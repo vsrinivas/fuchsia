@@ -12,9 +12,9 @@
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/convert/convert.h"
-#include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
@@ -108,7 +108,7 @@ TEST_F(DiffTest, ForEachDiff) {
         ++current_change;
         return true;
       },
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   ASSERT_EQ(status, Status::OK);
@@ -149,7 +149,7 @@ TEST_F(DiffTest, ForEachDiffWithMinKey) {
         EXPECT_EQ(e.entry, changes[current_change++].entry);
         return true;
       },
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   ASSERT_EQ(status, Status::OK);
@@ -164,7 +164,7 @@ TEST_F(DiffTest, ForEachDiffWithMinKey) {
         EXPECT_EQ(e.entry, changes[1].entry);
         return true;
       },
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   ASSERT_EQ(status, Status::OK);
@@ -200,7 +200,7 @@ TEST_F(DiffTest, ForEachDiffWithMinKeySkipNodes) {
         EXPECT_EQ(e.entry, changes[0].entry);
         return true;
       },
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   ASSERT_EQ(status, Status::OK);
@@ -235,7 +235,7 @@ TEST_F(DiffTest, ForEachDiffPriorityChange) {
         ++change_count;
         return true;
       },
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   ASSERT_EQ(status, Status::OK);
@@ -266,7 +266,7 @@ TEST_F(DiffTest, ForEachDiffEntryIdChange) {
         ++change_count;
         return true;
       },
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   ASSERT_EQ(status, Status::OK);
@@ -307,7 +307,7 @@ TEST_F(DiffTest, ForEachTwoWayDiff) {
         found_changes.push_back(std::move(e));
         return true;
       },
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   ASSERT_EQ(status, Status::OK);
@@ -368,7 +368,7 @@ TEST_F(DiffTest, ForEachTwoWayDiffMinKey) {
         EXPECT_EQ(*e.target, changes[1].entry);
         return true;
       },
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status));
   RunLoopFor(kSufficientDelay);
   EXPECT_EQ(change_count, 1);
   EXPECT_TRUE(called);
@@ -397,7 +397,7 @@ TEST_F(DiffTest, ForEachTwoWayDiffEntryIdChange) {
         ++change_count;
         return true;
       },
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   ASSERT_EQ(status, Status::OK);
@@ -503,7 +503,7 @@ TEST_F(DiffTest, ForEachThreeWayDiff) {
         current_change++;
         return true;
       },
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   ASSERT_EQ(status, Status::OK);
@@ -581,7 +581,7 @@ TEST_F(DiffTest, ForEachThreeWayDiffMinKey) {
         current_change++;
         return true;
       },
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   ASSERT_EQ(status, Status::OK);
@@ -645,7 +645,7 @@ TEST_F(DiffTest, ForEachThreeWayDiffNoDiff) {
         ADD_FAILURE();
         return true;
       },
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   ASSERT_EQ(status, Status::OK);
@@ -719,7 +719,7 @@ TEST_F(DiffTest, ForEachThreeWayNoBaseChange) {
         current_change++;
         return true;
       },
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   ASSERT_EQ(status, Status::OK);

@@ -18,9 +18,9 @@
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/convert/convert.h"
-#include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
 
 namespace storage {
 namespace {
@@ -65,8 +65,7 @@ class CommitFactoryTest : public ledger::TestWithEnvironment {
     bool called;
     Status status;
     clocks::DeviceIdManagerEmptyImpl device_id_manager;
-    storage_->Init(&device_id_manager,
-                   callback::Capture(callback::SetWhenCalled(&called), &status));
+    storage_->Init(&device_id_manager, ledger::Capture(ledger::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -99,7 +98,7 @@ class CommitFactoryTest : public ledger::TestWithEnvironment {
     Status status;
     std::unique_ptr<const Commit> commit;
     storage_->CommitJournal(std::move(journal),
-                            callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
+                            ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -119,7 +118,7 @@ class CommitFactoryTest : public ledger::TestWithEnvironment {
     Status status;
     std::unique_ptr<const Commit> commit;
     storage_->CommitJournal(std::move(journal),
-                            callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
+                            ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -355,7 +354,7 @@ TEST_F(CommitFactoryTest, GetLiveRootIdentifiers) {
   bool called;
   Status status;
   storage_->MarkCommitSynced(commit2->GetId(),
-                             callback::Capture(callback::SetWhenCalled(&called), &status));
+                             ledger::Capture(ledger::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -365,7 +364,7 @@ TEST_F(CommitFactoryTest, GetLiveRootIdentifiers) {
   // Mark commit4 as synced: both commit4_root and its parent's root (commit1_root) should be
   // removed.
   storage_->MarkCommitSynced(commit4->GetId(),
-                             callback::Capture(callback::SetWhenCalled(&called), &status));
+                             ledger::Capture(ledger::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -373,7 +372,7 @@ TEST_F(CommitFactoryTest, GetLiveRootIdentifiers) {
 
   // Mark commit3 as synced. Now that all commits are synced the set should be empty.
   storage_->MarkCommitSynced(commit3->GetId(),
-                             callback::Capture(callback::SetWhenCalled(&called), &status));
+                             ledger::Capture(ledger::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -423,12 +422,12 @@ TEST_F(CommitFactoryTest, GetLiveRootIdentifiersOnMergeCommit) {
   bool called;
   Status status;
   storage_->MarkCommitSynced(commit2->GetId(),
-                             callback::Capture(callback::SetWhenCalled(&called), &status));
+                             ledger::Capture(ledger::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
   storage_->MarkCommitSynced(commit3->GetId(),
-                             callback::Capture(callback::SetWhenCalled(&called), &status));
+                             ledger::Capture(ledger::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -437,7 +436,7 @@ TEST_F(CommitFactoryTest, GetLiveRootIdentifiersOnMergeCommit) {
               UnorderedElementsAre(base_root, merge_commit_root));
 
   storage_->MarkCommitSynced(merge_commit->GetId(),
-                             callback::Capture(callback::SetWhenCalled(&called), &status));
+                             ledger::Capture(ledger::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);

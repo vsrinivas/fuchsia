@@ -6,8 +6,8 @@
 
 #include "gtest/gtest.h"
 #include "src/ledger/bin/fidl/syncable/syncable_fidl_test.h"
-#include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
+#include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 
 namespace ledger {
 namespace {
@@ -89,7 +89,7 @@ TEST_F(SyncableTest, NoResponse) {
   zx_status_t status;
   bool error_called;
 
-  ptr_.set_error_handler(callback::Capture(callback::SetWhenCalled(&error_called), &status));
+  ptr_.set_error_handler(Capture(SetWhenCalled(&error_called), &status));
 
   ptr_->NoResponse();
   RunLoopUntilIdle();
@@ -118,7 +118,7 @@ TEST_F(SyncableTest, NoResponseSync) {
 
   bool sync_called;
   ptr_->NoResponse();
-  ptr_->Sync(callback::SetWhenCalled(&sync_called));
+  ptr_->Sync(SetWhenCalled(&sync_called));
 
   RunLoopUntilIdle();
   EXPECT_FALSE(sync_called);
@@ -133,9 +133,9 @@ TEST_F(SyncableTest, EmptyResponse) {
   bool error_called;
   bool callback_called;
 
-  ptr_.set_error_handler(callback::Capture(callback::SetWhenCalled(&error_called), &status));
+  ptr_.set_error_handler(Capture(SetWhenCalled(&error_called), &status));
 
-  ptr_->EmptyResponse(callback::SetWhenCalled(&callback_called));
+  ptr_->EmptyResponse(SetWhenCalled(&callback_called));
   RunLoopUntilIdle();
   EXPECT_EQ(impl_.empty_reponse_count(), 1);
   EXPECT_TRUE(callback_called);
@@ -143,7 +143,7 @@ TEST_F(SyncableTest, EmptyResponse) {
   EXPECT_FALSE(error_called);
 
   impl_.status_to_return() = Status::IO_ERROR;
-  ptr_->EmptyResponse(callback::SetWhenCalled(&callback_called));
+  ptr_->EmptyResponse(SetWhenCalled(&callback_called));
   RunLoopUntilIdle();
   EXPECT_EQ(impl_.empty_reponse_count(), 2);
   EXPECT_FALSE(callback_called);
@@ -155,7 +155,7 @@ TEST_F(SyncableTest, EmptyResponse) {
 TEST_F(SyncableTest, EmptyResponseWithParameter) {
   bool callback_called;
 
-  ptr_->EmptyResponseWithParameter(42, callback::SetWhenCalled(&callback_called));
+  ptr_->EmptyResponseWithParameter(42, SetWhenCalled(&callback_called));
   RunLoopUntilIdle();
   EXPECT_EQ(impl_.empty_reponse_count(), 1);
   EXPECT_EQ(impl_.parameter_received(), 42);
@@ -167,8 +167,8 @@ TEST_F(SyncableTest, EmptyResponseSync) {
 
   bool callback_called;
   bool sync_called;
-  ptr_->EmptyResponse(callback::SetWhenCalled(&callback_called));
-  ptr_->Sync(callback::SetWhenCalled(&sync_called));
+  ptr_->EmptyResponse(SetWhenCalled(&callback_called));
+  ptr_->Sync(SetWhenCalled(&sync_called));
 
   RunLoopUntilIdle();
   EXPECT_FALSE(callback_called);
@@ -186,10 +186,9 @@ TEST_F(SyncableTest, NotEmptyResponse) {
   bool callback_called;
   int callback_value;
 
-  ptr_.set_error_handler(callback::Capture(callback::SetWhenCalled(&error_called), &status));
+  ptr_.set_error_handler(Capture(SetWhenCalled(&error_called), &status));
 
-  ptr_->NotEmptyResponse(
-      callback::Capture(callback::SetWhenCalled(&callback_called), &callback_value));
+  ptr_->NotEmptyResponse(Capture(SetWhenCalled(&callback_called), &callback_value));
   RunLoopUntilIdle();
   EXPECT_EQ(impl_.not_empty_reponse_count(), 1);
   EXPECT_TRUE(callback_called);
@@ -198,8 +197,7 @@ TEST_F(SyncableTest, NotEmptyResponse) {
   EXPECT_FALSE(error_called);
 
   impl_.status_to_return() = Status::IO_ERROR;
-  ptr_->NotEmptyResponse(
-      callback::Capture(callback::SetWhenCalled(&callback_called), &std::ignore));
+  ptr_->NotEmptyResponse(Capture(SetWhenCalled(&callback_called), &std::ignore));
   RunLoopUntilIdle();
   EXPECT_EQ(impl_.not_empty_reponse_count(), 2);
   EXPECT_FALSE(callback_called);
@@ -212,8 +210,8 @@ TEST_F(SyncableTest, NotEmptyResponseWithParameter) {
   bool callback_called;
   int callback_value;
 
-  ptr_->NotEmptyResponseWithParameter(
-      42, callback::Capture(callback::SetWhenCalled(&callback_called), &callback_value));
+  ptr_->NotEmptyResponseWithParameter(42,
+                                      Capture(SetWhenCalled(&callback_called), &callback_value));
   RunLoopUntilIdle();
   EXPECT_EQ(impl_.not_empty_reponse_count(), 1);
   EXPECT_EQ(impl_.parameter_received(), 42);
@@ -226,9 +224,8 @@ TEST_F(SyncableTest, NotEmptyResponseSync) {
 
   bool callback_called;
   bool sync_called;
-  ptr_->NotEmptyResponse(
-      callback::Capture(callback::SetWhenCalled(&callback_called), &std::ignore));
-  ptr_->Sync(callback::SetWhenCalled(&sync_called));
+  ptr_->NotEmptyResponse(Capture(SetWhenCalled(&callback_called), &std::ignore));
+  ptr_->Sync(SetWhenCalled(&sync_called));
 
   RunLoopUntilIdle();
   EXPECT_FALSE(callback_called);
@@ -242,7 +239,7 @@ TEST_F(SyncableTest, NotEmptyResponseSync) {
 
 TEST_F(SyncableTest, OnDiscardable) {
   bool called;
-  binding_.SetOnDiscardable(callback::SetWhenCalled(&called));
+  binding_.SetOnDiscardable(SetWhenCalled(&called));
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
   ptr_.Unbind();
@@ -253,7 +250,7 @@ TEST_F(SyncableTest, OnDiscardable) {
 TEST_F(SyncableTest, OnDiscardableWithRunningOperation) {
   impl_.delay_callback() = true;
   bool called;
-  binding_.SetOnDiscardable(callback::SetWhenCalled(&called));
+  binding_.SetOnDiscardable(SetWhenCalled(&called));
   ptr_->NoResponse();
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
@@ -267,7 +264,7 @@ TEST_F(SyncableTest, OnDiscardableWithRunningOperation) {
 TEST_F(SyncableTest, OnDiscardableAfterError) {
   impl_.status_to_return() = Status::IO_ERROR;
   bool called;
-  binding_.SetOnDiscardable(callback::SetWhenCalled(&called));
+  binding_.SetOnDiscardable(SetWhenCalled(&called));
   ptr_->NoResponse();
   RunLoopUntilIdle();
   EXPECT_TRUE(called);

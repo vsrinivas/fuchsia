@@ -21,6 +21,7 @@ source_set("coroutine") {
   ]
 
   deps = [
+    "//src/ledger/lib/callback",
     "//src/ledger/lib/coroutine/context",
   ]
 
@@ -38,6 +39,7 @@ source_set("unittests") {
 
   deps = [
     ":coroutine",
+    "//src/ledger/lib/callback",
     "//src/ledger/lib/logging",
     "//src/lib/fxl",
     "//third_party/googletest:gmock",

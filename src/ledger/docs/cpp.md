@@ -156,7 +156,7 @@ concisely verifying results of an async call:
 ```cpp
  storage->GetCommit(
      parent_id,
-     callback::Capture(callback::SetWhenCalled(&called), &status, &base));
+     Capture(SetWhenCalled(&called), &status, &base));
  RunLoopUntilIdle();
  EXPECT_TRUE(called);
  EXPECT_EQ(storage::Status::OK, status);
@@ -176,17 +176,17 @@ to run them.
 [auto_cleanable.h]: /src/lib/callback/auto_cleanable.h
 [callback]: /src/lib/callback
 [cancellable.h]: /src/lib/callback/cancellable.h
-[capture.h]: /src/lib/callback/capture.h
+[capture.h]: /src/ledger/lib/callback/capture.h
 [defer.h]: /zircon/system/ulib/fit/include/lib/fit/defer.h
 [destruction_sentinel.h]: /src/lib/callback/destruction_sentinel.h
-[ensure_called.h]: /src/lib/callback/ensure_called.h
+[ensure_called.h]: /src/ledger/lib/callback/ensure_called.h
 [fit]: /zircon/system/ulib/fit
 [managed_container.h]: /src/ledger/lib/callback/managed_container.h
 [operation_serializer.h]: /src/ledger/lib/callback/operation_serializer.h
 [scoped_callback.h]: /src/lib/callback/scoped_callback.h
 [scoped_task_runner.h]: /src/lib/callback/scoped_task_runner.h
 [scoped_task_runner.h]: /src/lib/callback/scoped_task_runner.h
-[set_when_called.h]: /src/lib/callback/set_when_called.h
+[set_when_called.h]: /src/ledger/lib/callback/set_when_called.h
 [test_loop_fixture.h]: /src/lib/testing/loop_fixture/test_loop_fixture.h
 [trace_callback.h]: /src/lib/callback/trace_callback.h
 [waiter.h]: /src/lib/callback/waiter.h

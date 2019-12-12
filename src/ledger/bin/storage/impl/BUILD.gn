@@ -148,8 +148,8 @@ source_set("lib") {
     "//src/ledger/bin/storage/impl/btree:lib",
     "//src/ledger/bin/storage/public",
     "//src/ledger/bin/synchronization:lock",
+    "//src/ledger/lib/callback",
     "//src/ledger/lib/logging",
-    "//src/lib/callback",
     "//src/lib/fxl",
     "//third_party/abseil-cpp",
     "//zircon/public/lib/async-cpp",
@@ -182,7 +182,7 @@ source_set("test_utils") {
     "//src/ledger/bin/encryption/fake",
     "//src/ledger/bin/encryption/primitives",
     "//src/ledger/bin/storage/fake:lib",
-    "//src/lib/callback",
+    "//src/ledger/lib/callback",
     "//third_party/abseil-cpp",
   ]
 

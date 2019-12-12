@@ -14,8 +14,6 @@
 #include "src/ledger/bin/storage/fake/fake_db.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
-#include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
 
 namespace clocks {
 namespace {

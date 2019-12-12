@@ -5,16 +5,21 @@
 #include "src/lib/callback/waiter.h"
 
 #include <lib/fit/defer.h>
+#include <lib/fit/function.h>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
 
 namespace callback {
 namespace {
 
 using ::testing::ElementsAre;
+
+fit::closure SetWhenCalled(bool* value) {
+  *value = false;
+  return [value] { *value = true; };
+}
 
 TEST(Waiter, NoCallback) {
   auto waiter = fxl::MakeRefCounted<Waiter<int, int>>(0);
@@ -242,7 +247,7 @@ TEST(Waiter, CancelDeletesCallback) {
   auto callback = waiter->NewCallback();
 
   bool called = false;
-  auto on_destruction = fit::defer(callback::SetWhenCalled(&called));
+  auto on_destruction = fit::defer(SetWhenCalled(&called));
   waiter->Finalize([on_destruction = std::move(on_destruction)] {});
 
   EXPECT_FALSE(called);
@@ -256,7 +261,7 @@ TEST(Waiter, FinalizeDeletesCallback) {
   auto callback = waiter->NewCallback();
 
   bool called = false;
-  auto on_destruction = fit::defer(callback::SetWhenCalled(&called));
+  auto on_destruction = fit::defer(SetWhenCalled(&called));
   waiter->Finalize([on_destruction = std::move(on_destruction)] {});
 
   EXPECT_FALSE(called);

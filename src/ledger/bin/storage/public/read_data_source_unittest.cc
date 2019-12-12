@@ -8,9 +8,9 @@
 #include <lib/gtest/test_loop_fixture.h>
 
 #include "gtest/gtest.h"
-#include "src/lib/callback/capture.h"
+#include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 #include "src/lib/callback/scoped_task_runner.h"
-#include "src/lib/callback/set_when_called.h"
 
 namespace storage {
 namespace {
@@ -51,7 +51,7 @@ TEST_F(ReadDataSourceTest, ReadDataSource) {
   Status status;
   std::unique_ptr<DataSource::DataChunk> content;
   ReadDataSource(&container, std::make_unique<SplittingDataSource>(dispatcher(), expected_content),
-                 callback::Capture(callback::SetWhenCalled(&called), &status, &content));
+                 ledger::Capture(ledger::SetWhenCalled(&called), &status, &content));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -68,7 +68,7 @@ TEST_F(ReadDataSourceTest, DeleteContainerWhileReading) {
     ledger::ManagedContainer container;
     ReadDataSource(&container,
                    std::make_unique<SplittingDataSource>(dispatcher(), expected_content),
-                   callback::Capture(callback::SetWhenCalled(&called), &status, &content));
+                   ledger::Capture(ledger::SetWhenCalled(&called), &status, &content));
   }
   RunLoopUntilIdle();
   EXPECT_FALSE(called);

@@ -2,17 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LIB_CALLBACK_ENSURE_CALLED_H_
-#define SRC_LIB_CALLBACK_ENSURE_CALLED_H_
+#ifndef SRC_LEDGER_LIB_CALLBACK_ENSURE_CALLED_H_
+#define SRC_LEDGER_LIB_CALLBACK_ENSURE_CALLED_H_
 
 #include <optional>
 #include <tuple>
 #include <utility>
 
-#include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/macros.h"
+#include "src/ledger/lib/logging/logging.h"
 
-namespace callback {
+namespace ledger {
 
 // Given a function and a set a default arguments, ensures that the function
 // will always be called exactly once.
@@ -29,9 +28,9 @@ class EnsureCalled {
       : closure_(std::pair(std::move(function),
                            std::tuple<ArgType...>(std::forward<ArgType>(args)...))){};
 
-  EnsureCalled(EnsureCalled&& other) { *this = std::move(other); }
+  EnsureCalled(EnsureCalled&& other) noexcept { *this = std::move(other); }
 
-  EnsureCalled& operator=(EnsureCalled&& other) {
+  EnsureCalled& operator=(EnsureCalled&& other) noexcept {
     CallDefaultIfNeeded();
 
     // Assigning |closure_| directly does not work because lambdas are
@@ -46,7 +45,7 @@ class EnsureCalled {
   ~EnsureCalled() { CallDefaultIfNeeded(); }
 
   auto operator()(ArgType... args) {
-    FXL_DCHECK(closure_);
+    LEDGER_DCHECK(closure_);
     auto closure = TakeClosure();
     return std::invoke(std::move(closure->first), std::forward<ArgType>(args)...);
   }
@@ -72,6 +71,6 @@ class EnsureCalled {
   std::optional<std::pair<T, std::tuple<ArgType...>>> closure_;
 };
 
-}  // namespace callback
+}  // namespace ledger
 
-#endif  // SRC_LIB_CALLBACK_ENSURE_CALLED_H_
+#endif  // SRC_LEDGER_LIB_CALLBACK_ENSURE_CALLED_H_

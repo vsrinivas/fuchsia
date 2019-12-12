@@ -7,8 +7,8 @@
 #include <lib/fit/function.h>
 
 #include "gtest/gtest.h"
-#include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
+#include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 
 namespace cache {
 namespace {
@@ -22,12 +22,12 @@ TEST(LRUCacheTest, SimpleGet) {
   bool called;
   size_t status;
   size_t value;
-  cache.Get(0, callback::Capture(callback::SetWhenCalled(&called), &status, &value));
+  cache.Get(0, ledger::Capture(ledger::SetWhenCalled(&called), &status, &value));
   ASSERT_TRUE(called);
   EXPECT_EQ(status, 0u);
   EXPECT_EQ(value, 0u);
 
-  cache.Get(42, callback::Capture(callback::SetWhenCalled(&called), &status, &value));
+  cache.Get(42, ledger::Capture(ledger::SetWhenCalled(&called), &status, &value));
   ASSERT_TRUE(called);
   EXPECT_EQ(status, 0u);
   EXPECT_EQ(value, 84u);
@@ -46,12 +46,12 @@ TEST(LRUCacheTest, FailingGenerator) {
   size_t status;
   size_t value;
 
-  cache.Get(0, callback::Capture(callback::SetWhenCalled(&called), &status, &value));
+  cache.Get(0, ledger::Capture(ledger::SetWhenCalled(&called), &status, &value));
   ASSERT_TRUE(called);
   EXPECT_EQ(status, 1u);
   EXPECT_EQ(nb_called, 1u);
 
-  cache.Get(0, callback::Capture(callback::SetWhenCalled(&called), &status, &value));
+  cache.Get(0, ledger::Capture(ledger::SetWhenCalled(&called), &status, &value));
   ASSERT_TRUE(called);
   EXPECT_EQ(status, 1u);
   EXPECT_EQ(nb_called, 2u);
@@ -72,12 +72,12 @@ TEST(LRUCacheTest, CacheCallback) {
   size_t status1, status2;
   size_t value1, value2;
 
-  cache.Get(0, callback::Capture(callback::SetWhenCalled(&called1), &status1, &value1));
+  cache.Get(0, ledger::Capture(ledger::SetWhenCalled(&called1), &status1, &value1));
 
   EXPECT_FALSE(called1);
   EXPECT_EQ(nb_called, 1u);
 
-  cache.Get(0, callback::Capture(callback::SetWhenCalled(&called2), &status2, &value2));
+  cache.Get(0, ledger::Capture(ledger::SetWhenCalled(&called2), &status2, &value2));
 
   EXPECT_FALSE(called2);
   EXPECT_EQ(nb_called, 1u);
@@ -106,29 +106,29 @@ TEST(LRUCacheTest, LRUPolicy) {
   size_t status;
   size_t value;
 
-  cache.Get(0, callback::Capture([] {}, &status, &value));
+  cache.Get(0, ledger::Capture([] {}, &status, &value));
   EXPECT_EQ(nb_called, 1u);
-  cache.Get(0, callback::Capture([] {}, &status, &value));
+  cache.Get(0, ledger::Capture([] {}, &status, &value));
   EXPECT_EQ(nb_called, 1u);
-  cache.Get(1, callback::Capture([] {}, &status, &value));
+  cache.Get(1, ledger::Capture([] {}, &status, &value));
   EXPECT_EQ(nb_called, 2u);
-  cache.Get(2, callback::Capture([] {}, &status, &value));
+  cache.Get(2, ledger::Capture([] {}, &status, &value));
   EXPECT_EQ(nb_called, 3u);
-  cache.Get(0, callback::Capture([] {}, &status, &value));
+  cache.Get(0, ledger::Capture([] {}, &status, &value));
   EXPECT_EQ(nb_called, 3u);
-  cache.Get(1, callback::Capture([] {}, &status, &value));
+  cache.Get(1, ledger::Capture([] {}, &status, &value));
   EXPECT_EQ(nb_called, 3u);
-  cache.Get(2, callback::Capture([] {}, &status, &value));
+  cache.Get(2, ledger::Capture([] {}, &status, &value));
   EXPECT_EQ(nb_called, 3u);
-  cache.Get(3, callback::Capture([] {}, &status, &value));
+  cache.Get(3, ledger::Capture([] {}, &status, &value));
   EXPECT_EQ(nb_called, 4u);
-  cache.Get(1, callback::Capture([] {}, &status, &value));
+  cache.Get(1, ledger::Capture([] {}, &status, &value));
   EXPECT_EQ(nb_called, 4u);
-  cache.Get(2, callback::Capture([] {}, &status, &value));
+  cache.Get(2, ledger::Capture([] {}, &status, &value));
   EXPECT_EQ(nb_called, 4u);
-  cache.Get(3, callback::Capture([] {}, &status, &value));
+  cache.Get(3, ledger::Capture([] {}, &status, &value));
   EXPECT_EQ(nb_called, 4u);
-  cache.Get(0, callback::Capture([] {}, &status, &value));
+  cache.Get(0, ledger::Capture([] {}, &status, &value));
   EXPECT_EQ(nb_called, 5u);
 }
 

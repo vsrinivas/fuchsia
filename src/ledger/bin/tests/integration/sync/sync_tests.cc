@@ -11,10 +11,10 @@
 #include "src/ledger/bin/tests/integration/integration_test.h"
 #include "src/ledger/bin/tests/integration/sync/test_sync_state_watcher.h"
 #include "src/ledger/bin/tests/integration/test_page_watcher.h"
+#include "src/ledger/lib/callback/capture.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/ledger/lib/vmo/vector.h"
-#include "src/lib/callback/capture.h"
 
 namespace ledger {
 namespace {
@@ -55,7 +55,7 @@ TEST_P(SyncIntegrationCloudTest, SerialConnection) {
   // Retrieve the page ID so that we can later connect to the same page from
   // another app instance.
   auto loop_waiter = NewWaiter();
-  page1->GetId(callback::Capture(loop_waiter->GetCallback(), &page_id));
+  page1->GetId(Capture(loop_waiter->GetCallback(), &page_id));
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
 
   // Wait until the sync state becomes idle.
@@ -73,8 +73,7 @@ TEST_P(SyncIntegrationCloudTest, SerialConnection) {
 
   loop_waiter = NewWaiter();
   fuchsia::ledger::PageSnapshot_GetInline_Result result;
-  snapshot->GetInline(convert::ToArray("Hello"),
-                      callback::Capture(loop_waiter->GetCallback(), &result));
+  snapshot->GetInline(convert::ToArray("Hello"), Capture(loop_waiter->GetCallback(), &result));
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
   EXPECT_THAT(result, MatchesString("World"));
 
@@ -96,7 +95,7 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
   auto page1_state_watcher = WatchPageSyncState(&page1);
   PageId page_id;
   auto loop_waiter = NewWaiter();
-  page1->GetId(callback::Capture(loop_waiter->GetCallback(), &page_id));
+  page1->GetId(Capture(loop_waiter->GetCallback(), &page_id));
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
   auto page2 = instance2->GetPage(fidl::MakeOptional(page_id));
 
@@ -123,8 +122,7 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
 
   loop_waiter = NewWaiter();
   fuchsia::ledger::PageSnapshot_GetInline_Result result;
-  snapshot->GetInline(convert::ToArray("Hello"),
-                      callback::Capture(loop_waiter->GetCallback(), &result));
+  snapshot->GetInline(convert::ToArray("Hello"), Capture(loop_waiter->GetCallback(), &result));
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
   EXPECT_THAT(result, MatchesString("World"));
 
@@ -149,7 +147,7 @@ TEST_P(SyncIntegrationTest, DISABLED_LazyToEagerTransition) {
   auto page1_state_watcher = WatchPageSyncState(&page1);
   PageId page_id;
   auto loop_waiter = NewWaiter();
-  page1->GetId(callback::Capture(loop_waiter->GetCallback(), &page_id));
+  page1->GetId(Capture(loop_waiter->GetCallback(), &page_id));
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
   auto page2 = instance2->GetPage(fidl::MakeOptional(page_id));
 
@@ -167,7 +165,7 @@ TEST_P(SyncIntegrationTest, DISABLED_LazyToEagerTransition) {
   fuchsia::ledger::Page_CreateReferenceFromBuffer_Result create_result;
   loop_waiter = NewWaiter();
   page1->CreateReferenceFromBuffer(std::move(vmo).ToTransport(),
-                                   callback::Capture(loop_waiter->GetCallback(), &create_result));
+                                   Capture(loop_waiter->GetCallback(), &create_result));
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
   ASSERT_TRUE(create_result.is_response());
   page1->PutReference(key, create_result.response().reference, Priority::LAZY);
@@ -178,8 +176,7 @@ TEST_P(SyncIntegrationTest, DISABLED_LazyToEagerTransition) {
   // Lazy value is not downloaded eagerly.
   loop_waiter = NewWaiter();
   fuchsia::ledger::PageSnapshot_Get_Result get_result;
-  snapshot->Get(convert::ToArray("Hello"),
-                callback::Capture(loop_waiter->GetCallback(), &get_result));
+  snapshot->Get(convert::ToArray("Hello"), Capture(loop_waiter->GetCallback(), &get_result));
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
   EXPECT_THAT(get_result, MatchesError(fuchsia::ledger::Error::NEEDS_FETCH));
 
@@ -187,7 +184,7 @@ TEST_P(SyncIntegrationTest, DISABLED_LazyToEagerTransition) {
   loop_waiter = NewWaiter();
   // Fetch only a small part.
   snapshot->FetchPartial(convert::ToArray("Hello"), 0, 10,
-                         callback::Capture(loop_waiter->GetCallback(), &fetch_result));
+                         Capture(loop_waiter->GetCallback(), &fetch_result));
   // TODO(LE-812): this assertion is flaky. Re-enable this test once fixed.
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
   EXPECT_THAT(fetch_result, MatchesString(SizeIs(10)));
@@ -200,8 +197,7 @@ TEST_P(SyncIntegrationTest, DISABLED_LazyToEagerTransition) {
 
   // Now Get succeeds, as the value is no longer lazy.
   loop_waiter = NewWaiter();
-  snapshot->Get(convert::ToArray("Hello"),
-                callback::Capture(loop_waiter->GetCallback(), &get_result));
+  snapshot->Get(convert::ToArray("Hello"), Capture(loop_waiter->GetCallback(), &get_result));
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
   EXPECT_THAT(get_result, MatchesString(convert::ToString(big_value)));
 }
@@ -218,7 +214,7 @@ TEST_P(SyncIntegrationCloudTest, PageChangeLazyEntry) {
   auto page1_state_watcher = WatchPageSyncState(&page1);
   PageId page_id;
   auto loop_waiter = NewWaiter();
-  page1->GetId(callback::Capture(loop_waiter->GetCallback(), &page_id));
+  page1->GetId(Capture(loop_waiter->GetCallback(), &page_id));
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
   auto page2 = instance2->GetPage(fidl::MakeOptional(page_id));
 
@@ -229,7 +225,7 @@ TEST_P(SyncIntegrationCloudTest, PageChangeLazyEntry) {
   fuchsia::ledger::Page_CreateReferenceFromBuffer_Result result;
   loop_waiter = NewWaiter();
   page1->CreateReferenceFromBuffer(std::move(vmo).ToTransport(),
-                                   callback::Capture(loop_waiter->GetCallback(), &result));
+                                   Capture(loop_waiter->GetCallback(), &result));
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
   ASSERT_TRUE(result.is_response());
 

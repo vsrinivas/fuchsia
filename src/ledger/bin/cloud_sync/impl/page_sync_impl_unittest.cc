@@ -25,9 +25,8 @@
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/backoff/testing/test_backoff.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/socket/strings.h"
-#include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
 
 namespace cloud_sync {
 namespace {
@@ -121,7 +120,7 @@ TEST_F(PageSyncImplTest, UploadBacklog) {
   auto id1 = AddLocalCommit("content1")->id;
   auto id2 = AddLocalCommit("content2")->id;
   bool called;
-  page_sync_->SetOnPaused(callback::SetWhenCalled(&called));
+  page_sync_->SetOnPaused(ledger::SetWhenCalled(&called));
   StartPageSync();
 
   RunLoopUntilIdle();
@@ -154,7 +153,7 @@ TEST_F(PageSyncImplTest, PageWatcher) {
   auto id1 = AddLocalCommit("content1")->id;
   auto id2 = AddLocalCommit("content2")->id;
   bool called;
-  page_sync_->SetOnPaused(callback::SetWhenCalled(&called));
+  page_sync_->SetOnPaused(ledger::SetWhenCalled(&called));
   page_sync_->SetSyncWatcher(&watcher);
   StartPageSync();
 
@@ -177,7 +176,7 @@ TEST_F(PageSyncImplTest, NoUploadWhenDownloading) {
   storage_.should_delay_add_commit_confirmation = true;
 
   bool called;
-  page_sync_->SetOnPaused(callback::SetWhenCalled(&called));
+  page_sync_->SetOnPaused(ledger::SetWhenCalled(&called));
   StartPageSync();
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
@@ -217,7 +216,7 @@ TEST_F(PageSyncImplTest, UploadExistingCommitsOnlyAfterBacklogDownload) {
     backlog_downloaded_called = true;
   });
   bool called;
-  page_sync_->SetOnPaused(callback::SetWhenCalled(&called));
+  page_sync_->SetOnPaused(ledger::SetWhenCalled(&called));
   StartPageSync();
 
   RunLoopUntilIdle();
@@ -251,7 +250,7 @@ TEST_F(PageSyncImplTest, UploadExistingAndNewCommits) {
     });
   });
   bool called;
-  page_sync_->SetOnPaused(callback::SetWhenCalled(&called));
+  page_sync_->SetOnPaused(ledger::SetWhenCalled(&called));
 
   StartPageSync();
   RunLoopUntilIdle();
@@ -322,7 +321,7 @@ TEST_F(PageSyncImplTest, PausedOnUploadTemporaryError) {
 // error callback.
 TEST_F(PageSyncImplTest, FailToStoreRemoteCommit) {
   bool on_paused_called;
-  page_sync_->SetOnPaused(callback::SetWhenCalled(&on_paused_called));
+  page_sync_->SetOnPaused(ledger::SetWhenCalled(&on_paused_called));
   int error_callback_calls = 0;
   page_sync_->SetOnUnrecoverableError([&error_callback_calls] { error_callback_calls++; });
   StartPageSync();
@@ -394,7 +393,7 @@ TEST_F(PageSyncImplTest, UploadIsPaused) {
   AddLocalCommit("content1");
   AddLocalCommit("content2");
   bool called;
-  page_sync_->SetOnPaused(callback::SetWhenCalled(&called));
+  page_sync_->SetOnPaused(ledger::SetWhenCalled(&called));
 
   StartPageSync(UploadStatus::DISABLED);
   RunLoopUntilIdle();

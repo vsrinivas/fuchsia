@@ -31,7 +31,8 @@
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
-#include "src/lib/callback/set_when_called.h"
+#include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
@@ -80,7 +81,7 @@ class PageDbTest : public ledger::TestWithEnvironment {
     bool called;
     clocks::DeviceIdManagerEmptyImpl device_id_manager;
     page_storage_.Init(&device_id_manager,
-                       callback::Capture(callback::SetWhenCalled(&called), &status));
+                       ledger::Capture(ledger::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     ASSERT_EQ(status, Status::OK);

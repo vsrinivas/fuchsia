@@ -12,7 +12,7 @@
 #include "src/ledger/bin/platform/platform.h"
 #include "src/ledger/bin/platform/scoped_tmp_location.h"
 #include "src/ledger/bin/testing/get_page_ensure_initialized.h"
-#include "src/lib/callback/capture.h"
+#include "src/ledger/lib/callback/capture.h"
 
 namespace ledger {
 namespace {
@@ -67,7 +67,7 @@ TEST(GetLedgerTest, GetPageEnsureInitialized) {
 
   GetPageEnsureInitialized(
       &ledger, nullptr, DelayCallback::NO, [&] { loop.Quit(); },
-      callback::Capture([&] { loop.Quit(); }, &status, &page, &page_id));
+      Capture([&] { loop.Quit(); }, &status, &page, &page_id));
   loop.Run();
 
   EXPECT_EQ(status, Status::OK);

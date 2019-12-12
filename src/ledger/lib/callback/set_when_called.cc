@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/lib/callback/set_when_called.h"
+#include "set_when_called.h"
 
 #include <lib/fit/function.h>
 
-namespace callback {
+namespace ledger {
 
 fit::closure SetWhenCalled(bool* value) {
   *value = false;
   return [value] { *value = true; };
 }
 
-}  // namespace callback
+}  // namespace ledger

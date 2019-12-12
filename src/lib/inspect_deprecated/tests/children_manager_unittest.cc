@@ -7,6 +7,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fit/function.h>
 #include <lib/gtest/test_loop_fixture.h>
 
 #include <map>
@@ -21,8 +22,6 @@
 #include "peridot/lib/rng/test_random.h"
 #include "src/lib/callback/auto_cleanable.h"
 #include "src/lib/callback/capture.h"
-#include "src/lib/callback/ensure_called.h"
-#include "src/lib/callback/set_when_called.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/lib/inspect_deprecated/hierarchy.h"
 #include "src/lib/inspect_deprecated/inspect.h"
@@ -37,6 +36,11 @@ using testing::IsEmpty;
 using testing::UnorderedElementsAre;
 
 using namespace inspect_deprecated::testing;
+
+fit::closure SetWhenCalled(bool* value) {
+  *value = false;
+  return [value] { *value = true; };
+}
 
 bool NextBool(rng::Random* random) {
   auto bit_generator = random->NewBitGenerator<bool>();
@@ -437,7 +441,7 @@ class ChildrenManagerTest : public gtest::TestLoopFixture {
   bool success;
   top_level_node_.object_dir().object()->OpenChild(
       kElementsInspectPathComponent, elements->NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&callback_called), &success));
+      callback::Capture(SetWhenCalled(&callback_called), &success));
   RunLoopUntilIdle();
   if (!callback_called) {
     return ::testing::AssertionFailure()
@@ -453,7 +457,7 @@ class ChildrenManagerTest : public gtest::TestLoopFixture {
     fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect>* node,
     fuchsia::inspect::deprecated::Object* object) {
   bool callback_called;
-  (*node)->ReadData(callback::Capture(callback::SetWhenCalled(&callback_called), object));
+  (*node)->ReadData(callback::Capture(SetWhenCalled(&callback_called), object));
   RunLoopUntilIdle();
   if (!callback_called) {
     return ::testing::AssertionFailure() << "Callback passed to ReadData not called!";
@@ -466,7 +470,7 @@ class ChildrenManagerTest : public gtest::TestLoopFixture {
     fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect>* node,
     std::vector<std::string>* child_names) {
   bool callback_called;
-  (*node)->ListChildren(callback::Capture(callback::SetWhenCalled(&callback_called), child_names));
+  (*node)->ListChildren(callback::Capture(SetWhenCalled(&callback_called), child_names));
   RunLoopUntilIdle();
   if (!callback_called) {
     return ::testing::AssertionFailure() << "Callback passed to ListChildren not called!";
@@ -482,7 +486,7 @@ class ChildrenManagerTest : public gtest::TestLoopFixture {
   bool callback_called;
   bool success;
   (*parent)->OpenChild(child_name, child->NewRequest(),
-                       callback::Capture(callback::SetWhenCalled(&callback_called), &success));
+                       callback::Capture(SetWhenCalled(&callback_called), &success));
   RunLoopUntilIdle();
   if (!callback_called) {
     return ::testing::AssertionFailure() << "Callback passed to OpenChild not called!";
@@ -498,9 +502,8 @@ class ChildrenManagerTest : public gtest::TestLoopFixture {
                                                          fit::closure* retainer) {
   bool callback_called;
   bool success;
-  application->Activate(
-      std::move(full_name),
-      callback::Capture(callback::SetWhenCalled(&callback_called), &success, retainer));
+  application->Activate(std::move(full_name),
+                        callback::Capture(SetWhenCalled(&callback_called), &success, retainer));
   RunLoopUntilIdle();
   if (!callback_called) {
     return ::testing::AssertionFailure() << "Callback passed to Activate not called!";
@@ -518,7 +521,7 @@ class ChildrenManagerTest : public gtest::TestLoopFixture {
   fidl::InterfaceHandle<fuchsia::inspect::deprecated::Inspect> inspect_handle;
   top_level_node_.object_dir().object()->OpenChild(
       kElementsInspectPathComponent, inspect_handle.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&callback_called), &success));
+      callback::Capture(SetWhenCalled(&callback_called), &success));
   RunLoopUntilIdle();
   if (!callback_called) {
     return ::testing::AssertionFailure() << "Callback passed to OpenChild not called!";
@@ -783,7 +786,7 @@ TEST_F(ChildrenManagerTest, ElementsDeletedDuringInspection) {
   zx_status_t a_error_status;
   fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> a_ptr;
   a_ptr.set_error_handler(
-      callback::Capture(callback::SetWhenCalled(&a_error_callback_called), &a_error_status));
+      callback::Capture(SetWhenCalled(&a_error_callback_called), &a_error_status));
   ASSERT_TRUE(OpenChild(&elements_ptr, deepest_child_full_name[0], &a_ptr));
 
   ASSERT_EQ(Activity::INACTIVE, application.DebugGetActivity(deepest_child_full_name));
@@ -792,7 +795,7 @@ TEST_F(ChildrenManagerTest, ElementsDeletedDuringInspection) {
   zx_status_t a_b_error_status;
   fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> a_b_ptr;
   a_b_ptr.set_error_handler(
-      callback::Capture(callback::SetWhenCalled(&a_b_error_callback_called), &a_b_error_status));
+      callback::Capture(SetWhenCalled(&a_b_error_callback_called), &a_b_error_status));
   ASSERT_TRUE(OpenChild(&a_ptr, deepest_child_full_name[1], &a_b_ptr));
 
   ASSERT_EQ(Activity::INACTIVE, application.DebugGetActivity(deepest_child_full_name));
@@ -800,8 +803,8 @@ TEST_F(ChildrenManagerTest, ElementsDeletedDuringInspection) {
   bool a_b_c_error_callback_called;
   zx_status_t a_b_c_error_status;
   fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> a_b_c_ptr;
-  a_b_c_ptr.set_error_handler(callback::Capture(
-      callback::SetWhenCalled(&a_b_c_error_callback_called), &a_b_c_error_status));
+  a_b_c_ptr.set_error_handler(
+      callback::Capture(SetWhenCalled(&a_b_c_error_callback_called), &a_b_c_error_status));
   ASSERT_TRUE(OpenChild(&a_b_ptr, deepest_child_full_name[2], &a_b_c_ptr));
 
   ASSERT_EQ(Activity::ACTIVE, application.DebugGetActivity(deepest_child_full_name));

@@ -37,7 +37,6 @@
 #include "src/ledger/lib/socket/socket_pair.h"
 #include "src/ledger/lib/socket/socket_writer.h"
 #include "src/ledger/lib/socket/strings.h"
-#include "src/lib/callback/set_when_called.h"
 #include "third_party/abseil-cpp/absl/strings/str_cat.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 

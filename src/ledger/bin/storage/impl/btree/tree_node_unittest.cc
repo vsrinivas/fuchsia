@@ -11,9 +11,9 @@
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/convert/convert.h"
-#include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
@@ -76,9 +76,8 @@ TEST_F(TreeNodeTest, CreateGetTreeNode) {
   bool called;
   Status status;
   std::unique_ptr<const TreeNode> found_node;
-  TreeNode::FromIdentifier(
-      &fake_storage_, {node->GetIdentifier(), PageStorage::Location::Local()},
-      callback::Capture(callback::SetWhenCalled(&called), &status, &found_node));
+  TreeNode::FromIdentifier(&fake_storage_, {node->GetIdentifier(), PageStorage::Location::Local()},
+                           ledger::Capture(ledger::SetWhenCalled(&called), &status, &found_node));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -88,7 +87,7 @@ TEST_F(TreeNodeTest, CreateGetTreeNode) {
       &fake_storage_,
       {RandomObjectIdentifier(environment_.random(), fake_storage_.GetObjectIdentifierFactory()),
        PageStorage::Location::Local()},
-      callback::Capture(callback::SetWhenCalled(&called), &status, &found_node));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &found_node));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::INTERNAL_NOT_FOUND);
@@ -148,7 +147,7 @@ TEST_F(TreeNodeTest, Serialization) {
   Status status;
   std::unique_ptr<const Object> object;
   fake_storage_.GetObject(node->GetIdentifier(), PageStorage::Location::Local(),
-                          callback::Capture(callback::SetWhenCalled(&called), &status, &object));
+                          ledger::Capture(ledger::SetWhenCalled(&called), &status, &object));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);

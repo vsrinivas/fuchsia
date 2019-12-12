@@ -37,10 +37,10 @@
 #include "src/ledger/bin/testing/fake_disk_cleanup_manager.h"
 #include "src/ledger/bin/testing/inspect.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/inspect_deprecated/inspect.h"
@@ -182,7 +182,7 @@ TEST_F(LedgerManagerTest, DeletingLedgerManagerClosesConnections) {
 
 TEST_F(LedgerManagerTest, OnDiscardableCalled) {
   bool on_discardable_called;
-  ledger_manager_->SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  ledger_manager_->SetOnDiscardable(SetWhenCalled(&on_discardable_called));
 
   ledger_.Unbind();
   RunLoopUntilIdle();
@@ -191,7 +191,7 @@ TEST_F(LedgerManagerTest, OnDiscardableCalled) {
 
 TEST_F(LedgerManagerTest, OnDiscardableCalledWhenLastDetacherCalled) {
   bool on_discardable_called;
-  ledger_manager_->SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  ledger_manager_->SetOnDiscardable(SetWhenCalled(&on_discardable_called));
   auto first_detacher = ledger_manager_->CreateDetacher();
   auto second_detacher = ledger_manager_->CreateDetacher();
 
@@ -220,13 +220,13 @@ TEST_F(LedgerManagerTest, OnDiscardableCalledWhenLastDetacherCalled) {
 // being deleted.
 TEST_F(LedgerManagerTest, NonEmptyDuringDeletion) {
   bool on_discardable_called;
-  ledger_manager_->SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  ledger_manager_->SetOnDiscardable(SetWhenCalled(&on_discardable_called));
 
   PageId id = RandomId(environment_);
   bool delete_page_called;
   Status delete_page_status;
   ledger_manager_->DeletePageStorage(
-      id.id, callback::Capture(callback::SetWhenCalled(&delete_page_called), &delete_page_status));
+      id.id, Capture(SetWhenCalled(&delete_page_called), &delete_page_status));
 
   // Empty the Ledger manager.
   ledger_.Unbind();
@@ -253,7 +253,7 @@ TEST_F(LedgerManagerTest, GetPageDoNotCallTheCloud) {
   bool called;
   storage_ptr->ClearCalls();
   // Get the root page.
-  ledger_.set_error_handler(callback::Capture(callback::SetWhenCalled(&called), &status));
+  ledger_.set_error_handler(Capture(SetWhenCalled(&called), &status));
   ledger_->GetRootPage(page.NewRequest());
   RunLoopUntilIdle();
   EXPECT_FALSE(ledger_.is_bound());
@@ -267,7 +267,7 @@ TEST_F(LedgerManagerTest, GetPageDoNotCallTheCloud) {
   storage_ptr->ClearCalls();
 
   // Get a new page with a random id.
-  ledger_.set_error_handler(callback::Capture(callback::SetWhenCalled(&called), &status));
+  ledger_.set_error_handler(Capture(SetWhenCalled(&called), &status));
   ledger_->GetPage(fidl::MakeOptional(id), page.NewRequest());
   RunLoopUntilIdle();
   EXPECT_FALSE(ledger_.is_bound());
@@ -281,7 +281,7 @@ TEST_F(LedgerManagerTest, GetPageDoNotCallTheCloud) {
   storage_ptr->ClearCalls();
 
   // Create a new page.
-  ledger_.set_error_handler(callback::Capture(callback::SetWhenCalled(&called), &status));
+  ledger_.set_error_handler(Capture(SetWhenCalled(&called), &status));
   ledger_->GetPage(nullptr, page.NewRequest());
   RunLoopUntilIdle();
   EXPECT_FALSE(ledger_.is_bound());
@@ -298,15 +298,14 @@ TEST_F(LedgerManagerTest, OpenPageWithDeletePageStorageInProgress) {
   // Start deleting the page.
   bool delete_called;
   Status delete_status;
-  ledger_manager_->DeletePageStorage(
-      id.id, callback::Capture(callback::SetWhenCalled(&delete_called), &delete_status));
+  ledger_manager_->DeletePageStorage(id.id, Capture(SetWhenCalled(&delete_called), &delete_status));
   RunLoopUntilIdle();
   EXPECT_FALSE(delete_called);
 
   // Try to open the same page.
   bool get_page_done;
   ledger_->GetPage(fidl::MakeOptional(id), page.NewRequest());
-  ledger_->Sync(callback::SetWhenCalled(&get_page_done));
+  ledger_->Sync(SetWhenCalled(&get_page_done));
   RunLoopUntilIdle();
   EXPECT_FALSE(get_page_done);
 
@@ -542,7 +541,7 @@ class LedgerManagerWithRealStorageTest : public TestWithEnvironment {
     page_ptr->Put(convert::ToArray("Hello."),
                   convert::ToArray("Is it me for whom you are looking?"));
     bool sync_callback_called;
-    page_ptr->Sync(callback::Capture(callback::SetWhenCalled(&sync_callback_called)));
+    page_ptr->Sync(Capture(SetWhenCalled(&sync_callback_called)));
     RunLoopUntilIdle();
     if (!sync_callback_called) {
       return testing::AssertionFailure() << "Sync callback wasn't called!";

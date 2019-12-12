@@ -24,11 +24,11 @@
 #include "src/ledger/bin/testing/ledger_matcher.h"
 #include "src/ledger/cloud_provider_in_memory/lib/fake_cloud_provider.h"
 #include "src/ledger/cloud_provider_in_memory/lib/types.h"
+#include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/vmo/strings.h"
-#include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
 #include "src/lib/fsl/io/fd.h"
 #include "third_party/abseil-cpp/absl/strings/escaping.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
@@ -151,7 +151,7 @@ TEST_F(LedgerEndToEndTest, PutAndGet) {
       ledger_repository.NewRequest());
 
   ledger_repository->GetLedger(TestArray(), ledger_.NewRequest());
-  ledger_repository->Sync(callback::Capture(QuitLoopClosure()));
+  ledger_repository->Sync(ledger::Capture(QuitLoopClosure()));
   RunLoop();
 
   fidl::SynchronousInterfacePtr<ledger::Page> page;
@@ -193,7 +193,7 @@ TEST_F(LedgerEndToEndTest, ClearPage) {
       ledger_repository.NewRequest());
 
   ledger_repository->GetLedger(TestArray(), ledger_.NewRequest());
-  ledger_repository->Sync(callback::Capture(QuitLoopClosure()));
+  ledger_repository->Sync(ledger::Capture(QuitLoopClosure()));
   RunLoop();
 
   int page_count = 5;
@@ -268,7 +268,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
   auto cloud_provider =
       std::move(ledger::FakeCloudProvider::Builder(dispatcher(), random())
                     .SetCloudEraseOnCheck(ledger::CloudEraseOnCheck::YES)
-                    .SetOnWatcherSet(callback::SetWhenCalled(&device_set_watcher_set)))
+                    .SetOnWatcherSet(ledger::SetWhenCalled(&device_set_watcher_set)))
           .Build();
   {
     cloud_provider::CloudProviderPtr cloud_provider_ptr;
@@ -391,7 +391,7 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBeforePageInit) {
       std::move(cloud_provider_ptr), "user_id", ledger_repository.NewRequest());
 
   ledger_repository->GetLedger(TestArray(), ledger_.NewRequest());
-  ledger_repository->Sync(callback::Capture(QuitLoopClosure()));
+  ledger_repository->Sync(ledger::Capture(QuitLoopClosure()));
   RunLoop();
 
   // Close the cloud provider channel.
@@ -438,7 +438,7 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBetweenReadAndWrite) {
       std::move(cloud_provider_ptr), "user_id", ledger_repository.NewRequest());
 
   ledger_repository->GetLedger(TestArray(), ledger_.NewRequest());
-  ledger_repository->Sync(callback::Capture(QuitLoopClosure()));
+  ledger_repository->Sync(ledger::Capture(QuitLoopClosure()));
   RunLoop();
 
   // Write some data.

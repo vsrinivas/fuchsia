@@ -19,10 +19,10 @@
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/socket/strings.h"
-#include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
 #include "src/lib/fxl/arraysize.h"
 #include "third_party/abseil-cpp/absl/strings/str_format.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
@@ -1096,7 +1096,7 @@ TEST_F(BTreeUtilsTest, GetObjectIdentifiersFromEmpty) {
   GetObjectIdentifiers(
       environment_.coroutine_service(), &fake_storage_,
       {root_identifier, PageStorage::Location::Local()},
-      callback::Capture(callback::SetWhenCalled(&called), &status, &object_identifiers));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &object_identifiers));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   ASSERT_EQ(status, Status::OK);
@@ -1115,7 +1115,7 @@ TEST_F(BTreeUtilsTest, GetObjectOneNodeTree) {
   GetObjectIdentifiers(
       environment_.coroutine_service(), &fake_storage_,
       {root_identifier, PageStorage::Location::Local()},
-      callback::Capture(callback::SetWhenCalled(&called), &status, &object_identifiers));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &object_identifiers));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   ASSERT_EQ(status, Status::OK);
@@ -1137,7 +1137,7 @@ TEST_F(BTreeUtilsTest, GetObjectIdentifiersBigTree) {
   GetObjectIdentifiers(
       environment_.coroutine_service(), &fake_storage_,
       {root_identifier, PageStorage::Location::Local()},
-      callback::Capture(callback::SetWhenCalled(&called), &status, &object_identifiers));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &object_identifiers));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   ASSERT_EQ(status, Status::OK);
@@ -1165,7 +1165,7 @@ TEST_F(BTreeUtilsTest, GetObjectIdentifiersSkipLevel) {
   GetObjectIdentifiers(
       environment_.coroutine_service(), &fake_storage_,
       {root_identifier, PageStorage::Location::Local()},
-      callback::Capture(callback::SetWhenCalled(&called), &status, &object_identifiers));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &object_identifiers));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   ASSERT_EQ(status, Status::OK);
@@ -1199,7 +1199,7 @@ TEST_F(BTreeUtilsTest, GetObjectsFromSync) {
   // [00, 01, 02]  [04]
   GetObjectsFromSync(environment_.coroutine_service(), &fake_storage_,
                      {root_identifier, PageStorage::Location::TreeNodeFromNetwork(commit_id)},
-                     callback::Capture(callback::SetWhenCalled(&called), &status));
+                     ledger::Capture(ledger::SetWhenCalled(&called), &status));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   ASSERT_EQ(status, Status::OK);
@@ -1215,7 +1215,7 @@ TEST_F(BTreeUtilsTest, GetObjectsFromSync) {
   GetObjectIdentifiers(
       environment_.coroutine_service(), &fake_storage_,
       {root_identifier, PageStorage::Location::Local()},
-      callback::Capture(callback::SetWhenCalled(&called), &status, &object_identifiers));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &object_identifiers));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   ASSERT_EQ(status, Status::OK);

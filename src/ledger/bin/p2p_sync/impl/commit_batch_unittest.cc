@@ -15,7 +15,7 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/ledger/bin/storage/testing/storage_matcher.h"
-#include "src/lib/callback/set_when_called.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 
 using storage::MatchesCommitIdAndBytes;
 using testing::ElementsAre;
@@ -90,7 +90,7 @@ class FakeDelegate : public CommitBatch::Delegate {
 class CommitBatchTest : public gtest::TestLoopFixture {
  public:
   CommitBatchTest() : batch_(MakeP2PClientId(1u), &delegate_, &storage_) {
-    batch_.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called_));
+    batch_.SetOnDiscardable(ledger::SetWhenCalled(&on_discardable_called_));
   }
   ~CommitBatchTest() override = default;
 

@@ -16,9 +16,9 @@
 #include "src/ledger/bin/inspect/inspect.h"
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/callback/ensure_called.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/callback/ensure_called.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 
@@ -66,7 +66,7 @@ fit::closure InspectedCommit::CreateDetacher() {
 
 void InspectedCommit::GetNames(fit::function<void(std::set<std::string>)> callback) {
   fit::function<void(std::set<std::string>)> call_ensured_callback =
-      callback::EnsureCalled(std::move(callback), std::set<std::string>());
+      EnsureCalled(std::move(callback), std::set<std::string>());
   ongoing_storage_accesses_++;
   inspectable_page_->NewInspection(callback::MakeScoped(
       weak_factory_.GetWeakPtr(),
@@ -120,11 +120,11 @@ void InspectedCommit::Attach(std::string name, fit::function<void(fit::closure)>
 
   auto it = inspected_entry_containers_.find(key);
   if (it != inspected_entry_containers_.end()) {
-    it->second.AddCallback(callback::EnsureCalled(std::move(callback), fit::closure([] {})));
+    it->second.AddCallback(EnsureCalled(std::move(callback), fit::closure([] {})));
     return;
   }
   auto emplacement = inspected_entry_containers_.try_emplace(
-      key, callback::EnsureCalled(std::move(callback), fit::closure([] {})));
+      key, EnsureCalled(std::move(callback), fit::closure([] {})));
   ongoing_storage_accesses_++;
   fxl::WeakPtr<InspectedCommit> weak_this = weak_factory_.GetWeakPtr();
   inspectable_page_->NewInspection(callback::MakeScoped(

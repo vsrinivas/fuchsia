@@ -30,11 +30,11 @@
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/backoff/testing/test_backoff.h"
+#include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/socket/strings.h"
-#include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
 
 namespace cloud_sync {
 namespace {
@@ -392,10 +392,9 @@ TEST_F(PageDownloadTest, GetObject) {
   std::unique_ptr<storage::DataSource::DataChunk> data_chunk;
   RunLoopUntilIdle();
   states_.clear();
-  storage_.page_sync_delegate_->GetObject(
-      object_identifier, storage::RetrievedObjectType::BLOB,
-      callback::Capture(callback::SetWhenCalled(&called), &status, &source, &is_object_synced,
-                        &data_chunk));
+  storage_.page_sync_delegate_->GetObject(object_identifier, storage::RetrievedObjectType::BLOB,
+                                          ledger::Capture(ledger::SetWhenCalled(&called), &status,
+                                                          &source, &is_object_synced, &data_chunk));
   RunLoopUntilIdle();
 
   EXPECT_TRUE(called);
@@ -425,10 +424,9 @@ TEST_F(PageDownloadTest, RetryGetObject) {
   storage::ChangeSource source;
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data_chunk;
-  storage_.page_sync_delegate_->GetObject(
-      object_identifier, storage::RetrievedObjectType::BLOB,
-      callback::Capture(callback::SetWhenCalled(&called), &status, &source, &is_object_synced,
-                        &data_chunk));
+  storage_.page_sync_delegate_->GetObject(object_identifier, storage::RetrievedObjectType::BLOB,
+                                          ledger::Capture(ledger::SetWhenCalled(&called), &status,
+                                                          &source, &is_object_synced, &data_chunk));
 
   // Allow the operation to succeed after looping through five attempts.
   RunLoopFor(kTestBackoffInterval * 4);
@@ -516,8 +514,8 @@ TYPED_TEST(FailingPageDownloadTest, Fail) {
   std::unique_ptr<storage::DataSource::DataChunk> data_chunk;
   this->storage_.page_sync_delegate_->GetObject(
       object_identifier, storage::RetrievedObjectType::BLOB,
-      callback::Capture(callback::SetWhenCalled(&called), &status, &source, &is_object_synced,
-                        &data_chunk));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &source, &is_object_synced,
+                      &data_chunk));
   this->RunLoopUntilIdle();
 
   ASSERT_TRUE(called);
@@ -600,7 +598,7 @@ TEST_F(PageDownloadDiffTest, GetDiff) {
   std::vector<storage::EntryChange> changes;
   storage_.page_sync_delegate_->GetDiff(
       "commit", {"base1", "base2"},
-      callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &base_commit, &changes));
   RunLoopUntilIdle();
 
   EXPECT_THAT(
@@ -626,7 +624,7 @@ TEST_F(PageDownloadDiffTest, GetDiffFromEmpty) {
   std::vector<storage::EntryChange> changes;
   storage_.page_sync_delegate_->GetDiff(
       "commit", {"base1", "base2"},
-      callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &base_commit, &changes));
   RunLoopUntilIdle();
 
   EXPECT_THAT(
@@ -650,7 +648,7 @@ TEST_F(PageDownloadDiffTest, GetDiffFallback) {
   std::vector<storage::EntryChange> changes;
   storage_.page_sync_delegate_->GetDiff(
       "commit", {"base1", "base2"},
-      callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &base_commit, &changes));
   RunLoopUntilIdle();
 
   EXPECT_THAT(
@@ -683,7 +681,7 @@ TEST_F(PageDownloadDiffTest, GetDiffRetryOnNetworkError) {
   std::vector<storage::EntryChange> changes;
   storage_.page_sync_delegate_->GetDiff(
       "commit", {"base1", "base2"},
-      callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &base_commit, &changes));
 
   // Allow the operation to succeed after looping through five attempts.
   RunLoopFor(kTestBackoffInterval * 4);
@@ -709,7 +707,7 @@ TEST_F(PageDownloadDiffTest, GetDiffNotFound) {
   std::vector<storage::EntryChange> changes;
   storage_.page_sync_delegate_->GetDiff(
       "commit", {"base1", "base2"},
-      callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &base_commit, &changes));
   RunLoopUntilIdle();
 
   EXPECT_THAT(
@@ -738,7 +736,7 @@ TEST_F(PageDownloadDiffTest, GetDiffUnknownBase) {
   std::vector<storage::EntryChange> changes;
   storage_.page_sync_delegate_->GetDiff(
       "commit", {"base1", "base2"},
-      callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &base_commit, &changes));
   RunLoopUntilIdle();
 
   EXPECT_THAT(
@@ -771,7 +769,7 @@ TEST_F(PageDownloadDiffTest, GetDiffNoPack) {
   std::vector<storage::EntryChange> changes;
   storage_.page_sync_delegate_->GetDiff(
       "commit", {"base1", "base2"},
-      callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &base_commit, &changes));
   RunLoopUntilIdle();
 
   EXPECT_THAT(
@@ -799,7 +797,7 @@ TEST_P(PageDownloadDiffTest, AlteredDiffTest) {
   std::vector<storage::EntryChange> changes;
   storage_.page_sync_delegate_->GetDiff(
       "commit", {"base1", "base2"},
-      callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &base_commit, &changes));
   RunLoopUntilIdle();
 
   EXPECT_THAT(
@@ -844,7 +842,7 @@ TEST_F(PageDownloadDiffTest, NormalizationSortByKey) {
   std::vector<storage::EntryChange> changes;
   storage_.page_sync_delegate_->GetDiff(
       "commit", {"base1", "base2"},
-      callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &base_commit, &changes));
   RunLoopUntilIdle();
 
   EXPECT_THAT(
@@ -895,7 +893,7 @@ TEST_F(PageDownloadDiffTest, NormalizationRemoveDuplicates) {
   std::vector<storage::EntryChange> changes;
   storage_.page_sync_delegate_->GetDiff(
       "commit", {"base1", "base2"},
-      callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &base_commit, &changes));
   RunLoopUntilIdle();
 
   EXPECT_THAT(
@@ -926,7 +924,7 @@ TEST_F(PageDownloadDiffTest, NormalizationDuplicateKeys) {
   std::vector<storage::EntryChange> changes;
   storage_.page_sync_delegate_->GetDiff(
       "commit", {"base1", "base2"},
-      callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &base_commit, &changes));
   RunLoopUntilIdle();
 
   EXPECT_THAT(
@@ -958,7 +956,7 @@ TEST_F(PageDownloadDiffTest, NormalizationFailsMultipleInsertions) {
   std::vector<storage::EntryChange> changes;
   storage_.page_sync_delegate_->GetDiff(
       "commit", {"base1", "base2"},
-      callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &base_commit, &changes));
   RunLoopUntilIdle();
 
   EXPECT_THAT(
@@ -982,7 +980,7 @@ TEST_F(PageDownloadDiffTest, NormalizationFailsMultipleDeletions) {
   std::vector<storage::EntryChange> changes;
   storage_.page_sync_delegate_->GetDiff(
       "commit", {"base1", "base2"},
-      callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &base_commit, &changes));
   RunLoopUntilIdle();
 
   EXPECT_THAT(
@@ -1018,7 +1016,7 @@ TEST_F(FailingDecryptEntryPayloadPageDownloadDiffTest, Fail) {
   std::vector<storage::EntryChange> changes;
   storage_.page_sync_delegate_->GetDiff(
       "commit", {"base1", "base2"},
-      callback::Capture(callback::SetWhenCalled(&called), &status, &base_commit, &changes));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &base_commit, &changes));
   RunLoopUntilIdle();
 
   ASSERT_TRUE(called);

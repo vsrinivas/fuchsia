@@ -11,8 +11,7 @@
 #include "gtest/gtest.h"
 #include "src/ledger/bin/testing/fake_disk_cleanup_manager.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
-#include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 
 namespace ledger {
 namespace {
@@ -31,7 +30,7 @@ class TokenManagerTest : public TestWithEnvironment {
 TEST_F(TokenManagerTest, SingleExpiringTokenImmediatelyDiscarded) {
   bool on_discardable_called;
 
-  token_manager_.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  token_manager_.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
   token_manager_.CreateToken();
 
   EXPECT_TRUE(token_manager_.IsDiscardable());
@@ -41,7 +40,7 @@ TEST_F(TokenManagerTest, SingleExpiringTokenImmediatelyDiscarded) {
 TEST_F(TokenManagerTest, SingleExpiringTokenNotImmediatelyDiscarded) {
   bool on_discardable_called;
 
-  token_manager_.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  token_manager_.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
   {
     auto expiring_token = token_manager_.CreateToken();
 
@@ -58,7 +57,7 @@ TEST_F(TokenManagerTest, MultipleExpiringTokensNotImmediatelyDiscarded) {
   bool on_discardable_called;
   std::vector<std::unique_ptr<ExpiringToken>> tokens;
 
-  token_manager_.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  token_manager_.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
   for (int i = 0; i < token_count; i++) {
     tokens.emplace_back(std::make_unique<ExpiringToken>(token_manager_.CreateToken()));
     EXPECT_FALSE(token_manager_.IsDiscardable());
@@ -82,7 +81,7 @@ TEST_F(TokenManagerTest, DestroyedWhileTokensOutstanding) {
   bool on_discardable_called;
 
   std::unique_ptr<TokenManager> token_manager = std::make_unique<TokenManager>();
-  token_manager->SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  token_manager->SetOnDiscardable(SetWhenCalled(&on_discardable_called));
   auto first_expiring_token = token_manager->CreateToken();
   auto second_expiring_token = token_manager->CreateToken();
   token_manager.reset();

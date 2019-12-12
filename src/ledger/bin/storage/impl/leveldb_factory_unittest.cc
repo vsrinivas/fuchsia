@@ -13,8 +13,8 @@
 #include "src/ledger/bin/platform/detached_path.h"
 #include "src/ledger/bin/platform/scoped_tmp_location.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
-#include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
+#include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 #include "third_party/abseil-cpp/absl/strings/str_cat.h"
 
 namespace storage {
@@ -85,7 +85,7 @@ TEST_F(LevelDbFactoryTest, GetOrCreateDb) {
   std::unique_ptr<Db> db;
   bool called;
   db_factory_->GetOrCreateDb(db_path_.SubPath("db"), DbFactory::OnDbNotFound::CREATE,
-                             callback::Capture(callback::SetWhenCalled(&called), &status, &db));
+                             ledger::Capture(ledger::SetWhenCalled(&called), &status, &db));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -101,7 +101,7 @@ TEST_F(LevelDbFactoryTest, GetOrCreateDb) {
   // Close the previous instance and open it again.
   db.reset();
   db_factory_->GetOrCreateDb(db_path_.SubPath("db"), DbFactory::OnDbNotFound::RETURN,
-                             callback::Capture(callback::SetWhenCalled(&called), &status, &db));
+                             ledger::Capture(ledger::SetWhenCalled(&called), &status, &db));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -120,7 +120,7 @@ TEST_F(LevelDbFactoryTest, GetDbOnNotFound) {
   std::unique_ptr<Db> db;
   bool called;
   db_factory_->GetOrCreateDb(db_path_.SubPath("db"), DbFactory::OnDbNotFound::RETURN,
-                             callback::Capture(callback::SetWhenCalled(&called), &status, &db));
+                             ledger::Capture(ledger::SetWhenCalled(&called), &status, &db));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::PAGE_NOT_FOUND);
@@ -140,7 +140,7 @@ TEST_F(LevelDbFactoryTest, CreateMultipleDbs) {
     EXPECT_FALSE(environment_.file_system()->IsDirectory(path));
 
     db_factory_->GetOrCreateDb(path, DbFactory::OnDbNotFound::CREATE,
-                               callback::Capture(callback::SetWhenCalled(&called), &status, &db));
+                               ledger::Capture(ledger::SetWhenCalled(&called), &status, &db));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -166,7 +166,7 @@ TEST_F(LevelDbFactoryTest, CreateMultipleDbsConcurrently) {
 
     db_factory_->GetOrCreateDb(
         db_path_.SubPath(absl::StrCat(i)), DbFactory::OnDbNotFound::CREATE,
-        callback::Capture(callback::SetWhenCalled(&called[i]), &statuses[i], &dbs[i]));
+        ledger::Capture(ledger::SetWhenCalled(&called[i]), &statuses[i], &dbs[i]));
   }
   RunLoopUntilIdle();
 
@@ -196,7 +196,7 @@ TEST_F(LevelDbFactoryTest, GetOrCreateDbInCallback) {
         EXPECT_NE(nullptr, db1);
         db_factory_->GetOrCreateDb(
             path2, DbFactory::OnDbNotFound::CREATE,
-            callback::Capture(callback::SetWhenCalled(&called2), &status2, &db2));
+            ledger::Capture(ledger::SetWhenCalled(&called2), &status2, &db2));
       });
   RunLoopUntilIdle();
   EXPECT_TRUE(called1);
@@ -255,7 +255,7 @@ TEST_F(LevelDbFactoryTest, QuitWhenBusy) {
   // Post the initialization code to the I/O loop.
   (*db_factory_ptr)
       ->GetOrCreateDb(db_path_.SubPath(absl::StrCat(0)), DbFactory::OnDbNotFound::CREATE,
-                      callback::Capture(callback::SetWhenCalled(&called), &status, &db));
+                      ledger::Capture(ledger::SetWhenCalled(&called), &status, &db));
 
   // Delete the factory before any code is run on the I/O loop. The destructor
   // will block until all I/O operation are cancelled.

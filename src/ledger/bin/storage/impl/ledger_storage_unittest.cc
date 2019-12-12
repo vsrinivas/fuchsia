@@ -19,8 +19,8 @@
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
 #include "src/ledger/bin/storage/public/db_factory.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
-#include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
+#include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 
 namespace storage {
 namespace {
@@ -63,15 +63,15 @@ TEST_F(LedgerStorageTest, CreateGetCreatePageStorage) {
   Status status;
   std::unique_ptr<PageStorage> page_storage;
   bool called;
-  storage_.GetPageStorage(
-      page_id, callback::Capture(callback::SetWhenCalled(&called), &status, &page_storage));
+  storage_.GetPageStorage(page_id,
+                          ledger::Capture(ledger::SetWhenCalled(&called), &status, &page_storage));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::PAGE_NOT_FOUND);
   EXPECT_EQ(page_storage, nullptr);
 
   storage_.CreatePageStorage(
-      page_id, callback::Capture(callback::SetWhenCalled(&called), &status, &page_storage));
+      page_id, ledger::Capture(ledger::SetWhenCalled(&called), &status, &page_storage));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   ASSERT_EQ(status, Status::OK);
@@ -79,8 +79,8 @@ TEST_F(LedgerStorageTest, CreateGetCreatePageStorage) {
   ASSERT_EQ(page_storage->GetId(), page_id);
 
   page_storage.reset();
-  storage_.GetPageStorage(
-      page_id, callback::Capture(callback::SetWhenCalled(&called), &status, &page_storage));
+  storage_.GetPageStorage(page_id,
+                          ledger::Capture(ledger::SetWhenCalled(&called), &status, &page_storage));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -93,7 +93,7 @@ TEST_F(LedgerStorageTest, CreateDeletePageStorage) {
   bool called;
   std::unique_ptr<PageStorage> page_storage;
   storage_.CreatePageStorage(
-      page_id, callback::Capture(callback::SetWhenCalled(&called), &status, &page_storage));
+      page_id, ledger::Capture(ledger::SetWhenCalled(&called), &status, &page_storage));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   ASSERT_EQ(status, Status::OK);
@@ -101,20 +101,20 @@ TEST_F(LedgerStorageTest, CreateDeletePageStorage) {
   ASSERT_EQ(page_storage->GetId(), page_id);
   page_storage.reset();
 
-  storage_.GetPageStorage(
-      page_id, callback::Capture(callback::SetWhenCalled(&called), &status, &page_storage));
+  storage_.GetPageStorage(page_id,
+                          ledger::Capture(ledger::SetWhenCalled(&called), &status, &page_storage));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
   EXPECT_NE(nullptr, page_storage);
 
-  storage_.DeletePageStorage(page_id, callback::Capture(callback::SetWhenCalled(&called), &status));
+  storage_.DeletePageStorage(page_id, ledger::Capture(ledger::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
 
-  storage_.GetPageStorage(
-      page_id, callback::Capture(callback::SetWhenCalled(&called), &status, &page_storage));
+  storage_.GetPageStorage(page_id,
+                          ledger::Capture(ledger::SetWhenCalled(&called), &status, &page_storage));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::PAGE_NOT_FOUND);
@@ -126,7 +126,7 @@ TEST_F(LedgerStorageTest, DeletePageStorageNotFound) {
   Status status;
   bool called;
 
-  storage_.DeletePageStorage(page_id, callback::Capture(callback::SetWhenCalled(&called), &status));
+  storage_.DeletePageStorage(page_id, ledger::Capture(ledger::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::PAGE_NOT_FOUND);
@@ -137,8 +137,7 @@ TEST_F(LedgerStorageTest, ListNoPages) {
   bool called;
 
   std::set<PageId> listed_page_ids;
-  storage_.ListPages(
-      callback::Capture(callback::SetWhenCalled(&called), &status, &listed_page_ids));
+  storage_.ListPages(ledger::Capture(ledger::SetWhenCalled(&called), &status, &listed_page_ids));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -154,8 +153,8 @@ TEST_F(LedgerStorageTest, ListPages) {
   std::vector<std::unique_ptr<PageStorage>> page_storages(all_page_ids.size());
   std::vector<PageId> expected_page_ids;
   for (size_t i = 0; i < all_page_ids.size(); i++) {
-    storage_.CreatePageStorage(all_page_ids[i], callback::Capture(callback::SetWhenCalled(&called),
-                                                                  &status, &page_storages[i]));
+    storage_.CreatePageStorage(all_page_ids[i], ledger::Capture(ledger::SetWhenCalled(&called),
+                                                                &status, &page_storages[i]));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     ASSERT_EQ(status, Status::OK);
@@ -163,8 +162,7 @@ TEST_F(LedgerStorageTest, ListPages) {
 
     expected_page_ids.push_back(all_page_ids[i]);
     std::set<PageId> listed_page_ids;
-    storage_.ListPages(
-        callback::Capture(callback::SetWhenCalled(&called), &status, &listed_page_ids));
+    storage_.ListPages(ledger::Capture(ledger::SetWhenCalled(&called), &status, &listed_page_ids));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     ASSERT_EQ(status, Status::OK);
@@ -176,8 +174,7 @@ TEST_F(LedgerStorageTest, ListPages) {
   for (size_t i = 0; i < all_page_ids.size(); i++) {
     page_storages[i].reset();
     std::set<PageId> listed_page_ids;
-    storage_.ListPages(
-        callback::Capture(callback::SetWhenCalled(&called), &status, &listed_page_ids));
+    storage_.ListPages(ledger::Capture(ledger::SetWhenCalled(&called), &status, &listed_page_ids));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     ASSERT_EQ(status, Status::OK);
@@ -186,16 +183,14 @@ TEST_F(LedgerStorageTest, ListPages) {
 
   // ... deleting the page storages does cause them to no longer be listed.
   for (const auto& page_id : all_page_ids) {
-    storage_.DeletePageStorage(page_id,
-                               callback::Capture(callback::SetWhenCalled(&called), &status));
+    storage_.DeletePageStorage(page_id, ledger::Capture(ledger::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     ASSERT_EQ(status, Status::OK);
     expected_page_ids.erase(expected_page_ids.begin());
 
     std::set<PageId> listed_page_ids;
-    storage_.ListPages(
-        callback::Capture(callback::SetWhenCalled(&called), &status, &listed_page_ids));
+    storage_.ListPages(ledger::Capture(ledger::SetWhenCalled(&called), &status, &listed_page_ids));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     ASSERT_EQ(status, Status::OK);

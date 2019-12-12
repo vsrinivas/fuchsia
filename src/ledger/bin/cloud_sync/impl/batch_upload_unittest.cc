@@ -24,9 +24,9 @@
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/callback/capture.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/vmo/strings.h"
-#include "src/lib/callback/capture.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace cloud_sync {
@@ -814,7 +814,7 @@ TEST_F(BatchUploadTest, DoNotUploadSyncedCommitsOnRetry) {
 
   // Mark commit as synced.
   ledger::Status status;
-  storage_.MarkCommitSynced("id", callback::Capture(QuitLoopClosure(), &status));
+  storage_.MarkCommitSynced("id", Capture(QuitLoopClosure(), &status));
   RunLoopUntilIdle();
   EXPECT_EQ(status, ledger::Status::OK);
   EXPECT_EQ(storage_.unsynced_commits_to_return.size(), 0u);

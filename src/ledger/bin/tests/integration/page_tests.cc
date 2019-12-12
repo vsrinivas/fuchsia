@@ -13,8 +13,8 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/tests/integration/integration_test.h"
 #include "src/ledger/bin/tests/integration/test_utils.h"
+#include "src/ledger/lib/callback/capture.h"
 #include "src/ledger/lib/convert/convert.h"
-#include "src/lib/callback/capture.h"
 
 namespace ledger {
 namespace {
@@ -30,7 +30,7 @@ class PageIntegrationTest : public IntegrationTest {
   PageId PageGetId(PagePtr* page) {
     PageId id;
     auto loop_waiter = NewWaiter();
-    (*page)->GetId(callback::Capture(loop_waiter->GetCallback(), &id));
+    (*page)->GetId(Capture(loop_waiter->GetCallback(), &id));
     EXPECT_TRUE(loop_waiter->RunUntilCalled());
     return id;
   }

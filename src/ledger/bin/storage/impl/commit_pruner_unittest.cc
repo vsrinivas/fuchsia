@@ -17,7 +17,6 @@
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/ledger/lib/convert/convert.h"
-#include "src/lib/callback/set_when_called.h"
 
 using ::testing::_;
 using ::testing::AllOf;

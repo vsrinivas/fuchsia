@@ -17,9 +17,9 @@
 #include "src/ledger/bin/inspect/inspect.h"
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/callback/ensure_called.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/auto_cleanable.h"
-#include "src/lib/callback/ensure_called.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
@@ -44,7 +44,7 @@ bool CommitsChildrenManager::IsDiscardable() const { return inspected_commit_con
 
 void CommitsChildrenManager::GetNames(fit::function<void(std::set<std::string>)> callback) {
   fit::function<void(std::set<std::string>)> call_ensured_callback =
-      callback::EnsureCalled(std::move(callback), std::set<std::string>());
+      EnsureCalled(std::move(callback), std::set<std::string>());
   inspectable_page_->NewInspection([callback = std::move(call_ensured_callback)](
                                        storage::Status status, ExpiringToken token,
                                        ActivePageManager* active_page_manager) mutable {
@@ -85,11 +85,11 @@ void CommitsChildrenManager::Attach(std::string name, fit::function<void(fit::cl
 
   if (auto it = inspected_commit_containers_.find(commit_id);
       it != inspected_commit_containers_.end()) {
-    it->second.AddCallback(callback::EnsureCalled(std::move(callback), fit::closure()));
+    it->second.AddCallback(EnsureCalled(std::move(callback), fit::closure()));
     return;
   }
   auto emplacement = inspected_commit_containers_.try_emplace(
-      commit_id, callback::EnsureCalled(std::move(callback), fit::closure()));
+      commit_id, EnsureCalled(std::move(callback), fit::closure()));
   inspectable_page_->NewInspection([this, commit_display_name = std::move(name),
                                     commit_id = std::move(commit_id),
                                     emplacement = std::move(emplacement)](

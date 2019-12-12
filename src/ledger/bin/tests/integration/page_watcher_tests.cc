@@ -20,10 +20,10 @@
 #include "src/ledger/bin/tests/integration/integration_test.h"
 #include "src/ledger/bin/tests/integration/test_page_watcher.h"
 #include "src/ledger/bin/tests/integration/test_utils.h"
+#include "src/ledger/lib/callback/capture.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/vmo/strings.h"
-#include "src/lib/callback/capture.h"
 #include "third_party/abseil-cpp/absl/strings/str_format.h"
 
 namespace ledger {
@@ -328,7 +328,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherParallel) {
   PagePtr page1 = instance->GetTestPage();
   auto waiter = NewWaiter();
   PageId test_page_id;
-  page1->GetId(callback::Capture(waiter->GetCallback(), &test_page_id));
+  page1->GetId(Capture(waiter->GetCallback(), &test_page_id));
   ASSERT_TRUE(waiter->RunUntilCalled());
 
   PagePtr page2 = instance->GetPage(fidl::MakeOptional(test_page_id));
@@ -409,7 +409,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcher1Change2Pages) {
   PagePtr page1 = instance->GetTestPage();
   auto waiter = NewWaiter();
   PageId test_page_id;
-  page1->GetId(callback::Capture(waiter->GetCallback(), &test_page_id));
+  page1->GetId(Capture(waiter->GetCallback(), &test_page_id));
   ASSERT_TRUE(waiter->RunUntilCalled());
 
   PagePtr page2 = instance->GetPage(fidl::MakeOptional(test_page_id));
@@ -570,7 +570,7 @@ TEST_P(PageWatcherIntegrationTest, NoChangeTransactionForwardState) {
 
   auto waiter = NewWaiter();
   PageId page_id;
-  page1->GetId(callback::Capture(waiter->GetCallback(), &page_id));
+  page1->GetId(Capture(waiter->GetCallback(), &page_id));
   ASSERT_TRUE(waiter->RunUntilCalled());
 
   page1->StartTransaction();
@@ -609,7 +609,7 @@ TEST_P(PageWatcherIntegrationTest, RollbackTransactionForwardState) {
 
   auto waiter = NewWaiter();
   PageId page_id;
-  page1->GetId(callback::Capture(waiter->GetCallback(), &page_id));
+  page1->GetId(Capture(waiter->GetCallback(), &page_id));
   ASSERT_TRUE(waiter->RunUntilCalled());
 
   page1->StartTransaction();

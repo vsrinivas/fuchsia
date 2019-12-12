@@ -41,13 +41,13 @@
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/socket/strings.h"
 #include "src/ledger/lib/vmo/strings.h"
-#include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
 #include "src/lib/fxl/arraysize.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "third_party/abseil-cpp/absl/base/attributes.h"
@@ -477,8 +477,7 @@ class PageStorageTest : public StorageTest {
     bool called;
     Status status;
     clocks::DeviceIdManagerEmptyImpl device_id_manager;
-    storage_->Init(&device_id_manager,
-                   callback::Capture(callback::SetWhenCalled(&called), &status));
+    storage_->Init(&device_id_manager, ledger::Capture(ledger::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -514,7 +513,7 @@ class PageStorageTest : public StorageTest {
     bool called;
     Status status;
     std::unique_ptr<const Commit> commit;
-    storage_->GetCommit(id, callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
+    storage_->GetCommit(id, ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -559,7 +558,7 @@ class PageStorageTest : public StorageTest {
     bool called;
     Status status;
     storage_->AddCommitsFromSync(CommitAndBytesFromCommit(*commit), ChangeSource::CLOUD,
-                                 callback::Capture(callback::SetWhenCalled(&called), &status));
+                                 ledger::Capture(ledger::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -573,7 +572,7 @@ class PageStorageTest : public StorageTest {
     Status status;
     std::unique_ptr<const Commit> commit;
     storage_->CommitJournal(std::move(journal),
-                            callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
+                            ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit));
 
     RunLoopUntilIdle();
     EXPECT_EQ(status, expected_status);
@@ -624,7 +623,7 @@ class PageStorageTest : public StorageTest {
     ObjectIdentifier object_identifier;
     storage_->AddObjectFromLocal(
         ObjectType::BLOB, DataSource::Create(std::move(content)), {},
-        callback::Capture(callback::SetWhenCalled(&called), &status, &object_identifier));
+        ledger::Capture(ledger::SetWhenCalled(&called), &status, &object_identifier));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -640,7 +639,7 @@ class PageStorageTest : public StorageTest {
     Status status;
     std::unique_ptr<const Object> object;
     storage_->GetObject(object_identifier, location,
-                        callback::Capture(callback::SetWhenCalled(&called), &status, &object));
+                        ledger::Capture(ledger::SetWhenCalled(&called), &status, &object));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(status, expected_status);
@@ -655,7 +654,7 @@ class PageStorageTest : public StorageTest {
     Status status;
     ledger::SizedVmo vmo;
     storage_->GetObjectPart(object_identifier, offset, max_size, location,
-                            callback::Capture(callback::SetWhenCalled(&called), &status, &vmo));
+                            ledger::Capture(ledger::SetWhenCalled(&called), &status, &vmo));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(status, expected_status);
@@ -669,7 +668,7 @@ class PageStorageTest : public StorageTest {
     Status status;
     std::unique_ptr<const Piece> piece;
     storage_->GetPiece(object_identifier,
-                       callback::Capture(callback::SetWhenCalled(&called), &status, &piece));
+                       ledger::Capture(ledger::SetWhenCalled(&called), &status, &piece));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(status, expected_status) << object_identifier;
@@ -685,7 +684,7 @@ class PageStorageTest : public StorageTest {
       return true;
     };
     storage_->GetCommitContents(commit, "", std::move(on_next),
-                                callback::Capture(callback::SetWhenCalled(&called), &status));
+                                ledger::Capture(ledger::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -697,7 +696,7 @@ class PageStorageTest : public StorageTest {
     Status status;
     std::vector<std::unique_ptr<const Commit>> commits;
     storage_->GetUnsyncedCommits(
-        callback::Capture(callback::SetWhenCalled(&called), &status, &commits));
+        ledger::Capture(ledger::SetWhenCalled(&called), &status, &commits));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -751,8 +750,7 @@ class PageStorageTest : public StorageTest {
     Status status;
     bool is_untracked;
     storage_->ObjectIsUntracked(
-        object_identifier,
-        callback::Capture(callback::SetWhenCalled(&called), &status, &is_untracked));
+        object_identifier, ledger::Capture(ledger::SetWhenCalled(&called), &status, &is_untracked));
     RunLoopUntilIdle();
 
     if (!called) {
@@ -778,8 +776,8 @@ class PageStorageTest : public StorageTest {
     bool called;
     Status status;
     bool is_synced;
-    storage_->IsPieceSynced(object_identifier, callback::Capture(callback::SetWhenCalled(&called),
-                                                                 &status, &is_synced));
+    storage_->IsPieceSynced(object_identifier,
+                            ledger::Capture(ledger::SetWhenCalled(&called), &status, &is_synced));
     RunLoopUntilIdle();
 
     if (!called) {
@@ -802,8 +800,7 @@ class PageStorageTest : public StorageTest {
   ::testing::AssertionResult MarkCommitSynced(const CommitId& commit) {
     bool called;
     Status status;
-    storage_->MarkCommitSynced(commit,
-                               callback::Capture(callback::SetWhenCalled(&called), &status));
+    storage_->MarkCommitSynced(commit, ledger::Capture(ledger::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
 
     if (!called) {
@@ -820,7 +817,7 @@ class PageStorageTest : public StorageTest {
     bool called;
     Status status;
     storage_->MarkPieceSynced(object_identifier,
-                              callback::Capture(callback::SetWhenCalled(&called), &status));
+                              ledger::Capture(ledger::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
 
     if (!called) {
@@ -900,7 +897,7 @@ TEST_F(PageStorageTest, AddGetLocalCommits) {
   Status status;
   std::unique_ptr<const Commit> lookup_commit;
   storage_->GetCommit(RandomCommitId(environment_.random()),
-                      callback::Capture(callback::SetWhenCalled(&called), &status, &lookup_commit));
+                      ledger::Capture(ledger::SetWhenCalled(&called), &status, &lookup_commit));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::INTERNAL_NOT_FOUND);
@@ -910,7 +907,7 @@ TEST_F(PageStorageTest, AddGetLocalCommits) {
   journal->Put("key", RandomObjectIdentifier(), KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit;
   storage_->CommitJournal(std::move(journal),
-                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
+                          ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -940,7 +937,7 @@ TEST_F(PageStorageTest, AddLocalCommitsReferences) {
   Status status;
   std::unique_ptr<const Commit> commit1;
   storage_->CommitJournal(std::move(journal),
-                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit1));
+                          ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit1));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -949,7 +946,7 @@ TEST_F(PageStorageTest, AddLocalCommitsReferences) {
   journal->Put("other", object_id, KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit2;
   storage_->CommitJournal(std::move(journal),
-                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit2));
+                          ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit2));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -958,7 +955,7 @@ TEST_F(PageStorageTest, AddLocalCommitsReferences) {
   journal->Delete("other");
   std::unique_ptr<const Commit> commit3;
   storage_->CommitJournal(std::move(journal),
-                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit3));
+                          ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit3));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -987,13 +984,13 @@ TEST_F(PageStorageTest, AddCommitFromLocalDoNotMarkUnsynedAlreadySyncedCommit) {
   journal->Put("key", RandomObjectIdentifier(), KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit1;
   storage_->CommitJournal(std::move(journal),
-                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit1));
+                          ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit1));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
 
   CommitId id1 = commit1->GetId();
-  storage_->MarkCommitSynced(id1, callback::Capture(callback::SetWhenCalled(&called), &status));
+  storage_->MarkCommitSynced(id1, ledger::Capture(ledger::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -1002,13 +999,13 @@ TEST_F(PageStorageTest, AddCommitFromLocalDoNotMarkUnsynedAlreadySyncedCommit) {
   journal->Put("key", RandomObjectIdentifier(), KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit2;
   storage_->CommitJournal(std::move(journal),
-                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit2));
+                          ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit2));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
 
   CommitId id2 = commit2->GetId();
-  storage_->MarkCommitSynced(id2, callback::Capture(callback::SetWhenCalled(&called), &status));
+  storage_->MarkCommitSynced(id2, ledger::Capture(ledger::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -1019,8 +1016,8 @@ TEST_F(PageStorageTest, AddCommitFromLocalDoNotMarkUnsynedAlreadySyncedCommit) {
   journal = storage_->StartMergeCommit(commit1->Clone(), commit2->Clone());
   journal->Put("key", merged_object_id, KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit_merged1;
-  storage_->CommitJournal(std::move(journal), callback::Capture(callback::SetWhenCalled(&called),
-                                                                &status, &commit_merged1));
+  storage_->CommitJournal(std::move(journal), ledger::Capture(ledger::SetWhenCalled(&called),
+                                                              &status, &commit_merged1));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -1030,8 +1027,7 @@ TEST_F(PageStorageTest, AddCommitFromLocalDoNotMarkUnsynedAlreadySyncedCommit) {
   EXPECT_EQ(commits.size(), 1u);
   EXPECT_EQ(commits[0]->GetId(), merged_id1);
 
-  storage_->MarkCommitSynced(merged_id1,
-                             callback::Capture(callback::SetWhenCalled(&called), &status));
+  storage_->MarkCommitSynced(merged_id1, ledger::Capture(ledger::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -1040,8 +1036,8 @@ TEST_F(PageStorageTest, AddCommitFromLocalDoNotMarkUnsynedAlreadySyncedCommit) {
   journal = storage_->StartMergeCommit(commit1->Clone(), commit2->Clone());
   journal->Put("key", merged_object_id, KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit_merged2;
-  storage_->CommitJournal(std::move(journal), callback::Capture(callback::SetWhenCalled(&called),
-                                                                &status, &commit_merged2));
+  storage_->CommitJournal(std::move(journal), ledger::Capture(ledger::SetWhenCalled(&called),
+                                                              &status, &commit_merged2));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -1066,7 +1062,7 @@ TEST_F(PageStorageTest, AddCommitBeforeParentsError) {
   std::vector<PageStorage::CommitIdAndBytes> commits_and_bytes;
   commits_and_bytes.emplace_back(commit->GetId(), convert::ToString(commit->GetStorageBytes()));
   storage_->AddCommitsFromSync(std::move(commits_and_bytes), ChangeSource::CLOUD,
-                               callback::Capture(callback::SetWhenCalled(&called), &status));
+                               ledger::Capture(ledger::SetWhenCalled(&called), &status));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
@@ -1094,7 +1090,7 @@ TEST_F(PageStorageTest, AddCommitsOutOfOrderError) {
   bool called;
   Status status;
   storage_->AddCommitsFromSync(std::move(commits_and_bytes), ChangeSource::CLOUD,
-                               callback::Capture(callback::SetWhenCalled(&called), &status));
+                               ledger::Capture(ledger::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::INTERNAL_NOT_FOUND);
@@ -1154,7 +1150,7 @@ TEST_P(PageStorageSyncTest, AddGetSyncedCommits) {
     bool called;
     Status status;
     storage_->AddCommitsFromSync(CommitAndBytesFromCommit(*commit), ChangeSource::CLOUD,
-                                 callback::Capture(callback::SetWhenCalled(&called), &status));
+                                 ledger::Capture(ledger::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -1174,7 +1170,7 @@ TEST_P(PageStorageSyncTest, AddGetSyncedCommits) {
     sync.object_requests.clear();
     sync.diff_requests.clear();
     storage_->AddCommitsFromSync(CommitAndBytesFromCommit(*commit), ChangeSource::CLOUD,
-                                 callback::Capture(callback::SetWhenCalled(&called), &status));
+                                 ledger::Capture(ledger::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -1202,7 +1198,7 @@ TEST_F(PageStorageTest, MarkRemoteCommitSynced) {
   journal->Put("key", RandomObjectIdentifier(), KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit;
   storage_->CommitJournal(std::move(journal),
-                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
+                          ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -1213,7 +1209,7 @@ TEST_F(PageStorageTest, MarkRemoteCommitSynced) {
   std::vector<PageStorage::CommitIdAndBytes> commits_and_bytes;
   commits_and_bytes.emplace_back(commit->GetId(), convert::ToString(commit->GetStorageBytes()));
   storage_->AddCommitsFromSync(std::move(commits_and_bytes), ChangeSource::CLOUD,
-                               callback::Capture(callback::SetWhenCalled(&called), &status));
+                               ledger::Capture(ledger::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
 
@@ -1232,7 +1228,7 @@ TEST_F(PageStorageTest, SyncCommits) {
   journal->Put("key", RandomObjectIdentifier(), KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit;
   storage_->CommitJournal(std::move(journal),
-                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
+                          ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -1243,7 +1239,7 @@ TEST_F(PageStorageTest, SyncCommits) {
 
   // Mark it as synced.
   storage_->MarkCommitSynced(commit->GetId(),
-                             callback::Capture(callback::SetWhenCalled(&called), &status));
+                             ledger::Capture(ledger::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -1265,7 +1261,7 @@ TEST_F(PageStorageTest, HeadCommits) {
   journal->Put("key", RandomObjectIdentifier(), KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit;
   storage_->CommitJournal(std::move(journal),
-                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
+                          ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -1318,7 +1314,7 @@ TEST_F(PageStorageTest, OrderHeadCommitsByTimestampThenId) {
   bool called;
   Status status;
   storage_->AddCommitsFromSync(std::move(commits), ChangeSource::CLOUD,
-                               callback::Capture(callback::SetWhenCalled(&called), &status));
+                               ledger::Capture(ledger::SetWhenCalled(&called), &status));
   EXPECT_TRUE(RunLoopUntilIdle());
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -1361,7 +1357,7 @@ TEST_F(PageStorageTest, CreateJournalHugeNode) {
   Status status;
   std::vector<ObjectIdentifier> object_identifiers;
   storage_->GetUnsyncedPieces(
-      callback::Capture(callback::SetWhenCalled(&called), &status, &object_identifiers));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &object_identifiers));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
 
@@ -1423,7 +1419,7 @@ TEST_F(PageStorageTest, AddObjectFromLocal) {
     ObjectIdentifier object_identifier;
     storage_->AddObjectFromLocal(
         ObjectType::BLOB, data.ToDataSource(), {},
-        callback::Capture(callback::SetWhenCalled(&called), &status, &object_identifier));
+        ledger::Capture(ledger::SetWhenCalled(&called), &status, &object_identifier));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -1477,7 +1473,7 @@ TEST_F(PageStorageTestNoGc, AddHugeObjectFromLocal) {
     ObjectIdentifier object_identifier;
     storage_->AddObjectFromLocal(
         ObjectType::BLOB, data.ToDataSource(), {},
-        callback::Capture(callback::SetWhenCalled(&called), &status, &object_identifier));
+        ledger::Capture(ledger::SetWhenCalled(&called), &status, &object_identifier));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -1504,7 +1500,7 @@ TEST_F(PageStorageTest, AddSmallObjectFromLocal) {
     ObjectIdentifier object_identifier;
     storage_->AddObjectFromLocal(
         ObjectType::BLOB, data.ToDataSource(), {},
-        callback::Capture(callback::SetWhenCalled(&called), &status, &object_identifier));
+        ledger::Capture(ledger::SetWhenCalled(&called), &status, &object_identifier));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -1536,7 +1532,7 @@ TEST_F(PageStorageTest, AddObjectFromLocalError) {
   ObjectIdentifier object_identifier;
   storage_->AddObjectFromLocal(
       ObjectType::BLOB, std::move(data_source), {},
-      callback::Capture(callback::SetWhenCalled(&called), &status, &object_identifier));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &object_identifier));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::IO_ERROR);
@@ -1556,7 +1552,7 @@ TEST_F(PageStorageTestNoGc, DeleteObject) {
     Status status;
     PageStorageImplAccessorForTest::AddPiece(
         storage_, data->ToPiece(), ChangeSource::LOCAL, IsObjectSynced::NO, {},
-        callback::Capture(callback::SetWhenCalled(&called), &status));
+        ledger::Capture(ledger::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -1578,7 +1574,7 @@ TEST_F(PageStorageTestNoGc, DeleteObject) {
     // Delete the piece.
     PageStorageImplAccessorForTest::DeleteObject(
         storage_, object_digest,
-        callback::Capture(callback::SetWhenCalled(&called), &status, &references));
+        ledger::Capture(ledger::SetWhenCalled(&called), &status, &references));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -1636,7 +1632,7 @@ TEST_F(PageStorageTestNoGc, DeleteObjectWithReferences) {
         MakeObject(std::move(data_str), ObjectType::TREE_NODE, InlineBehavior::PREVENT)
             .ToDataSource(),
         MakeObjectReferencesAndPriority(references),
-        callback::Capture(callback::SetWhenCalled(&called), &status, &object_identifier));
+        ledger::Capture(ledger::SetWhenCalled(&called), &status, &object_identifier));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -1675,7 +1671,7 @@ TEST_F(PageStorageTestNoGc, DeleteObjectWithReferences) {
     ObjectReferencesAndPriority delete_references;
     PageStorageImplAccessorForTest::DeleteObject(
         storage_, object_digest,
-        callback::Capture(callback::SetWhenCalled(&called), &status, &delete_references));
+        ledger::Capture(ledger::SetWhenCalled(&called), &status, &delete_references));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -1713,7 +1709,7 @@ TEST_F(PageStorageTestNoGc, DeleteObjectAbortsWhenOnDiskReference) {
     Status status;
     PageStorageImplAccessorForTest::AddPiece(
         storage_, data->ToPiece(), ChangeSource::LOCAL, IsObjectSynced::NO, {},
-        callback::Capture(callback::SetWhenCalled(&called), &status));
+        ledger::Capture(ledger::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -1723,7 +1719,7 @@ TEST_F(PageStorageTestNoGc, DeleteObjectAbortsWhenOnDiskReference) {
     journal->Put("key", object_identifier, KeyPriority::EAGER);
     std::unique_ptr<const Commit> commit1;
     storage_->CommitJournal(std::move(journal),
-                            callback::Capture(callback::SetWhenCalled(&called), &status, &commit1));
+                            ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit1));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -1731,7 +1727,7 @@ TEST_F(PageStorageTestNoGc, DeleteObjectAbortsWhenOnDiskReference) {
     // Mark the commit as synced so that we do not need to keep its root commit alive to compute a
     // cloud diff.
     storage_->MarkCommitSynced(commit1->GetId(),
-                               callback::Capture(callback::SetWhenCalled(&called), &status));
+                               ledger::Capture(ledger::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -1754,7 +1750,7 @@ TEST_F(PageStorageTestNoGc, DeleteObjectAbortsWhenOnDiskReference) {
     journal->Put("key", RandomObjectIdentifier(), KeyPriority::EAGER);
     std::unique_ptr<const Commit> commit2;
     storage_->CommitJournal(std::move(journal),
-                            callback::Capture(callback::SetWhenCalled(&called), &status, &commit2));
+                            ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit2));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -1762,7 +1758,7 @@ TEST_F(PageStorageTestNoGc, DeleteObjectAbortsWhenOnDiskReference) {
     // Mark the commit as synced so that we do not need to keep its parent alive to compute a
     // cloud diff (otherwise it will also keep a live reference to |root_piece_digest|).
     storage_->MarkCommitSynced(commit2->GetId(),
-                               callback::Capture(callback::SetWhenCalled(&called), &status));
+                               ledger::Capture(ledger::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -1773,7 +1769,7 @@ TEST_F(PageStorageTestNoGc, DeleteObjectAbortsWhenOnDiskReference) {
     ObjectReferencesAndPriority references;
     PageStorageImplAccessorForTest::DeleteObject(
         storage_, object_digest,
-        callback::Capture(callback::SetWhenCalled(&called), &status, &references));
+        ledger::Capture(ledger::SetWhenCalled(&called), &status, &references));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::CANCELED);
@@ -1781,7 +1777,7 @@ TEST_F(PageStorageTestNoGc, DeleteObjectAbortsWhenOnDiskReference) {
     // Attempt to delete the root piece of |commit1|.
     PageStorageImplAccessorForTest::DeleteObject(
         storage_, root_piece_digest,
-        callback::Capture(callback::SetWhenCalled(&called), &status, &references));
+        ledger::Capture(ledger::SetWhenCalled(&called), &status, &references));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::CANCELED);
@@ -1807,7 +1803,7 @@ TEST_F(PageStorageTestNoGc, DeleteObjectAbortsWhenOnDiskReference) {
     EXPECT_EQ(PageStorageImplAccessorForTest::CountLiveReferences(storage_, root_piece_digest), 0);
     PageStorageImplAccessorForTest::DeleteObject(
         storage_, root_piece_digest,
-        callback::Capture(callback::SetWhenCalled(&called), &status, &references));
+        ledger::Capture(ledger::SetWhenCalled(&called), &status, &references));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -1820,7 +1816,7 @@ TEST_F(PageStorageTestNoGc, DeleteObjectAbortsWhenOnDiskReference) {
     EXPECT_EQ(PageStorageImplAccessorForTest::CountLiveReferences(storage_, object_digest), 0);
     PageStorageImplAccessorForTest::DeleteObject(
         storage_, object_digest,
-        callback::Capture(callback::SetWhenCalled(&called), &status, &references));
+        ledger::Capture(ledger::SetWhenCalled(&called), &status, &references));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -1842,7 +1838,7 @@ TEST_F(PageStorageTestNoGc, DeleteObjectAbortsWhenLiveReference) {
     Status status;
     PageStorageImplAccessorForTest::AddPiece(
         storage_, data->ToPiece(), ChangeSource::LOCAL, IsObjectSynced::NO, {},
-        callback::Capture(callback::SetWhenCalled(&called), &status));
+        ledger::Capture(ledger::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -1856,7 +1852,7 @@ TEST_F(PageStorageTestNoGc, DeleteObjectAbortsWhenLiveReference) {
     ObjectReferencesAndPriority references;
     PageStorageImplAccessorForTest::DeleteObject(
         storage_, object_digest,
-        callback::Capture(callback::SetWhenCalled(&called), &status, &references));
+        ledger::Capture(ledger::SetWhenCalled(&called), &status, &references));
     ASSERT_FALSE(called);
 
     // Make the identifier live again before deletion has gone through.
@@ -1882,7 +1878,7 @@ TEST_F(PageStorageTest, AddLocalPiece) {
     PageStorageImplAccessorForTest::AddPiece(
         storage_, data.ToPiece(), ChangeSource::LOCAL, IsObjectSynced::NO,
         {{reference.object_digest(), KeyPriority::LAZY}},
-        callback::Capture(callback::SetWhenCalled(&called), &status));
+        ledger::Capture(ledger::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -1908,7 +1904,7 @@ TEST_F(PageStorageTest, AddSyncPiece) {
     PageStorageImplAccessorForTest::AddPiece(
         storage_, data.ToPiece(), ChangeSource::CLOUD, IsObjectSynced::YES,
         {{reference.object_digest(), KeyPriority::EAGER}},
-        callback::Capture(callback::SetWhenCalled(&called), &status));
+        ledger::Capture(ledger::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -1932,7 +1928,7 @@ TEST_F(PageStorageTest, AddP2PPiece) {
     Status status;
     PageStorageImplAccessorForTest::AddPiece(
         storage_, data.ToPiece(), ChangeSource::P2P, IsObjectSynced::NO, {},
-        callback::Capture(callback::SetWhenCalled(&called), &status));
+        ledger::Capture(ledger::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -2026,7 +2022,7 @@ TEST_F(PageStorageTest, GetLargeObjectPart) {
   ObjectIdentifier object_identifier;
   storage_->AddObjectFromLocal(
       ObjectType::BLOB, data.ToDataSource(), /*tree_references=*/{},
-      callback::Capture(callback::SetWhenCalled(&called), &status, &object_identifier));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &object_identifier));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
 
@@ -2337,9 +2333,9 @@ TEST_F(PageStorageTest, GetHugeObjectFromSyncMaxConcurrentDownloads) {
   bool called;
   Status status;
   ledger::SizedVmo object_part;
-  storage_->GetObjectPart(
-      object_identifier, /*offset=*/0, /*max_size=*/-1, PageStorage::Location::ValueFromNetwork(),
-      callback::Capture(callback::SetWhenCalled(&called), &status, &object_part));
+  storage_->GetObjectPart(object_identifier, /*offset=*/0, /*max_size=*/-1,
+                          PageStorage::Location::ValueFromNetwork(),
+                          ledger::Capture(ledger::SetWhenCalled(&called), &status, &object_part));
   RunLoopUntilIdle();
 
   // Unblock the pending calls until GetObjectPart returns.
@@ -2467,7 +2463,7 @@ TEST_F(PageStorageTest, AddAndGetHugeTreenodeFromLocal) {
   storage_->AddObjectFromLocal(
       ObjectType::TREE_NODE, data.ToDataSource(),
       {{tree_reference.object_digest(), KeyPriority::LAZY}},
-      callback::Capture(callback::SetWhenCalled(&called), &status, &object_identifier));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &object_identifier));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
 
@@ -2653,7 +2649,7 @@ TEST_F(PageStorageTest, UnsyncedPieces) {
     btree::GetObjectIdentifiers(
         environment_.coroutine_service(), storage_.get(),
         {GetCommit(commits[i])->GetRootIdentifier(), PageStorage::Location::Local()},
-        callback::Capture(callback::SetWhenCalled(&called), &status, &commit_object_identifiers));
+        ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit_object_identifiers));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -2679,7 +2675,7 @@ TEST_F(PageStorageTest, UnsyncedPieces) {
   // commits.
   std::vector<ObjectIdentifier> returned_object_identifiers;
   storage_->GetUnsyncedPieces(
-      callback::Capture(callback::SetWhenCalled(&called), &status, &returned_object_identifiers));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &returned_object_identifiers));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -2687,7 +2683,7 @@ TEST_F(PageStorageTest, UnsyncedPieces) {
 
   // Mark the 2nd object as synced. We now expect to still find the other unsynced objects.
   storage_->MarkPieceSynced(stored_identifiers[1],
-                            callback::Capture(callback::SetWhenCalled(&called), &status));
+                            ledger::Capture(ledger::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -2696,7 +2692,7 @@ TEST_F(PageStorageTest, UnsyncedPieces) {
 
   returned_object_identifiers.clear();
   storage_->GetUnsyncedPieces(
-      callback::Capture(callback::SetWhenCalled(&called), &status, &returned_object_identifiers));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &returned_object_identifiers));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -2722,7 +2718,7 @@ TEST_F(PageStorageTest, PageIsSynced) {
   bool called;
   Status status;
   bool is_synced;
-  storage_->IsSynced(callback::Capture(callback::SetWhenCalled(&called), &status, &is_synced));
+  storage_->IsSynced(Capture(ledger::SetWhenCalled(&called), &status, &is_synced));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -2738,7 +2734,7 @@ TEST_F(PageStorageTest, PageIsSynced) {
 
   // After commiting, the page is unsynced.
   called = false;
-  storage_->IsSynced(callback::Capture(callback::SetWhenCalled(&called), &status, &is_synced));
+  storage_->IsSynced(Capture(ledger::SetWhenCalled(&called), &status, &is_synced));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -2754,7 +2750,7 @@ TEST_F(PageStorageTest, PageIsSynced) {
   btree::GetObjectIdentifiers(
       environment_.coroutine_service(), storage_.get(),
       {GetFirstHead()->GetRootIdentifier(), PageStorage::Location::Local()},
-      callback::Capture(callback::SetWhenCalled(&called), &status, &object_identifiers));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &object_identifiers));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -2762,26 +2758,25 @@ TEST_F(PageStorageTest, PageIsSynced) {
   for (const auto& object_identifier : object_identifiers) {
     ASSERT_TRUE(GetObjectDigestInfo(object_identifier.object_digest()).is_chunk());
     storage_->MarkPieceSynced(object_identifier,
-                              callback::Capture(callback::SetWhenCalled(&called), &status));
+                              ledger::Capture(ledger::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
   }
 
-  storage_->IsSynced(callback::Capture(callback::SetWhenCalled(&called), &status, &is_synced));
+  storage_->IsSynced(Capture(ledger::SetWhenCalled(&called), &status, &is_synced));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
   EXPECT_FALSE(is_synced);
 
   // Mark the commit as synced and expect that the page is synced.
-  storage_->MarkCommitSynced(commit_id,
-                             callback::Capture(callback::SetWhenCalled(&called), &status));
+  storage_->MarkCommitSynced(commit_id, ledger::Capture(ledger::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
 
-  storage_->IsSynced(callback::Capture(callback::SetWhenCalled(&called), &status, &is_synced));
+  storage_->IsSynced(Capture(ledger::SetWhenCalled(&called), &status, &is_synced));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -2809,13 +2804,13 @@ TEST_F(PageStorageTest, PageIsMarkedOnlineAfterCloudSync) {
   Status status;
   std::vector<ObjectIdentifier> object_identifiers;
   storage_->GetUnsyncedPieces(
-      callback::Capture(callback::SetWhenCalled(&called), &status, &object_identifiers));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &object_identifiers));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
   for (ObjectIdentifier& object_identifier : object_identifiers) {
     storage_->MarkPieceSynced(object_identifier,
-                              callback::Capture(callback::SetWhenCalled(&called), &status));
+                              ledger::Capture(ledger::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -2824,7 +2819,7 @@ TEST_F(PageStorageTest, PageIsMarkedOnlineAfterCloudSync) {
 
   // Mark the commit as synced. The page should now be marked as online.
   storage_->MarkCommitSynced(commit->GetId(),
-                             callback::Capture(callback::SetWhenCalled(&called), &status));
+                             ledger::Capture(ledger::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -2838,7 +2833,7 @@ TEST_F(PageStorageTest, PageIsMarkedOnlineSyncWithPeer) {
   // Mark the page as synced to peer and expect that it is marked as online.
   bool called;
   Status status;
-  storage_->MarkSyncedToPeer(callback::Capture(callback::SetWhenCalled(&called), &status));
+  storage_->MarkSyncedToPeer(Capture(ledger::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -2851,7 +2846,7 @@ TEST_F(PageStorageTest, PageIsEmpty) {
   bool is_empty;
 
   // Initially the page is empty.
-  storage_->IsEmpty(callback::Capture(callback::SetWhenCalled(&called), &status, &is_empty));
+  storage_->IsEmpty(Capture(ledger::SetWhenCalled(&called), &status, &is_empty));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -2862,7 +2857,7 @@ TEST_F(PageStorageTest, PageIsEmpty) {
   journal->Put("key", RandomObjectIdentifier(), KeyPriority::LAZY);
   EXPECT_TRUE(TryCommitJournal(std::move(journal), Status::OK));
 
-  storage_->IsEmpty(callback::Capture(callback::SetWhenCalled(&called), &status, &is_empty));
+  storage_->IsEmpty(Capture(ledger::SetWhenCalled(&called), &status, &is_empty));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -2873,7 +2868,7 @@ TEST_F(PageStorageTest, PageIsEmpty) {
   journal->Delete("key");
   EXPECT_TRUE(TryCommitJournal(std::move(journal), Status::OK));
 
-  storage_->IsEmpty(callback::Capture(callback::SetWhenCalled(&called), &status, &is_empty));
+  storage_->IsEmpty(Capture(ledger::SetWhenCalled(&called), &status, &is_empty));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -2993,19 +2988,18 @@ TEST_F(PageStorageTest, SyncMetadata) {
     Status status;
     std::string returned_value;
     storage_->GetSyncMetadata(
-        key, callback::Capture(callback::SetWhenCalled(&called), &status, &returned_value));
+        key, ledger::Capture(ledger::SetWhenCalled(&called), &status, &returned_value));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::INTERNAL_NOT_FOUND);
 
-    storage_->SetSyncMetadata(key, value,
-                              callback::Capture(callback::SetWhenCalled(&called), &status));
+    storage_->SetSyncMetadata(key, value, ledger::Capture(ledger::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
 
     storage_->GetSyncMetadata(
-        key, callback::Capture(callback::SetWhenCalled(&called), &status, &returned_value));
+        key, ledger::Capture(ledger::SetWhenCalled(&called), &status, &returned_value));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -3170,7 +3164,7 @@ class PageStorageTestAddMultipleCommits : public PageStorageTest {
       bool called;
       Status status;
       storage_->AddCommitsFromSync(std::move(initial_batch), ChangeSource::CLOUD,
-                                   callback::Capture(callback::SetWhenCalled(&called), &status));
+                                   ledger::Capture(ledger::SetWhenCalled(&called), &status));
       RunLoopUntilIdle();
       ASSERT_TRUE(called);
       EXPECT_EQ(status, Status::OK);
@@ -3215,7 +3209,7 @@ TEST_F(PageStorageTestAddMultipleCommits, FromCloudNoDiff) {
     Status status;
 
     storage_->AddCommitsFromSync(std::move(test_batch_), ChangeSource::CLOUD,
-                                 callback::Capture(callback::SetWhenCalled(&called), &status));
+                                 ledger::Capture(ledger::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -3247,7 +3241,7 @@ TEST_F(PageStorageTestAddMultipleCommits, FromCloudWithDiff) {
     Status status;
 
     storage_->AddCommitsFromSync(std::move(test_batch_), ChangeSource::CLOUD,
-                                 callback::Capture(callback::SetWhenCalled(&called), &status));
+                                 ledger::Capture(ledger::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -3274,7 +3268,7 @@ TEST_F(PageStorageTestAddMultipleCommits, FromP2P) {
     bool called;
     Status status;
     storage_->AddCommitsFromSync(std::move(test_batch_), ChangeSource::P2P,
-                                 callback::Capture(callback::SetWhenCalled(&called), &status));
+                                 ledger::Capture(ledger::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -3324,18 +3318,16 @@ TEST_F(PageStorageTest, GetEntryFromCommit) {
   bool called;
   Status status;
   Entry entry;
-  storage_->GetEntryFromCommit(
-      *commit, "key not found",
-      callback::Capture(callback::SetWhenCalled(&called), &status, &entry));
+  storage_->GetEntryFromCommit(*commit, "key not found",
+                               ledger::Capture(ledger::SetWhenCalled(&called), &status, &entry));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   ASSERT_EQ(status, Status::KEY_NOT_FOUND);
 
   for (int i = 0; i < size; ++i) {
     std::string expected_key = absl::StrFormat("key%05d", i);
-    storage_->GetEntryFromCommit(
-        *commit, expected_key,
-        callback::Capture(callback::SetWhenCalled(&called), &status, &entry));
+    storage_->GetEntryFromCommit(*commit, expected_key,
+                                 ledger::Capture(ledger::SetWhenCalled(&called), &status, &entry));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     ASSERT_EQ(status, Status::OK);
@@ -3520,7 +3512,7 @@ TEST_F(PageStorageTest, WatcherForReEntrantCommits) {
   journal->Put("key", RandomObjectIdentifier(), KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit1;
   storage_->CommitJournal(std::move(journal),
-                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit1));
+                          ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit1));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -3529,7 +3521,7 @@ TEST_F(PageStorageTest, WatcherForReEntrantCommits) {
   journal->Put("key", RandomObjectIdentifier(), KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit2;
   storage_->CommitJournal(std::move(journal),
-                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit2));
+                          ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit2));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -3553,7 +3545,7 @@ TEST_F(PageStorageTest, NoOpCommit) {
   Status status;
   std::unique_ptr<const Commit> commit;
   storage_->CommitJournal(std::move(journal),
-                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
+                          ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
 
@@ -3583,7 +3575,7 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   journal1->Put("key", value_1, KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit1;
   storage_->CommitJournal(std::move(journal1),
-                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit1));
+                          ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit1));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -3594,7 +3586,7 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   journal2->Put("key", value_2, KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit2;
   storage_->CommitJournal(std::move(journal2),
-                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit2));
+                          ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit2));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -3605,7 +3597,7 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   journal3->Put("key", merge_value, KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit3;
   storage_->CommitJournal(std::move(journal3),
-                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit3));
+                          ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit3));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -3648,9 +3640,9 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   // Start adding the remote commit.
   bool commits_from_sync_called;
   Status commits_from_sync_status;
-  storage_->AddCommitsFromSync(std::move(commits_and_bytes_base), ChangeSource::CLOUD,
-                               callback::Capture(callback::SetWhenCalled(&commits_from_sync_called),
-                                                 &commits_from_sync_status));
+  storage_->AddCommitsFromSync(
+      std::move(commits_and_bytes_base), ChangeSource::CLOUD,
+      ledger::Capture(ledger::SetWhenCalled(&commits_from_sync_called), &commits_from_sync_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(commits_from_sync_called);
   EXPECT_EQ(commits_from_sync_status, Status::OK);
@@ -3667,9 +3659,9 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   for (const auto& data : object_data_merge) {
     sync2.AddObject(data.first, data.second, ObjectAvailability::P2P_AND_CLOUD);
   }
-  storage_->AddCommitsFromSync(std::move(commits_and_bytes_merge), ChangeSource::CLOUD,
-                               callback::Capture(callback::SetWhenCalled(&commits_from_sync_called),
-                                                 &commits_from_sync_status));
+  storage_->AddCommitsFromSync(
+      std::move(commits_and_bytes_merge), ChangeSource::CLOUD,
+      ledger::Capture(ledger::SetWhenCalled(&commits_from_sync_called), &commits_from_sync_status));
 
   // Make the loop run until GetObject is called in sync, and before
   // AddCommitsFromSync finishes.
@@ -3684,9 +3676,8 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
       storage_->StartMergeCommit(std::move(heads[0]), std::move(heads[1]));
   journal->Put("key", merge_value, KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit;
-  storage_->CommitJournal(
-      std::move(journal),
-      callback::Capture(callback::SetWhenCalled(&called), &commits_from_local_status, &commit));
+  storage_->CommitJournal(std::move(journal), ledger::Capture(ledger::SetWhenCalled(&called),
+                                                              &commits_from_local_status, &commit));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(commits_from_local_status, Status::OK);
@@ -3706,7 +3697,7 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   EXPECT_EQ(commits_from_local_status, Status::OK);
 
   // Verify that the commit is added correctly.
-  storage_->GetCommit(id3, callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
+  storage_->GetCommit(id3, ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -3774,9 +3765,8 @@ TEST_F(PageStorageTest, GetMergeCommitIdsEmpty) {
   bool called;
   Status status;
   std::vector<CommitId> merges;
-  storage_->GetMergeCommitIds(
-      parent1->GetId(), parent2->GetId(),
-      callback::Capture(callback::SetWhenCalled(&called), &status, &merges));
+  storage_->GetMergeCommitIds(parent1->GetId(), parent2->GetId(),
+                              ledger::Capture(ledger::SetWhenCalled(&called), &status, &merges));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_THAT(merges, IsEmpty());
@@ -3804,7 +3794,7 @@ TEST_F(PageStorageTest, AddCommitsMissingParent) {
   bool called;
   Status status;
   storage_->AddCommitsFromSync(std::move(commits_and_bytes), ChangeSource::P2P,
-                               callback::Capture(callback::SetWhenCalled(&called), &status));
+                               ledger::Capture(ledger::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, Status::INTERNAL_NOT_FOUND);
@@ -3826,16 +3816,14 @@ TEST_F(PageStorageTest, GetMergeCommitIdsNonEmpty) {
   bool called;
   Status status;
   std::vector<CommitId> merges;
-  storage_->GetMergeCommitIds(
-      parent1->GetId(), parent2->GetId(),
-      callback::Capture(callback::SetWhenCalled(&called), &status, &merges));
+  storage_->GetMergeCommitIds(parent1->GetId(), parent2->GetId(),
+                              ledger::Capture(ledger::SetWhenCalled(&called), &status, &merges));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_THAT(merges, ElementsAre(merge->GetId()));
 
-  storage_->GetMergeCommitIds(
-      parent2->GetId(), parent1->GetId(),
-      callback::Capture(callback::SetWhenCalled(&called), &status, &merges));
+  storage_->GetMergeCommitIds(parent2->GetId(), parent1->GetId(),
+                              ledger::Capture(ledger::SetWhenCalled(&called), &status, &merges));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_THAT(merges, ElementsAre(merge->GetId()));
@@ -3853,7 +3841,7 @@ TEST_F(PageStorageTest, AddLocalCommitsInterrupted) {
   async::PostTask(dispatcher(), [this]() { storage_.reset(); });
   std::unique_ptr<const Commit> commit;
   storage_->CommitJournal(std::move(journal),
-                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
+                          ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit));
   EXPECT_TRUE(RunLoopUntilIdle());
   // The callback is eaten by the destruction of |storage_|, so we are not
   // expecting to be called. However, we do not crash.
@@ -3868,7 +3856,7 @@ TEST_F(PageStorageTest, GetCommitRootIdentifier) {
   journal->Put("key", value, KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit;
   storage_->CommitJournal(std::move(journal),
-                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
+                          ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -3886,7 +3874,7 @@ TEST_F(PageStorageTest, GetCommitRootIdentifier) {
   bool sync_delegate_called;
   fit::closure sync_delegate_call;
   DelayingFakeSyncDelegate sync(
-      callback::Capture(callback::SetWhenCalled(&sync_delegate_called), &sync_delegate_call),
+      ledger::Capture(ledger::SetWhenCalled(&sync_delegate_called), &sync_delegate_call),
       [](auto callback) { callback(); }, SyncFeatures::kNoDiff);
   storage_->SetSyncDelegate(&sync);
   sync.AddObject(root_id, root_data, ObjectAvailability::P2P_AND_CLOUD);
@@ -3894,9 +3882,9 @@ TEST_F(PageStorageTest, GetCommitRootIdentifier) {
   // Start adding the remote commit.
   bool commits_from_sync_called;
   Status commits_from_sync_status;
-  storage_->AddCommitsFromSync(std::move(commit_id_and_bytes), ChangeSource::CLOUD,
-                               callback::Capture(callback::SetWhenCalled(&commits_from_sync_called),
-                                                 &commits_from_sync_status));
+  storage_->AddCommitsFromSync(
+      std::move(commit_id_and_bytes), ChangeSource::CLOUD,
+      ledger::Capture(ledger::SetWhenCalled(&commits_from_sync_called), &commits_from_sync_status));
   RunLoopUntilIdle();
   EXPECT_FALSE(commits_from_sync_called);
   EXPECT_TRUE(sync_delegate_called);
@@ -3906,7 +3894,7 @@ TEST_F(PageStorageTest, GetCommitRootIdentifier) {
   ObjectIdentifier root_id_from_storage;
   PageStorageImplAccessorForTest::GetCommitRootIdentifier(
       storage_, commit_id,
-      callback::Capture(callback::SetWhenCalled(&called), &status, &root_id_from_storage));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &root_id_from_storage));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -3922,7 +3910,7 @@ TEST_F(PageStorageTest, GetCommitRootIdentifier) {
   EXPECT_TRUE(PageStorageImplAccessorForTest::RootCommitIdentifierMapIsEmpty(storage_));
   PageStorageImplAccessorForTest::GetCommitRootIdentifier(
       storage_, commit_id,
-      callback::Capture(callback::SetWhenCalled(&called), &status, &root_id_from_storage));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &root_id_from_storage));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -3938,7 +3926,7 @@ TEST_P(PageStorageSyncTest, GetCommitRootIdentifierFailedToAdd) {
   journal->Put("key", value, KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit;
   storage_->CommitJournal(std::move(journal),
-                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
+                          ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -3960,9 +3948,9 @@ TEST_P(PageStorageSyncTest, GetCommitRootIdentifierFailedToAdd) {
   // Add the remote commit.
   bool commits_from_sync_called;
   Status commits_from_sync_status;
-  storage_->AddCommitsFromSync(std::move(commit_id_and_bytes), ChangeSource::CLOUD,
-                               callback::Capture(callback::SetWhenCalled(&commits_from_sync_called),
-                                                 &commits_from_sync_status));
+  storage_->AddCommitsFromSync(
+      std::move(commit_id_and_bytes), ChangeSource::CLOUD,
+      ledger::Capture(ledger::SetWhenCalled(&commits_from_sync_called), &commits_from_sync_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(commits_from_sync_called);
   EXPECT_EQ(commits_from_sync_status, Status::INTERNAL_NOT_FOUND);
@@ -3971,7 +3959,7 @@ TEST_P(PageStorageSyncTest, GetCommitRootIdentifierFailedToAdd) {
   ObjectIdentifier root_id_from_storage;
   PageStorageImplAccessorForTest::GetCommitRootIdentifier(
       storage_, commit_id,
-      callback::Capture(callback::SetWhenCalled(&called), &status, &root_id_from_storage));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &root_id_from_storage));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -3987,7 +3975,7 @@ TEST_F(PageStorageTest, GetCommitIdFromRemoteId) {
   journal->Put("key", value, KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit;
   storage_->CommitJournal(std::move(journal),
-                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
+                          ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -4006,16 +3994,16 @@ TEST_F(PageStorageTest, GetCommitIdFromRemoteId) {
   bool sync_delegate_called;
   fit::closure sync_delegate_call;
   DelayingFakeSyncDelegate sync(
-      callback::Capture(callback::SetWhenCalled(&sync_delegate_called), &sync_delegate_call));
+      ledger::Capture(ledger::SetWhenCalled(&sync_delegate_called), &sync_delegate_call));
   storage_->SetSyncDelegate(&sync);
   sync.AddObject(root_id, root_data, ObjectAvailability::P2P_AND_CLOUD);
 
   // Start adding the remote commit.
   bool commits_from_sync_called;
   Status commits_from_sync_status;
-  storage_->AddCommitsFromSync(std::move(commit_id_and_bytes), ChangeSource::CLOUD,
-                               callback::Capture(callback::SetWhenCalled(&commits_from_sync_called),
-                                                 &commits_from_sync_status));
+  storage_->AddCommitsFromSync(
+      std::move(commit_id_and_bytes), ChangeSource::CLOUD,
+      ledger::Capture(ledger::SetWhenCalled(&commits_from_sync_called), &commits_from_sync_status));
   RunLoopUntilIdle();
   EXPECT_FALSE(commits_from_sync_called);
   EXPECT_TRUE(sync_delegate_called);
@@ -4025,7 +4013,7 @@ TEST_F(PageStorageTest, GetCommitIdFromRemoteId) {
   CommitId commit_id_from_storage;
   storage_->GetCommitIdFromRemoteId(
       remote_commit_id,
-      callback::Capture(callback::SetWhenCalled(&called), &status, &commit_id_from_storage));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit_id_from_storage));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -4041,7 +4029,7 @@ TEST_F(PageStorageTest, GetCommitIdFromRemoteId) {
   EXPECT_TRUE(PageStorageImplAccessorForTest::RemoteCommitIdMapIsEmpty(storage_));
   storage_->GetCommitIdFromRemoteId(
       remote_commit_id,
-      callback::Capture(callback::SetWhenCalled(&called), &status, &commit_id_from_storage));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit_id_from_storage));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -4070,7 +4058,7 @@ TEST_F(PageStorageTest, ChooseDiffBases) {
   journal->Put("key", RandomObjectIdentifier(), KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit_A;
   storage_->CommitJournal(std::move(journal),
-                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit_A));
+                          ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit_A));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -4079,7 +4067,7 @@ TEST_F(PageStorageTest, ChooseDiffBases) {
   journal->Put("key", RandomObjectIdentifier(), KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit_B;
   storage_->CommitJournal(std::move(journal),
-                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit_B));
+                          ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit_B));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -4088,7 +4076,7 @@ TEST_F(PageStorageTest, ChooseDiffBases) {
   journal->Put("key", RandomObjectIdentifier(), KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit_C;
   storage_->CommitJournal(std::move(journal),
-                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit_C));
+                          ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit_C));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -4097,7 +4085,7 @@ TEST_F(PageStorageTest, ChooseDiffBases) {
   journal->Put("key", RandomObjectIdentifier(), KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit_D;
   storage_->CommitJournal(std::move(journal),
-                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit_D));
+                          ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit_D));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -4105,7 +4093,7 @@ TEST_F(PageStorageTest, ChooseDiffBases) {
   journal = storage_->StartMergeCommit(commit_A->Clone(), commit_B->Clone());
   std::unique_ptr<const Commit> commit_e;
   storage_->CommitJournal(std::move(journal),
-                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit_e));
+                          ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit_e));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -4114,7 +4102,7 @@ TEST_F(PageStorageTest, ChooseDiffBases) {
   journal->Put("key", RandomObjectIdentifier(), KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit_f;
   storage_->CommitJournal(std::move(journal),
-                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit_f));
+                          ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit_f));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -4122,8 +4110,7 @@ TEST_F(PageStorageTest, ChooseDiffBases) {
   // Mark A,B,C,D as synced.
   for (auto& commit_id :
        {commit_A->GetId(), commit_B->GetId(), commit_C->GetId(), commit_D->GetId()}) {
-    storage_->MarkCommitSynced(commit_id,
-                               callback::Capture(callback::SetWhenCalled(&called), &status));
+    storage_->MarkCommitSynced(commit_id, ledger::Capture(ledger::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -4134,8 +4121,7 @@ TEST_F(PageStorageTest, ChooseDiffBases) {
   // The target commit is ignored.
   CommitId target_id = commit_f->GetId();
   PageStorageImplAccessorForTest::ChooseDiffBases(
-      storage_, target_id,
-      callback::Capture(callback::SetWhenCalled(&called), &status, &sync_heads));
+      storage_, target_id, ledger::Capture(ledger::SetWhenCalled(&called), &status, &sync_heads));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -4213,7 +4199,7 @@ TEST_F(PageStorageTest, UpdateClock) {
   bool called;
   Status status;
   Clock clock0;
-  storage_->GetClock(callback::Capture(callback::SetWhenCalled(&called), &status, &clock0));
+  storage_->GetClock(Capture(ledger::SetWhenCalled(&called), &status, &clock0));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -4225,14 +4211,14 @@ TEST_F(PageStorageTest, UpdateClock) {
   journal->Put("key", RandomObjectIdentifier(), KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit_A;
   storage_->CommitJournal(std::move(journal),
-                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit_A));
+                          ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit_A));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
 
   // The clock should contain one element, and point to the current head commit.
   Clock clock1;
-  storage_->GetClock(callback::Capture(callback::SetWhenCalled(&called), &status, &clock1));
+  storage_->GetClock(Capture(ledger::SetWhenCalled(&called), &status, &clock1));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -4245,14 +4231,14 @@ TEST_F(PageStorageTest, UpdateClock) {
   journal->Put("key", RandomObjectIdentifier(), KeyPriority::EAGER);
   std::unique_ptr<const Commit> commit_B;
   storage_->CommitJournal(std::move(journal),
-                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit_B));
+                          ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit_B));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
 
   // The clock should contain one element, and point to the current head commit.
   Clock clock2;
-  storage_->GetClock(callback::Capture(callback::SetWhenCalled(&called), &status, &clock2));
+  storage_->GetClock(Capture(ledger::SetWhenCalled(&called), &status, &clock2));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -4270,20 +4256,20 @@ TEST_F(PageStorageTest, UpdateClock) {
 
   std::unique_ptr<const Commit> commit_C;
   storage_->CommitJournal(std::move(journal1),
-                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit_C));
+                          ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit_C));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
 
   std::unique_ptr<const Commit> commit_D;
   storage_->CommitJournal(std::move(journal2),
-                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit_D));
+                          ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit_D));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
 
   Clock clock3;
-  storage_->GetClock(callback::Capture(callback::SetWhenCalled(&called), &status, &clock3));
+  storage_->GetClock(Capture(ledger::SetWhenCalled(&called), &status, &clock3));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -4317,7 +4303,7 @@ TEST_F(PageStorageTest, GetGenerationAndMissingParents) {
   std::vector<CommitId> missing;
   storage_->GetGenerationAndMissingParents(
       id_and_bytes,
-      callback::Capture(callback::SetWhenCalled(&called), &status, &generation, &missing));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &generation, &missing));
   RunLoopUntilIdle();
 
   ASSERT_TRUE(called);
@@ -4335,7 +4321,7 @@ TEST_F(PageStorageTest, EagerLiveReferencesGarbageCollection) {
     ObjectIdentifier object_identifier;
     storage_->AddObjectFromLocal(
         ObjectType::BLOB, data.ToDataSource(), {},
-        callback::Capture(callback::SetWhenCalled(&called), &status, &object_identifier));
+        ledger::Capture(ledger::SetWhenCalled(&called), &status, &object_identifier));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -4369,7 +4355,7 @@ TEST_F(PageStorageTestEagerRootNodesGC, EagerRootNodesGarbageCollection) {
     ObjectIdentifier object_identifier;
     storage_->AddObjectFromLocal(
         ObjectType::BLOB, data.ToDataSource(), {},
-        callback::Capture(callback::SetWhenCalled(&called), &status, &object_identifier));
+        ledger::Capture(ledger::SetWhenCalled(&called), &status, &object_identifier));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -4398,7 +4384,7 @@ TEST_F(PageStorageTestEagerRootNodesGC, EagerRootNodesGarbageCollection) {
     ObjectIdentifier object_identifier2;
     storage_->AddObjectFromLocal(
         ObjectType::BLOB, more_data.ToDataSource(), {},
-        callback::Capture(callback::SetWhenCalled(&called), &status, &object_identifier2));
+        ledger::Capture(ledger::SetWhenCalled(&called), &status, &object_identifier2));
     RunLoopUntilIdle();
     journal = storage_->StartCommit(std::move(commit));
     journal->Put("key", object_identifier2, KeyPriority::EAGER);
@@ -4456,11 +4442,11 @@ TEST_F(PageStorageTest, CommitJournalKeepsParents) {
   // Take the commit lock before committing. This will leave time for garbage collection.
   fit::closure unlock;
   PageStorageImplAccessorForTest::GetCommitSerializer(storage_).Serialize(
-      [] {}, callback::Capture(callback::SetWhenCalled(&called), &unlock));
+      [] {}, ledger::Capture(ledger::SetWhenCalled(&called), &unlock));
   ASSERT_TRUE(called);
   std::unique_ptr<const Commit> commit3;
   storage_->CommitJournal(std::move(journal),
-                          callback::Capture(callback::SetWhenCalled(&called), &status, &commit3));
+                          ledger::Capture(ledger::SetWhenCalled(&called), &status, &commit3));
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
   unlock();

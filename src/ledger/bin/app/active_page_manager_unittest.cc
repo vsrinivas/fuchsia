@@ -33,12 +33,12 @@
 #include "src/ledger/bin/sync_coordinator/testing/page_sync_empty_impl.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/backoff/exponential_backoff.h"
+#include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/ledger/lib/vmo/vector.h"
-#include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
 
 namespace ledger {
 namespace {
@@ -361,7 +361,7 @@ TEST_F(ActivePageManagerTest, OnDiscardableCallback) {
   ActivePageManager active_page_manager(&environment_, std::move(storage), nullptr,
                                         std::move(merger),
                                         ActivePageManager::PageStorageState::NEEDS_SYNC);
-  active_page_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  active_page_manager.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
   DrainLoop();
   EXPECT_FALSE(on_discardable_called);
 
@@ -372,16 +372,14 @@ TEST_F(ActivePageManagerTest, OnDiscardableCallback) {
 
   auto page_impl1 =
       std::make_unique<PageImpl>(environment_.dispatcher(), page_id_, page1.NewRequest());
-  active_page_manager.AddPageImpl(std::move(page_impl1),
-                                  callback::Capture(callback::SetWhenCalled(&called), &status));
+  active_page_manager.AddPageImpl(std::move(page_impl1), Capture(SetWhenCalled(&called), &status));
   DrainLoop();
   ASSERT_TRUE(called);
   ASSERT_EQ(status, Status::OK);
 
   auto page_impl2 =
       std::make_unique<PageImpl>(environment_.dispatcher(), page_id_, page2.NewRequest());
-  active_page_manager.AddPageImpl(std::move(page_impl2),
-                                  callback::Capture(callback::SetWhenCalled(&called), &status));
+  active_page_manager.AddPageImpl(std::move(page_impl2), Capture(SetWhenCalled(&called), &status));
   DrainLoop();
   ASSERT_TRUE(called);
   ASSERT_EQ(status, Status::OK);
@@ -396,8 +394,7 @@ TEST_F(ActivePageManagerTest, OnDiscardableCallback) {
   PagePtr page3;
   auto page_impl3 =
       std::make_unique<PageImpl>(environment_.dispatcher(), page_id_, page3.NewRequest());
-  active_page_manager.AddPageImpl(std::move(page_impl3),
-                                  callback::Capture(callback::SetWhenCalled(&called), &status));
+  active_page_manager.AddPageImpl(std::move(page_impl3), Capture(SetWhenCalled(&called), &status));
   DrainLoop();
   ASSERT_TRUE(called);
   ASSERT_EQ(status, Status::OK);
@@ -431,14 +428,13 @@ TEST_F(ActivePageManagerTest, DeletingPageManagerClosesConnections) {
   PagePtr page;
   auto page_impl =
       std::make_unique<PageImpl>(environment_.dispatcher(), page_id_, page.NewRequest());
-  active_page_manager->AddPageImpl(std::move(page_impl),
-                                   callback::Capture(callback::SetWhenCalled(&called), &status));
+  active_page_manager->AddPageImpl(std::move(page_impl), Capture(SetWhenCalled(&called), &status));
   DrainLoop();
   ASSERT_TRUE(called);
   ASSERT_EQ(status, Status::OK);
   bool page_closed;
   page.set_error_handler(
-      [callback = callback::SetWhenCalled(&page_closed)](zx_status_t status) { callback(); });
+      [callback = SetWhenCalled(&page_closed)](zx_status_t status) { callback(); });
 
   active_page_manager.reset();
   DrainLoop();
@@ -452,7 +448,7 @@ TEST_F(ActivePageManagerTest, OnDiscardableCallbackWithWatcher) {
   ActivePageManager active_page_manager(&environment_, std::move(storage), nullptr,
                                         std::move(merger),
                                         ActivePageManager::PageStorageState::NEEDS_SYNC);
-  active_page_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  active_page_manager.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
   DrainLoop();
   // PageManager is discardable, but the callback should not have be called, yet.
   EXPECT_FALSE(on_discardable_called);
@@ -464,16 +460,16 @@ TEST_F(ActivePageManagerTest, OnDiscardableCallbackWithWatcher) {
   PagePtr page2;
   auto page_impl1 =
       std::make_unique<PageImpl>(environment_.dispatcher(), page_id_, page1.NewRequest());
-  active_page_manager.AddPageImpl(
-      std::move(page_impl1), callback::Capture(callback::SetWhenCalled(&called), &internal_status));
+  active_page_manager.AddPageImpl(std::move(page_impl1),
+                                  Capture(SetWhenCalled(&called), &internal_status));
   DrainLoop();
   ASSERT_TRUE(called);
   ASSERT_EQ(internal_status, Status::OK);
 
   auto page_impl2 =
       std::make_unique<PageImpl>(environment_.dispatcher(), page_id_, page2.NewRequest());
-  active_page_manager.AddPageImpl(
-      std::move(page_impl2), callback::Capture(callback::SetWhenCalled(&called), &internal_status));
+  active_page_manager.AddPageImpl(std::move(page_impl2),
+                                  Capture(SetWhenCalled(&called), &internal_status));
   DrainLoop();
   ASSERT_TRUE(called);
   ASSERT_EQ(internal_status, Status::OK);
@@ -521,15 +517,15 @@ TEST_F(ActivePageManagerTest, DelayBindingUntilSyncBacklogDownloaded) {
   PagePtr page;
   auto page_impl1 =
       std::make_unique<PageImpl>(environment_.dispatcher(), page_id_, page.NewRequest());
-  active_page_manager.AddPageImpl(
-      std::move(page_impl1), callback::Capture(callback::SetWhenCalled(&called), &internal_status));
+  active_page_manager.AddPageImpl(std::move(page_impl1),
+                                  Capture(SetWhenCalled(&called), &internal_status));
   // The page should be bound, but except from GetId, no other method should
   // be executed, until the sync backlog is downloaded.
   DrainLoop();
   EXPECT_FALSE(called);
 
   PageId found_page_id;
-  page->GetId(callback::Capture(callback::SetWhenCalled(&called), &found_page_id));
+  page->GetId(Capture(SetWhenCalled(&called), &found_page_id));
   DrainLoop();
   EXPECT_TRUE(called);
   PageId expected_page_id;
@@ -549,13 +545,13 @@ TEST_F(ActivePageManagerTest, DelayBindingUntilSyncBacklogDownloaded) {
   page.Unbind();
   auto page_impl2 =
       std::make_unique<PageImpl>(environment_.dispatcher(), page_id_, page.NewRequest());
-  active_page_manager.AddPageImpl(
-      std::move(page_impl2), callback::Capture(callback::SetWhenCalled(&called), &internal_status));
+  active_page_manager.AddPageImpl(std::move(page_impl2),
+                                  Capture(SetWhenCalled(&called), &internal_status));
   DrainLoop();
   ASSERT_TRUE(called);
   ASSERT_EQ(internal_status, Status::OK);
 
-  page->GetId(callback::Capture(callback::SetWhenCalled(&called), &std::ignore));
+  page->GetId(Capture(SetWhenCalled(&called), &std::ignore));
   DrainLoop();
   EXPECT_TRUE(called);
 }
@@ -583,13 +579,12 @@ TEST_F(ActivePageManagerTest, DelayBindingUntilSyncTimeout) {
   PagePtr page;
   auto page_impl =
       std::make_unique<PageImpl>(environment_.dispatcher(), page_id_, page.NewRequest());
-  active_page_manager.AddPageImpl(std::move(page_impl),
-                                  callback::Capture(callback::SetWhenCalled(&called), &status));
+  active_page_manager.AddPageImpl(std::move(page_impl), Capture(SetWhenCalled(&called), &status));
   DrainLoop();
   ASSERT_TRUE(called);
   ASSERT_EQ(status, Status::OK);
 
-  page->GetId(callback::Capture(callback::SetWhenCalled(&called), &std::ignore));
+  page->GetId(Capture(SetWhenCalled(&called), &std::ignore));
   DrainLoop();
   EXPECT_TRUE(called);
 }
@@ -611,7 +606,7 @@ TEST_F(ActivePageManagerTest, ExitWhenSyncFinishes) {
   EXPECT_NE(nullptr, fake_page_sync_ptr->watcher);
 
   bool called;
-  active_page_manager.SetOnDiscardable(callback::SetWhenCalled(&called));
+  active_page_manager.SetOnDiscardable(SetWhenCalled(&called));
 
   async::PostTask(dispatcher(), [fake_page_sync_ptr] { fake_page_sync_ptr->on_paused(); });
 
@@ -645,14 +640,13 @@ TEST_F(ActivePageManagerTest, DontDelayBindingWithLocalPageStorage) {
   PagePtr page;
   auto page_impl =
       std::make_unique<PageImpl>(environment_.dispatcher(), page_id_, page.NewRequest());
-  active_page_manager.AddPageImpl(std::move(page_impl),
-                                  callback::Capture(callback::SetWhenCalled(&called), &status));
+  active_page_manager.AddPageImpl(std::move(page_impl), Capture(SetWhenCalled(&called), &status));
   // The page should be bound immediately.
   DrainLoop();
   ASSERT_TRUE(called);
   ASSERT_EQ(status, Status::OK);
 
-  page->GetId(callback::Capture(callback::SetWhenCalled(&called), &std::ignore));
+  page->GetId(Capture(SetWhenCalled(&called), &std::ignore));
   DrainLoop();
   EXPECT_TRUE(called);
 }
@@ -716,10 +710,9 @@ TEST_P(IdsAndParentIdsPageStorageActivePageManagerTest, GetCommitsSuccessGraphFu
   ActivePageManager active_page_manager(&environment_, std::move(storage), nullptr,
                                         std::move(merger),
                                         ActivePageManager::PageStorageState::NEEDS_SYNC);
-  active_page_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  active_page_manager.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
 
-  active_page_manager.GetCommits(
-      callback::Capture(callback::SetWhenCalled(&callback_called), &status, &commits));
+  active_page_manager.GetCommits(Capture(SetWhenCalled(&callback_called), &status, &commits));
   RunLoopUntilIdle();
 
   ASSERT_TRUE(callback_called);
@@ -779,10 +772,9 @@ TEST_P(IdsAndParentIdsPageStorageActivePageManagerTest, GetCommitsSuccessGraphPa
   ActivePageManager active_page_manager(&environment_, std::move(storage), nullptr,
                                         std::move(merger),
                                         ActivePageManager::PageStorageState::NEEDS_SYNC);
-  active_page_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  active_page_manager.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
 
-  active_page_manager.GetCommits(
-      callback::Capture(callback::SetWhenCalled(&callback_called), &status, &commits));
+  active_page_manager.GetCommits(Capture(SetWhenCalled(&callback_called), &status, &commits));
   RunLoopUntilIdle();
 
   ASSERT_TRUE(callback_called);
@@ -850,10 +842,9 @@ TEST_P(IdsAndParentIdsPageStoragePlusFailureIntegerActivePageManagerTest, GetCom
   ActivePageManager active_page_manager(&environment_, std::move(storage), nullptr,
                                         std::move(merger),
                                         ActivePageManager::PageStorageState::NEEDS_SYNC);
-  active_page_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  active_page_manager.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
 
-  active_page_manager.GetCommits(
-      callback::Capture(callback::SetWhenCalled(&callback_called), &status, &commits));
+  active_page_manager.GetCommits(Capture(SetWhenCalled(&callback_called), &status, &commits));
   RunLoopUntilIdle();
 
   ASSERT_TRUE(callback_called);
@@ -882,11 +873,10 @@ TEST_P(IdsAndParentIdsPageStorageActivePageManagerTest, GetCommitSuccess) {
   ActivePageManager active_page_manager(&environment_, std::move(storage), nullptr,
                                         std::move(merger),
                                         ActivePageManager::PageStorageState::NEEDS_SYNC);
-  active_page_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  active_page_manager.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
 
-  active_page_manager.GetCommit(
-      convert::ToString(storage::kFirstPageCommitId),
-      callback::Capture(callback::SetWhenCalled(&callback_called), &status, &commit));
+  active_page_manager.GetCommit(convert::ToString(storage::kFirstPageCommitId),
+                                Capture(SetWhenCalled(&callback_called), &status, &commit));
   RunLoopUntilIdle();
 
   ASSERT_TRUE(callback_called);
@@ -912,11 +902,10 @@ TEST_P(IdsAndParentIdsPageStorageActivePageManagerTest, GetCommitInternalError) 
   ActivePageManager active_page_manager(&environment_, std::move(storage), nullptr,
                                         std::move(merger),
                                         ActivePageManager::PageStorageState::NEEDS_SYNC);
-  active_page_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  active_page_manager.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
 
-  active_page_manager.GetCommit(
-      convert::ToString(storage::kFirstPageCommitId),
-      callback::Capture(callback::SetWhenCalled(&callback_called), &status, &commit));
+  active_page_manager.GetCommit(convert::ToString(storage::kFirstPageCommitId),
+                                Capture(SetWhenCalled(&callback_called), &status, &commit));
   RunLoopUntilIdle();
 
   ASSERT_TRUE(callback_called);
@@ -942,7 +931,7 @@ TEST_P(EntriesPageStorageActivePageManagerTest, GetEntriesSuccess) {
   ActivePageManager active_page_manager(&environment_, std::move(storage), nullptr,
                                         std::move(merger),
                                         ActivePageManager::PageStorageState::NEEDS_SYNC);
-  active_page_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  active_page_manager.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
 
   active_page_manager.GetEntries(
       storage::IdAndParentIdsCommit{convert::ToString(storage::kFirstPageCommitId), {}}, "",
@@ -950,7 +939,7 @@ TEST_P(EntriesPageStorageActivePageManagerTest, GetEntriesSuccess) {
         storage_entries.push_back(storage_entry);
         return true;
       },
-      callback::Capture(callback::SetWhenCalled(&callback_called), &status));
+      Capture(SetWhenCalled(&callback_called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(callback_called);
   EXPECT_THAT(status, Eq(Status::OK));
@@ -976,7 +965,7 @@ TEST_P(EntriesPageStorageActivePageManagerTest, GetEntriesInternalError) {
   ActivePageManager active_page_manager(&environment_, std::move(storage), nullptr,
                                         std::move(merger),
                                         ActivePageManager::PageStorageState::NEEDS_SYNC);
-  active_page_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  active_page_manager.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
 
   active_page_manager.GetEntries(
       storage::IdAndParentIdsCommit(convert::ToString(storage::kFirstPageCommitId), {}), "",
@@ -984,7 +973,7 @@ TEST_P(EntriesPageStorageActivePageManagerTest, GetEntriesInternalError) {
         storage_entries.push_back(storage_entry);
         return true;
       },
-      callback::Capture(callback::SetWhenCalled(&callback_called), &status));
+      Capture(SetWhenCalled(&callback_called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(callback_called);
   EXPECT_THAT(status, Ne(Status::OK));
@@ -1013,7 +1002,7 @@ TEST_P(EntriesPageStorageActivePageManagerTest, GetValueSuccess) {
   ActivePageManager active_page_manager(&environment_, std::move(storage), nullptr,
                                         std::move(merger),
                                         ActivePageManager::PageStorageState::NEEDS_SYNC);
-  active_page_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  active_page_manager.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
 
   for (const auto& [key, _] : entries) {
     active_page_manager.GetValue(
@@ -1047,12 +1036,11 @@ TEST_P(EntriesPageStorageActivePageManagerTest, GetValueGetEntryError) {
   ActivePageManager active_page_manager(&environment_, std::move(storage), nullptr,
                                         std::move(merger),
                                         ActivePageManager::PageStorageState::NEEDS_SYNC);
-  active_page_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  active_page_manager.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
 
   active_page_manager.GetValue(
       storage::IdAndParentIdsCommit{convert::ToString(storage::kFirstPageCommitId), {}},
-      "my happy fun key",
-      callback::Capture(callback::SetWhenCalled(&callback_called), &status, &value));
+      "my happy fun key", Capture(SetWhenCalled(&callback_called), &status, &value));
   RunLoopUntilIdle();
 
   ASSERT_TRUE(callback_called);
@@ -1076,11 +1064,11 @@ TEST_P(EntriesPageStorageActivePageManagerTest, GetValueGetObjectPartError) {
   ActivePageManager active_page_manager(&environment_, std::move(storage), nullptr,
                                         std::move(merger),
                                         ActivePageManager::PageStorageState::NEEDS_SYNC);
-  active_page_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  active_page_manager.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
 
   active_page_manager.GetValue(
       storage::IdAndParentIdsCommit{convert::ToString(storage::kFirstPageCommitId), {}}, key,
-      callback::Capture(callback::SetWhenCalled(&callback_called), &status, &value));
+      Capture(SetWhenCalled(&callback_called), &status, &value));
   RunLoopUntilIdle();
 
   ASSERT_TRUE(callback_called);

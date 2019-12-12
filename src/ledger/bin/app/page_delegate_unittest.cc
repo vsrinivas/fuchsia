@@ -12,8 +12,8 @@
 #include "src/ledger/bin/storage/fake/fake_page_storage.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/backoff/exponential_backoff.h"
-#include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
+#include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 
 namespace ledger {
 namespace {
@@ -44,7 +44,7 @@ TEST_F(PageDelegateTest, OnDiscardableInInit) {
                         std::move(page_impl));
 
   bool on_discardable_called;
-  delegate.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  delegate.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
 
   // Setup is finished: let's unbind the page
   page.Unbind();
@@ -52,7 +52,7 @@ TEST_F(PageDelegateTest, OnDiscardableInInit) {
 
   bool on_done_called;
   Status status;
-  delegate.Init(callback::Capture(callback::SetWhenCalled(&on_done_called), &status));
+  delegate.Init(Capture(SetWhenCalled(&on_done_called), &status));
 
   RunLoopUntilIdle();
 

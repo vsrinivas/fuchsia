@@ -48,6 +48,7 @@ source_set("unittests") {
 
   deps = [
     ":message_relay",
+    "//src/ledger/lib/callback",
     "//src/ledger/lib/convert",
     "//src/lib/callback",
     "//src/lib/testing/loop_fixture",

@@ -18,7 +18,7 @@ source_set("overnet") {
     "//sdk/fidl/fuchsia.overnet",
     "//src/ledger/bin/fidl_helpers",
     "//src/ledger/bin/testing:lib",
-    "//src/lib/callback",
+    "//src/ledger/lib/callback",
   ]
 
   deps = [
@@ -45,10 +45,10 @@ source_set("unittests") {
     "//src/ledger/bin/environment",
     "//src/ledger/bin/fidl_helpers:message_relay",
     "//src/ledger/bin/testing:lib",
+    "//src/ledger/lib/callback",
     "//src/ledger/lib/convert",
     "//src/ledger/lib/logging",
     "//src/ledger/lib/vmo",
-    "//src/lib/callback",
     "//src/lib/fxl",
     "//third_party/googletest:gtest",
   ]

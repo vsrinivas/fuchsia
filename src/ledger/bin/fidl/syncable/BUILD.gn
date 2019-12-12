@@ -39,7 +39,7 @@ source_set("unittests") {
     ":syncable",
     ":syncable_fidl_test",
     "//src/ledger/bin/fidl/syncable/fidl",
-    "//src/lib/callback",
+    "//src/ledger/lib/callback",
     "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-testing",

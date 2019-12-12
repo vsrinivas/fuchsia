@@ -14,11 +14,6 @@
 #include <string>
 #include <vector>
 
-#include "src/ledger/lib/logging/logging.h"
-#include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
-#include "third_party/abseil-cpp/absl/strings/string_view.h"
-
 // gtest matchers are in gmock and we cannot include the specific header file
 // directly as it is private to the library.
 #include "gmock/gmock.h"
@@ -34,9 +29,12 @@
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/ledger/bin/storage/testing/storage_matcher.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine_impl.h"
 #include "src/ledger/lib/logging/logging.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 using storage::MatchesCommitIdAndBytes;
 using testing::ElementsAre;
@@ -508,9 +506,9 @@ TEST_F(PageCommunicatorImplTest, GetObject) {
   storage::ChangeSource source;
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
-  page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,
-                              callback::Capture(callback::SetWhenCalled(&called), &status, &source,
-                                                &is_object_synced, &data));
+  page_communicator.GetObject(
+      MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &source, &is_object_synced, &data));
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
 
@@ -553,9 +551,9 @@ TEST_F(PageCommunicatorImplTest, DontGetObjectsIfMarkPageSyncedToPeerFailed) {
   storage::ChangeSource source;
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
-  page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,
-                              callback::Capture(callback::SetWhenCalled(&called), &status, &source,
-                                                &is_object_synced, &data));
+  page_communicator.GetObject(
+      MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &source, &is_object_synced, &data));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, ledger::Status::INTERNAL_NOT_FOUND);
@@ -678,9 +676,9 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSuccess) {
   storage::ChangeSource source;
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
-  page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,
-                              callback::Capture(callback::SetWhenCalled(&called), &status, &source,
-                                                &is_object_synced, &data));
+  page_communicator.GetObject(
+      MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &source, &is_object_synced, &data));
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
 
@@ -721,9 +719,9 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseSynced) {
   storage::ChangeSource source;
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
-  page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,
-                              callback::Capture(callback::SetWhenCalled(&called), &status, &source,
-                                                &is_object_synced, &data));
+  page_communicator.GetObject(
+      MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &source, &is_object_synced, &data));
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
 
@@ -763,9 +761,9 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseFail) {
   storage::ChangeSource source;
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
-  page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,
-                              callback::Capture(callback::SetWhenCalled(&called), &status, &source,
-                                                &is_object_synced, &data));
+  page_communicator.GetObject(
+      MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &source, &is_object_synced, &data));
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
 
@@ -805,9 +803,9 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceSuccess) {
   storage::ChangeSource source;
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
-  page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,
-                              callback::Capture(callback::SetWhenCalled(&called), &status, &source,
-                                                &is_object_synced, &data));
+  page_communicator.GetObject(
+      MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &source, &is_object_synced, &data));
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
   EXPECT_EQ(mesh.messages_.size(), 2u);
@@ -857,9 +855,9 @@ TEST_F(PageCommunicatorImplTest, GetObjectProcessResponseMultiDeviceFail) {
   storage::ChangeSource source;
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
-  page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,
-                              callback::Capture(callback::SetWhenCalled(&called), &status, &source,
-                                                &is_object_synced, &data));
+  page_communicator.GetObject(
+      MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &source, &is_object_synced, &data));
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
   EXPECT_EQ(mesh.messages_.size(), 2u);
@@ -907,8 +905,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectMultipleCalls) {
   storage::IsObjectSynced is_object_synced1, is_object_synced2;
   std::unique_ptr<storage::DataSource::DataChunk> data1, data2;
   page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,
-                              callback::Capture(callback::SetWhenCalled(&called1), &status1,
-                                                &source1, &is_object_synced1, &data1));
+                              ledger::Capture(ledger::SetWhenCalled(&called1), &status1, &source1,
+                                              &is_object_synced1, &data1));
   RunLoopUntilIdle();
   EXPECT_FALSE(called1);
 
@@ -916,8 +914,8 @@ TEST_F(PageCommunicatorImplTest, GetObjectMultipleCalls) {
   EXPECT_EQ(mesh.messages_[0].first, MakeP2PClientId(2u));
 
   page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,
-                              callback::Capture(callback::SetWhenCalled(&called2), &status2,
-                                                &source2, &is_object_synced2, &data2));
+                              ledger::Capture(ledger::SetWhenCalled(&called2), &status2, &source2,
+                                              &is_object_synced2, &data2));
   RunLoopUntilIdle();
   EXPECT_FALSE(called2);
 
@@ -1028,17 +1026,17 @@ TEST_F(PageCommunicatorImplTest, GetObjectDisconnect) {
       is_object_synced4;
   std::unique_ptr<storage::DataSource::DataChunk> data1, data2, data3, data4;
   page_communicator.GetObject(MakeObjectIdentifier("foo1"), storage::RetrievedObjectType::BLOB,
-                              callback::Capture(callback::SetWhenCalled(&called1), &status1,
-                                                &source1, &is_object_synced1, &data1));
+                              ledger::Capture(ledger::SetWhenCalled(&called1), &status1, &source1,
+                                              &is_object_synced1, &data1));
   page_communicator.GetObject(MakeObjectIdentifier("foo2"), storage::RetrievedObjectType::BLOB,
-                              callback::Capture(callback::SetWhenCalled(&called2), &status2,
-                                                &source2, &is_object_synced2, &data2));
+                              ledger::Capture(ledger::SetWhenCalled(&called2), &status2, &source2,
+                                              &is_object_synced2, &data2));
   page_communicator.GetObject(MakeObjectIdentifier("foo3"), storage::RetrievedObjectType::BLOB,
-                              callback::Capture(callback::SetWhenCalled(&called3), &status3,
-                                                &source3, &is_object_synced3, &data3));
+                              ledger::Capture(ledger::SetWhenCalled(&called3), &status3, &source3,
+                                              &is_object_synced3, &data3));
   page_communicator.GetObject(MakeObjectIdentifier("foo4"), storage::RetrievedObjectType::BLOB,
-                              callback::Capture(callback::SetWhenCalled(&called4), &status4,
-                                                &source4, &is_object_synced4, &data4));
+                              ledger::Capture(ledger::SetWhenCalled(&called4), &status4, &source4,
+                                              &is_object_synced4, &data4));
   RunLoopUntilIdle();
   EXPECT_FALSE(called1);
   EXPECT_FALSE(called2);
@@ -1314,9 +1312,9 @@ TEST_F(PageCommunicatorImplTest, CommitBatchDelayedUntilPeerReady) {
   storage::ChangeSource source;
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
-  page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,
-                              callback::Capture(callback::SetWhenCalled(&called), &status, &source,
-                                                &is_object_synced, &data));
+  page_communicator.GetObject(
+      MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &source, &is_object_synced, &data));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, ledger::Status::INTERNAL_NOT_FOUND);
@@ -1337,9 +1335,9 @@ TEST_F(PageCommunicatorImplTest, CommitBatchDelayedUntilPeerReady) {
               ElementsAre(MatchesCommitIdAndBytes("id", "data")));
 
   // Calling GetObject now sends a message to device 2.
-  page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,
-                              callback::Capture(callback::SetWhenCalled(&called), &status, &source,
-                                                &is_object_synced, &data));
+  page_communicator.GetObject(
+      MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &source, &is_object_synced, &data));
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
 
@@ -1388,9 +1386,9 @@ TEST_F(PageCommunicatorImplTest, GetObjectRemoveDevice) {
     page_communicator.OnDeviceChange(MakeP2PClientId(3u), p2p_provider::DeviceChangeType::DELETED);
   });
 
-  page_communicator.GetObject(MakeObjectIdentifier("foo1"), storage::RetrievedObjectType::BLOB,
-                              callback::Capture(callback::SetWhenCalled(&called), &status, &source,
-                                                &is_object_synced, &data));
+  page_communicator.GetObject(
+      MakeObjectIdentifier("foo1"), storage::RetrievedObjectType::BLOB,
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &source, &is_object_synced, &data));
 
   // The previous call to GetObject should return and not result in an
   // exception. Note that it is expected for GetObject callback to not be
@@ -1460,18 +1458,18 @@ TEST_F(PageCommunicatorImplTest, GetObjectNoPeer) {
   storage::ChangeSource source;
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
-  page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,
-                              callback::Capture(callback::SetWhenCalled(&called), &status, &source,
-                                                &is_object_synced, &data));
+  page_communicator.GetObject(
+      MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &source, &is_object_synced, &data));
   RunLoopUntilIdle();
 
   EXPECT_TRUE(called);
   EXPECT_EQ(status, ledger::Status::INTERNAL_NOT_FOUND);
 
   // A second call for the same object also returns.
-  page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,
-                              callback::Capture(callback::SetWhenCalled(&called), &status, &source,
-                                                &is_object_synced, &data));
+  page_communicator.GetObject(
+      MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &source, &is_object_synced, &data));
   RunLoopUntilIdle();
 
   EXPECT_TRUE(called);
@@ -1495,9 +1493,9 @@ TEST_F(PageCommunicatorImplTest, GetObject_Disconnect) {
   storage::ChangeSource source;
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data;
-  page_communicator.GetObject(MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,
-                              callback::Capture(callback::SetWhenCalled(&called), &status, &source,
-                                                &is_object_synced, &data));
+  page_communicator.GetObject(
+      MakeObjectIdentifier("foo"), storage::RetrievedObjectType::BLOB,
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &source, &is_object_synced, &data));
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
 

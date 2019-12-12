@@ -34,9 +34,9 @@
 #include "src/ledger/bin/testing/fake_disk_cleanup_manager.h"
 #include "src/ledger/bin/testing/inspect.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/convert/convert.h"
-#include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/inspect_deprecated/inspect.h"
@@ -118,13 +118,11 @@ TEST_F(PageManagerTest, OnDiscardableCalled) {
   Status get_page_status;
   bool on_discardable_called;
 
-  page_manager_->SetOnDiscardable(
-      callback::Capture(callback::SetWhenCalled(&on_discardable_called)));
+  page_manager_->SetOnDiscardable(Capture(SetWhenCalled(&on_discardable_called)));
 
   PagePtr page;
-  page_manager_->GetPage(
-      LedgerImpl::Delegate::PageState::NEW, page.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
+  page_manager_->GetPage(LedgerImpl::Delegate::PageState::NEW, page.NewRequest(),
+                         Capture(SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
   EXPECT_EQ(get_page_status, Status::OK);
@@ -148,13 +146,11 @@ TEST_F(PageManagerTest, OnDiscardableCalledWhenHeadDetacherCalled) {
   Status get_page_status;
   bool on_discardable_called;
 
-  page_manager_->SetOnDiscardable(
-      callback::Capture(callback::SetWhenCalled(&on_discardable_called)));
+  page_manager_->SetOnDiscardable(Capture(SetWhenCalled(&on_discardable_called)));
 
   PagePtr page;
-  page_manager_->GetPage(
-      LedgerImpl::Delegate::PageState::NEW, page.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
+  page_manager_->GetPage(LedgerImpl::Delegate::PageState::NEW, page.NewRequest(),
+                         Capture(SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
   EXPECT_EQ(Status::OK, get_page_status);
@@ -198,13 +194,11 @@ TEST_F(PageManagerTest, OnDiscardableCalledWhenCommitDetacherCalled) {
   Status get_page_status;
   bool on_discardable_called;
 
-  page_manager_->SetOnDiscardable(
-      callback::Capture(callback::SetWhenCalled(&on_discardable_called)));
+  page_manager_->SetOnDiscardable(Capture(SetWhenCalled(&on_discardable_called)));
 
   PagePtr page;
-  page_manager_->GetPage(
-      LedgerImpl::Delegate::PageState::NEW, page.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
+  page_manager_->GetPage(LedgerImpl::Delegate::PageState::NEW, page.NewRequest(),
+                         Capture(SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
   EXPECT_EQ(Status::OK, get_page_status);
@@ -248,13 +242,11 @@ TEST_F(PageManagerTest, OnDiscardableCalledInspectEarlierAndLaterThanPageBinding
   Status get_page_status;
   bool on_discardable_called;
 
-  page_manager_->SetOnDiscardable(
-      callback::Capture(callback::SetWhenCalled(&on_discardable_called)));
+  page_manager_->SetOnDiscardable(Capture(SetWhenCalled(&on_discardable_called)));
 
   PagePtr page;
-  page_manager_->GetPage(
-      LedgerImpl::Delegate::PageState::NEW, page.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
+  page_manager_->GetPage(LedgerImpl::Delegate::PageState::NEW, page.NewRequest(),
+                         Capture(SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
   EXPECT_EQ(Status::OK, get_page_status);
@@ -264,8 +256,7 @@ TEST_F(PageManagerTest, OnDiscardableCalledInspectEarlierAndLaterThanPageBinding
   RunLoopUntilIdle();
   EXPECT_TRUE(on_discardable_called);
 
-  page_manager_->SetOnDiscardable(
-      callback::Capture(callback::SetWhenCalled(&on_discardable_called)));
+  page_manager_->SetOnDiscardable(Capture(SetWhenCalled(&on_discardable_called)));
 
   fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> page_node;
   EXPECT_TRUE(
@@ -285,9 +276,8 @@ TEST_F(PageManagerTest, OnDiscardableCalledInspectEarlierAndLaterThanPageBinding
                         CommitIdToDisplayName(convert::ToString(storage::kFirstPageCommitId)),
                         &commit_node, &test_loop()));
 
-  page_manager_->GetPage(
-      LedgerImpl::Delegate::PageState::NEW, page.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
+  page_manager_->GetPage(LedgerImpl::Delegate::PageState::NEW, page.NewRequest(),
+                         Capture(SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
   EXPECT_EQ(Status::OK, get_page_status);
@@ -321,13 +311,11 @@ TEST_F(PageManagerTest, OnDiscardableCalledInspectEarlierAndPageBindingLater) {
   Status get_page_status;
   bool on_discardable_called;
 
-  page_manager_->SetOnDiscardable(
-      callback::Capture(callback::SetWhenCalled(&on_discardable_called)));
+  page_manager_->SetOnDiscardable(Capture(SetWhenCalled(&on_discardable_called)));
 
   PagePtr page;
-  page_manager_->GetPage(
-      LedgerImpl::Delegate::PageState::NEW, page.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
+  page_manager_->GetPage(LedgerImpl::Delegate::PageState::NEW, page.NewRequest(),
+                         Capture(SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
   EXPECT_EQ(Status::OK, get_page_status);
@@ -337,8 +325,7 @@ TEST_F(PageManagerTest, OnDiscardableCalledInspectEarlierAndPageBindingLater) {
   RunLoopUntilIdle();
   EXPECT_TRUE(on_discardable_called);
 
-  page_manager_->SetOnDiscardable(
-      callback::Capture(callback::SetWhenCalled(&on_discardable_called)));
+  page_manager_->SetOnDiscardable(Capture(SetWhenCalled(&on_discardable_called)));
 
   fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> page_node;
   EXPECT_TRUE(
@@ -358,9 +345,8 @@ TEST_F(PageManagerTest, OnDiscardableCalledInspectEarlierAndPageBindingLater) {
                         CommitIdToDisplayName(convert::ToString(storage::kFirstPageCommitId)),
                         &commit_node, &test_loop()));
 
-  page_manager_->GetPage(
-      LedgerImpl::Delegate::PageState::NEW, page.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
+  page_manager_->GetPage(LedgerImpl::Delegate::PageState::NEW, page.NewRequest(),
+                         Capture(SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
   EXPECT_EQ(Status::OK, get_page_status);
@@ -398,13 +384,11 @@ TEST_F(PageManagerTest, OnDiscardableCalledPageBindingEarlierAndInspectLater) {
   Status get_page_status;
   bool on_discardable_called;
 
-  page_manager_->SetOnDiscardable(
-      callback::Capture(callback::SetWhenCalled(&on_discardable_called)));
+  page_manager_->SetOnDiscardable(Capture(SetWhenCalled(&on_discardable_called)));
 
   PagePtr page;
-  page_manager_->GetPage(
-      LedgerImpl::Delegate::PageState::NEW, page.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
+  page_manager_->GetPage(LedgerImpl::Delegate::PageState::NEW, page.NewRequest(),
+                         Capture(SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
   EXPECT_EQ(Status::OK, get_page_status);
@@ -414,12 +398,10 @@ TEST_F(PageManagerTest, OnDiscardableCalledPageBindingEarlierAndInspectLater) {
   RunLoopUntilIdle();
   EXPECT_TRUE(on_discardable_called);
 
-  page_manager_->SetOnDiscardable(
-      callback::Capture(callback::SetWhenCalled(&on_discardable_called)));
+  page_manager_->SetOnDiscardable(Capture(SetWhenCalled(&on_discardable_called)));
 
-  page_manager_->GetPage(
-      LedgerImpl::Delegate::PageState::NEW, page.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
+  page_manager_->GetPage(LedgerImpl::Delegate::PageState::NEW, page.NewRequest(),
+                         Capture(SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
   EXPECT_EQ(Status::OK, get_page_status);
@@ -471,13 +453,11 @@ TEST_F(PageManagerTest, OnDiscardableCalledPageBindingEarlierAndLaterThanInspect
   Status get_page_status;
   bool on_discardable_called;
 
-  page_manager_->SetOnDiscardable(
-      callback::Capture(callback::SetWhenCalled(&on_discardable_called)));
+  page_manager_->SetOnDiscardable(Capture(SetWhenCalled(&on_discardable_called)));
 
   PagePtr page;
-  page_manager_->GetPage(
-      LedgerImpl::Delegate::PageState::NEW, page.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
+  page_manager_->GetPage(LedgerImpl::Delegate::PageState::NEW, page.NewRequest(),
+                         Capture(SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
   EXPECT_EQ(Status::OK, get_page_status);
@@ -487,12 +467,10 @@ TEST_F(PageManagerTest, OnDiscardableCalledPageBindingEarlierAndLaterThanInspect
   RunLoopUntilIdle();
   EXPECT_TRUE(on_discardable_called);
 
-  page_manager_->SetOnDiscardable(
-      callback::Capture(callback::SetWhenCalled(&on_discardable_called)));
+  page_manager_->SetOnDiscardable(Capture(SetWhenCalled(&on_discardable_called)));
 
-  page_manager_->GetPage(
-      LedgerImpl::Delegate::PageState::NEW, page.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
+  page_manager_->GetPage(LedgerImpl::Delegate::PageState::NEW, page.NewRequest(),
+                         Capture(SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
   EXPECT_EQ(Status::OK, get_page_status);
@@ -547,7 +525,7 @@ TEST_F(PageManagerTest, PageIsClosedAndSyncedCheckNotFound) {
   // Check for a page that doesn't exist.
   storage_->should_get_page_fail = true;
   page_manager_->PageIsClosedAndSynced(
-      callback::Capture(callback::SetWhenCalled(&called), &status, &is_closed_and_synced));
+      Capture(SetWhenCalled(&called), &status, &is_closed_and_synced));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::PAGE_NOT_FOUND);
@@ -564,9 +542,8 @@ TEST_F(PageManagerTest, PageIsClosedAndSyncedCheckClosed) {
   storage_->should_get_page_fail = false;
   PagePtr page;
   storage::PageIdView storage_page_id = convert::ExtendedStringView(page_id_.id);
-  page_manager_->GetPage(
-      LedgerImpl::Delegate::PageState::NAMED, page.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
+  page_manager_->GetPage(LedgerImpl::Delegate::PageState::NAMED, page.NewRequest(),
+                         Capture(SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
   EXPECT_EQ(get_page_status, Status::OK);
@@ -574,7 +551,7 @@ TEST_F(PageManagerTest, PageIsClosedAndSyncedCheckClosed) {
   Status storage_status;
   storage_->set_page_storage_synced(storage_page_id, true);
   page_manager_->PageIsClosedAndSynced(
-      callback::Capture(callback::SetWhenCalled(&called), &storage_status, &is_closed_and_synced));
+      Capture(SetWhenCalled(&called), &storage_status, &is_closed_and_synced));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(storage_status, Status::OK);
@@ -585,7 +562,7 @@ TEST_F(PageManagerTest, PageIsClosedAndSyncedCheckClosed) {
   RunLoopUntilIdle();
 
   page_manager_->PageIsClosedAndSynced(
-      callback::Capture(callback::SetWhenCalled(&called), &storage_status, &is_closed_and_synced));
+      Capture(SetWhenCalled(&called), &storage_status, &is_closed_and_synced));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(storage_status, Status::OK);
@@ -604,9 +581,8 @@ TEST_F(PageManagerTest, PageIsClosedAndSyncedCheckSynced) {
   PagePtr page;
   storage::PageIdView storage_page_id = convert::ExtendedStringView(page_id_.id);
 
-  page_manager_->GetPage(
-      LedgerImpl::Delegate::PageState::NAMED, page.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
+  page_manager_->GetPage(LedgerImpl::Delegate::PageState::NAMED, page.NewRequest(),
+                         Capture(SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
   EXPECT_EQ(get_page_status, Status::OK);
@@ -618,7 +594,7 @@ TEST_F(PageManagerTest, PageIsClosedAndSyncedCheckSynced) {
 
   Status storage_status;
   page_manager_->PageIsClosedAndSynced(
-      callback::Capture(callback::SetWhenCalled(&called), &storage_status, &is_closed_and_synced));
+      Capture(SetWhenCalled(&called), &storage_status, &is_closed_and_synced));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(storage_status, Status::OK);
@@ -636,9 +612,8 @@ TEST_F(PageManagerTest, PageIsClosedAndSyncedCheckPageOpened) {
   PagePtr page;
   storage::PageIdView storage_page_id = convert::ExtendedStringView(page_id_.id);
 
-  page_manager_->GetPage(
-      LedgerImpl::Delegate::PageState::NAMED, page.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
+  page_manager_->GetPage(LedgerImpl::Delegate::PageState::NAMED, page.NewRequest(),
+                         Capture(SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
   EXPECT_EQ(get_page_status, Status::OK);
@@ -652,16 +627,14 @@ TEST_F(PageManagerTest, PageIsClosedAndSyncedCheckPageOpened) {
   bool page_is_closed_and_synced_called = false;
   storage_->DelayIsSyncedCallback(storage_page_id, true);
   Status storage_status;
-  page_manager_->PageIsClosedAndSynced(
-      callback::Capture(callback::SetWhenCalled(&page_is_closed_and_synced_called), &storage_status,
-                        &is_closed_and_synced));
+  page_manager_->PageIsClosedAndSynced(Capture(SetWhenCalled(&page_is_closed_and_synced_called),
+                                               &storage_status, &is_closed_and_synced));
   RunLoopUntilIdle();
   EXPECT_FALSE(page_is_closed_and_synced_called);
 
   // Open and close the page.
-  page_manager_->GetPage(
-      LedgerImpl::Delegate::PageState::NAMED, page.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
+  page_manager_->GetPage(LedgerImpl::Delegate::PageState::NAMED, page.NewRequest(),
+                         Capture(SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
   EXPECT_EQ(get_page_status, Status::OK);
@@ -687,9 +660,8 @@ TEST_F(PageManagerTest, PageIsClosedAndSyncedConcurrentCalls) {
   PagePtr page;
   storage::PageIdView storage_page_id = convert::ExtendedStringView(page_id_.id);
 
-  page_manager_->GetPage(
-      LedgerImpl::Delegate::PageState::NAMED, page.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
+  page_manager_->GetPage(LedgerImpl::Delegate::PageState::NAMED, page.NewRequest(),
+                         Capture(SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
   EXPECT_EQ(get_page_status, Status::OK);
@@ -705,7 +677,7 @@ TEST_F(PageManagerTest, PageIsClosedAndSyncedConcurrentCalls) {
   PagePredicateResult is_closed_and_synced1;
   storage_->DelayIsSyncedCallback(storage_page_id, true);
   page_manager_->PageIsClosedAndSynced(
-      callback::Capture(callback::SetWhenCalled(&called1), &status1, &is_closed_and_synced1));
+      Capture(SetWhenCalled(&called1), &status1, &is_closed_and_synced1));
   RunLoopUntilIdle();
 
   // Prepare for the second call: it will return immediately and the expected
@@ -715,7 +687,7 @@ TEST_F(PageManagerTest, PageIsClosedAndSyncedConcurrentCalls) {
   PagePredicateResult is_closed_and_synced2;
   storage_->DelayIsSyncedCallback(storage_page_id, false);
   page_manager_->PageIsClosedAndSynced(
-      callback::Capture(callback::SetWhenCalled(&called2), &status2, &is_closed_and_synced2));
+      Capture(SetWhenCalled(&called2), &status2, &is_closed_and_synced2));
   RunLoopUntilIdle();
   EXPECT_FALSE(called1);
   EXPECT_TRUE(called2);
@@ -723,9 +695,8 @@ TEST_F(PageManagerTest, PageIsClosedAndSyncedConcurrentCalls) {
   EXPECT_EQ(is_closed_and_synced2, PagePredicateResult::YES);
 
   // Open and close the page.
-  page_manager_->GetPage(
-      LedgerImpl::Delegate::PageState::NAMED, page.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
+  page_manager_->GetPage(LedgerImpl::Delegate::PageState::NAMED, page.NewRequest(),
+                         Capture(SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
   EXPECT_EQ(get_page_status, Status::OK);
@@ -750,7 +721,7 @@ TEST_F(PageManagerTest, PageIsClosedOfflineAndEmptyCheckNotFound) {
   // Check for a page that doesn't exist.
   storage_->should_get_page_fail = true;
   page_manager_->PageIsClosedOfflineAndEmpty(
-      callback::Capture(callback::SetWhenCalled(&called), &status, &is_closed_offline_empty));
+      Capture(SetWhenCalled(&called), &status, &is_closed_offline_empty));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::PAGE_NOT_FOUND);
@@ -766,17 +737,16 @@ TEST_F(PageManagerTest, PageIsClosedOfflineAndEmptyCheckClosed) {
   PagePtr page;
   storage::PageIdView storage_page_id = convert::ExtendedStringView(page_id_.id);
 
-  page_manager_->GetPage(
-      LedgerImpl::Delegate::PageState::NAMED, page.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
+  page_manager_->GetPage(LedgerImpl::Delegate::PageState::NAMED, page.NewRequest(),
+                         Capture(SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
   EXPECT_EQ(get_page_status, Status::OK);
 
   storage_->set_page_storage_offline_empty(storage_page_id, true);
   Status storage_status;
-  page_manager_->PageIsClosedOfflineAndEmpty(callback::Capture(
-      callback::SetWhenCalled(&called), &storage_status, &is_closed_offline_empty));
+  page_manager_->PageIsClosedOfflineAndEmpty(
+      Capture(SetWhenCalled(&called), &storage_status, &is_closed_offline_empty));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(storage_status, Status::OK);
@@ -786,8 +756,8 @@ TEST_F(PageManagerTest, PageIsClosedOfflineAndEmptyCheckClosed) {
   page.Unbind();
   RunLoopUntilIdle();
 
-  page_manager_->PageIsClosedOfflineAndEmpty(callback::Capture(
-      callback::SetWhenCalled(&called), &storage_status, &is_closed_offline_empty));
+  page_manager_->PageIsClosedOfflineAndEmpty(
+      Capture(SetWhenCalled(&called), &storage_status, &is_closed_offline_empty));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(storage_status, Status::OK);
@@ -810,7 +780,7 @@ TEST_F(PageManagerTest, PageIsClosedOfflineAndEmptyCanDeletePageOnCallback) {
     is_closed_offline_empty = result;
 
     page_manager_->DeletePageStorage(
-        callback::Capture(callback::SetWhenCalled(&delete_page_called), &delete_page_status));
+        Capture(SetWhenCalled(&delete_page_called), &delete_page_status));
   });
   RunLoopUntilIdle();
   // Make sure the deletion finishes successfully.
@@ -831,18 +801,16 @@ TEST_F(PageManagerTest, CallGetPageTwice) {
   PagePtr page1;
   bool get_page_callback_called1;
   Status get_page_status1;
-  page_manager_->GetPage(
-      LedgerImpl::Delegate::PageState::NAMED, page1.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&get_page_callback_called1), &get_page_status1));
+  page_manager_->GetPage(LedgerImpl::Delegate::PageState::NAMED, page1.NewRequest(),
+                         Capture(SetWhenCalled(&get_page_callback_called1), &get_page_status1));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called1);
   EXPECT_EQ(get_page_status1, Status::OK);
   PagePtr page2;
   bool get_page_callback_called2;
   Status get_page_status2;
-  page_manager_->GetPage(
-      LedgerImpl::Delegate::PageState::NAMED, page2.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&get_page_callback_called2), &get_page_status2));
+  page_manager_->GetPage(LedgerImpl::Delegate::PageState::NAMED, page2.NewRequest(),
+                         Capture(SetWhenCalled(&get_page_callback_called2), &get_page_status2));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called2);
   EXPECT_EQ(get_page_status2, Status::OK);
@@ -866,9 +834,8 @@ TEST_F(PageManagerTest, OnExternallyUsedUnusedCalls) {
   disk_cleanup_manager_->ResetCounters();
 
   // Open a page and check that OnExternallyUsed was called once.
-  page_manager_->GetPage(
-      LedgerImpl::Delegate::PageState::NAMED, page1.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&get_page_callback_called1), &get_page_status1));
+  page_manager_->GetPage(LedgerImpl::Delegate::PageState::NAMED, page1.NewRequest(),
+                         Capture(SetWhenCalled(&get_page_callback_called1), &get_page_status1));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called1);
   EXPECT_EQ(get_page_status1, Status::OK);
@@ -881,9 +848,8 @@ TEST_F(PageManagerTest, OnExternallyUsedUnusedCalls) {
   disk_cleanup_manager_->ResetCounters();
 
   // Open the page again and check that there is no new call to OnExternallyUsed.
-  page_manager_->GetPage(
-      LedgerImpl::Delegate::PageState::NAMED, page2.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&get_page_callback_called2), &get_page_status2));
+  page_manager_->GetPage(LedgerImpl::Delegate::PageState::NAMED, page2.NewRequest(),
+                         Capture(SetWhenCalled(&get_page_callback_called2), &get_page_status2));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called2);
   EXPECT_EQ(get_page_status2, Status::OK);
@@ -925,7 +891,7 @@ TEST_F(PageManagerTest, OnInternallyUsedUnusedCalls) {
   Status storage_status;
   PagePredicateResult page_state;
   page_manager_->PageIsClosedAndSynced(
-      callback::Capture(callback::SetWhenCalled(&called), &storage_status, &page_state));
+      Capture(SetWhenCalled(&called), &storage_status, &page_state));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(storage_status, Status::OK);
@@ -941,9 +907,8 @@ TEST_F(PageManagerTest, OnInternallyUsedUnusedCalls) {
   // Open the same page with an external request and check that OnExternallyUsed was called once.
   bool get_page_callback_called;
   Status get_page_status;
-  page_manager_->GetPage(
-      LedgerImpl::Delegate::PageState::NAMED, page.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
+  page_manager_->GetPage(LedgerImpl::Delegate::PageState::NAMED, page.NewRequest(),
+                         Capture(SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
   EXPECT_EQ(get_page_status, Status::OK);
@@ -965,9 +930,8 @@ TEST_F(PageManagerTest, OnPageInternallyExternallyUsedUnused) {
   // Open and close the page through an external request.
   bool get_page_callback_called;
   Status get_page_status;
-  page_manager_->GetPage(
-      LedgerImpl::Delegate::PageState::NAMED, page.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
+  page_manager_->GetPage(LedgerImpl::Delegate::PageState::NAMED, page.NewRequest(),
+                         Capture(SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
   EXPECT_EQ(get_page_status, Status::OK);
@@ -988,8 +952,8 @@ TEST_F(PageManagerTest, OnPageInternallyExternallyUsedUnused) {
   bool page_is_synced_called = false;
   storage_->DelayIsSyncedCallback(storage_page_id, true);
   Status storage_status;
-  page_manager_->PageIsClosedAndSynced(callback::Capture(
-      callback::SetWhenCalled(&page_is_synced_called), &storage_status, &is_synced));
+  page_manager_->PageIsClosedAndSynced(
+      Capture(SetWhenCalled(&page_is_synced_called), &storage_status, &is_synced));
   RunLoopUntilIdle();
   EXPECT_FALSE(page_is_synced_called);
   EXPECT_EQ(disk_cleanup_manager_->externally_used_count, 0);
@@ -999,9 +963,8 @@ TEST_F(PageManagerTest, OnPageInternallyExternallyUsedUnused) {
   disk_cleanup_manager_->ResetCounters();
 
   // Open the same page with an external request and check that OnExternallyUsed was called once.
-  page_manager_->GetPage(
-      LedgerImpl::Delegate::PageState::NAMED, page.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
+  page_manager_->GetPage(LedgerImpl::Delegate::PageState::NAMED, page.NewRequest(),
+                         Capture(SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
   EXPECT_EQ(get_page_status, Status::OK);
@@ -1036,17 +999,15 @@ TEST_F(PageManagerTest, DeletePageStorageWhenPageOpenFails) {
   PagePtr page;
   bool called;
 
-  page_manager_->GetPage(
-      LedgerImpl::Delegate::PageState::NAMED, page.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
+  page_manager_->GetPage(LedgerImpl::Delegate::PageState::NAMED, page.NewRequest(),
+                         Capture(SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
   EXPECT_EQ(get_page_status, Status::OK);
 
   // Try to delete the page while it is open. Expect to get an error.
   Status storage_status;
-  page_manager_->DeletePageStorage(
-      callback::Capture(callback::SetWhenCalled(&called), &storage_status));
+  page_manager_->DeletePageStorage(Capture(SetWhenCalled(&called), &storage_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(storage_status, Status::ILLEGAL_STATE);
@@ -1063,9 +1024,8 @@ TEST_F(PageManagerTest, StartPageSyncCheckSyncCalled) {
   storage::PageId storage_page_id = convert::ToString(page_id_.id);
 
   // Opens the page and starts the sync with the cloud for the first time.
-  page_manager_->GetPage(
-      LedgerImpl::Delegate::PageState::NAMED, page.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
+  page_manager_->GetPage(LedgerImpl::Delegate::PageState::NAMED, page.NewRequest(),
+                         Capture(SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
   EXPECT_EQ(get_page_status, Status::OK);
@@ -1092,9 +1052,8 @@ TEST_F(PageManagerTest, StartPageSyncCheckWithOpenedPage) {
   storage::PageId storage_page_id = convert::ToString(page_id_.id);
 
   // Opens the page and starts the sync with the cloud for the first time.
-  page_manager_->GetPage(
-      LedgerImpl::Delegate::PageState::NAMED, page.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&get_page_callback_called), &get_page_status));
+  page_manager_->GetPage(LedgerImpl::Delegate::PageState::NAMED, page.NewRequest(),
+                         Capture(SetWhenCalled(&get_page_callback_called), &get_page_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(get_page_callback_called);
   EXPECT_EQ(get_page_status, Status::OK);

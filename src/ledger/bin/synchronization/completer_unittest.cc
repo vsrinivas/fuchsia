@@ -6,10 +6,10 @@
 
 #include "gtest/gtest.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
-#include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
 
 namespace ledger {
 
@@ -22,11 +22,11 @@ TEST_F(CompleterTest, TasksAreQueued) {
 
   Status status_1;
   bool task_1_has_run;
-  completer.WaitUntilDone(callback::Capture(callback::SetWhenCalled(&task_1_has_run), &status_1));
+  completer.WaitUntilDone(Capture(SetWhenCalled(&task_1_has_run), &status_1));
 
   Status status_2;
   bool task_2_has_run;
-  completer.WaitUntilDone(callback::Capture(callback::SetWhenCalled(&task_2_has_run), &status_2));
+  completer.WaitUntilDone(Capture(SetWhenCalled(&task_2_has_run), &status_2));
   RunLoopUntilIdle();
 
   EXPECT_FALSE(task_1_has_run);
@@ -47,7 +47,7 @@ TEST_F(CompleterTest, TasksAreQueued) {
 
   Status status_3;
   bool task_3_has_run;
-  completer.WaitUntilDone(callback::Capture(callback::SetWhenCalled(&task_3_has_run), &status_3));
+  completer.WaitUntilDone(Capture(SetWhenCalled(&task_3_has_run), &status_3));
   RunLoopUntilIdle();
   EXPECT_TRUE(task_3_has_run);
   EXPECT_EQ(status_3, Status::IO_ERROR);

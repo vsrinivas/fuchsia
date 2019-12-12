@@ -10,9 +10,9 @@
 #include <vector>
 
 #include "src/ledger/bin/inspect/inspect.h"
+#include "src/ledger/lib/callback/ensure_called.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/auto_cleanable.h"
-#include "src/lib/callback/ensure_called.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
@@ -43,7 +43,7 @@ void HeadsChildrenManager::CheckDiscardable() {
 
 void HeadsChildrenManager::GetNames(fit::function<void(std::set<std::string>)> callback) {
   fit::function<void(std::set<std::string>)> call_ensured_callback =
-      callback::EnsureCalled(std::move(callback), std::set<std::string>());
+      EnsureCalled(std::move(callback), std::set<std::string>());
   ExpiringToken token = token_manager_.CreateToken();
   inspectable_page_->NewInspection(
       [heads_children_manager_token = std::move(token),

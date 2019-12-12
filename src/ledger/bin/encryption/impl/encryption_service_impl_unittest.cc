@@ -8,9 +8,9 @@
 #include "src/ledger/bin/storage/fake/fake_object.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/convert/convert.h"
-#include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace encryption {
@@ -24,7 +24,7 @@ class EncryptionServiceTest : public ledger::TestWithEnvironment {
   void EncryptCommit(std::string commit_storage, Status* status, std::string* result) {
     bool called;
     encryption_service_.EncryptCommit(
-        commit_storage, callback::Capture(callback::SetWhenCalled(&called), status, result));
+        commit_storage, ledger::Capture(ledger::SetWhenCalled(&called), status, result));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
   }
@@ -33,8 +33,7 @@ class EncryptionServiceTest : public ledger::TestWithEnvironment {
                      std::string* result) {
     bool called;
     encryption_service_.DecryptCommit(
-        encrypted_commit_storage,
-        callback::Capture(callback::SetWhenCalled(&called), status, result));
+        encrypted_commit_storage, ledger::Capture(ledger::SetWhenCalled(&called), status, result));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
   }
@@ -42,7 +41,7 @@ class EncryptionServiceTest : public ledger::TestWithEnvironment {
   void EncryptEntryPayload(std::string entry_storage, Status* status, std::string* result) {
     bool called;
     encryption_service_.EncryptEntryPayload(
-        entry_storage, callback::Capture(callback::SetWhenCalled(&called), status, result));
+        entry_storage, ledger::Capture(ledger::SetWhenCalled(&called), status, result));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
   }
@@ -51,8 +50,7 @@ class EncryptionServiceTest : public ledger::TestWithEnvironment {
                            std::string* result) {
     bool called;
     encryption_service_.DecryptEntryPayload(
-        encrypted_entry_storage,
-        callback::Capture(callback::SetWhenCalled(&called), status, result));
+        encrypted_entry_storage, ledger::Capture(ledger::SetWhenCalled(&called), status, result));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
   }
@@ -62,15 +60,15 @@ class EncryptionServiceTest : public ledger::TestWithEnvironment {
     bool called;
     encryption_service_.GetObjectName(
         std::move(object_identifier),
-        callback::Capture(callback::SetWhenCalled(&called), status, result));
+        ledger::Capture(ledger::SetWhenCalled(&called), status, result));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
   }
 
   void GetPageId(std::string page_name, Status* status, std::string* result) {
     bool called;
-    encryption_service_.GetPageId(
-        std::move(page_name), callback::Capture(callback::SetWhenCalled(&called), status, result));
+    encryption_service_.GetPageId(std::move(page_name),
+                                  ledger::Capture(ledger::SetWhenCalled(&called), status, result));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
   }
@@ -80,7 +78,7 @@ class EncryptionServiceTest : public ledger::TestWithEnvironment {
     bool called;
     encryption_service_.EncryptObject(
         std::move(object_identifier), content,
-        callback::Capture(callback::SetWhenCalled(&called), status, result));
+        ledger::Capture(ledger::SetWhenCalled(&called), status, result));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
   }
@@ -90,7 +88,7 @@ class EncryptionServiceTest : public ledger::TestWithEnvironment {
     bool called;
     encryption_service_.DecryptObject(
         std::move(object_identifier), std::move(encrypted_data),
-        callback::Capture(callback::SetWhenCalled(&called), status, result));
+        ledger::Capture(ledger::SetWhenCalled(&called), status, result));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
   }
@@ -99,7 +97,7 @@ class EncryptionServiceTest : public ledger::TestWithEnvironment {
     bool called;
     fit::function<uint64_t(uint64_t)> permutation;
     encryption_service_.GetChunkingPermutation(
-        callback::Capture(callback::SetWhenCalled(&called), status, &permutation));
+        ledger::Capture(ledger::SetWhenCalled(&called), status, &permutation));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     *result = permutation(chunk_window_hash);

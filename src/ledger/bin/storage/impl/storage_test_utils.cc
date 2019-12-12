@@ -21,9 +21,9 @@
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
-#include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
 #include "third_party/abseil-cpp/absl/strings/str_format.h"
 
 namespace storage {
@@ -194,7 +194,7 @@ StorageTest::~StorageTest() = default;
   ObjectIdentifier object_identifier;
   GetStorage()->AddObjectFromLocal(
       ObjectType::BLOB, DataSource::Create(value), {},
-      callback::Capture(callback::SetWhenCalled(&called), &status, &object_identifier));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &object_identifier));
   RunLoopFor(kSufficientDelay);
   if (!called) {
     return ::testing::AssertionFailure() << "AddObjectFromLocal callback wasn't called.";
@@ -206,7 +206,7 @@ StorageTest::~StorageTest() = default;
 
   std::unique_ptr<const Object> result;
   GetStorage()->GetObject(object_identifier, PageStorage::Location::Local(),
-                          callback::Capture(callback::SetWhenCalled(&called), &status, &result));
+                          ledger::Capture(ledger::SetWhenCalled(&called), &status, &result));
   RunLoopFor(kSufficientDelay);
   if (!called) {
     return ::testing::AssertionFailure() << "GetObject callback wasn't called.";
@@ -275,8 +275,8 @@ StorageTest::~StorageTest() = default;
     ObjectIdentifier* empty_node_identifier) {
   bool called;
   Status status;
-  btree::TreeNode::Empty(GetStorage(), callback::Capture(callback::SetWhenCalled(&called), &status,
-                                                         empty_node_identifier));
+  btree::TreeNode::Empty(GetStorage(), ledger::Capture(ledger::SetWhenCalled(&called), &status,
+                                                       empty_node_identifier));
   RunLoopFor(kSufficientDelay);
   if (!called) {
     return ::testing::AssertionFailure() << "TreeNode::Empty callback wasn't called.";
@@ -295,7 +295,7 @@ StorageTest::~StorageTest() = default;
   std::unique_ptr<const btree::TreeNode> result;
   btree::TreeNode::FromIdentifier(
       GetStorage(), {std::move(identifier), std::move(location)},
-      callback::Capture(callback::SetWhenCalled(&called), &status, &result));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &result));
   RunLoopFor(kSufficientDelay);
   if (!called) {
     return ::testing::AssertionFailure() << "TreeNode::FromIdentifier callback wasn't called.";
@@ -316,7 +316,7 @@ StorageTest::~StorageTest() = default;
   ObjectIdentifier identifier;
   btree::TreeNode::FromEntries(
       GetStorage(), 0u, entries, children,
-      callback::Capture(callback::SetWhenCalled(&called), &status, &identifier));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &identifier));
 
   RunLoopFor(kSufficientDelay);
   if (!called) {

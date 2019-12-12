@@ -11,8 +11,8 @@
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/platform/scoped_tmp_dir.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
-#include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
+#include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 
 namespace cloud_sync {
 
@@ -66,7 +66,7 @@ TEST_F(LedgerSyncImplTest, CreatePageSync) {
   std::unique_ptr<PageSync> page_sync;
   ledger_sync_->CreatePageSync(
       page_storage.get(), page_storage.get(),
-      callback::Capture(callback::SetWhenCalled(&called), &status, &page_sync));
+      ledger::Capture(ledger::SetWhenCalled(&called), &status, &page_sync));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, storage::Status::OK);

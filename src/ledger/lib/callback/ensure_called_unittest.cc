@@ -2,17 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/lib/callback/ensure_called.h"
+#include "src/ledger/lib/callback/ensure_called.h"
 
 #include <tuple>
 #include <utility>
 
 #include "gtest/gtest.h"
-#include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
-#include "src/lib/fxl/macros.h"
+#include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 
-namespace callback {
+namespace ledger {
 namespace {
 
 TEST(EnsureCalled, NormalCall) {
@@ -20,8 +19,7 @@ TEST(EnsureCalled, NormalCall) {
   int called_with = 0;
 
   {
-    auto callable =
-        EnsureCalled(callback::Capture(callback::SetWhenCalled(&called), &called_with), 1);
+    auto callable = EnsureCalled(Capture(SetWhenCalled(&called), &called_with), 1);
     EXPECT_TRUE(callable);
 
     callable(2);
@@ -39,9 +37,7 @@ TEST(EnsureCalled, DestructorCall) {
   bool called;
   int called_with = 0;
 
-  {
-    auto call = EnsureCalled(callback::Capture(callback::SetWhenCalled(&called), &called_with), 1);
-  }
+  { auto call = EnsureCalled(Capture(SetWhenCalled(&called), &called_with), 1); }
 
   EXPECT_TRUE(called);
   EXPECT_EQ(called_with, 1);
@@ -73,7 +69,7 @@ TEST(EnsureCalled, MoveConstruct) {
   bool called;
 
   {
-    auto callback = EnsureCalled(callback::SetWhenCalled(&called));
+    auto callback = EnsureCalled(SetWhenCalled(&called));
 
     {
       auto callback2 = std::move(callback);
@@ -94,4 +90,4 @@ TEST(EnsureCalled, EnsureCalledReturn) {
 }
 
 }  // namespace
-}  // namespace callback
+}  // namespace ledger

@@ -29,6 +29,7 @@ source_set("unittests") {
 
   deps = [
     ":sync_helper",
+    "//src/ledger/lib/callback",
     "//third_party/googletest:gtest",
   ]
 

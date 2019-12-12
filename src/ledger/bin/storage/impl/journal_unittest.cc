@@ -16,7 +16,7 @@
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/testing/storage_matcher.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
-#include "src/lib/callback/set_when_called.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 
 namespace storage {
 namespace {
@@ -44,13 +44,13 @@ class JournalTest : public ledger::TestWithEnvironment {
     bool called;
     clocks::DeviceIdManagerEmptyImpl device_id_manager;
     page_storage_.Init(&device_id_manager,
-                       callback::Capture(callback::SetWhenCalled(&called), &status));
+                       ledger::Capture(ledger::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     ASSERT_EQ(status, Status::OK);
 
-    page_storage_.GetCommit(kFirstPageCommitId, callback::Capture(callback::SetWhenCalled(&called),
-                                                                  &status, &first_commit_));
+    page_storage_.GetCommit(kFirstPageCommitId, ledger::Capture(ledger::SetWhenCalled(&called),
+                                                                &status, &first_commit_));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     ASSERT_EQ(status, Status::OK);
@@ -71,7 +71,7 @@ class JournalTest : public ledger::TestWithEnvironment {
       return true;
     };
     page_storage_.GetCommitContents(commit, "", std::move(on_next),
-                                    callback::Capture(callback::SetWhenCalled(&called), &status));
+                                    ledger::Capture(ledger::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(status, Status::OK);

@@ -10,7 +10,7 @@
 
 #include <functional>
 
-#include "src/lib/callback/capture.h"
+#include "src/ledger/lib/callback/capture.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "third_party/abseil-cpp/absl/base/attributes.h"
@@ -129,7 +129,7 @@ ABSL_MUST_USE_RESULT ContinuationStatus SyncCall(CoroutineHandler* handler, A as
     }
     handler->Resume(ContinuationStatus::INTERRUPTED);
   });
-  auto capture = callback::Capture(
+  auto capture = ledger::Capture(
       [&sync_state, &callback_called, handler, unblocker = std::move(unblocker)]() mutable {
         // |capture| is already gated by the termination sentinel below. No need
         // to re-check here.

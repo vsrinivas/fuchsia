@@ -22,12 +22,10 @@
 #include "gtest/gtest.h"
 #include "src/ledger/bin/inspect/inspect.h"
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/ledger/bin/testing/inspect.h"
 #include "src/ledger/bin/testing/loop_controller.h"
 #include "src/ledger/bin/testing/loop_controller_test_loop.h"
+#include "src/ledger/lib/callback/capture.h"
 #include "src/ledger/lib/convert/convert.h"
-#include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
 #include "src/lib/inspect_deprecated/deprecated/expose.h"
 #include "src/lib/inspect_deprecated/hierarchy.h"
 #include "src/lib/inspect_deprecated/inspect.h"
@@ -54,8 +52,7 @@ testing::AssertionResult OpenChild(P parent, const std::string& child_name,
                                    LoopController* loop_controller) {
   bool success;
   std::unique_ptr<CallbackWaiter> waiter = loop_controller->NewWaiter();
-  (*parent)->OpenChild(child_name, child->NewRequest(),
-                       callback::Capture(waiter->GetCallback(), &success));
+  (*parent)->OpenChild(child_name, child->NewRequest(), Capture(waiter->GetCallback(), &success));
   if (!waiter->RunUntilCalled()) {
     return ::testing::AssertionFailure() << "RunUntilCalled not successful!";
   }

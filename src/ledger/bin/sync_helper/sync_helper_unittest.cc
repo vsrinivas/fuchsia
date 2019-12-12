@@ -5,7 +5,7 @@
 #include "src/ledger/bin/sync_helper/sync_helper.h"
 
 #include "gtest/gtest.h"
-#include "src/lib/callback/set_when_called.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 
 namespace ledger {
 namespace {
@@ -13,7 +13,7 @@ namespace {
 TEST(SyncHelper, NoOperation) {
   SyncHelper sync_helper;
   bool called = false;
-  sync_helper.RegisterSynchronizationCallback(callback::SetWhenCalled(&called));
+  sync_helper.RegisterSynchronizationCallback(SetWhenCalled(&called));
   EXPECT_TRUE(called);
 }
 
@@ -21,7 +21,7 @@ TEST(SyncHelper, OneOperation) {
   SyncHelper sync_helper;
   auto operation = sync_helper.WrapOperation([] {});
   bool called = false;
-  sync_helper.RegisterSynchronizationCallback(callback::SetWhenCalled(&called));
+  sync_helper.RegisterSynchronizationCallback(SetWhenCalled(&called));
   EXPECT_FALSE(called);
   operation();
   EXPECT_TRUE(called);
@@ -32,8 +32,8 @@ TEST(SyncHelper, TwoSyncCallbacks) {
   auto operation = sync_helper.WrapOperation([] {});
   bool called1 = false;
   bool called2 = false;
-  sync_helper.RegisterSynchronizationCallback(callback::SetWhenCalled(&called1));
-  sync_helper.RegisterSynchronizationCallback(callback::SetWhenCalled(&called2));
+  sync_helper.RegisterSynchronizationCallback(SetWhenCalled(&called1));
+  sync_helper.RegisterSynchronizationCallback(SetWhenCalled(&called2));
   EXPECT_FALSE(called1);
   EXPECT_FALSE(called2);
   operation();
@@ -46,7 +46,7 @@ TEST(SyncHelper, TwoOperation) {
   auto operation1 = sync_helper.WrapOperation([] {});
   auto operation2 = sync_helper.WrapOperation([] {});
   bool called = false;
-  sync_helper.RegisterSynchronizationCallback(callback::SetWhenCalled(&called));
+  sync_helper.RegisterSynchronizationCallback(SetWhenCalled(&called));
 
   EXPECT_FALSE(called);
   operation1();
@@ -60,7 +60,7 @@ TEST(SyncHelper, TwoOperationReversed) {
   auto operation1 = sync_helper.WrapOperation([] {});
   auto operation2 = sync_helper.WrapOperation([] {});
   bool called = false;
-  sync_helper.RegisterSynchronizationCallback(callback::SetWhenCalled(&called));
+  sync_helper.RegisterSynchronizationCallback(SetWhenCalled(&called));
 
   EXPECT_FALSE(called);
   operation2();
@@ -73,10 +73,10 @@ TEST(SyncHelper, TwoOperationTwoCallbacks) {
   SyncHelper sync_helper;
   auto operation1 = sync_helper.WrapOperation([] {});
   bool called1 = false;
-  sync_helper.RegisterSynchronizationCallback(callback::SetWhenCalled(&called1));
+  sync_helper.RegisterSynchronizationCallback(SetWhenCalled(&called1));
   auto operation2 = sync_helper.WrapOperation([] {});
   bool called2 = false;
-  sync_helper.RegisterSynchronizationCallback(callback::SetWhenCalled(&called2));
+  sync_helper.RegisterSynchronizationCallback(SetWhenCalled(&called2));
 
   EXPECT_FALSE(called1);
   EXPECT_FALSE(called2);
@@ -115,7 +115,7 @@ TEST(SyncHelper, WrapMutableLambda) {
 TEST(SyncHelper, StoreConstWrappedOperation) {
   SyncHelper sync_helper;
   bool called = false;
-  const auto operation = sync_helper.WrapOperation(callback::SetWhenCalled(&called));
+  const auto operation = sync_helper.WrapOperation(SetWhenCalled(&called));
   EXPECT_FALSE(called);
   operation();
   EXPECT_TRUE(called);
@@ -124,7 +124,7 @@ TEST(SyncHelper, StoreConstWrappedOperation) {
 TEST(SyncHelper, OnDiscardableCallback) {
   SyncHelper sync_helper;
   bool on_discardable_called;
-  sync_helper.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  sync_helper.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
   EXPECT_TRUE(sync_helper.IsDiscardable());
   const auto operation = sync_helper.WrapOperation([] {});
   EXPECT_FALSE(on_discardable_called);
@@ -138,7 +138,7 @@ TEST(SyncHelper, SyncWithDeletedOperation) {
   SyncHelper sync_helper;
   bool called;
   fit::closure operation = sync_helper.WrapOperation([] {});
-  sync_helper.RegisterSynchronizationCallback(callback::SetWhenCalled(&called));
+  sync_helper.RegisterSynchronizationCallback(SetWhenCalled(&called));
   EXPECT_FALSE(called);
   operation = nullptr;
   EXPECT_TRUE(called);
@@ -147,7 +147,7 @@ TEST(SyncHelper, SyncWithDeletedOperation) {
 TEST(SyncHelper, OnDiscardableWithDeletedOperation) {
   SyncHelper sync_helper;
   bool on_discardable_called;
-  sync_helper.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  sync_helper.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
   fit::closure operation = sync_helper.WrapOperation([] {});
   EXPECT_FALSE(on_discardable_called);
   operation = nullptr;

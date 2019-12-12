@@ -2,20 +2,35 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# NOTE(nathaniel): We don't like having this target at all and we intend to keep
+# it very, very small.
+source_set("crossplatform") {
+  sources = [
+    "capture.h",
+    "set_when_called.cc",
+    "set_when_called.h",
+  ]
+  public_deps = [
+    "//zircon/public/lib/fit:fit",
+  ]
+}
+
 source_set("callback") {
   sources = [
+    "ensure_called.h",
     "managed_container.cc",
     "managed_container.h",
     "operation_serializer.h",
   ]
 
   public_deps = [
+    ":crossplatform",
+    "//src/ledger/lib/logging",
     "//src/lib/fxl",
     "//zircon/public/lib/fit",
   ]
 
   deps = [
-    "//src/ledger/lib/logging",
     "//src/lib/callback",
   ]
 }
@@ -24,13 +39,15 @@ source_set("unittests") {
   testonly = true
 
   sources = [
+    "capture_unittest.cc",
+    "ensure_called_unittest.cc",
     "managed_container_unittest.cc",
     "operation_serializer_unittest.cc",
+    "set_when_called_unittest.cc",
   ]
 
   deps = [
     ":callback",
-    "//src/lib/callback",
     "//third_party/googletest:gtest",
   ]
 }

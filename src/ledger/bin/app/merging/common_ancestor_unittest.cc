@@ -16,9 +16,9 @@
 #include "src/ledger/bin/encryption/primitives/hash.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
+#include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/convert/convert.h"
-#include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
 
 using testing::ElementsAre;
 using testing::IsEmpty;
@@ -46,8 +46,7 @@ class CommonAncestorTest : public TestWithPageStorage {
     Status status;
     bool called;
     std::unique_ptr<const storage::Commit> base;
-    storage_->GetCommit(parent_id,
-                        callback::Capture(callback::SetWhenCalled(&called), &status, &base));
+    storage_->GetCommit(parent_id, Capture(SetWhenCalled(&called), &status, &base));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -56,8 +55,7 @@ class CommonAncestorTest : public TestWithPageStorage {
 
     contents(journal.get());
     std::unique_ptr<const storage::Commit> commit;
-    storage_->CommitJournal(std::move(journal),
-                            callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
+    storage_->CommitJournal(std::move(journal), Capture(SetWhenCalled(&called), &status, &commit));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -76,8 +74,8 @@ class CommonAncestorTest : public TestWithPageStorage {
     Status actual_status;
     bool called;
     std::unique_ptr<const storage::Commit> actual_commit;
-    storage_->CommitJournal(std::move(journal), callback::Capture(callback::SetWhenCalled(&called),
-                                                                  &actual_status, &actual_commit));
+    storage_->CommitJournal(std::move(journal),
+                            Capture(SetWhenCalled(&called), &actual_status, &actual_commit));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(actual_status, Status::OK);
@@ -89,7 +87,7 @@ class CommonAncestorTest : public TestWithPageStorage {
     Status status;
     std::unique_ptr<const storage::Commit> root;
     storage_->GetCommit(storage::kFirstPageCommitId,
-                        callback::Capture(callback::SetWhenCalled(&called), &status, &root));
+                        Capture(SetWhenCalled(&called), &status, &root));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(status, Status::OK);

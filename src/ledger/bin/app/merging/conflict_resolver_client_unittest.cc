@@ -18,8 +18,8 @@
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/lib/backoff/testing/test_backoff.h"
-#include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
+#include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 
 namespace ledger {
 namespace {
@@ -55,8 +55,7 @@ class ConflictResolverClientTest : public TestWithPageStorage {
     Status status;
     bool called;
     std::unique_ptr<const storage::Commit> base;
-    page_storage_->GetCommit(parent_id,
-                             callback::Capture(callback::SetWhenCalled(&called), &status, &base));
+    page_storage_->GetCommit(parent_id, Capture(SetWhenCalled(&called), &status, &base));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -65,8 +64,8 @@ class ConflictResolverClientTest : public TestWithPageStorage {
 
     contents(journal.get());
     std::unique_ptr<const storage::Commit> commit;
-    page_storage_->CommitJournal(
-        std::move(journal), callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
+    page_storage_->CommitJournal(std::move(journal),
+                                 Capture(SetWhenCalled(&called), &status, &commit));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -105,8 +104,8 @@ class ConflictResolverImpl : public ConflictResolver {
           right_version(std::move(right_version)),
           common_version(std::move(common_version)),
           result_provider_ptr(result_provider.Bind()) {
-      result_provider_ptr.set_error_handler(callback::Capture(
-          callback::SetWhenCalled(&result_provider_disconnected), &result_provider_status));
+      result_provider_ptr.set_error_handler(
+          Capture(SetWhenCalled(&result_provider_disconnected), &result_provider_status));
     }
   };
 
@@ -210,16 +209,14 @@ TEST_F(ConflictResolverClientTest, MergeNonConflicting) {
   std::unique_ptr<const storage::Commit> commit = std::move(commits[0]);
 
   storage::Entry key1_entry, key2_entry;
-  page_storage_->GetEntryFromCommit(
-      *commit, "key1",
-      callback::Capture(callback::SetWhenCalled(&called), &storage_status, &key1_entry));
+  page_storage_->GetEntryFromCommit(*commit, "key1",
+                                    Capture(SetWhenCalled(&called), &storage_status, &key1_entry));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(storage_status, Status::OK);
 
-  page_storage_->GetEntryFromCommit(
-      *commit, "key2",
-      callback::Capture(callback::SetWhenCalled(&called), &storage_status, &key2_entry));
+  page_storage_->GetEntryFromCommit(*commit, "key2",
+                                    Capture(SetWhenCalled(&called), &storage_status, &key2_entry));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(storage_status, Status::OK);
@@ -277,16 +274,14 @@ TEST_F(ConflictResolverClientTest, MergeNonConflictingOrdering) {
   std::unique_ptr<const storage::Commit> commit = std::move(commits[0]);
   bool called;
   storage::Entry key1_entry, key2_entry;
-  page_storage_->GetEntryFromCommit(
-      *commit, "key1",
-      callback::Capture(callback::SetWhenCalled(&called), &storage_status, &key1_entry));
+  page_storage_->GetEntryFromCommit(*commit, "key1",
+                                    Capture(SetWhenCalled(&called), &storage_status, &key1_entry));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(storage_status, Status::OK);
 
-  page_storage_->GetEntryFromCommit(
-      *commit, "key2",
-      callback::Capture(callback::SetWhenCalled(&called), &storage_status, &key2_entry));
+  page_storage_->GetEntryFromCommit(*commit, "key2",
+                                    Capture(SetWhenCalled(&called), &storage_status, &key2_entry));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(storage_status, Status::OK);

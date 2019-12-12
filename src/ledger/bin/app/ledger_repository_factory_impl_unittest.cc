@@ -14,9 +14,9 @@
 #include "src/ledger/bin/platform/detached_path.h"
 #include "src/ledger/bin/platform/scoped_tmp_dir.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/convert/convert.h"
-#include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fsl/io/fd.h"
 #include "src/lib/inspect_deprecated/inspect.h"
@@ -94,10 +94,9 @@ class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
   bool callback_called;
   Status status;
 
-  repository_factory_->GetRepository(
-      fsl::CloneChannelFromFileDescriptor(fd.get()), nullptr, kUserID,
-      ledger_repository_ptr->NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&callback_called), &status));
+  repository_factory_->GetRepository(fsl::CloneChannelFromFileDescriptor(fd.get()), nullptr,
+                                     kUserID, ledger_repository_ptr->NewRequest(),
+                                     Capture(SetWhenCalled(&callback_called), &status));
 
   RunLoopUntilIdle();
 
@@ -230,15 +229,14 @@ TEST_F(LedgerRepositoryFactoryImplTest, CloseLedgerRepository) {
   bool ptr1_closed;
   zx_status_t ptr1_closed_status;
   ledger_repository_ptr1.set_error_handler(
-      callback::Capture(callback::SetWhenCalled(&ptr1_closed), &ptr1_closed_status));
+      Capture(SetWhenCalled(&ptr1_closed), &ptr1_closed_status));
   bool ptr2_closed;
   zx_status_t ptr2_closed_status;
   ledger_repository_ptr2.set_error_handler(
-      callback::Capture(callback::SetWhenCalled(&ptr2_closed), &ptr2_closed_status));
+      Capture(SetWhenCalled(&ptr2_closed), &ptr2_closed_status));
   bool ledger_closed;
   zx_status_t ledger_closed_status;
-  ledger_ptr.set_error_handler(
-      callback::Capture(callback::SetWhenCalled(&ledger_closed), &ledger_closed_status));
+  ledger_ptr.set_error_handler(Capture(SetWhenCalled(&ledger_closed), &ledger_closed_status));
 
   ledger_repository_ptr1->GetLedger(convert::ToArray("ledger"), ledger_ptr.NewRequest());
   RunLoopUntilIdle();
@@ -277,14 +275,12 @@ TEST_F(LedgerRepositoryFactoryImplTest, CloseFactory) {
 
   repository_factory->GetRepository(
       fsl::CloneChannelFromFileDescriptor(tmp_location->path().root_fd()), nullptr, "",
-      ledger_repository_ptr.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&get_repository_called), &status));
+      ledger_repository_ptr.NewRequest(), Capture(SetWhenCalled(&get_repository_called), &status));
 
   bool channel_closed;
   zx_status_t zx_status;
 
-  ledger_repository_ptr.set_error_handler(
-      callback::Capture(callback::SetWhenCalled(&channel_closed), &zx_status));
+  ledger_repository_ptr.set_error_handler(Capture(SetWhenCalled(&channel_closed), &zx_status));
 
   RunLoopUntilIdle();
 

@@ -34,10 +34,10 @@
 #include "src/ledger/bin/sync_coordinator/testing/page_sync_empty_impl.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/backoff/exponential_backoff.h"
+#include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/vmo/strings.h"
-#include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
 
 namespace ledger {
 namespace {
@@ -199,9 +199,9 @@ TEST_P(SynchronyHeadsChildrenManagerTest, GetNames) {
   bool on_discardable_called;
 
   HeadsChildrenManager heads_children_manager{dispatcher(), &heads_node, &inspectable_page};
-  heads_children_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  heads_children_manager.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
   static_cast<inspect_deprecated::ChildrenManager*>(&heads_children_manager)
-      ->GetNames(callback::Capture(callback::SetWhenCalled(&callback_called), &names));
+      ->GetNames(Capture(SetWhenCalled(&callback_called), &names));
   RunLoopUntilIdle();
   ASSERT_TRUE(callback_called);
   EXPECT_THAT(names, UnorderedElementsAre(CommitIdToDisplayName(one), CommitIdToDisplayName(two),
@@ -239,7 +239,7 @@ TEST_P(SynchronyAndConcurrencyHeadsChildrenManagerTest, GetNames) {
   heads_children_manager.SetOnDiscardable([&on_discardable_calls] { on_discardable_calls++; });
   for (size_t index{0}; index < concurrency; index++) {
     static_cast<inspect_deprecated::ChildrenManager*>(&heads_children_manager)
-        ->GetNames(callback::Capture([&] { callbacks_called++; }, &nameses[index]));
+        ->GetNames(Capture([&] { callbacks_called++; }, &nameses[index]));
   }
   RunLoopUntilIdle();
   ASSERT_EQ(callbacks_called, concurrency);
@@ -287,10 +287,9 @@ TEST_P(SynchronyHeadsChildrenManagerTest, Attach) {
   bool on_discardable_called;
 
   HeadsChildrenManager heads_children_manager{dispatcher(), &heads_node, &inspectable_page};
-  heads_children_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  heads_children_manager.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
   static_cast<inspect_deprecated::ChildrenManager*>(&heads_children_manager)
-      ->Attach(CommitIdToDisplayName(two),
-               callback::Capture(callback::SetWhenCalled(&callback_called), &detacher));
+      ->Attach(CommitIdToDisplayName(two), Capture(SetWhenCalled(&callback_called), &detacher));
   RunLoopUntilIdle();
   ASSERT_TRUE(callback_called);
   EXPECT_TRUE(detacher);
@@ -338,11 +337,11 @@ TEST_P(SynchronyAndConcurrencyHeadsChildrenManagerTest, Attach) {
   bool on_discardable_called;
 
   HeadsChildrenManager heads_children_manager{dispatcher(), &heads_node, &inspectable_page};
-  heads_children_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  heads_children_manager.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
   for (size_t index{0}; index < concurrency; index++) {
     static_cast<inspect_deprecated::ChildrenManager*>(&heads_children_manager)
         ->Attach(CommitIdToDisplayName(attachment_choices[index]),
-                 callback::Capture([&] { callbacks_called++; }, &detachers[index]));
+                 Capture([&] { callbacks_called++; }, &detachers[index]));
   }
   RunLoopUntilIdle();
   ASSERT_EQ(callbacks_called, concurrency);
@@ -381,7 +380,7 @@ TEST_P(SynchronyAndConcurrencyHeadsChildrenManagerTest, GetNamesErrorGettingActi
   heads_children_manager.SetOnDiscardable([&on_discardable_calls] { on_discardable_calls++; });
   for (size_t index{0}; index < concurrency; index++) {
     static_cast<inspect_deprecated::ChildrenManager*>(&heads_children_manager)
-        ->GetNames(callback::Capture([&] { callbacks_called++; }, &nameses[index]));
+        ->GetNames(Capture([&] { callbacks_called++; }, &nameses[index]));
   }
   RunLoopUntilIdle();
   ASSERT_EQ(callbacks_called, concurrency);
@@ -432,7 +431,7 @@ TEST_P(SynchronyAndConcurrencyHeadsChildrenManagerTest, GetNamesErrorGettingComm
   heads_children_manager.SetOnDiscardable([&on_discardable_calls] { on_discardable_calls++; });
   for (size_t index{0}; index < concurrency; index++) {
     static_cast<inspect_deprecated::ChildrenManager*>(&heads_children_manager)
-        ->GetNames(callback::Capture([&] { callbacks_called++; }, &nameses[index]));
+        ->GetNames(Capture([&] { callbacks_called++; }, &nameses[index]));
   }
   RunLoopUntilIdle();
   ASSERT_EQ(callbacks_called, concurrency);
@@ -461,11 +460,11 @@ TEST_F(HeadsChildrenManagerTest, AttachInvalidName) {
   bool on_discardable_called;
 
   HeadsChildrenManager heads_children_manager{dispatcher(), &heads_node, &inspectable_page};
-  heads_children_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  heads_children_manager.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
 
   static_cast<inspect_deprecated::ChildrenManager*>(&heads_children_manager)
       ->Attach("Definitely not the display string of a commit ID",
-               callback::Capture(callback::SetWhenCalled(&callback_called), &detacher));
+               Capture(SetWhenCalled(&callback_called), &detacher));
   ASSERT_TRUE(callback_called);
   EXPECT_TRUE(detacher);
   // The HeadsChildrenManager under test did not surrender program control during the call to
@@ -473,7 +472,7 @@ TEST_F(HeadsChildrenManagerTest, AttachInvalidName) {
   EXPECT_FALSE(on_discardable_called);
 
   // The returned detacher is callable but has no discernible effect.
-  heads_children_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  heads_children_manager.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
   detacher();
   RunLoopUntilIdle();
   EXPECT_FALSE(on_discardable_called);

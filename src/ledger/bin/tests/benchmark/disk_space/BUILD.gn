@@ -26,7 +26,6 @@ executable("ledger_benchmark_disk_space") {
     "//src/ledger/bin/testing:lib",
     "//src/ledger/lib/logging",
     "//src/ledger/lib/vmo",
-    "//src/lib/callback",
     "//src/lib/fxl",
     "//third_party/abseil-cpp",
     "//zircon/public/lib/async-loop-cpp",

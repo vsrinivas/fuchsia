@@ -13,14 +13,11 @@
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/db_view_factory.h"
 #include "src/ledger/bin/app/serialization.h"
-#include "src/ledger/bin/platform/scoped_tmp_dir.h"
 #include "src/ledger/bin/storage/fake/fake_db.h"
 #include "src/ledger/bin/storage/fake/fake_db_factory.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
 
 namespace ledger {
 namespace {

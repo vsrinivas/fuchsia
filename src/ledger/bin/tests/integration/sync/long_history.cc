@@ -8,8 +8,8 @@
 #include "src/ledger/bin/tests/integration/integration_test.h"
 #include "src/ledger/bin/tests/integration/sync/test_sync_state_watcher.h"
 #include "src/ledger/bin/tests/integration/test_page_watcher.h"
+#include "src/ledger/lib/callback/capture.h"
 #include "src/ledger/lib/convert/convert.h"
-#include "src/lib/callback/capture.h"
 #include "src/lib/callback/waiter.h"
 
 namespace ledger {
@@ -50,7 +50,7 @@ TEST_P(LongHistorySyncTest, SyncLongHistory) {
   // Retrieve the page ID so that we can later connect to the same page from
   // another app instance.
   waiter = NewWaiter();
-  page1->GetId(callback::Capture(waiter->GetCallback(), &page_id));
+  page1->GetId(Capture(waiter->GetCallback(), &page_id));
   ASSERT_TRUE(waiter->RunUntilCalled());
 
   // Create the second instance, connect to the same page and download the
@@ -67,8 +67,7 @@ TEST_P(LongHistorySyncTest, SyncLongHistory) {
 
   waiter = NewWaiter();
   fuchsia::ledger::PageSnapshot_GetInline_Result result;
-  snapshot->GetInline(convert::ToArray("iteration"),
-                      callback::Capture(waiter->GetCallback(), &result));
+  snapshot->GetInline(convert::ToArray("iteration"), Capture(waiter->GetCallback(), &result));
   ASSERT_TRUE(waiter->RunUntilCalled());
   if (result.is_err()) {
     // The key is not present yet, wait for an event on the watcher.
@@ -79,8 +78,7 @@ TEST_P(LongHistorySyncTest, SyncLongHistory) {
   page2->GetSnapshot(snapshot.NewRequest(), {}, nullptr);
 
   waiter = NewWaiter();
-  snapshot->GetInline(convert::ToArray("iteration"),
-                      callback::Capture(waiter->GetCallback(), &result));
+  snapshot->GetInline(convert::ToArray("iteration"), Capture(waiter->GetCallback(), &result));
   ASSERT_TRUE(waiter->RunUntilCalled());
   const int last_iteration = commit_history_length - 1;
   ASSERT_THAT(result, MatchesString(std::to_string(last_iteration)));

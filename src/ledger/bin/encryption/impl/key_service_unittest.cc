@@ -6,8 +6,8 @@
 
 #include "gtest/gtest.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
-#include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
+#include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 
 namespace encryption {
 namespace {
@@ -23,8 +23,7 @@ TEST_F(KeyServiceTest, GetChunkingKey) {
   Status status;
   std::string result;
   bool called;
-  key_service_.GetChunkingKey(
-      callback::Capture(callback::SetWhenCalled(&called), &status, &result));
+  key_service_.GetChunkingKey(ledger::Capture(ledger::SetWhenCalled(&called), &status, &result));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -35,7 +34,7 @@ TEST_F(KeyServiceTest, GetPageIdKey) {
   Status status;
   std::string result;
   bool called;
-  key_service_.GetPageIdKey(callback::Capture(callback::SetWhenCalled(&called), &status, &result));
+  key_service_.GetPageIdKey(ledger::Capture(ledger::SetWhenCalled(&called), &status, &result));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -50,7 +49,7 @@ TEST_F(KeyServiceTest, GetEncryptionKey) {
 
   std::string encryption_key1;
   key_service_.GetEncryptionKey(
-      key_index1, callback::Capture(callback::SetWhenCalled(&called), &status, &encryption_key1));
+      key_index1, ledger::Capture(ledger::SetWhenCalled(&called), &status, &encryption_key1));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -58,7 +57,7 @@ TEST_F(KeyServiceTest, GetEncryptionKey) {
 
   std::string encryption_key2;
   key_service_.GetEncryptionKey(
-      key_index2, callback::Capture(callback::SetWhenCalled(&called), &status, &encryption_key2));
+      key_index2, ledger::Capture(ledger::SetWhenCalled(&called), &status, &encryption_key2));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -74,16 +73,16 @@ TEST_F(KeyServiceTest, GetRemoteObjectIdKey) {
   uint64_t key_index2 = kDefaultKeyIndex;
 
   std::string remote_object_id_key1;
-  key_service_.GetRemoteObjectIdKey(key_index1, callback::Capture(callback::SetWhenCalled(&called),
-                                                                  &status, &remote_object_id_key1));
+  key_service_.GetRemoteObjectIdKey(
+      key_index1, ledger::Capture(ledger::SetWhenCalled(&called), &status, &remote_object_id_key1));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
   EXPECT_FALSE(remote_object_id_key1.empty());
 
   std::string remote_object_id_key2;
-  key_service_.GetRemoteObjectIdKey(key_index2, callback::Capture(callback::SetWhenCalled(&called),
-                                                                  &status, &remote_object_id_key2));
+  key_service_.GetRemoteObjectIdKey(
+      key_index2, ledger::Capture(ledger::SetWhenCalled(&called), &status, &remote_object_id_key2));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);

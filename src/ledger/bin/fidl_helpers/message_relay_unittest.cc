@@ -9,9 +9,9 @@
 #include <memory>
 
 #include "gtest/gtest.h"
+#include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/convert/convert.h"
-#include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace ledger {
@@ -46,8 +46,7 @@ TEST_F(MessageRelayTest, SendReceiveMessage) {
 
   bool called;
   std::vector<uint8_t> data;
-  message_relay_2->SetMessageReceivedCallback(
-      callback::Capture(callback::SetWhenCalled(&called), &data));
+  message_relay_2->SetMessageReceivedCallback(Capture(SetWhenCalled(&called), &data));
   message_relay_1->SendMessage(convert::ToArray("some data"));
 
   RunLoopUntilIdle();

@@ -12,10 +12,10 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/ledger/bin/fidl_helpers/message_relay.h"
+#include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
 
 namespace ledger {
 
@@ -41,7 +41,7 @@ TEST_F(OvernetFactoryTest, HostList_OneHost_Workaround) {
 
   bool called = false;
   std::vector<fuchsia::overnet::Peer> host_list;
-  overnet1->ListPeers(callback::Capture(callback::SetWhenCalled(&called), &host_list));
+  overnet1->ListPeers(Capture(SetWhenCalled(&called), &host_list));
 
   RunLoopUntilIdle();
 
@@ -49,7 +49,7 @@ TEST_F(OvernetFactoryTest, HostList_OneHost_Workaround) {
   EXPECT_THAT(host_list, IsEmpty());
 
   called = false;
-  overnet1->ListPeers(callback::Capture(callback::SetWhenCalled(&called), &host_list));
+  overnet1->ListPeers(Capture(SetWhenCalled(&called), &host_list));
 
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
@@ -62,7 +62,7 @@ TEST_F(OvernetFactoryTest, HostList_OneHost) {
 
   bool called = false;
   std::vector<fuchsia::overnet::Peer> host_list;
-  overnet1->ListPeers(callback::Capture(callback::SetWhenCalled(&called), &host_list));
+  overnet1->ListPeers(Capture(SetWhenCalled(&called), &host_list));
 
   RunLoopUntilIdle();
 
@@ -71,7 +71,7 @@ TEST_F(OvernetFactoryTest, HostList_OneHost) {
   EXPECT_EQ(host_list.at(0).id.id, 1u);
 
   called = false;
-  overnet1->ListPeers(callback::Capture(callback::SetWhenCalled(&called), &host_list));
+  overnet1->ListPeers(Capture(SetWhenCalled(&called), &host_list));
 
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
@@ -84,13 +84,13 @@ TEST_F(OvernetFactoryTest, HostList_TwoHosts_Sequence) {
 
   bool called = false;
   std::vector<fuchsia::overnet::Peer> host_list;
-  overnet1->ListPeers(callback::Capture(callback::SetWhenCalled(&called), &host_list));
+  overnet1->ListPeers(Capture(SetWhenCalled(&called), &host_list));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
 
   called = false;
-  overnet1->ListPeers(callback::Capture(callback::SetWhenCalled(&called), &host_list));
+  overnet1->ListPeers(Capture(SetWhenCalled(&called), &host_list));
 
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
@@ -105,7 +105,7 @@ TEST_F(OvernetFactoryTest, HostList_TwoHosts_Sequence) {
   EXPECT_EQ(host_list.at(1).id.id, 2u);
 
   called = false;
-  overnet2->ListPeers(callback::Capture(callback::SetWhenCalled(&called), &host_list));
+  overnet2->ListPeers(Capture(SetWhenCalled(&called), &host_list));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
@@ -116,7 +116,7 @@ TEST_F(OvernetFactoryTest, HostList_TwoHosts_Sequence) {
   overnet2.Unbind();
   RunLoopUntilIdle();
 
-  overnet1->ListPeers(callback::Capture(callback::SetWhenCalled(&called), &host_list));
+  overnet1->ListPeers(Capture(SetWhenCalled(&called), &host_list));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   ASSERT_EQ(host_list.size(), 1u);
@@ -132,13 +132,13 @@ TEST_F(OvernetFactoryTest, HostList_TwoHosts_Chained) {
 
   bool called = false;
   std::vector<fuchsia::overnet::Peer> host_list;
-  overnet1->ListPeers(callback::Capture(callback::SetWhenCalled(&called), &host_list));
+  overnet1->ListPeers(Capture(SetWhenCalled(&called), &host_list));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
 
   called = false;
-  overnet1->ListPeers(callback::Capture(callback::SetWhenCalled(&called), &host_list));
+  overnet1->ListPeers(Capture(SetWhenCalled(&called), &host_list));
 
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
@@ -152,7 +152,7 @@ TEST_F(OvernetFactoryTest, HostList_TwoHosts_Chained) {
   EXPECT_EQ(host_list.at(0).id.id, 1u);
   EXPECT_EQ(host_list.at(1).id.id, 2u);
 
-  overnet1->ListPeers(callback::Capture(callback::SetWhenCalled(&called), &host_list));
+  overnet1->ListPeers(Capture(SetWhenCalled(&called), &host_list));
 
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
@@ -216,14 +216,13 @@ TEST_F(OvernetFactoryTest, ServiceProvider) {
   bool called_host1 = false;
   std::vector<uint8_t> message_host1;
   relays_host1[0]->SetMessageReceivedCallback(
-      callback::Capture(callback::SetWhenCalled(&called_host1), &message_host1));
+      Capture(SetWhenCalled(&called_host1), &message_host1));
 
   fidl_helpers::MessageRelay relay2;
   relay2.SetChannel(std::move(local));
   bool called_host2 = false;
   std::vector<uint8_t> message_host2;
-  relay2.SetMessageReceivedCallback(
-      callback::Capture(callback::SetWhenCalled(&called_host2), &message_host2));
+  relay2.SetMessageReceivedCallback(Capture(SetWhenCalled(&called_host2), &message_host2));
 
   // Sends a message from host2 to host1.
   relay2.SendMessage({0u, 1u});
@@ -244,7 +243,7 @@ TEST_F(OvernetFactoryTest, ServiceProvider) {
 
   // Verifies that disconnection works.
   bool relay2_disconnected = false;
-  relay2.SetChannelClosedCallback(callback::SetWhenCalled(&relay2_disconnected));
+  relay2.SetChannelClosedCallback(SetWhenCalled(&relay2_disconnected));
   relays_host1[0].reset();
 
   RunLoopUntilIdle();

@@ -86,10 +86,10 @@ source_set("lib") {
   deps = [
     "//sdk/fidl/fuchsia.net.oldhttp",
     "//src/ledger/bin/fidl",
+    "//src/ledger/lib/callback",
     "//src/ledger/lib/coroutine",
     "//src/ledger/lib/logging",
     "//src/ledger/lib/vmo",
-    "//src/lib/callback",
     "//src/lib/fxl",
     "//src/lib/inspect_deprecated:reader",
     "//third_party/abseil-cpp",
@@ -119,9 +119,9 @@ source_set("ledger_instance_factory") {
   ]
 
   deps = [
+    "//src/ledger/lib/callback",
     "//src/ledger/lib/convert",
     "//src/ledger/lib/vmo",
-    "//src/lib/callback",
     "//third_party/googletest:gtest",
   ]
 
@@ -156,8 +156,8 @@ source_set("get_ledger") {
 
   deps = [
     "//src/ledger/bin/fidl",
+    "//src/ledger/lib/callback",
     "//src/ledger/lib/logging",
-    "//src/lib/callback",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]
@@ -201,8 +201,8 @@ source_set("unittests") {
     ":lib",
     ":run_trace",
     "//src/ledger/bin/app:flags",
+    "//src/ledger/lib/callback",
     "//src/ledger/lib/logging",
-    "//src/lib/callback",
     "//src/lib/fxl",
     "//third_party/abseil-cpp",
     "//zircon/public/lib/async-loop-cpp",

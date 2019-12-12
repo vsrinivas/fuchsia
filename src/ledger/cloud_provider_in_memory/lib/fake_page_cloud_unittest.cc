@@ -15,10 +15,10 @@
 
 #include "peridot/lib/rng/random.h"
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/encoding/encoding.h"
-#include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace ledger {
@@ -72,8 +72,7 @@ TEST_F(FakePageCloudTest, DuplicateCommits) {
   ASSERT_TRUE(ledger::EncodeToBuffer(&commits, &commit_pack.buffer));
   cloud_provider::Status status;
   bool called;
-  page_cloud_->AddCommits(std::move(commit_pack),
-                          callback::Capture(callback::SetWhenCalled(&called), &status));
+  page_cloud_->AddCommits(std::move(commit_pack), Capture(SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   ASSERT_EQ(status, cloud_provider::Status::OK);
@@ -82,8 +81,7 @@ TEST_F(FakePageCloudTest, DuplicateCommits) {
   commits.commits.clear();
   commits.commits.push_back(MakeCommit("id0", std::nullopt));
   ASSERT_TRUE(ledger::EncodeToBuffer(&commits, &commit_pack.buffer));
-  page_cloud_->AddCommits(std::move(commit_pack),
-                          callback::Capture(callback::SetWhenCalled(&called), &status));
+  page_cloud_->AddCommits(std::move(commit_pack), Capture(SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   ASSERT_EQ(status, cloud_provider::Status::OK);
@@ -91,8 +89,8 @@ TEST_F(FakePageCloudTest, DuplicateCommits) {
   // Check that the cloud provider only returns one commit.
   std::unique_ptr<cloud_provider::CommitPack> commit_pack_ptr;
   std::unique_ptr<cloud_provider::PositionToken> position_token;
-  page_cloud_->GetCommits(nullptr, callback::Capture(callback::SetWhenCalled(&called), &status,
-                                                     &commit_pack_ptr, &position_token));
+  page_cloud_->GetCommits(
+      nullptr, Capture(SetWhenCalled(&called), &status, &commit_pack_ptr, &position_token));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   ASSERT_EQ(status, cloud_provider::Status::OK);
@@ -110,8 +108,7 @@ TEST_F(FakePageCloudTest, RejectUnknownBases) {
   ASSERT_TRUE(ledger::EncodeToBuffer(&commits, &commit_pack.buffer));
   cloud_provider::Status status;
   bool called;
-  page_cloud_->AddCommits(std::move(commit_pack),
-                          callback::Capture(callback::SetWhenCalled(&called), &status));
+  page_cloud_->AddCommits(std::move(commit_pack), Capture(SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   ASSERT_EQ(status, cloud_provider::Status::NOT_FOUND);
@@ -119,8 +116,8 @@ TEST_F(FakePageCloudTest, RejectUnknownBases) {
   // Check that no commit has been added.
   std::unique_ptr<cloud_provider::CommitPack> commit_pack_ptr;
   std::unique_ptr<cloud_provider::PositionToken> position_token;
-  page_cloud_->GetCommits(nullptr, callback::Capture(callback::SetWhenCalled(&called), &status,
-                                                     &commit_pack_ptr, &position_token));
+  page_cloud_->GetCommits(
+      nullptr, Capture(SetWhenCalled(&called), &status, &commit_pack_ptr, &position_token));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   ASSERT_EQ(status, cloud_provider::Status::OK);
@@ -135,7 +132,7 @@ TEST_F(FakePageCloudTest, GetDiffForUnknown) {
   std::unique_ptr<cloud_provider::DiffPack> diff;
 
   page_cloud_->GetDiff(convert::ToArray("not a commit"), {},
-                       callback::Capture(callback::SetWhenCalled(&called), &status, &diff));
+                       Capture(SetWhenCalled(&called), &status, &diff));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(status, cloud_provider::Status::NOT_FOUND);
@@ -152,8 +149,7 @@ TEST_F(FakePageCloudTest, AcceptDiff) {
   ASSERT_TRUE(ledger::EncodeToBuffer(&commits, &commit_pack.buffer));
   cloud_provider::Status status;
   bool called;
-  page_cloud_->AddCommits(std::move(commit_pack),
-                          callback::Capture(callback::SetWhenCalled(&called), &status));
+  page_cloud_->AddCommits(std::move(commit_pack), Capture(SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   ASSERT_EQ(status, cloud_provider::Status::OK);
@@ -161,7 +157,7 @@ TEST_F(FakePageCloudTest, AcceptDiff) {
   // Get its diff.
   std::unique_ptr<cloud_provider::DiffPack> diff_pack;
   page_cloud_->GetDiff(convert::ToArray("id0"), {},
-                       callback::Capture(callback::SetWhenCalled(&called), &status, &diff_pack));
+                       Capture(SetWhenCalled(&called), &status, &diff_pack));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   ASSERT_EQ(status, cloud_provider::Status::OK);
@@ -185,8 +181,7 @@ TEST_F(FakePageCloudTest, DiscardDiff) {
   ASSERT_TRUE(ledger::EncodeToBuffer(&commits, &commit_pack.buffer));
   cloud_provider::Status status;
   bool called;
-  page_cloud_->AddCommits(std::move(commit_pack),
-                          callback::Capture(callback::SetWhenCalled(&called), &status));
+  page_cloud_->AddCommits(std::move(commit_pack), Capture(SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   ASSERT_EQ(status, cloud_provider::Status::OK);
@@ -194,7 +189,7 @@ TEST_F(FakePageCloudTest, DiscardDiff) {
   // Get its diff.
   std::unique_ptr<cloud_provider::DiffPack> diff_pack;
   page_cloud_->GetDiff(convert::ToArray("id0"), {},
-                       callback::Capture(callback::SetWhenCalled(&called), &status, &diff_pack));
+                       Capture(SetWhenCalled(&called), &status, &diff_pack));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   ASSERT_EQ(status, cloud_provider::Status::OK);

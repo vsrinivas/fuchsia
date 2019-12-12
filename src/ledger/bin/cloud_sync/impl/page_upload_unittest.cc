@@ -27,10 +27,10 @@
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/backoff/testing/test_backoff.h"
+#include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/encoding/encoding.h"
 #include "src/ledger/lib/socket/strings.h"
-#include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
 
 namespace cloud_sync {
 namespace {
@@ -538,7 +538,7 @@ TEST_F(PageUploadTest, UploadClock) {
   bool called;
   ledger::Status status;
   page_upload_->UpdateClock(std::move(clock),
-                            callback::Capture(callback::SetWhenCalled(&called), &status));
+                            ledger::Capture(ledger::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
   EXPECT_THAT(page_cloud_.clocks, SizeIs(1));
@@ -562,16 +562,14 @@ TEST_F(PageUploadTest, UploadClockRateLimit) {
        storage::DeviceEntry{storage::ClockEntry{"commit1", 1}, storage::ClockEntry{"commit0", 0}}}};
   bool called_1;
   ledger::Status status_1;
-  page_upload_->UpdateClock(clock,
-                            callback::Capture(callback::SetWhenCalled(&called_1), &status_1));
+  page_upload_->UpdateClock(clock, ledger::Capture(ledger::SetWhenCalled(&called_1), &status_1));
   RunLoopUntilIdle();
   EXPECT_FALSE(called_1);
   EXPECT_THAT(page_cloud_.clocks, SizeIs(1));
 
   bool called_2;
   ledger::Status status_2;
-  page_upload_->UpdateClock(clock,
-                            callback::Capture(callback::SetWhenCalled(&called_2), &status_2));
+  page_upload_->UpdateClock(clock, ledger::Capture(ledger::SetWhenCalled(&called_2), &status_2));
   // The second call is waiting for the first one to finish.
   RunLoopUntilIdle();
   EXPECT_FALSE(called_2);
@@ -582,8 +580,7 @@ TEST_F(PageUploadTest, UploadClockRateLimit) {
        storage::DeviceEntry{storage::ClockEntry{"commit5", 5}, storage::ClockEntry{"commit0", 0}}}};
   bool called_3;
   ledger::Status status_3;
-  page_upload_->UpdateClock(clock_3,
-                            callback::Capture(callback::SetWhenCalled(&called_3), &status_3));
+  page_upload_->UpdateClock(clock_3, ledger::Capture(ledger::SetWhenCalled(&called_3), &status_3));
   // The second call is waiting for the first one to finish.
   RunLoopUntilIdle();
   EXPECT_FALSE(called_3);

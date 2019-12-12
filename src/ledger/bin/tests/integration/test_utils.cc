@@ -14,10 +14,10 @@
 
 #include "gtest/gtest.h"
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/ledger/lib/callback/capture.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/vmo/strings.h"
-#include "src/lib/callback/capture.h"
 
 namespace ledger {
 
@@ -54,7 +54,7 @@ std::vector<Entry> SnapshotGetEntries(LoopController* loop_controller, PageSnaps
     std::vector<Entry> entries;
     auto waiter = loop_controller->NewWaiter();
     (*snapshot)->GetEntries(fidl::Clone(start), std::move(token),
-                            callback::Capture(waiter->GetCallback(), &entries, &token));
+                            Capture(waiter->GetCallback(), &entries, &token));
     if (!waiter->RunUntilCalled()) {
       ADD_FAILURE() << "|GetEntries| failed to call back.";
       return {};

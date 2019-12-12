@@ -17,10 +17,10 @@
 #include "src/ledger/bin/testing/get_page_ensure_initialized.h"
 #include "src/ledger/bin/testing/ledger_app_instance_factory.h"
 #include "src/ledger/bin/tests/integration/integration_test.h"
+#include "src/ledger/lib/callback/capture.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/vmo/vector.h"
 #include "src/lib/callback/auto_cleanable.h"
-#include "src/lib/callback/capture.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
@@ -225,7 +225,7 @@ class ConvergenceTest : public BaseIntegrationTest,
             ADD_FAILURE() << "Page should not be disconnected.";
             StopLoop();
           },
-          callback::Capture(loop_waiter->GetCallback(), &status, &pages_[i], &page_id));
+          Capture(loop_waiter->GetCallback(), &status, &pages_[i], &page_id));
       ASSERT_TRUE(loop_waiter->RunUntilCalled());
       ASSERT_EQ(status, Status::OK);
     }
@@ -255,8 +255,8 @@ class ConvergenceTest : public BaseIntegrationTest,
     for (int i = 0; i < num_ledgers_; i++) {
       auto loop_waiter = NewWaiter();
       fuchsia::ledger::PageSnapshot_GetInline_Result result;
-      watchers[i]->GetInlineOnLatestSnapshot(
-          convert::ToArray(key), callback::Capture(loop_waiter->GetCallback(), &result));
+      watchers[i]->GetInlineOnLatestSnapshot(convert::ToArray(key),
+                                             Capture(loop_waiter->GetCallback(), &result));
       EXPECT_TRUE(loop_waiter->RunUntilCalled());
       EXPECT_TRUE(result.is_response());
       values.emplace_back(std::move(result.response().value));
@@ -316,7 +316,7 @@ TEST_P(ConvergenceTest, NLedgersConverge) {
   }
 
   auto loop_waiter = NewWaiter();
-  sync_waiter->Finalize(callback::Capture(loop_waiter->GetCallback()));
+  sync_waiter->Finalize(Capture(loop_waiter->GetCallback()));
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
 
   // Function to verify if the visible Ledger state has not changed since last

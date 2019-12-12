@@ -26,10 +26,10 @@
 #include "src/ledger/bin/testing/inspect.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/backoff/exponential_backoff.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/vmo/vector.h"
-#include "src/lib/callback/set_when_called.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
@@ -272,7 +272,7 @@ TEST_F(InspectedCommitTest, OnDiscardableCalledNoChildrenManagement) {
   InspectedCommit inspected_commit = InspectedCommit(
       dispatcher(), std::move(commit_node), std::move(commit), ExpiringToken(), &inspectable_page);
 
-  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  inspected_commit.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
 
   fit::closure detacher = inspected_commit.CreateDetacher();
   RunLoopUntilIdle();
@@ -282,7 +282,7 @@ TEST_F(InspectedCommitTest, OnDiscardableCalledNoChildrenManagement) {
   RunLoopUntilIdle();
   EXPECT_TRUE(on_discardable_called);
 
-  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  inspected_commit.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
 
   fit::closure first_detacher = inspected_commit.CreateDetacher();
   RunLoopUntilIdle();
@@ -327,9 +327,9 @@ TEST_F(InspectedCommitTest, GetNames) {
   std::set<std::string> names;
   bool on_discardable_called;
 
-  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  inspected_commit.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
   static_cast<inspect_deprecated::ChildrenManager*>(&inspected_commit)
-      ->GetNames(callback::Capture(callback::SetWhenCalled(&callback_called), &names));
+      ->GetNames(Capture(SetWhenCalled(&callback_called), &names));
   RunLoopUntilIdle();
   ASSERT_TRUE(callback_called);
   EXPECT_THAT(names, UnorderedElementsAreArray(key_display_names));
@@ -365,10 +365,10 @@ TEST_F(InspectedCommitTest, ConcurrentGetNames) {
   std::vector<std::set<std::string>> nameses{concurrency};
   bool on_discardable_called;
 
-  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  inspected_commit.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
   for (size_t index{0}; index < concurrency; index++) {
     static_cast<inspect_deprecated::ChildrenManager*>(&inspected_commit)
-        ->GetNames(callback::Capture([&] { callbacks_called++; }, &nameses[index]));
+        ->GetNames(Capture([&] { callbacks_called++; }, &nameses[index]));
   }
   RunLoopUntilIdle();
   ASSERT_EQ(callbacks_called, concurrency);
@@ -402,11 +402,10 @@ TEST_F(InspectedCommitTest, Attach) {
   bool callback_called;
   bool on_discardable_called;
 
-  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  inspected_commit.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
   fit::closure detacher;
   static_cast<inspect_deprecated::ChildrenManager*>(&inspected_commit)
-      ->Attach(KeyToDisplayName("one"),
-               callback::Capture(callback::SetWhenCalled(&callback_called), &detacher));
+      ->Attach(KeyToDisplayName("one"), Capture(SetWhenCalled(&callback_called), &detacher));
   RunLoopUntilIdle();
   ASSERT_TRUE(callback_called);
   EXPECT_TRUE(detacher);
@@ -437,18 +436,17 @@ TEST_F(InspectedCommitTest, AttachAbsentEntry) {
   bool callback_called;
   bool on_discardable_called;
 
-  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  inspected_commit.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
   fit::closure detacher;
   static_cast<inspect_deprecated::ChildrenManager*>(&inspected_commit)
-      ->Attach(KeyToDisplayName("three"),
-               callback::Capture(callback::SetWhenCalled(&callback_called), &detacher));
+      ->Attach(KeyToDisplayName("three"), Capture(SetWhenCalled(&callback_called), &detacher));
   RunLoopUntilIdle();
   ASSERT_TRUE(callback_called);
   EXPECT_TRUE(detacher);
   EXPECT_TRUE(on_discardable_called);
 
   // The returned detacher is callable but has no discernible effect.
-  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  inspected_commit.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
   detacher();
   RunLoopUntilIdle();
   EXPECT_FALSE(on_discardable_called);
@@ -491,11 +489,11 @@ TEST_F(InspectedCommitTest, ConcurrentAttach) {
       std::make_unique<storage::IdAndParentIdsCommit>(
           convert::ToString(storage::kFirstPageCommitId), std::set<storage::CommitId>()),
       ExpiringToken(), &inspectable_page);
-  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  inspected_commit.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
   for (size_t index{0}; index < concurrency; index++) {
     static_cast<inspect_deprecated::ChildrenManager*>(&inspected_commit)
         ->Attach(attachment_choices[index],
-                 callback::Capture([&] { callbacks_called++; }, &detachers[index]));
+                 Capture([&] { callbacks_called++; }, &detachers[index]));
   }
   RunLoopUntilIdle();
   ASSERT_EQ(callbacks_called, concurrency);
@@ -534,13 +532,13 @@ TEST_F(InspectedCommitTest, OnDiscardableCalledSomeChildrenManagement) {
   bool callback_called;
   bool on_discardable_called;
 
-  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  inspected_commit.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
   fit::closure first_commit_detacher = inspected_commit.CreateDetacher();
   EXPECT_FALSE(on_discardable_called);
   fit::closure one_entry_detacher;
   static_cast<inspect_deprecated::ChildrenManager*>(&inspected_commit)
       ->Attach(KeyToDisplayName("one"),
-               callback::Capture(callback::SetWhenCalled(&callback_called), &one_entry_detacher));
+               Capture(SetWhenCalled(&callback_called), &one_entry_detacher));
   RunLoopUntilIdle();
   ASSERT_TRUE(callback_called);
   EXPECT_TRUE(one_entry_detacher);
@@ -550,7 +548,7 @@ TEST_F(InspectedCommitTest, OnDiscardableCalledSomeChildrenManagement) {
   fit::closure two_entry_detacher;
   static_cast<inspect_deprecated::ChildrenManager*>(&inspected_commit)
       ->Attach(KeyToDisplayName("two"),
-               callback::Capture(callback::SetWhenCalled(&callback_called), &two_entry_detacher));
+               Capture(SetWhenCalled(&callback_called), &two_entry_detacher));
   RunLoopUntilIdle();
   ASSERT_TRUE(callback_called);
   EXPECT_TRUE(two_entry_detacher);
@@ -583,9 +581,9 @@ TEST_F(InspectedCommitTest, GetNamesErrorGettingActivePageManager) {
   std::set<std::string> names;
   bool on_discardable_called;
 
-  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  inspected_commit.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
   static_cast<inspect_deprecated::ChildrenManager*>(&inspected_commit)
-      ->GetNames(callback::Capture(callback::SetWhenCalled(&callback_called), &names));
+      ->GetNames(Capture(SetWhenCalled(&callback_called), &names));
   RunLoopUntilIdle();
   ASSERT_TRUE(callback_called);
   EXPECT_THAT(names, IsEmpty());
@@ -614,9 +612,9 @@ TEST_F(InspectedCommitTest, GetNamesErrorGettingEntries) {
   std::set<std::string> names;
   bool on_discardable_called;
 
-  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  inspected_commit.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
   static_cast<inspect_deprecated::ChildrenManager*>(&inspected_commit)
-      ->GetNames(callback::Capture(callback::SetWhenCalled(&callback_called), &names));
+      ->GetNames(Capture(SetWhenCalled(&callback_called), &names));
   RunLoopUntilIdle();
   ASSERT_TRUE(callback_called);
   EXPECT_THAT(names, IsEmpty());
@@ -637,10 +635,10 @@ TEST_F(InspectedCommitTest, AttachInvalidName) {
   fit::closure detacher;
   bool on_discardable_called;
 
-  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  inspected_commit.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
   static_cast<inspect_deprecated::ChildrenManager*>(&inspected_commit)
       ->Attach("This string is not a valid key display name",
-               callback::Capture(callback::SetWhenCalled(&callback_called), &detacher));
+               Capture(SetWhenCalled(&callback_called), &detacher));
   RunLoopUntilIdle();
   ASSERT_TRUE(callback_called);
   EXPECT_TRUE(detacher);
@@ -649,7 +647,7 @@ TEST_F(InspectedCommitTest, AttachInvalidName) {
   EXPECT_FALSE(on_discardable_called);
 
   // The returned detacher is callable but has no discernible effect.
-  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&callback_called));
+  inspected_commit.SetOnDiscardable(SetWhenCalled(&callback_called));
   detacher();
   RunLoopUntilIdle();
   EXPECT_FALSE(on_discardable_called);
@@ -669,17 +667,17 @@ TEST_F(InspectedCommitTest, AttachErrorGettingActivePageManager) {
   fit::closure detacher;
   bool on_discardable_called;
 
-  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  inspected_commit.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
   static_cast<inspect_deprecated::ChildrenManager*>(&inspected_commit)
       ->Attach(KeyToDisplayName("my happy fun key"),
-               callback::Capture(callback::SetWhenCalled(&callback_called), &detacher));
+               Capture(SetWhenCalled(&callback_called), &detacher));
   RunLoopUntilIdle();
   ASSERT_TRUE(callback_called);
   EXPECT_TRUE(detacher);
   EXPECT_TRUE(on_discardable_called);
 
   // The returned detacher is callable but has no discernible effect.
-  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  inspected_commit.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
   detacher();
   RunLoopUntilIdle();
   EXPECT_FALSE(on_discardable_called);
@@ -707,17 +705,17 @@ TEST_F(InspectedCommitTest, AttachErrorGettingEntry) {
   fit::closure detacher;
   bool on_discardable_called;
 
-  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  inspected_commit.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
   static_cast<inspect_deprecated::ChildrenManager*>(&inspected_commit)
       ->Attach(KeyToDisplayName("your happy fun key"),
-               callback::Capture(callback::SetWhenCalled(&callback_called), &detacher));
+               Capture(SetWhenCalled(&callback_called), &detacher));
   RunLoopUntilIdle();
   ASSERT_TRUE(callback_called);
   EXPECT_TRUE(detacher);
   EXPECT_TRUE(on_discardable_called);
 
   // The returned detacher is callable but has no discernible effect.
-  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  inspected_commit.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
   detacher();
   RunLoopUntilIdle();
   EXPECT_FALSE(on_discardable_called);
@@ -740,11 +738,11 @@ TEST_F(InspectedCommitTest, ConcurrentAttachErrorGettingActivePageManager) {
   std::vector<fit::closure> detachers{concurrency};
   bool on_discardable_called;
 
-  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  inspected_commit.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
   for (size_t index{0}; index < concurrency; index++) {
     static_cast<inspect_deprecated::ChildrenManager*>(&inspected_commit)
         ->Attach(KeyToDisplayName("my happy fun key"),
-                 callback::Capture([&] { callbacks_called++; }, &detachers[index]));
+                 Capture([&] { callbacks_called++; }, &detachers[index]));
   }
   RunLoopUntilIdle();
   ASSERT_EQ(callbacks_called, concurrency);
@@ -752,7 +750,7 @@ TEST_F(InspectedCommitTest, ConcurrentAttachErrorGettingActivePageManager) {
   EXPECT_TRUE(on_discardable_called);
 
   // The returned detachers are callable but have no discernible effect.
-  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  inspected_commit.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
   for (const fit::closure& detacher : detachers) {
     detacher();
     EXPECT_FALSE(on_discardable_called);
@@ -809,11 +807,11 @@ TEST_F(InspectedCommitTest, ConcurrentAttachErrorGettingEntry) {
   std::vector<fit::closure> detachers{concurrency};
   bool on_discardable_called;
 
-  inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  inspected_commit.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
   for (size_t index{0}; index < concurrency; index++) {
     static_cast<inspect_deprecated::ChildrenManager*>(&inspected_commit)
         ->Attach(attachment_choices[index],
-                 callback::Capture([&] { callbacks_called++; }, &detachers[index]));
+                 Capture([&] { callbacks_called++; }, &detachers[index]));
   }
   RunLoopUntilIdle();
   ASSERT_EQ(callbacks_called, concurrency);

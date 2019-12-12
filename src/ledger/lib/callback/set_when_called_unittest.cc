@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/lib/callback/set_when_called.h"
+#include "set_when_called.h"
 
 #include <gtest/gtest.h>
 
-namespace callback {
+namespace ledger {
 namespace {
 
 TEST(SetWhenCalled, SetsTheInitialValueToFalse) {
@@ -24,4 +24,4 @@ TEST(SetWhenCalled, SetsTheValueToTrueWhenCalled) {
 }
 
 }  // namespace
-}  // namespace callback
+}  // namespace ledger

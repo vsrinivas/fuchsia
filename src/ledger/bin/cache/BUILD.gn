@@ -29,7 +29,7 @@ source_set("unittests") {
 
   deps = [
     ":cache",
-    "//src/lib/callback:crossplatform",
+    "//src/ledger/lib/callback:crossplatform",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fit:fit",
   ]

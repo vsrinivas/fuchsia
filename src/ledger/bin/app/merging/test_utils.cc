@@ -14,9 +14,9 @@
 #include "src/ledger/bin/storage/impl/leveldb.h"
 #include "src/ledger/bin/storage/impl/page_storage_impl.h"
 #include "src/ledger/bin/storage/public/constants.h"
+#include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/convert/convert.h"
-#include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
@@ -35,7 +35,7 @@ fit::function<void(storage::Journal*)> TestWithPageStorage::AddKeyValueToJournal
     bool called;
     page_storage()->AddObjectFromLocal(
         storage::ObjectType::BLOB, storage::DataSource::Create(std::move(value)), {},
-        callback::Capture(callback::SetWhenCalled(&called), &status, &object_identifier));
+        Capture(SetWhenCalled(&called), &status, &object_identifier));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -55,7 +55,7 @@ fit::function<void(storage::Journal*)> TestWithPageStorage::DeleteKeyFromJournal
   std::unique_ptr<const storage::Object> object;
   bool called;
   page_storage()->GetObject(std::move(object_identifier), storage::PageStorage::Location::Local(),
-                            callback::Capture(callback::SetWhenCalled(&called), &status, &object));
+                            Capture(SetWhenCalled(&called), &status, &object));
   RunLoopUntilIdle();
   if (!called) {
     return ::testing::AssertionFailure() << "PageStorage::GetObject never called the callback.";
@@ -88,8 +88,7 @@ fit::function<void(storage::Journal*)> TestWithPageStorage::DeleteKeyFromJournal
 
   bool called;
   clocks::DeviceIdManagerEmptyImpl device_id_manager;
-  local_page_storage->Init(&device_id_manager,
-                           callback::Capture(callback::SetWhenCalled(&called), &status));
+  local_page_storage->Init(&device_id_manager, Capture(SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   if (!called) {
     return ::testing::AssertionFailure() << "PageStorage::Init never called the callback.";

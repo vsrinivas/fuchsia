@@ -6,7 +6,7 @@
 
 #include "gtest/gtest.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
-#include "src/lib/callback/set_when_called.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 
 namespace ledger {
 namespace {
@@ -18,8 +18,8 @@ TEST_F(PageAvailabilityManagerTest, PageAvailableByDefault) {
   bool on_available_called;
 
   PageAvailabilityManager page_availability_manager;
-  page_availability_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
-  page_availability_manager.OnPageAvailable(callback::SetWhenCalled(&on_available_called));
+  page_availability_manager.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
+  page_availability_manager.OnPageAvailable(SetWhenCalled(&on_available_called));
 
   EXPECT_TRUE(page_availability_manager.IsDiscardable());
   EXPECT_TRUE(on_available_called);
@@ -31,9 +31,9 @@ TEST_F(PageAvailabilityManagerTest, BusyPage) {
   bool on_available_called;
 
   PageAvailabilityManager page_availability_manager;
-  page_availability_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  page_availability_manager.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
   page_availability_manager.MarkPageBusy();
-  page_availability_manager.OnPageAvailable(callback::SetWhenCalled(&on_available_called));
+  page_availability_manager.OnPageAvailable(SetWhenCalled(&on_available_called));
 
   EXPECT_FALSE(page_availability_manager.IsDiscardable());
   EXPECT_FALSE(on_available_called);
@@ -46,15 +46,15 @@ TEST_F(PageAvailabilityManagerTest, PageAvailabilityManagerReusable) {
   bool second_on_available_called;
 
   PageAvailabilityManager page_availability_manager;
-  page_availability_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  page_availability_manager.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
   page_availability_manager.MarkPageBusy();
-  page_availability_manager.OnPageAvailable(callback::SetWhenCalled(&first_on_available_called));
+  page_availability_manager.OnPageAvailable(SetWhenCalled(&first_on_available_called));
 
   EXPECT_FALSE(page_availability_manager.IsDiscardable());
   EXPECT_FALSE(first_on_available_called);
   EXPECT_FALSE(on_discardable_called);
 
-  page_availability_manager.OnPageAvailable(callback::SetWhenCalled(&second_on_available_called));
+  page_availability_manager.OnPageAvailable(SetWhenCalled(&second_on_available_called));
   EXPECT_FALSE(page_availability_manager.IsDiscardable());
   EXPECT_FALSE(first_on_available_called);
   EXPECT_FALSE(second_on_available_called);
@@ -67,10 +67,10 @@ TEST_F(PageAvailabilityManagerTest, PageAvailabilityManagerReusable) {
   EXPECT_TRUE(second_on_available_called);
   EXPECT_TRUE(on_discardable_called);
 
-  page_availability_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  page_availability_manager.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
   page_availability_manager.MarkPageBusy();
-  page_availability_manager.OnPageAvailable(callback::SetWhenCalled(&second_on_available_called));
-  page_availability_manager.OnPageAvailable(callback::SetWhenCalled(&first_on_available_called));
+  page_availability_manager.OnPageAvailable(SetWhenCalled(&second_on_available_called));
+  page_availability_manager.OnPageAvailable(SetWhenCalled(&first_on_available_called));
 
   EXPECT_FALSE(page_availability_manager.IsDiscardable());
   EXPECT_FALSE(first_on_available_called);
@@ -91,15 +91,15 @@ TEST_F(PageAvailabilityManagerTest, CallbacksNotCalledOnDestruction) {
   bool second_on_available_called;
 
   auto page_availability_manager = std::make_unique<PageAvailabilityManager>();
-  page_availability_manager->SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  page_availability_manager->SetOnDiscardable(SetWhenCalled(&on_discardable_called));
   page_availability_manager->MarkPageBusy();
-  page_availability_manager->OnPageAvailable(callback::SetWhenCalled(&first_on_available_called));
+  page_availability_manager->OnPageAvailable(SetWhenCalled(&first_on_available_called));
 
   EXPECT_FALSE(page_availability_manager->IsDiscardable());
   EXPECT_FALSE(first_on_available_called);
   EXPECT_FALSE(on_discardable_called);
 
-  page_availability_manager->OnPageAvailable(callback::SetWhenCalled(&second_on_available_called));
+  page_availability_manager->OnPageAvailable(SetWhenCalled(&second_on_available_called));
 
   EXPECT_FALSE(page_availability_manager->IsDiscardable());
   EXPECT_FALSE(first_on_available_called);

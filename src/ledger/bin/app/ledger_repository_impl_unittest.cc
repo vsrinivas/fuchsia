@@ -35,12 +35,12 @@
 #include "src/ledger/bin/testing/fake_disk_cleanup_manager.h"
 #include "src/ledger/bin/testing/inspect.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/vmo/strings.h"
-#include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
 #include "src/lib/inspect_deprecated/deprecated/expose.h"
 #include "src/lib/inspect_deprecated/hierarchy.h"
 #include "src/lib/inspect_deprecated/inspect.h"
@@ -315,12 +315,12 @@ TEST_F(LedgerRepositoryImplTest, ConcurrentCalls) {
   // Make a first call to DiskCleanUp.
   bool callback_called1 = false;
   Status status1;
-  repository_->DiskCleanUp(callback::Capture(callback::SetWhenCalled(&callback_called1), &status1));
+  repository_->DiskCleanUp(Capture(SetWhenCalled(&callback_called1), &status1));
 
   // Make a second one before the first one has finished.
   bool callback_called2 = false;
   Status status2;
-  repository_->DiskCleanUp(callback::Capture(callback::SetWhenCalled(&callback_called2), &status2));
+  repository_->DiskCleanUp(Capture(SetWhenCalled(&callback_called2), &status2));
 
   // Make sure both of them start running.
   RunLoopUntilIdle();
@@ -464,20 +464,19 @@ TEST_F(LedgerRepositoryImplTest, Close) {
   repository_->BindRepository(ledger_repository_ptr2.NewRequest());
 
   bool on_discardable_called;
-  repository_->SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  repository_->SetOnDiscardable(SetWhenCalled(&on_discardable_called));
 
   bool ptr1_closed;
   zx_status_t ptr1_closed_status;
   ledger_repository_ptr1.set_error_handler(
-      callback::Capture(callback::SetWhenCalled(&ptr1_closed), &ptr1_closed_status));
+      Capture(SetWhenCalled(&ptr1_closed), &ptr1_closed_status));
   bool ptr2_closed;
   zx_status_t ptr2_closed_status;
   ledger_repository_ptr2.set_error_handler(
-      callback::Capture(callback::SetWhenCalled(&ptr2_closed), &ptr2_closed_status));
+      Capture(SetWhenCalled(&ptr2_closed), &ptr2_closed_status));
   bool ledger_closed;
   zx_status_t ledger_closed_status;
-  ledger_ptr.set_error_handler(
-      callback::Capture(callback::SetWhenCalled(&ledger_closed), &ledger_closed_status));
+  ledger_ptr.set_error_handler(Capture(SetWhenCalled(&ledger_closed), &ledger_closed_status));
 
   ledger_repository_ptr1->GetLedger(convert::ToArray("ledger"), ledger_ptr.NewRequest());
   RunLoopUntilIdle();
@@ -517,12 +516,12 @@ TEST_F(LedgerRepositoryImplTest, CloseEmpty) {
   repository_->BindRepository(ledger_repository_ptr1.NewRequest());
 
   bool on_discardable_called;
-  repository_->SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  repository_->SetOnDiscardable(SetWhenCalled(&on_discardable_called));
 
   bool ptr1_closed;
   zx_status_t ptr1_closed_status;
   ledger_repository_ptr1.set_error_handler(
-      callback::Capture(callback::SetWhenCalled(&ptr1_closed), &ptr1_closed_status));
+      Capture(SetWhenCalled(&ptr1_closed), &ptr1_closed_status));
 
   ledger_repository_ptr1->Close();
   RunLoopUntilIdle();
@@ -537,7 +536,7 @@ TEST_F(LedgerRepositoryImplTest, CloseWithoutOnDiscardableCallback) {
   bool ptr1_closed;
   Status ptr1_closed_status;
 
-  repository_->Close(callback::Capture(callback::SetWhenCalled(&ptr1_closed), &ptr1_closed_status));
+  repository_->Close(Capture(SetWhenCalled(&ptr1_closed), &ptr1_closed_status));
   RunLoopUntilIdle();
 
   EXPECT_TRUE(ptr1_closed);
@@ -553,7 +552,7 @@ TEST_F(LedgerRepositoryImplTest, AliveWithNoCallbacksSet) {
   // Make a first call to DiskCleanUp.
   bool callback_called1 = false;
   Status status1;
-  repository_->DiskCleanUp(callback::Capture(callback::SetWhenCalled(&callback_called1), &status1));
+  repository_->DiskCleanUp(Capture(SetWhenCalled(&callback_called1), &status1));
 
   // Make sure it starts running.
   RunLoopUntilIdle();
@@ -581,12 +580,12 @@ TEST_F(LedgerRepositoryImplTest, CloseWhileDbInitRunning) {
   repository_->BindRepository(ledger_repository_ptr1.NewRequest());
 
   bool on_discardable_called;
-  repository_->SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  repository_->SetOnDiscardable(SetWhenCalled(&on_discardable_called));
 
   bool ptr1_closed;
   zx_status_t ptr1_closed_status;
   ledger_repository_ptr1.set_error_handler(
-      callback::Capture(callback::SetWhenCalled(&ptr1_closed), &ptr1_closed_status));
+      Capture(SetWhenCalled(&ptr1_closed), &ptr1_closed_status));
 
   // The call should not trigger destruction, as the initialization of PageUsageDb is not finished.
   ledger_repository_ptr1->Close();
@@ -681,8 +680,7 @@ TEST_F(LedgerRepositoryImplTest, PageDeletionNewDeviceId) {
 
   bool called;
   Status status;
-  repository_->DeletePageStorage(ledger_name, page_id,
-                                 callback::Capture(callback::SetWhenCalled(&called), &status));
+  repository_->DeletePageStorage(ledger_name, page_id, Capture(SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -696,9 +694,8 @@ TEST_F(LedgerRepositoryImplTest, PageDeletionNewDeviceId) {
   EXPECT_NE(device_id_1, device_id_2);
 
   PagePredicateResult predicate;
-  repository_->PageIsClosedAndSynced(
-      ledger_name, page_id,
-      callback::Capture(callback::SetWhenCalled(&called), &status, &predicate));
+  repository_->PageIsClosedAndSynced(ledger_name, page_id,
+                                     Capture(SetWhenCalled(&called), &status, &predicate));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   // Page is deleted;
@@ -734,16 +731,14 @@ TEST_F(LedgerRepositoryImplTest, PageDeletionNotDoneIfDeviceIdManagerFails) {
 
   bool called;
   Status status;
-  repository_->DeletePageStorage(ledger_name, page_id,
-                                 callback::Capture(callback::SetWhenCalled(&called), &status));
+  repository_->DeletePageStorage(ledger_name, page_id, Capture(SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::INTERRUPTED);
 
   PagePredicateResult predicate;
-  repository_->PageIsClosedAndSynced(
-      ledger_name, page_id,
-      callback::Capture(callback::SetWhenCalled(&called), &status, &predicate));
+  repository_->PageIsClosedAndSynced(ledger_name, page_id,
+                                     Capture(SetWhenCalled(&called), &status, &predicate));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
@@ -781,8 +776,7 @@ TEST_F(LedgerRepositoryImplTest, PageDeletionReopensPageManagerIfClosed) {
 
   bool called;
   Status status;
-  repository_->DeletePageStorage(ledger_name, page_id,
-                                 callback::Capture(callback::SetWhenCalled(&called), &status));
+  repository_->DeletePageStorage(ledger_name, page_id, Capture(SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   // The call to DeletePageStorage is suspended in the middle of OnPageDeleted calback.
   EXPECT_FALSE(called);

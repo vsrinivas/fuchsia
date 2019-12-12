@@ -11,9 +11,9 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/fake_disk_cleanup_manager.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/convert/convert.h"
-#include "src/lib/callback/capture.h"
-#include "src/lib/callback/set_when_called.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
@@ -56,9 +56,9 @@ TEST_F(ActivePageManagerContainerTest, OneEarlyBindingNoPageManager) {
   ActivePageManagerContainer active_page_manager_container(
       &environment_, convert::ToString(kLedgerName), page_id,
       std::vector<PageUsageListener*>{&fake_disk_cleanup_manager_});
-  active_page_manager_container.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
-  active_page_manager_container.BindPage(
-      page.NewRequest(), callback::Capture(callback::SetWhenCalled(&callback_called), &status));
+  active_page_manager_container.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
+  active_page_manager_container.BindPage(page.NewRequest(),
+                                         Capture(SetWhenCalled(&callback_called), &status));
   RunLoopUntilIdle();
   EXPECT_FALSE(callback_called);
   EXPECT_FALSE(on_discardable_called);
@@ -87,9 +87,9 @@ TEST_F(ActivePageManagerContainerTest, BindBeforePageManager) {
   ActivePageManagerContainer active_page_manager_container(
       &environment_, convert::ToString(kLedgerName), page_id_,
       std::vector<PageUsageListener*>{&fake_disk_cleanup_manager_});
-  active_page_manager_container.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
-  active_page_manager_container.BindPage(
-      page.NewRequest(), callback::Capture(callback::SetWhenCalled(&callback_called), &status));
+  active_page_manager_container.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
+  active_page_manager_container.BindPage(page.NewRequest(),
+                                         Capture(SetWhenCalled(&callback_called), &status));
   RunLoopUntilIdle();
   EXPECT_FALSE(callback_called);
   active_page_manager_container.SetActivePageManager(Status::OK, std::move(active_page_manager_));
@@ -116,9 +116,9 @@ TEST_F(ActivePageManagerContainerTest, SingleExternalRequest) {
   ActivePageManagerContainer active_page_manager_container(
       &environment_, convert::ToString(kLedgerName), page_id_,
       std::vector<PageUsageListener*>{&fake_disk_cleanup_manager_});
-  active_page_manager_container.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
-  active_page_manager_container.BindPage(
-      page.NewRequest(), callback::Capture(callback::SetWhenCalled(&callback_called), &status));
+  active_page_manager_container.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
+  active_page_manager_container.BindPage(page.NewRequest(),
+                                         Capture(SetWhenCalled(&callback_called), &status));
   RunLoopUntilIdle();
   EXPECT_FALSE(callback_called);
   EXPECT_FALSE(on_discardable_called);
@@ -137,14 +137,13 @@ TEST_F(ActivePageManagerContainerTest, MultipleExternalRequests) {
   ActivePageManagerContainer active_page_manager_container(
       &environment_, convert::ToString(kLedgerName), page_id_,
       std::vector<PageUsageListener*>{&fake_disk_cleanup_manager_});
-  active_page_manager_container.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  active_page_manager_container.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
 
   PagePtr first_connection;
   bool first_callback_called;
   Status first_status;
   active_page_manager_container.BindPage(
-      first_connection.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&first_callback_called), &first_status));
+      first_connection.NewRequest(), Capture(SetWhenCalled(&first_callback_called), &first_status));
   RunLoopUntilIdle();
   EXPECT_FALSE(first_callback_called);
   EXPECT_FALSE(on_discardable_called);
@@ -158,10 +157,9 @@ TEST_F(ActivePageManagerContainerTest, MultipleExternalRequests) {
   Status third_status;
   active_page_manager_container.BindPage(
       second_connection.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&second_callback_called), &second_status));
+      Capture(SetWhenCalled(&second_callback_called), &second_status));
   active_page_manager_container.BindPage(
-      third_connection.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&third_callback_called), &third_status));
+      third_connection.NewRequest(), Capture(SetWhenCalled(&third_callback_called), &third_status));
   RunLoopUntilIdle();
   EXPECT_FALSE(first_callback_called);
   EXPECT_FALSE(second_callback_called);
@@ -186,14 +184,13 @@ TEST_F(ActivePageManagerContainerTest, UnregisteredExternalRequests) {
   ActivePageManagerContainer active_page_manager_container(
       &environment_, convert::ToString(kLedgerName), page_id_,
       std::vector<PageUsageListener*>{&fake_disk_cleanup_manager_});
-  active_page_manager_container.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  active_page_manager_container.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
 
   PagePtr first_connection;
   bool first_callback_called;
   Status first_status;
   active_page_manager_container.BindPage(
-      first_connection.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&first_callback_called), &first_status));
+      first_connection.NewRequest(), Capture(SetWhenCalled(&first_callback_called), &first_status));
   RunLoopUntilIdle();
   EXPECT_FALSE(first_callback_called);
   EXPECT_FALSE(on_discardable_called);
@@ -207,10 +204,9 @@ TEST_F(ActivePageManagerContainerTest, UnregisteredExternalRequests) {
   Status third_status;
   active_page_manager_container.BindPage(
       second_connection.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&second_callback_called), &second_status));
+      Capture(SetWhenCalled(&second_callback_called), &second_status));
   active_page_manager_container.BindPage(
-      third_connection.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&third_callback_called), &third_status));
+      third_connection.NewRequest(), Capture(SetWhenCalled(&third_callback_called), &third_status));
   RunLoopUntilIdle();
   EXPECT_FALSE(first_callback_called);
   EXPECT_FALSE(second_callback_called);
@@ -253,7 +249,7 @@ TEST_F(ActivePageManagerContainerTest, MultipleExternalRequestsAndMultipleIntern
   ActivePageManagerContainer active_page_manager_container(
       &environment_, convert::ToString(kLedgerName), page_id_,
       std::vector<PageUsageListener*>{&fake_disk_cleanup_manager_});
-  active_page_manager_container.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  active_page_manager_container.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
 
   size_t requested_internal_requests = 0;
   size_t live_external_requests = 0;
@@ -358,14 +354,13 @@ TEST_F(ActivePageManagerContainerTest, DestroyedWhileExternalRequestsOutstanding
       std::make_unique<ActivePageManagerContainer>(
           &environment_, convert::ToString(kLedgerName), page_id_,
           std::vector<PageUsageListener*>{&fake_disk_cleanup_manager_});
-  active_page_manager_container->SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  active_page_manager_container->SetOnDiscardable(SetWhenCalled(&on_discardable_called));
 
   PagePtr first_connection;
   bool first_callback_called;
   Status first_status;
   active_page_manager_container->BindPage(
-      first_connection.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&first_callback_called), &first_status));
+      first_connection.NewRequest(), Capture(SetWhenCalled(&first_callback_called), &first_status));
   RunLoopUntilIdle();
   EXPECT_FALSE(first_callback_called);
   EXPECT_FALSE(on_discardable_called);
@@ -379,10 +374,9 @@ TEST_F(ActivePageManagerContainerTest, DestroyedWhileExternalRequestsOutstanding
   Status third_status;
   active_page_manager_container->BindPage(
       second_connection.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&second_callback_called), &second_status));
+      Capture(SetWhenCalled(&second_callback_called), &second_status));
   active_page_manager_container->BindPage(
-      third_connection.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&third_callback_called), &third_status));
+      third_connection.NewRequest(), Capture(SetWhenCalled(&third_callback_called), &third_status));
   RunLoopUntilIdle();
   EXPECT_FALSE(first_callback_called);
   EXPECT_FALSE(second_callback_called);
@@ -409,7 +403,7 @@ TEST_F(ActivePageManagerContainerTest, DestroyedWhileRequestsAndTokensOutstandin
       std::make_unique<ActivePageManagerContainer>(
           &environment_, convert::ToString(kLedgerName), page_id_,
           std::vector<PageUsageListener*>{&fake_disk_cleanup_manager_});
-  active_page_manager_container->SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  active_page_manager_container->SetOnDiscardable(SetWhenCalled(&on_discardable_called));
 
   size_t requested_internal_requests = 0;
   size_t live_external_requests = 0;
@@ -458,7 +452,7 @@ TEST_F(ActivePageManagerContainerTest, DestroyedWhileCallingPageUsageListener) {
       std::make_unique<ActivePageManagerContainer>(
           &environment_, convert::ToString(kLedgerName), page_id_,
           std::vector<PageUsageListener*>{&fake_disk_cleanup_manager_});
-  active_page_manager_container->SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  active_page_manager_container->SetOnDiscardable(SetWhenCalled(&on_discardable_called));
   fake_disk_cleanup_manager_.set_on_OnExternallyUnused(
       [&] { active_page_manager_container.reset(); });
   fake_disk_cleanup_manager_.set_on_OnInternallyUnused(
@@ -531,7 +525,7 @@ TEST_F(ActivePageManagerContainerTest, OnlyInternalRequestCallbacks) {
   ActivePageManagerContainer active_page_manager_container =
       ActivePageManagerContainer(&environment_, convert::ToString(kLedgerName), page_id_,
                                  std::vector<PageUsageListener*>{&fake_disk_cleanup_manager_});
-  active_page_manager_container.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  active_page_manager_container.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
 
   size_t requested_internal_requests = 0;
   while (requested_internal_requests < internal_request_count) {
@@ -575,7 +569,7 @@ TEST_F(ActivePageManagerContainerTest, MultiplePageUsageListeners) {
   bool on_discardable_called;
   ActivePageManagerContainer active_page_manager_container(
       &environment_, convert::ToString(kLedgerName), page_id_, page_usage_listener_pointers);
-  active_page_manager_container.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  active_page_manager_container.SetOnDiscardable(SetWhenCalled(&on_discardable_called));
 
   size_t requested_internal_requests = 0;
   size_t live_external_requests = 0;
@@ -654,7 +648,7 @@ TEST_F(ActivePageManagerContainerTest, DeletedDuringPageUsageListenerOnExternall
       std::make_unique<ActivePageManagerContainer>(
           &environment_, convert::ToString(kLedgerName), page_id_,
           std::vector<PageUsageListener*>{&first_page_usage_listener, &second_page_usage_listener});
-  active_page_manager_container->SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  active_page_manager_container->SetOnDiscardable(SetWhenCalled(&on_discardable_called));
 
   active_page_manager_container->BindPage(external_request.NewRequest(), [&](Status status) {});
   active_page_manager_container->NewInternalRequest(
@@ -691,7 +685,7 @@ TEST_F(ActivePageManagerContainerTest, DeletedDuringPageUsageListenerOnInternall
       std::make_unique<ActivePageManagerContainer>(
           &environment_, convert::ToString(kLedgerName), page_id_,
           std::vector<PageUsageListener*>{&first_page_usage_listener, &second_page_usage_listener});
-  active_page_manager_container->SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
+  active_page_manager_container->SetOnDiscardable(SetWhenCalled(&on_discardable_called));
 
   active_page_manager_container->BindPage(external_request.NewRequest(), [&](Status status) {});
   active_page_manager_container->NewInternalRequest(

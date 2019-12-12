@@ -16,11 +16,11 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/tests/integration/integration_test.h"
 #include "src/ledger/bin/tests/integration/test_utils.h"
+#include "src/ledger/lib/callback/capture.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/vmo/sized_vmo.h"
 #include "src/ledger/lib/vmo/strings.h"
-#include "src/lib/callback/capture.h"
 #include "third_party/abseil-cpp/absl/strings/str_format.h"
 
 namespace ledger {
@@ -72,7 +72,7 @@ class ConflictResolverImpl : public ConflictResolver {
       : loop_controller_(loop_controller),
         resolve_waiter_(loop_controller->NewWaiter()),
         binding_(this, std::move(request)) {
-    binding_.set_error_handler(callback::Capture([] {}, &disconnected));
+    binding_.set_error_handler(Capture([] {}, &disconnected));
   }
   ~ConflictResolverImpl() override = default;
 
@@ -95,7 +95,7 @@ class ConflictResolverImpl : public ConflictResolver {
           disconnect_waiter_(loop_controller->NewWaiter()),
           loop_controller_(loop_controller) {
       this->result_provider.set_error_handler(
-          callback::Capture(disconnect_waiter_->GetCallback(), &result_provider_status));
+          Capture(disconnect_waiter_->GetCallback(), &result_provider_status));
     }
 
     // Returns the full list of changes.
@@ -201,8 +201,7 @@ class ConflictResolverImpl : public ConflictResolver {
         std::vector<DiffEntry> new_entries;
         auto waiter = loop_controller_->NewWaiter();
         std::unique_ptr<Token> new_token;
-        get_diff(std::move(token),
-                 callback::Capture(waiter->GetCallback(), &new_entries, &new_token));
+        get_diff(std::move(token), Capture(waiter->GetCallback(), &new_entries, &new_token));
         if (!waiter->RunUntilCalled()) {
           return ::testing::AssertionFailure() << "|get_diff| failed to called back.";
         }
@@ -392,7 +391,7 @@ TEST_P(MergingIntegrationTest, Merging) {
   PagePtr page1 = instance->GetTestPage();
   auto waiter = NewWaiter();
   PageId test_page_id;
-  page1->GetId(callback::Capture(waiter->GetCallback(), &test_page_id));
+  page1->GetId(Capture(waiter->GetCallback(), &test_page_id));
   ASSERT_TRUE(waiter->RunUntilCalled());
 
   PagePtr page2 = instance->GetPage(fidl::MakeOptional(test_page_id));
@@ -473,7 +472,7 @@ TEST_P(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
   PagePtr page1 = instance->GetTestPage();
   auto waiter = NewWaiter();
   PageId test_page_id;
-  page1->GetId(callback::Capture(waiter->GetCallback(), &test_page_id));
+  page1->GetId(Capture(waiter->GetCallback(), &test_page_id));
   ASSERT_TRUE(waiter->RunUntilCalled());
 
   // Set up a resolver configured not to resolve any conflicts.
@@ -587,7 +586,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
   PagePtr page1 = instance->GetTestPage();
   auto waiter = NewWaiter();
   PageId test_page_id;
-  page1->GetId(callback::Capture(waiter->GetCallback(), &test_page_id));
+  page1->GetId(Capture(waiter->GetCallback(), &test_page_id));
   ASSERT_TRUE(waiter->RunUntilCalled());
   PagePtr page2 = instance->GetPage(fidl::MakeOptional(test_page_id));
 
@@ -692,7 +691,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionMergeValuesOrder) {
   PagePtr page1 = instance->GetTestPage();
   auto waiter = NewWaiter();
   PageId test_page_id;
-  page1->GetId(callback::Capture(waiter->GetCallback(), &test_page_id));
+  page1->GetId(Capture(waiter->GetCallback(), &test_page_id));
   ASSERT_TRUE(waiter->RunUntilCalled());
   PagePtr page2 = instance->GetPage(fidl::MakeOptional(test_page_id));
 
@@ -781,7 +780,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionGetDiffMultiPart) {
   PagePtr page1 = instance->GetTestPage();
   auto waiter = NewWaiter();
   PageId test_page_id;
-  page1->GetId(callback::Capture(waiter->GetCallback(), &test_page_id));
+  page1->GetId(Capture(waiter->GetCallback(), &test_page_id));
   ASSERT_TRUE(waiter->RunUntilCalled());
   PagePtr page2 = instance->GetPage(fidl::MakeOptional(test_page_id));
 
@@ -848,7 +847,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionClosingPipe) {
   PagePtr page1 = instance->GetTestPage();
   auto waiter = NewWaiter();
   PageId test_page_id;
-  page1->GetId(callback::Capture(waiter->GetCallback(), &test_page_id));
+  page1->GetId(Capture(waiter->GetCallback(), &test_page_id));
   ASSERT_TRUE(waiter->RunUntilCalled());
   PagePtr page2 = instance->GetPage(fidl::MakeOptional(test_page_id));
 
@@ -914,7 +913,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionResetFactory) {
   PagePtr page1 = instance->GetTestPage();
   auto waiter = NewWaiter();
   PageId test_page_id;
-  page1->GetId(callback::Capture(waiter->GetCallback(), &test_page_id));
+  page1->GetId(Capture(waiter->GetCallback(), &test_page_id));
   ASSERT_TRUE(waiter->RunUntilCalled());
   PagePtr page2 = instance->GetPage(fidl::MakeOptional(test_page_id));
 
@@ -988,7 +987,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionMultipartMerge) {
   PagePtr page1 = instance->GetTestPage();
   auto waiter = NewWaiter();
   PageId test_page_id;
-  page1->GetId(callback::Capture(waiter->GetCallback(), &test_page_id));
+  page1->GetId(Capture(waiter->GetCallback(), &test_page_id));
   ASSERT_TRUE(waiter->RunUntilCalled());
   PagePtr page2 = instance->GetPage(fidl::MakeOptional(test_page_id));
 
@@ -1071,7 +1070,7 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionNoConflict) {
   PagePtr page1 = instance->GetTestPage();
   auto waiter = NewWaiter();
   PageId test_page_id;
-  page1->GetId(callback::Capture(waiter->GetCallback(), &test_page_id));
+  page1->GetId(Capture(waiter->GetCallback(), &test_page_id));
   ASSERT_TRUE(waiter->RunUntilCalled());
   PagePtr page2 = instance->GetPage(fidl::MakeOptional(test_page_id));
 
@@ -1138,7 +1137,7 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
   PagePtr page1 = instance->GetTestPage();
   PageId test_page_id;
   auto waiter = NewWaiter();
-  page1->GetId(callback::Capture(waiter->GetCallback(), &test_page_id));
+  page1->GetId(Capture(waiter->GetCallback(), &test_page_id));
   ASSERT_TRUE(waiter->RunUntilCalled());
   PagePtr page2 = instance->GetPage(fidl::MakeOptional(test_page_id));
 
@@ -1224,7 +1223,7 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionMultipartMerge) {
   PagePtr page1 = instance->GetTestPage();
   auto waiter = NewWaiter();
   PageId test_page_id;
-  page1->GetId(callback::Capture(waiter->GetCallback(), &test_page_id));
+  page1->GetId(Capture(waiter->GetCallback(), &test_page_id));
   ASSERT_TRUE(waiter->RunUntilCalled());
   PagePtr page2 = instance->GetPage(fidl::MakeOptional(test_page_id));
 
@@ -1304,7 +1303,7 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionNoRightChange) {
   PagePtr page1 = instance->GetTestPage();
   auto waiter = NewWaiter();
   PageId test_page_id;
-  page1->GetId(callback::Capture(waiter->GetCallback(), &test_page_id));
+  page1->GetId(Capture(waiter->GetCallback(), &test_page_id));
   ASSERT_TRUE(waiter->RunUntilCalled());
   PagePtr page2 = instance->GetPage(fidl::MakeOptional(test_page_id));
 
@@ -1372,7 +1371,7 @@ TEST_P(MergingIntegrationTest, WaitForCustomMerge) {
   PagePtr page1 = instance->GetTestPage();
   auto waiter = NewWaiter();
   PageId test_page_id;
-  page1->GetId(callback::Capture(waiter->GetCallback(), &test_page_id));
+  page1->GetId(Capture(waiter->GetCallback(), &test_page_id));
   ASSERT_TRUE(waiter->RunUntilCalled());
   PagePtr page2 = instance->GetPage(fidl::MakeOptional(test_page_id));
 
@@ -1407,7 +1406,7 @@ TEST_P(MergingIntegrationTest, WaitForCustomMerge) {
   auto conflicts_resolved_callback_waiter = NewWaiter();
   ConflictResolutionWaitStatus wait_status;
   page1->WaitForConflictResolution(
-      callback::Capture(conflicts_resolved_callback_waiter->GetCallback(), &wait_status));
+      Capture(conflicts_resolved_callback_waiter->GetCallback(), &wait_status));
 
   // Check that conflicts_resolved_callback is not called, as there are merge
   // requests pending.
@@ -1435,7 +1434,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionConflictingMerge) {
   PagePtr page1 = instance->GetTestPage();
   PageId test_page_id;
   auto waiter = NewWaiter();
-  page1->GetId(callback::Capture(waiter->GetCallback(), &test_page_id));
+  page1->GetId(Capture(waiter->GetCallback(), &test_page_id));
   ASSERT_TRUE(waiter->RunUntilCalled());
   PagePtr page2 = instance->GetPage(fidl::MakeOptional(test_page_id));
 
@@ -1600,7 +1599,7 @@ TEST_P(MergingIntegrationTest, ConflictResolutionFactoryUnavailableMergingContin
   PagePtr page_conn1 = instance->GetTestPage();
   PageId test_page_id;
   auto waiter = NewWaiter();
-  page_conn1->GetId(callback::Capture(waiter->GetCallback(), &test_page_id));
+  page_conn1->GetId(Capture(waiter->GetCallback(), &test_page_id));
   ASSERT_TRUE(waiter->RunUntilCalled());
   PagePtr page_conn2 = instance->GetPage(fidl::MakeOptional(test_page_id));
 
@@ -1656,8 +1655,7 @@ TEST_P(MergingIntegrationTest, ConflictResolutionFactoryUnavailableMergingContin
 
   waiter = NewWaiter();
   fuchsia::ledger::PageSnapshot_GetInline_Result result1;
-  snapshot3->GetInline(convert::ToArray("name"),
-                       callback::Capture(waiter->GetCallback(), &result1));
+  snapshot3->GetInline(convert::ToArray("name"), Capture(waiter->GetCallback(), &result1));
   ASSERT_TRUE(waiter->RunUntilCalled());
 
   PageSnapshotPtr snapshot4;
@@ -1665,8 +1663,7 @@ TEST_P(MergingIntegrationTest, ConflictResolutionFactoryUnavailableMergingContin
 
   fuchsia::ledger::PageSnapshot_GetInline_Result result2;
   waiter = NewWaiter();
-  snapshot4->GetInline(convert::ToArray("name"),
-                       callback::Capture(waiter->GetCallback(), &result2));
+  snapshot4->GetInline(convert::ToArray("name"), Capture(waiter->GetCallback(), &result2));
   ASSERT_TRUE(waiter->RunUntilCalled());
 
   ASSERT_TRUE(result1.is_response());
@@ -1697,7 +1694,7 @@ TEST_P(MergingIntegrationTest, ConflictResolutionFactoryUnavailableNewPagesMerge
   PagePtr page_conn1 = instance->GetTestPage();
   PageId test_page_id;
   auto waiter = NewWaiter();
-  page_conn1->GetId(callback::Capture(waiter->GetCallback(), &test_page_id));
+  page_conn1->GetId(Capture(waiter->GetCallback(), &test_page_id));
   ASSERT_TRUE(waiter->RunUntilCalled());
   PagePtr page_conn2 = instance->GetPage(fidl::MakeOptional(test_page_id));
 
@@ -1760,8 +1757,7 @@ TEST_P(MergingIntegrationTest, ConflictResolutionFactoryUnavailableNewPagesMerge
 
   waiter = NewWaiter();
   fuchsia::ledger::PageSnapshot_GetInline_Result result1;
-  snapshot3->GetInline(convert::ToArray("name"),
-                       callback::Capture(waiter->GetCallback(), &result1));
+  snapshot3->GetInline(convert::ToArray("name"), Capture(waiter->GetCallback(), &result1));
   ASSERT_TRUE(waiter->RunUntilCalled());
 
   PageSnapshotPtr snapshot4;
@@ -1769,8 +1765,7 @@ TEST_P(MergingIntegrationTest, ConflictResolutionFactoryUnavailableNewPagesMerge
 
   fuchsia::ledger::PageSnapshot_GetInline_Result result2;
   waiter = NewWaiter();
-  snapshot4->GetInline(convert::ToArray("name"),
-                       callback::Capture(waiter->GetCallback(), &result2));
+  snapshot4->GetInline(convert::ToArray("name"), Capture(waiter->GetCallback(), &result2));
   ASSERT_TRUE(waiter->RunUntilCalled());
 
   ASSERT_TRUE(result1.is_response());

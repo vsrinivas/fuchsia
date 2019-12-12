@@ -20,9 +20,9 @@ source_set("sync") {
     "//src/ledger/bin/fidl_helpers",
     "//src/ledger/bin/storage/public",
     "//src/ledger/bin/testing:lib",
+    "//src/ledger/lib/callback",
     "//src/ledger/lib/convert",
     "//src/ledger/lib/vmo",
-    "//src/lib/callback",
     "//src/lib/fxl",
   ]
 
