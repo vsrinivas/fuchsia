@@ -15,15 +15,16 @@ enum Ge2dRotation : uint8 {
     MAX = 4;
 };
 
-struct CropRectangle {
-    uint32 crop_x;
-    uint32 crop_y;
-    uint32 crop_width;
-    uint32 crop_height;
+struct Rect {
+    uint32 x;
+    uint32 y;
+    uint32 width;
+    uint32 height;
 };
 
 struct ResizeInfo {
-    CropRectangle crop; // Initially this will be the same size as the canvas.
+    // TODO (jsasinowski): Determine if this is a src or dst rect & document accordingly.
+    Rect crop; // Initially this will be the same size as the canvas.
     // Rotation is needed for video playback
     Ge2dRotation output_rotation;
 };
@@ -56,11 +57,12 @@ protocol Ge2d {
     InitTaskResize(zircon.device.sysmem.BufferCollectionInfo_2 input_buffer_collection,
                    zircon.device.sysmem.BufferCollectionInfo_2 output_buffer_collection,
                    ResizeInfo info,
-		   zircon.device.sysmem.ImageFormat_2 image_format,
+                   zircon.device.sysmem.ImageFormat_2 image_format,
                    vector<zircon.device.sysmem.ImageFormat_2> output_image_format_table,
                    uint32 output_image_format_index,
-		   ddk.protocol.camerahwaccel.HwAccelFrameCallback frame_callback,
-		   ddk.protocol.camerahwaccel.HwAccelResChangeCallback res_callback) -> (zx.status s, uint32 task_index);
+                   ddk.protocol.camerahwaccel.HwAccelFrameCallback frame_callback,
+                   ddk.protocol.camerahwaccel.HwAccelResChangeCallback res_callback)
+                        -> (zx.status s, uint32 task_index);
 
     // The WaterMark task only supports changing the Input And Output resolution
     // together. Moreover this operation changes both the input and output
@@ -70,12 +72,12 @@ protocol Ge2d {
     InitTaskWaterMark(zircon.device.sysmem.BufferCollectionInfo_2 input_buffer_collection,
                       zircon.device.sysmem.BufferCollectionInfo_2 output_buffer_collection,
                       WaterMarkInfo info,
-		      handle<vmo> watermark_vmo,
+                      handle<vmo> watermark_vmo,
                       vector<zircon.device.sysmem.ImageFormat_2> image_format_table,
                       uint32 image_format_index,
-		      ddk.protocol.camerahwaccel.HwAccelFrameCallback frame_callback,
-		      ddk.protocol.camerahwaccel.HwAccelResChangeCallback res_callback) -> (zx.status s, uint32 task_index);
-
+                      ddk.protocol.camerahwaccel.HwAccelFrameCallback frame_callback,
+                      ddk.protocol.camerahwaccel.HwAccelResChangeCallback res_callback)
+                        -> (zx.status s, uint32 task_index);
 
     // De-registers the task.
     RemoveTask(uint32 task_index);
@@ -103,5 +105,5 @@ protocol Ge2d {
 
     // Sets/Changes the crop rectangle (on a Resize Task). Typically called when
     // the camera controller is notified by Smart Framing to crop and resize.
-    SetCropRectangle(uint32 task_index, CropRectangle crop);
+    SetCropRect(uint32 task_index, Rect crop);
 };

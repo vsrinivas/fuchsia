@@ -111,10 +111,10 @@ class TaskTest : public zxtest::Test {
     ASSERT_OK(camera::GetImageFormat(output_image_format_table_[2],
                                      fuchsia_sysmem_PixelFormatType_NV12, kWidth / 4, kHeight / 4));
     // Set up fake Resize info, Watermark info, Watermark vmo.
-    resize_info_.crop.crop_x = 100;
-    resize_info_.crop.crop_y = 100;
-    resize_info_.crop.crop_width = 50;
-    resize_info_.crop.crop_height = 50;
+    resize_info_.crop.x = 100;
+    resize_info_.crop.y = 100;
+    resize_info_.crop.width = 50;
+    resize_info_.crop.height = 50;
     resize_info_.output_rotation = GE2D_ROTATION_ROTATION_0;
     watermark_info_.loc_x = 100;
     watermark_info_.loc_y = 100;

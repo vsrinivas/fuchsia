@@ -207,7 +207,7 @@ zx_status_t Ge2dDevice::Ge2dProcessFrame(uint32_t task_index, uint32_t input_buf
   return ZX_OK;
 }
 
-void Ge2dDevice::Ge2dSetCropRectangle(uint32_t task_index, const crop_rectangle_t* crop) {}
+void Ge2dDevice::Ge2dSetCropRect(uint32_t task_index, const rect_t* crop) {}
 
 void Ge2dDevice::ProcessTask(TaskInfo& info) {
   auto task = info.task;
