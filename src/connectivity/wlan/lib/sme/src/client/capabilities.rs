@@ -9,19 +9,18 @@
 //! If successful, the capabilities will be extracted and saved.
 
 use {
-    crate::{client::state::Protection, phy_selection::get_device_band_info},
+    crate::{capabilities::JoinCapabilities, phy_selection::get_device_band_info},
     failure::{bail, format_err, Error, ResultExt},
     fidl_fuchsia_wlan_mlme as fidl_mlme,
     log::warn,
     wlan_common::{
         channel::{Cbw, Channel},
         ie::{
-            intersect::*, parse_ht_capabilities, parse_vht_capabilities, write_wpa1_ie,
-            HtCapabilities, SupportedRate, VhtCapabilities,
+            intersect::*, parse_ht_capabilities, parse_vht_capabilities, HtCapabilities,
+            SupportedRate, VhtCapabilities,
         },
         mac::CapabilityInfo,
     },
-    wlan_rsn::ProtectionInfo,
 };
 
 /// Capability Info is defined in IEEE Std 802.11-1026 9.4.1.4.
@@ -62,25 +61,6 @@ fn override_capability_info(cap_info: CapabilityInfo) -> CapabilityInfo {
         .with_cf_poll_req(OVERRIDE_CAP_INFO_CF_POLL_REQUEST)
         .with_privacy(OVERRIDE_CAP_INFO_PRIVACY)
         .with_spectrum_mgmt(OVERRIDE_CAP_INFO_SPECTRUM_MGMT)
-}
-
-/// Capabilities that takes the iface device's capabilities based on the channel we are trying to
-/// join, the PHY parameters that is overridden by user's command line input and the BSS we are
-/// trying to join.
-/// They are stored in the form of IEs because at some point they will be transmitted in
-/// (Re)Association Request and (Re)Association Response frames.
-#[derive(Debug)]
-pub struct JoinCapabilities {
-    pub cap_info: CapabilityInfo,
-    pub rates: Vec<SupportedRate>,
-    pub ht_cap: Option<HtCapabilities>,
-    pub vht_cap: Option<VhtCapabilities>,
-}
-
-#[derive(Debug)]
-pub enum ProtectionIe {
-    Rsne(Vec<u8>),
-    VendorIes(Vec<u8>),
 }
 
 /// The entry point of this module.
@@ -194,46 +174,6 @@ fn override_vht_capabilities(mut vht_cap: VhtCapabilities, cbw: Cbw) -> VhtCapab
     }
     vht_cap.vht_cap_info = vht_cap_info;
     vht_cap
-}
-
-/// Based on the type of protection, derive either RSNE or Vendor IEs:
-/// No Protection or WEP: Neither
-/// WPA2: RSNE
-/// WPA1: Vendor IEs
-pub(crate) fn build_protection_ie(protection: &Protection) -> Result<Option<ProtectionIe>, Error> {
-    match protection {
-        Protection::Open | Protection::Wep(_) => Ok(None),
-        Protection::LegacyWpa(rsna) => {
-            let s_protection = rsna.negotiated_protection.to_full_protection();
-            let s_wpa = match s_protection {
-                ProtectionInfo::Rsne(_) => {
-                    bail!("found RSNE protection inside a WPA1 association...");
-                }
-                ProtectionInfo::LegacyWpa(wpa) => wpa,
-            };
-            let mut buf = vec![];
-            // Writing an RSNE into a Vector can never fail as a Vector can be grown when more
-            // space is required. If this panic ever triggers, something is clearly broken
-            // somewhere else.
-            write_wpa1_ie(&mut buf, &s_wpa).unwrap();
-            Ok(Some(ProtectionIe::VendorIes(buf)))
-        }
-        Protection::Rsna(rsna) => {
-            let s_protection = rsna.negotiated_protection.to_full_protection();
-            let s_rsne = match s_protection {
-                ProtectionInfo::Rsne(rsne) => rsne,
-                ProtectionInfo::LegacyWpa(_) => {
-                    bail!("found WPA protection inside an RSNA...");
-                }
-            };
-            let mut buf = Vec::with_capacity(s_rsne.len());
-            // Writing an RSNE into a Vector can never fail as a Vector can be grown when more
-            // space is required. If this panic ever triggers, something is clearly broken
-            // somewhere else.
-            let () = s_rsne.write_into(&mut buf).unwrap();
-            Ok(Some(ProtectionIe::Rsne(buf)))
-        }
-    }
 }
 
 #[cfg(test)]

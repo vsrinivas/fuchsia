@@ -2,23 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use eapol;
-use failure::{bail, ensure, format_err};
-use fidl_fuchsia_wlan_mlme::BssDescription;
-use fidl_fuchsia_wlan_sme as fidl_sme;
-use std::boxed::Box;
-use wlan_common::ie::rsn::{
-    akm, cipher,
-    rsne::{self, Rsne},
-    OUI,
-};
-use wlan_rsn::{
-    self, nonce::NonceReader, psk, rsna::UpdateSink, NegotiatedProtection, ProtectionInfo,
-};
-
-use crate::{
-    client::{state::Protection, InvalidPasswordArgError},
-    DeviceInfo,
+use {
+    crate::{
+        client::{protection::Protection, InvalidPasswordArgError},
+        DeviceInfo,
+    },
+    eapol,
+    failure::{bail, ensure, format_err},
+    fidl_fuchsia_wlan_mlme::BssDescription,
+    fidl_fuchsia_wlan_sme as fidl_sme,
+    std::boxed::Box,
+    wlan_common::ie::rsn::{
+        akm, cipher,
+        rsne::{self, Rsne},
+        OUI,
+    },
+    wlan_rsn::{
+        self, nonce::NonceReader, psk, rsna::UpdateSink, NegotiatedProtection, ProtectionInfo,
+    },
 };
 
 #[derive(Debug)]

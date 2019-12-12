@@ -7,42 +7,50 @@ mod capabilities;
 mod event;
 pub mod info;
 mod inspect;
+mod protection;
 mod rsn;
 mod scan;
 mod state;
+
 mod wpa;
 
 #[cfg(test)]
 pub mod test_utils;
 
-use failure::{bail, format_err, Fail};
-use fidl_fuchsia_wlan_common as fidl_common;
-use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, BssDescription, MlmeEvent, ScanRequest};
-use fidl_fuchsia_wlan_sme as fidl_sme;
-use fuchsia_inspect_contrib::{inspect_insert, inspect_log, log::InspectListClosure};
-use futures::channel::{mpsc, oneshot};
-use log::error;
-use std::sync::Arc;
-use wep_deprecated;
-use wlan_common::{self, bss::BssDescriptionExt, format::MacFmt, RadioConfig};
-use wlan_inspect::wrappers::InspectWlanChan;
+use {
+    self::{
+        event::Event,
+        info::InfoReporter,
+        protection::Protection,
+        rsn::get_rsna,
+        scan::{DiscoveryScan, JoinScan, ScanScheduler},
+        state::{ConnectCommand, State},
+        wpa::get_legacy_wpa_association,
+    },
+    crate::{
+        clone_utils::clone_bss_desc,
+        responder::Responder,
+        sink::{InfoSink, MlmeSink},
+        timer::{self, TimedEvent},
+        DeviceInfo, InfoStream, MlmeRequest, MlmeStream, Ssid,
+    },
+    failure::{bail, format_err, Fail},
+    fidl_fuchsia_wlan_common as fidl_common,
+    fidl_fuchsia_wlan_mlme::{self as fidl_mlme, BssDescription, MlmeEvent, ScanRequest},
+    fidl_fuchsia_wlan_sme as fidl_sme,
+    fuchsia_inspect_contrib::{inspect_insert, inspect_log, log::InspectListClosure},
+    futures::channel::{mpsc, oneshot},
+    log::error,
+    std::sync::Arc,
+    wep_deprecated,
+    wlan_common::{self, bss::BssDescriptionExt, format::MacFmt, RadioConfig},
+    wlan_inspect::wrappers::InspectWlanChan,
+};
 
-use super::{DeviceInfo, InfoStream, MlmeRequest, MlmeStream, Ssid};
-
-use self::event::Event;
-use self::info::InfoReporter;
-use self::rsn::get_rsna;
-use self::scan::{DiscoveryScan, JoinScan, ScanScheduler};
-use self::state::{ConnectCommand, Protection, State};
-use self::wpa::get_legacy_wpa_association;
-
-use crate::clone_utils::clone_bss_desc;
-use crate::responder::Responder;
-use crate::sink::{InfoSink, MlmeSink};
-use crate::timer::{self, TimedEvent};
-
-pub use self::bss::{BssInfo, ClientConfig};
-pub use self::info::{InfoEvent, ScanResult};
+pub use self::{
+    bss::{BssInfo, ClientConfig},
+    info::{InfoEvent, ScanResult},
+};
 
 // This is necessary to trick the private-in-public checker.
 // A private module is not allowed to include private types in its interface,

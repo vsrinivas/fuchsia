@@ -13,7 +13,7 @@ use wlan_common::organization::Oui;
 use wlan_rsn::{self, nonce::NonceReader, NegotiatedProtection, ProtectionInfo};
 
 use super::rsn::{compute_psk, Rsna};
-use crate::{client::state::Protection, DeviceInfo};
+use crate::{client::protection::Protection, DeviceInfo};
 
 /// According to the WiFi Alliance WPA standard (2004), only TKIP support is required. We allow
 /// CCMP if the AP requests it.

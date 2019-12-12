@@ -4,13 +4,13 @@
 
 use {
     crate::{
+        capabilities::JoinCapabilities,
         client::{
             bss::ClientConfig,
-            capabilities::{
-                build_join_capabilities, build_protection_ie, JoinCapabilities, ProtectionIe,
-            },
+            capabilities::build_join_capabilities,
             event::{self, Event},
             info::ConnectionPingInfo,
+            protection::{build_protection_ie, Protection, ProtectionIe},
             report_connect_finished,
             rsn::Rsna,
             ConnectFailure, ConnectResult, Context, EstablishRsnaFailure, Status,
@@ -65,17 +65,6 @@ pub enum LinkState {
         since: zx::Time,
         ping_event: Option<EventId>,
     },
-}
-
-#[derive(Debug)]
-pub enum Protection {
-    Open,
-    Wep(wep_deprecated::Key),
-    // WPA1 is based off of a modified pre-release version of IEEE 802.11i. It is similar enough
-    // that we can reuse the existing RSNA implementation rather than duplicating large pieces of
-    // logic.
-    LegacyWpa(Rsna),
-    Rsna(Rsna),
 }
 
 #[derive(Debug)]
