@@ -40,6 +40,7 @@ zx_test("usb-virtual-bus-hid") {
     "usb-hid-test.cc",
   ]
   deps = [
+    "$zx/system/fidl/fuchsia-device:llcpp",
     "$zx/system/fidl/fuchsia-hardware-input:llcpp",
     "$zx/system/fidl/fuchsia-hardware-usb-peripheral:llcpp",
     "$zx/system/fidl/fuchsia-hardware-usb-virtual-bus:llcpp",

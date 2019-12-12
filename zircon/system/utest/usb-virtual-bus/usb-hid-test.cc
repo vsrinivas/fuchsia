@@ -5,6 +5,7 @@
 #include <dirent.h>
 #include <endian.h>
 #include <fcntl.h>
+#include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/input/llcpp/fidl.h>
 #include <fuchsia/hardware/usb/peripheral/llcpp/fidl.h>
 #include <fuchsia/hardware/usb/virtual/bus/llcpp/fidl.h>
@@ -104,5 +105,36 @@ TEST_F(UsbHidTest, SetAndGetReport) {
   ASSERT_EQ(0xde, result2->report[2]);
 }
 
+TEST_F(UsbHidTest, UnBind) {
+  fbl::unique_fd fd_input(openat(bus_.GetRootFd(), devpath_.c_str(), O_RDWR));
+  ASSERT_GE(fd_input.get(), 0);
+
+  zx::channel input_channel;
+  ASSERT_OK(fdio_get_service_handle(fd_input.release(), input_channel.reset_and_get_address()));
+
+  auto hid_device_path_response = llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(
+      zx::unowned_channel(input_channel));
+  ASSERT_OK(hid_device_path_response.status());
+
+  zx::channel usbhid_channel;
+  std::string hid_device_path = hid_device_path_response->result.response().path.data();
+  std::string DEV_CONST = "@/dev/";
+  std::string usb_hid_path = hid_device_path.substr(
+      DEV_CONST.length(), hid_device_path.find_last_of("/") - DEV_CONST.length());
+  fbl::unique_fd fd_usb_hid(openat(bus_.GetRootFd(), usb_hid_path.c_str(), O_RDONLY));
+  ASSERT_GE(fd_usb_hid.get(), 0);
+  ASSERT_OK(fdio_get_service_handle(fd_usb_hid.release(), usbhid_channel.reset_and_get_address()));
+
+  std::string ifc_path = usb_hid_path.substr(0, usb_hid_path.find_last_of('/'));
+  fbl::unique_fd fd_usb_hid_parent(openat(bus_.GetRootFd(), ifc_path.c_str(), O_RDONLY));
+  ASSERT_GE(fd_usb_hid_parent.get(), 0);
+
+  std::unique_ptr<devmgr_integration_test::DirWatcher> watcher;
+  ASSERT_OK(devmgr_integration_test::DirWatcher::Create(std::move(fd_usb_hid_parent), &watcher));
+  auto resp =
+      llcpp::fuchsia::device::Controller::Call::ScheduleUnbind(zx::unowned_channel(usbhid_channel));
+  ASSERT_OK(resp.status());
+  ASSERT_OK(watcher->WaitForRemoval("usb-hid", zx::duration::infinite()));
+}
 }  // namespace
 }  // namespace usb_virtual_bus
