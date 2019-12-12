@@ -7,6 +7,7 @@
 #include <stdio.h>
 
 #include <algorithm>
+#include <iterator>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -23,7 +24,6 @@
 #include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/socket/strings.h"
-#include "src/lib/fxl/arraysize.h"
 #include "third_party/abseil-cpp/absl/strings/str_format.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
@@ -131,12 +131,12 @@ TEST_F(BTreeUtilsTest, GetNodeLevel) {
   for (size_t i = 0; i < 1000; ++i) {
     absl::string_view key(reinterpret_cast<char*>(&i), sizeof(i));
     uint8_t node_level =
-        std::min(arraysize(level_distribution) - 1,
+        std::min(std::size(level_distribution) - 1,
                  static_cast<size_t>(GetDefaultNodeLevelCalculator()->GetNodeLevel(key)));
     level_distribution[node_level]++;
   }
 
-  EXPECT_TRUE(std::is_sorted(level_distribution, level_distribution + arraysize(level_distribution),
+  EXPECT_TRUE(std::is_sorted(level_distribution, level_distribution + std::size(level_distribution),
                              [](int v1, int v2) { return v2 < v1; }));
   EXPECT_NE(0u, level_distribution[1]);
 }

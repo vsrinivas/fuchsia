@@ -47,7 +47,6 @@
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/socket/strings.h"
 #include "src/ledger/lib/vmo/strings.h"
-#include "src/lib/fxl/arraysize.h"
 #include "src/lib/timekeeper/test_clock.h"
 #include "third_party/abseil-cpp/absl/base/attributes.h"
 #include "third_party/abseil-cpp/absl/strings/str_format.h"
