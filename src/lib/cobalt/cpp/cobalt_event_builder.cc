@@ -76,12 +76,6 @@ CobaltEvent CobaltEventBuilder::as_memory_usage(const int64_t memory_bytes_used)
   return std::move(event_);
 }
 
-CobaltEvent CobaltEventBuilder::as_string_event(std::string string_event) {
-  event_.payload.set_string_event(std::move(string_event));
-
-  return std::move(event_);
-}
-
 CobaltEvent CobaltEventBuilder::as_int_histogram(std::vector<HistogramBucket> int_histogram) {
   event_.payload.set_int_histogram(std::move(int_histogram));
 

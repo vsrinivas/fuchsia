@@ -181,18 +181,6 @@ impl CobaltEventBuilder {
         self.build(EventPayload::MemoryBytesUsed(memory_bytes_used))
     }
 
-    /// Constructs a `CobaltEvent` with a payload type of `EventPayload::StringEvent`.
-    ///
-    /// # Examples
-    /// ```
-    /// asert_eq!(
-    ///     CobaltEvent::builder(16).as_string_event("Event!").payload,
-    ///     EventPayload::StringEvent("Event!".to_owned()));
-    /// ```
-    pub fn as_string_event<S: Into<String>>(self, string_event: S) -> CobaltEvent {
-        self.build(EventPayload::StringEvent(string_event.into()))
-    }
-
     /// Constructs a `CobaltEvent` with a payload type of `EventPayload::IntHistogram`.
     ///
     /// # Examples
@@ -276,18 +264,6 @@ mod tests {
     }
 
     #[test]
-    fn test_as_string_event() {
-        let event = CobaltEvent::builder(6).as_string_event("String Value");
-        let expected = CobaltEvent {
-            metric_id: 6,
-            event_codes: vec![],
-            component: None,
-            payload: EventPayload::StringEvent("String Value".into()),
-        };
-        assert_eq!(event, expected);
-    }
-
-    #[test]
     fn test_as_int_histogram() {
         let event = CobaltEvent::builder(7)
             .with_event_code(8)
@@ -306,28 +282,5 @@ mod tests {
     #[should_panic(expected = "Invalid index")]
     fn test_bad_event_code_at_index() {
         CobaltEvent::builder(8).with_event_code_at(5, 10).as_event();
-    }
-
-    #[test]
-    fn test_clone() {
-        let e = CobaltEvent::builder(102).with_event_code_at(1, 15);
-        assert_eq!(
-            e.clone().with_event_code_at(0, 10).as_string_event("Event 1"),
-            CobaltEvent {
-                metric_id: 102,
-                event_codes: vec![10, 15],
-                component: None,
-                payload: EventPayload::StringEvent("Event 1".to_owned())
-            }
-        );
-        assert_eq!(
-            e.with_event_code_at(0, 11).as_string_event("Event 2"),
-            CobaltEvent {
-                metric_id: 102,
-                event_codes: vec![11, 15],
-                component: None,
-                payload: EventPayload::StringEvent("Event 2".to_owned())
-            }
-        );
     }
 }

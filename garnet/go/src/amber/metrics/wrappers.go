@@ -129,19 +129,6 @@ func ensureConnection() bool {
 	return logger != nil
 }
 
-func logString(metric metricID, value string) {
-	if !ensureConnection() {
-		return
-	}
-
-	status, err := logger.LogString(uint32(metric), value)
-	if err != nil {
-		log.Printf("logString: %s", err)
-	} else if err := mapErrCobalt(status); err != nil {
-		log.Printf("logString: %s", err)
-	}
-}
-
 // logEventMulti() invokes logEventCountMulti() using periodDurationMicros=0
 // and count=1. Cobalt's simple EVENT_OCCURRED metric type does not support
 // multiple dimensions of event codes or a component string. When one wants to

@@ -73,18 +73,6 @@ bool CobaltTestAppLogger::LogMemoryUsage(uint32_t metric_id, uint32_t index,
   return true;
 }
 
-bool CobaltTestAppLogger::LogString(uint32_t metric_id, const std::string& val) {
-  Status status = Status::INTERNAL_ERROR;
-  logger_->LogString(metric_id, val, &status);
-  FX_VLOGS(1) << "LogString(" << val << ") => " << StatusToString(status);
-  if (status != Status::OK) {
-    FX_LOGS(ERROR) << "LogString() => " << StatusToString(status);
-    return false;
-  }
-
-  return true;
-}
-
 bool CobaltTestAppLogger::LogTimer(uint32_t metric_id, uint32_t start_time, uint32_t end_time,
                                    const std::string& timer_id, uint32_t timeout_s) {
   Status status = Status::INTERNAL_ERROR;

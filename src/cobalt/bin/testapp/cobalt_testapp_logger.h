@@ -38,9 +38,6 @@ class CobaltTestAppLogger {
   bool LogMemoryUsage(uint32_t metric_id, uint32_t index, const std::string& component,
                       int64_t bytes);
 
-  // Synchronously invokes LogString() using the given parameters.
-  bool LogString(uint32_t metric_id, const std::string& val);
-
   // Synchronously invokes StartTimer() and EndTimer() using the given
   // parameters.
   bool LogTimer(uint32_t metric_id, uint32_t start_time, uint32_t end_time,

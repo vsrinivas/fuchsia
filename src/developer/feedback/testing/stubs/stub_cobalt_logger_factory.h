@@ -36,7 +36,6 @@ class StubCobaltLoggerFactoryBase : public fuchsia::cobalt::LoggerFactory {
   bool WasLogElapsedTimeCalled() const { return logger_->WasLogElapsedTimeCalled(); }
   bool WasLogFrameRateCalled() const { return logger_->WasLogFrameRateCalled(); }
   bool WasLogMemoryUsageCalled() const { return logger_->WasLogMemoryUsageCalled(); }
-  bool WasLogStringCalled() const { return logger_->WasLogStringCalled(); }
   bool WasStartTimerCalled() const { return logger_->WasStartTimerCalled(); }
   bool WasEndTimerCalled() const { return logger_->WasEndTimerCalled(); }
   bool WasLogIntHistogramCalled() const { return logger_->WasLogIntHistogramCalled(); }

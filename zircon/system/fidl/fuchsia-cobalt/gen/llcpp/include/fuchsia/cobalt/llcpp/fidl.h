@@ -887,10 +887,6 @@ extern "C" const fidl_type_t fuchsia_cobalt_LoggerBaseLogMemoryUsageRequestTable
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerBaseLogMemoryUsageRequestTable;
 extern "C" const fidl_type_t fuchsia_cobalt_LoggerBaseLogMemoryUsageResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerBaseLogMemoryUsageResponseTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerBaseLogStringRequestTable;
-extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerBaseLogStringRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerBaseLogStringResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerBaseLogStringResponseTable;
 extern "C" const fidl_type_t fuchsia_cobalt_LoggerBaseStartTimerRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerBaseStartTimerRequestTable;
 extern "C" const fidl_type_t fuchsia_cobalt_LoggerBaseStartTimerResponseTable;
@@ -1099,43 +1095,6 @@ class LoggerBase final {
     using ResponseType = LogMemoryUsageResponse;
   };
 
-  struct LogStringResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::llcpp::fuchsia::cobalt::Status status;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_cobalt_LoggerBaseLogStringResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_cobalt_LoggerBaseLogStringResponseTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool ContainsUnion = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-  };
-  struct LogStringRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    uint32_t metric_id;
-    ::fidl::StringView s;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_cobalt_LoggerBaseLogStringRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_cobalt_LoggerBaseLogStringRequestTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 256;
-    static constexpr uint32_t AltPrimarySize = 40;
-    static constexpr uint32_t AltMaxOutOfLine = 256;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool ContainsUnion = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = LogStringResponse;
-  };
-
   struct StartTimerResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
@@ -1301,22 +1260,6 @@ class LoggerBase final {
       using Super::operator*;
     };
     template <typename ResponseType>
-    class LogString_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
-     public:
-      LogString_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::StringView s);
-      ~LogString_Impl() = default;
-      LogString_Impl(LogString_Impl&& other) = default;
-      LogString_Impl& operator=(LogString_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
     class StartTimer_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
@@ -1355,7 +1298,6 @@ class LoggerBase final {
     using LogElapsedTime = LogElapsedTime_Impl<LogElapsedTimeResponse>;
     using LogFrameRate = LogFrameRate_Impl<LogFrameRateResponse>;
     using LogMemoryUsage = LogMemoryUsage_Impl<LogMemoryUsageResponse>;
-    using LogString = LogString_Impl<LogStringResponse>;
     using StartTimer = StartTimer_Impl<StartTimerResponse>;
     using EndTimer = EndTimer_Impl<EndTimerResponse>;
   };
@@ -1446,22 +1388,6 @@ class LoggerBase final {
       using Super::operator*;
     };
     template <typename ResponseType>
-    class LogString_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-     public:
-      LogString_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer);
-      ~LogString_Impl() = default;
-      LogString_Impl(LogString_Impl&& other) = default;
-      LogString_Impl& operator=(LogString_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
     class StartTimer_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
@@ -1500,7 +1426,6 @@ class LoggerBase final {
     using LogElapsedTime = LogElapsedTime_Impl<LogElapsedTimeResponse>;
     using LogFrameRate = LogFrameRate_Impl<LogFrameRateResponse>;
     using LogMemoryUsage = LogMemoryUsage_Impl<LogMemoryUsageResponse>;
-    using LogString = LogString_Impl<LogStringResponse>;
     using StartTimer = StartTimer_Impl<StartTimerResponse>;
     using EndTimer = EndTimer_Impl<EndTimerResponse>;
   };
@@ -1545,12 +1470,6 @@ class LoggerBase final {
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::LogMemoryUsage LogMemoryUsage(::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes, ::fidl::BytePart _response_buffer);
-
-    // Allocates 320 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::LogString LogString(uint32_t metric_id, ::fidl::StringView s);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::LogString LogString(::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer);
 
     // Allocates 224 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::StartTimer StartTimer(uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s);
@@ -1603,12 +1522,6 @@ class LoggerBase final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::LogMemoryUsage LogMemoryUsage(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes, ::fidl::BytePart _response_buffer);
 
-    // Allocates 320 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::LogString LogString(::zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::StringView s);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::LogString LogString(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer);
-
     // Allocates 224 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::StartTimer StartTimer(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s);
 
@@ -1638,8 +1551,6 @@ class LoggerBase final {
     static ::fidl::DecodeResult<LogFrameRateResponse> LogFrameRate(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogFrameRateRequest> params, ::fidl::BytePart response_buffer);
 
     static ::fidl::DecodeResult<LogMemoryUsageResponse> LogMemoryUsage(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogMemoryUsageRequest> params, ::fidl::BytePart response_buffer);
-
-    static ::fidl::DecodeResult<LogStringResponse> LogString(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogStringRequest> params, ::fidl::BytePart response_buffer);
 
     static ::fidl::DecodeResult<StartTimerResponse> StartTimer(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<StartTimerRequest> params, ::fidl::BytePart response_buffer);
 
@@ -1725,20 +1636,6 @@ class LoggerBase final {
 
     virtual void LogMemoryUsage(uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes, LogMemoryUsageCompleter::Sync _completer) = 0;
 
-    class LogStringCompleterBase : public _Base {
-     public:
-      void Reply(::llcpp::fuchsia::cobalt::Status status);
-      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::cobalt::Status status);
-      void Reply(::fidl::DecodedMessage<LogStringResponse> params);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using LogStringCompleter = ::fidl::Completer<LogStringCompleterBase>;
-
-    virtual void LogString(uint32_t metric_id, ::fidl::StringView s, LogStringCompleter::Sync _completer) = 0;
-
     class StartTimerCompleterBase : public _Base {
      public:
       void Reply(::llcpp::fuchsia::cobalt::Status status);
@@ -1802,8 +1699,6 @@ class LoggerBase final {
     static void LogFrameRateResponse(const ::fidl::DecodedMessage<LoggerBase::LogFrameRateResponse>& _msg);
     static void LogMemoryUsageRequest(const ::fidl::DecodedMessage<LoggerBase::LogMemoryUsageRequest>& _msg);
     static void LogMemoryUsageResponse(const ::fidl::DecodedMessage<LoggerBase::LogMemoryUsageResponse>& _msg);
-    static void LogStringRequest(const ::fidl::DecodedMessage<LoggerBase::LogStringRequest>& _msg);
-    static void LogStringResponse(const ::fidl::DecodedMessage<LoggerBase::LogStringResponse>& _msg);
     static void StartTimerRequest(const ::fidl::DecodedMessage<LoggerBase::StartTimerRequest>& _msg);
     static void StartTimerResponse(const ::fidl::DecodedMessage<LoggerBase::StartTimerResponse>& _msg);
     static void EndTimerRequest(const ::fidl::DecodedMessage<LoggerBase::EndTimerRequest>& _msg);
@@ -1831,10 +1726,6 @@ extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleLogMemoryUsageRequestTab
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleLogMemoryUsageRequestTable;
 extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleLogMemoryUsageResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleLogMemoryUsageResponseTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleLogStringRequestTable;
-extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleLogStringRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleLogStringResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleLogStringResponseTable;
 extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleStartTimerRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleStartTimerRequestTable;
 extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleStartTimerResponseTable;
@@ -2047,43 +1938,6 @@ class LoggerSimple final {
     using ResponseType = LogMemoryUsageResponse;
   };
 
-  struct LogStringResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::llcpp::fuchsia::cobalt::Status status;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_cobalt_LoggerSimpleLogStringResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_cobalt_LoggerSimpleLogStringResponseTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool ContainsUnion = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-  };
-  struct LogStringRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    uint32_t metric_id;
-    ::fidl::StringView s;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_cobalt_LoggerSimpleLogStringRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_cobalt_LoggerSimpleLogStringRequestTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 256;
-    static constexpr uint32_t AltPrimarySize = 40;
-    static constexpr uint32_t AltMaxOutOfLine = 256;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool ContainsUnion = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = LogStringResponse;
-  };
-
   struct StartTimerResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
@@ -2289,22 +2143,6 @@ class LoggerSimple final {
       using Super::operator*;
     };
     template <typename ResponseType>
-    class LogString_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
-     public:
-      LogString_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::StringView s);
-      ~LogString_Impl() = default;
-      LogString_Impl(LogString_Impl&& other) = default;
-      LogString_Impl& operator=(LogString_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
     class StartTimer_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
@@ -2359,7 +2197,6 @@ class LoggerSimple final {
     using LogElapsedTime = LogElapsedTime_Impl<LogElapsedTimeResponse>;
     using LogFrameRate = LogFrameRate_Impl<LogFrameRateResponse>;
     using LogMemoryUsage = LogMemoryUsage_Impl<LogMemoryUsageResponse>;
-    using LogString = LogString_Impl<LogStringResponse>;
     using StartTimer = StartTimer_Impl<StartTimerResponse>;
     using EndTimer = EndTimer_Impl<EndTimerResponse>;
     using LogIntHistogram = LogIntHistogram_Impl<LogIntHistogramResponse>;
@@ -2451,22 +2288,6 @@ class LoggerSimple final {
       using Super::operator*;
     };
     template <typename ResponseType>
-    class LogString_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-     public:
-      LogString_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer);
-      ~LogString_Impl() = default;
-      LogString_Impl(LogString_Impl&& other) = default;
-      LogString_Impl& operator=(LogString_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
     class StartTimer_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
@@ -2521,7 +2342,6 @@ class LoggerSimple final {
     using LogElapsedTime = LogElapsedTime_Impl<LogElapsedTimeResponse>;
     using LogFrameRate = LogFrameRate_Impl<LogFrameRateResponse>;
     using LogMemoryUsage = LogMemoryUsage_Impl<LogMemoryUsageResponse>;
-    using LogString = LogString_Impl<LogStringResponse>;
     using StartTimer = StartTimer_Impl<StartTimerResponse>;
     using EndTimer = EndTimer_Impl<EndTimerResponse>;
     using LogIntHistogram = LogIntHistogram_Impl<LogIntHistogramResponse>;
@@ -2567,12 +2387,6 @@ class LoggerSimple final {
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::LogMemoryUsage LogMemoryUsage(::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes, ::fidl::BytePart _response_buffer);
-
-    // Allocates 320 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::LogString LogString(uint32_t metric_id, ::fidl::StringView s);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::LogString LogString(::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer);
 
     // Allocates 224 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::StartTimer StartTimer(uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s);
@@ -2631,12 +2445,6 @@ class LoggerSimple final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::LogMemoryUsage LogMemoryUsage(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes, ::fidl::BytePart _response_buffer);
 
-    // Allocates 320 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::LogString LogString(::zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::StringView s);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::LogString LogString(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer);
-
     // Allocates 224 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::StartTimer StartTimer(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s);
 
@@ -2672,8 +2480,6 @@ class LoggerSimple final {
     static ::fidl::DecodeResult<LogFrameRateResponse> LogFrameRate(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogFrameRateRequest> params, ::fidl::BytePart response_buffer);
 
     static ::fidl::DecodeResult<LogMemoryUsageResponse> LogMemoryUsage(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogMemoryUsageRequest> params, ::fidl::BytePart response_buffer);
-
-    static ::fidl::DecodeResult<LogStringResponse> LogString(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogStringRequest> params, ::fidl::BytePart response_buffer);
 
     static ::fidl::DecodeResult<StartTimerResponse> StartTimer(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<StartTimerRequest> params, ::fidl::BytePart response_buffer);
 
@@ -2761,20 +2567,6 @@ class LoggerSimple final {
 
     virtual void LogMemoryUsage(uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes, LogMemoryUsageCompleter::Sync _completer) = 0;
 
-    class LogStringCompleterBase : public _Base {
-     public:
-      void Reply(::llcpp::fuchsia::cobalt::Status status);
-      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::cobalt::Status status);
-      void Reply(::fidl::DecodedMessage<LogStringResponse> params);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using LogStringCompleter = ::fidl::Completer<LogStringCompleterBase>;
-
-    virtual void LogString(uint32_t metric_id, ::fidl::StringView s, LogStringCompleter::Sync _completer) = 0;
-
     class StartTimerCompleterBase : public _Base {
      public:
       void Reply(::llcpp::fuchsia::cobalt::Status status);
@@ -2852,8 +2644,6 @@ class LoggerSimple final {
     static void LogFrameRateResponse(const ::fidl::DecodedMessage<LoggerSimple::LogFrameRateResponse>& _msg);
     static void LogMemoryUsageRequest(const ::fidl::DecodedMessage<LoggerSimple::LogMemoryUsageRequest>& _msg);
     static void LogMemoryUsageResponse(const ::fidl::DecodedMessage<LoggerSimple::LogMemoryUsageResponse>& _msg);
-    static void LogStringRequest(const ::fidl::DecodedMessage<LoggerSimple::LogStringRequest>& _msg);
-    static void LogStringResponse(const ::fidl::DecodedMessage<LoggerSimple::LogStringResponse>& _msg);
     static void StartTimerRequest(const ::fidl::DecodedMessage<LoggerSimple::StartTimerRequest>& _msg);
     static void StartTimerResponse(const ::fidl::DecodedMessage<LoggerSimple::StartTimerResponse>& _msg);
     static void EndTimerRequest(const ::fidl::DecodedMessage<LoggerSimple::EndTimerRequest>& _msg);
@@ -3606,8 +3396,6 @@ class LoggerFactory final {
 
 constexpr uint32_t MAX_TIMER_ID_LENGTH = 64u;
 
-constexpr uint32_t MAX_STRING_EVENT_SIZE = 256u;
-
 constexpr uint32_t MAX_PROJECT_NAME_LENGTH = 64u;
 
 constexpr uint32_t MAX_HISTOGRAM_BUCKETS = 500u;
@@ -4005,8 +3793,7 @@ struct EventPayload {
     kElapsedMicros = 2,
     kFps = 3,
     kMemoryBytesUsed = 4,
-    kStringEvent = 5,
-    kIntHistogram = 6,
+    kIntHistogram = 5,
   };
 
   EventPayload();
@@ -4148,30 +3935,6 @@ struct EventPayload {
 
   int64_t const & memory_bytes_used() const { return memory_bytes_used_; }
 
-  bool is_string_event() const { return ordinal_ == Ordinal::kStringEvent; }
-
-  static EventPayload WithStringEvent(::fidl::StringView* val) {
-    EventPayload result;
-    result.set_string_event(val);
-    return result;
-  }
-
-  ::fidl::StringView& mutable_string_event();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::fidl::StringView>::value && std::is_copy_assignable<T>::value>
-  set_string_event(const T* v) {
-    mutable_string_event() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::fidl::StringView>::value && std::is_move_assignable<T>::value>
-  set_string_event(T* v) {
-    mutable_string_event() = std::move(*v);
-  }
-
-  ::fidl::StringView const & string_event() const { return string_event_; }
-
   bool is_int_histogram() const { return ordinal_ == Ordinal::kIntHistogram; }
 
   static EventPayload WithIntHistogram(::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket>* val) {
@@ -4218,8 +3981,7 @@ struct EventPayload {
     kElapsedMicros = 2,
     kFps = 3,
     kMemoryBytesUsed = 4,
-    kStringEvent = 5,
-    kIntHistogram = 6,
+    kIntHistogram = 5,
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
@@ -4233,7 +3995,6 @@ struct EventPayload {
     int64_t elapsed_micros_;
     float fps_;
     int64_t memory_bytes_used_;
-    ::fidl::StringView string_event_;
     ::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket> int_histogram_;
   };
 };
@@ -4281,10 +4042,6 @@ extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogMemoryUsageRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogMemoryUsageRequestTable;
 extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogMemoryUsageResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogMemoryUsageResponseTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogStringRequestTable;
-extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogStringRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogStringResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogStringResponseTable;
 extern "C" const fidl_type_t fuchsia_cobalt_LoggerStartTimerRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerStartTimerRequestTable;
 extern "C" const fidl_type_t fuchsia_cobalt_LoggerStartTimerResponseTable;
@@ -4506,43 +4263,6 @@ class Logger final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = LogMemoryUsageResponse;
-  };
-
-  struct LogStringResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::llcpp::fuchsia::cobalt::Status status;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_cobalt_LoggerLogStringResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_cobalt_LoggerLogStringResponseTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool ContainsUnion = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-  };
-  struct LogStringRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    uint32_t metric_id;
-    ::fidl::StringView s;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_cobalt_LoggerLogStringRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_cobalt_LoggerLogStringRequestTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 256;
-    static constexpr uint32_t AltPrimarySize = 40;
-    static constexpr uint32_t AltMaxOutOfLine = 256;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool ContainsUnion = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = LogStringResponse;
   };
 
   struct StartTimerResponse final {
@@ -4858,22 +4578,6 @@ class Logger final {
       using Super::operator*;
     };
     template <typename ResponseType>
-    class LogString_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
-     public:
-      LogString_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::StringView s);
-      ~LogString_Impl() = default;
-      LogString_Impl(LogString_Impl&& other) = default;
-      LogString_Impl& operator=(LogString_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
     class StartTimer_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
@@ -4976,7 +4680,6 @@ class Logger final {
     using LogElapsedTime = LogElapsedTime_Impl<LogElapsedTimeResponse>;
     using LogFrameRate = LogFrameRate_Impl<LogFrameRateResponse>;
     using LogMemoryUsage = LogMemoryUsage_Impl<LogMemoryUsageResponse>;
-    using LogString = LogString_Impl<LogStringResponse>;
     using StartTimer = StartTimer_Impl<StartTimerResponse>;
     using EndTimer = EndTimer_Impl<EndTimerResponse>;
     using LogIntHistogram = LogIntHistogram_Impl<LogIntHistogramResponse>;
@@ -5062,22 +4765,6 @@ class Logger final {
       ~LogMemoryUsage_Impl() = default;
       LogMemoryUsage_Impl(LogMemoryUsage_Impl&& other) = default;
       LogMemoryUsage_Impl& operator=(LogMemoryUsage_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
-    class LogString_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-     public:
-      LogString_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer);
-      ~LogString_Impl() = default;
-      LogString_Impl(LogString_Impl&& other) = default;
-      LogString_Impl& operator=(LogString_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -5189,7 +4876,6 @@ class Logger final {
     using LogElapsedTime = LogElapsedTime_Impl<LogElapsedTimeResponse>;
     using LogFrameRate = LogFrameRate_Impl<LogFrameRateResponse>;
     using LogMemoryUsage = LogMemoryUsage_Impl<LogMemoryUsageResponse>;
-    using LogString = LogString_Impl<LogStringResponse>;
     using StartTimer = StartTimer_Impl<StartTimerResponse>;
     using EndTimer = EndTimer_Impl<EndTimerResponse>;
     using LogIntHistogram = LogIntHistogram_Impl<LogIntHistogramResponse>;
@@ -5238,12 +4924,6 @@ class Logger final {
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::LogMemoryUsage LogMemoryUsage(::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes, ::fidl::BytePart _response_buffer);
-
-    // Allocates 320 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::LogString LogString(uint32_t metric_id, ::fidl::StringView s);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::LogString LogString(::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer);
 
     // Allocates 224 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::StartTimer StartTimer(uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s);
@@ -5320,12 +5000,6 @@ class Logger final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::LogMemoryUsage LogMemoryUsage(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes, ::fidl::BytePart _response_buffer);
 
-    // Allocates 320 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::LogString LogString(::zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::StringView s);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::LogString LogString(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer);
-
     // Allocates 224 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::StartTimer StartTimer(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s);
 
@@ -5379,8 +5053,6 @@ class Logger final {
     static ::fidl::DecodeResult<LogFrameRateResponse> LogFrameRate(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogFrameRateRequest> params, ::fidl::BytePart response_buffer);
 
     static ::fidl::DecodeResult<LogMemoryUsageResponse> LogMemoryUsage(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogMemoryUsageRequest> params, ::fidl::BytePart response_buffer);
-
-    static ::fidl::DecodeResult<LogStringResponse> LogString(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogStringRequest> params, ::fidl::BytePart response_buffer);
 
     static ::fidl::DecodeResult<StartTimerResponse> StartTimer(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<StartTimerRequest> params, ::fidl::BytePart response_buffer);
 
@@ -5473,20 +5145,6 @@ class Logger final {
     using LogMemoryUsageCompleter = ::fidl::Completer<LogMemoryUsageCompleterBase>;
 
     virtual void LogMemoryUsage(uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, int64_t bytes, LogMemoryUsageCompleter::Sync _completer) = 0;
-
-    class LogStringCompleterBase : public _Base {
-     public:
-      void Reply(::llcpp::fuchsia::cobalt::Status status);
-      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::cobalt::Status status);
-      void Reply(::fidl::DecodedMessage<LogStringResponse> params);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using LogStringCompleter = ::fidl::Completer<LogStringCompleterBase>;
-
-    virtual void LogString(uint32_t metric_id, ::fidl::StringView s, LogStringCompleter::Sync _completer) = 0;
 
     class StartTimerCompleterBase : public _Base {
      public:
@@ -5607,8 +5265,6 @@ class Logger final {
     static void LogFrameRateResponse(const ::fidl::DecodedMessage<Logger::LogFrameRateResponse>& _msg);
     static void LogMemoryUsageRequest(const ::fidl::DecodedMessage<Logger::LogMemoryUsageRequest>& _msg);
     static void LogMemoryUsageResponse(const ::fidl::DecodedMessage<Logger::LogMemoryUsageResponse>& _msg);
-    static void LogStringRequest(const ::fidl::DecodedMessage<Logger::LogStringRequest>& _msg);
-    static void LogStringResponse(const ::fidl::DecodedMessage<Logger::LogStringResponse>& _msg);
     static void StartTimerRequest(const ::fidl::DecodedMessage<Logger::StartTimerRequest>& _msg);
     static void StartTimerResponse(const ::fidl::DecodedMessage<Logger::StartTimerResponse>& _msg);
     static void EndTimerRequest(const ::fidl::DecodedMessage<Logger::EndTimerRequest>& _msg);
@@ -5793,23 +5449,6 @@ static_assert(sizeof(::llcpp::fuchsia::cobalt::LoggerBase::LogMemoryUsageRespons
 static_assert(offsetof(::llcpp::fuchsia::cobalt::LoggerBase::LogMemoryUsageResponse, status) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::cobalt::LoggerBase::LogStringRequest> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::cobalt::LoggerBase::LogStringRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::cobalt::LoggerBase::LogStringRequest)
-    == ::llcpp::fuchsia::cobalt::LoggerBase::LogStringRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::cobalt::LoggerBase::LogStringRequest, metric_id) == 16);
-static_assert(offsetof(::llcpp::fuchsia::cobalt::LoggerBase::LogStringRequest, s) == 24);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::cobalt::LoggerBase::LogStringResponse> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::cobalt::LoggerBase::LogStringResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::cobalt::LoggerBase::LogStringResponse)
-    == ::llcpp::fuchsia::cobalt::LoggerBase::LogStringResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::cobalt::LoggerBase::LogStringResponse, status) == 16);
-
-template <>
 struct IsFidlType<::llcpp::fuchsia::cobalt::LoggerBase::StartTimerRequest> : public std::true_type {};
 template <>
 struct IsFidlMessage<::llcpp::fuchsia::cobalt::LoggerBase::StartTimerRequest> : public std::true_type {};
@@ -5941,23 +5580,6 @@ struct IsFidlMessage<::llcpp::fuchsia::cobalt::LoggerSimple::LogMemoryUsageRespo
 static_assert(sizeof(::llcpp::fuchsia::cobalt::LoggerSimple::LogMemoryUsageResponse)
     == ::llcpp::fuchsia::cobalt::LoggerSimple::LogMemoryUsageResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::cobalt::LoggerSimple::LogMemoryUsageResponse, status) == 16);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::cobalt::LoggerSimple::LogStringRequest> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::cobalt::LoggerSimple::LogStringRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::cobalt::LoggerSimple::LogStringRequest)
-    == ::llcpp::fuchsia::cobalt::LoggerSimple::LogStringRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::cobalt::LoggerSimple::LogStringRequest, metric_id) == 16);
-static_assert(offsetof(::llcpp::fuchsia::cobalt::LoggerSimple::LogStringRequest, s) == 24);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::cobalt::LoggerSimple::LogStringResponse> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::cobalt::LoggerSimple::LogStringResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::cobalt::LoggerSimple::LogStringResponse)
-    == ::llcpp::fuchsia::cobalt::LoggerSimple::LogStringResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::cobalt::LoggerSimple::LogStringResponse, status) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::cobalt::LoggerSimple::StartTimerRequest> : public std::true_type {};
@@ -6294,23 +5916,6 @@ struct IsFidlMessage<::llcpp::fuchsia::cobalt::Logger::LogMemoryUsageResponse> :
 static_assert(sizeof(::llcpp::fuchsia::cobalt::Logger::LogMemoryUsageResponse)
     == ::llcpp::fuchsia::cobalt::Logger::LogMemoryUsageResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::cobalt::Logger::LogMemoryUsageResponse, status) == 16);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::cobalt::Logger::LogStringRequest> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::cobalt::Logger::LogStringRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::cobalt::Logger::LogStringRequest)
-    == ::llcpp::fuchsia::cobalt::Logger::LogStringRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::cobalt::Logger::LogStringRequest, metric_id) == 16);
-static_assert(offsetof(::llcpp::fuchsia::cobalt::Logger::LogStringRequest, s) == 24);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::cobalt::Logger::LogStringResponse> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::cobalt::Logger::LogStringResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::cobalt::Logger::LogStringResponse)
-    == ::llcpp::fuchsia::cobalt::Logger::LogStringResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::cobalt::Logger::LogStringResponse, status) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::cobalt::Logger::StartTimerRequest> : public std::true_type {};

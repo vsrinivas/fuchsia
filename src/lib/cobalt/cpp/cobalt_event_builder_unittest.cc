@@ -77,22 +77,6 @@ TEST(CobaltEventBuilder, MemoryUsage) {
                                       .as_memory_usage(bytes_used)));
 }
 
-TEST(CobaltEventBuilder, StringEvent) {
-  std::string string_event = "The string event";
-
-  CobaltEvent event;
-  event.metric_id = kMetricId;
-  event.event_codes.push_back(kDimension1);
-  event.event_codes.push_back(kDimension2);
-  event.component = kComponent;
-  event.payload.set_string_event(string_event);
-
-  ASSERT_TRUE(fidl::Equals(event, CobaltEventBuilder(kMetricId)
-                                      .with_event_codes({kDimension1, kDimension2})
-                                      .with_component(kComponent)
-                                      .as_string_event(string_event)));
-}
-
 TEST(CobaltEventBuilder, IntHistogram) {
   std::vector<HistogramBucket> int_histogram;
   int_histogram.push_back({0, 10});

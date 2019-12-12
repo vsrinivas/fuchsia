@@ -26,9 +26,6 @@ void MockCobaltLogger::LogMemoryUsage(uint32_t metric_id, uint32_t event_code,
                                       const std::string& component, int64_t bytes) {
   (*call_counts_)[LogMethod::kLogMemoryUsage]++;
 }
-void MockCobaltLogger::LogString(uint32_t metric_id, const std::string& s) {
-  (*call_counts_)[LogMethod::kLogString]++;
-}
 void MockCobaltLogger::LogIntHistogram(uint32_t metric_id, uint32_t event_code,
                                        const std::string& component,
                                        std::vector<fuchsia::cobalt::HistogramBucket> histogram) {

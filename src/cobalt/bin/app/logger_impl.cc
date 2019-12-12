@@ -45,12 +45,6 @@ void LoggerImpl::LogMemoryUsage(uint32_t metric_id, uint32_t event_code, std::st
   callback(ToCobaltStatus(logger_->LogMemoryUsage(metric_id, event_code, component, bytes)));
 }
 
-void LoggerImpl::LogString(uint32_t metric_id, std::string s,
-                           fuchsia::cobalt::LoggerBase::LogStringCallback callback) {
-  TRACE_DURATION("cobalt_fidl", "LoggerImpl::LogString");
-  callback(ToCobaltStatus(logger_->LogString(metric_id, s)));
-}
-
 void LoggerImpl::LogIntHistogram(uint32_t metric_id, uint32_t event_code, std::string component,
                                  std::vector<fuchsia::cobalt::HistogramBucket> histogram,
                                  fuchsia::cobalt::Logger::LogIntHistogramCallback callback) {
@@ -197,10 +191,6 @@ void LoggerImpl::LogCobaltEvent(fuchsia::cobalt::CobaltEvent event,
       callback(ToCobaltStatus(logger_->LogMemoryUsage(event.metric_id, event.event_codes,
                                                       event.component.value_or(""),
                                                       event.payload.memory_bytes_used())));
-      return;
-
-    case EventPayload::Tag::kStringEvent:
-      callback(ToCobaltStatus(logger_->LogString(event.metric_id, event.payload.string_event())));
       return;
 
     case EventPayload::Tag::kIntHistogram: {

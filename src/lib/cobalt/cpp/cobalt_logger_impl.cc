@@ -68,10 +68,6 @@ void BaseCobaltLoggerImpl::LogMemoryUsage(uint32_t metric_id, uint32_t event_cod
   LogEvent(std::make_unique<MemoryUsageEvent>(metric_id, event_code, component, bytes));
 }
 
-void BaseCobaltLoggerImpl::LogString(uint32_t metric_id, const std::string& s) {
-  LogEvent(std::make_unique<StringUsedEvent>(metric_id, s));
-}
-
 void BaseCobaltLoggerImpl::StartTimer(uint32_t metric_id, uint32_t event_code,
                                       const std::string& component, const std::string& timer_id,
                                       zx::time timestamp, zx::duration timeout) {

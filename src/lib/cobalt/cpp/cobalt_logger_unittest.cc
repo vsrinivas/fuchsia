@@ -50,10 +50,6 @@ bool Equals(const MemoryUsageEvent* e1, const MemoryUsageEvent* e2) {
          e1->component() == e2->component() && e1->bytes() == e2->bytes();
 }
 
-bool Equals(const StringUsedEvent* e1, const StringUsedEvent* e2) {
-  return e1->metric_id() == e2->metric_id() && e1->s() == e2->s();
-}
-
 bool Equals(const StartTimerEvent* e1, const StartTimerEvent* e2) {
   return e1->metric_id() == e2->metric_id() && e1->event_code() == e2->event_code() &&
          e1->component() == e2->component() && e1->timer_id() == e2->timer_id() &&
@@ -123,11 +119,6 @@ class FakeLoggerImpl : public fuchsia::cobalt::Logger {
                       LogMemoryUsageCallback callback) override {
     RecordCall(EventType::MEMORY_USAGE,
                std::make_unique<MemoryUsageEvent>(metric_id, event_code, component, bytes));
-    callback(fuchsia::cobalt::Status::OK);
-  }
-
-  void LogString(uint32_t metric_id, std::string s, LogStringCallback callback) override {
-    RecordCall(EventType::STRING_USED, std::make_unique<StringUsedEvent>(metric_id, s));
     callback(fuchsia::cobalt::Status::OK);
   }
 
@@ -222,10 +213,6 @@ class FakeLoggerImpl : public fuchsia::cobalt::Logger {
       case EventType::MEMORY_USAGE:
         EXPECT_TRUE(Equals(static_cast<const MemoryUsageEvent*>(expected),
                            static_cast<MemoryUsageEvent*>(calls_[type][0].get())));
-        break;
-      case EventType::STRING_USED:
-        EXPECT_TRUE(Equals(static_cast<const StringUsedEvent*>(expected),
-                           static_cast<StringUsedEvent*>(calls_[type][0].get())));
         break;
       case EventType::START_TIMER:
         EXPECT_TRUE(Equals(static_cast<const StartTimerEvent*>(expected),
@@ -461,13 +448,6 @@ TEST_F(CobaltLoggerTest, LogMemoryUsage) {
                                   event.bytes());
   RunLoopUntilIdle();
   logger()->ExpectCalledOnceWith(EventType::MEMORY_USAGE, &event);
-}
-
-TEST_F(CobaltLoggerTest, LogString) {
-  StringUsedEvent event(kFakeCobaltMetricId, "some_string");
-  cobalt_logger()->LogString(event.metric_id(), event.s());
-  RunLoopUntilIdle();
-  logger()->ExpectCalledOnceWith(EventType::STRING_USED, &event);
 }
 
 TEST_F(CobaltLoggerTest, StartTimer) {

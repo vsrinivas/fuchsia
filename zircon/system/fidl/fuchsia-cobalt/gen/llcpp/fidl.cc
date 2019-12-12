@@ -900,13 +900,6 @@ extern "C" const fidl_type_t fuchsia_cobalt_LoggerBaseLogMemoryUsageRequestTable
 extern "C" const fidl_type_t fuchsia_cobalt_LoggerBaseLogMemoryUsageResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerBaseLogMemoryUsageResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kLoggerBase_LogString_Ordinal = 0x4cc8ff6a00000000lu;
-[[maybe_unused]]
-constexpr uint64_t kLoggerBase_LogString_GenOrdinal = 0x735c8d0aee2ced9alu;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerBaseLogStringRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerBaseLogStringResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerBaseLogStringResponseTable;
-[[maybe_unused]]
 constexpr uint64_t kLoggerBase_StartTimer_Ordinal = 0x4a5c612000000000lu;
 [[maybe_unused]]
 constexpr uint64_t kLoggerBase_StartTimer_GenOrdinal = 0x68cec08d094e4938lu;
@@ -1281,75 +1274,6 @@ LoggerBase::UnownedResultOf::LogMemoryUsage LoggerBase::Call::LogMemoryUsage(::z
 }
 
 template <>
-LoggerBase::ResultOf::LogString_Impl<LoggerBase::LogStringResponse>::LogString_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::StringView s) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LogStringRequest, ::fidl::MessageDirection::kSending>();
-  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
-  auto& _write_bytes_array = _write_bytes_inlined;
-  LogStringRequest _request = {};
-  _request.metric_id = std::move(metric_id);
-  _request.s = std::move(s);
-  auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
-  if (_linearize_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_linearize_result));
-    return;
-  }
-  ::fidl::DecodedMessage<LogStringRequest> _decoded_request = std::move(_linearize_result.message);
-  Super::SetResult(
-      LoggerBase::InPlace::LogString(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
-}
-
-LoggerBase::ResultOf::LogString LoggerBase::SyncClient::LogString(uint32_t metric_id, ::fidl::StringView s) {
-    return ResultOf::LogString(::zx::unowned_channel(this->channel_), std::move(metric_id), std::move(s));
-}
-
-LoggerBase::ResultOf::LogString LoggerBase::Call::LogString(::zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::StringView s) {
-  return ResultOf::LogString(std::move(_client_end), std::move(metric_id), std::move(s));
-}
-
-template <>
-LoggerBase::UnownedResultOf::LogString_Impl<LoggerBase::LogStringResponse>::LogString_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer) {
-  if (_request_buffer.capacity() < LogStringRequest::PrimarySize) {
-    Super::SetFailure(::fidl::DecodeResult<LogStringResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
-    return;
-  }
-  LogStringRequest _request = {};
-  _request.metric_id = std::move(metric_id);
-  _request.s = std::move(s);
-  auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
-  if (_linearize_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_linearize_result));
-    return;
-  }
-  ::fidl::DecodedMessage<LogStringRequest> _decoded_request = std::move(_linearize_result.message);
-  Super::SetResult(
-      LoggerBase::InPlace::LogString(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
-}
-
-LoggerBase::UnownedResultOf::LogString LoggerBase::SyncClient::LogString(::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::LogString(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(s), std::move(_response_buffer));
-}
-
-LoggerBase::UnownedResultOf::LogString LoggerBase::Call::LogString(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::LogString(std::move(_client_end), std::move(_request_buffer), std::move(metric_id), std::move(s), std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<LoggerBase::LogStringResponse> LoggerBase::InPlace::LogString(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogStringRequest> params, ::fidl::BytePart response_buffer) {
-  LoggerBase::SetTransactionHeaderFor::LogStringRequest(params);
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<LoggerBase::LogStringResponse>::FromFailure(
-        std::move(_encode_request_result));
-  }
-  auto _call_result = ::fidl::Call<LogStringRequest, LogStringResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<LoggerBase::LogStringResponse>::FromFailure(
-        std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
-}
-
-template <>
 LoggerBase::ResultOf::StartTimer_Impl<LoggerBase::StartTimerResponse>::StartTimer_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<StartTimerRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
@@ -1576,19 +1500,6 @@ bool LoggerBase::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
           Interface::LogMemoryUsageCompleter::Sync(txn));
       return true;
     }
-    case kLoggerBase_LogString_Ordinal:
-    case kLoggerBase_LogString_GenOrdinal:
-    {
-      auto result = ::fidl::DecodeAs<LogStringRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
-        return true;
-      }
-      auto message = result.message.message();
-      impl->LogString(std::move(message->metric_id), std::move(message->s),
-          Interface::LogStringCompleter::Sync(txn));
-      return true;
-    }
     case kLoggerBase_StartTimer_Ordinal:
     case kLoggerBase_StartTimer_GenOrdinal:
     {
@@ -1811,42 +1722,6 @@ void LoggerBase::Interface::LogMemoryUsageCompleterBase::Reply(::fidl::DecodedMe
 }
 
 
-void LoggerBase::Interface::LogStringCompleterBase::Reply(::llcpp::fuchsia::cobalt::Status status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LogStringResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<LogStringResponse*>(_write_bytes);
-  LoggerBase::SetTransactionHeaderFor::LogStringResponse(
-      ::fidl::DecodedMessage<LogStringResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              LogStringResponse::PrimarySize,
-              LogStringResponse::PrimarySize)));
-  _response.status = std::move(status);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(LogStringResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<LogStringResponse>(std::move(_response_bytes)));
-}
-
-void LoggerBase::Interface::LogStringCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::cobalt::Status status) {
-  if (_buffer.capacity() < LogStringResponse::PrimarySize) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  auto& _response = *reinterpret_cast<LogStringResponse*>(_buffer.data());
-  LoggerBase::SetTransactionHeaderFor::LogStringResponse(
-      ::fidl::DecodedMessage<LogStringResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              LogStringResponse::PrimarySize,
-              LogStringResponse::PrimarySize)));
-  _response.status = std::move(status);
-  _buffer.set_actual(sizeof(LogStringResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<LogStringResponse>(std::move(_buffer)));
-}
-
-void LoggerBase::Interface::LogStringCompleterBase::Reply(::fidl::DecodedMessage<LogStringResponse> params) {
-  LoggerBase::SetTransactionHeaderFor::LogStringResponse(params);
-  CompleterBase::SendReply(std::move(params));
-}
-
-
 void LoggerBase::Interface::StartTimerCompleterBase::Reply(::llcpp::fuchsia::cobalt::Status status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<StartTimerResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
@@ -1955,13 +1830,6 @@ void LoggerBase::SetTransactionHeaderFor::LogMemoryUsageResponse(const ::fidl::D
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerBase_LogMemoryUsage_GenOrdinal);
 }
 
-void LoggerBase::SetTransactionHeaderFor::LogStringRequest(const ::fidl::DecodedMessage<LoggerBase::LogStringRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerBase_LogString_GenOrdinal);
-}
-void LoggerBase::SetTransactionHeaderFor::LogStringResponse(const ::fidl::DecodedMessage<LoggerBase::LogStringResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerBase_LogString_GenOrdinal);
-}
-
 void LoggerBase::SetTransactionHeaderFor::StartTimerRequest(const ::fidl::DecodedMessage<LoggerBase::StartTimerRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerBase_StartTimer_GenOrdinal);
 }
@@ -2013,13 +1881,6 @@ constexpr uint64_t kLoggerSimple_LogMemoryUsage_GenOrdinal = 0x14189c11cc19d641l
 extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleLogMemoryUsageRequestTable;
 extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleLogMemoryUsageResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleLogMemoryUsageResponseTable;
-[[maybe_unused]]
-constexpr uint64_t kLoggerSimple_LogString_Ordinal = 0x4cc8ff6a00000000lu;
-[[maybe_unused]]
-constexpr uint64_t kLoggerSimple_LogString_GenOrdinal = 0x735c8d0aee2ced9alu;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleLogStringRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerSimpleLogStringResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerSimpleLogStringResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLoggerSimple_StartTimer_Ordinal = 0x4a5c612000000000lu;
 [[maybe_unused]]
@@ -2402,75 +2263,6 @@ LoggerSimple::UnownedResultOf::LogMemoryUsage LoggerSimple::Call::LogMemoryUsage
 }
 
 template <>
-LoggerSimple::ResultOf::LogString_Impl<LoggerSimple::LogStringResponse>::LogString_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::StringView s) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LogStringRequest, ::fidl::MessageDirection::kSending>();
-  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
-  auto& _write_bytes_array = _write_bytes_inlined;
-  LogStringRequest _request = {};
-  _request.metric_id = std::move(metric_id);
-  _request.s = std::move(s);
-  auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
-  if (_linearize_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_linearize_result));
-    return;
-  }
-  ::fidl::DecodedMessage<LogStringRequest> _decoded_request = std::move(_linearize_result.message);
-  Super::SetResult(
-      LoggerSimple::InPlace::LogString(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
-}
-
-LoggerSimple::ResultOf::LogString LoggerSimple::SyncClient::LogString(uint32_t metric_id, ::fidl::StringView s) {
-    return ResultOf::LogString(::zx::unowned_channel(this->channel_), std::move(metric_id), std::move(s));
-}
-
-LoggerSimple::ResultOf::LogString LoggerSimple::Call::LogString(::zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::StringView s) {
-  return ResultOf::LogString(std::move(_client_end), std::move(metric_id), std::move(s));
-}
-
-template <>
-LoggerSimple::UnownedResultOf::LogString_Impl<LoggerSimple::LogStringResponse>::LogString_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer) {
-  if (_request_buffer.capacity() < LogStringRequest::PrimarySize) {
-    Super::SetFailure(::fidl::DecodeResult<LogStringResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
-    return;
-  }
-  LogStringRequest _request = {};
-  _request.metric_id = std::move(metric_id);
-  _request.s = std::move(s);
-  auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
-  if (_linearize_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_linearize_result));
-    return;
-  }
-  ::fidl::DecodedMessage<LogStringRequest> _decoded_request = std::move(_linearize_result.message);
-  Super::SetResult(
-      LoggerSimple::InPlace::LogString(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
-}
-
-LoggerSimple::UnownedResultOf::LogString LoggerSimple::SyncClient::LogString(::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::LogString(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(s), std::move(_response_buffer));
-}
-
-LoggerSimple::UnownedResultOf::LogString LoggerSimple::Call::LogString(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::LogString(std::move(_client_end), std::move(_request_buffer), std::move(metric_id), std::move(s), std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<LoggerSimple::LogStringResponse> LoggerSimple::InPlace::LogString(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogStringRequest> params, ::fidl::BytePart response_buffer) {
-  LoggerSimple::SetTransactionHeaderFor::LogStringRequest(params);
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<LoggerSimple::LogStringResponse>::FromFailure(
-        std::move(_encode_request_result));
-  }
-  auto _call_result = ::fidl::Call<LogStringRequest, LogStringResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<LoggerSimple::LogStringResponse>::FromFailure(
-        std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
-}
-
-template <>
 LoggerSimple::ResultOf::StartTimer_Impl<LoggerSimple::StartTimerResponse>::StartTimer_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, uint32_t event_code, ::fidl::StringView component, ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<StartTimerRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
@@ -2772,19 +2564,6 @@ bool LoggerSimple::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transac
           Interface::LogMemoryUsageCompleter::Sync(txn));
       return true;
     }
-    case kLoggerSimple_LogString_Ordinal:
-    case kLoggerSimple_LogString_GenOrdinal:
-    {
-      auto result = ::fidl::DecodeAs<LogStringRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
-        return true;
-      }
-      auto message = result.message.message();
-      impl->LogString(std::move(message->metric_id), std::move(message->s),
-          Interface::LogStringCompleter::Sync(txn));
-      return true;
-    }
     case kLoggerSimple_StartTimer_Ordinal:
     case kLoggerSimple_StartTimer_GenOrdinal:
     {
@@ -3020,42 +2799,6 @@ void LoggerSimple::Interface::LogMemoryUsageCompleterBase::Reply(::fidl::Decoded
 }
 
 
-void LoggerSimple::Interface::LogStringCompleterBase::Reply(::llcpp::fuchsia::cobalt::Status status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LogStringResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<LogStringResponse*>(_write_bytes);
-  LoggerSimple::SetTransactionHeaderFor::LogStringResponse(
-      ::fidl::DecodedMessage<LogStringResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              LogStringResponse::PrimarySize,
-              LogStringResponse::PrimarySize)));
-  _response.status = std::move(status);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(LogStringResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<LogStringResponse>(std::move(_response_bytes)));
-}
-
-void LoggerSimple::Interface::LogStringCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::cobalt::Status status) {
-  if (_buffer.capacity() < LogStringResponse::PrimarySize) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  auto& _response = *reinterpret_cast<LogStringResponse*>(_buffer.data());
-  LoggerSimple::SetTransactionHeaderFor::LogStringResponse(
-      ::fidl::DecodedMessage<LogStringResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              LogStringResponse::PrimarySize,
-              LogStringResponse::PrimarySize)));
-  _response.status = std::move(status);
-  _buffer.set_actual(sizeof(LogStringResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<LogStringResponse>(std::move(_buffer)));
-}
-
-void LoggerSimple::Interface::LogStringCompleterBase::Reply(::fidl::DecodedMessage<LogStringResponse> params) {
-  LoggerSimple::SetTransactionHeaderFor::LogStringResponse(params);
-  CompleterBase::SendReply(std::move(params));
-}
-
-
 void LoggerSimple::Interface::StartTimerCompleterBase::Reply(::llcpp::fuchsia::cobalt::Status status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<StartTimerResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
@@ -3198,13 +2941,6 @@ void LoggerSimple::SetTransactionHeaderFor::LogMemoryUsageRequest(const ::fidl::
 }
 void LoggerSimple::SetTransactionHeaderFor::LogMemoryUsageResponse(const ::fidl::DecodedMessage<LoggerSimple::LogMemoryUsageResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_LogMemoryUsage_GenOrdinal);
-}
-
-void LoggerSimple::SetTransactionHeaderFor::LogStringRequest(const ::fidl::DecodedMessage<LoggerSimple::LogStringRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_LogString_GenOrdinal);
-}
-void LoggerSimple::SetTransactionHeaderFor::LogStringResponse(const ::fidl::DecodedMessage<LoggerSimple::LogStringResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_LogString_GenOrdinal);
 }
 
 void LoggerSimple::SetTransactionHeaderFor::StartTimerRequest(const ::fidl::DecodedMessage<LoggerSimple::StartTimerRequest>& _msg) {
@@ -4373,9 +4109,6 @@ void ::llcpp::fuchsia::cobalt::EventPayload::MoveImpl_(EventPayload&& other) {
   case Ordinal::kMemoryBytesUsed:
     mutable_memory_bytes_used() = std::move(other.mutable_memory_bytes_used());
     break;
-  case Ordinal::kStringEvent:
-    mutable_string_event() = std::move(other.mutable_string_event());
-    break;
   case Ordinal::kIntHistogram:
     mutable_int_histogram() = std::move(other.mutable_int_histogram());
     break;
@@ -4391,7 +4124,6 @@ void ::llcpp::fuchsia::cobalt::EventPayload::SizeAndOffsetAssertionHelper() {
   static_assert(offsetof(::llcpp::fuchsia::cobalt::EventPayload, elapsed_micros_) == 8);
   static_assert(offsetof(::llcpp::fuchsia::cobalt::EventPayload, fps_) == 8);
   static_assert(offsetof(::llcpp::fuchsia::cobalt::EventPayload, memory_bytes_used_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::cobalt::EventPayload, string_event_) == 8);
   static_assert(offsetof(::llcpp::fuchsia::cobalt::EventPayload, int_histogram_) == 8);
   static_assert(sizeof(::llcpp::fuchsia::cobalt::EventPayload) == ::llcpp::fuchsia::cobalt::EventPayload::PrimarySize);
 }
@@ -4442,15 +4174,6 @@ int64_t& ::llcpp::fuchsia::cobalt::EventPayload::mutable_memory_bytes_used() {
   return memory_bytes_used_;
 }
 
-::fidl::StringView& ::llcpp::fuchsia::cobalt::EventPayload::mutable_string_event() {
-  if (ordinal_ != Ordinal::kStringEvent) {
-    Destroy();
-    new (&string_event_) ::fidl::StringView;
-    ordinal_ = Ordinal::kStringEvent;
-  }
-  return string_event_;
-}
-
 ::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket>& ::llcpp::fuchsia::cobalt::EventPayload::mutable_int_histogram() {
   if (ordinal_ != Ordinal::kIntHistogram) {
     Destroy();
@@ -4498,13 +4221,6 @@ constexpr uint64_t kLogger_LogMemoryUsage_GenOrdinal = 0x14189c11cc19d641lu;
 extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogMemoryUsageRequestTable;
 extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogMemoryUsageResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogMemoryUsageResponseTable;
-[[maybe_unused]]
-constexpr uint64_t kLogger_LogString_Ordinal = 0x4cc8ff6a00000000lu;
-[[maybe_unused]]
-constexpr uint64_t kLogger_LogString_GenOrdinal = 0x735c8d0aee2ced9alu;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogStringRequestTable;
-extern "C" const fidl_type_t fuchsia_cobalt_LoggerLogStringResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_cobalt_LoggerLogStringResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kLogger_StartTimer_Ordinal = 0x4a5c612000000000lu;
 [[maybe_unused]]
@@ -4902,75 +4618,6 @@ Logger::UnownedResultOf::LogMemoryUsage Logger::Call::LogMemoryUsage(::zx::unown
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
     return ::fidl::DecodeResult<Logger::LogMemoryUsageResponse>::FromFailure(
-        std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
-}
-
-template <>
-Logger::ResultOf::LogString_Impl<Logger::LogStringResponse>::LogString_Impl(::zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::StringView s) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LogStringRequest, ::fidl::MessageDirection::kSending>();
-  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
-  auto& _write_bytes_array = _write_bytes_inlined;
-  LogStringRequest _request = {};
-  _request.metric_id = std::move(metric_id);
-  _request.s = std::move(s);
-  auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
-  if (_linearize_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_linearize_result));
-    return;
-  }
-  ::fidl::DecodedMessage<LogStringRequest> _decoded_request = std::move(_linearize_result.message);
-  Super::SetResult(
-      Logger::InPlace::LogString(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
-}
-
-Logger::ResultOf::LogString Logger::SyncClient::LogString(uint32_t metric_id, ::fidl::StringView s) {
-    return ResultOf::LogString(::zx::unowned_channel(this->channel_), std::move(metric_id), std::move(s));
-}
-
-Logger::ResultOf::LogString Logger::Call::LogString(::zx::unowned_channel _client_end, uint32_t metric_id, ::fidl::StringView s) {
-  return ResultOf::LogString(std::move(_client_end), std::move(metric_id), std::move(s));
-}
-
-template <>
-Logger::UnownedResultOf::LogString_Impl<Logger::LogStringResponse>::LogString_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer) {
-  if (_request_buffer.capacity() < LogStringRequest::PrimarySize) {
-    Super::SetFailure(::fidl::DecodeResult<LogStringResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
-    return;
-  }
-  LogStringRequest _request = {};
-  _request.metric_id = std::move(metric_id);
-  _request.s = std::move(s);
-  auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
-  if (_linearize_result.status != ZX_OK) {
-    Super::SetFailure(std::move(_linearize_result));
-    return;
-  }
-  ::fidl::DecodedMessage<LogStringRequest> _decoded_request = std::move(_linearize_result.message);
-  Super::SetResult(
-      Logger::InPlace::LogString(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
-}
-
-Logger::UnownedResultOf::LogString Logger::SyncClient::LogString(::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::LogString(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(metric_id), std::move(s), std::move(_response_buffer));
-}
-
-Logger::UnownedResultOf::LogString Logger::Call::LogString(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t metric_id, ::fidl::StringView s, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::LogString(std::move(_client_end), std::move(_request_buffer), std::move(metric_id), std::move(s), std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<Logger::LogStringResponse> Logger::InPlace::LogString(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<LogStringRequest> params, ::fidl::BytePart response_buffer) {
-  Logger::SetTransactionHeaderFor::LogStringRequest(params);
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Logger::LogStringResponse>::FromFailure(
-        std::move(_encode_request_result));
-  }
-  auto _call_result = ::fidl::Call<LogStringRequest, LogStringResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Logger::LogStringResponse>::FromFailure(
         std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
@@ -5479,19 +5126,6 @@ bool Logger::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
           Interface::LogMemoryUsageCompleter::Sync(txn));
       return true;
     }
-    case kLogger_LogString_Ordinal:
-    case kLogger_LogString_GenOrdinal:
-    {
-      auto result = ::fidl::DecodeAs<LogStringRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
-        return true;
-      }
-      auto message = result.message.message();
-      impl->LogString(std::move(message->metric_id), std::move(message->s),
-          Interface::LogStringCompleter::Sync(txn));
-      return true;
-    }
     case kLogger_StartTimer_Ordinal:
     case kLogger_StartTimer_GenOrdinal:
     {
@@ -5826,42 +5460,6 @@ void Logger::Interface::LogMemoryUsageCompleterBase::Reply(::fidl::DecodedMessag
 }
 
 
-void Logger::Interface::LogStringCompleterBase::Reply(::llcpp::fuchsia::cobalt::Status status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LogStringResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<LogStringResponse*>(_write_bytes);
-  Logger::SetTransactionHeaderFor::LogStringResponse(
-      ::fidl::DecodedMessage<LogStringResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              LogStringResponse::PrimarySize,
-              LogStringResponse::PrimarySize)));
-  _response.status = std::move(status);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(LogStringResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<LogStringResponse>(std::move(_response_bytes)));
-}
-
-void Logger::Interface::LogStringCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::cobalt::Status status) {
-  if (_buffer.capacity() < LogStringResponse::PrimarySize) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  auto& _response = *reinterpret_cast<LogStringResponse*>(_buffer.data());
-  Logger::SetTransactionHeaderFor::LogStringResponse(
-      ::fidl::DecodedMessage<LogStringResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              LogStringResponse::PrimarySize,
-              LogStringResponse::PrimarySize)));
-  _response.status = std::move(status);
-  _buffer.set_actual(sizeof(LogStringResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<LogStringResponse>(std::move(_buffer)));
-}
-
-void Logger::Interface::LogStringCompleterBase::Reply(::fidl::DecodedMessage<LogStringResponse> params) {
-  Logger::SetTransactionHeaderFor::LogStringResponse(params);
-  CompleterBase::SendReply(std::move(params));
-}
-
-
 void Logger::Interface::StartTimerCompleterBase::Reply(::llcpp::fuchsia::cobalt::Status status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<StartTimerResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
@@ -6112,13 +5710,6 @@ void Logger::SetTransactionHeaderFor::LogMemoryUsageRequest(const ::fidl::Decode
 }
 void Logger::SetTransactionHeaderFor::LogMemoryUsageResponse(const ::fidl::DecodedMessage<Logger::LogMemoryUsageResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogMemoryUsage_GenOrdinal);
-}
-
-void Logger::SetTransactionHeaderFor::LogStringRequest(const ::fidl::DecodedMessage<Logger::LogStringRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogString_GenOrdinal);
-}
-void Logger::SetTransactionHeaderFor::LogStringResponse(const ::fidl::DecodedMessage<Logger::LogStringResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogString_GenOrdinal);
 }
 
 void Logger::SetTransactionHeaderFor::StartTimerRequest(const ::fidl::DecodedMessage<Logger::StartTimerRequest>& _msg) {

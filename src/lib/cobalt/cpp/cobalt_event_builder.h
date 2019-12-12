@@ -56,7 +56,6 @@ class CobaltEventBuilder {
   fuchsia::cobalt::CobaltEvent as_elapsed_time(const int64_t elapsed_micros);
   fuchsia::cobalt::CobaltEvent as_frame_rate(const float fps);
   fuchsia::cobalt::CobaltEvent as_memory_usage(const int64_t memory_bytes_used);
-  fuchsia::cobalt::CobaltEvent as_string_event(std::string string_event);
   fuchsia::cobalt::CobaltEvent as_int_histogram(
       std::vector<fuchsia::cobalt::HistogramBucket> int_histogram);
   fuchsia::cobalt::CobaltEvent as_event();

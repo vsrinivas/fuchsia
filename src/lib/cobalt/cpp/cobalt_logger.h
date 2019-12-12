@@ -109,26 +109,6 @@ class CobaltLogger {
   virtual void LogMemoryUsage(uint32_t metric_id, uint32_t event_code, const std::string& component,
                               int64_t bytes) = 0;
 
-  // Logs the fact that a given string was used, in a specific context.
-  // The semantics of the context and the string is specified in the
-  // Metric definition.
-  //
-  //  This method is intended to be used in the following situation:
-  //  * The string s being logged does not contain PII or passwords.
-  //  * The set S of all possible strings that may be logged is large.
-  //    If the set S is small consider using LogEvent() instead.
-  //  * The ultimate data of interest is the statistical distribution of the
-  //    most commonly used strings from S over the population of all Fuchsia
-  //    devices.
-  //
-  // |metric_id| ID of the metric to use. It must be one of the Metrics
-  // from the ProjectProfile used to create this CobaltLogger, and it must be of
-  // type STRING_USED.
-  //
-  // |s| The string to log. This should be a human-readable string of
-  //      size no more than 256 bytes.
-  virtual void LogString(uint32_t metric_id, const std::string& s) = 0;
-
   // This method is part of Cobalt's helper service for measuring the time
   // delta between two events that occur in different processes. This starts
   // the timer. A corresponding invocation of EndTimer() with the same

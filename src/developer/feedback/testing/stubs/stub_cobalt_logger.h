@@ -31,7 +31,6 @@ class StubCobaltLoggerBase : public fuchsia::cobalt::Logger {
   bool WasLogElapsedTimeCalled() const { return WasFunctionCalled(Function::LogElapsedTime); }
   bool WasLogFrameRateCalled() const { return WasFunctionCalled(Function::LogFrameRate); }
   bool WasLogMemoryUsageCalled() const { return WasFunctionCalled(Function::LogMemoryUsage); }
-  bool WasLogStringCalled() const { return WasFunctionCalled(Function::LogString); }
   bool WasStartTimerCalled() const { return WasFunctionCalled(Function::StartTimer); }
   bool WasEndTimerCalled() const { return WasFunctionCalled(Function::EndTimer); }
   bool WasLogIntHistogramCalled() const { return WasFunctionCalled(Function::LogIntHistogram); }
@@ -50,7 +49,6 @@ class StubCobaltLoggerBase : public fuchsia::cobalt::Logger {
   void MarkLogElapsedTimeCalled() { return MarkFunctionAsCalled(Function::LogElapsedTime); }
   void MarkLogFrameRateCalled() { return MarkFunctionAsCalled(Function::LogFrameRate); }
   void MarkLogMemoryUsageCalled() { return MarkFunctionAsCalled(Function::LogMemoryUsage); }
-  void MarkLogStringCalled() { return MarkFunctionAsCalled(Function::LogString); }
   void MarkStartTimerCalled() { return MarkFunctionAsCalled(Function::StartTimer); }
   void MarkEndTimerCalled() { return MarkFunctionAsCalled(Function::EndTimer); }
   void MarkLogIntHistogramCalled() { return MarkFunctionAsCalled(Function::LogIntHistogram); }
@@ -83,11 +81,6 @@ class StubCobaltLoggerBase : public fuchsia::cobalt::Logger {
   virtual void LogMemoryUsage(uint32_t metric_id, uint32_t event_code, ::std::string component,
                               int64_t bytes,
                               fuchsia::cobalt::Logger::LogMemoryUsageCallback callback) override {
-    FXL_NOTIMPLEMENTED();
-  }
-
-  virtual void LogString(uint32_t metric_id, ::std::string s,
-                         fuchsia::cobalt::Logger::LogStringCallback callback) override {
     FXL_NOTIMPLEMENTED();
   }
 
@@ -134,7 +127,6 @@ class StubCobaltLoggerBase : public fuchsia::cobalt::Logger {
     LogElapsedTime = 1 << 2,
     LogFrameRate = 1 << 3,
     LogMemoryUsage = 1 << 4,
-    LogString = 1 << 5,
     StartTimer = 1 << 6,
     EndTimer = 1 << 7,
     LogIntHistogram = 1 << 8,

@@ -138,19 +138,6 @@ class MemoryUsageEvent : public Event {
   const int64_t bytes_;
 };
 
-class StringUsedEvent : public Event {
- public:
-  StringUsedEvent(uint32_t metric_id, const std::string& s) : Event(metric_id), s_(s) {}
-  void Log(fuchsia::cobalt::LoggerPtr* logger,
-           fit::function<void(fuchsia::cobalt::Status)> callback) {
-    (*logger)->LogString(metric_id(), s_, std::move(callback));
-  }
-  const std::string& s() const { return s_; }
-
- private:
-  const std::string s_;
-};
-
 class StartTimerEvent : public Event {
  public:
   StartTimerEvent(uint32_t metric_id, uint32_t event_code, const std::string& component,
@@ -286,7 +273,6 @@ class BaseCobaltLoggerImpl : public CobaltLogger {
                     float fps) override;
   void LogMemoryUsage(uint32_t metric_id, uint32_t event_code, const std::string& component,
                       int64_t bytes) override;
-  void LogString(uint32_t metric_id, const std::string& s) override;
   void StartTimer(uint32_t metric_id, uint32_t event_code, const std::string& component,
                   const std::string& timer_id, zx::time timestamp, zx::duration timeout) override;
   void EndTimer(const std::string& timer_id, zx::time timestamp, zx::duration timeout) override;

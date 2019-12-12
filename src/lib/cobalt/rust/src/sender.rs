@@ -89,16 +89,6 @@ impl CobaltSender {
         });
     }
 
-    /// Logs a CobaltEvent of type `EventPayload::StringEvent`.
-    pub fn log_string<S: Into<String>>(&mut self, metric_id: u32, string: S) {
-        self.log_event_value(CobaltEvent {
-            metric_id,
-            event_codes: vec![],
-            component: None,
-            payload: EventPayload::StringEvent(string.into()),
-        });
-    }
-
     /// Logs a plain CobaltEvent.
     pub fn log_cobalt_event(&mut self, event: CobaltEvent) {
         self.log_event_value(event);
@@ -318,17 +308,6 @@ mod tests {
                 event_codes: vec![1, 2, 3, 4, 5],
                 component: Some("a test".to_owned()),
                 payload: EventPayload::MemoryBytesUsed(100),
-            }
-        );
-
-        sender.log_string(6, "A STRING EVENT");
-        assert_eq!(
-            receiver.try_next().unwrap().unwrap(),
-            CobaltEvent {
-                metric_id: 6,
-                event_codes: vec![],
-                component: None,
-                payload: EventPayload::StringEvent("A STRING EVENT".to_owned()),
             }
         );
 

@@ -29,7 +29,6 @@ class MockCobaltLogger : public cobalt::CobaltLogger {
                     float fps) override;
   void LogMemoryUsage(uint32_t metric_id, uint32_t event_code, const std::string& component,
                       int64_t bytes) override;
-  void LogString(uint32_t metric_id, const std::string& s) override;
   void StartTimer(uint32_t metric_id, uint32_t event_code, const std::string& component,
                   const std::string& timer_id, zx::time timestamp, zx::duration timeout) override{};
   void EndTimer(const std::string& timer_id, zx::time timestamp, zx::duration timeout) override{};

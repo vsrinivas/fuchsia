@@ -14,7 +14,6 @@ enum LogMethod {
   kLogElapsedTime = 3,
   kLogFrameRate = 4,
   kLogMemoryUsage = 5,
-  kLogString = 6,
   kLogCustomEvent = 7,
   kLogCobaltEvents = 8,
   kLogCobaltEvent = 9,

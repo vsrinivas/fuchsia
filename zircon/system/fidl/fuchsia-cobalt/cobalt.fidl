@@ -56,9 +56,6 @@ const uint32 MAX_PROJECT_NAME_LENGTH = 64;
 // Timer ids should not be longer than this.
 const uint32 MAX_TIMER_ID_LENGTH = 64;
 
-// String events should not be longer than this.
-const uint32 MAX_STRING_EVENT_SIZE = 256;
-
 // We only support up to 5 event_codes
 const uint32 MAX_EVENT_CODE_COUNT = 5;
 
@@ -343,26 +340,6 @@ protocol LoggerBase {
                    int64 bytes)
         -> (Status status);
 
-    // Logs the fact that a given string was used, in a specific context.
-    // The semantics of the context and the string is specified in the
-    // Metric definition.
-    //
-    //  This method is intended to be used in the following situation:
-    //  * The string s being logged does not contain PII or passwords.
-    //  * The set S of all possible strings that may be logged is large.
-    //    If the set S is small consider using LogEvent() instead.
-    //  * The ultimate data of interest is the statistical distribution of the
-    //    most commonly used strings from S over the population of all Fuchsia
-    //    devices.
-    //
-    // `metric_id` ID of the metric to use. It must be one of the Metrics
-    // from the ProjectProfile used to obtain this Logger, and it must be of
-    // type STRING_USED.
-    //
-    // `s` The string to log. This should be a human-readable string of size no
-    // more than 256 bytes.
-    LogString(uint32 metric_id, string:MAX_STRING_EVENT_SIZE s) -> (Status status);
-
     // This method is part of Cobalt's helper service for measuring the time
     // delta between two events that occur in different processes. This starts
     // the timer. A corresponding invocation of EndTimer() with the same
@@ -545,8 +522,8 @@ union EventPayload {
     // This maps to a call to LogMemoryUsage().
     5: int64 memory_bytes_used;
 
-    // This maps to a call to LogString().
-    6: string:MAX_STRING_EVENT_SIZE string_event;
+    // Previously mapped to a call to LogString() (deprecated).
+    6: reserved;
 
     // This maps to a call to LogIntHistogram().
     7: vector<HistogramBucket>:MAX_HISTOGRAM_BUCKETS int_histogram;

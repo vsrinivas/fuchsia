@@ -119,11 +119,6 @@ class FakeLoggerService : public ::llcpp::fuchsia::cobalt::Logger::Interface {
     ZX_PANIC("Not Implemented.");
   }
 
-  void LogString(uint32_t metric_id, ::fidl::StringView s,
-                 LogStringCompleter::Sync completer) final {
-    ZX_PANIC("Not Implemented.");
-  }
-
   void StartTimer(uint32_t metric_id, uint32_t event_code, ::fidl::StringView component,
                   ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s,
                   StartTimerCompleter::Sync completer) final {

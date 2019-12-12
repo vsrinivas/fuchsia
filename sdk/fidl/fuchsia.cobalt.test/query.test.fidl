@@ -16,7 +16,6 @@ enum LogMethod {
     LOG_ELAPSED_TIME = 3;
     LOG_FRAME_RATE = 4;
     LOG_MEMORY_USAGE = 5;
-    LOG_STRING = 6;
     LOG_INT_HISTOGRAM = 7;
     LOG_COBALT_EVENT = 8;
     LOG_COBALT_EVENTS = 9;

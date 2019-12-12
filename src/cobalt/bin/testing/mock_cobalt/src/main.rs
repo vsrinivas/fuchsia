@@ -30,7 +30,6 @@ struct EventsLog {
     log_elapsed_time: LogState,
     log_frame_rate: LogState,
     log_memory_usage: LogState,
-    log_string: LogState,
     log_int_histogram: LogState,
     log_cobalt_event: LogState,
     log_cobalt_events: LogState,
@@ -147,12 +146,6 @@ async fn handle_cobalt_logger(mut stream: cobalt::LoggerRequestStream, log: Even
                 let _ = responder.send(cobalt::Status::Ok);
                 state
             }
-            LogString { metric_id, s, responder } => {
-                let state = &mut log.log_string;
-                state.log.push(CobaltEvent::builder(metric_id).as_string_event(s));
-                let _ = responder.send(cobalt::Status::Ok);
-                state
-            }
             LogIntHistogram { metric_id, event_code, component, histogram, responder } => {
                 let state = &mut log.log_int_histogram;
                 state.log.push(
@@ -215,7 +208,6 @@ async fn run_cobalt_query_service(
                         LogElapsedTime => &mut state.log_elapsed_time,
                         LogFrameRate => &mut state.log_frame_rate,
                         LogMemoryUsage => &mut state.log_memory_usage,
-                        LogString => &mut state.log_string,
                         LogIntHistogram => &mut state.log_int_histogram,
                         LogCobaltEvent => &mut state.log_cobalt_event,
                         LogCobaltEvents => &mut state.log_cobalt_events,
@@ -261,7 +253,6 @@ async fn run_cobalt_query_service(
                         LogElapsedTime => state.log_elapsed_time.log.clear(),
                         LogFrameRate => state.log_frame_rate.log.clear(),
                         LogMemoryUsage => state.log_memory_usage.log.clear(),
-                        LogString => state.log_string.log.clear(),
                         LogIntHistogram => state.log_int_histogram.log.clear(),
                         LogCobaltEvent => state.log_cobalt_event.log.clear(),
                         LogCobaltEvents => state.log_cobalt_events.log.clear(),
@@ -460,7 +451,6 @@ mod tests {
             .await?;
         logger_proxy.log_memory_usage(metric_id, event_code, component_name, count).await?;
         logger_proxy.log_frame_rate(metric_id, event_code, component_name, frame_rate).await?;
-        logger_proxy.log_string(metric_id, component_name).await?;
         logger_proxy
             .log_int_histogram(metric_id, event_code, component_name, &mut vec![].into_iter())
             .await?;
@@ -481,7 +471,6 @@ mod tests {
         assert_eq!(state.log_elapsed_time.log.len(), 1);
         assert_eq!(state.log_memory_usage.log.len(), 1);
         assert_eq!(state.log_frame_rate.log.len(), 1);
-        assert_eq!(state.log_string.log.len(), 1);
         assert_eq!(state.log_int_histogram.log.len(), 1);
         assert_eq!(state.log_cobalt_event.log.len(), 1);
         Ok(())

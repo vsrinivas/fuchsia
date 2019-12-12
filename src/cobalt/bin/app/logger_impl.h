@@ -39,9 +39,6 @@ class LoggerImpl : public fuchsia::cobalt::Logger, public fuchsia::cobalt::Logge
   void LogMemoryUsage(uint32_t metric_id, uint32_t event_code, std::string component, int64_t bytes,
                       fuchsia::cobalt::LoggerBase::LogMemoryUsageCallback callback) override;
 
-  void LogString(uint32_t metric_id, std::string s,
-                 fuchsia::cobalt::LoggerBase::LogStringCallback callback) override;
-
   void LogIntHistogram(uint32_t metric_id, uint32_t event_code, std::string component,
                        std::vector<fuchsia::cobalt::HistogramBucket> histogram,
                        fuchsia::cobalt::Logger::LogIntHistogramCallback callback) override;
