@@ -12,7 +12,6 @@ rustc_library("selectors") {
 
   deps = [
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
-    "//sdk/fidl/fuchsia.diagnostics.inspect:fuchsia.diagnostics.inspect-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:regex",

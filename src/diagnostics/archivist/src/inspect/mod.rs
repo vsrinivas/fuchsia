@@ -3,12 +3,10 @@
 // found in the LICENSE file.
 use {
     crate::collection::*,
-    failure::{self, err_msg, format_err, Error},
+    failure::{self, bail, format_err, Error},
     fidl::endpoints::DiscoverableService,
-    fidl_fuchsia_diagnostics_inspect::{
-        DisplaySettings, FormatSettings, ReaderError, ReaderRequest, ReaderRequestStream,
-        ReaderSelector, Selector, TextSettings,
-    },
+    fidl::endpoints::{RequestStream, ServerEnd},
+    fidl_fuchsia_diagnostics::{self, Selector},
     fidl_fuchsia_inspect::TreeMarker,
     fidl_fuchsia_inspect_deprecated::InspectMarker,
     fidl_fuchsia_io::{DirectoryProxy, NodeInfo, CLONE_FLAG_SAME_RIGHTS},
@@ -20,7 +18,7 @@ use {
     fuchsia_inspect::trie,
     fuchsia_zircon::{self as zx, HandleBased},
     futures::future::{join_all, BoxFuture},
-    futures::{future, FutureExt, TryFutureExt, TryStreamExt},
+    futures::{FutureExt, TryFutureExt, TryStreamExt},
     inspect_fidl_load as deprecated_inspect,
     inspect_formatter::{self, HierarchyData, HierarchyFormatter, JsonFormatter},
     io_util,
@@ -30,6 +28,13 @@ use {
     std::path::{Path, PathBuf},
     std::sync::{Arc, Mutex, RwLock},
 };
+
+/// Keep only 64 hierarchy snapshots in memory at a time.
+/// We limit to 64 because each snapshot is sent over a VMO and we can only have
+/// 64 handles sent over a message.
+// TODO(4601): Make this product-configurable.
+// TODO(4601): Consider configuring batch sizes by bytes, not by hierarchy count.
+static IN_MEMORY_SNAPSHOT_LIMIT: usize = 64;
 
 type InspectDataTrie = trie::Trie<char, (PathBuf, DirectoryProxy, Option<InspectHierarchyMatcher>)>;
 
@@ -188,11 +193,11 @@ impl DataCollector for InspectDataCollector {
             let inspect_proxy = match InspectDataCollector::find_directory_proxy(&path).await {
                 Ok(proxy) => proxy,
                 Err(e) => {
-                    return Err(format_err!("Failed to open out directory at {:?}: {}", path, e));
+                    bail!("Failed to open out directory at {:?}: {}", path, e);
                 }
             };
 
-            return self.populate_data_map(&inspect_proxy).await;
+            self.populate_data_map(&inspect_proxy).await
         }
         .boxed()
     }
@@ -213,10 +218,78 @@ pub struct InspectHierarchyMatcher {
     node_property_selectors: Vec<Regex>,
 }
 
-/// InspectDataContainer is the container that holds
-/// all information needed to interact with the inspect
-/// hierarchies under a component's out directory.
-pub struct InspectDataContainer {
+/// PopulatedInspectDataContainer is the container that
+/// holds the actual Inspect data for a given component,
+/// along with all information needed to transform that data
+/// to be returned to the client.
+pub struct PopulatedInspectDataContainer {
+    /// Path to the out directory that this
+    /// data packet is configured for.
+    component_out_dir_path: PathBuf,
+    /// Vector of all the snapshots of inspect hierarchies under
+    /// the directory for component_out_dir_path.
+    snapshots: Vec<ReadSnapshot>,
+    /// Optional hierarchy matcher. If unset, the reader is running
+    /// in all-access mode, meaning no matching or filtering is required.
+    inspect_matcher: Option<InspectHierarchyMatcher>,
+}
+
+impl PopulatedInspectDataContainer {
+    async fn try_from(
+        unpopulated: UnpopulatedInspectDataContainer,
+    ) -> Result<PopulatedInspectDataContainer, Error> {
+        let mut collector = InspectDataCollector::new();
+        match collector.populate_data_map(&unpopulated.component_out_proxy).await {
+            Ok(_) => {
+                let mut snapshots = None;
+                if let Some(data_map) = Box::new(collector).take_data() {
+                    let mut acc = vec![];
+                    for (_, data) in data_map {
+                        match data {
+                            Data::Tree(tree, _) => match SnapshotTree::try_from(&tree).await {
+                                Ok(snapshot_tree) => acc.push(ReadSnapshot::Tree(snapshot_tree)),
+                                _ => {}
+                            },
+                            Data::DeprecatedFidl(inspect_proxy) => {
+                                match deprecated_inspect::load_hierarchy(inspect_proxy).await {
+                                    Ok(hierarchy) => acc.push(ReadSnapshot::Finished(hierarchy)),
+                                    _ => {}
+                                }
+                            }
+                            Data::Vmo(vmo) => match Snapshot::try_from(&vmo) {
+                                Ok(snapshot) => acc.push(ReadSnapshot::Single(snapshot)),
+                                _ => {}
+                            },
+                            Data::File(contents) => match Snapshot::try_from(contents) {
+                                Ok(snapshot) => acc.push(ReadSnapshot::Single(snapshot)),
+                                _ => {}
+                            },
+                            Data::Empty => {}
+                        }
+                    }
+                    snapshots = Some(acc);
+                }
+                match snapshots {
+                    Some(snapshots) => Ok(PopulatedInspectDataContainer {
+                        component_out_dir_path: unpopulated.component_out_dir_path,
+                        snapshots: snapshots,
+                        inspect_matcher: unpopulated.inspect_matcher,
+                    }),
+                    None => Err(format_err!(
+                        "Failed to parse snapshots for: {:?}.",
+                        unpopulated.component_out_dir_path
+                    )),
+                }
+            }
+            Err(e) => Err(e),
+        }
+    }
+}
+
+/// UnpopulatedInspectDataContainer is the container that holds
+/// all information needed to retrieve Inspect data
+/// for a given component, when requested.
+pub struct UnpopulatedInspectDataContainer {
     /// Path to the out directory that this
     /// data packet is configured for.
     component_out_dir_path: PathBuf,
@@ -225,7 +298,7 @@ pub struct InspectDataContainer {
     component_out_proxy: DirectoryProxy,
     /// Optional hierarchy matcher. If unset, the reader is running
     /// in all-access mode, meaning no matching or filtering is required.
-    inspect_hierarchy_matcher_option: Option<InspectHierarchyMatcher>,
+    inspect_matcher: Option<InspectHierarchyMatcher>,
 }
 
 /// InspectDataRepository manages storage of all state needed in order
@@ -317,16 +390,16 @@ impl InspectDataRepository {
 
     /// Return all of the DirectoryProxies that contain Inspect hierarchies
     /// which contain data that should be selected from.
-    pub fn fetch_data(&self) -> Vec<InspectDataContainer> {
+    pub fn fetch_data(&self) -> Vec<UnpopulatedInspectDataContainer> {
         return self
             .data_directories
             .iter()
             .filter_map(|(_, (component_path, dir_proxy, inspect_hierarchy_matcher))| {
                 io_util::clone_directory(&dir_proxy, CLONE_FLAG_SAME_RIGHTS).ok().map(|directory| {
-                    InspectDataContainer {
+                    UnpopulatedInspectDataContainer {
                         component_out_dir_path: component_path.clone(),
                         component_out_proxy: directory,
-                        inspect_hierarchy_matcher_option: inspect_hierarchy_matcher.clone(),
+                        inspect_matcher: inspect_hierarchy_matcher.clone(),
                     }
                 })
             })
@@ -337,46 +410,24 @@ impl InspectDataRepository {
 /// ReaderServer holds the state and data needed to serve Inspect data
 /// reading requests for a single client.
 ///
-/// active_selectors: are the vector of selectors which are configuring what
-///                   inspect data is returned by read requests.
+/// configured_selectors: are the selectors provided by the client which define
+///                       what inspect data is returned by read requests. An empty
+///                       vector implies that all available data should be returned.
 ///
 /// inspect_repo: the InspectDataRepository which holds the access-points for all relevant
 ///               inspect data.
 #[derive(Clone)]
 pub struct ReaderServer {
-    pub active_selectors: Arc<Mutex<Vec<Selector>>>,
     pub inspect_repo: Arc<RwLock<InspectDataRepository>>,
+    pub configured_selectors: Arc<Vec<fidl_fuchsia_diagnostics::Selector>>,
 }
 
 impl ReaderServer {
-    pub fn new(inspect_repo: Arc<RwLock<InspectDataRepository>>) -> Self {
-        ReaderServer { inspect_repo, active_selectors: Arc::new(Mutex::new(Vec::new())) }
-    }
-
-    /// Add a new selector to the active-selectors list.
-    /// Requires: The active_selectors lock is free.
-    ///           `reader_selector` is a valid formatted or plaintext inspect selector.
-    pub fn add_selector(&self, reader_selector: ReaderSelector) -> Result<(), ReaderError> {
-        match reader_selector {
-            ReaderSelector::StructuredSelector(x) => self.active_selectors.lock().unwrap().push(x),
-            ReaderSelector::StringSelector(x) => match selectors::parse_selector(&x) {
-                Ok(parsed_selector) => self.active_selectors.lock().unwrap().push(parsed_selector),
-                Err(_) => {
-                    return Err(ReaderError::InvalidSelector);
-                }
-            },
-            _ => {
-                return Err(ReaderError::InvalidSelector);
-            }
-        }
-        Ok(())
-    }
-
-    /// Removes all selectors that were previously configured for the session.
-    /// This puts the server back into a state where read requests return all
-    /// data that is exposed through the service.
-    pub fn clear_selectors(&mut self) {
-        self.active_selectors.lock().unwrap().clear();
+    pub fn new(
+        inspect_repo: Arc<RwLock<InspectDataRepository>>,
+        configured_selectors: Vec<fidl_fuchsia_diagnostics::Selector>,
+    ) -> Self {
+        ReaderServer { inspect_repo, configured_selectors: Arc::new(configured_selectors) }
     }
 
     /// Parses an inspect Snapshot into a node hierarchy, and iterates over the
@@ -423,247 +474,274 @@ impl ReaderServer {
         Ok(new_root)
     }
 
-    /// Reads all relevant inspect data based off of the active_selectors
-    /// and data exposed to the service, and formats it into a single text dump
-    /// with format controlled by `text_settings`.
+    /// Takes a batch of unpopulated inspect data containers, traverses their diagnostics
+    /// directories, takes snapshots of all the Inspect hierarchies in those directories,
+    /// and then transforms the data containers into `PopulatedInspectDataContainer` results.
     ///
-    /// Returns: a Buffer to a READ_ONLY VMO containing the text dump.
-    // TODO(lukenicholson): Actually format using text_settings.
-    async fn format_text(
+    /// An entry is only an Error if connecting to the directory fails. Within a component's
+    /// diagnostics directory, individual snapshots of hierarchies can fail and the transformation
+    /// to a PopulatedInspectDataContainer will still succeed.
+    async fn pump_inspect_data(
+        inspect_batch: Vec<UnpopulatedInspectDataContainer>,
+    ) -> Vec<Result<PopulatedInspectDataContainer, Error>> {
+        join_all(inspect_batch.into_iter().map(move |inspect_data_packet| {
+            PopulatedInspectDataContainer::try_from(inspect_data_packet)
+        }))
+        .await
+    }
+
+    /// Takes a batch of PopulatedInspectDataContainer results, and for all the non-error
+    /// entries converts all snapshots into in-memory node hierarchies, filters those hierarchies
+    /// so that the only diagnostics properties they contain are those configured by the static
+    /// and client-provided selectors, and then packages the filtered hierarchies into
+    /// HierarchyData data structs.
+    ///
+    // TODO(4601): Error entries should still be included, but with a custom hierarchy
+    //             that makes it clear to clients that snapshotting failed.
+    pub fn filter_snapshots(
+        pumped_inspect_data_results: Vec<Result<PopulatedInspectDataContainer, Error>>,
+    ) -> Vec<HierarchyData> {
+        // We iterate the vector of pumped inspect data packets, consuming each inspect vmo
+        // and filtering it using the provided selector regular expressions. Each filtered
+        // inspect hierarchy is then added to an accumulator as a HierarchyData to be converted
+        // into a JSON string and returned.
+        pumped_inspect_data_results.into_iter().fold(Vec::new(), |mut acc, pumped_data| {
+            match pumped_data {
+                Ok(PopulatedInspectDataContainer {
+                    component_out_dir_path,
+                    snapshots,
+                    inspect_matcher,
+                }) => {
+                    match inspect_matcher {
+                        Some(matchers) => {
+                            snapshots.into_iter().for_each(|snapshot| {
+                                match ReaderServer::filter_inspect_snapshot(
+                                    snapshot,
+                                    &matchers.component_node_selector,
+                                    &matchers.node_property_selectors,
+                                ) {
+                                    Ok(filtered_hierarchy) => {
+                                        acc.push(HierarchyData {
+                                            hierarchy: filtered_hierarchy,
+                                            file_path: component_out_dir_path
+                                                .to_str()
+                                                .expect("Can't have an invalid path here.")
+                                                .to_string(),
+                                            fields: vec![],
+                                        });
+                                    }
+                                    // TODO(4601): Failing to parse a node hierarchy
+                                    // might be worth more than a silent failure.
+                                    Err(_) => {}
+                                }
+                            });
+                        }
+                        None => {
+                            snapshots.into_iter().for_each(|snapshot| {
+                                let root_node_result: Result<NodeHierarchy, Error> = match snapshot
+                                {
+                                    ReadSnapshot::Single(snapshot) => {
+                                        PartialNodeHierarchy::try_from(snapshot)
+                                            .map(|partial| partial.into())
+                                    }
+                                    ReadSnapshot::Tree(snapshot_tree) => snapshot_tree.try_into(),
+                                    ReadSnapshot::Finished(hierarchy) => Ok(hierarchy),
+                                };
+                                match root_node_result {
+                                    Ok(node_hierarchy) => {
+                                        acc.push(HierarchyData {
+                                            hierarchy: node_hierarchy,
+                                            file_path: component_out_dir_path
+                                                .to_str()
+                                                .expect("Can't have an invalid path here.")
+                                                .to_string(),
+                                            fields: vec![],
+                                        });
+                                    }
+                                    Err(_) => {}
+                                }
+                            });
+                        }
+                    }
+
+                    acc
+                }
+                // TODO(36761): What does it mean for IO to fail on a
+                // subset of directory data collections?
+                Err(_) => acc,
+            }
+        })
+    }
+
+    /// Takes a vector of HierarchyData structs, and a `fidl_fuschia_diagnostics/Format`
+    /// enum, and writes each diagnostics hierarchy into a READ_ONLY VMO according to
+    /// provided format. This VMO is then packaged into a `fidl_fuchsia_mem/Buffer`
+    /// which is then packaged into a `fidl_fuschia_diagnostics/FormattedContent`
+    /// xunion which specifies the format of the VMO for clients.
+    ///
+    /// Errors in the returned Vector correspond to IO failures in writing to a VMO. If
+    /// a node hierarchy fails to format, its vmo is an empty string.
+    fn format_hierarchies(
+        format: fidl_fuchsia_diagnostics::Format,
+        hierarchies: Vec<HierarchyData>,
+    ) -> Vec<Result<fidl_fuchsia_diagnostics::FormattedContent, Error>> {
+        hierarchies
+            .into_iter()
+            .map(|hierarchy_data| {
+                let formatted_string_result = match format {
+                    fidl_fuchsia_diagnostics::Format::Json => {
+                        JsonFormatter::format_multiple(vec![hierarchy_data])
+                    }
+                    fidl_fuchsia_diagnostics::Format::Text => {
+                        Err(format_err!("Text formatting not supported for inspect."))
+                    }
+                };
+
+                let content_string = formatted_string_result.unwrap_or(
+                    // TODO(4601): Convert failed formattings into the
+                    // canonical json schema, with a failure message in "data"
+                    "".to_string(),
+                );
+
+                let vmo_size: u64 = content_string.len() as u64;
+
+                let dump_vmo_result: Result<zx::Vmo, Error> = zx::Vmo::create(vmo_size as u64)
+                    .map_err(|s| format_err!("error creating buffer, zx status: {}", s));
+
+                dump_vmo_result.and_then(|dump_vmo| {
+                    dump_vmo
+                        .write(content_string.as_bytes(), 0)
+                        .map_err(|s| format_err!("error writing buffer, zx status: {}", s))?;
+
+                    let client_vmo =
+                        dump_vmo.duplicate_handle(zx::Rights::READ | zx::Rights::BASIC)?;
+                    let mem_buffer = fidl_fuchsia_mem::Buffer { vmo: client_vmo, size: vmo_size };
+
+                    match format {
+                        fidl_fuchsia_diagnostics::Format::Json => {
+                            Ok(fidl_fuchsia_diagnostics::FormattedContent::FormattedJsonHierarchy(
+                                mem_buffer,
+                            ))
+                        }
+                        fidl_fuchsia_diagnostics::Format::Text => {
+                            Ok(fidl_fuchsia_diagnostics::FormattedContent::FormattedTextHierarchy(
+                                mem_buffer,
+                            ))
+                        }
+                    }
+                })
+            })
+            .collect()
+    }
+
+    /// Takes a BatchIterator server channel and starts serving snapshotted
+    /// Inspect hierarchies to clients as vectors of FormattedContent. The hierarchies
+    /// are served in batches of `IN_MEMORY_SNAPSHOT_LIMIT` at a time, and snapshots of
+    /// diagnostics data aren't taken until a component is included in
+    pub async fn serve_snapshot_results(
         self,
-        _text_settings: TextSettings,
-    ) -> Result<fidl_fuchsia_mem::Buffer, Error> {
+        batch_iterator_channel: fasync::Channel,
+        format: fidl_fuchsia_diagnostics::Format,
+    ) -> Result<(), Error> {
         // We must fetch the repositories in a closure to prevent the
-        // repository mutex-guard from leaking into the futures.
+        // repository mutex-guard from leaking into futures.
         let inspect_repo_data = {
             let locked_inspect_repo = self.inspect_repo.read().unwrap();
             locked_inspect_repo.fetch_data()
         };
 
-        let mut pumped_data_tuple_results =
-            join_all(inspect_repo_data.into_iter().map(move |inspect_data_packet| {
-                async move {
-                    let mut collector = InspectDataCollector::new();
-                    match collector
-                        .populate_data_map(&inspect_data_packet.component_out_proxy)
-                        .await
-                    {
-                        Ok(_) => {
-                            let mut snapshots = None;
-                            if let Some(data_map) = Box::new(collector).take_data() {
-                                let mut acc = vec![];
-                                for (_, data) in data_map {
-                                    match data {
-                                        Data::Tree(tree, _) => {
-                                            match SnapshotTree::try_from(&tree).await {
-                                                Ok(snapshot_tree) => {
-                                                    acc.push(ReadSnapshot::Tree(snapshot_tree))
-                                                }
-                                                _ => {}
-                                            }
-                                        }
-                                        Data::DeprecatedFidl(inspect_proxy) => {
-                                            match deprecated_inspect::load_hierarchy(inspect_proxy)
-                                                .await
-                                            {
-                                                Ok(hierarchy) => {
-                                                    acc.push(ReadSnapshot::Finished(hierarchy))
-                                                }
-                                                _ => {}
-                                            }
-                                        }
-                                        Data::Vmo(vmo) => match Snapshot::try_from(&vmo) {
-                                            Ok(snapshot) => {
-                                                acc.push(ReadSnapshot::Single(snapshot))
-                                            }
-                                            _ => {}
-                                        },
-                                        Data::File(contents) => {
-                                            match Snapshot::try_from(contents) {
-                                                Ok(snapshot) => {
-                                                    acc.push(ReadSnapshot::Single(snapshot))
-                                                }
-                                                _ => {}
-                                            }
-                                        }
-                                        Data::Empty => {}
-                                    }
-                                }
-                                snapshots = Some(acc);
-                            }
-                            match snapshots {
-                                Some(snapshots) => {
-                                    return Ok((
-                                        inspect_data_packet.component_out_dir_path,
-                                        snapshots,
-                                        inspect_data_packet.inspect_hierarchy_matcher_option,
-                                    ));
-                                }
-                                None => {
-                                    return Err(format_err!(
-                                        "Failed to parse snapshots for: {:?}.",
-                                        inspect_data_packet.component_out_dir_path
-                                    ));
-                                }
-                            };
-                        }
-                        Err(e) => return Err(e),
-                    };
-                }
-            }))
-            .await;
+        let mut stream = fidl_fuchsia_diagnostics::BatchIteratorRequestStream::from_channel(
+            batch_iterator_channel,
+        );
 
-        // We drain the vector of pumped inspect data packets, consuming each inspect vmo
-        // and filtering it using the provided selector regular expressions. Each filtered
-        // inspect hierarchy is then added to an accumulator as a HierarchyData to be converted
-        // into a JSON string and returned.
-        let hierarchy_datas =
-            pumped_data_tuple_results.drain(0..).fold(Vec::new(), |mut acc, pumped_data_tuple| {
-                match pumped_data_tuple {
-                    Ok((path, snapshots, Some(inspect_hierarchy_matcher))) => {
-                        snapshots.into_iter().for_each(|snapshot| {
-                            match ReaderServer::filter_inspect_snapshot(
-                                snapshot,
-                                &inspect_hierarchy_matcher.component_node_selector,
-                                &inspect_hierarchy_matcher.node_property_selectors,
-                            ) {
-                                Ok(filtered_hierarchy) => {
-                                    acc.push(HierarchyData {
-                                        hierarchy: filtered_hierarchy,
-                                        file_path: path
-                                            .to_str()
-                                            .expect("Can't have an invalid path here.")
-                                            .to_string(),
-                                        fields: vec![],
-                                    });
-                                }
-                                // TODO(4601): Failing to parse a node hierarchy
-                                // might be worth more than a silent failure.
-                                Err(_) => {}
-                            }
-                        });
-                        acc
+        let inspect_repo_length = inspect_repo_data.len();
+        let mut inspect_repo_iter = inspect_repo_data.into_iter();
+        let mut iter = 0;
+        let max = (inspect_repo_length - 1 / IN_MEMORY_SNAPSHOT_LIMIT) + 1;
+        while let Some(req) = stream.try_next().await? {
+            match req {
+                fidl_fuchsia_diagnostics::BatchIteratorRequest::GetNext { responder } => {
+                    if iter < max {
+                        let snapshot_batch: Vec<UnpopulatedInspectDataContainer> =
+                            (&mut inspect_repo_iter).take(IN_MEMORY_SNAPSHOT_LIMIT).collect();
+
+                        iter = iter + 1;
+
+                        // Asynchronously populate data containers with snapshots of relevant
+                        // inspect hierarchies.
+                        let pumped_inspect_data_results =
+                            ReaderServer::pump_inspect_data(snapshot_batch).await;
+
+                        // Apply selector filtering to all snapshot inspect hierarchies in the batch.
+                        let batch_hierarchy_data =
+                            ReaderServer::filter_snapshots(pumped_inspect_data_results);
+
+                        let formatted_content: Vec<
+                            Result<fidl_fuchsia_diagnostics::FormattedContent, Error>,
+                        > = ReaderServer::format_hierarchies(format, batch_hierarchy_data);
+
+                        let filtered_results: Vec<fidl_fuchsia_diagnostics::FormattedContent> =
+                            formatted_content.into_iter().filter_map(Result::ok).collect();
+                        responder.send(&mut Ok(filtered_results)).unwrap();
+                    } else {
+                        responder.send(&mut Ok(Vec::new())).unwrap();
                     }
-
-                    Ok((path, snapshots, None)) => {
-                        snapshots.into_iter().for_each(|snapshot| {
-                            let root_node_result: Result<NodeHierarchy, Error> = match snapshot {
-                                ReadSnapshot::Single(snapshot) => {
-                                    match PartialNodeHierarchy::try_from(snapshot) {
-                                        Ok(partial) => Ok(partial.into()),
-                                        Err(e) => Err(e),
-                                    }
-                                }
-                                ReadSnapshot::Tree(snapshot_tree) => snapshot_tree.try_into(),
-                                ReadSnapshot::Finished(hierarchy) => Ok(hierarchy),
-                            };
-                            match root_node_result {
-                                Ok(node_hierarchy) => {
-                                    acc.push(HierarchyData {
-                                        hierarchy: node_hierarchy,
-                                        file_path: path
-                                            .to_str()
-                                            .expect("Can't have an invalid path here.")
-                                            .to_string(),
-                                        fields: vec![],
-                                    });
-                                }
-                                Err(_) => {}
-                            }
-                        });
-
-                        acc
-                    }
-
-                    // TODO(36761): What does it mean for IO to fail on a
-                    // subset of directory data collections?
-                    Err(_) => acc,
                 }
-            });
-
-        let formatted_json_string = JsonFormatter::format_multiple(hierarchy_datas)?;
-
-        let vmo_size: u64 = formatted_json_string.len() as u64;
-
-        // TODO(lukenicholson): Inspect dumps may be large enough that they should be split
-        // over multiple VMOs and streamed to the client
-        let dump_vmo = zx::Vmo::create(vmo_size as u64)
-            .map_err(|s| err_msg(format!("error creating buffer, zx status: {}", s)))?;
-
-        dump_vmo
-            .write(formatted_json_string.as_bytes(), 0)
-            .map_err(|s| err_msg(format!("error writing buffer, zx status: {}", s)))?;
-
-        let client_vmo = dump_vmo.duplicate_handle(zx::Rights::READ | zx::Rights::BASIC)?;
-        Ok(fidl_fuchsia_mem::Buffer { vmo: client_vmo, size: vmo_size })
-    }
-
-    /// Reads all relevant inspect data based off of the active_selectors
-    /// and data exposed to the service, and formats it
-    /// with format controlled by `settings`, before dumping it into a VMO
-    /// to be returned to the client.
-    ///
-    /// Returns: a Buffer to a READ_ONLY VMO containing the formatted data dump.
-    pub async fn format(self, settings: FormatSettings) -> Result<fidl_fuchsia_mem::Buffer, Error> {
-        let display_settings = match settings.format {
-            Some(display_format) => display_format,
-            None => {
-                return Err(format_err!(
-                    "The FormatSettings were missing required display settings."
-                ))
             }
-        };
-
-        match display_settings {
-            DisplaySettings::Json(_) => {
-                return Err(format_err!("Json formatting is currently not supported."))
-            }
-            DisplaySettings::Text(text_settings) => return self.format_text(text_settings).await,
-            _ => unreachable!("This branch should never be taken."),
         }
+
+        Ok(())
     }
 
-    pub fn spawn_reader_server(mut self, stream: ReaderRequestStream) {
+    /// Takes a Reader server end, and starts hosting a Reader service exposing
+    /// Inspect data on the system. This data is scoped by the static selectors contained
+    /// in the InspectDataRepository provided to the ReaderServer constructor.
+    pub fn create_inspect_reader(
+        self,
+        server_end: ServerEnd<fidl_fuchsia_diagnostics::ReaderMarker>,
+    ) -> Result<(), Error> {
+        let server_chan = fasync::Channel::from_channel(server_end.into_channel())?;
+
         fasync::spawn(
-            stream
-                .try_for_each(move |req| {
-                    future::ready(match req {
-                        ReaderRequest::AddSelector { selector, responder } => {
-                            responder.send(&mut self.add_selector(selector))
-                        }
-                        ReaderRequest::ClearSelectors { control_handle: _ } => {
-                            self.clear_selectors();
-                            Ok(())
-                        }
-                        ReaderRequest::Format { settings, responder } => {
+            async move {
+                let mut stream =
+                    fidl_fuchsia_diagnostics::ReaderRequestStream::from_channel(server_chan);
+                while let Some(req) = stream.try_next().await? {
+                    match req {
+                        fidl_fuchsia_diagnostics::ReaderRequest::GetSnapshot {
+                            format,
+                            result_iterator,
+                            responder,
+                        } => {
                             let server_clone = self.clone();
-
-                            fasync::spawn(async move {
-                                match server_clone.format(settings).await {
-                                    Ok(vmo_buffer) => {
-                                        match responder.send(&mut Ok(vmo_buffer)) {
-                                            // TODO(lukenicholson): What does a failed
-                                            // response mean here?
-                                            _ => return,
-                                        };
-                                    }
-                                    _ => {
-                                        match responder.send(&mut Err(ReaderError::Io)) {
-                                            // TODO(lukenicholson): What does a failed
-                                            // response mean here?
-                                            _ => return,
-                                        };
-                                    }
+                            match fasync::Channel::from_channel(result_iterator.into_channel()) {
+                                Ok(channel) => {
+                                    responder.send(&mut Ok(()))?;
+                                    server_clone.serve_snapshot_results(channel, format).await?;
                                 }
-                            });
-
-                            Ok(())
+                                Err(_) => {
+                                    responder.send(&mut Err(
+                                        fidl_fuchsia_diagnostics::ReaderError::Io,
+                                    ))?;
+                                }
+                            }
                         }
-                    })
-                })
-                .map_ok(|_| ())
-                .unwrap_or_else(|e| eprintln!("error running inspect server: {:?}", e)),
-        )
+                        fidl_fuchsia_diagnostics::ReaderRequest::ReadStream {
+                            stream_mode: _,
+                            format: _,
+                            formatted_stream: _,
+                            control_handle: _,
+                        } => {}
+                    }
+                }
+                Ok(())
+            }
+            .unwrap_or_else(|e: failure::Error| {
+                eprintln!("running inspect reader: {:?}", e);
+            }),
+        );
+
+        Ok(())
     }
 }
 
@@ -672,7 +750,9 @@ mod tests {
     use super::*;
     use {
         crate::collection::DataCollector,
-        fdio, fuchsia_async as fasync,
+        fdio,
+        fidl::endpoints::create_proxy,
+        fuchsia_async as fasync,
         fuchsia_component::server::ServiceFs,
         fuchsia_inspect::{assert_inspect_tree, Inspector},
         fuchsia_zircon as zx,
@@ -951,14 +1031,44 @@ mod tests {
 
         inspect_repo.add(filename.into(), absolute_moniker, path, out_dir_proxy).unwrap();
 
-        let reader_server = ReaderServer::new(Arc::new(RwLock::new(inspect_repo)));
+        let reader_server = ReaderServer::new(Arc::new(RwLock::new(inspect_repo)), Vec::new());
 
-        let format_settings =
-            FormatSettings { format: Some(DisplaySettings::Text(TextSettings { indent: 4 })) };
+        let (consumer, batch_iterator): (
+            _,
+            ServerEnd<fidl_fuchsia_diagnostics::BatchIteratorMarker>,
+        ) = create_proxy().unwrap();
 
-        let inspect_data_dump = reader_server.format(format_settings).await.unwrap();
-        let mut buf = vec![0; inspect_data_dump.size as usize];
-        inspect_data_dump.vmo.read(&mut buf, 0).expect("reading vmo");
+        fasync::spawn(async move {
+            reader_server
+                .serve_snapshot_results(
+                    fasync::Channel::from_channel(batch_iterator.into_channel()).unwrap(),
+                    fidl_fuchsia_diagnostics::Format::Json,
+                )
+                .await
+                .unwrap();
+        });
+
+        let mut result_string = "".to_string();
+        loop {
+            let next_batch: Vec<fidl_fuchsia_diagnostics::FormattedContent> =
+                consumer.get_next().await.unwrap().unwrap();
+            if next_batch.is_empty() {
+                break;
+            }
+            for formatted_content in next_batch {
+                match formatted_content {
+                    fidl_fuchsia_diagnostics::FormattedContent::FormattedJsonHierarchy(data) => {
+                        let mut buf = vec![0; data.size as usize];
+                        data.vmo.read(&mut buf, 0).expect("reading vmo");
+                        let hierarchy_string = std::str::from_utf8(&buf).unwrap();
+                        // TODO(4601): one we create a json formatter per hierarchy,
+                        // this will break, and we'll need to do client processing.
+                        result_string.push_str(hierarchy_string);
+                    }
+                    _ => panic!("test only produces json formatted data"),
+                }
+            }
+        }
 
         let expected_result = format!(
             "[
@@ -981,6 +1091,6 @@ mod tests {
             bindings_dir
         );
 
-        assert_eq!(std::str::from_utf8(&buf).unwrap(), expected_result);
+        assert_eq!(result_string, expected_result);
     }
 }

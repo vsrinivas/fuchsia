@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 pub mod archive;
+pub mod archive_accessor;
 pub mod collection;
 pub mod configs;
 pub mod data_stats;

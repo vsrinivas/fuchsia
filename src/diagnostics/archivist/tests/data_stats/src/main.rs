@@ -1,11 +1,9 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
-
 use {
     failure::{Error, ResultExt},
-    fidl_fuchsia_diagnostics_inspect::{
-        DisplaySettings, FormatSettings, ReaderMarker, TextSettings,
-    },
+    fidl::endpoints::create_proxy,
+    fidl_fuchsia_diagnostics::ArchiveMarker,
     fuchsia_async as fasync,
     fuchsia_component::client::{launcher, AppBuilder},
     serde_json::json,
@@ -78,19 +76,38 @@ async fn main() -> Result<(), Error> {
         .add_dir_to_namespace("/data/archive".into(), File::open(archive_path)?)?
         .add_dir_to_namespace("/test_data".into(), File::open(test_data_path)?)?
         .spawn(&launcher)?;
+    let archive_accessor = archivist.connect_to_service::<ArchiveMarker>().unwrap();
+    let (reader_consumer, reader_server) = create_proxy().unwrap();
+    archive_accessor
+        .read_inspect(reader_server, &mut Vec::new().into_iter())
+        .await
+        .context("setting up the reader server")
+        .expect("fidl channels should be fine")
+        .expect("setting up the server shouldn't have any issues.");
 
-    let reader = archivist.connect_to_service::<ReaderMarker>()?;
-
-    let mut settings = FormatSettings::empty();
-    settings.format = Some(DisplaySettings::Text(TextSettings { indent: 2 }));
-
-    let json_buffer = reader
-        .format(settings)
+    let (batch_consumer, batch_server) = create_proxy().unwrap();
+    reader_consumer
+        .get_snapshot(fidl_fuchsia_diagnostics::Format::Json, batch_server)
         .await
         .context("requesting format")?
         .expect("should have been trivial to format");
-    let mut byte_buf = vec![0u8; json_buffer.size as usize];
-    json_buffer.vmo.read(&mut byte_buf, 0)?;
+
+    let first_result = batch_consumer
+        .get_next()
+        .await
+        .context("retrieving first batch of hierarchy data")
+        .expect("fidl should be fine")
+        .expect("expect batches to be retrieved without error");
+
+    assert_eq!(first_result.len(), 1, "Currently only one data hierarchy in the test.");
+
+    let mem_buf = match &first_result[0] {
+        fidl_fuchsia_diagnostics::FormattedContent::FormattedJsonHierarchy(buffer) => buffer,
+        _ => panic!("should be json formatted text"),
+    };
+
+    let mut byte_buf = vec![0u8; mem_buf.size as usize];
+    mem_buf.vmo.read(&mut byte_buf, 0)?;
 
     archivist.kill()?;
     let _ = archivist.wait().await?;

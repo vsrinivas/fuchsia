@@ -7,7 +7,7 @@
 #![warn(missing_docs)]
 
 use {
-    archivist_lib::{archive, configs, data_stats, diagnostics, inspect, logs},
+    archivist_lib::{archive, archive_accessor, configs, data_stats, diagnostics, inspect, logs},
     argh::FromArgs,
     failure::Error,
     fidl_fuchsia_io::DirectoryProxy,
@@ -63,8 +63,9 @@ fn main() -> Result<(), Error> {
         );
     }
 
-    // The repository that will serve as the data transfer between the archivist server
-    // and all services needing access to inspect data.
+    // The Inspect Repository offered to the ALL_ACCESS pipeline. This repository is unique
+    // in that it has no statically configured selectors, meaning all diagnostics data is visible.
+    // This should not be used for production services.
     let all_inspect_repository = Arc::new(RwLock::new(inspect::InspectDataRepository::new(None)));
 
     if let Some(to_summarize) = &archivist_configuration.summarized_dirs {
@@ -82,14 +83,9 @@ fn main() -> Result<(), Error> {
         .add_fidl_service(move |stream| log_manager2.spawn_log_manager(stream))
         .add_fidl_service(move |stream| log_manager3.spawn_log_sink(stream))
         .add_fidl_service(move |stream| {
-            // Every reader session gets their own clone of the inspect repository.
-            // This ends up functioning like a SPMC channel, in which only the archivist
-            // pushes updates to the repository, but multiple inspect Reader sessions
-            // read the data.
-            let reader_inspect_repository = all_inspect_repository.clone();
-            let inspect_reader_server = inspect::ReaderServer::new(reader_inspect_repository);
-
-            inspect_reader_server.spawn_reader_server(stream)
+            let all_archive_accessor =
+                archive_accessor::ArchiveAccessor::new(all_inspect_repository.clone());
+            all_archive_accessor.spawn_archive_accessor_server(stream)
         });
 
     let (out_dir_raw, out_dir_remote) = zx::Channel::create()?;

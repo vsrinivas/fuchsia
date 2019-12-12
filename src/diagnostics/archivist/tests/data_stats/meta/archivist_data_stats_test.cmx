@@ -7,7 +7,7 @@
             "isolated-temp"
         ],
         "services": [
-            "fuchsia.diagnostics.inspect.Reader",
+            "fuchsia.diagnostics.Archive",
             "fuchsia.sys.Launcher"
         ]
     }

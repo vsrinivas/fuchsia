@@ -10,6 +10,10 @@ using fuchsia.mem;
 ///  canonical selectors we've ecountered.
 const uint16 MAXIMUM_RAW_SELECTOR_LENGTH = 1024;
 
+/// The size 64 was chosen because entries in batches are handles to
+/// VMOs and there is a limit of 64 handles per fidl message.
+const uint16 MAXIMUM_ENTRIES_PER_BATCH = 64;
+
 /// Enum describing the potential fail-states of the Accessor service.
 enum AccessorError {
     // A provided selector argument failed to verify/parse.
@@ -212,5 +216,5 @@ protocol BatchIterator {
     ///   dropped, but future calls to GetNext will provide new subsets of
     ///   FormattedDataHierarchies.
     ///
-    GetNext() -> (vector<FormattedContent>:MAX batch) error ReaderError;
+    GetNext() -> (vector<FormattedContent>:MAXIMUM_ENTRIES_PER_BATCH batch) error ReaderError;
 };

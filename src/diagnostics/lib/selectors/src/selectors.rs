@@ -5,8 +5,7 @@
 #![allow(dead_code)]
 use {
     failure::{format_err, Error},
-    fidl_fuchsia_diagnostics::{ComponentSelector, StringSelector},
-    fidl_fuchsia_diagnostics_inspect::{Selector, TreeSelector},
+    fidl_fuchsia_diagnostics::{self, ComponentSelector, Selector, StringSelector, TreeSelector},
     lazy_static::lazy_static,
     regex::{Regex, RegexSet},
     std::fs,
@@ -182,6 +181,12 @@ pub fn validate_component_selector(component_selector: &ComponentSelector) -> Re
         }
         None => return Err(format_err!("Component selectors must have a moniker_segment.")),
     }
+}
+
+pub fn validate_selector(selector: &Selector) -> Result<(), Error> {
+    validate_component_selector(&selector.component_selector)?;
+    validate_tree_selector(&selector.tree_selector)?;
+    Ok(())
 }
 
 /// Parse a string into a FIDL StringSelector structure.

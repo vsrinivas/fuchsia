@@ -19,7 +19,6 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
-    "//sdk/fidl/fuchsia.diagnostics.inspect:fuchsia.diagnostics.inspect-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
     "//sdk/fidl/fuchsia.update.installer:fuchsia.update.installer-rustc",

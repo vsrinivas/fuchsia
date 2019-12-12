@@ -8,8 +8,7 @@
 use {
     crate::selectors,
     failure::{format_err, Error},
-    fidl_fuchsia_diagnostics::StringSelector,
-    fidl_fuchsia_diagnostics_inspect::Selector,
+    fidl_fuchsia_diagnostics::{Selector, StringSelector},
     std::collections::HashSet,
     std::path::PathBuf,
     std::sync::Arc,
@@ -187,10 +186,7 @@ fn evaluate_single_generation(
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*, fidl_fuchsia_diagnostics::ComponentSelector,
-        fidl_fuchsia_diagnostics_inspect::TreeSelector,
-    };
+    use {super::*, fidl_fuchsia_diagnostics::ComponentSelector};
 
     #[test]
     fn canonical_automata_simulator_test() {

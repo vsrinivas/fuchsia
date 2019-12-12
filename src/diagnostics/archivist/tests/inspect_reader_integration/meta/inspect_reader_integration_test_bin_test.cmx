@@ -2,7 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.diagnostics.inspect.Reader": "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx"
+                "fuchsia.diagnostics.Archive": "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx"
             }
         }
     },
@@ -15,7 +15,7 @@
             "isolated-temp"
         ],
         "services": [
-            "fuchsia.diagnostics.inspect.Reader"
+            "fuchsia.diagnostics.Archive"
         ]
     }
 }
