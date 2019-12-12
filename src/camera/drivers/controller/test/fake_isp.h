@@ -60,7 +60,9 @@ class FakeIsp {
   }
   static zx_status_t Start(void* ctx) { return static_cast<FakeIsp*>(ctx)->Start(); }
   static zx_status_t Stop(void* ctx) { return static_cast<FakeIsp*>(ctx)->Stop(); }
-  static zx_status_t ReleaseFrame(void* ctx, uint32_t index) { return static_cast<FakeIsp*>(ctx)->ReleaseFrame(index); }
+  static zx_status_t ReleaseFrame(void* ctx, uint32_t index) {
+    return static_cast<FakeIsp*>(ctx)->ReleaseFrame(index);
+  }
 
   const output_stream_callback_t* callback_;
   isp_protocol_t isp_protocol_ = {};

@@ -209,7 +209,9 @@ fit::result<ProcessNode*, zx_status_t> PipelineManager::CreateGraph(
       }
       break;
     }
-    default: { return fit::error(ZX_ERR_NOT_SUPPORTED); }
+    default: {
+      return fit::error(ZX_ERR_NOT_SUPPORTED);
+    }
   }
   return result;
 }
@@ -407,7 +409,9 @@ void PipelineManager::OnClientStreamDisconnect(PipelineInfo* info) {
       downscaled_resolution_stream_ = nullptr;
       break;
     }
-    default: { ZX_ASSERT_MSG(false, "Invalid input stream type\n"); }
+    default: {
+      ZX_ASSERT_MSG(false, "Invalid input stream type\n");
+    }
   }
 }
 
