@@ -211,10 +211,15 @@ fn normalize_blob_mirror_url<S: AsRef<str>>(mirror_url: &str, blob_mirror_url: S
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RepositoryConfig {
     repo_url: RepoUrl,
+    #[serde(default = "default_root_version")]
     root_version: u32,
     root_keys: Vec<RepositoryKey>,
     mirrors: Vec<MirrorConfig>,
     update_package_url: Option<PkgUrl>,
+}
+
+fn default_root_version() -> u32 {
+    1
 }
 
 impl RepositoryConfig {
@@ -877,6 +882,28 @@ mod tests {
         };
         let as_fidl: fidl::RepositoryConfig = config.clone().into();
         assert_eq!(RepositoryConfig::try_from(as_fidl).unwrap(), config);
+    }
+
+    #[test]
+    fn test_repository_config_deserialize_missing_root_version() {
+        let json_value = json!({
+            "repo_url": "fuchsia-pkg://fuchsia.com",
+            "root_keys": [],
+            "mirrors": [],
+            "update_package_url": null,
+        });
+        let actual_config: RepositoryConfig = serde_json::from_value(json_value).unwrap();
+
+        assert_eq!(
+            actual_config,
+            RepositoryConfig {
+                repo_url: "fuchsia-pkg://fuchsia.com".try_into().unwrap(),
+                root_version: 1,
+                root_keys: vec![],
+                mirrors: vec![],
+                update_package_url: None,
+            },
+        );
     }
 
     #[test]
