@@ -407,12 +407,14 @@ type XUnion struct {
 // xunion.
 type XUnionMember struct {
 	Attributes
-	Reserved     bool       `json:"reserved"`
-	Ordinal      int        `json:"ordinal"`
-	Type         Type       `json:"type"`
-	Name         Identifier `json:"name"`
-	Offset       int        `json:"offset"`
-	MaxOutOfLine int        `json:"max_out_of_line"`
+	Reserved        bool       `json:"reserved"`
+	Ordinal         int        `json:"ordinal"`
+	ExplicitOrdinal int        `json:"explicit_ordinal"`
+	HashedOrdinal   int        `json:"hashed_ordinal"`
+	Type            Type       `json:"type"`
+	Name            Identifier `json:"name"`
+	Offset          int        `json:"offset"`
+	MaxOutOfLine    int        `json:"max_out_of_line"`
 }
 
 // Table represents a declaration of a FIDL table.

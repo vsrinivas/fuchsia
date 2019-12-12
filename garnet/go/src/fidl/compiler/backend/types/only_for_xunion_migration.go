@@ -15,12 +15,18 @@ func ConvertUnionToXUnion(union Union) XUnion {
 			continue
 		}
 		members = append(members, XUnionMember{
-			Attributes:   member.Attributes,
-			Ordinal:      member.XUnionOrdinal,
-			Type:         member.Type,
-			Name:         member.Name,
-			Offset:       -1, // unused
-			MaxOutOfLine: -1, // unused
+			Attributes:      member.Attributes,
+			Ordinal:         member.XUnionOrdinal,
+			ExplicitOrdinal: member.XUnionOrdinal,
+			// This field doesn't apply to unions that were xunions since they
+			// already use explicit ordinals on the wire. Since backends only use
+			// this field to generate code that reads xunions, passing in the
+			// explicit ordinal here is OK.
+			HashedOrdinal: member.XUnionOrdinal,
+			Type:          member.Type,
+			Name:          member.Name,
+			Offset:        -1, // unused
+			MaxOutOfLine:  -1, // unused
 		})
 	}
 	typeShape := TypeShape{
