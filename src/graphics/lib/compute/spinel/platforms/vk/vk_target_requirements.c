@@ -88,7 +88,10 @@ spn_vk_target_get_requirements(struct spn_vk_target const * const        target,
       {
         requirements->ext_name_count = ext_count;
 
-        is_success = false;
+        if (ext_count > 0)
+          {
+            is_success = false;
+          }
       }
     else
       {
@@ -119,7 +122,7 @@ spn_vk_target_get_requirements(struct spn_vk_target const * const        target,
   }
 
   //
-  // FEATURES
+  // VkPhysicalDeviceFeatures2
   //
   if (requirements->pdf2 == NULL)
     {
@@ -128,10 +131,15 @@ spn_vk_target_get_requirements(struct spn_vk_target const * const        target,
   else
     {
       //
+      // FEATURES
+      //
+      VkPhysicalDeviceFeatures2 * const pdf2 = requirements->pdf2;
+
+      //
       // Let's always have this on during debug
       //
 #ifndef NDEBUG
-      requirements->pdf2->features.robustBufferAccess = true;
+      pdf2->features.robustBufferAccess = true;
 #endif
       //
       // Enable target features
@@ -139,26 +147,17 @@ spn_vk_target_get_requirements(struct spn_vk_target const * const        target,
 #undef SPN_VK_TARGET_FEATURE
 #define SPN_VK_TARGET_FEATURE(feature_)                                                            \
   if (target->config.features.named.feature_)                                                      \
-    requirements->pdf2->features.feature_ = true;
+    pdf2->features.feature_ = true;
 
       SPN_VK_TARGET_FEATURES()
-    }
 
-  //
-  // FEATURES2
-  //
-  // Ensure that *all* of the required feature flags are enabled
-  //
-  union spn_vk_target_feature_structures structures = target->config.structures;
+      //
+      // FEATURES2
+      //
+      // Ensure that *all* of the required feature flags are enabled
+      //
+      union spn_vk_target_feature_structures structures = target->config.structures;
 
-  VkPhysicalDeviceFeatures2 * const pdf2 = requirements->pdf2;
-
-  if (pdf2 == NULL)
-    {
-      is_success = false;
-    }
-  else
-    {
       VkBaseOutStructure * bos = pdf2->pNext;
 
       while (bos != NULL)

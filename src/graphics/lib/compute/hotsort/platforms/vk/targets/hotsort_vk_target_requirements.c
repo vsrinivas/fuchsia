@@ -59,7 +59,10 @@ hotsort_vk_target_get_requirements(struct hotsort_vk_target const * const       
     {
       requirements->ext_name_count = ext_count;
 
-      is_success = false;
+      if (ext_count > 0)
+        {
+          is_success = false;
+        }
     }
   else
     {
