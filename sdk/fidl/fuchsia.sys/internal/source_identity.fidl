@@ -1,0 +1,30 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sys.internal;
+
+const uint16 MAXIMUM_MONIKER_SEGMENTS = 25;
+const uint16 COMPONENT_NAME_MAX_LENGTH = 255;
+const uint16 STRING_MAX_LENGTH = 100;
+const uint16 MAX_URL_LENGTH = 4096;
+
+/// Identifies a component uniquely within the observing realm.
+/// Example: hub/r/sys/4566/c/http.cmx/19226/out/objects
+///   moniker: [root, sys, http.cmx]
+///   component_url: "fuchsia-pkg://fuchsia.com/http#meta/http.cmx"
+///   component_name: "http.cmx"
+///   instance_id: 19226
+table SourceIdentity {
+    /// The path to the component from the observing realm.
+    1: vector<string:STRING_MAX_LENGTH>:MAXIMUM_MONIKER_SEGMENTS moniker;
+
+    /// The URL from which the component was loaded.
+    2: string:MAX_URL_LENGTH component_url;
+
+    /// The name of the component.
+    3: string:COMPONENT_NAME_MAX_LENGTH component_name;
+
+    /// The ID of the component.
+    4: string:STRING_MAX_LENGTH instance_id;
+};
