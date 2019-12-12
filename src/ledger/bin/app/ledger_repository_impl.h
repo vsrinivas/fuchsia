@@ -33,7 +33,6 @@
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
 #include "src/lib/callback/auto_cleanable.h"
-#include "src/lib/files/unique_fd.h"
 #include "src/lib/inspect_deprecated/deprecated/expose.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"

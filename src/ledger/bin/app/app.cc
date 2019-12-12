@@ -29,7 +29,6 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/files/unique_fd.h"
 #include "src/lib/inspect_deprecated/deprecated/object_dir.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 #include "third_party/abseil-cpp/absl/flags/flag.h"
