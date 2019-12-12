@@ -6,8 +6,6 @@ source_set("vmo") {
   visibility = [ "//src/ledger/*" ]
 
   sources = [
-    "file.cc",
-    "file.h",
     "shared_vmo.cc",
     "shared_vmo.h",
     "sized_vmo.cc",
@@ -23,7 +21,6 @@ source_set("vmo") {
   ]
 
   public_deps = [
-    "//src/lib/files",
     "//src/lib/fxl",
     "//third_party/abseil-cpp",
     "//zircon/public/lib/zx",
@@ -37,7 +34,6 @@ source_set("unittests") {
   testonly = true
 
   sources = [
-    "file_unittest.cc",
     "shared_vmo_unittest.cc",
     "strings_unittest.cc",
     "vector_unittest.cc",
