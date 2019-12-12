@@ -18,7 +18,6 @@ source_set("context") {
   ]
 
   public_deps = [
-    "//src/lib/fxl",
     "//zircon/public/lib/zx",
   ]
 

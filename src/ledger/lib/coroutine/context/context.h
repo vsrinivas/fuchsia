@@ -8,11 +8,16 @@
 #include <memory>
 
 #include "src/ledger/lib/coroutine/context/stack.h"
-#include "src/lib/fxl/build_config.h"
 
-#if defined(ARCH_CPU_X86_64)
+// Processor architecture detection.  For more info on what's defined, see:
+//   http://msdn.microsoft.com/en-us/library/b0084kay.aspx
+//   http://www.agner.org/optimize/calling_conventions.pdf
+//   or with gcc, run: "echo | gcc -E -dM -"
+// X64
+#if defined(_M_X64) || defined(__x86_64__)
 #include "src/ledger/lib/coroutine/context/x64/context.h"
-#elif defined(ARCH_CPU_ARM64)
+// Arm64
+#elif defined(__aarch64__)
 #include "src/ledger/lib/coroutine/context/arm64/context.h"
 #else
 #error Please add support for your architecture.
