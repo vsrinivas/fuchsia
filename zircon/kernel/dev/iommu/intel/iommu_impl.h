@@ -14,8 +14,9 @@
 #include <dev/iommu.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
-#include <fbl/mutex.h>
 #include <hwreg/mmio.h>
+#include <kernel/lockdep.h>
+#include <kernel/mutex.h>
 
 #include "domain_allocator.h"
 #include "hw.h"
@@ -121,7 +122,7 @@ class IommuImpl final : public Iommu {
     return reinterpret_cast<volatile ds::RootTable*>(root_table_page_.vaddr());
   }
 
-  fbl::Mutex lock_;
+  DECLARE_MUTEX(IommuImpl) lock_;
 
   // Descriptor of this hardware unit
   ktl::unique_ptr<const uint8_t[]> desc_;

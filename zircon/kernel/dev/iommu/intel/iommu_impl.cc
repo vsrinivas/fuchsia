@@ -15,7 +15,6 @@
 
 #include <dev/interrupt.h>
 #include <fbl/algorithm.h>
-#include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 #include <ktl/move.h>
 #include <ktl/unique_ptr.h>
@@ -77,14 +76,24 @@ zx_status_t IommuImpl::Create(ktl::unique_ptr<const uint8_t[]> desc_bytes, size_
 }
 
 IommuImpl::~IommuImpl() {
-  fbl::AutoLock guard(&lock_);
+  Guard<Mutex> guard{&lock_};
 
   // We cannot unpin memory until translation is disabled
   zx_status_t status = SetTranslationEnableLocked(false, ZX_TIME_INFINITE);
   ASSERT(status == ZX_OK);
 
   DisableFaultsLocked();
-  msi_free_block(&irq_block_);
+  if (irq_block_.allocated) {
+    msi_register_handler(&irq_block_, 0, nullptr, nullptr);
+    msi_free_block(&irq_block_);
+  }
+
+  // Need to free any context tables before mmio_ is unmapped (and before this destructor
+  // concludes) as the context_tables_ hold raw pointers back into us. As the destructors of the
+  // tables will call operations that acquire the lock_ we drop them with the lock temporarily
+  // released.
+  fbl::DoublyLinkedList<ktl::unique_ptr<ContextTableState>> tables = ktl::move(context_tables_);
+  guard.CallUnlocked([&tables] { tables.clear(); });
 
   VmAspace::kernel_aspace()->FreeRegion(mmio_.base());
 }
@@ -254,7 +263,7 @@ zx_status_t IommuImpl::Map(uint64_t bus_txn_id, const fbl::RefPtr<VmObject>& vmo
 
   ds::Bdf bdf = decode_bus_txn_id(bus_txn_id);
 
-  fbl::AutoLock guard(&lock_);
+  Guard<Mutex> guard{&lock_};
   DeviceContext* dev;
   zx_status_t status = GetOrCreateDeviceContextLocked(bdf, &dev);
   if (status != ZX_OK) {
@@ -283,7 +292,7 @@ zx_status_t IommuImpl::MapContiguous(uint64_t bus_txn_id, const fbl::RefPtr<VmOb
 
   ds::Bdf bdf = decode_bus_txn_id(bus_txn_id);
 
-  fbl::AutoLock guard(&lock_);
+  Guard<Mutex> guard{&lock_};
   DeviceContext* dev;
   zx_status_t status = GetOrCreateDeviceContextLocked(bdf, &dev);
   if (status != ZX_OK) {
@@ -303,7 +312,7 @@ zx_status_t IommuImpl::Unmap(uint64_t bus_txn_id, dev_vaddr_t vaddr, size_t size
 
   ds::Bdf bdf = decode_bus_txn_id(bus_txn_id);
 
-  fbl::AutoLock guard(&lock_);
+  Guard<Mutex> guard{&lock_};
   DeviceContext* dev;
   zx_status_t status = GetOrCreateDeviceContextLocked(bdf, &dev);
   if (status != ZX_OK) {
@@ -323,7 +332,7 @@ zx_status_t IommuImpl::ClearMappingsForBusTxnId(uint64_t bus_txn_id) {
 }
 
 zx_status_t IommuImpl::Initialize() {
-  fbl::AutoLock guard(&lock_);
+  Guard<Mutex> guard{&lock_};
 
   // Ensure we support this device version
   auto version = reg::Version::Get().ReadFrom(&mmio_);
@@ -487,7 +496,7 @@ zx_status_t IommuImpl::SetTranslationEnableLocked(bool enabled, zx_time_t deadli
 }
 
 void IommuImpl::InvalidateContextCacheGlobalLocked() {
-  DEBUG_ASSERT(lock_.IsHeld());
+  DEBUG_ASSERT(lock_.lock().IsHeld());
 
   auto context_cmd = reg::ContextCommand::Get().FromValue(0);
   context_cmd.set_invld_context_cache(1);
@@ -499,7 +508,7 @@ void IommuImpl::InvalidateContextCacheGlobalLocked() {
 }
 
 void IommuImpl::InvalidateContextCacheDomainLocked(uint32_t domain_id) {
-  DEBUG_ASSERT(lock_.IsHeld());
+  DEBUG_ASSERT(lock_.lock().IsHeld());
 
   auto context_cmd = reg::ContextCommand::Get().FromValue(0);
   context_cmd.set_invld_context_cache(1);
@@ -512,17 +521,17 @@ void IommuImpl::InvalidateContextCacheDomainLocked(uint32_t domain_id) {
 }
 
 void IommuImpl::InvalidateContextCacheGlobal() {
-  fbl::AutoLock guard(&lock_);
+  Guard<Mutex> guard{&lock_};
   InvalidateContextCacheGlobalLocked();
 }
 
 void IommuImpl::InvalidateContextCacheDomain(uint32_t domain_id) {
-  fbl::AutoLock guard(&lock_);
+  Guard<Mutex> guard{&lock_};
   InvalidateContextCacheDomainLocked(domain_id);
 }
 
 void IommuImpl::InvalidateIotlbGlobalLocked() {
-  DEBUG_ASSERT(lock_.IsHeld());
+  DEBUG_ASSERT(lock_.lock().IsHeld());
   ASSERT(!caps_.required_write_buf_flushing());
 
   // TODO(teisenbe): Read/write draining?
@@ -535,7 +544,7 @@ void IommuImpl::InvalidateIotlbGlobalLocked() {
 }
 
 void IommuImpl::InvalidateIotlbDomainAllLocked(uint32_t domain_id) {
-  DEBUG_ASSERT(lock_.IsHeld());
+  DEBUG_ASSERT(lock_.lock().IsHeld());
   ASSERT(!caps_.required_write_buf_flushing());
 
   // TODO(teisenbe): Read/write draining?
@@ -549,7 +558,7 @@ void IommuImpl::InvalidateIotlbDomainAllLocked(uint32_t domain_id) {
 }
 
 void IommuImpl::InvalidateIotlbPageLocked(uint32_t domain_id, dev_vaddr_t vaddr, uint pages_pow2) {
-  DEBUG_ASSERT(lock_.IsHeld());
+  DEBUG_ASSERT(lock_.lock().IsHeld());
   DEBUG_ASSERT(IS_PAGE_ALIGNED(vaddr));
   DEBUG_ASSERT(pages_pow2 < 64);
   DEBUG_ASSERT(pages_pow2 <= caps_.max_addr_mask_value());
@@ -572,12 +581,12 @@ void IommuImpl::InvalidateIotlbPageLocked(uint32_t domain_id, dev_vaddr_t vaddr,
 }
 
 void IommuImpl::InvalidateIotlbGlobal() {
-  fbl::AutoLock guard(&lock_);
+  Guard<Mutex> guard{&lock_};
   InvalidateIotlbGlobalLocked();
 }
 
 void IommuImpl::InvalidateIotlbDomainAll(uint32_t domain_id) {
-  fbl::AutoLock guard(&lock_);
+  Guard<Mutex> guard{&lock_};
   InvalidateIotlbDomainAllLocked(domain_id);
 }
 
@@ -585,7 +594,7 @@ template <class RegType>
 zx_status_t IommuImpl::WaitForValueLocked(RegType* reg,
                                           typename RegType::ValueType (RegType::*getter)() const,
                                           typename RegType::ValueType value, zx_time_t deadline) {
-  DEBUG_ASSERT(lock_.IsHeld());
+  DEBUG_ASSERT(lock_.lock().IsHeld());
 
   const zx_time_t kMaxSleepDuration = ZX_USEC(10);
 
@@ -655,11 +664,12 @@ interrupt_eoi IommuImpl::FaultHandler(void* ctx) {
 }
 
 zx_status_t IommuImpl::ConfigureFaultEventInterruptLocked() {
-  DEBUG_ASSERT(lock_.IsHeld());
+  DEBUG_ASSERT(lock_.lock().IsHeld());
 
   if (!msi_is_supported()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
+  DEBUG_ASSERT(!irq_block_.allocated);
   zx_status_t status =
       msi_alloc_block(1, false /* can_target_64bit */, false /* msi x */, &irq_block_);
   if (status != ZX_OK) {
@@ -704,7 +714,7 @@ void IommuImpl::DisableFaultsLocked() {
 }
 
 zx_status_t IommuImpl::GetOrCreateContextTableLocked(ds::Bdf bdf, ContextTableState** tbl) {
-  DEBUG_ASSERT(lock_.IsHeld());
+  DEBUG_ASSERT(lock_.lock().IsHeld());
 
   volatile ds::RootTable* root_table = this->root_table();
   DEBUG_ASSERT(root_table);
@@ -744,7 +754,7 @@ zx_status_t IommuImpl::GetOrCreateContextTableLocked(ds::Bdf bdf, ContextTableSt
 }
 
 zx_status_t IommuImpl::GetOrCreateDeviceContextLocked(ds::Bdf bdf, DeviceContext** context) {
-  DEBUG_ASSERT(lock_.IsHeld());
+  DEBUG_ASSERT(lock_.lock().IsHeld());
 
   ContextTableState* ctx_table_state;
   zx_status_t status = GetOrCreateContextTableLocked(bdf, &ctx_table_state);
@@ -773,7 +783,7 @@ uint64_t IommuImpl::minimum_contiguity(uint64_t bus_txn_id) {
 
   ds::Bdf bdf = decode_bus_txn_id(bus_txn_id);
 
-  fbl::AutoLock guard(&lock_);
+  Guard<Mutex> guard{&lock_};
   DeviceContext* dev;
   zx_status_t status = GetOrCreateDeviceContextLocked(bdf, &dev);
   if (status != ZX_OK) {
@@ -790,7 +800,7 @@ uint64_t IommuImpl::aspace_size(uint64_t bus_txn_id) {
 
   ds::Bdf bdf = decode_bus_txn_id(bus_txn_id);
 
-  fbl::AutoLock guard(&lock_);
+  Guard<Mutex> guard{&lock_};
   DeviceContext* dev;
   zx_status_t status = GetOrCreateDeviceContextLocked(bdf, &dev);
   if (status != ZX_OK) {
