@@ -19,7 +19,7 @@
 // on our behalf).
 
 use crate::{
-    coding::decode_fidl,
+    coding::{decode_fidl, FrameHeader, FrameType, FRAME_HEADER_LENGTH},
     labels::{NodeId, NodeLinkId, RoutingLabel, MAX_ROUTING_LABEL_LENGTH},
     node_table::{LinkDescription, NodeDescription},
     ping_tracker::{PingTracker, PingTrackerResult, PongTracker},
@@ -242,7 +242,7 @@ enum ReadState {
     Initial { incoming: Vec<u8>, stream_type: StreamType },
     /// Stream type is known, and the length of the next datagram has been parsed.
     /// We do not yet know all the bytes for said datagram however.
-    Datagram { len: usize, incoming: Vec<u8>, stream_type: StreamType },
+    Datagram { hdr: FrameHeader, incoming: Vec<u8>, stream_type: StreamType },
     /// Stream has finished successfully.
     FinishedOk,
     /// Stream completed with an error.
@@ -266,7 +266,7 @@ impl ReadState {
 
     fn new_peer(client_end: bool) -> ReadState {
         ReadState::Datagram {
-            len: 4,
+            hdr: FrameHeader { frame_type: FrameType::Data, length: 4 },
             incoming: Vec::new(),
             stream_type: if client_end {
                 StreamType::PeerClientEnd(PeerState::Initial)
@@ -289,18 +289,11 @@ impl ReadState {
     /// Upon receiving some bytes, update state and return the new one.
     fn recv<Got>(self, bytes: &mut [u8], mut got: Got) -> ReadState
     where
-        Got: FnMut(StreamType, Option<&mut [u8]>) -> Result<(), Error>,
+        Got: FnMut(StreamType, Option<(FrameType, &mut [u8])>) -> Result<(), Error>,
     {
         if bytes.len() == 0 {
             return self;
         }
-
-        let rdlen = |buf: &[u8]| {
-            (buf[0] as u32)
-                | ((buf[1] as u32) << 8)
-                | ((buf[2] as u32) << 16)
-                | ((buf[3] as u32) << 24)
-        };
 
         log::trace!("recv bytes: state={:?} bytes={:?}", self, bytes);
 
@@ -313,30 +306,36 @@ impl ReadState {
                 // TODO(ctiller): consider specializing the fast path
                 // if incoming.len() == 0 && bytes.len() > 4 {}
                 incoming.extend_from_slice(bytes);
-                if incoming.len() >= 4 {
-                    let len = rdlen(&mut incoming) as usize;
-                    ReadState::Datagram { len, incoming: vec![], stream_type }
-                        .recv(&mut incoming[4..], got)
-                } else {
-                    ReadState::Initial { incoming, stream_type }
-                }
-            }
-            ReadState::Datagram { mut incoming, len, stream_type } => {
-                incoming.extend_from_slice(bytes);
-                if incoming.len() >= len {
-                    match got(stream_type, Some(&mut incoming[..len])) {
-                        Ok(_) => {
-                            ReadState::Initial { incoming: vec![], stream_type: stream_type.next() }
-                                .recv(&mut incoming[len..], got)
-                        }
+                if incoming.len() >= FRAME_HEADER_LENGTH {
+                    match FrameHeader::from_bytes(incoming.as_slice()) {
+                        Ok(hdr) => ReadState::Datagram { hdr, incoming: vec![], stream_type }
+                            .recv(&mut incoming[FRAME_HEADER_LENGTH..], got),
                         Err(e) => {
-                            log::trace!("Error reading stream: {:?}", e);
+                            log::warn!("Error reading stream: {:?}", e);
                             got(stream_type, None).unwrap();
                             ReadState::FinishedWithError
                         }
                     }
                 } else {
-                    ReadState::Datagram { incoming, len, stream_type }
+                    ReadState::Initial { incoming, stream_type }
+                }
+            }
+            ReadState::Datagram { mut incoming, hdr, stream_type } => {
+                incoming.extend_from_slice(bytes);
+                if incoming.len() >= hdr.length as usize {
+                    match got(stream_type, Some((hdr.frame_type, &mut incoming[..hdr.length]))) {
+                        Ok(_) => {
+                            ReadState::Initial { incoming: vec![], stream_type: stream_type.next() }
+                                .recv(&mut incoming[hdr.length..], got)
+                        }
+                        Err(e) => {
+                            log::warn!("Error reading stream: {:?}", e);
+                            got(stream_type, None).unwrap();
+                            ReadState::FinishedWithError
+                        }
+                    }
+                } else {
+                    ReadState::Datagram { incoming, hdr, stream_type }
                 }
             }
             ReadState::FinishedOk => ReadState::FinishedWithError,
@@ -348,7 +347,7 @@ impl ReadState {
     /// Go from unbound -> bound when the stream type is known.
     fn bind<Got>(self, stream_type: StreamType, got: Got) -> ReadState
     where
-        Got: FnMut(StreamType, Option<&mut [u8]>) -> Result<(), Error>,
+        Got: FnMut(StreamType, Option<(FrameType, &mut [u8])>) -> Result<(), Error>,
     {
         match self {
             ReadState::Unbound { mut incoming } => {
@@ -621,7 +620,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Endpoints<LinkData, Time> {
                 }
                 self.queue_send_bytes(
                     connection_stream_id,
-                    true,
+                    Some(FrameType::Data),
                     &mut bytes,
                     false,
                     |peer, messages, bytes| {
@@ -655,12 +654,16 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Endpoints<LinkData, Time> {
             .collect();
         for stream_id in stream_ids {
             let mut desc = self.node_desc_packet.clone();
-            if let Err(e) =
-                self.queue_send_bytes(stream_id, true, &mut desc, false, |peer, messages, bytes| {
+            if let Err(e) = self.queue_send_bytes(
+                stream_id,
+                Some(FrameType::Data),
+                &mut desc,
+                false,
+                |peer, messages, bytes| {
                     peer.update_node_description_sends += messages;
                     peer.update_node_description_send_bytes += bytes;
-                })
-            {
+                },
+            ) {
                 log::warn!("Failed to send datagram: {:?}", e);
             }
         }
@@ -711,7 +714,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Endpoints<LinkData, Time> {
                 if handles.len() != 0 {
                     failure::bail!("Unexpected handles in encoding");
                 }
-                self.queue_send_bytes(stream_id, true, bytes, false, update_stats)
+                self.queue_send_bytes(stream_id, Some(FrameType::Data), bytes, false, update_stats)
             },
         )?;
         Ok(stream_ids)
@@ -721,7 +724,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Endpoints<LinkData, Time> {
     fn queue_send_bytes(
         &mut self,
         stream_id: StreamId<LinkData>,
-        framed: bool,
+        frame_type: Option<FrameType>,
         bytes: &mut [u8],
         fin: bool,
         update_stats: impl Fn(&mut Peer<LinkData>, u64, u64),
@@ -744,15 +747,10 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Endpoints<LinkData, Time> {
             .get_mut(peer_id)
             .ok_or_else(|| failure::format_err!("Peer not found {:?}", peer_id))?;
         log::trace!("  node_id={:?}", peer.node_id);
-        if framed {
+        if let Some(frame_type) = frame_type {
             let frame_len = bytes.len();
             assert!(frame_len <= 0xffff_ffff);
-            let header: [u8; 4] = [
-                (frame_len & 0xff) as u8,
-                ((frame_len >> 8) & 0xff) as u8,
-                ((frame_len >> 16) & 0xff) as u8,
-                ((frame_len >> 24) & 0xff) as u8,
-            ];
+            let header = FrameHeader { frame_type, length: frame_len }.to_bytes()?;
             peer.conn
                 .0
                 .stream_send(stream.id, &header, false)
@@ -1028,7 +1026,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Endpoints<LinkData, Time> {
                         };
                         rs = rs.recv(
                             &mut buf[..n],
-                            |stream_type: StreamType, message: Option<&mut [u8]>| {
+                            |stream_type: StreamType, message: Option<(FrameType, &mut [u8])>| {
                                 recv_message_context.recv(stream_type, message)
                             },
                         );
@@ -1221,7 +1219,11 @@ where
 {
     /// Receive a datagram, parse it, and dispatch it to the right methods.
     /// message==None => end of stream.
-    fn recv(&mut self, stream_type: StreamType, message: Option<&mut [u8]>) -> Result<(), Error> {
+    fn recv(
+        &mut self,
+        stream_type: StreamType,
+        message: Option<(FrameType, &mut [u8])>,
+    ) -> Result<(), Error> {
         log::trace!(
             "{:?} Peer {:?} {:?} stream {:?} type {:?} index {} gets {:?}",
             self.node_id,
@@ -1244,7 +1246,7 @@ where
                 self.got.close(self.stream_id);
                 Ok(())
             }
-            (StreamType::Channel, Some(bytes)) => {
+            (StreamType::Channel, Some((FrameType::Data, bytes))) => {
                 let mut msg = decode_fidl::<ZirconChannelMessage>(bytes)?;
                 let mut handles = Vec::new();
                 for unbound in msg.handles.into_iter() {
@@ -1261,7 +1263,7 @@ where
                 }
                 self.got.channel_recv(self.stream_id, &mut msg.bytes, &mut handles)
             }
-            (StreamType::PeerServerEnd(PeerState::Initial), Some(bytes)) => {
+            (StreamType::PeerServerEnd(PeerState::Initial), Some((FrameType::Data, bytes))) => {
                 assert_eq!(bytes.len(), 4);
                 if bytes[3] != fidl::encoding::MAGIC_NUMBER_INITIAL {
                     failure::bail!(
@@ -1275,7 +1277,7 @@ where
                 }
                 Ok(())
             }
-            (StreamType::PeerClientEnd(PeerState::Initial), Some(bytes)) => {
+            (StreamType::PeerClientEnd(PeerState::Initial), Some((FrameType::Data, bytes))) => {
                 assert_eq!(bytes.len(), 4);
                 if bytes[3] != fidl::encoding::MAGIC_NUMBER_INITIAL {
                     failure::bail!(
@@ -1289,7 +1291,7 @@ where
                 }
                 Ok(())
             }
-            (StreamType::PeerServerEnd(PeerState::Config), Some(bytes)) => {
+            (StreamType::PeerServerEnd(PeerState::Config), Some((FrameType::Data, bytes))) => {
                 let msg = decode_fidl::<ConfigRequest>(bytes).context("Decoding ConfigRequest")?;
                 log::trace!("{:?} Got config request: {:?}", self.node_id, msg);
                 let (config, response) = Config::negotiate(msg);
@@ -1297,7 +1299,7 @@ where
                 self.config_response_needed.insert(self.stream_id, response);
                 Ok(())
             }
-            (StreamType::PeerClientEnd(PeerState::Config), Some(bytes)) => {
+            (StreamType::PeerClientEnd(PeerState::Config), Some((FrameType::Data, bytes))) => {
                 let msg =
                     decode_fidl::<ConfigResponse>(bytes).context("Decoding ConfigResponse")?;
                 log::trace!("{:?} Got config reply: {:?}", self.node_id, msg);
@@ -1306,7 +1308,7 @@ where
                 self.newly_established_clients.push(self.peer.node_id);
                 Ok(())
             }
-            (StreamType::PeerServerEnd(PeerState::Ready), Some(bytes)) => {
+            (StreamType::PeerServerEnd(PeerState::Ready), Some((FrameType::Data, bytes))) => {
                 let msg = decode_fidl::<PeerMessage>(bytes).context("Decoding PeerMessage")?;
                 log::trace!("{:?} Got peer message: {:?}", self.node_id, msg);
                 match msg {
@@ -1362,7 +1364,7 @@ where
                     }
                 }
             }
-            (StreamType::PeerClientEnd(PeerState::Ready), Some(bytes)) => {
+            (StreamType::PeerClientEnd(PeerState::Ready), Some((FrameType::Data, bytes))) => {
                 let msg = decode_fidl::<PeerReply>(bytes).context("Decoding PeerReply")?;
                 log::trace!("{:?} Got peer reply: {:?}", self.node_id, msg);
                 match msg {
@@ -1437,9 +1439,12 @@ where
             config_completed: self.config_completed,
             newly_established_clients: self.newly_established_clients,
         };
-        rs = rs.bind(stream_type, |stream_type: StreamType, message: Option<&mut [u8]>| {
-            recv_message_context.recv(stream_type, message)
-        });
+        rs = rs.bind(
+            stream_type,
+            |stream_type: StreamType, message: Option<(FrameType, &mut [u8])>| {
+                recv_message_context.recv(stream_type, message)
+            },
+        );
         self.streams
             .get_mut(bind_stream_id)
             .ok_or_else(|| failure::format_err!("Stream not found for bind {:?}", bind_stream_id))?
@@ -2023,7 +2028,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
         {
             let result = self.endpoints.queue_send_bytes(
                 stream_id,
-                false,
+                None,
                 &mut [0, 0, 0, fidl::encoding::MAGIC_NUMBER_INITIAL],
                 false,
                 |_, _, _| {},
@@ -2040,7 +2045,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
                     }
                     self.endpoints.queue_send_bytes(
                         stream_id,
-                        true,
+                        Some(FrameType::Data),
                         &mut bytes,
                         false,
                         |_, _, _| {},
@@ -2055,7 +2060,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
         while let Some(stream_id) = self.endpoints.need_to_send_node_description_clients.pop() {
             let result = self.endpoints.queue_send_bytes(
                 stream_id,
-                false,
+                None,
                 &mut [0, 0, 0, fidl::encoding::MAGIC_NUMBER_INITIAL],
                 false,
                 |_, _, _| {},
@@ -2073,7 +2078,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
                     }
                     self.endpoints.queue_send_bytes(
                         stream_id,
-                        true,
+                        Some(FrameType::Data),
                         &mut bytes,
                         false,
                         |_, _, _| {},
@@ -2085,7 +2090,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
             }
             let result = self.endpoints.queue_send_bytes(
                 stream_id,
-                true,
+                Some(FrameType::Data),
                 &mut self.endpoints.node_desc_packet.clone(),
                 false,
                 |peer, messages, bytes| {
@@ -2123,7 +2128,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
         while let Some(stream_id) = self.endpoints.ack_link_status_updates.pop() {
             if let Err(e) = self.endpoints.queue_send_bytes(
                 stream_id,
-                true,
+                Some(FrameType::Data),
                 &mut self.ack_link_status_frame.clone(),
                 false,
                 |peer, messages, bytes| {
@@ -2157,7 +2162,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
                     last_sent = Some(stream_id);
                     if let Err(e) = self.endpoints.queue_send_bytes(
                         stream_id,
-                        true,
+                        Some(FrameType::Data),
                         &mut bytes.clone(),
                         false,
                         |peer, messages, bytes| {
