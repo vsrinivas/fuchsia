@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LIB_CALLBACK_CANCELLABLE_H_
-#define SRC_LIB_CALLBACK_CANCELLABLE_H_
+#ifndef SRC_LIB_NETWORK_WRAPPER_CANCELLABLE_H_
+#define SRC_LIB_NETWORK_WRAPPER_CANCELLABLE_H_
 
 #include <lib/fit/function.h>
 
@@ -14,7 +14,7 @@
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
-namespace callback {
+namespace network_wrapper {
 
 class AutoCancel;
 
@@ -75,8 +75,8 @@ class AutoCancel {
 // RAII container for multiple |Cancellable|s. The |Cancellable|s will be
 // canceled when this object is deleted. The |Cancellable| objects will also be
 // deleted when they complete.
-using CancellableContainer = AutoCleanableSet<AutoCancel>;
+using CancellableContainer = callback::AutoCleanableSet<AutoCancel>;
 
-}  // namespace callback
+}  // namespace network_wrapper
 
-#endif  // SRC_LIB_CALLBACK_CANCELLABLE_H_
+#endif  // SRC_LIB_NETWORK_WRAPPER_CANCELLABLE_H_

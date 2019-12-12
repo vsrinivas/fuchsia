@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/lib/callback/cancellable.h"
+#include "src/lib/network_wrapper/cancellable.h"
 
 #include <lib/async-testing/test_loop.h>
 #include <lib/fit/function.h>
 
 #include "gtest/gtest.h"
 
-namespace callback {
+namespace network_wrapper {
 namespace {
 
 class FakeCancellable : public Cancellable {
@@ -173,4 +173,4 @@ TEST(CancellableContainer, ClearOnDone) {
 }
 
 }  //  namespace
-}  //  namespace callback
+}  //  namespace network_wrapper

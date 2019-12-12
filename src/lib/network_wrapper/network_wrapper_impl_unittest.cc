@@ -218,7 +218,7 @@ TEST_F(NetworkWrapperImplTest, Redirection) {
 }
 
 TEST_F(NetworkWrapperImplTest, CancelOnCallback) {
-  fxl::RefPtr<callback::Cancellable> request;
+  fxl::RefPtr<Cancellable> request;
   http::URLResponsePtr response;
   request = network_service_.Request(
       [this] {

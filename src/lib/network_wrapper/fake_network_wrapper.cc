@@ -9,8 +9,8 @@
 #include <utility>
 
 #include "lib/fidl/cpp/optional.h"
-#include "src/lib/callback/cancellable_helper.h"
 #include "src/lib/fsl/socket/strings.h"
+#include "src/lib/network_wrapper/cancellable_helper.h"
 
 namespace network_wrapper {
 
@@ -40,10 +40,10 @@ void FakeNetworkWrapper::SetStringResponse(const std::string& body, uint32_t sta
   SetSocketResponse(fsl::WriteStringToSocket(body), status_code);
 }
 
-fxl::RefPtr<callback::Cancellable> FakeNetworkWrapper::Request(
+fxl::RefPtr<Cancellable> FakeNetworkWrapper::Request(
     fit::function<http::URLRequest()> request_factory,
     fit::function<void(http::URLResponse)> callback) {
-  auto cancellable = callback::CancellableImpl::Create([] {});
+  auto cancellable = CancellableImpl::Create([] {});
   if (!response_to_return_) {
     return cancellable;
   }

@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/lib/callback/cancellable_helper.h"
+#include "src/lib/network_wrapper/cancellable_helper.h"
 
 #include <lib/fit/function.h>
 
 #include "gtest/gtest.h"
 
-namespace callback {
+namespace network_wrapper {
 namespace {
 
 TEST(CancellableImpl, CancelInvalidateCancellable) {
@@ -101,4 +101,4 @@ TEST(CancellableImpl, CancelInWrappedCallback) {
 }
 
 }  //  namespace
-}  //  namespace callback
+}  //  namespace network_wrapper

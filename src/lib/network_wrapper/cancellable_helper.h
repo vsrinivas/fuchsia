@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LIB_CALLBACK_CANCELLABLE_HELPER_H_
-#define SRC_LIB_CALLBACK_CANCELLABLE_HELPER_H_
+#ifndef SRC_LIB_NETWORK_WRAPPER_CANCELLABLE_HELPER_H_
+#define SRC_LIB_NETWORK_WRAPPER_CANCELLABLE_HELPER_H_
 
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 
 #include <type_traits>
 
-#include "src/lib/callback/cancellable.h"
 #include "src/lib/fxl/logging.h"
+#include "src/lib/network_wrapper/cancellable.h"
 
-namespace callback {
+namespace network_wrapper {
 
 namespace internal {
 
@@ -101,8 +101,8 @@ class CancellableImpl final : public Cancellable {
 };
 
 // Creates a cancellable that is already done.
-fxl::RefPtr<callback::Cancellable> CreateDoneCancellable();
+fxl::RefPtr<Cancellable> CreateDoneCancellable();
 
-}  // namespace callback
+}  // namespace network_wrapper
 
-#endif  // SRC_LIB_CALLBACK_CANCELLABLE_HELPER_H_
+#endif  // SRC_LIB_NETWORK_WRAPPER_CANCELLABLE_HELPER_H_

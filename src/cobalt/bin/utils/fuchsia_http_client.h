@@ -8,7 +8,8 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
 
-#include "garnet/public/lib/network_wrapper/network_wrapper.h"
+#include "src/lib/network_wrapper/cancellable.h"
+#include "src/lib/network_wrapper/network_wrapper.h"
 #include "src/lib/fsl/socket/socket_drainer.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "third_party/cobalt/src/lib/clearcut/http_client.h"
@@ -75,7 +76,7 @@ class NetworkRequest : public fxl::RefCountedThreadSafe<NetworkRequest>,
 
   const lib::clearcut::HTTPRequest& request() { return request_; }
 
-  void SetNetworkWrapperCancel(fxl::RefPtr<callback::Cancellable> network_wrapper_cancel) {
+  void SetNetworkWrapperCancel(fxl::RefPtr<network_wrapper::Cancellable> network_wrapper_cancel) {
     network_wrapper_cancel_ = network_wrapper_cancel;
   }
 
@@ -109,7 +110,7 @@ class NetworkRequest : public fxl::RefCountedThreadSafe<NetworkRequest>,
   // Task which will cancel the network request if triggered.
   std::unique_ptr<async::TaskClosure> deadline_task_;
   // The callback to cancel the network request.
-  fxl::RefPtr<callback::Cancellable> network_wrapper_cancel_;
+  fxl::RefPtr<network_wrapper::Cancellable> network_wrapper_cancel_;
   // The SocketDrainer used to read the data from the network
   std::unique_ptr<fsl::SocketDrainer> socket_drainer_;
 };

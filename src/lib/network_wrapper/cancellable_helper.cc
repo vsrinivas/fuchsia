@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/lib/callback/cancellable_helper.h"
+#include "src/lib/network_wrapper/cancellable_helper.h"
 
 #include <lib/fit/function.h>
 
-namespace callback {
+namespace network_wrapper {
 namespace {
 class DoneCancellable : public Cancellable {
  public:
@@ -34,8 +34,6 @@ void CancellableImpl::SetOnDone(fit::closure callback) {
   on_done_ = std::move(callback);
 }
 
-fxl::RefPtr<callback::Cancellable> CreateDoneCancellable() {
-  return fxl::AdoptRef(new DoneCancellable());
-}
+fxl::RefPtr<Cancellable> CreateDoneCancellable() { return fxl::AdoptRef(new DoneCancellable()); }
 
-}  // namespace callback
+}  // namespace network_wrapper

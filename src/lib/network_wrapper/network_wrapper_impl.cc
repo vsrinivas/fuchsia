@@ -6,10 +6,10 @@
 
 #include <utility>
 
-#include "src/lib/callback/cancellable_helper.h"
 #include "src/lib/callback/destruction_sentinel.h"
 #include "src/lib/callback/trace_callback.h"
 #include "src/lib/fxl/strings/ascii.h"
+#include "src/lib/network_wrapper/cancellable_helper.h"
 
 namespace network_wrapper {
 
@@ -160,12 +160,12 @@ NetworkWrapperImpl::NetworkWrapperImpl(async_dispatcher_t* dispatcher,
 
 NetworkWrapperImpl::~NetworkWrapperImpl() {}
 
-fxl::RefPtr<callback::Cancellable> NetworkWrapperImpl::Request(
+fxl::RefPtr<Cancellable> NetworkWrapperImpl::Request(
     fit::function<http::URLRequest()> request_factory,
     fit::function<void(http::URLResponse)> callback) {
   RunningRequest& request = running_requests_.emplace(std::move(request_factory));
 
-  auto cancellable = callback::CancellableImpl::Create([&request]() { request.Cancel(); });
+  auto cancellable = CancellableImpl::Create([&request]() { request.Cancel(); });
 
   request.set_callback(cancellable->WrapCallback(
       TRACE_CALLBACK(std::move(callback), "network_wrapper", "network_request")));

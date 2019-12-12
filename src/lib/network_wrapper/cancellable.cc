@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/lib/callback/cancellable.h"
+#include "src/lib/network_wrapper/cancellable.h"
 
 #include <lib/fit/function.h>
 
 #include <utility>
 
-namespace callback {
+namespace network_wrapper {
 
 Cancellable::Cancellable() {}
 
@@ -52,4 +52,4 @@ void AutoCancel::OnDone() {
   }
 }
 
-}  // namespace callback
+}  // namespace network_wrapper

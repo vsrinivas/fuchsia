@@ -8,9 +8,9 @@
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
 #include <lib/fit/function.h>
 
-#include "src/lib/callback/cancellable.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/lib/network_wrapper/cancellable.h"
 
 namespace network_wrapper {
 
@@ -23,7 +23,7 @@ class NetworkWrapper {
   virtual ~NetworkWrapper() {}
 
   // Starts a url network request.
-  virtual fxl::RefPtr<callback::Cancellable> Request(
+  virtual fxl::RefPtr<Cancellable> Request(
       fit::function<::fuchsia::net::oldhttp::URLRequest()> request_factory,
       fit::function<void(::fuchsia::net::oldhttp::URLResponse)> callback) = 0;
 

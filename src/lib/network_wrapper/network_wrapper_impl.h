@@ -20,7 +20,7 @@ class NetworkWrapperImpl : public NetworkWrapper {
                      fit::function<::fuchsia::net::oldhttp::HttpServicePtr()> http_service_factory);
   ~NetworkWrapperImpl() override;
 
-  fxl::RefPtr<callback::Cancellable> Request(
+  fxl::RefPtr<Cancellable> Request(
       fit::function<::fuchsia::net::oldhttp::URLRequest()> request_factory,
       fit::function<void(::fuchsia::net::oldhttp::URLResponse)> callback) override;
 
