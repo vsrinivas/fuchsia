@@ -9,7 +9,11 @@ use {
     component_manager_lib::{
         builtin_environment::BuiltinEnvironment,
         klog,
-        model::{AbsoluteMoniker, Binder, ComponentManagerConfig, Model},
+        model::{
+            binding::Binder,
+            model::{ComponentManagerConfig, Model},
+            moniker::AbsoluteMoniker,
+        },
         startup,
     },
     failure::{Error, ResultExt},

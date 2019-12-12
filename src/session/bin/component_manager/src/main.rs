@@ -5,7 +5,10 @@
 use {
     component_manager_lib::{
         builtin_environment::BuiltinEnvironment,
-        model::{testing::test_helpers, AbsoluteMoniker, Binder, ComponentManagerConfig},
+        model::{
+            binding::Binder, model::ComponentManagerConfig, moniker::AbsoluteMoniker,
+            testing::test_helpers,
+        },
         startup,
     },
     failure::{self, Error},

@@ -3,7 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::*,
+    crate::model::{
+        binding::Binder,
+        error::ModelError,
+        moniker::AbsoluteMoniker,
+        resolver::{Resolver, ResolverError, ResolverFut, ResolverRegistry},
+        runner::{Runner, RunnerError},
+        realm::Realm,
+    },
     cm_rust::{ComponentDecl, ExposeDecl, UseDecl},
     directory_broker::RoutingFn,
     failure::format_err,
@@ -13,11 +20,8 @@ use {
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_async::EHandle,
     fuchsia_vfs_pseudo_fs_mt::{
-        directory::entry::DirectoryEntry,
-        execution_scope::ExecutionScope,
-        file::pcb::asynchronous::read_only_static,
-        path::Path,
-        pseudo_directory,
+        directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
+        file::pcb::asynchronous::read_only_static, path::Path, pseudo_directory,
     },
     fuchsia_zircon::{AsHandleRef, Koid},
     futures::{future::BoxFuture, lock::Mutex, prelude::*},
@@ -97,13 +101,15 @@ fn new_proxy_routing_fn(ty: CapabilityType) -> RoutingFn {
                     let sub_dir = pseudo_directory!(
                         "hello" => read_only_static(b"friend"),
                     );
-                    let path = Path::validate_and_split(relative_path).expect("Failed to split path");
+                    let path =
+                        Path::validate_and_split(relative_path).expect("Failed to split path");
                     sub_dir.open(
                         ExecutionScope::from_executor(Box::new(EHandle::local())),
                         flags,
                         mode,
                         path,
-                        server_end);
+                        server_end,
+                    );
                 }
                 CapabilityType::Runner => {
                     // TODO(fxb/4761): Implement routing for runner caps.

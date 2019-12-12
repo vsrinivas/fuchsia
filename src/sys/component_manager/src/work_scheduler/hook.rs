@@ -5,7 +5,11 @@
 use {
     crate::{
         capability::{ComponentManagerCapability, ComponentManagerCapabilityProvider},
-        model::{Event, EventPayload, EventType, Hook, HooksRegistration, ModelError, Realm},
+        model::{
+            error::ModelError,
+            hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
+            realm::Realm,
+        },
         work_scheduler::work_scheduler::{
             WorkScheduler, WORKER_CAPABILITY_PATH, WORK_SCHEDULER_CAPABILITY_PATH,
             WORK_SCHEDULER_CONTROL_CAPABILITY_PATH,

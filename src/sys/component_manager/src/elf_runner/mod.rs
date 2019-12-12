@@ -5,7 +5,7 @@
 use {
     crate::{
         constants::PKG_PATH,
-        model::{Runner, RunnerError},
+        model::runner::{Runner, RunnerError},
         process_launcher::ProcessLauncher,
         startup::Arguments,
     },

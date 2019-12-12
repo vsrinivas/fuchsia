@@ -4,21 +4,16 @@
 
 use {
     crate::{
-        capability::*,
+        capability::{ComponentManagerCapability, ComponentManagerCapabilityProvider},
         framework::REALM_SERVICE,
-        model::*,
         model::{
-            hooks::*,
+            error::ModelError,
+            hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
+            realm::Realm,
             testing::{routing_test_helpers::*, test_helpers::*},
         },
     },
-    cm_rust::{
-        self, CapabilityName, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, ExposeDecl,
-        ExposeDirectoryDecl, ExposeServiceProtocolDecl, ExposeRunnerDecl, ExposeSource, ExposeTarget,
-        OfferDecl, OfferDirectoryDecl, OfferDirectorySource, OfferServiceProtocolDecl,
-        OfferRunnerDecl, OfferRunnerSource, OfferServiceSource, OfferTarget, RunnerDecl,
-        RunnerSource, UseDecl, UseDirectoryDecl, UseServiceProtocolDecl, UseRunnerDecl, UseSource,
-    },
+    cm_rust::*,
     failure::Error,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,

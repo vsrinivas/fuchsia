@@ -4,8 +4,11 @@
 
 use {
     crate::{
-        capability::*,
-        model::{error::*, hooks::*},
+        capability::{ComponentManagerCapability, ComponentManagerCapabilityProvider},
+        model::{
+            error::ModelError,
+            hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
+        },
     },
     cm_rust::CapabilityPath,
     failure::{Error, Fail},
@@ -323,7 +326,7 @@ fn koid_to_string(koid: Result<zx::Koid, zx::Status>) -> String {
 mod tests {
     use {
         super::*,
-        crate::model::{Realm, ResolverRegistry},
+        crate::model::{hooks::Hooks, realm::Realm, resolver::ResolverRegistry},
         failure::ResultExt,
         fidl::endpoints::{ClientEnd, Proxy, ServerEnd, ServiceMarker},
         fidl_fuchsia_io as fio,

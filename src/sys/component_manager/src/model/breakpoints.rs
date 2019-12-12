@@ -3,10 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::testing::breakpoints_capability::{
-        BreakpointCapabilityHook, BreakpointCapabilityProvider,
+    crate::model::{
+        breakpoints_capability::{BreakpointCapabilityHook, BreakpointCapabilityProvider},
+        error::ModelError,
+        hooks::{Event, EventType, Hook, HooksRegistration},
+        moniker::AbsoluteMoniker,
     },
-    crate::model::*,
     failure::Error,
     futures::{
         channel::oneshot::Canceled, channel::*, future::BoxFuture, lock::Mutex, sink::SinkExt,
@@ -45,7 +47,7 @@ impl Invocation {
 /// BreakpointCapability. It receives a BreakpointInvocation from a BreakpointInvocationSender
 /// and propagates it to the client.
 #[derive(Clone)]
-pub struct InvocationSender {
+struct InvocationSender {
     tx: Arc<Mutex<mpsc::Sender<Invocation>>>,
 }
 

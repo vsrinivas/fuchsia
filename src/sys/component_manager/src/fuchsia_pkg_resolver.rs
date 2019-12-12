@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::{Resolver, ResolverError, ResolverFut},
+    crate::model::resolver::{Resolver, ResolverError, ResolverFut},
     cm_fidl_translator,
     failure::format_err,
     fidl::endpoints::ClientEnd,
@@ -14,6 +14,7 @@ use {
     std::path::Path,
 };
 
+#[allow(unused)]
 pub static SCHEME: &str = "fuchsia-pkg";
 
 /// Resolves component URLs with the "fuchsia-pkg" scheme. See the fuchsia_pkg_url crate for URL

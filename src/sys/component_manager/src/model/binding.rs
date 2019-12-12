@@ -4,8 +4,16 @@
 
 use {
     crate::model::{
-        AbsoluteMoniker, Event, EventPayload, ExposedDir, IncomingNamespace, Model, ModelError,
-        Realm, RealmState, Resolver, RoutingFacade, Runner, Runtime,
+        error::ModelError,
+        exposed_dir::ExposedDir,
+        hooks::{Event, EventPayload},
+        model::Model,
+        moniker::AbsoluteMoniker,
+        namespace::IncomingNamespace,
+        resolver::Resolver,
+        routing_facade::RoutingFacade,
+        runner::Runner,
+        realm::{Realm, RealmState, Runtime},
     },
     cm_rust::data,
     fidl::endpoints::{create_endpoints, Proxy, ServerEnd},
@@ -215,7 +223,12 @@ mod tests {
         crate::{
             builtin_environment::BuiltinEnvironment,
             model::testing::{mocks::*, test_helpers::*, test_hook::TestHook},
-            model::*,
+            model::{
+                hooks::HooksRegistration,
+                model::{ComponentManagerConfig, ModelParams},
+                moniker::PartialMoniker,
+                resolver::ResolverRegistry,
+            },
             startup,
         },
         cm_rust::{self, ChildDecl, ComponentDecl},

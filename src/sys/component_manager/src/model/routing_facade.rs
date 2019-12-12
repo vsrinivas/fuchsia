@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::{moniker::AbsoluteMoniker, routing::*, Model},
+    crate::model::{model::Model, moniker::AbsoluteMoniker, routing},
     cm_rust::{ExposeDecl, UseDecl},
     directory_broker::RoutingFn,
     fidl::endpoints::ServerEnd,
@@ -49,7 +49,7 @@ fn route_use_fn(model: Model, abs_moniker: AbsoluteMoniker, use_: UseDecl) -> Ro
             let abs_moniker = abs_moniker.clone();
             let use_ = use_.clone();
             fasync::spawn(async move {
-                let res = route_use_capability(
+                let res = routing::route_use_capability(
                     &model,
                     flags,
                     mode,
@@ -74,7 +74,7 @@ fn route_expose_fn(model: Model, abs_moniker: AbsoluteMoniker, expose: ExposeDec
             let abs_moniker = abs_moniker.clone();
             let expose = expose.clone();
             fasync::spawn(async move {
-                let res = route_expose_capability(
+                let res = routing::route_expose_capability(
                     &model,
                     flags,
                     mode,

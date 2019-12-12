@@ -302,7 +302,7 @@ mod tests {
     use {
         super::WorkSchedulerDelegate,
         crate::{
-            model::AbsoluteMoniker,
+            model::moniker::AbsoluteMoniker,
             work_scheduler::{
                 dispatcher::{self as dspr, Dispatcher},
                 work_item::WorkItem,

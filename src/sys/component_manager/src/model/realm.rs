@@ -3,7 +3,18 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::*,
+    crate::model::{
+        actions::{Action, ActionSet, Notification},
+        error::ModelError,
+        exposed_dir::ExposedDir,
+        hooks::{Event, EventPayload, Hooks},
+        model::Model,
+        moniker::{AbsoluteMoniker, ChildMoniker, InstanceId, PartialMoniker},
+        namespace::IncomingNamespace,
+        resolver::{Resolver, ResolverRegistry},
+        routing,
+        runner::{NullRunner, RemoteRunner, Runner},
+    },
     cm_rust::{
         self, CapabilityPath, ChildDecl, ComponentDecl, ExposeDecl, ExposeTarget, UseDecl,
         UseStorageDecl,
@@ -13,7 +24,7 @@ use {
     fidl_fuchsia_io::{self as fio, DirectoryProxy, MODE_TYPE_DIRECTORY},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_vfs_pseudo_fs_mt::{
-        execution_scope::ExecutionScope, path::Path, directory::entry::DirectoryEntry
+        directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path,
     },
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::{
@@ -378,7 +389,8 @@ impl Realm {
         };
         for use_ in decl.uses.iter() {
             if let UseDecl::Storage(use_storage) = use_ {
-                route_and_delete_storage(&model, &use_storage, realm.abs_moniker.clone()).await?;
+                routing::route_and_delete_storage(&model, &use_storage, realm.abs_moniker.clone())
+                    .await?;
                 break;
             }
         }
@@ -489,14 +501,13 @@ impl Realm {
         // directories using OPEN_FLAG_POSIX which automatically opens the new connection using
         // the same directory rights as the parent directory connection.
         let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_POSIX;
-        exposed_dir
-            .root_dir.clone()
-            .open(
-                ExecutionScope::from_executor(Box::new(fasync::EHandle::local())),
-                flags,
-                fio::MODE_TYPE_DIRECTORY,
-                Path::empty(),
-                server_end);
+        exposed_dir.root_dir.clone().open(
+            ExecutionScope::from_executor(Box::new(fasync::EHandle::local())),
+            flags,
+            fio::MODE_TYPE_DIRECTORY,
+            Path::empty(),
+            server_end,
+        );
         Ok(())
     }
 }

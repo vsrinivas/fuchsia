@@ -86,7 +86,7 @@ impl RunnerError {
 /// Such environments, even though they don't execute any code, can still be
 /// used by other components to bind to, which in turn may trigger further
 /// bindings to its children.
-pub struct NullRunner {}
+pub(super) struct NullRunner {}
 
 impl Runner for NullRunner {
     fn start(

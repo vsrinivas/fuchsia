@@ -52,7 +52,14 @@
 //!   complete.
 
 use {
-    crate::model::*,
+    crate::model::{
+        error::ModelError,
+        hooks::{Event, EventPayload},
+        model::Model,
+        moniker::ChildMoniker,
+        realm::Realm,
+        shutdown,
+    },
     fuchsia_async as fasync,
     futures::future::{join_all, poll_fn, BoxFuture},
     futures::lock::Mutex,
@@ -96,21 +103,16 @@ impl ActionStatus {
 /// `register()` and `finish()` return a boolean that indicates whether the set of actions changed
 /// as a result of the call. If so, the caller should invoke `Action::handle()` to
 /// ensure the change in actions is acted upon.
-pub struct ActionSet {
+pub(super) struct ActionSet {
     rep: HashMap<Action, Arc<ActionStatus>>,
 }
 
 /// Type of notification returned by `ActionSet::register()`.
-pub type Notification = BoxFuture<'static, Result<(), ModelError>>;
+pub(super) type Notification = BoxFuture<'static, Result<(), ModelError>>;
 
 impl ActionSet {
     pub fn new() -> Self {
         ActionSet { rep: HashMap::new() }
-    }
-
-    /// Returns true if `action` is registered.
-    pub fn has(&self, action: &Action) -> bool {
-        self.rep.contains_key(action)
     }
 
     /// Registers an action in the set, returning a notification that completes when the action
@@ -245,7 +247,12 @@ fn ok_or_first_error(results: Vec<Result<(), ModelError>>) -> Result<(), ModelEr
 pub mod tests {
     use super::*;
     use {
-        crate::model::testing::{test_helpers::*, test_hook::*},
+        crate::model::{
+            binding::Binder,
+            hooks::{EventType, Hook, HooksRegistration},
+            moniker::{AbsoluteMoniker, PartialMoniker},
+            testing::{test_helpers::*, test_hook::*},
+        },
         cm_rust::{
             CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, ExposeDecl,
             ExposeServiceProtocolDecl, ExposeSource, ExposeTarget, OfferDecl,

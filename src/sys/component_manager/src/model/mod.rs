@@ -2,31 +2,31 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub mod actions;
-mod addable_directory;
-mod binding;
-mod capability;
-pub mod dir_tree;
+pub mod binding;
 pub mod error;
-mod exposed_dir;
 pub mod hooks;
 pub mod hub;
-mod model;
+pub mod model;
 pub mod moniker;
-mod namespace;
-mod realm;
-mod resolver;
-mod routing;
-pub mod routing_facade;
-mod runner;
-pub mod shutdown;
-mod storage;
+pub mod realm;
+// TODO: This would be #[cfg(test)], but it cannot be because some external crates depend on
+// fuctionality in this module. Factor out the externally-depended code into its own module.
 pub mod testing;
+
+pub(crate) mod actions;
+pub(crate) mod breakpoints;
+pub(crate) mod resolver;
+pub(crate) mod routing;
+pub(crate) mod runner;
+pub(crate) mod shutdown;
+
+mod addable_directory;
+mod breakpoints_capability;
+mod capability;
+mod dir_tree;
+mod exposed_dir;
+mod namespace;
+mod routing_facade;
+mod storage;
 #[cfg(test)]
 mod tests;
-
-pub use self::{
-    actions::*, binding::*, capability::*, dir_tree::*, error::*, exposed_dir::*, hooks::*, hub::*,
-    model::*, moniker::*, namespace::*, realm::*, resolver::*, routing::*, routing_facade::*,
-    runner::*, storage::*,
-};

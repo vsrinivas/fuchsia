@@ -6,8 +6,11 @@ use {
     component_manager_lib::{
         builtin_environment::BuiltinEnvironment,
         model::{
-            self, AbsoluteMoniker, Binder, ComponentManagerConfig, EventType, Hook,
-            HooksRegistration, Model,
+            binding::Binder,
+            hooks::{EventType, Hook, HooksRegistration},
+            model::ComponentManagerConfig,
+            model::Model,
+            moniker::AbsoluteMoniker,
         },
         startup,
     },
@@ -59,7 +62,7 @@ impl TestRunner {
     }
 
     async fn bind(&self) -> Result<(), Error> {
-        let res = self.model.bind(&model::AbsoluteMoniker::root()).await;
+        let res = self.model.bind(&AbsoluteMoniker::root()).await;
         assert!(res.is_ok());
         Ok(())
     }

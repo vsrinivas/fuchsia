@@ -4,7 +4,13 @@
 
 use {
     crate::constants::PKG_PATH,
-    crate::model::*,
+    crate::model::{
+        error::ModelError,
+        hooks::{Event, EventPayload},
+        model::Model,
+        moniker::AbsoluteMoniker,
+        routing,
+    },
     cm_rust::{self, ComponentDecl, UseDecl, UseStorageDecl},
     directory_broker,
     fidl::endpoints::{create_endpoints, ClientEnd, ServerEnd},
@@ -12,18 +18,11 @@ use {
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_async::EHandle,
     fuchsia_vfs_pseudo_fs_mt::{
-        directory::immutable::simple as pfs,
-        directory::entry::DirectoryEntry,
-        directory::entry_container::DirectlyMutable,
-        execution_scope::ExecutionScope,
-        path::Path,
+        directory::entry::DirectoryEntry, directory::entry_container::DirectlyMutable,
+        directory::immutable::simple as pfs, execution_scope::ExecutionScope, path::Path,
     },
     fuchsia_zircon as zx,
-    futures::future::{
-        Abortable,
-        AbortHandle,
-        BoxFuture,
-    },
+    futures::future::{AbortHandle, Abortable, BoxFuture},
     log::*,
     std::{collections::HashMap, sync::Arc},
 };
@@ -209,7 +208,7 @@ impl IncomingNamespace {
             // directories using OPEN_FLAG_POSIX which automatically opens the new connection using
             // the same directory rights as the parent directory connection.
             let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_POSIX;
-            let res = route_use_capability(
+            let res = routing::route_use_capability(
                 &model,
                 flags,
                 fio::MODE_TYPE_DIRECTORY,
@@ -269,7 +268,7 @@ impl IncomingNamespace {
                 let model = model.clone();
                 let abs_moniker = abs_moniker.clone();
                 fasync::spawn(async move {
-                    let res = route_use_capability(
+                    let res = routing::route_use_capability(
                         &model,
                         flags,
                         mode,
@@ -299,10 +298,9 @@ impl IncomingNamespace {
             },
         );
 
-        let service_dir = svc_dirs
-            .entry(use_.target_path.dirname.clone())
-            .or_insert(pfs::simple());
-        service_dir.clone()
+        let service_dir = svc_dirs.entry(use_.target_path.dirname.clone()).or_insert(pfs::simple());
+        service_dir
+            .clone()
             .add_entry(
                 &use_.target_path.basename,
                 directory_broker::DirectoryBroker::new(route_open_fn),

@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::{capability::*, model::*},
+    crate::{
+        capability::{ComponentManagerCapability, ComponentManagerCapabilityProvider},
+        model::{error::ModelError, realm::Realm, routing_facade::RoutingFacade},
+    },
     cm_rust::{ComponentDecl, UseDecl},
     fuchsia_trace as trace,
     futures::{future::BoxFuture, lock::Mutex},
@@ -237,7 +240,7 @@ impl HooksInner {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, std::sync::Arc};
+    use {super::*, crate::model::resolver::ResolverRegistry, std::sync::Arc};
 
     #[derive(Clone)]
     struct EventLog {

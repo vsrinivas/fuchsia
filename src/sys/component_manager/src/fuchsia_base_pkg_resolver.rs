@@ -4,7 +4,10 @@
 
 use {
     crate::model::{
-        find_exposed_root_directory_capability, Binder, Model, Resolver, ResolverError, ResolverFut,
+        binding::Binder,
+        model::Model,
+        resolver::{Resolver, ResolverError, ResolverFut},
+        routing,
     },
     cm_fidl_translator,
     failure::format_err,
@@ -47,15 +50,17 @@ impl FuchsiaPkgResolver {
             let model_guard = self.model.lock().await;
             let model = model_guard.as_ref().expect("model reference missing");
             let model = model.upgrade().ok_or(ResolverError::model_not_available())?;
-            let (capability_path, realm) =
-                find_exposed_root_directory_capability(&model, "/pkgfs".try_into().unwrap())
-                    .await
-                    .map_err(|e| {
-                        ResolverError::component_not_available(
-                            component_package_url.to_string(),
-                            format_err!("failed to route pkgfs handle: {}", e),
-                        )
-                    })?;
+            let (capability_path, realm) = routing::find_exposed_root_directory_capability(
+                &model,
+                "/pkgfs".try_into().unwrap(),
+            )
+            .await
+            .map_err(|e| {
+                ResolverError::component_not_available(
+                    component_package_url.to_string(),
+                    format_err!("failed to route pkgfs handle: {}", e),
+                )
+            })?;
             let (pkgfs_client, pkgfs_server) = create_proxy::<DirectoryMarker>().map_err(|e| {
                 ResolverError::component_not_available(component_package_url.to_string(), e)
             })?;
@@ -155,9 +160,7 @@ mod tests {
         fidl_fuchsia_io::NodeMarker,
         fuchsia_async as fasync,
         fuchsia_vfs_pseudo_fs_mt::{
-            directory::entry::DirectoryEntry,
-            execution_scope::ExecutionScope,
-            path,
+            directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path,
             pseudo_directory,
         },
         std::path::Path,

@@ -6,8 +6,16 @@ use {
     crate::{
         builtin_environment::BuiltinEnvironment,
         klog,
-        model::testing::{breakpoints::*, echo_service::*, mocks::*, test_helpers::*},
-        model::*,
+        model::{
+            binding::Binder,
+            breakpoints::*,
+            error::ModelError,
+            hooks::{EventType, HooksRegistration},
+            model::{ComponentManagerConfig, Model, ModelParams},
+            moniker::{AbsoluteMoniker, ChildMoniker, InstanceId, RelativeMoniker},
+            resolver::ResolverRegistry,
+            testing::{echo_service::*, mocks::*, test_helpers::*},
+        },
         startup,
     },
     cm_rust::*,
@@ -21,7 +29,6 @@ use {
     },
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_async::EHandle,
-    fuchsia_component::server::{ServiceFs, ServiceObj},
     fuchsia_vfs_pseudo_fs_mt::{
         self as fvfs, directory::entry::DirectoryEntry, directory::immutable::simple as pfs,
         execution_scope::ExecutionScope, file::pcb::asynchronous::read_only_const,
@@ -579,20 +586,6 @@ impl RoutingTest {
     pub fn resolved_url(component_name: &str) -> String {
         format!("test:///{}_resolved", component_name)
     }
-}
-
-pub fn default_builtin_service_fs() -> ServiceFs<ServiceObj<'static, ()>> {
-    let mut builtin_service_fs = ServiceFs::new();
-    builtin_service_fs.add_fidl_service_at("builtin.Echo", move |mut stream: EchoRequestStream| {
-        fasync::spawn(async move {
-            while let Some(EchoRequest::EchoString { value, responder }) =
-                stream.try_next().await.unwrap()
-            {
-                responder.send(value.as_ref().map(|s| &**s)).unwrap();
-            }
-        });
-    });
-    builtin_service_fs
 }
 
 /// Contains functions to use capabilities in routing tests.

@@ -6,8 +6,12 @@ use {
     crate::{
         framework::RealmCapabilityHost,
         model::{
-            testing::breakpoints::BreakpointSystem, Binder, ComponentManagerConfig, EventType, Hub,
-            Model, ModelError,
+            binding::Binder,
+            error::ModelError,
+            hooks::EventType,
+            hub::Hub,
+            model::{ComponentManagerConfig, Model},
+            breakpoints::BreakpointSystem,
         },
         process_launcher::ProcessLauncher,
         root_realm_stop_notifier::RootRealmStopNotifier,

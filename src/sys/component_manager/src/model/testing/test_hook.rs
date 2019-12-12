@@ -5,18 +5,21 @@
 use {
     crate::{
         capability::*,
-        model::*,
         model::addable_directory::AddableDirectoryWithResult,
+        model::{
+            error::ModelError,
+            hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
+            moniker::AbsoluteMoniker,
+            realm::Realm,
+        },
     },
     directory_broker,
     fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fuchsia_io::DirectoryMarker,
     fuchsia_async::EHandle,
     fuchsia_vfs_pseudo_fs_mt::{
-        directory::immutable::simple as pfs,
-        directory::entry::DirectoryEntry,
-        execution_scope::ExecutionScope,
-        path::Path,
+        directory::entry::DirectoryEntry, directory::immutable::simple as pfs,
+        execution_scope::ExecutionScope, path::Path,
     },
     fuchsia_zircon as zx,
     futures::{executor::block_on, future::BoxFuture, lock::Mutex, prelude::*},
@@ -383,7 +386,8 @@ impl HubInjectionCapabilityProvider {
         )?;
         let mut rel_path = self.relative_path.clone();
         rel_path.push(relative_path);
-        let path = Path::validate_and_split(rel_path.join("/")).expect("Failed to split and validate path");
+        let path = Path::validate_and_split(rel_path.join("/"))
+            .expect("Failed to split and validate path");
         dir.open(
             ExecutionScope::from_executor(Box::new(EHandle::local())),
             flags,

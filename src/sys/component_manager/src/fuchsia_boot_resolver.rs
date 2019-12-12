@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::{Resolver, ResolverError, ResolverFut},
+    crate::model::resolver::{Resolver, ResolverError, ResolverFut},
     cm_fidl_translator::translate,
     failure::Error,
     fidl::endpoints::ClientEnd,

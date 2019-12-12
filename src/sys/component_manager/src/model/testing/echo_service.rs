@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{capability::*, model::hooks::*, model::*},
+    crate::{capability::*, model::error::ModelError, model::hooks::*},
     cm_rust::*,
     fidl::endpoints::ServerEnd,
     fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream},

@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        model::{AbsoluteMoniker, Binder, ModelError, Realm},
+        model::{binding::Binder, error::ModelError, moniker::AbsoluteMoniker, realm::Realm},
         work_scheduler::{work_item::WorkItem, work_scheduler::WORKER_CAPABILITY_PATH},
     },
     failure::Fail,

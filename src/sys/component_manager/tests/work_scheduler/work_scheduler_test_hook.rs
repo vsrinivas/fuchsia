@@ -8,7 +8,12 @@
 use {
     component_manager_lib::{
         capability::{ComponentManagerCapability, ComponentManagerCapabilityProvider},
-        model::*,
+        model::{
+            error::ModelError,
+            hooks::{Event, EventPayload, Hook},
+            moniker::AbsoluteMoniker,
+            realm::Realm,
+        },
     },
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_test_workscheduler as fws,

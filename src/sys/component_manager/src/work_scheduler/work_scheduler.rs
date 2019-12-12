@@ -18,7 +18,7 @@
 
 use {
     crate::{
-        model::{Binder, Realm},
+        model::{binding::Binder, realm::Realm},
         work_scheduler::{delegate::WorkSchedulerDelegate, dispatcher::RealDispatcher},
     },
     cm_rust::CapabilityPath,
@@ -157,7 +157,7 @@ mod time_tests {
     use {
         super::WorkScheduler,
         crate::{
-            model::{testing::mocks::FakeBinder, AbsoluteMoniker, Binder},
+            model::{binding::Binder, testing::mocks::FakeBinder, moniker::AbsoluteMoniker},
             work_scheduler::{
                 dispatcher::{Dispatcher, Error},
                 work_item::WorkItem,
@@ -718,7 +718,9 @@ mod connect_tests {
         crate::{
             capability::ComponentManagerCapability,
             model::{
-                testing::mocks::FakeBinder, Event, EventPayload, Hooks, Realm, ResolverRegistry,
+                hooks::{Event, EventPayload, Hooks},
+                testing::mocks::FakeBinder,
+                realm::Realm, resolver::ResolverRegistry,
             },
         },
         failure::Error,

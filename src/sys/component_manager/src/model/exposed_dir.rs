@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::*,
+    crate::model::{
+        dir_tree::DirTree, error::ModelError, model::Model, moniker::AbsoluteMoniker,
+        routing_facade::RoutingFacade,
+    },
     cm_rust::ComponentDecl,
     fuchsia_vfs_pseudo_fs_mt::directory::immutable as pfs,
     std::sync::Arc,
@@ -26,6 +29,6 @@ impl ExposedDir {
         let route_fn = RoutingFacade::new(model.clone()).route_expose_fn_factory();
         let tree = DirTree::build_from_exposes(route_fn, abs_moniker, decl);
         tree.install(abs_moniker, &mut dir)?;
-        Ok(ExposedDir { root_dir: dir})
+        Ok(ExposedDir { root_dir: dir })
     }
 }

@@ -5,7 +5,10 @@
 use {
     crate::{
         capability::*,
-        model::{error::*, hooks::*},
+        model::{
+            error::ModelError,
+            hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
+        },
     },
     cm_rust::CapabilityPath,
     failure::Error,
@@ -137,7 +140,7 @@ impl ComponentManagerCapabilityProvider for VmexCapabilityProvider {
 mod tests {
     use {
         super::*,
-        crate::model::{Realm, ResolverRegistry},
+        crate::model::{hooks::Hooks, realm::Realm, resolver::ResolverRegistry},
         fidl::endpoints::ClientEnd,
         fuchsia_async as fasync,
         fuchsia_zircon::AsHandleRef,

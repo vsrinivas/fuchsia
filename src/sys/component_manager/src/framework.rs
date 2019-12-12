@@ -1,9 +1,19 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// found in the LICENSE file.cti
 
 use {
-    crate::{capability::*, model::*},
+    crate::{
+        capability::{ComponentManagerCapability, ComponentManagerCapabilityProvider},
+        model::{
+            binding::Binder,
+            error::ModelError,
+            hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
+            model::{ComponentManagerConfig, Model},
+            moniker::PartialMoniker,
+            realm::Realm,
+        },
+    },
     cm_fidl_validator,
     cm_rust::{CapabilityPath, FidlIntoNative},
     failure::Error,
@@ -348,7 +358,13 @@ mod tests {
     use {
         crate::{
             builtin_environment::BuiltinEnvironment,
-            model::testing::{mocks::*, routing_test_helpers::*, test_helpers::*, test_hook::*},
+            model::{
+                breakpoints,
+                model::ModelParams,
+                moniker::AbsoluteMoniker,
+                resolver::ResolverRegistry,
+                testing::{mocks::*, routing_test_helpers::*, test_helpers::*, test_hook::*},
+            },
             startup,
         },
         cm_rust::{
@@ -618,7 +634,7 @@ mod tests {
 
         let hook = Arc::new(TestHook::new());
 
-        let breakpoint_system = testing::breakpoints::BreakpointSystem::new();
+        let breakpoint_system = breakpoints::BreakpointSystem::new();
         let breakpoint_receiver = breakpoint_system
             .register(vec![EventType::PreDestroyInstance, EventType::PostDestroyInstance])
             .await;

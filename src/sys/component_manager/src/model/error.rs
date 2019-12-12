@@ -3,7 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::*,
+    crate::model::{
+        moniker::{AbsoluteMoniker, PartialMoniker},
+        resolver::ResolverError,
+        runner::RunnerError,
+        storage::StorageError,
+    },
     clonable_error::ClonableError,
     failure::{Error, Fail},
 };

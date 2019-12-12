@@ -9,17 +9,18 @@
 
 pub mod builtin_environment;
 pub mod capability;
-pub mod elf_runner;
-pub mod framework;
-pub mod fuchsia_base_pkg_resolver;
-pub mod fuchsia_boot_resolver;
-pub mod fuchsia_pkg_resolver;
 pub mod klog;
 pub mod model;
-pub mod root_realm_stop_notifier;
 pub mod startup;
-pub mod system_controller;
-pub mod work_scheduler;
+
+pub(crate) mod elf_runner;
+pub(crate) mod framework;
+pub(crate) mod fuchsia_base_pkg_resolver;
+pub(crate) mod fuchsia_boot_resolver;
+pub(crate) mod fuchsia_pkg_resolver;
+pub(crate) mod root_realm_stop_notifier;
+pub(crate) mod system_controller;
+pub(crate) mod work_scheduler;
 
 mod constants;
 mod process_launcher;

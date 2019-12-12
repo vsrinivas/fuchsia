@@ -8,7 +8,7 @@ use {
         fuchsia_base_pkg_resolver,
         fuchsia_boot_resolver::{self, FuchsiaBootResolver},
         fuchsia_pkg_resolver,
-        model::{Model, ModelParams, ResolverRegistry},
+        model::{model::{Model, ModelParams}, resolver::ResolverRegistry},
     },
     failure::{format_err, Error, ResultExt},
     fidl::endpoints::ServiceMarker,

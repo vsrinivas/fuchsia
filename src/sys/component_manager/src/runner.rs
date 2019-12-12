@@ -5,10 +5,9 @@ use {
     crate::{
         capability::{ComponentManagerCapability, ComponentManagerCapabilityProvider},
         model::{
-            self,
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
-            Runner,
+            runner::Runner,
         },
     },
     cm_rust::CapabilityName,
@@ -45,7 +44,7 @@ impl BuiltinRunner {
     }
 }
 
-impl model::Hook for BuiltinRunnerInner {
+impl Hook for BuiltinRunnerInner {
     fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
         Box::pin(async move {
             if let EventPayload::RouteBuiltinCapability { capability, capability_provider } =
@@ -125,9 +124,11 @@ mod tests {
     use super::*;
     use {
         crate::model::{
-            hooks::*,
+            hooks::Hooks,
+            resolver::ResolverRegistry,
+            runner::{RemoteRunner, RunnerError},
             testing::{routing_test_helpers::*, test_helpers::*},
-            Realm, RemoteRunner, ResolverRegistry,
+            realm::Realm,
         },
         cm_rust::{
             self, CapabilityName, ChildDecl, ComponentDecl, OfferDecl, OfferRunnerDecl,
@@ -197,8 +198,8 @@ mod tests {
             &self,
             _start_info: fsys::ComponentStartInfo,
             _server_end: ServerEnd<fsys::ComponentControllerMarker>,
-        ) -> BoxFuture<Result<(), model::RunnerError>> {
-            Box::pin(async { Err(model::RunnerError::invalid_args("xxx", format_err!("yyy"))) })
+        ) -> BoxFuture<Result<(), RunnerError>> {
+            Box::pin(async { Err(RunnerError::invalid_args("xxx", format_err!("yyy"))) })
         }
     }
 

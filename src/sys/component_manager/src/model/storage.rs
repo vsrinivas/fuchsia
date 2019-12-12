@@ -3,7 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::*,
+    crate::model::{
+        binding::Binder,
+        model::Model,
+        moniker::{AbsoluteMoniker, RelativeMoniker},
+        realm::Realm,
+    },
     clonable_error::ClonableError,
     cm_rust::CapabilityPath,
     failure::{Error, Fail},

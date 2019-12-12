@@ -2,31 +2,30 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::model::addable_directory::AddableDirectoryWithResult;
 use {
-    crate::model::addable_directory::AddableDirectory,
-    crate::model::routing_facade::RoutingFacade,
-    crate::model::*,
+    crate::model::{
+        addable_directory::{AddableDirectory, AddableDirectoryWithResult},
+        error::ModelError,
+        moniker::AbsoluteMoniker,
+        routing_facade::RoutingFacade,
+    },
     cm_rust::{CapabilityPath, ComponentDecl, ExposeDecl, UseDecl},
     directory_broker::{DirectoryBroker, RoutingFn},
     fuchsia_vfs_pseudo_fs_mt::directory::immutable::simple as pfs,
     std::collections::HashMap,
-    std::sync::Arc
+    std::sync::Arc,
 };
 
 type Directory = Arc<pfs::Simple>;
 
-pub struct CapabilityUsageTree {
+pub(super) struct CapabilityUsageTree {
     directory_nodes: HashMap<String, CapabilityUsageTree>,
     dir: Box<Directory>,
     routing_facade: RoutingFacade,
 }
 
 impl CapabilityUsageTree {
-    pub fn new(
-        dir: Directory,
-        routing_facade: RoutingFacade,
-    ) -> Self {
+    pub fn new(dir: Directory, routing_facade: RoutingFacade) -> Self {
         Self { directory_nodes: HashMap::new(), dir: Box::new(dir), routing_facade }
     }
 
@@ -84,7 +83,7 @@ impl CapabilityUsageTree {
 
 /// Represents the directory hierarchy of the exposed directory, not including the nodes for the
 /// capabilities themselves.
-pub struct DirTree {
+pub(super) struct DirTree {
     directory_nodes: HashMap<String, Box<DirTree>>,
     broker_nodes: HashMap<String, RoutingFn>,
 }
@@ -203,9 +202,7 @@ mod tests {
         fidl_fuchsia_io2 as fio2,
         fuchsia_async::EHandle,
         fuchsia_vfs_pseudo_fs_mt::{
-            directory::entry::DirectoryEntry,
-            execution_scope::ExecutionScope,
-            path,
+            directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path,
         },
         fuchsia_zircon as zx,
         std::convert::TryFrom,

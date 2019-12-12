@@ -3,7 +3,19 @@
 // found in the LICENSE file.
 
 use {
-    crate::{capability::*, model::*},
+    crate::{
+        capability::ComponentManagerCapability,
+        model::{
+            binding::Binder,
+            capability::RoutedCapability,
+            error::ModelError,
+            hooks::{Event, EventPayload},
+            model::Model,
+            moniker::{AbsoluteMoniker, ChildMoniker, PartialMoniker, RelativeMoniker},
+            realm::Realm,
+            storage,
+        },
+    },
     cm_rust::{
         self, CapabilityPath, ExposeDecl, ExposeDirectoryDecl, ExposeTarget, OfferDecl,
         OfferDirectorySource, OfferRunnerSource, OfferServiceSource, OfferStorageSource,
@@ -58,7 +70,7 @@ enum CapabilitySource {
 /// Finds the source of the `capability` used by `absolute_moniker`, and pass along the
 /// `server_chan` to the hosting component's out directory (or componentmgr's namespace, if
 /// applicable) using an open request with `open_mode`.
-pub async fn route_use_capability<'a>(
+pub(super) async fn route_use_capability<'a>(
     model: &'a Model,
     flags: u32,
     open_mode: u32,
@@ -92,7 +104,7 @@ pub async fn route_use_capability<'a>(
 /// Finds the source of the expose capability used at `source_path` by
 /// `absolute_moniker`, and pass along the `server_chan` to the hosting component's out
 /// directory (or componentmgr's namespace, if applicable)
-pub async fn route_expose_capability<'a>(
+pub(super) async fn route_expose_capability<'a>(
     model: &'a Model,
     flags: u32,
     open_mode: u32,
@@ -238,7 +250,7 @@ pub async fn route_and_open_storage_capability<'a>(
 ) -> Result<(), ModelError> {
     let (dir_source_realm, dir_source_path, relative_moniker) =
         route_storage_capability(model, use_decl, use_abs_moniker).await?;
-    let storage_dir_proxy = open_isolated_storage(
+    let storage_dir_proxy = storage::open_isolated_storage(
         &model,
         dir_source_realm,
         &dir_source_path,
@@ -258,14 +270,14 @@ pub async fn route_and_open_storage_capability<'a>(
 
 /// Routes a `UseDecl::Storage` to the component instance providing the backing directory and
 /// deletes its isolated storage.
-pub async fn route_and_delete_storage<'a>(
+pub(super) async fn route_and_delete_storage<'a>(
     model: &'a Model,
     use_decl: &'a UseStorageDecl,
     use_abs_moniker: AbsoluteMoniker,
 ) -> Result<(), ModelError> {
     let (dir_source_realm, dir_source_path, relative_moniker) =
         route_storage_capability(model, use_decl, use_abs_moniker).await?;
-    delete_isolated_storage(&model, dir_source_realm, &dir_source_path, &relative_moniker)
+    storage::delete_isolated_storage(&model, dir_source_realm, &dir_source_path, &relative_moniker)
         .await
         .map_err(|e| ModelError::from(e))?;
     Ok(())

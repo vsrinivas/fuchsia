@@ -3,7 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    crate::{capability::*, model::testing::breakpoints::*, model::*},
+    crate::{
+        capability::{ComponentManagerCapability, ComponentManagerCapabilityProvider},
+        model::{
+            breakpoints::{BreakpointRegistry, Invocation, InvocationReceiver},
+            error::ModelError,
+            hooks::{Event, EventPayload, EventType, Hook},
+        },
+    },
     fidl::endpoints::{create_request_stream, ClientEnd, ServerEnd},
     fidl_fuchsia_test_breakpoints as fbreak, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{future::BoxFuture, lock::Mutex, StreamExt},

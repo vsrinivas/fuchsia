@@ -3,7 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::{AbsoluteMoniker, Event, EventType, Hook, HooksRegistration, ModelError},
+    crate::model::{
+        error::ModelError,
+        hooks::{Event, EventType, Hook, HooksRegistration},
+        moniker::AbsoluteMoniker,
+    },
     futures::channel::*,
     futures::future::BoxFuture,
     futures::lock::Mutex,

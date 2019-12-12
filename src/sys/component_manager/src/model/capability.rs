@@ -1,5 +1,5 @@
 use {
-    crate::model::*,
+    crate::model::moniker::ChildMoniker,
     cm_rust::{
         self, CapabilityName, CapabilityPath, ComponentDecl, ExposeDecl, ExposeDirectoryDecl,
         ExposeRunnerDecl, ExposeServiceDecl, ExposeServiceProtocolDecl, OfferDecl,
@@ -12,7 +12,7 @@ use {
 
 /// A capability being routed.
 #[derive(Debug)]
-pub enum RoutedCapability {
+pub(super) enum RoutedCapability {
     Use(UseDecl),
     Expose(ExposeDecl),
     Offer(OfferDecl),
@@ -102,6 +102,7 @@ impl RoutedCapability {
     }
 
     /// Returns the set of `ExposeServiceDecl`s that expose the service capability, if they exist.
+    #[allow(unused)]
     pub fn find_expose_service_sources<'a>(
         &self,
         decl: &'a ComponentDecl,
@@ -219,6 +220,7 @@ impl RoutedCapability {
     }
 
     /// Returns the set of `OfferServiceDecl`s that offer the service capability, if they exist.
+    #[allow(unused)]
     pub fn find_offer_service_sources<'a>(
         &self,
         decl: &'a ComponentDecl,

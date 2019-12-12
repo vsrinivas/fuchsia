@@ -4,8 +4,14 @@
 
 use {
     crate::{
-        capability::*,
-        model::{self, error::ModelError, hooks::*, Model, Realm},
+        capability::{ComponentManagerCapability, ComponentManagerCapabilityProvider},
+        model::{
+            actions::Action,
+            error::ModelError,
+            hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
+            model::Model,
+            realm::Realm,
+        },
     },
     cm_rust::CapabilityPath,
     failure::{Error, ResultExt},
@@ -119,7 +125,7 @@ impl SystemControllerCapabilityProvider {
                     Realm::register_action(
                         model.root_realm.clone(),
                         model.clone(),
-                        model::Action::Shutdown,
+                        Action::Shutdown,
                     )
                     .await
                     .await
@@ -169,8 +175,8 @@ mod tests {
     use {
         crate::capability::ComponentManagerCapabilityProvider,
         crate::model::{
+            binding::Binder,
             testing::test_helpers::{default_component_decl, ActionsTest, ComponentInfo},
-            Binder,
         },
         crate::system_controller::SystemControllerCapabilityProvider,
         cm_rust::{ChildDecl, ComponentDecl},

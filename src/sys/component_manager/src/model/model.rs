@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::{AbsoluteMoniker, ModelError, Realm, ResolverRegistry, Runner},
+    crate::model::{
+        error::ModelError, moniker::AbsoluteMoniker, realm::Realm, resolver::ResolverRegistry,
+        runner::Runner,
+    },
     std::sync::Arc,
 };
 
