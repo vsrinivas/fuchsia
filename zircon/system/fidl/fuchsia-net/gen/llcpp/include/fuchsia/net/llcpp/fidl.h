@@ -35,7 +35,9 @@ public:
   const static LookupIpOptions mask;
 
   explicit constexpr inline operator uint8_t() const { return value_; }
-  constexpr inline operator bool() const { return value_; }
+  explicit constexpr inline operator bool() const { return static_cast<bool>(value_); }
+  constexpr inline bool operator==(const LookupIpOptions& other) const { return value_ == other.value_; }
+  constexpr inline bool operator!=(const LookupIpOptions& other) const { return value_ != other.value_; }
   constexpr inline LookupIpOptions operator~() const;
   constexpr inline LookupIpOptions operator|(const LookupIpOptions& other) const;
   constexpr inline LookupIpOptions operator&(const LookupIpOptions& other) const;

@@ -94,7 +94,9 @@ public:
   const static AddDeviceConfig mask;
 
   explicit constexpr inline operator uint32_t() const { return value_; }
-  constexpr inline operator bool() const { return value_; }
+  explicit constexpr inline operator bool() const { return static_cast<bool>(value_); }
+  constexpr inline bool operator==(const AddDeviceConfig& other) const { return value_ == other.value_; }
+  constexpr inline bool operator!=(const AddDeviceConfig& other) const { return value_ != other.value_; }
   constexpr inline AddDeviceConfig operator~() const;
   constexpr inline AddDeviceConfig operator|(const AddDeviceConfig& other) const;
   constexpr inline AddDeviceConfig operator&(const AddDeviceConfig& other) const;

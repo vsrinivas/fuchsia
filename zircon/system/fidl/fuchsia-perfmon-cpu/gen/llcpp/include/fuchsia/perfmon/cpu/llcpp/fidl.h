@@ -32,7 +32,9 @@ public:
   const static PropertyFlags mask;
 
   explicit constexpr inline operator uint64_t() const { return value_; }
-  constexpr inline operator bool() const { return value_; }
+  explicit constexpr inline operator bool() const { return static_cast<bool>(value_); }
+  constexpr inline bool operator==(const PropertyFlags& other) const { return value_ == other.value_; }
+  constexpr inline bool operator!=(const PropertyFlags& other) const { return value_ != other.value_; }
   constexpr inline PropertyFlags operator~() const;
   constexpr inline PropertyFlags operator|(const PropertyFlags& other) const;
   constexpr inline PropertyFlags operator&(const PropertyFlags& other) const;
@@ -94,7 +96,9 @@ public:
   const static EventConfigFlags mask;
 
   explicit constexpr inline operator uint32_t() const { return value_; }
-  constexpr inline operator bool() const { return value_; }
+  explicit constexpr inline operator bool() const { return static_cast<bool>(value_); }
+  constexpr inline bool operator==(const EventConfigFlags& other) const { return value_ == other.value_; }
+  constexpr inline bool operator!=(const EventConfigFlags& other) const { return value_ != other.value_; }
   constexpr inline EventConfigFlags operator~() const;
   constexpr inline EventConfigFlags operator|(const EventConfigFlags& other) const;
   constexpr inline EventConfigFlags operator&(const EventConfigFlags& other) const;

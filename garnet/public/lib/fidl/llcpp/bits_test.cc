@@ -75,6 +75,6 @@ TEST(Bits, CanConvertToNumberButMustBeExplicit) {
 TEST(Bits, CanConvertToBool) {
   using namespace llcpp::fidl::llcpp::types::test;
 
-  bool result = SampleBits::B;
+  bool result = static_cast<bool>(SampleBits::B);
   EXPECT_TRUE(result);
 }

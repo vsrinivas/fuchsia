@@ -315,7 +315,7 @@ static zx_status_t VerifyAndCheckTimebase(const FidlPerfmonConfig* icfg, PmuConf
       zxlogf(ERROR, "%s: Hole at rate [%u]\n", __func__, ii);
       return ZX_ERR_INVALID_ARGS;
     }
-    if (icfg->events[ii].flags != 0) {
+    if (icfg->events[ii].flags != fidl_perfmon::EventConfigFlags()) {
       zxlogf(ERROR, "%s: Hole at flags [%u]\n", __func__, ii);
       return ZX_ERR_INVALID_ARGS;
     }

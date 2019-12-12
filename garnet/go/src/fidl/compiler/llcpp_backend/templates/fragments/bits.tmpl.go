@@ -17,7 +17,9 @@ public:
   const static {{ .Name }} mask;
 
   explicit constexpr inline operator {{ .Type }}() const { return value_; }
-  constexpr inline operator bool() const { return value_; }
+  explicit constexpr inline operator bool() const { return static_cast<bool>(value_); }
+  constexpr inline bool operator==(const {{ .Name }}& other) const { return value_ == other.value_; }
+  constexpr inline bool operator!=(const {{ .Name }}& other) const { return value_ != other.value_; }
   constexpr inline {{ .Name }} operator~() const;
   constexpr inline {{ .Name }} operator|(const {{ .Name }}& other) const;
   constexpr inline {{ .Name }} operator&(const {{ .Name }}& other) const;
