@@ -103,5 +103,42 @@ function test::fx_set_with_packages {
   return 0
 }
 
+function test::ok_exit_status {
+  _config_file="$(mktemp)"
+  _debug_file="$(mktemp)"
+  _enable_testing "${_debug_file}" 0 "${_config_file}"
+  local enable=1
+  local test_uuid="__TEST__"
+  metrics-write-config $enable "$test_uuid"
+  metrics-read-config
+
+  # exercise track-command-finished
+  track-command-finished "1234" "0" "set"
+  track-command-finished "1234" "128" "build"
+
+  # debug file should not be empty
+  if [[ ! -s "$_debug_file" ]]; then
+    return 1
+  fi
+
+  debug_result="202"
+  expected=(
+    # first command (set) ended succesfully, so it generated a timing event
+    "t=timing utc=fx utv=set utt=1234 utl= RESULT=${debug_result}" \
+    # the second command (build) failed with exit code 128
+    "t=event ec=fx_exception ea=build el= cd1=128 RESULT=${debug_result}" \
+    )
+  local c=0
+  for expected_line in "${expected[@]}"; do
+    c=$(( c+1 ))
+    local actual="$(sed "${c}q;d" "${_debug_file}")"
+    if [[ ! ${actual} = *${expected_line} ]]; then
+      echo "TEST FAILURE: '${actual}' does not end with '${expected_line}'"
+      return 1
+    fi
+  done
+  return 0
+}
+
 test_main "$@"
 

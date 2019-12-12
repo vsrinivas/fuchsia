@@ -253,13 +253,14 @@ function track-command-finished {
       )
   else
     # Failures are logged as event hits with a separate category
+    # exit status is stored as Custom Dimension 1
     hit_type="event"
     analytics_args=(
       "t=event" \
       "ec=fx_exception" \
       "ea=${subcommand}" \
       "el=${args}" \
-      "ev=${exit_status}" \
+      "cd1=${exit_status}" \
       )
   fi
 
