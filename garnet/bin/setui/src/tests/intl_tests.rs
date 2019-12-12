@@ -102,6 +102,67 @@ async fn test_intl_e2e() {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
+async fn test_intl_e2e_set_twice() {
+    // Create and fetch a store from device storage so we can read stored value for testing.
+    let factory = Box::new(InMemoryStorageFactory::create());
+    let store = factory.get_store::<IntlInfo>();
+    let intl_service = create_test_intl_env(factory).await;
+
+    // Initial value is None.
+    let settings = intl_service.watch().await.expect("watch completed").expect("watch successful");
+    assert_eq!(settings.time_zone_id, None);
+
+    // Set new values.
+    let mut intl_settings = fidl_fuchsia_settings::IntlSettings::empty();
+    let updated_timezone = "GMT";
+    intl_settings.time_zone_id =
+        Some(fidl_fuchsia_intl::TimeZoneId { id: updated_timezone.to_string() });
+    intl_service.set(intl_settings).await.expect("set completed").expect("set successful");
+
+    // Try to set to a new value: this second set should succeed too.
+    let mut intl_settings = fidl_fuchsia_settings::IntlSettings::empty();
+    let updated_timezone = "PST";
+    intl_settings.time_zone_id =
+        Some(fidl_fuchsia_intl::TimeZoneId { id: updated_timezone.to_string() });
+    intl_service.set(intl_settings).await.expect("set completed").expect("repeated set successful");
+
+    // Verify the value we set is persisted in DeviceStorage.
+    let mut store_lock = store.lock().await;
+    let retrieved_struct = store_lock.get().await;
+    assert_eq!(retrieved_struct.time_zone_id.unwrap(), updated_timezone);
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_intl_e2e_idempotent_set() {
+    // Create and fetch a store from device storage so we can read stored value for testing.
+    let factory = Box::new(InMemoryStorageFactory::create());
+    let store = factory.get_store::<IntlInfo>();
+    let intl_service = create_test_intl_env(factory).await;
+
+    // Initial value is None.
+    let settings = intl_service.watch().await.expect("watch completed").expect("watch successful");
+    assert_eq!(settings.time_zone_id, None);
+
+    // Set new values.
+    let mut intl_settings = fidl_fuchsia_settings::IntlSettings::empty();
+    let updated_timezone = "GMT";
+    intl_settings.time_zone_id =
+        Some(fidl_fuchsia_intl::TimeZoneId { id: updated_timezone.to_string() });
+    intl_service.set(intl_settings).await.expect("set completed").expect("set successful");
+
+    // Try to set again to the same value: this second set should succeed.
+    let mut intl_settings = fidl_fuchsia_settings::IntlSettings::empty();
+    intl_settings.time_zone_id =
+        Some(fidl_fuchsia_intl::TimeZoneId { id: updated_timezone.to_string() });
+    intl_service.set(intl_settings).await.expect("set completed").expect("repeated set successful");
+
+    // Verify the value we set is persisted in DeviceStorage.
+    let mut store_lock = store.lock().await;
+    let retrieved_struct = store_lock.get().await;
+    assert_eq!(retrieved_struct.time_zone_id.unwrap(), updated_timezone);
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
 async fn test_intl_invalid_timezone() {
     const INITIAL_TIME_ZONE: &'static str = "GMT";
 
