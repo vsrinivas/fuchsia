@@ -152,6 +152,8 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
             TokenManagerRequest::ListProfileIds { app_config, responder } => {
                 responder.send_result(self.list_profile_ids(app_config))
             }
+            // TODO(fxb/42916): Remove wildcard match after firebase soft transition completes.
+            _ => Ok(()),
         }
     }
 

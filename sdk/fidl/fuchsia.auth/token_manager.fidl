@@ -183,6 +183,23 @@ protocol TokenManager {
     GetIdToken(AppConfig app_config, string user_profile_id, string? audience)
         -> (Status status, string? id_token);
 
+    /// Returns a Firebase token from an auth provider for the given account and
+    /// Fuchsia component, and Firebase client. The component's OAuth configuration
+    /// is supplied in `app_config`, the Firebase client is supplied in
+    /// `firebase_api_key`, and `user_profile_id` is a unique account identifier
+    /// returned by the Authorize() or ListProfileIds() calls.
+    ///
+    /// This api invokes firebase auth's VerifyAssertion endpoint that takes an
+    /// OAuth IdToken as the fuchsia.ui.input. Audience is the intended recipient
+    /// of the firebase id token.
+    ///
+    /// The Firebase auth token is returned from cache if possible, otherwise it is
+    /// refreshed from the auth provider.
+    [Transitional]
+    GetFirebaseToken(AppConfig app_config, string user_profile_id,
+                     string audience, string firebase_api_key)
+        -> (Status status, FirebaseToken? firebase_token);
+
     /// Deletes and revokes all long lived and short lived tokens generated for
     /// an account and on behalf of a Fuchsia component. The component's OAuth
     /// configuration is provided in `app_config` and `user_profile_id`
