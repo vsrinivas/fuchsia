@@ -213,12 +213,18 @@ pub struct RepositoryConfig {
     repo_url: RepoUrl,
     #[serde(default = "default_root_version")]
     root_version: u32,
+    #[serde(default = "default_root_threshold")]
+    root_threshold: u32,
     root_keys: Vec<RepositoryKey>,
     mirrors: Vec<MirrorConfig>,
     update_package_url: Option<PkgUrl>,
 }
 
 fn default_root_version() -> u32 {
+    1
+}
+
+fn default_root_threshold() -> u32 {
     1
 }
 
@@ -255,6 +261,12 @@ impl RepositoryConfig {
     /// Returns the initial trusted root version.
     pub fn root_version(&self) -> u32 {
         self.root_version
+    }
+
+    /// Returns the threshold of root keys needed to sign the initial root metadata before it is
+    /// considered trusted.
+    pub fn root_threshold(&self) -> u32 {
+        self.root_threshold
     }
 
     /// Returns a slice of all root keys.
@@ -294,9 +306,19 @@ impl TryFrom<fidl::RepositoryConfig> for RepositoryConfig {
             1
         };
 
+        let root_threshold = if let Some(root_threshold) = other.root_threshold {
+            if root_threshold < 1 {
+                return Err(RepositoryParseError::InvalidRootThreshold(root_threshold));
+            }
+            root_threshold
+        } else {
+            1
+        };
+
         Ok(Self {
             repo_url: repo_url,
             root_version: root_version,
+            root_threshold: root_threshold,
             root_keys: other
                 .root_keys
                 .unwrap_or(vec![])
@@ -319,6 +341,7 @@ impl From<RepositoryConfig> for fidl::RepositoryConfig {
         Self {
             repo_url: Some(config.repo_url.to_string()),
             root_version: Some(config.root_version),
+            root_threshold: Some(config.root_threshold),
             root_keys: Some(config.root_keys.into_iter().map(RepositoryKey::into).collect()),
             mirrors: Some(config.mirrors.into_iter().map(MirrorConfig::into).collect()),
             update_package_url: config.update_package_url.map(|url| url.to_string()),
@@ -338,6 +361,7 @@ impl RepositoryConfigBuilder {
             config: RepositoryConfig {
                 repo_url,
                 root_version: 1,
+                root_threshold: 1,
                 root_keys: vec![],
                 mirrors: vec![],
                 update_package_url: None,
@@ -352,6 +376,11 @@ impl RepositoryConfigBuilder {
 
     pub fn root_version(mut self, root_version: u32) -> Self {
         self.config.root_version = root_version;
+        self
+    }
+
+    pub fn root_threshold(mut self, root_threshold: u32) -> Self {
+        self.config.root_threshold = root_threshold;
         self
     }
 
@@ -759,6 +788,7 @@ mod tests {
         let config = RepositoryConfig {
             repo_url: "fuchsia-pkg://fuchsia.com".try_into().unwrap(),
             root_version: 2,
+            root_threshold: 2,
             root_keys: vec![RepositoryKey::Ed25519(vec![0xf1, 15, 16, 3])],
             mirrors: vec![MirrorConfig {
                 mirror_url: "http://example.com/tuf/repo".into(),
@@ -774,6 +804,7 @@ mod tests {
             fidl::RepositoryConfig {
                 repo_url: Some("fuchsia-pkg://fuchsia.com".try_into().unwrap()),
                 root_version: Some(2),
+                root_threshold: Some(2),
                 root_keys: Some(vec![fidl::RepositoryKeyConfig::Ed25519Key(vec![0xf1, 15, 16, 3])]),
                 mirrors: Some(vec![fidl::MirrorConfig {
                     mirror_url: Some("http://example.com/tuf/repo".into()),
@@ -793,6 +824,7 @@ mod tests {
         let as_fidl = fidl::RepositoryConfig {
             repo_url: Some("fuchsia-pkg://fuchsia.com".try_into().unwrap()),
             root_version: None,
+            root_threshold: None,
             root_keys: Some(vec![fidl::RepositoryKeyConfig::Ed25519Key(vec![0xf1, 15, 16, 3])]),
             mirrors: Some(vec![fidl::MirrorConfig {
                 mirror_url: Some("http://example.com/tuf/repo".into()),
@@ -807,6 +839,7 @@ mod tests {
             Ok(RepositoryConfig {
                 repo_url: "fuchsia-pkg://fuchsia.com".try_into().unwrap(),
                 root_version: 1,
+                root_threshold: 1,
                 root_keys: vec![RepositoryKey::Ed25519(vec![0xf1, 15, 16, 3]),],
                 mirrors: vec![MirrorConfig {
                     mirror_url: "http://example.com/tuf/repo".into(),
@@ -826,6 +859,7 @@ mod tests {
         let as_fidl = fidl::RepositoryConfig {
             repo_url: Some("fuchsia-pkg://fuchsia.com".try_into().unwrap()),
             root_version: Some(2),
+            root_threshold: Some(2),
             root_keys: Some(vec![fidl::RepositoryKeyConfig::Ed25519Key(vec![0xf1, 15, 16, 3])]),
             mirrors: Some(vec![fidl::MirrorConfig {
                 mirror_url: Some("http://example.com/tuf/repo".into()),
@@ -840,6 +874,7 @@ mod tests {
             Ok(RepositoryConfig {
                 repo_url: "fuchsia-pkg://fuchsia.com".try_into().unwrap(),
                 root_version: 2,
+                root_threshold: 2,
                 root_keys: vec![RepositoryKey::Ed25519(vec![0xf1, 15, 16, 3]),],
                 mirrors: vec![MirrorConfig {
                     mirror_url: "http://example.com/tuf/repo".into(),
@@ -859,6 +894,7 @@ mod tests {
         let as_fidl = fidl::RepositoryConfig {
             repo_url: None,
             root_version: None,
+            root_threshold: None,
             root_keys: Some(vec![]),
             mirrors: Some(vec![]),
             update_package_url: Some("fuchsia-pkg://fuchsia.com/systemupdate".try_into().unwrap()),
@@ -871,6 +907,7 @@ mod tests {
         let config = RepositoryConfig {
             repo_url: "fuchsia-pkg://fuchsia.com".try_into().unwrap(),
             root_version: 2,
+            root_threshold: 2,
             root_keys: vec![RepositoryKey::Ed25519(vec![0xf1, 15, 16, 3])],
             mirrors: vec![MirrorConfig {
                 mirror_url: "http://example.com/tuf/repo".into(),
@@ -885,7 +922,7 @@ mod tests {
     }
 
     #[test]
-    fn test_repository_config_deserialize_missing_root_version() {
+    fn test_repository_config_deserialize_missing_root_version_and_threshold() {
         let json_value = json!({
             "repo_url": "fuchsia-pkg://fuchsia.com",
             "root_keys": [],
@@ -899,6 +936,7 @@ mod tests {
             RepositoryConfig {
                 repo_url: "fuchsia-pkg://fuchsia.com".try_into().unwrap(),
                 root_version: 1,
+                root_threshold: 1,
                 root_keys: vec![],
                 mirrors: vec![],
                 update_package_url: None,
@@ -912,6 +950,7 @@ mod tests {
             RepositoryConfigs::Version1(vec![RepositoryConfig {
                 repo_url: "fuchsia-pkg://fuchsia.com".try_into().unwrap(),
                 root_version: 1,
+                root_threshold: 1,
                 root_keys: vec![],
                 mirrors: vec![],
                 update_package_url: None,
@@ -921,6 +960,7 @@ mod tests {
                 "content": [{
                     "repo_url": "fuchsia-pkg://fuchsia.com",
                     "root_version": 1,
+                    "root_threshold": 1,
                     "root_keys": [],
                     "mirrors": [],
                     "update_package_url": null,

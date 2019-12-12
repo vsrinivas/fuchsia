@@ -99,7 +99,7 @@ impl Inner {
             client: tuf::client::Client::with_trusted_root_keys(
                 Config::default(),
                 &MetadataVersion::Number(config.root_version()),
-                1,
+                config.root_threshold(),
                 &root_keys,
                 local,
                 remote,

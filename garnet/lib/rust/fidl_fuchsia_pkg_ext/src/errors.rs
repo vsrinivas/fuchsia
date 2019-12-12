@@ -46,4 +46,7 @@ pub enum RepositoryParseError {
 
     #[fail(display = "invalid root version: {}", _0)]
     InvalidRootVersion(u32),
+
+    #[fail(display = "invalid root threshold: {}", _0)]
+    InvalidRootThreshold(u32),
 }
