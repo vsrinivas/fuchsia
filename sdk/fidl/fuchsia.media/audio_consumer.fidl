@@ -28,6 +28,10 @@ protocol AudioConsumer {
     /// method is used as the sole source of packets incoming to the logical consumer until that
     /// stream sink is closed or the `EndOfStream` method is called on that sink. At that point,
     /// the second stream sink is used, and so on.
+    ///
+    /// If an unsupported compression type is supplied, the
+    /// `stream_sink_request` request will be closed with an epitaph value of
+    /// `ZX_ERR_INVALID_ARGS`
     CreateStreamSink(
         vector<handle<vmo>>:16 buffers,
         AudioStreamType stream_type,

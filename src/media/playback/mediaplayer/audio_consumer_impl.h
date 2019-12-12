@@ -118,6 +118,7 @@ class AudioConsumerImpl : public fuchsia::media::AudioConsumer, public ServicePr
   fuchsia::media::AudioConsumer::WatchStatusCallback watch_status_callback_;
 
   std::shared_ptr<FidlAudioRenderer> audio_renderer_;
+  std::shared_ptr<SimpleStreamSinkImpl> simple_stream_sink_;
 
   bool timeline_started_;
   bool status_dirty_;

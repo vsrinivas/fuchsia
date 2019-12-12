@@ -87,6 +87,8 @@ class AudioConsumerTests : public sys::testing::TestWithEnvironment {
 
 // Test that factory channel is closed and we still have a connection to the created AudioConsumer
 TEST_F(AudioConsumerTests, FactoryClosed) {
+  got_status_ = false;
+
   audio_consumer_.events().WatchStatus(
       [this](fuchsia::media::AudioConsumerStatus status) { got_status_ = true; });
 
@@ -104,7 +106,6 @@ TEST_F(AudioConsumerTests, CreateStreamSink) {
   stream_type.channels = kSamplesPerFrame;
   stream_type.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
   bool sink_connection_closed = false;
-
   got_status_ = false;
 
   auto compression = fuchsia::media::Compression::New();
@@ -116,13 +117,19 @@ TEST_F(AudioConsumerTests, CreateStreamSink) {
     EXPECT_EQ(status, ZX_OK);
   }
 
+  audio_consumer_.events().WatchStatus([this](fuchsia::media::AudioConsumerStatus status) {
+    EXPECT_FALSE(status.has_presentation_timeline());
+    got_status_ = true;
+  });
+
+  RunLoopUntil([this]() { return got_status_; });
+  got_status_ = false;
+
   audio_consumer_->CreateStreamSink(std::move(vmos), stream_type, std::move(compression),
                                     sink.NewRequest());
 
   sink.set_error_handler(
       [&sink_connection_closed](zx_status_t status) { sink_connection_closed = true; });
-
-  RunLoopUntilIdle();
 
   audio_consumer_->Start(fuchsia::media::AudioConsumerStartFlags::SUPPLY_DRIVEN, 0,
                          fuchsia::media::NO_TIMESTAMP);
@@ -149,6 +156,36 @@ TEST_F(AudioConsumerTests, CreateStreamSink) {
 
   EXPECT_TRUE(sent_packet);
   EXPECT_FALSE(sink_connection_closed);
+}
+
+// Test that error is generated when unsupported codec is specified
+TEST_F(AudioConsumerTests, UnsupportedCodec) {
+  fuchsia::media::StreamSinkPtr sink;
+  fuchsia::media::AudioStreamType stream_type;
+  stream_type.frames_per_second = kFramesPerSecond;
+  stream_type.channels = kSamplesPerFrame;
+  stream_type.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
+  bool sink_connection_closed = false;
+  got_status_ = false;
+
+  auto compression = fuchsia::media::Compression::New();
+  compression->type = fuchsia::media::AUDIO_ENCODING_OPUS;
+
+  std::vector<zx::vmo> vmos(kNumVmos);
+  for (uint32_t i = 0; i < kNumVmos; i++) {
+    zx_status_t status = zx::vmo::create(kVmoSize, 0, &vmos[i]);
+    EXPECT_EQ(status, ZX_OK);
+  }
+
+  audio_consumer_->CreateStreamSink(std::move(vmos), stream_type, std::move(compression),
+                                    sink.NewRequest());
+
+  sink.set_error_handler([&sink_connection_closed](zx_status_t status) {
+    EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+    sink_connection_closed = true;
+  });
+
+  RunLoopUntil([&sink_connection_closed]() { return sink_connection_closed; });
 }
 
 // Test expected behavior of AudioConsumer interface when no compression type is

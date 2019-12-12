@@ -42,6 +42,8 @@ class SimpleStreamSinkImpl : public Node, public fuchsia::media::SimpleStreamSin
     return *output_stream_type_;
   }
 
+  void Close(zx_status_t epitaph) { binding_.Close(epitaph); }
+
   // Node implementation.
   const char* label() const override { return "simple stream sink"; }
 

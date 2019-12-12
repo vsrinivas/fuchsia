@@ -103,7 +103,19 @@ AudioConsumerImpl::AudioConsumerImpl(uint64_t session_id, sys::ComponentContext*
   decoder_factory_ = DecoderFactory::Create(this);
   FX_DCHECK(decoder_factory_);
 
-  core_.SetUpdateCallback([this]() { SendStatusUpdate(); });
+  core_.SetUpdateCallback([this]() {
+    if (core_.problem()) {
+      if (core_.problem()->type == fuchsia::media::playback::PROBLEM_AUDIO_ENCODING_NOT_SUPPORTED) {
+        FX_LOGS(WARNING) << "Unsupported codec";
+        if (simple_stream_sink_) {
+          core_.ClearSourceSegment();
+          simple_stream_sink_->Close(ZX_ERR_INVALID_ARGS);
+          simple_stream_sink_ = nullptr;
+        }
+      }
+    }
+    SendStatusUpdate();
+  });
 }
 
 AudioConsumerImpl::~AudioConsumerImpl() { core_.SetUpdateCallback(nullptr); }
@@ -140,6 +152,8 @@ void AudioConsumerImpl::CreateStreamSink(
       });
 
   pending_buffers_ = std::move(buffers);
+
+  simple_stream_sink_ = pending_simple_stream_sink_;
 
   if (!core_.has_source_segment()) {
     MaybeSetNewSource();
@@ -254,8 +268,7 @@ void AudioConsumerImpl::SendStatusUpdate() {
         fidl::To<fuchsia::media::TimelineFunction>(core_.timeline_function()));
   }
 
-  // TODO(afoxley) set any errors here
-  // status.set_error()
+  // TODO(afoxley) set any error here
 
   watch_status_callback_(std::move(status));
   watch_status_callback_ = nullptr;
