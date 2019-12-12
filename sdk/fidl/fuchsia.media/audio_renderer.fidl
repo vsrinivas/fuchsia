@@ -22,9 +22,8 @@ protocol AudioRenderer {
     compose StreamBufferSet;
     compose StreamSink;
 
-    /// Sets the type of the stream to be delivered by the client. Using this
-    /// method implies that the stream encoding is `AUDIO_ENCODING_LPCM`.
-    SetPcmStreamType(AudioStreamType type);
+    /// Binds to the gain control for this AudioRenderer.
+    BindGainControl(request<fuchsia.media.audio.GainControl> gain_control_request);
 
     /// Sets the units used by the presentation (media) timeline. By default, PTS
     /// units are nanoseconds (as if this were called with values of 1e9 and 1).
@@ -98,6 +97,69 @@ protocol AudioRenderer {
     // CLOCK_MONOTONIC instead of following the default (perhaps dynamic) system
     // rate?
     SetReferenceClock(handle reference_clock);
+
+    /// Sets the usage of the render stream. This must be called before a call to
+    /// |SetPcmStreamType|.
+    SetUsage(AudioRenderUsage usage);
+
+    /// Sets the type of the stream to be delivered by the client. Using this
+    /// method implies that the stream encoding is `AUDIO_ENCODING_LPCM`.
+    ///
+    /// This must be called before |Play| or |PlayNoReply|. After a call to
+    /// |SetPcmStreamType|, the client must then send an |AddPayloadBuffer|
+    /// request, followed by the various |StreamSink| methods (ex: |SendPacket|/
+    /// |SendPacketNoReply|, etc).
+    SetPcmStreamType(AudioStreamType type);
+
+    /// Enable or disable notifications about changes to the minimum clock lead
+    /// time (in nanoseconds) for this AudioRenderer. Calling this method with
+    /// 'enabled' set to true will trigger an immediate `OnMinLeadTimeChanged`
+    /// event with the current minimum lead time for the AudioRenderer. If the
+    /// value changes, an `OnMinLeadTimeChanged` event will be raised with the
+    /// new value. This behavior will continue until the user calls
+    /// `EnableMinLeadTimeEvents(false)`.
+    ///
+    /// The minimum clock lead time is the amount of time ahead of the reference
+    /// clock's understanding of "now" that packets needs to arrive (relative to
+    /// the playback clock transformation) in order for the mixer to be able to
+    /// mix packet. For example...
+    ///
+    /// ++ Let the PTS of packet X be P(X)
+    /// ++ Let the function which transforms PTS -> RefClock be R(p) (this
+    ///    function is determined by the call to Play(...)
+    /// ++ Let the minimum lead time be MLT
+    ///
+    /// If R(P(X)) < RefClock.Now() + MLT
+    /// Then the packet is late, and some (or all) of the packet's payload will
+    /// need to be skipped in order to present the packet at the scheduled time.
+    ///
+    // TODO(mpuryear): What should the units be here?  Options include...
+    //
+    // 1) Normalized to nanoseconds (this is the current API)
+    // 2) Reference clock units (what happens if the reference clock changes?)
+    // 3) PTS units (what happens when the user changes the PTS units?)
+    //
+    // TODO(mpuryear): Should `EnableMinLeadTimeEvents` have an optional -> ()
+    // return value for synchronization purposes?  Probably not; users should be
+    // able to send a disable request and clear their event handler if they no
+    // longer want notifications. Their in-process dispatcher framework can
+    // handle draining and dropping any lead time changed events that were
+    // already in flight when the disable message was sent.
+    //
+    EnableMinLeadTimeEvents(bool enabled);
+    -> OnMinLeadTimeChanged(int64 min_lead_time_nsec);
+
+    // TODO(mpuryear): Eliminate this method when possible. Right now, it is
+    // used by code requiring synchronous FIDL interfaces to talk to
+    // AudioRenderers.
+    ///
+    /// While it is possible to call |GetMinLeadTime| before |SetPcmStreamType|,
+    /// there's little reason to do so. This is because lead time is a function
+    /// of format/rate, so lead time will be recalculated after |SetPcmStreamType|.
+    /// If min lead time events are enabled before |SetPcmStreamType| (with
+    /// |EnableMinLeadTimeEvents(true)|), then an event will be generated in
+    /// response to |SetPcmStreamType|.
+    GetMinLeadTime() -> (int64 min_lead_time_nsec);
 
     /// Immediately put the AudioRenderer into a playing state. Start the advance
     /// of the media timeline, using specific values provided by the caller (or
@@ -224,64 +286,6 @@ protocol AudioRenderer {
     // TODO(mpuryear): Collapse these if we ever have optional retvals in FIDL
     Pause() -> (int64 reference_time, int64 media_time);
     PauseNoReply();
-
-    /// Enable or disable notifications about changes to the minimum clock lead
-    /// time (in nanoseconds) for this AudioRenderer. Calling this method with
-    /// 'enabled' set to true will trigger an immediate `OnMinLeadTimeChanged`
-    /// event with the current minimum lead time for the AudioRenderer. If the
-    /// value changes, an `OnMinLeadTimeChanged` event will be raised with the
-    /// new value. This behavior will continue until the user calls
-    /// `EnableMinLeadTimeEvents(false)`.
-    ///
-    /// The minimum clock lead time is the amount of time ahead of the reference
-    /// clock's understanding of "now" that packets needs to arrive (relative to
-    /// the playback clock transformation) in order for the mixer to be able to
-    /// mix packet. For example...
-    ///
-    /// ++ Let the PTS of packet X be P(X)
-    /// ++ Let the function which transforms PTS -> RefClock be R(p) (this
-    ///    function is determined by the call to Play(...)
-    /// ++ Let the minimum lead time be MLT
-    ///
-    /// If R(P(X)) < RefClock.Now() + MLT
-    /// Then the packet is late, and some (or all) of the packet's payload will
-    /// need to be skipped in order to present the packet at the scheduled time.
-    ///
-    // TODO(mpuryear): What should the units be here?  Options include...
-    //
-    // 1) Normalized to nanoseconds (this is the current API)
-    // 2) Reference clock units (what happens if the reference clock changes?)
-    // 3) PTS units (what happens when the user changes the PTS units?)
-    //
-    // TODO(mpuryear): Should `EnableMinLeadTimeEvents` have an optional -> ()
-    // return value for synchronization purposes?  Probably not; users should be
-    // able to send a disable request and clear their event handler if they no
-    // longer want notifications. Their in-process dispatcher framework can
-    // handle draining and dropping any lead time changed events that were
-    // already in flight when the disable message was sent.
-    //
-    EnableMinLeadTimeEvents(bool enabled);
-    -> OnMinLeadTimeChanged(int64 min_lead_time_nsec);
-
-    // TODO(mpuryear): Eliminate this method when possible. Right now, it is
-    // used by code requiring synchronous FIDL interfaces to talk to
-    // AudioRenderers.
-    GetMinLeadTime() -> (int64 min_lead_time_nsec);
-
-    /// Binds to the gain control for this AudioRenderer.
-    BindGainControl(request<fuchsia.media.audio.GainControl> gain_control_request);
-
-    /// Sets the usage of the render stream. This must be called before a call to
-    /// |SetPcmStreamType|.
-    SetUsage(AudioRenderUsage usage);
-
-    // /////////////////////////////////////////////////////////////////////////
-    // StreamBufferSet methods
-    // See stream.fidl.
-
-    // /////////////////////////////////////////////////////////////////////////
-    // StreamSink methods
-    // See stream.fidl.
 
     // TODO(mpuryear): Spec methods/events which can be used for unintentional
     // discontinuity/underflow detection.
