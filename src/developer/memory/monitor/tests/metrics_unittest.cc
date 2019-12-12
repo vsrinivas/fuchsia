@@ -40,7 +40,7 @@ TEST_F(MetricsUnitTest, All) {
           },
       .vmos =
           {
-              {.koid = 1, .name = "zbi-decompressed", .committed_bytes = 1},
+              {.koid = 1, .name = "uncompressed-bootfs", .committed_bytes = 1},
               {.koid = 2, .name = "magma_create_buffer", .committed_bytes = 2},
               {.koid = 3, .name = "Sysmem:buf", .committed_bytes = 3},
               {.koid = 4, .name = "test", .committed_bytes = 4},
@@ -216,7 +216,7 @@ TEST_F(MetricsUnitTest, Undigested) {
           },
       .vmos =
           {
-              {.koid = 1, .name = "zbi-decompressed", .committed_bytes = 1},
+              {.koid = 1, .name = "uncompressed-bootfs", .committed_bytes = 1},
               {.koid = 2, .name = "test", .committed_bytes = 2},
           },
       .processes =
