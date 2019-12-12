@@ -472,6 +472,7 @@ type BufferCollectionFUCHSIA = u64;
 const STRUCTURE_TYPE_BUFFER_COLLECTION_CREATE_INFO_FUCHSIA: u32 = 1001004000;
 const STRUCTURE_TYPE_IMPORT_MEMORY_BUFFER_COLLECTION_FUCHSIA: u32 = 1001004004;
 const STRUCTURE_TYPE_BUFFER_COLLECTION_IMAGE_CREATE_INFO_FUCHSIA: u32 = 1001004005;
+const STRUCTURE_TYPE_BUFFER_COLLECTION_PROPERTIES_FUCHSIA: u32 = 1001004006;
 
 #[repr(C)]
 #[allow(non_snake_case)]
@@ -659,7 +660,10 @@ impl VulkanImage {
             arrayLayers: 1,
             samples: vk::SAMPLE_COUNT_1_BIT,
             tiling: vk::IMAGE_TILING_OPTIMAL,
-            usage: vk::IMAGE_USAGE_COLOR_ATTACHMENT_BIT | vk::IMAGE_USAGE_STORAGE_BIT,
+            usage: vk::IMAGE_USAGE_COLOR_ATTACHMENT_BIT
+                | vk::IMAGE_USAGE_STORAGE_BIT
+                | vk::IMAGE_USAGE_TRANSFER_SRC_BIT
+                | vk::IMAGE_USAGE_TRANSFER_DST_BIT,
             sharingMode: vk::SHARING_MODE_EXCLUSIVE,
             queueFamilyIndexCount: 0,
             pQueueFamilyIndices: ptr::null(),
@@ -706,16 +710,19 @@ impl VulkanImage {
             output.assume_init()
         };
 
-        let mem_props = unsafe {
-            let mut output = mem::MaybeUninit::uninit();
+        let mut mem_props = unsafe {
+            let output = mem::MaybeUninit::<BufferCollectionPropertiesFUCHSIA>::zeroed();
+            output.assume_init()
+        };
+        mem_props.sType = STRUCTURE_TYPE_BUFFER_COLLECTION_PROPERTIES_FUCHSIA;
+        unsafe {
             let result = vk_ext.GetBufferCollectionPropertiesFUCHSIA(
                 device,
                 buffer_collection,
-                output.as_mut_ptr(),
+                &mut mem_props,
             );
             assert_eq!(result, vk::SUCCESS);
-            output.assume_init()
-        };
+        }
         let mem_type_bits = mem_reqs.memoryTypeBits & mem_props.memoryTypeBits;
         assert_ne!(mem_type_bits, 0);
         let mem_type_index = {
@@ -761,9 +768,9 @@ impl VulkanImage {
                 magFilter: vk::FILTER_NEAREST,
                 minFilter: vk::FILTER_NEAREST,
                 mipmapMode: vk::SAMPLER_MIPMAP_MODE_NEAREST,
-                addressModeU: vk::SAMPLER_ADDRESS_MODE_REPEAT,
-                addressModeV: vk::SAMPLER_ADDRESS_MODE_REPEAT,
-                addressModeW: vk::SAMPLER_ADDRESS_MODE_REPEAT,
+                addressModeU: vk::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+                addressModeV: vk::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+                addressModeW: vk::SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
                 mipLodBias: 0.0,
                 anisotropyEnable: vk::FALSE,
                 maxAnisotropy: 1.0,
@@ -825,7 +832,11 @@ impl Drop for VulkanImage {
     }
 }
 
+const EXTERNAL_MEMORY_EXTENSION_NAME: &'static [u8; 27usize] = b"VK_FUCHSIA_external_memory\0";
 const BUFFER_COLLECTION_EXTENSION_NAME: &'static [u8; 29usize] = b"VK_FUCHSIA_buffer_collection\0";
+
+#[cfg(debug)]
+const VALIDATION_LAYER_NAME: &'static [u8; 28usize] = b"VK_LAYER_KHRONOS_validation\0";
 
 extern "C" fn image_dispatch_submitter(
     queue: vk::Queue,
@@ -906,6 +917,10 @@ impl SpinelContext {
             engineVersion: 0,
             apiVersion: vulkan_version!(1, 1, 0),
         };
+        #[cfg(debug)]
+        let layers = vec![VALIDATION_LAYER_NAME.as_ptr() as *const c_char];
+        #[cfg(not(debug))]
+        let layers = Vec::new();
         let instance = unsafe {
             let mut output = mem::MaybeUninit::uninit();
             let create_info = vk::InstanceCreateInfo {
@@ -913,8 +928,8 @@ impl SpinelContext {
                 pNext: ptr::null(),
                 flags: 0,
                 pApplicationInfo: &app_info,
-                enabledLayerCount: 0,
-                ppEnabledLayerNames: ptr::null(),
+                enabledLayerCount: layers.len() as u32,
+                ppEnabledLayerNames: layers.as_ptr(),
                 enabledExtensionCount: 0,
                 ppEnabledExtensionNames: ptr::null(),
             };
@@ -1042,12 +1057,13 @@ impl SpinelContext {
             output
         };
         let mut ext_names = unsafe {
-            let num = 1 + spn_tr.ext_name_count as usize + hs_tr.ext_name_count as usize;
+            let num = 2 + spn_tr.ext_name_count as usize + hs_tr.ext_name_count as usize;
             let mut output: Vec<*const c_char> = Vec::with_capacity(num);
             output.set_len(num as usize);
             output
         };
-        ext_names[0] = BUFFER_COLLECTION_EXTENSION_NAME.as_ptr() as *const c_char;
+        ext_names[0] = EXTERNAL_MEMORY_EXTENSION_NAME.as_ptr() as *const c_char;
+        ext_names[1] = BUFFER_COLLECTION_EXTENSION_NAME.as_ptr() as *const c_char;
 
         let mut feature1 = unsafe {
             let output = mem::MaybeUninit::<PhysicalDeviceHostQueryResetFeaturesEXT>::zeroed();
@@ -1089,14 +1105,14 @@ impl SpinelContext {
 
         spn_tr.qcis = qcis.as_mut_ptr();
         spn_tr.ext_names =
-            if spn_tr.ext_name_count > 0 { &mut ext_names[1] } else { ptr::null_mut() };
+            if spn_tr.ext_name_count > 0 { &mut ext_names[2] } else { ptr::null_mut() };
         spn_tr.pdf2 = &mut pdf2;
         unsafe {
             let status = spn_vk_target_get_requirements(spn_target, &mut spn_tr);
             assert_eq!(status, SpnSuccess);
         };
         hs_tr.ext_names = if hs_tr.ext_name_count > 0 {
-            &mut ext_names[1 + spn_tr.ext_name_count as usize]
+            &mut ext_names[2 + spn_tr.ext_name_count as usize]
         } else {
             ptr::null_mut()
         };

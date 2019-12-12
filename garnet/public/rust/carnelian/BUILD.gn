@@ -6,6 +6,7 @@ import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
+import("//src/lib/vulkan/layers.gni")
 
 rustc_library("carnelian") {
   name = "carnelian"
@@ -479,6 +480,10 @@ package("clockface_rs") {
       dest = "clockface_rs.cmx"
     },
   ]
+
+  public_deps = vulkan_validation_layers.public_deps
+  loadable_modules = vulkan_validation_layers.loadable_modules
+  resources = vulkan_validation_layers.resources
 }
 
 package("ink_rs") {
@@ -499,6 +504,10 @@ package("ink_rs") {
       dest = "ink_rs.cmx"
     },
   ]
+
+  public_deps = vulkan_validation_layers.public_deps
+  loadable_modules = vulkan_validation_layers.loadable_modules
+  resources = vulkan_validation_layers.resources
 }
 
 unittest_package("carnelian_tests") {

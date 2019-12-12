@@ -12,6 +12,7 @@
             "vulkan"
         ],
         "services": [
+            "fuchsia.logger.LogSink",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.sysmem.Allocator",
