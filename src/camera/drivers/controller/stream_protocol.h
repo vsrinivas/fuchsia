@@ -24,7 +24,6 @@ class ProcessNode;
 class StreamImpl : public fuchsia::camera2::Stream {
  public:
   explicit StreamImpl(async_dispatcher_t* dispatcher, ProcessNode* output_node);
-  ~StreamImpl() override;
 
   // Binds a channel to the stream.
   // Args:

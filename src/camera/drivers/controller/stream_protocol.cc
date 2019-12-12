@@ -18,8 +18,6 @@ constexpr auto TAG = "camera_controller";
 StreamImpl::StreamImpl(async_dispatcher_t* dispatcher, ProcessNode* output_node)
     : dispatcher_(dispatcher), binding_(this), output_node_(*output_node) {}
 
-StreamImpl::~StreamImpl() { Shutdown(ZX_OK); }
-
 zx_status_t StreamImpl::Attach(zx::channel channel, fit::function<void(void)> disconnect_handler) {
   FX_DCHECK(!binding_.is_bound());
   disconnect_handler_ = std::move(disconnect_handler);
