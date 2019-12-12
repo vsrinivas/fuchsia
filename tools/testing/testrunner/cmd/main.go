@@ -83,6 +83,9 @@ func main() {
 		return
 	}
 
+	// Have logs output timestamps with milliseconds.
+	log.SetFlags(log.Ldate | log.Lmicroseconds)
+
 	// Load tests.
 	testsPath := flag.Arg(0)
 	tests, err := loadTests(testsPath)

@@ -99,8 +99,8 @@ func NewLogger(loggerLevel LogLevel, color color.Color, outWriter, errWriter io.
 	}
 	l := &Logger{
 		LoggerLevel:   loggerLevel,
-		goLogger:      goLog.New(outWriter, "", goLog.LstdFlags),
-		goErrorLogger: goLog.New(errWriter, "", goLog.LstdFlags),
+		goLogger:      goLog.New(outWriter, "", goLog.Ldate|goLog.Lmicroseconds),
+		goErrorLogger: goLog.New(errWriter, "", goLog.Ldate|goLog.Lmicroseconds),
 		color:         color,
 		prefix:        prefix,
 	}

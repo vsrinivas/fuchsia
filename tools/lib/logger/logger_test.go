@@ -32,8 +32,10 @@ func TestNewLogger(t *testing.T) {
 	logger := NewLogger(InfoLevel, color.NewColor(color.ColorAuto), nil, nil, prefix)
 	logFlags, errFlags := logger.goLogger.Flags(), logger.goErrorLogger.Flags()
 
-	if logFlags != goLog.LstdFlags || errFlags != goLog.LstdFlags {
-		t.Fatalf("New loggers should have the proper flags set for both standard and error logging. Expected: \n%+v and %+v\n but got: \n%+v and %+v", goLog.LstdFlags, goLog.LstdFlags, logFlags, errFlags)
+	correctFlags := (goLog.Ldate|goLog.Lmicroseconds)
+
+	if logFlags != correctFlags || errFlags != correctFlags {
+		t.Fatalf("New loggers should have the proper flags set for both standard and error logging. Expected: \n%+v and %+v\n but got: \n%+v and %+v", correctFlags, correctFlags, logFlags, errFlags)
 	}
 
 	logPrefix := logger.prefix
