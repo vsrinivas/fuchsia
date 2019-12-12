@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LIB_CALLBACK_WAITER_H_
-#define SRC_LIB_CALLBACK_WAITER_H_
+#ifndef SRC_LEDGER_LIB_CALLBACK_WAITER_H_
+#define SRC_LEDGER_LIB_CALLBACK_WAITER_H_
 
 #include <lib/fit/function.h>
 
@@ -12,11 +12,11 @@
 #include <utility>
 #include <vector>
 
+#include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/scoped_callback.h"
-#include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 
-namespace callback {
+namespace ledger {
 
 namespace internal {
 
@@ -212,15 +212,15 @@ class BaseWaiter : public fxl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
   // to the accumulator (unless the waiter has become done in the meantime
   // because one of the waiting callbacks failed).
   fit::function<void(Args...)> NewCallback() {
-    FXL_DCHECK(!result_callback_) << "Waiter was already finalized.";
-    FXL_DCHECK(state_ != State::CANCELLED) << "Waiter has been cancelled.";
+    LEDGER_DCHECK(!result_callback_) << "Waiter was already finalized.";
+    LEDGER_DCHECK(state_ != State::CANCELLED) << "Waiter has been cancelled.";
     if (state_ != State::STARTED) {
       return [](Args...) {};
     }
     ++pending_callbacks_;
     return [waiter_ref = fxl::RefPtr<BaseWaiter<A, R, Args...>>(this),
             token = accumulator_.PrepareCall()](Args&&... args) mutable {
-      FXL_DCHECK(waiter_ref) << "Callbacks returned by a Waiter must be called only once.";
+      LEDGER_DCHECK(waiter_ref) << "Callbacks returned by a Waiter must be called only once.";
       // Moving ref to the stack to ensure that the callback is not called
       // inside the finalize callback.
       auto ref = std::move(waiter_ref);
@@ -236,10 +236,10 @@ class BaseWaiter : public fxl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
       return;
     }
     // This is a programmer error.
-    FXL_DCHECK(!result_callback_) << "Waiter already finalized, can't finalize more!";
+    LEDGER_DCHECK(!result_callback_) << "Waiter already finalized, can't finalize more!";
     // This should never happen: FINISHED can only be reached after having
     // called Finalize, and Finalize can only be called once.
-    FXL_DCHECK(state_ != State::FINISHED) << "Waiter already finished.";
+    LEDGER_DCHECK(state_ != State::FINISHED) << "Waiter already finished.";
     result_callback_ = std::move(callback);
     ExecuteCallbackIfFinished();
   }
@@ -279,7 +279,7 @@ class BaseWaiter : public fxl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
   // callback if necessary.
   template <typename T>
   void ReturnResult(T token, Args... args) {
-    FXL_DCHECK(pending_callbacks_ > 0);
+    LEDGER_DCHECK(pending_callbacks_ > 0);
     --pending_callbacks_;
     if (state_ != State::STARTED) {
       return;
@@ -295,8 +295,8 @@ class BaseWaiter : public fxl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
   // are no more pending callbacks or the waiter is done.
   // Must only be called in STARTED or DONE state.
   void ExecuteCallbackIfFinished() {
-    FXL_DCHECK(state_ != State::FINISHED) << "Waiter already finished.";
-    FXL_DCHECK(state_ != State::CANCELLED)
+    LEDGER_DCHECK(state_ != State::FINISHED) << "Waiter already finished.";
+    LEDGER_DCHECK(state_ != State::CANCELLED)
         << "Cancelled waiter tried to execute the finalization callback.";
     if (!result_callback_ || (state_ == State::STARTED && pending_callbacks_ > 0)) {
       return;
@@ -403,7 +403,7 @@ class AnyWaiter : public BaseWaiter<internal::AnyAccumulator<S, V>, std::pair<S,
 // Promise is used to wait on a single asynchronous call. A typical usage
 // example is:
 // auto promise =
-//     fxl::MakeRefCounted<callback::Promise<Status, std::unique_ptr<Object>>>(
+//     fxl::MakeRefCounted<Promise<Status, std::unique_ptr<Object>>>(
 //         Status::ILLEGAL_STATE);
 // storage->GetObject(object_digest1, promise->NewCallback());
 // ...
@@ -450,6 +450,6 @@ class CompletionWaiter : public BaseWaiter<internal::CompletionAccumulator, bool
   ~CompletionWaiter() override{};
 };
 
-}  // namespace callback
+}  // namespace ledger
 
-#endif  // SRC_LIB_CALLBACK_WAITER_H_
+#endif  // SRC_LEDGER_LIB_CALLBACK_WAITER_H_

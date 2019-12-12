@@ -24,10 +24,10 @@
 #include "src/ledger/bin/testing/get_page_ensure_initialized.h"
 #include "src/ledger/bin/testing/quit_on_error.h"
 #include "src/ledger/bin/testing/run_with_tracing.h"
+#include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/trace_callback.h"
-#include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "third_party/abseil-cpp/absl/flags/flag.h"
 #include "third_party/abseil-cpp/absl/flags/parse.h"
@@ -140,7 +140,7 @@ void GetPageBenchmark::RunSingle(size_t request_number) {
     zx_nanosleep(zx_deadline_after(kDelay.get()));
   }
 
-  auto waiter = fxl::MakeRefCounted<callback::CompletionWaiter>();
+  auto waiter = fxl::MakeRefCounted<CompletionWaiter>();
   TRACE_ASYNC_BEGIN("benchmark", "get_page", request_number);
   ledger_->GetPage(reuse_ ? fidl::Clone(page_id_) : nullptr, pages_[request_number].NewRequest());
   ledger_->Sync([this, callback = waiter->NewCallback(), request_number]() mutable {

@@ -12,7 +12,6 @@
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
-#include "src/lib/callback/waiter.h"
 
 namespace storage {
 namespace btree {

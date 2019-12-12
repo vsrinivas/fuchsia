@@ -14,11 +14,11 @@
 #include "src/ledger/bin/app/fidl/serialization_size.h"
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/storage/public/object.h"
+#include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/util/ptr.h"
 #include "src/ledger/lib/vmo/sized_vmo.h"
 #include "src/ledger/lib/vmo/strings.h"
-#include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace ledger {
@@ -101,8 +101,7 @@ void ComputePageChange(
   };
 
   auto waiter =
-      fxl::MakeRefCounted<callback::Waiter<Status, std::unique_ptr<fuchsia::mem::Buffer>>>(
-          Status::OK);
+      fxl::MakeRefCounted<Waiter<Status, std::unique_ptr<fuchsia::mem::Buffer>>>(Status::OK);
 
   auto context = std::make_unique<Context>();
   context->page_change->timestamp = other.GetTimestamp().get();
@@ -213,7 +212,7 @@ void ComputeThreeWayDiff(
   // returned. As each |DiffEntry| struct has three values, we ensure that
   // values are always returned in a specific order (base, left, right). Some
   // values may be empty, to denote a lack of diff.
-  auto waiter = fxl::MakeRefCounted<callback::Waiter<Status, ledger::SizedVmo>>(Status::OK);
+  auto waiter = fxl::MakeRefCounted<Waiter<Status, ledger::SizedVmo>>(Status::OK);
 
   auto context = std::make_unique<Context>();
 

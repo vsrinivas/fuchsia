@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/lib/callback/waiter.h"
+#include "src/ledger/lib/callback/waiter.h"
 
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "src/lib/callback/capture.h"
+#include "src/ledger/lib/callback/capture.h"
 
-namespace callback {
+namespace ledger {
 namespace {
 
 using ::testing::ElementsAre;
@@ -392,4 +392,4 @@ TEST(StatusWaiter, ScopedCancelled) {
 }
 
 }  //  namespace
-}  //  namespace callback
+}  //  namespace ledger

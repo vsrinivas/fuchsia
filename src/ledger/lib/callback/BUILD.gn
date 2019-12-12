@@ -21,6 +21,7 @@ source_set("callback") {
     "managed_container.cc",
     "managed_container.h",
     "operation_serializer.h",
+    "waiter.h",
   ]
 
   public_deps = [
@@ -44,10 +45,12 @@ source_set("unittests") {
     "managed_container_unittest.cc",
     "operation_serializer_unittest.cc",
     "set_when_called_unittest.cc",
+    "waiter_unittest.cc",
   ]
 
   deps = [
     ":callback",
+    "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
 }

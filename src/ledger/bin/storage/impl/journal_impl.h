@@ -19,7 +19,6 @@
 #include "src/ledger/bin/storage/public/journal.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
-#include "src/lib/callback/waiter.h"
 
 namespace storage {
 

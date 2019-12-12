@@ -10,7 +10,6 @@
 #include "src/ledger/bin/testing/ledger_matcher.h"
 #include "src/ledger/bin/tests/integration/integration_test.h"
 #include "src/ledger/bin/tests/integration/test_utils.h"
-#include "src/lib/callback/waiter.h"
 
 using testing::IsEmpty;
 

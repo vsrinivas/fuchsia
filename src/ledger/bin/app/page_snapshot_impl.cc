@@ -17,11 +17,11 @@
 #include "src/ledger/bin/app/fidl/serialization_size.h"
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/callback/trace_callback.h"
-#include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
@@ -115,8 +115,7 @@ void FillEntries(
   auto timed_callback = TRACE_CALLBACK(std::move(callback), "ledger", "snapshot_get_entries");
 
   auto waiter =
-      fxl::MakeRefCounted<callback::Waiter<Status, std::unique_ptr<const storage::Object>>>(
-          Status::OK);
+      fxl::MakeRefCounted<Waiter<Status, std::unique_ptr<const storage::Object>>>(Status::OK);
 
   auto context = std::make_unique<Context>();
   // Use |token| for the first key if present.

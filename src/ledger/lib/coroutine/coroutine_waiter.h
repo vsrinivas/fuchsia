@@ -12,11 +12,11 @@
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "third_party/abseil-cpp/absl/base/attributes.h"
 
-// Utilities to interact with coroutines and callback::Waiter.
+// Utilities to interact with coroutines and Waiter.
 
 namespace coroutine {
 
-// Waits on a callback::Waiter (and other waiter utilities). This method interrupts the coroutine
+// Waits on a Waiter (and other waiter utilities). This method interrupts the coroutine
 // until the finalizer of the waiter is executed. The results of the waiter are stored in
 // |parameters|. If |Wait| returns |INTERRUPTED|, the coroutine must unwind its stack and terminate.
 // Cancels the waiter when Wait terminates: callbacks scoped to the waiter may safely use the

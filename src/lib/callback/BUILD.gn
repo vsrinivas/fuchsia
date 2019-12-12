@@ -15,7 +15,6 @@ source_set("callback") {
     "scoped_task_runner.cc",
     "scoped_task_runner.h",
     "trace_callback.h",
-    "waiter.h",
   ]
 
   public_deps = [
@@ -42,7 +41,6 @@ executable("callback_unittests") {
     "destruction_sentinel_unittest.cc",
     "scoped_callback_unittest.cc",
     "scoped_task_runner_unittest.cc",
-    "waiter_unittest.cc",
   ]
 
   deps = [

@@ -9,10 +9,10 @@
 #include <utility>
 
 #include "src/ledger/bin/app/page_utils.h"
+#include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace ledger {
@@ -105,8 +105,7 @@ Status FindCommonAncestors(coroutine::CoroutineHandler* handler, storage::PageSt
   while (walk_state.interesting_size() > 0) {
     uint64_t expected_generation = walk_state.NextGeneration();
     auto waiter = fxl::MakeRefCounted<
-        callback::Waiter<Status, std::pair<std::unique_ptr<const storage::Commit>, WalkFlags>>>(
-        Status::OK);
+        Waiter<Status, std::pair<std::unique_ptr<const storage::Commit>, WalkFlags>>>(Status::OK);
     while (walk_state.interesting_size() > 0 &&
            expected_generation == walk_state.NextGeneration()) {
       auto [commit, flags] = walk_state.Pop();

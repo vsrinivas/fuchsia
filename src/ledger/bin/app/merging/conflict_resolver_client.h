@@ -17,7 +17,6 @@
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/lib/callback/operation_serializer.h"
-#include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {

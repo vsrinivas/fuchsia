@@ -13,9 +13,9 @@
 #include "src/ledger/bin/app/diff_utils.h"
 #include "src/ledger/bin/app/fidl/serialization_size.h"
 #include "src/ledger/bin/app/page_utils.h"
+#include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/scoped_callback.h"
-#include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace ledger {
@@ -319,7 +319,7 @@ void BranchTracker::OnNewCommits(const std::vector<std::unique_ptr<const storage
 void BranchTracker::StartTransaction(fit::closure watchers_drained_callback) {
   LEDGER_DCHECK(!transaction_in_progress_);
   transaction_in_progress_ = true;
-  auto waiter = fxl::MakeRefCounted<callback::CompletionWaiter>();
+  auto waiter = fxl::MakeRefCounted<CompletionWaiter>();
   for (auto& watcher : watchers_) {
     watcher.SetOnDrainedCallback(waiter->NewCallback());
   }

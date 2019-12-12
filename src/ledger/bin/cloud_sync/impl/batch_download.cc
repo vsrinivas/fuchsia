@@ -12,10 +12,10 @@
 
 #include "src/ledger/bin/cloud_sync/impl/constants.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/scoped_callback.h"
-#include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace cloud_sync {
@@ -44,7 +44,7 @@ void BatchDownload::Start() {
   LEDGER_DCHECK(!started_);
   started_ = true;
   auto waiter = fxl::MakeRefCounted<
-      callback::Waiter<encryption::Status, storage::PageStorage::CommitIdAndBytes>>(
+      ledger::Waiter<encryption::Status, storage::PageStorage::CommitIdAndBytes>>(
       encryption::Status::OK);
   for (auto& remote_commit : remote_commits_) {
     if (!remote_commit.has_id() || !remote_commit.has_data()) {

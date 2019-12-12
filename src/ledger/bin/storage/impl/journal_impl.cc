@@ -18,9 +18,9 @@
 #include "src/ledger/bin/storage/impl/data_serialization.h"
 #include "src/ledger/bin/storage/impl/object_identifier_encoding.h"
 #include "src/ledger/bin/storage/public/commit.h"
+#include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace storage {
@@ -183,7 +183,7 @@ Status JournalImpl::CreateCommitFromChanges(
 
 void JournalImpl::GetObjectsToSync(
     fit::function<void(Status status, std::vector<ObjectIdentifier> objects_to_sync)> callback) {
-  auto waiter = fxl::MakeRefCounted<callback::Waiter<Status, bool>>(Status::OK);
+  auto waiter = fxl::MakeRefCounted<ledger::Waiter<Status, bool>>(Status::OK);
   std::vector<ObjectIdentifier> added_values;
   for (auto const& journal_entry : journal_entries_) {
     if (journal_entry.second.deleted) {

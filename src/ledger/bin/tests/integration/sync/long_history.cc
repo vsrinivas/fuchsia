@@ -9,8 +9,8 @@
 #include "src/ledger/bin/tests/integration/sync/test_sync_state_watcher.h"
 #include "src/ledger/bin/tests/integration/test_page_watcher.h"
 #include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/convert/convert.h"
-#include "src/lib/callback/waiter.h"
 
 namespace ledger {
 namespace {

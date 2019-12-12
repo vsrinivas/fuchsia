@@ -11,11 +11,11 @@
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/read_data_source.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/scoped_callback.h"
-#include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 #include "third_party/flatbuffers/include/flatbuffers/flatbuffers.h"
@@ -568,7 +568,7 @@ void PageCommunicatorImpl::ProcessCommitRequest(p2p_provider::P2PClientId source
   coroutine_manager_.StartCoroutine(
       [this, source = std::move(source),
        request = std::move(request)](coroutine::CoroutineHandler* handler) {
-        auto commit_waiter = fxl::MakeRefCounted<callback::Waiter<
+        auto commit_waiter = fxl::MakeRefCounted<ledger::Waiter<
             ledger::Status, std::pair<storage::CommitId, std::unique_ptr<const storage::Commit>>>>(
             ledger::Status::OK);
         for (const CommitId* id : *request->commit_ids()) {
@@ -611,7 +611,7 @@ void PageCommunicatorImpl::ProcessObjectRequest(p2p_provider::P2PClientId source
         // while adding new items.
         std::list<ObjectResponseHolder> object_responses;
         auto response_waiter =
-            fxl::MakeRefCounted<callback::StatusWaiter<ledger::Status>>(ledger::Status::OK);
+            fxl::MakeRefCounted<ledger::StatusWaiter<ledger::Status>>(ledger::Status::OK);
         for (const ObjectId* object_id : *request->object_ids()) {
           storage::ObjectIdentifier identifier = ToObjectIdentifier(object_id, storage_);
           // The identifier held by |object_responses| ensures that the piece will not be

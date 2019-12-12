@@ -10,9 +10,9 @@
 #include "src/ledger/bin/storage/impl/btree/synchronous_storage.h"
 #include "src/ledger/bin/storage/impl/btree/tree_node.h"
 #include "src/ledger/bin/storage/impl/object_digest.h"
+#include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "third_party/murmurhash/murmurhash.h"
 
@@ -307,7 +307,7 @@ Status NodeBuilder::Build(SynchronousStorage* page_storage, ObjectIdentifier* ob
 
   std::vector<NodeBuilder*> to_build;
   while (CollectNodesToBuild(&to_build)) {
-    auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
+    auto waiter = fxl::MakeRefCounted<ledger::StatusWaiter<Status>>(Status::OK);
     for (NodeBuilder* child : to_build) {
       std::map<size_t, ObjectIdentifier> children;
       for (size_t index = 0; index < child->children_.size(); ++index) {

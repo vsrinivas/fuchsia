@@ -101,7 +101,7 @@ Instead, make the asynchronous calls directly and use
 [coroutine::Waiter](coroutine_waiter.h) to collate the results:
 ``` cpp
 auto waiter = fxl::MakeRefCounted<
-    callback::Waiter<Status, std::unique_ptr<Result>>>(Status::OK);
+    Waiter<Status, std::unique_ptr<Result>>>(Status::OK);
 
 for (auto& obj : objects_) {
   AsyncFrobinate(obj, waiter->NewCallback());

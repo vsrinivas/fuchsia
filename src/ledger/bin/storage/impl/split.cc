@@ -18,9 +18,9 @@
 #include "src/ledger/bin/storage/impl/object_identifier_encoding.h"
 #include "src/ledger/bin/storage/public/data_source.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/third_party/bup/bupsplit.h"
-#include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
@@ -363,7 +363,7 @@ void CollectPiecesInternal(ObjectIdentifier root, fxl::RefPtr<CollectPiecesState
       return;
     }
 
-    auto waiter = fxl::MakeRefCounted<callback::CompletionWaiter>();
+    auto waiter = fxl::MakeRefCounted<ledger::CompletionWaiter>();
     status = ForEachIndexChild(data, factory, [&](ObjectIdentifier identifier) {
       CollectPiecesInternal(std::move(identifier), state, waiter->NewCallback());
       return Status::OK;

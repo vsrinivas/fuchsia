@@ -6,8 +6,8 @@
 
 #include <lib/fit/function.h>
 
+#include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace sync_coordinator {
@@ -217,7 +217,7 @@ void PageSyncImpl::GetObject(storage::ObjectIdentifier object_identifier,
   // example, if P2P returns before cloud with a NOT_FOUND status, then we will
   // wait for Cloud to return; if P2P returns with an OK status, we will pass
   // the P2P-returned value immediately.
-  auto waiter = fxl::MakeRefCounted<callback::AnyWaiter<
+  auto waiter = fxl::MakeRefCounted<ledger::AnyWaiter<
       ledger::Status, std::tuple<storage::ChangeSource, storage::IsObjectSynced,
                                  std::unique_ptr<storage::DataSource::DataChunk>>>>(
       ledger::Status::OK, ledger::Status::INTERNAL_NOT_FOUND,
@@ -263,7 +263,7 @@ void PageSyncImpl::GetDiff(storage::CommitId commit_id,
 }
 
 void PageSyncImpl::UpdateClock(storage::Clock clock, fit::function<void(ledger::Status)> callback) {
-  auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<ledger::Status>>(ledger::Status::OK);
+  auto waiter = fxl::MakeRefCounted<ledger::StatusWaiter<ledger::Status>>(ledger::Status::OK);
   if (cloud_sync_) {
     cloud_sync_->UpdateClock(clock, waiter->NewCallback());
   }

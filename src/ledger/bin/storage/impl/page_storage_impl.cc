@@ -45,6 +45,7 @@
 #include "src/ledger/bin/storage/public/object.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/synchronization/lock.h"
+#include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
@@ -53,7 +54,6 @@
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/callback/trace_callback.h"
-#include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/arraysize.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -191,7 +191,7 @@ void PageStorageImpl::GetGenerationAndMissingParents(
     return;
   }
 
-  auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
+  auto waiter = fxl::MakeRefCounted<ledger::StatusWaiter<Status>>(Status::OK);
 
   // The vector must not move until the finalizer is called.
   auto result = std::make_unique<std::vector<CommitId>>();
@@ -202,8 +202,8 @@ void PageStorageImpl::GetGenerationAndMissingParents(
               waiter->MakeScoped([callback = waiter->NewCallback(), parent_id, result_ptr](
                                      Status status, std::unique_ptr<const Commit> /*commit*/) {
                 if (status == Status::INTERNAL_NOT_FOUND) {
-                  // |result| is alive, because |Waiter::MakeScoped| only calls us if the finalizer
-                  // has not run yet.
+                  // |result| is alive, because |ledger::Waiter::MakeScoped| only calls us if the
+                  // finalizer has not run yet.
                   result_ptr->push_back(convert::ToString(parent_id));
                   callback(Status::OK);
                   return;
@@ -283,7 +283,7 @@ void PageStorageImpl::RemoveCommitWatcher(CommitWatcher* watcher) {
 }
 
 void PageStorageImpl::IsSynced(fit::function<void(Status, bool)> callback) {
-  auto waiter = fxl::MakeRefCounted<callback::Waiter<Status, bool>>(Status::OK);
+  auto waiter = fxl::MakeRefCounted<ledger::Waiter<Status, bool>>(Status::OK);
   // Check for unsynced commits.
   coroutine_manager_.StartCoroutine(
       waiter->NewCallback(),
@@ -445,7 +445,7 @@ void PageStorageImpl::AddObjectFromLocal(ObjectType object_type,
 
   auto managed_data_source = managed_container_.Manage(std::move(data_source));
   auto managed_data_source_ptr = managed_data_source->get();
-  auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
+  auto waiter = fxl::MakeRefCounted<ledger::StatusWaiter<Status>>(Status::OK);
   encryption_service_->GetChunkingPermutation(
       [this, waiter, managed_data_source = std::move(managed_data_source),
        tree_references = std::move(tree_references), managed_data_source_ptr, object_type,
@@ -1149,7 +1149,7 @@ void PageStorageImpl::FillBufferWithObjectContent(const Piece& piece, ledger::Si
   // Iterate over the children pieces, recursing into the ones corresponding to
   // the part of the object to be copied to the VMO.
   int64_t sub_offset = 0;
-  auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
+  auto waiter = fxl::MakeRefCounted<ledger::StatusWaiter<Status>>(Status::OK);
   for (const auto* child : *file_index->children()) {
     if (sub_offset + child->size() > file_index->size()) {
       callback(Status::DATA_INTEGRITY_ERROR);
@@ -1229,7 +1229,7 @@ void PageStorageImpl::GetOrDownloadPiece(
       return;
     }
     auto waiter = fxl::MakeRefCounted<
-        callback::AnyWaiter<Status, std::tuple<std::unique_ptr<const Piece>, WritePieceCallback>>>(
+        ledger::AnyWaiter<Status, std::tuple<std::unique_ptr<const Piece>, WritePieceCallback>>>(
         Status::OK, Status::INTERNAL_NOT_FOUND,
         std::tuple<std::unique_ptr<const Piece>, WritePieceCallback>());
 
@@ -1431,7 +1431,7 @@ Status PageStorageImpl::SynchronousDownloadDiff(coroutine::CoroutineHandler* han
 
   // The base commit might be one of the commits we are currently downloading. It is fine to use it
   // directly, as we just need to know what is its root identifier.
-  auto waiter = fxl::MakeRefCounted<callback::Waiter<Status, ObjectIdentifier>>(Status::OK);
+  auto waiter = fxl::MakeRefCounted<ledger::Waiter<Status, ObjectIdentifier>>(Status::OK);
   GetCommitRootIdentifier(base_commit_id, waiter->NewCallback());
   GetCommitRootIdentifier(target_commit_id, waiter->NewCallback());
 
@@ -1498,7 +1498,7 @@ Status PageStorageImpl::SynchronousInit(CoroutineHandler* handler,
     commits.push_back(std::move(head_commit));
   } else {
     auto waiter =
-        fxl::MakeRefCounted<callback::Waiter<Status, std::unique_ptr<const Commit>>>(Status::OK);
+        fxl::MakeRefCounted<ledger::Waiter<Status, std::unique_ptr<const Commit>>>(Status::OK);
 
     for (const auto& head : heads) {
       GetCommit(head.second, waiter->NewCallback());
@@ -1679,7 +1679,7 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(CoroutineHandler* handler,
     }
   }
 
-  auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
+  auto waiter = fxl::MakeRefCounted<ledger::StatusWaiter<Status>>(Status::OK);
   // Get all objects from sync and then add the commit objects.
   for (const auto& leaf : leaves) {
     btree::GetObjectsFromSync(environment_->coroutine_service(), this,
@@ -1722,7 +1722,7 @@ Status PageStorageImpl::SynchronousGetUnsyncedCommits(
   RETURN_ON_ERROR(db_->GetUnsyncedCommitIds(handler, &commit_ids));
 
   auto waiter =
-      fxl::MakeRefCounted<callback::Waiter<Status, std::unique_ptr<const Commit>>>(Status::OK);
+      fxl::MakeRefCounted<ledger::Waiter<Status, std::unique_ptr<const Commit>>>(Status::OK);
   for (const auto& commit_id : commit_ids) {
     GetCommit(commit_id, waiter->NewCallback());
   }

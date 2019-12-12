@@ -7,9 +7,9 @@
 #include <utility>
 #include <vector>
 
+#include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/scoped_callback.h"
-#include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace p2p_sync {
@@ -27,8 +27,8 @@ bool CommitBatch::IsDiscardable() const { return discardable_; }
 void CommitBatch::AddToBatch(std::vector<storage::PageStorage::CommitIdAndBytes> new_commits) {
   // Ask the storage for the generation and missing parents of the new commits.
   auto waiter =
-      fxl::MakeRefCounted<callback::Waiter<ledger::Status, storage::PageStorage::CommitIdAndBytes,
-                                           uint64_t, std::vector<storage::CommitId>>>(
+      fxl::MakeRefCounted<ledger::Waiter<ledger::Status, storage::PageStorage::CommitIdAndBytes,
+                                         uint64_t, std::vector<storage::CommitId>>>(
           ledger::Status::OK);
 
   for (auto& commit : new_commits) {

@@ -18,10 +18,10 @@
 #include "src/ledger/bin/testing/ledger_app_instance_factory.h"
 #include "src/ledger/bin/tests/integration/integration_test.h"
 #include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/vmo/vector.h"
 #include "src/lib/callback/auto_cleanable.h"
-#include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace ledger {
@@ -309,7 +309,7 @@ TEST_P(ConvergenceTest, NLedgersConverge) {
     }
   }
 
-  auto sync_waiter = fxl::MakeRefCounted<callback::CompletionWaiter>();
+  auto sync_waiter = fxl::MakeRefCounted<CompletionWaiter>();
   for (int i = 0; i < num_ledgers_; i++) {
     pages_[i]->Commit();
     pages_[i]->Sync(sync_waiter->NewCallback());
@@ -354,7 +354,7 @@ TEST_P(ConvergenceTest, NLedgersConverge) {
 
   bool merge_done = false;
   ConflictResolutionWaitStatus wait_status = ConflictResolutionWaitStatus::NO_CONFLICTS;
-  fxl::RefPtr<callback::StatusWaiter<ConflictResolutionWaitStatus>> waiter;
+  fxl::RefPtr<StatusWaiter<ConflictResolutionWaitStatus>> waiter;
 
   // In addition of verifying that the external states of the ledgers have
   // converged, we also verify we are not currently performing a merge in the
@@ -368,7 +368,7 @@ TEST_P(ConvergenceTest, NLedgersConverge) {
         return true;
       }
       if (!waiter) {
-        waiter = fxl::MakeRefCounted<callback::StatusWaiter<ConflictResolutionWaitStatus>>(
+        waiter = fxl::MakeRefCounted<StatusWaiter<ConflictResolutionWaitStatus>>(
             ConflictResolutionWaitStatus::NO_CONFLICTS);
         for (int i = 0; i < num_ledgers_; i++) {
           pages_[i]->WaitForConflictResolution(waiter->NewCallback());

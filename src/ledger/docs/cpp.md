@@ -189,4 +189,4 @@ to run them.
 [set_when_called.h]: /src/ledger/lib/callback/set_when_called.h
 [test_loop_fixture.h]: /src/lib/testing/loop_fixture/test_loop_fixture.h
 [trace_callback.h]: /src/lib/callback/trace_callback.h
-[waiter.h]: /src/lib/callback/waiter.h
+[waiter.h]: /src/ledger/lib/callback/waiter.h

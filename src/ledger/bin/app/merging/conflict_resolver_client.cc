@@ -16,12 +16,12 @@
 #include "src/ledger/bin/app/fidl/serialization_size.h"
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/public/status.h"
+#include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/socket/strings.h"
 #include "src/ledger/lib/util/ptr.h"
 #include "src/lib/callback/scoped_callback.h"
-#include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
@@ -190,8 +190,7 @@ void ConflictResolverClient::Merge(std::vector<MergedValue> merged_values,
         if (!IsInValidStateAndNotify(weak_this, callback)) {
           return;
         }
-        auto waiter =
-            fxl::MakeRefCounted<callback::Waiter<Status, storage::ObjectIdentifier>>(Status::OK);
+        auto waiter = fxl::MakeRefCounted<Waiter<Status, storage::ObjectIdentifier>>(Status::OK);
         for (const MergedValue& merged_value : merged_values) {
           if (merged_value.source != ValueSource::DELETE) {
             GetOrCreateObjectIdentifier(merged_value, waiter->NewCallback());

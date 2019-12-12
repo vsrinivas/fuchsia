@@ -15,10 +15,10 @@
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/data_source.h"
 #include "src/ledger/bin/storage/public/read_data_source.h"
+#include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/encoding/encoding.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/callback/waiter.h"
 #include "third_party/abseil-cpp/absl/strings/str_cat.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
@@ -485,8 +485,8 @@ void PageDownload::DecodeAndParseDiff(
     return;
   }
 
-  auto waiter = fxl::MakeRefCounted<callback::Waiter<ledger::Status, storage::EntryChange>>(
-      ledger::Status::OK);
+  auto waiter =
+      fxl::MakeRefCounted<ledger::Waiter<ledger::Status, storage::EntryChange>>(ledger::Status::OK);
   for (const cloud_provider::DiffEntry& cloud_change : diff.changes()) {
     ReadDiffEntry(cloud_change, waiter->NewCallback());
   }

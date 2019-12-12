@@ -19,11 +19,11 @@
 #include "src/ledger/bin/app/page_snapshot_impl.h"
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/socket/strings.h"
 #include "src/lib/callback/scoped_callback.h"
-#include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace ledger {
@@ -101,7 +101,7 @@ void PageDelegate::Put(std::vector<uint8_t> key, std::vector<uint8_t> value,
 void PageDelegate::PutWithPriority(std::vector<uint8_t> key, std::vector<uint8_t> value,
                                    Priority priority, fit::function<void(Status)> callback) {
   LEDGER_DCHECK(key.size() <= kMaxKeySize);
-  auto promise = fxl::MakeRefCounted<callback::Promise<Status, storage::ObjectIdentifier>>(
+  auto promise = fxl::MakeRefCounted<Promise<Status, storage::ObjectIdentifier>>(
       Status::ILLEGAL_STATE);
   storage_->AddObjectFromLocal(storage::ObjectType::BLOB,
                                storage::DataSource::Create(std::move(value)), {},
