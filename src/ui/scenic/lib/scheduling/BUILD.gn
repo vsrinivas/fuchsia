@@ -17,6 +17,8 @@ source_set("frame_scheduler") {
     "constant_frame_predictor.h",
     "default_frame_scheduler.cc",
     "default_frame_scheduler.h",
+    "delegating_frame_scheduler.cc",
+    "delegating_frame_scheduler.h",
     "duration_predictor.cc",
     "duration_predictor.h",
     "frame_predictor.cc",

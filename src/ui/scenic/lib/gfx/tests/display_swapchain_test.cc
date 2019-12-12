@@ -140,8 +140,8 @@ class DisplaySwapchainTest : public Fixture {
     FXL_CHECK(frame_scheduler_);
     return std::make_unique<FrameTimings>(
         frame_number, present_time, latch_time, started_time,
-        fit::bind_member(frame_scheduler_.get(), &MockFrameScheduler::OnFrameRendered),
-        fit::bind_member(frame_scheduler_.get(), &MockFrameScheduler::OnFramePresented));
+        [this](const FrameTimings& timings) { ++frame_presented_call_count_; },
+        [this](const FrameTimings& timings) { ++frame_rendered_call_count_; });
   }
 
   const BufferPool& Framebuffers(DisplaySwapchain* swapchain) const {
@@ -154,8 +154,13 @@ class DisplaySwapchainTest : public Fixture {
   Session* session() { return session_.get(); }
   display::Display* display() { return display_manager()->default_display(); }
   std::shared_ptr<MockFrameScheduler> scheduler() { return frame_scheduler_; }
+  uint32_t frame_presented_call_count() { return frame_presented_call_count_; }
+  uint32_t frame_rendered_call_count() { return frame_rendered_call_count_; }
 
  private:
+  uint32_t frame_presented_call_count_ = 0;
+  uint32_t frame_rendered_call_count_ = 0;
+
   std::unique_ptr<Sysmem> sysmem_;
   std::unique_ptr<display::DisplayManager> display_manager_;
   std::unique_ptr<Session> session_;
@@ -184,11 +189,11 @@ VK_TEST_F(DisplaySwapchainTest, RenderStress) {
                                           /*timeout=*/zx::msec(50)));
   }
   RunLoopUntilIdle();
-  EXPECT_EQ(scheduler()->frame_rendered_call_count(), kNumFrames);
+  EXPECT_EQ(frame_rendered_call_count(), kNumFrames);
   // Last frame is left up on the display, so look for presentation.
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [this]() { return scheduler()->frame_presented_call_count() == kNumFrames; },
-      /*timeout=*/zx::msec(50)));
+  EXPECT_TRUE(
+      RunLoopWithTimeoutOrUntil([this]() { return frame_presented_call_count() == kNumFrames; },
+                                /*timeout=*/zx::msec(50)));
 }
 
 VK_TEST_F(DisplaySwapchainTest, RenderProtectedStress) {
@@ -212,10 +217,10 @@ VK_TEST_F(DisplaySwapchainTest, RenderProtectedStress) {
                                           /*timeout=*/zx::msec(50)));
   }
   RunLoopUntilIdle();
-  EXPECT_EQ(scheduler()->frame_rendered_call_count(), kNumFrames);
+  EXPECT_EQ(frame_rendered_call_count(), kNumFrames);
   // Last frame is left up on the display, so look for presentation.
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [this]() { return scheduler()->frame_presented_call_count() == kNumFrames; },
+      [this]() { return frame_presented_call_count() == kNumFrames; },
       /*timeout=*/zx::msec(50)));
 }
 

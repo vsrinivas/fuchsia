@@ -9,6 +9,36 @@
 namespace scheduling {
 namespace test {
 
+void MockFrameScheduler::SetRenderContinuously(bool render_continuously) {
+  if (set_render_continuously_callback_) {
+    set_render_continuously_callback_(render_continuously);
+  }
+}
+
+void MockFrameScheduler::ScheduleUpdateForSession(zx::time presentation_time,
+                                                  scenic_impl::SessionId session) {
+  if (schedule_update_for_session_callback_) {
+    schedule_update_for_session_callback_(presentation_time, session);
+  }
+}
+
+void MockFrameScheduler::GetFuturePresentationInfos(
+    zx::duration requested_prediction_span,
+    FrameScheduler::GetFuturePresentationInfosCallback presentation_infos_callback) {
+  if (get_future_presentation_infos_callback_) {
+    presentation_infos_callback(get_future_presentation_infos_callback_(requested_prediction_span));
+  }
+  presentation_infos_callback({});
+}
+
+void MockFrameScheduler::SetOnFramePresentedCallbackForSession(
+    scenic_impl::SessionId session, OnFramePresentedCallback frame_presented_callback) {
+  if (set_on_frame_presented_callback_for_session_callback_) {
+    set_on_frame_presented_callback_for_session_callback_(session,
+                                                          std::move(frame_presented_callback));
+  }
+}
+
 SessionUpdater::UpdateResults MockSessionUpdater::UpdateSessions(
     std::unordered_set<SessionId> sessions_to_update, zx::time presentation_time,
     zx::time wakeup_time, uint64_t trace_id) {

@@ -258,8 +258,9 @@ void DefaultFrameScheduler::ScheduleUpdateForSession(zx::time presentation_time,
   RequestFrame();
 }
 
-std::vector<fuchsia::scenic::scheduling::PresentationInfo>
-DefaultFrameScheduler::GetFuturePresentationInfos(zx::duration requested_prediction_span) {
+void DefaultFrameScheduler::GetFuturePresentationInfos(
+    zx::duration requested_prediction_span,
+    FrameScheduler::GetFuturePresentationInfosCallback presentation_infos_callback) {
   std::vector<fuchsia::scenic::scheduling::PresentationInfo> infos;
 
   PredictionRequest request;
@@ -308,12 +309,13 @@ DefaultFrameScheduler::GetFuturePresentationInfos(zx::duration requested_predict
   }
 
   ZX_DEBUG_ASSERT(infos.size() >= 1);
-  return infos;
+  presentation_infos_callback(std::move(infos));
 }
 
 void DefaultFrameScheduler::SetOnFramePresentedCallbackForSession(
-    SessionId session, OnFramePresentedCallback callback) {
-  update_manager_.SetOnFramePresentedCallbackForSession(session, std::move(callback));
+    SessionId session, OnFramePresentedCallback frame_presented_callback) {
+  update_manager_.SetOnFramePresentedCallbackForSession(session,
+                                                        std::move(frame_presented_callback));
 }
 
 DefaultFrameScheduler::UpdateManager::ApplyUpdatesResult DefaultFrameScheduler::ApplyUpdates(
@@ -512,9 +514,9 @@ void DefaultFrameScheduler::UpdateManager::SignalPresentCallbacks(
 }
 
 void DefaultFrameScheduler::UpdateManager::SetOnFramePresentedCallbackForSession(
-    SessionId session, OnFramePresentedCallback callback) {
+    SessionId session, OnFramePresentedCallback frame_presented_callback) {
   FXL_DCHECK(present2_callback_map_.find(session) == present2_callback_map_.end());
-  present2_callback_map_[session] = std::move(callback);
+  present2_callback_map_[session] = std::move(frame_presented_callback);
 }
 
 }  // namespace scheduling

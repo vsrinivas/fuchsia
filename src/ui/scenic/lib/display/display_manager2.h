@@ -69,6 +69,8 @@ class DisplayManager2 : public fuchsia::ui::display::DisplayManager {
     fuchsia::ui::display::Info info;
   };
 
+  // Internal data structure that holds the DisplayController interface and
+  // associated info (listener, list of Displays).
   struct DisplayControllerPrivate {
     // If a a client has called ClaimDisplay(), this will be non-null and point
     // to the DisplayController passed to the client. This pointer is nulled

@@ -33,17 +33,15 @@ void SessionTest::TearDown() {
 SessionContext SessionTest::CreateSessionContext() {
   FXL_DCHECK(frame_scheduler_);
 
-  SessionContext session_context{
-      vk::Device(),
-      nullptr,           // escher::Escher*
-      nullptr,           // escher::ResourceRecycler
-      nullptr,           // escher::ImageFactory*
-      nullptr,           // escher::RoundedRectFactory*
-      nullptr,           // escher::ReleaseFenceSignaller*
-      frame_scheduler_,  // shared_ptr<FrameScheduler>
-      nullptr,           // SceneGraphWeakPtr
-      nullptr            // ViewLinker*
-  };
+  SessionContext session_context{.vk_device = vk::Device(),
+                                 .escher = nullptr,
+                                 .escher_resource_recycler = nullptr,
+                                 .escher_image_factory = nullptr,
+                                 .escher_rounded_rect_factory = nullptr,
+                                 .release_fence_signaller = nullptr,
+                                 .frame_scheduler = frame_scheduler_,
+                                 .scene_graph = nullptr,
+                                 .view_linker = nullptr};
   return session_context;
 }
 

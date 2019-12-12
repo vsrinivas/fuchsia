@@ -115,16 +115,28 @@ class HitTestTest : public gtest::TestLoopFixture {
     kRendererId,
   };
 
-  HitTestTest()
-      : engine_(context_provider_.context(),
-                /* frame_scheduler */ nullptr,
-                /* release_fence_signaller */ nullptr,
-                /* escher */ nullptr) {}
-  Engine* engine() { return &engine_; }
+  Engine* engine() { return engine_.get(); }
   float layer_width() const { return layer_width_; }
   float layer_height() const { return layer_height_; }
 
-  CustomSession CreateSession(SessionId id) { return CustomSession(id, engine_.session_context()); }
+  // | ::testing::Test |
+  void SetUp() override {
+    gtest::TestLoopFixture::SetUp();
+    engine_ = std::make_unique<Engine>(context_provider_.context(),
+                                       /* frame_scheduler */ nullptr,
+                                       /* release_fence_signaller */ nullptr,
+                                       /* escher */ nullptr);
+  }
+
+  // | ::testing::Test |
+  void TearDown() override {
+    gtest::TestLoopFixture::TearDown();
+    engine_.reset();
+  }
+
+  CustomSession CreateSession(SessionId id) {
+    return CustomSession(id, engine_->session_context());
+  }
 
   // Creates a session ID 0 with a compositor, layer stack, layer, scene, camera, and renderer.
   CustomSession CreateRootSession(float layer_width, float layer_height) {
@@ -162,7 +174,7 @@ class HitTestTest : public gtest::TestLoopFixture {
   // Models input subsystem's access to Engine internals.
   // For simplicity, we use the first (and only) compositor and layer stack.
   LayerStackPtr layer_stack() {
-    const CompositorWeakPtr& compositor = engine_.scene_graph()->first_compositor();
+    const CompositorWeakPtr& compositor = engine_->scene_graph()->first_compositor();
     FXL_CHECK(compositor);
     LayerStackPtr layer_stack = compositor->layer_stack();
     FXL_CHECK(layer_stack);
@@ -172,7 +184,7 @@ class HitTestTest : public gtest::TestLoopFixture {
 
  private:
   sys::testing::ComponentContextProvider context_provider_;
-  Engine engine_;
+  std::unique_ptr<Engine> engine_;
 
   float layer_width_, layer_height_;
 };

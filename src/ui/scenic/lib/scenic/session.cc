@@ -104,10 +104,7 @@ void Session::Present2(fuchsia::ui::scenic::Present2Args args, Present2Callback 
   }
 
   // After decrementing |num_presents_allowed_|, fire the immediate callback.
-  auto future_presentation_infos = GetTempSessionDelegate()->GetFuturePresentationInfos(
-      zx::duration(args.requested_prediction_span()));
-  if (callback)
-    callback({std::move(future_presentation_infos), num_presents_allowed_});
+  InvokeFuturePresentationTimesCallback(args.requested_prediction_span(), std::move(callback));
 
   // Schedule the update.
   GetTempSessionDelegate()->Present2(args.requested_presentation_time(),
@@ -117,10 +114,19 @@ void Session::Present2(fuchsia::ui::scenic::Present2Args args, Present2Callback 
 
 void Session::RequestPresentationTimes(zx_duration_t requested_prediction_span,
                                        RequestPresentationTimesCallback callback) {
-  if (callback)
-    callback({GetTempSessionDelegate()->GetFuturePresentationInfos(
-                  zx::duration(requested_prediction_span)),
-              num_presents_allowed_});
+  InvokeFuturePresentationTimesCallback(requested_prediction_span, std::move(callback));
+}
+
+void Session::InvokeFuturePresentationTimesCallback(zx_duration_t requested_prediction_span,
+                                                    RequestPresentationTimesCallback callback) {
+  if (callback) {
+    GetTempSessionDelegate()->GetFuturePresentationInfos(
+        zx::duration(requested_prediction_span),
+        [weak = weak_factory_.GetWeakPtr(), callback = std::move(callback)](
+            std::vector<fuchsia::scenic::scheduling::PresentationInfo> presentation_infos) {
+          callback({std::move(presentation_infos), weak ? weak->num_presents_allowed_ : 0});
+        });
+  }
 }
 
 void Session::SetCommandDispatchers(
