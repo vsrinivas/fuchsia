@@ -195,15 +195,20 @@ template("clang_toolchain") {
       outfile = "{{output_dir}}/$outname"
       depfile = "$outfile.d"
       unstripped_outfile = outfile
+      command = ""
       if (use_strip) {
         unstripped_outfile = "{{output_dir}}/exe.unstripped/{{target_output_name}}{{output_extension}}"
+
+        # TODO: see the comment below
+        command += "mkdir -p {{output_dir}}/exe.unstripped && "
       }
-      command = "$rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o \"$unstripped_outfile\" {{rustdeps}} {{externs}}"
+      command += "$rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o \"$unstripped_outfile\" {{rustdeps}} {{externs}}"
       description = "RUST {{output}}"
       default_output_dir = "{{root_out_dir}}"
       outputs = [
-        outfile
+        outfile,
       ]
+
       # TODO: enable this once Ninja supports multiple outputs with depfile:
       #   https://github.com/ninja-build/ninja/pull/1534
       #if (outfile != unstripped_outfile) {
@@ -253,10 +258,14 @@ template("clang_toolchain") {
       outname = "{{target_output_name}}{{output_extension}}"
       outfile = "{{output_dir}}/$outname"
       depfile = "$outfile.d"
+      command = ""
       if (use_strip) {
         unstripped_outfile = "{{output_dir}}/lib.unstripped/{{target_output_name}}{{output_extension}}"
+
+        # TODO: see the comment below
+        command += "mkdir -p {{output_dir}}/exe.unstripped && "
       }
-      command = "$rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o \"$unstripped_outfile\" {{rustdeps}} {{externs}}"
+      command += "$rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o \"$unstripped_outfile\" {{rustdeps}} {{externs}}"
       description = "RUST {{output}}"
       default_output_dir = "{{root_out_dir}}"
       if (invoker.toolchain_os == "mac") {
@@ -266,8 +275,9 @@ template("clang_toolchain") {
       }
       output_prefix = "lib"
       outputs = [
-        outfile
+        outfile,
       ]
+
       # TODO: enable this once Ninja supports multiple outputs with depfile:
       #   https://github.com/ninja-build/ninja/pull/1534
       #if (outfile != unstripped_outfile) {
