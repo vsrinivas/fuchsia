@@ -13,7 +13,6 @@
 #include <set>
 
 #include "src/lib/backoff/exponential_backoff.h"
-#include "src/lib/callback/waiter.h"
 #include "src/lib/cobalt/cpp/cobalt_logger.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/syslog/cpp/logger.h"
@@ -217,35 +216,34 @@ void BaseCobaltLoggerImpl::SendEvents() {
   events_in_transit_ = std::move(events_to_send_);
   events_to_send_.clear();
 
-  auto waiter = fxl::MakeRefCounted<callback::CompletionWaiter>();
+  auto complete_count = std::make_shared<int>(events_in_transit_.size());
   for (auto& event : events_in_transit_) {
-    auto callback = waiter->NewCallback();
-    event->Log(&logger_,
-               [this, event_ptr = event.get(), callback = std::move(callback)](Status status) {
-                 LogEventCallback(event_ptr, status);
-                 callback();
-               });
-  }
+    event->Log(&logger_, [this, event_ptr = event.get(), complete_count](Status status) {
+      LogEventCallback(event_ptr, status);
+      (*complete_count)--;
 
-  waiter->Finalize([this]() {
-    // No transient errors.
-    if (events_in_transit_.empty()) {
-      backoff_.Reset();
-      // Send any event received while |events_in_transit_| was not
-      // empty.
-      SendEvents();
-      return;
-    }
-
-    // A transient error happened, retry after a delay.
-    async::PostDelayedTask(
-        dispatcher_,
-        [this]() {
-          OnTransitFail();
+      // All events have been logged.
+      if (!*complete_count) {
+        // No transient errors.
+        if (events_in_transit_.empty()) {
+          backoff_.Reset();
+          // Send any event received while |events_in_transit_| was not
+          // empty.
           SendEvents();
-        },
-        backoff_.GetNext());
-  });
+          return;
+        }
+
+        // A transient error happened, retry after a delay.
+        async::PostDelayedTask(
+            dispatcher_,
+            [this]() {
+              OnTransitFail();
+              SendEvents();
+            },
+            backoff_.GetNext());
+      }
+    });
+  }
 }
 
 void BaseCobaltLoggerImpl::LogEventCallback(const BaseEvent* event, Status status) {

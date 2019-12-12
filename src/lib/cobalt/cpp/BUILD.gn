@@ -28,7 +28,6 @@ source_set("cobalt_logger") {
 
   deps = [
     "//src/lib/backoff",
-    "//src/lib/callback",
     "//src/lib/fsl",
   ]
 }
