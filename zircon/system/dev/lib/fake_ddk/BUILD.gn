@@ -29,8 +29,11 @@ zx_library("fake_ddk") {
     "$zx/system/ulib/async-loop",
     "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/async-loop:async-loop-default.static",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fidl-async:fidl-async",
+    "$zx/system/ulib/fidl-async",
+    "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
@@ -40,15 +43,15 @@ zx_library("fake_ddk") {
     "$zx/system/ulib/async-loop:headers",
 
     # <lib/fake_ddk/fake_ddk.h> has #include <ddk/device.h>.
-    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddk:headers",
 
     # <lib/fake_ddk/fake_ddk.h> has #include <fbl/array.h>
-    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fbl:headers",
 
     # <lib/fake_ddk/fidl-helper.h> has #include <lib/fidl-async/bind.h>.
     "$zx/system/ulib/fidl-async:headers",
 
     # <lib/fake_ddk/fake_ddk.h> has #include <lib/sync/completion.h>.
-    "$zx/system/ulib/sync",
+    "$zx/system/ulib/sync:headers",
   ]
 }
