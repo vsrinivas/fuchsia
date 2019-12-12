@@ -80,7 +80,7 @@ void StreamImpl::Start() {
   }
   output_node_.OnStartStreaming();
   started_ = true;
-}  // namespace camera
+}
 
 void StreamImpl::ReleaseFrame(uint32_t buffer_id) { output_node_.OnReleaseFrame(buffer_id); }
 

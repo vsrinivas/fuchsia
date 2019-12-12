@@ -90,12 +90,14 @@ void ProcessNode::OnReleaseFrame(uint32_t buffer_index) {
 }
 
 void ProcessNode::OnStartStreaming() {
-  enabled_ = true;
-  if (type_ == NodeType::kInputStream) {
-    isp_stream_protocol_->Start();
-    return;
+  if (!enabled_) {
+    enabled_ = true;
+    if (type_ == NodeType::kInputStream) {
+      isp_stream_protocol_->Start();
+      return;
+    }
+    parent_node_->OnStartStreaming();
   }
-  parent_node_->OnStartStreaming();
 }
 
 bool ProcessNode::AllChildNodesDisabled() {

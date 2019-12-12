@@ -394,6 +394,25 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_TRUE(HasStreamType(input_vector, stream_to_find));
   }
 
+  void TestMultipleStartStreaming() {
+    auto stream_config_node = GetStreamConfigNode(kDebugConfig, kStreamTypeFR);
+    ASSERT_NE(nullptr, stream_config_node);
+
+    PipelineInfo info;
+    fuchsia::camera2::hal::StreamConfig stream_config;
+    stream_config.properties.set_stream_type(kStreamTypeFR);
+    info.stream_config = &stream_config;
+    info.node = *stream_config_node;
+
+    auto result = GetInputNode(kStreamTypeFR, &info);
+    auto graph_result = GetGraphNode(&info, result.value().get());
+
+    // Set streaming on.
+    graph_result.value()->client_stream()->Start();
+
+    EXPECT_NO_FATAL_FAILURE(graph_result.value()->client_stream()->Start());
+  }
+
   FakeIsp fake_isp_;
   FakeGdc fake_gdc_;
   async::Loop loop_;
@@ -430,6 +449,8 @@ TEST_F(ControllerProtocolTest, TestConfigureVideoConfigStream1) {
 }
 
 TEST_F(ControllerProtocolTest, TestHasStreamType) { TestHasStreamType(); }
+
+TEST_F(ControllerProtocolTest, TestMultipleStartStreaming) { TestMultipleStartStreaming(); }
 
 TEST_F(ControllerProtocolTest, LoadGdcConfig) {
 #ifdef INTERNAL_ACCESS
