@@ -46,9 +46,13 @@ class CodecImplLifetime : public gtest::RealLoopFixture {
     // nothing else to do here
   }
 
-  void SetUp() override {
-    loop_separate_thread_.StartThread("separate_thread");
+  ~CodecImplLifetime() {
+    // Force to teardown before admission_control_.
+    RunLoopUntilIdle();
+    QuitLoop();
   }
+
+  void SetUp() override { loop_separate_thread_.StartThread("separate_thread"); }
   void TearDown() override {
     // Force any failure during ~CodecImpl to have more obvious stack.
     codec_impl_ = nullptr;

@@ -43,6 +43,7 @@ source_set("codec_impl_tests") {
   testonly = true
 
   sources = [
+    "test_admission_control.cc",
     "test_failures.cc",
     "test_fake_map_range.cc",
     "test_lifetime.cc",

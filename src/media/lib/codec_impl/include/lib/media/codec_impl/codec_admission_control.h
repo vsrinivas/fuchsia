@@ -6,10 +6,14 @@
 #define SRC_MEDIA_LIB_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_ADMISSION_CONTROL_H_
 
 #include <lib/async/cpp/task.h>
+#include <lib/fit/defer.h>
 #include <lib/fit/function.h>
+#include <lib/zx/channel.h>
 #include <zircon/compiler.h>
 
 #include <mutex>
+#include <unordered_set>
+#include <vector>
 
 #include <fbl/macros.h>
 
@@ -26,17 +30,9 @@ class CodecAdmissionControl {
   // Get a move-only CodecAdmission as a move-only ticket that allows creation
   // of a CodecImpl.
   //
-  // TODO(dustingreen): The attempt to add a codec should not be started until
-  // after any previously-initiated Codec channel closes are fully done being
-  // processed.  This method signature allows for that fencing to be added later
-  // without changing the call site, but the actual fencing isn't really there
-  // yet - currently a single re-post is done to make the async-ness real, but
-  // (at least) because close processing itself needs to post around to get
-  // everything shut down cleanly, the overall fencing isn't really there yet.
-  //
   // TODO(dustingreen): std::optional<> instead when C++17.
   void TryAddCodec(bool multi_instance, fit::function<void(std::unique_ptr<CodecAdmission>)>
-                   continue_after_previously_started_channel_closes_done);
+                                            continue_after_previously_started_channel_closes_done);
 
   // Anything posted here will run after any previously-posted items here or via
   // TryAddCodec().
@@ -44,38 +40,69 @@ class CodecAdmissionControl {
   // Run the posted closure after all previously-started closes are done being
   // processed, and after all previously-queued closures via this method are
   // done.
-  //
-  // TODO(dustingreen): This doesn't actually do what it says yet, though
-  // items queued via this method and TryAddCodec() do run in order.
   void PostAfterPreviouslyStartedClosesDone(fit::closure to_run);
 
  private:
   friend class CodecAdmission;
 
-  // This is called after exactly one post via
-  // PostAfterPreviouslyStartedClosesDone() performed by TryAddCodec().
+  // This keeps a set of deferred callbacks alive until all references to it are released.
+  class PreviousCloseHandle {
+   public:
+    void AddClosureToReference(std::shared_ptr<fit::deferred_callback> input_defer) {
+      defer_list_.push_back(input_defer);
+    }
+
+   private:
+    std::vector<std::shared_ptr<fit::deferred_callback>> defer_list_;
+  };
+
+  // This is called after all previous closes are done.
   std::unique_ptr<CodecAdmission> TryAddCodecInternal(bool multi_instance);
+  std::shared_ptr<PreviousCloseHandle> OnCodecIsClosing();
 
   void RemoveCodec(bool multi_instance);
+  void CleanOutPreviousClosures() __TA_REQUIRES(lock_);
 
   async_dispatcher_t* shared_fidl_dispatcher_ = nullptr;
+
+  // Must only be accessed from the shared fidl thread.
+  std::unordered_set<CodecAdmission*> codecs_to_check_for_close_;
 
   std::mutex lock_;
   uint32_t single_instance_codec_count_ __TA_GUARDED(lock_) = 0;
   uint32_t multi_instance_codec_count_ __TA_GUARDED(lock_) = 0;
+
+  std::vector<std::weak_ptr<PreviousCloseHandle>> previous_closes_ __TA_GUARDED(lock_);
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(CodecAdmissionControl);
 };
 
 class CodecAdmission {
  public:
-  // move-only
-  //
-  // These user-declared but not user-provided move construct / move assign
-  // still count as user-delcared, so these (either of them) cause normal copy
-  // and assign to be implicitly deleted (both of them).
-  CodecAdmission(CodecAdmission&& from) = default;
-  CodecAdmission& operator=(CodecAdmission&& from) = default;
+  CodecAdmission(CodecAdmission&& from) = delete;
+  CodecAdmission& operator=(CodecAdmission&& from) = delete;
+  CodecAdmission(const CodecAdmission& from) = delete;
+  CodecAdmission& operator=(const CodecAdmission& from) = delete;
+
+  // Must be called from the shared fidl thread.
+  void SetChannelToWaitOn(zx::unowned_channel channel) {
+    channel_ = channel;
+    if (*channel_) {
+      codec_admission_control_->codecs_to_check_for_close_.insert(this);
+    } else {
+      codec_admission_control_->codecs_to_check_for_close_.erase(this);
+    }
+  }
+
+  // Must be called from the shared fidl thread.
+  void CheckIfChannelClosing();
+
+  // Tell the codec admission control that this codec will be closing soon. When the class is
+  // destroyed |close_handle_| will be destructed and that allows pending callbacks to run.
+  void SetCodecIsClosing() {
+    if (!close_handle_)
+      close_handle_ = codec_admission_control_->OnCodecIsClosing();
+  }
 
   ~CodecAdmission();
 
@@ -85,6 +112,8 @@ class CodecAdmission {
 
   CodecAdmissionControl* codec_admission_control_ = nullptr;
   bool multi_instance_;
+  std::shared_ptr<CodecAdmissionControl::PreviousCloseHandle> close_handle_;
+  zx::unowned_channel channel_;
 };
 
 #endif  // SRC_MEDIA_LIB_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_ADMISSION_CONTROL_H_

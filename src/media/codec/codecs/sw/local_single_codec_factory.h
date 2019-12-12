@@ -56,6 +56,10 @@ class LocalSingleCodecFactory : public fuchsia::mediacodec::CodecFactory {
   template <typename Adapter, typename Params>
   void VendCodecAdapter(Params params,
                         fidl::InterfaceRequest<fuchsia::media::StreamProcessor> codec_request) {
+    // Ignore channel errors (e.g. PEER_CLOSED) after this point, because this channel has served
+    // its purpose. Otherwise the error handler could tear down the loop before the codec was
+    // finished being added.
+    binding_.set_error_handler([](auto) {});
     codec_admission_control_->TryAddCodec(
         /*multi_instance=*/true,
         [this, params = std::move(params), codec_request = std::move(codec_request)](
