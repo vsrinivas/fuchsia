@@ -627,6 +627,12 @@ fn populate_inspect_repo(
     )
 }
 
+fn remove_from_inspect_repo(state: &Arc<Mutex<ArchivistState>>, component_name: &String) {
+    let state = state.lock().unwrap();
+    let mut inspect_repo = state.inspect_repository.write().unwrap();
+    inspect_repo.remove(component_name)
+}
+
 async fn process_event(
     state: Arc<Mutex<ArchivistState>>,
     event: ComponentEvent,
@@ -634,7 +640,10 @@ async fn process_event(
     match event {
         ComponentEvent::Existing(data) => archive_event(&state, "EXISTING", data).await,
         ComponentEvent::Start(data) => archive_event(&state, "START", data).await,
-        ComponentEvent::Stop(data) => archive_event(&state, "STOP", data).await,
+        ComponentEvent::Stop(data) => {
+            remove_from_inspect_repo(&state, &data.component_name);
+            archive_event(&state, "STOP", data).await
+        }
         ComponentEvent::OutDirectoryAppeared(data) => populate_inspect_repo(&state, data),
     }
 }

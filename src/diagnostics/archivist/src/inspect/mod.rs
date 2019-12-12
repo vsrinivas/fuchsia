@@ -321,6 +321,14 @@ impl InspectDataRepository {
         }
     }
 
+    pub fn remove(&mut self, component_name: &String) {
+        // TODO(4601): The data directory trie should be a prefix of
+        //             absolute moniker segments, not component names,
+        //             so that client provided selectors can scope
+        //             more quickly.
+        self.data_directories.remove(component_name.chars().collect());
+    }
+
     pub fn add(
         &mut self,
         component_name: String,
@@ -1018,10 +1026,10 @@ mod tests {
         let child_1_1_selector = selectors::parse_selector(r#"*:root/child_1/*:some-int"#).unwrap();
         let child_2_selector =
             selectors::parse_selector(r#"test_bindings2:root/child_2:*"#).unwrap();
-        let mut inspect_repo = InspectDataRepository::new(Some(vec![
+        let inspect_repo = Arc::new(RwLock::new(InspectDataRepository::new(Some(vec![
             Arc::new(child_1_1_selector),
             Arc::new(child_2_selector),
-        ]));
+        ]))));
 
         let out_dir_proxy = InspectDataCollector::find_directory_proxy(&path).await.unwrap();
 
@@ -1029,10 +1037,47 @@ mod tests {
         // selector, so any path would match.
         let absolute_moniker = vec!["test_bindings2".to_string()];
 
-        inspect_repo.add(filename.into(), absolute_moniker, path, out_dir_proxy).unwrap();
+        let filename_string = filename.into();
+        inspect_repo
+            .write()
+            .unwrap()
+            .add(filename_string.clone(), absolute_moniker, path, out_dir_proxy)
+            .unwrap();
 
-        let reader_server = ReaderServer::new(Arc::new(RwLock::new(inspect_repo)), Vec::new());
+        let reader_server = ReaderServer::new(inspect_repo.clone(), Vec::new());
 
+        let result_string = read_snapshot(reader_server.clone()).await;
+
+        let expected_result = format!(
+            "[
+    {{
+        \"contents\": {{
+            \"root\": {{
+                \"child_1\": {{
+                    \"child_1_1\": {{
+                        \"some-int\": 3
+                    }}
+                }},
+                \"child_2\": {{
+                    \"some-int\": 2
+                }}
+            }}
+        }},
+        \"path\": \"/{}/out\"
+    }}
+]",
+            bindings_dir
+        );
+
+        assert_eq!(result_string, expected_result);
+
+        inspect_repo.write().unwrap().remove(&filename_string);
+        let result_string = read_snapshot(reader_server.clone()).await;
+
+        assert_eq!(result_string, "".to_string());
+    }
+
+    async fn read_snapshot(reader_server: ReaderServer) -> String {
         let (consumer, batch_iterator): (
             _,
             ServerEnd<fidl_fuchsia_diagnostics::BatchIteratorMarker>,
@@ -1069,28 +1114,6 @@ mod tests {
                 }
             }
         }
-
-        let expected_result = format!(
-            "[
-    {{
-        \"contents\": {{
-            \"root\": {{
-                \"child_1\": {{
-                    \"child_1_1\": {{
-                        \"some-int\": 3
-                    }}
-                }},
-                \"child_2\": {{
-                    \"some-int\": 2
-                }}
-            }}
-        }},
-        \"path\": \"/{}/out\"
-    }}
-]",
-            bindings_dir
-        );
-
-        assert_eq!(result_string, expected_result);
+        result_string
     }
 }
