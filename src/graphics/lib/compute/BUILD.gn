@@ -45,6 +45,7 @@ group("compute") {
 group("tests") {
   testonly = true
   public_deps = [
+    ":graphics_compute_spinel_unittests",
     ":graphics_compute_unittests",
     "mold:mold-tests",
     "spinel-mold:spinel-mold-static-tests",
@@ -90,10 +91,21 @@ group("all_tests") {
 graphics_compute_unittests_package("graphics_compute_unittests") {
   deps = [
     "common:common_unittests",
-    "spinel:spinel_ext_unittests",
     "svg:svg_unittests",
     "tests:common_unittests",
     "tests/common/spinel:unittests",
+    "tests/mock_spinel:mock_spinel_unittests",
+  ]
+}
+
+# A target used to group all graphics compute unit-tests that need to link
+# to the Vulkan Spinel backend. This is only necessary because
+# svg2spinel_unittest.cc depends on Spinel internals and need to link to
+# the library to work properly. A future CL will change the test to use
+# mock_spinel instead, which will allow removing this target.
+graphics_compute_unittests_package("graphics_compute_spinel_unittests") {
+  deps = [
+    "spinel:spinel_ext_unittests",
   ]
 }
 

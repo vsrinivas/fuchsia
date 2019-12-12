@@ -1,0 +1,51 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("../../gn/build_rules.gni")
+
+config("public_config") {
+  # Clients should include "tests/mock_spinel/mock_spinel.h"
+  include_dirs = [ graphics_compute_dir ]
+}
+
+# The Mock spinel API implementation used for testing and demos.
+source_set("mock_spinel") {
+  sources = [
+    "mock_spinel.cc",
+    "mock_spinel.h",
+    "spinel_api_interface.cc",
+    "spinel_api_interface.h",
+  ]
+  public_configs = [ ":public_config" ]
+  public_deps = [
+    "${graphics_compute_dir}/spinel:spinel_headers",
+    "${graphics_compute_dir}/tests:common",
+  ]
+}
+
+graphics_compute_unittests("mock_spinel_unittests") {
+  sources = [
+    "mock_spinel_unittest.cc",
+  ]
+  deps = [
+    ":mock_spinel",
+    ":mock_spinel_test_utils",
+    graphics_compute_gmock_target,
+  ]
+}
+
+# Convenience class to write tests with mock_spinel.
+source_set("mock_spinel_test_utils") {
+  sources = [
+    "mock_spinel_test_utils.cc",
+    "mock_spinel_test_utils.h",
+  ]
+  public_configs = [ ":public_config" ]
+  public_deps = [
+    ":mock_spinel",
+    "${graphics_compute_dir}/tests/common/spinel:spinel_test_utils",
+    graphics_compute_gtest_target,
+  ]
+  testonly = true
+}
