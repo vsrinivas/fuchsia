@@ -16,6 +16,7 @@
 #include <kernel/event.h>
 #include <kernel/percpu.h>
 #include <kernel/thread.h>
+#include <kernel/thread_lock.h>
 #include <ktl/atomic.h>
 #include <lk/init.h>
 #include <lockdep/lockdep.h>
@@ -167,7 +168,14 @@ ThreadLockState* SystemGetThreadLockState() {
 void SystemInitThreadLockState(ThreadLockState*) {}
 
 // Wakes up the loop detector thread to re-evaluate the dependency graph.
-void SystemTriggerLoopDetection() { event_signal(&graph_edge_event, /*reschedule=*/false); }
+void SystemTriggerLoopDetection() {
+  if (spin_lock_held(&ThreadLock::Get()->lock())) {
+    AssertHeld<ThreadLock, IrqSave>(*ThreadLock::Get());
+    event_signal_thread_locked(&graph_edge_event);
+  } else {
+    event_signal(&graph_edge_event, /*reschedule=*/false);
+  }
+}
 
 }  // namespace lockdep
 

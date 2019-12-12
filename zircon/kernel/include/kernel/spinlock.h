@@ -180,6 +180,9 @@ struct NoIrqSavePolicy<spin_lock_t> {
     return true;
   }
   static void Release(spin_lock_t* lock, State*) TA_REL(lock) { spin_unlock(lock); }
+  static void AssertHeld(const spin_lock_t& lock) TA_ASSERT(lock) {
+    DEBUG_ASSERT(spin_lock_held(const_cast<spin_lock_t*>(&lock)));
+  }
 };
 
 // Configure Guard<spin_lock_t, NoIrqSave> to use the above policy to acquire and
@@ -245,6 +248,9 @@ struct IrqSavePolicy<spin_lock_t> {
   }
   static void Release(spin_lock_t* lock, State* state) TA_REL(lock) {
     spin_unlock_restore(lock, state->state, state->flags);
+  }
+  static void AssertHeld(const spin_lock_t& lock) TA_ASSERT(lock) {
+    DEBUG_ASSERT(spin_lock_held(const_cast<spin_lock_t*>(&lock)));
   }
 };
 

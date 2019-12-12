@@ -88,10 +88,10 @@ using EnableIfNotShared =
 // Calling this function requires that LockType has a policy implementing
 // `AssertHeld`. The default policy automatically implements AssertHeld
 // if the underlying lock object has an `AssertHeld` method.
-template <typename Lockable>
+template <typename Lockable, typename Option = void>
 void AssertHeld(const Lockable& lock) __TA_ASSERT(lock) __TA_ASSERT(lock.lock())
     __TA_ASSERT(lock.capability()) {
-  LockPolicy<internal::GetLockType<Lockable>>::AssertHeld(lock.lock());
+  LockPolicy<internal::GetLockType<Lockable>, Option>::AssertHeld(lock.lock());
 }
 
 // Type tag to select the (private) ordered Guard constructor.
