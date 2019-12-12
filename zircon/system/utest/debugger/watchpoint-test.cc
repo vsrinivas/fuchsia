@@ -6,18 +6,24 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <zircon/process.h>
+#include <zircon/status.h>
+#include <zircon/threads.h>
 
 #include <atomic>
 
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
-#include <zircon/process.h>
-#include <zircon/status.h>
-#include <zircon/threads.h>
 
 #include "inferior-control.h"
 #include "inferior.h"
 #include "utils.h"
+
+#if defined(__aarch64__)
+
+#include <zircon/hw/debug/arm64.h>
+
+#endif
 
 namespace {
 
@@ -57,14 +63,26 @@ zx_status_t set_watchpoint(zx_handle_t thread_handle) {
 
 zx_status_t set_watchpoint(zx_handle_t thread_handle) {
   zx_thread_state_debug_regs_t debug_regs = {};
-  // For now the API is very simple, as zircon is not using further
-  // configuration beyond simply adding a write watchpoint.
-  // TODO(donosoc): Unify this under one public arch header.
-  debug_regs.hw_wps[0].dbgwcr = 0b1;  // DBGWCR_E
+  ARM64_DBGWCR_E_SET(&debug_regs.hw_wps[0].dbgwcr, 1);
+  ARM64_DBGWCR_BAS_SET(&debug_regs.hw_wps[0].dbgwcr, 0xff);
+
   debug_regs.hw_wps[0].dbgwvr = reinterpret_cast<uint64_t>(&gVariableToChange);
 
   return zx_thread_write_state(thread_handle, ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
                                sizeof(debug_regs));
+}
+
+zx_status_t get_far(zx_handle_t thread_handle, uint64_t* far) {
+  zx_thread_state_debug_regs_t debug_regs = {};
+  zx_status_t status = zx_thread_read_state(thread_handle, ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
+                                            sizeof(debug_regs));
+  if (status != ZX_OK) {
+    *far = 0;
+    return status;
+  }
+
+  *far = debug_regs.far;
+  return ZX_OK;
 }
 
 #else
@@ -120,6 +138,12 @@ bool test_watchpoint_impl(zx_handle_t excp_channel) {
   tu_channel_wait_readable(excp_channel);
   tu_exception_t exception = tu_read_exception(excp_channel);
   ASSERT_EQ(exception.info.type, ZX_EXCP_HW_BREAKPOINT);
+
+#if defined(__aarch64__)
+  uint64_t far = 0;
+  ASSERT_EQ(get_far(thread_handle, &far), ZX_OK);
+  ASSERT_NE(far, 0);
+#endif
 
   // Clear the state and resume the thread.
   status = unset_watchpoint(thread_handle);

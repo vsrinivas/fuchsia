@@ -130,23 +130,28 @@ typedef struct zx_thread_state_debug_regs {
   } hw_bps[AARCH64_MAX_HW_BREAKPOINTS];
   // Number of HW Breakpoints in the platform.
   // Will be set on read and ignored on write.
-  uint8_t hw_bps_count;
-
-  uint8_t padding1[7];
 
   struct {
     uint32_t dbgwcr;  // HW Watchpoint Control register.
     uint8_t padding1[4];
     uint64_t dbgwvr;  // HW Watchpoint Value register.
   } hw_wps[AARCH64_MAX_HW_WATCHPOINTS];
-  // Number of HW Watchpoints in the platform.
-  // Will be set on read and ignored on write.
-  uint8_t hw_wps_count;
 
-  uint8_t padding2[3];
+  // Faulting Virtual Address for watchpoint exceptions.
+  // Read-only, values are ignored on write.
+  uint64_t far;
 
   // The esr value since the last exception.
+  // Read-only, values are ignored on write.
   uint32_t esr;
+
+  // Number of HW Breakpoints/Watchpoints in the platform.
+  // Will be set on read and ignored on write.
+  uint8_t hw_bps_count;
+  uint8_t hw_wps_count;
+
+  uint8_t padding1[2];
+
 } zx_thread_state_debug_regs_t;
 
 #endif

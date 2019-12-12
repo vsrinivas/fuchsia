@@ -392,10 +392,11 @@ VALIDATE_TYPE_SIZE_ALIGNMENT(zx_thread_state_debug_regs_t, 528, 8);
 VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_debug_regs_t, hw_bps, 0, 256);
 VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_debug_regs_t, hw_bps[0].dbgbcr, 0, 4);
 VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_debug_regs_t, hw_bps[0].dbgbvr, 8, 8);
-VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_debug_regs_t, hw_bps_count, 256, 1);
-VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_debug_regs_t, hw_wps, 264, 256);
-VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_debug_regs_t, hw_wps_count, 520, 1);
-VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_debug_regs_t, esr, 524, 4);
+VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_debug_regs_t, hw_wps, 256, 256);
+VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_debug_regs_t, far, 512, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_debug_regs_t, esr, 520, 4);
+VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_debug_regs_t, hw_bps_count, 524, 1);
+VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_debug_regs_t, hw_wps_count, 525, 1);
 #elif defined(__x86_64__)
 VALIDATE_TYPE_SIZE_ALIGNMENT(zx_thread_state_debug_regs_t, 48, 8);
 VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_debug_regs_t, dr, 0, 32);

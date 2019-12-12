@@ -7,8 +7,8 @@
 #ifndef ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARM64_REGISTERS_H_
 #define ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARM64_REGISTERS_H_
 
-#include <zircon/syscalls/debug.h>
 #include <zircon/hw/debug/arm64.h>
+#include <zircon/syscalls/debug.h>
 
 // MDSCR_EL1
 // Monitor Debug System Control Register. It's the main control register fot the debug
@@ -63,9 +63,8 @@
 // The user can only activate/deactivate watchpoints.
 #define ARM64_DBGWCR_USER_MASK (ARM64_DBGWCR_E_MASK)
 
-#define ARM64_DBGBCR_ACTIVE_MASK ((ARM64_DBGBCR_E_MASK) | \
-                                  (0b10u << ARM64_DBGBCR_PMC_SHIFT) | \
-                                  (ARM64_DBGBCR_BAS_MASK))
+#define ARM64_DBGBCR_ACTIVE_MASK \
+  ((ARM64_DBGBCR_E_MASK) | (0b10u << ARM64_DBGBCR_PMC_SHIFT) | (ARM64_DBGBCR_BAS_MASK))
 
 // The actual addresses bits that we will allow the user to write for a hw breakpoint.
 #define ARM64_DBGBVR_USER_MASK (0xfffffffffffcu)
@@ -100,6 +99,7 @@ typedef struct arm64_debug_state {
     uint32_t dbgwcr;
     uint64_t dbgwvr;
   } hw_wps[ARM64_MAX_HW_WATCHPOINTS];
+  uint64_t far;
   uint32_t esr;
 } arm64_debug_state_t;
 
