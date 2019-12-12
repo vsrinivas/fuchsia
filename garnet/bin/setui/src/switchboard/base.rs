@@ -80,8 +80,7 @@ pub enum SettingRequest {
     SetAutoBrightness(bool),
 
     // Do not disturb requests.
-    SetUserInitiatedDoNotDisturb(bool),
-    SetNightModeInitiatedDoNotDisturb(bool),
+    SetDnD(DoNotDisturbInfo),
 
     // Intl requests.
     SetIntlInfo(IntlInfo),
@@ -153,10 +152,7 @@ pub struct DisplayInfo {
 
 impl DisplayInfo {
     pub const fn new(auto_brightness: bool, manual_brightness_value: f32) -> DisplayInfo {
-        DisplayInfo {
-            manual_brightness_value: manual_brightness_value,
-            auto_brightness: auto_brightness,
-        }
+        DisplayInfo { manual_brightness_value, auto_brightness }
     }
 }
 
@@ -171,13 +167,16 @@ bitflags! {
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct DoNotDisturbInfo {
-    pub user_dnd: bool,
-    pub night_mode_dnd: bool,
+    pub user_dnd: Option<bool>,
+    pub night_mode_dnd: Option<bool>,
 }
 
 impl DoNotDisturbInfo {
+    pub const fn empty() -> DoNotDisturbInfo {
+        DoNotDisturbInfo { user_dnd: None, night_mode_dnd: None }
+    }
     pub const fn new(user_dnd: bool, night_mode_dnd: bool) -> DoNotDisturbInfo {
-        DoNotDisturbInfo { user_dnd: user_dnd, night_mode_dnd: night_mode_dnd }
+        DoNotDisturbInfo { user_dnd: Some(user_dnd), night_mode_dnd: Some(night_mode_dnd) }
     }
 }
 

@@ -28,10 +28,7 @@ async fn test_do_not_disturb() {
     // Prepopulate initial value.
     {
         let mut store_lock = store.lock().await;
-        assert!(store_lock
-            .write(&DoNotDisturbInfo { user_dnd: true, night_mode_dnd: false }, false)
-            .await
-            .is_ok());
+        assert!(store_lock.write(&DoNotDisturbInfo::new(true, false), false).await.is_ok());
     }
 
     create_fidl_service(
@@ -46,33 +43,43 @@ async fn test_do_not_disturb() {
 
     let dnd_proxy = env.connect_to_service::<DoNotDisturbMarker>().expect("connected to service");
 
-    verify_dnd_watch(&dnd_proxy, DoNotDisturbInfo { user_dnd: true, night_mode_dnd: false }).await;
+    verify_dnd_watch(&dnd_proxy, DoNotDisturbInfo::new(true, false)).await;
 
-    set_dnd(&dnd_proxy, "NIGHT_MODE_DND", true).await;
+    set_dnd(&dnd_proxy, None, Some(true)).await;
 
-    verify_dnd_watch(&dnd_proxy, DoNotDisturbInfo { user_dnd: true, night_mode_dnd: true }).await;
+    verify_dnd_watch(&dnd_proxy, DoNotDisturbInfo::new(true, true)).await;
 
-    set_dnd(&dnd_proxy, "USER_DND", false).await;
+    set_dnd(&dnd_proxy, Some(false), None).await;
 
-    verify_dnd_watch(&dnd_proxy, DoNotDisturbInfo { user_dnd: false, night_mode_dnd: true }).await;
+    verify_dnd_watch(&dnd_proxy, DoNotDisturbInfo::new(false, true)).await;
 
-    set_dnd(&dnd_proxy, "NIGHT_MODE_DND", false).await;
+    set_dnd(&dnd_proxy, Some(false), Some(false)).await;
 
-    verify_dnd_watch(&dnd_proxy, DoNotDisturbInfo { user_dnd: false, night_mode_dnd: false }).await;
+    verify_dnd_watch(&dnd_proxy, DoNotDisturbInfo::new(false, false)).await;
+
+    set_dnd(&dnd_proxy, Some(true), Some(true)).await;
+
+    verify_dnd_watch(&dnd_proxy, DoNotDisturbInfo::new(true, true)).await;
 }
 
-async fn set_dnd(dnd_proxy: &DoNotDisturbProxy, setting: &str, value: bool) {
+async fn set_dnd(
+    dnd_proxy: &DoNotDisturbProxy,
+    user_dnd: Option<bool>,
+    night_mode_dnd: Option<bool>,
+) {
     let mut dnd_settings = DoNotDisturbSettings::empty();
-    match setting {
-        "USER_DND" => dnd_settings.user_initiated_do_not_disturb = Some(value),
-        "NIGHT_MODE_DND" => dnd_settings.night_mode_initiated_do_not_disturb = Some(value),
-        _ => panic!("Attempted to set an unrecognized dnd attribute: {}", setting),
-    };
+    if let Some(u) = user_dnd {
+        dnd_settings.user_initiated_do_not_disturb = Some(u);
+    }
+    if let Some(n) = night_mode_dnd {
+        dnd_settings.night_mode_initiated_do_not_disturb = Some(n);
+    }
+    println!("settings: {:?}", dnd_settings);
     dnd_proxy.set(dnd_settings).await.expect("set completed").expect("set successful");
 }
 
 async fn verify_dnd_watch(dnd_proxy: &DoNotDisturbProxy, expected_dnd: DoNotDisturbInfo) {
     let settings = dnd_proxy.watch().await.expect("watch completed");
-    assert_eq!(settings.user_initiated_do_not_disturb, Some(expected_dnd.user_dnd));
-    assert_eq!(settings.night_mode_initiated_do_not_disturb, Some(expected_dnd.night_mode_dnd));
+    assert_eq!(settings.user_initiated_do_not_disturb, expected_dnd.user_dnd);
+    assert_eq!(settings.night_mode_initiated_do_not_disturb, expected_dnd.night_mode_dnd);
 }

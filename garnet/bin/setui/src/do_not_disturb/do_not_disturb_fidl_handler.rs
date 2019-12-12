@@ -25,8 +25,8 @@ impl From<SettingResponse> for DoNotDisturbSettings {
     fn from(response: SettingResponse) -> Self {
         if let SettingResponse::DoNotDisturb(info) = response {
             let mut dnd_settings = fidl_fuchsia_settings::DoNotDisturbSettings::empty();
-            dnd_settings.user_initiated_do_not_disturb = Some(info.user_dnd);
-            dnd_settings.night_mode_initiated_do_not_disturb = Some(info.night_mode_dnd);
+            dnd_settings.user_initiated_do_not_disturb = info.user_dnd;
+            dnd_settings.night_mode_initiated_do_not_disturb = info.night_mode_dnd;
             dnd_settings
         } else {
             panic!("incorrect value sent to do_not_disturb");
@@ -35,13 +35,10 @@ impl From<SettingResponse> for DoNotDisturbSettings {
 }
 
 fn to_request(settings: DoNotDisturbSettings) -> Option<SettingRequest> {
-    let mut request = None;
-    if let Some(user_dnd) = settings.user_initiated_do_not_disturb {
-        request = Some(SettingRequest::SetUserInitiatedDoNotDisturb(user_dnd));
-    } else if let Some(night_mode_dnd) = settings.night_mode_initiated_do_not_disturb {
-        request = Some(SettingRequest::SetNightModeInitiatedDoNotDisturb(night_mode_dnd));
-    }
-    request
+    let mut dnd_info = DoNotDisturbInfo::empty();
+    dnd_info.user_dnd = settings.user_initiated_do_not_disturb;
+    dnd_info.night_mode_dnd = settings.night_mode_initiated_do_not_disturb;
+    Some(SettingRequest::SetDnD(dnd_info))
 }
 
 pub fn spawn_do_not_disturb_fidl_handler(

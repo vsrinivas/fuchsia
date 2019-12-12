@@ -12,8 +12,7 @@ use {
     std::sync::Arc,
 };
 
-const USER_DND_NAME: &str = "user_dnd";
-const NIGHT_MODE_DND_NAME: &str = "night_mode_dnd";
+const DND_NAME: &str = "do_not_disturb";
 
 impl DeviceStorageCompatible for DoNotDisturbInfo {
     const KEY: &'static str = "do_not_disturb_info";
@@ -54,33 +53,22 @@ pub fn spawn_do_not_disturb_controller(
                 {
                     #[allow(unreachable_patterns)]
                     match request {
-                        SettingRequest::SetUserInitiatedDoNotDisturb(user_dnd) => {
-                            let mut request_info = stored_value.clone();
-                            request_info.user_dnd = user_dnd;
+                        SettingRequest::SetDnD(dnd_info) => {
+                            if dnd_info.user_dnd.is_some() {
+                                stored_value.user_dnd = dnd_info.user_dnd;
+                            }
+                            if dnd_info.night_mode_dnd.is_some() {
+                                stored_value.night_mode_dnd = dnd_info.night_mode_dnd;
+                            }
 
                             write_value(
-                                request_info,
-                                USER_DND_NAME,
+                                stored_value,
+                                DND_NAME,
                                 &notifier_lock,
                                 &storage,
                                 responder,
                             )
                             .await;
-                            stored_value = request_info;
-                        }
-                        SettingRequest::SetNightModeInitiatedDoNotDisturb(night_mode_dnd) => {
-                            let mut request_info = stored_value.clone();
-                            request_info.night_mode_dnd = night_mode_dnd;
-
-                            write_value(
-                                request_info,
-                                NIGHT_MODE_DND_NAME,
-                                &notifier_lock,
-                                &storage,
-                                responder,
-                            )
-                            .await;
-                            stored_value = request_info;
                         }
                         SettingRequest::Get => {
                             let mut storage_lock = storage.lock().await;

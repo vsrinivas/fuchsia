@@ -10,34 +10,28 @@ pub async fn command(
     night_mode_dnd: Option<bool>,
 ) -> Result<String, Error> {
     let mut output = String::new();
+    let mut settings = DoNotDisturbSettings::empty();
 
-    if let Some(user_dnd_value) = user_dnd {
-        let mut settings = DoNotDisturbSettings::empty();
-        settings.user_initiated_do_not_disturb = Some(user_dnd_value);
+    settings.user_initiated_do_not_disturb = user_dnd;
+    settings.night_mode_initiated_do_not_disturb = night_mode_dnd;
 
+    if settings != DoNotDisturbSettings::empty() {
         let mutate_result = proxy.set(settings).await?;
         match mutate_result {
-            Ok(_) =>
+            Ok(_) => {
+                let mut settings_clone = DoNotDisturbSettings::empty();
+                settings_clone.user_initiated_do_not_disturb = user_dnd;
+                settings_clone.night_mode_initiated_do_not_disturb = night_mode_dnd;
                 output.push_str(&format!(
-                    "Successfully set user_initiated_do_not_disturb to {}", user_dnd_value)),
-            Err(err) => output.push_str(&format!("{:?}", err)),
-        }
-    } else if let Some(night_mode_dnd_value) = night_mode_dnd {
-        let mut settings = DoNotDisturbSettings::empty();
-        settings.night_mode_initiated_do_not_disturb = Some(night_mode_dnd_value);
-
-        let mutate_result = proxy.set(settings).await?;
-        match mutate_result {
-            Ok(_) => output.push_str(&format!(
-                "Successfully set night_mode_initiated_do_not_disturb to {}",
-                night_mode_dnd_value
-            )),
+                    "Successfully set do_not_disturb to {:#?}",
+                    describe_do_not_disturb_setting(&settings_clone)
+                ));
+            }
             Err(err) => output.push_str(&format!("{:?}", err)),
         }
     } else {
         let setting = proxy.watch().await?;
-        let setting_string =
-            describe_do_not_disturb_setting(&setting);
+        let setting_string = describe_do_not_disturb_setting(&setting);
         output.push_str(&setting_string);
     }
 
