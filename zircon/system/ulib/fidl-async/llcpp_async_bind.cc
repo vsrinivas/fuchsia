@@ -25,13 +25,16 @@ AsyncBinding::AsyncBinding(async_dispatcher_t* dispatcher, zx::channel channel, 
       channel_(std::move(channel)),
       interface_(impl),
       dispatch_fn_(dispatch_fn),
-      on_unbound_fn_(std::move(on_unbound_fn)) {}
+      on_unbound_fn_(std::move(on_unbound_fn)) {
+  ZX_ASSERT(channel_);
+}
 
 AsyncBinding::~AsyncBinding() {
+  ZX_ASSERT(channel_);
   if (on_delete_) {
-    sync_completion_signal(on_delete_);
     if (out_channel_)
       *out_channel_ = std::move(channel_);
+    sync_completion_signal(on_delete_);
   }
 }
 
@@ -44,8 +47,7 @@ void AsyncBinding::OnUnbind(zx_status_t epitaph, UnboundReason reason) {
   {
     std::scoped_lock lock(lock_);
     // Indicate that no other thread should wait for unbind.
-    if (!unbind_)
-      unbind_ = true;
+    unbind_ = true;
     // Determine the epitaph and whether to send it.
     if (reason == UnboundReason::kInternalError || epitaph_.send) {
       send_epitaph = true;
@@ -149,8 +151,6 @@ void AsyncBinding::UnbindInternal(std::shared_ptr<AsyncBinding>&& calling_ref,
   // Move the calling reference into this scope.
   auto binding = std::move(calling_ref);
 
-  bool send_epitaph = false;
-  zx_status_t epitaph_val = ZX_OK;
   {
     std::scoped_lock lock(lock_);
     // Another thread has entered this critical section already via Unbind(), Close(), or
@@ -158,14 +158,12 @@ void AsyncBinding::UnbindInternal(std::shared_ptr<AsyncBinding>&& calling_ref,
     if (unbind_)
       return;
     unbind_ = true;  // Indicate that waits should no longer be added to the dispatcher.
-    // Set or update the epitaph in binding state.
-    send_epitaph = epitaph || epitaph_.send;
-    if (send_epitaph)
-      epitaph_val = epitaph_.send ? epitaph_.status : *epitaph;
-    epitaph_ = {epitaph_val, send_epitaph};
     // Attempt to cancel the current wait. On failure, a dispatcher thread will invoke OnUnbind().
-    if (async_cancel_wait(dispatcher_, &wait_) != ZX_OK)
+    if (async_cancel_wait(dispatcher_, &wait_) != ZX_OK) {
+      if (epitaph)
+        epitaph_ = {*epitaph, true};  // Store the epitaph in binding state.
       return;
+    }
   }
 
   keep_alive_ = nullptr;  // No one left to access the internal reference.
@@ -174,14 +172,15 @@ void AsyncBinding::UnbindInternal(std::shared_ptr<AsyncBinding>&& calling_ref,
   auto on_unbound_fn = std::move(on_unbound_fn_);
   auto* intf = interface_;
   auto* dispatcher = dispatcher_;
+  bool peer_closed = epitaph && *epitaph == ZX_ERR_PEER_CLOSED;
   // Wait for deletion and take the channel. This will only wait on internal code which will not
   // block indefinitely.
-  auto channel = WaitForDelete(std::move(binding), true);
+  auto channel = WaitForDelete(std::move(binding), !peer_closed);
 
   // If required, send the epitaph and close the channel.
-  if (channel && send_epitaph) {
+  if (channel && epitaph) {
     auto tmp = std::move(channel);
-    fidl_epitaph_write(tmp.get(), epitaph_val);
+    fidl_epitaph_write(tmp.get(), *epitaph);
   }
 
   if (!on_unbound_fn)
@@ -193,8 +192,7 @@ void AsyncBinding::UnbindInternal(std::shared_ptr<AsyncBinding>&& calling_ref,
       .on_unbound_fn = std::move(on_unbound_fn),
       .intf = intf,
       .channel = std::move(channel),
-      .reason =
-          epitaph_val == ZX_ERR_PEER_CLOSED ? UnboundReason::kPeerClosed : UnboundReason::kUnbind};
+      .reason = peer_closed ? UnboundReason::kPeerClosed : UnboundReason::kUnbind};
   ZX_ASSERT(async_post_task(dispatcher, &task->task) == ZX_OK);
 }
 
