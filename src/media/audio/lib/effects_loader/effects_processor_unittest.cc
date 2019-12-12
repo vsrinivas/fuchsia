@@ -7,12 +7,12 @@
 #include <gtest/gtest.h>
 
 #include "src/media/audio/effects/test_effects/test_effects.h"
-#include "src/media/audio/lib/effects_loader/effects_loader_test_base.h"
+#include "src/media/audio/lib/effects_loader/testing/effects_loader_test_base.h"
 
 namespace media::audio {
 namespace {
 
-class EffectsProcessorTest : public test::EffectsLoaderTestBase {};
+class EffectsProcessorTest : public testing::EffectsLoaderTestBase {};
 
 // The following tests validates the EffectsProcessor class itself.
 //

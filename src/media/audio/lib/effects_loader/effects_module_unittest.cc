@@ -6,19 +6,19 @@
 
 #include <gtest/gtest.h>
 
-#include "src/media/audio/lib/effects_loader/effects_loader_test_base.h"
+#include "src/media/audio/lib/effects_loader/testing/effects_loader_test_base.h"
 
 namespace media::audio {
 namespace {
 
 TEST(EffectsModuleTest, OpenModule) {
-  auto m = EffectsModuleV1::Open(test::kTestEffectsModuleName);
+  auto m = EffectsModuleV1::Open(testing::kTestEffectsModuleName);
   ASSERT_TRUE(m);
   ASSERT_EQ(0u, m->num_effects);
 }
 
 TEST(EffectsModuleTest, MoveModule) {
-  auto m1 = EffectsModuleV1::Open(test::kTestEffectsModuleName);
+  auto m1 = EffectsModuleV1::Open(testing::kTestEffectsModuleName);
   ASSERT_TRUE(m1);
 
   auto m2 = std::move(m1);

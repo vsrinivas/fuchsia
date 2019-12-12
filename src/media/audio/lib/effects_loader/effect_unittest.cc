@@ -6,12 +6,12 @@
 
 #include <gtest/gtest.h>
 
-#include "src/media/audio/lib/effects_loader/effects_loader_test_base.h"
+#include "src/media/audio/lib/effects_loader/testing/effects_loader_test_base.h"
 
 namespace media::audio {
 namespace {
 
-class EffectTest : public test::EffectsLoaderTestBase {};
+class EffectTest : public testing::EffectsLoaderTestBase {};
 
 TEST_F(EffectTest, MoveEffect) {
   ASSERT_EQ(ZX_OK, test_effects()->add_effect({{"assign_to_1.0", FUCHSIA_AUDIO_EFFECTS_CHANNELS_ANY,

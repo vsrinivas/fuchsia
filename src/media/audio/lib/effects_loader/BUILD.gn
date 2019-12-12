@@ -35,8 +35,6 @@ executable("test") {
 
   sources = [
     "effect_unittest.cc",
-    "effects_loader_test_base.cc",
-    "effects_loader_test_base.h",
     "effects_loader_unittest.cc",
     "effects_module_unittest.cc",
     "effects_processor_unittest.cc",
@@ -44,6 +42,7 @@ executable("test") {
 
   deps = [
     ":effects_loader",
+    "testing",
     "//src/lib/fxl/test:gtest_main_with_syslog",
   ]
 }

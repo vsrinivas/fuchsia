@@ -6,12 +6,12 @@
 
 #include <gtest/gtest.h>
 
-#include "src/media/audio/lib/effects_loader/effects_loader_test_base.h"
+#include "src/media/audio/lib/effects_loader/testing/effects_loader_test_base.h"
 
 namespace media::audio {
 namespace {
 
-class EffectsLoaderTest : public test::EffectsLoaderTestBase {};
+class EffectsLoaderTest : public testing::EffectsLoaderTestBase {};
 
 static constexpr uint32_t kInvalidEffectId = 1;
 static constexpr uint32_t kFrameRate = 48000;
