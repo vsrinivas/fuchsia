@@ -106,6 +106,11 @@ function read-patches-from-stdin {
     # repositories will show up as sso://host/project, in which case we extract
     # host and need to append -review.googlesource.com to it.
     if [[ "$host" =~ .*googlesource.* ]]; then
+      if [[ "$host" =~ .*-review.* ]]; then
+        fx-error "Invalid hostname. Make sure you paste the line from" \
+        "the 'Download' section of the Gerrit CL, not the Gerrit CL itself."
+        exit 1
+      fi
       host=$(echo "$host" | sed "s/\.googlesource/-review\.googlesource/")
     else
       host="$host-review.googlesource.com"
