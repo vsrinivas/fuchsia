@@ -7,7 +7,7 @@ use {
         AnimationMode, App, AppAssistant, FrameBufferPtr, Point, Size, ViewAssistant,
         ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
     },
-    chrono::{Timelike, Utc},
+    chrono::{Local, Timelike},
     euclid::{Angle, Transform2D, Vector2D},
     failure::Error,
     fidl::endpoints::create_endpoints,
@@ -305,32 +305,31 @@ impl Scene {
         let scale = size.width.min(size.height);
         let center = Point::new(size.width / 2.0, size.height / 2.0);
         const MICROSECONDS_PER_SECOND: f32 = 1e+6;
-        let now = Utc::now();
+        let now = Local::now();
         let (_is_pm, hour12) = now.hour12();
         let us = now.nanosecond() as f32 / 1000.0;
         let second = now.second() as f32 + us / MICROSECONDS_PER_SECOND;
         let minute = now.minute() as f32 + second / 60.0;
         let hour = hour12 as f32 + minute / 60.0;
-        const R0: f32 = -0.25; // rotate from 3 to 12.
-                               // Enough steps to ensure smooth movement of second hand each frame
-                               // on a 60hz display.
-        const STEPS: usize = 60 * 60;
+        const R0: f32 = -0.25; // Rotate from 3 to 12.
+        const STEPS: usize = 60 * 60; // Enough steps to ensure smooth movement
+                                      // of second hand each frame on a 60hz display.
         let index = ((R0 + hour / 12.0).rem_euclid(1.0) * STEPS as f32) as usize;
         if index != self.hour_index {
             let angle = index as f32 * 2.0 * f32::consts::PI / STEPS as f32;
-            self.hour_hand.update(context, scale, angle, center);
+            self.hour_hand.update(context, scale, -angle, center);
             self.hour_index = index;
         }
         let index = ((R0 + minute / 60.0).rem_euclid(1.0) * STEPS as f32) as usize;
         if index != self.minute_index {
             let angle = index as f32 * 2.0 * f32::consts::PI / STEPS as f32;
-            self.minute_hand.update(context, scale, angle, center);
+            self.minute_hand.update(context, scale, -angle, center);
             self.minute_index = index;
         }
         let index = ((R0 + second / 60.0).rem_euclid(1.0) * STEPS as f32) as usize;
         if index != self.second_index {
             let angle = index as f32 * 2.0 * f32::consts::PI / STEPS as f32;
-            self.second_hand.update(context, scale, angle, center);
+            self.second_hand.update(context, scale, -angle, center);
             self.second_index = index;
         }
     }
