@@ -33,17 +33,16 @@ class FuchsiaHTTPClient : public lib::clearcut::HTTPClient {
   //
   // Note: Do not invoke this method from |dispatcher_|'s thread.
   // Note: Do not wait on the returned future from |dispatcher_|'s thread.
+  //
+  // This FuchsiaHTTPClient instance must remain alive until the returned future
+  // is completed.
   std::future<lib::statusor::StatusOr<lib::clearcut::HTTPResponse>> Post(
       lib::clearcut::HTTPRequest request, std::chrono::steady_clock::time_point deadline);
 
- protected:
-  // These are internal only functions that are intended to make
-  // instrumentation of tests easier.
+ private:
   virtual void HandleResponse(fxl::RefPtr<NetworkRequest> req,
                               ::fuchsia::net::oldhttp::URLResponse fx_response);
   virtual void HandleDeadline(fxl::RefPtr<NetworkRequest> req);
-
- private:
   virtual void SendRequest(fxl::RefPtr<NetworkRequest> network_request);
 
   // |network_wrapper_| is thread averse, and should only be accessed on the
@@ -57,10 +56,12 @@ class FuchsiaHTTPClient : public lib::clearcut::HTTPClient {
 class NetworkRequest : public fxl::RefCountedThreadSafe<NetworkRequest>,
                        public fsl::SocketDrainer::Client {
  public:
-  NetworkRequest(lib::clearcut::HTTPRequest req) : request_(std::move(req)) {}
+  NetworkRequest(lib::clearcut::HTTPRequest req) : request_(std::move(req)) {
+    response_.response = "";
+  }
 
   void ReadResponse(async_dispatcher_t* dispatcher, fxl::RefPtr<NetworkRequest> self,
-                    uint32_t http_code, zx::socket source);
+                    zx::socket source);
   void OnDataAvailable(const void* data, size_t num_bytes);
   void OnDataComplete();
 
@@ -86,15 +87,21 @@ class NetworkRequest : public fxl::RefCountedThreadSafe<NetworkRequest>,
     deadline_task_->PostDelayed(dispatcher, duration);
   }
 
+  lib::clearcut::HTTPResponse& response() { return response_; }
+
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(NetworkRequest);
   ~NetworkRequest() {}
 
-  // The request object.
+  // The Clearcut request.
   lib::clearcut::HTTPRequest request_;
-  // Response information to be sent to the promise.
-  std::string response_;
-  uint32_t http_code_;
+
+  // The Clearcut response. This variable is populated during rsponse processing
+  // in the case that the underlying network request succeeded, and then the
+  // data is moved to |promise_|, leaving this variable empty, in
+  // OnDataComplete().
+  lib::clearcut::HTTPResponse response_;
+
   // The promise used for returning a value.
   std::promise<lib::statusor::StatusOr<lib::clearcut::HTTPResponse>> promise_;
   // A reference to itself that will be set when ReadResponse is used.

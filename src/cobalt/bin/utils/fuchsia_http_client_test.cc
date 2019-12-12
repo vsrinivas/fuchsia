@@ -8,179 +8,177 @@
 
 #include "gtest/gtest.h"
 #include "lib/gtest/test_loop_fixture.h"
+#include "src/lib/fsl/socket/strings.h"
+#include "src/lib/fxl/command_line.h"
 #include "src/lib/network_wrapper/fake_network_wrapper.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace cobalt {
 namespace utils {
 
 namespace http = ::fuchsia::net::oldhttp;
 
+using http::HttpHeader;
 using lib::clearcut::HTTPRequest;
 using lib::clearcut::HTTPResponse;
 using lib::statusor::StatusOr;
 using network_wrapper::FakeNetworkWrapper;
 using network_wrapper::NetworkWrapper;
 
-class CVBool {
- public:
-  CVBool() : set_(false) {}
+namespace {
 
-  void Notify() {
-    {
-      std::unique_lock<std::mutex> lock(mutex_);
-      set_ = true;
-    }
-    cv_.notify_all();
-  }
-
-  template <class Rep, class Period>
-  bool Wait(const std::chrono::duration<Rep, Period>& duration) {
-    std::unique_lock<std::mutex> lock(mutex_);
-    if (set_) {
-      return true;
-    }
-    return cv_.wait_for(lock, duration, [this] { return set_; });
-  }
-
-  bool Check() {
-    std::unique_lock<std::mutex> lock(mutex_);
-    return set_;
-  }
-
- private:
-  std::mutex mutex_;
-  std::condition_variable cv_;
-  bool set_;
-};
-
-class TestFuchsiaHTTPClient : public FuchsiaHTTPClient {
- public:
-  TestFuchsiaHTTPClient(NetworkWrapper* network_wrapper, async_dispatcher_t* dispatcher)
-      : FuchsiaHTTPClient(network_wrapper, dispatcher) {}
-
-  void HandleResponse(fxl::RefPtr<NetworkRequest> req, http::URLResponse fx_response) override {
-    FuchsiaHTTPClient::HandleResponse(req, std::move(fx_response));
-    response_handled_.Notify();
-  }
-
-  void HandleDeadline(fxl::RefPtr<NetworkRequest> req) override {
-    deadline_triggered_.Notify();
-    FuchsiaHTTPClient::HandleDeadline(req);
-  }
-
-  bool CheckResponseHandled() { return response_handled_.Check(); }
-  bool CheckDeadlineTriggered() { return deadline_triggered_.Check(); }
-
-  CVBool response_handled_;
-  CVBool deadline_triggered_;
-};
+// Makes a string that is three times longer than the size of a SocketDrainer
+// buffer so that we exercise our implementation of
+// SocketDrainer::Client.
+std::string MakeLongString() {
+  return std::string(64 * 1024, 'a') + std::string(64 * 1024, 'b') + std::string(64 * 1024, 'c');
+}
+}  // namespace
 
 class FuchsiaHTTPClientTest : public ::gtest::TestLoopFixture {
  public:
   FuchsiaHTTPClientTest()
       : ::gtest::TestLoopFixture(),
         network_wrapper_(dispatcher()),
-        delete_after_post_(false),
-        http_client(new TestFuchsiaHTTPClient(&network_wrapper_, dispatcher())) {}
+        http_client(new FuchsiaHTTPClient(&network_wrapper_, dispatcher())) {}
 
-  void PrepareResponse(const std::string& body, uint32_t status_code = 200) {
-    network_wrapper_.SetStringResponse(body, status_code);
+  void SetHttpResponse(const std::string& body, uint32_t status_code,
+                       std::vector<HttpHeader> headers) {
+    http::URLResponse url_response;
+    if (!body.empty()) {
+      url_response.body = http::URLBody::New();
+      url_response.body->set_stream(fsl::WriteStringToSocket(body));
+    }
+    url_response.status_code = status_code;
+    url_response.headers = std::move(headers);
+    network_wrapper_.SetResponse(std::move(url_response));
   }
 
-  void PrepareResponse(zx::socket body, uint32_t status_code = 200) {
-    network_wrapper_.SetSocketResponse(std::move(body), status_code);
+  void SetHttpResponse(zx::socket body, uint32_t status_code, std::vector<HttpHeader> headers) {
+    http::URLResponse url_response;
+    url_response.body = http::URLBody::New();
+    url_response.body->set_stream(std::move(body));
+    url_response.status_code = status_code;
+    url_response.headers = std::move(headers);
+    network_wrapper_.SetResponse(std::move(url_response));
   }
 
+  void SetNetworkErrorResponse(std::string error_message) {
+    http::URLResponse url_response;
+    url_response.url = "https://www.example.com";
+    url_response.error = http::HttpError::New();
+    url_response.error->description = std::move(error_message);
+    network_wrapper_.SetResponse(std::move(url_response));
+  }
+
+  // Invokes Post() in another thread (because Post() is not allowed to be
+  // invoked in the dispather's thread) and waits for Post() to complete and
+  // returns the value of Post().
   std::future<StatusOr<HTTPResponse>> PostString(const std::string& body) {
     auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(1);
-    auto future = std::async(std::launch::async, [this, body, deadline] {
-      auto post_future = http_client->Post(HTTPRequest("http://www.test.com", body), deadline);
-      if (delete_after_post_) {
-        delete_after_post_ = false;
-        http_client.reset(nullptr);
-      }
-      post_sent_.Notify();
-      return post_future.get();
+    // Since Post() returns a future and async returns a future here we have
+    // a future<future>.
+    auto future_future = std::async(std::launch::async, [this, body, deadline] {
+      auto future = http_client->Post(HTTPRequest("http://www.test.com", body), deadline);
+      return future;
     });
-    // Wait up to 10 second for std::async to run. This should happen almost
-    // immediately.
-    EXPECT_TRUE(post_sent_.Wait(std::chrono::seconds(10)));
 
-    return future;
+    // Wait for future<future> returned by async. Its value is the future
+    // returned by Post().
+    return future_future.get();
   }
 
-  template <class F>
-  StatusOr<F> RunUntilReady(std::future<StatusOr<F>>* future, zx::duration max_wait,
-                            zx::duration increment = zx::msec(100)) {
-    zx::duration elapsed;
-    while (elapsed < max_wait) {
-      elapsed += increment;
-      RunLoopFor(increment);
-      if (std::future_status::ready == future->wait_for(std::chrono::milliseconds(1))) {
-        return future->get();
-      }
+  // Prepares the FakeNetworkWrapper to return a response without a network
+  // error and then invokes PostString() and checks the returned HTTPResponse.
+  //
+  // |response_body_to_use| is the response body that the FakeNetworkWrapper will
+  // be asked to return. If this is empty then the |body| field will be empty.
+  //
+  // |http_response_code| is the code that the FakeNetworkWrapper will be asked
+  // to return.
+  //
+  // |include_response_headers| Should the FakeNetworkWrapper include any
+  // response headers.
+  void DoPostTest(std::string response_body_to_use, uint32_t http_response_code,
+                  bool include_response_headers) {
+    std::vector<HttpHeader> response_headers_to_use;
+    if (include_response_headers) {
+      response_headers_to_use = {HttpHeader{.name = "name1", .value = "value1"},
+                                 HttpHeader{.name = "name2", .value = "value2"}};
     }
-    return util::Status(util::StatusCode::CANCELLED, "Ran out of time");
+    SetHttpResponse(response_body_to_use, http_response_code, response_headers_to_use);
+    auto response_future = PostString("Request");
+    RunLoopUntilIdle();
+    // Note that here we are violating our own mandate to not wait on the
+    // future returned from Post() in the dispather's thread. The reason this
+    // is OK is that we inovked RunLoopUntilIdle() so we know that the future
+    // returned form Post() has already been prepared so that get() will not
+    // block.
+    auto response_or = response_future.get();
+    EXPECT_TRUE(response_or.ok());
+    auto response = response_or.ConsumeValueOrDie();
+    EXPECT_EQ(response.response, response_body_to_use);
+    EXPECT_EQ(response.http_code, http_response_code);
+    if (include_response_headers) {
+      EXPECT_EQ(response.headers.size(), 2);
+      EXPECT_EQ(response.headers["name1"], "value1");
+      EXPECT_EQ(response.headers["name2"], "value2");
+    } else {
+      EXPECT_TRUE(response.headers.empty());
+    }
   }
-
-  void DeleteHttpClientAfterPost() { delete_after_post_ = true; }
 
  private:
   FakeNetworkWrapper network_wrapper_;
-  bool delete_after_post_;
-  CVBool post_sent_;
 
  public:
-  std::unique_ptr<TestFuchsiaHTTPClient> http_client;
+  std::unique_ptr<FuchsiaHTTPClient> http_client;
 };
 
-TEST_F(FuchsiaHTTPClientTest, MakePostAndGet) {
-  PrepareResponse("Response");
+TEST_F(FuchsiaHTTPClientTest, EmptyBodyNoHeaders) { DoPostTest("", 100, false); }
+
+TEST_F(FuchsiaHTTPClientTest, EmptyBodyWithHeaders) { DoPostTest("", 101, true); }
+
+TEST_F(FuchsiaHTTPClientTest, ShortBodyNoHeaders) { DoPostTest("Short response", 200, false); }
+
+TEST_F(FuchsiaHTTPClientTest, ShortBodyWithHeaders) { DoPostTest("Short response", 201, true); }
+
+TEST_F(FuchsiaHTTPClientTest, LongBodyNoHeaders) { DoPostTest(MakeLongString(), 202, false); }
+
+TEST_F(FuchsiaHTTPClientTest, LongBodyWithHeaders) { DoPostTest(MakeLongString(), 203, true); }
+
+TEST_F(FuchsiaHTTPClientTest, NetworkError) {
+  SetNetworkErrorResponse("Something bad happened.");
   auto response_future = PostString("Request");
   RunLoopUntilIdle();
-  EXPECT_TRUE(http_client->CheckResponseHandled());
+  // Note that here we are violating our own mandate to not wait on the
+  // future returned from Post() in the dispather's thread. The reason this
+  // is OK is that we inovked RunLoopUntilIdle() so we know that the future
+  // returned form Post() has already been prepared so that get() will not
+  // block.
   auto response_or = response_future.get();
-  EXPECT_TRUE(response_or.ok());
-  auto response = response_or.ConsumeValueOrDie();
-  EXPECT_EQ(response.response, "Response");
+  ASSERT_FALSE(response_or.ok());
+  EXPECT_EQ(response_or.status().error_code(), util::StatusCode::INTERNAL);
+  EXPECT_EQ(response_or.status().error_message(),
+            "https://www.example.com error Something bad happened.");
 }
 
-TEST_F(FuchsiaHTTPClientTest, DISABLED_TestTimeout) {
+TEST_F(FuchsiaHTTPClientTest, TimeoutWithNoResponse) {
+  // Do not prepare any response. This causes the FakeNetworkWrapper to
+  // never return one so that we will get a timeout after 1 second.
+
   auto response_future = PostString("Request");
 
   RunLoopFor(zx::msec(100));
-  EXPECT_FALSE(http_client->CheckDeadlineTriggered());
+  ASSERT_TRUE(response_future.valid());
+  EXPECT_EQ(std::future_status::timeout, response_future.wait_for(std::chrono::microseconds(1)));
 
   RunLoopFor(zx::sec(1));
-  EXPECT_TRUE(http_client->CheckDeadlineTriggered());
 
+  ASSERT_EQ(std::future_status::ready, response_future.wait_for(std::chrono::microseconds(1)));
   auto response_or = response_future.get();
   ASSERT_FALSE(response_or.ok());
   EXPECT_EQ(response_or.status().error_code(), util::StatusCode::DEADLINE_EXCEEDED);
-}
-
-TEST_F(FuchsiaHTTPClientTest, DISABLED_WaitAfterRelease) {
-  zx::socket socket_in, socket_out;
-  ASSERT_EQ(zx::socket::create(0u, &socket_in, &socket_out), ZX_OK);
-  PrepareResponse(std::move(socket_in));
-
-  DeleteHttpClientAfterPost();
-  auto response_future = PostString("Request");
-
-  const char message[] = "Response";
-  for (const char* it = message; *it; ++it) {
-    RunLoopFor(zx::sec(1));
-    size_t bytes_written;
-    socket_out.write(0u, it, 1, &bytes_written);
-    EXPECT_EQ(1u, bytes_written);
-    EXPECT_NE(std::future_status::ready, response_future.wait_for(std::chrono::milliseconds(1)));
-  }
-  socket_out.reset();
-
-  auto response_or = RunUntilReady(&response_future, zx::sec(1));
-  EXPECT_EQ(response_or.status().error_code(), util::StatusCode::OK);
-  auto response = response_or.ConsumeValueOrDie();
-  EXPECT_EQ(response.response, "Response");
 }
 
 }  // namespace utils

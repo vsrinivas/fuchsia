@@ -47,6 +47,7 @@ executable("cobalt_utils_unittests") {
 
   sources = [
     "clock_test.cc",
+    "cobalt_utils_unittests_main.cc",
     "fuchsia_http_client_test.cc",
   ]
 
@@ -55,7 +56,7 @@ executable("cobalt_utils_unittests") {
     ":fuchsia_http_client",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
-    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/fsl",
     "//src/lib/network_wrapper:fake",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",

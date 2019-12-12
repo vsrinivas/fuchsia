@@ -10,6 +10,7 @@
 
 #include "src/lib/fsl/socket/strings.h"
 #include "src/lib/fsl/vmo/strings.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace cobalt {
 namespace utils {
@@ -45,27 +46,39 @@ http::URLRequest MakeRequest(fxl::RefPtr<NetworkRequest> network_request) {
   return fx_request;
 }
 
+// If |fx_response| has any response headers then this function moves all of
+// the response headers from |fx_response| to |response| leaving
+// |fx_response| with an empty vector of response headers.
+void MoveResponseHeaders(http::URLResponse* fx_response, HTTPResponse* response) {
+  FXL_CHECK(fx_response);
+  FXL_CHECK(response);
+  if (fx_response->headers.has_value()) {
+    for (auto& header : fx_response->headers.value()) {
+      response->headers.emplace(std::move(header.name), std::move(header.value));
+    }
+    fx_response->headers.value().clear();
+  }
+}
+
 }  // namespace
 
 void NetworkRequest::ReadResponse(async_dispatcher_t* dispatcher, fxl::RefPtr<NetworkRequest> self,
-                                  uint32_t http_code, zx::socket source) {
+                                  zx::socket source) {
   // Store a reference to myself, so that I don't get deleted while reading from
   // the socket.
   self_ = self;
-  http_code_ = http_code;
   socket_drainer_ = std::make_unique<fsl::SocketDrainer>(this, dispatcher);
   socket_drainer_->Start(std::move(source));
 }
 
 void NetworkRequest::OnDataAvailable(const void* data, size_t num_bytes) {
-  response_.append(static_cast<const char*>(data), num_bytes);
+  FX_VLOGS(6) << "NetworkRequest::OnDataAvailable(" << num_bytes << ")";
+  response_.response.append(static_cast<const char*>(data), num_bytes);
 }
 
 void NetworkRequest::OnDataComplete() {
-  HTTPResponse response;
-  response.response = response_;
-  response.http_code = http_code_;
-  SetValueAndCleanUp(std::move(response));
+  FX_VLOGS(6) << "NetworkRequest::OnDataComplete()";
+  SetValueAndCleanUp(std::move(response_));
 }
 
 FuchsiaHTTPClient::FuchsiaHTTPClient(network_wrapper::NetworkWrapper* network_wrapper,
@@ -81,15 +94,13 @@ void FuchsiaHTTPClient::HandleResponse(fxl::RefPtr<NetworkRequest> req,
     req->SetValueAndCleanUp(util::Status(util::StatusCode::INTERNAL, ss.str()));
     return;
   }
+  req->response().http_code = fx_response.status_code;
+  MoveResponseHeaders(&fx_response, &req->response());
   if (fx_response.body) {
     FXL_DCHECK(fx_response.body->is_stream());
-    req->ReadResponse(dispatcher_, req, fx_response.status_code,
-                      std::move(fx_response.body->stream()));
+    req->ReadResponse(dispatcher_, req, std::move(fx_response.body->stream()));
   } else {
-    HTTPResponse response;
-    response.response = "";
-    response.http_code = fx_response.status_code;
-    req->SetValueAndCleanUp(std::move(response));
+    req->OnDataComplete();
   }
 }
 
