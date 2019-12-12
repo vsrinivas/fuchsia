@@ -6,7 +6,6 @@
 
 #include <lib/fit/function.h>
 
-#include "flatbuffers/flatbuffers.h"
 #include "src/ledger/bin/p2p_sync/impl/message_generated.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
@@ -19,6 +18,7 @@
 #include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
+#include "third_party/flatbuffers/include/flatbuffers/flatbuffers.h"
 
 namespace p2p_sync {
 namespace {

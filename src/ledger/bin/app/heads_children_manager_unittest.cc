@@ -9,7 +9,6 @@
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fit/function.h>
-#include <lib/gtest/test_loop_fixture.h>
 
 #include <map>
 #include <memory>
@@ -38,6 +37,7 @@
 #include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/vmo/strings.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace ledger {
 namespace {

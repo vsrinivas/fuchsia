@@ -5,7 +5,6 @@
 #include "src/ledger/bin/app/page_eviction_manager_impl.h"
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
-#include <lib/gtest/test_loop_fixture.h>
 
 #include <memory>
 
@@ -21,6 +20,7 @@
 #include "src/ledger/lib/callback/capture.h"
 #include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {

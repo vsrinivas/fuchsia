@@ -3,7 +3,6 @@
 
 #include "src/ledger/bin/app/background_sync_manager.h"
 
-#include <lib/gtest/test_loop_fixture.h>
 #include <unistd.h>
 
 #include <memory>
@@ -18,6 +17,7 @@
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {

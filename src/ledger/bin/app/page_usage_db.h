@@ -5,8 +5,6 @@
 #ifndef SRC_LEDGER_BIN_APP_PAGE_USAGE_DB_H_
 #define SRC_LEDGER_BIN_APP_PAGE_USAGE_DB_H_
 
-#include <lib/timekeeper/clock.h>
-
 #include <functional>
 #include <memory>
 
@@ -23,6 +21,7 @@
 #include "src/ledger/bin/synchronization/completer.h"
 #include "src/ledger/lib/callback/operation_serializer.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
+#include "src/lib/timekeeper/clock.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {

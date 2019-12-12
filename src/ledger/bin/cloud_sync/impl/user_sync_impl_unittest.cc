@@ -4,7 +4,6 @@
 
 #include "src/ledger/bin/cloud_sync/impl/user_sync_impl.h"
 
-#include <lib/gtest/test_loop_fixture.h>
 #include <unistd.h>
 
 #include <utility>
@@ -17,6 +16,7 @@
 #include "src/ledger/bin/public/status.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/backoff/testing/test_backoff.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace cloud_sync {
 

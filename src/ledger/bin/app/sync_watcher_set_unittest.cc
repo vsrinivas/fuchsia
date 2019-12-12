@@ -5,12 +5,12 @@
 #include "src/ledger/bin/app/sync_watcher_set.h"
 
 #include <lib/fidl/cpp/binding.h>
-#include <lib/gtest/test_loop_fixture.h>
 
 #include <algorithm>
 #include <string>
 
 #include "gtest/gtest.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace ledger {
 namespace {

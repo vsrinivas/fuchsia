@@ -5,12 +5,12 @@
 #include "src/ledger/bin/storage/public/read_data_source.h"
 
 #include <lib/fit/function.h>
-#include <lib/gtest/test_loop_fixture.h>
 
 #include "gtest/gtest.h"
 #include "src/ledger/lib/callback/capture.h"
 #include "src/ledger/lib/callback/set_when_called.h"
 #include "src/lib/callback/scoped_task_runner.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace storage {
 namespace {

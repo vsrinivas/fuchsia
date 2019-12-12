@@ -7,7 +7,6 @@
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/clone.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <zircon/errors.h>
 
 #include <algorithm>
@@ -35,6 +34,7 @@
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/socket/strings.h"
 #include "src/ledger/lib/vmo/strings.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "third_party/abseil-cpp/absl/strings/str_format.h"
 
 using testing::Contains;

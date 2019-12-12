@@ -6,13 +6,13 @@
 #define SRC_LEDGER_BIN_TESTS_CLOUD_PROVIDER_VALIDATION_TEST_H_
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <gtest/gtest.h>
 
 #include "peridot/lib/rng/test_random.h"
 #include "src/ledger/bin/tests/cloud_provider/types.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace cloud_provider {
 

@@ -6,11 +6,11 @@
 #define SRC_LEDGER_BIN_TESTING_TEST_WITH_ENVIRONMENT_H_
 
 #include <lib/fit/function.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace ledger {
 

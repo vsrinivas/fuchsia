@@ -7,7 +7,6 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/encoder.h>
 #include <lib/fit/function.h>
-#include <lib/gtest/test_loop_fixture.h>
 
 #include <algorithm>
 #include <string>
@@ -23,6 +22,7 @@
 #include "src/ledger/bin/testing/overnet/overnet_factory.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/coroutine/coroutine_impl.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace p2p_sync {
 class PageCommunicatorImplInspectorForTest {

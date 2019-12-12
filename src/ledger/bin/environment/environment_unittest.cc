@@ -7,13 +7,13 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
-#include <lib/timekeeper/test_clock.h>
 
 #include "peridot/lib/rng/test_random.h"
 #include "src/ledger/bin/environment/test_loop_notification.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
+#include "src/lib/timekeeper/test_clock.h"
 
 namespace ledger {
 namespace {

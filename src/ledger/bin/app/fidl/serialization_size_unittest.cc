@@ -9,7 +9,6 @@
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fidl/runtime_flag.h>
-#include <lib/gtest/test_loop_fixture.h>
 
 #include <memory>
 
@@ -17,6 +16,7 @@
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/vmo/strings.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "third_party/abseil-cpp/absl/strings/str_format.h"
 
 namespace ledger {

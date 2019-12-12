@@ -6,8 +6,8 @@
 
 #include <lib/fit/function.h>
 
-#include "lib/gtest/test_loop_fixture.h"
 #include "src/ledger/lib/socket/strings.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace ledger {
 namespace {

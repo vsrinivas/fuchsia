@@ -4,9 +4,8 @@
 
 #include "src/ledger/lib/socket/socket_drainer_client.h"
 
-#include <lib/gtest/test_loop_fixture.h>
-
 #include "src/ledger/lib/socket/socket_pair.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace socket {
 namespace {

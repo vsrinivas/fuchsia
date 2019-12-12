@@ -5,12 +5,12 @@
 #include "src/ledger/lib/socket/socket_writer.h"
 
 #include <lib/fit/function.h>
-#include <lib/gtest/test_loop_fixture.h>
 
 #include <utility>
 
 #include "src/ledger/lib/socket/socket_drainer_client.h"
 #include "src/ledger/lib/socket/socket_pair.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace socket {

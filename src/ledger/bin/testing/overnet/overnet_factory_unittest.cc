@@ -5,7 +5,6 @@
 #include "src/ledger/bin/testing/overnet/overnet_factory.h"
 
 #include <fuchsia/overnet/cpp/fidl.h>
-#include <lib/gtest/test_loop_fixture.h>
 
 #include <memory>
 
@@ -16,6 +15,7 @@
 #include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace ledger {
 

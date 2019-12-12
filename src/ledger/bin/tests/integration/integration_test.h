@@ -8,7 +8,6 @@
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/gtest/real_loop_fixture.h>
 
 #include <functional>
 
@@ -17,6 +16,7 @@
 #include "gtest/gtest.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/testing/ledger_app_instance_factory.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 namespace ledger {
 

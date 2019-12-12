@@ -4,8 +4,6 @@
 
 #include "src/ledger/bin/cloud_sync/impl/ledger_sync_impl.h"
 
-#include <lib/gtest/test_loop_fixture.h>
-
 #include "src/ledger/bin/cloud_sync/impl/testing/test_cloud_provider.h"
 #include "src/ledger/bin/cloud_sync/impl/testing/test_page_storage.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
@@ -13,6 +11,7 @@
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/callback/capture.h"
 #include "src/ledger/lib/callback/set_when_called.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace cloud_sync {
 

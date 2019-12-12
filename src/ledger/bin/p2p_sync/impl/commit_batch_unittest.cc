@@ -4,8 +4,6 @@
 
 #include "src/ledger/bin/p2p_sync/impl/commit_batch.h"
 
-#include <lib/gtest/test_loop_fixture.h>
-
 #include <map>
 #include <vector>
 
@@ -16,6 +14,7 @@
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/ledger/bin/storage/testing/storage_matcher.h"
 #include "src/ledger/lib/callback/set_when_called.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 using storage::MatchesCommitIdAndBytes;
 using testing::ElementsAre;

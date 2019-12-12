@@ -4,8 +4,8 @@
 
 #include "src/ledger/bin/p2p_sync/impl/encoding.h"
 
-#include "flatbuffers/flatbuffers.h"
 #include "src/ledger/bin/p2p_sync/impl/message_generated.h"
+#include "third_party/flatbuffers/include/flatbuffers/flatbuffers.h"
 
 namespace p2p_sync {
 namespace {

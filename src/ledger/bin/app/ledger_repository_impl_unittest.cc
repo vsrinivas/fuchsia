@@ -8,7 +8,6 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
-#include <lib/gtest/test_loop_fixture.h>
 
 #include <memory>
 #include <vector>
@@ -45,6 +44,7 @@
 #include "src/lib/inspect_deprecated/hierarchy.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 #include "src/lib/inspect_deprecated/testing/inspect.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {

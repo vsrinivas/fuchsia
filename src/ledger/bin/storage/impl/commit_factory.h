@@ -6,7 +6,6 @@
 #define SRC_LEDGER_BIN_STORAGE_IMPL_COMMIT_FACTORY_H_
 
 #include <lib/fit/function.h>
-#include <lib/timekeeper/clock.h>
 
 #include <memory>
 #include <string>
@@ -20,6 +19,7 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/lib/timekeeper/clock.h"
 
 namespace storage {
 

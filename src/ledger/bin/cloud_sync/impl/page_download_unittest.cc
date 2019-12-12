@@ -7,7 +7,6 @@
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
-#include <lib/gtest/test_loop_fixture.h>
 
 #include <algorithm>
 #include <memory>
@@ -35,6 +34,7 @@
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/socket/strings.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace cloud_sync {
 namespace {

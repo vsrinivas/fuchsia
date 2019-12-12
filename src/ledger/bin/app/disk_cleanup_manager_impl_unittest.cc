@@ -4,8 +4,6 @@
 
 #include "src/ledger/bin/app/disk_cleanup_manager_impl.h"
 
-#include <lib/gtest/test_loop_fixture.h>
-
 #include <memory>
 
 #include "gmock/gmock.h"
@@ -17,6 +15,7 @@
 #include "src/ledger/bin/storage/fake/fake_db_factory.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {

@@ -8,7 +8,6 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
-#include <lib/timekeeper/test_loop_test_clock.h>
 
 #include <memory>
 #include <string>
@@ -37,6 +36,7 @@
 #include "src/ledger/lib/socket/socket_pair.h"
 #include "src/ledger/lib/socket/socket_writer.h"
 #include "src/ledger/lib/socket/strings.h"
+#include "src/lib/timekeeper/test_loop_test_clock.h"
 #include "third_party/abseil-cpp/absl/strings/str_cat.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 

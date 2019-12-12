@@ -6,7 +6,6 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
-#include <lib/gtest/test_loop_fixture.h>
 
 #include <map>
 
@@ -16,6 +15,7 @@
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace cloud_sync {

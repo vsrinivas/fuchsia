@@ -6,7 +6,6 @@
 
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
-#include <lib/gtest/test_loop_fixture.h>
 
 #include <functional>
 #include <map>
@@ -27,6 +26,7 @@
 #include "src/ledger/lib/callback/capture.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/vmo/strings.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace cloud_sync {

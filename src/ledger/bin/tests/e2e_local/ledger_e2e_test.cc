@@ -7,7 +7,6 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/synchronous_interface_ptr.h>
 #include <lib/fit/function.h>
-#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
 #include <string.h>
 
@@ -30,6 +29,7 @@
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/fsl/io/fd.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "third_party/abseil-cpp/absl/strings/escaping.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
