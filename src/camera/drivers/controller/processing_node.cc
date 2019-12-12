@@ -7,6 +7,7 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
+#include <fbl/auto_lock.h>
 #include <src/lib/fxl/logging.h>
 
 #include "stream_protocol.h"
@@ -38,6 +39,11 @@ void ProcessNode::OnFrameAvailable(uint32_t buffer_index) {
     auto& child_node = i.child_node;
     // TODO(braval): Regulate frame rate here
     if (child_node->enabled()) {
+      {
+        fbl::AutoLock al(&in_use_buffer_lock_);
+        ZX_ASSERT(buffer_index < in_use_buffer_count_.size());
+        in_use_buffer_count_[buffer_index]++;
+      }
       child_node->OnReadyToProcess(buffer_index);
     }
   }
@@ -55,6 +61,11 @@ void ProcessNode::OnFrameAvailable(const frame_available_info_t* info) {
       auto& child_node = i.child_node;
       // TODO(braval): Regulate frame rate here
       if (child_node->enabled()) {
+        {
+          fbl::AutoLock al(&in_use_buffer_lock_);
+          ZX_ASSERT(info->buffer_id < in_use_buffer_count_.size());
+          in_use_buffer_count_[info->buffer_id]++;
+        }
         child_node->OnReadyToProcess(info->buffer_id);
       }
     }
@@ -64,6 +75,15 @@ void ProcessNode::OnFrameAvailable(const frame_available_info_t* info) {
 }
 
 void ProcessNode::OnReleaseFrame(uint32_t buffer_index) {
+  if (type_ != NodeType::kOutputStream) {
+    fbl::AutoLock al(&in_use_buffer_lock_);
+    ZX_ASSERT(buffer_index < in_use_buffer_count_.size());
+    in_use_buffer_count_[buffer_index]--;
+    if (in_use_buffer_count_[buffer_index] != 0) {
+      return;
+    }
+  }
+
   // First release this nodes Frames (GDC, GE2D)
   switch (type_) {
     case NodeType::kGdc: {

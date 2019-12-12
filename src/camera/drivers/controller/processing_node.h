@@ -43,7 +43,8 @@ class ProcessNode {
         output_image_formats_(output_image_formats),
         isp_callback_{OnFrameAvailable, this},
         enabled_(false),
-        supported_streams_(supported_streams) {
+        supported_streams_(supported_streams),
+        in_use_buffer_count_(output_buffer_collection.buffer_count, 0) {
     ZX_ASSERT(type == NodeType::kInputStream);
     configured_streams_.push_back(current_stream_type);
   }
@@ -73,7 +74,8 @@ class ProcessNode {
         hw_accelerator_res_callback_{OnResChange, this},
         gdc_(gdc),
         enabled_(false),
-        supported_streams_(supported_streams) {
+        supported_streams_(supported_streams),
+        in_use_buffer_count_(output_buffer_collection.buffer_count, 0) {
     ZX_ASSERT(type == NodeType::kGdc);
     configured_streams_.push_back(current_stream_type);
   }
@@ -162,6 +164,10 @@ class ProcessNode {
   static void OnResChange(void* ctx, const frame_available_info_t* info) {}
 
   bool AllChildNodesDisabled();
+
+  // Lock to guard |in_use_buffer_count_|
+  fbl::Mutex in_use_buffer_lock_;
+
   // Type of node.
   NodeType type_;
   // List of all the children for this node.
@@ -189,6 +195,9 @@ class ProcessNode {
   std::vector<fuchsia::camera2::CameraStreamType> configured_streams_;
   // The Stream types this node could support as well.
   std::vector<fuchsia::camera2::CameraStreamType> supported_streams_;
+  // A vector to keep track of outstanding in-use buffers handed off to all child nodes.
+  // [buffer_index] --> [count]
+  std::vector<uint32_t> in_use_buffer_count_ __TA_GUARDED(in_use_buffer_lock_);
 };
 
 }  // namespace camera
