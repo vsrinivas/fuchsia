@@ -4,6 +4,14 @@
 
 #include "src/developer/debug/zxdb/console/verbs.h"
 
+#include "src/developer/debug/zxdb/console/commands/verb_cls.h"
+#include "src/developer/debug/zxdb/console/commands/verb_connect.h"
+#include "src/developer/debug/zxdb/console/commands/verb_disconnect.h"
+#include "src/developer/debug/zxdb/console/commands/verb_help.h"
+#include "src/developer/debug/zxdb/console/commands/verb_opendump.h"
+#include "src/developer/debug/zxdb/console/commands/verb_quit.h"
+#include "src/developer/debug/zxdb/console/commands/verb_quit_agent.h"
+#include "src/developer/debug/zxdb/console/commands/verb_status.h"
 #include "src/lib/fxl/logging.h"
 
 namespace zxdb {
@@ -18,6 +26,7 @@ VerbRecord::VerbRecord(CommandExecutor exec, std::initializer_list<std::string> 
       help(help),
       command_group(command_group),
       source_affinity(source_affinity) {}
+
 VerbRecord::VerbRecord(CommandExecutorWithCallback exec_cb,
                        std::initializer_list<std::string> aliases, const char* short_help,
                        const char* help, CommandGroup command_group, SourceAffinity source_affinity)
@@ -27,6 +36,7 @@ VerbRecord::VerbRecord(CommandExecutorWithCallback exec_cb,
       help(help),
       command_group(command_group),
       source_affinity(source_affinity) {}
+
 VerbRecord::VerbRecord(CommandExecutor exec, CommandCompleter complete,
                        std::initializer_list<std::string> aliases, const char* short_help,
                        const char* help, CommandGroup command_group, SourceAffinity source_affinity)
@@ -37,6 +47,7 @@ VerbRecord::VerbRecord(CommandExecutor exec, CommandCompleter complete,
       command_group(command_group),
       source_affinity(source_affinity),
       complete(std::move(complete)) {}
+
 VerbRecord::VerbRecord(CommandExecutorWithCallback exec_cb, CommandCompleter complete,
                        std::initializer_list<std::string> aliases, const char* short_help,
                        const char* help, CommandGroup command_group, SourceAffinity source_affinity)
@@ -47,13 +58,13 @@ VerbRecord::VerbRecord(CommandExecutorWithCallback exec_cb, CommandCompleter com
       command_group(command_group),
       source_affinity(source_affinity),
       complete(std::move(complete)) {}
+
 VerbRecord::~VerbRecord() = default;
 
 const std::map<Verb, VerbRecord>& GetVerbs() {
   static std::map<Verb, VerbRecord> all_verbs;
   if (all_verbs.empty()) {
     AppendBreakpointVerbs(&all_verbs);
-    AppendControlVerbs(&all_verbs);
     AppendMemoryVerbs(&all_verbs);
     AppendProcessVerbs(&all_verbs);
     AppendSettingsVerbs(&all_verbs);
@@ -61,6 +72,15 @@ const std::map<Verb, VerbRecord>& GetVerbs() {
     AppendSymbolVerbs(&all_verbs);
     AppendSystemVerbs(&all_verbs);
     AppendThreadVerbs(&all_verbs);
+
+    all_verbs[Verb::kHelp] = GetHelpVerbRecord();
+    all_verbs[Verb::kQuit] = GetQuitVerbRecord();
+    all_verbs[Verb::kConnect] = GetConnectVerbRecord();
+    all_verbs[Verb::kDisconnect] = GetDisconnectVerbRecord();
+    all_verbs[Verb::kQuitAgent] = GetQuitAgentVerbRecord();
+    all_verbs[Verb::kOpenDump] = GetOpendumpVerbRecord();
+    all_verbs[Verb::kStatus] = GetStatusVerbRecord();
+    all_verbs[Verb::kCls] = GetClsVerbRecord();
 
     // Everything but Noun::kNone (= 0) should be in the map.
     FXL_DCHECK(all_verbs.size() == static_cast<size_t>(Verb::kLast) - 1)

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_VERB_STEPS_H_
-#define SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_VERB_STEPS_H_
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_COMMANDS_VERB_STEPS_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_COMMANDS_VERB_STEPS_H_
 
 #include <vector>
 
@@ -22,4 +22,4 @@ void RunVerbStepsWithSubstatements(Thread* thread, std::vector<SubstatementCall>
 
 }  // namespace zxdb
 
-#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_VERB_STEPS_H_
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_COMMANDS_VERB_STEPS_H_

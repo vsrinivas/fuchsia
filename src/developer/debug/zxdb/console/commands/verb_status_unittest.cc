@@ -1,18 +1,16 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
-#include <gtest/gtest.h>
+#include "src/developer/debug/zxdb/console/commands/verb_status.h"
 
-#include "src/developer/debug/shared/zx_status.h"
+#include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/client/mock_remote_api.h"
-#include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/remote_api_test.h"
-#include "src/developer/debug/zxdb/client/session.h"
-#include "src/developer/debug/zxdb/client/target_impl.h"
 #include "src/developer/debug/zxdb/console/mock_console.h"
-#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
+
 namespace {
 
 class TestRemoteAPI : public MockRemoteAPI {
@@ -41,7 +39,7 @@ class TestRemoteAPI : public MockRemoteAPI {
   int status_requests_ = 0;
 };
 
-class VerbsControl : public RemoteAPITest {
+class VerbStatus : public RemoteAPITest {
  public:
   TestRemoteAPI* remote_api() const { return remote_api_; }
 
@@ -56,7 +54,9 @@ class VerbsControl : public RemoteAPITest {
   TestRemoteAPI* remote_api_;
 };
 
-TEST_F(VerbsControl, Status) {
+}  // namespace
+
+TEST_F(VerbStatus, Status) {
   debug_ipc::StreamBuffer stream;
   session().set_stream(&stream);
   ASSERT_TRUE(session().IsConnected());
@@ -97,34 +97,24 @@ TEST_F(VerbsControl, Status) {
   }
 }
 
-// Quit with no running processes should exit immediately.
-TEST_F(VerbsControl, QuitNoProcs) {
-  MockConsole console(&session());
+TEST_F(VerbStatus, ConnectionStatus) {
+  Session session;
 
-  EXPECT_FALSE(console.has_quit());
-  console.ProcessInputLine("quit");
-  EXPECT_TRUE(console.has_quit());
+  // No connection state.
+  std::string no_conn_string = GetConnectionStatus(&session).AsString();
+  EXPECT_NE(std::string::npos, no_conn_string.find("Not connected"));
+
+  // Testing the connected connection status is currently difficult to mock and
+  // is low-priority for testing. If Session were refactored this could become
+  // practical.
 }
 
-// Quit with running processes should prompt.
-TEST_F(VerbsControl, QuitRunningProcs) {
-  MockConsole console(&session());
+TEST_F(VerbStatus, JobStatusNone) {
+  Session empty_session;
+  ConsoleContext empty_context(&empty_session);
 
-  InjectProcess(1234);
-  console.FlushOutputEvents();  // Process attaching will output some stuff.
-
-  // This should prompt instead of quitting.
-  console.ProcessInputLine("quit");
-  EXPECT_FALSE(console.has_quit());
-
-  auto output = console.GetOutputEvent();
-  ASSERT_EQ(output.type, MockConsole::OutputEvent::Type::kOutput);
-  EXPECT_EQ("\nAre you sure you want to quit and detach from the running process?\n",
-            output.output.AsString());
-
-  EXPECT_TRUE(console.SendModalReply("y"));
-  EXPECT_TRUE(console.has_quit());
+  std::string no_conn_status = GetJobStatus(&empty_context).AsString();
+  EXPECT_NE(std::string::npos, no_conn_status.find("Attached to 0 job(s)"));
 }
 
-}  // namespace
 }  // namespace zxdb
