@@ -70,8 +70,8 @@ group("tests") {
 group("all_tests") {
   testonly = true
   public_deps = [
-    ":graphics_compute_vk_unittests",
     ":graphics_compute_mold_c_unittests",
+    ":graphics_compute_vk_unittests",
     ":tests",
     "hotsort:tests",
     "spinel:tests",
@@ -93,6 +93,7 @@ graphics_compute_unittests_package("graphics_compute_unittests") {
     "spinel:spinel_ext_unittests",
     "svg:svg_unittests",
     "tests:common_unittests",
+    "tests/common/spinel:unittests",
   ]
 }
 

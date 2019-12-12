@@ -5,6 +5,7 @@
 #include "spinel_test_utils.h"
 
 #include "spinel/spinel_opcodes.h"
+#include "tests/common/list_ostream.h"
 
 //
 // spn_path_t
@@ -67,6 +68,13 @@ AssertSpnTransformEqual(const char *          m_expr,
                         const spn_transform_t m,
                         const spn_transform_t n)
 {
+  // NOTE: This checks for strict equality, which isn't always very useful for
+  //       floating point values. It would be nice to have a float-near check
+  //       instead, but doing this is incredibly hard [1], and GoogleTest does
+  //       not expose its algorithms for near-float comparisons at the moment.
+  //
+  //   [1] https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
+  //
   if (m.sx != n.sx || m.shx != n.shx || m.tx != n.tx || m.shy != n.shy || m.sy != n.sy ||
       m.ty != n.ty || m.w0 != n.w0 || m.w1 != n.w1)
     {
@@ -92,6 +100,7 @@ operator<<(std::ostream & os, const spn_clip_t & clip)
 ::testing::AssertionResult
 AssertSpnClipEqual(const char * m_expr, const char * n_expr, const spn_clip_t m, const spn_clip_t n)
 {
+  // See comment in AssertSpnTransformEqual about equality comparisons.
   if (m.x0 != n.x0 || m.y0 != n.y0 || m.x1 != n.x1 || m.y1 != n.y1)
     {
       return ::testing::AssertionFailure()
@@ -115,6 +124,7 @@ operator<<(std::ostream & os, const spn_txty_t & txty)
 ::testing::AssertionResult
 AssertSpnTxtyEqual(const char * m_expr, const char * n_expr, const spn_txty_t m, const spn_txty_t n)
 {
+  // See comment in AssertSpnTransformEqual about equality comparisons.
   if (m.tx != n.tx || m.ty != n.ty)
     {
       return ::testing::AssertionFailure()
@@ -127,22 +137,10 @@ AssertSpnTxtyEqual(const char * m_expr, const char * n_expr, const spn_txty_t m,
 //  Styling commands
 //
 
-std::string
-spinelStylingCommandsToString(const spn_styling_cmd_t * begin, const spn_styling_cmd_t * end)
-{
-  std::string  result;
-  const char * comma = nullptr;
-  for (; begin < end; ++begin)
-    {
-      spn_styling_cmd_t cmd = *begin;
-      if (comma)
-        result.append(comma);
-      comma = ",";
+// clang-format off
 
-      // clang-format off
-
-  // List of simple commands, i.e. those that do not take arguments from the
-  // command stream.
+// List of simple commands, i.e. those that do not take arguments from the
+// command stream.
 #define LIST_SIMPLE_STYLING_OPCODES(macro) \
   macro(NOOP) \
   macro(COVER_NONZERO) \
@@ -171,25 +169,37 @@ spinelStylingCommandsToString(const spn_styling_cmd_t * begin, const spn_styling
   macro(COLOR_ILL_COPY_ACC) \
   macro(COLOR_ACC_MULTIPLY_ILL)
 
-      // clang-format on
+// clang-format on
+
+std::string
+spinelStylingCommandsToString(const spn_styling_cmd_t * begin, const spn_styling_cmd_t * end)
+{
+  std::stringstream ss;
+  list_ostream      ls(ss);
+  for (; begin < end; ++begin)
+    {
+      spn_styling_cmd_t cmd = *begin;
 
 #define CASE_SIMPLE(name_)                                                                         \
   case SPN_STYLING_OPCODE_##name_:                                                                 \
-    result.append(#name_);                                                                         \
+    ls << #name_;                                                                                  \
     break;
 
       switch (cmd)
         {
           LIST_SIMPLE_STYLING_OPCODES(CASE_SIMPLE)
+
+          // TODO(digit): Handle commands with parameters correctly!
           default:
             char temp[32];
             snprintf(temp, sizeof(temp), "CMD[%u]", cmd);
-            result.append(temp);
+            ls << temp;
         }
 #undef CASE_SIMPLE
+      ls << ls.comma;
     }
 
-  return result;
+  return ss.str();
 }
 
 std::string

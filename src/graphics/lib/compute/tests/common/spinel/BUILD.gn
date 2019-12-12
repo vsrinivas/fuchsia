@@ -1,0 +1,37 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("../../../gn/build_rules.gni")
+
+config("public_config") {
+  # For now clients should include "tests/common/spinel/xxx.h"
+  include_dirs = [ graphics_compute_dir ]
+}
+
+# Spinel-related test utilities. Only depends on the Spinel API headers, and
+# and only useful for tests (testonly is set to true).
+source_set("spinel_test_utils") {
+  sources = [
+    "spinel_test_utils.cc",
+    "spinel_test_utils.h",
+  ]
+  public_configs = [ ":public_config" ]
+  public_deps = [
+    "${graphics_compute_dir}/spinel:spinel_headers",
+    "${graphics_compute_dir}/tests:common",
+    graphics_compute_gtest_target,
+  ]
+  testonly = true
+}
+
+# Unit-tests for both spinel_utils and spinel_test_utils.
+graphics_compute_unittests("unittests") {
+  sources = [
+    "spinel_test_utils_unittest.cc",
+  ]
+  deps = [
+    ":spinel_test_utils",
+    "${graphics_compute_dir}/tests:common",
+  ]
+}

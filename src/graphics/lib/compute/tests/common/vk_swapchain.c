@@ -521,7 +521,7 @@ vk_swapchain_acquire_next_image(vk_swapchain_t * swapchain, uint32_t * image_ind
 
   swapchain->image_index = *image_index;
   PRINT("#%2u: ACQUIRED image_index=%u signal_sem=%p\n",
-        swapchain->image_number,
+        swapchain->image_counter,
         *image_index,
         semaphore);
 

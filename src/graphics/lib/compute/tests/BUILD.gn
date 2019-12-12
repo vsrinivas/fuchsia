@@ -23,6 +23,8 @@ source_set("common") {
   public = [
     "common/argparse.h",
     "common/fps_counter.h",
+    "common/list_ostream.h",
+    "common/scoped_struct.h",
     "common/utils.h",
   ]
   sources = [
@@ -30,34 +32,23 @@ source_set("common") {
     "common/argparse.h",
     "common/fps_counter.c",
     "common/fps_counter.h",
+    "common/list_ostream.h",
+    "common/scoped_struct.h",
     "common/utils.c",
     "common/utils.h",
   ]
   public_configs = [ ":common_public_config" ]
 }
 
-source_set("spinel_test_utils") {
-  sources = [
-    "common/spinel/spinel_test_utils.cc",
-    "common/spinel/spinel_test_utils.h",
-  ]
-  public_configs = [ ":common_public_config" ]
-  public_deps = [
-    "${graphics_compute_dir}/spinel:spinel_headers",
-    graphics_compute_gtest_target,
-  ]
-  testonly = true
-}
-
 graphics_compute_unittests("common_unittests") {
   sources = [
     "common/argparse_unittest.cc",
     "common/fps_counter_unittest.cc",
-    "common/spinel/spinel_test_utils_unittest.cc",
+    "common/list_ostream_unittest.cc",
+    "common/scoped_struct_unittest.cc",
   ]
   deps = [
     ":common",
-    ":spinel_test_utils",
   ]
 }
 
@@ -141,23 +132,6 @@ graphics_compute_unittests("common_vk_unittests") {
     ":common_vk",
   ]
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
-}
-
-# Spinel related test utilities library.
-source_set("common_spinel") {
-  sources = [
-    "common/spinel/spinel_device_config_utils.c",
-    "common/spinel/spinel_device_config_utils.h",
-  ]
-  deps = [
-    ":common",
-    ":common_vk",
-  ]
-  public_deps = [
-    "${graphics_compute_dir}/hotsort/platforms/vk",
-    "${graphics_compute_dir}/spinel/platforms/vk:vk",
-    "${graphics_compute_dir}/spinel/platforms/vk:vk_find_target",
-  ]
 }
 
 group("tests") {
