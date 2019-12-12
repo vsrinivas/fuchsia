@@ -63,6 +63,10 @@ class BeaconTest : public ::testing::Test, public simulation::StationIfc {
                    const common::MacAddr& dst, uint16_t status) override {
     GTEST_FAIL();
   }
+  void RxDisassocReq(const wlan_channel_t& channel, const common::MacAddr& src,
+                   const common::MacAddr& dst, uint16_t reason) override {
+    GTEST_FAIL();
+  }
   void RxProbeReq(const wlan_channel_t& channel, const common::MacAddr& src) override {
     GTEST_FAIL();
   }

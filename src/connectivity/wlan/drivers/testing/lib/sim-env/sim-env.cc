@@ -52,6 +52,16 @@ void Environment::TxAssocResp(StationIfc* sender, const wlan_channel_t& channel,
   }
 }
 
+void Environment::TxDisassocReq(StationIfc* sender, const wlan_channel_t& channel,
+                                const common::MacAddr& src, const common::MacAddr& dst,
+                                uint16_t reason) {
+  for (auto sta : stations_) {
+    if (sta != sender) {
+      sta->RxDisassocReq(channel, src, dst, reason);
+    }
+  }
+}
+
 void Environment::TxProbeReq(StationIfc* sender, const wlan_channel_t& channel,
                              const common::MacAddr& src) {
   for (auto sta : stations_) {

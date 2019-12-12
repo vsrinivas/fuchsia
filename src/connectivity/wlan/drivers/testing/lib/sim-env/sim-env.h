@@ -77,6 +77,10 @@ class Environment {
   void TxAssocResp(StationIfc* sender, const wlan_channel_t& channel, const common::MacAddr& src,
                    const common::MacAddr& dst, uint16_t status);
 
+  // Send a request to disassociate.
+  void TxDisassocReq(StationIfc* sender, const wlan_channel_t& channel, const common::MacAddr& src,
+                     const common::MacAddr& dst, uint16_t reason);
+
   // Send a probe request.
   void TxProbeReq(StationIfc* sender, const wlan_channel_t& channel, const common::MacAddr& src);
 

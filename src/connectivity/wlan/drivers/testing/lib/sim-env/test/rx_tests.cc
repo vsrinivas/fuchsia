@@ -16,6 +16,7 @@ constexpr wlan_channel_t kDefaultChannel = {
 constexpr wlan_ssid_t kDefaultSsid = {.len = 15, .ssid = "Fuchsia Fake AP"};
 const common::MacAddr kDefaultBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
 constexpr uint16_t kDefaultAssocStatus = 42;
+constexpr uint16_t kDefaultDisassocReason = 5;
 
 void checkChannel(const wlan_channel_t& channel) {
   EXPECT_EQ(channel.primary, kDefaultChannel.primary);
@@ -59,6 +60,13 @@ class SimStation : public wlan::simulation::StationIfc {
     assoc_resp_seen_ = true;
   }
 
+  void RxDisassocReq(const wlan_channel_t& channel, const common::MacAddr& src,
+                     const common::MacAddr& dst, uint16_t reason) override {
+    checkChannel(channel);
+    EXPECT_EQ(reason, kDefaultDisassocReason);
+    disassoc_req_seen_ = true;
+  }
+
   void RxProbeReq(const wlan_channel_t& channel, const common::MacAddr& src) override {
     checkChannel(channel);
     probe_req_seen_ = true;
@@ -80,6 +88,7 @@ class SimStation : public wlan::simulation::StationIfc {
   bool assoc_resp_seen_ = false;
   bool probe_req_seen_ = false;
   bool probe_resp_seen_ = false;
+  bool disassoc_req_seen_ = false;
 };
 
 uint8_t SimStation::instance_count = 0;
@@ -142,4 +151,11 @@ TEST_F(RxTest, ProbeRespTest) {
   EXPECT_EQ(stations_[2].probe_resp_seen_, false);
 }
 
+TEST_F(RxTest, DisassocReqTest) {
+  env_.TxDisassocReq(&stations_[2], kDefaultChannel, stations_[2].mac_addr_, stations_[0].mac_addr_,
+                     kDefaultDisassocReason);
+  EXPECT_EQ(stations_[0].disassoc_req_seen_, true);
+  EXPECT_EQ(stations_[1].disassoc_req_seen_, true);
+  EXPECT_EQ(stations_[2].disassoc_req_seen_, false);
+}
 }  // namespace wlan::testing

@@ -30,6 +30,10 @@ class StationIfc {
   virtual void RxAssocResp(const wlan_channel_t& channel, const common::MacAddr& src,
                            const common::MacAddr& dst, uint16_t status) = 0;
 
+  // Receive an disassocation request
+  virtual void RxDisassocReq(const wlan_channel_t& channel, const common::MacAddr& src,
+                             const common::MacAddr& dst, uint16_t reason) = 0;
+
   // Receive a Probe request
   virtual void RxProbeReq(const wlan_channel_t& channel, const common::MacAddr& src) = 0;
 
