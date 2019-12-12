@@ -198,6 +198,14 @@ void x86_intel_cpu_set_ssbd(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
   }
 }
 
+bool x86_intel_cpu_has_enhanced_ibrs(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
+  if (cpuid->ReadFeatures().HasFeature(cpu_id::Features::ARCH_CAPABILITIES)) {
+    uint64_t arch_capabilities = msr->read_msr(X86_MSR_IA32_ARCH_CAPABILITIES);
+    return arch_capabilities & X86_ARCH_CAPABILITIES_IBRS_ALL;
+  }
+  return false;
+}
+
 void x86_intel_init_percpu(void) {
   cpu_id::CpuId cpuid;
   MsrAccess msr;

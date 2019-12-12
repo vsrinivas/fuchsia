@@ -37,6 +37,7 @@
 #define X86_MSR_IA32_APIC_BASE 0x0000001b       /* APIC base physical address */
 #define X86_MSR_IA32_TSC_ADJUST 0x0000003b      /* TSC adjust */
 #define X86_MSR_IA32_SPEC_CTRL 0x00000048       /* Speculative Execution Controls */
+#define X86_SPEC_CTRL_IBRS (1ull << 0)
 #define X86_SPEC_CTRL_SSBD (1ull << 2)
 #define X86_MSR_IA32_PRED_CMD 0x00000049        /* Indirect Branch Prediction Command */
 #define X86_MSR_IA32_BIOS_UPDT_TRIG 0x00000079u /* Microcode Patch Loader */
@@ -44,6 +45,7 @@
 #define X86_MSR_IA32_MTRRCAP 0x000000fe         /* MTRR capability */
 #define X86_MSR_IA32_ARCH_CAPABILITIES 0x0000010a
 #define X86_ARCH_CAPABILITIES_RDCL_NO (1ull << 0)
+#define X86_ARCH_CAPABILITIES_IBRS_ALL (1ull << 1)
 #define X86_ARCH_CAPABILITIES_SSB_NO (1ull << 4)
 #define X86_ARCH_CAPABILITIES_MDS_NO (1ull << 5)
 #define X86_ARCH_CAPABILITIES_TAA_NO (1ull << 8)

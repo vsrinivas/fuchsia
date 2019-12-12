@@ -500,6 +500,38 @@ static bool test_x64_ssb_disable() {
   END_TEST;
 }
 
+static bool test_x64_spectre_v2_enumeration() {
+  BEGIN_TEST;
+
+  fbl::AllocChecker ac;
+  {
+    // Test an Intel Xeon E5-2690 V4 w/ older microcode (no ARCH_CAPABILITIES)
+    FakeMsrAccess fake_msrs;
+    EXPECT_FALSE(x86_intel_cpu_has_enhanced_ibrs(&cpu_id::kCpuIdXeon2690v4, &fake_msrs));
+  }
+  {
+    // Test an Intel Xeon E5-2690 V4 w/ new microcode (ARCH_CAPABILITIES available)
+    auto data = ktl::make_unique<cpu_id::TestDataSet>(&ac, cpu_id::kTestDataXeon2690v4);
+    ASSERT_TRUE(ac.check(), "");
+    data->leaf7.reg[cpu_id::Features::ARCH_CAPABILITIES.reg] |=
+        (1 << cpu_id::Features::ARCH_CAPABILITIES.bit);
+    data->leaf7.reg[cpu_id::Features::SSBD.reg] |= (1 << cpu_id::Features::SSBD.bit);
+    cpu_id::FakeCpuId cpu(*data.get());
+    FakeMsrAccess fake_msrs = {};
+    fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0};
+    EXPECT_FALSE(x86_intel_cpu_has_enhanced_ibrs(&cpu_id::kCpuIdXeon2690v4, &fake_msrs));
+  }
+  {
+    // Use Goldmont CPUID but set IBRS_ALL.
+    FakeMsrAccess fake_msrs = {};
+    // IBRS_ALL | SKIP_L1DFL_VMENTRY | (PSCHANGE)
+    fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0x6a};
+    EXPECT_TRUE(x86_intel_cpu_has_enhanced_ibrs(&cpu_id::kCpuIdCeleronJ3455, &fake_msrs));
+  }
+
+  END_TEST;
+}
+
 static uint32_t intel_make_microcode_checksum(uint32_t* patch, size_t bytes) {
   size_t dwords = bytes / sizeof(uint32_t);
   uint32_t sum = 0;
@@ -702,6 +734,7 @@ UNITTEST("test enumeration of x64 MDS vulnerability", test_x64_mds_enumeration)
 UNITTEST("test enumeration of x64 SWAPGS vulnerability", test_x64_swapgs_bug_enumeration)
 UNITTEST("test enumeration of x64 SSB vulnerability", test_x64_ssb_enumeration)
 UNITTEST("test mitigation of x64 SSB vulnerability", test_x64_ssb_disable)
+UNITTEST("test enumeration of x64 Spectre V2 flags", test_x64_spectre_v2_enumeration)
 UNITTEST("test Intel x86 microcode patch loader match and load logic", test_x64_intel_ucode_loader)
 UNITTEST("test Intel x86 microcode patch loader mechanism", test_x64_intel_ucode_patch_loader)
 UNITTEST("test pkg power limit change", test_x64_power_limits)

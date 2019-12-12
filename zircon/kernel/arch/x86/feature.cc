@@ -52,6 +52,7 @@ bool g_md_clear_on_user_return;
 bool g_has_ibpb;
 bool g_should_ibpb_on_ctxt_switch;
 bool g_ras_fill_on_entry;
+bool g_has_enhanced_ibrs;
 // True if we should disable all speculative execution mitigations.
 bool g_disable_spec_mitigations;
 
@@ -179,10 +180,15 @@ void x86_feature_init(void) {
     g_has_ssb = x86_intel_cpu_has_ssb(&cpuid, &msr);
     g_has_ssbd = x86_intel_cpu_has_ssbd(&cpuid, &msr);
     g_has_ibpb = cpuid.ReadFeatures().HasFeature(cpu_id::Features::SPEC_CTRL);
+    g_has_enhanced_ibrs = x86_intel_cpu_has_enhanced_ibrs(&cpuid, &msr);
   } else if (x86_vendor == X86_VENDOR_AMD) {
     g_has_ssb = x86_amd_cpu_has_ssb(&cpuid, &msr);
     g_has_ssbd = x86_amd_cpu_has_ssbd(&cpuid, &msr);
     g_has_ibpb = cpuid.ReadFeatures().HasFeature(cpu_id::Features::AMD_IBPB);
+    // Certain AMD CPUs may prefer modes where retpolines are not used and IBRS is enabled
+    // early in boot. This is similar to Intel's "Enhanced IBRS" but enumerated differently.
+    // See "Indirect Branch Control Extension" Revision 4.10.18, Extended Usage Models.
+    g_has_enhanced_ibrs = x86_amd_cpu_has_ibrs_always_on(&cpuid);
   }
   // TODO(fxb/33667, fxb/12150): Consider whether a process can opt-out of an IBPB on switch,
   // either on switch-in (ex: its compiled with a retpoline) or switch-out (ex: it promises
@@ -419,6 +425,8 @@ void x86_feature_debug(void) {
     printf("ibpb_ctxt_switch ");
   if (g_ras_fill_on_entry)
     printf("ras_fill ");
+  if (g_has_enhanced_ibrs)
+    printf("enhanced_ibrs ");
   printf("\n");
 }
 

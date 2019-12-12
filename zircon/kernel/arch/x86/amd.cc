@@ -82,6 +82,14 @@ void x86_amd_cpu_set_ssbd(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
   }
 }
 
+bool x86_amd_cpu_has_ibrs_always_on(const cpu_id::CpuId* cpuid) {
+  if (cpuid->ReadFeatures().HasFeature(cpu_id::Features::AMD_IBRS_ALWAYS_ON) &&
+      cpuid->ReadFeatures().HasFeature(cpu_id::Features::AMD_PREFER_IBRS)) {
+    return true;
+  }
+  return false;
+}
+
 void x86_amd_init_percpu(void) {
   cpu_id::CpuId cpuid;
   MsrAccess msr;

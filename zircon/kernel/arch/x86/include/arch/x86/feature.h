@@ -380,6 +380,8 @@ bool x86_amd_cpu_has_ssbd(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 void x86_intel_cpu_set_ssbd(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 void x86_amd_cpu_set_ssbd(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 void x86_cpu_ibpb(MsrAccess* msr);
+bool x86_intel_cpu_has_enhanced_ibrs(const cpu_id::CpuId* cpuid, MsrAccess* msr);
+bool x86_amd_cpu_has_ibrs_always_on(const cpu_id::CpuId* cpuid);
 #endif
 uint32_t x86_amd_get_patch_level(void);
 uint32_t x86_intel_get_patch_level(void);
