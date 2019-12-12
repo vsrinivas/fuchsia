@@ -88,8 +88,11 @@ spn_ri_image_render(struct spn_device * const device, spn_render_submit_t const 
   //
   struct spn_vk_render_submit_ext_image_pre_barrier *         pre_barrier         = NULL;
   struct spn_vk_render_submit_ext_image_pre_clear *           pre_clear           = NULL;
+  struct spn_vk_render_submit_ext_image_process *             pre_process         = NULL;
   struct spn_vk_render_submit_ext_image_render *              render              = NULL;
+  struct spn_vk_render_submit_ext_image_process *             post_process        = NULL;
   struct spn_vk_render_submit_ext_image_post_copy_to_buffer * post_copy_to_buffer = NULL;
+  struct spn_vk_render_submit_ext_image_post_copy_to_image *  post_copy_to_image  = NULL;
   struct spn_vk_render_submit_ext_image_post_barrier *        post_barrier        = NULL;
 
   void * ext_next = submit->ext;
@@ -108,12 +111,24 @@ spn_ri_image_render(struct spn_device * const device, spn_render_submit_t const 
             pre_clear = ext_next;
             break;
 
+          case SPN_VK_RENDER_SUBMIT_EXT_TYPE_IMAGE_PRE_PROCESS:
+            pre_process = ext_next;
+            break;
+
           case SPN_VK_RENDER_SUBMIT_EXT_TYPE_IMAGE_RENDER:
             render = ext_next;
             break;
 
+          case SPN_VK_RENDER_SUBMIT_EXT_TYPE_IMAGE_POST_PROCESS:
+            post_process = ext_next;
+            break;
+
           case SPN_VK_RENDER_SUBMIT_EXT_TYPE_IMAGE_POST_COPY_TO_BUFFER:
             post_copy_to_buffer = ext_next;
+            break;
+
+          case SPN_VK_RENDER_SUBMIT_EXT_TYPE_IMAGE_POST_COPY_TO_IMAGE:
+            post_copy_to_image = ext_next;
             break;
 
           case SPN_VK_RENDER_SUBMIT_EXT_TYPE_IMAGE_POST_BARRIER:
@@ -276,6 +291,67 @@ spn_ri_image_render(struct spn_device * const device, spn_render_submit_t const 
     }
 
   //
+  // process?
+  //
+  if (pre_process != NULL)
+    {
+      //
+      // imgbar.srcAccessMask       -- use default
+      // imgbar.oldLayout           -- use default
+      // imgbar.srcQueueFamilyIndex -- use default
+      // imgbar.image               -- use default
+      //
+      imgbar.dstAccessMask       = pre_process->access_mask;
+      imgbar.newLayout           = render->image_info.imageLayout;
+      imgbar.dstQueueFamilyIndex = device->environment.qfi;
+
+      vkCmdPipelineBarrier(cb,
+                           src_stage,
+                           VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                           0,
+                           0,
+                           NULL,
+                           0,
+                           NULL,
+                           imgbar_count,
+                           &imgbar);
+
+      vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_COMPUTE, pre_process->pipeline);
+
+      vkCmdBindDescriptorSets(cb,
+                              VK_PIPELINE_BIND_POINT_COMPUTE,
+                              pre_process->pipeline_layout,
+                              0,
+                              pre_process->descriptor_set_count,
+                              pre_process->descriptor_sets,
+                              0,
+                              0);
+
+      vkCmdPushConstants(cb,
+                         pre_process->pipeline_layout,
+                         VK_SHADER_STAGE_COMPUTE_BIT,
+                         pre_process->push_offset,
+                         pre_process->push_size,
+                         pre_process->push_values);
+
+      vkCmdDispatch(cb,
+                    pre_process->group_count_x,
+                    pre_process->group_count_y,
+                    pre_process->group_count_z);
+
+      //
+      // post command -- transition to render layout
+      //
+      src_stage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+
+      imgbar.srcAccessMask       = imgbar.dstAccessMask;
+      imgbar.oldLayout           = render->image_info.imageLayout;
+      imgbar.srcQueueFamilyIndex = device->environment.qfi;
+
+      imgbar_count = 1;
+    }
+
+  //
   // DS: BLOCK POOL
   //
   struct spn_vk * const instance = device->instance;
@@ -386,7 +462,53 @@ spn_ri_image_render(struct spn_device * const device, spn_render_submit_t const 
   }
 
   //
-  // copy?
+  // process?
+  //
+  if (post_process != NULL)
+    {
+      imgbar.dstAccessMask = post_process->access_mask;
+
+      imgbar_count = 1;
+
+      vkCmdPipelineBarrier(cb,
+                           src_stage,
+                           VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                           0,
+                           0,
+                           NULL,
+                           0,
+                           NULL,
+                           imgbar_count,
+                           &imgbar);
+
+      vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_COMPUTE, post_process->pipeline);
+
+      vkCmdBindDescriptorSets(cb,
+                              VK_PIPELINE_BIND_POINT_COMPUTE,
+                              post_process->pipeline_layout,
+                              0,
+                              post_process->descriptor_set_count,
+                              post_process->descriptor_sets,
+                              0,
+                              0);
+
+      vkCmdPushConstants(cb,
+                         post_process->pipeline_layout,
+                         VK_SHADER_STAGE_COMPUTE_BIT,
+                         post_process->push_offset,
+                         post_process->push_size,
+                         post_process->push_values);
+
+      vkCmdDispatch(cb,
+                    post_process->group_count_x,
+                    post_process->group_count_y,
+                    post_process->group_count_z);
+
+      imgbar.srcAccessMask = imgbar.dstAccessMask;
+    }
+
+  //
+  // copy to buffer?
   //
   if (post_copy_to_buffer != NULL)
     {
@@ -420,6 +542,61 @@ spn_ri_image_render(struct spn_device * const device, spn_render_submit_t const 
                              post_copy_to_buffer->dst,
                              post_copy_to_buffer->region_count,
                              post_copy_to_buffer->regions);
+
+      //
+      // post copy -- transition the image back to default
+      //
+      src_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+
+      //
+      // imgbar.dstQueueFamilyIndex -- not set
+      // imgbar.image               -- use default
+      //
+      imgbar.srcAccessMask       = VK_ACCESS_TRANSFER_READ_BIT;
+      imgbar.dstAccessMask       = 0;
+      imgbar.oldLayout           = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+      imgbar.newLayout           = render->image_info.imageLayout;
+      imgbar.srcQueueFamilyIndex = device->environment.qfi;  // ignored
+
+      imgbar_count = 1;
+    }
+
+  //
+  // copy to image?
+  //
+  if (post_copy_to_image != NULL)
+    {
+      //
+      // imgbar.srcAccessMask       -- use default
+      // imgbar.oldLayout           -- use default
+      // imgbar.srcQueueFamilyIndex -- use default
+      // imgbar.dstQueueFamilyIndex -- use default
+      // imgbar.image               -- use default
+      //
+      imgbar.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+      imgbar.oldLayout     = render->image_info.imageLayout;
+      imgbar.newLayout     = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+
+      imgbar_count = 1;
+
+      vkCmdPipelineBarrier(cb,
+                           src_stage,
+                           VK_PIPELINE_STAGE_TRANSFER_BIT,
+                           0,
+                           0,
+                           NULL,
+                           0,
+                           NULL,
+                           imgbar_count,
+                           &imgbar);
+
+      vkCmdCopyImage(cb,
+                     render->image,
+                     VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                     post_copy_to_image->dst,
+                     post_copy_to_image->dst_layout,
+                     post_copy_to_image->region_count,
+                     post_copy_to_image->regions);
 
       //
       // post copy -- transition the image back to default

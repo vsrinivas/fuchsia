@@ -70,7 +70,7 @@ struct spn_vk_context_create_info
 // These extensions can be chained in any order but will always be
 // executed in the following order:
 //
-//   PRE_BARRIER>PRE_CLEAR>RENDER>POST_COPY>POST_BARRIER
+//   PRE_BARRIER>PRE_CLEAR>PRE_PROCESS>RENDER>POST_PROCESS>POST_COPY>POST_BARRIER
 //
 // Note that this is the same order as the enum.
 //
@@ -82,8 +82,11 @@ typedef enum spn_vk_render_submit_ext_type_e
 {
   SPN_VK_RENDER_SUBMIT_EXT_TYPE_IMAGE_PRE_BARRIER,
   SPN_VK_RENDER_SUBMIT_EXT_TYPE_IMAGE_PRE_CLEAR,
+  SPN_VK_RENDER_SUBMIT_EXT_TYPE_IMAGE_PRE_PROCESS,
   SPN_VK_RENDER_SUBMIT_EXT_TYPE_IMAGE_RENDER,
+  SPN_VK_RENDER_SUBMIT_EXT_TYPE_IMAGE_POST_PROCESS,
   SPN_VK_RENDER_SUBMIT_EXT_TYPE_IMAGE_POST_COPY_TO_BUFFER,
+  SPN_VK_RENDER_SUBMIT_EXT_TYPE_IMAGE_POST_COPY_TO_IMAGE,
   SPN_VK_RENDER_SUBMIT_EXT_TYPE_IMAGE_POST_BARRIER
 } spn_vk_render_submit_ext_type_e;
 
@@ -148,6 +151,27 @@ typedef struct spn_vk_render_submit_ext_image_pre_clear
 } spn_vk_render_submit_ext_image_pre_clear_t;
 
 //
+// PRE/POST-RENDER PROCESS
+//
+
+typedef struct spn_vk_render_submit_ext_image_process
+{
+  void *                          ext;
+  spn_vk_render_submit_ext_type_e type;
+  uint32_t                        access_mask;
+  VkPipeline                      pipeline;
+  VkPipelineLayout                pipeline_layout;
+  uint32_t                        descriptor_set_count;
+  const VkDescriptorSet *         descriptor_sets;
+  uint32_t                        push_offset;
+  uint32_t                        push_size;
+  const void *                    push_values;
+  uint32_t                        group_count_x;
+  uint32_t                        group_count_y;
+  uint32_t                        group_count_z;
+} spn_vk_render_submit_ext_image_process_t;
+
+//
 // POST-RENDER IMAGE COPY TO A BUFFER
 //
 
@@ -159,6 +183,20 @@ typedef struct spn_vk_render_submit_ext_image_post_copy_to_buffer
   uint32_t                        region_count;
   const VkBufferImageCopy *       regions;
 } spn_vk_render_submit_ext_image_post_copy_to_buffer_t;
+
+//
+// POST-RENDER IMAGE COPY TO AN IMAGE
+//
+
+typedef struct spn_vk_render_submit_ext_image_post_copy_to_image
+{
+  void *                          ext;
+  spn_vk_render_submit_ext_type_e type;
+  VkImage                         dst;
+  VkImageLayout                   dst_layout;
+  uint32_t                        region_count;
+  const VkImageCopy *             regions;
+} spn_vk_render_submit_ext_image_post_copy_to_image_t;
 
 //
 // POST-RENDER IMAGE BARRIER

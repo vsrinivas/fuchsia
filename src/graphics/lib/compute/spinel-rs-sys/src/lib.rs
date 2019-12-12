@@ -65,8 +65,11 @@ pub struct SpnVkContextCreateInfo {
 pub enum SpnVkRenderSubmitExtType {
     SpnVkRenderSubmitExtTypeImagePreBarrier,
     SpnVkRenderSubmitExtTypeImagePreClear,
+    SpnVkRenderSubmitExtTypeImagePreProcess,
     SpnVkRenderSubmitExtTypeImageRender,
+    SpnVkRenderSubmitExtTypeImagePostProcess,
     SpnVkRenderSubmitExtTypeImagePostCopyToBuffer,
+    SpnVkRenderSubmitExtTypeImagePostCopyToImage,
     SpnVkRenderSubmitExtTypeImagePostBarrier,
 }
 
@@ -106,12 +109,41 @@ pub struct SpnVkRenderSubmitExtImagePreClear {
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
+pub struct SpnVkRenderSubmitExtImageProcess {
+    pub ext: *mut raw::c_void,
+    pub type_: SpnVkRenderSubmitExtType,
+    pub access_mask: u32,
+    pub pipeline: vk::Pipeline,
+    pub pipeline_layout: vk::PipelineLayout,
+    pub descriptor_set_count: u32,
+    pub descriptor_sets: *const vk::DescriptorSet,
+    pub push_offset: u32,
+    pub push_size: u32,
+    pub push_values: *const raw::c_void,
+    pub group_count_x: u32,
+    pub group_count_y: u32,
+    pub group_count_z: u32,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
 pub struct SpnVkRenderSubmitExtImagePostCopyToBuffer {
     pub ext: *mut raw::c_void,
     pub type_: SpnVkRenderSubmitExtType,
     pub dst: vk::Buffer,
     pub region_count: u32,
     pub regions: *const vk::BufferImageCopy,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct SpnVkRenderSubmitExtImagePostCopyToImage {
+    pub ext: *mut raw::c_void,
+    pub type_: SpnVkRenderSubmitExtType,
+    pub dst: vk::Image,
+    pub dst_layout: vk::ImageLayout,
+    pub region_count: u32,
+    pub regions: *const vk::ImageCopy,
 }
 
 #[repr(C)]
