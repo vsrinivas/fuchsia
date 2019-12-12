@@ -17,6 +17,12 @@
 #include "src/camera/lib/format_conversion/format_conversion.h"
 
 namespace camera {
+
+// Returns |true| if CameraStreamType |type| is present in the
+// vector |streams|.
+bool HasStreamType(const std::vector<fuchsia::camera2::CameraStreamType>& streams,
+                   fuchsia::camera2::CameraStreamType type);
+
 struct PipelineInfo {
   InternalConfigNode node;
   const fuchsia::camera2::hal::StreamConfig* stream_config;

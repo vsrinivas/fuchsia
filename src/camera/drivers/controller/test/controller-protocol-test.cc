@@ -13,9 +13,10 @@
 
 #include "fake_gdc.h"
 #include "fake_isp.h"
+#include "src/camera/drivers/controller/isp_stream_protocol.h"
 #include "src/camera/drivers/controller/pipeline_manager.h"
 
-// NOTE: In this test, we are actually just unit testing the ControllerImpl class
+// NOTE: In this test, we are actually just unit testing the ControllerImpl class.
 
 namespace camera {
 
@@ -23,7 +24,12 @@ namespace {
 constexpr uint32_t kDebugConfig = 0;
 constexpr uint32_t kMonitorConfig = 1;
 constexpr uint32_t kVideoConfig = 2;
-}  // namespace
+constexpr auto kStreamTypeFR = fuchsia::camera2::CameraStreamType::FULL_RESOLUTION;
+constexpr auto kStreamTypeDS = fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION;
+constexpr auto kStreamTypeML = fuchsia::camera2::CameraStreamType::MACHINE_LEARNING;
+constexpr auto kStreamTypeVideo = fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE;
+constexpr auto kStreamTypeMonitoring = fuchsia::camera2::CameraStreamType::MONITORING;
+constexpr auto kNumBuffers = 5;
 
 class ControllerProtocolTest : public gtest::TestLoopFixture {
  public:
@@ -66,38 +72,29 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_EQ(ZX_OK, controller_protocol_device_->GetInternalConfiguration(kDebugConfig, &info));
     EXPECT_EQ(info->streams_info.size(), 1u);
     // 1st stream is FR
-    EXPECT_EQ(info->streams_info[0].input_stream_type,
-              fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
+    EXPECT_EQ(info->streams_info[0].input_stream_type, kStreamTypeFR);
     // FR supported streams
     EXPECT_EQ(info->streams_info[0].supported_streams.size(), 1u);
-    EXPECT_EQ(info->streams_info[0].supported_streams[0],
-              fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
+    EXPECT_EQ(info->streams_info[0].supported_streams[0], kStreamTypeFR);
 
     // Monitor Configuration
     EXPECT_EQ(ZX_OK, controller_protocol_device_->GetInternalConfiguration(kMonitorConfig, &info));
     EXPECT_EQ(info->streams_info.size(), 2u);
 
     // 1st Stream is FR
-    EXPECT_EQ(info->streams_info[0].input_stream_type,
-              fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
+    EXPECT_EQ(info->streams_info[0].input_stream_type, kStreamTypeFR);
 
     // FR Supported streams
     EXPECT_EQ(info->streams_info[0].supported_streams.size(), 2u);
-    EXPECT_EQ(info->streams_info[0].supported_streams[0],
-              fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
-                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
-    EXPECT_EQ(info->streams_info[0].supported_streams[1],
-              fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
-                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
+    EXPECT_EQ(info->streams_info[0].supported_streams[0], kStreamTypeFR | kStreamTypeML);
+    EXPECT_EQ(info->streams_info[0].supported_streams[1], kStreamTypeDS | kStreamTypeML);
 
     // 2nd Stream is DS
-    EXPECT_EQ(info->streams_info[1].input_stream_type,
-              fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION);
+    EXPECT_EQ(info->streams_info[1].input_stream_type, kStreamTypeDS);
 
     // DS supported streams
     EXPECT_EQ(info->streams_info[1].supported_streams.size(), 1u);
-    EXPECT_EQ(info->streams_info[1].supported_streams[0],
-              fuchsia::camera2::CameraStreamType::MONITORING);
+    EXPECT_EQ(info->streams_info[1].supported_streams[0], kStreamTypeMonitoring);
     EXPECT_EQ(info->streams_info[1].child_nodes[0].type, kGdc);
     ASSERT_EQ(info->streams_info[1].child_nodes[0].gdc_info.config_type.size(), 3u);
     EXPECT_EQ(info->streams_info[1].child_nodes[0].gdc_info.config_type[0],
@@ -107,193 +104,140 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_EQ(info->streams_info[1].child_nodes[0].gdc_info.config_type[2],
               GdcConfig::MONITORING_360p);
     ASSERT_EQ(info->streams_info[1].child_nodes[0].supported_streams.size(), 1u);
-    EXPECT_EQ(info->streams_info[1].child_nodes[0].supported_streams[0],
-              fuchsia::camera2::CameraStreamType::MONITORING);
+    EXPECT_EQ(info->streams_info[1].child_nodes[0].supported_streams[0], kStreamTypeMonitoring);
 
     // Output node.
     EXPECT_EQ(info->streams_info[1].child_nodes[0].child_nodes.size(), 1u);
     EXPECT_EQ(info->streams_info[1].child_nodes[0].child_nodes[0].type, kOutputStream);
     ASSERT_EQ(info->streams_info[1].child_nodes[0].child_nodes[0].supported_streams.size(), 1u);
     EXPECT_EQ(info->streams_info[1].child_nodes[0].child_nodes[0].supported_streams[0],
-              fuchsia::camera2::CameraStreamType::MONITORING);
+              kStreamTypeMonitoring);
 
     // Video Conferencing configuration
     EXPECT_EQ(ZX_OK, controller_protocol_device_->GetInternalConfiguration(kVideoConfig, &info));
     EXPECT_EQ(info->streams_info.size(), 1u);
 
     // 1st stream is FR
-    EXPECT_EQ(info->streams_info[0].input_stream_type,
-              fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
+    EXPECT_EQ(info->streams_info[0].input_stream_type, kStreamTypeFR);
     // FR Supported streams
     EXPECT_EQ(info->streams_info[0].supported_streams.size(), 2u);
     EXPECT_EQ(info->streams_info[0].supported_streams[0],
-              fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
-                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
-                  fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
-    EXPECT_EQ(info->streams_info[0].supported_streams[1],
-              fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
+              kStreamTypeFR | kStreamTypeML | kStreamTypeVideo);
+    EXPECT_EQ(info->streams_info[0].supported_streams[1], kStreamTypeVideo);
+  }
+
+  InternalConfigNode* GetStreamConfigNode(uint32_t config_type,
+                                          const fuchsia::camera2::CameraStreamType stream_type) {
+    controller_protocol_device_->PopulateConfigurations();
+    InternalConfigInfo* info = nullptr;
+    // Get internal configuration for debug config.
+    EXPECT_EQ(ZX_OK, controller_protocol_device_->GetInternalConfiguration(config_type, &info));
+    // Get stream config for kStreamTypeFR; stream.
+    return controller_protocol_device_->GetStreamConfigNode(info, stream_type);
+  }
+
+  // This helper API does the basic validation of an Input Node.
+  fit::result<std::unique_ptr<camera::ProcessNode>, zx_status_t> GetInputNode(
+      const fuchsia::camera2::CameraStreamType stream_type, PipelineInfo* info) {
+    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
+    buffer_collection.buffer_count = kNumBuffers;
+    EXPECT_NE(nullptr, info);
+
+    info->output_buffers = std::move(buffer_collection);
+    info->image_format_index = 0;
+
+    auto result = pipeline_manager_->CreateInputNode(info);
+    EXPECT_TRUE(result.is_ok());
+
+    EXPECT_NE(nullptr, result.value()->isp_stream_protocol());
+    EXPECT_EQ(NodeType::kInputStream, result.value()->type());
+    return result;
+  }
+
+  // This helper API does the basic validation of an Output Node.
+  fit::result<camera::ProcessNode*, zx_status_t> GetGraphNode(PipelineInfo* info,
+                                                              ProcessNode* input_node) {
+    auto graph_result = pipeline_manager_->CreateGraph(info, info->node, input_node);
+    EXPECT_TRUE(graph_result.is_ok());
+
+    EXPECT_NE(nullptr, graph_result.value());
+    EXPECT_NE(nullptr, graph_result.value()->client_stream());
+    EXPECT_EQ(NodeType::kOutputStream, graph_result.value()->type());
+    return graph_result;
+  }
+  // Returns |true| if all |streams| are present in the
+  // vector |streams_to_validate|.
+  bool HasAllStreams(const std::vector<fuchsia::camera2::CameraStreamType>& streams_to_validate,
+                     const std::vector<fuchsia::camera2::CameraStreamType>& streams) {
+    if (streams_to_validate.size() != streams.size()) {
+      return false;
+    }
+    for (auto stream : streams) {
+      if (!camera::HasStreamType(streams_to_validate, stream)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   void TestDebugStreamConfigNode() {
-    controller_protocol_device_->PopulateConfigurations();
-    InternalConfigInfo* info = nullptr;
-    // Get internal configuration for debug config
-    EXPECT_EQ(ZX_OK, controller_protocol_device_->GetInternalConfiguration(kDebugConfig, &info));
-    // Get stream config for fuchsia::camera2::CameraStreamType::FULL_RESOLUTION; stream
-    auto stream_config = controller_protocol_device_->GetStreamConfigNode(
-        info, fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
-    EXPECT_NE(nullptr, stream_config);
-
-    stream_config = controller_protocol_device_->GetStreamConfigNode(
-        info, fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION);
-    EXPECT_EQ(nullptr, stream_config);
+    EXPECT_NE(nullptr, GetStreamConfigNode(kDebugConfig, kStreamTypeFR));
+    EXPECT_EQ(nullptr, GetStreamConfigNode(kDebugConfig, kStreamTypeDS));
   }
 
-  void TestConfigureInputNode_DebugConfig() {
-    controller_protocol_device_->PopulateConfigurations();
-    InternalConfigInfo* internal_info = nullptr;
-    // Get internal configuration for debug config
-    EXPECT_EQ(ZX_OK,
-              controller_protocol_device_->GetInternalConfiguration(kDebugConfig, &internal_info));
-    // Get stream config for fuchsia::camera2::CameraStreamType::FULL_RESOLUTION; stream
-    auto stream_config_node = controller_protocol_device_->GetStreamConfigNode(
-        internal_info, fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
+  void TestConfigureDebugConfig() {
+    auto stream_type = kStreamTypeFR;
+    auto stream_config_node = GetStreamConfigNode(kDebugConfig, stream_type);
     ASSERT_NE(nullptr, stream_config_node);
-
-    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
-    fuchsia::camera2::hal::StreamConfig stream_config;
-    stream_config.properties.set_stream_type(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
-
     PipelineInfo info;
-    info.output_buffers = std::move(buffer_collection);
-    info.image_format_index = 0;
-    info.node = *stream_config_node;
+    fuchsia::camera2::hal::StreamConfig stream_config;
+    stream_config.properties.set_stream_type(stream_type);
     info.stream_config = &stream_config;
+    info.node = *stream_config_node;
 
-    auto result = pipeline_manager_->CreateInputNode(&info);
-    EXPECT_EQ(true, result.is_ok());
-
-    EXPECT_NE(nullptr, result.value()->isp_stream_protocol());
-    EXPECT_EQ(NodeType::kInputStream, result.value()->type());
+    __UNUSED auto result = GetInputNode(stream_type, &info);
+    __UNUSED auto graph_result = GetGraphNode(&info, result.value().get());
   }
 
-  void TestConfigureOutputNode_DebugConfig() {
-    controller_protocol_device_->PopulateConfigurations();
-    InternalConfigInfo* internal_info = nullptr;
-    // Get internal configuration for debug config
-    EXPECT_EQ(ZX_OK,
-              controller_protocol_device_->GetInternalConfiguration(kDebugConfig, &internal_info));
-    // Get stream config for fuchsia::camera2::CameraStreamType::FULL_RESOLUTION; stream
-    auto stream_config_node = controller_protocol_device_->GetStreamConfigNode(
-        internal_info, fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
+  void TestConfigureMonitorConfigStreamFR() {
+    auto stream_type = kStreamTypeDS | kStreamTypeML;
+    auto stream_config_node = GetStreamConfigNode(kMonitorConfig, stream_type);
     ASSERT_NE(nullptr, stream_config_node);
-
-    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
-    fuchsia::camera2::hal::StreamConfig stream_config;
-    stream_config.properties.set_stream_type(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
-
     PipelineInfo info;
-    info.output_buffers = std::move(buffer_collection);
-    info.image_format_index = 0;
-    info.node = *stream_config_node;
-    info.stream_config = &stream_config;
-
-    auto result = pipeline_manager_->CreateInputNode(&info);
-    ASSERT_EQ(true, result.is_ok());
-
-    EXPECT_NE(nullptr, result.value()->isp_stream_protocol());
-    EXPECT_EQ(NodeType::kInputStream, result.value()->type());
-
-    auto graph_result = pipeline_manager_->CreateGraph(&info, info.node, result.value().get());
-    ASSERT_EQ(true, graph_result.is_ok());
-
-    ASSERT_NE(nullptr, graph_result.value());
-    EXPECT_NE(nullptr, graph_result.value()->client_stream());
-    EXPECT_EQ(NodeType::kOutputStream, graph_result.value()->type());
-  }
-
-  void TestConfigure_MonitorConfig_StreamFR() {
-    controller_protocol_device_->PopulateConfigurations();
-    InternalConfigInfo* internal_info = nullptr;
-    // Get the internal configuration for monitor config
-    EXPECT_EQ(ZX_OK, controller_protocol_device_->GetInternalConfiguration(kMonitorConfig,
-                                                                           &internal_info));
-    // Get the stream config
-    auto stream_config_node = controller_protocol_device_->GetStreamConfigNode(
-        internal_info, fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
-                           fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
-    ASSERT_NE(nullptr, stream_config_node);
-
-    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
     fuchsia::camera2::hal::StreamConfig stream_config;
-    stream_config.properties.set_stream_type(
-        fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
-        fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
-
-    PipelineInfo info;
-    info.output_buffers = std::move(buffer_collection);
-    info.image_format_index = 0;
-    info.node = *stream_config_node;
+    stream_config.properties.set_stream_type(stream_type);
     info.stream_config = &stream_config;
+    info.node = *stream_config_node;
 
-    auto result = pipeline_manager_->CreateInputNode(&info);
-    EXPECT_EQ(true, result.is_ok());
-
-    EXPECT_NE(nullptr, result.value()->isp_stream_protocol());
-    EXPECT_EQ(NodeType::kInputStream, result.value()->type());
-
-    auto graph_result = pipeline_manager_->CreateGraph(&info, info.node, result.value().get());
-    ASSERT_EQ(true, graph_result.is_ok());
-
-    ASSERT_NE(nullptr, graph_result.value());
-    EXPECT_NE(nullptr, graph_result.value()->client_stream());
-    EXPECT_EQ(NodeType::kOutputStream, graph_result.value()->type());
+    auto result = GetInputNode(stream_type, &info);
+    auto graph_result = GetGraphNode(&info, result.value().get());
 
     // Check if GDC node was created.
     EXPECT_EQ(NodeType::kGdc, graph_result.value()->parent_node()->type());
 
     // Validate the configured and supported streams for Input node.
-    ASSERT_EQ(result.value()->configured_streams().size(), 1u);
-    EXPECT_EQ(result.value()->configured_streams().at(0),
-              fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
-                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
+    EXPECT_TRUE(HasAllStreams(result.value()->configured_streams(), {stream_type}));
 
-    ASSERT_EQ(result.value()->supported_streams().size(), 2u);
-    EXPECT_EQ(result.value()->supported_streams().at(0),
-              fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
-                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
-    EXPECT_EQ(result.value()->supported_streams().at(1),
-              fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
-                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
+    EXPECT_TRUE(HasAllStreams(result.value()->supported_streams(),
+                              {stream_type, kStreamTypeFR | kStreamTypeML}));
 
     // Validate the configured and supported streams for GDC node.
-    ASSERT_EQ(graph_result.value()->parent_node()->configured_streams().size(), 1u);
-    EXPECT_EQ(graph_result.value()->parent_node()->configured_streams().at(0),
-              fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
-                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
+    EXPECT_TRUE(
+        HasAllStreams(graph_result.value()->parent_node()->configured_streams(), {stream_type}));
 
-    ASSERT_EQ(graph_result.value()->parent_node()->supported_streams().size(), 1u);
-    EXPECT_EQ(graph_result.value()->parent_node()->supported_streams().at(0),
-              fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
-                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
+    EXPECT_TRUE(
+        HasAllStreams(graph_result.value()->parent_node()->supported_streams(), {stream_type}));
 
     // Validate the configured and supported streams for Output node.
-    ASSERT_EQ(graph_result.value()->configured_streams().size(), 1u);
-    EXPECT_EQ(graph_result.value()->configured_streams().at(0),
-              fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
-                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
+    EXPECT_TRUE(HasAllStreams(graph_result.value()->configured_streams(), {stream_type}));
 
-    ASSERT_EQ(graph_result.value()->supported_streams().size(), 1u);
-    EXPECT_EQ(graph_result.value()->supported_streams().at(0),
-              fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
-                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
+    EXPECT_TRUE(HasAllStreams(graph_result.value()->supported_streams(), {stream_type}));
 
     // Check if the stream got created.
     EXPECT_TRUE(pipeline_manager_->IsStreamAlreadyCreated(&info, result.value().get()));
 
     // Change the requested stream type.
-    stream_config.properties.set_stream_type(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
-                                             fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
+    stream_config.properties.set_stream_type(kStreamTypeFR | kStreamTypeML);
     info.stream_config = &stream_config;
 
     auto append_result =
@@ -307,7 +251,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_FALSE(pipeline_manager_->IsStreamAlreadyCreated(&info, result.value().get()));
 
     // Change the requested stream type to something invalid for this configuration.
-    stream_config.properties.set_stream_type(fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
+    stream_config.properties.set_stream_type(kStreamTypeML);
     info.stream_config = &stream_config;
 
     append_result =
@@ -316,175 +260,86 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_EQ(ZX_ERR_INVALID_ARGS, append_result.error());
   }
 
-  void TestConfigure_MonitorConfig_StreamDS() {
-    controller_protocol_device_->PopulateConfigurations();
-    InternalConfigInfo* internal_info = nullptr;
-    // Get the internal configuration for monitor config
-    EXPECT_EQ(ZX_OK, controller_protocol_device_->GetInternalConfiguration(kMonitorConfig,
-                                                                           &internal_info));
-    // Get the stream config
-    auto stream_config_node = controller_protocol_device_->GetStreamConfigNode(
-        internal_info, fuchsia::camera2::CameraStreamType::MONITORING);
+  void TestConfigureMonitorConfigStreamDS() {
+    auto stream_config_node = GetStreamConfigNode(kMonitorConfig, kStreamTypeMonitoring);
     ASSERT_NE(nullptr, stream_config_node);
-
-    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
-    fuchsia::camera2::hal::StreamConfig stream_config;
-    stream_config.properties.set_stream_type(fuchsia::camera2::CameraStreamType::MONITORING);
-
     PipelineInfo info;
-    info.output_buffers = std::move(buffer_collection);
-    info.image_format_index = 0;
-
-    info.node = *stream_config_node;
+    fuchsia::camera2::hal::StreamConfig stream_config;
+    stream_config.properties.set_stream_type(kStreamTypeMonitoring);
     info.stream_config = &stream_config;
+    info.node = *stream_config_node;
 
-    auto result = pipeline_manager_->CreateInputNode(&info);
-    EXPECT_EQ(true, result.is_ok());
-
-    EXPECT_NE(nullptr, result.value()->isp_stream_protocol());
-    EXPECT_EQ(NodeType::kInputStream, result.value()->type());
-
-    auto graph_result = pipeline_manager_->CreateGraph(&info, info.node, result.value().get());
-    ASSERT_EQ(true, graph_result.is_ok());
-
-    ASSERT_NE(nullptr, graph_result.value());
-    EXPECT_NE(nullptr, graph_result.value()->client_stream());
-    EXPECT_EQ(NodeType::kOutputStream, graph_result.value()->type());
+    auto result = GetInputNode(kStreamTypeMonitoring, &info);
+    auto graph_result = GetGraphNode(&info, result.value().get());
 
     // Check if GDC node was created.
     EXPECT_EQ(NodeType::kGdc, graph_result.value()->parent_node()->type());
 
     // Validate the configured and supported streams for Input node.
-    ASSERT_EQ(result.value()->configured_streams().size(), 1u);
-    EXPECT_EQ(result.value()->configured_streams().at(0),
-              fuchsia::camera2::CameraStreamType::MONITORING);
-
-    ASSERT_EQ(result.value()->supported_streams().size(), 1u);
-    EXPECT_EQ(result.value()->supported_streams().at(0),
-              fuchsia::camera2::CameraStreamType::MONITORING);
+    EXPECT_TRUE(HasAllStreams(result.value()->configured_streams(), {kStreamTypeMonitoring}));
+    EXPECT_TRUE(HasAllStreams(result.value()->supported_streams(), {kStreamTypeMonitoring}));
 
     // Validate the configured and supported streams for GDC node.
-    ASSERT_EQ(graph_result.value()->parent_node()->configured_streams().size(), 1u);
-    EXPECT_EQ(graph_result.value()->parent_node()->configured_streams().at(0),
-              fuchsia::camera2::CameraStreamType::MONITORING);
-
-    ASSERT_EQ(graph_result.value()->parent_node()->supported_streams().size(), 1u);
-    EXPECT_EQ(graph_result.value()->parent_node()->supported_streams().at(0),
-              fuchsia::camera2::CameraStreamType::MONITORING);
+    EXPECT_TRUE(HasAllStreams(graph_result.value()->parent_node()->supported_streams(),
+                              {kStreamTypeMonitoring}));
+    EXPECT_TRUE(HasAllStreams(graph_result.value()->parent_node()->configured_streams(),
+                              {kStreamTypeMonitoring}));
 
     // Validate the configured and supported streams for Output node.
-    ASSERT_EQ(graph_result.value()->configured_streams().size(), 1u);
-    EXPECT_EQ(graph_result.value()->configured_streams().at(0),
-              fuchsia::camera2::CameraStreamType::MONITORING);
-
-    ASSERT_EQ(graph_result.value()->supported_streams().size(), 1u);
-    EXPECT_EQ(graph_result.value()->supported_streams().at(0),
-              fuchsia::camera2::CameraStreamType::MONITORING);
+    EXPECT_TRUE(HasAllStreams(graph_result.value()->supported_streams(), {kStreamTypeMonitoring}));
+    EXPECT_TRUE(HasAllStreams(graph_result.value()->configured_streams(), {kStreamTypeMonitoring}));
   }
 
-  void TestConfigure_VideoConfig_Stream1() {
-    controller_protocol_device_->PopulateConfigurations();
-    InternalConfigInfo* internal_info = nullptr;
-    // Get the internal configuration for monitor config
-    EXPECT_EQ(ZX_OK,
-              controller_protocol_device_->GetInternalConfiguration(kVideoConfig, &internal_info));
-    // Get the stream config
-    auto stream_config_node = controller_protocol_device_->GetStreamConfigNode(
-        internal_info, fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
-                           fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
-                           fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
+  void TestConfigureVideoConfigStream1() {
+    auto stream_config_node =
+        GetStreamConfigNode(kVideoConfig, kStreamTypeFR | kStreamTypeML | kStreamTypeVideo);
     ASSERT_NE(nullptr, stream_config_node);
 
-    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
-    fuchsia::camera2::hal::StreamConfig stream_config;
-    stream_config.properties.set_stream_type(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
-                                             fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
-                                             fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
-
     PipelineInfo info;
-    info.output_buffers = std::move(buffer_collection);
-    info.image_format_index = 0;
-    info.node = *stream_config_node;
+    fuchsia::camera2::hal::StreamConfig stream_config;
+    stream_config.properties.set_stream_type(kStreamTypeFR | kStreamTypeML | kStreamTypeVideo);
     info.stream_config = &stream_config;
+    info.node = *stream_config_node;
 
-    auto result = pipeline_manager_->CreateInputNode(&info);
-    EXPECT_EQ(true, result.is_ok());
-
-    EXPECT_NE(nullptr, result.value()->isp_stream_protocol());
-    EXPECT_EQ(NodeType::kInputStream, result.value()->type());
-
-    auto graph_result = pipeline_manager_->CreateGraph(&info, info.node, result.value().get());
-    ASSERT_EQ(true, graph_result.is_ok());
-
-    ASSERT_NE(nullptr, graph_result.value());
-    EXPECT_NE(nullptr, graph_result.value()->client_stream());
-    EXPECT_EQ(NodeType::kOutputStream, graph_result.value()->type());
+    auto result = GetInputNode(kStreamTypeFR | kStreamTypeML | kStreamTypeVideo, &info);
+    auto graph_result = GetGraphNode(&info, result.value().get());
 
     // Check if GDC1 & GDC2 node was created.
     EXPECT_EQ(NodeType::kGdc, graph_result.value()->parent_node()->type());
     EXPECT_EQ(NodeType::kGdc, graph_result.value()->parent_node()->parent_node()->type());
 
     // Validate the configured and supported streams for Input node.
-    ASSERT_EQ(result.value()->configured_streams().size(), 1u);
-    EXPECT_EQ(result.value()->configured_streams().at(0),
-              fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
-                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
-                  fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
-
-    ASSERT_EQ(result.value()->supported_streams().size(), 2u);
-    EXPECT_EQ(result.value()->supported_streams().at(0),
-              fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
-                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
-                  fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
-    EXPECT_EQ(result.value()->supported_streams().at(1),
-              fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
+    EXPECT_TRUE(HasAllStreams(result.value()->configured_streams(),
+                              {kStreamTypeFR | kStreamTypeML | kStreamTypeVideo}));
+    EXPECT_TRUE(
+        HasAllStreams(result.value()->supported_streams(),
+                      {kStreamTypeFR | kStreamTypeML | kStreamTypeVideo, kStreamTypeVideo}));
 
     // Validate the configured and supported streams for GDC2 node.
-    ASSERT_EQ(graph_result.value()->parent_node()->configured_streams().size(), 1u);
-    EXPECT_EQ(graph_result.value()->parent_node()->configured_streams().at(0),
-              fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
-                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
-                  fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
-
-    ASSERT_EQ(graph_result.value()->parent_node()->supported_streams().size(), 1u);
-    EXPECT_EQ(graph_result.value()->parent_node()->supported_streams().at(0),
-              fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
-                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
-                  fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
+    EXPECT_TRUE(HasAllStreams(graph_result.value()->parent_node()->configured_streams(),
+                              {kStreamTypeFR | kStreamTypeML | kStreamTypeVideo}));
+    EXPECT_TRUE(HasAllStreams(graph_result.value()->parent_node()->supported_streams(),
+                              {kStreamTypeFR | kStreamTypeML | kStreamTypeVideo}));
 
     // Validate the configured and supported streams for GDC1 node.
-    ASSERT_EQ(graph_result.value()->parent_node()->parent_node()->configured_streams().size(), 1u);
-    EXPECT_EQ(graph_result.value()->parent_node()->parent_node()->configured_streams().at(0),
-              fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
-                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
-                  fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
-
-    ASSERT_EQ(graph_result.value()->parent_node()->parent_node()->supported_streams().size(), 2u);
-    EXPECT_EQ(graph_result.value()->parent_node()->parent_node()->supported_streams().at(0),
-              fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
-                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
-                  fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
-    EXPECT_EQ(graph_result.value()->parent_node()->parent_node()->supported_streams().at(1),
-              fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
+    EXPECT_TRUE(
+        HasAllStreams(graph_result.value()->parent_node()->parent_node()->configured_streams(),
+                      {kStreamTypeFR | kStreamTypeML | kStreamTypeVideo}));
+    EXPECT_TRUE(
+        HasAllStreams(graph_result.value()->parent_node()->parent_node()->supported_streams(),
+                      {kStreamTypeFR | kStreamTypeML | kStreamTypeVideo, kStreamTypeVideo}));
 
     // Validate the configured and supported streams for Output node.
-    ASSERT_EQ(graph_result.value()->configured_streams().size(), 1u);
-    EXPECT_EQ(graph_result.value()->configured_streams().at(0),
-              fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
-                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
-                  fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
-
-    ASSERT_EQ(graph_result.value()->supported_streams().size(), 1u);
-    EXPECT_EQ(graph_result.value()->supported_streams().at(0),
-              fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
-                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
-                  fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
+    EXPECT_TRUE(HasAllStreams(graph_result.value()->configured_streams(),
+                              {kStreamTypeFR | kStreamTypeML | kStreamTypeVideo}));
+    EXPECT_TRUE(HasAllStreams(graph_result.value()->supported_streams(),
+                              {kStreamTypeFR | kStreamTypeML | kStreamTypeVideo}));
 
     // Check if the stream got created.
     EXPECT_TRUE(pipeline_manager_->IsStreamAlreadyCreated(&info, result.value().get()));
 
     // Change the requested stream type.
-    stream_config.properties.set_stream_type(fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
+    stream_config.properties.set_stream_type(kStreamTypeVideo);
     info.stream_config = &stream_config;
 
     auto append_result =
@@ -499,40 +354,18 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
   }
 
   void TestShutdownPathAfterStreamingOn() {
-    controller_protocol_device_->PopulateConfigurations();
-    InternalConfigInfo* internal_info = nullptr;
-    // Get internal configuration for debug config
-    EXPECT_EQ(ZX_OK,
-              controller_protocol_device_->GetInternalConfiguration(kDebugConfig, &internal_info));
-    // Get stream config for fuchsia::camera2::CameraStreamType::FULL_RESOLUTION; stream
-    auto stream_config_node = controller_protocol_device_->GetStreamConfigNode(
-        internal_info, fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
+    auto stream_config_node = GetStreamConfigNode(kDebugConfig, kStreamTypeFR);
     ASSERT_NE(nullptr, stream_config_node);
 
-    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
-    fuchsia::camera2::hal::StreamConfig stream_config;
-    stream_config.properties.set_stream_type(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
-
     PipelineInfo info;
-    info.output_buffers = std::move(buffer_collection);
-    info.image_format_index = 0;
-    info.node = *stream_config_node;
+    fuchsia::camera2::hal::StreamConfig stream_config;
+    stream_config.properties.set_stream_type(kStreamTypeFR);
     info.stream_config = &stream_config;
+    info.node = *stream_config_node;
+    auto result = GetInputNode(kStreamTypeFR, &info);
+    auto graph_result = GetGraphNode(&info, result.value().get());
 
-    auto result = pipeline_manager_->CreateInputNode(&info);
-    EXPECT_EQ(true, result.is_ok());
-
-    EXPECT_NE(nullptr, result.value()->isp_stream_protocol());
-    EXPECT_EQ(NodeType::kInputStream, result.value()->type());
-
-    auto graph_result = pipeline_manager_->CreateGraph(&info, info.node, result.value().get());
-    EXPECT_EQ(true, graph_result.is_ok());
-
-    ASSERT_NE(nullptr, graph_result.value());
-    EXPECT_NE(nullptr, graph_result.value()->client_stream());
-    EXPECT_EQ(NodeType::kOutputStream, graph_result.value()->type());
-
-    // Set streaming on
+    // Set streaming on.
     graph_result.value()->client_stream()->Start();
 
     EXPECT_NO_FATAL_FAILURE(pipeline_manager_->OnClientStreamDisconnect(&info));
@@ -544,6 +377,21 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
 
     result = pipeline_manager_->LoadGdcConfiguration(GdcConfig::MONITORING_360p);
     EXPECT_FALSE(result.is_error());
+  }
+
+  void TestHasStreamType() {
+    std::vector<fuchsia::camera2::CameraStreamType> input_vector;
+    auto stream_to_find = kStreamTypeFR;
+
+    EXPECT_FALSE(HasStreamType(input_vector, stream_to_find));
+
+    input_vector.push_back(kStreamTypeML);
+    input_vector.push_back(kStreamTypeMonitoring);
+
+    EXPECT_FALSE(HasStreamType(input_vector, stream_to_find));
+
+    input_vector.push_back(kStreamTypeFR);
+    EXPECT_TRUE(HasStreamType(input_vector, stream_to_find));
   }
 
   FakeIsp fake_isp_;
@@ -563,29 +411,25 @@ TEST_F(ControllerProtocolTest, GetConfigs) { TestInternalConfigs(); }
 
 TEST_F(ControllerProtocolTest, GetDebugStreamConfig) { TestDebugStreamConfigNode(); }
 
-TEST_F(ControllerProtocolTest, ConfigureInputNodeDebugConfig) {
-  TestConfigureInputNode_DebugConfig();
-}
-
-TEST_F(ControllerProtocolTest, ConfigureOutputNodeDebugConfig) {
-  TestConfigureOutputNode_DebugConfig();
-}
+TEST_F(ControllerProtocolTest, ConfigureOutputNodeDebugConfig) { TestConfigureDebugConfig(); }
 
 TEST_F(ControllerProtocolTest, TestShutdownPathAfterStreamingOn) {
   TestShutdownPathAfterStreamingOn();
 }
 
-TEST_F(ControllerProtocolTest, TestConfigure_MonitorConfig_StreamFR) {
-  TestConfigure_MonitorConfig_StreamFR();
+TEST_F(ControllerProtocolTest, TestConfigureMonitorConfigStreamFR) {
+  TestConfigureMonitorConfigStreamFR();
 }
 
-TEST_F(ControllerProtocolTest, TestConfigure_MonitorConfig_StreamDS) {
-  TestConfigure_MonitorConfig_StreamDS();
+TEST_F(ControllerProtocolTest, TestConfigureMonitorConfigStreamDS) {
+  TestConfigureMonitorConfigStreamDS();
 }
 
-TEST_F(ControllerProtocolTest, TestConfigure_VideoConfig_Stream1) {
-  TestConfigure_VideoConfig_Stream1();
+TEST_F(ControllerProtocolTest, TestConfigureVideoConfigStream1) {
+  TestConfigureVideoConfigStream1();
 }
+
+TEST_F(ControllerProtocolTest, TestHasStreamType) { TestHasStreamType(); }
 
 TEST_F(ControllerProtocolTest, LoadGdcConfig) {
 #ifdef INTERNAL_ACCESS
@@ -594,5 +438,6 @@ TEST_F(ControllerProtocolTest, LoadGdcConfig) {
   GTEST_SKIP();
 #endif
 }
+}  // namespace
 
 }  // namespace camera

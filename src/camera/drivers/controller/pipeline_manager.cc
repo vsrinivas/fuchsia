@@ -14,6 +14,14 @@ namespace camera {
 
 constexpr auto TAG = "camera_controller";
 
+bool HasStreamType(const std::vector<fuchsia::camera2::CameraStreamType>& streams,
+                   fuchsia::camera2::CameraStreamType type) {
+  if (std::find(streams.begin(), streams.end(), type) == streams.end()) {
+    return false;
+  }
+  return true;
+}
+
 const InternalConfigNode* PipelineManager::GetNextNodeInPipeline(PipelineInfo* info,
                                                                  const InternalConfigNode& node) {
   for (const auto& child_node : node.child_nodes) {
@@ -235,14 +243,6 @@ PipelineManager::ConfigureStreamPipelineHelper(
   return fit::ok(std::move(input_processing_node));
 }
 
-static bool SupportsStreamType(const std::vector<fuchsia::camera2::CameraStreamType>& streams,
-                               fuchsia::camera2::CameraStreamType type) {
-  if (std::find(streams.begin(), streams.end(), type) == streams.end()) {
-    return false;
-  }
-  return true;
-}
-
 fit::result<std::pair<InternalConfigNode, ProcessNode*>, zx_status_t>
 PipelineManager::FindNodeToAttachNewStream(PipelineInfo* info,
                                            const InternalConfigNode& current_internal_node,
@@ -251,15 +251,14 @@ PipelineManager::FindNodeToAttachNewStream(PipelineInfo* info,
 
   // Validate if this node supports the requested stream type
   // to be safe.
-  if (!SupportsStreamType(node->supported_streams(), requested_stream_type)) {
+  if (!HasStreamType(node->supported_streams(), requested_stream_type)) {
     return fit::error(ZX_ERR_INVALID_ARGS);
   }
 
   // Traverse the |node| to find a node which supports this stream
   // but none of its children support this stream.
   for (auto& child_node_info : node->child_nodes_info()) {
-    if (SupportsStreamType(child_node_info.child_node->supported_streams(),
-                           requested_stream_type)) {
+    if (HasStreamType(child_node_info.child_node->supported_streams(), requested_stream_type)) {
       // If we find a child node which supports the requested stream type,
       // we move on to that child node.
       auto next_internal_node = GetNextNodeInPipeline(info, current_internal_node);
