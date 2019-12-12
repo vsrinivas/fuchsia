@@ -22,6 +22,8 @@
 
 #include "src/lib/fxl/macros.h"
 
+constexpr size_t kMacAddrStringLength = 17;
+
 // NetstackIntermediary implements only the Netstack methods that are used by
 // Machina guests. Rather than creating an ethernet device and associating it
 // with an instance of Netstack, NetstackIntermediary bridges guests into the
@@ -33,7 +35,7 @@ class NetstackIntermediary : public fuchsia::netstack::Netstack {
   using NetworkBinding = std::pair<std::unique_ptr<netemul::EthernetClient>,
                                    fidl::InterfacePtr<fuchsia::netemul::network::FakeEndpoint>>;
 
-  NetstackIntermediary(std::string network_name, NetworkMap mac_network_mapping);
+  NetstackIntermediary(NetworkMap mac_network_mapping);
 
   // The following methods are required by the Machina guest's VirtioNet.
   void AddEthernetDevice(std::string topological_path,
@@ -78,15 +80,13 @@ class NetstackIntermediary : public fuchsia::netstack::Netstack {
   }
 
  protected:
-  NetstackIntermediary(std::string network_name, NetworkMap mac_network_mapping,
+  NetstackIntermediary(NetworkMap mac_network_mapping,
                        std::unique_ptr<sys::ComponentContext> context);
 
  private:
   fit::promise<fidl::InterfaceHandle<fuchsia::netemul::network::Network>> GetNetwork(
       std::string network_name);
   fit::promise<> SetupEthClient(const std::unique_ptr<netemul::EthernetClient>& eth_client);
-
-  std::string network_name_;
 
   std::vector<NetworkBinding> guest_client_endpoints_;
   NetworkMap mac_network_mapping_;

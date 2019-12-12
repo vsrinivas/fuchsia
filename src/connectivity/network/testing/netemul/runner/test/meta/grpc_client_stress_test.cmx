@@ -18,9 +18,9 @@
             "guest": [
                 {
                     "label": "debian_guest",
-                    "networks": [
-                        "net"
-                    ],
+                    "macs": {
+                        "02:1a:11:00:01:00": "net"
+                    },
                     "url": "fuchsia-pkg://fuchsia.com/debian_guest#meta/debian_guest.cmx"
                 }
             ],

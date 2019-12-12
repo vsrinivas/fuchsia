@@ -10,8 +10,8 @@
                         "services": {
                             "fuchsia.netstack.Netstack": {
                                 "arguments": [
-                                    "--interface=70:00:0a:0b:0c:0d=net-1",
-                                    "--interface=70:00:01:02:03:04=net-2"
+                                    "--interface=72:00:0a:0b:0c:0d=net-1",
+                                    "--interface=72:00:01:02:03:04=net-2"
                                 ],
                                 "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_intermediary.cmx"
                             }
@@ -85,7 +85,7 @@
                 {
                     "endpoints": [
                         {
-                            "mac": "70:00:0a:0b:0c:0d",
+                            "mac": "72:00:0a:0b:0c:0d",
                             "name": "client-ep-1"
                         }
                     ],
@@ -94,7 +94,7 @@
                 {
                     "endpoints": [
                         {
-                            "mac": "70:00:01:02:03:04",
+                            "mac": "72:00:01:02:03:04",
                             "name": "client-ep-2"
                         }
                     ],

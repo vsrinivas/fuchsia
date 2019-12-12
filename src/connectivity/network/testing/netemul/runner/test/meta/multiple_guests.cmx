@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "bin/multiple_guests"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-persistent-storage"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.netemul.guest.GuestDiscovery",
+            "fuchsia.virtualization.Manager"
+        ]
+    }
+}

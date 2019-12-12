@@ -10,7 +10,7 @@
                         "services": {
                             "fuchsia.netstack.Netstack": {
                                 "arguments": [
-                                    "--network=net"
+                                    "--interface=02:1a:11:00:01:00=net"
                                 ],
                                 "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_intermediary.cmx"
                             }
@@ -54,6 +54,7 @@
                 {
                     "endpoints": [
                         {
+                            "mac": "02:1a:11:00:01:00",
                             "name": "mock-ep"
                         }
                     ],

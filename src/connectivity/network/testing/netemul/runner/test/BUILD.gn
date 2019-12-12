@@ -44,6 +44,7 @@ group("netemul_empty_binaries") {
   write_file("$root_out_dir/netstack_intermediary_test", "")
   write_file("$root_out_dir/guest_test", "")
   write_file("$root_out_dir/grpc_client_stress_test", "")
+  write_file("$root_out_dir/multiple_guests_test", "")
 }
 
 test_package("netemul_sandbox_test") {
@@ -186,12 +187,21 @@ test_package("netemul_guest_test") {
     ":netemul_empty_binaries",
     "guest",
     "guest_grpc_stress",
+    "multiple_guests",
   ]
 
   resources = [
     {
       path = "//src/virtualization/lib/guest_interaction/test/test_script.sh"
       dest = "test_script.sh"
+    },
+    {
+      path = "multiple_guests/data/setup_linux_client.sh"
+      dest = "setup_linux_client.sh"
+    },
+    {
+      path = "multiple_guests/data/setup_linux_router.sh"
+      dest = "setup_linux_router.sh"
     },
   ]
 
@@ -204,6 +214,10 @@ test_package("netemul_guest_test") {
       path = rebase_path("meta/guest.cmx")
       dest = "guest.cmx"
     },
+    {
+      path = rebase_path("meta/multiple_guests.cmx")
+      dest = "multiple_guests.cmx"
+    },
   ]
 
   binaries = [
@@ -212,6 +226,9 @@ test_package("netemul_guest_test") {
     },
     {
       name = "grpc_client_stress"
+    },
+    {
+      name = "multiple_guests"
     },
   ]
 
@@ -229,6 +246,16 @@ test_package("netemul_guest_test") {
     },
     {
       name = "grpc_client_stress_test"
+      environments = [
+        {
+          dimensions = {
+            device_type = "Intel NUC Kit NUC7i5DNHE"
+          }
+        },
+      ]
+    },
+    {
+      name = "multiple_guests_test"
       environments = [
         {
           dimensions = {

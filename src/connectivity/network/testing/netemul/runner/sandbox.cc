@@ -394,14 +394,10 @@ bool Sandbox::CreateEnvironmentOptions(const config::Environment& config,
   return true;
 }
 
-// Only one guest can be created and that guest may only have one network associated with it.
 bool Sandbox::CreateGuestOptions(const std::vector<config::Guest>& guests,
                                  ManagedEnvironment::Options* options) {
   if (guests.empty()) {
     return true;
-  }
-  if (guests.size() > 1 || guests[0].networks().size() > 1) {
-    return false;
   }
 
   environment::LoggerOptions* logger = options->mutable_logger_options();
@@ -419,12 +415,20 @@ bool Sandbox::CreateGuestOptions(const std::vector<config::Guest>& guests,
     ls.name = fuchsia::netemul::guest::GuestDiscovery::Name_;
     ls.url = kGuestDiscoveryUrl;
   }
-  if (!guests[0].networks().empty()) {
-    std::string netstack_arg = "--network=" + guests[0].networks()[0];
+
+  std::vector<std::string> netstack_args;
+  for (const config::Guest& guest : guests) {
+    for (const std::pair<std::string, std::string>& mac_ethertap_mapping : guest.macs()) {
+      netstack_args.push_back("--interface=" + mac_ethertap_mapping.first + "=" +
+                              mac_ethertap_mapping.second);
+    }
+  }
+
+  if (!netstack_args.empty()) {
     auto& ls = services->emplace_back();
     ls.name = fuchsia::netstack::Netstack::Name_;
     ls.url = kNetstackIntermediaryUrl;
-    ls.arguments = std::vector<std::string>{netstack_arg};
+    ls.arguments = std::move(netstack_args);
   }
 
   return true;
@@ -480,26 +484,36 @@ Sandbox::Promise Sandbox::LaunchGuestEnvironment(ConfiguringEnvironmentPtr env,
                                                  const config::Guest& guest) {
   ASSERT_HELPER_DISPATCHER;
 
-  return fit::make_promise(
-             [this, env,
-              &guest]() -> fit::promise<fuchsia::virtualization::GuestPtr, SandboxResult> {
-               // Launch the guest
-               fuchsia::virtualization::LaunchInfo guest_launch_info;
-               guest_launch_info.label = guest.guest_label();
-               guest_launch_info.url = guest.guest_image_url();
-               guest_launch_info.args.emplace({"--virtio-gpu=false"});
-               fuchsia::virtualization::GuestPtr guest_controller;
+  return fit::make_promise([this, env, &guest]()
+                               -> fit::promise<fuchsia::virtualization::GuestPtr, SandboxResult> {
+           // Launch the guest
+           fuchsia::virtualization::LaunchInfo guest_launch_info;
+           guest_launch_info.label = guest.guest_label();
+           guest_launch_info.url = guest.guest_image_url();
+           guest_launch_info.args.emplace({"--virtio-gpu=false"});
 
-               fit::bridge<fuchsia::virtualization::GuestPtr, SandboxResult> bridge;
-               realm_->LaunchInstance(
-                   std::move(guest_launch_info), guest_controller.NewRequest(),
-                   [completer = std::move(bridge.completer),
-                    guest_controller = std::move(guest_controller)](uint32_t cid) mutable {
-                     completer.complete_ok(std::move(guest_controller));
-                   });
+           if (!guest.macs().empty()) {
+             for (const std::pair<std::string, std::string>& mac_ethertap_mapping : guest.macs()) {
+               guest_launch_info.args->push_back("--net=" + mac_ethertap_mapping.first);
+             }
 
-               return bridge.consumer.promise();
-             })
+             // Prevent the guest from receiving a default MAC address from the VirtioNet
+             // internals.
+             guest_launch_info.args->push_back("--default-net=false");
+           }
+
+           fuchsia::virtualization::GuestPtr guest_controller;
+
+           fit::bridge<fuchsia::virtualization::GuestPtr, SandboxResult> bridge;
+           realm_->LaunchInstance(
+               std::move(guest_launch_info), guest_controller.NewRequest(),
+               [completer = std::move(bridge.completer),
+                guest_controller = std::move(guest_controller)](uint32_t cid) mutable {
+                 completer.complete_ok(std::move(guest_controller));
+               });
+
+           return bridge.consumer.promise();
+         })
       .and_then([](const fuchsia::virtualization::GuestPtr& guest_controller)
                     -> fit::promise<zx::socket, SandboxResult> {
         fit::bridge<zx::socket, SandboxResult> bridge;

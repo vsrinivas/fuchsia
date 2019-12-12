@@ -15,14 +15,12 @@
 
 static constexpr netemul::EthernetConfig eth_config = {.nbufs = 256, .buff_size = 2048};
 
-NetstackIntermediary::NetstackIntermediary(std::string network_name, NetworkMap mac_network_mapping)
-    : NetstackIntermediary(std::move(network_name), std::move(mac_network_mapping),
-                           sys::ComponentContext::Create()) {}
+NetstackIntermediary::NetstackIntermediary(NetworkMap mac_network_mapping)
+    : NetstackIntermediary(std::move(mac_network_mapping), sys::ComponentContext::Create()) {}
 
-NetstackIntermediary::NetstackIntermediary(std::string network_name, NetworkMap mac_network_mapping,
+NetstackIntermediary::NetstackIntermediary(NetworkMap mac_network_mapping,
                                            std::unique_ptr<sys::ComponentContext> context)
-    : network_name_(std::move(network_name)),
-      mac_network_mapping_(std::move(mac_network_mapping)),
+    : mac_network_mapping_(std::move(mac_network_mapping)),
       context_(std::move(context)),
       executor_(async_get_default_dispatcher()) {
   context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
@@ -59,8 +57,7 @@ void NetstackIntermediary::AddEthernetDevice(
   executor_.schedule_task(
       fit::make_promise([this, index]() mutable {
         // Get the MAC address from the ethernet device and determine which ethertap network it
-        // should be connected to.  If no mapping has been provided for the device, connect it to
-        // the network specified by the `--network` parameter.
+        // should be connected to.
         fit::bridge<std::string> bridge;
         auto& [eth_client, fake_ep] = guest_client_endpoints_[index];
         eth_client->device()->GetInfo([this, completer = std::move(bridge.completer)](
@@ -70,7 +67,15 @@ void NetstackIntermediary::AddEthernetDevice(
             completer.complete_ok(iterator->second);
             return;
           }
-          completer.complete_ok(network_name_);
+
+          char buffer[kMacAddrStringLength + 1];
+          for (uint8_t i = 0; i < info.mac.octets.size(); i++) {
+            sprintf(&buffer[3 * i], "%02X:", info.mac.octets[i]);
+          }
+          buffer[kMacAddrStringLength] = '\0';
+
+          FXL_LOG(ERROR) << "No network specified for " << buffer;
+          completer.complete_error();
         });
         return bridge.consumer.promise();
       })

@@ -12,7 +12,6 @@ namespace config {
 static const char* kLabel = "label";
 static const char* kUrl = "url";
 static const char* kFiles = "files";
-static const char* kNetworks = "networks";
 static const char* kMacAddrs = "macs";
 
 bool Guest::ParseFromJSON(const rapidjson::Value& value, json::JSONParser* parser) {
@@ -24,7 +23,6 @@ bool Guest::ParseFromJSON(const rapidjson::Value& value, json::JSONParser* parse
   // Set default vaules.
   guest_image_url_ = "fuchsia-pkg://fuchsia.com/debian_guest#meta/debian_guest.cmx";
   guest_label_ = "debian_guest";
-  networks_.clear();
   files_.clear();
   macs_.clear();
 
@@ -49,25 +47,6 @@ bool Guest::ParseFromJSON(const rapidjson::Value& value, json::JSONParser* parse
       }
       for (auto f = i->value.MemberBegin(); f != i->value.MemberEnd(); f++) {
         files_[f->name.GetString()] = f->value.GetString();
-      }
-    } else if (i->name == kNetworks) {
-      if (!i->value.IsArray()) {
-        parser->ReportError("guest networks must be an array");
-        return false;
-      }
-      auto networks = i->value.GetArray();
-      for (auto n = networks.Begin(); n != networks.End(); n++) {
-        if (!n->IsString()) {
-          parser->ReportError("guest network entries must be strings");
-          return false;
-        }
-        networks_.push_back(n->GetString());
-      }
-
-      // TODO(NET-2468): Allow guests to connect to more than one network.
-      if (networks_.size() > 1) {
-        parser->ReportError("NET-2468: guest networks can only have one entry");
-        return false;
       }
     } else if (i->name == kMacAddrs) {
       if (!i->value.IsObject()) {
@@ -94,8 +73,6 @@ bool Guest::ParseFromJSON(const rapidjson::Value& value, json::JSONParser* parse
 const std::string& Guest::guest_image_url() const { return guest_image_url_; };
 
 const std::string& Guest::guest_label() const { return guest_label_; };
-
-const std::vector<std::string>& Guest::networks() const { return networks_; };
 
 const std::map<std::string, std::string>& Guest::files() const { return files_; };
 

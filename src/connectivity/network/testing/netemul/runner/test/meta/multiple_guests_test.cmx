@@ -2,12 +2,12 @@
     "facets": {
         "fuchsia.netemul": {
             "capture": true,
+            "default_url": "fuchsia-pkg://fuchsia.com/netemul_guest_test#meta/multiple_guests.cmx",
             "environment": {
                 "children": [
                     {
-                        "name": "dhcp_server",
+                        "name": "fuchsia",
                         "services": {
-                            "fuchsia.net.SocketProvider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
                             "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
                             "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
                             "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
@@ -16,13 +16,19 @@
                             {
                                 "arguments": [
                                     "-e",
-                                    "client-ep"
+                                    "client-ep",
+                                    "-i",
+                                    "192.168.0.2/24",
+                                    "-g",
+                                    "192.168.0.1"
                                 ],
                                 "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
                             }
                         ],
                         "test": [
-                            "fuchsia-pkg://fuchsia.com/netemul_dhcp_tests#meta/dhcp_validity.cmx"
+                            {
+                                "arguments": []
+                            }
                         ]
                     }
                 ]
@@ -30,24 +36,37 @@
             "guest": [
                 {
                     "files": {
-                        "data/dhcp_setup.sh": "/root/input/dhcp_setup.sh",
-                        "data/dhcpd.conf": "/etc/dhcp/dhcpd.conf"
+                        "data/setup_linux_router.sh": "/root/input/setup_linux_router.sh"
                     },
-                    "label": "debian_guest",
+                    "label": "debian_guest_1",
                     "macs": {
-                        "02:1a:11:00:01:00": "net"
+                        "02:1a:11:00:01:00": "net_1",
+                        "02:1a:11:00:01:01": "net_2"
+                    },
+                    "url": "fuchsia-pkg://fuchsia.com/debian_guest#meta/debian_guest.cmx"
+                },
+                {
+                    "files": {
+                        "data/setup_linux_client.sh": "/root/input/setup_linux_client.sh"
+                    },
+                    "label": "debian_guest_2",
+                    "macs": {
+                        "02:1a:11:00:01:02": "net_1"
                     },
                     "url": "fuchsia-pkg://fuchsia.com/debian_guest#meta/debian_guest.cmx"
                 }
             ],
             "networks": [
                 {
+                    "name": "net_1"
+                },
+                {
                     "endpoints": [
                         {
                             "name": "client-ep"
                         }
                     ],
-                    "name": "net"
+                    "name": "net_2"
                 }
             ]
         }

@@ -16,7 +16,7 @@
 class GuestInfo {
  public:
   bool operator<(const GuestInfo& rhs) const {
-    return (realm_id < rhs.realm_id) && (guest_cid < rhs.guest_cid);
+    return (realm_id < rhs.realm_id) || (realm_id == rhs.realm_id && guest_cid < rhs.guest_cid);
   }
   bool operator==(const GuestInfo& rhs) const {
     return (realm_id == rhs.realm_id) && (guest_cid == rhs.guest_cid);
