@@ -333,7 +333,7 @@ void Scheduler::UpdateTimeline(SchedTime now) {
   trace.End(Round<uint64_t>(runtime_ns), Round<uint64_t>(virtual_time_));
 }
 
-void Scheduler::RescheduleCommon(SchedTime now, void* outer_trace) {
+void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace) {
   LocalTraceDuration trace{"reschedule_common"_stringref};
 
   const cpu_num_t current_cpu = arch_curr_cpu_num();
@@ -486,8 +486,8 @@ void Scheduler::RescheduleCommon(SchedTime now, void* outer_trace) {
     // with durations tail-call this method, so terminating the duration
     // here should not cause significant inaccuracy of the outer duration.
     trace.End();
-    if (outer_trace) {
-      static_cast<LocalTraceDuration*>(outer_trace)->End();
+    if (end_outer_trace) {
+      end_outer_trace();
     }
     FinalContextSwitch(current_thread, next_thread);
   }
@@ -684,7 +684,7 @@ void Scheduler::Block() {
   const SchedTime now = CurrentTime();
   SCHED_LTRACEF("current=%s now=%" PRId64 "\n", current_thread->name, now.raw_value());
 
-  Scheduler::Get()->RescheduleCommon(now, &trace);
+  Scheduler::Get()->RescheduleCommon(now, trace.Completer());
 }
 
 bool Scheduler::Unblock(thread_t* thread) {
@@ -782,7 +782,7 @@ void Scheduler::Yield() {
   current_state->time_slice_ns_ = now - current->start_of_current_time_slice_ns_;
   DEBUG_ASSERT(current_state->time_slice_ns_ >= 0);
 
-  current->RescheduleCommon(now, &trace);
+  current->RescheduleCommon(now, trace.Completer());
 }
 
 void Scheduler::Preempt() {
@@ -800,7 +800,7 @@ void Scheduler::Preempt() {
   SCHED_LTRACEF("current=%s now=%" PRId64 "\n", current_thread->name, now.raw_value());
 
   current_thread->state = THREAD_READY;
-  Get()->RescheduleCommon(now, &trace);
+  Get()->RescheduleCommon(now, trace.Completer());
 }
 
 void Scheduler::Reschedule() {
@@ -823,7 +823,7 @@ void Scheduler::Reschedule() {
   SCHED_LTRACEF("current=%s now=%" PRId64 "\n", current_thread->name, now.raw_value());
 
   current_thread->state = THREAD_READY;
-  Get()->RescheduleCommon(now, &trace);
+  Get()->RescheduleCommon(now, trace.Completer());
 }
 
 void Scheduler::RescheduleInternal() { Get()->RescheduleCommon(CurrentTime()); }

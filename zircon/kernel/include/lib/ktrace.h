@@ -351,6 +351,13 @@ class TraceDuration<TraceEnabled<enabled>, group, context> {
     }
   }
 
+  // Returns a callable to complete this duration trace. This is useful to
+  // delegate closing the duration to a callee. The lifetime of the
+  // TraceDuration instance must not end before the completer is invoked.
+  auto Completer() {
+    return [this]() { End(); };
+  }
+
  private:
   StringRef* string_ref_;
 };

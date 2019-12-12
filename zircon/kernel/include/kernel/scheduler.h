@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <zircon/types.h>
 
+#include <fbl/function.h>
 #include <fbl/intrusive_pointer_traits.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <ffl/fixed.h>
@@ -129,8 +130,11 @@ class Scheduler {
                                  cpu_mask_t* cpus_to_reschedule_mask, PropagatePI propagate)
       TA_REQ(thread_lock);
 
+  using EndTraceCallback = fbl::InlineFunction<void(), sizeof(void*)>;
+
   // Common logic for reschedule API.
-  void RescheduleCommon(SchedTime now, void* outer_trace = nullptr) TA_REQ(thread_lock);
+  void RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace = nullptr)
+      TA_REQ(thread_lock);
 
   // Evaluates the schedule and returns the thread that should execute,
   // updating the runqueue as necessary.
