@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <block-client/cpp/fake-device.h>
-
 #include <array>
 
+#include <block-client/cpp/fake-device.h>
 #include <fvm/format.h>
 #include <zxtest/zxtest.h>
 
@@ -69,7 +68,7 @@ TEST(FakeBlockDeviceTest, WriteAndReadUsingFifoTransaction) {
   fake_device->GetStats(false, &stats);
   ASSERT_EQ(1, stats.write.success.total_calls);
   ASSERT_EQ(kVmoBlocks * kBlockSizeDefault, stats.write.success.bytes_transferred);
-  ASSERT_LT(0, stats.write.success.total_time_spent);
+  ASSERT_GE(stats.write.success.total_time_spent, 0);
 
   // Clear out the registered VMO.
   char dst[kVmoBlocks * kBlockSizeDefault];
@@ -90,7 +89,7 @@ TEST(FakeBlockDeviceTest, WriteAndReadUsingFifoTransaction) {
   fake_device->GetStats(false, &stats);
   ASSERT_EQ(1, stats.read.success.total_calls);
   ASSERT_EQ(kVmoBlocks * kBlockSizeDefault, stats.read.success.bytes_transferred);
-  ASSERT_LT(0, stats.read.success.total_time_spent);
+  ASSERT_GE(stats.read.success.total_time_spent, 0);
 }
 
 TEST(FakeBlockDeviceTest, FifoTransactionFlush) {
@@ -114,7 +113,7 @@ TEST(FakeBlockDeviceTest, FifoTransactionFlush) {
   fake_device->GetStats(false, &stats);
   ASSERT_EQ(1, stats.flush.success.total_calls);
   ASSERT_EQ(0, stats.flush.success.bytes_transferred);
-  ASSERT_LT(0, stats.flush.success.total_time_spent);
+  ASSERT_GE(stats.flush.success.total_time_spent, 0);
 }
 
 // Tests that writing followed by a flush acts like a regular write.
@@ -248,7 +247,7 @@ TEST(FakeBlockDeviceTest, FifoTransactionUnsupportedTrim) {
   fake_device->GetStats(true, &stats);
   ASSERT_EQ(1, stats.trim.failure.total_calls);
   ASSERT_EQ(kVmoBlocks * kBlockSizeDefault, stats.trim.failure.bytes_transferred);
-  ASSERT_LT(0, stats.trim.failure.total_time_spent);
+  ASSERT_GE(stats.trim.failure.total_time_spent, 0);
 }
 
 TEST(FakeBlockDeviceTest, ReadWriteWithBarrier) {
@@ -276,10 +275,10 @@ TEST(FakeBlockDeviceTest, ReadWriteWithBarrier) {
   fake_device->GetStats(false, &stats);
   ASSERT_EQ(1, stats.write.success.total_calls);
   ASSERT_EQ(kVmoBlocks * kBlockSizeDefault, stats.write.success.bytes_transferred);
-  ASSERT_LT(0, stats.write.success.total_time_spent);
+  ASSERT_GE(stats.write.success.total_time_spent, 0);
   ASSERT_EQ(1, stats.barrier_before.success.total_calls);
   ASSERT_EQ(kVmoBlocks * kBlockSizeDefault, stats.barrier_before.success.bytes_transferred);
-  ASSERT_LT(0, stats.barrier_before.success.total_time_spent);
+  ASSERT_GE(stats.barrier_before.success.total_time_spent, 0);
 
   // Clear out the registered VMO.
   char dst[kVmoBlocks * kBlockSizeDefault];
@@ -300,10 +299,10 @@ TEST(FakeBlockDeviceTest, ReadWriteWithBarrier) {
   fake_device->GetStats(false, &stats);
   ASSERT_EQ(1, stats.read.success.total_calls);
   ASSERT_EQ(kVmoBlocks * kBlockSizeDefault, stats.read.success.bytes_transferred);
-  ASSERT_LT(0, stats.read.success.total_time_spent);
+  ASSERT_GE(stats.read.success.total_time_spent, 0);
   ASSERT_EQ(1, stats.barrier_after.success.total_calls);
   ASSERT_EQ(kVmoBlocks * kBlockSizeDefault, stats.barrier_after.success.bytes_transferred);
-  ASSERT_LT(0, stats.barrier_after.success.total_time_spent);
+  ASSERT_GE(stats.barrier_after.success.total_time_spent, 0);
 }
 
 TEST(FakeBlockDeviceTest, ClearStats) {
@@ -327,7 +326,7 @@ TEST(FakeBlockDeviceTest, ClearStats) {
   fake_device->GetStats(true, &stats);
   ASSERT_EQ(1, stats.flush.success.total_calls);
   ASSERT_EQ(0, stats.flush.success.bytes_transferred);
-  ASSERT_LT(0, stats.flush.success.total_time_spent);
+  ASSERT_GE(stats.flush.success.total_time_spent, 0);
 
   // We cleared stats during previous GetStats.
   fake_device->GetStats(false, &stats);
