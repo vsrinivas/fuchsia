@@ -11,6 +11,8 @@ rustc_library("fidl_fuchsia_net_ext") {
   edition = "2018"
   deps = [
     "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
   ]
 }
