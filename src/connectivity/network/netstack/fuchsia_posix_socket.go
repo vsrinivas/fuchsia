@@ -645,10 +645,6 @@ func (ios *endpoint) close(loopDone ...<-chan struct{}) int64 {
 			// Delete this endpoint from the global endpoints.
 			ios.metadata.endpoints.Delete(uint64(ios.local))
 
-			// HACK(crbug.com/1005300): chromium mojo code expects this; it doesn't
-			// care if the socket is closed.
-			ios.local.Shutdown(zx.SocketShutdownRead | zx.SocketShutdownWrite)
-
 			if err := ios.local.Close(); err != nil {
 				panic(err)
 			}
