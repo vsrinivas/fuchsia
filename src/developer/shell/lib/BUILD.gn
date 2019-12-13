@@ -64,6 +64,26 @@ action("js_libs") {
          rebase_path(sources, root_build_dir)
 }
 
+compiled_js("repl_init") {
+  source = "repl_init.js"
+  module = true
+  extra_args = [
+    "-M",
+    "li_internal",
+  ]
+}
+
+executable("spawn_child_test_util") {
+  testonly = true
+
+  sources = [
+    "spawn_child_test_util.cc",
+  ]
+  deps = [
+    "//sdk/fidl/fuchsia.sys",
+  ]
+}
+
 source_set("tests") {
   testonly = true
   sources = [
@@ -75,15 +95,21 @@ source_set("tests") {
   ]
   deps = [
     ":lib",
+    "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp:test_support",
     "//sdk/lib/fidl/cpp/test",
+    "//sdk/lib/sys/cpp",
     "//src/developer/shell/console",
     "//src/lib/fidl_codec:json_for_test",
+    "//src/lib/fxl",
+    "//src/sys/component_index/fidl:index",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/fdio",
     "//zircon/public/lib/memfs",
     "//zircon/public/lib/task-utils",
+    "//zircon/public/lib/zx",
   ]
 }

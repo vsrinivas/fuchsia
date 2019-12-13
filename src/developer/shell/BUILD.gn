@@ -69,7 +69,15 @@ test_package("shell_tests") {
     ":generate_fidl_json",
     ":shell_tests_bin",
     "//src/developer/shell/lib:js_libs",
+    "//src/developer/shell/lib:spawn_child_test_util",
   ]
+
+  binaries = [
+    {
+      name = "spawn_child_test_util"
+    },
+  ]
+
   tests = [
     {
       name = "shell_tests_bin"

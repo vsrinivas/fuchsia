@@ -143,6 +143,13 @@ class Task extends Object {
   constructor(handle) {
     super(handle);
   }
+
+  /**
+   * Kills the task, returns 0 on success
+   */
+  kill(){
+    return zx_internal.kill(this._handle);
+  }
 }
 
 /**

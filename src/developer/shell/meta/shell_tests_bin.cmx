@@ -11,7 +11,8 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.boot.RootJob"
+            "fuchsia.boot.RootJob",
+            "fuchsia.process.Launcher"
         ]
     }
 }

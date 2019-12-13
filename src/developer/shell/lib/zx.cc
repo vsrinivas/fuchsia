@@ -8,6 +8,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <iostream>
 #include <memory>
 #include <string>
 
@@ -434,7 +435,7 @@ JSValue ObjectGetInfo(JSContext *ctx, JSValueConst /*this_val*/, int argc, JSVal
       return ZxStatusToError(ctx, status);
     }
     buffer_size *= 2;
-  } while (actual * 2 < avail && attempt < kMaxAttempts);
+  } while (actual < avail && attempt < kMaxAttempts);
   return controller->GetValues(actual);
 }
 
@@ -473,6 +474,21 @@ JSValue JobDefault(JSContext *ctx, JSValueConst /*this_val*/, int /*argc*/,
   return HandleCreate(ctx, d, ZX_OBJ_TYPE_JOB);
 }
 
+// Calls zx_task_kill
+// argv[0] is a handle to the task to kill
+JSValue Kill(JSContext *ctx, JSValueConst /*this_val*/, int argc, JSValueConst *argv) {
+  if (argc != 1) {
+    return JS_ThrowSyntaxError(ctx, "Bad arguments to zx.kill");
+  }
+  zx_handle_info_t handle_info = HandleFromJsval(argv[0]);
+
+  zx_status_t status = zx_task_kill(handle_info.handle);
+  if (status != ZX_OK) {
+    return ZxStatusToError(ctx, status);
+  }
+  return JS_NewInt32(ctx, 0);
+}
+
 #define FLAG(x) JS_PROP_INT32_DEF(#x, x, JS_PROP_CONFIGURABLE)
 #define FLAG_64(x) JS_PROP_INT64_DEF(#x, x, JS_PROP_CONFIGURABLE)
 
@@ -485,6 +501,7 @@ const JSCFunctionListEntry funcs_[] = {
     JS_CFUNC_DEF("getObjectInfo", 2, ObjectGetInfo),
     JS_CFUNC_DEF("getObjectProperty", 2, ObjectGetProperty),
     JS_CFUNC_DEF("jobDefault", 2, JobDefault), JS_CFUNC_DEF("processSelf", 2, ProcessSelf),
+    JS_CFUNC_DEF("kill", 1, Kill),
     /* Handle signal constants */
     FLAG(ZX_CHANNEL_READABLE), FLAG(ZX_CHANNEL_WRITABLE), FLAG(ZX_CHANNEL_PEER_CLOSED),
     /* zx_object_get_info flags */
