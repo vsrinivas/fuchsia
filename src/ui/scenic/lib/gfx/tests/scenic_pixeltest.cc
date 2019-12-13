@@ -389,7 +389,8 @@ TEST_F(ScenicPixelTest, PoseBuffer) {
       scenic_impl::gfx::test::GetBufferRequirements(device, kVmoSize, kUsageFlags);
   auto memory = scenic_impl::gfx::test::AllocateExportableMemory(
       device, physical_device, memory_requirements,
-      vk::MemoryPropertyFlagBits::eDeviceLocal | vk::MemoryPropertyFlagBits::eHostVisible);
+      vk::MemoryPropertyFlagBits::eDeviceLocal | vk::MemoryPropertyFlagBits::eHostVisible |
+          vk::MemoryPropertyFlagBits::eHostCached);
 
   // If we can't make memory that is both host-visible and device-local, we
   // can't run this test.
@@ -487,6 +488,13 @@ TEST_F(ScenicPixelTest, PoseBuffer) {
 
   int expected_color_index[num_quaternions] = {0, 0, 1, 1, 2, 3, 4, 5};
 
+  uintptr_t ptr;
+  status = zx::vmar::root_self()->map(0, pose_buffer_vmo, 0, kVmoSize,
+                                      ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &ptr);
+  FXL_CHECK(status == ZX_OK);
+
+  auto pose_buffer_ptr = reinterpret_cast<escher::hmd::Pose*>(ptr);
+
   for (int i = 0; i < num_quaternions; i++) {
     // Put pose into pose buffer.
     // Only testing orientation so position is always the origin.
@@ -494,9 +502,10 @@ TEST_F(ScenicPixelTest, PoseBuffer) {
     // that takes you into head space.
     escher::hmd::Pose pose(glm::inverse(quaternions[i]), glm::vec3(0, 0, 0));
 
-    // Use vmo::write here for test simplicity. In a real case the vmo should be
-    // mapped into a vmar so we dont need a syscall per write
-    zx_status_t status = pose_buffer_vmo.write(&pose, 0, sizeof(escher::hmd::Pose));
+    *pose_buffer_ptr = pose;
+
+    // Manually flush the buffer so this works on ARM
+    status = pose_buffer_vmo.op_range(ZX_VMO_OP_CACHE_CLEAN, 0, kVmoSize, nullptr, 0);
     FXL_CHECK(status == ZX_OK);
 
     Present(session);
