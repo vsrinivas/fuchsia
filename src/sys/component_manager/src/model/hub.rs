@@ -709,6 +709,7 @@ mod tests {
             root_component_url,
             root_resolver_registry: resolver,
             elf_runner: Arc::new(runner),
+            builtin_runners: HashMap::new(),
         }));
         let builtin_environment =
             BuiltinEnvironment::new(&startup_args, &model, ComponentManagerConfig::default())

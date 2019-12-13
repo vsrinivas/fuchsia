@@ -7,6 +7,8 @@ use {
         error::ModelError, moniker::AbsoluteMoniker, realm::Realm, resolver::ResolverRegistry,
         runner::Runner,
     },
+    cm_rust::CapabilityName,
+    std::collections::HashMap,
     std::sync::Arc,
 };
 
@@ -31,8 +33,13 @@ pub struct ModelParams {
     /// The component resolver registry used in the root realm.
     /// In particular, it will be used to resolve the root component itself.
     pub root_resolver_registry: ResolverRegistry,
-    /// The built-in ELF runner, used for starting components with an ELF binary.
+    /// Builtin ELF runner, used for starting components with no explicit runner
+    /// specified.
+    // TODO(fxb/4761): This is to be removed, and components required to explictly
+    // state their runner.
     pub elf_runner: Arc<dyn Runner + Send + Sync + 'static>,
+    /// Builtin runners, offered to the root component.
+    pub builtin_runners: HashMap<CapabilityName, Arc<dyn Runner + Send + Sync + 'static>>,
 }
 
 /// The component model holds authoritative state about a tree of component instances, including
@@ -47,10 +54,14 @@ pub struct ModelParams {
 pub struct Model {
     pub root_realm: Arc<Realm>,
 
-    /// The built-in ELF runner, used for starting components with an ELF binary.
-    // TODO(fxb/4761): Remove. This should be a routed capability, and
-    // not explicitly passed around in the model.
+    /// Builtin ELF runner, used for starting components with no explicit runner
+    /// specified.
+    // TODO(fxb/4761): This is to be removed, and components required to explictly
+    // state their runner.
     pub elf_runner: Arc<dyn Runner + Send + Sync>,
+
+    /// Builtin runners, offered to the root component.
+    pub builtin_runners: HashMap<CapabilityName, Arc<dyn Runner + Send + Sync + 'static>>,
 }
 
 impl Model {
@@ -62,6 +73,7 @@ impl Model {
                 params.root_component_url,
             )),
             elf_runner: params.elf_runner,
+            builtin_runners: params.builtin_runners,
         }
     }
 

@@ -376,7 +376,7 @@ mod tests {
         fidl_fuchsia_io::MODE_TYPE_SERVICE,
         fuchsia_async as fasync,
         io_util::OPEN_RIGHT_READABLE,
-        std::collections::HashSet,
+        std::collections::{HashMap, HashSet},
         std::convert::TryFrom,
         std::path::PathBuf,
     };
@@ -410,6 +410,7 @@ mod tests {
                 root_component_url: "test:///root".to_string(),
                 root_resolver_registry: resolver,
                 elf_runner: mock_runner,
+                builtin_runners: HashMap::new(),
             }));
             let builtin_environment = Arc::new(
                 BuiltinEnvironment::new(&startup_args, &model, config)

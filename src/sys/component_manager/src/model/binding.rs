@@ -10,10 +10,10 @@ use {
         model::Model,
         moniker::AbsoluteMoniker,
         namespace::IncomingNamespace,
+        realm::{Realm, RealmState, Runtime},
         resolver::Resolver,
         routing_facade::RoutingFacade,
         runner::Runner,
-        realm::{Realm, RealmState, Runtime},
     },
     cm_rust::data,
     fidl::endpoints::{create_endpoints, Proxy, ServerEnd},
@@ -232,7 +232,7 @@ mod tests {
             startup,
         },
         cm_rust::{self, ChildDecl, ComponentDecl},
-        std::collections::HashSet,
+        std::collections::{HashMap, HashSet},
     };
 
     async fn new_model(
@@ -259,6 +259,7 @@ mod tests {
             root_component_url: "test:///root".to_string(),
             root_resolver_registry: resolver,
             elf_runner: mock_runner,
+            builtin_runners: HashMap::new(),
         }));
         let builtin_environment =
             BuiltinEnvironment::new(&startup_args, &model, ComponentManagerConfig::default())

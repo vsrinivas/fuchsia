@@ -30,7 +30,7 @@ use {
     fuchsia_vfs_pseudo_fs_mt::directory::entry::DirectoryEntry,
     fuchsia_zircon::{self as zx, AsHandleRef, Koid},
     futures::TryStreamExt,
-    std::collections::HashSet,
+    std::collections::{HashMap, HashSet},
     std::path::Path,
     std::sync::Arc,
 };
@@ -297,6 +297,7 @@ impl ActionsTest {
             root_component_url: format!("test:///{}", root_component),
             root_resolver_registry: resolver,
             elf_runner: runner.clone(),
+            builtin_runners: HashMap::new(),
         }));
         // TODO(fsamuel): Don't install the Hub's hooks because the Hub expects components
         // to start and stop in a certain lifecycle ordering. In particular, some unit

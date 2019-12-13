@@ -226,24 +226,29 @@ mod tests {
     // a: uses runner "elf" offered from the component mananger.
     #[fuchsia_async::run_singlethreaded(test)]
     async fn use_runner_from_component_manager() {
+        let mock_runner = Arc::new(MockRunner::new());
+
         let components = vec![(
             "a",
             ComponentDecl {
                 uses: vec![UseDecl::Runner(UseRunnerDecl {
-                    source_name: CapabilityName("elf".to_string()),
+                    source_name: CapabilityName("my_runner".to_string()),
                 })],
                 ..default_component_decl()
             },
         )];
 
         // Set up the system.
-        let universe = RoutingTest::new("a", components).await;
+        let universe = RoutingTestBuilder::new("a", components)
+            .add_builtin_runner("my_runner", mock_runner.clone())
+            .build()
+            .await;
 
         // Bind the root component.
         universe.bind_instance(&vec![].into()).await.expect("bind failed");
 
         // Ensure the instance starts up.
-        universe.wait_for_component_start(&vec![].into()).await;
+        assert!(mock_runner.urls_run().iter().any(|s| s == "test:///a_resolved"));
     }
 
     //   (cm)
@@ -256,6 +261,8 @@ mod tests {
     // b: uses runner "elf".
     #[fuchsia_async::run_singlethreaded(test)]
     async fn offer_runner_from_component_manager() {
+        let mock_runner = Arc::new(MockRunner::new());
+
         let components = vec![
             (
                 "a",
@@ -289,12 +296,16 @@ mod tests {
         ];
 
         // Set up the system.
-        let universe = RoutingTest::new("a", components).await;
+        let universe = RoutingTestBuilder::new("a", components)
+            .add_builtin_runner("elf", mock_runner.clone())
+            .build()
+            .await;
 
         // Bind the root component.
         universe.bind_instance(&vec!["b:0"].into()).await.expect("bind failed");
 
-        // Ensure the instance starts up.
-        universe.wait_for_component_start(&vec!["b:0"].into()).await;
+        // Ensure the instances started up.
+        assert!(mock_runner.urls_run().iter().any(|s| s == "test:///a_resolved"));
+        assert!(mock_runner.urls_run().iter().any(|s| s == "test:///b_resolved"));
     }
 }

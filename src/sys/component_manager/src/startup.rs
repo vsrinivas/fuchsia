@@ -8,7 +8,10 @@ use {
         fuchsia_base_pkg_resolver,
         fuchsia_boot_resolver::{self, FuchsiaBootResolver},
         fuchsia_pkg_resolver,
-        model::{model::{Model, ModelParams}, resolver::ResolverRegistry},
+        model::{
+            model::{Model, ModelParams},
+            resolver::ResolverRegistry,
+        },
     },
     failure::{format_err, Error, ResultExt},
     fidl::endpoints::ServiceMarker,
@@ -167,12 +170,13 @@ pub async fn model_setup(args: &Arguments) -> Result<Arc<Model>, Error> {
     let model_for_resolver = Arc::new(Mutex::new(None));
 
     let launcher_connector = ProcessLauncherConnector::new(&args);
-    let runner = ElfRunner::new(launcher_connector);
+    let runner = Arc::new(ElfRunner::new(launcher_connector));
     let resolver_registry = available_resolvers(model_for_resolver.clone())?;
     let params = ModelParams {
         root_component_url: args.root_component_url.clone(),
         root_resolver_registry: resolver_registry,
-        elf_runner: Arc::new(runner),
+        elf_runner: runner.clone(),
+        builtin_runners: vec![("elf".into(), runner.clone() as _)].into_iter().collect(),
     };
     let model = Arc::new(Model::new(params));
 

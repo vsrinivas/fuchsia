@@ -7,11 +7,11 @@ use {
         framework::RealmCapabilityHost,
         model::{
             binding::Binder,
+            breakpoints::BreakpointSystem,
             error::ModelError,
             hooks::EventType,
             hub::Hub,
             model::{ComponentManagerConfig, Model},
-            breakpoints::BreakpointSystem,
         },
         process_launcher::ProcessLauncher,
         root_realm_stop_notifier::RootRealmStopNotifier,
@@ -21,6 +21,7 @@ use {
         vmex::VmexService,
         work_scheduler::WorkScheduler,
     },
+    cm_rust::CapabilityName,
     fidl::endpoints::{create_endpoints, create_proxy, ServerEnd},
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,
@@ -30,6 +31,7 @@ use {
     fuchsia_component::server::*,
     fuchsia_zircon as zx,
     futures::{lock::Mutex, stream::StreamExt},
+    std::collections::HashMap,
     std::sync::{Arc, Weak},
 };
 
@@ -46,7 +48,7 @@ pub struct BuiltinEnvironment {
     pub system_controller: Arc<SystemController>,
     pub realm_capability_host: RealmCapabilityHost,
     pub hub: Hub,
-    pub elf_runner: BuiltinRunner,
+    pub builtin_runners: HashMap<CapabilityName, BuiltinRunner>,
     pub breakpoint_system: Option<BreakpointSystem>,
     pub stop_notifier: Mutex<Option<RootRealmStopNotifier>>,
 }
@@ -90,9 +92,13 @@ impl BuiltinEnvironment {
 
         let hub = Hub::new(args.root_component_url.clone())?;
 
-        // Set up the ELF runner.
-        let elf_runner = BuiltinRunner::new("elf".into(), Arc::clone(&model.elf_runner));
-        model.root_realm.hooks.install(vec![elf_runner.hook()]).await;
+        // Set up the builtin runners.
+        let mut builtin_runners = HashMap::new();
+        for (name, runner) in model.builtin_runners.iter() {
+            let runner = BuiltinRunner::new(name.clone(), runner.clone());
+            model.root_realm.hooks.install(vec![runner.hook()]).await;
+            builtin_runners.insert(name.clone(), runner);
+        }
 
         // Set up the root realm stop notifier.
         let stop_notifier = RootRealmStopNotifier::new();
@@ -112,7 +118,7 @@ impl BuiltinEnvironment {
             system_controller,
             realm_capability_host,
             hub,
-            elf_runner,
+            builtin_runners,
             breakpoint_system,
             stop_notifier: Mutex::new(Some(stop_notifier)),
         })
