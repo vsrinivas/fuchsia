@@ -20,6 +20,11 @@ DatabaseInfo::DatabaseInfo(std::shared_ptr<InfoContext> context) : context_(cont
 void DatabaseInfo::LogMaxCrashpadDatabaseSize(uint64_t max_crashpad_database_size_in_kb) {
   context_->InspectManager().ExposeDatabase(max_crashpad_database_size_in_kb);
 }
+
+void DatabaseInfo::IncrementUploadAttempt(const std::string& local_report_id) {
+  context_->InspectManager().IncrementUploadAttempt(local_report_id);
+}
+
 void DatabaseInfo::MarkReportAsUploaded(const std::string& local_report_id,
                                         const std::string& server_report_id) {
   context_->InspectManager().MarkReportAsUploaded(local_report_id, server_report_id);

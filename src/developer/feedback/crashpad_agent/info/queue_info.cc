@@ -16,8 +16,4 @@ void QueueInfo::LogReport(const std::string& program_name, const std::string& lo
   context_->InspectManager().AddReport(program_name, local_report_id);
 }
 
-void QueueInfo::IncrementUploadAttempt(const std::string& local_report_id) {
-  context_->InspectManager().IncrementUploadAttempt(local_report_id);
-}
-
 }  // namespace feedback

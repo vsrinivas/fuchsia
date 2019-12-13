@@ -44,6 +44,8 @@ class Database {
   // If there's an error with |database_| return nullptr.
   std::unique_ptr<UploadReport> GetUploadReport(const crashpad::UUID& local_report_id);
 
+  void IncrementUploadAttempt(const crashpad::UUID& local_report_id);
+
   // Record |upload_report| as uploaded and clean up the report's annotations
   //
   // Return false if there is an error with |database_|.
@@ -68,6 +70,7 @@ class Database {
   ~Database() = default;
 
  private:
+  bool Contains(const crashpad::UUID& local_report_id);
   // Allows for crashpad::UUID to be used as the key in an |std::unordered_map|.
   struct UUIDHasher {
     size_t operator()(const crashpad::UUID& uuid) const {
@@ -77,8 +80,9 @@ class Database {
 
   // Data pertinent to a crash report not stored in |database_|.
   struct AdditionalData {
-    std::map<std::string, std::string> annotations;
     bool has_minidump;
+    uint64_t upload_attempts;
+    std::map<std::string, std::string> annotations;
   };
 
   Database(std::unique_ptr<crashpad::CrashReportDatabase> database,

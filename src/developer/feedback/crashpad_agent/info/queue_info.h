@@ -19,8 +19,6 @@ struct QueueInfo {
 
   void LogReport(const std::string& program_name, const std::string& local_report_id);
 
-  void IncrementUploadAttempt(const std::string& local_report_id);
-
  private:
   std::shared_ptr<InfoContext> context_;
 };

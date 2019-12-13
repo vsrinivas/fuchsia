@@ -32,6 +32,7 @@ using inspect::testing::NameMatches;
 using inspect::testing::NodeMatches;
 using inspect::testing::PropertyList;
 using inspect::testing::StringIs;
+using inspect::testing::UintIs;
 using testing::Contains;
 using testing::ElementsAre;
 using testing::IsEmpty;
@@ -493,6 +494,7 @@ TEST_F(DatabaseTest, Check_InspectTree_ReportUploaded) {
   EXPECT_TRUE(info_context_->InspectManager().AddReport("program", local_report_id.ToString()));
 
   // Mark the report as uploaded and check the Inspect tree.
+  database_->IncrementUploadAttempt(local_report_id);
   EXPECT_TRUE(database_->MarkAsUploaded(std::move(upload_report), "server_report_id"));
   CheckLastCobaltCrashState(CrashState::Uploaded);
   EXPECT_THAT(InspectTree(),
@@ -505,6 +507,7 @@ TEST_F(DatabaseTest, Check_InspectTree_ReportUploaded) {
                                             PropertyList(UnorderedElementsAreArray({
                                                 StringIs("creation_time", kTimeStr),
                                                 StringIs("final_state", "uploaded"),
+                                                UintIs("upload_attempts", 1u),
                                             })))),
                           ChildrenMatch(ElementsAre(NodeMatches(AllOf(
                               NameMatches("crash_server"), PropertyList(UnorderedElementsAreArray({

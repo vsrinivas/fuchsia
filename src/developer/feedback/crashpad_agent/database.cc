@@ -87,12 +87,12 @@ bool Database::MakeNewReport(const std::map<std::string, fuchsia::mem::Buffer>& 
     return false;
   }
 
-  additional_data_[*local_report_id] = {annotations, minidump.has_value()};
+  additional_data_[*local_report_id] = {minidump.has_value(), /*upload_attempts=*/0u, annotations};
   return true;
 }
 
 std::unique_ptr<UploadReport> Database::GetUploadReport(const UUID& local_report_id) {
-  if (additional_data_.find(local_report_id) == additional_data_.end()) {
+  if (!Contains(local_report_id)) {
     FX_LOGS(ERROR) << fxl::StringPrintf("Error fetching additional data for local crash report %s",
                                         local_report_id.ToString().c_str());
     // The database no longer contains the report (it was most likely pruned).
@@ -111,6 +111,15 @@ std::unique_ptr<UploadReport> Database::GetUploadReport(const UUID& local_report
   return std::make_unique<UploadReport>(std::move(upload_report),
                                         additional_data_.at(local_report_id).annotations,
                                         additional_data_.at(local_report_id).has_minidump);
+}
+
+void Database::IncrementUploadAttempt(const crashpad::UUID& local_report_id) {
+  if (!Contains(local_report_id)) {
+    return;
+  }
+
+  ++(additional_data_.at(local_report_id).upload_attempts);
+  info_.IncrementUploadAttempt(local_report_id.ToString());
 }
 
 bool Database::MarkAsUploaded(std::unique_ptr<UploadReport> upload_report,
@@ -159,6 +168,10 @@ bool Database::Archive(const crashpad::UUID& local_report_id) {
   }
 
   return true;
+}
+
+bool Database::Contains(const crashpad::UUID& local_report_id) {
+  return additional_data_.find(local_report_id) != additional_data_.end();
 }
 
 void Database::CleanUp(const UUID& local_report_id) { additional_data_.erase(local_report_id); }

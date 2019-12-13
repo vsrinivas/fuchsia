@@ -101,7 +101,7 @@ bool Queue::Upload(const UUID& local_report_id) {
     return true;
   }
 
-  info_.IncrementUploadAttempt(local_report_id.ToString());
+  database_->IncrementUploadAttempt(local_report_id);
 
   std::string server_report_id;
   if (crash_server_->MakeRequest(report->GetAnnotations(), report->GetAttachments(),

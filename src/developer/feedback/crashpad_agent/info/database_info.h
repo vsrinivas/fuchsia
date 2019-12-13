@@ -17,6 +17,9 @@ struct DatabaseInfo {
   DatabaseInfo(std::shared_ptr<InfoContext> context);
 
   void LogMaxCrashpadDatabaseSize(uint64_t max_crashpad_database_size_in_kb);
+
+  void IncrementUploadAttempt(const std::string& local_report_id);
+
   void MarkReportAsUploaded(const std::string& local_report_id,
                             const std::string& server_report_id);
   void MarkReportAsArchived(const std::string& local_report_id);
