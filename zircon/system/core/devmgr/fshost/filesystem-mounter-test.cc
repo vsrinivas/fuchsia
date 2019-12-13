@@ -7,6 +7,7 @@
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
 
+#include <cobalt-client/cpp/in_memory_logger.h>
 #include <zxtest/zxtest.h>
 
 #include "fs-manager.h"
@@ -17,7 +18,8 @@ namespace devmgr {
 namespace {
 
 FsHostMetrics MakeMetrics() {
-  return FsHostMetrics(std::make_unique<cobalt_client::Collector>(FsManager::CollectorOptions()));
+  return FsHostMetrics(std::make_unique<cobalt_client::Collector>(
+      std::make_unique<cobalt_client::InMemoryLogger>()));
 }
 
 class FilesystemMounterHarness : public zxtest::Test {
