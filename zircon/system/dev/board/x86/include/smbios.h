@@ -7,8 +7,6 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-__BEGIN_CDECLS
-
 // Populates the given buffer with the board name.  If the board name is larger
 // than the buffer, ZX_ERR_BUFFER_TOO_SMALL is returned, and *board_name_actual
 // refers to the needed size.  These lengths include a trailing null-byte
@@ -17,5 +15,3 @@ zx_status_t smbios_get_board_name(char* board_name_buffer, size_t board_name_siz
 
 // Check if we consider the given product name to be valid.
 bool smbios_product_name_is_valid(const char* product_name);
-
-__END_CDECLS

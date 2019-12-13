@@ -7,8 +7,6 @@
 #include <acpica/acpi.h>
 #include <zircon/types.h>
 
-__BEGIN_CDECLS
-
 enum resource_address_type {
   RESOURCE_ADDRESS_MEMORY,
   RESOURCE_ADDRESS_IO,
@@ -83,5 +81,3 @@ zx_status_t resource_parse_memory(ACPI_RESOURCE* res, resource_memory_t* out);
 zx_status_t resource_parse_address(ACPI_RESOURCE* res, resource_address_t* out);
 zx_status_t resource_parse_io(ACPI_RESOURCE* res, resource_io_t* out);
 zx_status_t resource_parse_irq(ACPI_RESOURCE* res, resource_irq_t* out);
-
-__END_CDECLS

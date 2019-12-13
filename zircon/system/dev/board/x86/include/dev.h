@@ -27,8 +27,6 @@
 #define HID_LENGTH 8
 #define CID_LENGTH 8
 
-__BEGIN_CDECLS
-
 zx_status_t battery_init(zx_device_t* parent, ACPI_HANDLE acpi_handle);
 zx_status_t ec_init(zx_device_t* parent, ACPI_HANDLE acpi_handle);
 zx_status_t pwrbtn_init(zx_device_t* parent);
@@ -37,5 +35,3 @@ zx_status_t tbmc_init(zx_device_t* parent, ACPI_HANDLE acpi_handle);
 zx_status_t cros_ec_lpc_init(zx_device_t* parent, ACPI_HANDLE acpi_handle);
 zx_status_t thermal_init(zx_device_t* parent, ACPI_DEVICE_INFO* info, ACPI_HANDLE acpi_handle);
 zx_status_t lid_init(zx_device_t* parent, ACPI_HANDLE acpi_handle);
-
-__END_CDECLS

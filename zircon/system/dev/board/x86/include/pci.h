@@ -14,8 +14,6 @@
 
 #include "acpi-private.h"
 
-__BEGIN_CDECLS
-
 // It would be nice to use the hwreg library here, but these structs should be kept
 // simple so that it can be passed across process boundaries.
 
@@ -42,7 +40,5 @@ bool pci_platform_has_mcfg(void);
 
 zx_status_t get_pci_init_arg(zx_pci_init_arg_t** arg, uint32_t* size);
 zx_status_t pci_report_current_resources(zx_handle_t root_resource_handle);
-
-__END_CDECLS
 
 #endif  // ZIRCON_SYSTEM_DEV_BUS_ACPI_INCLUDE_PCI_H_

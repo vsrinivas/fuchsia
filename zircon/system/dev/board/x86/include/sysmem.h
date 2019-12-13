@@ -8,8 +8,4 @@
 #include <ddk/protocol/platform/bus.h>
 #include <zircon/compiler.h>
 
-__BEGIN_CDECLS
-
 zx_status_t publish_sysmem(pbus_protocol_t* pbus);
-
-__END_CDECLS

@@ -7,8 +7,6 @@
 
 #include <zircon/types.h>
 
-__BEGIN_CDECLS
-
 typedef struct {
   uint32_t type;
 #define POWER_TYPE_AC 0
@@ -72,7 +70,5 @@ void reboot(void);
 void reboot_recovery(void);
 void reboot_bootloader(void);
 zx_status_t suspend_to_ram(void);
-
-__END_CDECLS
 
 #endif  // ZIRCON_SYSTEM_DEV_BOARD_X86_INCLUDE_POWER_H_

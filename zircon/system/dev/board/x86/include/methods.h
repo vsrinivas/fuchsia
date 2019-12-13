@@ -13,8 +13,6 @@
 
 #define ACPI_UUID_SIZE 16u
 
-__BEGIN_CDECLS
-
 zx_status_t acpi_bbn_call(ACPI_HANDLE dev_obj, uint8_t* out_bbn);
 zx_status_t acpi_crt_call(ACPI_HANDLE dev_obj, uint64_t* out);
 
@@ -32,5 +30,3 @@ zx_status_t acpi_osc_call(ACPI_HANDLE dev_obj, const char* uuid_str, uint64_t re
 zx_status_t acpi_psv_call(ACPI_HANDLE dev_obj, uint64_t* out);
 zx_status_t acpi_seg_call(ACPI_HANDLE dev_obj, uint16_t* out_seg);
 zx_status_t acpi_tmp_call(ACPI_HANDLE dev_obj, uint64_t* out);
-
-__END_CDECLS
