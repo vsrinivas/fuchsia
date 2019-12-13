@@ -1,5 +1,13 @@
 {
     "program": {
         "binary": "test/telephony_bin_test"
+    },
+    "sandbox": {
+        "pkgfs": [ "packages" ],
+        "dev": [ "class/qmi-transport" ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Launcher"
+        ]
     }
 }
