@@ -499,7 +499,6 @@ mod tests {
             let res = res.expect_err("remove_dir did not fail");
             match res {
                 Error::Fidl("read_dirents", fidl_error)
-                | Error::Fidl("read_dirents", fidl_error)
                     if fidl_error.is_closed() => {}
                 _ => panic!("unexpected error {:?}", res),
             }
