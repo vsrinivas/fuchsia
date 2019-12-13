@@ -561,8 +561,9 @@ table Profile {
 
 ```fidl
 union Pattern {
-    Color color;        // the Pattern contains either a Color
-    Texture texture;    // or a Texture, but not both at the same time
+    1: reserved;           // this was possibly a variant that was removed
+    2: Color color;        // the Pattern contains either a Color
+    3: Texture texture;    // or a Texture, but not both at the same time
 };
 struct Color {
     float32 r;
@@ -594,9 +595,10 @@ Unions are denoted by their declared name (eg. **Pattern**) and nullability:
 
 ```fidl
 xunion Value {
-    int16 command;
-    Circle data;
-    float64 offset;
+    1: int16 command;
+    2: Circle data;
+    3: reserved;
+    4: float64 offset;
 };
 ```
 

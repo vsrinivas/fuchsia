@@ -240,8 +240,8 @@ However, they follow similar rules to [structs](#structs).
 
 ```fidl
 xunion A {         xunion A {
-  int32 a;           string b;
-  string b;          int32 a;
+  1: int32 a;         2: string b;
+  2: string b;        1: int32 a;
 };                 };
 ```
 
@@ -253,14 +253,12 @@ xunion A {         xunion A {
 
 ```fidl
 xunion A {         xunion A {
-  int32 a;           int32 a_new;
-  string b;          string b;
+  1: int32 a;         1: int32 a_new;
+  2: string b;        2: string b;
 };                 };
 ```
 
 ![green checkmark](gc.png) **ABI Compatibility**: YES
-* Use the `[Selector]` to retain compatibility:
-  * `xunion A {`<br>&nbsp;&nbsp;`[Selector = "a"]`<br>&nbsp;&nbsp;`int32 a_new;`<br>&nbsp;&nbsp;`string b;`<br>`};`
 
 ![red x](rx.png) **Transition Considerations**: NO
 
@@ -268,9 +266,9 @@ xunion A {         xunion A {
 
 ```fidl
 xunion A {         xunion A {
-  int32 a;           int32 a;
-  string b;          string b;
-                     int32 c;
+  1: int32 a;        1: int32 a;
+  2: string b;       2: string b;
+                     3: int32 c;
 };                 };
 ```
 
@@ -278,21 +276,23 @@ xunion A {         xunion A {
 
 **Transition Considerations**:
 * Depends on language bindings.
-* Exhaustive matching (i.e., C++ `switch{}` on union tag) will break.
+* Exhaustive matching (i.e., C++ `switch{}` on union tag) will break, so source
+  needs to be updated accordingly.
 
 #### Removing members
 
 ```fidl
 xunion A {         xunion A {
-  int32 a;           int32 a;
-  string b;
+  1: int32 a;         1: int32 a;
+  2: string b;        2: reserved;
 };                 };
 ```
 
 ![green checkmark](gc.png) **ABI Compatibility**: YES
 
 ![green checkmark](gc.png) **Transition Considerations**: YES
-* So long as `b` is not referenced any more.
+
+* Removed member should be marked reserved to prevent future use
 
 ## vectors
 

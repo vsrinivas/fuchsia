@@ -552,9 +552,9 @@ The following example shows how xunions are laid out according to their fields.
 
 ```fidl
 xunion Value {
-    int16 command;
-    Circle data;
-    float64 offset;
+    1: int16 command;
+    2: Circle data;
+    3: float64 offset;
 };
 ```
 
