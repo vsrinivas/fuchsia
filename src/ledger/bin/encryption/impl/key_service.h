@@ -12,8 +12,8 @@
 
 #include "src/ledger/bin/cache/lru_cache.h"
 #include "src/ledger/bin/encryption/public/encryption_service.h"
+#include "src/ledger/lib/memory/weak_ptr.h"
 #include "src/lib/callback/scoped_callback.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace encryption {
 
@@ -77,7 +77,7 @@ class KeyService {
   // Master keys indexed by key_index.
   cache::LRUCache<uint32_t, std::string, Status> master_keys_;
 
-  fxl::WeakPtrFactory<KeyService> weak_factory_;
+  ledger::WeakPtrFactory<KeyService> weak_factory_;
 };
 
 }  // namespace encryption

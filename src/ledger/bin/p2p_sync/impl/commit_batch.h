@@ -15,7 +15,7 @@
 
 #include "src/ledger/bin/p2p_provider/public/types.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/ledger/lib/memory/weak_ptr.h"
 
 namespace p2p_sync {
 
@@ -74,7 +74,7 @@ class CommitBatch {
   fit::closure on_discardable_;
 
   // This must be the last member of the class.
-  fxl::WeakPtrFactory<CommitBatch> weak_factory_;
+  ledger::WeakPtrFactory<CommitBatch> weak_factory_;
 };
 
 }  // namespace p2p_sync

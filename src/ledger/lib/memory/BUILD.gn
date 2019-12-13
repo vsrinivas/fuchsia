@@ -1,0 +1,37 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("memory") {
+  sources = [
+    "ref_counted.h",
+    "ref_counted_internal.h",
+    "ref_ptr.h",
+    "ref_ptr_internal.h",
+    "weak_ptr.h",
+    "weak_ptr_internal.cc",
+    "weak_ptr_internal.h",
+  ]
+
+  public_deps = [
+    "//src/ledger/lib/logging",
+  ]
+
+  configs += [ "//src/ledger:ledger_config" ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "ref_counted_unittest.cc",
+    "weak_ptr_unittest.cc",
+  ]
+
+  deps = [
+    ":memory",
+    "//third_party/googletest:gtest",
+  ]
+
+  configs += [ "//src/ledger:ledger_config" ]
+}

@@ -27,6 +27,7 @@
 #include "src/ledger/bin/storage/public/ledger_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/sync_coordinator/public/ledger_sync.h"
+#include "src/ledger/lib/memory/weak_ptr.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
@@ -182,7 +183,7 @@ class PageManager : InspectablePage {
   int64_t outstanding_detachers_ = 0;
 
   // Must be the last member.
-  fxl::WeakPtrFactory<PageManager> weak_factory_;
+  WeakPtrFactory<PageManager> weak_factory_;
 };
 
 }  // namespace ledger

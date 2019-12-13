@@ -12,7 +12,7 @@
 #include <utility>
 #include <vector>
 
-#include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/ledger/lib/memory/weak_ptr.h"
 
 namespace ledger {
 
@@ -105,7 +105,7 @@ class ManagedContainer {
 
   std::vector<std::unique_ptr<Element>> managed_elements_;
   fit::closure on_discardable_;
-  fxl::WeakPtrFactory<ManagedContainer> weak_ptr_factory_;
+  WeakPtrFactory<ManagedContainer> weak_ptr_factory_;
 };
 
 }  // namespace ledger

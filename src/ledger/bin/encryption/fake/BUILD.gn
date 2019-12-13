@@ -16,7 +16,6 @@ source_set("fake") {
 
   public_deps = [
     "//src/ledger/bin/encryption/public",
-    "//src/lib/fxl",
     "//third_party/abseil-cpp",
   ]
 

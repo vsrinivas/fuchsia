@@ -17,8 +17,7 @@
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/lib/fxl/memory/ref_ptr.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/ledger/lib/memory/weak_ptr.h"
 #include "src/lib/timekeeper/clock.h"
 
 namespace storage {
@@ -103,7 +102,7 @@ class CommitFactory : public LiveCommitTracker {
   std::map<CommitId, std::vector<ObjectIdentifier>> live_root_identifiers_;
 
   // This must be the last member of the class.
-  fxl::WeakPtrFactory<CommitFactory> weak_factory_;
+  ledger::WeakPtrFactory<CommitFactory> weak_factory_;
 };
 
 }  // namespace storage

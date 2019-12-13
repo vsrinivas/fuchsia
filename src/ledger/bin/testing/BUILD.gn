@@ -67,7 +67,6 @@ source_set("lib") {
     "//src/ledger/bin/storage/public:public",
     "//src/ledger/lib/convert",
     "//src/ledger/lib/vmo",
-    "//src/lib/fxl",
     "//src/lib/inspect_deprecated",
     "//src/lib/inspect_deprecated/testing:testing",
     "//src/lib/testing/loop_fixture",
@@ -90,7 +89,6 @@ source_set("lib") {
     "//src/ledger/lib/coroutine",
     "//src/ledger/lib/logging",
     "//src/ledger/lib/vmo",
-    "//src/lib/fxl",
     "//src/lib/inspect_deprecated:reader",
     "//third_party/abseil-cpp",
     "//third_party/boringssl",
@@ -114,7 +112,6 @@ source_set("ledger_instance_factory") {
     "//src/ledger/bin/fidl",
     "//src/ledger/bin/fidl/include",
     "//src/ledger/bin/fidl_helpers",
-    "//src/lib/fxl",
     "//third_party/abseil-cpp",
   ]
 
@@ -149,7 +146,6 @@ source_set("get_ledger") {
     "//src/ledger/bin/public",
     "//src/ledger/lib/convert",
     "//src/ledger/lib/vmo",
-    "//src/lib/fxl",
     "//third_party/abseil-cpp",
     "//zircon/public/lib/fit",
   ]
@@ -178,7 +174,6 @@ source_set("run_trace") {
 
   deps = [
     "//src/ledger/lib/logging",
-    "//src/lib/fxl",
     "//third_party/abseil-cpp",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
@@ -203,7 +198,6 @@ source_set("unittests") {
     "//src/ledger/bin/app:flags",
     "//src/ledger/lib/callback",
     "//src/ledger/lib/logging",
-    "//src/lib/fxl",
     "//third_party/abseil-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",

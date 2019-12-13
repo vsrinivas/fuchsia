@@ -20,8 +20,9 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/logging/logging.h"
+#include "src/ledger/lib/memory/ref_counted.h"
+#include "src/ledger/lib/memory/ref_ptr.h"
 #include "src/ledger/third_party/bup/bupsplit.h"
-#include "src/lib/fxl/memory/ref_ptr.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
@@ -329,7 +330,7 @@ class SplitContext {
   PendingPiece latest_piece_;
 };
 
-class CollectPiecesState : public fxl::RefCountedThreadSafe<CollectPiecesState> {
+class CollectPiecesState : public ledger::RefCountedThreadSafe<CollectPiecesState> {
  public:
   fit::function<void(ObjectIdentifier, fit::function<void(Status, absl::string_view)>)>
       data_accessor;
@@ -337,7 +338,7 @@ class CollectPiecesState : public fxl::RefCountedThreadSafe<CollectPiecesState> 
   bool running = true;
 };
 
-void CollectPiecesInternal(ObjectIdentifier root, fxl::RefPtr<CollectPiecesState> state,
+void CollectPiecesInternal(ObjectIdentifier root, ledger::RefPtr<CollectPiecesState> state,
                            fit::closure on_done) {
   if (!state->callback(IterationStatus::IN_PROGRESS, root)) {
     on_done();
@@ -363,7 +364,7 @@ void CollectPiecesInternal(ObjectIdentifier root, fxl::RefPtr<CollectPiecesState
       return;
     }
 
-    auto waiter = fxl::MakeRefCounted<ledger::CompletionWaiter>();
+    auto waiter = ledger::MakeRefCounted<ledger::CompletionWaiter>();
     status = ForEachIndexChild(data, factory, [&](ObjectIdentifier identifier) {
       CollectPiecesInternal(std::move(identifier), state, waiter->NewCallback());
       return Status::OK;
@@ -409,7 +410,7 @@ void CollectPieces(
     fit::function<void(ObjectIdentifier, fit::function<void(Status, absl::string_view)>)>
         data_accessor,
     fit::function<bool(IterationStatus, ObjectIdentifier)> callback) {
-  auto state = fxl::MakeRefCounted<CollectPiecesState>();
+  auto state = ledger::MakeRefCounted<CollectPiecesState>();
   state->data_accessor = std::move(data_accessor);
   state->callback = std::move(callback);
 

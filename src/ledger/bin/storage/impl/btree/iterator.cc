@@ -9,7 +9,7 @@
 #include "src/ledger/bin/storage/impl/btree/internal_helper.h"
 #include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/ledger/lib/memory/ref_ptr.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
@@ -212,7 +212,7 @@ void GetObjectsFromSync(coroutine::CoroutineService* coroutine_service, PageStor
                         LocatedObjectIdentifier root_identifier,
                         fit::function<void(Status)> callback) {
   auto waiter =
-      fxl::MakeRefCounted<ledger::Waiter<Status, std::unique_ptr<const Object>>>(Status::OK);
+      ledger::MakeRefCounted<ledger::Waiter<Status, std::unique_ptr<const Object>>>(Status::OK);
   auto on_next = [page_storage, waiter](Entry e) {
     if (e.priority == KeyPriority::EAGER) {
       page_storage->GetObject(e.object_identifier, PageStorage::Location::ValueFromNetwork(),

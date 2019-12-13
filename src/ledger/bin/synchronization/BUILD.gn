@@ -13,7 +13,6 @@ source_set("lock") {
   public_deps = [
     "//src/ledger/lib/callback",
     "//src/ledger/lib/coroutine",
-    "//src/lib/fxl",
     "//third_party/abseil-cpp",
   ]
 
@@ -27,7 +26,6 @@ source_set("dispatcher_checker") {
   ]
 
   public_deps = [
-    "//src/lib/fxl",
     "//zircon/public/lib/async-default",
   ]
 
@@ -43,7 +41,6 @@ source_set("completer") {
   public_deps = [
     "//src/ledger/bin/public",
     "//src/ledger/lib/coroutine",
-    "//src/lib/fxl",
   ]
 
   deps = [
@@ -67,7 +64,6 @@ source_set("unittests") {
     ":dispatcher_checker",
     ":lock",
     "//src/ledger/bin/testing:lib",
-    "//src/lib/fxl",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async",
   ]

@@ -152,8 +152,8 @@ TEST_F(SerializationSizeTest, Get) {
   const size_t value_size = 125;
   std::vector<uint8_t> key = GetKey(0, key_size);
   std::string object_data = GetValue(0, value_size);
-  ledger::SizedVmo vmo;
-  ASSERT_TRUE(ledger::VmoFromString(object_data, &vmo));
+  SizedVmo vmo;
+  ASSERT_TRUE(VmoFromString(object_data, &vmo));
   fuchsia::mem::Buffer value = std::move(vmo).ToTransport();
 
   auto client_callback = [](fuchsia::ledger::PageSnapshot_Get_Result /*result*/) {};
@@ -266,8 +266,8 @@ TEST_F(SerializationSizeTest, GetEntries) {
   for (size_t i = 0; i < n_entries; i++) {
     Entry entry;
     std::string object_data = GetValue(0, value_size);
-    ledger::SizedVmo vmo;
-    ASSERT_TRUE(ledger::VmoFromString(object_data, &vmo));
+    SizedVmo vmo;
+    ASSERT_TRUE(VmoFromString(object_data, &vmo));
     entry.value = fidl::MakeOptional(std::move(vmo).ToTransport());
     entry.key = GetKey(0, key_size);
     entry.priority = Priority::EAGER;

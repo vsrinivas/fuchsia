@@ -33,6 +33,7 @@
 #include "src/ledger/cloud_provider_in_memory/lib/types.h"
 #include "src/ledger/lib/backoff/exponential_backoff.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/memory/weak_ptr.h"
 #include "src/ledger/lib/socket/socket_pair.h"
 #include "src/ledger/lib/socket/socket_writer.h"
 #include "src/ledger/lib/socket/strings.h"
@@ -80,11 +81,11 @@ Environment BuildEnvironment(async::TestLoop* loop, async_dispatcher_t* dispatch
   return EnvironmentBuilder()
       .SetAsync(dispatcher)
       .SetIOAsync(io_dispatcher)
-      .SetNotificationFactory(ledger::TestLoopNotification::NewFactory(loop))
+      .SetNotificationFactory(TestLoopNotification::NewFactory(loop))
       .SetStartupContext(component_context)
       .SetBackoffFactory([random] {
-        return std::make_unique<ledger::ExponentialBackoff>(kBackoffDuration, 1u, kBackoffDuration,
-                                                            random->NewBitGenerator<uint64_t>());
+        return std::make_unique<ExponentialBackoff>(kBackoffDuration, 1u, kBackoffDuration,
+                                                    random->NewBitGenerator<uint64_t>());
       })
       .SetClock(std::make_unique<timekeeper::TestLoopTestClock>(loop))
       .SetRandom(std::make_unique<DelegatedRandom>(random))
@@ -147,7 +148,7 @@ class LedgerAppInstanceImpl final : public LedgerAppInstanceFactory::LedgerAppIn
       cloud_provider_;
 
   // This must be the last field of this class.
-  fxl::WeakPtrFactory<LedgerAppInstanceImpl> weak_ptr_factory_;
+  WeakPtrFactory<LedgerAppInstanceImpl> weak_ptr_factory_;
 };
 
 LedgerAppInstanceImpl::LedgerAppInstanceImpl(
@@ -241,7 +242,7 @@ class FakeUserCommunicatorFactory : public p2p_sync::UserCommunicatorFactory {
   uint64_t host_id_;
 
   // This must be the last field of this class.
-  fxl::WeakPtrFactory<FakeUserCommunicatorFactory> weak_ptr_factory_;
+  WeakPtrFactory<FakeUserCommunicatorFactory> weak_ptr_factory_;
 };
 
 enum EnableP2PMesh { NO, YES };

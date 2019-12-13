@@ -343,7 +343,7 @@ void FakePageCloud::AddObject(std::vector<uint8_t> id, fuchsia::mem::Buffer data
     return;
   }
   std::string bytes;
-  if (!ledger::StringFromVmo(data, &bytes)) {
+  if (!StringFromVmo(data, &bytes)) {
     callback(cloud_provider::Status::INTERNAL_ERROR);
     return;
   }
@@ -363,7 +363,7 @@ void FakePageCloud::GetObject(std::vector<uint8_t> id, GetObjectCallback callbac
     return;
   }
   ::fuchsia::mem::Buffer buffer;
-  if (!ledger::VmoFromString(objects_[id_str], &buffer)) {
+  if (!VmoFromString(objects_[id_str], &buffer)) {
     callback(cloud_provider::Status::INTERNAL_ERROR, nullptr);
     return;
   }

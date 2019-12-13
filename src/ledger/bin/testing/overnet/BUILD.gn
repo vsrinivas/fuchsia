@@ -25,7 +25,6 @@ source_set("overnet") {
     "//src/ledger/lib/convert",
     "//src/ledger/lib/logging",
     "//src/ledger/lib/vmo",
-    "//src/lib/fxl",
     "//third_party/googletest:gtest",
   ]
 
@@ -49,7 +48,6 @@ source_set("unittests") {
     "//src/ledger/lib/convert",
     "//src/ledger/lib/logging",
     "//src/ledger/lib/vmo",
-    "//src/lib/fxl",
     "//third_party/googletest:gtest",
   ]
 

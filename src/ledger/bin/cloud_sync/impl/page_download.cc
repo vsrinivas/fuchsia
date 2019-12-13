@@ -19,6 +19,7 @@
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/encoding/encoding.h"
 #include "src/ledger/lib/logging/logging.h"
+#include "src/ledger/lib/memory/ref_ptr.h"
 #include "third_party/abseil-cpp/absl/strings/str_cat.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
@@ -485,8 +486,8 @@ void PageDownload::DecodeAndParseDiff(
     return;
   }
 
-  auto waiter =
-      fxl::MakeRefCounted<ledger::Waiter<ledger::Status, storage::EntryChange>>(ledger::Status::OK);
+  auto waiter = ledger::MakeRefCounted<ledger::Waiter<ledger::Status, storage::EntryChange>>(
+      ledger::Status::OK);
   for (const cloud_provider::DiffEntry& cloud_change : diff.changes()) {
     ReadDiffEntry(cloud_change, waiter->NewCallback());
   }

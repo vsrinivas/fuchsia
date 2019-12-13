@@ -100,7 +100,7 @@ class SyncableBinding {
     });
   }
 
-  // Returns a new callback taking a ledger::Status. This callback will be
+  // Returns a new callback taking a Status. This callback will be
   // responsible, in case of error, to send the status back as an event and
   // close the connection to the client.
   auto NewErrorCallback(const char* function_name) {

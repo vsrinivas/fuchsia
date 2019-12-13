@@ -17,6 +17,7 @@
 #include "src/ledger/bin/app/token_manager.h"
 #include "src/ledger/bin/app/types.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/memory/weak_ptr.h"
 
 namespace ledger {
 
@@ -98,7 +99,7 @@ class ActivePageManagerContainer {
   TokenManager token_manager_;
 
   // Must be the last member.
-  fxl::WeakPtrFactory<ActivePageManagerContainer> weak_factory_;
+  WeakPtrFactory<ActivePageManagerContainer> weak_factory_;
 };
 
 }  // namespace ledger

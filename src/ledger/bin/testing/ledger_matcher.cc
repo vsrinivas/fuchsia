@@ -24,8 +24,7 @@ MATCHER_P(InternalViewMatcher, sub_matcher, "") {  // NOLINT
 
 MATCHER_P(InternalBufferMatcher, sub_matcher, "") {  // NOLINT
   std::string vmo_content;
-  if (!TypedEq<bool>(true).MatchAndExplain(ledger::StringFromVmo(arg, &vmo_content),
-                                           result_listener)) {
+  if (!TypedEq<bool>(true).MatchAndExplain(StringFromVmo(arg, &vmo_content), result_listener)) {
     return false;
   }
 
@@ -71,7 +70,7 @@ ErrorOrStringResultAdapter::ErrorOrStringResultAdapter(const Result& result) {
     return;
   }
   std::string value;
-  bool status = ledger::StringFromVmo(result.response().buffer, &value);
+  bool status = StringFromVmo(result.response().buffer, &value);
   if (!status) {
     result_ = fit::error(std::make_pair(ZX_ERR_BAD_HANDLE, fuchsia::ledger::Error::NETWORK_ERROR));
     return;

@@ -11,8 +11,8 @@
 #include <functional>
 
 #include "src/ledger/lib/callback/capture.h"
-#include "src/lib/fxl/memory/ref_counted.h"
-#include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/ledger/lib/memory/ref_counted.h"
+#include "src/ledger/lib/memory/ref_ptr.h"
 #include "third_party/abseil-cpp/absl/base/attributes.h"
 
 // This Coroutine library allows to use coroutines. A coroutine is a function
@@ -106,12 +106,12 @@ class CoroutineService {
 template <typename A, typename... Args>
 ABSL_MUST_USE_RESULT ContinuationStatus SyncCall(CoroutineHandler* handler, A async_call,
                                                  Args*... parameters) {
-  class TerminationSentinel : public fxl::RefCountedThreadSafe<TerminationSentinel> {
+  class TerminationSentinel : public ledger::RefCountedThreadSafe<TerminationSentinel> {
    public:
     bool terminated = false;
   };
 
-  auto termination_sentinel = fxl::MakeRefCounted<TerminationSentinel>();
+  auto termination_sentinel = ledger::MakeRefCounted<TerminationSentinel>();
   auto on_return = fit::defer([termination_sentinel] { termination_sentinel->terminated = true; });
 
   volatile bool sync_state = true;

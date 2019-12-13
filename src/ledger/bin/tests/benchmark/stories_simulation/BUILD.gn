@@ -24,7 +24,6 @@ executable("ledger_benchmark_stories_simulation") {
     "//src/ledger/lib/convert",
     "//src/ledger/lib/logging",
     "//src/ledger/lib/vmo",
-    "//src/lib/fxl",
     "//third_party/abseil-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",

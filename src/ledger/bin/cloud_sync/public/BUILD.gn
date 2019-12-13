@@ -19,7 +19,6 @@ source_set("public") {
     "//src/ledger/bin/fidl/include",
     "//src/ledger/bin/platform",
     "//src/ledger/bin/storage/public",
-    "//src/lib/fxl",
     "//third_party/abseil-cpp",
   ]
 

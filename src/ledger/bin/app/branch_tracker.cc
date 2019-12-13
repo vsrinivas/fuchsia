@@ -15,8 +15,9 @@
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/logging/logging.h"
+#include "src/ledger/lib/memory/ref_ptr.h"
+#include "src/ledger/lib/memory/weak_ptr.h"
 #include "src/lib/callback/scoped_callback.h"
-#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace ledger {
 class BranchTracker::PageWatcherContainer {
@@ -245,7 +246,7 @@ class BranchTracker::PageWatcherContainer {
   PageWatcherPtr interface_;
 
   // This must be the last member of the class.
-  fxl::WeakPtrFactory<PageWatcherContainer> weak_factory_;
+  WeakPtrFactory<PageWatcherContainer> weak_factory_;
 };
 
 BranchTracker::BranchTracker(Environment* environment, ActivePageManager* manager,
@@ -319,7 +320,7 @@ void BranchTracker::OnNewCommits(const std::vector<std::unique_ptr<const storage
 void BranchTracker::StartTransaction(fit::closure watchers_drained_callback) {
   LEDGER_DCHECK(!transaction_in_progress_);
   transaction_in_progress_ = true;
-  auto waiter = fxl::MakeRefCounted<CompletionWaiter>();
+  auto waiter = MakeRefCounted<CompletionWaiter>();
   for (auto& watcher : watchers_) {
     watcher.SetOnDrainedCallback(waiter->NewCallback());
   }

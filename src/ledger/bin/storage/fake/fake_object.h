@@ -7,7 +7,6 @@
 
 #include "src/ledger/bin/storage/public/object.h"
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {

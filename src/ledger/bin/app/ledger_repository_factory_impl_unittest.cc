@@ -78,7 +78,7 @@ class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
 ::testing::AssertionResult LedgerRepositoryFactoryImplTest::CreateDirectory(
     const std::string& name) {
   if (!environment_.file_system()->CreateDirectory(
-          ledger::DetachedPath(tmp_location_->path().root_fd(), name))) {
+          DetachedPath(tmp_location_->path().root_fd(), name))) {
     return ::testing::AssertionFailure() << "Failed to create directory \"" << name << "\"!";
   }
   return ::testing::AssertionSuccess();
@@ -224,7 +224,7 @@ TEST_F(LedgerRepositoryFactoryImplTest, CloseLedgerRepository) {
   ledger_internal::LedgerRepositoryPtr ledger_repository_ptr2;
   ASSERT_TRUE(CallGetRepository(repository_directory, &ledger_repository_ptr2));
 
-  ledger::LedgerPtr ledger_ptr;
+  LedgerPtr ledger_ptr;
 
   bool ptr1_closed;
   zx_status_t ptr1_closed_status;

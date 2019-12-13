@@ -13,7 +13,7 @@
 
 namespace ledger {
 
-using CompleterTest = ledger::TestWithEnvironment;
+using CompleterTest = TestWithEnvironment;
 
 TEST_F(CompleterTest, TasksAreQueued) {
   Completer completer(environment_.dispatcher());

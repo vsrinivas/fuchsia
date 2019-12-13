@@ -20,9 +20,9 @@
 #include "src/ledger/lib/callback/capture.h"
 #include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/memory/ref_ptr.h"
 #include "src/ledger/lib/vmo/sized_vmo.h"
 #include "src/ledger/lib/vmo/strings.h"
-#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace ledger {
 namespace {
@@ -81,7 +81,7 @@ class PageSnapshotIntegrationTest : public IntegrationTest {
     }
     EXPECT_TRUE(result.is_response());
     std::string result_as_string;
-    EXPECT_TRUE(ledger::StringFromVmo(result.response().buffer, &result_as_string));
+    EXPECT_TRUE(StringFromVmo(result.response().buffer, &result_as_string));
     return result_as_string;
   }
 };
@@ -511,8 +511,8 @@ TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromSocket) {
 TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromVmo) {
   auto instance = NewLedgerAppInstance();
   const std::string big_data(1'000'000, 'a');
-  ledger::SizedVmo vmo;
-  ASSERT_TRUE(ledger::VmoFromString(big_data, &vmo));
+  SizedVmo vmo;
+  ASSERT_TRUE(VmoFromString(big_data, &vmo));
 
   PagePtr page = instance->GetTestPage();
 

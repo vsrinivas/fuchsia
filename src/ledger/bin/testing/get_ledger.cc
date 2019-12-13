@@ -22,11 +22,10 @@
 #include "src/ledger/lib/logging/logging.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fsl/io/fd.h"
-#include "src/lib/fxl/logging.h"
 
 namespace ledger {
 namespace {
-// Converts a status returned by Ledger via FIDL to a ledger::Status.
+// Converts a status returned by Ledger via FIDL to a Status.
 // The convention is that kernel errors (zx_status_t) are negative, while
 // positive values are reserved for user-space.
 Status ToLedgerStatus(zx_status_t status) {

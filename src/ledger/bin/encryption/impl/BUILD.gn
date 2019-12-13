@@ -29,7 +29,6 @@ source_set("impl") {
 
   public_deps = [
     "//src/ledger/bin/encryption/public",
-    "//src/lib/fxl",
     "//third_party/abseil-cpp",
   ]
 

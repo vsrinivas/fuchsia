@@ -17,7 +17,7 @@
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/lib/callback/operation_serializer.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/ledger/lib/memory/weak_ptr.h"
 
 namespace ledger {
 // Client handling communication with a ConflictResolver interface in order to
@@ -71,7 +71,7 @@ class ConflictResolverClient : public fuchsia::ledger::MergeResultProviderSyncab
   // cancelled) and the status is OK. Returns |true| in that case. Otherwise,
   // calls |callback| with the given |status| and calls |Finalize| if this
   // object is not deleted, then return |false|.
-  static bool IsInValidStateAndNotify(const fxl::WeakPtr<ConflictResolverClient>& weak_this,
+  static bool IsInValidStateAndNotify(const WeakPtr<ConflictResolverClient>& weak_this,
                                       const fit::function<void(Status)>& callback,
                                       Status status = Status::OK);
 
@@ -106,7 +106,7 @@ class ConflictResolverClient : public fuchsia::ledger::MergeResultProviderSyncab
       merge_result_provider_binding_;
 
   // This must be the last member of the class.
-  fxl::WeakPtrFactory<ConflictResolverClient> weak_factory_;
+  WeakPtrFactory<ConflictResolverClient> weak_factory_;
 };
 
 }  // namespace ledger

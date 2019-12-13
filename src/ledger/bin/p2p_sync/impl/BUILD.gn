@@ -35,7 +35,6 @@ source_set("impl") {
     "//src/ledger/bin/storage/public",
     "//src/ledger/lib/convert",
     "//src/lib/callback",
-    "//src/lib/fxl",
     "//third_party/abseil-cpp",
   ]
 
@@ -73,7 +72,6 @@ source_set("unittests") {
     "//src/ledger/lib/callback",
     "//src/ledger/lib/logging",
     "//src/ledger/lib/vmo",
-    "//src/lib/fxl",
     "//third_party/abseil-cpp",
 
     # gtest matchers are in gmock.

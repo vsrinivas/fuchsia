@@ -160,8 +160,8 @@ TEST_P(SyncIntegrationTest, DISABLED_LazyToEagerTransition) {
 
   std::vector<uint8_t> key = convert::ToArray("Hello");
   std::vector<uint8_t> big_value = generator.MakeValue(2 * 65536 + 1);
-  ledger::SizedVmo vmo;
-  ASSERT_TRUE(ledger::VmoFromVector(big_value, &vmo));
+  SizedVmo vmo;
+  ASSERT_TRUE(VmoFromVector(big_value, &vmo));
   fuchsia::ledger::Page_CreateReferenceFromBuffer_Result create_result;
   loop_waiter = NewWaiter();
   page1->CreateReferenceFromBuffer(std::move(vmo).ToTransport(),
@@ -220,8 +220,8 @@ TEST_P(SyncIntegrationCloudTest, PageChangeLazyEntry) {
 
   std::vector<uint8_t> key = convert::ToArray("Hello");
   std::vector<uint8_t> big_value(2 * 65536 + 1);
-  ledger::SizedVmo vmo;
-  ASSERT_TRUE(ledger::VmoFromVector(big_value, &vmo));
+  SizedVmo vmo;
+  ASSERT_TRUE(VmoFromVector(big_value, &vmo));
   fuchsia::ledger::Page_CreateReferenceFromBuffer_Result result;
   loop_waiter = NewWaiter();
   page1->CreateReferenceFromBuffer(std::move(vmo).ToTransport(),

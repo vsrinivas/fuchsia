@@ -22,8 +22,8 @@ source_set("sync") {
     "//src/ledger/bin/testing:lib",
     "//src/ledger/lib/callback",
     "//src/ledger/lib/convert",
+    "//src/ledger/lib/memory",
     "//src/ledger/lib/vmo",
-    "//src/lib/fxl",
   ]
 
   public_deps = [

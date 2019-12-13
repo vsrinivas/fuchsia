@@ -9,6 +9,7 @@
 #include "gtest/gtest.h"
 #include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/coroutine/coroutine_impl.h"
+#include "src/ledger/lib/memory/ref_ptr.h"
 
 namespace coroutine {
 namespace {
@@ -17,7 +18,7 @@ TEST(CoroutineWaiterTest, Wait) {
 
   fit::closure on_done;
   coroutine_service.StartCoroutine([&](CoroutineHandler* current_handler) {
-    auto waiter = fxl::MakeRefCounted<ledger::CompletionWaiter>();
+    auto waiter = ledger::MakeRefCounted<ledger::CompletionWaiter>();
     on_done = waiter->NewCallback();
     EXPECT_EQ(Wait(current_handler, std::move(waiter)), ContinuationStatus::OK);
   });
@@ -32,7 +33,7 @@ TEST(CoroutineWaiterTest, Cancel) {
   fit::closure scoped_callback;
   coroutine_service.StartCoroutine([&](CoroutineHandler* handler) {
     coroutine_handler = handler;
-    auto waiter = fxl::MakeRefCounted<ledger::CompletionWaiter>();
+    auto waiter = ledger::MakeRefCounted<ledger::CompletionWaiter>();
     scoped_callback = waiter->MakeScoped(
         [callback = waiter->NewCallback()] { FAIL() << "Should not be called"; });
     EXPECT_EQ(Wait(handler, std::move(waiter)), ContinuationStatus::INTERRUPTED);

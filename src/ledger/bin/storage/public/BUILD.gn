@@ -42,7 +42,6 @@ source_set("public") {
     "//src/ledger/lib/socket",
     "//src/ledger/lib/util:ptr",
     "//src/ledger/lib/vmo",
-    "//src/lib/fxl",
     "//third_party/abseil-cpp",
     "//third_party/flatbuffers",
     "//zircon/public/lib/zx",

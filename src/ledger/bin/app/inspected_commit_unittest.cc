@@ -89,7 +89,7 @@ class SubstitutePageStorage final : public storage::PageStorageEmptyImpl {
   void RemoveCommitWatcher(storage::CommitWatcher* watcher) override {}
   void GetObjectPart(storage::ObjectIdentifier object_identifier, int64_t offset, int64_t max_size,
                      storage::PageStorage::Location location,
-                     fit::function<void(storage::Status, ledger::SizedVmo)> callback) override {
+                     fit::function<void(storage::Status, SizedVmo)> callback) override {
     if (offset != 0) {
       LEDGER_NOTIMPLEMENTED();  // Feel free to implement!
     }
@@ -120,8 +120,8 @@ class SubstitutePageStorage final : public storage::PageStorageEmptyImpl {
         callback(storage::Status::INTERNAL_NOT_FOUND, {});
         return;
       }
-      ledger::SizedVmo sized_vmo;
-      bool result = ledger::VmoFromVector(value_it->second.first, &sized_vmo);
+      SizedVmo sized_vmo;
+      bool result = VmoFromVector(value_it->second.first, &sized_vmo);
       LEDGER_DCHECK(result) << "That was really not expected to fail in this test!";
       callback(storage::Status::OK, std::move(sized_vmo));
     };

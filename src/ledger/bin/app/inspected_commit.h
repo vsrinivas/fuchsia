@@ -17,8 +17,8 @@
 #include "src/ledger/bin/app/inspected_entry.h"
 #include "src/ledger/bin/app/types.h"
 #include "src/ledger/bin/storage/public/commit.h"
+#include "src/ledger/lib/memory/weak_ptr.h"
 #include "src/lib/callback/auto_cleanable.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
@@ -70,7 +70,7 @@ class InspectedCommit final : public inspect_deprecated::ChildrenManager {
   // This object passes |this|-capturing callbacks to objects that it doesn't own
   // (|ActivePageManagerContainer| and |ActivePageManager|), so it needs a |WeakPtrFactory| to keep
   // its callbacks scoped to itself. Must be the last member.
-  fxl::WeakPtrFactory<InspectedCommit> weak_factory_;
+  WeakPtrFactory<InspectedCommit> weak_factory_;
 };
 
 }  // namespace ledger

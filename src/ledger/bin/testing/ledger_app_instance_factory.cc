@@ -9,7 +9,6 @@
 #include "gtest/gtest.h"
 #include "src/ledger/bin/testing/inspect.h"
 #include "src/lib/fsl/io/fd.h"
-#include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {

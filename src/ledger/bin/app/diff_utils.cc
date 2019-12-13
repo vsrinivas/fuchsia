@@ -16,10 +16,10 @@
 #include "src/ledger/bin/storage/public/object.h"
 #include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/logging/logging.h"
+#include "src/ledger/lib/memory/ref_ptr.h"
 #include "src/ledger/lib/util/ptr.h"
 #include "src/ledger/lib/vmo/sized_vmo.h"
 #include "src/ledger/lib/vmo/strings.h"
-#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace ledger {
 namespace diff_utils {
@@ -40,9 +40,9 @@ const std::string& GetKey(const storage::ThreeWayChange& change) {
 // be provided through the |waiter|.
 ValuePtr GetValueFromEntry(storage::PageStorage* const storage,
                            const std::unique_ptr<storage::Entry>& entry,
-                           fit::function<void(Status, ledger::SizedVmo)> callback) {
+                           fit::function<void(Status, SizedVmo)> callback) {
   if (!entry) {
-    callback(Status::OK, ledger::SizedVmo());
+    callback(Status::OK, SizedVmo());
     return nullptr;
   }
   ValuePtr value = Value::New();
@@ -68,7 +68,7 @@ void GetOptionalValueFromReference(
   storage->GetObjectPart(
       object_identifier, 0u, std::numeric_limits<int64_t>::max(),
       storage::PageStorage::Location::Local(),
-      [priority, callback = std::move(callback)](Status status, ledger::SizedVmo vmo) {
+      [priority, callback = std::move(callback)](Status status, SizedVmo vmo) {
         if ((status == Status::INTERNAL_NOT_FOUND) && (priority == Priority::LAZY)) {
           callback(Status::OK, nullptr);
           return;
@@ -100,8 +100,7 @@ void ComputePageChange(
     std::string next_token = "";
   };
 
-  auto waiter =
-      fxl::MakeRefCounted<Waiter<Status, std::unique_ptr<fuchsia::mem::Buffer>>>(Status::OK);
+  auto waiter = MakeRefCounted<Waiter<Status, std::unique_ptr<fuchsia::mem::Buffer>>>(Status::OK);
 
   auto context = std::make_unique<Context>();
   context->page_change->timestamp = other.GetTimestamp().get();
@@ -212,7 +211,7 @@ void ComputeThreeWayDiff(
   // returned. As each |DiffEntry| struct has three values, we ensure that
   // values are always returned in a specific order (base, left, right). Some
   // values may be empty, to denote a lack of diff.
-  auto waiter = fxl::MakeRefCounted<Waiter<Status, ledger::SizedVmo>>(Status::OK);
+  auto waiter = MakeRefCounted<Waiter<Status, SizedVmo>>(Status::OK);
 
   auto context = std::make_unique<Context>();
 
@@ -270,7 +269,7 @@ void ComputeThreeWayDiff(
     // to send it inside the PageChange object. |waiter| collates these
     // asynchronous calls and |result_callback| processes them.
     auto result_callback = [context = std::move(context), callback = std::move(callback)](
-                               Status status, std::vector<ledger::SizedVmo> results) mutable {
+                               Status status, std::vector<SizedVmo> results) mutable {
       if (status != Status::OK) {
         LEDGER_LOG(ERROR) << "Error while reading changed values when computing PageChange: "
                           << fidl::ToUnderlying(status);

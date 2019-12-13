@@ -16,8 +16,8 @@
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
+#include "src/ledger/lib/memory/weak_ptr.h"
 #include "src/lib/callback/auto_cleanable.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {
 class ActivePageManager;
@@ -82,7 +82,7 @@ class BranchTracker : public storage::CommitWatcher {
   std::unique_ptr<const storage::Commit> current_commit_;
 
   // This must be the last member of the class.
-  fxl::WeakPtrFactory<BranchTracker> weak_factory_;
+  WeakPtrFactory<BranchTracker> weak_factory_;
 };
 
 }  // namespace ledger

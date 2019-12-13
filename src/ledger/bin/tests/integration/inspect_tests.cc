@@ -92,7 +92,7 @@ TEST_P(InspectTest, ContentInspectableAfterDisconnection) {
   const std::string& repository_display_name = repository_hierarchy.name();
 
   // Connect to a ledger.
-  ledger::LedgerPtr ledger;
+  LedgerPtr ledger;
   repository->GetLedger(ledger_name, ledger.NewRequest());
   waiter = NewWaiter();
   repository->Sync(waiter->GetCallback());
@@ -106,7 +106,7 @@ TEST_P(InspectTest, ContentInspectableAfterDisconnection) {
                   {RepositoryMatches(repository_display_name, {LedgerMatches(ledger_name, {})})}));
 
   // Connect to a page.
-  ledger::PagePtr page;
+  PagePtr page;
   ledger->GetPage(std::make_unique<PageId>(page_id), page.NewRequest());
   waiter = NewWaiter();
   page->Sync(waiter->GetCallback());
@@ -225,14 +225,14 @@ TEST_P(InspectTest, ConflictInCommitHistory) {
   const std::string& repository_display_name = repository_hierarchy.name();
 
   // Connect to a ledger.
-  ledger::LedgerPtr ledger;
+  LedgerPtr ledger;
   repository->GetLedger(ledger_name, ledger.NewRequest());
   waiter = NewWaiter();
   repository->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
 
   // Connect to a page.
-  ledger::PagePtr page;
+  PagePtr page;
   ledger->GetPage(std::make_unique<PageId>(page_id), page.NewRequest());
   waiter = NewWaiter();
   page->Sync(waiter->GetCallback());
@@ -292,8 +292,8 @@ TEST_P(InspectTest, ConflictInCommitHistory) {
   ASSERT_TRUE(CommitDisplayNameToCommitId(post_put_head_node.name(), &post_put_head_id));
 
   // Create a conflict on the page.
-  ledger::PagePtr left_page_connection;
-  ledger::PagePtr right_page_connection;
+  PagePtr left_page_connection;
+  PagePtr right_page_connection;
   ledger->GetPage(std::make_unique<PageId>(page_id), left_page_connection.NewRequest());
   ledger->GetPage(std::make_unique<PageId>(page_id), right_page_connection.NewRequest());
   // Start transactions to ensure that mutation are concurrent.

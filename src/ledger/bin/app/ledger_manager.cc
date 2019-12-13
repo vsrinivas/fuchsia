@@ -27,7 +27,6 @@
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/scoped_callback.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {

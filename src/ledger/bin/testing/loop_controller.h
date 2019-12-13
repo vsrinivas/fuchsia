@@ -11,7 +11,6 @@
 #include <memory>
 
 #include "src/ledger/bin/fidl/include/types.h"
-#include "src/lib/fxl/memory/ref_ptr.h"
 #include "third_party/abseil-cpp/absl/base/attributes.h"
 
 namespace ledger {

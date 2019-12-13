@@ -122,8 +122,8 @@ void PageImpl::CreateReferenceFromBuffer(
     fit::function<void(Status, fuchsia::ledger::Page_CreateReferenceFromBuffer_Result)> callback) {
   fit::function<void(Status, fit::result<Reference, zx_status_t>)> timed_callback = TRACE_CALLBACK(
       ToCreateReferenceCallback(std::move(callback)), "ledger", "page_create_reference_from_vmo");
-  ledger::SizedVmo vmo;
-  if (!ledger::SizedVmo::FromTransport(std::move(data), &vmo)) {
+  SizedVmo vmo;
+  if (!SizedVmo::FromTransport(std::move(data), &vmo)) {
     callback(Status::INVALID_ARGUMENT, {});
     return;
   }

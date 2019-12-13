@@ -10,7 +10,7 @@
 #include <functional>
 #include <queue>
 
-#include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/ledger/lib/memory/weak_ptr.h"
 
 namespace ledger {
 
@@ -98,7 +98,7 @@ class OperationSerializer {
   fit::closure on_discardable_;
 
   // This must be the last member of the class.
-  fxl::WeakPtrFactory<OperationSerializer> weak_factory_;
+  WeakPtrFactory<OperationSerializer> weak_factory_;
 };
 
 }  // namespace ledger

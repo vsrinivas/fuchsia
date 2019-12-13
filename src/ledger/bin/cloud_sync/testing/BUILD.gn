@@ -18,7 +18,6 @@ source_set("testing") {
 
   deps = [
     "//src/lib/fsl",
-    "//src/lib/fxl",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]

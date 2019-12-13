@@ -29,8 +29,8 @@
 #include "src/ledger/lib/callback/ensure_called.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
+#include "src/ledger/lib/memory/weak_ptr.h"
 #include "src/lib/callback/scoped_callback.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
@@ -340,7 +340,7 @@ fit::function<bool()> PageManager::NewPageTracker() {
   uint64_t operation_id = was_opened_id_++;
   was_opened_.push_back(operation_id);
 
-  fxl::WeakPtr<PageManager> weak_this = weak_factory_.GetWeakPtr();
+  WeakPtr<PageManager> weak_this = weak_factory_.GetWeakPtr();
 
   auto stop_tracking = [this, weak_this, operation_id]() {
     if (!weak_this) {

@@ -28,7 +28,7 @@ Environment TestWithEnvironment::MakeTestEnvironment(
   EnvironmentBuilder builder;
   builder.SetAsync(dispatcher())
       .SetIOAsync(io_loop_interface_->dispatcher())
-      .SetNotificationFactory(ledger::TestLoopNotification::NewFactory(&test_loop()))
+      .SetNotificationFactory(TestLoopNotification::NewFactory(&test_loop()))
       .SetStartupContext(component_context_provider_.context())
       .SetClock(std::make_unique<timekeeper::TestLoopTestClock>(&test_loop()))
       .SetRandom(std::make_unique<rng::TestRandom>(test_loop().initial_state()))

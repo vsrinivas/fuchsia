@@ -22,7 +22,6 @@ source_set("environment") {
     "//src/ledger/bin/storage/public",
     "//src/ledger/lib/backoff",
     "//src/ledger/lib/coroutine",
-    "//src/lib/fxl",
     "//src/lib/timekeeper:system",
   ]
 
@@ -67,7 +66,6 @@ source_set("unittests") {
     ":test_loop_notification",
     "//peridot/lib/rng:testing",
     "//sdk/lib/sys/cpp/testing:unit",
-    "//src/lib/fxl",
     "//src/lib/testing/loop_fixture",
     "//src/lib/timekeeper:testing",
     "//third_party/googletest:gmock",

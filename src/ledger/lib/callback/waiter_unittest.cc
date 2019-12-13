@@ -10,6 +10,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/memory/ref_ptr.h"
 
 namespace ledger {
 namespace {
@@ -22,7 +23,7 @@ fit::closure SetWhenCalled(bool* value) {
 }
 
 TEST(Waiter, NoCallback) {
-  auto waiter = fxl::MakeRefCounted<Waiter<int, int>>(0);
+  auto waiter = MakeRefCounted<Waiter<int, int>>(0);
 
   int result = -1;
   std::vector<int> data;
@@ -33,7 +34,7 @@ TEST(Waiter, NoCallback) {
 }
 
 TEST(Waiter, DataPreInitialize) {
-  auto waiter = fxl::MakeRefCounted<Waiter<int, int>>(0);
+  auto waiter = MakeRefCounted<Waiter<int, int>>(0);
 
   waiter->NewCallback()(0, 0);
   waiter->NewCallback()(0, 1);
@@ -48,7 +49,7 @@ TEST(Waiter, DataPreInitialize) {
 }
 
 TEST(Waiter, DataPostInitialize) {
-  auto waiter = fxl::MakeRefCounted<Waiter<int, int>>(0);
+  auto waiter = MakeRefCounted<Waiter<int, int>>(0);
 
   auto c1 = waiter->NewCallback();
   auto c2 = waiter->NewCallback();
@@ -70,7 +71,7 @@ TEST(Waiter, DataPostInitialize) {
 }
 
 TEST(Waiter, DataMixedInitialize) {
-  auto waiter = fxl::MakeRefCounted<Waiter<int, int>>(0);
+  auto waiter = MakeRefCounted<Waiter<int, int>>(0);
 
   waiter->NewCallback()(0, 0);
   waiter->NewCallback()(0, 1);
@@ -90,7 +91,7 @@ TEST(Waiter, DataMixedInitialize) {
 }
 
 TEST(Waiter, UnorderedCalls) {
-  auto waiter = fxl::MakeRefCounted<Waiter<int, int>>(0);
+  auto waiter = MakeRefCounted<Waiter<int, int>>(0);
 
   auto c1 = waiter->NewCallback();
   auto c2 = waiter->NewCallback();
@@ -109,7 +110,7 @@ TEST(Waiter, UnorderedCalls) {
 }
 
 TEST(Waiter, EarlyReturnOnError) {
-  auto waiter = fxl::MakeRefCounted<Waiter<int, int>>(0);
+  auto waiter = MakeRefCounted<Waiter<int, int>>(0);
 
   waiter->NewCallback();
   waiter->NewCallback()(1, 2);
@@ -124,7 +125,7 @@ TEST(Waiter, EarlyReturnOnError) {
 }
 
 TEST(Waiter, CallbackSurviveWaiter) {
-  auto waiter = fxl::MakeRefCounted<Waiter<int, int>>(0);
+  auto waiter = MakeRefCounted<Waiter<int, int>>(0);
   auto c1 = waiter->NewCallback();
 
   waiter = nullptr;
@@ -133,7 +134,7 @@ TEST(Waiter, CallbackSurviveWaiter) {
 }
 
 TEST(Waiter, MultipleParameterCallack) {
-  auto waiter = fxl::MakeRefCounted<Waiter<int, int, int>>(0);
+  auto waiter = MakeRefCounted<Waiter<int, int, int>>(0);
   auto c1 = waiter->NewCallback();
   c1(0, 1, 2);
 
@@ -146,7 +147,7 @@ TEST(Waiter, MultipleParameterCallack) {
 }
 
 TEST(Waiter, Promise) {
-  auto promise = fxl::MakeRefCounted<Promise<int, int>>(0);
+  auto promise = MakeRefCounted<Promise<int, int>>(0);
 
   promise->NewCallback()(1, 2);
   int status, result;
@@ -156,7 +157,7 @@ TEST(Waiter, Promise) {
 }
 
 TEST(Waiter, DeleteInFinalize) {
-  auto promise = fxl::MakeRefCounted<Promise<int, int>>(0);
+  auto promise = MakeRefCounted<Promise<int, int>>(0);
   promise->NewCallback()(1, 2);
   promise->Finalize([&](int status, int result) {
     // Delete the callback.
@@ -165,7 +166,7 @@ TEST(Waiter, DeleteInFinalize) {
 }
 
 TEST(StatusWaiter, MixedInitialize) {
-  auto waiter = fxl::MakeRefCounted<StatusWaiter<int>>(0);
+  auto waiter = MakeRefCounted<StatusWaiter<int>>(0);
 
   waiter->NewCallback()(0);
   waiter->NewCallback()(0);
@@ -181,7 +182,7 @@ TEST(StatusWaiter, MixedInitialize) {
 }
 
 TEST(StatusWaiter, EarlyReturnOnError) {
-  auto waiter = fxl::MakeRefCounted<StatusWaiter<int>>(0);
+  auto waiter = MakeRefCounted<StatusWaiter<int>>(0);
 
   waiter->NewCallback()(0);
   waiter->NewCallback()(1);
@@ -196,7 +197,7 @@ TEST(StatusWaiter, EarlyReturnOnError) {
 }
 
 TEST(CompletionWaiter, MixedInitialize) {
-  auto waiter = fxl::MakeRefCounted<CompletionWaiter>();
+  auto waiter = MakeRefCounted<CompletionWaiter>();
 
   waiter->NewCallback()();
   waiter->NewCallback()();
@@ -213,7 +214,7 @@ TEST(CompletionWaiter, MixedInitialize) {
 }
 
 TEST(Waiter, CancelThenFinalize) {
-  auto waiter = fxl::MakeRefCounted<CompletionWaiter>();
+  auto waiter = MakeRefCounted<CompletionWaiter>();
 
   auto callback = waiter->NewCallback();
 
@@ -228,7 +229,7 @@ TEST(Waiter, CancelThenFinalize) {
 }
 
 TEST(Waiter, FinalizeThenCancel) {
-  auto waiter = fxl::MakeRefCounted<CompletionWaiter>();
+  auto waiter = MakeRefCounted<CompletionWaiter>();
 
   auto callback = waiter->NewCallback();
 
@@ -242,7 +243,7 @@ TEST(Waiter, FinalizeThenCancel) {
 }
 
 TEST(Waiter, CancelDeletesCallback) {
-  auto waiter = fxl::MakeRefCounted<CompletionWaiter>();
+  auto waiter = MakeRefCounted<CompletionWaiter>();
 
   auto callback = waiter->NewCallback();
 
@@ -256,7 +257,7 @@ TEST(Waiter, CancelDeletesCallback) {
 }
 
 TEST(Waiter, FinalizeDeletesCallback) {
-  auto waiter = fxl::MakeRefCounted<CompletionWaiter>();
+  auto waiter = MakeRefCounted<CompletionWaiter>();
 
   auto callback = waiter->NewCallback();
 
@@ -270,7 +271,7 @@ TEST(Waiter, FinalizeDeletesCallback) {
 }
 
 TEST(AnyWaiter, FailureThenSuccess) {
-  auto waiter = fxl::MakeRefCounted<AnyWaiter<bool, int>>(true, false);
+  auto waiter = MakeRefCounted<AnyWaiter<bool, int>>(true, false);
 
   auto cb1 = waiter->NewCallback();
   auto cb2 = waiter->NewCallback();
@@ -292,7 +293,7 @@ TEST(AnyWaiter, FailureThenSuccess) {
 }
 
 TEST(AnyWaiter, AllFailure) {
-  auto waiter = fxl::MakeRefCounted<AnyWaiter<bool, int>>(true, false, -1);
+  auto waiter = MakeRefCounted<AnyWaiter<bool, int>>(true, false, -1);
 
   auto cb1 = waiter->NewCallback();
   auto cb2 = waiter->NewCallback();
@@ -312,7 +313,7 @@ TEST(AnyWaiter, AllFailure) {
 }
 
 TEST(AnyWaiter, Default) {
-  auto waiter = fxl::MakeRefCounted<AnyWaiter<bool, int>>(true, false, -1);
+  auto waiter = MakeRefCounted<AnyWaiter<bool, int>>(true, false, -1);
 
   bool called;
   int status, result;
@@ -328,7 +329,7 @@ TEST(StatusWaiter, ScopedSuccess) {
   bool finalized;
   bool status;
 
-  auto waiter = fxl::MakeRefCounted<StatusWaiter<bool>>(true);
+  auto waiter = MakeRefCounted<StatusWaiter<bool>>(true);
   auto callback = waiter->NewCallback();
   auto scoped1 = waiter->MakeScoped(SetWhenCalled(&scoped1_called));
   auto scoped2 = waiter->MakeScoped(SetWhenCalled(&scoped2_called));
@@ -351,7 +352,7 @@ TEST(StatusWaiter, ScopedFailure) {
   bool finalized;
   bool status;
 
-  auto waiter = fxl::MakeRefCounted<StatusWaiter<bool>>(true);
+  auto waiter = MakeRefCounted<StatusWaiter<bool>>(true);
   auto callback1 = waiter->NewCallback();
   auto callback2 = waiter->NewCallback();
   auto scoped1 = waiter->MakeScoped(SetWhenCalled(&scoped1_called));
@@ -375,7 +376,7 @@ TEST(StatusWaiter, ScopedCancelled) {
   bool finalized;
   bool status;
 
-  auto waiter = fxl::MakeRefCounted<StatusWaiter<bool>>(true);
+  auto waiter = MakeRefCounted<StatusWaiter<bool>>(true);
   auto callback = waiter->NewCallback();
   auto scoped1 = waiter->MakeScoped(SetWhenCalled(&scoped1_called));
   auto scoped2 = waiter->MakeScoped(SetWhenCalled(&scoped2_called));

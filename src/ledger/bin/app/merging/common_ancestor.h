@@ -13,7 +13,6 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
-#include "src/lib/fxl/memory/ref_counted.h"
 
 namespace ledger {
 

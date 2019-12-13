@@ -25,7 +25,6 @@ source_set("impl") {
     "//src/ledger/bin/filesystem",
     "//src/ledger/bin/p2p_provider/public",
     "//src/ledger/lib/convert",
-    "//src/lib/fxl",
     "//third_party/abseil-cpp",
   ]
 
@@ -55,7 +54,6 @@ source_set("unittests") {
     "//src/ledger/bin/testing/overnet",
     "//src/ledger/lib/backoff/testing",
     "//src/ledger/lib/vmo",
-    "//src/lib/fxl",
     "//third_party/abseil-cpp",
 
     # gtest matchers are in gmock.

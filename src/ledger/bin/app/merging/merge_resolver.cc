@@ -23,10 +23,9 @@
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
 #include "src/ledger/lib/logging/logging.h"
+#include "src/ledger/lib/memory/ref_ptr.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/callback/trace_callback.h"
-#include "src/lib/fxl/memory/ref_ptr.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {
 
@@ -374,7 +373,7 @@ Status MergeResolver::FindMergesSync(coroutine::CoroutineHandler* handler,
                                      const std::vector<storage::CommitId>& left_commits,
                                      storage::CommitId right_commit,
                                      std::vector<storage::CommitId>* merges) {
-  auto waiter = fxl::MakeRefCounted<Waiter<Status, std::vector<storage::CommitId>>>(Status::OK);
+  auto waiter = MakeRefCounted<Waiter<Status, std::vector<storage::CommitId>>>(Status::OK);
   for (const auto& left_commit : left_commits) {
     storage_->GetMergeCommitIds(left_commit, right_commit, waiter->NewCallback());
   }

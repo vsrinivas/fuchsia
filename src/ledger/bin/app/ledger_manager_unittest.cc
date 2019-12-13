@@ -41,7 +41,6 @@
 #include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 #include "src/lib/inspect_deprecated/testing/inspect.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"

@@ -12,7 +12,7 @@
 #include "src/ledger/bin/storage/public/object.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/synchronization/dispatcher_checker.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/ledger/lib/memory/weak_ptr.h"
 #include "src/lib/fxl/synchronization/thread_checker.h"
 #include "third_party/abseil-cpp/absl/base/attributes.h"
 
@@ -107,7 +107,7 @@ class ObjectIdentifierFactoryImpl : public ObjectIdentifierFactory {
   ledger::DispatcherChecker dispatcher_checker_;
 
   // Must be the last member variable.
-  fxl::WeakPtrFactory<ObjectIdentifierFactoryImpl> weak_factory_;
+  ledger::WeakPtrFactory<ObjectIdentifierFactoryImpl> weak_factory_;
 };
 
 }  // namespace storage

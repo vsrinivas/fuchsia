@@ -10,8 +10,6 @@
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
 
-#include "src/lib/fxl/memory/ref_ptr.h"
-
 namespace ledger {
 
 // The events to report.

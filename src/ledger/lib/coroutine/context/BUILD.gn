@@ -15,10 +15,10 @@ source_set("context") {
   deps = [
     "//src/ledger/lib/coroutine/context/$target_cpu",
     "//src/ledger/lib/logging",
-    "//src/lib/fxl",
   ]
 
   public_deps = [
+    "//src/lib/fxl",
     "//zircon/public/lib/zx",
   ]
 
@@ -34,7 +34,6 @@ source_set("unittests") {
 
   deps = [
     ":context",
-    "//src/lib/fxl",
     "//third_party/abseil-cpp",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fit",

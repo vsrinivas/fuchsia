@@ -23,8 +23,8 @@
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
+#include "src/ledger/lib/memory/weak_ptr.h"
 #include "src/lib/callback/auto_cleanable.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace p2p_sync {
 class PageCommunicatorImplInspectorForTest;
@@ -144,7 +144,7 @@ class PageCommunicatorImpl : public PageCommunicator,
   storage::PageSyncClient* const sync_client_;
 
   // This must be the last member of the class.
-  fxl::WeakPtrFactory<PageCommunicatorImpl> weak_factory_;
+  ledger::WeakPtrFactory<PageCommunicatorImpl> weak_factory_;
 };
 
 }  // namespace p2p_sync

@@ -11,7 +11,7 @@
 #include "src/ledger/bin/app/page_usage_listener.h"
 #include "src/ledger/bin/app/types.h"
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/ledger/lib/memory/weak_ptr.h"
 
 namespace ledger {
 
@@ -38,7 +38,7 @@ class TokenManager {
   ssize_t outstanding_token_count_;
   fit::closure on_discardable_;
   // Must be the last member.
-  fxl::WeakPtrFactory<TokenManager> weak_factory_;
+  WeakPtrFactory<TokenManager> weak_factory_;
 };
 
 }  // namespace ledger

@@ -28,9 +28,9 @@
 #include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
+#include "src/ledger/lib/memory/ref_ptr.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/callback/trace_callback.h"
-#include "src/lib/fxl/memory/ref_ptr.h"
 #include "third_party/abseil-cpp/absl/flags/flag.h"
 #include "third_party/abseil-cpp/absl/flags/parse.h"
 #include "third_party/abseil-cpp/absl/strings/numbers.h"
@@ -268,7 +268,7 @@ void StoriesBenchmark::InitializeDefaultPages() {
   AddWatcher(&root_page_, "Story/", &root_watcher_on_story_);
   AddWatcher(&root_page_, "Focus/", &root_watcher_on_focus_);
 
-  auto waiter = fxl::MakeRefCounted<CompletionWaiter>();
+  auto waiter = MakeRefCounted<CompletionWaiter>();
 
   // Get entries from the agent runner page.
   ReadAllFromPage(&agent_runner_page_, convert::ToArray(""), waiter->NewCallback());
@@ -298,7 +298,7 @@ void StoriesBenchmark::RunSingle(int i) {
 
   TRACE_ASYNC_BEGIN("benchmark", "story_lifetime", i);
 
-  auto waiter = fxl::MakeRefCounted<CompletionWaiter>();
+  auto waiter = MakeRefCounted<CompletionWaiter>();
   ReadFromPage(&root_page_, story_name, waiter->NewCallback());
 
   PagePtr story_page;
@@ -351,7 +351,7 @@ void StoriesBenchmark::EditStory(int i, PageId story_id, fit::function<void()> c
   AddWatcher(story_ptr, "", &story_watcher1_);
 
   std::vector<uint8_t> link_key = GetLinkKey(i);
-  auto waiter = fxl::MakeRefCounted<CompletionWaiter>();
+  auto waiter = MakeRefCounted<CompletionWaiter>();
   ReadFromPage(story_ptr, link_key, waiter->NewCallback());
 
   AddWatcher(story_ptr, "", &story_watcher2_);
@@ -391,7 +391,7 @@ void StoriesBenchmark::MaybeCleanup(int i, fit::function<void()> callback) {
 void StoriesBenchmark::ClearLRUPage(int story_index, fit::function<void()> callback) {
   // Clear and close the LRU page, i.e. the first element of |active_stories_|.
   TRACE_ASYNC_BEGIN("benchmark", "story_cleanup", story_index);
-  auto waiter = fxl::MakeRefCounted<CompletionWaiter>();
+  auto waiter = MakeRefCounted<CompletionWaiter>();
 
   ActiveStory& story = active_stories_.front();
 

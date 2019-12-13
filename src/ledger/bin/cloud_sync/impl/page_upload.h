@@ -20,8 +20,8 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/backoff/backoff.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
+#include "src/ledger/lib/memory/weak_ptr.h"
 #include "src/lib/callback/scoped_task_runner.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace cloud_sync {
 // Internal state of PageUpload.
@@ -131,7 +131,7 @@ class PageUpload : public storage::CommitWatcher {
   UploadSyncState external_state_ = UPLOAD_NOT_STARTED;
 
   // Must be the last member.
-  fxl::WeakPtrFactory<PageUpload> weak_ptr_factory_;
+  ledger::WeakPtrFactory<PageUpload> weak_ptr_factory_;
 };
 
 }  // namespace cloud_sync

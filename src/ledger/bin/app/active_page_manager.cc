@@ -282,27 +282,27 @@ void ActivePageManager::GetValue(const storage::Commit& commit, std::string key,
           return;
         }
 
-        page_storage_->GetObjectPart(
-            std::move(entry.object_identifier), 0, 1024, storage::PageStorage::Location::Local(),
-            [this, callback = std::move(callback)](storage::Status status,
-                                                   const ledger::SizedVmo& sized_vmo) {
-              ongoing_page_storage_uses_--;
-              if (status != storage::Status::OK) {
-                callback(status, std::vector<uint8_t>{});
-                CheckDiscardable();
-                return;
-              }
-              std::vector<uint8_t> value{};
-              if (!ledger::VectorFromVmo(sized_vmo, &value)) {
-                LEDGER_LOG(ERROR) << "VMO of size " << sized_vmo.size()
-                                  << " not converted to vector<uint8_t>.";
-                callback(Status::INTERNAL_ERROR, std::vector<uint8_t>{});
-                CheckDiscardable();
-                return;
-              }
-              callback(Status::OK, std::move(value));
-              CheckDiscardable();
-            });
+        page_storage_->GetObjectPart(std::move(entry.object_identifier), 0, 1024,
+                                     storage::PageStorage::Location::Local(),
+                                     [this, callback = std::move(callback)](
+                                         storage::Status status, const SizedVmo& sized_vmo) {
+                                       ongoing_page_storage_uses_--;
+                                       if (status != storage::Status::OK) {
+                                         callback(status, std::vector<uint8_t>{});
+                                         CheckDiscardable();
+                                         return;
+                                       }
+                                       std::vector<uint8_t> value{};
+                                       if (!VectorFromVmo(sized_vmo, &value)) {
+                                         LEDGER_LOG(ERROR) << "VMO of size " << sized_vmo.size()
+                                                           << " not converted to vector<uint8_t>.";
+                                         callback(Status::INTERNAL_ERROR, std::vector<uint8_t>{});
+                                         CheckDiscardable();
+                                         return;
+                                       }
+                                       callback(Status::OK, std::move(value));
+                                       CheckDiscardable();
+                                     });
       });
 }
 

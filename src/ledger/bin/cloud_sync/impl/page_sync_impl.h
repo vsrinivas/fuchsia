@@ -26,7 +26,6 @@
 #include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/destruction_sentinel.h"
 #include "src/lib/callback/scoped_task_runner.h"
-#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace cloud_sync {
 

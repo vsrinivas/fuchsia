@@ -187,7 +187,7 @@ class EntriesPageStorage final : public storage::PageStorageEmptyImpl {
   void RemoveCommitWatcher(storage::CommitWatcher* watcher) override {}
   void GetObjectPart(storage::ObjectIdentifier object_identifier, int64_t offset, int64_t max_size,
                      storage::PageStorage::Location location,
-                     fit::function<void(storage::Status, ledger::SizedVmo)> callback) override {
+                     fit::function<void(storage::Status, SizedVmo)> callback) override {
     if (offset != 0) {
       LEDGER_NOTIMPLEMENTED();  // Feel free to implement!
     }
@@ -217,8 +217,8 @@ class EntriesPageStorage final : public storage::PageStorageEmptyImpl {
         callback(storage::Status::INTERNAL_NOT_FOUND, {});
         return;
       }
-      ledger::SizedVmo sized_vmo;
-      ASSERT_TRUE(ledger::VmoFromVector(value_it->second.first, &sized_vmo));
+      SizedVmo sized_vmo;
+      ASSERT_TRUE(VmoFromVector(value_it->second.first, &sized_vmo));
       callback(storage::Status::OK, std::move(sized_vmo));
     };
     switch (get_object_part_synchrony_) {

@@ -9,7 +9,6 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/scoped_callback.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {
 

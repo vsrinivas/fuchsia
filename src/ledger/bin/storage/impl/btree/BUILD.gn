@@ -43,7 +43,6 @@ source_set("lib") {
     "//src/ledger/lib/callback",
     "//src/ledger/lib/convert",
     "//src/ledger/lib/logging",
-    "//src/lib/fxl",
     "//third_party/abseil-cpp",
     "//third_party/murmurhash",
   ]

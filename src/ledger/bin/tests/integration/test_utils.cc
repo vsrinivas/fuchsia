@@ -34,7 +34,7 @@ std::vector<uint8_t> RandomArray(rng::Random* random, size_t size,
 
 std::string ToString(const fuchsia::mem::BufferPtr& vmo) {
   std::string value;
-  bool status = ledger::StringFromVmo(*vmo, &value);
+  bool status = StringFromVmo(*vmo, &value);
   LEDGER_DCHECK(status);
   return value;
 }

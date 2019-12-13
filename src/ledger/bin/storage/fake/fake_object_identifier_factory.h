@@ -9,7 +9,7 @@
 #include <memory>
 
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/ledger/lib/memory/weak_ptr.h"
 #include "third_party/abseil-cpp/absl/base/attributes.h"
 
 namespace storage {
@@ -45,7 +45,7 @@ class FakeObjectIdentifierFactory : public ObjectIdentifierFactory {
   // map retains a reference.
   std::map<ObjectDigest, std::shared_ptr<ObjectIdentifier::Token>> tokens_;
 
-  fxl::WeakPtrFactory<FakeObjectIdentifierFactory> weak_factory_;
+  ledger::WeakPtrFactory<FakeObjectIdentifierFactory> weak_factory_;
 };
 
 }  // namespace fake

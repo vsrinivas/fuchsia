@@ -18,7 +18,7 @@
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/ledger/lib/memory/weak_ptr.h"
 
 namespace cloud_sync {
 
@@ -146,7 +146,7 @@ class BatchUpload {
   coroutine::CoroutineManager coroutine_manager_;
 
   // Must be the last member.
-  fxl::WeakPtrFactory<BatchUpload> weak_ptr_factory_;
+  ledger::WeakPtrFactory<BatchUpload> weak_ptr_factory_;
 };
 
 }  // namespace cloud_sync

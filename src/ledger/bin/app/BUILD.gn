@@ -32,7 +32,6 @@ executable("app") {
     "//src/ledger/bin/storage/public",
     "//src/ledger/lib/logging",
     "//src/ledger/lib/vmo",
-    "//src/lib/fxl",
     "//third_party/abseil-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
@@ -158,7 +157,6 @@ source_set("lib") {
     "//src/ledger/lib/socket",
     "//src/ledger/lib/util:ptr",
     "//src/ledger/lib/vmo",
-    "//src/lib/fxl",
     "//third_party/abseil-cpp",
     "//zircon/public/lib/trace",
   ]
@@ -185,7 +183,6 @@ source_set("constants") {
   ]
 
   public_deps = [
-    "//src/lib/fxl",
     "//third_party/abseil-cpp",
   ]
 
@@ -201,7 +198,6 @@ source_set("flags") {
   public_deps = [
     "//sdk/lib/sys/cpp",
     "//src/ledger/bin/storage/public",
-    "//src/lib/fxl",
     "//third_party/abseil-cpp",
   ]
 
@@ -214,7 +210,6 @@ source_set("serialization_version") {
   ]
 
   public_deps = [
-    "//src/lib/fxl",
     "//third_party/abseil-cpp",
   ]
 
@@ -283,7 +278,6 @@ source_set("unittests") {
     "//src/ledger/lib/convert",
     "//src/ledger/lib/logging",
     "//src/ledger/lib/vmo",
-    "//src/lib/fxl",
     "//src/lib/inspect_deprecated",
     "//src/lib/inspect_deprecated:reader",
     "//src/lib/inspect_deprecated/testing:testing",

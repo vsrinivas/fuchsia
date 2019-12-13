@@ -13,7 +13,7 @@
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/ledger/lib/memory/ref_ptr.h"
 
 namespace ledger {
 
@@ -104,7 +104,7 @@ Status FindCommonAncestors(coroutine::CoroutineHandler* handler, storage::PageSt
   // Loop until we only find "BelowCommonAncestors"
   while (walk_state.interesting_size() > 0) {
     uint64_t expected_generation = walk_state.NextGeneration();
-    auto waiter = fxl::MakeRefCounted<
+    auto waiter = MakeRefCounted<
         Waiter<Status, std::pair<std::unique_ptr<const storage::Commit>, WalkFlags>>>(Status::OK);
     while (walk_state.interesting_size() > 0 &&
            expected_generation == walk_state.NextGeneration()) {

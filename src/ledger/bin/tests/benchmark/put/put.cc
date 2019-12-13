@@ -28,7 +28,6 @@
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/vmo/strings.h"
-#include "src/lib/fxl/memory/ref_ptr.h"
 #include "third_party/abseil-cpp/absl/flags/flag.h"
 #include "third_party/abseil-cpp/absl/flags/parse.h"
 #include "third_party/abseil-cpp/absl/strings/numbers.h"
@@ -283,8 +282,8 @@ void PutBenchmark::PutEntry(std::vector<uint8_t> key, std::vector<uint8_t> value
     });
     return;
   }
-  ledger::SizedVmo vmo;
-  LEDGER_CHECK(ledger::VmoFromString(convert::ToStringView(value), &vmo));
+  SizedVmo vmo;
+  LEDGER_CHECK(VmoFromString(convert::ToStringView(value), &vmo));
   TRACE_ASYNC_BEGIN("benchmark", "create_reference", trace_event_id);
   page_->CreateReferenceFromBuffer(
       std::move(vmo).ToTransport(),

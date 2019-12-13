@@ -11,7 +11,6 @@
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/vmo/strings.h"
-#include "src/lib/fxl/memory/ref_ptr.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
@@ -46,9 +45,9 @@ void PageDataGenerator::PutEntry(PagePtr* page, std::vector<uint8_t> key,
     callback(Status::OK);
     return;
   }
-  ledger::SizedVmo vmo;
-  if (!ledger::VmoFromString(convert::ToStringView(value), &vmo)) {
-    LogOnError(Status::IO_ERROR, "ledger::VmoFromString");
+  SizedVmo vmo;
+  if (!VmoFromString(convert::ToStringView(value), &vmo)) {
+    LogOnError(Status::IO_ERROR, "VmoFromString");
     callback(Status::IO_ERROR);
     return;
   }

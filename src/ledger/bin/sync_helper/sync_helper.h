@@ -12,8 +12,8 @@
 #include <utility>
 
 #include "src/ledger/bin/sync_helper/mutable.h"
+#include "src/ledger/lib/memory/weak_ptr.h"
 #include "src/lib/callback/scoped_callback.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {
 
@@ -95,7 +95,7 @@ class SyncHelper {
   fit::closure on_discardable_;
 
   // This must be the last member.
-  fxl::WeakPtrFactory<SyncHelper> weak_ptr_factory_;
+  WeakPtrFactory<SyncHelper> weak_ptr_factory_;
 };
 
 }  // namespace ledger

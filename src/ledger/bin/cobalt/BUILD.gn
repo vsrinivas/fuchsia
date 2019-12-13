@@ -24,7 +24,6 @@ source_set("cobalt") {
   public_deps = [
     "//sdk/lib/sys/cpp",
     "//src/ledger/lib/vmo",
-    "//src/lib/fxl",
   ]
 
   deps = [

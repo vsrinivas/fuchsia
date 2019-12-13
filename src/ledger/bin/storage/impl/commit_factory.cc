@@ -22,9 +22,9 @@
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/fxl/memory/ref_counted.h"
-#include "src/lib/fxl/memory/ref_ptr.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/ledger/lib/memory/ref_counted.h"
+#include "src/ledger/lib/memory/ref_ptr.h"
+#include "src/ledger/lib/memory/weak_ptr.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
@@ -68,13 +68,13 @@ std::string SerializeCommit(uint64_t generation, zx::time_utc timestamp,
   return convert::ToString(builder);
 }
 
-class SharedStorageBytes : public fxl::RefCountedThreadSafe<SharedStorageBytes> {
+class SharedStorageBytes : public ledger::RefCountedThreadSafe<SharedStorageBytes> {
  public:
   const std::string& bytes() { return bytes_; }
 
  private:
-  FRIEND_REF_COUNTED_THREAD_SAFE(SharedStorageBytes);
-  FRIEND_MAKE_REF_COUNTED(SharedStorageBytes);
+  LEDGER_FRIEND_REF_COUNTED_THREAD_SAFE(SharedStorageBytes);
+  LEDGER_FRIEND_MAKE_REF_COUNTED(SharedStorageBytes);
   explicit SharedStorageBytes(std::string bytes) : bytes_(std::move(bytes)) {}
   ~SharedStorageBytes() = default;
 
@@ -88,8 +88,8 @@ class CommitFactory::CommitImpl : public Commit {
   // Creates a new |CommitImpl| object with the given contents.
   CommitImpl(CommitId id, zx::time_utc timestamp, uint64_t generation,
              ObjectIdentifier root_node_identifier, std::vector<CommitIdView> parent_ids,
-             std::string salt, fxl::RefPtr<SharedStorageBytes> storage_bytes,
-             fxl::WeakPtr<CommitFactory> factory);
+             std::string salt, ledger::RefPtr<SharedStorageBytes> storage_bytes,
+             ledger::WeakPtr<CommitFactory> factory);
 
   ~CommitImpl() override;
 
@@ -110,15 +110,15 @@ class CommitFactory::CommitImpl : public Commit {
   const ObjectIdentifier root_node_identifier_;
   const std::vector<CommitIdView> parent_ids_;
   const std::string salt_;
-  const fxl::RefPtr<SharedStorageBytes> storage_bytes_;
-  fxl::WeakPtr<CommitFactory> const factory_;
+  const ledger::RefPtr<SharedStorageBytes> storage_bytes_;
+  ledger::WeakPtr<CommitFactory> const factory_;
 };
 
 CommitFactory::CommitImpl::CommitImpl(CommitId id, zx::time_utc timestamp, uint64_t generation,
                                       ObjectIdentifier root_node_identifier,
                                       std::vector<CommitIdView> parent_ids, std::string salt,
-                                      fxl::RefPtr<SharedStorageBytes> storage_bytes,
-                                      fxl::WeakPtr<CommitFactory> factory)
+                                      ledger::RefPtr<SharedStorageBytes> storage_bytes,
+                                      ledger::WeakPtr<CommitFactory> factory)
     : id_(std::move(id)),
       timestamp_(timestamp),
       generation_(generation),
@@ -186,7 +186,7 @@ Status CommitFactory::FromStorageBytes(CommitId id, std::string storage_bytes,
     return Status::DATA_INTEGRITY_ERROR;
   }
 
-  auto storage_ptr = fxl::MakeRefCounted<SharedStorageBytes>(std::move(storage_bytes));
+  auto storage_ptr = ledger::MakeRefCounted<SharedStorageBytes>(std::move(storage_bytes));
 
   const CommitStorage* commit_storage = GetCommitStorage(storage_ptr->bytes().data());
 
@@ -262,7 +262,7 @@ void CommitFactory::Empty(PageStorage* page_storage,
 
         LEDGER_DCHECK(IsDigestValid(root_identifier.object_digest()));
 
-        auto storage_ptr = fxl::MakeRefCounted<SharedStorageBytes>("");
+        auto storage_ptr = ledger::MakeRefCounted<SharedStorageBytes>("");
 
         auto ptr = std::make_unique<CommitImpl>(
             convert::ToString(kFirstPageCommitId), zx::time_utc(), 0, std::move(root_identifier),

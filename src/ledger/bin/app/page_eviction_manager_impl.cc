@@ -23,6 +23,7 @@
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
 #include "src/ledger/lib/logging/logging.h"
+#include "src/ledger/lib/memory/ref_ptr.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
@@ -144,7 +145,7 @@ Status PageEvictionManagerImpl::CanEvictPage(coroutine::CoroutineHandler* handle
                                              storage::PageIdView page_id, bool* can_evict) {
   LEDGER_DCHECK(delegate_);
 
-  auto waiter = fxl::MakeRefCounted<Waiter<Status, PagePredicateResult>>(Status::OK);
+  auto waiter = MakeRefCounted<Waiter<Status, PagePredicateResult>>(Status::OK);
 
   delegate_->PageIsClosedAndSynced(ledger_name, page_id, waiter->NewCallback());
   delegate_->PageIsClosedOfflineAndEmpty(ledger_name, page_id, waiter->NewCallback());

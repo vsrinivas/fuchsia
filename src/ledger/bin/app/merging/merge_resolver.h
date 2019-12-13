@@ -15,7 +15,6 @@
 #include "src/ledger/lib/backoff/backoff.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/lib/callback/scoped_task_runner.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {
 class ActivePageManager;

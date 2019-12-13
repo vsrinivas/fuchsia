@@ -27,7 +27,7 @@
 #include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/ledger/lib/memory/ref_ptr.h"
 #include "third_party/abseil-cpp/absl/flags/flag.h"
 #include "third_party/abseil-cpp/absl/flags/parse.h"
 #include "third_party/abseil-cpp/absl/strings/numbers.h"
@@ -135,7 +135,7 @@ void DiskSpaceBenchmark::Run() {
     return;
   }
 
-  auto waiter = fxl::MakeRefCounted<Waiter<Status, PagePtr>>(Status::OK);
+  auto waiter = MakeRefCounted<Waiter<Status, PagePtr>>(Status::OK);
 
   for (size_t page_number = 0; page_number < page_count_; page_number++) {
     GetPageEnsureInitialized(
@@ -164,7 +164,7 @@ void DiskSpaceBenchmark::Populate() {
   int insertions = std::max(unique_key_count_, commit_count_);
   LEDGER_LOG(INFO) << "Transaction size: " << transaction_size << ", insertions: " << insertions
                    << ".";
-  auto waiter = fxl::MakeRefCounted<StatusWaiter<Status>>(Status::OK);
+  auto waiter = MakeRefCounted<StatusWaiter<Status>>(Status::OK);
   for (auto& page : pages_) {
     auto keys = generator_.MakeKeys(insertions, key_size_, unique_key_count_);
     page_data_generator_.Populate(&page, std::move(keys), value_size_, transaction_size,

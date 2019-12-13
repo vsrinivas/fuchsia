@@ -9,7 +9,6 @@
 
 #include "src/ledger/lib/callback/operation_serializer.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
 #include "third_party/abseil-cpp/absl/base/attributes.h"
 
 namespace lock {

@@ -8,19 +8,19 @@
 
 #include "src/ledger/bin/storage/impl/object_identifier_encoding.h"
 #include "src/ledger/lib/convert/convert.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/ledger/lib/memory/weak_ptr.h"
 
 namespace storage {
 namespace fake {
 
 class FakeObjectIdentifierFactory::TokenImpl : public ObjectIdentifier::Token {
  public:
-  explicit TokenImpl(fxl::WeakPtr<FakeObjectIdentifierFactory> factory) : factory_(factory) {}
+  explicit TokenImpl(ledger::WeakPtr<FakeObjectIdentifierFactory> factory) : factory_(factory) {}
   ~TokenImpl() override = default;
   ObjectIdentifierFactory* factory() const override { return factory_.get(); }
 
  private:
-  fxl::WeakPtr<FakeObjectIdentifierFactory> factory_;
+  ledger::WeakPtr<FakeObjectIdentifierFactory> factory_;
 };
 
 FakeObjectIdentifierFactory::FakeObjectIdentifierFactory() : weak_factory_(this) {}

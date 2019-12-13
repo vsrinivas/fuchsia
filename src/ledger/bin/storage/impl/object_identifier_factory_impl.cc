@@ -12,7 +12,7 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/ledger/lib/memory/weak_ptr.h"
 
 namespace storage {
 namespace {
@@ -33,7 +33,7 @@ std::string TokenCountsToString(
 class ObjectIdentifierFactoryImpl::TokenImpl : public ObjectIdentifier::Token {
  public:
   explicit TokenImpl(
-      fxl::WeakPtr<ObjectIdentifierFactoryImpl> tracker,
+      ledger::WeakPtr<ObjectIdentifierFactoryImpl> tracker,
       std::map<ObjectDigest, std::weak_ptr<ObjectIdentifier::Token>>::iterator map_entry)
       : tracker_(std::move(tracker)), map_entry_(map_entry) {}
 
@@ -73,7 +73,7 @@ class ObjectIdentifierFactoryImpl::TokenImpl : public ObjectIdentifier::Token {
   ObjectIdentifierFactory* factory() const override { return tracker_.get(); }
 
  private:
-  fxl::WeakPtr<ObjectIdentifierFactoryImpl> tracker_;
+  ledger::WeakPtr<ObjectIdentifierFactoryImpl> tracker_;
   std::map<ObjectDigest, std::weak_ptr<ObjectIdentifier::Token>>::iterator map_entry_;
 };
 

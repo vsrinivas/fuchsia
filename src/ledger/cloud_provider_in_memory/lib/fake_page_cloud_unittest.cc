@@ -69,7 +69,7 @@ TEST_F(FakePageCloudTest, DuplicateCommits) {
   cloud_provider::Commits commits;
   commits.commits.push_back(MakeCommit("id0", std::nullopt));
   cloud_provider::CommitPack commit_pack;
-  ASSERT_TRUE(ledger::EncodeToBuffer(&commits, &commit_pack.buffer));
+  ASSERT_TRUE(EncodeToBuffer(&commits, &commit_pack.buffer));
   cloud_provider::Status status;
   bool called;
   page_cloud_->AddCommits(std::move(commit_pack), Capture(SetWhenCalled(&called), &status));
@@ -80,7 +80,7 @@ TEST_F(FakePageCloudTest, DuplicateCommits) {
   // Add the commit again.
   commits.commits.clear();
   commits.commits.push_back(MakeCommit("id0", std::nullopt));
-  ASSERT_TRUE(ledger::EncodeToBuffer(&commits, &commit_pack.buffer));
+  ASSERT_TRUE(EncodeToBuffer(&commits, &commit_pack.buffer));
   page_cloud_->AddCommits(std::move(commit_pack), Capture(SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
@@ -95,7 +95,7 @@ TEST_F(FakePageCloudTest, DuplicateCommits) {
   ASSERT_TRUE(called);
   ASSERT_EQ(status, cloud_provider::Status::OK);
   ASSERT_TRUE(commit_pack_ptr);
-  ASSERT_TRUE(ledger::DecodeFromBuffer(commit_pack_ptr->buffer, &commits));
+  ASSERT_TRUE(DecodeFromBuffer(commit_pack_ptr->buffer, &commits));
   EXPECT_THAT(commits.commits, SizeIs(1));
 }
 
@@ -105,7 +105,7 @@ TEST_F(FakePageCloudTest, RejectUnknownBases) {
   commits.commits.push_back(MakeCommit("id0", std::nullopt));
   commits.commits.push_back(MakeCommit("id1", "not a commit"));
   cloud_provider::CommitPack commit_pack;
-  ASSERT_TRUE(ledger::EncodeToBuffer(&commits, &commit_pack.buffer));
+  ASSERT_TRUE(EncodeToBuffer(&commits, &commit_pack.buffer));
   cloud_provider::Status status;
   bool called;
   page_cloud_->AddCommits(std::move(commit_pack), Capture(SetWhenCalled(&called), &status));
@@ -122,7 +122,7 @@ TEST_F(FakePageCloudTest, RejectUnknownBases) {
   ASSERT_TRUE(called);
   ASSERT_EQ(status, cloud_provider::Status::OK);
   ASSERT_TRUE(commit_pack_ptr);
-  ASSERT_TRUE(ledger::DecodeFromBuffer(commit_pack_ptr->buffer, &commits));
+  ASSERT_TRUE(DecodeFromBuffer(commit_pack_ptr->buffer, &commits));
   EXPECT_THAT(commits.commits, SizeIs(0));
 }
 
@@ -146,7 +146,7 @@ TEST_F(FakePageCloudTest, AcceptDiff) {
   cloud_provider::Commits commits;
   commits.commits.push_back(MakeCommit("id0", std::nullopt));
   cloud_provider::CommitPack commit_pack;
-  ASSERT_TRUE(ledger::EncodeToBuffer(&commits, &commit_pack.buffer));
+  ASSERT_TRUE(EncodeToBuffer(&commits, &commit_pack.buffer));
   cloud_provider::Status status;
   bool called;
   page_cloud_->AddCommits(std::move(commit_pack), Capture(SetWhenCalled(&called), &status));
@@ -165,7 +165,7 @@ TEST_F(FakePageCloudTest, AcceptDiff) {
 
   // The diff should be from the empty page.
   cloud_provider::Diff diff;
-  ASSERT_TRUE(ledger::DecodeFromBuffer(diff_pack->buffer, &diff));
+  ASSERT_TRUE(DecodeFromBuffer(diff_pack->buffer, &diff));
   ASSERT_TRUE(diff.has_base_state());
   EXPECT_TRUE(diff.base_state().is_empty_page());
 }
@@ -178,7 +178,7 @@ TEST_F(FakePageCloudTest, DiscardDiff) {
   cloud_provider::Commits commits;
   commits.commits.push_back(MakeCommit("id0", std::nullopt));
   cloud_provider::CommitPack commit_pack;
-  ASSERT_TRUE(ledger::EncodeToBuffer(&commits, &commit_pack.buffer));
+  ASSERT_TRUE(EncodeToBuffer(&commits, &commit_pack.buffer));
   cloud_provider::Status status;
   bool called;
   page_cloud_->AddCommits(std::move(commit_pack), Capture(SetWhenCalled(&called), &status));
@@ -197,7 +197,7 @@ TEST_F(FakePageCloudTest, DiscardDiff) {
 
   // The diff should be a null diff from the commit itself.
   cloud_provider::Diff diff;
-  ASSERT_TRUE(ledger::DecodeFromBuffer(diff_pack->buffer, &diff));
+  ASSERT_TRUE(DecodeFromBuffer(diff_pack->buffer, &diff));
   ASSERT_TRUE(diff.has_base_state());
   ASSERT_TRUE(diff.base_state().is_at_commit());
   EXPECT_EQ(diff.base_state().at_commit(), convert::ToArray("id0"));

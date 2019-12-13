@@ -27,7 +27,7 @@ source_set("callback") {
   public_deps = [
     ":crossplatform",
     "//src/ledger/lib/logging",
-    "//src/lib/fxl",
+    "//src/ledger/lib/memory",
     "//zircon/public/lib/fit",
   ]
 

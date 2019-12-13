@@ -38,7 +38,7 @@ class Client : public SocketDrainer::Client {
 TEST_F(SocketDrainerTest, ReadData) {
   Client client([] {}, [] {});
   SocketDrainer drainer(&client);
-  drainer.Start(ledger::WriteStringToSocket("Hello"));
+  drainer.Start(WriteStringToSocket("Hello"));
   RunLoopUntilIdle();
   EXPECT_EQ("Hello", client.GetValue());
 }
@@ -47,7 +47,7 @@ TEST_F(SocketDrainerTest, DeleteOnCallback) {
   std::unique_ptr<SocketDrainer> drainer;
   Client client([&drainer] { drainer.reset(); }, [] {});
   drainer = std::make_unique<SocketDrainer>(&client);
-  drainer->Start(ledger::WriteStringToSocket("H"));
+  drainer->Start(WriteStringToSocket("H"));
   RunLoopUntilIdle();
   EXPECT_EQ("H", client.GetValue());
   EXPECT_EQ(nullptr, drainer.get());

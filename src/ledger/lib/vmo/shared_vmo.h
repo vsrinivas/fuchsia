@@ -9,7 +9,7 @@
 
 #include <mutex>
 
-#include "src/lib/fxl/memory/ref_counted.h"
+#include "src/ledger/lib/memory/ref_counted.h"
 
 namespace ledger {
 
@@ -18,7 +18,7 @@ namespace ledger {
 // object have been released.
 //
 // This object is thread-safe.
-class SharedVmo : public fxl::RefCountedThreadSafe<SharedVmo> {
+class SharedVmo : public RefCountedThreadSafe<SharedVmo> {
  public:
   // Initializes a shared VMO.
   //
@@ -51,7 +51,7 @@ class SharedVmo : public fxl::RefCountedThreadSafe<SharedVmo> {
   std::once_flag mapping_once_flag_{};
   uintptr_t mapping_ = 0u;
 
-  FRIEND_REF_COUNTED_THREAD_SAFE(SharedVmo);
+  LEDGER_FRIEND_REF_COUNTED_THREAD_SAFE(SharedVmo);
 };
 
 }  // namespace ledger

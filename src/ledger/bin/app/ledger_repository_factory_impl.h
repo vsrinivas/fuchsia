@@ -23,6 +23,7 @@
 #include "src/ledger/bin/p2p_sync/public/user_communicator_factory.h"
 #include "src/ledger/bin/sync_coordinator/impl/user_sync_impl.h"
 #include "src/ledger/lib/callback/managed_container.h"
+#include "src/ledger/lib/memory/weak_ptr.h"
 #include "src/lib/callback/auto_cleanable.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/inspect_deprecated/deprecated/expose.h"
@@ -87,7 +88,7 @@ class LedgerRepositoryFactoryImpl
 
   coroutine::CoroutineManager coroutine_manager_;
 
-  fxl::WeakPtrFactory<LedgerRepositoryFactoryImpl> weak_factory_;
+  WeakPtrFactory<LedgerRepositoryFactoryImpl> weak_factory_;
 };
 
 }  // namespace ledger

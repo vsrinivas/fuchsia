@@ -19,6 +19,7 @@
 #include "src/ledger/lib/callback/ensure_called.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
+#include "src/ledger/lib/memory/weak_ptr.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 
@@ -126,7 +127,7 @@ void InspectedCommit::Attach(std::string name, fit::function<void(fit::closure)>
   auto emplacement = inspected_entry_containers_.try_emplace(
       key, EnsureCalled(std::move(callback), fit::closure([] {})));
   ongoing_storage_accesses_++;
-  fxl::WeakPtr<InspectedCommit> weak_this = weak_factory_.GetWeakPtr();
+  WeakPtr<InspectedCommit> weak_this = weak_factory_.GetWeakPtr();
   inspectable_page_->NewInspection(callback::MakeScoped(
       weak_this,
       [this, name = std::move(name), key = std::move(key), emplacement = std::move(emplacement),

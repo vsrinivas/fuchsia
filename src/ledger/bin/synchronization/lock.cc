@@ -6,7 +6,7 @@
 
 #include <lib/fit/function.h>
 
-#include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/ledger/lib/memory/weak_ptr.h"
 
 namespace lock {
 namespace {
@@ -46,7 +46,7 @@ class LockImpl : public Lock {
  private:
   fit::closure serialization_callback_;
 
-  fxl::WeakPtrFactory<LockImpl> weak_ptr_factory_;
+  ledger::WeakPtrFactory<LockImpl> weak_ptr_factory_;
 };
 }  // namespace
 

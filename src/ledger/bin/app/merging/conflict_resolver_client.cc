@@ -19,11 +19,11 @@
 #include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
+#include "src/ledger/lib/memory/ref_ptr.h"
+#include "src/ledger/lib/memory/weak_ptr.h"
 #include "src/ledger/lib/socket/strings.h"
 #include "src/ledger/lib/util/ptr.h"
 #include "src/lib/callback/scoped_callback.h"
-#include "src/lib/fxl/memory/ref_ptr.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {
 ConflictResolverClient::ConflictResolverClient(storage::PageStorage* storage,
@@ -190,7 +190,7 @@ void ConflictResolverClient::Merge(std::vector<MergedValue> merged_values,
         if (!IsInValidStateAndNotify(weak_this, callback)) {
           return;
         }
-        auto waiter = fxl::MakeRefCounted<Waiter<Status, storage::ObjectIdentifier>>(Status::OK);
+        auto waiter = MakeRefCounted<Waiter<Status, storage::ObjectIdentifier>>(Status::OK);
         for (const MergedValue& merged_value : merged_values) {
           if (merged_value.source != ValueSource::DELETE) {
             GetOrCreateObjectIdentifier(merged_value, waiter->NewCallback());
@@ -289,8 +289,8 @@ void ConflictResolverClient::Done(fit::function<void(Status)> callback) {
 }
 
 bool ConflictResolverClient::IsInValidStateAndNotify(
-    const fxl::WeakPtr<ConflictResolverClient>& weak_this,
-    const fit::function<void(Status)>& callback, Status status) {
+    const WeakPtr<ConflictResolverClient>& weak_this, const fit::function<void(Status)>& callback,
+    Status status) {
   if (!weak_this) {
     callback(Status::INTERNAL_ERROR);
     return false;

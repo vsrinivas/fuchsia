@@ -22,7 +22,6 @@ source_set("testing") {
     "//src/ledger/lib/backoff/testing",
     "//src/ledger/lib/logging",
     "//src/ledger/lib/vmo",
-    "//src/lib/fxl",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]

@@ -29,8 +29,8 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/sync_coordinator/public/ledger_sync.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/memory/weak_ptr.h"
 #include "src/lib/callback/auto_cleanable.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
@@ -144,7 +144,7 @@ class LedgerManager : public LedgerImpl::Delegate, inspect_deprecated::ChildrenM
   fit::deferred_callback children_manager_retainer_;
 
   // Must be the last member.
-  fxl::WeakPtrFactory<LedgerManager> weak_factory_;
+  WeakPtrFactory<LedgerManager> weak_factory_;
 };
 
 }  // namespace ledger

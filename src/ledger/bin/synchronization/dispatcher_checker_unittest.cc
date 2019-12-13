@@ -11,7 +11,7 @@
 
 namespace ledger {
 
-using DispatcherCheckerTest = ledger::TestWithEnvironment;
+using DispatcherCheckerTest = TestWithEnvironment;
 
 TEST_F(DispatcherCheckerTest, Trivial) {
   DispatcherChecker checker;

@@ -12,10 +12,6 @@ source_set("public") {
     "user_id_provider.h",
   ]
 
-  public_deps = [
-    "//src/lib/fxl",
-  ]
-
   deps = [
     "//src/ledger/lib/convert",
   ]

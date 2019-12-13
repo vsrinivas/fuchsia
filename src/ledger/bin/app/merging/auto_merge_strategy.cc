@@ -14,9 +14,8 @@
 #include "src/ledger/bin/app/merging/conflict_resolver_client.h"
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/lib/logging/logging.h"
+#include "src/ledger/lib/memory/weak_ptr.h"
 #include "src/lib/callback/scoped_callback.h"
-#include "src/lib/fxl/memory/ref_ptr.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace ledger {
 class AutoMergeStrategy::AutoMerger {
@@ -55,7 +54,7 @@ class AutoMergeStrategy::AutoMerger {
   bool cancelled_ = false;
 
   // This must be the last member of the class.
-  fxl::WeakPtrFactory<AutoMergeStrategy::AutoMerger> weak_factory_;
+  WeakPtrFactory<AutoMergeStrategy::AutoMerger> weak_factory_;
 };
 
 AutoMergeStrategy::AutoMerger::AutoMerger(storage::PageStorage* storage,

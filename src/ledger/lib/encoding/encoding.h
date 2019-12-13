@@ -30,7 +30,7 @@ bool EncodeToBuffer(T* data, fuchsia::mem::Buffer* buffer) {
   // is allocated when the vector is encoded.
   encoder.Alloc(fidl::EncodingInlineSize<T, fidl::Encoder>(&encoder));
   fidl::Encode(&encoder, data, 0);
-  return ledger::VmoFromVector(encoder.TakeBytes(), buffer);
+  return VmoFromVector(encoder.TakeBytes(), buffer);
 }
 
 // Deserialization of T from a buffer. See the comment in EncodeToBuffer for
@@ -41,7 +41,7 @@ bool DecodeFromBuffer(const fuchsia::mem::Buffer& buffer, T* data) {
   LEDGER_DCHECK(data);
 
   std::vector<uint8_t> bytes;
-  if (!ledger::VectorFromVmo(buffer, &bytes)) {
+  if (!VectorFromVmo(buffer, &bytes)) {
     return false;
   }
 

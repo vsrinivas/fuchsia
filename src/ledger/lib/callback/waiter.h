@@ -13,8 +13,9 @@
 #include <vector>
 
 #include "src/ledger/lib/logging/logging.h"
+#include "src/ledger/lib/memory/ref_counted.h"
+#include "src/ledger/lib/memory/ref_ptr.h"
 #include "src/lib/callback/scoped_callback.h"
-#include "src/lib/fxl/memory/ref_counted.h"
 
 namespace ledger {
 
@@ -157,13 +158,13 @@ class CompletionAccumulator {
 template <typename W>
 class WaiterWitness {
  public:
-  explicit WaiterWitness(fxl::RefPtr<W> waiter) : waiter_(waiter) {}
+  explicit WaiterWitness(RefPtr<W> waiter) : waiter_(waiter) {}
 
   // Returns |true| if the waiter is in state |STARTED|.
   explicit operator bool() { return waiter_->state_ == W::State::STARTED; }
 
  private:
-  fxl::RefPtr<W> waiter_;
+  RefPtr<W> waiter_;
 };
 
 }  // namespace internal
@@ -203,7 +204,7 @@ class WaiterWitness {
 //   R Result();
 // };
 template <typename A, typename R, typename... Args>
-class BaseWaiter : public fxl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
+class BaseWaiter : public RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
  public:
   // Returns a callback for the waiter to wait on. This method must not be
   // called once |Finalize| or |Cancel| have been called.
@@ -218,7 +219,7 @@ class BaseWaiter : public fxl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
       return [](Args...) {};
     }
     ++pending_callbacks_;
-    return [waiter_ref = fxl::RefPtr<BaseWaiter<A, R, Args...>>(this),
+    return [waiter_ref = RefPtr<BaseWaiter<A, R, Args...>>(this),
             token = accumulator_.PrepareCall()](Args&&... args) mutable {
       LEDGER_DCHECK(waiter_ref) << "Callbacks returned by a Waiter must be called only once.";
       // Moving ref to the stack to ensure that the callback is not called
@@ -258,8 +259,8 @@ class BaseWaiter : public fxl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
   // implies that the finalizer is still alive, so callbacks can use objects owned by the finalizer.
   template <typename Callback>
   auto MakeScoped(Callback callback) {
-    return callback::MakeScoped(
-        internal::WaiterWitness(fxl::RefPtr<BaseWaiter<A, R, Args...>>(this)), std::move(callback));
+    return callback::MakeScoped(internal::WaiterWitness(RefPtr<BaseWaiter<A, R, Args...>>(this)),
+                                std::move(callback));
   }
 
  protected:
@@ -270,8 +271,8 @@ class BaseWaiter : public fxl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
   // The waiter state. See class comment for allowed transitions.
   enum class State { STARTED, DONE, CANCELLED, FINISHED };
 
-  FRIEND_REF_COUNTED_THREAD_SAFE(BaseWaiter);
-  FRIEND_MAKE_REF_COUNTED(BaseWaiter);
+  LEDGER_FRIEND_REF_COUNTED_THREAD_SAFE(BaseWaiter);
+  LEDGER_FRIEND_MAKE_REF_COUNTED(BaseWaiter);
   friend class internal::WaiterWitness<BaseWaiter<A, R, Args...>>;
 
   // Receives the result of a |NewCallback| callback and accumulates it if not
@@ -322,7 +323,7 @@ class BaseWaiter : public fxl::RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
 
 // Waiter can be used to collate the results of many asynchronous calls into one
 // callback. A typical usage example would be:
-// auto waiter = fxl::MakeRefCounted<callback::Waiter<Status,
+// auto waiter = MakeRefCounted<callback::Waiter<Status,
 //                                   std::unique_ptr<Object>>>(Status::OK);
 // storage->GetObject(object_digest1, waiter->NewCallback());
 // storage->GetObject(object_digest2, waiter->NewCallback());
@@ -350,8 +351,8 @@ class Waiter : public BaseWaiter<
   }
 
  private:
-  FRIEND_REF_COUNTED_THREAD_SAFE(Waiter);
-  FRIEND_MAKE_REF_COUNTED(Waiter);
+  LEDGER_FRIEND_REF_COUNTED_THREAD_SAFE(Waiter);
+  LEDGER_FRIEND_MAKE_REF_COUNTED(Waiter);
   ~Waiter() override{};
 
   explicit Waiter(S success_status)
@@ -365,8 +366,8 @@ class Waiter : public BaseWaiter<
 template <class S>
 class StatusWaiter : public BaseWaiter<internal::StatusAccumulator<S>, S, S> {
  private:
-  FRIEND_REF_COUNTED_THREAD_SAFE(StatusWaiter);
-  FRIEND_MAKE_REF_COUNTED(StatusWaiter);
+  LEDGER_FRIEND_REF_COUNTED_THREAD_SAFE(StatusWaiter);
+  LEDGER_FRIEND_MAKE_REF_COUNTED(StatusWaiter);
 
   explicit StatusWaiter(S success_status)
       : BaseWaiter<internal::StatusAccumulator<S>, S, S>(
@@ -388,8 +389,8 @@ class AnyWaiter : public BaseWaiter<internal::AnyAccumulator<S, V>, std::pair<S,
   }
 
  private:
-  FRIEND_REF_COUNTED_THREAD_SAFE(AnyWaiter);
-  FRIEND_MAKE_REF_COUNTED(AnyWaiter);
+  LEDGER_FRIEND_REF_COUNTED_THREAD_SAFE(AnyWaiter);
+  LEDGER_FRIEND_MAKE_REF_COUNTED(AnyWaiter);
 
   // Creates a new waiter. |success_status| and |default_value| will be
   // returned to the callback in |Finalize| if |NewCallback| is not called.
@@ -403,7 +404,7 @@ class AnyWaiter : public BaseWaiter<internal::AnyAccumulator<S, V>, std::pair<S,
 // Promise is used to wait on a single asynchronous call. A typical usage
 // example is:
 // auto promise =
-//     fxl::MakeRefCounted<Promise<Status, std::unique_ptr<Object>>>(
+//     MakeRefCounted<Promise<Status, std::unique_ptr<Object>>>(
 //         Status::ILLEGAL_STATE);
 // storage->GetObject(object_digest1, promise->NewCallback());
 // ...
@@ -422,8 +423,8 @@ class Promise : public BaseWaiter<internal::PromiseAccumulator<S, V>, std::pair<
   }
 
  private:
-  FRIEND_REF_COUNTED_THREAD_SAFE(Promise);
-  FRIEND_MAKE_REF_COUNTED(Promise);
+  LEDGER_FRIEND_REF_COUNTED_THREAD_SAFE(Promise);
+  LEDGER_FRIEND_MAKE_REF_COUNTED(Promise);
 
   // Creates a new promise. |default_status| and |default_value| will be
   // returned to the callback in |Finalize| if |NewCallback| is not called.
@@ -442,8 +443,8 @@ class CompletionWaiter : public BaseWaiter<internal::CompletionAccumulator, bool
   }
 
  private:
-  FRIEND_REF_COUNTED_THREAD_SAFE(CompletionWaiter);
-  FRIEND_MAKE_REF_COUNTED(CompletionWaiter);
+  LEDGER_FRIEND_REF_COUNTED_THREAD_SAFE(CompletionWaiter);
+  LEDGER_FRIEND_MAKE_REF_COUNTED(CompletionWaiter);
 
   CompletionWaiter()
       : BaseWaiter<internal::CompletionAccumulator, bool>(internal::CompletionAccumulator()) {}

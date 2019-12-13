@@ -19,9 +19,10 @@
 #include "src/ledger/lib/callback/capture.h"
 #include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/memory/ref_counted.h"
+#include "src/ledger/lib/memory/ref_ptr.h"
 #include "src/ledger/lib/vmo/vector.h"
 #include "src/lib/callback/auto_cleanable.h"
-#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace ledger {
 namespace {
@@ -45,7 +46,7 @@ std::vector<uint8_t> DoubleToArray(double dbl) {
   return ::testing::AssertionSuccess();
 }
 
-class RefCountedPageSnapshot : public fxl::RefCountedThreadSafe<RefCountedPageSnapshot> {
+class RefCountedPageSnapshot : public RefCountedThreadSafe<RefCountedPageSnapshot> {
  public:
   RefCountedPageSnapshot() = default;
 
@@ -59,7 +60,7 @@ class RefCountedPageSnapshot : public fxl::RefCountedThreadSafe<RefCountedPageSn
 class PageWatcherImpl : public PageWatcher {
  public:
   PageWatcherImpl(fidl::InterfaceRequest<PageWatcher> request,
-                  fxl::RefPtr<RefCountedPageSnapshot> base_snapshot)
+                  RefPtr<RefCountedPageSnapshot> base_snapshot)
       : binding_(this, std::move(request)), current_snapshot_(std::move(base_snapshot)) {}
   PageWatcherImpl(const PageWatcherImpl&) = delete;
   PageWatcherImpl& operator=(const PageWatcherImpl&) = delete;
@@ -84,12 +85,12 @@ class PageWatcherImpl : public PageWatcher {
   void OnChange(PageChange /*page_change*/, ResultState /*result_state*/,
                 OnChangeCallback callback) override {
     changes++;
-    current_snapshot_ = fxl::MakeRefCounted<RefCountedPageSnapshot>();
+    current_snapshot_ = MakeRefCounted<RefCountedPageSnapshot>();
     callback((**current_snapshot_).NewRequest());
   }
 
   fidl::Binding<PageWatcher> binding_;
-  fxl::RefPtr<RefCountedPageSnapshot> current_snapshot_;
+  RefPtr<RefCountedPageSnapshot> current_snapshot_;
 };
 
 class SyncWatcherImpl : public SyncWatcher {
@@ -233,7 +234,7 @@ class ConvergenceTest : public BaseIntegrationTest,
  protected:
   std::unique_ptr<PageWatcherImpl> WatchPageContents(PagePtr* page) {
     PageWatcherPtr page_watcher;
-    auto page_snapshot = fxl::MakeRefCounted<RefCountedPageSnapshot>();
+    auto page_snapshot = MakeRefCounted<RefCountedPageSnapshot>();
     fidl::InterfaceRequest<PageSnapshot> page_snapshot_request = (**page_snapshot).NewRequest();
     std::unique_ptr<PageWatcherImpl> watcher =
         std::make_unique<PageWatcherImpl>(page_watcher.NewRequest(), std::move(page_snapshot));
@@ -308,7 +309,7 @@ TEST_P(ConvergenceTest, NLedgersConverge) {
     }
   }
 
-  auto sync_waiter = fxl::MakeRefCounted<CompletionWaiter>();
+  auto sync_waiter = MakeRefCounted<CompletionWaiter>();
   for (int i = 0; i < num_ledgers_; i++) {
     pages_[i]->Commit();
     pages_[i]->Sync(sync_waiter->NewCallback());
@@ -353,7 +354,7 @@ TEST_P(ConvergenceTest, NLedgersConverge) {
 
   bool merge_done = false;
   ConflictResolutionWaitStatus wait_status = ConflictResolutionWaitStatus::NO_CONFLICTS;
-  fxl::RefPtr<StatusWaiter<ConflictResolutionWaitStatus>> waiter;
+  RefPtr<StatusWaiter<ConflictResolutionWaitStatus>> waiter;
 
   // In addition of verifying that the external states of the ledgers have
   // converged, we also verify we are not currently performing a merge in the
@@ -367,7 +368,7 @@ TEST_P(ConvergenceTest, NLedgersConverge) {
         return true;
       }
       if (!waiter) {
-        waiter = fxl::MakeRefCounted<StatusWaiter<ConflictResolutionWaitStatus>>(
+        waiter = MakeRefCounted<StatusWaiter<ConflictResolutionWaitStatus>>(
             ConflictResolutionWaitStatus::NO_CONFLICTS);
         for (int i = 0; i < num_ledgers_; i++) {
           pages_[i]->WaitForConflictResolution(waiter->NewCallback());

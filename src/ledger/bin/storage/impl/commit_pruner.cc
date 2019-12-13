@@ -13,6 +13,7 @@
 #include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
 #include "src/ledger/lib/logging/logging.h"
+#include "src/ledger/lib/memory/ref_ptr.h"
 
 namespace storage {
 namespace {
@@ -24,7 +25,7 @@ Status ExploreGeneration(
     std::vector<std::unique_ptr<const Commit>>* parents) {
   uint64_t expected_generation = (*frontier->begin())->GetGeneration();
   auto waiter =
-      fxl::MakeRefCounted<ledger::Waiter<Status, std::unique_ptr<const Commit>>>(Status::OK);
+      ledger::MakeRefCounted<ledger::Waiter<Status, std::unique_ptr<const Commit>>>(Status::OK);
   while (!frontier->empty() && expected_generation == (*frontier->begin())->GetGeneration()) {
     // Pop the newest commit.
     const std::unique_ptr<const Commit>& commit = *frontier->begin();

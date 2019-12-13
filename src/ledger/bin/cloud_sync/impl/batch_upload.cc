@@ -21,10 +21,10 @@
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
 #include "src/ledger/lib/encoding/encoding.h"
 #include "src/ledger/lib/logging/logging.h"
+#include "src/ledger/lib/memory/ref_ptr.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/callback/trace_callback.h"
-#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace cloud_sync {
 
@@ -119,7 +119,7 @@ void BatchUpload::StartObjectUpload() {
   // Use a completion waiter: even after an error, we still want to wait until all uploads in
   // progress complete before calling the error callback. Errors are tracked through the |status_|
   // variable.
-  auto waiter = fxl::MakeRefCounted<ledger::CompletionWaiter>();
+  auto waiter = ledger::MakeRefCounted<ledger::CompletionWaiter>();
 
   std::vector<storage::ObjectIdentifier> remaining_object_identifiers =
       std::move(remaining_object_identifiers_);
@@ -152,7 +152,7 @@ void BatchUpload::SynchronousUploadObject(coroutine::CoroutineHandler* handler,
   LEDGER_DCHECK(status_ == UploadStatus::OK);
 
   // While this waiter is alive and not cancelled, this function's stack frame is alive.
-  auto waiter = fxl::MakeRefCounted<ledger::StatusWaiter<UploadStatus>>(UploadStatus::OK);
+  auto waiter = ledger::MakeRefCounted<ledger::StatusWaiter<UploadStatus>>(UploadStatus::OK);
   std::string object_name;
   encryption_service_->GetObjectName(
       object_identifier, waiter->MakeScoped([&object_name, callback = waiter->NewCallback()](
@@ -270,7 +270,7 @@ void BatchUpload::FilterAndUploadCommits() {
 void BatchUpload::EncodeCommit(
     const storage::Commit& commit,
     fit::function<void(UploadStatus, cloud_provider::Commit)> commit_callback) {
-  auto waiter = fxl::MakeRefCounted<ledger::StatusWaiter<UploadStatus>>(UploadStatus::OK);
+  auto waiter = ledger::MakeRefCounted<ledger::StatusWaiter<UploadStatus>>(UploadStatus::OK);
 
   auto remote_commit = std::make_unique<cloud_provider::Commit>();
   auto remote_commit_ptr = remote_commit.get();
@@ -324,7 +324,7 @@ void BatchUpload::EncodeDiff(storage::CommitIdView commit_id,
               return lhs.entry.entry_id < rhs.entry.entry_id;
             });
 
-  auto waiter = fxl::MakeRefCounted<ledger::Waiter<UploadStatus, cloud_provider::DiffEntry>>(
+  auto waiter = ledger::MakeRefCounted<ledger::Waiter<UploadStatus, cloud_provider::DiffEntry>>(
       UploadStatus::OK);
 
   cloud_provider::Diff diff;
@@ -376,8 +376,8 @@ void BatchUpload::EncodeEntry(
 void BatchUpload::UploadCommits() {
   LEDGER_DCHECK(status_ == UploadStatus::OK);
   std::vector<storage::CommitId> ids;
-  auto waiter =
-      fxl::MakeRefCounted<ledger::Waiter<UploadStatus, cloud_provider::Commit>>(UploadStatus::OK);
+  auto waiter = ledger::MakeRefCounted<ledger::Waiter<UploadStatus, cloud_provider::Commit>>(
+      UploadStatus::OK);
 
   for (auto& storage_commit : commits_) {
     EncodeCommit(*storage_commit, waiter->NewCallback());
@@ -415,7 +415,7 @@ void BatchUpload::UploadCommits() {
                                  return;
                                }
                                auto waiter =
-                                   fxl::MakeRefCounted<ledger::StatusWaiter<ledger::Status>>(
+                                   ledger::MakeRefCounted<ledger::StatusWaiter<ledger::Status>>(
                                        ledger::Status::OK);
 
                                for (auto& id : commit_ids) {

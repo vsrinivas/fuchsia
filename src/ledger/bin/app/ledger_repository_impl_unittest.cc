@@ -145,7 +145,7 @@ class BlockingFakeDb : public storage::Db {
 // BlockingFakeDbFactory returns BlockingFakeDb objects
 class BlockingFakeDbFactory : public storage::DbFactory {
  public:
-  void GetOrCreateDb(ledger::DetachedPath /*db_path*/, DbFactory::OnDbNotFound /*on_db_not_found*/,
+  void GetOrCreateDb(DetachedPath /*db_path*/, DbFactory::OnDbNotFound /*on_db_not_found*/,
                      fit::function<void(Status, std::unique_ptr<storage::Db>)> callback) override {
     callback(Status::OK, std::make_unique<BlockingFakeDb>());
   }
@@ -184,12 +184,12 @@ class FakeUserSync : public sync_coordinator::UserSync {
 
 class FailingDeviceIdManager : public clocks::DeviceIdManager {
  public:
-  ledger::Status OnPageDeleted(coroutine::CoroutineHandler* handler) override {
+  Status OnPageDeleted(coroutine::CoroutineHandler* handler) override {
     return Status::INTERRUPTED;
   }
 
-  ledger::Status GetNewDeviceId(coroutine::CoroutineHandler* handler,
-                                clocks::DeviceId* device_id) override {
+  Status GetNewDeviceId(coroutine::CoroutineHandler* handler,
+                        clocks::DeviceId* device_id) override {
     *device_id = clocks::DeviceId{"fingerprint", 1};
     return Status::OK;
   }
@@ -201,15 +201,15 @@ class YieldingDeviceIdManager : public clocks::DeviceIdManager {
  public:
   YieldingDeviceIdManager(coroutine::CoroutineHandler** handler) : handler_(handler) {}
 
-  ledger::Status OnPageDeleted(coroutine::CoroutineHandler* handler) override {
+  Status OnPageDeleted(coroutine::CoroutineHandler* handler) override {
     *handler_ = handler;
     if (handler->Yield() == coroutine::ContinuationStatus::INTERRUPTED)
       return Status::INTERRUPTED;
     return Status::OK;
   }
 
-  ledger::Status GetNewDeviceId(coroutine::CoroutineHandler* handler,
-                                clocks::DeviceId* device_id) override {
+  Status GetNewDeviceId(coroutine::CoroutineHandler* handler,
+                        clocks::DeviceId* device_id) override {
     *device_id = clocks::DeviceId{"fingerprint", 1};
     return Status::OK;
   }
@@ -380,7 +380,7 @@ TEST_F(LedgerRepositoryImplTest, InspectAPILedgerPresence) {
 
   // When one ledger has been created in the repository, check that the Inspect
   // hierarchy is as expected with a node for that one ledger.
-  ledger::LedgerPtr first_ledger_ptr;
+  LedgerPtr first_ledger_ptr;
   ledger_repository_ptr->GetLedger(convert::ToArray(first_ledger_name),
                                    first_ledger_ptr.NewRequest());
   RunLoopUntilIdle();
@@ -390,7 +390,7 @@ TEST_F(LedgerRepositoryImplTest, InspectAPILedgerPresence) {
 
   // When two ledgers have been created in the repository, check that the
   // Inspect hierarchy is as expected with nodes for both ledgers.
-  ledger::LedgerPtr second_ledger_ptr;
+  LedgerPtr second_ledger_ptr;
   ledger_repository_ptr->GetLedger(convert::ToArray(second_ledger_name),
                                    second_ledger_ptr.NewRequest());
   RunLoopUntilIdle();
@@ -413,7 +413,7 @@ TEST_F(LedgerRepositoryImplTest, InspectAPIDisconnectedLedgerPresence) {
 
   // When one ledger has been created in the repository, check that the Inspect
   // hierarchy is as expected with a node for that one ledger.
-  ledger::LedgerPtr first_ledger_ptr;
+  LedgerPtr first_ledger_ptr;
   ledger_repository_ptr->GetLedger(convert::ToArray(first_ledger_name),
                                    first_ledger_ptr.NewRequest());
   RunLoopUntilIdle();
@@ -423,7 +423,7 @@ TEST_F(LedgerRepositoryImplTest, InspectAPIDisconnectedLedgerPresence) {
 
   // When two ledgers have been created in the repository, check that the
   // Inspect hierarchy is as expected with nodes for both ledgers.
-  ledger::LedgerPtr second_ledger_ptr;
+  LedgerPtr second_ledger_ptr;
   ledger_repository_ptr->GetLedger(convert::ToArray(second_ledger_name),
                                    second_ledger_ptr.NewRequest());
   RunLoopUntilIdle();
@@ -458,7 +458,7 @@ TEST_F(LedgerRepositoryImplTest, InspectAPIDisconnectedLedgerPresence) {
 TEST_F(LedgerRepositoryImplTest, Close) {
   ledger_internal::LedgerRepositoryPtr ledger_repository_ptr1;
   ledger_internal::LedgerRepositoryPtr ledger_repository_ptr2;
-  ledger::LedgerPtr ledger_ptr;
+  LedgerPtr ledger_ptr;
 
   repository_->BindRepository(ledger_repository_ptr1.NewRequest());
   repository_->BindRepository(ledger_repository_ptr2.NewRequest());
@@ -610,7 +610,7 @@ TEST_F(LedgerRepositoryImplTest, TrySyncClosedPageSyncStarted) {
 
   // Opens the Ledger and creates LedgerManager.
   std::string ledger_name = "ledger";
-  ledger::LedgerPtr first_ledger_ptr;
+  LedgerPtr first_ledger_ptr;
   ledger_repository_ptr->GetLedger(convert::ToArray(ledger_name), first_ledger_ptr.NewRequest());
 
   // Opens the page and starts the sync with the cloud for the first time.
@@ -639,7 +639,7 @@ TEST_F(LedgerRepositoryImplTest, TrySyncClosedPageWithOpenedPage) {
 
   // Opens the Ledger and creates LedgerManager.
   std::string ledger_name = "ledger";
-  ledger::LedgerPtr first_ledger_ptr;
+  LedgerPtr first_ledger_ptr;
   ledger_repository_ptr->GetLedger(convert::ToArray(ledger_name), first_ledger_ptr.NewRequest());
 
   // Opens the page and starts the sync with the cloud for the first time.
@@ -664,7 +664,7 @@ TEST_F(LedgerRepositoryImplTest, PageDeletionNewDeviceId) {
 
   // Opens the Ledger and creates LedgerManager.
   std::string ledger_name = "ledger";
-  ledger::LedgerPtr first_ledger_ptr;
+  LedgerPtr first_ledger_ptr;
   ledger_repository_ptr->GetLedger(convert::ToArray(ledger_name), first_ledger_ptr.NewRequest());
 
   // Opens the page, and get the clock device id.
@@ -717,7 +717,7 @@ TEST_F(LedgerRepositoryImplTest, PageDeletionNotDoneIfDeviceIdManagerFails) {
 
   // Opens the Ledger and creates LedgerManager.
   std::string ledger_name = "ledger";
-  ledger::LedgerPtr first_ledger_ptr;
+  LedgerPtr first_ledger_ptr;
   ledger_repository_ptr->GetLedger(convert::ToArray(ledger_name), first_ledger_ptr.NewRequest());
 
   // Opens the page, and get the clock device id.
@@ -762,7 +762,7 @@ TEST_F(LedgerRepositoryImplTest, PageDeletionReopensPageManagerIfClosed) {
 
   // Opens the Ledger and creates LedgerManager.
   std::string ledger_name = "ledger";
-  ledger::LedgerPtr first_ledger_ptr;
+  LedgerPtr first_ledger_ptr;
   ledger_repository_ptr->GetLedger(convert::ToArray(ledger_name), first_ledger_ptr.NewRequest());
 
   // Opens the page, and get the clock device id.

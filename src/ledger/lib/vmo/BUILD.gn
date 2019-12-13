@@ -21,7 +21,7 @@ source_set("vmo") {
   ]
 
   public_deps = [
-    "//src/lib/fxl",
+    "//src/ledger/lib/memory",
     "//third_party/abseil-cpp",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-mem",

@@ -15,8 +15,8 @@ source_set("coroutine") {
 
   public_deps = [
     "//src/ledger/lib/logging",
+    "//src/ledger/lib/memory",
     "//src/lib/callback",
-    "//src/lib/fxl",
     "//third_party/abseil-cpp",
   ]
 
@@ -41,7 +41,6 @@ source_set("unittests") {
     ":coroutine",
     "//src/ledger/lib/callback",
     "//src/ledger/lib/logging",
-    "//src/lib/fxl",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]

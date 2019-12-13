@@ -67,7 +67,7 @@ bool VmoFromString(const absl::string_view& string, SizedVmo* sized_vmo) {
 }
 
 bool VmoFromString(const absl::string_view& string, fuchsia::mem::Buffer* buffer_ptr) {
-  ledger::SizedVmo sized_vmo;
+  SizedVmo sized_vmo;
   if (!VmoFromContainer<absl::string_view>(string, &sized_vmo)) {
     return false;
   }
@@ -99,7 +99,7 @@ bool VmoFromVector(const std::vector<char>& vector, SizedVmo* sized_vmo) {
 }
 
 bool VmoFromVector(const std::vector<char>& vector, fuchsia::mem::Buffer* buffer_ptr) {
-  ledger::SizedVmo sized_vmo;
+  SizedVmo sized_vmo;
   if (!VmoFromContainer<std::vector<char>>(vector, &sized_vmo)) {
     return false;
   }
@@ -123,7 +123,7 @@ bool VmoFromVector(const std::vector<uint8_t>& vector, SizedVmo* sized_vmo) {
 }
 
 bool VmoFromVector(const std::vector<uint8_t>& vector, fuchsia::mem::Buffer* buffer_ptr) {
-  ledger::SizedVmo sized_vmo;
+  SizedVmo sized_vmo;
   if (!VmoFromContainer<std::vector<uint8_t>>(vector, &sized_vmo)) {
     return false;
   }

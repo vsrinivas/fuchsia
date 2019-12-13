@@ -16,8 +16,8 @@
 #include "src/ledger/bin/storage/public/page_sync_delegate.h"
 #include "src/ledger/lib/backoff/backoff.h"
 #include "src/ledger/lib/callback/managed_container.h"
+#include "src/ledger/lib/memory/weak_ptr.h"
 #include "src/lib/callback/scoped_task_runner.h"
-#include "src/lib/fxl/memory/ref_ptr.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace cloud_sync {
@@ -152,7 +152,7 @@ class PageDownload : public cloud_provider::PageCloudWatcher {
   fidl::Binding<cloud_provider::PageCloudWatcher> watcher_binding_;
 
   // Must be the last member.
-  fxl::WeakPtrFactory<PageDownload> weak_factory_;
+  ledger::WeakPtrFactory<PageDownload> weak_factory_;
 };
 
 }  // namespace cloud_sync

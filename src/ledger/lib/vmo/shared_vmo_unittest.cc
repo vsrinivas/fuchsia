@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "gtest/gtest.h"
+#include "src/ledger/lib/memory/ref_ptr.h"
 #include "src/ledger/lib/vmo/sized_vmo.h"
 #include "src/ledger/lib/vmo/strings.h"
 
@@ -19,7 +20,7 @@ TEST(SharedVmos, Unmappable) {
   ASSERT_TRUE(VmoFromString(content, &vmo));
   zx_handle_t vmo_handle = vmo.vmo().get();
 
-  auto shared_vmo = fxl::MakeRefCounted<SharedVmo>(std::move(vmo.vmo()));
+  auto shared_vmo = MakeRefCounted<SharedVmo>(std::move(vmo.vmo()));
   ASSERT_NE(nullptr, shared_vmo.get());
   EXPECT_EQ(vmo_handle, shared_vmo->vmo().get());
   EXPECT_LE(content.size(), shared_vmo->vmo_size());
@@ -33,7 +34,7 @@ TEST(SharedVmos, Mapped) {
   ASSERT_TRUE(VmoFromString(content, &vmo));
   zx_handle_t vmo_handle = vmo.vmo().get();
 
-  auto shared_vmo = fxl::MakeRefCounted<SharedVmo>(std::move(vmo.vmo()), ZX_VM_PERM_READ);
+  auto shared_vmo = MakeRefCounted<SharedVmo>(std::move(vmo.vmo()), ZX_VM_PERM_READ);
   ASSERT_NE(nullptr, shared_vmo.get());
   EXPECT_EQ(vmo_handle, shared_vmo->vmo().get());
   EXPECT_LE(content.size(), shared_vmo->vmo_size());
