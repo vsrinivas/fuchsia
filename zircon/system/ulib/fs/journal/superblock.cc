@@ -39,9 +39,14 @@ void JournalSuperblock::Update(uint64_t start, uint64_t sequence_number) {
 }
 
 uint32_t JournalSuperblock::new_checksum() const {
+#ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
+  // Aways return 0 when fuzzing
+  return 0;
+#else
   JournalInfo info = *reinterpret_cast<const JournalInfo*>(buffer_->Data(0));
   info.checksum = 0;
   return crc32(0, reinterpret_cast<const uint8_t*>(&info), sizeof(JournalInfo));
+#endif
 }
 
 }  // namespace fs

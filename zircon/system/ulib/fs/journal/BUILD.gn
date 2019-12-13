@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx_build/public/gn/fuzzer.gni")
+
 zx_library("journal") {
   host = true
   sources = [
@@ -54,6 +56,7 @@ zx_library("journal") {
 group("test") {
   testonly = true
   deps = [
+    ":journal-fuzzer",
     ":journal-unit",
   ]
 }
@@ -81,4 +84,26 @@ zx_test("journal-unit") {
   ]
 
   include_dirs = [ "." ]
+}
+
+source_set("fuzz-utils") {
+  sources = [
+    "test/fuzzer_utils.cc",
+  ]
+  public_deps = [
+    ":journal",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zx",
+    "$zx/third_party/ulib/cksum",
+  ]
+}
+
+fuzzer("journal-fuzzer") {
+  sources = [
+    "test/journal_fuzztest.cc",
+  ]
+  deps = [
+    ":fuzz-utils",
+  ]
+  include_dirs = [ "test" ]
 }

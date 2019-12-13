@@ -12,7 +12,8 @@ namespace storage {
 enum class OperationType {
   kRead,
   kWrite,
-  kTrim,  // Unimplemented.
+  kTrim,              // Unimplemented.
+  kMaxValue = kTrim,  // For FuzzedDataProvider
 };
 
 // A mapping of an in-memory buffer to an on-disk location.
