@@ -29,17 +29,13 @@ class PuppetMasterImpl : public fuchsia::modular::PuppetMaster {
 
   void Connect(fidl::InterfaceRequest<fuchsia::modular::PuppetMaster> request);
 
- private:
-  // |PuppetMaster|
+  // fuchsia::modular::PuppetMaster implementation.
   void ControlStory(std::string story_name,
                     fidl::InterfaceRequest<fuchsia::modular::StoryPuppetMaster> request) override;
-
-  // |PuppetMaster|
   void DeleteStory(std::string story_name, DeleteStoryCallback done) override;
-
-  // |PuppetMaster|
   void GetStories(GetStoriesCallback done) override;
 
+ private:
   SessionStorage* const session_storage_;  // Not owned.
   StoryCommandExecutor* const executor_;   // Not owned.
 

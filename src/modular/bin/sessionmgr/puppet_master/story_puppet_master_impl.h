@@ -27,6 +27,8 @@ class StoryPuppetMasterImpl : public fuchsia::modular::StoryPuppetMaster {
                         SessionStorage* session_storage, StoryCommandExecutor* executor);
   ~StoryPuppetMasterImpl() override;
 
+  const std::string& story_name() const { return story_name_; }
+
  private:
   // |StoryPuppetMaster|
   void Enqueue(std::vector<fuchsia::modular::StoryCommand> commands) override;
@@ -46,7 +48,7 @@ class StoryPuppetMasterImpl : public fuchsia::modular::StoryPuppetMaster {
   void AnnotateModule(std::string module_id, std::vector<fuchsia::modular::Annotation> annotations,
                       AnnotateModuleCallback callback) override;
 
-  std::string story_name_;
+  const std::string story_name_;
   SessionStorage* const session_storage_;  // Not owned.
   StoryCommandExecutor* const executor_;   // Not owned.
 

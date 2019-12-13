@@ -31,6 +31,17 @@ void PuppetMasterImpl::ControlStory(
 }
 
 void PuppetMasterImpl::DeleteStory(std::string story_name, DeleteStoryCallback done) {
+  // Remove StoryPuppetMasters to stop pending commands executing after delete.
+  std::vector<StoryPuppetMasterImpl*> to_remove;
+  for (auto& binding : story_puppet_masters_.bindings()) {
+    if (binding->impl()->story_name() == story_name)
+      to_remove.emplace_back(binding->impl().get());
+  }
+  for (auto* impl : to_remove) {
+    story_puppet_masters_.RemoveBinding(impl);
+  }
+
+  // Delete the Story storage.
   session_storage_->DeleteStory(story_name)->Then(std::move(done));
 }
 

@@ -65,6 +65,7 @@ protocol PuppetMaster {
     ControlStory(string story_name, request<StoryPuppetMaster> request);
 
     // Deletes a story associated to `story_name`.
+    // Any active StoryPuppetMaster connections to the Story will be closed.
     DeleteStory(string story_name) -> ();
 
     // Returns a list of all the names of stories in the session.

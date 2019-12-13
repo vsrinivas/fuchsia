@@ -326,9 +326,7 @@ TEST_F(PuppetMasterTest, SetStoryInfoExtraAfterDeleteStory) {
       ->Then([&](fidl::StringPtr id, fuchsia::ledger::PageId page_id) { done = true; });
   RunLoopUntil([&] { return done; });
 
-  auto story = ControlStory(story_name);
-
-  std::vector<fuchsia::modular::StoryInfoExtraEntry> extra_info{
+  const std::vector<fuchsia::modular::StoryInfoExtraEntry> kStoryExtraInfo{
       fuchsia::modular::StoryInfoExtraEntry{
           .key = "ignored_key",
           .value = "ignored_value",
@@ -336,9 +334,10 @@ TEST_F(PuppetMasterTest, SetStoryInfoExtraAfterDeleteStory) {
 
   // Try to SetStoryInfoExtra. It should not return an error even though the story has
   // already been created, since the method is a no-op.
+  auto story = ControlStory(story_name);
   done = false;
   story->SetStoryInfoExtra(
-      extra_info, [&](fuchsia::modular::StoryPuppetMaster_SetStoryInfoExtra_Result result) {
+      kStoryExtraInfo, [&](fuchsia::modular::StoryPuppetMaster_SetStoryInfoExtra_Result result) {
         EXPECT_FALSE(result.is_err());
         done = true;
       });
@@ -351,9 +350,10 @@ TEST_F(PuppetMasterTest, SetStoryInfoExtraAfterDeleteStory) {
 
   // Try to SetStoryInfoExtra again. It should succeed because story it applies
   // to has not been created yet.
+  story = ControlStory(story_name);
   done = false;
   story->SetStoryInfoExtra(
-      extra_info, [&](fuchsia::modular::StoryPuppetMaster_SetStoryInfoExtra_Result result) {
+      kStoryExtraInfo, [&](fuchsia::modular::StoryPuppetMaster_SetStoryInfoExtra_Result result) {
         EXPECT_FALSE(result.is_err());
         done = true;
       });
@@ -381,6 +381,37 @@ TEST_F(PuppetMasterTest, DeleteStory) {
       });
 
   RunLoopUntil([&] { return done; });
+}
+
+TEST_F(PuppetMasterTest, DeleteStoryWithQueuedCommands) {
+  const char* kStoryName = "DeleteWithQueuedCommandsStory";
+  const char* kModuleName = "DeleteWithQueuedCommandsModule";
+
+  // Call PuppetMaster directly to create & control a new Story.
+  fuchsia::modular::StoryPuppetMasterPtr story_puppet_master;
+  impl_->ControlStory(kStoryName, story_puppet_master.NewRequest());
+
+  // Push an AddMod command to the StoryPuppetMaster.
+  bool is_story_puppet_master_closed = false;
+  story_puppet_master.set_error_handler([&](zx_status_t status) {
+                                          EXPECT_EQ(status, ZX_ERR_PEER_CLOSED);
+                                          is_story_puppet_master_closed = true;
+                                        });
+  std::vector<fuchsia::modular::StoryCommand> commands;
+  commands.push_back(MakeAddModCommand(kModuleName));
+  story_puppet_master->Enqueue(std::move(commands));
+  story_puppet_master->Execute([](fuchsia::modular::ExecuteResult) {
+                                 // Execute() should never be processed
+                                 ADD_FAILURE();
+                               });
+
+  // Call PuppetMaster directly (i.e. without requiring the loop to be spun)
+  // to delete the Story before the commands can be executed.
+  impl_->DeleteStory(kStoryName, [](){});
+
+  // Spin the loop and expect that the StoryPuppetMaster be disconnected.
+  RunLoopUntilIdle();
+  EXPECT_TRUE(is_story_puppet_master_closed);
 }
 
 TEST_F(PuppetMasterTest, GetStories) {
