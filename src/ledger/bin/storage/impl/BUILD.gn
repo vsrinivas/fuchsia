@@ -76,8 +76,8 @@ source_set("object_identifier_lib") {
     ":object_identifier",
     "//src/ledger/bin/storage/public",
     "//src/ledger/bin/synchronization:dispatcher_checker",
+    "//src/ledger/bin/synchronization:thread_checker",
     "//src/ledger/lib/convert",
-    "//src/lib/fxl",
     "//third_party/abseil-cpp",
   ]
 

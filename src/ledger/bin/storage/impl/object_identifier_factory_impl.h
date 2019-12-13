@@ -12,8 +12,8 @@
 #include "src/ledger/bin/storage/public/object.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/synchronization/dispatcher_checker.h"
+#include "src/ledger/bin/synchronization/thread_checker.h"
 #include "src/ledger/lib/memory/weak_ptr.h"
-#include "src/lib/fxl/synchronization/thread_checker.h"
 #include "third_party/abseil-cpp/absl/base/attributes.h"
 
 namespace storage {
@@ -103,7 +103,7 @@ class ObjectIdentifierFactoryImpl : public ObjectIdentifierFactory {
   std::map<ObjectDigest, bool> deletion_aborted_;
 
   // To check for multithreaded accesses.
-  fxl::ThreadChecker thread_checker_;
+  ledger::ThreadChecker thread_checker_;
   ledger::DispatcherChecker dispatcher_checker_;
 
   // Must be the last member variable.

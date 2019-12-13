@@ -50,6 +50,18 @@ source_set("completer") {
   configs += [ "//src/ledger:ledger_config" ]
 }
 
+source_set("thread_checker") {
+  sources = [
+    "thread_checker.h",
+  ]
+
+  public_deps = [
+    "//src/ledger/lib/logging",
+  ]
+
+  configs += [ "//src/ledger:ledger_config" ]
+}
+
 source_set("unittests") {
   testonly = true
 
@@ -57,12 +69,14 @@ source_set("unittests") {
     "completer_unittest.cc",
     "dispatcher_checker_unittest.cc",
     "lock_unittest.cc",
+    "thread_checker_unittest.cc",
   ]
 
   deps = [
     ":completer",
     ":dispatcher_checker",
     ":lock",
+    ":thread_checker",
     "//src/ledger/bin/testing:lib",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async",
