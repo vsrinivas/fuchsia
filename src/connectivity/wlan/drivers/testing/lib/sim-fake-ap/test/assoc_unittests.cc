@@ -16,16 +16,20 @@ constexpr wlan_channel_t kDefaultChannel = {
 constexpr wlan_ssid_t kApSsid = {.len = 15, .ssid = "Fuchsia Fake AP"};
 const common::MacAddr kApBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
 const common::MacAddr kClientMacAddr({0x11, 0x22, 0x33, 0x44, 0xee, 0xff});
+const uint16_t kClientDisassocReason = 1;
+const uint16_t kApDisassocReason = 2;
 
 class AssocTest : public ::testing::Test, public simulation::StationIfc {
  public:
   AssocTest() : ap_(&env_, kApBssid, kApSsid, kDefaultChannel) { env_.AddStation(this); };
-
+  void DisassocFromAp(const common::MacAddr& sta, uint16_t reason);
   simulation::Environment env_;
   simulation::FakeAp ap_;
 
   unsigned assoc_resp_count_ = 0;
-  std::list<uint16_t> status_list_;
+  unsigned disassoc_req_count_ = 0;
+  std::list<uint16_t> assoc_status_list_;
+  std::list<uint16_t> disassoc_status_list_;
 
  private:
   // StationIfc methods
@@ -41,9 +45,7 @@ class AssocTest : public ::testing::Test, public simulation::StationIfc {
   void RxAssocResp(const wlan_channel_t& channel, const common::MacAddr& src,
                    const common::MacAddr& dst, uint16_t status) override;
   void RxDisassocReq(const wlan_channel_t& channel, const common::MacAddr& src,
-                   const common::MacAddr& dst, uint16_t reason) override {
-    GTEST_FAIL();
-  }
+                   const common::MacAddr& dst, uint16_t reason) override;
   void RxProbeReq(const wlan_channel_t& channel, const common::MacAddr& src) override {
     GTEST_FAIL();
   }
@@ -60,6 +62,10 @@ void validateChannel(const wlan_channel_t& channel) {
   EXPECT_EQ(channel.secondary80, kDefaultChannel.secondary80);
 }
 
+void AssocTest::DisassocFromAp(const common::MacAddr& sta, uint16_t reason) {
+  EXPECT_EQ(ap_.GetNumClients(), 1U);
+  ap_.DisassocSta(sta, reason);
+}
 void AssocTest::RxAssocResp(const wlan_channel_t& channel, const common::MacAddr& src,
                             const common::MacAddr& dst, uint16_t status) {
   validateChannel(channel);
@@ -67,7 +73,17 @@ void AssocTest::RxAssocResp(const wlan_channel_t& channel, const common::MacAddr
   EXPECT_EQ(dst, kClientMacAddr);
 
   assoc_resp_count_++;
-  status_list_.push_back(status);
+  assoc_status_list_.push_back(status);
+}
+
+void AssocTest::RxDisassocReq(const wlan_channel_t& channel, const common::MacAddr& src,
+                              const common::MacAddr& dst, uint16_t reason) {
+  validateChannel(channel);
+  EXPECT_EQ(src, kApBssid);
+  EXPECT_EQ(dst, kClientMacAddr);
+
+  disassoc_req_count_++;
+  disassoc_status_list_.push_back(reason);
 }
 
 void AssocTest::ReceiveNotification(void* payload) {
@@ -135,13 +151,13 @@ TEST_F(AssocTest, BasicUse) {
   env_.Run();
 
   EXPECT_EQ(assoc_resp_count_, 3U);
-  ASSERT_EQ(status_list_.size(), (size_t)3);
-  EXPECT_EQ(status_list_.front(), (uint16_t)WLAN_STATUS_CODE_SUCCESS);
-  status_list_.pop_front();
-  EXPECT_EQ(status_list_.front(), (uint16_t)WLAN_STATUS_CODE_REFUSED_TEMPORARILY);
-  status_list_.pop_front();
-  EXPECT_EQ(status_list_.front(), (uint16_t)WLAN_STATUS_CODE_REFUSED_TEMPORARILY);
-  status_list_.pop_front();
+  ASSERT_EQ(assoc_status_list_.size(), (size_t)3);
+  EXPECT_EQ(assoc_status_list_.front(), (uint16_t)WLAN_STATUS_CODE_SUCCESS);
+  assoc_status_list_.pop_front();
+  EXPECT_EQ(assoc_status_list_.front(), (uint16_t)WLAN_STATUS_CODE_REFUSED_TEMPORARILY);
+  assoc_status_list_.pop_front();
+  EXPECT_EQ(assoc_status_list_.front(), (uint16_t)WLAN_STATUS_CODE_REFUSED_TEMPORARILY);
+  assoc_status_list_.pop_front();
 }
 
 /* Verify that association requests are ignored when the association handling state is set to
@@ -183,9 +199,71 @@ TEST_F(AssocTest, RejectAssociations) {
   env_.Run();
 
   EXPECT_EQ(assoc_resp_count_, 1U);
-  ASSERT_EQ(status_list_.size(), (size_t)1);
-  EXPECT_EQ(status_list_.front(), (uint16_t)WLAN_STATUS_CODE_REFUSED);
-  status_list_.pop_front();
+  ASSERT_EQ(assoc_status_list_.size(), (size_t)1);
+  EXPECT_EQ(assoc_status_list_.front(), (uint16_t)WLAN_STATUS_CODE_REFUSED);
+  assoc_status_list_.pop_front();
 }
 
+/* Verify that Disassociation from previously associated STA is handled
+   correctly.
+
+   Timeline for this test:
+   1s: send assoc request
+   2s: send disassoc request
+ */
+TEST_F(AssocTest, DisassocFromSta) {
+  // Schedule assoc req
+  auto handler = new std::function<void()>;
+  *handler = std::bind(&simulation::Environment::TxAssocReq, &env_, this, kDefaultChannel,
+                       kClientMacAddr, kApBssid);
+  env_.ScheduleNotification(this, zx::sec(1), static_cast<void*>(handler));
+
+  // Schedule Disassoc request from STA
+  handler = new std::function<void()>;
+  *handler = std::bind(&simulation::Environment::TxDisassocReq, &env_, this, kDefaultChannel,
+                       kClientMacAddr, kApBssid, kClientDisassocReason);
+  env_.ScheduleNotification(this, zx::sec(2), static_cast<void*>(handler));
+
+  env_.Run();
+
+  // Verify that one assoc resp was seen and after disassoc the number of
+  // clients should be 0.
+  EXPECT_EQ(assoc_resp_count_, 1U);
+  ASSERT_EQ(assoc_status_list_.size(), (size_t)1);
+  EXPECT_EQ(assoc_status_list_.front(), (uint16_t)WLAN_STATUS_CODE_SUCCESS);
+  EXPECT_EQ(ap_.GetNumClients(), 0U);
+  assoc_status_list_.pop_front();
+}
+
+/* Verify that Disassociation from the FakeAP is handled correctly.
+
+   Timeline for this test:
+   1s: send assoc request
+   2s: send disassoc request from AP
+ */
+TEST_F(AssocTest, DisassocFromAp) {
+  // Schedule assoc req
+  auto handler = new std::function<void()>;
+  *handler = std::bind(&simulation::Environment::TxAssocReq, &env_, this, kDefaultChannel,
+                       kClientMacAddr, kApBssid);
+  env_.ScheduleNotification(this, zx::sec(1), static_cast<void*>(handler));
+
+  // Schedule Disassoc request from AP
+  handler = new std::function<void()>;
+  *handler = std::bind(&AssocTest::DisassocFromAp, this, kClientMacAddr, kApDisassocReason);
+  env_.ScheduleNotification(this, zx::sec(2), static_cast<void*>(handler));
+
+  env_.Run();
+
+  // Verify that one assoc resp was seen and after disassoc the number of
+  // clients should be 0.
+  EXPECT_EQ(assoc_resp_count_, 1U);
+  ASSERT_EQ(assoc_status_list_.size(), (size_t)1);
+  EXPECT_EQ(assoc_status_list_.front(), (uint16_t)WLAN_STATUS_CODE_SUCCESS);
+  EXPECT_EQ(ap_.GetNumClients(), 0U);
+  EXPECT_EQ(disassoc_req_count_, 1U);
+  EXPECT_EQ(disassoc_status_list_.front(), kApDisassocReason);
+  assoc_status_list_.pop_front();
+  disassoc_status_list_.pop_front();
+}
 }  // namespace wlan::testing

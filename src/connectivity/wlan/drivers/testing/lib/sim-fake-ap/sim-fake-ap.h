@@ -27,7 +27,7 @@ namespace wlan::simulation {
 class FakeAp : public StationIfc {
  public:
   // How to handle an association request
-  enum AssocHandling {ASSOC_ALLOWED, ASSOC_IGNORED, ASSOC_REJECTED};
+  enum AssocHandling { ASSOC_ALLOWED, ASSOC_IGNORED, ASSOC_REJECTED };
 
   struct Security {
     enum ieee80211_cipher_suite cipher_suite;
@@ -56,6 +56,7 @@ class FakeAp : public StationIfc {
   wlan_channel_t GetChannel() { return chan_; }
   common::MacAddr GetBssid() { return bssid_; }
   wlan_ssid_t GetSsid() { return ssid_; }
+  uint32_t GetNumClients() { return clients_.size(); }
 
   // Will we receive a message sent on the specified channel?
   bool CanReceiveChannel(const wlan_channel_t& channel);
@@ -73,6 +74,9 @@ class FakeAp : public StationIfc {
   // Specify how to handle association requests
   void SetAssocHandling(enum AssocHandling mode);
 
+  // Disassociate a Station
+  zx_status_t DisassocSta(const common::MacAddr& sta_mac, uint16_t reason);
+
   // StationIfc operations - these are the functions that allow the simulated AP to be used
   // inside of a sim-env environment.
   void Rx(void* pkt) override {}
@@ -83,7 +87,7 @@ class FakeAp : public StationIfc {
   void RxAssocResp(const wlan_channel_t& channel, const common::MacAddr& src,
                    const common::MacAddr& dst, uint16_t status) override {}
   void RxDisassocReq(const wlan_channel_t& channel, const common::MacAddr& src,
-                   const common::MacAddr& dst, uint16_t reason) override {}
+                   const common::MacAddr& dst, uint16_t reason) override;
   void RxProbeReq(const wlan_channel_t& channel, const common::MacAddr& src) override;
   void RxProbeResp(const wlan_channel_t& channel, const common::MacAddr& src,
                    const common::MacAddr& dst, const wlan_ssid_t& ssid) override {}
@@ -121,6 +125,8 @@ class FakeAp : public StationIfc {
 
   // Delay between an association request and an association response
   zx::duration assoc_resp_interval_ = zx::msec(1);
+  // Delay between an Disassociation request and an Disassociation response
+  zx::duration disassoc_resp_interval_ = zx::msec(1);
   // Delay between an probe request and an probe response
   zx::duration probe_resp_interval_ = zx::msec(1);
 

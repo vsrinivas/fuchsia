@@ -33,11 +33,15 @@ using RxProbeRespHandler = std::function<void(
 using RxAssocResponseHandler =
     std::function<void(const common::MacAddr& src, const common::MacAddr& dst, uint16_t status)>;
 
+using RxDisassocReqHandler =
+    std::function<void(const common::MacAddr& src, const common::MacAddr& dst, uint16_t reason)>;
+
 class SimHardware : simulation::StationIfc {
  public:
   struct EventHandlers {
     RxBeaconHandler rx_beacon_handler;
     RxAssocResponseHandler rx_assoc_resp_handler;
+    RxDisassocReqHandler rx_disassoc_req_handler;
     RxProbeRespHandler rx_probe_resp_handler;
   };
 
@@ -66,7 +70,7 @@ class SimHardware : simulation::StationIfc {
   void RxAssocResp(const wlan_channel_t& channel, const common::MacAddr& src,
                    const common::MacAddr& dst, uint16_t status) override;
   void RxDisassocReq(const wlan_channel_t& channel, const common::MacAddr& src,
-                   const common::MacAddr& dst, uint16_t reason) override {}
+                   const common::MacAddr& dst, uint16_t reason) override;
   void RxProbeReq(const wlan_channel_t& channel, const common::MacAddr& src) override {}  // no-op
   void RxProbeResp(const wlan_channel_t& channel, const common::MacAddr& src,
                    const common::MacAddr& dst, const wlan_ssid_t& ssid) override;
@@ -74,6 +78,7 @@ class SimHardware : simulation::StationIfc {
 
   // Operations that are forwarded to the environment
   void TxAssocReq(const common::MacAddr& src, const common::MacAddr& bssid);
+  void TxDisassocReq(const common::MacAddr& src, const common::MacAddr& bssid, uint16_t reason);
   void TxProbeRequest(common::MacAddr& scan_mac);
 
  private:

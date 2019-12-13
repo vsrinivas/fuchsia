@@ -46,6 +46,13 @@ void SimHardware::RxAssocResp(const wlan_channel_t& channel, const common::MacAd
   }
 }
 
+void SimHardware::RxDisassocReq(const wlan_channel_t& channel, const common::MacAddr& src,
+                                const common::MacAddr& dst, uint16_t reason) {
+  if (rx_enabled_ && ChannelsMatch(channel, channel_)) {
+    event_handlers_.rx_disassoc_req_handler(src, dst, reason);
+  }
+}
+
 void SimHardware::RxProbeResp(const wlan_channel_t& channel, const common::MacAddr& src,
                               const common::MacAddr& dst, const wlan_ssid_t& ssid) {
   // Pass information from probe response to firmware if they are on the channel we are tuned to.
@@ -93,6 +100,11 @@ void SimHardware::CancelCallback(uint64_t id) { env_->CancelNotification(this, i
 
 void SimHardware::TxAssocReq(const common::MacAddr& src, const common::MacAddr& bssid) {
   env_->TxAssocReq(this, channel_, src, bssid);
+}
+
+void SimHardware::TxDisassocReq(const common::MacAddr& src, const common::MacAddr& bssid,
+                                uint16_t reason) {
+  env_->TxDisassocReq(this, channel_, src, bssid, reason);
 }
 
 void SimHardware::TxProbeRequest(common::MacAddr& scan_mac) {

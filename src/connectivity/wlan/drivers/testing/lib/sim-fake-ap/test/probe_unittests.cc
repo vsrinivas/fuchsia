@@ -56,7 +56,7 @@ class ProbeTest : public ::testing::Test, public simulation::StationIfc {
     GTEST_FAIL();
   }
   void RxDisassocReq(const wlan_channel_t& channel, const common::MacAddr& src,
-                   const common::MacAddr& dst, uint16_t reason) override {
+                     const common::MacAddr& bssid, uint16_t reason) override {
     GTEST_FAIL();
   }
   void RxProbeReq(const wlan_channel_t& channel, const common::MacAddr& src) override {

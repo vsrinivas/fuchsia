@@ -91,6 +91,42 @@ void FakeAp::RxAssocReq(const wlan_channel_t& channel, const common::MacAddr& sr
   ScheduleAssocResp(WLAN_STATUS_CODE_SUCCESS, src);
 }
 
+void FakeAp::RxDisassocReq(const wlan_channel_t& channel, const common::MacAddr& src,
+                           const common::MacAddr& bssid, const uint16_t reason) {
+  // Make sure we heard the message
+  if (!CanReceiveChannel(channel)) {
+    return;
+  }
+
+  // Ignore requests that are not for us
+  if (bssid != bssid_) {
+    return;
+  }
+
+  // Make sure the client is already associated
+  for (auto client : clients_) {
+    if (client == src) {
+      // Client is already associated
+      clients_.remove(src);
+      return;
+    }
+  }
+}
+
+zx_status_t FakeAp::DisassocSta(const common::MacAddr& sta_mac, uint16_t reason) {
+  // Make sure the client is already associated
+  for (auto client : clients_) {
+    if (client == sta_mac) {
+      // Client is already associated
+      environment_->TxDisassocReq(this, chan_, bssid_, sta_mac, reason);
+      clients_.remove(sta_mac);
+      return ZX_OK;
+    }
+  }
+  // client not found
+  return ZX_ERR_INVALID_ARGS;
+}
+
 void FakeAp::RxProbeReq(const wlan_channel_t& channel, const common::MacAddr& src) {
   // Make sure we heard the message
   if (!CanReceiveChannel(channel)) {
@@ -120,8 +156,6 @@ void FakeAp::ReceiveNotification(void* payload) {
   delete handler;
 }
 
-void FakeAp::SetAssocHandling(enum AssocHandling mode) {
-  assoc_handling_mode_ = mode;
-}
+void FakeAp::SetAssocHandling(enum AssocHandling mode) { assoc_handling_mode_ = mode; }
 
 }  // namespace wlan::simulation
