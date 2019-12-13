@@ -51,6 +51,7 @@ void Session::Enqueue(std::vector<fuchsia::ui::scenic::Command> cmds) {
   // calling into us during destruction.
   if (!valid_)
     return;
+  TRACE_DURATION("gfx", "scenic_impl::Session::Enqueue", "session_id", id(), "num_commands", cmds.size());
   for (auto& cmd : cmds) {
     // TODO(SCN-710): This dispatch is far from optimal in terms of performance.
     // We need to benchmark it to figure out whether it matters.
@@ -114,6 +115,7 @@ void Session::Present2(fuchsia::ui::scenic::Present2Args args, Present2Callback 
 
 void Session::RequestPresentationTimes(zx_duration_t requested_prediction_span,
                                        RequestPresentationTimesCallback callback) {
+  TRACE_DURATION("gfx", "scenic_impl::Session::RequestPresentationTimes");
   InvokeFuturePresentationTimesCallback(requested_prediction_span, std::move(callback));
 }
 
@@ -141,6 +143,8 @@ void Session::SetDebugName(std::string debug_name) {
   // calling into us during destruction.
   if (!valid_)
     return;
+
+  TRACE_DURATION("gfx", "scenic_impl::Session::SetDebugName");
   GetTempSessionDelegate()->SetDebugName(debug_name);
 }
 
@@ -153,6 +157,7 @@ void Session::EventAndErrorReporter::Reset() { session_ = nullptr; }
 
 void Session::EventAndErrorReporter::PostFlushTask() {
   FXL_DCHECK(session_);
+  TRACE_DURATION("gfx", "scenic_impl::Session::EventAndErrorReporter::PostFlushTask");
 
   // If this is the first EnqueueEvent() since the last FlushEvent(), post a
   // task to ensure that FlushEvents() is called.
@@ -165,6 +170,8 @@ void Session::EventAndErrorReporter::PostFlushTask() {
 void Session::EventAndErrorReporter::EnqueueEvent(fuchsia::ui::gfx::Event event) {
   if (!session_)
     return;
+
+  TRACE_DURATION("gfx", "scenic_impl::Session::EventAndErrorReporter::EnqueueEvent", "event_type", "gfx::Event");
   PostFlushTask();
 
   fuchsia::ui::scenic::Event scenic_event;
@@ -175,6 +182,8 @@ void Session::EventAndErrorReporter::EnqueueEvent(fuchsia::ui::gfx::Event event)
 void Session::EventAndErrorReporter::EnqueueEvent(fuchsia::ui::scenic::Command unhandled_command) {
   if (!session_)
     return;
+
+  TRACE_DURATION("gfx", "scenic_impl::Session::EventAndErrorReporter::EnqueueEvent", "event_type", "UnhandledCommand");
   PostFlushTask();
 
   fuchsia::ui::scenic::Event scenic_event;
@@ -186,6 +195,7 @@ void Session::EventAndErrorReporter::EnqueueEvent(fuchsia::ui::input::InputEvent
   if (!session_)
     return;
 
+  TRACE_DURATION("gfx", "scenic_impl::Session::EventAndErrorReporter::EnqueueEvent", "event_type", "input::InputEvent");
   // Force an immediate flush, preserving event order.
   fuchsia::ui::scenic::Event scenic_event;
   scenic_event.set_input(std::move(event));
@@ -198,6 +208,7 @@ void Session::EventAndErrorReporter::FlushEvents() {
   if (!session_)
     return;
 
+  TRACE_DURATION("gfx", "scenic_impl::Session::EventAndErrorReporter::FlushEvents");
   if (!buffered_events_.empty()) {
     if (session_->listener_) {
       session_->listener_->OnScenicEvent(std::move(buffered_events_));
@@ -220,6 +231,8 @@ void Session::EventAndErrorReporter::ReportError(fxl::LogSeverity severity,
     FXL_LOG(ERROR) << "Reporting Scenic Session error after session destroyed: " << error_string;
     return;
   }
+
+  TRACE_DURATION("gfx", "scenic_impl::Session::EventAndErrorReporter::ReportError");
 
   switch (severity) {
     case fxl::LOG_INFO:

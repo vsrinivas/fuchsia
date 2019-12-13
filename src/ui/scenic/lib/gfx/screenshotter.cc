@@ -146,6 +146,7 @@ void Screenshotter::OnCommandBufferDone(
 
 void Screenshotter::TakeScreenshot(
     Engine* engine, fuchsia::ui::scenic::Scenic::TakeScreenshotCallback done_callback) {
+  TRACE_DURATION("gfx", "Screenshotter::TakeScreenshot");
   auto* escher = engine->escher();
   const CompositorWeakPtr& compositor = engine->scene_graph()->first_compositor();
 

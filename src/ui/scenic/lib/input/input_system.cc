@@ -503,6 +503,8 @@ void InputCommandDispatcher::DispatchTouchCommand(const SendPointerInputCmd& com
 //    hit test; our dispatch needs to account for such behavior.
 // TODO(SCN-1078): Enhance trackpad support.
 void InputCommandDispatcher::DispatchMouseCommand(const SendPointerInputCmd& command) {
+  TRACE_DURATION("input", "dispatch_command", "command", "MouseCmd");
+
   const uint32_t device_id = command.pointer_event.device_id;
   const Phase pointer_phase = command.pointer_event.phase;
   const escher::vec2 pointer = PointerCoords(command.pointer_event);
@@ -584,6 +586,7 @@ void InputCommandDispatcher::DispatchMouseCommand(const SendPointerInputCmd& com
 }
 
 void InputCommandDispatcher::DispatchCommand(const SendKeyboardInputCmd& command) {
+  TRACE_DURATION("input", "dispatch_command", "command", "SendKeyboardInputCmd");
   // Expected (but soon to be deprecated) event flow.
   ReportToImeService(input_system_->ime_service(), command.keyboard_event);
 
@@ -630,6 +633,7 @@ void InputCommandDispatcher::DispatchCommand(const SetHardKeyboardDeliveryCmd& c
 }
 
 void InputCommandDispatcher::DispatchCommand(const SetParallelDispatchCmd& command) {
+  TRACE_DURATION("input", "dispatch_command", "command", "SetParallelDispatchCmd");
   FXL_LOG(INFO) << "Scenic: Parallel dispatch is turned "
                 << (command.parallel_dispatch ? "ON" : "OFF");
   parallel_dispatch_ = command.parallel_dispatch;
@@ -660,6 +664,7 @@ void InputCommandDispatcher::ReportKeyboardEvent(EventReporter* reporter, Keyboa
 
 void InputCommandDispatcher::ReportToImeService(const ImeServicePtr& ime_service,
                                                 KeyboardEvent keyboard) {
+  TRACE_DURATION("input", "dispatch_event_to_client", "event_type", "ime_keyboard_event");
   if (ime_service && ime_service.is_bound()) {
     InputEvent event;
     event.set_keyboard(std::move(keyboard));
