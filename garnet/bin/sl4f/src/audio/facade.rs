@@ -30,6 +30,9 @@ const AUDIO_SAMPLE_FORMAT_32BIT_FLOAT: u32 = (1 << 9);
 
 const ASF_RANGE_FLAG_FPS_CONTINUOUS: u16 = (1 << 0);
 
+// If this changes, so too must the astro audio_core_config.
+const AUDIO_OUTPUT_ID: [u8; 16] = [0x01; 16];
+
 fn get_sample_size(format: u32) -> Result<usize, Error> {
     Ok(match format {
         // These are the currently implemented formats.
@@ -318,6 +321,7 @@ impl VirtualOutput {
         va_output.clear_format_ranges()?;
         va_output.set_fifo_depth(0)?;
         va_output.set_external_delay(0)?;
+        va_output.set_unique_id(&mut AUDIO_OUTPUT_ID.clone())?;
 
         let sample_format = get_zircon_sample_format(self.sample_format);
         va_output.add_format_range(
@@ -344,7 +348,7 @@ impl VirtualOutput {
                 worker.run(rx, va_output).await?;
                 Ok::<(), Error>(())
             }
-                .unwrap_or_else(|e| eprintln!("Output extraction thread failed: {:?}", e)),
+            .unwrap_or_else(|e| eprintln!("Output extraction thread failed: {:?}", e)),
         );
 
         self.output_sender = Some(tx);
@@ -725,7 +729,7 @@ impl VirtualInput {
                 worker.run(rx, va_input, active).await?;
                 Ok::<(), Error>(())
             }
-                .unwrap_or_else(|e| eprintln!("Input injection thread failed: {:?}", e)),
+            .unwrap_or_else(|e| eprintln!("Input injection thread failed: {:?}", e)),
         );
 
         self.input_sender = Some(tx);
