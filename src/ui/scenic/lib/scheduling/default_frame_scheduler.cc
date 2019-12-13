@@ -18,7 +18,7 @@
 
 namespace scheduling {
 
-DefaultFrameScheduler::DefaultFrameScheduler(std::shared_ptr<const VsyncTiming> vsync_timing,
+DefaultFrameScheduler::DefaultFrameScheduler(std::shared_ptr<VsyncTiming> vsync_timing,
                                              std::unique_ptr<FramePredictor> predictor,
                                              inspect_deprecated::Node inspect_node,
                                              std::unique_ptr<cobalt::CobaltLogger> cobalt_logger)
@@ -78,8 +78,8 @@ void DefaultFrameScheduler::SetRenderContinuously(bool render_continuously) {
 
 std::pair<zx::time, zx::time> DefaultFrameScheduler::ComputePresentationAndWakeupTimesForTargetTime(
     const zx::time requested_presentation_time) const {
-  const zx::time last_vsync_time = vsync_timing_->last_vsync_time();
-  const zx::duration vsync_interval = vsync_timing_->vsync_interval();
+  const zx::time last_vsync_time = vsync_timing_->GetLastVsyncTime();
+  const zx::duration vsync_interval = vsync_timing_->GetVsyncInterval();
   const zx::time now = zx::time(async_now(dispatcher_));
 
   PredictedTimes times =
@@ -185,22 +185,22 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
   update_manager_.RatchetPresentCallbacks(presentation_time, frame_number_);
 
   // Create a FrameTimings instance for this frame to track the render and presentation times.
-  auto timings_rendered_callback = [weak =
-                                        weak_factory_.GetWeakPtr()](const FrameTimings& timings) {
-    if (weak) {
-      weak->OnFrameRendered(timings);
-    } else {
-      FXL_LOG(ERROR) << "Error, cannot record render time: FrameScheduler does not exist";
-    }
-  };
-  auto timings_presented_callback = [weak =
-                                         weak_factory_.GetWeakPtr()](const FrameTimings& timings) {
-    if (weak) {
-      weak->OnFramePresented(timings);
-    } else {
-      FXL_LOG(ERROR) << "Error, cannot record presentation time: FrameScheduler does not exist";
-    }
-  };
+  auto timings_rendered_callback =
+      [weak = weak_factory_.GetWeakPtr()](const FrameTimings& timings) {
+        if (weak) {
+          weak->OnFrameRendered(timings);
+        } else {
+          FXL_LOG(ERROR) << "Error, cannot record render time: FrameScheduler does not exist";
+        }
+      };
+  auto timings_presented_callback =
+      [weak = weak_factory_.GetWeakPtr()](const FrameTimings& timings) {
+        if (weak) {
+          weak->OnFramePresented(timings);
+        } else {
+          FXL_LOG(ERROR) << "Error, cannot record presentation time: FrameScheduler does not exist";
+        }
+      };
   auto frame_timings = std::make_unique<FrameTimings>(
       frame_number_, presentation_time, wakeup_time_, frame_render_start_time,
       std::move(timings_rendered_callback), std::move(timings_presented_callback));
@@ -265,10 +265,10 @@ void DefaultFrameScheduler::GetFuturePresentationInfos(
 
   PredictionRequest request;
   request.now = zx::time(async_now(dispatcher_));
-  request.last_vsync_time = vsync_timing_->last_vsync_time();
+  request.last_vsync_time = vsync_timing_->GetLastVsyncTime();
 
   // We assume this value is constant, at least for the near future.
-  request.vsync_interval = vsync_timing_->vsync_interval();
+  request.vsync_interval = vsync_timing_->GetVsyncInterval();
 
   constexpr static const uint64_t kMaxPredictionCount = 8;
   uint64_t count = 0;
@@ -328,7 +328,7 @@ DefaultFrameScheduler::UpdateManager::ApplyUpdatesResult DefaultFrameScheduler::
   }
 
   return update_manager_.ApplyUpdates(target_presentation_time, latched_time,
-                                      vsync_timing_->vsync_interval(), frame_number_);
+                                      vsync_timing_->GetVsyncInterval(), frame_number_);
 }
 
 void DefaultFrameScheduler::OnFramePresented(const FrameTimings& timings) {
@@ -345,7 +345,7 @@ void DefaultFrameScheduler::OnFramePresented(const FrameTimings& timings) {
 
   FXL_DCHECK(timings.finalized());
   const FrameTimings::Timestamps timestamps = timings.GetTimestamps();
-  stats_.RecordFrame(timestamps, vsync_timing_->vsync_interval());
+  stats_.RecordFrame(timestamps, vsync_timing_->GetVsyncInterval());
 
   if (timings.FrameWasDropped()) {
     TRACE_INSTANT("gfx", "FrameDropped", TRACE_SCOPE_PROCESS, "frame_number",
@@ -369,7 +369,7 @@ void DefaultFrameScheduler::OnFramePresented(const FrameTimings& timings) {
 
     auto presentation_info = fuchsia::images::PresentationInfo();
     presentation_info.presentation_time = timestamps.actual_presentation_time.get();
-    presentation_info.presentation_interval = vsync_timing_->vsync_interval().get();
+    presentation_info.presentation_interval = vsync_timing_->GetVsyncInterval().get();
 
     update_manager_.SignalPresentCallbacks(presentation_info);
   }
@@ -417,7 +417,7 @@ DefaultFrameScheduler::UpdateManager::ApplyUpdates(zx::time target_presentation_
   std::for_each(
       session_updaters_.begin(), session_updaters_.end(),
       [this, &sessions_to_update, &update_results, target_presentation_time, latched_time,
-       frame_number](fxl::WeakPtr<SessionUpdater> updater) {
+          frame_number](fxl::WeakPtr<SessionUpdater> updater) {
         auto session_results = updater->UpdateSessions(sessions_to_update, target_presentation_time,
                                                        latched_time, frame_number);
 

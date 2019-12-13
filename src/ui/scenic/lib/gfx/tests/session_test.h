@@ -8,6 +8,7 @@
 #include <lib/fit/function.h>
 
 #include "lib/gtest/test_loop_fixture.h"
+#include "src/ui/scenic/lib/display/display_manager.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/sysmem.h"
 #include "src/ui/scenic/lib/gfx/tests/error_reporting_test.h"
@@ -15,7 +16,6 @@
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
 #include "src/ui/scenic/lib/scenic/tests/scenic_test.h"
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
-#include "src/ui/scenic/lib/scheduling/vsync_timing.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -55,6 +55,7 @@ class SessionTest : public ErrorReportingTest {
  private:
   SessionContext session_context_;
 
+  std::shared_ptr<display::Display> display_;
   std::shared_ptr<scheduling::FrameScheduler> frame_scheduler_;
   std::unique_ptr<Session> session_;
 };

@@ -11,6 +11,7 @@
 
 #include "lib/gtest/test_loop_fixture.h"
 #include "lib/sys/cpp/component_context.h"
+#include "src/ui/scenic/lib/display/display_manager.h"
 #include "src/ui/scenic/lib/gfx/engine/engine.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/sysmem.h"
@@ -18,7 +19,6 @@
 #include "src/ui/scenic/lib/gfx/tests/mocks/mocks.h"
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
-#include "src/ui/scenic/lib/scheduling/vsync_timing.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -36,6 +36,7 @@ class SessionHandlerTest : public ErrorReportingTest, public scheduling::Session
   void TearDown() override;
 
   void InitializeScenic();
+  void InitializeDisplayManager();
   void InitializeEngine();
   void InitializeSessionHandler();
   void InitializeScenicSession(SessionId session_id);
@@ -66,7 +67,7 @@ class SessionHandlerTest : public ErrorReportingTest, public scheduling::Session
   std::unique_ptr<Engine> engine_;
   std::shared_ptr<scheduling::FrameScheduler> frame_scheduler_;
   std::unique_ptr<Sysmem> sysmem_;
-  std::shared_ptr<const scheduling::VsyncTiming> vsync_timing_;
+  std::unique_ptr<display::DisplayManager> display_manager_;
   std::unique_ptr<scenic_impl::Session> scenic_session_;
   CommandDispatcherUniquePtr command_dispatcher_;
   std::unique_ptr<SessionManager> session_manager_;

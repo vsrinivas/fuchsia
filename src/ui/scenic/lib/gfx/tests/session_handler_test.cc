@@ -19,6 +19,7 @@ void SessionHandlerTest::SetUp() {
   ErrorReportingTest::SetUp();
 
   InitializeScenic();
+  InitializeDisplayManager();
   InitializeEngine();
 
   InitializeSessionHandler();
@@ -31,6 +32,7 @@ void SessionHandlerTest::TearDown() {
   engine_.reset();
   frame_scheduler_.reset();
   command_buffer_sequencer_.reset();
+  display_manager_.reset();
   scenic_.reset();
   session_manager_.reset();
 
@@ -54,6 +56,12 @@ void SessionHandlerTest::InitializeSessionHandler() {
       CommandDispatcherContext(scenic_.get(), scenic_session_.get()), std::move(session_context));
 }
 
+void SessionHandlerTest::InitializeDisplayManager() {
+  display_manager_ = std::make_unique<display::DisplayManager>();
+  display_manager_->SetDefaultDisplayForTests(std::make_unique<display::Display>(
+      /*id*/ 0, /*px-width*/ 0, /*px-height*/ 0));
+}
+
 void SessionHandlerTest::InitializeEngine() {
   command_buffer_sequencer_ = std::make_unique<escher::impl::CommandBufferSequencer>();
 
@@ -61,7 +69,7 @@ void SessionHandlerTest::InitializeEngine() {
       std::make_unique<ReleaseFenceSignallerForTest>(command_buffer_sequencer_.get());
 
   frame_scheduler_ = std::make_shared<scheduling::DefaultFrameScheduler>(
-      std::make_shared<scheduling::VsyncTiming>(),
+      display_manager_->default_display_shared(),
       std::make_unique<scheduling::ConstantFramePredictor>(/* static_vsync_offset */ zx::msec(5)));
   engine_ = std::make_unique<Engine>(app_context_.context(), frame_scheduler_,
                                      std::move(mock_release_fence_signaller), GetEscherWeakPtr());
