@@ -30,7 +30,13 @@ namespace {
 class SystemRamMemoryAllocator : public MemoryAllocator {
  public:
   zx_status_t Allocate(uint64_t size, zx::vmo* parent_vmo) override {
-    return zx::vmo::create(size, 0, parent_vmo);
+    zx_status_t status = zx::vmo::create(size, 0, parent_vmo);
+    if (status != ZX_OK) {
+      return status;
+    }
+    constexpr const char vmo_name[] = "Sysmem-core";
+    parent_vmo->set_property(ZX_PROP_NAME, vmo_name, sizeof(vmo_name));
+    return status;
   }
   zx_status_t SetupChildVmo(const zx::vmo& parent_vmo, const zx::vmo& child_vmo) override {
     // nothing to do here
@@ -75,6 +81,8 @@ class ContiguousSystemRamMemoryAllocator : public MemoryAllocator {
       status = ZX_ERR_NO_MEMORY;
       return status;
     }
+    constexpr const char vmo_name[] = "Sysmem-contig-core";
+    result_parent_vmo.set_property(ZX_PROP_NAME, vmo_name, sizeof(vmo_name));
     *parent_vmo = std::move(result_parent_vmo);
     return ZX_OK;
   }
@@ -109,6 +117,8 @@ class ExternalMemoryAllocator : public MemoryAllocator {
       return status;
     }
 
+    constexpr const char vmo_name[] = "Sysmem-external-heap";
+    result_vmo.set_property(ZX_PROP_NAME, vmo_name, sizeof(vmo_name));
     *parent_vmo = std::move(result_vmo);
     return ZX_OK;
   }
