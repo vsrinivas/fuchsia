@@ -21,12 +21,11 @@
 #include "src/ledger/bin/fidl/syncable.h"
 #include "src/ledger/bin/fidl_helpers/bound_interface_set.h"
 #include "src/ledger/bin/inspect/inspect.h"
-#include "src/ledger/bin/p2p_provider/impl/p2p_provider_impl.h"
+#include "src/ledger/bin/p2p_provider/fake/fake_p2p_provider_factory.h"
+#include "src/ledger/bin/p2p_provider/public/p2p_provider_factory.h"
 #include "src/ledger/bin/p2p_sync/impl/user_communicator_impl.h"
-#include "src/ledger/bin/p2p_sync/public/user_communicator_factory.h"
 #include "src/ledger/bin/testing/ledger_app_instance_factory.h"
 #include "src/ledger/bin/testing/loop_controller_test_loop.h"
-#include "src/ledger/bin/testing/overnet/overnet_factory.h"
 #include "src/ledger/bin/tests/integration/sharding.h"
 #include "src/ledger/bin/tests/integration/test_utils.h"
 #include "src/ledger/cloud_provider_in_memory/lib/fake_cloud_provider.h"
@@ -104,7 +103,7 @@ class LedgerAppInstanceImpl final : public LedgerAppInstanceFactory::LedgerAppIn
       fidl::InterfacePtr<ledger_internal::LedgerRepositoryFactory> repository_factory_ptr,
       fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider, FakeCloudProvider>*
           cloud_provider,
-      std::unique_ptr<p2p_sync::UserCommunicatorFactory> user_communicator_factory,
+      p2p_provider::P2PProviderFactory* p2p_provider_factory,
       fidl::InterfaceRequest<fuchsia::inspect::deprecated::Inspect> inspect_request,
       fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> inspect_ptr);
   ~LedgerAppInstanceImpl() override;
@@ -115,13 +114,12 @@ class LedgerAppInstanceImpl final : public LedgerAppInstanceFactory::LedgerAppIn
     LedgerRepositoryFactoryContainer(
         Environment* environment,
         fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory> request,
-        std::unique_ptr<p2p_sync::UserCommunicatorFactory> user_communicator_factory,
+        p2p_provider::P2PProviderFactory* p2p_provider_factory,
         inspect_deprecated::Node repositories_node,
         fidl::InterfaceRequest<fuchsia::inspect::deprecated::Inspect> inspect_request,
         fuchsia::inspect::deprecated::Inspect* inspect_impl)
         : environment_(environment),
-          factory_impl_(environment_, std::move(user_communicator_factory),
-                        std::move(repositories_node)),
+          factory_impl_(environment_, p2p_provider_factory, std::move(repositories_node)),
           binding_(&factory_impl_, std::move(request)),
           inspect_binding_(inspect_impl, std::move(inspect_request)) {}
     LedgerRepositoryFactoryContainer(const LedgerRepositoryFactoryContainer&) = delete;
@@ -159,7 +157,7 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
     fidl::InterfacePtr<ledger_internal::LedgerRepositoryFactory> repository_factory_ptr,
     fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider, FakeCloudProvider>*
         cloud_provider,
-    std::unique_ptr<p2p_sync::UserCommunicatorFactory> user_communicator_factory,
+    p2p_provider::P2PProviderFactory* p2p_provider_factory,
     fidl::InterfaceRequest<fuchsia::inspect::deprecated::Inspect> inspect_request,
     fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> inspect_ptr)
     : LedgerAppInstanceFactory::LedgerAppInstance(loop_controller, convert::ToArray(kLedgerName),
@@ -177,12 +175,11 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
   top_level_inspect_node_ = inspect_deprecated::Node(std::move(top_level_object_dir));
 
   async::PostTask(loop_->dispatcher(), [this, request = std::move(repository_factory_request),
-                                        user_communicator_factory =
-                                            std::move(user_communicator_factory),
+                                        p2p_provider_factory,
                                         inspect_request = std::move(inspect_request),
                                         top_level_component_object]() mutable {
     factory_container_ = std::make_unique<LedgerRepositoryFactoryContainer>(
-        environment_.get(), std::move(request), std::move(user_communicator_factory),
+        environment_.get(), std::move(request), p2p_provider_factory,
         top_level_inspect_node_.CreateChild(convert::ToString(kRepositoriesInspectPathComponent)),
         std::move(inspect_request), top_level_component_object.get());
   });
@@ -209,42 +206,6 @@ LedgerAppInstanceImpl::~LedgerAppInstanceImpl() {
   loop_.release();
 }
 
-class FakeUserCommunicatorFactory : public p2p_sync::UserCommunicatorFactory {
- public:
-  FakeUserCommunicatorFactory(Environment* environment, async_dispatcher_t* services_dispatcher,
-                              OvernetFactory* overnet_factory, uint64_t host_id)
-      : environment_(environment),
-        services_dispatcher_(services_dispatcher),
-        overnet_factory_(overnet_factory),
-        host_id_(std::move(host_id)),
-        weak_ptr_factory_(this) {}
-  ~FakeUserCommunicatorFactory() override = default;
-
-  std::unique_ptr<p2p_sync::UserCommunicator> GetUserCommunicator(
-      std::unique_ptr<p2p_provider::UserIdProvider> user_id_provider) override {
-    fuchsia::overnet::OvernetPtr overnet;
-    async::PostTask(services_dispatcher_,
-                    callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
-                                         [this, request = overnet.NewRequest()]() mutable {
-                                           overnet_factory_->AddBinding(host_id_,
-                                                                        std::move(request));
-                                         }));
-    std::unique_ptr<p2p_provider::P2PProvider> provider =
-        std::make_unique<p2p_provider::P2PProviderImpl>(
-            std::move(overnet), std::move(user_id_provider), environment_->random());
-    return std::make_unique<p2p_sync::UserCommunicatorImpl>(environment_, std::move(provider));
-  }
-
- private:
-  Environment* environment_;
-  async_dispatcher_t* const services_dispatcher_;
-  OvernetFactory* const overnet_factory_;
-  uint64_t host_id_;
-
-  // This must be the last field of this class.
-  WeakPtrFactory<FakeUserCommunicatorFactory> weak_ptr_factory_;
-};
-
 enum EnableP2PMesh { NO, YES };
 
 // Whether to enable sync or not.
@@ -270,7 +231,7 @@ class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
                           .SetInjectMissingDiff(test_diffs_ == TestDiffs::TEST_COMPATIBILITY
                                                     ? InjectMissingDiff::YES
                                                     : InjectMissingDiff::NO))),
-        overnet_factory_(services_loop_->dispatcher()),
+        p2p_provider_factory_(&random_, services_loop_->dispatcher()),
         enable_sync_(enable_sync),
         enable_p2p_mesh_(enable_p2p_mesh) {}
 
@@ -293,8 +254,8 @@ class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
   // Loop on which to run the cloud provider.
   std::unique_ptr<SubLoop> cloud_provider_loop_;
   fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider, FakeCloudProvider> cloud_provider_;
+  p2p_provider::FakeP2PProviderFactory p2p_provider_factory_;
   int app_instance_counter_ = 0;
-  OvernetFactory overnet_factory_;
   const EnableSync enable_sync_;
   const EnableP2PMesh enable_p2p_mesh_;
 };
@@ -320,10 +281,9 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
   auto environment = std::make_unique<Environment>(
       BuildEnvironment(&loop_, loop->dispatcher(), io_loop->dispatcher(),
                        component_context_provider_.context(), &random_, diff_compatibility_policy));
-  std::unique_ptr<p2p_sync::UserCommunicatorFactory> user_communicator_factory;
+  p2p_provider::P2PProviderFactory* p2p_factory = nullptr;
   if (enable_p2p_mesh_ == EnableP2PMesh::YES) {
-    user_communicator_factory = std::make_unique<FakeUserCommunicatorFactory>(
-        environment.get(), services_loop_->dispatcher(), &overnet_factory_, app_instance_counter_);
+    p2p_factory = &p2p_provider_factory_;
   }
   app_instance_counter_++;
 
@@ -332,8 +292,8 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
   return std::make_unique<LedgerAppInstanceImpl>(
       &loop_controller_, std::move(loop), std::move(io_loop), std::move(environment),
       services_loop_->dispatcher(), std::move(repository_factory_request),
-      std::move(repository_factory_ptr), cloud_provider, std::move(user_communicator_factory),
-      std::move(inspect_request), std::move(inspect_ptr));
+      std::move(repository_factory_ptr), cloud_provider, p2p_factory, std::move(inspect_request),
+      std::move(inspect_ptr));
 }
 
 LoopController* LedgerAppInstanceFactoryImpl::GetLoopController() { return &loop_controller_; }

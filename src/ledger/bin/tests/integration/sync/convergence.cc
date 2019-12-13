@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
-#include <fuchsia/modular/auth/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>

@@ -24,7 +24,7 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/fidl/syncable.h"
 #include "src/ledger/bin/inspect/inspect.h"
-#include "src/ledger/bin/p2p_sync/impl/user_communicator_factory_impl.h"
+#include "src/ledger/bin/p2p_provider/public/p2p_provider_factory.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
@@ -108,14 +108,9 @@ class App : public ledger_internal::LedgerController {
                                           .SetStartupContext(component_context_.get())
                                           .SetGcPolicy(app_params_.gc_policy)
                                           .Build());
-    std::unique_ptr<p2p_sync::UserCommunicatorFactoryImpl> user_communicator_factory;
-    if (!app_params_.disable_p2p_sync) {
-      user_communicator_factory =
-          std::make_unique<p2p_sync::UserCommunicatorFactoryImpl>(environment_.get());
-    }
 
     factory_impl_ = std::make_unique<LedgerRepositoryFactoryImpl>(
-        environment_.get(), std::move(user_communicator_factory),
+        environment_.get(), nullptr,
         inspect_objects_.top_level_node.CreateChild(
             convert::ToString(kRepositoriesInspectPathComponent)));
 

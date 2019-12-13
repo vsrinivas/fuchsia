@@ -14,7 +14,6 @@
 
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/environment/test_loop_notification.h"
-#include "src/ledger/bin/p2p_provider/impl/p2p_provider_impl.h"
 #include "src/ledger/bin/p2p_provider/public/p2p_provider.h"
 #include "src/ledger/bin/p2p_sync/impl/user_communicator_impl.h"
 #include "src/ledger/bin/storage/public/page_sync_client.h"

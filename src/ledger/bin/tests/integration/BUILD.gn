@@ -46,7 +46,6 @@ source_set("integration_sharded") {
   deps = [
     ":integration_lib",
     "//sdk/fidl/fuchsia.ledger",
-    "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/ledger/bin/app:constants",
@@ -54,6 +53,7 @@ source_set("integration_sharded") {
     "//src/ledger/bin/environment:test_loop_notification",
     "//src/ledger/bin/fidl",
     "//src/ledger/bin/fidl:syncable",
+    "//src/ledger/bin/p2p_provider/fake",
     "//src/ledger/bin/p2p_provider/impl",
     "//src/ledger/bin/p2p_provider/public",
     "//src/ledger/bin/p2p_sync/impl",
@@ -62,7 +62,6 @@ source_set("integration_sharded") {
     "//src/ledger/bin/storage/public",
     "//src/ledger/bin/testing:ledger_instance_factory",
     "//src/ledger/bin/testing:lib",
-    "//src/ledger/bin/testing/overnet",
     "//src/ledger/bin/tests/integration/sync",
     "//src/ledger/cloud_provider_in_memory/lib",
     "//src/ledger/lib/backoff",

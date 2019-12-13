@@ -7,7 +7,6 @@
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/ledger/internal/cpp/fidl.h>
-#include <fuchsia/modular/auth/cpp/fidl.h>
 
 #include <memory>
 #include <string>
@@ -20,7 +19,7 @@
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/fidl/syncable.h"
-#include "src/ledger/bin/p2p_sync/public/user_communicator_factory.h"
+#include "src/ledger/bin/p2p_provider/public/p2p_provider_factory.h"
 #include "src/ledger/bin/sync_coordinator/impl/user_sync_impl.h"
 #include "src/ledger/lib/callback/managed_container.h"
 #include "src/ledger/lib/memory/weak_ptr.h"
@@ -34,10 +33,9 @@ namespace ledger {
 class LedgerRepositoryFactoryImpl
     : public ::fuchsia::ledger::internal::LedgerRepositoryFactorySyncableDelegate {
  public:
-  explicit LedgerRepositoryFactoryImpl(
-      Environment* environment,
-      std::unique_ptr<p2p_sync::UserCommunicatorFactory> user_communicator_factory,
-      inspect_deprecated::Node inspect_node);
+  explicit LedgerRepositoryFactoryImpl(Environment* environment,
+                                       p2p_provider::P2PProviderFactory* p2p_provider_factory,
+                                       inspect_deprecated::Node inspect_node);
   LedgerRepositoryFactoryImpl(const LedgerRepositoryFactoryImpl&) = delete;
   LedgerRepositoryFactoryImpl& operator=(const LedgerRepositoryFactoryImpl&) = delete;
   ~LedgerRepositoryFactoryImpl() override;
@@ -80,7 +78,7 @@ class LedgerRepositoryFactoryImpl
   void DeleteRepositoryDirectory(const RepositoryInformation& repository_information);
 
   Environment* const environment_;
-  std::unique_ptr<p2p_sync::UserCommunicatorFactory> const user_communicator_factory_;
+  p2p_provider::P2PProviderFactory* const p2p_provider_factory_;
 
   callback::AutoCleanableMap<std::string, LedgerRepositoryContainer> repositories_;
 

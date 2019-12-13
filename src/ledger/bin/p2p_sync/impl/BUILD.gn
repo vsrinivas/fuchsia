@@ -21,14 +21,11 @@ source_set("impl") {
     "message_holder.h",
     "page_communicator_impl.cc",
     "page_communicator_impl.h",
-    "user_communicator_factory_impl.cc",
-    "user_communicator_factory_impl.h",
     "user_communicator_impl.cc",
     "user_communicator_impl.h",
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.modular.auth",
     "//src/ledger/bin/environment",
     "//src/ledger/bin/p2p_provider/impl",
     "//src/ledger/bin/p2p_sync/public",
@@ -64,11 +61,10 @@ source_set("unittests") {
     ":impl",
     ":message",
     "//sdk/lib/fidl/cpp",
-    "//src/ledger/bin/p2p_provider/impl",
+    "//src/ledger/bin/p2p_provider/fake",
     "//src/ledger/bin/storage/fake:lib",
     "//src/ledger/bin/storage/testing",
     "//src/ledger/bin/testing:lib",
-    "//src/ledger/bin/testing/overnet",
     "//src/ledger/lib/callback",
     "//src/ledger/lib/logging",
     "//src/ledger/lib/vmo",

@@ -10,7 +10,6 @@ group("testing") {
     ":lib",
     ":unittests",
     "ledger_test_instance_provider",
-    "overnet",
   ]
 }
 
@@ -54,7 +53,6 @@ source_set("lib") {
     "//peridot/lib/rng:testing",
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.ledger.cloud",
-    "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/ledger/bin/app:flags",

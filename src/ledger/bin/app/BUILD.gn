@@ -17,7 +17,6 @@ executable("app") {
     ":constants",
     ":flags",
     ":lib",
-    "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.net.oldhttp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
@@ -163,7 +162,6 @@ source_set("lib") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.ledger",
-    "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/lib/sys/cpp",
     "//src/ledger/lib/logging",
     "//src/lib/inspect_deprecated",
@@ -253,7 +251,6 @@ source_set("unittests") {
     ":constants",
     ":flags",
     ":lib",
-    "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/ledger/bin/clocks/impl",

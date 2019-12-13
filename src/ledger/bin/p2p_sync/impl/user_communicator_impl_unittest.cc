@@ -15,11 +15,9 @@
 // directly as it is private to the library.
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "src/ledger/bin/p2p_provider/impl/p2p_provider_impl.h"
-#include "src/ledger/bin/p2p_provider/public/user_id_provider.h"
+#include "src/ledger/bin/p2p_provider/fake/fake_p2p_provider_factory.h"
 #include "src/ledger/bin/p2p_sync/impl/page_communicator_impl.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
-#include "src/ledger/bin/testing/overnet/overnet_factory.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/coroutine/coroutine_impl.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
@@ -65,27 +63,22 @@ class FakeUserIdProvider : public p2p_provider::UserIdProvider {
 
 class UserCommunicatorImplTest : public ledger::TestWithEnvironment {
  public:
-  UserCommunicatorImplTest() : overnet_factory_(dispatcher()) {}
+  UserCommunicatorImplTest() : p2p_provider_factory_(environment_.random(), dispatcher()) {}
   UserCommunicatorImplTest(const UserCommunicatorImplTest&) = delete;
   UserCommunicatorImplTest& operator=(const UserCommunicatorImplTest&) = delete;
 
-  std::unique_ptr<UserCommunicator> GetUserCommunicator(uint64_t node_id,
-                                                        std::string user_name = "user") {
-    fuchsia::overnet::OvernetPtr overnet;
-    overnet_factory_.AddBinding(node_id, overnet.NewRequest());
+  std::unique_ptr<UserCommunicator> GetUserCommunicator() {
     std::unique_ptr<p2p_provider::P2PProvider> provider =
-        std::make_unique<p2p_provider::P2PProviderImpl>(
-            std::move(overnet), std::make_unique<FakeUserIdProvider>(std::move(user_name)),
-            environment_.random());
+        p2p_provider_factory_.NewP2PProvider(environment_.dispatcher(), nullptr);
     return std::make_unique<UserCommunicatorImpl>(&environment_, std::move(provider));
   }
 
  protected:
-  ledger::OvernetFactory overnet_factory_;
+  p2p_provider::FakeP2PProviderFactory p2p_provider_factory_;
 };
 
 TEST_F(UserCommunicatorImplTest, OneHost_NoCrash) {
-  std::unique_ptr<UserCommunicator> user_communicator = GetUserCommunicator(1);
+  std::unique_ptr<UserCommunicator> user_communicator = GetUserCommunicator();
   user_communicator->Start();
   std::unique_ptr<LedgerCommunicator> ledger = user_communicator->GetLedgerCommunicator("ledger1");
   FakePageStorage storage("page1");
@@ -95,7 +88,7 @@ TEST_F(UserCommunicatorImplTest, OneHost_NoCrash) {
 }
 
 TEST_F(UserCommunicatorImplTest, ThreeHosts_SamePage) {
-  std::unique_ptr<UserCommunicator> user_communicator1 = GetUserCommunicator(1);
+  std::unique_ptr<UserCommunicator> user_communicator1 = GetUserCommunicator();
   user_communicator1->Start();
   std::unique_ptr<LedgerCommunicator> ledger1 = user_communicator1->GetLedgerCommunicator("app");
   FakePageStorage storage1("page");
@@ -106,7 +99,7 @@ TEST_F(UserCommunicatorImplTest, ThreeHosts_SamePage) {
   EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page1),
               testing::SizeIs(0));
 
-  std::unique_ptr<UserCommunicator> user_communicator2 = GetUserCommunicator(2);
+  std::unique_ptr<UserCommunicator> user_communicator2 = GetUserCommunicator();
   user_communicator2->Start();
   std::unique_ptr<LedgerCommunicator> ledger2 = user_communicator2->GetLedgerCommunicator("app");
   FakePageStorage storage2("page");
@@ -119,7 +112,7 @@ TEST_F(UserCommunicatorImplTest, ThreeHosts_SamePage) {
   EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page2),
               testing::SizeIs(1));
 
-  std::unique_ptr<UserCommunicator> user_communicator3 = GetUserCommunicator(3);
+  std::unique_ptr<UserCommunicator> user_communicator3 = GetUserCommunicator();
   user_communicator3->Start();
   std::unique_ptr<LedgerCommunicator> ledger3 = user_communicator3->GetLedgerCommunicator("app");
   FakePageStorage storage3("page");
@@ -144,7 +137,7 @@ TEST_F(UserCommunicatorImplTest, ThreeHosts_SamePage) {
 }
 
 TEST_F(UserCommunicatorImplTest, ThreeHosts_TwoPages) {
-  std::unique_ptr<UserCommunicator> user_communicator1 = GetUserCommunicator(1);
+  std::unique_ptr<UserCommunicator> user_communicator1 = GetUserCommunicator();
   user_communicator1->Start();
   std::unique_ptr<LedgerCommunicator> ledger1 = user_communicator1->GetLedgerCommunicator("app");
   FakePageStorage storage1_1("page1");
@@ -162,7 +155,7 @@ TEST_F(UserCommunicatorImplTest, ThreeHosts_TwoPages) {
   EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page1_2),
               testing::SizeIs(0));
 
-  std::unique_ptr<UserCommunicator> user_communicator2 = GetUserCommunicator(2);
+  std::unique_ptr<UserCommunicator> user_communicator2 = GetUserCommunicator();
   user_communicator2->Start();
   std::unique_ptr<LedgerCommunicator> ledger2 = user_communicator2->GetLedgerCommunicator("app");
   FakePageStorage storage2_1("page1");
@@ -178,7 +171,7 @@ TEST_F(UserCommunicatorImplTest, ThreeHosts_TwoPages) {
   EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page2_1),
               testing::SizeIs(1));
 
-  std::unique_ptr<UserCommunicator> user_communicator3 = GetUserCommunicator(3);
+  std::unique_ptr<UserCommunicator> user_communicator3 = GetUserCommunicator();
   user_communicator3->Start();
   std::unique_ptr<LedgerCommunicator> ledger3 = user_communicator3->GetLedgerCommunicator("app");
   FakePageStorage storage3_2("page2");
@@ -212,7 +205,7 @@ TEST_F(UserCommunicatorImplTest, ThreeHosts_TwoPages) {
 // active. This ensure we correctly connect pages that become active after the
 // device is connected.
 TEST_F(UserCommunicatorImplTest, ThreeHosts_WaitBeforePageIsActive) {
-  std::unique_ptr<UserCommunicator> user_communicator1 = GetUserCommunicator(1);
+  std::unique_ptr<UserCommunicator> user_communicator1 = GetUserCommunicator();
   user_communicator1->Start();
   RunLoopUntilIdle();
   std::unique_ptr<LedgerCommunicator> ledger1 = user_communicator1->GetLedgerCommunicator("app");
@@ -221,7 +214,7 @@ TEST_F(UserCommunicatorImplTest, ThreeHosts_WaitBeforePageIsActive) {
   page1->Start();
   RunLoopUntilIdle();
 
-  std::unique_ptr<UserCommunicator> user_communicator2 = GetUserCommunicator(2);
+  std::unique_ptr<UserCommunicator> user_communicator2 = GetUserCommunicator();
   user_communicator2->Start();
   RunLoopUntilIdle();
   std::unique_ptr<LedgerCommunicator> ledger2 = user_communicator2->GetLedgerCommunicator("app");
@@ -235,7 +228,7 @@ TEST_F(UserCommunicatorImplTest, ThreeHosts_WaitBeforePageIsActive) {
   EXPECT_THAT(PageCommunicatorImplInspectorForTest::GetInterestedDevices(page2),
               testing::SizeIs(1));
 
-  std::unique_ptr<UserCommunicator> user_communicator3 = GetUserCommunicator(3);
+  std::unique_ptr<UserCommunicator> user_communicator3 = GetUserCommunicator();
   user_communicator3->Start();
   RunLoopUntilIdle();
   std::unique_ptr<LedgerCommunicator> ledger3 = user_communicator3->GetLedgerCommunicator("app");

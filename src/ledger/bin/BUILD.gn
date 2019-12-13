@@ -36,10 +36,8 @@ test("ledger_unittests") {
     "//src/ledger/bin/encryption/primitives:unittests",
     "//src/ledger/bin/environment:unittests",
     "//src/ledger/bin/fidl/syncable:unittests",
-    "//src/ledger/bin/fidl_helpers:unittests",
     "//src/ledger/bin/filesystem:unittests",
     "//src/ledger/bin/inspect:unittests",
-    "//src/ledger/bin/p2p_provider/impl:unittests",
     "//src/ledger/bin/p2p_sync/impl:unittests",
     "//src/ledger/bin/platform:implementation_unittests",
     "//src/ledger/bin/platform:unittests",
@@ -53,7 +51,6 @@ test("ledger_unittests") {
     "//src/ledger/bin/sync_helper:unittests",
     "//src/ledger/bin/synchronization:unittests",
     "//src/ledger/bin/testing:unittests",
-    "//src/ledger/bin/testing/overnet:unittests",
     "//src/lib/fxl/test:gtest_main",
   ]
 

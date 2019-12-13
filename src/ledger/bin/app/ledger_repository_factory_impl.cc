@@ -5,6 +5,7 @@
 #include "src/ledger/bin/app/ledger_repository_factory_impl.h"
 
 #include <fcntl.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/async/wait.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -27,9 +28,9 @@
 #include "src/ledger/bin/clocks/public/device_fingerprint_manager.h"
 #include "src/ledger/bin/cloud_sync/impl/user_sync_impl.h"
 #include "src/ledger/bin/fidl/include/types.h"
-#include "src/ledger/bin/p2p_provider/impl/p2p_provider_impl.h"
 #include "src/ledger/bin/p2p_provider/impl/static_user_id_provider.h"
 #include "src/ledger/bin/p2p_sync/impl/user_communicator_impl.h"
+#include "src/ledger/bin/p2p_sync/public/user_communicator.h"
 #include "src/ledger/bin/platform/platform.h"
 #include "src/ledger/bin/platform/scoped_tmp_dir.h"
 #include "src/ledger/bin/storage/impl/leveldb_factory.h"
@@ -247,11 +248,10 @@ struct LedgerRepositoryFactoryImpl::RepositoryInformation {
 };
 
 LedgerRepositoryFactoryImpl::LedgerRepositoryFactoryImpl(
-    Environment* environment,
-    std::unique_ptr<p2p_sync::UserCommunicatorFactory> user_communicator_factory,
+    Environment* environment, p2p_provider::P2PProviderFactory* p2p_provider_factory,
     inspect_deprecated::Node inspect_node)
     : environment_(environment),
-      user_communicator_factory_(std::move(user_communicator_factory)),
+      p2p_provider_factory_(p2p_provider_factory),
       repositories_(environment_->dispatcher()),
       inspect_node_(std::move(inspect_node)),
       coroutine_manager_(environment_->coroutine_service()),
@@ -416,7 +416,7 @@ std::unique_ptr<cloud_sync::UserSyncImpl> LedgerRepositoryFactoryImpl::CreateClo
 
 std::unique_ptr<p2p_sync::UserCommunicator> LedgerRepositoryFactoryImpl::CreateP2PSync(
     const RepositoryInformation& repository_information) {
-  if (!user_communicator_factory_) {
+  if (p2p_provider_factory_ == nullptr) {
     return nullptr;
   }
 
@@ -426,8 +426,9 @@ std::unique_ptr<p2p_sync::UserCommunicator> LedgerRepositoryFactoryImpl::CreateP
 
   auto user_id_provider =
       std::make_unique<p2p_provider::StaticUserIdProvider>(repository_information.user_id);
-
-  return user_communicator_factory_->GetUserCommunicator(std::move(user_id_provider));
+  auto p2p_provider = p2p_provider_factory_->NewP2PProvider(environment_->dispatcher(),
+                                                            std::move(user_id_provider));
+  return std::make_unique<p2p_sync::UserCommunicatorImpl>(environment_, std::move(p2p_provider));
 }
 
 void LedgerRepositoryFactoryImpl::OnVersionMismatch(RepositoryInformation repository_information) {

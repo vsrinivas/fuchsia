@@ -6,7 +6,6 @@
 #define SRC_LEDGER_BIN_APP_LEDGER_REPOSITORY_IMPL_H_
 
 #include <fuchsia/ledger/internal/cpp/fidl.h>
-#include <fuchsia/modular/auth/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/fit/function.h>
 

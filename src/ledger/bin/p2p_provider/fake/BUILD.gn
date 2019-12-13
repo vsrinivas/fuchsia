@@ -1,29 +1,26 @@
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 visibility = [ "//src/ledger/*" ]
 
-source_set("impl") {
+source_set("fake") {
   sources = [
-    "make_client_id.cc",
-    "make_client_id.h",
-    "static_user_id_provider.cc",
-    "static_user_id_provider.h",
+    "fake_p2p_provider_factory.cc",
+    "fake_p2p_provider_factory.h",
   ]
 
   public_deps = [
-    "//sdk/lib/sys/cpp",
-    "//src/ledger/bin/filesystem",
+    "//src/ledger/bin/p2p_provider/impl",
     "//src/ledger/bin/p2p_provider/public",
     "//src/ledger/lib/convert",
+    "//src/ledger/lib/logging",
     "//third_party/abseil-cpp",
   ]
 
   deps = [
     "//src/ledger/bin/environment",
     "//src/ledger/lib/convert",
-    "//src/ledger/lib/logging",
     "//src/lib/callback",
   ]
 }
