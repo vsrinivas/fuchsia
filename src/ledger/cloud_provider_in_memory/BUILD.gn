@@ -17,7 +17,7 @@ test("cloud_provider_in_memory_unittests") {
 
   deps = [
     "lib:unittests",
-    "//src/lib/fxl/test:gtest_main",
+    "//src/ledger/bin/testing:gtest_main",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]

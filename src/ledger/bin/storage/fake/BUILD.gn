@@ -69,6 +69,7 @@ source_set("unittests") {
     "//src/ledger/bin/platform",
     "//src/ledger/bin/storage/public:parametrized_tests",
     "//src/ledger/bin/testing:lib",
+    "//third_party/googletest:gtest",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]

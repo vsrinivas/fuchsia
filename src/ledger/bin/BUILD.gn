@@ -50,8 +50,8 @@ test("ledger_unittests") {
     "//src/ledger/bin/sync_coordinator/impl:unittests",
     "//src/ledger/bin/sync_helper:unittests",
     "//src/ledger/bin/synchronization:unittests",
+    "//src/ledger/bin/testing:gtest_main",
     "//src/ledger/bin/testing:unittests",
-    "//src/lib/fxl/test:gtest_main",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]
@@ -60,7 +60,7 @@ test("ledger_unittests") {
 test("ledger_host_tests") {
   deps = [
     "//src/ledger/bin/cache:unittests",
-    "//src/lib/fxl/test:gtest_main",
+    "//src/ledger/bin/testing:gtest_main",
   ]
 }
 

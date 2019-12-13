@@ -200,6 +200,7 @@ source_set("unittests") {
     "//src/ledger/lib/callback",
     "//src/ledger/lib/logging",
     "//third_party/abseil-cpp",
+    "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]

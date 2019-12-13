@@ -85,6 +85,7 @@ source_set("parametrized_tests") {
   public_deps = [
     ":public",
     "//src/ledger/bin/testing:lib",
+    "//third_party/googletest:gtest",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]

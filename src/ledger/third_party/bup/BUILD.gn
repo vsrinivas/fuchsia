@@ -28,7 +28,8 @@ executable("bupsplit_unittest") {
 
   deps = [
     ":bup",
-    "//src/lib/fxl/test:gtest_main",
+    "//src/ledger/bin/testing:gtest_main",
+    "//third_party/googletest:gtest",
   ]
 }
 

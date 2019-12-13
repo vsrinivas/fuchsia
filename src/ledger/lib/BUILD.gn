@@ -18,6 +18,7 @@ executable("ledger_lib_unittests") {
   testonly = true
 
   deps = [
+    "//src/ledger/bin/testing:gtest_main",
     "//src/ledger/lib/backoff:unittests",
     "//src/ledger/lib/callback:unittests",
     "//src/ledger/lib/convert:unittests",
@@ -27,6 +28,5 @@ executable("ledger_lib_unittests") {
     "//src/ledger/lib/logging:unittests",
     "//src/ledger/lib/socket:unittests",
     "//src/ledger/lib/vmo:unittests",
-    "//src/lib/fxl/test:gtest_main",
   ]
 }

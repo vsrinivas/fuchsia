@@ -60,6 +60,7 @@ source_set("integration_sharded") {
     "//src/ledger/bin/p2p_sync/public",
     "//src/ledger/bin/storage/fake:lib",
     "//src/ledger/bin/storage/public",
+    "//src/ledger/bin/testing:gtest_main",
     "//src/ledger/bin/testing:ledger_instance_factory",
     "//src/ledger/bin/testing:lib",
     "//src/ledger/bin/tests/integration/sync",
@@ -70,7 +71,6 @@ source_set("integration_sharded") {
     "//src/ledger/lib/logging",
     "//src/ledger/lib/socket",
     "//src/ledger/lib/vmo",
-    "//src/lib/fxl/test:gtest_main",
     "//src/lib/timekeeper:testing",
     "//third_party/abseil-cpp",
   ]
