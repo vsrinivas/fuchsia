@@ -121,7 +121,7 @@ TEST_F(MediaButtonsListenerTest, MediaButtons) {
         // Inject a media button input with all buttons but the factory reset button
         // set. If fdr is set, FactoryResetManager will handle the buttons event
         // instead of the MediaButtonListener, which we are testing.
-        InjectInput({"media_button", "1", "1", "1", "0", nullptr});
+        InjectInput({"media_button", "1", "1", "1", "0", "1", nullptr});
         ++injection_count_;
       },
       zx::sec(1));

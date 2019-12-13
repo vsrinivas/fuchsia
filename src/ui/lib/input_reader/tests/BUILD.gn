@@ -116,6 +116,7 @@ executable("input_reader_unittests") {
   testonly = true
 
   sources = [
+    "buttons_test.cc",
     "keyboard_test.cc",
     "mouse_test.cc",
     "sensor_test.cc",

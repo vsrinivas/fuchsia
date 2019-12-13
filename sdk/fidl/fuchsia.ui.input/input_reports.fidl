@@ -227,6 +227,7 @@ struct MediaButtonsReport {
     bool volume_down;
     bool mic_mute;
     bool reset;
+    bool pause;
 };
 
 // Device and Report

@@ -140,6 +140,7 @@ fn media_buttons(
     volume_down: bool,
     mic_mute: bool,
     reset: bool,
+    pause: bool,
     time: u64,
 ) -> InputReport {
     InputReport {
@@ -150,6 +151,7 @@ fn media_buttons(
             volume_down,
             mic_mute,
             reset,
+            pause,
         })),
         mouse: None,
         stylus: None,
@@ -164,6 +166,7 @@ fn media_button_event(
     volume_down: bool,
     mic_mute: bool,
     reset: bool,
+    pause: bool,
     consumer: impl ServerConsumer,
 ) -> Result<(), Error> {
     let input_device = register_media_buttons(consumer)?;
@@ -174,6 +177,7 @@ fn media_button_event(
             volume_down,
             mic_mute,
             reset,
+            pause,
             nanos_from_epoch()?,
         ))
         .map_err(Into::into)
@@ -185,8 +189,9 @@ pub async fn media_button_event_command(
     volume_down: bool,
     mic_mute: bool,
     reset: bool,
+    pause: bool,
 ) -> Result<(), Error> {
-    media_button_event(volume_up, volume_down, mic_mute, reset, RegistryServerConsumer)
+    media_button_event(volume_up, volume_down, mic_mute, reset, pause, RegistryServerConsumer)
 }
 
 fn key_press(keyboard: KeyboardReport, time: u64) -> InputReport {
@@ -214,7 +219,11 @@ fn key_press_usage(usage: Option<u32>, time: u64) -> InputReport {
     )
 }
 
-fn keyboard_event(usage: u32, duration: Duration, consumer: impl ServerConsumer) -> Result<(), Error> {
+fn keyboard_event(
+    usage: u32,
+    duration: Duration,
+    consumer: impl ServerConsumer,
+) -> Result<(), Error> {
     let input_device = register_keyboard(consumer)?;
 
     repeat_with_delay(
@@ -474,7 +483,7 @@ mod tests {
     #[test]
     fn media_event_report() {
         assert_reports_eq!(TestConsumer,
-            media_button_event(true, false, true, false, TestConsumer),
+            media_button_event(true, false, true, false, true, TestConsumer),
             [
                 {
                     media_buttons: MediaButtonsReport {
@@ -482,6 +491,7 @@ mod tests {
                         volume_down: false,
                         mic_mute: true,
                         reset: false,
+                        pause: true,
                     }
                 },
             ]

@@ -30,6 +30,7 @@ class Buttons : public Device {
     VOLUME_DOWN = 1 << 1,
     RESET = 1 << 2,
     PHONE_MUTE = 1 << 3,
+    PAUSE = 1 << 4,
   };
   uint32_t capabilities_ = 0;
 
@@ -37,6 +38,7 @@ class Buttons : public Device {
   hid::Attributes volume_down_ = {};
   hid::Attributes reset_ = {};
   hid::Attributes phone_mute_ = {};
+  hid::Attributes pause_ = {};
 
   size_t report_size_ = 0;
   uint8_t report_id_ = 0;

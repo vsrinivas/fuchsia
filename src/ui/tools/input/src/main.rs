@@ -144,6 +144,9 @@ enum Command {
         #[structopt(parse(try_from_str = "parse_bool"))]
         /// 0 or 1
         reset: bool,
+        #[structopt(parse(try_from_str = "parse_bool"))]
+        /// 0 or 1
+        pause: bool,
     },
 }
 
@@ -204,8 +207,10 @@ fn main() {
                 Duration::from_millis(duration as u64),
             ]
         ),
-        Command::MediaButton { mic_mute, volume_up, volume_down, reset } => {
-            run!(executor, media_button_event_command, [mic_mute, volume_up, volume_down, reset,])
-        }
+        Command::MediaButton { mic_mute, volume_up, volume_down, reset, pause } => run!(
+            executor,
+            media_button_event_command,
+            [mic_mute, volume_up, volume_down, reset, pause]
+        ),
     };
 }

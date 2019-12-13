@@ -26,6 +26,7 @@ bool Buttons::ParseReportDescriptor(const hid::ReportDescriptor& report_descript
   hid::Attributes volume_down = {};
   hid::Attributes reset = {};
   hid::Attributes phone_mute = {};
+  hid::Attributes pause = {};
   uint32_t caps = 0;
 
   for (size_t i = 0; i < report_descriptor.input_count; i++) {
@@ -47,6 +48,10 @@ bool Buttons::ParseReportDescriptor(const hid::ReportDescriptor& report_descript
                hid::USAGE(hid::usage::Page::kTelephony, hid::usage::Telephony::kPhoneMute)) {
       phone_mute = field.attr;
       caps |= Capabilities::PHONE_MUTE;
+    } else if (field.attr.usage ==
+               hid::USAGE(hid::usage::Page::kConsumer, hid::usage::Consumer::kPause)) {
+      pause = field.attr;
+      caps |= Capabilities::PAUSE;
     }
   }
 
@@ -59,6 +64,7 @@ bool Buttons::ParseReportDescriptor(const hid::ReportDescriptor& report_descript
   volume_down_ = volume_down;
   reset_ = reset;
   phone_mute_ = phone_mute;
+  pause_ = pause;
 
   report_size_ = report_descriptor.input_byte_sz;
   report_id_ = report_descriptor.report_id;
@@ -80,6 +86,9 @@ bool Buttons::ParseReportDescriptor(const hid::ReportDescriptor& report_descript
   if (caps & Capabilities::RESET) {
     device_descriptor->buttons_descriptor->buttons |= fuchsia::ui::input::kReset;
   }
+  if (caps & Capabilities::PAUSE) {
+    device_descriptor->buttons_descriptor->buttons |= fuchsia::ui::input::kPause;
+  }
   return true;
 }
 
@@ -91,6 +100,7 @@ bool Buttons::ParseReport(const uint8_t* data, size_t len,
   double volume_down = 0;
   double reset = 0;
   double mic_mute = 0;
+  double pause = 0;
 
   if (report_size_ != len) {
     FXL_LOG(INFO) << "Sensor report: Expected size " << report_size_ << "Received size " << len;
@@ -121,11 +131,18 @@ bool Buttons::ParseReport(const uint8_t* data, size_t len,
       return false;
     }
   }
+  if (capabilities_ & Capabilities::PAUSE) {
+    if (!hid::ExtractAsUnit(data, len, pause_, &pause)) {
+      FXL_LOG(INFO) << "Sensor report: Failed to parse pause";
+      return false;
+    }
+  }
 
   report->media_buttons->mic_mute = 0;
   report->media_buttons->volume_up = 0;
   report->media_buttons->volume_down = 0;
   report->media_buttons->reset = 0;
+  report->media_buttons->pause = 0;
 
   if (capabilities_ & Capabilities::PHONE_MUTE) {
     report->media_buttons->mic_mute = (mic_mute > 0);
@@ -138,6 +155,9 @@ bool Buttons::ParseReport(const uint8_t* data, size_t len,
   }
   if (capabilities_ & Capabilities::RESET) {
     report->media_buttons->reset = (reset > 0);
+  }
+  if (capabilities_ & Capabilities::PAUSE) {
+    report->media_buttons->pause = (pause > 0);
   }
 
   return true;
