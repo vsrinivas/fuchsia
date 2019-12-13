@@ -70,7 +70,7 @@ std::unique_ptr<DemoView> DemoView::Create(scenic::ViewContext context, async::L
                                            bool chaos, bool image_io) {
   auto view = std::make_unique<DemoView>(std::move(context), loop, chaos, image_io);
 
-  view->stream_provider_ = StreamProvider::Create(StreamProvider::Source::MANAGER);
+  view->stream_provider_ = StreamProvider::Create(StreamProvider::Source::CONTROLLER);
   if (!view->stream_provider_) {
     FX_LOGS(ERROR) << "Failed to get MANAGER stream provider";
     return nullptr;

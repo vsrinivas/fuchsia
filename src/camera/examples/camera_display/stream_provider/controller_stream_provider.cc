@@ -15,6 +15,12 @@
 #include "src/lib/syslog/cpp/logger.h"
 
 static constexpr const char* kDevicePath = "/dev/camera-controller/camera-controller-device";
+// NOTE: These indexes are coming from Sherlock controller configuration.
+// See sherlock-configs.cc for reference.
+static constexpr uint32_t kMonitorConfig = 1;
+static constexpr uint32_t kMlFrStream = 0;
+static constexpr uint32_t kMlDsStream = 1;
+static constexpr uint32_t kMonitoringStream = 2;
 
 ControllerStreamProvider::~ControllerStreamProvider() {
   if (controller_ && streaming_) {
@@ -102,10 +108,24 @@ ControllerStreamProvider::ConnectToStream(fidl::InterfaceRequest<fuchsia::camera
   uint32_t config_index = 0;
   uint32_t stream_config_index = 0;
   uint32_t image_format_index = 0;
+  // Displaying all sub-streams from the monitoring config side-by-side;
+  // 0: full-res machine learning stream;
+  // 1: downscaled machine learning stream;
+  // 2: monitoring stream;
   switch (index) {
     case 0:
-      config_index = 1;
-      stream_config_index = 1;
+      config_index = kMonitorConfig;
+      stream_config_index = kMlFrStream;
+      image_format_index = 0;
+      break;
+    case 1:
+      config_index = kMonitorConfig;
+      stream_config_index = kMlDsStream;
+      image_format_index = 0;
+      break;
+    case 2:
+      config_index = kMonitorConfig;
+      stream_config_index = kMonitoringStream;
       image_format_index = 0;
       break;
     default:
