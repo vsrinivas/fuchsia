@@ -14,5 +14,6 @@
         "max_seconds": 86400
     },
     "permitted_macs": [],
-    "static_assignments": {}
+    "static_assignments": {},
+    "arp_probe": false
 }

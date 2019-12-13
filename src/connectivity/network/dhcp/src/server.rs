@@ -4,7 +4,8 @@
 
 use crate::configuration::ServerParameters;
 use crate::protocol::{
-    DhcpOption, FidlCompatible, Message, MessageType, OpCode, OptionCode, ProtocolError,
+    DhcpOption, FidlCompatible, FromFidlExt, IntoFidlExt, Message, MessageType, OpCode, OptionCode,
+    ProtocolError,
 };
 use crate::stash::Stash;
 use failure::{Error, Fail, ResultExt};
@@ -153,8 +154,9 @@ impl Server {
                 pool_range_start: Ipv4Addr::new(192, 168, 0, 0),
                 pool_range_stop: Ipv4Addr::new(192, 168, 0, 0),
             },
-            permitted_macs: Vec::new(),
-            static_assignments: HashMap::new(),
+            permitted_macs: crate::configuration::PermittedMacs(Vec::new()),
+            static_assignments: crate::configuration::StaticAssignments(HashMap::new()),
+            arp_probe: false,
         };
         Server::from_config(params, &rand_string, DEFAULT_STASH_PREFIX).await
     }
@@ -673,9 +675,38 @@ impl ServerDispatcher for Server {
 
     fn dispatch_get_parameter(
         &self,
-        _name: fidl_fuchsia_net_dhcp::ParameterName,
+        name: fidl_fuchsia_net_dhcp::ParameterName,
     ) -> Result<fidl_fuchsia_net_dhcp::Parameter, Status> {
-        unimplemented!()
+        match name {
+            fidl_fuchsia_net_dhcp::ParameterName::IpAddrs => {
+                Ok(fidl_fuchsia_net_dhcp::Parameter::IpAddrs(
+                    self.params.server_ips.clone().into_fidl(),
+                ))
+            }
+            fidl_fuchsia_net_dhcp::ParameterName::AddressPool => {
+                Ok(fidl_fuchsia_net_dhcp::Parameter::AddressPool(
+                    self.params.managed_addrs.clone().into_fidl(),
+                ))
+            }
+            fidl_fuchsia_net_dhcp::ParameterName::LeaseLength => {
+                Ok(fidl_fuchsia_net_dhcp::Parameter::Lease(
+                    self.params.lease_length.clone().into_fidl(),
+                ))
+            }
+            fidl_fuchsia_net_dhcp::ParameterName::PermittedMacs => {
+                Ok(fidl_fuchsia_net_dhcp::Parameter::PermittedMacs(
+                    self.params.permitted_macs.clone().into_fidl(),
+                ))
+            }
+            fidl_fuchsia_net_dhcp::ParameterName::StaticallyAssignedAddrs => {
+                Ok(fidl_fuchsia_net_dhcp::Parameter::StaticallyAssignedAddrs(
+                    self.params.static_assignments.clone().into_fidl(),
+                ))
+            }
+            fidl_fuchsia_net_dhcp::ParameterName::ArpProbe => {
+                Ok(fidl_fuchsia_net_dhcp::Parameter::ArpProbe(self.params.arp_probe))
+            }
+        }
     }
 
     fn dispatch_set_option(&mut self, value: fidl_fuchsia_net_dhcp::Option_) -> Result<(), Status> {
@@ -692,9 +723,60 @@ impl ServerDispatcher for Server {
 
     fn dispatch_set_parameter(
         &mut self,
-        _value: fidl_fuchsia_net_dhcp::Parameter,
+        value: fidl_fuchsia_net_dhcp::Parameter,
     ) -> Result<(), Status> {
-        unimplemented!()
+        Ok(match value {
+            fidl_fuchsia_net_dhcp::Parameter::IpAddrs(ip_addrs) => {
+                self.params.server_ips = Vec::<Ipv4Addr>::from_fidl(ip_addrs)
+            }
+            fidl_fuchsia_net_dhcp::Parameter::AddressPool(managed_addrs) => {
+                self.params.managed_addrs =
+                    match crate::configuration::ManagedAddresses::try_from_fidl(managed_addrs) {
+                        Ok(managed_addrs) => managed_addrs,
+                        Err(e) => {
+                            log::info!(
+                                "dispatch_set_parameter() got invalid AddressPool argument: {}",
+                                e
+                            );
+                            return Err(Status::INVALID_ARGS);
+                        }
+                    }
+            }
+            fidl_fuchsia_net_dhcp::Parameter::Lease(lease_length) => {
+                self.params.lease_length =
+                    match crate::configuration::LeaseLength::try_from_fidl(lease_length) {
+                        Ok(lease_length) => lease_length,
+                        Err(e) => {
+                            log::info!(
+                                "dispatch_set_parameter() got invalid LeaseLength argument: {}",
+                                e
+                            );
+                            return Err(Status::INVALID_ARGS);
+                        }
+                    }
+            }
+            fidl_fuchsia_net_dhcp::Parameter::PermittedMacs(permitted_macs) => {
+                self.params.permitted_macs =
+                    crate::configuration::PermittedMacs::from_fidl(permitted_macs)
+            }
+            fidl_fuchsia_net_dhcp::Parameter::StaticallyAssignedAddrs(static_assignments) => {
+                self.params.static_assignments =
+                    match crate::configuration::StaticAssignments::try_from_fidl(static_assignments)
+                    {
+                        Ok(static_assignments) => static_assignments,
+                        Err(e) => {
+                            log::info!("dispatch_set_parameter() got invalid StaticallyAssignedAddrs argument: {}", e);
+                            return Err(Status::INVALID_ARGS);
+                        }
+                    }
+            }
+            fidl_fuchsia_net_dhcp::Parameter::ArpProbe(arp_probe) => {
+                self.params.arp_probe = arp_probe
+            }
+            fidl_fuchsia_net_dhcp::Parameter::__UnknownVariant { .. } => {
+                return Err(Status::INVALID_ARGS)
+            }
+        })
     }
 
     fn dispatch_list_options(&self) -> Result<Vec<fidl_fuchsia_net_dhcp::Option_>, Status> {
@@ -719,7 +801,25 @@ impl ServerDispatcher for Server {
     }
 
     fn dispatch_list_parameters(&self) -> Result<Vec<fidl_fuchsia_net_dhcp::Parameter>, Status> {
-        unimplemented!()
+        // Without this redundant borrow, the compiler will interpret this statement as a moving destructure.
+        let ServerParameters {
+            server_ips,
+            managed_addrs,
+            lease_length,
+            permitted_macs,
+            static_assignments,
+            arp_probe,
+        } = &self.params;
+        Ok(vec![
+            fidl_fuchsia_net_dhcp::Parameter::IpAddrs(server_ips.clone().into_fidl()),
+            fidl_fuchsia_net_dhcp::Parameter::AddressPool(managed_addrs.clone().into_fidl()),
+            fidl_fuchsia_net_dhcp::Parameter::Lease(lease_length.clone().into_fidl()),
+            fidl_fuchsia_net_dhcp::Parameter::PermittedMacs(permitted_macs.clone().into_fidl()),
+            fidl_fuchsia_net_dhcp::Parameter::StaticallyAssignedAddrs(
+                static_assignments.clone().into_fidl(),
+            ),
+            fidl_fuchsia_net_dhcp::Parameter::ArpProbe(*arp_probe),
+        ])
     }
 }
 
@@ -2752,6 +2852,18 @@ pub mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_server_dispatcher_get_parameter_returns_parameter() -> Result<(), Error> {
+        let mut server = new_test_minimal_server().await?;
+        let addr = random_ipv4_generator();
+        server.params.server_ips = vec![addr];
+        let expected = fidl_fuchsia_net_dhcp::Parameter::IpAddrs(vec![addr.into_fidl()]);
+        let result =
+            server.dispatch_get_parameter(fidl_fuchsia_net_dhcp::ParameterName::IpAddrs)?;
+        assert_eq!(result, expected);
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn test_server_dispatcher_set_option_returns_unit() -> Result<(), Error> {
         let mut server = new_test_minimal_server().await?;
         let option = || {
@@ -2764,6 +2876,57 @@ pub mod tests {
         let code = stored_option.code();
         let result = server.options_repo.get(&code);
         assert_eq!(result, Some(&stored_option));
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_server_dispatcher_set_parameter() -> Result<(), Error> {
+        let mut server = new_test_minimal_server().await?;
+        let addr = random_ipv4_generator();
+        let valid_parameter = || fidl_fuchsia_net_dhcp::Parameter::IpAddrs(vec![addr.into_fidl()]);
+        let empty_lease_length =
+            fidl_fuchsia_net_dhcp::Parameter::Lease(fidl_fuchsia_net_dhcp::LeaseLength {
+                default: None,
+                max: None,
+            });
+        let bad_mask =
+            fidl_fuchsia_net_dhcp::Parameter::AddressPool(fidl_fuchsia_net_dhcp::AddressPool {
+                network_id: Some(fidl_fuchsia_net::Ipv4Address { addr: [192, 168, 0, 0] }),
+                broadcast: Some(fidl_fuchsia_net::Ipv4Address { addr: [192, 168, 0, 255] }),
+                mask: Some(fidl_fuchsia_net::Ipv4Address { addr: [255, 255, 0, 255] }),
+                pool_range_start: Some(fidl_fuchsia_net::Ipv4Address { addr: [192, 168, 0, 2] }),
+                pool_range_stop: Some(fidl_fuchsia_net::Ipv4Address { addr: [192, 168, 0, 254] }),
+            });
+        let MacAddr { octets: mac } = random_mac_generator();
+        let duplicated_static_assignment =
+            fidl_fuchsia_net_dhcp::Parameter::StaticallyAssignedAddrs(vec![
+                fidl_fuchsia_net_dhcp::StaticAssignment {
+                    host: Some(fidl_fuchsia_net::MacAddress { octets: mac.clone() }),
+                    assigned_addr: Some(random_ipv4_generator().into_fidl()),
+                },
+                fidl_fuchsia_net_dhcp::StaticAssignment {
+                    host: Some(fidl_fuchsia_net::MacAddress { octets: mac.clone() }),
+                    assigned_addr: Some(random_ipv4_generator().into_fidl()),
+                },
+            ]);
+
+        let () = server.dispatch_set_parameter(valid_parameter())?;
+        assert_eq!(
+            server.dispatch_get_parameter(fidl_fuchsia_net_dhcp::ParameterName::IpAddrs)?,
+            valid_parameter()
+        );
+        assert_eq!(
+            server.dispatch_set_parameter(empty_lease_length).unwrap_err(),
+            fuchsia_zircon::Status::INVALID_ARGS
+        );
+        assert_eq!(
+            server.dispatch_set_parameter(bad_mask).unwrap_err(),
+            fuchsia_zircon::Status::INVALID_ARGS
+        );
+        assert_eq!(
+            server.dispatch_set_parameter(duplicated_static_assignment).unwrap_err(),
+            fuchsia_zircon::Status::INVALID_ARGS
+        );
         Ok(())
     }
 
@@ -2782,6 +2945,19 @@ pub mod tests {
         assert_eq!(result.len(), server.options_repo.len());
         assert!(result.contains(&mask()));
         assert!(result.contains(&hostname()));
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_server_dispatcher_list_parameters_returns_parameters() -> Result<(), Error> {
+        let mut server = new_test_minimal_server().await?;
+        let addr = random_ipv4_generator();
+        server.params.server_ips = vec![addr];
+        let expected = fidl_fuchsia_net_dhcp::Parameter::IpAddrs(vec![addr.into_fidl()]);
+        let result = server.dispatch_list_parameters()?;
+        let params_fields_ct = 6;
+        assert_eq!(result.len(), params_fields_ct);
+        assert!(result.contains(&expected));
         Ok(())
     }
 }
