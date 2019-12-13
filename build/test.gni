@@ -53,8 +53,11 @@ template("test") {
     if (!defined(output_dir)) {
       output_dir = root_out_dir
     }
-    if (!defined(output_name)) {
+    if (defined(output_name)) {
+      _manifest_output_name = output_name
+    } else {
       output_name = target_name
+      _manifest_output_name = "$target_name-test"
     }
     if (!defined(output_extension)) {
       output_extension = ""
@@ -63,6 +66,7 @@ template("test") {
     _output_name = output_name
     if (output_extension != "") {
       _output_name += ".$output_extension"
+      _manifest_output_name += ".$output_extension"
     }
     _output_file = rebase_path("$output_dir/$_output_name", root_build_dir)
     if (defined(invoker.test_group)) {
@@ -73,7 +77,7 @@ template("test") {
 
     metadata = {
       migrated_manifest_lines =
-          [ "test/$_test_group/$_output_name=$_output_file" ]
+          [ "test/$_test_group/$_manifest_output_name=$_output_file" ]
     }
   }
 }
