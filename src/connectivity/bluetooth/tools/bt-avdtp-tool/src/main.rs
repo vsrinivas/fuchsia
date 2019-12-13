@@ -151,6 +151,22 @@ async fn establish_stream<'a>(
     Ok(String::from("Establish stream command"))
 }
 
+async fn abort_stream<'a>(
+    _args: &'a [&'a str],
+    peer_controller: &PeerControllerProxy,
+) -> Result<String, Error> {
+    let _ = peer_controller.abort_stream().await;
+    Ok(String::from("Abort stream command"))
+}
+
+async fn start_stream<'a>(
+    _args: &'a [&'a str],
+    peer_controller: &PeerControllerProxy,
+) -> Result<String, Error> {
+    let _ = peer_controller.start_stream().await;
+    Ok(String::from("Start stream command"))
+}
+
 /// Handle a single raw input command from a user and indicate whether the command should
 /// result in continuation or breaking of the read evaluate print loop.
 async fn handle_cmd<'a>(
@@ -177,8 +193,10 @@ async fn handle_cmd<'a>(
         }
     };
     let res = match cmd {
+        Ok(Cmd::AbortStream) => abort_stream(args, &peer_controller).await,
         Ok(Cmd::EstablishStream) => establish_stream(args, &peer_controller).await,
         Ok(Cmd::ReleaseStream) => release_stream(args, &peer_controller).await,
+        Ok(Cmd::StartStream) => start_stream(args, &peer_controller).await,
         Ok(Cmd::SetConfig) => set_configuration(args, &peer_controller).await,
         Ok(Cmd::GetConfig) => get_configuration(args, &peer_controller).await,
         Ok(Cmd::GetCapabilities) => get_capabilities(args, &peer_controller).await,

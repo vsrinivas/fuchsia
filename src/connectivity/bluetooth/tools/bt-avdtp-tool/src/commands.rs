@@ -75,8 +75,10 @@ macro_rules! gen_commands {
 // TODO(37089): Add support for printing with arguments (merge PrintPeer, PrintPeers).
 gen_commands! {
     Cmd {
+        AbortStream = ("abort-stream", ["generic id"], "Initiate an abort stream command"),
         EstablishStream = ("establish-stream", ["generic id"], "Establish streaming on the device"),
         ReleaseStream = ("release-stream", ["generic id"], "Release the stream"),
+        StartStream = ("start-stream", ["generic id"], "Initiate a start stream command"),
         SetConfig = ("set-configuration", ["generic id"], "Set configuration"),
         GetConfig = ("get-configuration", ["generic id"], "Get configuration"),
         GetCapabilities = ("get-capabilities", ["generic id"], "Get capabilities"),
