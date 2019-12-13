@@ -8,6 +8,7 @@ import datetime
 import json
 import logging
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -446,8 +447,19 @@ def update_all_references(source, dest, dry_run):
     for dirpath, dirnames, filenames in os.walk(dest):
         for name in filenames:
             filepath = os.path.join(dirpath, name)
-            run_command(['sed', '-e', 's?%s?%s?g' % (source, dest), '-i', '',
-                         filepath], dry_run)
+            logging.debug('converting %s to %s in %s' % (source, dest, filepath))
+
+            # On a dry run, verify that the input_file can be read
+            # On a normal run, read the input, write with new references
+            # to a temp file, and then swap the temp file over the input file
+            with open(filepath, 'r') as input_file:
+                lines = input_file.readlines()
+            if not dry_run:
+                filepath_temp = filepath + ".temp"
+                with open(filepath_temp, 'w') as output_file:
+                    for line in lines:
+                        output_file.write(re.sub(source, dest, line))
+                os.rename(filepath_temp, filepath)
 
 
 """
