@@ -231,8 +231,7 @@ mod tests {
             },
             startup,
         },
-        cm_rust::{self, ChildDecl, ComponentDecl},
-        std::collections::{HashMap, HashSet},
+        std::collections::HashSet,
     };
 
     async fn new_model(
@@ -258,8 +257,10 @@ mod tests {
         let model = Arc::new(Model::new(ModelParams {
             root_component_url: "test:///root".to_string(),
             root_resolver_registry: resolver,
-            elf_runner: mock_runner,
-            builtin_runners: HashMap::new(),
+            elf_runner: mock_runner.clone(),
+            builtin_runners: vec![(TEST_RUNNER_NAME.into(), mock_runner.clone() as _)]
+                .into_iter()
+                .collect(),
         }));
         let builtin_environment =
             BuiltinEnvironment::new(&startup_args, &model, ComponentManagerConfig::default())
@@ -273,7 +274,7 @@ mod tests {
     async fn bind_root() {
         let mock_runner = Arc::new(MockRunner::new());
         let mut mock_resolver = MockResolver::new();
-        mock_resolver.add_component("root", default_component_decl());
+        mock_resolver.add_component("root", component_decl_with_test_runner());
         let (model, _builtin_environment) = new_model(mock_resolver, mock_runner.clone()).await;
         let m: AbsoluteMoniker = AbsoluteMoniker::root();
         let res = model.bind(&m).await;
@@ -289,7 +290,7 @@ mod tests {
     async fn bind_root_non_existent() {
         let mock_runner = Arc::new(MockRunner::new());
         let mut mock_resolver = MockResolver::new();
-        mock_resolver.add_component("root", default_component_decl());
+        mock_resolver.add_component("root", component_decl_with_test_runner());
         let (model, _builtin_environment) = new_model(mock_resolver, mock_runner.clone()).await;
         let m: AbsoluteMoniker = vec!["no-such-instance:0"].into();
         let res = model.bind(&m).await;
@@ -307,24 +308,14 @@ mod tests {
         let mut mock_resolver = MockResolver::new();
         mock_resolver.add_component(
             "root",
-            ComponentDecl {
-                children: vec![
-                    ChildDecl {
-                        name: "system".to_string(),
-                        url: "test:///system".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    },
-                    ChildDecl {
-                        name: "echo".to_string(),
-                        url: "test:///echo".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    },
-                ],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .add_lazy_child("system")
+                .add_lazy_child("echo")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         );
-        mock_resolver.add_component("system", default_component_decl());
-        mock_resolver.add_component("echo", default_component_decl());
+        mock_resolver.add_component("system", component_decl_with_test_runner());
+        mock_resolver.add_component("echo", component_decl_with_test_runner());
         let hook = Arc::new(TestHook::new());
         let (model, _builtin_environment) =
             new_model_with(mock_resolver, mock_runner.clone(), hook.hooks()).await;
@@ -372,35 +363,21 @@ mod tests {
         let mut mock_resolver = MockResolver::new();
         mock_resolver.add_component(
             "root",
-            ComponentDecl {
-                children: vec![ChildDecl {
-                    name: "system".to_string(),
-                    url: "test:///system".to_string(),
-                    startup: fsys::StartupMode::Lazy,
-                }],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .add_lazy_child("system")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         );
         mock_resolver.add_component(
             "system",
-            ComponentDecl {
-                children: vec![
-                    ChildDecl {
-                        name: "logger".to_string(),
-                        url: "test:///logger".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    },
-                    ChildDecl {
-                        name: "netstack".to_string(),
-                        url: "test:///netstack".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    },
-                ],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .add_lazy_child("logger")
+                .add_lazy_child("netstack")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         );
-        mock_resolver.add_component("logger", default_component_decl());
-        mock_resolver.add_component("netstack", default_component_decl());
+        mock_resolver.add_component("logger", component_decl_with_test_runner());
+        mock_resolver.add_component("netstack", component_decl_with_test_runner());
         let hook = Arc::new(TestHook::new());
         let (model, _builtin_environment) =
             new_model_with(mock_resolver, mock_runner.clone(), hook.hooks()).await;
@@ -447,16 +424,12 @@ mod tests {
         let mut mock_resolver = MockResolver::new();
         mock_resolver.add_component(
             "root",
-            ComponentDecl {
-                children: vec![ChildDecl {
-                    name: "system".to_string(),
-                    url: "test:///system".to_string(),
-                    startup: fsys::StartupMode::Lazy,
-                }],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .add_lazy_child("system")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         );
-        mock_resolver.add_component("system", default_component_decl());
+        mock_resolver.add_component("system", component_decl_with_test_runner());
         let (model, _builtin_environment) = new_model(mock_resolver, mock_runner.clone()).await;
         // bind to system
         let m: AbsoluteMoniker = vec!["system:0"].into();
@@ -493,57 +466,35 @@ mod tests {
         let mut mock_resolver = MockResolver::new();
         mock_resolver.add_component(
             "root",
-            ComponentDecl {
-                children: vec![ChildDecl {
-                    name: "a".to_string(),
-                    url: "test:///a".to_string(),
-                    startup: fsys::StartupMode::Lazy,
-                }],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .add_lazy_child("a")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         );
         mock_resolver.add_component(
             "a",
-            ComponentDecl {
-                children: vec![
-                    ChildDecl {
-                        name: "b".to_string(),
-                        url: "test:///b".to_string(),
-                        startup: fsys::StartupMode::Eager,
-                    },
-                    ChildDecl {
-                        name: "c".to_string(),
-                        url: "test:///c".to_string(),
-                        startup: fsys::StartupMode::Eager,
-                    },
-                ],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .add_eager_child("b")
+                .add_eager_child("c")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         );
-        mock_resolver.add_component("b", default_component_decl());
+        mock_resolver.add_component("b", component_decl_with_test_runner());
         mock_resolver.add_component(
             "c",
-            ComponentDecl {
-                children: vec![ChildDecl {
-                    name: "d".to_string(),
-                    url: "test:///d".to_string(),
-                    startup: fsys::StartupMode::Eager,
-                }],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .add_eager_child("d")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         );
         mock_resolver.add_component(
             "d",
-            ComponentDecl {
-                children: vec![ChildDecl {
-                    name: "e".to_string(),
-                    url: "test:///e".to_string(),
-                    startup: fsys::StartupMode::Lazy,
-                }],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .add_lazy_child("e")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         );
-        mock_resolver.add_component("e", default_component_decl());
+        mock_resolver.add_component("e", component_decl_with_test_runner());
         let hook = Arc::new(TestHook::new());
         let (model, _builtin_environment) =
             new_model_with(mock_resolver, mock_runner.clone(), hook.hooks()).await;
@@ -586,28 +537,19 @@ mod tests {
         let mut mock_resolver = MockResolver::new();
         mock_resolver.add_component(
             "root",
-            ComponentDecl {
-                children: vec![ChildDecl {
-                    name: "a".to_string(),
-                    url: "test:///a".to_string(),
-                    startup: fsys::StartupMode::Lazy,
-                }],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .add_lazy_child("a")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         );
         mock_resolver.add_component(
             "a",
-            ComponentDecl {
-                program: None,
-                children: vec![ChildDecl {
-                    name: "b".to_string(),
-                    url: "test:///b".to_string(),
-                    startup: fsys::StartupMode::Eager,
-                }],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new_empty_component()
+                .add_eager_child("b")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         );
-        mock_resolver.add_component("b", default_component_decl());
+        mock_resolver.add_component("b", component_decl_with_test_runner());
         let (model, _builtin_environment) = new_model(mock_resolver, mock_runner.clone()).await;
 
         // Bind to the parent component. The child should be started. However, the parent component

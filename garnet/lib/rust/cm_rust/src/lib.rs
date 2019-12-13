@@ -157,7 +157,7 @@ macro_rules! fidl_into_vec {
     };
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default)]
 pub struct ComponentDecl {
     pub program: Option<fdata::Dictionary>,
     pub uses: Vec<UseDecl>,

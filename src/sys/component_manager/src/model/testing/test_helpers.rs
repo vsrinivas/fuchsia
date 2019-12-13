@@ -31,6 +31,7 @@ use {
     fuchsia_zircon::{self as zx, AsHandleRef, Koid},
     futures::TryStreamExt,
     std::collections::{HashMap, HashSet},
+    std::default::Default,
     std::path::Path,
     std::sync::Arc,
 };
@@ -153,16 +154,105 @@ pub async fn get_live_child<'a>(realm: &'a Realm, child: &'a str) -> Arc<Realm> 
 
 /// Returns an empty component decl for an executable component.
 pub fn default_component_decl() -> ComponentDecl {
+    ComponentDecl { program: Some(fdata::Dictionary { entries: vec![] }), ..Default::default() }
+}
+
+/// Name of the test runner.
+///
+/// Several functions assume the existance of a runner with this name.
+pub const TEST_RUNNER_NAME: &str = "test_runner";
+
+/// Returns an empty component decl set up to have a non-empty program and to use the "test_runner"
+/// runner.
+pub fn component_decl_with_test_runner() -> ComponentDecl {
     ComponentDecl {
         program: Some(fdata::Dictionary { entries: vec![] }),
-        uses: Vec::new(),
-        exposes: Vec::new(),
-        offers: Vec::new(),
-        children: Vec::new(),
-        collections: Vec::new(),
-        facets: None,
-        storage: Vec::new(),
-        runners: Vec::new(),
+        uses: vec![cm_rust::UseDecl::Runner(cm_rust::UseRunnerDecl {
+            source_name: TEST_RUNNER_NAME.into(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Builder for constructing a ComponentDecl.
+#[derive(Debug, Clone)]
+pub struct ComponentDeclBuilder {
+    result: ComponentDecl,
+}
+
+impl ComponentDeclBuilder {
+    /// An empty ComponentDeclBuilder, with no program.
+    pub fn new_empty_component() -> Self {
+        ComponentDeclBuilder { result: Default::default() }
+    }
+
+    /// A ComponentDeclBuilder prefilled with a program and using a runner named "test_runner",
+    /// which we assume is offered to us.
+    pub fn new() -> Self {
+        Self::new_empty_component().use_runner(TEST_RUNNER_NAME)
+    }
+
+    /// Add a child element with the given name, URL, and startup mode.
+    pub fn add_custom_child(mut self, name: &str, url: &str, startup: fsys::StartupMode) -> Self {
+        self.result.children.push(ChildDecl {
+            name: name.to_string(),
+            url: url.to_string(),
+            startup: startup,
+        });
+        self
+    }
+
+    /// Add a lazily instantiated child with a default test URL derived from the name.
+    pub fn add_lazy_child(self, name: &str) -> Self {
+        self.add_custom_child(name, &format!("test:///{}", name), fsys::StartupMode::Lazy)
+    }
+
+    /// Add an eagerly instantiated child with a default test URL derived from the name.
+    pub fn add_eager_child(self, name: &str) -> Self {
+        self.add_custom_child(name, &format!("test:///{}", name), fsys::StartupMode::Eager)
+    }
+
+    /// Add a "use" clause, using the given runner.
+    pub fn use_runner(mut self, name: &str) -> Self {
+        self.result
+            .uses
+            .push(cm_rust::UseDecl::Runner(cm_rust::UseRunnerDecl { source_name: name.into() }));
+        self
+    }
+
+    /// Return a mutable reference to the declaration being built.
+    pub fn decl(&mut self) -> &mut ComponentDecl {
+        &mut self.result
+    }
+
+    /// Route the named runner cap to every currently declared child.
+    pub fn offer_runner_to_children(mut self, name: &str) -> Self {
+        // For each child, offer the runner cap from our realm to the child.
+        for child in self.result.children.iter() {
+            self.result.offers.push(cm_rust::OfferDecl::Runner(cm_rust::OfferRunnerDecl {
+                source: cm_rust::OfferRunnerSource::Realm,
+                source_name: name.into(),
+                target: cm_rust::OfferTarget::Child(child.name.to_string()),
+                target_name: name.into(),
+            }));
+        }
+
+        // Similarly, for each collection, offer the runner cap.
+        for collection in self.result.collections.iter() {
+            self.result.offers.push(cm_rust::OfferDecl::Runner(cm_rust::OfferRunnerDecl {
+                source: cm_rust::OfferRunnerSource::Realm,
+                source_name: name.into(),
+                target: cm_rust::OfferTarget::Collection(collection.name.to_string()),
+                target_name: name.into(),
+            }));
+        }
+
+        self
+    }
+
+    /// Generate the final ComponentDecl.
+    pub fn build(self) -> ComponentDecl {
+        self.result
     }
 }
 
