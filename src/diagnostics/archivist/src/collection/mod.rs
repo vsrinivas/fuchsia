@@ -12,14 +12,13 @@
 //! exposed externally over a stream for use by the Archivist.
 
 use {
-    crate::inspect,
+    crate::{
+        component_events::{ComponentEvent, ComponentEventData, Data, InspectReaderData},
+        inspect,
+    },
     failure::{self, format_err, Error},
-    fidl_fuchsia_inspect::TreeProxy,
-    fidl_fuchsia_inspect_deprecated::InspectProxy,
-    fidl_fuchsia_io::DirectoryProxy,
     fuchsia_async as fasync,
     fuchsia_watch::{self, NodeType, PathEvent},
-    fuchsia_zircon as zx,
     futures::future::{join_all, BoxFuture},
     futures::{channel::mpsc, sink::SinkExt, stream::BoxStream, FutureExt, StreamExt},
     std::collections::HashMap,
@@ -52,110 +51,11 @@ static ARCHIVIST_NAME: &str = "archivist.cmx";
 /// Ignore components with this name, since ComponentManager hub contains a cycle.
 static COMPONENT_MANAGER_NAME: &str = "component_manager.cmx";
 
-/// Represents the data associated with a component event.
-#[derive(Debug)]
-pub struct ComponentEventData {
-    /// The path to the component's realm.
-    pub realm_path: RealmPath,
-
-    /// The name of the component.
-    pub component_name: String,
-
-    /// The instance ID of the component.
-    pub component_id: String,
-
-    /// Extra data about this event (to be stored in extra files in the archive).
-    pub component_data_map: Option<DataMap>,
-}
-
-impl PartialEq for ComponentEventData {
-    /// Check ComponentEventData for equality.
-    ///
-    /// We implement this manually so that we can avoid requiring equality comparison on
-    /// `component_data_map`.
-    fn eq(&self, other: &Self) -> bool {
-        self.realm_path == other.realm_path
-            && self.component_name == other.component_name
-            && self.component_id == other.component_id
-    }
-}
-
-#[derive(Debug)]
-pub struct InspectReaderData {
-    /// Path through the component hierarchy to the component
-    /// that this data packet is about.
-    pub component_hierarchy_path: PathBuf,
-
-    /// The path from the root parent to
-    /// the component generating the inspect reader
-    /// data, with all non-monikers stripped, such as
-    /// `r` and `c` characters denoting realm or component
-    /// or realm id/component id.
-    /// eg: /r/my_realm/123/c/echo.cmx/123/ becomes:
-    ///     [my_realm, echo.cmx]
-    pub absolute_moniker: Vec<String>,
-
-    /// The name of the component.
-    pub component_name: String,
-
-    /// The instance ID of the component.
-    pub component_id: String,
-
-    /// Proxy to the inspect data host.
-    pub data_directory_proxy: Option<DirectoryProxy>,
-}
-
 pub type DataMap = HashMap<String, Data>;
-
-/// Data associated with a component.
-///
-/// This data is stored by data collectors and
-/// passed by the collectors to processors.
-///
-/// This may be extended to new types of data.
-#[derive(Debug)]
-pub enum Data {
-    /// Empty data, for testing.
-    Empty,
-
-    /// A VMO containing data associated with the event.
-    Vmo(zx::Vmo),
-
-    /// A file containing data associated with the event.
-    ///
-    /// Because we can't synchronously retrieve file contents like we can for VMOs, this holds
-    /// the full file contents. Future changes should make streaming ingestion feasible.
-    File(Vec<u8>),
-
-    /// A connection to a Tree service and a handle to the root hierarchy VMO. This VMO is what a
-    /// root.inspect file would contain and the result of calling Tree#GetContent. We hold to it
-    /// so that we can use it when the component is removed, at which point calling the Tree
-    /// service is not an option.
-    Tree(TreeProxy, Option<zx::Vmo>),
-
-    /// A connection to the deprecated Inspect service.
-    DeprecatedFidl(InspectProxy),
-}
-
-/// An event that occurred to a component.
-#[derive(Debug)]
-pub enum ComponentEvent {
-    /// The component existed when the collection process started.
-    Existing(ComponentEventData),
-
-    /// We observed the component starting.
-    Start(ComponentEventData),
-
-    /// We observed the component stopping.
-    Stop(ComponentEventData),
-
-    /// We observed the creation of a new `out` directory.
-    OutDirectoryAppeared(InspectReaderData),
-}
 
 /// A realm path is a vector of realm names.
 #[derive(Clone, Eq, PartialEq, Debug)]
-pub struct RealmPath(Vec<String>);
+pub struct RealmPath(pub Vec<String>);
 
 impl RealmPath {
     fn as_string(&self) -> String {
@@ -570,7 +470,10 @@ impl HubCollector {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {fdio, fuchsia_component::server::ServiceFs, fuchsia_zircon::Peered, std::fs};
+    use {
+        fdio, fuchsia_component::server::ServiceFs, fuchsia_zircon as zx, fuchsia_zircon::Peered,
+        std::fs,
+    };
 
     macro_rules! make_component_event {
         ($fn_name:ident, $type:ident) => {
@@ -621,54 +524,6 @@ mod tests {
             component_id: component_id.to_string(),
             data_directory_proxy: None,
         });
-    }
-
-    #[cfg(test)]
-    impl PartialEq for InspectReaderData {
-        fn eq(&self, other: &Self) -> bool {
-            let InspectReaderData {
-                component_hierarchy_path,
-                absolute_moniker,
-                component_name,
-                component_id,
-                data_directory_proxy: _,
-            } = self;
-            let InspectReaderData {
-                component_hierarchy_path: heirarchy_path,
-                component_name: name,
-                absolute_moniker: moniker,
-                component_id: id,
-                data_directory_proxy: _,
-            } = other;
-            component_hierarchy_path == heirarchy_path
-                && component_name == name
-                && component_id == id
-                && absolute_moniker == moniker
-        }
-    }
-
-    #[cfg(test)]
-    impl PartialEq for ComponentEvent {
-        fn eq(&self, other: &Self) -> bool {
-            match (self, other) {
-                (ComponentEvent::Existing(a), ComponentEvent::Existing(b)) => {
-                    return a == b;
-                }
-                (ComponentEvent::Start(a), ComponentEvent::Start(b)) => {
-                    return a == b;
-                }
-                (ComponentEvent::Stop(a), ComponentEvent::Stop(b)) => {
-                    return a == b;
-                }
-                (
-                    ComponentEvent::OutDirectoryAppeared(a),
-                    ComponentEvent::OutDirectoryAppeared(b),
-                ) => {
-                    return a == b;
-                }
-                _ => false,
-            }
-        }
     }
 
     #[derive(Debug)]

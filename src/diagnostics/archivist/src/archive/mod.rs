@@ -4,7 +4,8 @@
 
 use {
     crate::{
-        collection::{self, ComponentEvent, ComponentEventData, InspectReaderData},
+        collection::HubCollector,
+        component_events::{ComponentEvent, ComponentEventData, Data, InspectReaderData},
         configs, diagnostics, inspect,
     },
     chrono::prelude::*,
@@ -610,7 +611,7 @@ impl ArchivistState {
 
 fn populate_inspect_repo(
     state: &Arc<Mutex<ArchivistState>>,
-    inspect_reader_data: collection::InspectReaderData,
+    inspect_reader_data: InspectReaderData,
 ) -> Result<(), Error> {
     let state = state.lock().unwrap();
     let mut inspect_repo = state.inspect_repository.write().unwrap();
@@ -670,10 +671,8 @@ async fn archive_event(
     if let Some(data_map) = event_data.component_data_map {
         for (path, object) in data_map {
             match object {
-                collection::Data::Empty
-                | collection::Data::DeprecatedFidl(_)
-                | collection::Data::Tree(_, None) => {}
-                collection::Data::Vmo(vmo) | collection::Data::Tree(_, Some(vmo)) => {
+                Data::Empty | Data::DeprecatedFidl(_) | Data::Tree(_, None) => {}
+                Data::Vmo(vmo) | Data::Tree(_, Some(vmo)) => {
                     let mut contents = vec![0u8; vmo.get_size()? as usize];
                     vmo.read(&mut contents[..], 0)?;
 
@@ -692,7 +691,7 @@ async fn archive_event(
 
                     log = log.add_event_file(path, &contents);
                 }
-                collection::Data::File(contents) => {
+                Data::File(contents) => {
                     log = log.add_event_file(path, &contents);
                 }
             }
@@ -802,7 +801,7 @@ pub async fn run_archivist(
     let state = Arc::new(Mutex::new(archivist_state));
     component::health().set_starting_up();
 
-    let mut collector = collection::HubCollector::new("/hub")?;
+    let mut collector = HubCollector::new("/hub")?;
     let mut events = collector.component_events().unwrap();
 
     let collector_state = state.clone();

@@ -25,6 +25,7 @@ rustc_library("lib") {
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//sdk/fidl/fuchsia.diagnostics.stream:fuchsia.diagnostics.stream-rustc",
+    "//sdk/fidl/fuchsia.sys.internal:fuchsia.sys.internal-rustc",
     "//src/diagnostics/lib/inspect-fidl-load",
     "//src/diagnostics/lib/inspect-formatter",
     "//src/diagnostics/lib/selectors",

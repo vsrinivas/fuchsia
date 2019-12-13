@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    crate::collection::*,
+    crate::{
+        collection::{DataCollector, DataMap},
+        component_events::Data,
+    },
     failure::{self, bail, format_err, Error},
     fidl::endpoints::DiscoverableService,
     fidl::endpoints::{RequestStream, ServerEnd},
