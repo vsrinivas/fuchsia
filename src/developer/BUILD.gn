@@ -19,6 +19,7 @@ group("tests") {
 
   deps = [
     "//src/developer/debug:tests",
+    "//src/developer/development-bridge:tests",
     "//src/developer/exception_broker/tests",
     "//src/developer/feedback:tests",
     "//src/developer/fuchsia-criterion:fuchsia-criterion-tests",
