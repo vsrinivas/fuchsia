@@ -18,10 +18,10 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/platform/detached_path.h"
 #include "src/ledger/bin/platform/fd.h"
+#include "src/ledger/bin/platform/unique_fd.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/files/unique_fd.h"
 
 namespace ledger {
 namespace {
@@ -46,7 +46,7 @@ Status GetLedger(sys::ComponentContext* context,
                  fit::function<void()> error_handler, LedgerPtr* ledger,
                  storage::GarbageCollectionPolicy gc_policy,
                  fit::function<void(fit::closure)>* close_repository) {
-  fbl::unique_fd dir(
+  unique_fd dir(
       openat(ledger_repository_path.root_fd(), ledger_repository_path.path().c_str(), O_RDONLY));
   if (!dir.is_valid()) {
     LEDGER_LOG(ERROR) << "Unable to open directory at " << ledger_repository_path.path()

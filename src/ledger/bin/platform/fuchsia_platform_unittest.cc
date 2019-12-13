@@ -23,8 +23,8 @@ TEST(FuchsiaPlatformTest, OpenFD) {
   ASSERT_TRUE(file_system->CreateDirectory(subpath));
 
   DetachedPath new_subpath;
-  std::unique_ptr<FileSystem::FileDescriptor> fd = file_system->OpenFD(subpath, &new_subpath);
-  EXPECT_TRUE(fd->IsValid());
+  unique_fd fd = file_system->OpenFD(subpath, &new_subpath);
+  EXPECT_TRUE(fd.is_valid());
   EXPECT_NE(subpath.root_fd(), new_subpath.root_fd());
   EXPECT_EQ(new_subpath.path(), ".");
 }

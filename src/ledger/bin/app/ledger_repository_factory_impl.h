@@ -20,11 +20,11 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/fidl/syncable.h"
 #include "src/ledger/bin/p2p_provider/public/p2p_provider_factory.h"
+#include "src/ledger/bin/platform/fd.h"
 #include "src/ledger/bin/sync_coordinator/impl/user_sync_impl.h"
 #include "src/ledger/lib/callback/managed_container.h"
 #include "src/ledger/lib/memory/weak_ptr.h"
 #include "src/lib/callback/auto_cleanable.h"
-#include "src/lib/files/unique_fd.h"
 #include "src/lib/inspect_deprecated/deprecated/expose.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 
@@ -54,7 +54,7 @@ class LedgerRepositoryFactoryImpl
   // Binds |repository_request| to the repository stored in the directory opened
   // in |root_fd|.
   void GetRepositoryByFD(
-      std::shared_ptr<fbl::unique_fd> root_fd,
+      std::shared_ptr<unique_fd> root_fd,
       fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider, std::string user_id,
       fidl::InterfaceRequest<ledger_internal::LedgerRepository> repository_request,
       fit::function<void(Status)> callback);

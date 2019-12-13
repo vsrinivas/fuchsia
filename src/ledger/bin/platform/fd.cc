@@ -11,6 +11,8 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
+#include "src/ledger/bin/platform/unique_fd.h"
+
 namespace ledger {
 
 zx::channel CloneChannelFromFileDescriptor(int fd) {
@@ -28,13 +30,13 @@ zx::channel CloneChannelFromFileDescriptor(int fd) {
   return zx::channel(handle.release());
 }
 
-fbl::unique_fd OpenChannelAsFileDescriptor(zx::channel channel) {
+unique_fd OpenChannelAsFileDescriptor(zx::channel channel) {
   int fd = -1;
   zx_status_t status = fdio_fd_create(channel.release(), &fd);
   if (status != ZX_OK) {
-    return fbl::unique_fd();
+    return unique_fd();
   }
-  return fbl::unique_fd(fd);
+  return unique_fd(fd);
 }
 
 }  // namespace ledger

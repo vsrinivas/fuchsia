@@ -6,6 +6,7 @@
 #define SRC_LEDGER_BIN_PLATFORM_FUCHSIA_PLATFORM_H_
 
 #include "src/ledger/bin/platform/platform.h"
+#include "src/ledger/bin/platform/unique_fd.h"
 #include "util/env_fuchsia.h"
 
 namespace ledger {
@@ -17,7 +18,7 @@ class FuchsiaFileSystem : public FileSystem {
 
   // Opens a FileDescriptor at the given |path|. If the operation fails, the returned FileDescriptor
   // will be invalid.
-  std::unique_ptr<FileDescriptor> OpenFD(DetachedPath path, DetachedPath* result_path);
+  unique_fd OpenFD(DetachedPath path, DetachedPath* result_path);
 
   // Creates a new LevelDB environment at |db_path|. If an FD is not already opened at the location
   // of |db_path| a new one is opend, and |updated_db_path| reflects this update. Otherwise,

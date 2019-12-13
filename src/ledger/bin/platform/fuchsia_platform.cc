@@ -14,54 +14,29 @@
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
-#include "src/lib/files/unique_fd.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 #include "util/env_fuchsia.h"
 
 namespace ledger {
-namespace {
 
 constexpr absl::string_view kCurrentPath = ".";
 
-class FuchsiaFileDescriptor : public FileSystem::FileDescriptor {
- public:
-  // Creates a FuchsiaFileDescriptor with the given file descriptor.
-  FuchsiaFileDescriptor(int fd) : unique_fd_(fd) {}
-
-  ~FuchsiaFileDescriptor() = default;
-
-  // Returns the int representation of this FuchsiaFileDescriptor.
-  int Get() { return unique_fd_.get(); }
-
-  // FileSystem::FileDescriptor:
-  bool IsValid() { return unique_fd_.is_valid(); }
-
- private:
-  fbl::unique_fd unique_fd_;
-};
-
-}  // namespace
-
-// Opens a FileDescriptor at the given |path|. If the operation fails, the returned FileDescriptor
-// will be invalid.
-std::unique_ptr<FileSystem::FileDescriptor> FuchsiaFileSystem::OpenFD(DetachedPath path,
-                                                                      DetachedPath* result_path) {
-  auto fd = std::make_unique<FuchsiaFileDescriptor>(
-      openat(path.root_fd(), path.path().c_str(), O_RDONLY | O_DIRECTORY));
-  if (fd->IsValid()) {
-    *result_path = DetachedPath(fd->Get());
+unique_fd FuchsiaFileSystem::OpenFD(DetachedPath path, DetachedPath* result_path) {
+  unique_fd fd(openat(path.root_fd(), path.path().c_str(), O_RDONLY | O_DIRECTORY));
+  if (fd.is_valid()) {
+    *result_path = DetachedPath(fd.get());
   }
   return fd;
 }
 
 std::unique_ptr<leveldb::Env> FuchsiaFileSystem::MakeLevelDbEnvironment(
     DetachedPath db_path, DetachedPath* updated_db_path) {
-  std::unique_ptr<FileSystem::FileDescriptor> unique_fd;
+  unique_fd fd;
   *updated_db_path = db_path;
   if (db_path.path() != ".") {
     // Open a FileDescriptor at the db path.
-    unique_fd = OpenFD(db_path, updated_db_path);
-    if (!unique_fd->IsValid()) {
+    fd = OpenFD(db_path, updated_db_path);
+    if (!fd.is_valid()) {
       LEDGER_LOG(ERROR) << "Unable to open directory at " << db_path.path() << ". errno: " << errno;
       return nullptr;
     }

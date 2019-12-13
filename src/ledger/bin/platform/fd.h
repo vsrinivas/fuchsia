@@ -7,13 +7,13 @@
 
 #include <lib/zx/channel.h>
 
-#include "src/lib/files/unique_fd.h"
+#include "src/ledger/bin/platform/unique_fd.h"
 
 namespace ledger {
 
 zx::channel CloneChannelFromFileDescriptor(int fd);
 
-fbl::unique_fd OpenChannelAsFileDescriptor(zx::channel channel);
+unique_fd OpenChannelAsFileDescriptor(zx::channel channel);
 
 }  // namespace ledger
 

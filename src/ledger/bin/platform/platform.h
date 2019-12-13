@@ -18,15 +18,6 @@ namespace ledger {
 // An abstraction over all file system related operations.
 class FileSystem {
  public:
-  // A scoped file descriptor.
-  class FileDescriptor {
-   public:
-    virtual ~FileDescriptor() = default;
-
-    // Returns whether this FileDescriptor is valid.
-    virtual bool IsValid() = 0;
-  };
-
   FileSystem() = default;
 
   virtual ~FileSystem() = default;

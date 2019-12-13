@@ -30,7 +30,6 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/p2p_provider/impl/static_user_id_provider.h"
 #include "src/ledger/bin/p2p_sync/impl/user_communicator_impl.h"
-#include "src/ledger/bin/platform/fd.h"
 #include "src/ledger/bin/platform/platform.h"
 #include "src/ledger/bin/platform/scoped_tmp_dir.h"
 #include "src/ledger/bin/storage/impl/leveldb_factory.h"
@@ -119,7 +118,7 @@ bool GetRepositoryName(rng::Random* random, FileSystem* file_system,
 // requests and callbacks and fires them when the repository is available.
 class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
  public:
-  explicit LedgerRepositoryContainer(std::shared_ptr<fbl::unique_fd> root_fd)
+  explicit LedgerRepositoryContainer(std::shared_ptr<unique_fd> root_fd)
       : root_fd_(std::move(root_fd)) {
     // Ensure that we close the repository if the underlying filesystem closes
     // too. This prevents us from trying to write on disk when there's no disk
@@ -197,7 +196,7 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
     }
   }
 
-  std::shared_ptr<fbl::unique_fd> root_fd_;
+  std::shared_ptr<unique_fd> root_fd_;
   zx::channel fd_chan_;
   std::unique_ptr<async::Wait> fd_wait_;
   // This callback is invoked indirectly when ledger_repository_ is destructed, because the
@@ -215,7 +214,7 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
 
 struct LedgerRepositoryFactoryImpl::RepositoryInformation {
  public:
-  explicit RepositoryInformation(std::shared_ptr<fbl::unique_fd> root_fd, std::string user_id)
+  explicit RepositoryInformation(std::shared_ptr<unique_fd> root_fd, std::string user_id)
       : root_fd_(std::move(root_fd)),
         base_path(root_fd_->get()),
         content_path(base_path.SubPath(kSerializationVersion)),
@@ -233,7 +232,7 @@ struct LedgerRepositoryFactoryImpl::RepositoryInformation {
   }
 
  private:
-  std::shared_ptr<fbl::unique_fd> root_fd_;
+  std::shared_ptr<unique_fd> root_fd_;
 
  public:
   DetachedPath base_path;
@@ -263,17 +262,17 @@ void LedgerRepositoryFactoryImpl::GetRepository(
     fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider, std::string user_id,
     fidl::InterfaceRequest<ledger_internal::LedgerRepository> repository_request,
     fit::function<void(Status)> callback) {
-  fbl::unique_fd root_fd = OpenChannelAsFileDescriptor(std::move(repository_handle));
+  unique_fd root_fd = OpenChannelAsFileDescriptor(std::move(repository_handle));
   if (!root_fd.is_valid()) {
     callback(Status::IO_ERROR);
     return;
   }
-  GetRepositoryByFD(std::make_shared<fbl::unique_fd>(std::move(root_fd)), std::move(cloud_provider),
+  GetRepositoryByFD(std::make_shared<unique_fd>(std::move(root_fd)), std::move(cloud_provider),
                     user_id, std::move(repository_request), std::move(callback));
 }
 
 void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
-    std::shared_ptr<fbl::unique_fd> root_fd,
+    std::shared_ptr<unique_fd> root_fd,
     fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider, std::string user_id,
     fidl::InterfaceRequest<ledger_internal::LedgerRepository> repository_request,
     fit::function<void(Status)> callback) {

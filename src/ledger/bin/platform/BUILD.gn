@@ -13,6 +13,7 @@ source_set("platform") {
     "platform.h",
     "scoped_tmp_dir.h",
     "scoped_tmp_location.h",
+    "unique_fd.h",
   ]
 
   public_deps = [

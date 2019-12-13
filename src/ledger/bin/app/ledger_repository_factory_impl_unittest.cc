@@ -14,11 +14,11 @@
 #include "src/ledger/bin/platform/detached_path.h"
 #include "src/ledger/bin/platform/fd.h"
 #include "src/ledger/bin/platform/scoped_tmp_dir.h"
+#include "src/ledger/bin/platform/unique_fd.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/callback/capture.h"
 #include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/convert/convert.h"
-#include "src/lib/files/unique_fd.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 #include "src/lib/inspect_deprecated/reader.h"
 #include "src/lib/inspect_deprecated/testing/inspect.h"
@@ -86,7 +86,7 @@ class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
 
 ::testing::AssertionResult LedgerRepositoryFactoryImplTest::CallGetRepository(
     const std::string& name, ledger_internal::LedgerRepositoryPtr* ledger_repository_ptr) {
-  fbl::unique_fd fd(openat(tmp_location_->path().root_fd(), name.c_str(), O_RDONLY));
+  unique_fd fd(openat(tmp_location_->path().root_fd(), name.c_str(), O_RDONLY));
   if (!fd.is_valid()) {
     return ::testing::AssertionFailure() << "Failed to validate directory \"" << name << "\"!";
   }
