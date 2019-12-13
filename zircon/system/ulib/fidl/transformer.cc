@@ -805,7 +805,7 @@ class TransformerBase {
         .max_count = 0 /*unused*/,
         .element_size = 1,
         .nullable = kFidlNullability_Nullable, /* constraints are not checked, i.e. unused */
-        nullptr /* alt_type unused, we provide both src and dst */};
+        .alt_type = nullptr /* alt_type unused, we provide both src and dst */};
     return TransformVector(string_as_coded_vector, string_as_coded_vector, position,
                            out_traversal_result);
   }
