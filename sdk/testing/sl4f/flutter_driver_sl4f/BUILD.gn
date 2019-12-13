@@ -1,0 +1,21 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/dart_library.gni")
+
+dart_library("flutter_driver_sl4f") {
+  package_name = "flutter_driver_sl4f"
+
+  sdk_category = "partner"
+
+  sources = [
+    "flutter_driver_sl4f.dart",
+  ]
+
+  deps = [
+    "//sdk/testing/sl4f/client",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
+    "//third_party/dart-pkg/git/flutter/packages/fuchsia_remote_debug_protocol",
+  ]
+}
