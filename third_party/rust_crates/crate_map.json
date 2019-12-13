@@ -381,6 +381,11 @@
             "package_name": "regex"
         },
         {
+            "crate_name": "regex_syntax",
+            "crate_type": "lib",
+            "package_name": "regex-syntax"
+        },
+        {
             "crate_name": "rental",
             "crate_type": "lib",
             "package_name": "rental"
@@ -821,6 +826,11 @@
             "crate_name": "regex",
             "crate_type": "lib",
             "package_name": "regex"
+        },
+        {
+            "crate_name": "regex_syntax",
+            "crate_type": "lib",
+            "package_name": "regex-syntax"
         },
         {
             "crate_name": "ring",
