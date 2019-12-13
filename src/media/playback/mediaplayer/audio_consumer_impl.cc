@@ -180,9 +180,9 @@ void AudioConsumerImpl::MaybeSetNewSource() {
   core_.SetSourceSegment(audio_consumer_source->TakeSourceSegment(),
                          [this, simple_stream_sink = std::move(simple_stream_sink),
                           buffers = std::move(buffers)]() mutable {
-                           int buffer_index = 0;
+                           size_t buffer_index = buffers.size() - 1;
                            while (!buffers.empty()) {
-                             simple_stream_sink->AddPayloadBuffer(buffer_index++,
+                             simple_stream_sink->AddPayloadBuffer(buffer_index--,
                                                                   std::move(*(buffers.end() - 1)));
                              buffers.pop_back();
                            }

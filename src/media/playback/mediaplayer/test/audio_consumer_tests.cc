@@ -9,7 +9,9 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
+#include <zircon/time.h>
 
+#include <array>
 #include <memory>
 #include <queue>
 #include <type_traits>
@@ -420,6 +422,58 @@ TEST_F(AudioConsumerTests, CheckPtsRate) {
   RunLoopUntil([&sent_packet]() { return sent_packet; });
 
   EXPECT_TRUE(sent_packet);
+  EXPECT_TRUE(fake_audio_.renderer().expected());
+  EXPECT_FALSE(sink_connection_closed);
+}
+
+// Test that packet buffers are consumed in the order they were supplied
+TEST_F(AudioConsumerTests, BufferOrdering) {
+  fuchsia::media::StreamSinkPtr sink;
+  fuchsia::media::AudioStreamType stream_type;
+  stream_type.frames_per_second = kFramesPerSecond;
+  stream_type.channels = kSamplesPerFrame;
+  stream_type.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
+  bool sink_connection_closed = false;
+
+  fake_audio_.renderer().ExpectPackets(
+      {{0, kVmoSize, 0x0000000000000000}, {kFramesPerSecond / 1000, kVmoSize, 0xa844a65edadbefbf}});
+
+  std::vector<zx::vmo> vmos(kNumVmos);
+  for (uint32_t i = 0; i < kNumVmos; i++) {
+    std::array<char, 1> test_data = {static_cast<char>(i)};
+    zx_status_t status = zx::vmo::create(kVmoSize, 0, &vmos[i]);
+    EXPECT_EQ(status, ZX_OK);
+    vmos[i].write(test_data.data(), 0, test_data.size());
+  }
+
+  audio_consumer_->CreateStreamSink(std::move(vmos), stream_type, nullptr, sink.NewRequest());
+
+  sink.set_error_handler(
+      [&sink_connection_closed](zx_status_t status) { sink_connection_closed = true; });
+
+  audio_consumer_->Start(fuchsia::media::AudioConsumerStartFlags::SUPPLY_DRIVEN, 0,
+                         fuchsia::media::NO_TIMESTAMP);
+
+  auto packet = fuchsia::media::StreamPacket::New();
+  packet->payload_buffer_id = 0;
+  packet->payload_size = kVmoSize;
+  packet->payload_offset = 0;
+  packet->pts = 0;
+
+  bool sent_packet = false;
+  sink->SendPacket(*packet, [&sent_packet]() { sent_packet = true; });
+  RunLoopUntil([&sent_packet]() { return sent_packet; });
+
+  packet = fuchsia::media::StreamPacket::New();
+  packet->payload_buffer_id = 1;
+  packet->payload_size = kVmoSize;
+  packet->payload_offset = 0;
+  packet->pts = ZX_MSEC(1);
+
+  sent_packet = false;
+  sink->SendPacket(*packet, [&sent_packet]() { sent_packet = true; });
+  RunLoopUntil([&sent_packet]() { return sent_packet; });
+
   EXPECT_TRUE(fake_audio_.renderer().expected());
   EXPECT_FALSE(sink_connection_closed);
 }
