@@ -5,7 +5,7 @@
 #ifndef TOOLS_FIDLCAT_COMMAND_LINE_OPTIONS_H_
 #define TOOLS_FIDLCAT_COMMAND_LINE_OPTIONS_H_
 
-#include <cmdline/args_parser.h>
+#include <optional>
 
 #include "src/lib/fidl_codec/display_options.h"
 #include "tools/fidlcat/lib/decode_options.h"
@@ -18,6 +18,8 @@ struct CommandLineOptions {
   std::vector<std::string> remote_name;
   std::vector<std::string> symbol_paths;
   std::vector<std::string> symbol_repo_paths;
+  std::string symbol_cache_path;
+  std::vector<std::string> symbol_servers;
   std::vector<std::string> fidl_ir_paths;
   std::vector<std::string> syscall_filters;
   std::vector<std::string> exclude_syscall_filters;
@@ -34,9 +36,9 @@ struct CommandLineOptions {
 
 // Parses the given |argc| and |argv| into the well-defined |options|.  If there
 // are strings left over, they are put in |params|.
-cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options,
-                                 DecodeOptions* decode_options, DisplayOptions* display_options,
-                                 std::vector<std::string>* params);
+std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options,
+                             DecodeOptions* decode_options, DisplayOptions* display_options,
+                             std::vector<std::string>* params);
 
 // Gets the list of .fidl.json files from the command line flags.
 //

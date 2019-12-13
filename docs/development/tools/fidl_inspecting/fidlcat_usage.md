@@ -287,3 +287,12 @@ satisfy the **--exclude-syscalls** pattern.
 To display all the syscalls but the zx_handle syscalls, use:
 
 --syscalls ".\*" --exclude-syscalls "zx_handle_.\*"
+
+## Symbols
+
+Fidlcat can connect to a symbol server. You have to use the option:
+
+**--with-symbol-server**
+
+The first time you use this option, fidlcat will give you a link to an
+authentication page. You then have to use the generated key to authenticate.

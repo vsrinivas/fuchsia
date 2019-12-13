@@ -410,7 +410,7 @@ void ProcessController::Initialize(zxdb::Session& session,
                                    const char* syscall_name) {
   global_dispatcher = dispatcher.get();
   std::vector<std::string> blank;
-  workflow_.Initialize(blank, blank, std::move(dispatcher));
+  workflow_.Initialize(blank, blank, "", blank, std::move(dispatcher));
 
   // Create fake processes and threads.
   InjectProcesses(session);

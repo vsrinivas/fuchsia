@@ -67,9 +67,9 @@ TEST_F(CommandLineOptionsTest, ArgfileTest) {
   DecodeOptions decode_options;
   DisplayOptions display_options;
   std::vector<std::string> params;
-  auto status = ParseCommandLine(argv.size(), argv.data(), &options, &decode_options,
-                                 &display_options, &params);
-  ASSERT_TRUE(status.ok());
+  auto error = ParseCommandLine(argv.size(), argv.data(), &options, &decode_options,
+                                &display_options, &params);
+  ASSERT_TRUE(error.empty());
   ASSERT_EQ(0U, params.size()) << "Expected 0 params, got (at least) " << params[0];
 
   // Expand the FIDL paths.
@@ -99,9 +99,9 @@ TEST_F(CommandLineOptionsTest, BadOptionsTest) {
   DecodeOptions decode_options;
   DisplayOptions display_options;
   std::vector<std::string> params;
-  auto status = ParseCommandLine(argv.size(), argv.data(), &options, &decode_options,
-                                 &display_options, &params);
-  ASSERT_TRUE(status.ok());
+  auto error = ParseCommandLine(argv.size(), argv.data(), &options, &decode_options,
+                                &display_options, &params);
+  ASSERT_TRUE(error.empty());
   ASSERT_EQ(0U, params.size()) << "Expected 0 params, got (at least) " << params[0];
 
   std::vector<std::unique_ptr<std::istream>> paths;
@@ -117,6 +117,8 @@ TEST_F(CommandLineOptionsTest, SimpleParseCommandLineTest) {
   std::string fidl_ir_path = "blah.fidl.json";
   std::string symbol_path = "path/to/debug/symbols";
   std::string symbol_repo_path = "path/to/debug/symbols/repo";
+  std::string symbol_cache = "~";
+  std::string symbol_server = "gs://fuchsia-infra-debug-symbols";
   std::string remote_pid = "3141";
   std::string connect = "localhost:8080";
   std::vector<const char*> argv = {"fakebinary",
@@ -126,6 +128,10 @@ TEST_F(CommandLineOptionsTest, SimpleParseCommandLineTest) {
                                    symbol_path.c_str(),
                                    "--symbol-repo-path",
                                    symbol_repo_path.c_str(),
+                                   "--symbol-cache",
+                                   symbol_cache.c_str(),
+                                   "--symbol-server",
+                                   symbol_server.c_str(),
                                    "--connect",
                                    connect.c_str(),
                                    "--remote-pid",
@@ -146,14 +152,16 @@ TEST_F(CommandLineOptionsTest, SimpleParseCommandLineTest) {
   DecodeOptions decode_options;
   DisplayOptions display_options;
   std::vector<std::string> params;
-  auto status = ParseCommandLine(argv.size(), argv.data(), &options, &decode_options,
-                                 &display_options, &params);
-  ASSERT_TRUE(status.ok());
+  auto error = ParseCommandLine(argv.size(), argv.data(), &options, &decode_options,
+                                &display_options, &params);
+  ASSERT_TRUE(error.empty());
   ASSERT_EQ(2U, params.size()) << "Expected 0 params, got (at least) " << params[0];
   ASSERT_EQ(connect, *options.connect);
   ASSERT_EQ(remote_pid, options.remote_pid[0]);
   ASSERT_EQ(symbol_path, options.symbol_paths[0]);
   ASSERT_EQ(symbol_repo_path, options.symbol_repo_paths[0]);
+  ASSERT_EQ(symbol_cache, options.symbol_cache_path);
+  ASSERT_EQ(symbol_server, options.symbol_servers[0]);
   ASSERT_EQ(fidl_ir_path, options.fidl_ir_paths[0]);
   ASSERT_EQ(2, options.stack_level);
 
@@ -182,9 +190,9 @@ TEST_F(CommandLineOptionsTest, CantHavePidAndFilter) {
   DecodeOptions decode_options;
   DisplayOptions display_options;
   std::vector<std::string> params;
-  auto status = ParseCommandLine(argv.size(), argv.data(), &options, &decode_options,
-                                 &display_options, &params);
-  ASSERT_TRUE(!status.ok());
+  auto error = ParseCommandLine(argv.size(), argv.data(), &options, &decode_options,
+                                &display_options, &params);
+  ASSERT_TRUE(!error.empty());
 }
 
 // Test to ensure that help is printed when no action is requested
@@ -199,9 +207,9 @@ TEST_F(CommandLineOptionsTest, NoActionMeansFailure) {
   DecodeOptions decode_options;
   DisplayOptions display_options;
   std::vector<std::string> params;
-  auto status = ParseCommandLine(argv.size(), argv.data(), &options, &decode_options,
-                                 &display_options, &params);
-  ASSERT_TRUE(!status.ok());
+  auto error = ParseCommandLine(argv.size(), argv.data(), &options, &decode_options,
+                                &display_options, &params);
+  ASSERT_TRUE(!error.empty());
 }
 
 TEST_F(CommandLineOptionsTest, QuietTrumpsVerbose) {
@@ -228,8 +236,8 @@ TEST_F(CommandLineOptionsTest, QuietTrumpsVerbose) {
   DecodeOptions decode_options;
   DisplayOptions display_options;
   std::vector<std::string> params;
-  auto status = ParseCommandLine(argv.size(), argv.data(), &options, &decode_options,
-                                 &display_options, &params);
+  auto error = ParseCommandLine(argv.size(), argv.data(), &options, &decode_options,
+                                &display_options, &params);
   ASSERT_TRUE(fxl::ShouldCreateLogMessage(fxl::LOG_ERROR));
   ASSERT_FALSE(fxl::ShouldCreateLogMessage(fxl::LOG_INFO));
 }

@@ -117,10 +117,12 @@ int ConsoleMain(int argc, const char* argv[]) {
   DecodeOptions decode_options;
   DisplayOptions display_options;
   std::vector<std::string> params;
-  cmdline::Status status =
+  int remaining_servers = 0;
+  bool server_error = false;
+  std::string error =
       ParseCommandLine(argc, argv, &options, &decode_options, &display_options, &params);
-  if (status.has_error()) {
-    fprintf(stderr, "%s\n", status.error_message().c_str());
+  if (!error.empty()) {
+    fprintf(stderr, "%s\n", error.c_str());
     return 1;
   }
 
@@ -148,17 +150,74 @@ int ConsoleMain(int argc, const char* argv[]) {
   }
 
   InterceptionWorkflow workflow;
-  workflow.Initialize(options.symbol_paths, options.symbol_repo_paths,
+  workflow.Initialize(options.symbol_paths, options.symbol_repo_paths, options.symbol_cache_path,
+                      options.symbol_servers,
                       std::make_unique<SyscallDisplayDispatcher>(&loader, decode_options,
                                                                  display_options, std::cout));
 
-  EnqueueStartup(&workflow, options, params);
+  if (workflow.HasSymbolServers()) {
+    for (const auto& server : workflow.GetSymbolServers()) {
+      // The first time we connect to a server, we have to provide an authentication.
+      // After that, the key is cached.
+      if (server->state() == zxdb::SymbolServer::State::kAuth) {
+        std::string key;
+        std::cout << "To authenticate " << server->name()
+                  << ", please supply an authentication token. You can retrieve a token from:\n"
+                  << server->AuthInfo() << '\n'
+                  << "Enter the server authentication key: ";
+        std::cin >> key;
 
-  // TODO(fidlcat): When the attached koid terminates normally, we should exit and call
-  // QuitNow() on the MessageLoop.
+        // Do the authentication.
+        ++remaining_servers;
+        server->Authenticate(key,
+                             [&workflow, &remaining_servers, &server_error](const zxdb::Err& err) {
+                               if (err.has_error()) {
+                                 FXL_LOG(ERROR) << "Server authentication failed: " << err.msg();
+                                 server_error = true;
+                               }
+                               if (--remaining_servers == 0) {
+                                 if (server_error) {
+                                   workflow.Shutdown();
+                                 } else {
+                                   FXL_LOG(INFO) << "Authentication successful";
+                                 }
+                               }
+                             });
+      }
+      // We want to know when all the symbol servers are ready. We can only start
+      //  monitoring when all the servers are ready.
+      server->set_state_change_callback(
+          [&workflow, &options, &params](zxdb::SymbolServer* server,
+                                         zxdb::SymbolServer::State state) {
+            if (state == zxdb::SymbolServer::State::kUnreachable) {
+              server->set_state_change_callback(nullptr);
+              FXL_LOG(ERROR) << "Can't connect to symbol server";
+            } else if (state == zxdb::SymbolServer::State::kReady) {
+              server->set_state_change_callback(nullptr);
+              bool ready = true;
+              for (const auto& server : workflow.GetSymbolServers()) {
+                if (server->state() != zxdb::SymbolServer::State::kReady) {
+                  ready = false;
+                }
+              }
+              if (ready) {
+                // Now all the symbol servers are ready. We can start fidlcat work.
+                FXL_LOG(INFO) << "Connected to symbol server";
+                EnqueueStartup(&workflow, options, params);
+              }
+            }
+          });
+    }
+  } else {
+    // No symbol server => directly start monitoring.
+    EnqueueStartup(&workflow, options, params);
+  }
+
   workflow_.store(&workflow);
   CatchSigterm();
 
+  // Start waiting for events on the message loop.
+  // When all the monitored process will be terminated, we will exit the loop.
   InterceptionWorkflow::Go();
 
   return 0;

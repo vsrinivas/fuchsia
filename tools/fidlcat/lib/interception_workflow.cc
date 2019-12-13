@@ -189,6 +189,7 @@ InterceptionWorkflow::~InterceptionWorkflow() {
 
 void InterceptionWorkflow::Initialize(
     const std::vector<std::string>& symbol_paths, const std::vector<std::string>& symbol_repo_paths,
+    const std::string& symbol_cache_path, const std::vector<std::string>& symbol_servers,
     std::unique_ptr<SyscallDecoderDispatcher> syscall_decoder_dispatcher) {
   syscall_decoder_dispatcher_ = std::move(syscall_decoder_dispatcher);
   // 1) Set up symbol index.
@@ -209,6 +210,11 @@ void InterceptionWorkflow::Initialize(
   // We add the options paths given paths.
   paths.insert(paths.end(), symbol_paths.begin(), symbol_paths.end());
 
+  if (!symbol_cache_path.empty()) {
+    session_->system().settings().SetString(zxdb::ClientSettings::System::kSymbolCache,
+                                            symbol_cache_path);
+  }
+
   // Adding it to the settings will trigger the loading of the symbols.
   // Redundant adds are ignored.
   session_->system().settings().SetList(zxdb::ClientSettings::System::kSymbolPaths,
@@ -225,6 +231,12 @@ void InterceptionWorkflow::Initialize(
   // 3) Provide a loop, if none exists.
   if (debug_ipc::MessageLoop::Current() == nullptr) {
     loop_->Init();
+  }
+
+  // 4) Initialize the symbol servers.
+  if (!symbol_servers.empty()) {
+    session_->system().settings().SetList(zxdb::ClientSettings::System::kSymbolServers,
+                                          symbol_servers);
   }
 }
 
@@ -251,6 +263,14 @@ zxdb::Target* InterceptionWorkflow::GetNewTarget() {
     }
   }
   return session_->system().CreateNewTarget(nullptr);
+}
+
+bool InterceptionWorkflow::HasSymbolServers() const {
+  return !session_->system().GetSymbolServers().empty();
+}
+
+std::vector<zxdb::SymbolServer*> InterceptionWorkflow::GetSymbolServers() const {
+  return session_->system().GetSymbolServers();
 }
 
 void InterceptionWorkflow::Attach(const std::vector<zx_koid_t>& process_koids) {

@@ -25,6 +25,7 @@
 // on CQ in a way I can't repro locally.
 #undef __TA_REQUIRES
 
+#include "tools/fidlcat/command_line_options.h"
 #include "tools/fidlcat/lib/syscall_decoder_dispatcher.h"
 
 namespace fidlcat {
@@ -100,6 +101,8 @@ class InterceptionWorkflow {
   // - Make sure that the data are routed from the client to the session
   void Initialize(const std::vector<std::string>& symbol_paths,
                   const std::vector<std::string>& symbol_repo_paths,
+                  const std::string& symbol_cache_path,
+                  const std::vector<std::string>& symbol_servers,
                   std::unique_ptr<SyscallDecoderDispatcher> syscall_decoder_dispatcher);
 
   // Connect the workflow to the host/port pair given.  |and_then| is posted to
@@ -142,6 +145,9 @@ class InterceptionWorkflow {
 
   zxdb::Target* GetTarget(zx_koid_t process_koid);
   zxdb::Target* GetNewTarget();
+
+  bool HasSymbolServers() const;
+  std::vector<zxdb::SymbolServer*> GetSymbolServers() const;
 
   zxdb::Session* session() const { return session_; }
   std::unordered_set<zx_koid_t>& configured_processes() { return configured_processes_; }

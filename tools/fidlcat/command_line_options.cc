@@ -80,6 +80,17 @@ const char kSymbolRepoPathHelp[] = R"(  --symbol-repo-path=<path>
       style as the .build-id folder as used with the -s option. This is useful
       if your build ID index is not named .build-id)";
 
+const char kSymbolCacheHelp[] = R"(  --symbol-cache=<path>
+      Path where we can keep a symbol cache. A folder called <path>/.build-id
+      will be created if it does not exist, and symbols will be read from this
+      location as though you had specified "-s <path>". If a symbol server has
+      been specified, downloaded symbols will be stored in the .build-id
+      folder.)";
+
+const char kSymbolServerHelp[] = R"(  --symbol-server=<url>
+      When symbols are missing, attempt to download them from the given URL.
+      will be loaded as an ELF file (if possible).)";
+
 const char* const kSyscallFilterHelp = R"(  --syscalls
       A regular expression which selects the syscalls to decode and display.
       Can be passed multiple times.
@@ -172,9 +183,9 @@ cmdline::Status ProcessLogOptions(const CommandLineOptions* options) {
   return cmdline::Status::Ok();
 }
 
-cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options,
-                                 DecodeOptions* decode_options, DisplayOptions* display_options,
-                                 std::vector<std::string>* params) {
+std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options,
+                             DecodeOptions* decode_options, DisplayOptions* display_options,
+                             std::vector<std::string>* params) {
   cmdline::ArgsParser<CommandLineOptions> parser;
 
   parser.AddSwitch("connect", 'r', kRemoteHostHelp, &CommandLineOptions::connect);
@@ -184,6 +195,8 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
   parser.AddSwitch("symbol-path", 's', kSymbolPathHelp, &CommandLineOptions::symbol_paths);
   parser.AddSwitch("symbol-repo-path", 0, kSymbolRepoPathHelp,
                    &CommandLineOptions::symbol_repo_paths);
+  parser.AddSwitch("symbol-cache", 's', kSymbolCacheHelp, &CommandLineOptions::symbol_cache_path);
+  parser.AddSwitch("symbol-server", 's', kSymbolServerHelp, &CommandLineOptions::symbol_servers);
   parser.AddSwitch("syscalls", 0, kSyscallFilterHelp, &CommandLineOptions::syscall_filters);
   parser.AddSwitch("exclude-syscalls", 0, kExcludeSyscallFilterHelp,
                    &CommandLineOptions::exclude_syscall_filters);
@@ -201,17 +214,21 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
 
   cmdline::Status status = parser.Parse(argc, argv, options, params);
   if (status.has_error()) {
-    return status;
+    return status.error_message();
   }
 
-  cmdline::Status log_status = ProcessLogOptions(options);
-  if (log_status.has_error()) {
-    return log_status;
+  status = ProcessLogOptions(options);
+  if (status.has_error()) {
+    return status.error_message();
   }
 
   if (requested_help || (options->remote_name.empty() && options->remote_pid.empty() &&
                          std::find(params->begin(), params->end(), "run") == params->end())) {
-    return cmdline::Status::Error(kHelpIntro + parser.GetHelp());
+    status = cmdline::Status::Error(kHelpIntro + parser.GetHelp());
+    if (status.has_error()) {
+      return status.error_message();
+    }
+    return "";
   }
 
   decode_options->stack_level = options->stack_level;
@@ -244,7 +261,7 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
         (options->colors == "always") || ((options->colors == "auto") && (ioctl_result != -1));
   }
 
-  return cmdline::Status::Ok();
+  return "";
 }
 
 namespace {

@@ -22,13 +22,17 @@
 ## - This scripts uses the tool "nc" for testing TCP connections. Check that it
 ##   is in $PATH and that it works.
 ##
-## Usage: fx fidlcat [--debug-mode] [(--port|-p) <PORT>] [--with-process-info] [--stack=<value>]
+## Usage: fx fidlcat [--debug-mode] [(--port|-p) <PORT>] [--with-symbol-server]
+##                   [--with-process-info] [--stack=<value>]
 ##                   [--syscalls=<regexp>] [--exclude-syscalls=<regexp>]
 ##                   [--verbose=<value> | --quiet=<value>] [--log-file <path>]
 ##                   [--remote-pid=<pid> | --remote-name=<name> | run <component specification>]
 ##
 ##    --port               Port the debug agent will be listening on. Will use 2345
 ##                         by default.
+##    --with-symbol-server Connect to the symbol server. The first time you use this option,
+##                         fidlcat will give you a link to an authentication page.
+##                         You then have to use the generated key to authenticate.
 ##    --debug-mode         Whether the debug agent's debug logs should be shown.
 ##    --with-process-info  Display the process name, process id and thread id on
 ##                         each line (useful for grep).
@@ -114,6 +118,8 @@ quiet=
 log_file=
 remote_pids=()
 remote_names=()
+symbol_server=
+server_url=
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -124,6 +130,10 @@ while [[ $# -gt 0 ]]; do
     --port|-p)
       shift
       port="$1"
+      ;;
+    --with-symbol-server)
+      symbol_server="--symbol-server"
+      server_url="gs://fuchsia-infra-debug-symbols"
       ;;
     --debug-mode)
       agent_out="/dev/stdout"
@@ -224,7 +234,10 @@ if launch_debug_agent; then
     "-s" "${FUCHSIA_BUILD_DIR}" \
     "-s" "${ZIRCON_BUILDROOT}" \
     "-s" "${PREBUILT_CLANG_DIR}/lib/debug" \
+    "--symbol-cache" ~ \
     --pretty-print \
+    ${symbol_server} \
+    ${server_url} \
     ${with_process_info} \
     ${stack} \
     ${syscalls} \
