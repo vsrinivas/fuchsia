@@ -128,24 +128,37 @@ PipelineConfig::MixGroup ParseMixGroupFromJsonObject(const rapidjson::Value& val
 void ParsePipelineConfigFromJsonObject(const rapidjson::Value& value,
                                        ProcessConfig::Builder* config_builder) {
   FX_CHECK(value.IsObject());
+  std::optional<PipelineConfig::MixGroup> root;
 
   auto it = value.FindMember(kJsonKeyOutputStreams);
+  std::vector<PipelineConfig::MixGroup> output_streams;
   if (it != value.MemberEnd()) {
     FX_CHECK(it->value.IsArray());
     for (const auto& group : it->value.GetArray()) {
-      config_builder->AddOutputStreamEffects(ParseMixGroupFromJsonObject(group));
+      output_streams.emplace_back(ParseMixGroupFromJsonObject(group));
     }
   }
 
   it = value.FindMember(kJsonKeyMix);
   if (it != value.MemberEnd()) {
-    config_builder->SetMixEffects(ParseMixGroupFromJsonObject(it->value));
+    root.emplace(ParseMixGroupFromJsonObject(it->value));
+    root->inputs = std::move(output_streams);
   }
 
   it = value.FindMember(kJsonKeyLinearize);
   if (it != value.MemberEnd()) {
-    config_builder->SetLinearizeEffects(ParseMixGroupFromJsonObject(it->value));
+    auto linearize_group = ParseMixGroupFromJsonObject(it->value);
+    if (!output_streams.empty()) {
+      linearize_group.inputs = std::move(output_streams);
+    }
+    if (root) {
+      linearize_group.inputs.push_back(std::move(*root));
+    }
+    root = {std::move(linearize_group)};
   }
+  FX_CHECK(root);
+  FX_CHECK(output_streams.empty());
+  config_builder->SetPipeline(PipelineConfig(std::move(*root)));
 }
 
 std::pair<std::optional<audio_stream_unique_id_t>, RoutingConfig::DeviceProfile>

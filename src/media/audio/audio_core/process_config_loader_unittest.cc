@@ -259,9 +259,42 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
   const auto config = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
   ASSERT_TRUE(config);
 
-  ASSERT_EQ(2u, config->pipeline().GetOutputStreams().size());
+  const auto& root = config->pipeline().root();
+  {  // 'linearize' mix_group
+    const auto& mix_group = root;
+    EXPECT_EQ("", mix_group.name);
+    EXPECT_EQ(4u, mix_group.input_streams.size());
+    EXPECT_EQ(fuchsia::media::AudioRenderUsage::BACKGROUND, mix_group.input_streams[0]);
+    EXPECT_EQ(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT, mix_group.input_streams[1]);
+    EXPECT_EQ(fuchsia::media::AudioRenderUsage::MEDIA, mix_group.input_streams[2]);
+    EXPECT_EQ(fuchsia::media::AudioRenderUsage::INTERRUPTION, mix_group.input_streams[3]);
+    ASSERT_EQ(1u, mix_group.effects.size());
+    {
+      const auto& effect = mix_group.effects[0];
+      EXPECT_EQ("libbar2.so", effect.lib_name);
+      EXPECT_EQ("linearize_effect", effect.effect_name);
+      EXPECT_EQ("{\"a\":123,\"b\":456}", effect.effect_config);
+    }
+    ASSERT_EQ(1u, mix_group.inputs.size());
+  }
+
+  const auto& mix = root.inputs[0];
+  {  // 'mix' mix_group
+    const auto& mix_group = mix;
+    EXPECT_EQ("", mix_group.name);
+    EXPECT_EQ(0u, mix_group.input_streams.size());
+    ASSERT_EQ(1u, mix_group.effects.size());
+    {
+      const auto& effect = mix_group.effects[0];
+      EXPECT_EQ("libfoo2.so", effect.lib_name);
+      EXPECT_EQ("effect3", effect.effect_name);
+      EXPECT_EQ("", effect.effect_config);
+    }
+    ASSERT_EQ(2u, mix_group.inputs.size());
+  }
+
   {  // output mix_group 1
-    const auto& mix_group = config->pipeline().GetOutputStreams()[0];
+    const auto& mix_group = mix.inputs[0];
     EXPECT_EQ("media", mix_group.name);
     EXPECT_EQ(1u, mix_group.input_streams.size());
     EXPECT_EQ(fuchsia::media::AudioRenderUsage::MEDIA, mix_group.input_streams[0]);
@@ -281,7 +314,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
   }
 
   {  // output mix_group 2
-    const auto& mix_group = config->pipeline().GetOutputStreams()[1];
+    const auto& mix_group = mix.inputs[1];
     EXPECT_EQ("communications", mix_group.name);
     EXPECT_EQ(1u, mix_group.input_streams.size());
     EXPECT_EQ(fuchsia::media::AudioRenderUsage::COMMUNICATION, mix_group.input_streams[0]);
@@ -291,36 +324,6 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
       EXPECT_EQ("libbaz.so", effect.lib_name);
       EXPECT_EQ("", effect.effect_name);
       EXPECT_EQ("{\"string_param\":\"some string value\"}", effect.effect_config);
-    }
-  }
-
-  {  // 'mix' mix_group
-    const auto& mix_group = config->pipeline().GetMix();
-    EXPECT_EQ("", mix_group.name);
-    EXPECT_EQ(0u, mix_group.input_streams.size());
-    ASSERT_EQ(1u, mix_group.effects.size());
-    {
-      const auto& effect = mix_group.effects[0];
-      EXPECT_EQ("libfoo2.so", effect.lib_name);
-      EXPECT_EQ("effect3", effect.effect_name);
-      EXPECT_EQ("", effect.effect_config);
-    }
-  }
-
-  {  // 'linearize' mix_group
-    const auto& mix_group = config->pipeline().GetLinearize();
-    EXPECT_EQ("", mix_group.name);
-    EXPECT_EQ(4u, mix_group.input_streams.size());
-    EXPECT_EQ(fuchsia::media::AudioRenderUsage::BACKGROUND, mix_group.input_streams[0]);
-    EXPECT_EQ(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT, mix_group.input_streams[1]);
-    EXPECT_EQ(fuchsia::media::AudioRenderUsage::MEDIA, mix_group.input_streams[2]);
-    EXPECT_EQ(fuchsia::media::AudioRenderUsage::INTERRUPTION, mix_group.input_streams[3]);
-    ASSERT_EQ(1u, mix_group.effects.size());
-    {
-      const auto& effect = mix_group.effects[0];
-      EXPECT_EQ("libbar2.so", effect.lib_name);
-      EXPECT_EQ("linearize_effect", effect.effect_name);
-      EXPECT_EQ("{\"a\":123,\"b\":456}", effect.effect_config);
     }
   }
 }

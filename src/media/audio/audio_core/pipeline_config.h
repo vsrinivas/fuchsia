@@ -30,23 +30,31 @@ class PipelineConfig {
     std::string name;
     std::vector<fuchsia::media::AudioRenderUsage> input_streams;
     std::vector<Effect> effects;
+    std::vector<MixGroup> inputs;
   };
 
-  // Returns the set of effects that are to be used for the provided output stream.
-  const std::vector<MixGroup>& GetOutputStreams() const { return output_streams_; }
+  static PipelineConfig Default() {
+    PipelineConfig config;
+    config.root_.name = "default";
+    config.root_.input_streams = {
+        fuchsia::media::AudioRenderUsage::BACKGROUND,
+        fuchsia::media::AudioRenderUsage::MEDIA,
+        fuchsia::media::AudioRenderUsage::INTERRUPTION,
+        fuchsia::media::AudioRenderUsage::SYSTEM_AGENT,
+        fuchsia::media::AudioRenderUsage::COMMUNICATION,
+    };
+    return config;
+  }
 
-  // Returns the set of effects to be applied on the mix stage.
-  const MixGroup& GetMix() const { return mix_; }
+  PipelineConfig() = default;
+  explicit PipelineConfig(MixGroup root) : root_(std::move(root)) {}
 
-  // Returns the set of effects to be applied on the linearize stage.
-  const MixGroup& GetLinearize() const { return linearize_; }
+  const MixGroup& root() const { return root_; }
 
  private:
   friend class ProcessConfigBuilder;
 
-  std::vector<MixGroup> output_streams_;
-  MixGroup mix_;
-  MixGroup linearize_;
+  MixGroup root_;
 };
 
 }  // namespace media::audio

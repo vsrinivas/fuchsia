@@ -9,19 +9,8 @@ namespace media::audio {
 // static
 std::optional<ProcessConfig> ProcessConfig::instance_;
 
-ProcessConfigBuilder& ProcessConfigBuilder::SetMixEffects(PipelineConfig::MixGroup effects) {
-  pipeline_.mix_ = std::move(effects);
-  return *this;
-}
-
-ProcessConfigBuilder& ProcessConfigBuilder::SetLinearizeEffects(PipelineConfig::MixGroup effects) {
-  pipeline_.linearize_ = std::move(effects);
-  return *this;
-}
-
-ProcessConfigBuilder& ProcessConfigBuilder::AddOutputStreamEffects(
-    PipelineConfig::MixGroup effects) {
-  pipeline_.output_streams_.emplace_back(std::move(effects));
+ProcessConfigBuilder& ProcessConfigBuilder::SetPipeline(PipelineConfig pipeline) {
+  pipeline_ = std::move(pipeline);
   return *this;
 }
 
