@@ -174,7 +174,7 @@ zx_status_t AmlSCPI::ScpiGetDvfsInfo(uint8_t power_domain, scpi_opp_t* out_opps)
     out_opps->opp[i].volt_uv = aml_dvfs_info.opp[i].volt_uv;
     zxlogf(INFO, "Operating point %d - ", i);
     zxlogf(INFO, "Freq %.4f Ghz ", (out_opps->opp[i].freq_hz) / (double)1000000000);
-    zxlogf(INFO, "Voltage %.4f mV\n", (out_opps->opp[i].volt_uv) / (double)1000);
+    zxlogf(INFO, "Voltage %.4f V\n", (out_opps->opp[i].volt_uv) / (double)1000);
   }
 
   scpi_opp[power_domain] = static_cast<scpi_opp_t*>(calloc(1, sizeof(scpi_opp_t)));
