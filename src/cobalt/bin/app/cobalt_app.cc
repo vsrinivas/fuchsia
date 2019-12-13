@@ -146,9 +146,9 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
       &logger_encoder_, observation_writer_.get(), &local_aggregate_proto_store_,
       &obs_history_proto_store_, event_aggregator_backfill_days);
 
-  controller_impl_ = std::make_unique<CobaltControllerImpl>(
-      dispatcher, shipping_manager_.get(), event_aggregator_manager_->GetEventAggregator(),
-      observation_store_.get());
+  controller_impl_ = std::make_unique<CobaltControllerImpl>(dispatcher, shipping_manager_.get(),
+                                                            event_aggregator_manager_.get(),
+                                                            observation_store_.get());
 
   undated_event_manager_ = std::make_shared<logger::UndatedEventManager>(
       &logger_encoder_, event_aggregator_manager_->GetEventAggregator(), observation_writer_.get(),

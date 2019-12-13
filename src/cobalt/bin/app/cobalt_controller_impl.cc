@@ -11,16 +11,16 @@ namespace cobalt {
 
 using encoder::ShippingManager;
 
-CobaltControllerImpl::CobaltControllerImpl(async_dispatcher_t* dispatcher,
-                                           encoder::ShippingManager* shipping_manager,
-                                           local_aggregation::EventAggregator* event_aggregator,
-                                           observation_store::ObservationStore* observation_store)
+CobaltControllerImpl::CobaltControllerImpl(
+    async_dispatcher_t* dispatcher, encoder::ShippingManager* shipping_manager,
+    local_aggregation::EventAggregatorManager* event_aggregator_mgr,
+    observation_store::ObservationStore* observation_store)
     : dispatcher_(dispatcher),
       shipping_manager_(shipping_manager),
-      event_aggregator_(event_aggregator),
+      event_aggregator_mgr_(event_aggregator_mgr),
       observation_store_(observation_store) {
   CHECK(dispatcher_);
-  CHECK(event_aggregator_);
+  CHECK(event_aggregator_mgr_);
   CHECK(observation_store_);
   CHECK(shipping_manager_);
 }
@@ -61,7 +61,7 @@ void CobaltControllerImpl::GenerateAggregatedObservations(
     GenerateAggregatedObservationsCallback callback) {
   std::vector<uint64_t> num_obs_before =
       observation_store_->num_observations_added_for_reports(report_ids);
-  event_aggregator_->GenerateObservationsNoWorker(day_index);
+  event_aggregator_mgr_->GenerateObservationsNoWorker(day_index);
   std::vector<uint64_t> num_obs_after =
       observation_store_->num_observations_added_for_reports(report_ids);
   std::vector<uint64_t> num_new_obs;

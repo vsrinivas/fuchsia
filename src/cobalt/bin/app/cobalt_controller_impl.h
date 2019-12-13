@@ -8,7 +8,7 @@
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 
-#include "third_party/cobalt/src/local_aggregation/event_aggregator.h"
+#include "third_party/cobalt/src/local_aggregation/event_aggregator_mgr.h"
 #include "third_party/cobalt/src/observation_store/observation_store.h"
 #include "third_party/cobalt/src/uploader/shipping_manager.h"
 
@@ -21,7 +21,7 @@ class CobaltControllerImpl : public fuchsia::cobalt::Controller {
   // |observation_store| should be the same ObservationStore which is used by
   // by |event_aggregator| and by the Cobalt v1.0 ShippingManager.
   CobaltControllerImpl(async_dispatcher_t* dispatcher, encoder::ShippingManager* shipping_manager,
-                       local_aggregation::EventAggregator* event_aggregator,
+                       local_aggregation::EventAggregatorManager* event_aggregator_mgr,
                        observation_store::ObservationStore* observation_store);
 
  private:
@@ -40,7 +40,7 @@ class CobaltControllerImpl : public fuchsia::cobalt::Controller {
 
   async_dispatcher_t* const dispatcher_;
   encoder::ShippingManager* shipping_manager_;
-  local_aggregation::EventAggregator* event_aggregator_;
+  local_aggregation::EventAggregatorManager* event_aggregator_mgr_;  // not owned
   observation_store::ObservationStore* observation_store_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CobaltControllerImpl);
