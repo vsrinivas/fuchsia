@@ -39,7 +39,7 @@ pub enum RunnerError {
         #[fail(cause)]
         err: ClonableError,
     },
-    #[fail(display = "failed to launch component with url \"{}\": {}", url, err)]
+    #[fail(display = "runner failed to launch component with url \"{}\": {}", url, err)]
     ComponentLaunchError {
         url: String,
         #[fail(cause)]
@@ -78,6 +78,18 @@ impl RunnerError {
 
     pub fn runner_connection_error(err: impl Into<Error>) -> RunnerError {
         RunnerError::RunnerConnectionError { err: err.into().into() }
+    }
+
+    /// Convert this error into its approximate fsys::Error equivalent.
+    pub fn as_fidl_error(&self) -> fsys::Error {
+        match self {
+            RunnerError::InvalidArgs { .. } => fsys::Error::InvalidArguments,
+            RunnerError::ComponentLoadError { .. } => fsys::Error::InstanceCannotStart,
+            RunnerError::ComponentLaunchError { .. } => fsys::Error::InstanceCannotStart,
+            RunnerError::ComponentRuntimeDirectoryError { .. } => fsys::Error::Internal,
+            RunnerError::RunnerConnectionError { .. } => fsys::Error::Internal,
+            RunnerError::Unsupported { .. } => fsys::Error::Unsupported,
+        }
     }
 }
 
@@ -125,6 +137,24 @@ fn spawn_null_controller_server(mut request_stream: fsys::ComponentControllerReq
     });
 }
 
+/// Wrapper for converting fsys::Error into the failure::Error type.
+#[derive(Debug, Clone, Fail)]
+pub struct RemoteRunnerError(pub fsys::Error);
+
+impl std::fmt::Display for RemoteRunnerError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // Use the Debug formatter for Display.
+        use std::fmt::Debug;
+        self.0.fmt(f)
+    }
+}
+
+impl std::convert::From<fsys::Error> for RemoteRunnerError {
+    fn from(error: fsys::Error) -> RemoteRunnerError {
+        RemoteRunnerError(error)
+    }
+}
+
 /// A runner provided by another component.
 pub struct RemoteRunner {
     client: fsys::ComponentRunnerProxy,
@@ -140,9 +170,12 @@ impl RemoteRunner {
         start_info: fsys::ComponentStartInfo,
         server_end: ServerEnd<fsys::ComponentControllerMarker>,
     ) -> Result<(), RunnerError> {
+        let url = start_info.resolved_url.clone().unwrap_or_else(|| "<none>".to_string());
         self.client
             .start(start_info, server_end)
-            .map_err(|e| RunnerError::runner_connection_error(e))?;
+            .await
+            .map_err(|e| RunnerError::runner_connection_error(e))?
+            .map_err(|e| RunnerError::component_launch_error(url, RemoteRunnerError(e)))?;
         Ok(())
     }
 }

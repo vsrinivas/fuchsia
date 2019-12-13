@@ -15,7 +15,6 @@ use {
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::future::BoxFuture,
     futures::stream::TryStreamExt,
-    log::warn,
     std::sync::{Arc, Weak},
 };
 
@@ -89,16 +88,13 @@ impl RunnerCapabilityProvider {
             .into_stream()
             .expect("could not convert channel into stream");
         fasync::spawn(async move {
-            // Keep handling requests until the stream closes or we receive a runner error.
+            // Keep handling requests until the stream closes.
             while let Ok(Some(request)) = stream.try_next().await {
-                let fsys::ComponentRunnerRequest::Start { start_info, controller, .. } = request;
-                let component_url = start_info.resolved_url.clone();
-                if let Err(error) = runner.start(start_info, controller).await {
-                    warn!(
-                        "Runner returned an error attempting to start '{}': {}",
-                        component_url.as_ref().map(|x| x as &str).unwrap_or("<unknown>"),
-                        error
-                    );
+                let fsys::ComponentRunnerRequest::Start { start_info, controller, responder } =
+                    request;
+                let mut result =
+                    runner.start(start_info, controller).await.map_err(|e| e.as_fidl_error());
+                if responder.send(&mut result).is_err() {
                     break;
                 }
             }
@@ -125,28 +121,29 @@ mod tests {
     use {
         crate::model::{
             hooks::Hooks,
-            resolver::ResolverRegistry,
-            runner::{RemoteRunner, RunnerError},
-            testing::{routing_test_helpers::*, test_helpers::*},
             realm::Realm,
+            resolver::ResolverRegistry,
+            runner::RemoteRunnerError,
+            testing::{mocks::MockRunner, routing_test_helpers::*, test_helpers::*},
         },
         cm_rust::{
             self, CapabilityName, ChildDecl, ComponentDecl, OfferDecl, OfferRunnerDecl,
             OfferRunnerSource, OfferTarget, UseDecl, UseRunnerDecl,
         },
-        failure::{format_err, Error},
+        failure::Error,
         futures::lock::Mutex,
+        matches::assert_matches,
     };
 
     fn create_test_realm() -> Realm {
         Realm::new_root_realm(ResolverRegistry::new(), "test:///root".to_string())
     }
 
-    fn sample_start_info() -> fsys::ComponentStartInfo {
+    fn sample_start_info(name: &str) -> fsys::ComponentStartInfo {
         fsys::ComponentStartInfo {
-            resolved_url: Some("test".to_string()),
+            resolved_url: Some(name.to_string()),
             program: None,
-            ns: None,
+            ns: Some(fsys::ComponentNamespace { paths: Vec::new(), directories: Vec::new() }),
             outgoing_dir: None,
             runtime_dir: None,
         }
@@ -157,10 +154,8 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn get_cap_from_hook() -> Result<(), Error> {
         // Set up a runner.
-        let (runner_proxy, mut runner_stream) =
-            fidl::endpoints::create_proxy_and_stream::<fsys::ComponentRunnerMarker>()?;
-        let builtin_runner =
-            BuiltinRunner::new("elf".into(), Arc::new(RemoteRunner::new(runner_proxy)));
+        let mock_runner = Arc::new(MockRunner::new());
+        let builtin_runner = BuiltinRunner::new("elf".into(), Arc::clone(&mock_runner) as Arc<_>);
 
         // Install the hook, and dispatch an event.
         let hooks = Hooks::new(None);
@@ -183,40 +178,43 @@ mod tests {
             fidl::endpoints::create_endpoints::<fsys::ComponentControllerMarker>()?;
         provider.open(0, 0, ".".to_string(), server.into_channel()).await?;
 
-        // Ensure the message goes through to our channel.
-        client.start(sample_start_info(), server_controller)?;
-        assert!(runner_stream.try_next().await?.is_some());
+        // Start the client.
+        client
+            .start(sample_start_info("xxx://test"), server_controller)
+            .await?
+            .map_err(|x| RemoteRunnerError(x))?;
+
+        // Ensure we saw the start event.
+        assert_eq!(mock_runner.urls_run(), vec!["xxx://test"]);
 
         Ok(())
-    }
-
-    /// A runner that always returns an error on calls to `start`.
-    struct FailingRunner();
-
-    impl Runner for FailingRunner {
-        fn start(
-            &self,
-            _start_info: fsys::ComponentStartInfo,
-            _server_end: ServerEnd<fsys::ComponentControllerMarker>,
-        ) -> BoxFuture<Result<(), RunnerError>> {
-            Box::pin(async { Err(RunnerError::invalid_args("xxx", format_err!("yyy"))) })
-        }
     }
 
     // Test sending a start command to a failing runner.
     #[fuchsia_async::run_singlethreaded(test)]
     async fn capability_provider_error_from_runner() -> Result<(), Error> {
-        // Set up a capability provider wrapping a runner that always returns an error.
-        let provider = RunnerCapabilityProvider { runner: Arc::new(FailingRunner {}) };
+        // Set up a capability provider wrapping a runner that returns an error on our
+        // target URL.
+        let mock_runner = Arc::new(MockRunner::new());
+        mock_runner.add_failing_url("xxx://failing");
+        let provider = RunnerCapabilityProvider { runner: Arc::clone(&mock_runner) as Arc<_> };
 
         // Open a connection to the provider.
         let (client, server) = fidl::endpoints::create_proxy::<fsys::ComponentRunnerMarker>()?;
-        let (_, server_controller) =
-            fidl::endpoints::create_endpoints::<fsys::ComponentControllerMarker>()?;
         provider.open(0, 0, ".".to_string(), server.into_channel()).await?;
 
-        // Ensure the start call succeeds, even if the runner fails.
-        client.start(sample_start_info(), server_controller)?;
+        // Ensure errors are propagated back to the caller.
+        //
+        // We make multiple calls over the same channel to ensure that the channel remains open
+        // even after errors.
+        for _ in 0..3i32 {
+            let (_, server_controller) =
+                fidl::endpoints::create_endpoints::<fsys::ComponentControllerMarker>()?;
+            assert_matches!(
+                client.start(sample_start_info("xxx://failing"), server_controller).await.unwrap(),
+                Err(fsys::Error::InstanceCannotStart)
+            );
+        }
 
         Ok(())
     }

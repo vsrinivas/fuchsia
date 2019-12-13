@@ -7,9 +7,9 @@ use {
         binding::Binder,
         error::ModelError,
         moniker::AbsoluteMoniker,
+        realm::Realm,
         resolver::{Resolver, ResolverError, ResolverFut, ResolverRegistry},
         runner::{Runner, RunnerError},
-        realm::Realm,
     },
     cm_rust::{ComponentDecl, ExposeDecl, UseDecl},
     directory_broker::RoutingFn,
@@ -206,9 +206,14 @@ impl MockRunner {
         }
     }
 
+    /// Cause the URL `url` to return an error when started.
+    pub fn add_failing_url(&self, url: &str) {
+        self.inner.lock().unwrap().failing_urls.insert(url.to_string());
+    }
+
     /// Cause the component `name` to return an error when started.
     pub fn cause_failure(&self, name: &str) {
-        self.inner.lock().unwrap().failing_urls.insert(format!("test:///{}_resolved", name));
+        self.add_failing_url(&format!("test:///{}_resolved", name))
     }
 
     /// Return a list of URLs that have been run by this runner.

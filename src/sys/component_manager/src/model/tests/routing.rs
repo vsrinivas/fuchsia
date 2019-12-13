@@ -18,9 +18,11 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_zircon as zx,
-    futures::{future::BoxFuture, lock::Mutex, stream::StreamExt, TryStreamExt},
+    futures::{
+        channel::mpsc::Receiver, future::BoxFuture, join, lock::Mutex, stream::StreamExt,
+        TryStreamExt,
+    },
     log::*,
-    matches::assert_matches,
     std::{
         convert::{TryFrom, TryInto},
         sync::{Arc, Weak},
@@ -1780,6 +1782,19 @@ async fn use_in_collection_not_offered() {
     .await;
 }
 
+/// Wait for a ComponentRunnerStart request, acknowledge it, and return
+/// the start info.
+///
+/// Panics if the channel closes before we receive a request.
+async fn wait_for_runner_request(
+    recv: &mut Receiver<fsys::ComponentRunnerRequest>,
+) -> fsys::ComponentStartInfo {
+    let fsys::ComponentRunnerRequest::Start { start_info, responder, .. } =
+        recv.next().await.expect("Channel closed before request was received.");
+    responder.send(&mut Ok(())).expect("Failed to send response over channel.");
+    start_info
+}
+
 ///   a
 ///    \
 ///     b
@@ -1852,14 +1867,19 @@ async fn use_runner_from_grandparent() {
         .build()
         .await;
 
-    // Bind "c:0". We expect to see a call to our runner service for the new component.
-    universe.bind_instance(&vec!["b:0", "c:0"].into()).await.unwrap();
-    assert_matches!(
-        receiver.next().await,
-        Some(fsys::ComponentRunnerRequest::Start {
-            start_info: fsys::ComponentStartInfo { resolved_url: Some(url), .. },
-            ..
-        }) if url == "test:///c_resolved");
+    join!(
+        // Bind "c:0". We expect to see a call to our runner service for the new component.
+        async move {
+            universe.bind_instance(&vec!["b:0", "c:0"].into()).await.unwrap();
+        },
+        // Wait for a request, and ensure it has the correct URL.
+        async move {
+            assert_eq!(
+                wait_for_runner_request(&mut receiver).await.resolved_url,
+                Some("test:///c_resolved".to_string())
+            );
+        }
+    );
 }
 
 ///   a
@@ -1934,14 +1954,19 @@ async fn use_runner_from_silbing() {
         .build()
         .await;
 
-    // Bind "b:0". We expect to see a call to our runner service for the new component.
-    universe.bind_instance(&vec!["b:0"].into()).await.unwrap();
-    assert_matches!(
-        receiver.next().await,
-        Some(fsys::ComponentRunnerRequest::Start {
-            start_info: fsys::ComponentStartInfo { resolved_url: Some(url), .. },
-            ..
-        }) if url == "test:///b_resolved");
+    join!(
+        // Bind "b:0". We expect to see a call to our runner service for the new component.
+        async move {
+            universe.bind_instance(&vec!["b:0"].into()).await.unwrap();
+        },
+        // Wait for a request, and ensure it has the correct URL.
+        async move {
+            assert_eq!(
+                wait_for_runner_request(&mut receiver).await.resolved_url,
+                Some("test:///b_resolved".to_string())
+            );
+        }
+    );
 }
 
 #[fuchsia_async::run_singlethreaded(test)]

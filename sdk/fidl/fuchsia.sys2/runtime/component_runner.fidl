@@ -26,8 +26,24 @@ protocol ComponentRunner {
     /// The caller of this method takes responsibility for binding client
     /// connections and controlling the lifetime of the newly started
     /// component instance through the requested `controller`.
+    ///
+    /// If an error is returned, the runner must ensure that resources
+    /// are cleaned up; the caller will not invoke the `controller`
+    /// interfaces, for example.
+    ///
+    /// Errors:
+    /// - `INVALID_ARGUMENTS`: `resolved_url` is not supported by this runner;
+    ///   `program` contains missing or invalid arguments; or a required field
+    ///   in `start_info` (such `ns`, `outgoing_dir`, or `runtime_dir`) was not
+    ///   provided.
+    /// - `INSTANCE_CANNOT_START`: The runner could not start the component.
+    ///    For example, a critical part of the program could not be found or
+    ///    loaded, or the referenced binary was invalid for this runner.
+    /// - `NO_SPACE`: The component could not be launched due to lack of
+    ///    resources.
+    /// - `INTERNAL`: An unexpected internal runner error was encountered.
     Start(ComponentStartInfo start_info,
-          request<ComponentController> controller);
+          request<ComponentController> controller) -> () error Error;
 };
 
 /// Parameters for starting a new component instance.
