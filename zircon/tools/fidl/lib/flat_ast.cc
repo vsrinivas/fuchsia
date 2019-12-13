@@ -1828,21 +1828,9 @@ bool Library::ConsumeXUnionDeclaration(std::unique_ptr<raw::XUnionDeclaration> x
       std::pair<std::string, std::string_view>(LibraryName(this, "."), name.name_part());
   bool should_write_explicit =
       explicit_ordinal_xunions.find(xunion_name) != explicit_ordinal_xunions.end();
-  bool are_ordinals_explicit = xunion_declaration->members[0]->maybe_ordinal != nullptr;
-  uint32_t current_ordinal = 1;
   std::vector<XUnion::Member> members;
   for (auto& member : xunion_declaration->members) {
-    auto explicit_ordinal = std::move(member->maybe_ordinal);
-
-    bool is_member_ordinal_explicit = explicit_ordinal != nullptr;
-    if (are_ordinals_explicit != is_member_ordinal_explicit) {
-      return Fail(member->location(), "cannot mix explicit and implicit ordinals");
-    }
-
-    if (!explicit_ordinal) {
-      // implicitly set explicit ordinals by numbering from 1.
-      explicit_ordinal = std::make_unique<raw::Ordinal32>(*member, current_ordinal++);
-    }
+    auto explicit_ordinal = std::move(member->ordinal);
     if (explicit_ordinal->value > kXunionOrdinalCutoff) {
       return Fail(member->location(), "xunion ordinal must be <= 512");
     }
@@ -1868,7 +1856,6 @@ bool Library::ConsumeXUnionDeclaration(std::unique_ptr<raw::XUnionDeclaration> x
                            std::move(type_ctor), location,
                            std::move(member->maybe_used->attributes), should_write_explicit);
     } else {
-      assert(is_member_ordinal_explicit && "Reserved union members must have an ordinal specified");
       members.emplace_back(std::move(explicit_ordinal), member->location());
     }
   }

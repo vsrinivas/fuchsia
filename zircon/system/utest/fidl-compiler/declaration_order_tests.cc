@@ -200,8 +200,8 @@ bool nonnullable_xunion() {
 library example;
 
 xunion #Xunion# {
-  request<#Protocol#> req;
-  #Payload# foo;
+  1: request<#Protocol#> req;
+  2: #Payload# foo;
 };
 
 protocol #Protocol# {
@@ -235,8 +235,8 @@ bool nullable_xunion() {
 library example;
 
 xunion #Xunion# {
-  request<#Protocol#> req;
-  #Payload# foo;
+  1: request<#Protocol#> req;
+  2: #Payload# foo;
 };
 
 protocol #Protocol# {
@@ -298,7 +298,7 @@ struct #Request# {
 };
 
 xunion #Xunion# {
-  #Payload# foo;
+  1: #Payload# foo;
 };
 
 )FIDL");
@@ -337,7 +337,7 @@ struct #Request# {
 };
 
 xunion #Xunion# {
-  #Payload# foo;
+  1: #Payload# foo;
 };
 
 )FIDL");

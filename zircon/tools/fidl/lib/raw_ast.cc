@@ -297,9 +297,7 @@ void XUnionMember::Accept(TreeVisitor* visitor) const {
       visitor->OnAttributeList(maybe_used->attributes);
     }
   }
-  if (maybe_ordinal != nullptr) {
-    visitor->OnOrdinal32(*maybe_ordinal);
-  }
+  visitor->OnOrdinal32(*ordinal);
   if (maybe_used != nullptr) {
     visitor->OnTypeConstructor(maybe_used->type_ctor);
     visitor->OnIdentifier(maybe_used->identifier);

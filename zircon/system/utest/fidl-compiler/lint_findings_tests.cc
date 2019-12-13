@@ -565,7 +565,7 @@ union DeclName {
 library fidl.repeater;
 
 xunion DeclName {
-    string:64 ${TEST};
+    1: string:64 ${TEST};
 };
 )FIDL"},
   };
@@ -774,7 +774,7 @@ union DeclName {
 library fidl.repeater;
 
 xunion DeclName {
-    string:64 ${TEST};
+    1: string:64 ${TEST};
 };
 )FIDL"},
   };
@@ -851,7 +851,7 @@ union ${TEST} {
 library fidl.repeater;
 
 xunion ${TEST} {
-    string:64 decl_member;
+    1: string:64 decl_member;
 };
 )FIDL"},
   };
@@ -1185,7 +1185,7 @@ union DeclName {
 library fidl.a;
 
 xunion DeclName {
-    string:64 ${TEST};
+    1: string:64 ${TEST};
 };
 )FIDL"},
   };
@@ -1263,7 +1263,7 @@ union ${TEST} {
 library fidl.a;
 
 xunion ${TEST} {
-    string:64 decl_member;
+    1: string:64 decl_member;
 };
 )FIDL"},
   };

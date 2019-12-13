@@ -1303,13 +1303,13 @@ bool json_generator_test_xunion() {
 library fidl.test.json;
 
 xunion FlexibleFoo {
-  string s;
-  int32 i;
+  1: string s;
+  2: int32 i;
 };
 
 strict xunion StrictFoo {
-  string s;
-  int32 i;
+  1: string s;
+  2: int32 i;
 };
 
 xunion ExplicitFoo {
@@ -1360,7 +1360,7 @@ strict xunion ExplicitStrictFoo {
           "location": {
             "filename": "json.fidl",
             "line": 5,
-            "column": 10
+            "column": 13
           },
           "size": 16,
           "max_out_of_line": 4294967295,
@@ -1380,7 +1380,7 @@ strict xunion ExplicitStrictFoo {
           "location": {
             "filename": "json.fidl",
             "line": 6,
-            "column": 9
+            "column": 12
           },
           "size": 4,
           "max_out_of_line": 0,
@@ -1445,7 +1445,7 @@ strict xunion ExplicitStrictFoo {
           "location": {
             "filename": "json.fidl",
             "line": 10,
-            "column": 10
+            "column": 13
           },
           "size": 16,
           "max_out_of_line": 4294967295,
@@ -1465,7 +1465,7 @@ strict xunion ExplicitStrictFoo {
           "location": {
             "filename": "json.fidl",
             "line": 11,
-            "column": 9
+            "column": 12
           },
           "size": 4,
           "max_out_of_line": 0,
@@ -1728,13 +1728,13 @@ bool json_generator_test_request_flexible_envelope() {
 library fidl.test.json;
 
 xunion FlexibleFoo {
-  string s;
-  int32 i;
+  1: string s;
+  2: int32 i;
 };
 
 strict xunion StrictFoo {
-  string s;
-  int32 i;
+  1: string s;
+  2: int32 i;
 };
 
 protocol Protocol {
@@ -2079,7 +2079,7 @@ protocol Protocol {
           "location": {
             "filename": "json.fidl",
             "line": 5,
-            "column": 10
+            "column": 13
           },
           "size": 16,
           "max_out_of_line": 4294967295,
@@ -2099,7 +2099,7 @@ protocol Protocol {
           "location": {
             "filename": "json.fidl",
             "line": 6,
-            "column": 9
+            "column": 12
           },
           "size": 4,
           "max_out_of_line": 0,
@@ -2164,7 +2164,7 @@ protocol Protocol {
           "location": {
             "filename": "json.fidl",
             "line": 10,
-            "column": 10
+            "column": 13
           },
           "size": 16,
           "max_out_of_line": 4294967295,
@@ -2184,7 +2184,7 @@ protocol Protocol {
           "location": {
             "filename": "json.fidl",
             "line": 11,
-            "column": 9
+            "column": 12
           },
           "size": 4,
           "max_out_of_line": 0,

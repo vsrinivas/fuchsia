@@ -233,13 +233,6 @@ std::unique_ptr<raw::Ordinal32> Parser::ParseOrdinal32() {
   return std::make_unique<raw::Ordinal32>(scope.GetSourceElement(), ordinal);
 }
 
-std::unique_ptr<raw::Ordinal32> Parser::MaybeParseOrdinal32() {
-  if (Peek().kind() == Token::Kind::kNumericLiteral) {
-    return ParseOrdinal32();
-  }
-  return nullptr;
-}
-
 std::unique_ptr<raw::TrueLiteral> Parser::ParseTrueLiteral() {
   ASTScope scope(this);
   ConsumeToken(IdentifierOfSubkind(Token::Subkind::kTrue));
@@ -1146,7 +1139,7 @@ std::unique_ptr<raw::XUnionMember> Parser::ParseXUnionMember() {
   auto attributes = MaybeParseAttributeList();
   if (!Ok())
     return Fail();
-  auto maybe_ordinal = MaybeParseOrdinal32();
+  auto ordinal = ParseOrdinal32();
   if (!Ok())
     return Fail();
 
@@ -1155,9 +1148,7 @@ std::unique_ptr<raw::XUnionMember> Parser::ParseXUnionMember() {
       return Fail();
     if (attributes)
       return Fail("Cannot attach attributes to reserved ordinals");
-    if (!maybe_ordinal)
-      return Fail("Reserved members must have an explicit ordinal specified");
-    return std::make_unique<raw::XUnionMember>(scope.GetSourceElement(), std::move(maybe_ordinal));
+    return std::make_unique<raw::XUnionMember>(scope.GetSourceElement(), std::move(ordinal));
   }
 
   auto type_ctor = ParseTypeConstructor();
@@ -1168,14 +1159,9 @@ std::unique_ptr<raw::XUnionMember> Parser::ParseXUnionMember() {
   if (!Ok())
     return Fail();
 
-  if (!maybe_ordinal) {
-    return std::make_unique<raw::XUnionMember>(scope.GetSourceElement(), std::move(type_ctor),
-                                               std::move(identifier), std::move(attributes));
-  } else {
-    return std::make_unique<raw::XUnionMember>(scope.GetSourceElement(), std::move(maybe_ordinal),
-                                               std::move(type_ctor), std::move(identifier),
-                                               std::move(attributes));
-  };
+  return std::make_unique<raw::XUnionMember>(scope.GetSourceElement(), std::move(ordinal),
+                                             std::move(type_ctor), std::move(identifier),
+                                             std::move(attributes));
 }
 
 std::unique_ptr<raw::XUnionDeclaration> Parser::ParseXUnionDeclaration(

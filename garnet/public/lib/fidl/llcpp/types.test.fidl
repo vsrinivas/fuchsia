@@ -25,8 +25,8 @@ xunion TestXUnion {
 };
 
 strict xunion TestStrictXUnion {
-    int32 primitive;
-    CopyableStruct copyable;
+    1: int32 primitive;
+    2: CopyableStruct copyable;
 };
 
 /// Verifies that user code can manipulate these bits.

@@ -82,7 +82,7 @@ union ExampleUnion {
 [OnXUnion]
 xunion ExampleXUnion {
     [OnXUnionMember]
-    uint32 variant;
+    1: uint32 variant;
 };
 
 )FIDL",

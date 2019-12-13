@@ -132,7 +132,7 @@ xunion Foo {
 };
 )FIDL"));
 
-  // Cannot mix explicit/hashed ordinals
+  // Members must have explicit ordinals
   EXPECT_FALSE(Compiles(R"FIDL(
 library fidl.test.xunions;
 
@@ -143,7 +143,7 @@ xunion Foo {
 )FIDL",
                         &errors));
   EXPECT_EQ(errors.size(), 1u);
-  ASSERT_STR_STR(errors.at(0).c_str(), "cannot mix explicit and implicit ordinals");
+  ASSERT_STR_STR(errors.at(0).c_str(), "expecting NumericLiteral");
 
   // Keywords as field names.
   EXPECT_TRUE(Compiles(R"FIDL(

@@ -612,26 +612,20 @@ class UnionDeclaration final : public SourceElement {
 
 class XUnionMember final : public SourceElement {
  public:
-  XUnionMember(SourceElement const& element, std::unique_ptr<TypeConstructor> type_ctor,
-               std::unique_ptr<Identifier> identifier, std::unique_ptr<AttributeList> attributes)
-      : SourceElement(element),
-        maybe_used(std::make_unique<Used>(std::move(type_ctor), std::move(identifier),
-                                          std::move(attributes))) {}
-
   XUnionMember(SourceElement const& element, std::unique_ptr<Ordinal32> ordinal,
                std::unique_ptr<TypeConstructor> type_ctor, std::unique_ptr<Identifier> identifier,
                std::unique_ptr<AttributeList> attributes)
       : SourceElement(element),
-        maybe_ordinal(std::move(ordinal)),
+        ordinal(std::move(ordinal)),
         maybe_used(std::make_unique<Used>(std::move(type_ctor), std::move(identifier),
                                           std::move(attributes))) {}
 
   XUnionMember(SourceElement const& element, std::unique_ptr<Ordinal32> ordinal)
-      : SourceElement(element), maybe_ordinal(std::move(ordinal)) {}
+      : SourceElement(element), ordinal(std::move(ordinal)) {}
 
   void Accept(TreeVisitor* visitor) const;
 
-  std::unique_ptr<Ordinal32> maybe_ordinal;
+  std::unique_ptr<Ordinal32> ordinal;
 
   // A used member is not 'reserved'
   struct Used {

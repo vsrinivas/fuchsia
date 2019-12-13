@@ -135,11 +135,11 @@ bool xunion_strictness() {
 library example;
 
 xunion FlexibleFoo {
-    int32 i;
+    1: int32 i;
 };
 
 strict xunion StrictFoo {
-    int32 i;
+    1: int32 i;
 };
 
 )FIDL");
@@ -153,7 +153,7 @@ strict xunion StrictFoo {
 bool flexible_xunion_redundant() {
   return redundant_strictness("flexible", R"FIDL(
 experimental_flexible xunion Foo {
-  int32 i;
+  1: int32 i;
 };
 )FIDL");
 }

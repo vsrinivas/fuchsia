@@ -716,7 +716,7 @@ bool BadConstTestAssignTypeName() {
            "bits Example { A = 1; };",
            "enum Example { A = 1; };",
            "union Example { 1: bool A; };",
-           "xunion Example { bool A; };",
+           "xunion Example { 1: bool A; };",
            "using Example = string;",
        }) {
     std::ostringstream ss;

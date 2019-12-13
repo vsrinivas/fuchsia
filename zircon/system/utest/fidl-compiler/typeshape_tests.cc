@@ -1542,7 +1542,7 @@ static bool xunions() {
 library example;
 
 xunion XUnionWithOneBool {
-  bool b;
+  1: bool b;
 };
 
 struct StructWithOptionalXUnionWithOneBool {
@@ -1552,7 +1552,7 @@ struct StructWithOptionalXUnionWithOneBool {
 xunion XUnionWithBoundedOutOfLineObject {
   // smaller than |v| below, so will not be selected for max-out-of-line
   // calculation.
-  bool b;
+  1: bool b;
 
   // 1. vector<int32>:5 = 8 bytes for vector element count
   //                    + 8 bytes for data pointer
@@ -1564,20 +1564,20 @@ xunion XUnionWithBoundedOutOfLineObject {
   //                              + 8 bytes for data pointer
   //                              + 240 bytes out-of-line (40 bytes contents * 6)
   //                              = 256 bytes total
-  vector<vector<int32>:5>:6 v;
+  2: vector<vector<int32>:5>:6 v;
 };
 
 xunion XUnionWithUnboundedOutOfLineObject {
-  string s;
+  1: string s;
 };
 
 xunion XUnionWithoutPayloadPadding {
-  array<uint64>:7 a;
+  1: array<uint64>:7 a;
 };
 
 xunion PaddingCheck {
-  array<uint8>:3 three;
-  array<uint8>:5 five;
+  1: array<uint8>:3 three;
+  2: array<uint8>:5 five;
 };
     )FIDL");
   ASSERT_TRUE(test_library.Compile());
@@ -1669,34 +1669,34 @@ bool envelope_strictness() {
 library example;
 
 strict xunion StrictLeafXUnion {
-    int64 a;
+    1: int64 a;
 };
 
 xunion FlexibleLeafXUnion {
-    int64 a;
+    1: int64 a;
 };
 
 xunion FlexibleXUnionOfStrictXUnion {
-    StrictLeafXUnion xu;
+    1: StrictLeafXUnion xu;
 };
 
 xunion FlexibleXUnionOfFlexibleXUnion {
-    FlexibleLeafXUnion xu;
+    1: FlexibleLeafXUnion xu;
 };
 
 strict xunion StrictXUnionOfStrictXUnion {
-    StrictLeafXUnion xu;
+    1: StrictLeafXUnion xu;
 };
 
 strict xunion StrictXUnionOfFlexibleXUnion {
-    FlexibleLeafXUnion xu;
+    1: FlexibleLeafXUnion xu;
 };
 
 table FlexibleLeafTable {
 };
 
 strict xunion StrictXUnionOfFlexibleTable {
-    FlexibleLeafTable ft;
+    1: FlexibleLeafTable ft;
 };
 
     )FIDL");
@@ -2845,7 +2845,7 @@ bool transitive_union_xunion() {
 library test;
 
 xunion InnerXUnion {
-  int32 foo;
+  1: int32 foo;
 };
 
 union MiddleUnion {
@@ -2854,7 +2854,7 @@ union MiddleUnion {
 };
 
 xunion OuterXUnion {
-  MiddleUnion foo;
+  1: MiddleUnion foo;
 };
 
 )FIDL");

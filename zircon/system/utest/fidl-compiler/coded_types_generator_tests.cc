@@ -213,8 +213,8 @@ bool CodedTypesOfXUnions() {
 library example;
 
 xunion MyXUnion {
-  bool foo;
-  int32 bar;
+  1: bool foo;
+  2: int32 bar;
 };
 )FIDL");
   ASSERT_TRUE(library.Compile());
@@ -286,8 +286,8 @@ union MyUnion {
 };
 
 xunion MyXUnion {
-  bool foo;
-  int32 bar;
+  1: bool foo;
+  2: int32 bar;
 };
 
 struct Wrapper1 {
@@ -434,8 +434,8 @@ bool CodedTypesOfNullableXUnions() {
 library example;
 
 xunion MyXUnion {
-  bool foo;
-  int32 bar;
+  1: bool foo;
+  2: int32 bar;
 };
 
 struct Wrapper1 {

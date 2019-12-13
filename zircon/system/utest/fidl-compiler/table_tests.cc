@@ -235,7 +235,7 @@ table Foo {
 };
 
 xunion OptionalTableContainer {
-    Foo foo;
+    1: Foo foo;
 };
 
 )FIDL"));
@@ -278,7 +278,7 @@ table Example {
                         &errors));
   ASSERT_EQ(errors.size(), 1u);
   ASSERT_STR_STR(errors.at(0).c_str(),
-    "missing ordinal 2 (ordinals must be dense); consider marking it reserved");
+                 "missing ordinal 2 (ordinals must be dense); consider marking it reserved");
 
   END_TEST;
 }
