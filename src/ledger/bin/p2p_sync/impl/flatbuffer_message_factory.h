@@ -5,10 +5,9 @@
 #ifndef SRC_LEDGER_BIN_P2P_SYNC_IMPL_FLATBUFFER_MESSAGE_FACTORY_H_
 #define SRC_LEDGER_BIN_P2P_SYNC_IMPL_FLATBUFFER_MESSAGE_FACTORY_H_
 
-#include <flatbuffers/flatbuffers.h>
-
 #include "src/ledger/bin/p2p_sync/impl/message_generated.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
+#include "third_party/flatbuffers/include/flatbuffers/flatbuffers.h"
 
 namespace p2p_sync {
 

@@ -10,8 +10,6 @@
 #include <algorithm>
 #include <utility>
 
-#include <flatbuffers/flatbuffers.h>
-
 #include "peridot/lib/rng/random.h"
 #include "src/ledger/bin/storage/impl/btree/tree_node.h"
 #include "src/ledger/bin/storage/impl/commit_generated.h"
@@ -26,6 +24,7 @@
 #include "src/ledger/lib/memory/ref_ptr.h"
 #include "src/ledger/lib/memory/weak_ptr.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
+#include "third_party/flatbuffers/include/flatbuffers/flatbuffers.h"
 
 namespace storage {
 

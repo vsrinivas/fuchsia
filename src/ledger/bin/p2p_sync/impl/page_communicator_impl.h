@@ -7,8 +7,6 @@
 
 #include <lib/fit/function.h>
 
-#include <flatbuffers/flatbuffers.h>
-
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/p2p_provider/public/types.h"
 #include "src/ledger/bin/p2p_sync/impl/commit_batch.h"
@@ -25,6 +23,7 @@
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
 #include "src/ledger/lib/memory/weak_ptr.h"
 #include "src/lib/callback/auto_cleanable.h"
+#include "third_party/flatbuffers/include/flatbuffers/flatbuffers.h"
 
 namespace p2p_sync {
 class PageCommunicatorImplInspectorForTest;

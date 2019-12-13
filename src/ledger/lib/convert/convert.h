@@ -10,10 +10,10 @@
 #include <array>
 #include <string>
 
-#include <flatbuffers/flatbuffers.h>
 #include <leveldb/db.h>
 
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
+#include "third_party/flatbuffers/include/flatbuffers/flatbuffers.h"
 
 namespace convert {
 

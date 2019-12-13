@@ -9,8 +9,6 @@
 
 #include <algorithm>
 
-#include <flatbuffers/flatbuffers.h>
-
 #include "src/ledger/bin/encryption/impl/encrypted_commit_generated.h"
 #include "src/ledger/bin/encryption/impl/encrypted_entry_generated.h"
 #include "src/ledger/bin/encryption/impl/remote_commit_id_generated.h"
@@ -24,6 +22,7 @@
 #include "src/lib/callback/scoped_callback.h"
 #include "third_party/abseil-cpp/absl/strings/str_cat.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
+#include "third_party/flatbuffers/include/flatbuffers/flatbuffers.h"
 
 namespace encryption {
 namespace {
