@@ -146,7 +146,7 @@ fn evaluate_path_state_with_selector_node(
         // TODO(4601): String patterns that contain wildcards must be pattern matched on.
         //             Can we convert these to regex to avoid another custom state machine?
         StringSelector::StringPattern(string_pattern) => {
-            if string_pattern == selectors::WILDCARD_SYMBOL {
+            if string_pattern == selectors::WILDCARD_SYMBOL_STR {
                 return true;
             } else {
                 // TODO(4601): Support wildcarded string_literals.

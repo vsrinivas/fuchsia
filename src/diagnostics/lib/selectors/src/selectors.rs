@@ -8,6 +8,7 @@ use {
     fidl_fuchsia_diagnostics::{self, ComponentSelector, Selector, StringSelector, TreeSelector},
     lazy_static::lazy_static,
     regex::{Regex, RegexSet},
+    regex_syntax,
     std::fs,
     std::io::{BufRead, BufReader},
     std::path::{Path, PathBuf},
@@ -24,7 +25,8 @@ static PATH_NODE_DELIMITER: char = '/';
 static ESCAPE_CHARACTER: char = '\\';
 
 // Pattern used to encode wildcard.
-pub static WILDCARD_SYMBOL: &str = "*";
+pub static WILDCARD_SYMBOL_STR: &str = "*";
+pub static WILDCARD_SYMBOL_CHAR: char = '*';
 
 // Pattern used to encode globs.
 static GLOB_SYMBOL: &str = "**";
@@ -353,23 +355,121 @@ pub fn parse_selectors(selector_path: impl Into<PathBuf>) -> Result<Vec<Selector
     Ok(selector_vec)
 }
 
-pub fn convert_path_selector_to_regex(selector: &Vec<StringSelector>) -> Result<Regex, Error> {
+/// Helper method for converting ExactMatch StringSelectors to regex. We must
+/// escape all special characters on the behalf of the selector author when converting
+/// exact matches to regex.
+fn is_special_character(character: char) -> bool {
+    character == ESCAPE_CHARACTER
+        || character == PATH_NODE_DELIMITER
+        || character == SELECTOR_DELIMITER
+        || character == WILDCARD_SYMBOL_CHAR
+}
+
+/// Converts a single character from a StringSelector into a format that allows it
+/// selected for as a literal character in regular expression. This means that all
+/// characters in the selector string, which are also regex meta characters, end up
+/// being escaped.
+fn convert_single_character_to_regex(token_builder: &mut String, character: char) {
+    if regex_syntax::is_meta_character(character) {
+        token_builder.push(ESCAPE_CHARACTER);
+    }
+    token_builder.push(character);
+}
+
+/// When the regular expression converter encounters a `\` escape character
+/// in the selector string, it needs to express that escape in the regular expression.
+/// The regular expression needs to match both the literal backslash and whatever character
+/// is being `escaped` in the selector string. So this method converts a selector string
+/// like `\:` into `\\:`.
+// TODO(4601): Should we validate that the only characters being "escaped" in our
+//             selector strings are characters that have special syntax in our selector
+//             DSL?
+fn convert_escaped_char_to_regex(
+    token_builder: &mut String,
+    selection_iter: &mut std::str::CharIndices<'_>,
+) -> Result<(), Error> {
+    // We have to push an additional escape for escape characters
+    // since the `\` has significance in Regex that we need to escape
+    // in order to have literal matching on the backslash.
+    token_builder.push(ESCAPE_CHARACTER);
+    token_builder.push(ESCAPE_CHARACTER);
+    let escaped_char_option: Option<(usize, char)> = selection_iter.next();
+    escaped_char_option
+        .map(|(_, escaped_char)| convert_single_character_to_regex(token_builder, escaped_char))
+        .ok_or(format_err!("Selecter fails verification due to unmatched escape character"))
+}
+
+/// Converts a single StringSelector into a regular expression.
+///
+/// If the StringSelector is a StringPattern, it interperets `\` characters
+/// as escape characters that prevent `*` characters from being evaluated as pattern
+/// matchers.
+///
+/// If the StringSelector is an ExactMatch, it will "santiize" the exact match to
+/// align with the format of sanitized text from the system. The resulting regex will
+/// be a literal matcher for escape-characters followed by special characters in the
+/// selector lanaguage.
+pub fn convert_string_selector_to_regex(
+    node: &StringSelector,
+    wildcard_symbol_replacement: &str,
+) -> Result<String, Error> {
+    match node {
+        StringSelector::StringPattern(string_pattern) => {
+            if string_pattern == WILDCARD_SYMBOL_STR {
+                Ok(wildcard_symbol_replacement.to_string())
+            } else {
+                let mut node_regex_builder = "(".to_string();
+                let mut node_iter = string_pattern.as_str().char_indices();
+                while let Some((_, selector_char)) = node_iter.next() {
+                    if selector_char == ESCAPE_CHARACTER {
+                        convert_escaped_char_to_regex(&mut node_regex_builder, &mut node_iter)?
+                    } else if selector_char == WILDCARD_SYMBOL_CHAR {
+                        node_regex_builder.push_str(wildcard_symbol_replacement);
+                    } else {
+                        convert_single_character_to_regex(&mut node_regex_builder, selector_char);
+                    }
+                }
+                node_regex_builder.push_str(")");
+                Ok(node_regex_builder)
+            }
+        }
+        StringSelector::ExactMatch(string_pattern) => {
+            let mut node_regex_builder = "(".to_string();
+            let mut node_iter = string_pattern.as_str().char_indices();
+            while let Some((_, selector_char)) = node_iter.next() {
+                if is_special_character(selector_char) {
+                    // In ExactMatch mode, we assume that the client wants
+                    // their series of strings to be a literal match for the
+                    // sanitized strings on the system. The sanitized strings
+                    // are formed by escaping all special characters, so we do
+                    // the same here.
+                    node_regex_builder.push(ESCAPE_CHARACTER);
+                    node_regex_builder.push(ESCAPE_CHARACTER);
+                }
+                convert_single_character_to_regex(&mut node_regex_builder, selector_char);
+            }
+            node_regex_builder.push_str(")");
+            Ok(node_regex_builder)
+        }
+        _ => unreachable!("no expected alternative variants of the path selection node."),
+    }
+}
+
+/// Converts a vector of StringSelectors into a single regular expression which matches
+/// strings encoding paths.
+///
+/// NOTE: The resulting regular expression makes the assumption that all "nodes" in the
+/// strings encoding paths that it will match against have been sanitized by the
+/// sanitize_string_for_selectors API in this crate.
+pub fn convert_path_selector_to_regex(selector: &[StringSelector]) -> Result<Regex, Error> {
     let mut regex_string = "^".to_string();
     for path_selector in selector {
-        match path_selector {
-            StringSelector::StringPattern(string_pattern) => {
-                if string_pattern == WILDCARD_SYMBOL {
-                    regex_string.push_str(WILDCARD_REGEX_EQUIVALENT);
-                } else {
-                    // TODO(4601): Support regex conversion of wildcarded string literals.
-                    // TODO(4601): Support converting escaped char patterns into a form
-                    //             matched by regex.
-                    regex_string.push_str(&string_pattern)
-                }
-            }
-            StringSelector::ExactMatch(string_pattern) => regex_string.push_str(&string_pattern),
-            _ => unreachable!("no expected alternative variants of the path selection node."),
-        }
+        // Path selectors replace wildcards with a regex that only extends to the next
+        // unescaped '/' character, since we want each node to only be applied to one level
+        // of the path.
+        let node_regex =
+            convert_string_selector_to_regex(path_selector, WILDCARD_REGEX_EQUIVALENT)?;
+        regex_string.push_str(&node_regex);
         regex_string.push_str("/");
     }
     regex_string.push_str("$");
@@ -377,31 +477,44 @@ pub fn convert_path_selector_to_regex(selector: &Vec<StringSelector>) -> Result<
     Ok(Regex::new(&regex_string)?)
 }
 
+/// Converts a single StringSelectors into a  regular expression which matches
+/// strings encoding a property name on a node.
+///
+/// NOTE: The resulting regular expression makes the assumption that the property names
+/// that it will match against have been sanitized by the  sanitize_string_for_selectors API in
+/// this crate.
 pub fn convert_property_selector_to_regex(selector: &StringSelector) -> Result<Regex, Error> {
     let mut regex_string = "^".to_string();
 
-    match selector {
-        StringSelector::StringPattern(string_pattern) => {
-            if string_pattern == WILDCARD_SYMBOL {
-                // NOTE: With property selectors, the wildcard is equivalent to a glob, since it
-                // unconditionally matches all entries, and there's no concept of recursion on
-                // property selection.
-                regex_string.push_str(GLOB_REGEX_EQUIVALENT);
-            } else {
-                // TODO(4601): Support regex conversion of wildcarded string literals.
-                regex_string.push_str(&string_pattern);
-            }
-        }
-
-        StringSelector::ExactMatch(string_pattern) => {
-            regex_string.push_str(&string_pattern);
-        }
-        _ => unreachable!("no expected alternative variants of the property selection node."),
-    };
+    // Property selectors replace wildcards with GLOB like behavior since there is no
+    // concept of levels/depth to properties.
+    let property_regex = convert_string_selector_to_regex(selector, GLOB_REGEX_EQUIVALENT)?;
+    regex_string.push_str(&property_regex);
 
     regex_string.push_str("$");
 
     Ok(Regex::new(&regex_string)?)
+}
+
+/// Sanitizes raw strings from the system such that they align with the
+/// special-character and escaping semantics of the Selector format.
+///
+/// Sanitization escapes the known special characters in the selector language.
+///
+/// NOTE: All strings must be sanitized before being evaluated by
+///       selectors in regex form.
+pub fn sanitize_string_for_selectors(node: &str) -> String {
+    let mut sanitized_string = String::new();
+
+    let mut node_iter = node.char_indices();
+    while let Some((_, node_char)) = node_iter.next() {
+        if is_special_character(node_char) {
+            sanitized_string.push(ESCAPE_CHARACTER);
+        }
+        sanitized_string.push(node_char);
+    }
+
+    sanitized_string
 }
 
 #[cfg(test)]
@@ -628,17 +741,28 @@ mod tests {
         // Note: We provide the full selector syntax but this test is only transpiling
         // the node-path of the selector, and validating against that.
         let test_cases = vec![
-            (r#"echo.cmx:a/*/c:*"#, r#"a/b/c/"#),
-            (r#"echo.cmx:a/*/*/*/*/c:*"#, r#"a/b/g/e/d/c/"#),
-            (r#"echo.cmx:*/*/*/*/*/*/*:*"#, r#"a/b/\/c/d/e\*/f/"#),
-            (r#"echo.cmx:a/*/*/d/*/*:*"#, r#"a/b/\/c/d/e\*/f/"#),
+            (r#"echo.cmx:a/*/c:*"#, vec!["a", "b", "c"]),
+            (r#"echo.cmx:a/*/*/*/*/c:*"#, vec!["a", "b", "g", "e", "d", "c"]),
+            (r#"echo.cmx:*/*/*/*/*/*/*:*"#, vec!["a", "b", "/c", "d", "e*", "f"]),
+            (r#"echo.cmx:a/*/*/d/*/*:*"#, vec!["a", "b", "/c", "d", "e*", "f"]),
+            (r#"echo.cmx:a/*/\/c/d/e\*/*:*"#, vec!["a", "b", "/c", "d", "e*", "f"]),
+            (r#"echo.cmx:a/b*/c:*"#, vec!["a", "bob", "c"]),
         ];
         for (selector, string_to_match) in test_cases {
+            let mut sanitized_node_path = string_to_match
+                .iter()
+                .map(|s| sanitize_string_for_selectors(s))
+                .collect::<Vec<String>>()
+                .join("/");
+            // We must append a "/" because the absolute monikers end in slash and
+            // hierarchy node paths don't, but we want to reuse the regex logic.
+            sanitized_node_path.push('/');
+
             let parsed_selector = parse_selector(selector).unwrap();
             let tree_selector = parsed_selector.tree_selector;
             let node_path = tree_selector.node_path.unwrap();
             let selector_regex = convert_path_selector_to_regex(&node_path).unwrap();
-            assert!(selector_regex.is_match(string_to_match));
+            assert!(selector_regex.is_match(&sanitized_node_path));
         }
     }
 
@@ -647,19 +771,26 @@ mod tests {
         // Note: We provide the full selector syntax but this test is only transpiling
         // the node-path of the tree selector, and valdating against that.
         let test_cases = vec![
-            // TODO(4601): This test case should pass when we support wildcarded string literals.
-            (r#"echo.cmx:a/b*/c:*"#, r#"a/bob/c/"#),
             // Failing because it's missing a required "d" directory node in the string.
-            (r#"echo.cmx:a/*/d/*/f:*"#, r#"a/b/c/e/f/"#),
+            (r#"echo.cmx:a/*/d/*/f:*"#, vec!["a", "b", "c", "e", "f"]),
             // Failing because the match string doesnt end at the c node.
-            (r#"echo.cmx:a/*/*/*/*/*/c:*"#, r#"a/b/g/e/d/c/f/"#),
+            (r#"echo.cmx:a/*/*/*/*/*/c:*"#, vec!["a", "b", "g", "e", "d", "f"]),
         ];
         for (selector, string_to_match) in test_cases {
+            let mut sanitized_node_path = string_to_match
+                .iter()
+                .map(|s| sanitize_string_for_selectors(s))
+                .collect::<Vec<String>>()
+                .join("/");
+            // We must append a "/" because the absolute monikers end in slash and
+            // hierarchy node paths don't, but we want to reuse the regex logic.
+            sanitized_node_path.push('/');
+
             let parsed_selector = parse_selector(selector).unwrap();
             let tree_selector = parsed_selector.tree_selector;
             let node_path = tree_selector.node_path.unwrap();
             let selector_regex = convert_path_selector_to_regex(&node_path).unwrap();
-            assert!(!selector_regex.is_match(string_to_match));
+            assert!(!selector_regex.is_match(&sanitized_node_path));
         }
     }
 
@@ -670,14 +801,15 @@ mod tests {
         let test_cases = vec![
             (r#"echo.cmx:a:*"#, r#"a"#),
             (r#"echo.cmx:a:bob"#, r#"bob"#),
-            (r#"echo.cmx:a:\\\*"#, r#"\*"#),
+            (r#"echo.cmx:a:b*"#, r#"bob"#),
+            (r#"echo.cmx:a:\*"#, r#"*"#),
         ];
         for (selector, string_to_match) in test_cases {
             let parsed_selector = parse_selector(selector).unwrap();
             let tree_selector = parsed_selector.tree_selector;
             let property_selector = tree_selector.target_properties.unwrap();
             let selector_regex = convert_property_selector_to_regex(&property_selector).unwrap();
-            assert!(selector_regex.is_match(string_to_match));
+            assert!(selector_regex.is_match(&sanitize_string_for_selectors(string_to_match)));
         }
     }
 
@@ -686,12 +818,6 @@ mod tests {
         // Note: We provide the full selector syntax but this test is only transpiling
         // the node-path of the tree selector, and valdating against that.
         let test_cases = vec![
-            // TODO(4601): This test case should pass when we support wildcarded string literals.
-            (r#"echo.cmx:a:b*"#, r#"bob"#),
-            // TODO(4601): This test case should pass when we support translating string literals
-            //             with escapes. Right now, the matching selector must be
-            //             r#"**:a:\\\*"#
-            (r#"echo.cmx:a:\*"#, r#"\*"#),
             (r#"echo.cmx:a:c"#, r#"d"#),
             (r#"echo.cmx:a:bob"#, r#"thebob"#),
             (r#"echo.cmx:a:c"#, r#"cdog"#),
@@ -701,7 +827,7 @@ mod tests {
             let tree_selector = parsed_selector.tree_selector;
             let target_properties = tree_selector.target_properties.unwrap();
             let selector_regex = convert_property_selector_to_regex(&target_properties).unwrap();
-            assert!(!selector_regex.is_match(string_to_match));
+            assert!(!selector_regex.is_match(&sanitize_string_for_selectors(string_to_match)));
         }
     }
 

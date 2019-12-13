@@ -15,6 +15,7 @@ rustc_library("selectors") {
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:regex",
+    "//third_party/rust_crates:regex-syntax",
     "//third_party/rust_crates:tempfile",
   ]
 }

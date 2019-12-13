@@ -455,8 +455,11 @@ impl ReaderServer {
         };
         let mut new_root = NodeHierarchy::new_root();
         for (node_path, property) in root_node.property_iter() {
-            let mut formatted_node_path =
-                node_path.iter().map(|s| s.as_str()).collect::<Vec<&str>>().join("/");
+            let mut formatted_node_path = node_path
+                .iter()
+                .map(|s| selectors::sanitize_string_for_selectors(s))
+                .collect::<Vec<String>>()
+                .join("/");
             // We must append a "/" because the absolute monikers end in slash and
             // hierarchy node paths don't, but we want to reuse the regex logic.
             formatted_node_path.push('/');
