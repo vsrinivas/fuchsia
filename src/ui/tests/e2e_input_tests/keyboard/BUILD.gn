@@ -21,19 +21,36 @@ rustc_library("driver") {
   with_unit_tests = true
 
   deps = [
+    ":ui-test-tools",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
-    "//garnet/public/rust/fuchsia-scenic",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.ui.input2:fuchsia.ui.input2-rustc",
-    "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy-rustc",
-    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
     "//src/lib/ui/input-synthesis",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
+  ]
+}
+
+rustc_library("ui-test-tools") {
+  source_root = "ui-test-tools/lib.rs"
+  with_unit_tests = true
+  version = "0.1.0"
+  edition = "2018"
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-scenic",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx-rustc",
+    "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy-rustc",
+    "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures",
+    "//garnet/public/rust/fuchsia-syslog",
   ]
 }
 
@@ -51,7 +68,6 @@ test_package("keyboard-e2e") {
           dimensions = {
             device_type = "Intel NUC Kit NUC7i5DNHE"
           }
-          tags = [ "flaky" ]  # Bug: 40902
         },
       ]
     },
