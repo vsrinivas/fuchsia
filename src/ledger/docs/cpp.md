@@ -188,5 +188,5 @@ to run them.
 [scoped_task_runner.h]: /src/lib/callback/scoped_task_runner.h
 [set_when_called.h]: /src/ledger/lib/callback/set_when_called.h
 [test_loop_fixture.h]: /src/lib/testing/loop_fixture/test_loop_fixture.h
-[trace_callback.h]: /src/lib/callback/trace_callback.h
+[trace_callback.h]: /src/ledger/lib/callback/trace_callback.h
 [waiter.h]: /src/ledger/lib/callback/waiter.h

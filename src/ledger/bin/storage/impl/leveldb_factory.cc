@@ -15,11 +15,11 @@
 #include <mutex>
 
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/callback/trace_callback.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/auto_cleanable.h"
 #include "src/lib/callback/scoped_callback.h"
-#include "src/lib/callback/trace_callback.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 // LevelDbFactory tries to keep an empty, initialized instance of LevelDb always

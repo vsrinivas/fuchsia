@@ -11,8 +11,8 @@
 
 #include "src/ledger/bin/app/page_delegate.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/callback/trace_callback.h"
 #include "src/lib/callback/scoped_task_runner.h"
-#include "src/lib/callback/trace_callback.h"
 
 namespace ledger {
 namespace {

@@ -14,6 +14,7 @@
 #include "src/ledger/bin/cloud_sync/impl/entry_payload_encoding.h"
 #include "src/ledger/bin/cloud_sync/impl/status.h"
 #include "src/ledger/bin/storage/public/constants.h"
+#include "src/ledger/lib/callback/trace_callback.h"
 #include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
@@ -24,7 +25,6 @@
 #include "src/ledger/lib/memory/ref_ptr.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/callback/scoped_callback.h"
-#include "src/lib/callback/trace_callback.h"
 
 namespace cloud_sync {
 

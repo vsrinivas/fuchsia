@@ -17,13 +17,13 @@
 #include "src/ledger/bin/app/fidl/serialization_size.h"
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/ledger/lib/callback/trace_callback.h"
 #include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/memory/ref_counted.h"
 #include "src/ledger/lib/memory/ref_ptr.h"
 #include "src/ledger/lib/vmo/strings.h"
-#include "src/lib/callback/trace_callback.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {

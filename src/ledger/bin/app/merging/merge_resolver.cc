@@ -19,13 +19,13 @@
 #include "src/ledger/bin/app/merging/merge_strategy.h"
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/cobalt/cobalt.h"
+#include "src/ledger/lib/callback/trace_callback.h"
 #include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/memory/ref_ptr.h"
 #include "src/lib/callback/scoped_callback.h"
-#include "src/lib/callback/trace_callback.h"
 
 namespace ledger {
 
