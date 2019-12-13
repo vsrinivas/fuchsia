@@ -9,6 +9,7 @@ banjo("ddk.protocol.isp") {
     "isp.banjo",
   ]
   deps = [
+    "//zircon/system/banjo/ddk.protocol.camerahwaccel",
     "//zircon/system/banjo/zircon.device.camera",
     "//zircon/system/banjo/zircon.device.sysmem",
   ]
