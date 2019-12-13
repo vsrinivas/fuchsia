@@ -68,6 +68,11 @@ float LookupPixelDensityForDisplay(uint32_t width_in_px, uint32_t height_in_px) 
     // Assume the display is a 24in HD monitor.
     FXL_LOG(INFO) << "RootPresenter: treating display as a 24in monitor.";
     return 4.16f;
+  } else if (width_in_px == 2560 && height_in_px == 1440) {
+    // TODO(fxb/42794): Allow Root Presenter clients to specify exact pixel ratio
+    // Assume display is a 27in 2K monitor.
+    FXL_LOG(INFO) << "RootPresenter: treating device as a 27in 2k monitor.";
+    return 5.22f;
   } else {
     // TODO(SCN-384): Don't lie.
     FXL_LOG(WARNING) << "RootPresenter: unrecognized display.";
