@@ -1,0 +1,6 @@
+{
+    "program": {
+        "binary": "test/dev_authenticator_bin_test"
+    },
+    "sandbox": {}
+}
