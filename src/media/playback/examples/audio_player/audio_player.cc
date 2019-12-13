@@ -38,12 +38,8 @@ AudioPlayer::AudioPlayer(const AudioPlayerParams& params, fit::closure quit_call
   if (!params.url().empty()) {
     url::GURL url = url::GURL(params.url());
 
-    if (url.SchemeIsFile()) {
-      player_->SetFileSource(fsl::CloneChannelFromFileDescriptor(
-          fbl::unique_fd(open(url.path().c_str(), O_RDONLY)).get()));
-    } else {
-      player_->SetHttpSource(params.url(), nullptr);
-    }
+    player_->SetFileSource(fsl::CloneChannelFromFileDescriptor(
+        fbl::unique_fd(open(url.path().c_str(), O_RDONLY)).get()));
     GetKeystroke();
 
     player_->Play();

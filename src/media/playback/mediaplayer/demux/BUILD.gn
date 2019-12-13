@@ -11,8 +11,6 @@ source_set("demux") {
     "demux.h",
     "file_reader.cc",
     "file_reader.h",
-    "http_reader.cc",
-    "http_reader.h",
     "reader.h",
     "reader_cache.cc",
     "reader_cache.h",
@@ -28,7 +26,6 @@ source_set("demux") {
 
   deps = [
     "//garnet/bin/http:errors",
-    "//sdk/fidl/fuchsia.net.oldhttp",
     "//src/lib/fsl",
     "//src/lib/syslog/cpp",
     "//src/media/playback/mediaplayer/graph",

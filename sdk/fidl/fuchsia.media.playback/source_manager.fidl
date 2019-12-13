@@ -5,17 +5,11 @@
 library fuchsia.media.playback;
 
 using fuchsia.media;
-using fuchsia.net.oldhttp;
 using zx;
 
 /// Manages sources on behalf of a Player.
 [FragileBase]
 protocol SourceManager {
-    /// Creates a source that reads from a URL.
-    CreateHttpSource(string http_url,
-                     vector<fuchsia.net.oldhttp.HttpHeader>? headers,
-                     request<Source> source_request);
-
     /// Creates a source that reads from a file.
     CreateFileSource(handle<channel> file_channel,
                      request<Source> source_request);

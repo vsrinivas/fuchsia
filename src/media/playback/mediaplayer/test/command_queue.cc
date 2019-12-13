@@ -122,14 +122,9 @@ void CommandQueue::SetUrlCommand::Execute(CommandQueue* command_queue) {
 
   url::GURL url = url::GURL(url_);
 
-  if (url.SchemeIsFile()) {
-    auto fd = fbl::unique_fd(open(url.path().c_str(), O_RDONLY));
-    FX_CHECK(fd.is_valid());
-    command_queue->player_->SetFileSource(fsl::CloneChannelFromFileDescriptor(fd.get()));
-  } else {
-    command_queue->player_->SetHttpSource(url_, nullptr);
-  }
-
+  auto fd = fbl::unique_fd(open(url.path().c_str(), O_RDONLY));
+  FX_CHECK(fd.is_valid());
+  command_queue->player_->SetFileSource(fsl::CloneChannelFromFileDescriptor(fd.get()));
   command_queue->prev_seek_position_ = 0;
   command_queue->status_ = nullptr;
   command_queue->ExecuteNextCommand();

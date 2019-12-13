@@ -7,7 +7,6 @@ library fuchsia.media.playback;
 using fuchsia.math;
 using fuchsia.media;
 using fuchsia.media.audio;
-using fuchsia.net.oldhttp;
 using fuchsia.ui.views;
 using zx;
 
@@ -15,11 +14,6 @@ using zx;
 [Discoverable]
 protocol Player {
     compose SourceManager;
-
-    /// Sets an HTTP URL to read from. The provided headers are added to each
-    /// HTTP request issued to the URL.
-    SetHttpSource(string http_url,
-                  vector<fuchsia.net.oldhttp.HttpHeader>? headers);
 
     /// Sets a file channel to read from.
     SetFileSource(handle<channel> file_channel);
@@ -65,7 +59,7 @@ struct PlayerStatus {
     /// Whether the source has a video stream.
     bool has_video;
 
-    /// Indicates whether the player is ready to play. After `SetHttpSource`,
+    /// Indicates whether the player is ready to play. After
     /// `SetFileSource` or `SourceManager.SetSource` is called, this value is
     /// false until the player is fully prepared to play the content from the
     /// source.

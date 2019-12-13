@@ -25,7 +25,6 @@
 #include "src/media/playback/mediaplayer/core/demux_source_segment.h"
 #include "src/media/playback/mediaplayer/core/renderer_sink_segment.h"
 #include "src/media/playback/mediaplayer/demux/file_reader.h"
-#include "src/media/playback/mediaplayer/demux/http_reader.h"
 #include "src/media/playback/mediaplayer/demux/reader_cache.h"
 #include "src/media/playback/mediaplayer/fidl/fidl_audio_renderer.h"
 #include "src/media/playback/mediaplayer/fidl/fidl_reader.h"
@@ -404,11 +403,6 @@ void PlayerImpl::SetTimelineFunction(float rate, int64_t reference_time, fit::cl
   SendStatusUpdates();
 }
 
-void PlayerImpl::SetHttpSource(std::string http_url,
-                               fidl::VectorPtr<fuchsia::net::oldhttp::HttpHeader> headers) {
-  BeginSetSource(CreateSource(HttpReader::Create(this, http_url, std::move(headers)), nullptr));
-}
-
 void PlayerImpl::SetFileSource(zx::channel file_channel) {
   BeginSetSource(CreateSource(FileReader::Create(std::move(file_channel)), nullptr));
 }
@@ -465,8 +459,7 @@ void PlayerImpl::FinishSetSource() {
   current_source_ = std::move(new_source_);
   current_source_handle_ = std::move(new_source_handle_);
   FX_DCHECK(current_source_);
-  // There's no handle if |SetHttpSource|, |SetFileSource| or |SetReaderSource|
-  // was used.
+  // There's no handle if |SetFileSource| or |SetReaderSource| was used.
 }
 
 void PlayerImpl::Play() {
@@ -516,18 +509,6 @@ void PlayerImpl::BindGainControl(
 void PlayerImpl::AddBinding(fidl::InterfaceRequest<fuchsia::media::playback::Player> request) {
   FX_DCHECK(request);
   AddBindingInternal(std::move(request));
-}
-
-void PlayerImpl::CreateHttpSource(
-    std::string http_url, fidl::VectorPtr<fuchsia::net::oldhttp::HttpHeader> headers,
-    fidl::InterfaceRequest<fuchsia::media::playback::Source> source_request) {
-  FX_DCHECK(source_request);
-
-  zx_koid_t koid = GetKoid(source_request);
-  source_impls_by_koid_.emplace(
-      koid, CreateSource(HttpReader::Create(this, http_url, std::move(headers)),
-                         std::move(source_request),
-                         [this, koid]() { source_impls_by_koid_.erase(koid); }));
 }
 
 void PlayerImpl::CreateFileSource(

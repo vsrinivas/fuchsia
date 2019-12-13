@@ -51,7 +51,7 @@ class CommandQueue {
   // Notifies the command queue that the view is ready.
   void NotifyViewReady();
 
-  // Queues a |SetFileSource| or |SetHttpSource| command.
+  // Queues a |SetFileSource| command.
   void SetUrl(const std::string& url) { AddCommand(new SetUrlCommand(url)); }
 
   // Queues a |SetFileSource| command.

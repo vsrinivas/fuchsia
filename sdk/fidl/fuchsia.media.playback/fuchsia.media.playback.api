@@ -1,6 +1,6 @@
 {
-  "fidl/fuchsia.media.playback/player.fidl": "b093e74abc22fce8dfda847d4d4c1791",
+  "fidl/fuchsia.media.playback/player.fidl": "955db74abd030e3fe3551606c4833a8d",
   "fidl/fuchsia.media.playback/problem.fidl": "87a4097616967869a35d9b62dec59677",
   "fidl/fuchsia.media.playback/seeking_reader.fidl": "4d6a1e04aa6f66ccafaeac1985fb7acc",
-  "fidl/fuchsia.media.playback/source_manager.fidl": "316c942a32f6559bb1f0482af6b6e022"
+  "fidl/fuchsia.media.playback/source_manager.fidl": "5463c6cebe294cc90501e381d39fff19"
 }

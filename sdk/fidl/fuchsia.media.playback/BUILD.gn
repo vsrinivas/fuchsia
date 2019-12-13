@@ -6,10 +6,7 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.media.playback") {
   # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
-  excluded_checks = [
-    "string-bounds-not-specified",
-    "vector-bounds-not-specified",
-  ]
+  excluded_checks = [ "string-bounds-not-specified" ]
 
   sdk_category = "partner"
 
@@ -24,7 +21,6 @@ fidl("fuchsia.media.playback") {
     "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.media.audio",
-    "//sdk/fidl/fuchsia.net.oldhttp",
     "//sdk/fidl/fuchsia.ui.views",
   ]
 }

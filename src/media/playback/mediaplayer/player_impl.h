@@ -40,10 +40,6 @@ class PlayerImpl : public fuchsia::media::playback::Player, public ServiceProvid
 
   ~PlayerImpl() override;
 
-  // Player implementation.
-  void SetHttpSource(std::string http_url,
-                     fidl::VectorPtr<fuchsia::net::oldhttp::HttpHeader> headers) override;
-
   void SetFileSource(zx::channel file_channel) override;
 
   void Play() override;
@@ -58,10 +54,6 @@ class PlayerImpl : public fuchsia::media::playback::Player, public ServiceProvid
       fidl::InterfaceRequest<fuchsia::media::audio::GainControl> gain_control_request) override;
 
   void AddBinding(fidl::InterfaceRequest<fuchsia::media::playback::Player> request) override;
-
-  void CreateHttpSource(
-      std::string http_url, fidl::VectorPtr<fuchsia::net::oldhttp::HttpHeader> headers,
-      fidl::InterfaceRequest<fuchsia::media::playback::Source> source_request) override;
 
   void CreateFileSource(
       zx::channel file_channel,
