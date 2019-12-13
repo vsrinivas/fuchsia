@@ -19,7 +19,6 @@ use fidl::{
 	fidl_empty_struct,
 	fidl_struct,
 	fidl_table,
-	fidl_union,
 	fidl_xunion,
 };
 
@@ -62,12 +61,9 @@ fidl_struct! {
   members: [
     field {
       ty: i32,
-      offset_old: 0,
       offset_v1: 0,
     },
   ],
-  size_old: 4,
-  align_old: 4,
   size_v1: 4,
   align_v1: 4,
 }

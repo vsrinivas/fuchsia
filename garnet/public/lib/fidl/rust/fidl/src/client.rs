@@ -690,7 +690,7 @@ mod tests {
         fuchsia_zircon::DurationNum,
         futures::{join, FutureExt, StreamExt},
         futures_test::task::new_count_waker,
-        std::{sync::atomic::Ordering, thread},
+        std::thread,
         test_util::assert_matches,
     };
 
@@ -700,11 +700,9 @@ mod tests {
 
     #[rustfmt::skip]
     fn expected_sent_bytes(tx_id_low_byte: u8) -> [u8; 24] {
-        let v1 = crate::encoding::ENCODE_UNIONS_USING_XUNION_FORMAT.load(Ordering::Relaxed);
-        let flags_low_byte = if v1 { 1 } else { 0 };
         [
             tx_id_low_byte, 0, 0, 0, // 32 bit tx_id
-            flags_low_byte, 0, 0, // flags
+            1, 0, 0, // flags (unions encoded as xunions)
             MAGIC_NUMBER_INITIAL,
             0, 0, 0, 0, // low bytes of 64 bit ordinal
             SEND_ORDINAL_HIGH_BYTE, 0, 0, 0, // high bytes of 64 bit ordinal
@@ -916,12 +914,7 @@ mod tests {
         // Send the event from the server
         let server = fasync::Channel::from_channel(server_end).unwrap();
         let (bytes, handles) = (&mut vec![], &mut vec![]);
-        let header = TransactionHeader::new_full(
-            0,
-            5,
-            &crate::encoding::Context { unions_use_xunion_format: false },
-            0,
-        );
+        let header = TransactionHeader::new_full(0, 5, &crate::encoding::Context {}, 0);
         encode_transaction(header, bytes, handles);
         server.write(bytes, handles).expect("Server channel write failed");
         drop(server);

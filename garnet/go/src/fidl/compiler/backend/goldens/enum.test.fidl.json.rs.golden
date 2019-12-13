@@ -19,7 +19,6 @@ use fidl::{
 	fidl_empty_struct,
 	fidl_struct,
 	fidl_table,
-	fidl_union,
 	fidl_xunion,
 };
 

@@ -27,7 +27,6 @@ use fidl::{
 	fidl_empty_struct,
 	fidl_struct,
 	fidl_table,
-	fidl_union,
 	fidl_xunion,
 };
 
@@ -42,9 +41,6 @@ use fidl::{
 {{ end -}}
 {{ range $result := .Results -}}
 {{ template "ResultDeclaration" $result}}
-{{ end -}}
-{{ range $union := .Unions -}}
-{{ template "UnionDeclaration" $union }}
 {{ end -}}
 {{ range $xunion := .XUnions -}}
 {{ template "XUnionDeclaration" $xunion }}

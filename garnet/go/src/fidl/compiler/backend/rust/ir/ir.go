@@ -87,26 +87,6 @@ type Result struct {
 	Alignment int
 }
 
-type Union struct {
-	types.Attributes
-	ECI       EncodedCompoundIdentifier
-	Derives   derives
-	Name      string
-	Members   []UnionMember
-	Size      int
-	Alignment int
-}
-
-type UnionMember struct {
-	types.Attributes
-	Derives       derives
-	OGType        types.Type
-	Type          Type
-	Name          string
-	Offset        int
-	XUnionOrdinal int
-}
-
 type Struct struct {
 	types.Attributes
 	ECI     EncodedCompoundIdentifier
@@ -201,7 +181,6 @@ type Root struct {
 	Enums        []Enum
 	Structs      []Struct
 	XUnions      []XUnion
-	Unions       []Union
 	Results      []Result
 	Tables       []Table
 	Interfaces   []Interface
@@ -230,15 +209,6 @@ func (r *Root) findTable(eci EncodedCompoundIdentifier) *Table {
 	for i := range r.Tables {
 		if r.Tables[i].ECI == eci {
 			return &r.Tables[i]
-		}
-	}
-	return nil
-}
-
-func (r *Root) findUnion(eci EncodedCompoundIdentifier) *Union {
-	for i := range r.Unions {
-		if r.Unions[i].ECI == eci {
-			return &r.Unions[i]
 		}
 	}
 	return nil
@@ -843,46 +813,6 @@ func (c *compiler) compileXUnion(val types.XUnion) XUnion {
 	return r
 }
 
-func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
-	return UnionMember{
-		Attributes:    val.Attributes,
-		OGType:        val.Type,
-		Type:          c.compileType(val.Type, false),
-		Name:          compileCamelIdentifier(val.Name),
-		Offset:        val.Offset,
-		XUnionOrdinal: val.XUnionOrdinal,
-	}
-}
-
-func (c *compiler) compileResultFromUnion(val types.Union, root Root) Result {
-	r := Result{
-		Attributes: val.Attributes,
-		ECI:        val.Name,
-		Name:       c.compileCamelCompoundIdentifier(val.Name),
-		OkOGTypes:  []types.Type{},
-		Ok:         []string{},
-		ErrOGType:  val.Members[1].Type,
-		ErrType:    c.compileUnionMember(val.Members[1]).Type.Decl,
-		Size:       val.Size,
-		Alignment:  val.Alignment,
-	}
-
-	OkArm := val.Members[0]
-	ci := c.compileCamelCompoundIdentifier(OkArm.Type.Identifier)
-
-	// always a struct on the Ok arms in Results
-	for _, v := range root.Structs {
-		if v.Name == ci {
-			for _, m := range v.Members {
-				r.OkOGTypes = append(r.OkOGTypes, m.OGType)
-				r.Ok = append(r.Ok, m.Type)
-			}
-		}
-	}
-
-	return r
-}
-
 func (c *compiler) compileResultFromXUnion(val types.XUnion, root Root) Result {
 	r := Result{
 		Attributes: val.Attributes,
@@ -907,26 +837,6 @@ func (c *compiler) compileResultFromXUnion(val types.XUnion, root Root) Result {
 				r.Ok = append(r.Ok, m.Type)
 			}
 		}
-	}
-
-	return r
-}
-
-func (c *compiler) compileUnion(val types.Union) Union {
-	r := Union{
-		Attributes: val.Attributes,
-		ECI:        val.Name,
-		Name:       c.compileCamelCompoundIdentifier(val.Name),
-		Members:    []UnionMember{},
-		Size:       val.Size,
-		Alignment:  val.Alignment,
-	}
-
-	for _, v := range val.Members {
-		if v.Reserved {
-			continue
-		}
-		r.Members = append(r.Members, c.compileUnionMember(v))
 	}
 
 	return r
@@ -1062,9 +972,6 @@ func (c *compiler) fillDerives(ir *Root) {
 	for _, v := range ir.Results {
 		dc.fillDerivesForECI(v.ECI)
 	}
-	for _, v := range ir.Unions {
-		dc.fillDerivesForECI(v.ECI)
-	}
 	for _, v := range ir.Tables {
 		dc.fillDerivesForECI(v.ECI)
 	}
@@ -1190,32 +1097,37 @@ typeSwitch:
 		// non-strict tables.
 		derivesOut = derivesOut.remove(derivesCopy).andUnknown()
 		table.Derives = derivesOut
-	case types.UnionDeclType:
-		union := dc.root.findUnion(eci)
+	case types.UnionDeclType, types.XUnionDeclType:
+		// Although there are no more unions in Rust, this switch statement is
+		// over dc.decls[eci] where decls comes from DeclsWithDependencies(),
+		// which still distinguishes UnionDeclType and XUnionDeclType.
+		xunion := dc.root.findXUnion(eci)
 		var result *Result
-		var xunion *XUnion
-		if union == nil {
+		if xunion == nil {
 			result = dc.root.findResult(eci)
 		}
-		if union == nil && result == nil {
-			xunion = dc.root.findXUnion(eci)
+		if xunion == nil && result == nil {
+			log.Panic("xunion not found: ", eci)
 		}
-		if union == nil && result == nil && xunion == nil {
-			log.Panic("union not found: ", eci)
-		}
-		if union != nil {
-			// It's a union, not a result
+		if xunion != nil {
+			// It's a xunion, not a result
 			// Check if the derives have already been calculated
 			if deriveStatus.complete {
-				derivesOut = union.Derives
+				derivesOut = xunion.Derives
 				break typeSwitch
 			}
 			derivesOut = derivesAll
-			for _, member := range union.Members {
+			for _, member := range xunion.Members {
 				derivesOut = derivesOut.and(dc.fillDerivesForType(member.OGType))
 			}
-			union.Derives = derivesOut
-		} else if result != nil {
+			if !xunion.Strictness {
+				// FIXME(cramertj) When large arrays are no longer an issue and we
+				// stop tracking Debug and PartialEq, this should set all values to
+				// false for non-strict xunions.
+				derivesOut = derivesOut.remove(derivesCopy).andUnknown()
+			}
+			xunion.Derives = derivesOut
+		} else {
 			// It's a Result, not a union
 			// Check if the derives have already been calculated
 			if deriveStatus.complete {
@@ -1228,40 +1140,7 @@ typeSwitch:
 			}
 			derivesOut = derivesOut.and(dc.fillDerivesForType(result.ErrOGType))
 			result.Derives = derivesOut
-		} else {
-			if deriveStatus.complete {
-				derivesOut = xunion.Derives
-				break typeSwitch
-			}
-			derivesOut = derivesAll
-			for _, member := range xunion.Members {
-				derivesOut = derivesOut.and(dc.fillDerivesForType(member.OGType))
-			}
-			xunion.Derives = derivesOut
 		}
-	case types.XUnionDeclType:
-		xunion := dc.root.findXUnion(eci)
-		if xunion == nil {
-			log.Panic("xunion not found: ", eci)
-		}
-		// Check if the derives have already been calculated
-		if deriveStatus.complete {
-			derivesOut = xunion.Derives
-			break typeSwitch
-		}
-		derivesOut = derivesAll
-		for _, member := range xunion.Members {
-			derivesOut = derivesOut.and(dc.fillDerivesForType(member.OGType))
-		}
-		if !xunion.Strictness {
-			// FIXME(cramertj) When large arrays are no longer an issue and we
-			// stop tracking Debug and PartialEq, this should set all values to
-			// false for non-strict xunions.
-			if !xunion.Strictness {
-				derivesOut = derivesOut.remove(derivesCopy).andUnknown()
-			}
-		}
-		xunion.Derives = derivesOut
 	default:
 		log.Panic("Unknown declaration type filling derives: ", declType)
 	}

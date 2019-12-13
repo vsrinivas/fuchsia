@@ -9,8 +9,10 @@ use std::convert::TryInto;
 
 pub fn decode_fidl<T: fidl::encoding::Decodable>(bytes: &mut [u8]) -> Result<T, Error> {
     let mut value = T::new_empty();
-    // This is OK because overnet interfaces do not use static unions.
-    let context = fidl::encoding::Context { unions_use_xunion_format: true };
+    // WARNING: Since we are decoding without a transaction header, we have to
+    // provide a context manually. This could cause problems in future FIDL wire
+    // format migrations, which are driven by header flags.
+    let context = fidl::encoding::Context {};
     fidl::encoding::Decoder::decode_with_context(&context, bytes, &mut [], &mut value)?;
     Ok(value)
 }

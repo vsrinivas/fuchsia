@@ -21,7 +21,7 @@ var tmpl = template.Must(template.New("tmpls").Parse(`
 use fidl::encoding::{Context, Decodable, Decoder, Encoder};
 use fidl_conformance as conformance;
 
-const V1_CONTEXT: &Context = &Context { unions_use_xunion_format: true };
+const V1_CONTEXT: &Context = &Context {};
 
 {{ range .EncodeSuccessCases }}
 #[test]

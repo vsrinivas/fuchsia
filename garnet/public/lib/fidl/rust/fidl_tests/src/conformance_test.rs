@@ -7,7 +7,7 @@
 use fidl::encoding::{Context, Decodable, Decoder, Encoder};
 use fidl_conformance as conformance;
 
-const V1_CONTEXT: &Context = &Context { unions_use_xunion_format: true };
+const V1_CONTEXT: &Context = &Context {};
 
 #[test]
 fn test_add_ethernet_device_request_v1_encode() {

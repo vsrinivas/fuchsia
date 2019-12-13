@@ -323,8 +323,10 @@ async fn run_overnet_prelude() -> Result<Node<OvernetRuntime>, Error> {
     let (mut frame, (tx_bytes, _)) = futures::try_join!(first_frame, wr)?;
 
     let mut greeting = StreamSocketGreeting::empty();
-    // This is OK because overnet interfaces do not use static unions.
-    let context = fidl::encoding::Context { unions_use_xunion_format: true };
+    // WARNING: Since we are decoding without a transaction header, we have to
+    // provide a context manually. This could cause problems in future FIDL wire
+    // format migrations, which are driven by header flags.
+    let context = fidl::encoding::Context {};
     fidl::encoding::Decoder::decode_with_context(&context, frame.as_mut(), &mut [], &mut greeting)?;
 
     log::trace!("Got greeting: {:?}", greeting);

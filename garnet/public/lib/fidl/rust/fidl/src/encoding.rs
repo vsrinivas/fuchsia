@@ -10,12 +10,7 @@ use {
     bitflags::bitflags,
     byteorder::{ByteOrder, LittleEndian},
     fuchsia_zircon_status as zx_status,
-    std::{
-        cell::RefCell,
-        cmp, mem, ptr, str,
-        sync::atomic::{AtomicBool, Ordering},
-        u32, u64,
-    },
+    std::{cell::RefCell, cmp, mem, ptr, str, u32, u64},
 };
 
 thread_local!(static CODING_BUF: RefCell<MessageBuf> = RefCell::new(MessageBuf::new()));
@@ -123,33 +118,21 @@ pub const EPITAPH_ORDINAL: u64 = 0xffffffffffffffffu64;
 /// The current wire format magic number
 pub const MAGIC_NUMBER_INITIAL: u8 = 1;
 
-/// Global flag indicating whether to encode unions using the xunion format.
-/// This only exists for compatibility tests. Nothing else should change it.
-// TODO(fxb/40023) Remove this once the union-to-xunion migration is complete.
-#[doc(hidden)]
-pub static ENCODE_UNIONS_USING_XUNION_FORMAT: AtomicBool = AtomicBool::new(true);
-
 /// Context for encoding and decoding.
+///
+/// This is currently empty. We keep it around to ease the implementation of
+/// context-dependent behavior for future migrations.
 ///
 /// WARNING: Do not construct this directly unless you know what you're doing.
 /// FIDL uses `Context` to coordinate soft migrations, so improper uses of it
 /// could result in ABI breakage.
 #[derive(Clone, Copy, Debug)]
-pub struct Context {
-    /// True if unions are encoded with the xunion format. For encoding, this is
-    /// chosen up front when creating the context. For decoding, this is set by
-    /// a flag in the transaction header. In FIDL IR, this corresponds to the
-    /// "old" format when false and the "v1" format when true.
-    pub unions_use_xunion_format: bool,
-}
+pub struct Context {}
 
 impl Context {
+    /// Returns the header flags to set when encoding with this context.
     fn header_flags(&self) -> HeaderFlags {
-        if self.unions_use_xunion_format {
-            HeaderFlags::UNIONS_USE_XUNION_FORMAT
-        } else {
-            HeaderFlags::empty()
-        }
+        HeaderFlags::UNIONS_USE_XUNION_FORMAT
     }
 }
 
@@ -206,7 +189,8 @@ pub struct Decoder<'a> {
 
 /// The default context for encoding.
 fn default_encode_context() -> Context {
-    Context { unions_use_xunion_format: ENCODE_UNIONS_USING_XUNION_FORMAT.load(Ordering::Relaxed) }
+    // During migrations, this controls the default write path.
+    Context {}
 }
 
 impl<'a> Encoder<'a> {
@@ -1639,30 +1623,19 @@ macro_rules! fidl_struct {
         members: [$(
             $member_name:ident {
                 ty: $member_ty:ty,
-                offset_old: $member_offset_old:expr,
                 offset_v1: $member_offset_v1:expr,
             },
         )*],
-        size_old: $size_old:expr,
-        align_old: $align_old:expr,
         size_v1: $size_v1:expr,
         align_v1: $align_v1:expr,
     ) => {
         impl $crate::encoding::Layout for $name {
-            fn inline_align(context: &$crate::encoding::Context) -> usize {
-                if context.unions_use_xunion_format {
-                    $align_v1
-                } else {
-                    $align_old
-                }
+            fn inline_align(_context: &$crate::encoding::Context) -> usize {
+                $align_v1
             }
 
-            fn inline_size(context: &$crate::encoding::Context) -> usize {
-                if context.unions_use_xunion_format {
-                    $size_v1
-                } else {
-                    $size_old
-                }
+            fn inline_size(_context: &$crate::encoding::Context) -> usize {
+                $size_v1
             }
         }
 
@@ -1672,11 +1645,7 @@ macro_rules! fidl_struct {
                     let mut cur_offset = 0;
                     $(
                         // Skip to the start of the next field
-                        let member_offset = if encoder.context().unions_use_xunion_format {
-                            $member_offset_v1
-                        } else {
-                            $member_offset_old
-                        };
+                        let member_offset = $member_offset_v1;
                         encoder.padding(member_offset - cur_offset)?;
                         cur_offset = member_offset;
                         $crate::fidl_encode!(&mut self.$member_name, encoder)?;
@@ -1704,11 +1673,7 @@ macro_rules! fidl_struct {
                     $(
                         // Skip to the start of the next field
                         // TODO(FIDL-598) Switch to `skip_padding` when other bindings are ready.
-                        let member_offset = if decoder.context().unions_use_xunion_format {
-                            $member_offset_v1
-                        } else {
-                            $member_offset_old
-                        };
+                        let member_offset = $member_offset_v1;
                         decoder.next_slice(member_offset - cur_offset)?;
                         cur_offset = member_offset;
                         $crate::fidl_decode!(&mut self.$member_name, decoder)?;
@@ -1986,28 +1951,6 @@ macro_rules! fidl_table {
     }
 }
 
-// Alignment factor of union is defined by the maximal alignment factor of the tag field and any of its options.
-// tag field will always be same size as E in the case of results
-fn union_result_align<O: Layout>(context: &Context) -> usize {
-    std::cmp::max(O::inline_align(context), <u32 as Layout>::inline_align(context))
-}
-
-fn union_result_field_offset<O: Layout>(context: &Context) -> usize {
-    round_up_to_align(<u32 as Layout>::inline_size(context), union_result_align::<O>(context))
-}
-
-fn union_result_field_padding<O: Layout>(context: &Context) -> usize {
-    union_result_field_offset::<O>(context) - <u32 as Layout>::inline_size(context)
-}
-
-// Size of union is the size of the tag field plus the size of the largest
-// option including padding necessary to satisfy its alignment requirements.
-fn union_result_inline_size<O: Layout>(context: &Context) -> usize {
-    <u32 as Layout>::inline_size(context)
-        + union_result_field_padding::<O>(context)
-        + std::cmp::max(O::inline_size(context), <u32 as Layout>::inline_size(context))
-}
-
 /// Decodes the inline portion of a xunion. Returns (ordinal, num_bytes, num_handles).
 pub fn decode_xunion_inline_portion(decoder: &mut Decoder) -> Result<(u64, u32, u32)> {
     let mut ordinal: u64 = 0;
@@ -2028,154 +1971,46 @@ pub fn decode_xunion_inline_portion(decoder: &mut Decoder) -> Result<(u64, u32, 
     Ok((ordinal, num_bytes, num_handles))
 }
 
-/// Decodes a `Result` type from xunion bytes.
-/// Assumes Ok and Err use ordinals 1 and 2, respectively.
-fn decode_result_from_xunion<O, E>(
-    result: &mut std::result::Result<O, E>,
-    decoder: &mut Decoder<'_>,
-) -> Result<()>
-where
-    O: Decodable,
-    E: Decodable,
-{
-    let (ordinal, _, _) = decode_xunion_inline_portion(decoder)?;
-    let member_inline_size = match ordinal {
-        1 => {
-            // If the inline size is 0, meaning the type is (), use an inline
-            // size of 1 instead because () in this context means an empty
-            // struct, not an absent payload.
-            cmp::max(1, decoder.inline_size_of::<O>())
-        }
-        2 => decoder.inline_size_of::<E>(),
-        _ => return Err(Error::UnknownUnionTag),
-    };
-    decoder.read_out_of_line(member_inline_size, |decoder| {
-        decoder.recurse(|decoder| {
-            match ordinal {
-                1 => {
-                    if let Ok(_) = result {
-                        // Do nothing, read the value into the object
-                    } else {
-                        // Initialize `self` to the right variant
-                        *result = Ok(fidl_new_empty!(O));
-                    }
-                    if let Ok(val) = result {
-                        val.decode(decoder)?;
-                    } else {
-                        unreachable!()
-                    }
-                }
-                2 => {
-                    if let Err(_) = result {
-                        // Do nothing, read the value into the object
-                    } else {
-                        // Initialize `self` to the right variant
-                        *result = Err(fidl_new_empty!(E));
-                    }
-                    if let Err(val) = result {
-                        val.decode(decoder)?;
-                    } else {
-                        unreachable!()
-                    }
-                }
-                // Should be unreachable, since we already checked above.
-                ordinal => panic!("unexpected ordinal {:?}", ordinal),
-            }
-            Ok(())
-        })
-    })
-}
-
 impl<O, E> Layout for std::result::Result<O, E>
 where
     O: Layout,
     E: Layout,
 {
-    fn inline_align(context: &Context) -> usize {
-        if context.unions_use_xunion_format {
-            8
-        } else {
-            union_result_align::<O>(context)
-        }
+    fn inline_align(_context: &Context) -> usize {
+        8
     }
-
-    fn inline_size(context: &Context) -> usize {
-        if context.unions_use_xunion_format {
-            24
-        } else {
-            union_result_inline_size::<O>(context)
-        }
+    fn inline_size(_context: &Context) -> usize {
+        24
     }
 }
 
 impl<O, E> Encodable for std::result::Result<O, E>
 where
-    O: Decodable + Encodable,
-    E: Decodable + Encodable,
+    O: Encodable,
+    E: Encodable,
 {
     fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
-        if encoder.context.unions_use_xunion_format {
-            match self {
-                Ok(val) => {
-                    // Encode success ordinal
-                    1u32.encode(encoder)?;
-                    // Padding
-                    0u32.encode(encoder)?;
-                    encoder.recurse(|encoder|
-                        // If the inline size is 0, meaning the type is (),
-                        // encode a zero byte instead because () in this context
-                        // means an empty struct, not an absent payload.
-                        if encoder.inline_size_of::<O>() == 0 {
-                            encode_in_envelope(&mut Some(&mut 0u8), encoder)
-                        } else {
-                            encode_in_envelope(&mut Some(val), encoder)
-                        }
-                    )?;
-                }
-                Err(val) => {
-                    // Encode error ordinal
-                    2u32.encode(encoder)?;
-                    // Padding
-                    0u32.encode(encoder)?;
-                    encoder.recurse(|encoder| encode_in_envelope(&mut Some(val), encoder))?;
-                }
-            }
-            return Ok(());
-        }
-
-        let start_pos = encoder.offset;
-
         match self {
             Ok(val) => {
-                // Encode success tag
-                0u32.encode(encoder)?;
-
-                // Padding
-                encoder.next_slice(union_result_field_padding::<O>(&encoder.context))?;
-
-                // Encode success value
-                val.encode(encoder)?;
-
-                // Ok() and Err() branches may be of a different size. We need to make sure we
-                // always encode inline_size() bytes.
-                encoder.tail_padding::<Self>(start_pos)?;
+                // Encode success ordinal
+                1u64.encode(encoder)?;
+                encoder.recurse(|encoder|
+                    // If the inline size is 0, meaning the type is (),
+                    // encode a zero byte instead because () in this context
+                    // means an empty struct, not an absent payload.
+                    if encoder.inline_size_of::<O>() == 0 {
+                        encode_in_envelope(&mut Some(&mut 0u8), encoder)
+                    } else {
+                        encode_in_envelope(&mut Some(val), encoder)
+                    }
+                )
             }
             Err(val) => {
-                // Encode Error tag
-                1u32.encode(encoder)?;
-
-                // Padding
-                encoder.next_slice(union_result_field_padding::<O>(&encoder.context))?;
-
-                // Encode Error value
-                val.encode(encoder)?;
-
-                // Ok() and Err() branches may be of a different size. We need to make sure we
-                // always encode inline_size() bytes.
-                encoder.tail_padding::<Self>(start_pos)?;
+                // Encode error ordinal
+                2u64.encode(encoder)?;
+                encoder.recurse(|encoder| encode_in_envelope(&mut Some(val), encoder))
             }
         }
-        Ok(())
     }
 }
 
@@ -2189,250 +2024,51 @@ where
     }
 
     fn decode(&mut self, decoder: &mut Decoder<'_>) -> Result<()> {
-        if decoder.context().unions_use_xunion_format {
-            return decode_result_from_xunion(self, decoder);
-        }
-
-        let start_pos = decoder.inline_pos();
-
-        let mut tag: u32 = 0;
-        tag.decode(decoder)?;
-        // TODO(FIDL-598) Switch to `skip_padding` when other bindings are ready.
-        decoder.next_slice(union_result_field_padding::<O>(&decoder.context))?;
-
-        match tag {
-            0 => {
-                loop {
-                    match self {
-                        Ok(val) => {
-                            val.decode(decoder)?;
-                            decoder.skip_tail_padding::<Self>(start_pos)?;
-                            break;
-                        }
-                        Err(_) => {
-                            // Only construct an empty instance of the nested type if we have an
-                            // Err(T) value.  Now `loop` to go into the first branch.
-                            *self = Ok(<O as Decodable>::new_empty())
-                        }
-                    }
-                }
-                Ok(())
-            }
-
+        let (ordinal, _, _) = decode_xunion_inline_portion(decoder)?;
+        let member_inline_size = match ordinal {
             1 => {
-                loop {
-                    match self {
-                        Err(val) => {
-                            val.decode(decoder)?;
-                            decoder.skip_tail_padding::<Self>(start_pos)?;
-                            break;
+                // If the inline size is 0, meaning the type is (), use an inline
+                // size of 1 instead because () in this context means an empty
+                // struct, not an absent payload.
+                cmp::max(1, decoder.inline_size_of::<O>())
+            }
+            2 => decoder.inline_size_of::<E>(),
+            _ => return Err(Error::UnknownUnionTag),
+        };
+        decoder.read_out_of_line(member_inline_size, |decoder| {
+            decoder.recurse(|decoder| {
+                match ordinal {
+                    1 => {
+                        if let Ok(_) = self {
+                            // Do nothing, read the value into the object
+                        } else {
+                            // Initialize `self` to the right variant
+                            *self = Ok(fidl_new_empty!(O));
                         }
-                        Ok(_) => {
-                            // Only construct an empty instance of the nested type if we have an
-                            // Ok(T) value.  Now `loop` to go into the first branch.
-                            *self = Err(<E as Decodable>::new_empty())
+                        if let Ok(val) = self {
+                            val.decode(decoder)
+                        } else {
+                            unreachable!()
                         }
                     }
-                }
-                Ok(())
-            }
-            _ => Err(Error::UnknownUnionTag), // this would indicate it is not actually a result
-        }
-    }
-}
-
-/// A macro which declares a new FIDL union as a Rust enum and implements the
-/// FIDL encoding and decoding traits for it.
-#[macro_export]
-macro_rules! fidl_union {
-    (
-        $(#[$attrs:meta])*
-        name: $name:ident,
-        members: [$(
-            $member_name:ident {
-                ty: $member_ty:ty,
-                offset: $member_offset:expr,
-                xunion_ordinal: $member_xunion_ordinal:expr,
-            },
-        )*],
-        size: $size:expr,
-        align: $align:expr,
-    ) => {
-        $( #[$attrs] )*
-        pub enum $name {
-            $(
-                $member_name ( $member_ty ),
-            )*
-        }
-
-        impl $name {
-            #[allow(irrefutable_let_patterns, unused)]
-            fn member_index(&self) -> u32 {
-                let mut index = 0;
-                $(
-                    if let $name::$member_name(_) = self {
-                        return index
+                    2 => {
+                        if let Err(_) = self {
+                            // Do nothing, read the value into the object
+                        } else {
+                            // Initialize `self` to the right variant
+                            *self = Err(fidl_new_empty!(E));
+                        }
+                        if let Err(val) = self {
+                            val.decode(decoder)
+                        } else {
+                            unreachable!()
+                        }
                     }
-                    index += 1;
-                )*
-                panic!("unreachable union member")
-            }
-
-            fn ordinal(&self) -> u64 {
-                match self {
-                    $(
-                        $name::$member_name(_) => $member_xunion_ordinal,
-                    )*
+                    // Should be unreachable, since we already checked above.
+                    ordinal => panic!("unexpected ordinal {:?}", ordinal),
                 }
-            }
-
-            fn decode_from_xunion(&mut self, decoder: &mut $crate::encoding::Decoder<'_>) -> $crate::Result<()> {
-                #![allow(irrefutable_let_patterns)]
-                let (ordinal, _, _) = $crate::encoding::decode_xunion_inline_portion(decoder)?;
-                let member_inline_size = match ordinal {
-                    $(
-                        $member_xunion_ordinal => decoder.inline_size_of::<$member_ty>(),
-                    )*
-                    _ => return Err($crate::Error::UnknownUnionTag),
-                };
-                decoder.read_out_of_line(member_inline_size, |decoder| {
-                    decoder.recurse(|decoder| {
-                        match ordinal {
-                            $(
-                                $member_xunion_ordinal => {
-                                    if let $name::$member_name(_) = self {
-                                        // Do nothing, read the value into the object
-                                    } else {
-                                        // Initialize `self` to the right variant
-                                        *self = $name::$member_name(
-                                            $crate::fidl_new_empty!($member_ty)
-                                        );
-                                    }
-                                    if let $name::$member_name(val) = self {
-                                        $crate::fidl_decode!(val, decoder)?;
-                                    } else {
-                                        unreachable!()
-                                    }
-                                }
-                            )*
-                            // Should be unreachable, since we already checked above.
-                            ordinal => panic!("unexpected ordinal {:?}", ordinal)
-                        }
-                        Ok(())
-                    })
-                })
-            }
-        }
-
-        impl $crate::encoding::Layout for $name {
-            fn inline_align(context: &$crate::encoding::Context) -> usize {
-                if context.unions_use_xunion_format {
-                    8
-                } else {
-                    $align
-                }
-            }
-            fn inline_size(context: &$crate::encoding::Context) -> usize {
-                if context.unions_use_xunion_format {
-                    24
-                } else {
-                    $size
-                }
-            }
-        }
-
-        impl $crate::encoding::Encodable for $name {
-            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>) -> $crate::Result<()> {
-                if encoder.context().unions_use_xunion_format {
-                    let mut ordinal = self.ordinal();
-                    // Encode ordinal
-                    $crate::fidl_encode!(&mut ordinal, encoder)?;
-                    encoder.recurse(|encoder| {
-                        match self {
-                            $(
-                                $name::$member_name ( val ) =>
-                                    $crate::encoding::encode_in_envelope(&mut Some(val), encoder),
-                            )*
-                        }
-                    })?;
-                    return Ok(());
-                }
-
-                let mut member_index = self.member_index();
-                // Encode tag
-                $crate::fidl_encode!(&mut member_index, encoder)?;
-
-                encoder.recurse(|encoder| {
-                    match self { $(
-                        $name::$member_name ( val ) => {
-                            // Jump to offset minus 4-byte tag
-                            encoder.padding($member_offset - 4)?;
-                            // Encode value
-                            $crate::fidl_encode!(val, encoder)?;
-                            // Skip to the end of the union's size
-                            encoder.padding($size - (
-                                encoder.inline_size_of::<$member_ty>() + $member_offset
-                            ))?;
-                            Ok(())
-                        }
-                    )* }
-                })
-            }
-        }
-
-        impl $crate::encoding::Decodable for $name {
-            fn new_empty() -> Self {
-                #![allow(unreachable_code)]
-                $(
-                    return $name::$member_name($crate::fidl_new_empty!($member_ty));
-                )*
-                panic!("called new_empty on empty fidl union")
-            }
-
-            fn decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>) -> $crate::Result<()> {
-                #![allow(unused)]
-                if decoder.context().unions_use_xunion_format {
-                    return self.decode_from_xunion(decoder);
-                }
-
-                let mut tag: u32 = 0;
-                $crate::fidl_decode!(&mut tag, decoder)?;
-                decoder.recurse(|decoder| {
-                    let mut index = 0;
-                    $(
-                        if index == tag {
-                            // Jump to offset minus 4-byte tag
-                            // TODO(FIDL-598) Switch to `skip_padding` when other bindings are ready.
-                            decoder.next_slice($member_offset - 4)?;
-                            // Loop will only ever run once-- if the variant is not correct,
-                            // it is fixed up.
-                            loop {
-                                match self {
-                                    $name::$member_name(val) => {
-                                        $crate::fidl_decode!(val, decoder)?;
-                                        break;
-                                    }
-                                    _ => {}
-                                }
-                                *self = $name::$member_name($crate::fidl_new_empty!($member_ty));
-                            }
-                            // Skip to the end of the union's size
-                            // TODO(FIDL-598) Switch to `skip_padding` when other bindings are ready.
-                            decoder.next_slice($size - (decoder.inline_size_of::<$member_ty>() + $member_offset))?;
-                            return Ok(());
-                        }
-                        index += 1;
-                    )*
-                    Err($crate::Error::UnknownUnionTag)
-                })
-            }
-        }
-
-        impl $crate::encoding::Autonull for $name {
-            fn naturally_nullable(context: &$crate::encoding::Context) -> bool {
-                context.unions_use_xunion_format
-            }
-        }
+            })
+        })
     }
 }
 
@@ -2625,27 +2261,21 @@ fidl_struct! {
     members: [
         tx_id {
             ty: u32,
-            offset_old: 0,
             offset_v1: 0,
         },
         flags {
             ty: [u8; 3],
-            offset_old: 4,
             offset_v1: 4,
         },
         magic_number {
             ty: u8,
-            offset_old: 7,
             offset_v1: 7,
         },
         ordinal {
             ty: u64,
-            offset_old: 8, // Save 64 bits for id, even though it's only 32 bits
             offset_v1: 8,
         },
     ],
-    size_old: 16,
-    align_old: 8,
     size_v1: 16,
     align_v1: 8,
 }
@@ -2695,18 +2325,13 @@ impl TransactionHeader {
     }
 
     /// Returns the header's flags as a `HeaderFlags` value.
-    ///
-    /// The result will only contain bits listed in the `HeaderFlags`
-    /// definition. Thus, `header.set_flags(header.flags())` is not a no-op.
     pub fn flags(&self) -> HeaderFlags {
         HeaderFlags::from_bits_truncate(LittleEndian::read_u24(&self.flags))
     }
 
     /// Returns the context to use for decoding the message body associated with this header.
     pub fn decoding_context(&self) -> Context {
-        Context {
-            unions_use_xunion_format: self.flags().contains(HeaderFlags::UNIONS_USE_XUNION_FORMAT),
-        }
+        Context {}
     }
 }
 
@@ -2752,7 +2377,7 @@ impl<T: Decodable> Decodable for TransactionMessage<'_, T> {
 pub fn decode_transaction_header(bytes: &[u8]) -> Result<(TransactionHeader, &[u8])> {
     let mut header = TransactionHeader::new_empty();
     // The header doesn't contain unions, so the context flag doesn't matter.
-    let context = Context { unions_use_xunion_format: false };
+    let context = Context {};
     let header_len = <TransactionHeader as Layout>::inline_size(&context);
     if bytes.len() < header_len {
         return Err(Error::OutOfRange);
@@ -2942,22 +2567,7 @@ mod test {
     use matches::assert_matches;
     use std::{f32, f64, fmt, i64, u64};
 
-    pub const CONTEXTS: &[&Context] = &[
-        &Context { unions_use_xunion_format: false },
-        &Context { unions_use_xunion_format: true },
-    ];
-
-    macro_rules! inline_size {
-        ($type:ty, $context:expr) => {
-            <$type as Layout>::inline_size($context)
-        };
-    }
-
-    macro_rules! inline_align {
-        ($type:ty, $context:expr) => {
-            <$type as Layout>::inline_align($context)
-        };
-    }
+    pub const CONTEXTS: &[&Context] = &[&Context {}];
 
     pub fn encode_decode<T: Encodable + Decodable>(ctx: &Context, start: &mut T) -> T {
         let buf = &mut Vec::new();
@@ -3079,27 +2689,27 @@ mod test {
 
     #[test]
     fn result_encode_empty_ok_value() {
-        let ctx = &Context { unions_use_xunion_format: true };
-        // An empty response is represented by () and has zero size.
-        encode_assert_bytes(ctx, (), &[]);
-        identities![(),];
-        // But in the context of an error result type Result<(), ErrorType>, the
-        // () in Ok(()) is treated as an empty struct (with size 1).
-        encode_assert_bytes(
-            ctx,
-            Ok::<(), i32>(()),
-            &[
-                0x01, 0x00, 0x00, 0x00, // success ordinal
-                0x00, 0x00, 0x00, 0x00, // success ordinal [cont.]
-                0x08, 0x00, 0x00, 0x00, // 8 bytes (rounded up from 1)
-                0x00, 0x00, 0x00, 0x00, // 0 handles
-                0xff, 0xff, 0xff, 0xff, // present
-                0xff, 0xff, 0xff, 0xff, // present [cont.]
-                0x00, 0x00, 0x00, 0x00, // empty struct + 3 bytes padding
-                0x00, 0x00, 0x00, 0x00, // padding
-            ],
-        );
-        identities![Ok::<(), i32>(()),];
+        identities![(), Ok::<(), i32>(()),];
+        for ctx in CONTEXTS {
+            // An empty response is represented by () and has zero size.
+            encode_assert_bytes(ctx, (), &[]);
+            // But in the context of an error result type Result<(), ErrorType>, the
+            // () in Ok(()) is treated as an empty struct (with size 1).
+            encode_assert_bytes(
+                ctx,
+                Ok::<(), i32>(()),
+                &[
+                    0x01, 0x00, 0x00, 0x00, // success ordinal
+                    0x00, 0x00, 0x00, 0x00, // success ordinal [cont.]
+                    0x08, 0x00, 0x00, 0x00, // 8 bytes (rounded up from 1)
+                    0x00, 0x00, 0x00, 0x00, // 0 handles
+                    0xff, 0xff, 0xff, 0xff, // present
+                    0xff, 0xff, 0xff, 0xff, // present [cont.]
+                    0x00, 0x00, 0x00, 0x00, // empty struct + 3 bytes padding
+                    0x00, 0x00, 0x00, 0x00, // padding
+                ],
+            );
+        }
     }
 
     #[test]
@@ -3112,43 +2722,6 @@ mod test {
             Res::Ok((vec![1, 2, 3, 4, 5], true)),
             Res::Err(7u32),
         ];
-    }
-
-    #[test]
-    fn result_and_union_compat() {
-        fidl_union! {
-            #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-            name: OkayOrError,
-            members: [
-                Okay {
-                    ty: u64,
-                    offset: 8,
-                    xunion_ordinal: 1,
-                },
-                Error {
-                    ty: u32,
-                    offset: 8,
-                    xunion_ordinal: 2,
-                },
-            ],
-            size: 16,
-            align: 8,
-        };
-
-        let buf = &mut Vec::new();
-        let handle_buf = &mut Vec::new();
-        let mut out: std::result::Result<u64, u32> = Decodable::new_empty();
-        let ctx = &Context { unions_use_xunion_format: false };
-
-        Encoder::encode_with_context(ctx, buf, handle_buf, &mut OkayOrError::Okay(42u64))
-            .expect("Encoding failed");
-        Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
-        assert_eq!(out, Ok(42));
-
-        Encoder::encode_with_context(ctx, buf, handle_buf, &mut OkayOrError::Error(3u32))
-            .expect("Encoding failed");
-        Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
-        assert_eq!(out, Err(3));
     }
 
     #[test]
@@ -3168,70 +2741,69 @@ mod test {
             ],
         };
 
-        let buf = &mut Vec::new();
-        let handle_buf = &mut Vec::new();
-        let mut out: std::result::Result<u64, u32> = Decodable::new_empty();
-        let ctx = &Context { unions_use_xunion_format: true };
+        for ctx in CONTEXTS {
+            let buf = &mut Vec::new();
+            let handle_buf = &mut Vec::new();
+            let mut out: std::result::Result<u64, u32> = Decodable::new_empty();
 
-        Encoder::encode_with_context(ctx, buf, handle_buf, &mut OkayOrError::Okay(42u64))
-            .expect("Encoding failed");
-        Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
-        assert_eq!(out, Ok(42));
+            Encoder::encode_with_context(ctx, buf, handle_buf, &mut OkayOrError::Okay(42u64))
+                .expect("Encoding failed");
+            Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
+            assert_eq!(out, Ok(42));
 
-        Encoder::encode_with_context(ctx, buf, handle_buf, &mut OkayOrError::Error(3u32))
-            .expect("Encoding failed");
-        Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
-        assert_eq!(out, Err(3));
+            Encoder::encode_with_context(ctx, buf, handle_buf, &mut OkayOrError::Error(3u32))
+                .expect("Encoding failed");
+            Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
+            assert_eq!(out, Err(3));
+        }
     }
 
     #[test]
-    fn result_and_union_compat_smaller() {
-        fidl_union! {
+    fn result_and_xunion_compat_smaller() {
+        fidl_empty_struct!(Empty);
+        fidl_xunion! {
             #[derive(Debug, Copy, Clone, Eq, PartialEq)]
             name: OkayOrError,
             members: [
                 Okay {
-                    ty: (),
-                    offset: 4,
-                    xunion_ordinal: 1,
+                    ty: Empty,
+                    ordinal: 1,
                 },
                 Error {
                     ty: i32,
-                    offset: 4,
-                    xunion_ordinal: 2,
+                    ordinal: 2,
                 },
             ],
-            size: 8,
-            align: 4,
         };
 
-        let buf = &mut Vec::new();
-        let handle_buf = &mut Vec::new();
-        let ctx = &Context { unions_use_xunion_format: false };
+        for ctx in CONTEXTS {
+            let buf = &mut Vec::new();
+            let handle_buf = &mut Vec::new();
 
-        // result to union
-        Encoder::encode_with_context(ctx, buf, handle_buf, &mut Ok::<(), i32>(()))
-            .expect("Encoding failed");
-        let mut out = OkayOrError::new_empty();
-        Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
-        assert_eq!(out, OkayOrError::Okay(()));
+            // result to xunion
+            Encoder::encode_with_context(ctx, buf, handle_buf, &mut Ok::<(), i32>(()))
+                .expect("Encoding failed");
+            let mut out = OkayOrError::new_empty();
+            Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
+            assert_eq!(out, OkayOrError::Okay(Empty {}));
 
-        Encoder::encode_with_context(ctx, buf, handle_buf, &mut Err::<(), i32>(5))
-            .expect("Encoding failed");
-        Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
-        assert_eq!(out, OkayOrError::Error(5));
+            Encoder::encode_with_context(ctx, buf, handle_buf, &mut Err::<(), i32>(5))
+                .expect("Encoding failed");
+            Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
+            assert_eq!(out, OkayOrError::Error(5));
 
-        // union to result
-        let mut out: std::result::Result<(), i32> = Decodable::new_empty();
-        Encoder::encode_with_context(ctx, buf, handle_buf, &mut OkayOrError::Okay(()))
-            .expect("Encoding failed");
-        Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
-        assert_eq!(out, Ok(()));
+            // xunion to result
+            let mut out: std::result::Result<(), i32> = Decodable::new_empty();
+            Encoder::encode_with_context(ctx, buf, handle_buf, &mut OkayOrError::Okay(Empty {}))
+                .expect("Encoding failed");
+            Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
+            assert_eq!(out, Ok(()));
 
-        Encoder::encode_with_context(ctx, buf, handle_buf, &mut OkayOrError::Error(3i32))
-            .expect("Encoding failed");
-        Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
-        assert_eq!(out, Err(3));
+            Encoder::encode_with_context(ctx, buf, handle_buf, &mut OkayOrError::Error(3i32))
+                .expect("Encoding failed");
+            Decoder::decode_with_context(ctx, buf, handle_buf, &mut out).expect("Decoding failed");
+            assert_eq!(out, Err(3));
+        }
     }
 
     #[test]
@@ -3284,118 +2856,6 @@ mod test {
         }
     }
 
-    #[test]
-    fn padding_errors_correct_offset() {
-        use std::result::Result;
-
-        // This kind of result uses more bytes for the Ok() branch than for the Err() branch, so we
-        // should have some padding in the Err() values.
-        let mut v: Result<String, u32> = Err(5);
-        let buf = &mut Vec::new();
-        let handle_buf = &mut Vec::new();
-        let ctx = &Context { unions_use_xunion_format: false };
-        Encoder::encode_with_context(ctx, buf, handle_buf, &mut v).expect("Encoding failed");
-
-        // Try to corrupt the second byte of padding after the Err() value content.
-        let break_pos = inline_align!(Result<String, u32>, ctx) + inline_size!(u32, ctx) + 1;
-        buf[break_pos] = 10;
-
-        let res = Decoder::decode_with_context(ctx, buf, handle_buf, &mut v)
-            .expect_err("Decoded broken padding");
-        match res {
-            Error::NonZeroPadding { padding_start, non_zero_pos } => {
-                // This check is fragile, as it is trying to mimic what array encoders/decoders do.
-                // If this fails after you update the array encoding, please update the check as
-                // well.
-                assert_eq!(
-                    padding_start,
-                    inline_align!(Result<String, u32>, ctx) + inline_size!(u32, ctx)
-                );
-                assert_eq!(non_zero_pos, break_pos);
-            }
-            _ => panic!("decode_with_context failed with: {}", res),
-        }
-    }
-
-    #[test]
-    fn padding_errors_correct_offset_for_out_of_line_data() {
-        use std::result::Result;
-
-        // This kind of result uses more bytes for the Ok() branch than for the Err() branch, so we
-        // should have some padding in the Err() values.  Vec is expected to put the Result itself
-        // into the out_of_line area.
-        let mut v: Vec<Result<String, u32>> = vec![Err(5)];
-        let buf = &mut Vec::new();
-        let handle_buf = &mut Vec::new();
-        let ctx = &Context { unions_use_xunion_format: false };
-        Encoder::encode_with_context(ctx, buf, handle_buf, &mut v).expect("Encoding failed");
-
-        // Try to corrupt the second byte of padding after the Err() value content. The object
-        // itself is in the out_of_line area, which follows the inlnie size of the vector.
-        let break_pos = inline_size!(Vec<Result<String, u32>>, ctx)
-            + inline_align!(Result<String, u32>, ctx)
-            + inline_size!(u32, ctx)
-            + 1;
-        buf[break_pos] = 10;
-
-        let res = Decoder::decode_with_context(ctx, buf, handle_buf, &mut v)
-            .expect_err("Decoded broken padding");
-        match res {
-            Error::NonZeroPadding { padding_start, non_zero_pos } => {
-                // This check is fragile, as it is trying to mimic what array encoders/decoders do.
-                // If this fails after you update the array encoding, please update the check as
-                // well.
-                assert_eq!(
-                    padding_start,
-                    inline_size!(Vec<Result<String, u32>>, ctx)
-                        + inline_align!(Result<String, u32>, ctx)
-                        + inline_size!(u32, ctx)
-                );
-                assert_eq!(non_zero_pos, break_pos);
-            }
-            _ => panic!("decode_with_context failed with: {}", res),
-        }
-    }
-
-    #[test]
-    fn encode_decode_union() {
-        fidl_union! {
-            #[derive(Debug, Clone, Eq, PartialEq)]
-            name: NumOrStr,
-            members: [
-                Num {
-                    ty: u64,
-                    offset: 8,
-                    xunion_ordinal: 1,
-                },
-                Str {
-                    ty: String,
-                    offset: 8,
-                    xunion_ordinal: 2,
-                },
-            ],
-            size: 24,
-            align: 8,
-        };
-
-        for ctx in CONTEXTS {
-            // These need to be manually compared because of missing `PartialEq` impls.
-            for num in vec![0, 255, 256] {
-                match encode_decode(ctx, &mut NumOrStr::Num(num)) {
-                    NumOrStr::Num(out_num) if num == out_num => {}
-                    x => panic!("unexpected decoded value {:?}", x),
-                }
-            }
-
-            for string in vec![String::new(), "hello world!".to_string()] {
-                match &encode_decode(ctx, &mut NumOrStr::Str(string.clone())) {
-                    NumOrStr::Str(out_str) if out_str == &string => {}
-                    x => panic!("unexpected decoded value {:?}", x),
-                }
-            }
-        }
-    }
-
     struct Foo {
         byte: u8,
         bignum: u64,
@@ -3407,22 +2867,17 @@ mod test {
         members: [
             byte {
                 ty: u8,
-                offset_old: 0,
                 offset_v1: 0,
             },
             bignum {
                 ty: u64,
-                offset_old: 8,
                 offset_v1: 8,
             },
             string {
                 ty: String,
-                offset_old: 16,
                 offset_v1: 16,
             },
         ],
-        size_old: 32,
-        align_old: 8,
         size_v1: 32,
         align_v1: 8,
     }
@@ -3862,31 +3317,12 @@ mod test {
         members: [
             x {
                 ty: u64,
-                offset_old: 0,
                 offset_v1: 0,
             },
         ],
-        size_old: 8,
-        align_old: 8,
         size_v1: 8,
         align_v1: 8,
     }
-
-    // Ensure single-variant union compiles (no irrefutable pattern errors).
-    fidl_union! {
-        #[derive(Debug, PartialEq)]
-        name: SingleVariantUnion,
-        members: [
-            B {
-                ty: bool,
-                offset: 0,
-                xunion_ordinal: 1,
-            },
-        ],
-        size: 8,
-        align: 4,
-    }
-
     // Ensure single-variant xunion compiles (no irrefutable pattern errors).
     fidl_xunion! {
         #[derive(Debug, PartialEq)]
@@ -3899,40 +3335,6 @@ mod test {
         ],
     }
 
-    fidl_union! {
-        #[derive(Debug, PartialEq)]
-        name: SimpleUnion,
-        members: [
-            I32 {
-                ty: i32,
-                offset: 4,
-                xunion_ordinal: 1,
-            },
-            I64 {
-                ty: i64,
-                offset: 8,
-                xunion_ordinal: 2,
-            },
-            S {
-                ty: Int64Struct,
-                offset: 8,
-                xunion_ordinal: 3,
-            },
-            Os {
-                ty: Option<Box<Int64Struct>>,
-                offset: 8,
-                xunion_ordinal: 4,
-            },
-            Str {
-                ty: String,
-                offset: 8,
-                xunion_ordinal: 5,
-            },
-        ],
-        size: 24,
-        align: 8,
-    }
-
     fidl_xunion! {
         #[derive(Debug, PartialEq)]
         name: TestSampleXUnion,
@@ -3941,13 +3343,9 @@ mod test {
                 ty: u32,
                 ordinal: 0x29df47a5,
             },
-            Su {
-                ty: SimpleUnion,
-                ordinal: 0x6f317664,
-            },
             St {
                 ty: SimpleTable,
-                ordinal: 3,
+                ordinal: 0x6f317664,
             },
         ],
         unknown_member: __UnknownVariant,
@@ -3961,13 +3359,9 @@ mod test {
                 ty: u32,
                 ordinal: 0x29df47a5,
             },
-            Su {
-                ty: SimpleUnion,
-                ordinal: 0x6f317664,
-            },
             St {
                 ty: SimpleTable,
-                ordinal: 3,
+                ordinal: 0x6f317664,
             },
         ],
     }
@@ -3982,78 +3376,6 @@ mod test {
             },
         ],
         unknown_member: __UnknownVariant,
-    }
-
-    #[test]
-    fn union_encoded_as_xunion_based_on_context() {
-        encode_assert_bytes(
-            &Context { unions_use_xunion_format: false },
-            SimpleUnion::I64(3),
-            &[
-                0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // union tag + padding
-                0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // value 3
-                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // padding
-            ],
-        );
-        encode_assert_bytes(
-            &Context { unions_use_xunion_format: true },
-            SimpleUnion::I64(3),
-            &[
-                0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // xunion ordinal
-                0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 8 bytes, 0 handles
-                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // presence indicator
-                0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // value 3
-            ],
-        );
-    }
-
-    #[test]
-    fn encode_decode_nullable_union() {
-        identities![None::<Box<SimpleUnion>>, Some(Box::new(SimpleUnion::I64(3))),];
-    }
-
-    #[test]
-    fn nullable_union_is_out_of_line_in_old_context() {
-        encode_assert_bytes(
-            &Context { unions_use_xunion_format: false },
-            None::<Box<SimpleUnion>>,
-            &[
-                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // union is not present
-            ],
-        );
-        encode_assert_bytes(
-            &Context { unions_use_xunion_format: false },
-            Some(Box::new(SimpleUnion::I64(3))),
-            &[
-                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // union is present
-                0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // union tag + padding
-                0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // value 3
-                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // padding
-            ],
-        );
-    }
-
-    #[test]
-    fn nullable_union_is_inline_in_v1_context() {
-        encode_assert_bytes(
-            &Context { unions_use_xunion_format: true },
-            None::<Box<SimpleUnion>>,
-            &[
-                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 0 ordinal = null
-                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 0 bytes, 0 handles
-                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // not present
-            ],
-        );
-        encode_assert_bytes(
-            &Context { unions_use_xunion_format: true },
-            Some(Box::new(SimpleUnion::I64(3))),
-            &[
-                0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // xunion ordinal
-                0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 8 bytes, 0 handles
-                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // presence indicator
-                0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // value 3
-            ],
-        );
     }
 
     #[test]
@@ -4089,27 +3411,6 @@ mod test {
             encode_assert_bytes(ctx, None::<Box<TestSampleXUnion>>, &[0; 24]);
             encode_assert_bytes(ctx, None::<Box<TestSampleXUnionStrict>>, &[0; 24]);
         }
-    }
-
-    #[test]
-    fn xunion_golden_su() {
-        let xunion_su_bytes = &[
-            0x64, 0x76, 0x31, 0x6f, 0x00, 0x00, 0x00, 0x00, // xunion discriminator + padding
-            0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // num bytes + num handles
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // presence indicator
-            // secondary object 0
-            0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // union discriminant + padding
-            0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // string size
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // string present
-            // secondary object 1
-            b'h', b'e', b'l', b'l', b'o', 0x00, 0x00, 0x00, // string "hello" + padding
-        ];
-
-        encode_assert_bytes(
-            &Context { unions_use_xunion_format: false },
-            TestSampleXUnion::Su(SimpleUnion::Str("hello".to_string())),
-            xunion_su_bytes,
-        )
     }
 
     #[test]
@@ -4222,28 +3523,6 @@ mod test {
             assert_eq!(x.ordinal(), 0xffffffffu64);
             assert_eq!(encode_decode(ctx, &mut x).ordinal(), 0xffffffffu64);
         }
-    }
-
-    #[test]
-    fn union_as_xunion_with_64_bit_ordinal() {
-        fidl_union! {
-            #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-            name: BigOrdinal,
-            members: [
-                X {
-                    ty: u64,
-                    offset: 8,
-                    xunion_ordinal: 0xffffffffu64,
-                },
-            ],
-            size: 8,
-            align: 8,
-        };
-
-        let mut x = BigOrdinal::X(0);
-        let ctx = &Context { unions_use_xunion_format: true };
-        assert_eq!(x.ordinal(), 0xffffffffu64);
-        assert_eq!(encode_decode(ctx, &mut x).ordinal(), 0xffffffffu64);
     }
 
     #[test]

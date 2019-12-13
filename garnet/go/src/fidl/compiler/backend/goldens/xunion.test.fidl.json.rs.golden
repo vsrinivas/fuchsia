@@ -19,7 +19,6 @@ use fidl::{
 	fidl_empty_struct,
 	fidl_struct,
 	fidl_table,
-	fidl_union,
 	fidl_xunion,
 };
 
@@ -133,12 +132,9 @@ fidl_struct! {
   members: [
     x1 {
       ty: Option<Box<OlderSimpleUnion>>,
-      offset_old: 0,
       offset_v1: 0,
     },
   ],
-  size_old: 24,
-  align_old: 8,
   size_v1: 24,
   align_v1: 8,
 }
