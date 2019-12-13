@@ -297,14 +297,15 @@ dm poweroff
 	cmdline += " zircon.autorun.boot=/boot/bin/sh+/boot/runcmds"
 	args = append(args, "-append", cmdline)
 
-	i := &Instance{cmd: exec.Command(path, args...)}
-	err = i.Start()
-	if err != nil {
+	cmd = exec.Command(path, args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err = cmd.Start(); err != nil {
 		return "", "", err
 	}
-	defer i.Kill()
+	defer cmd.Process.Kill()
 
-	err = i.cmd.Wait()
+	err = cmd.Wait()
 	if err != nil {
 		return "", "", err
 	}
@@ -331,6 +332,13 @@ dm poweroff
 	if err != nil {
 		return "", "", err
 	}
+
+	fmt.Printf("===== %s non-interactive run stdout =====\n", toRun)
+	fmt.Print(string(retLog))
+	fmt.Printf("===== %s non-interactive run stderr =====\n", toRun)
+	fmt.Print(string(retErr))
+	fmt.Printf("===== %s end =====\n", toRun)
+
 	return string(retLog), string(retErr), nil
 }
 
