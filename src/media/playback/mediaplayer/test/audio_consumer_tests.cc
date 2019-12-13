@@ -161,7 +161,7 @@ TEST_F(AudioConsumerTests, CreateStreamSink) {
 }
 
 // Test that error is generated when unsupported codec is specified
-TEST_F(AudioConsumerTests, UnsupportedCodec) {
+TEST_F(AudioConsumerTests, DISABLED_UnsupportedCodec) {
   fuchsia::media::StreamSinkPtr sink;
   fuchsia::media::AudioStreamType stream_type;
   stream_type.frames_per_second = kFramesPerSecond;
