@@ -5,6 +5,7 @@
 #include "debuglog.h"
 
 #include <inttypes.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/debuglog.h>
 #include <string.h>
 #include <stdio.h>
@@ -71,7 +72,7 @@ int debuglog_init() {
   }
 
   // Set up our timeout to expire immediately, so that we check for pending log messages
-  g_debuglog_next_timeout = zx_clock_get_monotonic();
+  g_debuglog_next_timeout = zx::clock::get_monotonic().get();
 
   seqno = 1;
   pending = 0;

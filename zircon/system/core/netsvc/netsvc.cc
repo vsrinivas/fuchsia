@@ -4,6 +4,7 @@
 
 #include "netsvc.h"
 
+#include <lib/zx/clock.h>
 #include <unistd.h>
 #include <zircon/boot/netboot.h>
 #include <zircon/syscalls.h>
@@ -142,7 +143,7 @@ int main(int argc, char** argv) {
         break;
       }
 
-      zx_time_t now = zx_clock_get_monotonic();
+      zx_time_t now = zx::clock::get_monotonic().get();
       if (now > debuglog_next_timeout()) {
         debuglog_timeout_expired();
       }
