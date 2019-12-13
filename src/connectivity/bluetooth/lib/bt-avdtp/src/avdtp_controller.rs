@@ -139,6 +139,30 @@ impl AvdtpController {
                     }
                 }
             }
+            PeerControllerRequest::StartStream { responder } => {
+                match avdtp.start(&[endpoint_id.clone()]).await {
+                    Ok(resp) => {
+                        fx_log_info!("StartStream was successful: {:?}", resp);
+                        responder.send(&mut Ok(()))?;
+                    }
+                    Err(e) => {
+                        fx_log_info!("Stream {} start failed: {:?}", endpoint_id, e);
+                        responder.send(&mut Err(PeerError::ProtocolError))?;
+                    }
+                }
+            }
+            PeerControllerRequest::AbortStream { responder } => {
+                match avdtp.abort(endpoint_id).await {
+                    Ok(resp) => {
+                        fx_log_info!("Abort was successful: {:?}", resp);
+                        responder.send(&mut Ok(()))?;
+                    }
+                    Err(e) => {
+                        fx_log_info!("Stream {} abort failed: {:?}", endpoint_id, e);
+                        responder.send(&mut Err(PeerError::ProtocolError))?;
+                    }
+                }
+            }
             PeerControllerRequest::EstablishStream { responder } => {
                 match avdtp.open(endpoint_id).await {
                     Ok(resp) => {
@@ -341,10 +365,12 @@ mod tests {
                 | Ok(Request::Reconfigure { responder, .. }) => {
                     responder.send().expect("Sending response should have worked");
                 }
-                Ok(Request::Suspend { responder, .. }) => {
+                Ok(Request::Suspend { responder, .. }) | Ok(Request::Start { responder, .. }) => {
                     responder.send().expect("Sending response should have worked");
                 }
-                Ok(Request::Open { responder, .. }) | Ok(Request::Close { responder, .. }) => {
+                Ok(Request::Open { responder, .. })
+                | Ok(Request::Close { responder, .. })
+                | Ok(Request::Abort { responder, .. }) => {
                     // Purposefully make this fail, to ensure fail condition branch works.
                     responder
                         .reject(ErrorCode::UnsupportedConfiguration)
@@ -414,6 +440,9 @@ mod tests {
         let res = client_proxy.suspend_and_reconfigure().await;
         assert_eq!(Ok(Ok(())), res.map_err(|e| e.to_string()));
 
+        let res = client_proxy.start_stream().await;
+        assert_eq!(Ok(Ok(())), res.map_err(|e| e.to_string()));
+
         // FIDL method should work, but the underlying AVDTP method call should return an error.
         // See `listen_for_avdtp_requests`.
         let res = client_proxy.release_stream().await.expect("Command should succeed");
@@ -422,6 +451,11 @@ mod tests {
         // FIDL method should work, but the underlying AVDTP method call should return an error.
         // See `listen_for_avdtp_requests`.
         let res = client_proxy.establish_stream().await.expect("Command should succeed");
+        assert_eq!(Err("ProtocolError".to_string()), res.map_err(|e| format!("{:?}", e)));
+
+        // FIDL method should work, but the underlying AVDTP method call should return an error.
+        // See `listen_for_avdtp_requests`.
+        let res = client_proxy.abort_stream().await.expect("Command should succeed");
         assert_eq!(Err("ProtocolError".to_string()), res.map_err(|e| format!("{:?}", e)));
     }
 }
