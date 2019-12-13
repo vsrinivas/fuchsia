@@ -935,6 +935,7 @@ void Controller::DisplayControllerImplReleaseImage(image_t* image) {
   fbl::AutoLock lock(&gtt_lock_);
   for (unsigned i = 0; i < imported_images_.size(); i++) {
     if (imported_images_[i]->base() == image->handle) {
+      imported_images_[i]->ClearRegion();
       imported_images_.erase(i);
       return;
     }
@@ -1855,7 +1856,7 @@ zx_status_t Controller::GttFree(uint64_t addr) {
   fbl::AutoLock lock(&gtt_lock_);
   for (unsigned i = 0; i < imported_gtt_regions_.size(); i++) {
     if (imported_gtt_regions_[i]->base() == addr) {
-      imported_gtt_regions_.erase(i)->ClearRegion(true);
+      imported_gtt_regions_.erase(i)->ClearRegion();
       return ZX_OK;
     }
   }
@@ -1866,7 +1867,7 @@ zx_status_t Controller::GttClear(uint64_t addr) {
   fbl::AutoLock lock(&gtt_lock_);
   for (unsigned i = 0; i < imported_gtt_regions_.size(); i++) {
     if (imported_gtt_regions_[i]->base() == addr) {
-      imported_gtt_regions_[i]->ClearRegion(true);
+      imported_gtt_regions_[i]->ClearRegion();
       return ZX_OK;
     }
   }

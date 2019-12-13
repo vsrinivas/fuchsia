@@ -131,7 +131,7 @@ void Gtt::SetupForMexec(uintptr_t stolen_fb, uint32_t length) {
 
 GttRegion::GttRegion(Gtt* gtt) : gtt_(gtt), is_rotated_(false) {}
 
-GttRegion::~GttRegion() { ClearRegion(false); }
+GttRegion::~GttRegion() { ClearRegion(); }
 
 zx_status_t GttRegion::PopulateRegion(zx_handle_t vmo, uint64_t page_offset, uint64_t length,
                                       bool writable) {
@@ -189,7 +189,7 @@ zx_status_t GttRegion::PopulateRegion(zx_handle_t vmo, uint64_t page_offset, uin
   return ZX_OK;
 }
 
-void GttRegion::ClearRegion(bool close_vmo) {
+void GttRegion::ClearRegion() {
   if (!region_) {
     return;
   }
@@ -213,7 +213,7 @@ void GttRegion::ClearRegion(bool close_vmo) {
   pmts_.reset();
   mapped_end_ = 0;
 
-  if (close_vmo && vmo_ != ZX_HANDLE_INVALID) {
+  if (vmo_ != ZX_HANDLE_INVALID) {
     zx_handle_close(vmo_);
   }
   vmo_ = ZX_HANDLE_INVALID;

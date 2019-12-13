@@ -29,7 +29,7 @@ class GttRegion {
 
   zx_status_t PopulateRegion(zx_handle_t vmo, uint64_t page_offset, uint64_t length,
                              bool writable = false);
-  void ClearRegion(bool close_vmo);
+  void ClearRegion();
 
   uint64_t base() const { return region_->base; }
   uint64_t size() const { return region_->size; }
