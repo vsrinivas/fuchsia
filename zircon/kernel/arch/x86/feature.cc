@@ -947,14 +947,17 @@ void swapgs_bug_postfence(const CodePatchInfo* patch) {
 }
 
 extern "C" void x86_ras_fill_select(const CodePatchInfo* patch) {
-  const size_t kSize = 9;
+  const size_t kSize = 53;
   DEBUG_ASSERT(patch->dest_size == kSize);
 
   // TODO(fxb/33667): Consider whether Enhanced IBRS + SMEP + SMAP requires filling RAS.
-  if (g_disable_spec_mitigations) {
-     memset(patch->dest_addr, kNop, kSize);
-  } else {
-     // Keep the call to x86_ras_fill in place.
+  // Copy the contents of x86_ras_fill to the kernel syscall / exception entry point,
+  // except for the final RET.
+  if (!g_disable_spec_mitigations) {
+     extern char x86_ras_fill_start;
+     extern char x86_ras_fill_end;
+     DEBUG_ASSERT(&x86_ras_fill_end - &x86_ras_fill_start == kSize);
+     memcpy(patch->dest_addr, (void*) x86_ras_fill, kSize);
      g_ras_fill_on_entry = true;
   }
 }

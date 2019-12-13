@@ -144,27 +144,40 @@ END_FUNCTION(x86_monitor)
 //
 //    Overwriting the RAS prevents those attacks.
 FUNCTION(x86_ras_fill)
-        movq    (%rsp), %rdx
+.global x86_ras_fill_start
+x86_ras_fill_start:
+    pushq %rcx
+    // Execute a loop of 32 calls; each call creates a return address stack
+    // (RAS/RSB) entry pointing at the predicted return address, |trap|.
+    // Any speculative returns will execute code starting at |trap|, which
+    // is an infinite loop of PAUSE-LFENCE (a "speculation trap").
+    //
+    // All known-bad x86 CPUs have a RAS with 32 entries or less. (AMD
+    // Mitigation V2-3, Intel Table 6: RSB stuffing).
+    movl $16, %ecx
 
-        // Execute a loop of 32 calls; each call creates a return address stack
-        // (RAS/RSB) entry pointing at the predicted return address, |trap|.
-        // Any speculative returns will execute code starting at |trap|, which
-        // is an infinite loop of PAUSE-LFENCE (a "speculation trap").
-        //
-        // All known-bad x86 CPUs have a RAS with 32 entries or less. (AMD
-        // Mitigation V2-3, Intel Table 6: RSB stuffing).
-        movl    $32, %ecx
-0:      call    1f
-trap:   pause
-        lfence
-        jmp     trap
-1:      subl    $1, %ecx
-        jnz     0b
+    .align 16
+0:  call 1f
+.Ltrap1:
+    pause
+    lfence
+    jmp .Ltrap1
 
-        // Return to the caller without consuming a RAS entry.
-        // LFENCE ensures that the return (jmp *r64) itself cannot be attacked,
-        // see AMD Mitigation V2-2.
-        addq    $256 + 8, %rsp
-        lfence
-        jmp     *%rdx
+    .align 16
+1:  call 2f
+.Ltrap2:
+    pause
+    lfence
+    jmp .Ltrap2
+
+    .align 16
+2:
+    subl $1, %ecx
+    jnz 0b
+
+    addq $256, %rsp
+    popq %rcx
+.global x86_ras_fill_end
+x86_ras_fill_end:
+    ret
 END_FUNCTION(x86_ras_fill)

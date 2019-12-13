@@ -107,14 +107,13 @@ FUNCTION_LABEL(interrupt_common)
 
     /* Spectre V2: Overwrite the Return Address Stack to ensure its not poisoned/can't underflow */
 .Lmaybe_exception_ras_fill:
-    // We cannot lose %rdx or %rcx, so save them around a call to x86_ras_fill
-    push %rdx
-    push %rcx
-    call x86_ras_fill
-    pop %rcx
-    pop %rdx
-    APPLY_CODE_PATCH_FUNC_WITH_DEFAULT(x86_ras_fill_select, .Lmaybe_exception_ras_fill, 9)
+    jmp   1f
+    .rept 51
+    nop
+    .endr
+    APPLY_CODE_PATCH_FUNC_WITH_DEFAULT(x86_ras_fill_select, .Lmaybe_exception_ras_fill, 53)
 
+    .align 16
 1:
     /* Certain processors may speculative past a conditional swapgs, with a caller-controlled
      * GS_BASE register. This may allow callers to infer the contents of kernel offsets or data.
