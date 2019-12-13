@@ -42,8 +42,8 @@ class FakeBackend : public Backend {
     state_ = State::DEVICE_STATUS_ACK;
   }
   void DeviceReset() override {
-    EXPECT_EQ(state_, State::DEVICE_VOID);
-    state_ = State::DEVICE_RESET;
+      state_ = State::DEVICE_RESET;
+      kicked_queues_.clear();
   }
   void ReadDeviceConfig(uint16_t offset, uint8_t* value) override {
     auto shifted_offset = static_cast<uint16_t>(offset + kISRStatus + 1);
@@ -90,7 +90,12 @@ class FakeBackend : public Backend {
     kicked_queues_.insert(ring_index);
   }
   uint32_t IsrStatus() override { return registers8_.find(kISRStatus)->second; }
-  zx_status_t InterruptValid() override { return ZX_OK; }
+  zx_status_t InterruptValid() override {
+    if (!irq_handle_) {
+      return ZX_ERR_BAD_HANDLE;
+    }
+    return ZX_OK;
+  }
   zx_status_t WaitForInterrupt() override { return ZX_OK; }
   void InterruptAck() override {}
 
