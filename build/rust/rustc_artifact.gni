@@ -498,6 +498,7 @@ template("rustc_artifact") {
         output_name = output_filename
         public_deps = non_rust_deps
         rustflags = rflags
+        complete_static_lib = true
       }
     } else {
       assert(false, "unsupported crate type, should've been caught above-- report this issue to the toolchain team")
