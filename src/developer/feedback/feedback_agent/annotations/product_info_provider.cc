@@ -19,9 +19,23 @@
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
+namespace {
 
 using fuchsia::feedback::Annotation;
 using fuchsia::hwinfo::ProductInfo;
+
+// Required annotations as per /src/hwinfo/hwinfo_product_config_schema.json.
+bool IsRequired(const std::string& annotation) {
+  static const std::set<std::string> required_annotaitons = {
+      kAnnotationHardwareProductName,
+      kAnnotationHardwareProductModel,
+      kAnnotationHardwareProductManufacturer,
+  };
+
+  return required_annotaitons.find(annotation) != required_annotaitons.end();
+}
+
+}  // namespace
 
 ProductInfoProvider::ProductInfoProvider(const std::set<std::string>& annotations_to_get,
                                          async_dispatcher_t* dispatcher,
@@ -71,7 +85,9 @@ fit::promise<std::vector<Annotation>> ProductInfoProvider::GetAnnotations() {
 
         for (const auto& key : annotations_to_get) {
           if (product_info.find(key) == product_info.end()) {
-            FX_LOGS(WARNING) << "Failed to build annotation " << key;
+            if (IsRequired(key)) {
+              FX_LOGS(WARNING) << "Failed to build annotation " << key;
+            }
             continue;
           }
 
