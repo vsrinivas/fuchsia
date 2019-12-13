@@ -12,11 +12,8 @@ use {
     fidl_fidl_examples_echo as fidl_echo, fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_runtime::{job_default, HandleInfo, HandleType},
     fuchsia_vfs_pseudo_fs_mt::{
-        directory::entry::DirectoryEntry,
-        execution_scope::ExecutionScope,
-        file::pcb::asynchronous::read_only_static,
-        path::Path as pfsPath,
-        pseudo_directory,
+        directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
+        file::pcb::asynchronous::read_only_static, path::Path as pfsPath, pseudo_directory,
     },
     fuchsia_zircon::HandleBased,
     io_util,

@@ -21,9 +21,8 @@ namespace component {
 
 class NamespaceBuilder {
  public:
-  NamespaceBuilder(fxl::UniqueFD dir, const std::string namespace_id) :
-    appmgr_config_dir_(std::move(dir)),
-    ns_id(namespace_id) {}
+  NamespaceBuilder(fxl::UniqueFD dir, const std::string namespace_id)
+      : appmgr_config_dir_(std::move(dir)), ns_id(namespace_id) {}
   ~NamespaceBuilder();
 
   void AddFlatNamespace(fuchsia::sys::FlatNamespacePtr flat_namespace);

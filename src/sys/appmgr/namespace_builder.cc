@@ -26,8 +26,7 @@ namespace component {
 constexpr char kDeprecatedDataName[] = "deprecated-data";
 constexpr char kBlockedDataName[] = "data";
 
-constexpr char kGlobalDataAllowlist[] =
-    "allowlist/global_data.txt";
+constexpr char kGlobalDataAllowlist[] = "allowlist/global_data.txt";
 
 NamespaceBuilder::~NamespaceBuilder() = default;
 

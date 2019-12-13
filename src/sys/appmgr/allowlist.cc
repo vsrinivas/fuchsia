@@ -9,7 +9,8 @@
 
 namespace component {
 
-Allowlist::Allowlist(const fxl::UniqueFD& dir, const std::string& path, Allowlist::Expectation expected) {
+Allowlist::Allowlist(const fxl::UniqueFD& dir, const std::string& path,
+                     Allowlist::Expectation expected) {
   std::string result;
   if (!files::ReadFileToStringAt(dir.get(), path, &result)) {
     if (expected == Allowlist::kExpected) {

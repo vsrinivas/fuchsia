@@ -19,7 +19,8 @@ namespace {
 
 class RealmTest : public ::testing::Test {
  protected:
-  std::string NewFile(const std::string& base_dir, const std::string& path, const std::string& contents) {
+  std::string NewFile(const std::string& base_dir, const std::string& path,
+                      const std::string& contents) {
     const std::string file = fxl::Substitute("$0/$1", base_dir, path);
     if (!files::WriteFile(file, contents.data(), contents.size())) {
       return "";
@@ -34,10 +35,8 @@ class RealmTest : public ::testing::Test {
     auto environment_services = sys::ServiceDirectory::CreateFromNamespace();
     fuchsia::sys::ServiceListPtr root_realm_services(new fuchsia::sys::ServiceList);
     RealmArgs realm_args = RealmArgs::MakeWithAdditionalServices(
-        nullptr, "test", "/data", "/data/cache", "/tmp", std::move(environment_services),
-        false, std::move(root_realm_services),
-        fuchsia::sys::EnvironmentOptions{},
-        std::move(dirfd));
+        nullptr, "test", "/data", "/data/cache", "/tmp", std::move(environment_services), false,
+        std::move(root_realm_services), fuchsia::sys::EnvironmentOptions{}, std::move(dirfd));
     return Realm::Create(std::move(realm_args));
   }
 

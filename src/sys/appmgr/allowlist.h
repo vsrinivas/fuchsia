@@ -31,9 +31,7 @@ class Allowlist {
     return internal_set_.find(url) != internal_set_.end();
   }
 
-  bool WasFilePresent() const {
-    return file_found_;
-  }
+  bool WasFilePresent() const { return file_found_; }
 
  private:
   std::unordered_set<std::string> internal_set_;

@@ -56,8 +56,8 @@ class ComponentsBinaryTest : public sys::testing::TestWithEnvironment {
     environment_->CreateComponent(CreateLaunchInfo(url, std::move(args)), controller.NewRequest());
 
     bool terminated = false;
-    controller.events().OnTerminated =
-        [&terminated, &return_code, &termination_reason](int64_t code, TerminationReason reason) {
+    controller.events().OnTerminated = [&terminated, &return_code, &termination_reason](
+                                           int64_t code, TerminationReason reason) {
       if (return_code != nullptr) {
         *return_code = code;
       }
@@ -116,12 +116,12 @@ TEST_F(ComponentsBinaryTest, GetEnvMismatch) {
   std::string output = ReadOutFile();
   ASSERT_EQ(output, "FOO=bar BAR=NULL\n");
 }
-  
+
 TEST_F(ComponentsBinaryTest, UnallowedDeprecatedShellFailsToLaunch) {
   int64_t return_code = -1;
   TerminationReason termination_reason;
-  RunComponent(ComponentsBinaryTest::UrlFromCmx("echo_deprecated_shell.cmx"),
-               &return_code, &termination_reason);
+  RunComponent(ComponentsBinaryTest::UrlFromCmx("echo_deprecated_shell.cmx"), &return_code,
+               &termination_reason);
   EXPECT_NE(TerminationReason::EXITED, termination_reason);
 }
 

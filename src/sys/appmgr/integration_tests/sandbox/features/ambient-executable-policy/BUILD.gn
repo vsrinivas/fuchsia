@@ -21,8 +21,8 @@ sandbox_test_package("has_ambient_executable") {
   ]
 
   deps = [
-    "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
     "//src/lib/fxl/test:gtest_main",
+    "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
   ]
   environments = basic_envs
 }
@@ -33,8 +33,8 @@ sandbox_test_package("no_ambient_executable") {
   ]
 
   deps = [
-    "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
     "//src/lib/fxl/test:gtest_main",
+    "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
   ]
   environments = basic_envs
 }
