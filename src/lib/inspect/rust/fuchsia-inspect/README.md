@@ -31,10 +31,21 @@ by `fx set [....] --with //src/lib/inspect/rust/fuchsia-inspect:tests`.
 ## Benchmarking
 
 Benchmarks for `fuchsia_inspect` are available in the `rust_inspect_benchmarks`
-package:
+package.
+
+One way to run the benchmarks is with the following command:
 
 ```
-$ fx run-test rust_inspect_benchmarks
+$ fx shell trace record --spec-file=/pkgfs/packages/rust_inspect_benchmarks/0/data/benchmarks.tspec
+```
+
+It is possible to run the benchmarks in a fast "unit test mode" with
+the following test command.  This runs a small number of test
+iterations without collecting performance results, which can be useful
+for checking that the tests don't fail:
+
+```
+$ fx shell run rust_inspect_benchmarks
 ```
 
 You'll need to include `//src/lib/inspect/rust/fuchsia-inspect:benchmarks` in your

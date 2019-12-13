@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/rust_inspect_benchmarks"
+        "binary": "bin/rust_inspect_benchmarks"
     },
     "sandbox": {
         "services": [

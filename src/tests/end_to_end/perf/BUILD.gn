@@ -16,6 +16,7 @@ import("//build/testing/environments.gni")
 test_list = [
   "ledger_perf_test",
   "microbenchmarks_test",
+  "rust_inspect_benchmarks_test",
   "tspec_example_test",
 ]
 foreach(target_name, test_list) {
@@ -70,6 +71,7 @@ group("package_deps") {
     "//garnet/examples/benchmark",
     "//src/ledger:bin",
     "//src/ledger/bin/tests/benchmark",
+    "//src/lib/inspect/rust/fuchsia-inspect:benchmarks",
   ]
 }
 
@@ -79,6 +81,7 @@ group("test") {
   deps = [
     ":ledger_perf_test($host_toolchain)",
     ":microbenchmarks_test($host_toolchain)",
+    ":rust_inspect_benchmarks_test($host_toolchain)",
     ":tspec_example_test($host_toolchain)",
   ]
 }

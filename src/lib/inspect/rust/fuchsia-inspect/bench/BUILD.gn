@@ -5,8 +5,10 @@
 import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
 
-test_package("rust_inspect_benchmarks") {
-  tests = [
+package("rust_inspect_benchmarks") {
+  testonly = true
+
+  binaries = [
     {
       name = "rust_inspect_benchmarks"
     },
@@ -16,6 +18,13 @@ test_package("rust_inspect_benchmarks") {
     {
       path = rebase_path("benchmarks.tspec")
       dest = "benchmarks.tspec"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/rust_inspect_benchmarks.cmx")
+      dest = "rust_inspect_benchmarks.cmx"
     },
   ]
 
