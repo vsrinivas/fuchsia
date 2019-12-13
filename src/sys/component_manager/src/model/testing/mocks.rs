@@ -279,7 +279,7 @@ impl Runner for MockRunner {
             // Fetch host functions, which will provide the outgoing and runtime directories
             // for the component.
             //
-            // If functions were provided, then start_info.outgoing_dir will be
+            // If functions were not provided, then start_info.outgoing_dir will be
             // automatically closed once it goes out of scope at the end of this
             // function.
             outgoing_host_fn = state.outgoing_host_fns.get(&resolved_url).map(Arc::clone);
