@@ -32,8 +32,8 @@ config_data("web_engine_config") {
 prebuilt_package("web_engine_pkg") {
   visibility = [ ":web_engine" ]
 
-  package_name = "web_engine"
-  archive = "//prebuilt/third_party/chromium/arch/$target_cpu/web_engine.far"
+  package_name = "chromium"
+  archive = "//prebuilt/third_party/chromium/arch/$target_cpu/chromium.far"
 }
 
 group("web_runner") {

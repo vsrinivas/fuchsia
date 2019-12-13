@@ -10,7 +10,7 @@
                 "fuchsia.ui.policy.Presenter": "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx",
                 "fuchsia.ui.scenic.Scenic": "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx",
                 "fuchsia.vulkan.loader.Loader": "fuchsia-pkg://fuchsia.com/vulkan_loader#meta/vulkan_loader.cmx",
-                "fuchsia.web.ContextProvider": "fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cmx"
+                "fuchsia.web.ContextProvider": "fuchsia-pkg://fuchsia.com/chromium#meta/chromium.cmx"
             },
             "system-services": [
                 "fuchsia.posix.socket.Provider",
