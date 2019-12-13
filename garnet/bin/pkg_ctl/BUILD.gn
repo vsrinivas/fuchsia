@@ -2,67 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+# TODO(fxb/35099): update references, and delete this directory.
 
-rustc_binary("bin") {
-  name = "pkgctl"
-  with_unit_tests = true
-  edition = "2018"
-
-  deps = [
-    "//garnet/lib/rust/fidl_fuchsia_pkg_ext",
-    "//garnet/lib/rust/files_async",
-    "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-component",
-    "//garnet/public/rust/fuchsia-zircon",
-    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
-    "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
-    "//sdk/fidl/fuchsia.space:fuchsia.space-rustc",
-    "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
-    "//src/lib/argh",
-    "//src/sys/lib/fuchsia_url_rewrite",
-    "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:matches",
-    "//third_party/rust_crates:serde_json",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+group("pkg_ctl") {
+  public_deps = [
+    "//src/sys/pkg/bin/pkgctl",
   ]
 }
 
-package("pkg_ctl") {
-  deps = [
-    ":bin",
-  ]
-
-  binaries = [
-    {
-      name = "pkgctl"
-      dest = "pkgctl"
-      shell = true
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/pkgctl.cmx")
-      dest = "pkgctl.cmx"
-    },
-  ]
-}
-
-test_package("pkg_ctl_tests") {
-  deps = [
-    ":bin_test",
-  ]
-
-  tests = [
-    {
-      name = "pkgctl_bin_test"
-      environments = basic_envs
-    },
+group("pkg_ctl_tests") {
+  testonly = true
+  public_deps = [
+    "//src/sys/pkg/bin/pkgctl:pkgctl-tests",
   ]
 }

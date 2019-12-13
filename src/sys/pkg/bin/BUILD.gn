@@ -6,6 +6,7 @@ group("bin") {
   testonly = true
   deps = [
     "omaha-client",
+    "pkgctl",
     "update:update-bin",
   ]
 }
@@ -14,6 +15,7 @@ group("tests") {
   testonly = true
   deps = [
     "omaha-client:tests",
+    "pkgctl:tests",
     "update:tests",
   ]
 }

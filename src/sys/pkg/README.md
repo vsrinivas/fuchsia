@@ -26,7 +26,7 @@ Updated: November 2019
    </td>
    <td>CLI for pkg_resolver
    </td>
-   <td>`//garnet/bin/pkg_ctl`
+   <td>`//src/sys/pkg/bin/pkgctl`
    </td>
    <td>Rust
    </td>
