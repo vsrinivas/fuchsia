@@ -31,7 +31,7 @@ pub struct Declaration {
     pub values: Vec<Value>,
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum ValueType {
     Number,
     Str,

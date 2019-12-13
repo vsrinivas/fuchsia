@@ -5,7 +5,7 @@
 use crate::bind_library;
 use crate::bind_program::{self, Condition, ConditionOp, Statement};
 use crate::dependency_graph::{self, DependencyGraph};
-use crate::errors::UserError;
+use crate::errors::{self, UserError};
 use crate::instruction;
 use crate::make_identifier;
 use crate::parser_common::{self, CompoundIdentifier, Include, Value};
@@ -20,8 +20,7 @@ use std::str::FromStr;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum CompilerError {
-    FileOpenError(PathBuf),
-    FileReadError(PathBuf),
+    FileError(errors::FileError),
     BindParserError(parser_common::BindParserError),
     DependencyError(dependency_graph::DependencyError<CompoundIdentifier>),
     DuplicateIdentifier(CompoundIdentifier),
@@ -36,28 +35,41 @@ pub enum CompilerError {
 
 impl fmt::Display for CompilerError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let blah: CompilerError = self.clone();
-        let user_error = UserError::from(blah);
-        write!(f, "{}", user_error)
+        write!(f, "{}", UserError::from(self.clone()))
     }
 }
+
+pub type SymbolTable = HashMap<CompoundIdentifier, Symbol>;
 
 pub fn compile(
     program: PathBuf,
     libraries: &[PathBuf],
 ) -> Result<Vec<instruction::Instruction>, CompilerError> {
-    let mut file =
-        File::open(&program).map_err(|_| CompilerError::FileOpenError(program.clone()))?;
+    let (symbolic_instructions, _) = compile_to_symbolic(program, libraries)?;
+
+    Ok(symbolic_instructions.into_iter().map(|symbolic| symbolic.to_instruction()).collect())
+}
+
+pub fn compile_to_symbolic(
+    program: PathBuf,
+    libraries: &[PathBuf],
+) -> Result<(Vec<SymbolicInstruction>, SymbolTable), CompilerError> {
+    let mut file = File::open(&program)
+        .map_err(|_| CompilerError::FileError(errors::FileError::FileOpenError(program.clone())))?;
     let mut buf = String::new();
-    file.read_to_string(&mut buf).map_err(|_| CompilerError::FileReadError(program.clone()))?;
+    file.read_to_string(&mut buf)
+        .map_err(|_| CompilerError::FileError(errors::FileError::FileReadError(program.clone())))?;
     let ast = bind_program::Ast::from_str(&buf).map_err(CompilerError::BindParserError)?;
 
     let mut library_asts = vec![];
     for library in libraries {
-        let mut file =
-            File::open(library).map_err(|_| CompilerError::FileOpenError(library.clone()))?;
+        let mut file = File::open(library).map_err(|_| {
+            CompilerError::FileError(errors::FileError::FileOpenError(program.clone()))
+        })?;
         let mut buf = String::new();
-        file.read_to_string(&mut buf).map_err(|_| CompilerError::FileReadError(library.clone()))?;
+        file.read_to_string(&mut buf).map_err(|_| {
+            CompilerError::FileError(errors::FileError::FileReadError(program.clone()))
+        })?;
         library_asts
             .push(bind_library::Ast::from_str(&buf).map_err(CompilerError::BindParserError)?);
     }
@@ -68,7 +80,7 @@ pub fn compile(
 
     let symbolic_instructions = compile_statements(ast.statements, &symbol_table)?;
 
-    Ok(symbolic_instructions.into_iter().map(|symbolic| symbolic.to_instruction()).collect())
+    Ok((symbolic_instructions, symbol_table))
 }
 
 fn resolve_dependencies<'a>(
@@ -98,8 +110,8 @@ fn resolve_dependencies<'a>(
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Clone, PartialEq)]
-enum Symbol {
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum Symbol {
     DeprecatedKey(u32),
     Key(String, bind_library::ValueType),
     NumberValue(u64),
@@ -172,7 +184,7 @@ fn find_qualified_identifier(
 #[allow(dead_code)]
 fn construct_symbol_table(
     libraries: impl Iterator<Item = impl Deref<Target = bind_library::Ast>>,
-) -> Result<HashMap<CompoundIdentifier, Symbol>, CompilerError> {
+) -> Result<SymbolTable, CompilerError> {
     let mut symbol_table = get_deprecated_symbols();
     for lib in libraries {
         let bind_library::Ast { name, using, declarations } = &*lib;
@@ -246,7 +258,7 @@ fn construct_symbol_table(
 
 /// Hard code these symbols during the migration from macros to bind programs. Eventually these
 /// will be defined in libraries and the compiler will emit strings for them in the bytecode.
-fn get_deprecated_symbols() -> HashMap<CompoundIdentifier, Symbol> {
+fn get_deprecated_symbols() -> SymbolTable {
     let mut symbol_table = HashMap::new();
     let mut insert_deprecated = |key, value| {
         symbol_table.insert(make_identifier!("deprecated", key), Symbol::DeprecatedKey(value));
@@ -350,7 +362,7 @@ fn get_deprecated_symbols() -> HashMap<CompoundIdentifier, Symbol> {
 }
 
 #[derive(Debug, PartialEq)]
-enum SymbolicInstruction {
+pub enum SymbolicInstruction {
     AbortIfEqual { lhs: Symbol, rhs: Symbol },
     AbortIfNotEqual { lhs: Symbol, rhs: Symbol },
     Label(u32),
@@ -394,9 +406,9 @@ impl SymbolicInstruction {
     }
 }
 
-fn compile_statements(
+pub fn compile_statements(
     statements: Vec<Statement>,
-    symbol_table: &HashMap<CompoundIdentifier, Symbol>,
+    symbol_table: &SymbolTable,
 ) -> Result<Vec<SymbolicInstruction>, CompilerError> {
     let mut compiler = Compiler::new(symbol_table);
     compiler.compile_statements(statements)?;
@@ -406,11 +418,11 @@ fn compile_statements(
 struct Compiler<'a> {
     instructions: Vec<SymbolicInstruction>,
     next_label_id: u32,
-    symbol_table: &'a HashMap<CompoundIdentifier, Symbol>,
+    symbol_table: &'a SymbolTable,
 }
 
 impl<'a> Compiler<'a> {
-    fn new(symbol_table: &'a HashMap<CompoundIdentifier, Symbol>) -> Self {
+    fn new(symbol_table: &'a SymbolTable) -> Self {
         Compiler { instructions: vec![], next_label_id: 0, symbol_table }
     }
 
@@ -456,13 +468,13 @@ impl<'a> Compiler<'a> {
                     let lhs_symbol = self.lookup_identifier(lhs)?;
                     let rhs_symbol = self.lookup_value(rhs)?;
                     let instruction = match op {
-                        ConditionOp::Equals => {
-                            SymbolicInstruction::AbortIfNotEqual { lhs: lhs_symbol, rhs: rhs_symbol }
-                        }
-                        ConditionOp::NotEquals => SymbolicInstruction::AbortIfEqual {
+                        ConditionOp::Equals => SymbolicInstruction::AbortIfNotEqual {
                             lhs: lhs_symbol,
                             rhs: rhs_symbol,
                         },
+                        ConditionOp::NotEquals => {
+                            SymbolicInstruction::AbortIfEqual { lhs: lhs_symbol, rhs: rhs_symbol }
+                        }
                     };
                     self.instructions.push(instruction);
                 }

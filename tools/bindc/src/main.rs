@@ -83,7 +83,7 @@ fn main() {
     }
 
     if let Some(device_file) = opt.device_file {
-        if let Err(err) = debugger::debug(device_file) {
+        if let Err(err) = debugger::debug(opt.input, &includes, device_file) {
             eprintln!("Debugger failed with error:");
             eprintln!("{}", err);
             std::process::exit(1);

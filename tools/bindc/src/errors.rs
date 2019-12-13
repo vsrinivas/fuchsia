@@ -3,9 +3,17 @@
 // found in the LICENSE file.
 
 use crate::compiler::CompilerError;
+use crate::debugger::DebuggerError;
 use crate::dependency_graph::DependencyError;
 use crate::parser_common::{BindParserError, CompoundIdentifier};
 use std::fmt;
+use std::path::PathBuf;
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum FileError {
+    FileOpenError(PathBuf),
+    FileReadError(PathBuf),
+}
 
 pub struct UserError {
     index: String,
@@ -26,6 +34,23 @@ impl fmt::Display for UserError {
             writeln!(f, "{}", span)?;
         }
         Ok(())
+    }
+}
+
+impl From<FileError> for UserError {
+    fn from(error: FileError) -> Self {
+        match error {
+            FileError::FileOpenError(path) => UserError::new(
+                "E100",
+                &format!("Failed to open file: {}.", path.to_string_lossy()),
+                None,
+            ),
+            FileError::FileReadError(path) => UserError::new(
+                "E101",
+                &format!("Failed to read file: {}.", path.to_string_lossy()),
+                None,
+            ),
+        }
     }
 }
 
@@ -124,16 +149,7 @@ impl From<BindParserError> for UserError {
 impl From<CompilerError> for UserError {
     fn from(error: CompilerError) -> Self {
         match error {
-            CompilerError::FileOpenError(path) => UserError::new(
-                "E100",
-                &format!("Failed to open file: {}.", path.to_string_lossy()),
-                None,
-            ),
-            CompilerError::FileReadError(path) => UserError::new(
-                "E101",
-                &format!("Failed to read file: {}.", path.to_string_lossy()),
-                None,
-            ),
+            CompilerError::FileError(error) => UserError::from(error),
             CompilerError::BindParserError(error) => UserError::from(error),
             CompilerError::DependencyError(error) => UserError::from(error),
             CompilerError::DuplicateIdentifier(identifier) => UserError::new(
@@ -190,6 +206,40 @@ impl From<DependencyError<CompoundIdentifier>> for UserError {
             DependencyError::CircularDependency => {
                 UserError::new("E201", "Cicular dependency", None)
             }
+        }
+    }
+}
+
+impl From<DebuggerError> for UserError {
+    fn from(error: DebuggerError) -> Self {
+        match error {
+            DebuggerError::FileError(error) => UserError::from(error),
+            DebuggerError::BindParserError(error) => UserError::from(error),
+            DebuggerError::CompilerError(error) => UserError::from(error),
+            DebuggerError::DuplicateKeyError(identifier) => UserError::new(
+                "E300",
+                &format!(
+                    "The key `{}` appears multiple times in the device specification.",
+                    identifier
+                ),
+                None,
+            ),
+            DebuggerError::MissingLabelError => UserError::new(
+                "E301",
+                concat!(
+                    "Missing label in the bind program symbolic instructions.\n",
+                    "This is a bind compiler bug, please report it!"
+                ),
+                None,
+            ),
+            DebuggerError::NoOutcomeError => UserError::new(
+                "E302",
+                concat!(
+                    "Reached the end of the symbolic instructions without binding or aborting.\n",
+                    "This is a bind compiler bug, please report it!"
+                ),
+                None,
+            ),
         }
     }
 }
