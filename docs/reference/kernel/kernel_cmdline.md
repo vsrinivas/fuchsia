@@ -159,6 +159,11 @@ register as "trace provider".
 The default is enabled. This options exists to provide a quick fallback should
 a problem arise.
 
+## driver.iommu.enable=\<bool>
+
+This option (disabled by default) allows the system to use a hardware IOMMU
+if present.
+
 ## gfxconsole.early=\<bool>
 
 This option (disabled by default) requests that the kernel start a graphics
@@ -173,11 +178,6 @@ needed for debugging it may speed up boot to disable it.
 
 This option asks the graphics console to use a specific font.  Currently
 only "9x16" (the default) and "18x32" (a double-size font) are supported.
-
-## iommu.enable=\<bool>
-
-This option (disabled by default) allows the system to use a hardware IOMMU
-if present.
 
 ## kernel.bypass-debuglog=\<bool>
 

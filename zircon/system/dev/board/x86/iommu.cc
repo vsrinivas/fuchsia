@@ -417,7 +417,7 @@ cleanup:
 }
 
 static bool use_hardware_iommu(void) {
-  const char* value = getenv("iommu.enable");
+  const char* value = getenv("driver.iommu.enable");
   if (value == NULL) {
     return false;  // Default to false currently
   } else if (!strcmp(value, "0") || !strcmp(value, "false") || !strcmp(value, "off")) {
