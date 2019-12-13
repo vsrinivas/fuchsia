@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        capability::{ComponentManagerCapability, ComponentManagerCapabilityProvider},
+        capability::{CapabilityProvider, CapabilitySource, FrameworkCapability},
         model::{
             breakpoints::{BreakpointRegistry, Invocation, InvocationReceiver},
             error::ModelError,
@@ -35,18 +35,18 @@ impl BreakpointCapabilityHook {
 
     /// Creates and returns a BreakpointCapability when a component uses
     /// the Breakpoint framework service
-    async fn on_route_framework_capability_async(
+    async fn on_route_scoped_framework_capability_async(
         self: Arc<Self>,
-        capability_decl: &ComponentManagerCapability,
-        capability: Option<Box<dyn ComponentManagerCapabilityProvider>>,
-    ) -> Result<Option<Box<dyn ComponentManagerCapabilityProvider>>, ModelError> {
+        capability_decl: &FrameworkCapability,
+        capability: Option<Box<dyn CapabilityProvider>>,
+    ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         match (capability, capability_decl) {
-            (None, ComponentManagerCapability::ServiceProtocol(source_path))
+            (None, FrameworkCapability::ServiceProtocol(source_path))
                 if *source_path == *BREAKPOINT_SYSTEM_SERVICE =>
             {
                 return Ok(Some(Box::new(BreakpointCapabilityProvider::new(
                     self.breakpoint_registry.clone(),
-                )) as Box<dyn ComponentManagerCapabilityProvider>))
+                )) as Box<dyn CapabilityProvider>))
             }
             (c, _) => return Ok(c),
         };
@@ -56,12 +56,18 @@ impl BreakpointCapabilityHook {
 impl Hook for BreakpointCapabilityHook {
     fn on(self: Arc<Self>, event: &Event) -> BoxFuture<'_, Result<(), ModelError>> {
         Box::pin(async move {
-            if let EventPayload::RouteFrameworkCapability { capability, capability_provider } =
-                &event.payload
+            if let EventPayload::RouteCapability {
+                source: CapabilitySource::Framework { capability, scope_realm: Some(_) },
+                capability_provider,
+            } = &event.payload
             {
+                // TODO(xbhatnag): Scope the BreakpointSystem by passing in scope_realm!
                 let mut capability_provider = capability_provider.lock().await;
                 *capability_provider = self
-                    .on_route_framework_capability_async(&capability, capability_provider.take())
+                    .on_route_scoped_framework_capability_async(
+                        &capability,
+                        capability_provider.take(),
+                    )
                     .await?;
             }
             Ok(())
@@ -96,7 +102,7 @@ impl BreakpointCapabilityProvider {
     }
 }
 
-impl ComponentManagerCapabilityProvider for BreakpointCapabilityProvider {
+impl CapabilityProvider for BreakpointCapabilityProvider {
     fn open(
         &self,
         _flags: u32,
@@ -123,7 +129,7 @@ impl ExternalCapabilityProvider {
     }
 }
 
-impl ComponentManagerCapabilityProvider for ExternalCapabilityProvider {
+impl CapabilityProvider for ExternalCapabilityProvider {
     fn open(
         &self,
         _flags: u32,
@@ -225,38 +231,43 @@ async fn serve_receiver(
 
 fn maybe_create_event_payload(event_payload: EventPayload) -> Option<fbreak::EventPayload> {
     match event_payload {
-        EventPayload::RouteFrameworkCapability { capability, capability_provider, .. } => {
+        EventPayload::RouteCapability { source, capability_provider, .. } => {
             let routing_protocol = Some(serve_routing_protocol_async(capability_provider));
-            let capability = match capability {
-                ComponentManagerCapability::Service(path) => path.to_string(),
-                ComponentManagerCapability::ServiceProtocol(path) => path.to_string(),
-                ComponentManagerCapability::Directory(path) => path.to_string(),
-                ComponentManagerCapability::Runner(name) => name.to_string(),
-            };
-            let capability = Some(capability);
-            let routing_payload = Some(fbreak::RoutingPayload { routing_protocol, capability });
+
+            // Runners are special. They do not have a path, so their name is the capability ID.
+            let capability_id = Some(
+                if let CapabilitySource::Framework {
+                    capability: FrameworkCapability::Runner(name),
+                    ..
+                } = &source
+                {
+                    name.to_string()
+                } else if let Some(path) = source.path() {
+                    path.to_string()
+                } else {
+                    return None;
+                },
+            );
+
+            let source = Some(match source {
+                CapabilitySource::Framework { scope_realm, .. } => {
+                    fbreak::CapabilitySource::Framework(fbreak::FrameworkCapability {
+                        scope_moniker: scope_realm.map(|realm| realm.abs_moniker.to_string()),
+                        ..fbreak::FrameworkCapability::empty()
+                    })
+                }
+                CapabilitySource::Component { source_realm, .. } => {
+                    fbreak::CapabilitySource::Component(fbreak::ComponentCapability {
+                        source_moniker: Some(source_realm.abs_moniker.to_string()),
+                        ..fbreak::ComponentCapability::empty()
+                    })
+                }
+                _ => return None,
+            });
+
+            let routing_payload =
+                Some(fbreak::RoutingPayload { routing_protocol, capability_id, source });
             Some(fbreak::EventPayload { routing_payload, ..fbreak::EventPayload::empty() })
-        }
-        EventPayload::RouteBuiltinCapability { capability, capability_provider, .. } => {
-            let routing_protocol = Some(serve_routing_protocol_async(capability_provider));
-            let capability = match capability {
-                ComponentManagerCapability::Service(path) => path.to_string(),
-                ComponentManagerCapability::ServiceProtocol(path) => path.to_string(),
-                ComponentManagerCapability::Directory(path) => path.to_string(),
-                ComponentManagerCapability::Runner(name) => name.to_string(),
-            };
-            let capability = Some(capability);
-            let routing_payload = Some(fbreak::RoutingPayload { routing_protocol, capability });
-            Some(fbreak::EventPayload { routing_payload, ..fbreak::EventPayload::empty() })
-        }
-        EventPayload::UseCapability { use_, .. } => {
-            let capability = use_
-                .path()
-                .expect("UseCapability only works with path-based capabilities")
-                .to_string();
-            let capability = Some(capability);
-            let use_capability_payload = Some(fbreak::UseCapabilityPayload { capability });
-            Some(fbreak::EventPayload { use_capability_payload, ..fbreak::EventPayload::empty() })
         }
         _ => None,
     }
@@ -274,7 +285,7 @@ fn create_invocation_fidl_object(invocation: Invocation) -> fbreak::Invocation {
 
 /// Serves the server end of the RoutingProtocol FIDL protocol asynchronously.
 fn serve_routing_protocol_async(
-    capability_provider: Arc<Mutex<Option<Box<dyn ComponentManagerCapabilityProvider>>>>,
+    capability_provider: Arc<Mutex<Option<Box<dyn CapabilityProvider>>>>,
 ) -> ClientEnd<fbreak::RoutingProtocolMarker> {
     let (client_end, stream) = create_request_stream::<fbreak::RoutingProtocolMarker>()
         .expect("failed to create request stream for RoutingProtocol");
@@ -286,7 +297,7 @@ fn serve_routing_protocol_async(
 
 /// Serves RoutingProtocol FIDL requests received over the provided stream.
 async fn serve_routing_protocol(
-    capability_provider: Arc<Mutex<Option<Box<dyn ComponentManagerCapabilityProvider>>>>,
+    capability_provider: Arc<Mutex<Option<Box<dyn CapabilityProvider>>>>,
     mut stream: fbreak::RoutingProtocolRequestStream,
 ) {
     while let Some(Ok(fbreak::RoutingProtocolRequest::SetProvider { client_end, responder })) =
@@ -320,11 +331,9 @@ fn convert_fidl_event_type_to_std(event_type: fbreak::EventType) -> EventType {
         fbreak::EventType::PostDestroyInstance => EventType::PostDestroyInstance,
         fbreak::EventType::PreDestroyInstance => EventType::PreDestroyInstance,
         fbreak::EventType::RootComponentResolved => EventType::RootComponentResolved,
-        fbreak::EventType::RouteBuiltinCapability => EventType::RouteBuiltinCapability,
-        fbreak::EventType::RouteFrameworkCapability => EventType::RouteFrameworkCapability,
+        fbreak::EventType::RouteCapability => EventType::RouteCapability,
         fbreak::EventType::StartInstance => EventType::StartInstance,
         fbreak::EventType::StopInstance => EventType::StopInstance,
-        fbreak::EventType::UseCapability => EventType::UseCapability,
     }
 }
 
@@ -334,10 +343,8 @@ fn convert_std_event_type_to_fidl(event_type: EventType) -> fbreak::EventType {
         EventType::PostDestroyInstance => fbreak::EventType::PostDestroyInstance,
         EventType::PreDestroyInstance => fbreak::EventType::PreDestroyInstance,
         EventType::RootComponentResolved => fbreak::EventType::RootComponentResolved,
-        EventType::RouteBuiltinCapability => fbreak::EventType::RouteBuiltinCapability,
-        EventType::RouteFrameworkCapability => fbreak::EventType::RouteFrameworkCapability,
+        EventType::RouteCapability => fbreak::EventType::RouteCapability,
         EventType::StartInstance => fbreak::EventType::StartInstance,
         EventType::StopInstance => fbreak::EventType::StopInstance,
-        EventType::UseCapability => fbreak::EventType::UseCapability,
     }
 }

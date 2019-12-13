@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        capability::{ComponentManagerCapability, ComponentManagerCapabilityProvider},
+        capability::{CapabilityProvider, CapabilitySource, FrameworkCapability},
         model::{
             binding::Binder,
             error::ModelError,
@@ -67,7 +67,7 @@ impl RealmCapabilityProvider {
     }
 }
 
-impl ComponentManagerCapabilityProvider for RealmCapabilityProvider {
+impl CapabilityProvider for RealmCapabilityProvider {
     fn open(
         &self,
         flags: u32,
@@ -97,7 +97,7 @@ impl RealmCapabilityHost {
 
     pub fn hooks(&self) -> Vec<HooksRegistration> {
         vec![HooksRegistration {
-            events: vec![EventType::RouteFrameworkCapability],
+            events: vec![EventType::RouteCapability],
             callback: Arc::downgrade(&self.inner) as Weak<dyn Hook>,
         }]
     }
@@ -310,22 +310,22 @@ impl RealmCapabilityHostInner {
         Ok(())
     }
 
-    async fn on_route_framework_capability_async<'a>(
+    async fn on_route_scoped_framework_capability_async<'a>(
         self: Arc<Self>,
         realm: Arc<Realm>,
-        capability: &'a ComponentManagerCapability,
-        capability_provider: Option<Box<dyn ComponentManagerCapabilityProvider>>,
-    ) -> Result<Option<Box<dyn ComponentManagerCapabilityProvider>>, ModelError> {
+        capability: &'a FrameworkCapability,
+        capability_provider: Option<Box<dyn CapabilityProvider>>,
+    ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         // If some other capability has already been installed, then there's nothing to
         // do here.
         match (&capability_provider, capability) {
-            (None, ComponentManagerCapability::ServiceProtocol(capability_path))
+            (None, FrameworkCapability::ServiceProtocol(capability_path))
                 if *capability_path == *REALM_SERVICE =>
             {
                 return Ok(Some(Box::new(RealmCapabilityProvider::new(
                     realm.clone(),
                     RealmCapabilityHost { inner: self.clone() },
-                )) as Box<dyn ComponentManagerCapabilityProvider>));
+                )) as Box<dyn CapabilityProvider>));
             }
             _ => return Ok(capability_provider),
         }
@@ -333,15 +333,17 @@ impl RealmCapabilityHostInner {
 }
 
 impl Hook for RealmCapabilityHostInner {
-    fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
+    fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
-            if let EventPayload::RouteFrameworkCapability { capability, capability_provider } =
-                &event.payload
+            if let EventPayload::RouteCapability {
+                source: CapabilitySource::Framework { capability, scope_realm: Some(scope_realm) },
+                capability_provider,
+            } = &event.payload
             {
                 let mut capability_provider = capability_provider.lock().await;
                 *capability_provider = self
-                    .on_route_framework_capability_async(
-                        event.target_realm.clone(),
+                    .on_route_scoped_framework_capability_async(
+                        scope_realm.clone(),
                         &capability,
                         capability_provider.take(),
                     )

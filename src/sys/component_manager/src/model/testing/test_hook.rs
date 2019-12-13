@@ -304,16 +304,16 @@ impl HubInjectionTestHook {
         HubInjectionTestHook {}
     }
 
-    pub async fn on_route_framework_capability_async<'a>(
+    pub async fn on_route_scoped_framework_capability_async<'a>(
         &'a self,
         realm: Arc<Realm>,
-        capability: &'a ComponentManagerCapability,
-        mut capability_provider: Option<Box<dyn ComponentManagerCapabilityProvider>>,
-    ) -> Result<Option<Box<dyn ComponentManagerCapabilityProvider>>, ModelError> {
+        capability: &'a FrameworkCapability,
+        mut capability_provider: Option<Box<dyn CapabilityProvider>>,
+    ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         // This Hook is about injecting itself between the Hub and the Model.
         // If the Hub hasn't been installed, then there's nothing to do here.
         let mut relative_path = match (&capability_provider, capability) {
-            (Some(_), ComponentManagerCapability::Directory(source_path)) => source_path.split(),
+            (Some(_), FrameworkCapability::Directory(source_path)) => source_path.split(),
             _ => return Ok(capability_provider),
         };
 
@@ -330,15 +330,17 @@ impl HubInjectionTestHook {
 }
 
 impl Hook for HubInjectionTestHook {
-    fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
+    fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
-            if let EventPayload::RouteFrameworkCapability { capability, capability_provider } =
-                &event.payload
+            if let EventPayload::RouteCapability {
+                source: CapabilitySource::Framework { capability, scope_realm: Some(scope_realm) },
+                capability_provider,
+            } = &event.payload
             {
                 let mut capability_provider = capability_provider.lock().await;
                 *capability_provider = self
-                    .on_route_framework_capability_async(
-                        event.target_realm.clone(),
+                    .on_route_scoped_framework_capability_async(
+                        scope_realm.clone(),
                         capability,
                         capability_provider.take(),
                     )
@@ -352,14 +354,14 @@ impl Hook for HubInjectionTestHook {
 struct HubInjectionCapabilityProvider {
     abs_moniker: AbsoluteMoniker,
     relative_path: Vec<String>,
-    intercepted_capability: Box<dyn ComponentManagerCapabilityProvider>,
+    intercepted_capability: Box<dyn CapabilityProvider>,
 }
 
 impl HubInjectionCapabilityProvider {
     pub fn new(
         abs_moniker: AbsoluteMoniker,
         relative_path: Vec<String>,
-        intercepted_capability: Box<dyn ComponentManagerCapabilityProvider>,
+        intercepted_capability: Box<dyn CapabilityProvider>,
     ) -> Self {
         HubInjectionCapabilityProvider { abs_moniker, relative_path, intercepted_capability }
     }
@@ -400,7 +402,7 @@ impl HubInjectionCapabilityProvider {
     }
 }
 
-impl ComponentManagerCapabilityProvider for HubInjectionCapabilityProvider {
+impl CapabilityProvider for HubInjectionCapabilityProvider {
     fn open(
         &self,
         flags: u32,

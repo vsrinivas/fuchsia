@@ -225,17 +225,15 @@ impl BreakpointSystem {
                     EventType::PostDestroyInstance,
                     EventType::PreDestroyInstance,
                     EventType::RootComponentResolved,
-                    EventType::RouteFrameworkCapability,
-                    EventType::RouteBuiltinCapability,
+                    EventType::RouteCapability,
                     EventType::StartInstance,
                     EventType::StopInstance,
-                    EventType::UseCapability,
                 ],
                 callback: Arc::downgrade(&self.hook) as Weak<dyn Hook>,
             },
             // This hook provides the Breakpoint capability to components in the tree
             HooksRegistration {
-                events: vec![EventType::RouteFrameworkCapability],
+                events: vec![EventType::RouteCapability],
                 callback: Arc::downgrade(&self.capability_hook) as Weak<dyn Hook>,
             },
         ]

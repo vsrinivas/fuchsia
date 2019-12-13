@@ -43,6 +43,7 @@ test_package("hub_integration_test") {
     "components:advanced_routing_reporter_bin",
     "components:dynamic_child_reporter_bin",
     "components:simple_component_bin",
+    "components:used_service_reporter_bin",
     "components:visibility_reporter_bin",
     "//examples/components/routing/echo_server",
   ]
@@ -58,7 +59,15 @@ test_package("hub_integration_test") {
     },
     {
       path = rebase_path("components/advanced_routing/meta/echo_realm.cml")
-      dest = "echo_realm.cm"
+      dest = "advanced_routing_echo_realm.cm"
+    },
+    {
+      path = rebase_path("components/used_service/meta/reporter.cml")
+      dest = "used_service_reporter.cm"
+    },
+    {
+      path = rebase_path("components/used_service/meta/echo_realm.cml")
+      dest = "used_service_echo_realm.cm"
     },
     {
       path = rebase_path("components/dynamic_child/meta/reporter.cml")
@@ -91,6 +100,9 @@ test_package("hub_integration_test") {
     },
     {
       name = "advanced_routing_reporter"
+    },
+    {
+      name = "used_service_reporter"
     },
     {
       name = "simple"

@@ -17,16 +17,15 @@ pub(crate) mod actions;
 pub(crate) mod breakpoints;
 pub(crate) mod resolver;
 pub(crate) mod routing;
+pub(crate) mod routing_facade;
 pub(crate) mod runner;
 pub(crate) mod shutdown;
 
 mod addable_directory;
 mod breakpoints_capability;
-mod capability;
 mod dir_tree;
 mod exposed_dir;
 mod namespace;
-mod routing_facade;
 mod storage;
 #[cfg(test)]
 mod tests;

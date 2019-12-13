@@ -19,7 +19,6 @@
         {
             "service_protocol": [
                 "/svc/fuchsia.test.hub.HubReport",
-                "/svc/fuchsia.test.breakpoints.BreakpointSystem",
             ],
             "from": "framework"
         },

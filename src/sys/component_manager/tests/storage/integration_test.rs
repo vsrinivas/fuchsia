@@ -79,8 +79,7 @@ async fn storage_from_collection() -> Result<(), Error> {
     let receiver = breakpoint_system
         .set_breakpoints(vec![StartInstance::TYPE, PostDestroyInstance::TYPE])
         .await?;
-    let bind_receiver =
-        breakpoint_system.set_breakpoints(vec![RouteFrameworkCapability::TYPE]).await?;
+    let bind_receiver = breakpoint_system.set_breakpoints(vec![RouteCapability::TYPE]).await?;
 
     breakpoint_system.start_component_manager().await?;
 
@@ -89,8 +88,9 @@ async fn storage_from_collection() -> Result<(), Error> {
     invocation.resume().await?;
 
     // The root component connects to the Realm service to start the dynamic child
-    let invocation =
-        bind_receiver.wait_until_route_framework_capability("/", "/svc/fuchsia.sys2.Realm").await?;
+    let invocation = bind_receiver
+        .wait_until_framework_capability("/", "/svc/fuchsia.sys2.Realm", Some("/"))
+        .await?;
     invocation.resume().await?;
 
     // Expect 2 children to be started - one static and one dynamic
@@ -111,7 +111,7 @@ async fn storage_from_collection() -> Result<(), Error> {
 
     // The root component connects to the Trigger service to start the dynamic child
     let invocation = bind_receiver
-        .wait_until_route_framework_capability("/", "/svc/fidl.test.components.Trigger")
+        .wait_until_framework_capability("/", "/svc/fidl.test.components.Trigger", Some("/"))
         .await?;
     invocation.inject(serve_trigger_capability_async()).await?;
     invocation.resume().await?;

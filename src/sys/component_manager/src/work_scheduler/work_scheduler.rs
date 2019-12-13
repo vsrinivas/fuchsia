@@ -157,7 +157,7 @@ mod time_tests {
     use {
         super::WorkScheduler,
         crate::{
-            model::{binding::Binder, testing::mocks::FakeBinder, moniker::AbsoluteMoniker},
+            model::{binding::Binder, moniker::AbsoluteMoniker, testing::mocks::FakeBinder},
             work_scheduler::{
                 dispatcher::{Dispatcher, Error},
                 work_item::WorkItem,
@@ -716,11 +716,12 @@ mod connect_tests {
     use {
         super::{WorkScheduler, WORK_SCHEDULER_CONTROL_CAPABILITY_PATH},
         crate::{
-            capability::ComponentManagerCapability,
+            capability::{CapabilitySource, FrameworkCapability},
             model::{
                 hooks::{Event, EventPayload, Hooks},
+                realm::Realm,
+                resolver::ResolverRegistry,
                 testing::mocks::FakeBinder,
-                realm::Realm, resolver::ResolverRegistry,
             },
         },
         failure::Error,
@@ -741,9 +742,12 @@ mod connect_tests {
         hooks.install(WorkScheduler::hooks(&work_scheduler)).await;
 
         let capability_provider = Arc::new(Mutex::new(None));
-        let capability = ComponentManagerCapability::ServiceProtocol(
-            WORK_SCHEDULER_CONTROL_CAPABILITY_PATH.clone(),
-        );
+        let source = CapabilitySource::Framework {
+            capability: FrameworkCapability::ServiceProtocol(
+                WORK_SCHEDULER_CONTROL_CAPABILITY_PATH.clone(),
+            ),
+            scope_realm: None,
+        };
 
         let (client, server) = zx::Channel::create()?;
 
@@ -754,8 +758,8 @@ mod connect_tests {
         };
         let event = Event {
             target_realm: realm.clone(),
-            payload: EventPayload::RouteBuiltinCapability {
-                capability: capability.clone(),
+            payload: EventPayload::RouteCapability {
+                source,
                 capability_provider: capability_provider.clone(),
             },
         };

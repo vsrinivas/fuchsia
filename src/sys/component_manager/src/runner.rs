@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 use {
     crate::{
-        capability::{ComponentManagerCapability, ComponentManagerCapabilityProvider},
+        capability::{CapabilityProvider, CapabilitySource, FrameworkCapability},
         model::{
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
@@ -34,25 +34,27 @@ impl BuiltinRunner {
         BuiltinRunner { inner: Arc::new(BuiltinRunnerInner { name, runner }) }
     }
 
-    /// Construct a `HooksRegistration` that will route our runner as a builtin capability.
+    /// Construct a `HooksRegistration` that will route our runner as a framework capability.
     pub fn hook(&self) -> HooksRegistration {
         HooksRegistration {
-            events: vec![EventType::RouteBuiltinCapability],
+            events: vec![EventType::RouteCapability],
             callback: Arc::downgrade(&self.inner) as Weak<dyn Hook>,
         }
     }
 }
 
 impl Hook for BuiltinRunnerInner {
-    fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
+    fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
-            if let EventPayload::RouteBuiltinCapability { capability, capability_provider } =
-                &event.payload
+            if let EventPayload::RouteCapability {
+                source: CapabilitySource::Framework { capability, scope_realm: None },
+                capability_provider,
+            } = &event.payload
             {
                 // If we are being asked about the runner capability we own, pass a
                 // copy back to the caller.
                 let mut capability_provider = capability_provider.lock().await;
-                if let ComponentManagerCapability::Runner(runner_name) = capability {
+                if let FrameworkCapability::Runner(runner_name) = capability {
                     if self.name == *runner_name {
                         *capability_provider =
                             Some(Box::new(RunnerCapabilityProvider::new(self.runner.clone())));
@@ -103,7 +105,7 @@ impl RunnerCapabilityProvider {
     }
 }
 
-impl ComponentManagerCapabilityProvider for RunnerCapabilityProvider {
+impl CapabilityProvider for RunnerCapabilityProvider {
     fn open(
         &self,
         flags: u32,
@@ -164,8 +166,11 @@ mod tests {
         hooks
             .dispatch(&Event {
                 target_realm: Arc::new(create_test_realm()),
-                payload: EventPayload::RouteBuiltinCapability {
-                    capability: ComponentManagerCapability::Runner("elf".into()),
+                payload: EventPayload::RouteCapability {
+                    source: CapabilitySource::Framework {
+                        capability: FrameworkCapability::Runner("elf".into()),
+                        scope_realm: None,
+                    },
                     capability_provider: provider_result.clone(),
                 },
             })

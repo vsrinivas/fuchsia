@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        capability::{ComponentManagerCapability, ComponentManagerCapabilityProvider},
+        capability::{CapabilityProvider, CapabilitySource, FrameworkCapability},
         model::{
             actions::Action,
             error::ModelError,
@@ -45,7 +45,7 @@ impl SystemController {
 
     pub fn hooks(&self) -> Vec<HooksRegistration> {
         vec![HooksRegistration {
-            events: vec![EventType::RouteBuiltinCapability],
+            events: vec![EventType::RouteCapability],
             callback: Arc::downgrade(&self.inner) as Weak<dyn Hook>,
         }]
     }
@@ -60,17 +60,17 @@ impl SystemControllerInner {
         Self { model }
     }
 
-    async fn on_route_builtin_capability_async<'a>(
+    async fn on_route_framework_capability_async<'a>(
         self: Arc<Self>,
-        capability: &'a ComponentManagerCapability,
-        capability_provider: Option<Box<dyn ComponentManagerCapabilityProvider>>,
-    ) -> Result<Option<Box<dyn ComponentManagerCapabilityProvider>>, ModelError> {
+        capability: &'a FrameworkCapability,
+        capability_provider: Option<Box<dyn CapabilityProvider>>,
+    ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         match capability {
-            ComponentManagerCapability::ServiceProtocol(capability_path)
+            FrameworkCapability::ServiceProtocol(capability_path)
                 if *capability_path == *SYSTEM_CONTROLLER_CAPABILITY_PATH =>
             {
                 Ok(Some(Box::new(SystemControllerCapabilityProvider::new(self.model.clone()))
-                    as Box<dyn ComponentManagerCapabilityProvider>))
+                    as Box<dyn CapabilityProvider>))
             }
             _ => Ok(capability_provider),
         }
@@ -78,16 +78,17 @@ impl SystemControllerInner {
 }
 
 impl Hook for SystemControllerInner {
-    fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
+    fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
-            match &event.payload {
-                EventPayload::RouteBuiltinCapability { capability, capability_provider } => {
-                    let mut capability_provider = capability_provider.lock().await;
-                    *capability_provider = self
-                        .on_route_builtin_capability_async(&capability, capability_provider.take())
-                        .await?;
-                }
-                _ => {}
+            if let EventPayload::RouteCapability {
+                source: CapabilitySource::Framework { capability, scope_realm: None },
+                capability_provider,
+            } = &event.payload
+            {
+                let mut capability_provider = capability_provider.lock().await;
+                *capability_provider = self
+                    .on_route_framework_capability_async(&capability, capability_provider.take())
+                    .await?;
             };
             Ok(())
         })
@@ -148,7 +149,7 @@ impl SystemControllerCapabilityProvider {
     }
 }
 
-impl ComponentManagerCapabilityProvider for SystemControllerCapabilityProvider {
+impl CapabilityProvider for SystemControllerCapabilityProvider {
     fn open(
         &self,
         _flags: u32,
@@ -173,7 +174,7 @@ impl ComponentManagerCapabilityProvider for SystemControllerCapabilityProvider {
 #[cfg(test)]
 mod tests {
     use {
-        crate::capability::ComponentManagerCapabilityProvider,
+        crate::capability::CapabilityProvider,
         crate::model::{
             binding::Binder,
             testing::test_helpers::{default_component_decl, ActionsTest, ComponentInfo},

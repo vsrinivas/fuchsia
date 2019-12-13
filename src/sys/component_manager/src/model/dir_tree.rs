@@ -3,11 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::{
-        addable_directory::{AddableDirectory, AddableDirectoryWithResult},
-        error::ModelError,
-        moniker::AbsoluteMoniker,
-        routing_facade::RoutingFacade,
+    crate::{
+        capability::CapabilitySource,
+        model::{
+            addable_directory::{AddableDirectory, AddableDirectoryWithResult},
+            error::ModelError,
+            moniker::AbsoluteMoniker,
+            routing_facade::RoutingFacade,
+        },
     },
     cm_rust::{CapabilityPath, ComponentDecl, ExposeDecl, UseDecl},
     directory_broker::{DirectoryBroker, RoutingFn},
@@ -32,15 +35,19 @@ impl CapabilityUsageTree {
     pub async fn mark_capability_used(
         &mut self,
         abs_moniker: &AbsoluteMoniker,
-        use_: UseDecl,
+        source: CapabilitySource,
     ) -> Result<(), ModelError> {
-        // TODO(xbhatnag): Currently only service uses are sent as events
-        // Hence, the UseDecl must always have a CapabilityPath.
-        let path = use_.path().expect("mark_capability_used: UseDecl must have path");
+        // Do nothing for capabilities without paths
+        let path = {
+            match source.path() {
+                Some(path) => path,
+                None => return Ok(()),
+            }
+        };
         let basename = path.basename.to_string();
         let tree = self.to_directory_node(path, abs_moniker).await?;
-        let routing_factory = tree.routing_facade.route_use_fn_factory();
-        let routing_fn = routing_factory(abs_moniker.clone(), use_);
+        let routing_factory = tree.routing_facade.route_capability_source_fn_factory();
+        let routing_fn = routing_factory(abs_moniker.clone(), source);
 
         let node = DirectoryBroker::new(routing_fn);
 

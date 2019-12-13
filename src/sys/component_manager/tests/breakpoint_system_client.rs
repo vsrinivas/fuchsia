@@ -80,7 +80,7 @@ impl InvocationReceiverClient {
     /// Expects the next invocation to be of a particular type.
     /// Returns the casted type if successful and an error otherwise.
     pub async fn expect_type<T: Invocation>(&self) -> Result<T, Error> {
-        let invocation = self.proxy.next().await?;
+        let invocation = self.next().await?;
         T::from_fidl(invocation)
     }
 
@@ -107,53 +107,69 @@ impl InvocationReceiverClient {
         }
     }
 
-    /// Waits for an invocation of a particular type and moniker.
+    /// Waits for an invocation of a particular type and target moniker.
     /// Implicitly resumes all other invocations.
     /// Returns the casted type if successful and an error otherwise.
     pub async fn wait_until_exact<T: Invocation>(
         &self,
-        expected_moniker: &str,
+        expected_target_moniker: &str,
     ) -> Result<T, Error> {
         loop {
             let invocation = self.wait_until_type::<T>().await?;
-            if invocation.target_moniker() == expected_moniker {
+            if invocation.target_moniker() == expected_target_moniker {
                 return Ok(invocation);
             }
             invocation.resume().await?;
         }
     }
 
-    /// Waits for a UseCapability invocation of a particular moniker and capability path.
-    /// Implicitly resumes all other invocations.
+    /// Waits for a component capability to be routed matching a particular
+    /// target moniker and capability. Implicitly resumes all other invocations.
     /// Returns the casted type if successful and an error otherwise.
-    pub async fn wait_until_use_capability(
+    pub async fn wait_until_component_capability(
         &self,
-        expected_moniker: &str,
-        expected_capability_path: &str,
-    ) -> Result<UseCapability, Error> {
-        loop {
-            let invocation = self.wait_until_exact::<UseCapability>(expected_moniker).await?;
-            if expected_capability_path == invocation.capability {
-                return Ok(invocation);
-            }
-            invocation.resume().await?;
-        }
-    }
-
-    /// Waits for a RouteFrameworkCapability invocation of a particular moniker and capability path.
-    /// Implicitly resumes all other invocations.
-    /// Returns the casted type if successful and an error otherwise.
-    pub async fn wait_until_route_framework_capability(
-        &self,
-        expected_moniker: &str,
-        expected_capability: &str,
-    ) -> Result<RouteFrameworkCapability, Error> {
+        expected_target_moniker: &str,
+        expected_capability_id: &str,
+    ) -> Result<RouteCapability, Error> {
         loop {
             let invocation =
-                self.wait_until_exact::<RouteFrameworkCapability>(expected_moniker).await?;
-            if expected_capability == invocation.capability {
-                return Ok(invocation);
+                self.wait_until_exact::<RouteCapability>(expected_target_moniker).await?;
+            if expected_capability_id == invocation.capability_id {
+                match invocation.source {
+                    fbreak::CapabilitySource::Component(_) => return Ok(invocation),
+                    _ => {}
+                }
             }
+            invocation.resume().await?;
+        }
+    }
+
+    /// Waits for a framework capability to be routed matching a particular
+    /// target moniker, scope moniker and capability. Implicitly resumes all other invocations.
+    /// Returns the casted type if successful and an error otherwise.
+    pub async fn wait_until_framework_capability(
+        &self,
+        expected_target_moniker: &str,
+        expected_capability_id: &str,
+        expected_scope_moniker: Option<&str>,
+    ) -> Result<RouteCapability, Error> {
+        loop {
+            let invocation =
+                self.wait_until_exact::<RouteCapability>(expected_target_moniker).await?;
+            let expected_scope_moniker = expected_scope_moniker.map(|m| m.to_string());
+
+            // If the capability ID matches and the capability source is framework
+            // with a matching optional scope moniker, then return the invocation.
+            if expected_capability_id == invocation.capability_id {
+                match &invocation.source {
+                    fbreak::CapabilitySource::Framework(fbreak::FrameworkCapability {
+                        scope_moniker: expected_scope_moniker,
+                        ..
+                    }) => return Ok(invocation),
+                    _ => {}
+                }
+            }
+
             invocation.resume().await?;
         }
     }
@@ -453,12 +469,16 @@ create_event!(RootComponentResolved);
 create_event!(StartInstance);
 create_event!(StopInstance);
 create_event!(
-    event_type: RouteBuiltinCapability,
+    event_type: RouteCapability,
     payload: {
         name: routing_payload,
         data: {
             {
-                name: capability,
+                name: source,
+                ty: fbreak::CapabilitySource,
+            }
+            {
+                name: capability_id,
                 ty: String,
             }
         },
@@ -469,37 +489,5 @@ create_event!(
                 trait_name: RoutingProtocol,
             }
         },
-    }
-);
-create_event!(
-    event_type: RouteFrameworkCapability,
-    payload: {
-        name: routing_payload,
-        data: {
-            {
-                name: capability,
-                ty: String,
-            }
-        },
-        protocols: {
-            {
-                name: routing_protocol,
-                ty: fbreak::RoutingProtocolProxy,
-                trait_name: RoutingProtocol,
-            }
-        },
-    }
-);
-create_event!(
-    event_type: UseCapability,
-    payload: {
-        name: use_capability_payload,
-        data: {
-            {
-                name: capability,
-                ty: String,
-            }
-        },
-        protocols: {},
     }
 );

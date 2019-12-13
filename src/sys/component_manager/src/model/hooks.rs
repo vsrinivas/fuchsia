@@ -4,10 +4,10 @@
 
 use {
     crate::{
-        capability::{ComponentManagerCapability, ComponentManagerCapabilityProvider},
+        capability::{CapabilityProvider, CapabilitySource},
         model::{error::ModelError, realm::Realm, routing_facade::RoutingFacade},
     },
-    cm_rust::{ComponentDecl, UseDecl},
+    cm_rust::ComponentDecl,
     fuchsia_trace as trace,
     futures::{future::BoxFuture, lock::Mutex},
     std::{
@@ -37,13 +37,9 @@ pub enum EventType {
     /// The root component instance's declaration was resolved successfully for the first time.
     RootComponentResolved,
 
-    /// A builtin capability is being requested by a component and requires routing.
+    /// A capability is being requested by a component and requires routing.
     /// The event propagation system is used to supply the capability being requested.
-    RouteBuiltinCapability,
-
-    /// A framework capability is being requested by a component and requires routing.
-    /// The event propagation system is used to supply the capability being requested.
-    RouteFrameworkCapability,
+    RouteCapability,
 
     /// An instance was bound to. If the instance is executable, it is also started.
     StartInstance,
@@ -51,10 +47,6 @@ pub enum EventType {
     /// An instance was stopped successfully.
     /// This event must occur before PostDestroyInstance.
     StopInstance,
-
-    /// A capability was used by an instance. An instance uses a capability when
-    /// it creates a channel and provides the server end to ComponentManager for routing.
-    UseCapability,
 }
 
 /// The component manager calls out to objects that implement the `Hook` trait on registered
@@ -62,7 +54,7 @@ pub enum EventType {
 /// capabilities. This permits `Hook` to serve as a point of extensibility for the component
 /// manager.
 pub trait Hook: Send + Sync {
-    fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>>;
+    fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>>;
 }
 
 /// An object registers a hook into a component manager event via a `HooksRegistration` object.
@@ -81,19 +73,12 @@ pub enum EventPayload {
     PostDestroyInstance,
     PreDestroyInstance,
     RootComponentResolved,
-    RouteBuiltinCapability {
-        capability: ComponentManagerCapability,
+    RouteCapability {
+        source: CapabilitySource,
         // Events are passed to hooks as immutable borrows. In order to mutate,
         // a field within an Event, interior mutability is employed here with
         // a Mutex.
-        capability_provider: Arc<Mutex<Option<Box<dyn ComponentManagerCapabilityProvider>>>>,
-    },
-    RouteFrameworkCapability {
-        capability: ComponentManagerCapability,
-        // Events are passed to hooks as immutable borrows. In order to mutate,
-        // a field within an Event, interior mutability is employed here with
-        // a Mutex.
-        capability_provider: Arc<Mutex<Option<Box<dyn ComponentManagerCapabilityProvider>>>>,
+        capability_provider: Arc<Mutex<Option<Box<dyn CapabilityProvider>>>>,
     },
     StartInstance {
         component_decl: ComponentDecl,
@@ -101,9 +86,6 @@ pub enum EventPayload {
         routing_facade: RoutingFacade,
     },
     StopInstance,
-    UseCapability {
-        use_: UseDecl,
-    },
 }
 
 impl EventPayload {
@@ -113,11 +95,9 @@ impl EventPayload {
             EventPayload::PostDestroyInstance => EventType::PostDestroyInstance,
             EventPayload::PreDestroyInstance => EventType::PreDestroyInstance,
             EventPayload::RootComponentResolved => EventType::RootComponentResolved,
-            EventPayload::RouteBuiltinCapability { .. } => EventType::RouteBuiltinCapability,
-            EventPayload::RouteFrameworkCapability { .. } => EventType::RouteFrameworkCapability,
+            EventPayload::RouteCapability { .. } => EventType::RouteCapability,
             EventPayload::StartInstance { .. } => EventType::StartInstance,
             EventPayload::StopInstance => EventType::StopInstance,
-            EventPayload::UseCapability { .. } => EventType::UseCapability,
         }
     }
 }
@@ -132,16 +112,12 @@ impl fmt::Debug for EventPayload {
             | EventPayload::PreDestroyInstance
             | EventPayload::RootComponentResolved
             | EventPayload::StopInstance => formatter.finish(),
-            EventPayload::RouteBuiltinCapability { capability, .. } => {
-                formatter.field("capability", &capability).finish()
-            }
-            EventPayload::RouteFrameworkCapability { capability, .. } => {
+            EventPayload::RouteCapability { source: capability, .. } => {
                 formatter.field("capability", &capability).finish()
             }
             EventPayload::StartInstance { component_decl, .. } => {
                 formatter.field("component_decl", &component_decl).finish()
             }
-            EventPayload::UseCapability { use_ } => formatter.field("use_decl", &use_).finish(),
         }
     }
 }

@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        capability::{ComponentManagerCapability, ComponentManagerCapabilityProvider},
+        capability::{CapabilityProvider, CapabilitySource, FrameworkCapability},
         model::{
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
@@ -89,7 +89,7 @@ impl ProcessLauncher {
 
     pub fn hooks(&self) -> Vec<HooksRegistration> {
         vec![HooksRegistration {
-            events: vec![EventType::RouteBuiltinCapability],
+            events: vec![EventType::RouteCapability],
             callback: Arc::downgrade(&self.inner) as Weak<dyn Hook>,
         }]
     }
@@ -253,17 +253,17 @@ impl ProcessLauncherInner {
         Self {}
     }
 
-    async fn on_route_builtin_capability_async<'a>(
+    async fn on_route_framework_capability_async<'a>(
         self: Arc<Self>,
-        capability: &'a ComponentManagerCapability,
-        capability_provider: Option<Box<dyn ComponentManagerCapabilityProvider>>,
-    ) -> Result<Option<Box<dyn ComponentManagerCapabilityProvider>>, ModelError> {
+        capability: &'a FrameworkCapability,
+        capability_provider: Option<Box<dyn CapabilityProvider>>,
+    ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         match capability {
-            ComponentManagerCapability::ServiceProtocol(capability_path)
+            FrameworkCapability::ServiceProtocol(capability_path)
                 if *capability_path == *PROCESS_LAUNCHER_CAPABILITY_PATH =>
             {
                 Ok(Some(Box::new(ProcessLauncherCapabilityProvider::new())
-                    as Box<dyn ComponentManagerCapabilityProvider>))
+                    as Box<dyn CapabilityProvider>))
             }
             _ => Ok(capability_provider),
         }
@@ -271,16 +271,17 @@ impl ProcessLauncherInner {
 }
 
 impl Hook for ProcessLauncherInner {
-    fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
+    fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
-            match &event.payload {
-                EventPayload::RouteBuiltinCapability { capability, capability_provider } => {
-                    let mut capability_provider = capability_provider.lock().await;
-                    *capability_provider = self
-                        .on_route_builtin_capability_async(&capability, capability_provider.take())
-                        .await?;
-                }
-                _ => {}
+            if let EventPayload::RouteCapability {
+                source: CapabilitySource::Framework { capability, scope_realm: None },
+                capability_provider,
+            } = &event.payload
+            {
+                let mut capability_provider = capability_provider.lock().await;
+                *capability_provider = self
+                    .on_route_framework_capability_async(&capability, capability_provider.take())
+                    .await?;
             };
             Ok(())
         })
@@ -295,7 +296,7 @@ impl ProcessLauncherCapabilityProvider {
     }
 }
 
-impl ComponentManagerCapabilityProvider for ProcessLauncherCapabilityProvider {
+impl CapabilityProvider for ProcessLauncherCapabilityProvider {
     fn open(
         &self,
         _flags: u32,
@@ -376,8 +377,12 @@ mod tests {
         hooks.install(process_launcher.hooks()).await;
 
         let capability_provider = Arc::new(Mutex::new(None));
-        let capability =
-            ComponentManagerCapability::ServiceProtocol(PROCESS_LAUNCHER_CAPABILITY_PATH.clone());
+        let source = CapabilitySource::Framework {
+            capability: FrameworkCapability::ServiceProtocol(
+                PROCESS_LAUNCHER_CAPABILITY_PATH.clone(),
+            ),
+            scope_realm: None,
+        };
 
         let (client, server) = zx::Channel::create()?;
 
@@ -389,8 +394,8 @@ mod tests {
 
         let event = Event {
             target_realm: realm.clone(),
-            payload: EventPayload::RouteBuiltinCapability {
-                capability: capability.clone(),
+            payload: EventPayload::RouteCapability {
+                source,
                 capability_provider: capability_provider.clone(),
             },
         };

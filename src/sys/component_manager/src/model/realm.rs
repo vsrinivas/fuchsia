@@ -175,8 +175,10 @@ impl Realm {
     ) -> BoxFuture<'a, Result<Arc<dyn Runner + Send + Sync + 'static>, ModelError>> {
         async move {
             // Fetch component declaration.
-            let state = self.lock_state().await;
-            let decl = state.as_ref().expect("resolve_runner: not resolved").decl();
+            let decl = {
+                let state = self.lock_state().await;
+                state.as_ref().expect("resolve_runner: not resolved").decl().clone()
+            };
 
             // Find any explicit "use" runner declaration, resolve that.
             let runner_decl = decl.uses.iter().find_map(|u| match u {

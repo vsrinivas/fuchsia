@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        capability::{ComponentManagerCapability, ComponentManagerCapabilityProvider},
+        capability::{CapabilityProvider, CapabilitySource, FrameworkCapability},
         model::{
             addable_directory::AddableDirectoryWithResult,
             dir_tree::{CapabilityUsageTree, DirTree},
@@ -15,7 +15,7 @@ use {
             routing_facade::RoutingFacade,
         },
     },
-    cm_rust::{ComponentDecl, UseDecl},
+    cm_rust::ComponentDecl,
     directory_broker,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{DirectoryProxy, NodeMarker, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY},
@@ -74,7 +74,7 @@ impl HubCapabilityProvider {
     }
 }
 
-impl ComponentManagerCapabilityProvider for HubCapabilityProvider {
+impl CapabilityProvider for HubCapabilityProvider {
     fn open(
         &self,
         flags: u32,
@@ -134,10 +134,9 @@ impl Hub {
                 EventType::AddDynamicChild,
                 EventType::PostDestroyInstance,
                 EventType::PreDestroyInstance,
-                EventType::RouteFrameworkCapability,
+                EventType::RouteCapability,
                 EventType::StartInstance,
                 EventType::StopInstance,
-                EventType::UseCapability,
             ],
             callback: Arc::downgrade(&self.inner) as Weak<dyn Hook>,
         }]
@@ -486,45 +485,52 @@ impl HubInner {
         Ok(())
     }
 
-    async fn on_route_framework_capability_async<'a>(
+    async fn try_set_capability_provider<'a>(
         self: Arc<Self>,
-        realm: Arc<Realm>,
-        capability: &'a ComponentManagerCapability,
-        capability_provider: Option<Box<dyn ComponentManagerCapabilityProvider>>,
-    ) -> Result<Option<Box<dyn ComponentManagerCapabilityProvider>>, ModelError> {
-        // If this capability is not a directory, then it's not a hub capability.
-        let mut relative_path = match (&capability_provider, capability) {
-            (None, ComponentManagerCapability::Directory(source_path)) => source_path.split(),
-            _ => return Ok(capability_provider),
-        };
+        source: &'a CapabilitySource,
+        capability_provider: Arc<Mutex<Option<Box<dyn CapabilityProvider>>>>,
+    ) {
+        // If this is a scoped framework directory capability, then check the source path
+        if let CapabilitySource::Framework {
+            capability: FrameworkCapability::Directory(source_path),
+            scope_realm: Some(scope_realm),
+        } = source
+        {
+            let mut relative_path = source_path.split();
+            // The source path must begin with "hub"
+            if relative_path.is_empty() || relative_path.remove(0) != "hub" {
+                return;
+            }
 
-        // If this capability's source path doesn't begin with 'hub', then it's
-        // not a hub capability.
-        if relative_path.is_empty() || relative_path.remove(0) != "hub" {
-            return Ok(capability_provider);
+            // Set the capability provider, if not already set.
+            let mut capability_provider = capability_provider.lock().await;
+            if capability_provider.is_none() {
+                *capability_provider = Some(Box::new(HubCapabilityProvider::new(
+                    scope_realm.abs_moniker.clone(),
+                    relative_path,
+                    self,
+                )))
+            }
         }
-
-        Ok(Some(Box::new(HubCapabilityProvider::new(
-            realm.abs_moniker.clone(),
-            relative_path,
-            self.clone(),
-        ))))
     }
 
-    async fn on_capability_use_async(
-        &self,
-        realm: Arc<Realm>,
-        use_: UseDecl,
+    async fn on_route_capability_async(
+        self: Arc<Self>,
+        target_moniker: AbsoluteMoniker,
+        source: CapabilitySource,
+        capability_provider: Arc<Mutex<Option<Box<dyn CapabilityProvider>>>>,
     ) -> Result<(), ModelError> {
+        self.clone().try_set_capability_provider(&source, capability_provider).await;
+
         let mut instance_map = self.instances.lock().await;
         let execution = instance_map
-            .get_mut(&realm.abs_moniker)
-            .expect("A component that is using a service must exist in the instance map")
+            .get_mut(&target_moniker)
+            .expect("A component that is requesting a capability must exist in the instance map")
             .execution
             .as_mut()
-            .expect("A component that is using a service must have an execution.");
+            .expect("A component that is requesting a capability must have an execution.");
 
-        execution.capability_usage_tree.mark_capability_used(&realm.abs_moniker, use_).await?;
+        execution.capability_usage_tree.mark_capability_used(&target_moniker, source).await?;
 
         Ok(())
     }
@@ -537,7 +543,7 @@ impl HubInner {
 }
 
 impl Hook for HubInner {
-    fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
+    fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
             match &event.payload {
                 EventPayload::StartInstance {
@@ -565,18 +571,13 @@ impl Hook for HubInner {
                 EventPayload::PostDestroyInstance => {
                     self.on_post_destroy_instance_async(event.target_realm.clone()).await?;
                 }
-                EventPayload::RouteFrameworkCapability { capability, capability_provider } => {
-                    let mut capability_provider = capability_provider.lock().await;
-                    *capability_provider = self
-                        .on_route_framework_capability_async(
-                            event.target_realm.clone(),
-                            &capability,
-                            capability_provider.take(),
-                        )
-                        .await?;
-                }
-                EventPayload::UseCapability { use_ } => {
-                    self.on_capability_use_async(event.target_realm.clone(), use_.clone()).await?;
+                EventPayload::RouteCapability { source, capability_provider } => {
+                    self.on_route_capability_async(
+                        event.target_realm.abs_moniker.clone(),
+                        source.clone(),
+                        capability_provider.clone(),
+                    )
+                    .await?;
                 }
                 _ => {}
             };
@@ -853,7 +854,7 @@ mod tests {
                 runtime_host_fn: None,
             }],
             vec![HooksRegistration {
-                events: vec![EventType::RouteFrameworkCapability],
+                events: vec![EventType::RouteCapability],
                 callback: Arc::downgrade(&hub_injection_test_hook) as Weak<dyn Hook>,
             }],
         )

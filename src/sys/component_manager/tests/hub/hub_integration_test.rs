@@ -14,7 +14,7 @@ use {
 };
 
 pub struct TestRunner {
-    _test: BlackBoxTest,
+    pub test: BlackBoxTest,
     external_hub_v2_path: PathBuf,
     hub_report_capability: HubReportCapability,
 }
@@ -47,7 +47,7 @@ impl TestRunner {
             let start_receiver =
                 breakpoint_system.set_breakpoints(vec![StartInstance::TYPE]).await?;
             let route_receiver =
-                breakpoint_system.set_breakpoints(vec![RouteFrameworkCapability::TYPE]).await?;
+                breakpoint_system.set_breakpoints(vec![RouteCapability::TYPE]).await?;
 
             // Register for events which are required by this test runner.
             // TODO(xbhatnag): There may be problems here if event_types contains
@@ -65,10 +65,15 @@ impl TestRunner {
                 start_receiver.expect_type::<StartInstance>().await?.resume().await?;
             }
 
-            // Inject HubTestHook as a framework capability
+            // Inject HubTestHook as a scoped framework capability
             let invocation = route_receiver
-                .wait_until_route_framework_capability(reporter_moniker, HUB_REPORT_SERVICE)
+                .wait_until_framework_capability(
+                    reporter_moniker,
+                    HUB_REPORT_SERVICE,
+                    Some(reporter_moniker),
+                )
                 .await?;
+
             invocation.inject(hub_report_capability.serve_async()).await?;
             invocation.resume().await?;
 
@@ -78,7 +83,7 @@ impl TestRunner {
 
         let external_hub_v2_path = test.get_component_manager_path().join("out/hub");
 
-        let runner = Self { _test: test, external_hub_v2_path, hub_report_capability };
+        let runner = Self { test, external_hub_v2_path, hub_report_capability };
 
         Ok((runner, receiver))
     }
@@ -181,21 +186,17 @@ impl TestRunner {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn advanced_routing_test() -> Result<(), Error> {
+async fn advanced_routing() -> Result<(), Error> {
     let echo_service_name = "fidl.examples.routing.echo.Echo";
     let hub_report_service_name = "fuchsia.test.hub.HubReport";
-    let breakpoints_service_name = "fuchsia.test.breakpoints.BreakpointSystem";
 
-    let (test_runner, receiver) = TestRunner::start(
-        "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/echo_realm.cm",
+    let (test_runner, _) = TestRunner::start(
+        "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/advanced_routing_echo_realm.cm",
         3,
         "/reporter:0",
-        vec![UseCapability::TYPE],
+        vec![],
     )
     .await?;
-
-    // Wait for HubReport capability to be used by reporter.
-    receiver.expect_exact::<UseCapability>("/reporter:0").await?.resume().await?;
 
     // Verify that echo_realm has two children.
     test_runner
@@ -215,13 +216,13 @@ async fn advanced_routing_test() -> Result<(), Error> {
     // Verify that the Echo service is exposed by echo_server
     test_runner.verify_directory_listing_externally(expose_svc_dir, vec![echo_service_name]).await;
 
-    // Verify that reporter is using Breakpoint, HubReport and Echo services
+    // Verify that reporter is given the HubReport and Echo services
     let in_dir = "children/reporter/exec/in";
     let svc_dir = format!("{}/{}", in_dir, "svc");
     test_runner
         .verify_directory_listing_externally(
             svc_dir.as_str(),
-            vec![echo_service_name, breakpoints_service_name, hub_report_service_name],
+            vec![echo_service_name, hub_report_service_name],
         )
         .await;
 
@@ -248,6 +249,7 @@ async fn advanced_routing_test() -> Result<(), Error> {
             vec!["expose", "in", "out", "resolved_url", "runtime", "used"],
         )
         .await;
+
     test_runner
         .verify_directory_listing_locally(
             "/hub",
@@ -272,40 +274,59 @@ async fn advanced_routing_test() -> Result<(), Error> {
         .await
         .send()?;
 
-    // Verify that reporter has only connected to the HubReport capability
+    // Verify that reporter used the HubReport service.
+    // The test used the Echo service, so that should also be marked.
+    let used_dir = "children/reporter/exec/used";
+    let svc_dir = format!("{}/{}", used_dir, "svc");
     test_runner
-        .verify_directory_listing_locally("/hub/used/svc", vec![hub_report_service_name])
+        .verify_directory_listing_externally(
+            svc_dir.as_str(),
+            vec![echo_service_name, hub_report_service_name],
+        )
+        .await;
+
+    test_runner.wait_for_component_stop().await;
+
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn used_service_test() -> Result<(), Error> {
+    let echo_service_name = "fidl.examples.routing.echo.Echo";
+    let hub_report_service_name = "fuchsia.test.hub.HubReport";
+    let breakpoints_service_name = "fuchsia.test.breakpoints.BreakpointSystem";
+
+    let (test_runner, _) = TestRunner::start(
+        "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/used_service_echo_realm.cm",
+        3,
+        "/reporter:0",
+        vec![],
+    )
+    .await?;
+
+    // Verify that the hub shows only HubReport service in use
+    test_runner
+        .verify_directory_listing_locally("/hub/exec/used/svc", vec![hub_report_service_name])
         .await
         .send()?;
-
-    // Wait for the reporter to use the Breakpoints capability
-    receiver.expect_exact::<UseCapability>("/reporter:0").await?.resume().await?;
-
-    // Wait for the reporter to connect to the Echo capability
-    receiver.expect_exact::<UseCapability>("/reporter:0").await?.resume().await?;
 
     // Verify that the hub now shows the Breakpoint and Echo capability as in use
     test_runner
         .verify_directory_listing_locally(
-            "/hub/used/svc",
+            "/hub/exec/used/svc",
             vec![echo_service_name, breakpoints_service_name, hub_report_service_name],
         )
         .await
         .send()?;
-
-    // Wait for the reporter to connect to the Echo capability again
-    receiver.expect_exact::<UseCapability>("/reporter:0").await?.resume().await?;
 
     // Verify that the hub does not change
     test_runner
         .verify_directory_listing_locally(
-            "/hub/used/svc",
+            "/hub/exec/used/svc",
             vec![echo_service_name, breakpoints_service_name, hub_report_service_name],
         )
         .await
         .send()?;
-
-    test_runner.wait_for_component_stop().await;
 
     Ok(())
 }

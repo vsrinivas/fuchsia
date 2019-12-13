@@ -3,7 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::{model::Model, moniker::AbsoluteMoniker, routing},
+    crate::{
+        capability::CapabilitySource,
+        model::{
+            model::Model,
+            moniker::AbsoluteMoniker,
+            routing::{open_capability_at_source, route_expose_capability, route_use_capability},
+        },
+    },
     cm_rust::{ExposeDecl, UseDecl},
     directory_broker::RoutingFn,
     fidl::endpoints::ServerEnd,
@@ -40,6 +47,17 @@ impl RoutingFacade {
             route_expose_fn(model, abs_moniker, expose)
         }
     }
+
+    /// Returns a factory for functions that route a component to a capability source.
+    pub fn route_capability_source_fn_factory(
+        &self,
+    ) -> impl Fn(AbsoluteMoniker, CapabilitySource) -> RoutingFn {
+        let model = self.model.clone();
+        move |abs_moniker: AbsoluteMoniker, source: CapabilitySource| {
+            let model = model.clone();
+            route_capability_source(model, abs_moniker, source)
+        }
+    }
 }
 
 fn route_use_fn(model: Model, abs_moniker: AbsoluteMoniker, use_: UseDecl) -> RoutingFn {
@@ -49,7 +67,7 @@ fn route_use_fn(model: Model, abs_moniker: AbsoluteMoniker, use_: UseDecl) -> Ro
             let abs_moniker = abs_moniker.clone();
             let use_ = use_.clone();
             fasync::spawn(async move {
-                let res = routing::route_use_capability(
+                let res = route_use_capability(
                     &model,
                     flags,
                     mode,
@@ -67,6 +85,35 @@ fn route_use_fn(model: Model, abs_moniker: AbsoluteMoniker, use_: UseDecl) -> Ro
     )
 }
 
+fn route_capability_source(
+    model: Model,
+    abs_moniker: AbsoluteMoniker,
+    source: CapabilitySource,
+) -> RoutingFn {
+    Box::new(
+        move |flags: u32, mode: u32, relative_path: String, server_end: ServerEnd<NodeMarker>| {
+            let model = model.clone();
+            let abs_moniker = abs_moniker.clone();
+            let source = source.clone();
+            fasync::spawn(async move {
+                let res = open_capability_at_source(
+                    &model,
+                    flags,
+                    mode,
+                    relative_path,
+                    source,
+                    abs_moniker.clone(),
+                    server_end.into_channel(),
+                )
+                .await;
+                if let Err(e) = res {
+                    error!("failed to route service for {}: {:?}", abs_moniker, e);
+                }
+            });
+        },
+    )
+}
+
 fn route_expose_fn(model: Model, abs_moniker: AbsoluteMoniker, expose: ExposeDecl) -> RoutingFn {
     Box::new(
         move |flags: u32, mode: u32, _relative_path: String, server_end: ServerEnd<NodeMarker>| {
@@ -74,7 +121,7 @@ fn route_expose_fn(model: Model, abs_moniker: AbsoluteMoniker, expose: ExposeDec
             let abs_moniker = abs_moniker.clone();
             let expose = expose.clone();
             fasync::spawn(async move {
-                let res = routing::route_expose_capability(
+                let res = route_expose_capability(
                     &model,
                     flags,
                     mode,

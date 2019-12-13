@@ -47,7 +47,7 @@ async fn install_work_scheduler_test_hook(model: &Arc<Model>) -> Arc<WorkSchedul
         .root_realm
         .hooks
         .install(vec![HooksRegistration {
-            events: vec![EventType::RouteFrameworkCapability],
+            events: vec![EventType::RouteCapability],
             callback: Arc::downgrade(&work_scheduler_test_hook) as Weak<dyn Hook>,
         }])
         .await;

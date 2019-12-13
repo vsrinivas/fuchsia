@@ -11,9 +11,9 @@ const uint64 MAX_NUM_EVENT_TYPES_RECEIVED = 9;
 /// The maximum string length of a component moniker.
 const uint64 MAX_MONIKER_LENGTH = 100;
 
-/// The maximum string length of the name/path of a capability.
+/// The maximum string length of a capability ID.
 /// This value is currently set arbitrarily.
-const uint64 MAX_CAPABILITY_LENGTH = 50;
+const uint64 MAX_CAPABILITY_ID_LENGTH = 50;
 
 /// These EventTypes are used for the Breakpoints protocol.
 /// They are FIDL versions of the EventType enum in hooks.rs and have
@@ -37,47 +37,57 @@ enum EventType {
 
     /// A builtin capability is being requested by a component and requires routing.
     /// The event propagation system is used to supply the capability being requested.
-    ROUTE_BUILTIN_CAPABILITY = 5;
-
-    /// A framework capability is being requested by a component and requires routing.
-    /// The event propagation system is used to supply the capability being requested.
-    ROUTE_FRAMEWORK_CAPABILITY = 6;
+    ROUTE_CAPABILITY = 5;
 
     /// An instance was bound to. If the instance is executable, it is also started.
-    START_INSTANCE = 7;
+    START_INSTANCE = 6;
 
     /// An instance was stopped successfully.
     /// This event must occur before PostDestroyInstance.
-    STOP_INSTANCE = 8;
+    STOP_INSTANCE = 7;
+};
 
-    /// A capability was used by an instance. An instance uses a capability when
-    /// it creates a channel and provides the server end to ComponentManager for routing.
-    USE_CAPABILITY = 9;
+/// Describes the source of a routed capability.
+xunion CapabilitySource {
+    /// The capability is provided by the framework and may be
+    /// scoped down to a component.
+    1: FrameworkCapability framework;
+
+    /// The capability is provided by another component.
+    2: ComponentCapability component;
+};
+
+/// Describes a capability provided by the framework
+table FrameworkCapability {
+    /// The moniker of the instance that this capability is scoped to.
+    1: string:MAX_MONIKER_LENGTH scope_moniker;
+};
+
+/// Describes a capability provided by a component
+table ComponentCapability {
+    /// The moniker of the instance that is providing this capability.
+    1: string:MAX_MONIKER_LENGTH source_moniker;
 };
 
 /// Encapsulates additional data/protocols for some event types.
 table EventPayload {
-    /// Payload for RouteFrameworkCapability and RouteBuiltinCapability events
+    /// Payload for RouteCapability events
     1: RoutingPayload routing_payload;
-
-    /// Payload for UseCapability event
-    2: UseCapabilityPayload use_capability_payload;
 };
 
-/// Payload for RouteFrameworkCapability and RouteBuiltinCapability events
+/// Payload for RouteCapability events
 table RoutingPayload {
-    /// Allows setting a capability provider for RouteFrameworkCapability
-    /// and RouteBuiltinCapability events
+    /// Allows setting a capability provider for
+    /// RouteCapability events
     1: RoutingProtocol routing_protocol;
 
-    /// Name/Path of a capability.
-    2: string:MAX_CAPABILITY_LENGTH capability;
-};
+    /// Identifier of capability being requested.
+    /// For a path-based capability, this is the path.
+    /// For a runner capability, this is the name.
+    2: string:MAX_CAPABILITY_ID_LENGTH capability_id;
 
-/// Payload for UseCapability event
-table UseCapabilityPayload {
-    /// Name/Path of a capability
-    1: string:MAX_CAPABILITY_LENGTH capability;
+    /// Source of the capability that needs to be routed.
+    3: CapabilitySource source;
 };
 
 /// Contains all information about a single invocation of a breakpoint

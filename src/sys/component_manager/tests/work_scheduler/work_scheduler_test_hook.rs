@@ -7,7 +7,7 @@
 
 use {
     component_manager_lib::{
-        capability::{ComponentManagerCapability, ComponentManagerCapabilityProvider},
+        capability::{CapabilityProvider, CapabilitySource, FrameworkCapability},
         model::{
             error::ModelError,
             hooks::{Event, EventPayload, Hook},
@@ -112,20 +112,20 @@ impl WorkSchedulerTestHook {
         tx.send(dispatched_event).await.unwrap()
     }
 
-    async fn on_route_framework_capability_async<'a>(
+    async fn on_route_scoped_framework_capability_async(
         self: Arc<Self>,
         realm: Arc<Realm>,
-        capability: &'a ComponentManagerCapability,
-        capability_provider: Option<Box<dyn ComponentManagerCapabilityProvider>>,
-    ) -> Result<Option<Box<dyn ComponentManagerCapabilityProvider>>, ModelError> {
+        capability: &FrameworkCapability,
+        capability_provider: Option<Box<dyn CapabilityProvider>>,
+    ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         match (&capability_provider, capability) {
-            (None, ComponentManagerCapability::ServiceProtocol(capability_path))
+            (None, FrameworkCapability::ServiceProtocol(capability_path))
                 if *capability_path == *REPORT_SERVICE =>
             {
                 Ok(Some(Box::new(WorkSchedulerTestCapabilityProvider::new(
                     realm.abs_moniker.clone(),
                     self.clone(),
-                )) as Box<dyn ComponentManagerCapabilityProvider>))
+                )) as Box<dyn CapabilityProvider>))
             }
             _ => Ok(capability_provider),
         }
@@ -133,20 +133,21 @@ impl WorkSchedulerTestHook {
 }
 
 impl Hook for WorkSchedulerTestHook {
-    fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
+    fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
-            match &event.payload {
-                EventPayload::RouteFrameworkCapability { capability, capability_provider } => {
-                    let mut capability_provider = capability_provider.lock().await;
-                    *capability_provider = self
-                        .on_route_framework_capability_async(
-                            event.target_realm.clone(),
-                            &capability,
-                            capability_provider.take(),
-                        )
-                        .await?;
-                }
-                _ => {}
+            if let EventPayload::RouteCapability {
+                source: CapabilitySource::Framework { capability, scope_realm: Some(scope_realm) },
+                capability_provider,
+            } = &event.payload
+            {
+                let mut capability_provider = capability_provider.lock().await;
+                *capability_provider = self
+                    .on_route_scoped_framework_capability_async(
+                        scope_realm.clone(),
+                        &capability,
+                        capability_provider.take(),
+                    )
+                    .await?;
             }
             Ok(())
         })
@@ -195,7 +196,7 @@ impl WorkSchedulerTestCapabilityProvider {
     }
 }
 
-impl ComponentManagerCapabilityProvider for WorkSchedulerTestCapabilityProvider {
+impl CapabilityProvider for WorkSchedulerTestCapabilityProvider {
     fn open(
         &self,
         _flags: u32,

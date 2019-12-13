@@ -11,17 +11,22 @@ rustc_binary("advanced_routing_reporter_bin") {
   source_root = "advanced_routing/reporter.rs"
   deps = [
     ":hub_report_lib",
+    "//garnet/public/rust/fuchsia-async",
+    "//third_party/rust_crates:failure",
+  ]
+}
+
+rustc_binary("used_service_reporter_bin") {
+  name = "used_service_reporter"
+  edition = "2018"
+  source_root = "used_service/reporter.rs"
+  deps = [
+    ":hub_report_lib",
     "//examples/components/routing/fidl:echo-rustc",
-    "//garnet/lib/rust/files_async",
-    "//garnet/lib/rust/io_util",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//src/sys/component_manager/tests:breakpoint_system_client",
-    "//src/sys/component_manager/tests/fidl:breakpoints-rustc",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
 

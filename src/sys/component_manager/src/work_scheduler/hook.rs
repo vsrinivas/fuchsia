@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        capability::{ComponentManagerCapability, ComponentManagerCapabilityProvider},
+        capability::{CapabilityProvider, CapabilitySource, FrameworkCapability},
         model::{
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
@@ -30,38 +30,39 @@ impl WorkScheduler {
     /// produce references needed by `HooksRegistration` without consuming `Arc`.
     pub fn hooks(work_scheduler: &Arc<Self>) -> Vec<HooksRegistration> {
         vec![HooksRegistration {
-            events: vec![EventType::RouteBuiltinCapability, EventType::RouteFrameworkCapability],
+            events: vec![EventType::RouteCapability],
             callback: Arc::downgrade(work_scheduler) as Weak<dyn Hook>,
         }]
     }
 
-    /// Route capability to access `fuchsia.sys2.WorkSchedulerControl` protocol as a builtin
+    /// Route capability to access `fuchsia.sys2.WorkSchedulerControl` protocol as a framework
     /// capability.
-    async fn on_route_builtin_capability_async<'a>(
+    async fn on_route_framework_capability_async<'a>(
         self: Arc<Self>,
-        capability: &'a ComponentManagerCapability,
-        capability_provider: Option<Box<dyn ComponentManagerCapabilityProvider>>,
-    ) -> Result<Option<Box<dyn ComponentManagerCapabilityProvider>>, ModelError> {
+        capability: &'a FrameworkCapability,
+        capability_provider: Option<Box<dyn CapabilityProvider>>,
+    ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         match (&capability_provider, capability) {
-            (None, ComponentManagerCapability::ServiceProtocol(capability_path))
+            (None, FrameworkCapability::ServiceProtocol(capability_path))
                 if *capability_path == *WORK_SCHEDULER_CONTROL_CAPABILITY_PATH =>
             {
                 Ok(Some(Box::new(WorkSchedulerControlCapabilityProvider::new(self.clone()))
-                    as Box<dyn ComponentManagerCapabilityProvider>))
+                    as Box<dyn CapabilityProvider>))
             }
             _ => Ok(capability_provider),
         }
     }
 
-    /// Route capability to access `fuchsia.sys2.WorkScheduler` protocol as a framework capability.
-    async fn on_route_framework_capability_async<'a>(
+    /// Route capability to access `fuchsia.sys2.WorkScheduler` protocol as a scoped framework
+    /// capability.
+    async fn on_route_scoped_framework_capability_async<'a>(
         self: Arc<Self>,
         realm: Arc<Realm>,
-        capability: &'a ComponentManagerCapability,
-        capability_provider: Option<Box<dyn ComponentManagerCapabilityProvider>>,
-    ) -> Result<Option<Box<dyn ComponentManagerCapabilityProvider>>, ModelError> {
+        capability: &'a FrameworkCapability,
+        capability_provider: Option<Box<dyn CapabilityProvider>>,
+    ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         match (&capability_provider, capability) {
-            (None, ComponentManagerCapability::ServiceProtocol(capability_path))
+            (None, FrameworkCapability::ServiceProtocol(capability_path))
                 if *capability_path == *WORK_SCHEDULER_CAPABILITY_PATH =>
             {
                 // Only clients that expose the Worker protocol to the framework can
@@ -69,7 +70,7 @@ impl WorkScheduler {
                 Self::verify_worker_exposed_to_framework(&*realm).await?;
                 Ok(Some(
                     Box::new(WorkSchedulerCapabilityProvider::new(realm.clone(), self.clone()))
-                        as Box<dyn ComponentManagerCapabilityProvider>,
+                        as Box<dyn CapabilityProvider>,
                 ))
             }
             _ => Ok(capability_provider),
@@ -91,20 +92,30 @@ impl WorkScheduler {
 }
 
 impl Hook for WorkScheduler {
-    fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
+    fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
             match &event.payload {
-                EventPayload::RouteBuiltinCapability { capability, capability_provider } => {
-                    let mut capability_provider = capability_provider.lock().await;
-                    *capability_provider = self
-                        .on_route_builtin_capability_async(&capability, capability_provider.take())
-                        .await?;
-                }
-                EventPayload::RouteFrameworkCapability { capability, capability_provider } => {
+                EventPayload::RouteCapability {
+                    source: CapabilitySource::Framework { capability, scope_realm: None },
+                    capability_provider,
+                } => {
                     let mut capability_provider = capability_provider.lock().await;
                     *capability_provider = self
                         .on_route_framework_capability_async(
-                            event.target_realm.clone(),
+                            &capability,
+                            capability_provider.take(),
+                        )
+                        .await?;
+                }
+                EventPayload::RouteCapability {
+                    source:
+                        CapabilitySource::Framework { capability, scope_realm: Some(scope_realm) },
+                    capability_provider,
+                } => {
+                    let mut capability_provider = capability_provider.lock().await;
+                    *capability_provider = self
+                        .on_route_scoped_framework_capability_async(
+                            scope_realm.clone(),
                             &capability,
                             capability_provider.take(),
                         )
@@ -156,7 +167,7 @@ impl WorkSchedulerControlCapabilityProvider {
     }
 }
 
-impl ComponentManagerCapabilityProvider for WorkSchedulerControlCapabilityProvider {
+impl CapabilityProvider for WorkSchedulerControlCapabilityProvider {
     /// Spawn an event loop to service `WorkScheduler` FIDL operations.
     fn open(
         &self,
@@ -223,7 +234,7 @@ impl WorkSchedulerCapabilityProvider {
     }
 }
 
-impl ComponentManagerCapabilityProvider for WorkSchedulerCapabilityProvider {
+impl CapabilityProvider for WorkSchedulerCapabilityProvider {
     /// Spawn an event loop to service `WorkScheduler` FIDL operations.
     fn open(
         &self,

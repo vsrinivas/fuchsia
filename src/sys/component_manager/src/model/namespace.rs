@@ -4,13 +4,7 @@
 
 use {
     crate::constants::PKG_PATH,
-    crate::model::{
-        error::ModelError,
-        hooks::{Event, EventPayload},
-        model::Model,
-        moniker::AbsoluteMoniker,
-        routing,
-    },
+    crate::model::{error::ModelError, model::Model, moniker::AbsoluteMoniker, routing},
     cm_rust::{self, ComponentDecl, UseDecl, UseStorageDecl},
     directory_broker,
     fidl::endpoints::{create_endpoints, ClientEnd, ServerEnd},
@@ -281,19 +275,6 @@ impl IncomingNamespace {
                     if let Err(e) = res {
                         error!("failed to route service for component {}: {:?}", abs_moniker, e);
                     }
-                    let realm = model
-                        .look_up_realm(&abs_moniker)
-                        .await
-                        .expect("A service that is using a capability must exist in the model.");
-                    let event = Event {
-                        target_realm: realm.clone(),
-                        payload: EventPayload::UseCapability { use_ },
-                    };
-                    realm
-                        .hooks
-                        .dispatch(&event)
-                        .await
-                        .expect("add_service_use: hook dispatch failed");
                 });
             },
         );
