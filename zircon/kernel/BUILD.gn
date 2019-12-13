@@ -91,6 +91,7 @@ if (current_toolchain == default_toolchain) {
   config("kernel_config") {
     configs = [
       ":lock_dep",
+      ":retpoline",
       ":scheduler",
       ":standalone",
       ":warnings",
@@ -220,6 +221,20 @@ if (current_toolchain == default_toolchain) {
     }
 
     cflags_c = [ "-Wmissing-prototypes" ]
+  }
+
+  config("retpoline") {
+    visibility = [ ":*" ]
+    cflags = []
+    defines = []
+    if (current_cpu == "x64") {
+      if (is_gcc) {
+        cflags += [ "-mindirect-branch=thunk-inline", "-mindirect-branch-register" ]
+      } else {
+        cflags += [ "-mretpoline" ]
+      }
+      defines += [ "KERNEL_RETPOLINE=1" ]
+    }
   }
 
   config("lock_dep") {

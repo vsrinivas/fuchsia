@@ -427,6 +427,9 @@ void x86_feature_debug(void) {
     printf("ras_fill ");
   if (g_has_enhanced_ibrs)
     printf("enhanced_ibrs ");
+#ifdef KERNEL_RETPOLINE
+  printf("retpoline ");
+#endif
   printf("\n");
 }
 
