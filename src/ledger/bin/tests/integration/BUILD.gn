@@ -70,8 +70,8 @@ source_set("integration_sharded") {
     "//src/ledger/lib/convert",
     "//src/ledger/lib/logging",
     "//src/ledger/lib/socket",
+    "//src/ledger/lib/timekeeper:testing",
     "//src/ledger/lib/vmo",
-    "//src/lib/timekeeper:testing",
     "//third_party/abseil-cpp",
   ]
 

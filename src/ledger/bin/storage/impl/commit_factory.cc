@@ -207,7 +207,7 @@ Status CommitFactory::FromStorageBytes(CommitId id, std::string storage_bytes,
 }
 
 std::unique_ptr<const Commit> CommitFactory::FromContentAndParents(
-    timekeeper::Clock* clock, rng::Random* random, ObjectIdentifier root_node_identifier,
+    ledger::Clock* clock, rng::Random* random, ObjectIdentifier root_node_identifier,
     std::vector<std::unique_ptr<const Commit>> parent_commits) {
   LEDGER_DCHECK(parent_commits.size() == 1 || parent_commits.size() == 2);
 

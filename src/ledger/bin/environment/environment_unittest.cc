@@ -13,7 +13,7 @@
 #include "src/ledger/bin/environment/test_loop_notification.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/loop_fixture/test_loop_fixture.h"
-#include "src/lib/timekeeper/test_clock.h"
+#include "src/ledger/lib/timekeeper/test_clock.h"
 
 namespace ledger {
 namespace {
@@ -38,7 +38,7 @@ TEST_F(EnvironmentTest, InitializationOfAsyncAndIOAsync) {
 
 TEST_F(EnvironmentTest, InitializationClock) {
   auto io_loop = test_loop().StartNewLoop();
-  auto clock = std::make_unique<timekeeper::TestClock>();
+  auto clock = std::make_unique<TestClock>();
   auto clock_ptr = clock.get();
   Environment env = EnvironmentBuilder()
                         .SetStartupContext(component_context_provider_.context())

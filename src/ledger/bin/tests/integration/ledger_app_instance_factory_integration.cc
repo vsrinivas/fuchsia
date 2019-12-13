@@ -36,7 +36,7 @@
 #include "src/ledger/lib/socket/socket_pair.h"
 #include "src/ledger/lib/socket/socket_writer.h"
 #include "src/ledger/lib/socket/strings.h"
-#include "src/lib/timekeeper/test_loop_test_clock.h"
+#include "src/ledger/lib/timekeeper/test_loop_test_clock.h"
 #include "third_party/abseil-cpp/absl/strings/str_cat.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
@@ -86,7 +86,7 @@ Environment BuildEnvironment(async::TestLoop* loop, async_dispatcher_t* dispatch
         return std::make_unique<ExponentialBackoff>(kBackoffDuration, 1u, kBackoffDuration,
                                                     random->NewBitGenerator<uint64_t>());
       })
-      .SetClock(std::make_unique<timekeeper::TestLoopTestClock>(loop))
+      .SetClock(std::make_unique<TestLoopTestClock>(loop))
       .SetRandom(std::make_unique<DelegatedRandom>(random))
       .SetGcPolicy(kTestingGarbageCollectionPolicy)
       .SetDiffCompatibilityPolicy(diff_compatibility_policy)

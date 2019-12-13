@@ -21,7 +21,7 @@
 #include "src/ledger/bin/synchronization/completer.h"
 #include "src/ledger/lib/callback/operation_serializer.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
-#include "src/lib/timekeeper/clock.h"
+#include "src/ledger/lib/timekeeper/clock.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
@@ -79,7 +79,7 @@ class PageUsageDb {
   // Deletes the row with the given |key| in the underlying database.
   Status Delete(coroutine::CoroutineHandler* handler, absl::string_view key);
 
-  timekeeper::Clock* const clock_;
+  Clock* const clock_;
   std::unique_ptr<storage::Db> const db_;
 
   bool initialization_called_ = false;

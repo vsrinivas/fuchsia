@@ -17,7 +17,7 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/backoff/backoff.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
-#include "src/lib/timekeeper/clock.h"
+#include "src/ledger/lib/timekeeper/clock.h"
 
 namespace ledger {
 
@@ -32,7 +32,7 @@ class Environment {
               sys::ComponentContext* component_context,
               std::unique_ptr<coroutine::CoroutineService> coroutine_service,
               BackoffFactory backoff_factory, NotificationFactory notification_factory,
-              std::unique_ptr<timekeeper::Clock> clock, std::unique_ptr<rng::Random> random,
+              std::unique_ptr<Clock> clock, std::unique_ptr<rng::Random> random,
               storage::GarbageCollectionPolicy gc_policy,
               storage::DiffCompatibilityPolicy diff_compatibility_policy);
   Environment(Environment&& other) noexcept;
@@ -55,7 +55,7 @@ class Environment {
 
   std::unique_ptr<Notification> MakeNotification();
 
-  timekeeper::Clock* clock() const { return clock_.get(); }
+  Clock* clock() const { return clock_.get(); }
 
   rng::Random* random() const { return random_.get(); }
 
@@ -81,7 +81,7 @@ class Environment {
   std::unique_ptr<coroutine::CoroutineService> coroutine_service_;
   BackoffFactory backoff_factory_;
   NotificationFactory notification_factory_;
-  std::unique_ptr<timekeeper::Clock> clock_;
+  std::unique_ptr<Clock> clock_;
   std::unique_ptr<rng::Random> random_;
   storage::GarbageCollectionPolicy gc_policy_;
   storage::DiffCompatibilityPolicy diff_compatibility_policy_;
@@ -110,7 +110,7 @@ class EnvironmentBuilder {
       std::unique_ptr<coroutine::CoroutineService> coroutine_service);
   EnvironmentBuilder& SetBackoffFactory(Environment::BackoffFactory backoff_factory);
   EnvironmentBuilder& SetNotificationFactory(Environment::NotificationFactory notification_factory);
-  EnvironmentBuilder& SetClock(std::unique_ptr<timekeeper::Clock> clock);
+  EnvironmentBuilder& SetClock(std::unique_ptr<Clock> clock);
   EnvironmentBuilder& SetRandom(std::unique_ptr<rng::Random> random);
   EnvironmentBuilder& SetGcPolicy(storage::GarbageCollectionPolicy gc_policy);
   EnvironmentBuilder& SetDiffCompatibilityPolicy(
@@ -127,7 +127,7 @@ class EnvironmentBuilder {
   std::unique_ptr<coroutine::CoroutineService> coroutine_service_;
   Environment::BackoffFactory backoff_factory_;
   Environment::NotificationFactory notification_factory_;
-  std::unique_ptr<timekeeper::Clock> clock_;
+  std::unique_ptr<Clock> clock_;
   std::unique_ptr<rng::Random> random_;
   storage::GarbageCollectionPolicy gc_policy_ = storage::GarbageCollectionPolicy::NEVER;
   storage::DiffCompatibilityPolicy diff_compatibility_policy_ =

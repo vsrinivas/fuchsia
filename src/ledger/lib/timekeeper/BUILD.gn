@@ -1,0 +1,65 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+
+source_set("timekeeper") {
+  sources = [
+    "clock.h",
+  ]
+
+  public_deps = [
+    "//zircon/public/lib/zx",
+  ]
+
+  configs += [ "//src/ledger:ledger_config" ]
+}
+
+source_set("system") {
+  sources = [
+    "system_clock.h",
+  ]
+
+  public_deps = [
+    ":timekeeper",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+source_set("testing") {
+  testonly = true
+
+  sources = [
+    "monotonic_test_clock_base.cc",
+    "monotonic_test_clock_base.h",
+    "test_clock.cc",
+    "test_clock.h",
+    "test_loop_test_clock.cc",
+    "test_loop_test_clock.h",
+  ]
+
+  public_deps = [
+    ":timekeeper",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-testing",
+    "//zircon/public/lib/fit",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+  sources = [
+    "system_clock_unittest.cc",
+    "test_clock_unittest.cc",
+    "test_loop_test_clock_unittest.cc",
+  ]
+
+  deps = [
+    ":system",
+    ":testing",
+    "//src/ledger/lib/loop_fixture",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-testing",
+  ]
+}

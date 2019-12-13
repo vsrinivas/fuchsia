@@ -22,7 +22,7 @@ source_set("environment") {
     "//src/ledger/bin/storage/public",
     "//src/ledger/lib/backoff",
     "//src/ledger/lib/coroutine",
-    "//src/lib/timekeeper:system",
+    "//src/ledger/lib/timekeeper:system",
   ]
 
   deps = [
@@ -67,7 +67,7 @@ source_set("unittests") {
     "//peridot/lib/rng:testing",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/ledger/lib/loop_fixture",
-    "//src/lib/timekeeper:testing",
+    "//src/ledger/lib/timekeeper:testing",
     "//third_party/googletest:gmock",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",

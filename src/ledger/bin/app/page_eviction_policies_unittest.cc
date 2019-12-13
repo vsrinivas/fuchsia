@@ -10,7 +10,7 @@
 #include "src/ledger/lib/callback/capture.h"
 #include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/convert/convert.h"
-#include "src/lib/timekeeper/test_clock.h"
+#include "src/ledger/lib/timekeeper/test_clock.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
@@ -191,7 +191,7 @@ TEST_F(PageEvictionPoliciesTest, LeastRecentyUsedErrorWhileEvicting) {
 TEST_F(PageEvictionPoliciesTest, AgeBased) {
   FakePageEvictionDelegate delegate;
   std::string ledger_name = "ledger";
-  timekeeper::TestClock test_clock;
+  TestClock test_clock;
   zx::time_utc now = zx::time_utc(2) + kUnusedTimeLimit;
   test_clock.Set(now);
   std::vector<const PageInfo> pages = {
@@ -218,7 +218,7 @@ TEST_F(PageEvictionPoliciesTest, AgeBased) {
 TEST_F(PageEvictionPoliciesTest, AgeBasedWithOpenPages) {
   FakePageEvictionDelegate delegate;
   std::string ledger_name = "ledger";
-  timekeeper::TestClock test_clock;
+  TestClock test_clock;
   zx::time_utc now = zx::time_utc(2) + kUnusedTimeLimit;
   test_clock.Set(now);
   std::vector<const PageInfo> pages = {
@@ -245,7 +245,7 @@ TEST_F(PageEvictionPoliciesTest, AgeBasedWithOpenPages) {
 TEST_F(PageEvictionPoliciesTest, AgeBasedNoPagesToEvict) {
   FakePageEvictionDelegate delegate;
   std::string ledger_name = "ledger";
-  timekeeper::TestClock test_clock;
+  TestClock test_clock;
   zx::time_utc now = zx::time_utc(5) + kUnusedTimeLimit;
   test_clock.Set(now);
   std::vector<const PageInfo> pages = {
@@ -274,7 +274,7 @@ TEST_F(PageEvictionPoliciesTest, AgeBasedNoPagesToEvict) {
 TEST_F(PageEvictionPoliciesTest, AgeBasedErrorWhileEvicting) {
   FakePageEvictionDelegate delegate;
   std::string ledger_name = "ledger";
-  timekeeper::TestClock test_clock;
+  TestClock test_clock;
   zx::time_utc now = zx::time_utc(5) + kUnusedTimeLimit;
   test_clock.Set(now);
   std::vector<const PageInfo> pages = {
@@ -300,7 +300,7 @@ TEST_F(PageEvictionPoliciesTest, AgeBasedErrorWhileEvicting) {
 TEST_F(PageEvictionPoliciesTest, AgeBasedWithCustomizedTimeLimit) {
   FakePageEvictionDelegate delegate;
   std::string ledger_name = "ledger";
-  timekeeper::TestClock test_clock;
+  TestClock test_clock;
   test_clock.Set(zx::time_utc(2));
   std::vector<const PageInfo> pages = {
       {ledger_name, "page1", zx::time_utc(1)},

@@ -18,7 +18,7 @@
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/memory/weak_ptr.h"
-#include "src/lib/timekeeper/clock.h"
+#include "src/ledger/lib/timekeeper/clock.h"
 
 namespace storage {
 
@@ -35,7 +35,7 @@ class CommitFactory : public LiveCommitTracker {
 
   // Factory method for creating a |Commit| object from its components.
   std::unique_ptr<const Commit> FromContentAndParents(
-      timekeeper::Clock* clock, rng::Random* random, ObjectIdentifier root_node_identifier,
+      ledger::Clock* clock, rng::Random* random, ObjectIdentifier root_node_identifier,
       std::vector<std::unique_ptr<const Commit>> parent_commits);
 
   // Factory method for creating an empty |Commit| object, i.e. without parents and with empty

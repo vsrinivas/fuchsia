@@ -11,6 +11,7 @@ group("lib") {
     "logging",
     "loop_fixture",
     "socket",
+    "timekeeper",
     "vmo",
   ]
 }
@@ -29,6 +30,7 @@ executable("ledger_lib_unittests") {
     "//src/ledger/lib/logging:unittests",
     "//src/ledger/lib/loop_fixture:unittests",
     "//src/ledger/lib/socket:unittests",
+    "//src/ledger/lib/timekeeper:unittests",
     "//src/ledger/lib/vmo:unittests",
   ]
 }

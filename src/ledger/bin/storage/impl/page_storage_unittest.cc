@@ -46,8 +46,8 @@
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/socket/strings.h"
+#include "src/ledger/lib/timekeeper/test_clock.h"
 #include "src/ledger/lib/vmo/strings.h"
-#include "src/lib/timekeeper/test_clock.h"
 #include "third_party/abseil-cpp/absl/base/attributes.h"
 #include "third_party/abseil-cpp/absl/strings/str_format.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
@@ -1270,7 +1270,7 @@ TEST_F(PageStorageTest, HeadCommits) {
 }
 
 TEST_F(PageStorageTest, OrderHeadCommitsByTimestampThenId) {
-  timekeeper::TestClock test_clock;
+  ledger::TestClock test_clock;
   // We generate a few timestamps: some random, and a few equal constants to
   // test ID ordering.
   std::vector<zx::time_utc> timestamps(7);

@@ -10,7 +10,7 @@
 #include "src/ledger/bin/storage/public/iterator.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
-#include "src/lib/timekeeper/clock.h"
+#include "src/ledger/lib/timekeeper/clock.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
@@ -75,15 +75,14 @@ std::unique_ptr<PageEvictionPolicy> NewLeastRecentyUsedPolicy(
 // were closed and not used for at least 5 hours. The given delegate should
 // outlive the returned object.
 std::unique_ptr<PageEvictionPolicy> NewAgeBasedPolicy(
-    coroutine::CoroutineService* corroutine_service, PageEvictionDelegate* delegate,
-    timekeeper::Clock* clock);
+    coroutine::CoroutineService* corroutine_service, PageEvictionDelegate* delegate, Clock* clock);
 
 // Creates and returns a new Age-Based policy, which evicts the pages that
 // were closed and not used for at least the specified duration. The given
 // delegate should outlive the returned object.
 std::unique_ptr<PageEvictionPolicy> NewAgeBasedPolicy(
-    coroutine::CoroutineService* corroutine_service, PageEvictionDelegate* delegate,
-    timekeeper::Clock* clock, zx::duration unused_time_limit);
+    coroutine::CoroutineService* corroutine_service, PageEvictionDelegate* delegate, Clock* clock,
+    zx::duration unused_time_limit);
 
 }  // namespace ledger
 

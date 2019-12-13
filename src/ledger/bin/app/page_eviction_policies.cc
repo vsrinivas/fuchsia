@@ -56,7 +56,7 @@ class LeastRecentlyUsedPageEvictionPolicy : public PageEvictionPolicy {
 class AgeBasedPageEvictionPolicy : public PageEvictionPolicy {
  public:
   AgeBasedPageEvictionPolicy(coroutine::CoroutineService* coroutine_service,
-                             PageEvictionDelegate* delegate, timekeeper::Clock* clock,
+                             PageEvictionDelegate* delegate, Clock* clock,
                              zx::duration unused_time_limit);
   AgeBasedPageEvictionPolicy(const AgeBasedPageEvictionPolicy&) = delete;
   AgeBasedPageEvictionPolicy& operator=(const AgeBasedPageEvictionPolicy&) = delete;
@@ -67,7 +67,7 @@ class AgeBasedPageEvictionPolicy : public PageEvictionPolicy {
  private:
   PageEvictionDelegate* delegate_;
   coroutine::CoroutineManager coroutine_manager_;
-  timekeeper::Clock* clock_;
+  Clock* clock_;
   zx::duration unused_time_limit_;
 };
 
@@ -112,8 +112,8 @@ void LeastRecentlyUsedPageEvictionPolicy::SelectAndEvict(
 }
 
 AgeBasedPageEvictionPolicy::AgeBasedPageEvictionPolicy(
-    coroutine::CoroutineService* coroutine_service, PageEvictionDelegate* delegate,
-    timekeeper::Clock* clock, zx::duration unused_time_limit)
+    coroutine::CoroutineService* coroutine_service, PageEvictionDelegate* delegate, Clock* clock,
+    zx::duration unused_time_limit)
     : delegate_(delegate),
       coroutine_manager_(coroutine_service),
       clock_(clock),
@@ -172,14 +172,13 @@ std::unique_ptr<PageEvictionPolicy> NewLeastRecentyUsedPolicy(
 }
 
 std::unique_ptr<PageEvictionPolicy> NewAgeBasedPolicy(
-    coroutine::CoroutineService* coroutine_service, PageEvictionDelegate* delegate,
-    timekeeper::Clock* clock) {
+    coroutine::CoroutineService* coroutine_service, PageEvictionDelegate* delegate, Clock* clock) {
   return NewAgeBasedPolicy(coroutine_service, delegate, clock, kUnusedTimeLimit);
 }
 
 std::unique_ptr<PageEvictionPolicy> NewAgeBasedPolicy(
-    coroutine::CoroutineService* coroutine_service, PageEvictionDelegate* delegate,
-    timekeeper::Clock* clock, zx::duration unused_time_limit) {
+    coroutine::CoroutineService* coroutine_service, PageEvictionDelegate* delegate, Clock* clock,
+    zx::duration unused_time_limit) {
   return std::make_unique<AgeBasedPageEvictionPolicy>(coroutine_service, delegate, clock,
                                                       unused_time_limit);
 }
