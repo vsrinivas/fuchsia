@@ -22,10 +22,11 @@
 
 namespace fidl_codec {
 
-class Value;
+class MessageDecoderDispatcher;
 class Object;
 class Struct;
 class Type;
+class Value;
 
 enum class Direction { kUnknown, kClient, kServer };
 
@@ -39,6 +40,35 @@ enum class SyscallFidlType {
   kInputMessage,   // A message (request or response which is read).
   kOutputRequest,  // A request which is written (case of zx_channel_call).
   kInputResponse   // A response which is read (case of zx_channel_call).
+};
+
+class DecodedMessage {
+ public:
+  DecodedMessage() = default;
+
+  // Decodes a message and fill all the fields. Returns true if we can display something.
+  bool DecodeMessage(MessageDecoderDispatcher* dispatcher, uint64_t process_koid,
+                     zx_handle_t handle, const uint8_t* bytes, uint32_t num_bytes,
+                     const zx_handle_info_t* handles, uint32_t num_handles, SyscallFidlType type,
+                     std::ostream& os, std::string_view line_header = "", int tabs = 0);
+
+  // Displays a decoded message using the fields. Returns true if we have been able to display
+  // correctly the message.
+  bool Display(const Colors& colors, bool pretty_print, int columns, std::ostream& os,
+               std::string_view line_header, int tabs);
+
+ private:
+  const fidl_message_header_t* header_ = nullptr;
+  const InterfaceMethod* method_ = nullptr;
+  std::unique_ptr<Object> decoded_request_;
+  std::stringstream request_error_stream_;
+  bool matched_request_ = false;
+  std::unique_ptr<Object> decoded_response_;
+  std::stringstream response_error_stream_;
+  bool matched_response_ = false;
+  Direction direction_ = Direction::kUnknown;
+  bool is_request_ = false;
+  const char* message_direction_ = "";
 };
 
 // Class which is able to decode all the messages received/sent.
@@ -67,6 +97,16 @@ class MessageDecoderDispatcher {
                      uint32_t num_bytes, const zx_handle_info_t* handles, uint32_t num_handles,
                      SyscallFidlType type, std::ostream& os, std::string_view line_header = "",
                      int tabs = 0);
+
+  // Heuristic which computes the direction of a message (outgoing request, incomming response,
+  // ...).
+  Direction ComputeDirection(uint64_t process_koid, zx_handle_t handle, SyscallFidlType type,
+                             const InterfaceMethod* method, bool only_one_valid);
+
+  // Update the direction. Used when the heuristic was wrong.
+  void UpdateDirection(uint64_t process_koid, zx_handle_t handle, Direction direction) {
+    handle_directions_[std::make_tuple(handle, process_koid)] = direction;
+  }
 
  private:
   LibraryLoader* const loader_;

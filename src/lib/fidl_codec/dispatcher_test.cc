@@ -87,7 +87,7 @@ TEST_F(DispatcherTest, TwoStringArrayIntIncorrect) {
   ASSERT_FALSE(result);
   ASSERT_EQ(
       output.str(),
-      "    Can't determine request/response. it can be:\n"
+      "    Can't decode message.\n"
       "      sent request errors:\n"
       "40: Not enough data to decode (needs 8, remains 7)\n"
       "      sent request test.fidlcodec.examples/FidlCodecTestInterface.TwoStringArrayInt = {\n"

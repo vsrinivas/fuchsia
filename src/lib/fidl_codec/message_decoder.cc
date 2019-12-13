@@ -23,189 +23,214 @@ std::string DocumentToString(rapidjson::Document* document) {
   return output.GetString();
 }
 
-bool MessageDecoderDispatcher::DecodeMessage(uint64_t process_koid, zx_handle_t handle,
-                                             const uint8_t* bytes, uint32_t num_bytes,
-                                             const zx_handle_info_t* handles, uint32_t num_handles,
-                                             SyscallFidlType type, std::ostream& os,
-                                             std::string_view line_header, int tabs) {
-  if (loader_ == nullptr) {
+bool DecodedMessage::DecodeMessage(MessageDecoderDispatcher* dispatcher, uint64_t process_koid,
+                                   zx_handle_t handle, const uint8_t* bytes, uint32_t num_bytes,
+                                   const zx_handle_info_t* handles, uint32_t num_handles,
+                                   SyscallFidlType type, std::ostream& os,
+                                   std::string_view line_header, int tabs) {
+  if (dispatcher->loader() == nullptr) {
     return false;
   }
   if ((bytes == nullptr) || (num_bytes < sizeof(fidl_message_header_t))) {
     os << line_header << std::string(tabs * kTabSize, ' ') << "not enough data for message\n";
     return false;
   }
-  auto header = reinterpret_cast<const fidl_message_header_t*>(bytes);
-  const std::vector<const InterfaceMethod*>* methods = loader_->GetByOrdinal(header->ordinal);
+  header_ = reinterpret_cast<const fidl_message_header_t*>(bytes);
+  const std::vector<const InterfaceMethod*>* methods =
+      dispatcher->loader()->GetByOrdinal(header_->ordinal);
   if (methods == nullptr || methods->empty()) {
     os << line_header << std::string(tabs * kTabSize, ' ') << "Protocol method with ordinal 0x"
-       << std::hex << header->ordinal << " not found\n";
+       << std::hex << header_->ordinal << " not found\n";
     return false;
   }
 
-  const InterfaceMethod* method = (*methods)[0];
+  method_ = (*methods)[0];
 
-  std::unique_ptr<Object> decoded_request;
-  std::stringstream request_error_stream;
-  bool matched_request = DecodeRequest(method, bytes, num_bytes, handles, num_handles,
-                                       &decoded_request, request_error_stream);
+  matched_request_ = DecodeRequest(method_, bytes, num_bytes, handles, num_handles,
+                                   &decoded_request_, request_error_stream_);
+  matched_response_ = DecodeResponse(method_, bytes, num_bytes, handles, num_handles,
+                                     &decoded_response_, response_error_stream_);
 
-  std::unique_ptr<Object> decoded_response;
-  std::stringstream response_error_stream;
-  bool matched_response = DecodeResponse(method, bytes, num_bytes, handles, num_handles,
-                                         &decoded_response, response_error_stream);
-
-  Direction direction = Direction::kUnknown;
-  auto handle_direction = handle_directions_.find(std::make_tuple(handle, process_koid));
-  if (handle_direction != handle_directions_.end()) {
-    direction = handle_direction->second;
-  } else {
-    // This is the first read or write we intercept for this handle/koid. If we
-    // launched the process, we suppose we intercepted the very first read or
-    // write.
-    // If this is not an event (which would mean method->request() is null), a
-    // write means that we are watching a client (a client starts by writing a
-    // request) and a read means that we are watching a server (a server starts
-    // by reading the first client request).
-    // If we attached to a running process, we can only determine correctly if
-    // we are watching a client or a server if we have only one matched_request
-    // or one matched_response.
-    if (IsLaunchedProcess(process_koid) || (matched_request != matched_response)) {
-      // We launched the process or exactly one of request and response are
-      // valid => we can determine the direction.
-      switch (type) {
-        case SyscallFidlType::kOutputMessage:
-          handle_directions_[std::make_tuple(handle, process_koid)] =
-              (method->request() != nullptr) ? Direction::kClient : Direction::kServer;
-          break;
-        case SyscallFidlType::kInputMessage:
-          handle_directions_[std::make_tuple(handle, process_koid)] =
-              (method->request() != nullptr) ? Direction::kServer : Direction::kClient;
-          break;
-        case SyscallFidlType::kOutputRequest:
-        case SyscallFidlType::kInputResponse:
-          handle_directions_[std::make_tuple(handle, process_koid)] = Direction::kClient;
-      }
-      direction = handle_directions_[std::make_tuple(handle, process_koid)];
-    }
-  }
-  bool is_request = false;
-  const char* message_direction = "";
+  direction_ = dispatcher->ComputeDirection(process_koid, handle, type, method_,
+                                            matched_request_ != matched_response_);
   switch (type) {
     case SyscallFidlType::kOutputMessage:
-      if (direction == Direction::kClient) {
-        is_request = true;
+      if (direction_ == Direction::kClient) {
+        is_request_ = true;
       }
-      message_direction = "sent ";
+      message_direction_ = "sent ";
       break;
     case SyscallFidlType::kInputMessage:
-      if (direction == Direction::kServer) {
-        is_request = true;
+      if (direction_ == Direction::kServer) {
+        is_request_ = true;
       }
-      message_direction = "received ";
+      message_direction_ = "received ";
       break;
     case SyscallFidlType::kOutputRequest:
-      is_request = true;
-      message_direction = "sent ";
+      is_request_ = true;
+      message_direction_ = "sent ";
       break;
     case SyscallFidlType::kInputResponse:
-      message_direction = "received ";
+      message_direction_ = "received ";
       break;
   }
-  if (direction != Direction::kUnknown) {
-    if ((is_request && !matched_request) || (!is_request && !matched_response)) {
-      if ((is_request && matched_response) || (!is_request && matched_request)) {
+  if (direction_ != Direction::kUnknown) {
+    if ((is_request_ && !matched_request_) || (!is_request_ && !matched_response_)) {
+      if ((is_request_ && matched_response_) || (!is_request_ && matched_request_)) {
         if ((type == SyscallFidlType::kOutputRequest) ||
             (type == SyscallFidlType::kInputResponse)) {
           // We know the direction: we can't be wrong => we haven't been able to decode the message.
-          return false;
+          // However, we can still display something.
+          return true;
         }
         // The first determination seems to be wrong. That is, we are expecting
         // a request but only a response has been successfully decoded or we are
         // expecting a response but only a request has been successfully
         // decoded.
         // Invert the deduction which should now be the right one.
-        handle_directions_[std::make_tuple(handle, process_koid)] =
-            (direction == Direction::kClient) ? Direction::kServer : Direction::kClient;
-        is_request = !is_request;
+        dispatcher->UpdateDirection(
+            process_koid, handle,
+            (direction_ == Direction::kClient) ? Direction::kServer : Direction::kClient);
+        is_request_ = !is_request_;
       }
     }
   }
+  return true;
+}
 
-  rapidjson::Document actual_request;
-  rapidjson::Document actual_response;
-  if (!display_options_.pretty_print) {
-    if (decoded_request != nullptr) {
-      decoded_request->ExtractJson(actual_request.GetAllocator(), actual_request);
+bool DecodedMessage::Display(const Colors& colors, bool pretty_print, int columns, std::ostream& os,
+                             std::string_view line_header, int tabs) {
+  if (direction_ == Direction::kUnknown) {
+    if (matched_request_ || matched_response_) {
+      os << line_header << std::string(tabs * kTabSize, ' ') << colors.red
+         << "Can't determine request/response." << colors.reset << " it can be:\n";
+    } else {
+      os << line_header << std::string(tabs * kTabSize, ' ') << colors.red
+         << "Can't decode message." << colors.reset << '\n';
     }
 
-    if (decoded_response != nullptr) {
-      decoded_response->ExtractJson(actual_response.GetAllocator(), actual_response);
-    }
-  }
-
-  if (direction == Direction::kUnknown) {
-    os << line_header << std::string(tabs * kTabSize, ' ') << colors_.red
-       << "Can't determine request/response." << colors_.reset << " it can be:\n";
     ++tabs;
   }
 
-  if (matched_request && (is_request || (direction == Direction::kUnknown))) {
-    os << line_header << std::string(tabs * kTabSize, ' ') << colors_.white_on_magenta
-       << message_direction << "request" << colors_.reset << ' ' << colors_.green
-       << method->enclosing_interface().name() << '.' << method->name() << colors_.reset << " = ";
-    if (display_options_.pretty_print) {
-      decoded_request->PrettyPrint(os, colors_, header, line_header, tabs, tabs * kTabSize,
-                                   display_options_.columns);
+  if (matched_request_ && (is_request_ || (direction_ == Direction::kUnknown))) {
+    os << line_header << std::string(tabs * kTabSize, ' ') << colors.white_on_magenta
+       << message_direction_ << "request" << colors.reset << ' ' << colors.green
+       << method_->enclosing_interface().name() << '.' << method_->name() << colors.reset << " = ";
+    if (pretty_print) {
+      decoded_request_->PrettyPrint(os, colors, header_, line_header, tabs, tabs * kTabSize,
+                                    columns);
     } else {
+      rapidjson::Document actual_request;
+      if (decoded_request_ != nullptr) {
+        decoded_request_->ExtractJson(actual_request.GetAllocator(), actual_request);
+      }
       os << DocumentToString(&actual_request);
     }
     os << '\n';
   }
-  if (matched_response && (!is_request || (direction == Direction::kUnknown))) {
-    os << line_header << std::string(tabs * kTabSize, ' ') << colors_.white_on_magenta
-       << message_direction << "response" << colors_.reset << ' ' << colors_.green
-       << method->enclosing_interface().name() << '.' << method->name() << colors_.reset << " = ";
-    if (display_options_.pretty_print) {
-      decoded_response->PrettyPrint(os, colors_, header, line_header, tabs, tabs * kTabSize,
-                                    display_options_.columns);
+  if (matched_response_ && (!is_request_ || (direction_ == Direction::kUnknown))) {
+    os << line_header << std::string(tabs * kTabSize, ' ') << colors.white_on_magenta
+       << message_direction_ << "response" << colors.reset << ' ' << colors.green
+       << method_->enclosing_interface().name() << '.' << method_->name() << colors.reset << " = ";
+    if (pretty_print) {
+      decoded_response_->PrettyPrint(os, colors, header_, line_header, tabs, tabs * kTabSize,
+                                     columns);
     } else {
+      rapidjson::Document actual_response;
+      if (decoded_response_ != nullptr) {
+        decoded_response_->ExtractJson(actual_response.GetAllocator(), actual_response);
+      }
       os << DocumentToString(&actual_response);
     }
     os << '\n';
   }
-  if (matched_request || matched_response) {
+  if (matched_request_ || matched_response_) {
     return true;
   }
-  std::string request_errors = request_error_stream.str();
+  std::string request_errors = request_error_stream_.str();
   if (!request_errors.empty()) {
-    os << line_header << std::string(tabs * kTabSize, ' ') << colors_.red << message_direction
-       << "request errors" << colors_.reset << ":\n"
+    os << line_header << std::string(tabs * kTabSize, ' ') << colors.red << message_direction_
+       << "request errors" << colors.reset << ":\n"
        << request_errors;
-    if (decoded_request != nullptr) {
-      os << line_header << std::string(tabs * kTabSize, ' ') << colors_.white_on_magenta
-         << message_direction << "request" << colors_.reset << ' ' << colors_.green
-         << method->enclosing_interface().name() << '.' << method->name() << colors_.reset << " = ";
-      decoded_request->PrettyPrint(os, colors_, header, line_header, tabs, tabs * kTabSize,
-                                   display_options_.columns);
+    if (decoded_request_ != nullptr) {
+      os << line_header << std::string(tabs * kTabSize, ' ') << colors.white_on_magenta
+         << message_direction_ << "request" << colors.reset << ' ' << colors.green
+         << method_->enclosing_interface().name() << '.' << method_->name() << colors.reset
+         << " = ";
+      decoded_request_->PrettyPrint(os, colors, header_, line_header, tabs, tabs * kTabSize,
+                                    columns);
       os << '\n';
     }
   }
-  std::string response_errors = response_error_stream.str();
+  std::string response_errors = response_error_stream_.str();
   if (!response_errors.empty()) {
-    os << line_header << std::string(tabs * kTabSize, ' ') << colors_.red << message_direction
-       << "response errors" << colors_.reset << ":\n"
+    os << line_header << std::string(tabs * kTabSize, ' ') << colors.red << message_direction_
+       << "response errors" << colors.reset << ":\n"
        << response_errors;
-    if (decoded_response != nullptr) {
-      os << line_header << std::string(tabs * kTabSize, ' ') << colors_.white_on_magenta
-         << message_direction << "request" << colors_.reset << ' ' << colors_.green
-         << method->enclosing_interface().name() << '.' << method->name() << colors_.reset << " = ";
-      decoded_response->PrettyPrint(os, colors_, header, line_header, tabs, tabs * kTabSize,
-                                    display_options_.columns);
+    if (decoded_response_ != nullptr) {
+      os << line_header << std::string(tabs * kTabSize, ' ') << colors.white_on_magenta
+         << message_direction_ << "request" << colors.reset << ' ' << colors.green
+         << method_->enclosing_interface().name() << '.' << method_->name() << colors.reset
+         << " = ";
+      decoded_response_->PrettyPrint(os, colors, header_, line_header, tabs, tabs * kTabSize,
+                                     columns);
       os << '\n';
     }
   }
   return false;
+}
+
+bool MessageDecoderDispatcher::DecodeMessage(uint64_t process_koid, zx_handle_t handle,
+                                             const uint8_t* bytes, uint32_t num_bytes,
+                                             const zx_handle_info_t* handles, uint32_t num_handles,
+                                             SyscallFidlType type, std::ostream& os,
+                                             std::string_view line_header, int tabs) {
+  DecodedMessage message;
+  if (!message.DecodeMessage(this, process_koid, handle, bytes, num_bytes, handles, num_handles,
+                             type, os, line_header, tabs)) {
+    return false;
+  }
+  return message.Display(colors_, display_options_.pretty_print, display_options_.columns, os,
+                         line_header, tabs);
+}
+
+Direction MessageDecoderDispatcher::ComputeDirection(uint64_t process_koid, zx_handle_t handle,
+                                                     SyscallFidlType type,
+                                                     const InterfaceMethod* method,
+                                                     bool only_one_valid) {
+  auto handle_direction = handle_directions_.find(std::make_tuple(handle, process_koid));
+  if (handle_direction != handle_directions_.end()) {
+    return handle_direction->second;
+  }
+  // This is the first read or write we intercept for this handle/koid. If we
+  // launched the process, we suppose we intercepted the very first read or
+  // write.
+  // If this is not an event (which would mean method->request() is null), a
+  // write means that we are watching a client (a client starts by writing a
+  // request) and a read means that we are watching a server (a server starts
+  // by reading the first client request).
+  // If we attached to a running process, we can only determine correctly if
+  // we are watching a client or a server if we have only one matched_request
+  // or one matched_response.
+  if (IsLaunchedProcess(process_koid) || only_one_valid) {
+    // We launched the process or exactly one of request and response are
+    // valid => we can determine the direction.
+    switch (type) {
+      case SyscallFidlType::kOutputMessage:
+        handle_directions_[std::make_tuple(handle, process_koid)] =
+            (method->request() != nullptr) ? Direction::kClient : Direction::kServer;
+        break;
+      case SyscallFidlType::kInputMessage:
+        handle_directions_[std::make_tuple(handle, process_koid)] =
+            (method->request() != nullptr) ? Direction::kServer : Direction::kClient;
+        break;
+      case SyscallFidlType::kOutputRequest:
+      case SyscallFidlType::kInputResponse:
+        handle_directions_[std::make_tuple(handle, process_koid)] = Direction::kClient;
+    }
+    return handle_directions_[std::make_tuple(handle, process_koid)];
+  }
+  return Direction::kUnknown;
 }
 
 MessageDecoder::MessageDecoder(const uint8_t* bytes, uint32_t num_bytes,
