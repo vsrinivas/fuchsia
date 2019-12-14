@@ -6,17 +6,22 @@ use {
     bitfield::bitfield,
     bt_avdtp::RtpHeader,
     failure::{bail, format_err, Error, ResultExt},
-    fidl::endpoints::ClientEnd,
+    fidl::client::QueryResponseFut,
     fidl_fuchsia_media::{
-        AudioSampleFormat, AudioStreamType, MediumSpecificStreamType, SimpleStreamSinkProxy,
-        StreamPacket, StreamType, AUDIO_ENCODING_AACLATM, AUDIO_ENCODING_SBC, NO_TIMESTAMP,
-        STREAM_PACKET_FLAG_DISCONTINUITY,
-    },
-    fidl_fuchsia_media_playback::{
-        PlayerEvent, PlayerEventStream, PlayerMarker, PlayerProxy, SourceMarker,
+        AudioConsumerProxy, AudioConsumerStartFlags, AudioConsumerStatus, AudioSampleFormat,
+        AudioStreamType, Compression, SessionAudioConsumerFactoryMarker,
+        SessionAudioConsumerFactoryProxy, StreamPacket, StreamSinkProxy, AUDIO_ENCODING_AACLATM,
+        AUDIO_ENCODING_SBC, NO_TIMESTAMP, STREAM_PACKET_FLAG_DISCONTINUITY,
     },
     fuchsia_zircon::{self as zx, HandleBased},
-    futures::{stream, StreamExt},
+    futures::{
+        future::Future,
+        ready,
+        stream::{FusedStream, Stream},
+        task::{Context, Poll},
+        FutureExt, StreamExt,
+    },
+    std::pin::Pin,
 };
 
 const DEFAULT_BUFFER_LEN: usize = 65536;
@@ -28,12 +33,20 @@ pub struct Player {
     buffer_len: usize,
     codec: String,
     current_offset: usize,
-    stream_source: SimpleStreamSinkProxy,
-    player: PlayerProxy,
-    events: PlayerEventStream,
+    stream_sink: StreamSinkProxy,
+    audio_consumer: AudioConsumerProxy,
+    watch_status_stream: HangingGetStream<
+        QueryResponseFut<AudioConsumerStatus>,
+        Result<AudioConsumerStatus, fidl::Error>,
+    >,
     playing: bool,
     next_packet_flags: u32,
     last_seq_played: u16,
+}
+
+pub enum PlayerEvent {
+    Closed,
+    Status(AudioConsumerStatus),
 }
 
 #[derive(Debug, PartialEq)]
@@ -125,88 +138,113 @@ impl SbcHeader {
     }
 }
 
+struct HangingGetStream<Fut, T>
+where
+    Fut: Future<Output = T> + Unpin,
+{
+    generator: Box<dyn Fn() -> Fut>,
+    future: Fut,
+}
+
+impl<Fut, T> HangingGetStream<Fut, T>
+where
+    Fut: Future<Output = T> + Unpin,
+{
+    fn new(generator: Box<dyn Fn() -> Fut>) -> Self {
+        let future = generator();
+        Self { generator, future }
+    }
+}
+
+impl<Fut, T> FusedStream for HangingGetStream<Fut, T>
+where
+    Fut: Future<Output = T> + Unpin,
+{
+    fn is_terminated(&self) -> bool {
+        false
+    }
+}
+
+impl<Fut, T> Stream for HangingGetStream<Fut, T>
+where
+    Fut: Future<Output = T> + Unpin,
+{
+    type Item = T;
+
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let result = ready!(self.future.poll_unpin(cx));
+        self.future = (self.generator)();
+        Poll::Ready(Some(result))
+    }
+}
+
 impl Player {
     /// Attempt to make a new player that decodes and plays frames encoded in the
     /// `codec`
-    pub async fn new(codec: String, sample_freq: u32) -> Result<Player, Error> {
-        let player = fuchsia_component::client::connect_to_service::<PlayerMarker>()
-            .context("Failed to connect to media player")?;
-        Self::from_proxy(codec, sample_freq, player).await
+    pub async fn new(session_id: u64, codec: String, sample_freq: u32) -> Result<Player, Error> {
+        let audio_consumer_factory =
+            fuchsia_component::client::connect_to_service::<SessionAudioConsumerFactoryMarker>()
+                .context("Failed to connect to audio consumer factory")?;
+        Self::from_proxy(session_id, codec, sample_freq, audio_consumer_factory).await
     }
 
-    /// Build a Player given a PlayerProxy.
+    /// Build a AudioConsumer given a SessionAudioConsumerFactoryProxy.
     /// Used in tests.
     async fn from_proxy(
+        session_id: u64,
         codec: String,
         sample_freq: u32,
-        player: PlayerProxy,
+        audio_consumer_factory: SessionAudioConsumerFactoryProxy,
     ) -> Result<Player, Error> {
-        let (source_proxy, source) = fidl::endpoints::create_proxy()?;
-        player.create_elementary_source(0, false, false, None, source)?;
+        let (audio_consumer, audio_consumer_server) = fidl::endpoints::create_proxy()?;
 
-        let audio_stream_type = AudioStreamType {
+        audio_consumer_factory.create_audio_consumer(session_id, audio_consumer_server)?;
+
+        let (stream_sink, stream_sink_server) = fidl::endpoints::create_proxy()?;
+
+        let mut audio_stream_type = AudioStreamType {
             sample_format: AudioSampleFormat::Signed16,
             channels: 2, // Stereo
             frames_per_second: sample_freq,
         };
 
-        let mut stream_type = StreamType {
-            medium_specific: MediumSpecificStreamType::Audio(audio_stream_type),
-            encoding: codec.clone(),
-            encoding_parameters: None,
-        };
-
-        let (stream_source, stream_source_server) = fidl::endpoints::create_proxy()?;
-        source_proxy.add_stream(&mut stream_type, sample_freq, 1, stream_source_server)?;
+        let mut compression = Compression { type_: codec.clone(), parameters: None };
 
         let buffer = zx::Vmo::create(DEFAULT_BUFFER_LEN as u64)?;
+        let buffers = vec![buffer.duplicate_handle(zx::Rights::SAME_RIGHTS)?];
 
-        stream_source.add_payload_buffer(0, buffer.duplicate_handle(zx::Rights::SAME_RIGHTS)?)?;
+        audio_consumer.create_stream_sink(
+            &mut buffers.into_iter(),
+            &mut audio_stream_type,
+            Some(&mut compression),
+            stream_sink_server,
+        )?;
 
-        let mut player_event_stream = player.take_event_stream();
+        let audio_consumer_clone = audio_consumer.clone();
+        let watch_status_stream =
+            HangingGetStream::new(Box::new(move || audio_consumer_clone.watch_status()));
 
-        let source_client_channel = source_proxy.into_channel().unwrap().into_zx_channel();
-        let upcasted_source = ClientEnd::<SourceMarker>::new(source_client_channel);
-        player.set_source(Some(upcasted_source))?;
-
-        // We should be able to wait until either
-        // (1) audio is connected or
-        // (2) there is a Problem.
-        loop {
-            let x = player_event_stream.next().await;
-            if x.is_none() {
-                // The player closed the event stream, something is wrong.
-                return Err(format_err!("MediaPlayer closed"));
-            }
-            let evt = x.unwrap();
-            if evt.is_err() {
-                return Err(evt.unwrap_err().into());
-            }
-            let PlayerEvent::OnStatusChanged { player_status } = evt.unwrap();
-            if let Some(problem) = player_status.problem {
-                return Err(format_err!(
-                    "Problem setting up: {} - {:?}",
-                    problem.type_,
-                    problem.details
-                ));
-            }
-            if player_status.audio_connected {
-                break;
-            }
-        }
-
-        Ok(Player {
+        let mut player = Player {
             buffer,
             buffer_len: DEFAULT_BUFFER_LEN,
             codec,
-            stream_source,
-            player,
-            events: player_event_stream,
+            stream_sink,
+            audio_consumer,
+            watch_status_stream,
             current_offset: 0,
             playing: false,
             next_packet_flags: 0,
             last_seq_played: 0,
-        })
+        };
+
+        // wait for initial event
+        let evt = player.next_event().await;
+        match evt {
+            PlayerEvent::Closed => return Err(format_err!("AudioConsumer closed")),
+            PlayerEvent::Status(_status) => (),
+        };
+
+        Ok(player)
     }
 
     /// Interpret the first four octets of the slice in `bytes` as a little-endian  u32
@@ -279,7 +317,7 @@ impl Player {
         }
 
         if full_frame_len > self.buffer_len {
-            self.stream_source.end_of_stream()?;
+            self.stream_sink.end_of_stream()?;
             bail!("frame is too large for buffer");
         }
         if self.current_offset + full_frame_len > self.buffer_len {
@@ -311,7 +349,7 @@ impl Player {
             stream_segment_id: 0,
         };
 
-        self.stream_source.send_packet_no_reply(&mut packet)?;
+        self.stream_sink.send_packet_no_reply(&mut packet)?;
 
         self.current_offset += frame.len();
         self.next_packet_flags = 0;
@@ -323,37 +361,44 @@ impl Player {
     }
 
     pub fn play(&mut self) -> Result<(), Error> {
-        self.player.play()?;
+        self.audio_consumer.start(AudioConsumerStartFlags::SupplyDriven, 0, NO_TIMESTAMP)?;
         self.playing = true;
         Ok(())
     }
 
-    pub fn pause(&mut self) -> Result<(), Error> {
-        self.player.pause()?;
+    pub fn stop(&mut self) -> Result<(), Error> {
+        self.audio_consumer.stop()?;
         self.playing = false;
         Ok(())
     }
 
-    pub fn next_event<'a>(&'a mut self) -> stream::Next<'_, PlayerEventStream> {
-        self.events.next()
+    /// If PlayerEvent::Closed is returned, that indicates the underlying
+    /// service went away and the player should be closed/rebuilt
+    pub async fn next_event(&mut self) -> PlayerEvent {
+        match self.watch_status_stream.next().await {
+            None => PlayerEvent::Closed,
+            Some(Err(_)) => PlayerEvent::Closed,
+            Some(Ok(s)) => PlayerEvent::Status(s),
+        }
     }
 }
 
 impl Drop for Player {
     fn drop(&mut self) {
-        self.pause().unwrap_or_else(|e| println!("Error in drop: {:}", e));
+        self.stop().unwrap_or_else(|e| println!("Error in drop: {:}", e));
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use matches::assert_matches;
 
     use {
-        fidl::endpoints::{create_proxy_and_stream, RequestStream},
-        fidl_fuchsia_media::{SimpleStreamSinkRequest, SimpleStreamSinkRequestStream},
-        fidl_fuchsia_media_playback::{
-            ElementarySourceRequest, PlayerMarker, PlayerRequest, PlayerRequestStream, PlayerStatus,
+        fidl::endpoints::create_proxy_and_stream,
+        fidl_fuchsia_media::{
+            AudioConsumerRequest, AudioConsumerRequestStream, SessionAudioConsumerFactoryRequest,
+            StreamSinkRequest, StreamSinkRequestStream,
         },
         fuchsia_async as fasync,
         std::task::Poll,
@@ -389,103 +434,99 @@ mod tests {
         assert_eq!(HEADER2_FRAMELEN, Player::find_sbc_frame_len(&header2).unwrap());
     }
 
-    /// Runs through the setup sequence of a Player, returning the player,
-    /// SimpleStreamSinkRequestStream and PlayerRequestStream that it is communicating with, and
-    /// the VMO payload buffer that was provided to the SimpleStreamSink.
+    /// Runs through the setup sequence of a AudioConsumer, returning the audio consumer,
+    /// StreamSinkRequestStream and AudioConsumerRequestStream that it is communicating with, and
+    /// the VMO payload buffer that was provided to the AudioConsumer.
     fn setup_player(
         exec: &mut fasync::Executor,
         codec: &str,
-    ) -> (Player, SimpleStreamSinkRequestStream, PlayerRequestStream, zx::Vmo) {
+    ) -> (Player, StreamSinkRequestStream, AudioConsumerRequestStream, zx::Vmo) {
         const TEST_SAMPLE_FREQ: u32 = 48000;
+        const TEST_SESSION_ID: u64 = 1;
 
-        let (player_proxy, mut player_request_stream) =
-            create_proxy_and_stream::<PlayerMarker>().expect("proxy pair creation");
-        let mut player_new_fut =
-            Box::pin(Player::from_proxy(codec.to_string(), TEST_SAMPLE_FREQ, player_proxy));
+        let (audio_consumer_factory_proxy, mut audio_consumer_factory_request_stream) =
+            create_proxy_and_stream::<SessionAudioConsumerFactoryMarker>()
+                .expect("proxy pair creation");
+
+        let mut player_new_fut = Box::pin(Player::from_proxy(
+            TEST_SESSION_ID,
+            codec.to_string(),
+            TEST_SAMPLE_FREQ,
+            audio_consumer_factory_proxy,
+        ));
 
         // player creation is done in stages, waiting for the below source/sink
         // objects to be created. Just run the creation up until the first
         // blocking point.
         assert!(exec.run_until_stalled(&mut player_new_fut).is_pending());
 
-        let complete = exec.run_until_stalled(&mut player_request_stream.select_next_some());
-        let player_req = match complete {
+        let complete =
+            exec.run_until_stalled(&mut audio_consumer_factory_request_stream.select_next_some());
+        let audio_consumer_create_req = match complete {
             Poll::Ready(Ok(req)) => req,
-            x => panic!("expected player request message but got {:?}", x),
+            x => panic!("expected audio consumer create request message but got {:?}", x),
         };
 
-        let mut source_request_stream = match player_req {
-            PlayerRequest::CreateElementarySource { source_request, .. } => source_request,
+        let (audio_consumer_create_request, session_id) = match audio_consumer_create_req {
+            SessionAudioConsumerFactoryRequest::CreateAudioConsumer {
+                audio_consumer_request,
+                session_id,
+                ..
+            } => (audio_consumer_request, session_id),
+        };
+
+        assert_eq!(session_id, TEST_SESSION_ID);
+
+        let mut audio_consumer_request_stream = audio_consumer_create_request
+            .into_stream()
+            .expect("a audio consumer stream to be created from the request");
+
+        let complete =
+            exec.run_until_stalled(&mut audio_consumer_request_stream.select_next_some());
+        let audio_consumer_req = match complete {
+            Poll::Ready(Ok(req)) => req,
+            x => panic!("expected audio consumer request message but got {:?}", x),
+        };
+
+        let (stream_sink_request, mut buffers) = match audio_consumer_req {
+            AudioConsumerRequest::CreateStreamSink { stream_sink_request, buffers, .. } => {
+                (stream_sink_request, buffers)
+            }
             _ => panic!("should be CreateElementarySource"),
-        }
-        .into_stream()
-        .expect("a source request stream to be created from the request");
-
-        let complete = exec.run_until_stalled(&mut source_request_stream.select_next_some());
-        let source_req = match complete {
-            Poll::Ready(Ok(req)) => req,
-            x => panic!("expected source request message but got {:?}", x),
         };
 
-        let (sink_request, sample_freq) = match source_req {
-            ElementarySourceRequest::AddStream {
-                sink_request, ticks_per_second_numerator, ..
-            } => (sink_request, ticks_per_second_numerator),
-            _ => panic!("should be AddStream"),
-        };
-        let mut sink_request_stream = sink_request
+        let sink_vmo = buffers.remove(0);
+
+        let sink_request_stream = stream_sink_request
             .into_stream()
             .expect("a sink request stream to be created from the request");
 
-        assert_eq!(sample_freq, TEST_SAMPLE_FREQ);
-
-        let complete = exec.run_until_stalled(&mut sink_request_stream.select_next_some());
-        let sink_req = match complete {
+        let complete =
+            exec.run_until_stalled(&mut audio_consumer_request_stream.select_next_some());
+        let audio_consumer_req = match complete {
             Poll::Ready(Ok(req)) => req,
-            x => panic!("expected sink req message but got {:?}", x),
+            x => panic!("expected audio consumer request message but got {:?}", x),
         };
 
-        let sink_vmo = match sink_req {
-            SimpleStreamSinkRequest::AddPayloadBuffer { payload_buffer, .. } => payload_buffer,
-            _ => panic!("should have a PayloadBuffer"),
+        let watch_status_responder = match audio_consumer_req {
+            AudioConsumerRequest::WatchStatus { responder, .. } => responder,
+            _ => panic!("should be WatchStatus"),
         };
 
-        let complete = exec.run_until_stalled(&mut player_request_stream.select_next_some());
-        let player_req = match complete {
-            Poll::Ready(Ok(req)) => req,
-            x => panic!("expected player req message but got {:?}", x),
+        let status = AudioConsumerStatus {
+            min_lead_time: Some(50),
+            max_lead_time: Some(500),
+            error: None,
+            presentation_timeline: None,
         };
-
-        match player_req {
-            PlayerRequest::SetSource { .. } => (),
-            _ => panic!("should be SetSource"),
-        };
-
-        player_request_stream
-            .control_handle()
-            .send_on_status_changed(&mut PlayerStatus {
-                duration: 0,
-                can_pause: false,
-                can_seek: false,
-                has_audio: true,
-                has_video: false,
-                ready: true,
-                metadata: None,
-                problem: None,
-                audio_connected: true,
-                video_connected: false,
-                video_size: None,
-                pixel_aspect_ratio: None,
-                timeline_function: None,
-                end_of_stream: false,
-            })
-            .expect("status changed to send");
+        watch_status_responder.send(status).expect("watch status sent");
 
         let player = match exec.run_until_stalled(&mut player_new_fut) {
             Poll::Ready(Ok(player)) => player,
             _ => panic!("player should be done"),
         };
-        (player, sink_request_stream, player_request_stream, sink_vmo)
+
+        (player, sink_request_stream, audio_consumer_request_stream, sink_vmo)
     }
 
     #[test]
@@ -497,10 +538,10 @@ mod tests {
 
     #[test]
     /// Tests that the creation of a player executes with the expected interaction with the
-    /// Player and stream setup.
+    /// AudioConsumer and stream setup.
     /// This tests that the buffer is sent correctly and that data "sent" through the shared
     /// VMO is readable by the receiver of the VMO.
-    /// We do this by mocking the Player and SimpleSourceStream interfaces that are used.
+    /// We do this by mocking the AudioConsumer and StreamSink interfaces that are used.
     fn test_send_frame() {
         let mut exec = fasync::Executor::new().expect("executor should build");
 
@@ -517,7 +558,7 @@ mod tests {
         };
 
         let (offset, size) = match sink_req {
-            SimpleStreamSinkRequest::SendPacketNoReply { packet, .. } => {
+            StreamSinkRequest::SendPacketNoReply { packet, .. } => {
                 (packet.payload_offset, packet.payload_size as usize)
             }
             _ => panic!("should have received a packet"),
@@ -536,7 +577,7 @@ mod tests {
         payload: &[u8],
         exec: &mut fasync::Executor,
         player: &mut Player,
-        sink_request_stream: &mut SimpleStreamSinkRequestStream,
+        sink_request_stream: &mut StreamSinkRequestStream,
     ) -> u32 {
         player.push_payload(payload).expect("send happens okay");
 
@@ -547,7 +588,7 @@ mod tests {
         };
 
         match sink_req {
-            SimpleStreamSinkRequest::SendPacketNoReply { packet, .. } => packet.flags,
+            StreamSinkRequest::SendPacketNoReply { packet, .. } => packet.flags,
             _ => panic!("should have received a packet"),
         }
     }
@@ -555,12 +596,20 @@ mod tests {
     #[test]
     /// Test that discontinuous packets are flagged as such. We do this by
     /// sending packets through a Player and examining them after they come out
-    /// of the mock SimpleSourceStream interface.
+    /// of the mock StreamSink interface.
     fn test_packet_discontinuities() {
         let mut exec = fasync::Executor::new().expect("executor should build");
 
         let (mut player, mut sink_request_stream, mut player_request_stream, _) =
             setup_player(&mut exec, AUDIO_ENCODING_AACLATM);
+
+        let complete = exec.run_until_stalled(&mut player_request_stream.select_next_some());
+        let player_req = match complete {
+            Poll::Ready(Ok(req)) => req,
+            x => panic!("expected player req message but got {:?}", x),
+        };
+
+        assert_matches!(player_req, AudioConsumerRequest::WatchStatus { .. });
 
         player.play().expect("player plays");
 
@@ -570,10 +619,7 @@ mod tests {
             x => panic!("expected player req message but got {:?}", x),
         };
 
-        match player_req {
-            PlayerRequest::Play { .. } => (),
-            _ => panic!("should be Play"),
-        };
+        assert_matches!(player_req, AudioConsumerRequest::Start { .. });
 
         // raw rtp header with sequence number of 1
         let mut raw = [128, 96, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 5];

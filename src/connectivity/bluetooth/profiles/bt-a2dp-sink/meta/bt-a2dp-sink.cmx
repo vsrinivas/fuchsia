@@ -8,7 +8,7 @@
             "fuchsia.bluetooth.bredr.Profile",
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.logger.LogSink",
-            "fuchsia.media.playback.Player"
+            "fuchsia.media.SessionAudioConsumerFactory"
         ]
     }
 }

@@ -84,6 +84,7 @@ const SBC_SEID: u8 = 6;
 const AAC_SEID: u8 = 7;
 
 const DEFAULT_SAMPLE_RATE: u32 = 48000;
+const DEFAULT_SESSION_ID: u64 = 0;
 
 /// Controls a stream endpoint and the media decoding task which is associated with it.
 #[derive(Debug)]
@@ -203,6 +204,8 @@ impl Stream {
             self.endpoint.take_transport()?,
             self.encoding.clone(),
             self.sample_freq(),
+            // TODO(42976) get real media session id
+            DEFAULT_SESSION_ID,
             receive,
             inspect,
             cobalt_sender,
@@ -254,8 +257,12 @@ impl Streams {
         let mut s = Streams::new();
         // TODO(BT-533): detect codecs, add streams for each codec
         // SBC is required
-        if let Err(e) =
-            player::Player::new(AUDIO_ENCODING_SBC.to_string(), DEFAULT_SAMPLE_RATE).await
+        if let Err(e) = player::Player::new(
+            DEFAULT_SESSION_ID,
+            AUDIO_ENCODING_SBC.to_string(),
+            DEFAULT_SAMPLE_RATE,
+        )
+        .await
         {
             fx_log_warn!("Can't play required SBC audio: {}", e);
             return Err(e);
@@ -369,14 +376,15 @@ async fn decode_media_stream(
     mut stream: avdtp::MediaStream,
     encoding: String,
     sample_rate: u32,
+    session_id: u64,
     mut end_signal: Receiver<()>,
     mut inspect: StreamingInspectData,
     cobalt_sender: CobaltSender,
 ) -> () {
-    let mut player = match player::Player::new(encoding.clone(), sample_rate).await {
+    let mut player = match player::Player::new(session_id, encoding.clone(), sample_rate).await {
         Ok(v) => v,
         Err(e) => {
-            fx_log_info!("Can't setup stream source for Media: {:?}", e);
+            fx_log_info!("Can't setup player for Media: {:?}", e);
             return;
         }
     };
@@ -410,19 +418,23 @@ async fn decode_media_stream(
                 }
             },
             evt = player.next_event().fuse() => {
-                fx_log_info!("Player Event happened: {:?}", evt);
-                if evt.is_none() {
-                    fx_log_info!("Rebuilding Player: {:?}", evt);
-                    // The player died somehow? Attempt to rebuild the player.
-                    player = match player::Player::new(encoding.clone(), sample_rate).await {
-                        Ok(v) => v,
-                        Err(e) => {
-                            fx_log_info!("Can't rebuild player: {:?}", e);
-                            break;
-                        }
-                    };
+                match evt {
+                    player::PlayerEvent::Closed => {
+                        fx_log_info!("Rebuilding Player");
+                        // The player died somehow? Attempt to rebuild the player.
+                        player = match player::Player::new(session_id, encoding.clone(), sample_rate).await {
+                            Ok(v) => v,
+                            Err(e) => {
+                                fx_log_info!("Can't rebuild player: {:?}", e);
+                                break;
+                            }
+                        };
+                    },
+                    player::PlayerEvent::Status(s) => {
+                        fx_log_info!("PlayerEvent Status happened: {:?}", s);
+                    }
                 }
-            }
+            },
             _ = inspect.update_interval.next() => {
                 inspect.update_rx_statistics();
             }
