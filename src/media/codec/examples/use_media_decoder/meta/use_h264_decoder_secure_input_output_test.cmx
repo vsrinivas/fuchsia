@@ -9,7 +9,7 @@
         }
     },
     "program": {
-        "binary": "test/use_h264_decoder_secure_input_output_test"
+        "binary": "test/disabled/use_h264_decoder_secure_input_output_test"
     },
     "sandbox": {
         "dev": [

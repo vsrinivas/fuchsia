@@ -133,10 +133,11 @@ package("use_h264_decoder_secure_input_output_test") {
 
   tests = [
     {
-      # Should pass when run on sherlock.
+      # Should pass when run on sherlock, but can fail due to occasional clearTVP issues.
+      # TODO(42991): Re-enable.
       name = "use_h264_decoder_secure_input_output_test"
 
-      environments = [ sherlock_env ]
+      disabled = true
     },
   ]
 
