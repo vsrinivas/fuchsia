@@ -5,6 +5,7 @@
 #include "dma-mgr.h"
 
 #include <lib/syslog/global.h>
+#include <zircon/syscalls.h>
 
 #include <cstdint>
 
@@ -122,10 +123,9 @@ void DmaManager::PrintStatus(ddk::MmioBuffer* mmio) {
   GetUvFailures().ReadFrom(mmio).Print();
 }
 
-zx_status_t DmaManager::Configure(
-    fuchsia_sysmem_BufferCollectionInfo_2 buffer_collection,
-    const fuchsia_sysmem_ImageFormat_2& image_format,
-    fit::function<void(fuchsia_camera_FrameAvailableEvent)> frame_available_callback) {
+zx_status_t DmaManager::Configure(fuchsia_sysmem_BufferCollectionInfo_2 buffer_collection,
+                                  const fuchsia_sysmem_ImageFormat_2& image_format,
+                                  fit::function<void(frame_available_info)> frame_callback) {
   current_format_ = DmaFormat(image_format);
   // TODO(CAM-54): Provide a way to dump the previous set of write locked
   // buffers.
@@ -160,12 +160,12 @@ zx_status_t DmaManager::Configure(
     FX_LOG(ERROR, TAG, "Unable to pin buffers for DmaManager");
     return status;
   }
-  frame_available_callback_ = std::move(frame_available_callback);
+  frame_callback_ = std::move(frame_callback);
   return ZX_OK;
 }
 
 void DmaManager::Enable() {
-  ZX_ASSERT(frame_available_callback_ != nullptr);
+  ZX_ASSERT(frame_callback_ != nullptr);
   enabled_ = true;
 }
 
@@ -184,24 +184,24 @@ void DmaManager::OnFrameWritten() {
   if (!enabled_) {
     return;
   }
-  ZX_ASSERT(frame_available_callback_ != nullptr);
+  ZX_ASSERT(frame_callback_ != nullptr);
   ZX_ASSERT(!write_locked_buffers_.empty());
-  fuchsia_camera_FrameAvailableEvent event;
+  frame_available_info info;
+
+  info.metadata.timestamp = static_cast<uint64_t>(zx_clock_get_monotonic());
+
   // If we had a buffer available when we loaded the new frame:
   if (write_locked_buffers_.back()) {
-    event.buffer_id = write_locked_buffers_.back()->ReleaseWriteLockAndGetIndex();
-    event.frame_status = fuchsia_camera_FrameStatus_OK;
-    // TODO(garratt): set metadata
-    event.metadata.timestamp = 0;
+    info.buffer_id = write_locked_buffers_.back()->ReleaseWriteLockAndGetIndex();
+    info.frame_status = fuchsia_camera_FrameStatus_OK;
   } else {
     // We were not able to get a buffer when the frame was loaded. So we just
     // let the client know now that the buffer was full.
-    event.buffer_id = 0;
-    event.frame_status = fuchsia_camera_FrameStatus_ERROR_BUFFER_FULL;
-    event.metadata.timestamp = 0;
+    info.buffer_id = 0;
+    info.frame_status = fuchsia_camera_FrameStatus_ERROR_BUFFER_FULL;
   }
   write_locked_buffers_.pop_back();
-  frame_available_callback_(event);
+  frame_callback_(info);
 }
 
 // Called as one of the later steps when a new frame arrives.

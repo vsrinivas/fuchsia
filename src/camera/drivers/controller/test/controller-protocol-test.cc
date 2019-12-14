@@ -8,6 +8,7 @@
 #include <lib/fit/function.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
+#include <zircon/syscalls.h>
 
 #include <fbl/auto_call.h>
 
@@ -570,13 +571,24 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
 
     // ISP is single parent for two nodes.
     // Invoke OnFrameAvailable() for the ISP node. Buffer index = 1.
-    EXPECT_NO_FATAL_FAILURE(isp_node->OnFrameAvailable(1));
+    frame_available_info_t frame_info = {
+        .frame_status = FRAME_STATUS_OK,
+        .buffer_id = 1,
+        .metadata =
+            {
+                .timestamp = static_cast<uint64_t>(zx_clock_get_monotonic()),
+                .image_format_index = 0,
+                .input_buffer_index = 0,
+            },
+    };
 
-    EXPECT_EQ(isp_node->get_in_use_buffer_count(1), 1u);
+    EXPECT_NO_FATAL_FAILURE(isp_node->OnFrameAvailable(&frame_info));
+
     EXPECT_EQ(isp_node->get_in_use_buffer_count(0), 0u);
+    EXPECT_EQ(isp_node->get_in_use_buffer_count(frame_info.buffer_id), 1u);
 
-    EXPECT_NO_FATAL_FAILURE(isp_node->OnReleaseFrame(1));
-    EXPECT_EQ(isp_node->get_in_use_buffer_count(1), 0u);
+    EXPECT_NO_FATAL_FAILURE(isp_node->OnReleaseFrame(frame_info.buffer_id));
+    EXPECT_EQ(isp_node->get_in_use_buffer_count(frame_info.buffer_id), 0u);
 
     ml_fr_output->client_stream()->Stop();
     ml_ds_output->client_stream()->Stop();

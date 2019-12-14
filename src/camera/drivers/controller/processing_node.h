@@ -42,7 +42,7 @@ class ProcessNode {
         parent_node_(nullptr),
         output_buffer_collection_(std::move(output_buffer_collection)),
         output_image_formats_(output_image_formats),
-        isp_callback_{OnFrameAvailable, this},
+        hw_accelerator_frame_callback_{OnFrameAvailable, this},
         enabled_(false),
         supported_streams_(supported_streams),
         in_use_buffer_count_(output_buffer_collection.buffer_count, 0) {
@@ -95,7 +95,6 @@ class ProcessNode {
 
   // Callback function when frame is done processing for this node by the HW.
   // Here we would scan the |nodes_| and call each nodes |OnReadyToProcess()|
-  void OnFrameAvailable(uint32_t buffer_index);
   void OnFrameAvailable(const frame_available_info_t* info);
 
   // Called by child nodes when the frame is released.
@@ -124,8 +123,6 @@ class ProcessNode {
   std::unique_ptr<camera::IspStreamProtocol>& isp_stream_protocol() { return isp_stream_protocol_; }
   NodeType type() { return type_; }
 
-  // Returns this instance's callback parameter for use with the ISP Stream banjo interface.
-  const output_stream_callback_t* isp_callback() { return &isp_callback_; }
   const hw_accel_frame_callback_t* hw_accelerator_frame_callback() {
     return &hw_accelerator_frame_callback_;
   }
@@ -166,11 +163,7 @@ class ProcessNode {
   bool enabled() { return enabled_; }
 
  private:
-  // Invoked by the ISP thread when a new frame is available.
-  static void OnFrameAvailable(void* ctx, uint32_t buffer_id) {
-    static_cast<ProcessNode*>(ctx)->OnFrameAvailable(buffer_id);
-  }
-  // Invoked by GDC or GE2D when a new frame is available.
+  // Invoked by GDC, GE2D, or the ISP when a new frame is available.
   static void OnFrameAvailable(void* ctx, const frame_available_info_t* info) {
     static_cast<ProcessNode*>(ctx)->OnFrameAvailable(info);
   }
@@ -197,9 +190,7 @@ class ProcessNode {
   std::unique_ptr<StreamImpl> client_stream_;
   // Valid for input node
   std::unique_ptr<IspStreamProtocol> isp_stream_protocol_;
-  // ISP callback
-  output_stream_callback_t isp_callback_;
-  // GDC/GE2D Frame callback
+  // GDC/GE2D/ISP Frame callback
   hw_accel_frame_callback_t hw_accelerator_frame_callback_;
   // GDC/GE2D Res change callback
   hw_accel_res_change_callback_t hw_accelerator_res_callback_;

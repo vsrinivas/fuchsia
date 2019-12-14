@@ -12,6 +12,8 @@
 
 #include <deque>
 
+#include <ddk/protocol/camerahwaccel.h>
+
 #include "../mali-009/pingpong_regs.h"
 #include "dma-format.h"
 
@@ -44,10 +46,9 @@ class DmaManager {
   //  - ReleaseFrame calls with currently used indices (relating to the old
   //  BufferCollection)
   //    will return errors.
-  zx_status_t Configure(
-      fuchsia_sysmem_BufferCollectionInfo_2 buffer_collection,
-      const fuchsia_sysmem_ImageFormat_2& image_format,
-      fit::function<void(fuchsia_camera_FrameAvailableEvent)> frame_available_callback);
+  zx_status_t Configure(fuchsia_sysmem_BufferCollectionInfo_2 buffer_collection,
+                        const fuchsia_sysmem_ImageFormat_2& image_format,
+                        fit::function<void(frame_available_info)> frame_callback);
 
   static zx_status_t Create(const zx::bti& bti, const ddk::MmioView& isp_mmio_local,
                             Stream stream_type, std::unique_ptr<DmaManager>* out);
@@ -86,7 +87,7 @@ class DmaManager {
   std::deque<std::optional<fzl::VmoPool::Buffer>> write_locked_buffers_;
   std::optional<DmaFormat> current_format_;
   Stream stream_type_;
-  fit::function<void(fuchsia_camera_FrameAvailableEvent)> frame_available_callback_;
+  fit::function<void(frame_available_info)> frame_callback_;
   zx::bti bti_;
   uint64_t buffer_underrun_sequential_count_ = 0;
 

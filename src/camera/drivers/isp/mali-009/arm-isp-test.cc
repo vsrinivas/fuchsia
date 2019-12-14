@@ -69,12 +69,14 @@ zx_status_t ArmIspDeviceTester::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 }
 struct FrameReadyReceiver {
   fbl::Vector<uint32_t> ready_ids;
-  void FrameReady(uint32_t buffer_id) { ready_ids.push_back(buffer_id); }
-  output_stream_callback GetCallback() {
-    output_stream_callback cb;
+  void FrameReady(const frame_available_info_t* frame_info) {
+    ready_ids.push_back(frame_info->buffer_id);
+  }
+  hw_accel_frame_callback GetCallback() {
+    hw_accel_frame_callback cb;
     cb.ctx = this;
-    cb.frame_ready = [](void* ctx, uint32_t buffer_id) {
-      reinterpret_cast<FrameReadyReceiver*>(ctx)->FrameReady(buffer_id);
+    cb.frame_ready = [](void* ctx, const frame_available_info_t* frame_info) {
+      reinterpret_cast<FrameReadyReceiver*>(ctx)->FrameReady(frame_info);
     };
     return cb;
   }
@@ -162,7 +164,7 @@ void ArmIspDeviceTester::TestConnectStream(fuchsia_camera_test_TestReport* repor
   constexpr uint32_t kPixelType = fuchsia_sysmem_PixelFormatType_NV12;
   fuchsia_camera_FrameRate rate = {.frames_per_sec_numerator = 30, .frames_per_sec_denominator = 1};
   FrameReadyReceiver receiver;
-  output_stream_callback cb = receiver.GetCallback();
+  hw_accel_frame_callback_t cb = receiver.GetCallback();
   output_stream_protocol output_stream;
   output_stream_protocol_ops_t ops;
   output_stream.ops = &ops;
@@ -177,21 +179,21 @@ void ArmIspDeviceTester::TestConnectStream(fuchsia_camera_test_TestReport* repor
                          buffer_collection, image_format, isp_->bti_.get(), kNumberOfBuffers),
                      "Failed to create contiguous buffers");
 
-  ISP_TEST_EXPECT_OK(isp_->IspCreateOutputStream2(&buffer_collection, &image_format, &rate,
-                                                  STREAM_TYPE_FULL_RESOLUTION, &cb, &output_stream),
+  ISP_TEST_EXPECT_OK(isp_->IspCreateOutputStream(&buffer_collection, &image_format, &rate,
+                                                 STREAM_TYPE_FULL_RESOLUTION, &cb, &output_stream),
                      "Failed to create full resolution input stream");
 
-  ISP_TEST_EXPECT_OK(isp_->IspCreateOutputStream2(&buffer_collection, &image_format, &rate,
-                                                  STREAM_TYPE_DOWNSCALED, &cb, &output_stream),
+  ISP_TEST_EXPECT_OK(isp_->IspCreateOutputStream(&buffer_collection, &image_format, &rate,
+                                                 STREAM_TYPE_DOWNSCALED, &cb, &output_stream),
                      "Failed to create downscaled input stream");
 
-  ISP_TEST_EXPECT_EQ(isp_->IspCreateOutputStream2(&buffer_collection, &image_format, &rate,
-                                                  STREAM_TYPE_SCALAR, &cb, &output_stream),
+  ISP_TEST_EXPECT_EQ(isp_->IspCreateOutputStream(&buffer_collection, &image_format, &rate,
+                                                 STREAM_TYPE_SCALAR, &cb, &output_stream),
                      ZX_ERR_NOT_SUPPORTED,
                      "Failed to return ZX_ERR_NOT_SUPPORTED for scalar stream");
 
-  ISP_TEST_EXPECT_EQ(isp_->IspCreateOutputStream2(&buffer_collection, &image_format, &rate,
-                                                  STREAM_TYPE_INVALID, &cb, &output_stream),
+  ISP_TEST_EXPECT_EQ(isp_->IspCreateOutputStream(&buffer_collection, &image_format, &rate,
+                                                 STREAM_TYPE_INVALID, &cb, &output_stream),
                      ZX_ERR_INVALID_ARGS,
                      "Failed to return ZX_ERR_INVALID_ARGS for invalid stream");
 
@@ -209,7 +211,7 @@ void ArmIspDeviceTester::TestCallbacks(fuchsia_camera_test_TestReport* report) {
   fuchsia_camera_FrameRate rate = {.frames_per_sec_numerator = 30, .frames_per_sec_denominator = 1};
   FrameReadyReceiver full_res_receiver;
   FrameReadyReceiver downscaled_receiver;
-  output_stream_callback full_res_cb = full_res_receiver.GetCallback();
+  hw_accel_frame_callback_t full_res_cb = full_res_receiver.GetCallback();
   output_stream_protocol full_res_output_stream, downscaled_output_stream;
   output_stream_protocol_ops_t full_res_ops, downscaled_ops;
   full_res_output_stream.ops = &full_res_ops;
@@ -225,15 +227,15 @@ void ArmIspDeviceTester::TestCallbacks(fuchsia_camera_test_TestReport* report) {
                          buffer_collection, image_format, isp_->bti_.get(), kNumberOfBuffers),
                      "Failed to create contiguous buffers.");
 
-  ISP_TEST_EXPECT_OK(isp_->IspCreateOutputStream2(&buffer_collection, &image_format, &rate,
-                                                  STREAM_TYPE_FULL_RESOLUTION, &full_res_cb,
-                                                  &full_res_output_stream),
+  ISP_TEST_EXPECT_OK(isp_->IspCreateOutputStream(&buffer_collection, &image_format, &rate,
+                                                 STREAM_TYPE_FULL_RESOLUTION, &full_res_cb,
+                                                 &full_res_output_stream),
                      "Failed to create full resolution input stream.");
 
-  output_stream_callback downscaled_cb = downscaled_receiver.GetCallback();
+  hw_accel_frame_callback_t downscaled_cb = downscaled_receiver.GetCallback();
   ISP_TEST_EXPECT_OK(
-      isp_->IspCreateOutputStream2(&buffer_collection, &image_format, &rate, STREAM_TYPE_DOWNSCALED,
-                                   &downscaled_cb, &downscaled_output_stream),
+      isp_->IspCreateOutputStream(&buffer_collection, &image_format, &rate, STREAM_TYPE_DOWNSCALED,
+                                  &downscaled_cb, &downscaled_output_stream),
       "Failed to create downscaled input stream.");
 
   // Try to release a frame before things are started.  Should fail.
@@ -336,12 +338,12 @@ zx_status_t ArmIspDeviceTester::CreateStreamServer() {
   });
 
   fuchsia_camera_FrameRate rate = {.frames_per_sec_numerator = 30, .frames_per_sec_denominator = 1};
-  output_stream_callback cb{};
-  cb.frame_ready = [](void* ctx, uint32_t buffer_id) {
+  hw_accel_frame_callback_t cb{};
+  cb.frame_ready = [](void* ctx, const frame_available_info_t* frame_info) {
     auto tester = static_cast<ArmIspDeviceTester*>(ctx);
     fbl::AutoLock server_guard(&tester->server_lock_);
     std::list<uint32_t> frames_to_be_released;
-    tester->server_->FrameAvailable(buffer_id, &frames_to_be_released);
+    tester->server_->FrameAvailable(frame_info->buffer_id, &frames_to_be_released);
     tester->ReleaseFrames(frames_to_be_released);
     if (tester->server_->GetNumClients() == 0) {
       // Stop streaming server upon losing the last client.
@@ -362,8 +364,8 @@ zx_status_t ArmIspDeviceTester::CreateStreamServer() {
     return ZX_ERR_BAD_STATE;
   }
 
-  status = isp_->IspCreateOutputStream2(&buffers, &image_format_, &rate,
-                                        STREAM_TYPE_FULL_RESOLUTION, &cb, &stream_protocol_);
+  status = isp_->IspCreateOutputStream(&buffers, &image_format_, &rate, STREAM_TYPE_FULL_RESOLUTION,
+                                       &cb, &stream_protocol_);
   if (status != ZX_OK) {
     FX_PLOGST(ERROR, TAG, status) << "IspCreateOutputStream failed";
     return status;

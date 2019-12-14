@@ -126,11 +126,10 @@ fit::result<std::unique_ptr<ProcessNode>, zx_status_t> PipelineManager::CreateIn
     return fit::error(ZX_ERR_INTERNAL);
   }
 
-  // TODO(braval): create FR or DS depending on what stream is requested
-  auto status = isp_.CreateOutputStream2(
+  auto status = isp_.CreateOutputStream(
       buffer_collection_helper.GetC(), &image_format,
       reinterpret_cast<const frame_rate_t*>(&info->node.output_frame_rate), isp_stream_type,
-      processing_node->isp_callback(), isp_stream_protocol->protocol());
+      processing_node->hw_accelerator_frame_callback(), isp_stream_protocol->protocol());
   if (status != ZX_OK) {
     FX_PLOGST(ERROR, TAG, status) << "Failed to create output stream on ISP";
     return fit::error(ZX_ERR_INTERNAL);

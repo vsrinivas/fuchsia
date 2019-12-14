@@ -69,13 +69,9 @@ class DmaMgrTest : public zxtest::Test {
     ASSERT_OK(status);
   }
 
-  void FullResCallback(fuchsia_camera_FrameAvailableEvent event) {
-    full_resolution_callbacks_.push_back(event);
-  }
+  void FullResCallback(frame_available_info info) { full_resolution_callbacks_.push_back(info); }
 
-  void DownScaledCallback(fuchsia_camera_FrameAvailableEvent event) {
-    downscaled_callbacks_.push_back(event);
-  }
+  void DownScaledCallback(frame_available_info info) { downscaled_callbacks_.push_back(info); }
 
   bool CheckWriteEnabled(Stream type) {
     if (type == Stream::FullResolution) {
@@ -179,8 +175,8 @@ class DmaMgrTest : public zxtest::Test {
   fuchsia_sysmem_BufferCollectionInfo_2 downscaled_buffer_collection_;
   fuchsia_sysmem_ImageFormat_2 full_resolution_image_format_;
   fuchsia_sysmem_ImageFormat_2 downscaled_image_format_;
-  std::vector<fuchsia_camera_FrameAvailableEvent> full_resolution_callbacks_;
-  std::vector<fuchsia_camera_FrameAvailableEvent> downscaled_callbacks_;
+  std::vector<frame_available_info> full_resolution_callbacks_;
+  std::vector<frame_available_info> downscaled_callbacks_;
 };
 
 TEST_F(DmaMgrTest, EnableDeathTest) {
@@ -336,8 +332,8 @@ TEST_F(DmaMgrTest, CallbackReentrancy) {
   uint32_t buffer_id = kFullResNumberOfBuffers;
   zx_status_t status = full_resolution_dma_->Configure(
       full_resolution_buffer_collection_, full_resolution_image_format_,
-      [this, &buffer_id](fuchsia_camera_FrameAvailableEvent event) {
-        buffer_id = event.buffer_id;
+      [this, &buffer_id](frame_available_info info) {
+        buffer_id = info.buffer_id;
         full_resolution_dma_->Disable();
         ASSERT_FALSE(full_resolution_dma_->enabled());
       });

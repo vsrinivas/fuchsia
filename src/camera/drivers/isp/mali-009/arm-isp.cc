@@ -706,14 +706,7 @@ zx_status_t ArmIspDevice::IspCreateOutputStream(const buffer_collection_info_2_t
                                                 const frame_rate_t* rate, stream_type_t type,
                                                 const hw_accel_frame_callback_t* frame_callback,
                                                 output_stream_protocol_t* out_s) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
-zx_status_t ArmIspDevice::IspCreateOutputStream2(
-    const buffer_collection_info_2_t* buffer_collection, const image_format_2_t* image_format,
-    const frame_rate_t* rate, stream_type_t type, const output_stream_callback_t* stream,
-    output_stream_protocol_t* out_s) {
-  ZX_ASSERT(stream && stream->frame_ready);
+  ZX_ASSERT(frame_callback && frame_callback->frame_ready);
 
   if (!IsIspConfigInitialized()) {
     zx_status_t status = SetupIspConfig();
@@ -725,11 +718,12 @@ zx_status_t ArmIspDevice::IspCreateOutputStream2(
   }
 
   // TODO(CAM-79): Set frame rate in sensor
-  auto frame_ready_callback = [stream = *stream](fuchsia_camera_FrameAvailableEvent event) {
+  auto frame_ready_callback = [frame_callback =
+                                   *frame_callback](const frame_available_info_t info) {
     // TODO(CAM-80): change the output_stream_callback_t so it uses all the
     // frame available info
-    if (event.frame_status == fuchsia_camera_FrameStatus_OK) {
-      stream.frame_ready(stream.ctx, event.buffer_id);
+    if (info.frame_status == fuchsia_camera_FrameStatus_OK) {
+      frame_callback.frame_ready(frame_callback.ctx, &info);
     }
   };
 
@@ -768,6 +762,13 @@ zx_status_t ArmIspDevice::IspCreateOutputStream2(
       return ZX_ERR_INVALID_ARGS;
   }
   return ZX_ERR_INVALID_ARGS;
+}
+
+zx_status_t ArmIspDevice::IspCreateOutputStream2(
+    const buffer_collection_info_2_t* buffer_collection, const image_format_2_t* image_format,
+    const frame_rate_t* rate, stream_type_t type, const output_stream_callback_t* stream,
+    output_stream_protocol_t* out_s) {
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 int ArmIspDevice::FrameProcessingThread() {
