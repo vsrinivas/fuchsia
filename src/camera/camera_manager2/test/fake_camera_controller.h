@@ -55,8 +55,8 @@ class FakeController : public fuchsia::camera2::hal::Controller {
   void GetConfigs(GetConfigsCallback callback) override;
 
   void CreateStream(uint32_t config_index, uint32_t stream_index, uint32_t image_format_index,
-                    ::fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection,
-                    ::fidl::InterfaceRequest<::fuchsia::camera2::Stream> stream) override;
+                    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection,
+                    fidl::InterfaceRequest<fuchsia::camera2::Stream> stream) override;
 
   // Enable/Disable Streaming
   void EnableStreaming() override {}
@@ -76,8 +76,8 @@ class FakeController : public fuchsia::camera2::hal::Controller {
     uint32_t config_index;
     uint32_t stream_index;
     uint32_t image_format_index;
-    ::fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
-    ::fidl::InterfaceRequest<::fuchsia::camera2::Stream> stream;
+    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
+    fidl::InterfaceRequest<fuchsia::camera2::Stream> stream;
   };
 
   std::vector<fuchsia::camera2::hal::Config> configs_;

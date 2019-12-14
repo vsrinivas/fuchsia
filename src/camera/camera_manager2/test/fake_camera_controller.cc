@@ -96,8 +96,8 @@ void FakeController::GetConfigs(GetConfigsCallback callback) {
 
 void FakeController::CreateStream(uint32_t config_index, uint32_t stream_index,
                                   uint32_t image_format_index,
-                                  ::fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection,
-                                  ::fidl::InterfaceRequest<::fuchsia::camera2::Stream> stream) {
+                                  fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection,
+                                  fidl::InterfaceRequest<fuchsia::camera2::Stream> stream) {
   CameraConnection conn = {.config_index = config_index,
                            .stream_index = stream_index,
                            .image_format_index = image_format_index,

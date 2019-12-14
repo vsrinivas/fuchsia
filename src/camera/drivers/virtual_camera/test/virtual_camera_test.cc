@@ -17,7 +17,7 @@ namespace camera {
 namespace {
 
 // Test the controller part of the virtual camera
-class CameraHalTest : public ::testing::Test {
+class CameraHalTest : public testing::Test {
  public:
   CameraHalTest()
       : loop_(&kAsyncLoopConfigNoAttachToCurrentThread),

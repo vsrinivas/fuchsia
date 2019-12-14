@@ -17,7 +17,7 @@ namespace camera {
 // Representation of a client of the CameraManager, used internally by the CameraManager.
 class VideoDeviceClient {
  public:
-  using StartupCallback = ::fit::function<void(zx_status_t status)>;
+  using StartupCallback = fit::function<void(zx_status_t status)>;
 
   // Create a VideoDeviceClient to handle the connection to a camera HAL.
   // The VideoDeviceClient takes ownership of |controller|.
@@ -32,7 +32,7 @@ class VideoDeviceClient {
   zx_status_t CreateStream(
       uint32_t config_index, uint32_t stream_type, uint32_t image_format_index,
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollection> sysmem_collection,
-      ::fidl::InterfaceRequest<::fuchsia::camera2::Stream> stream);
+      fidl::InterfaceRequest<fuchsia::camera2::Stream> stream);
   void set_id(int32_t id) { device_id_ = id; }
   int32_t id() const { return device_id_; }
   bool muted() const { return muted_; }

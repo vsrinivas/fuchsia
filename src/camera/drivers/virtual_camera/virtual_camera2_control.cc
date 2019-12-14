@@ -151,8 +151,8 @@ void VirtualCamera2ControllerImpl::GetDeviceInfo(GetDeviceInfoCallback callback)
 
 void VirtualCamera2ControllerImpl::CreateStream(
     uint32_t config_index, uint32_t stream_type, uint32_t /*image_format_index*/,
-    ::fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection,
-    ::fidl::InterfaceRequest<::fuchsia::camera2::Stream> stream) {
+    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection,
+    fidl::InterfaceRequest<fuchsia::camera2::Stream> stream) {
   auto& stream_config = configs_[config_index].stream_configs[stream_type];
   rate_ = stream_config.frame_rate;
 

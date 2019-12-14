@@ -21,7 +21,7 @@ zx_status_t GdcTask::PinConfigVmos(const gdc_config_info* config_vmo_list, size_
                                    const zx::bti& bti) {
   fbl::AllocChecker ac;
   pinned_config_vmos_ =
-      fbl ::Array<fzl::PinnedVmo>(new (&ac) fzl::PinnedVmo[config_vmos_count], config_vmos_count);
+      fbl::Array<fzl::PinnedVmo>(new (&ac) fzl::PinnedVmo[config_vmos_count], config_vmos_count);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }

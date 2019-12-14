@@ -112,8 +112,8 @@ zx_status_t GenericTask::InitBuffers(const buffer_collection_info_2_t* input_buf
 
   // Pin the input buffers.
   input_buffers_ =
-      fbl ::Array<fzl::PinnedVmo>(new (&ac) fzl::PinnedVmo[input_buffer_collection->buffer_count],
-                                  input_buffer_collection->buffer_count);
+      fbl::Array<fzl::PinnedVmo>(new (&ac) fzl::PinnedVmo[input_buffer_collection->buffer_count],
+                                 input_buffer_collection->buffer_count);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }

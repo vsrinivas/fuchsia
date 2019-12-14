@@ -17,7 +17,7 @@
 namespace camera {
 namespace {
 
-class VideoDeviceClientTest : public ::testing::Test {
+class VideoDeviceClientTest : public testing::Test {
  public:
   VideoDeviceClientTest()
       : fake_camera_(FakeController::StandardConfigs(), fake_camera_loop_.dispatcher()),

@@ -25,7 +25,7 @@ namespace camera {
 
 namespace {
 
-constexpr ::fuchsia::sysmem::PixelFormatType kFramePixelFormat =
+constexpr fuchsia::sysmem::PixelFormatType kFramePixelFormat =
     fuchsia::sysmem::PixelFormatType::NV12;
 
 // Isp FR parameters

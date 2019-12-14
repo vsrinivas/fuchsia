@@ -59,9 +59,9 @@ class ArmIspDevice : public IspDeviceType,
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(ArmIspDevice);
 
-  explicit ArmIspDevice(zx_device_t* parent, ddk ::MmioBuffer hiu_mmio, ddk ::MmioBuffer power_mmio,
-                        ddk ::MmioBuffer memory_pd_mmio, ddk ::MmioBuffer reset_mmio,
-                        ddk ::MmioBuffer isp_mmio, mmio_buffer_t local_mmio, zx::interrupt isp_irq,
+  explicit ArmIspDevice(zx_device_t* parent, ddk::MmioBuffer hiu_mmio, ddk::MmioBuffer power_mmio,
+                        ddk::MmioBuffer memory_pd_mmio, ddk::MmioBuffer reset_mmio,
+                        ddk::MmioBuffer isp_mmio, mmio_buffer_t local_mmio, zx::interrupt isp_irq,
                         zx::bti bti, zx_device_t* camera_sensor)
       : IspDeviceType(parent),
         pdev_(parent),

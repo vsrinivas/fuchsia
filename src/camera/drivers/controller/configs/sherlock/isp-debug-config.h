@@ -27,9 +27,9 @@ constexpr uint32_t kIspStreamMinBufferForCamping = 5;
 constexpr uint32_t kIspStreamWidth = 2176;
 constexpr uint32_t kIspStreamHeight = 2720;
 constexpr uint32_t kIspStreamFrameRate = 30;
-constexpr ::fuchsia::sysmem::PixelFormatType kIspStreamPixelFormat =
+constexpr fuchsia::sysmem::PixelFormatType kIspStreamPixelFormat =
     fuchsia::sysmem::PixelFormatType::NV12;
-constexpr ::fuchsia::sysmem::ColorSpaceType kIspStreamColorSpaceType =
+constexpr fuchsia::sysmem::ColorSpaceType kIspStreamColorSpaceType =
     fuchsia::sysmem::ColorSpaceType::REC601_PAL;
 
 }  // namespace

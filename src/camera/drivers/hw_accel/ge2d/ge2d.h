@@ -50,7 +50,7 @@ using Ge2dDeviceType = ddk::Device<Ge2dDevice, ddk::UnbindableNew>;
 class Ge2dDevice : public Ge2dDeviceType, public ddk::Ge2dProtocol<Ge2dDevice, ddk::base_protocol> {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(Ge2dDevice);
-  explicit Ge2dDevice(zx_device_t* parent, ddk ::MmioBuffer ge2d_mmio, zx::interrupt ge2d_irq,
+  explicit Ge2dDevice(zx_device_t* parent, ddk::MmioBuffer ge2d_mmio, zx::interrupt ge2d_irq,
                       zx::bti bti, zx::port port, amlogic_canvas_protocol_t canvas)
       : Ge2dDeviceType(parent),
         port_(std::move(port)),

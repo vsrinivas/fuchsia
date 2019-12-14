@@ -50,7 +50,7 @@ using GdcDeviceType = ddk::Device<GdcDevice, ddk::UnbindableNew>;
 class GdcDevice : public GdcDeviceType, public ddk::GdcProtocol<GdcDevice, ddk::base_protocol> {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(GdcDevice);
-  explicit GdcDevice(zx_device_t* parent, ddk ::MmioBuffer clk_mmio, ddk ::MmioBuffer gdc_mmio,
+  explicit GdcDevice(zx_device_t* parent, ddk::MmioBuffer clk_mmio, ddk::MmioBuffer gdc_mmio,
                      zx::interrupt gdc_irq, zx::bti bti, zx::port port)
       : GdcDeviceType(parent),
         port_(std::move(port)),

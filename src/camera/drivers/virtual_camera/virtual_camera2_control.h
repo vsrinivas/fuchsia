@@ -92,8 +92,8 @@ class VirtualCamera2ControllerImpl : public fuchsia::camera2::hal::Controller {
   // If the new stream requested is already part of the existing running configuration
   // the HAL will just be creating this new stream while the other stream still exists as is.
   void CreateStream(uint32_t config_index, uint32_t stream_type, uint32_t image_format_index,
-                    ::fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection,
-                    ::fidl::InterfaceRequest<::fuchsia::camera2::Stream> stream) override;
+                    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection,
+                    fidl::InterfaceRequest<fuchsia::camera2::Stream> stream) override;
 
   // Enable/Disable Streaming
   void EnableStreaming() override {}

@@ -38,7 +38,7 @@ std::unique_ptr<VideoDeviceClient> VideoDeviceClient::Create(
 zx_status_t VideoDeviceClient::CreateStream(
     uint32_t config_index, uint32_t stream_type, uint32_t image_format_index,
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollection> sysmem_collection,
-    ::fidl::InterfaceRequest<::fuchsia::camera2::Stream> stream) {
+    fidl::InterfaceRequest<fuchsia::camera2::Stream> stream) {
   if (config_index >= configs_.size()) {
     FX_LOGS(WARNING) << "Requested config " << config_index << " Does not exist.";
     return ZX_ERR_INVALID_ARGS;
@@ -68,7 +68,8 @@ zx_status_t VideoDeviceClient::CreateStream(
 
   zx_status_t allocation_status = ZX_OK;
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info{};
-  status = sysmem_collection_ptr->WaitForBuffersAllocated(&allocation_status, &buffer_collection_info);
+  status =
+      sysmem_collection_ptr->WaitForBuffersAllocated(&allocation_status, &buffer_collection_info);
   if (allocation_status != ZX_OK) {
     FX_PLOGS(ERROR, allocation_status) << "Failed to allocate buffers.";
     return allocation_status;
@@ -79,7 +80,7 @@ zx_status_t VideoDeviceClient::CreateStream(
   }
 
   status = camera_control_->CreateStream(config_index, stream_type, image_format_index,
-                                      std::move(buffer_collection_info), std::move(stream));
+                                         std::move(buffer_collection_info), std::move(stream));
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to call CreateStream.";
     return status;
