@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/compiled_action.gni")
 import("//src/lib/icu/tzdata/icu_tzdata_config_data.gni")
 
 # Generates a text file containing the revision ID (e.g. "2019c") of the time
@@ -10,20 +11,29 @@ import("//src/lib/icu/tzdata/icu_tzdata_config_data.gni")
 # The resulting file is ASCII-encoded and contains a single unquoted string
 # without any line breaks. It is written to
 # `out/default/gen/src/lib/icu/tzdata/revision.txt`.
-action("revision") {
-  zoneinfo64_path = "//third_party/icu/tzres/zoneinfo64.res"
+compiled_action("revision") {
+  tool = "//src/lib/icu/tools/extractor:icu_data_extractor"
+
+  icu_data_file = "//third_party/icu/common/icudtl.dat"
+  tz_res_dir = "//third_party/icu/tzres/"
   output_path = "${target_gen_dir}/revision.txt"
 
-  script = "extract_revision.sh"
   sources = [
-    zoneinfo64_path,
+    icu_data_file,
   ]
   outputs = [
     output_path,
   ]
+
+  rebased_icu_data_file = rebase_path(icu_data_file)
+  rebased_tz_res_dir = rebase_path(tz_res_dir)
+  rebased_output_path = rebase_path(output_path)
+
   args = [
-    rebase_path(zoneinfo64_path),
-    rebase_path(output_path),
+    "--icu-data-file=${rebased_icu_data_file}",
+    "--tz-res-dir=${rebased_tz_res_dir}",
+    "--output=${rebased_output_path}",
+    "tz-version",
   ]
 }
 

@@ -2,25 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("icu") {
-  testonly = true
-  deps = [
-    ":tests",
-    "rust",
-  ]
-}
-
-group("tests") {
-  testonly = true
-
-  deps = [
-    "rust:tests",
-  ]
-}
-
 group("tools") {
   testonly = true
   deps = [
-    "tools:tools",
+    "extractor:host",
   ]
 }
