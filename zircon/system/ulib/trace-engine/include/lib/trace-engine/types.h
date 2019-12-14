@@ -241,61 +241,61 @@ typedef struct {
 
 // Makes a null argument value.
 static inline trace_arg_value_t trace_make_null_arg_value(void) {
-  trace_arg_value_t arg_value = {.type = TRACE_ARG_NULL, {}};
+  trace_arg_value_t arg_value = {TRACE_ARG_NULL, {}};
   return arg_value;
 }
 
 // Makes a signed 32-bit integer argument value.
 static inline trace_arg_value_t trace_make_int32_arg_value(int32_t value) {
-  trace_arg_value_t arg_value = {.type = TRACE_ARG_INT32, {.int32_value = value}};
+  trace_arg_value_t arg_value = {TRACE_ARG_INT32, {.int32_value = value}};
   return arg_value;
 }
 
 // Makes an unsigned 32-bit integer argument value.
 static inline trace_arg_value_t trace_make_uint32_arg_value(uint32_t value) {
-  trace_arg_value_t arg_value = {.type = TRACE_ARG_UINT32, {.uint32_value = value}};
+  trace_arg_value_t arg_value = {TRACE_ARG_UINT32, {.uint32_value = value}};
   return arg_value;
 }
 
 // Makes a signed 64-bit integer argument value.
 static inline trace_arg_value_t trace_make_int64_arg_value(int64_t value) {
-  trace_arg_value_t arg_value = {.type = TRACE_ARG_INT64, {.int64_value = value}};
+  trace_arg_value_t arg_value = {TRACE_ARG_INT64, {.int64_value = value}};
   return arg_value;
 }
 
 // Makes an unsigned 64-bit integer argument value.
 static inline trace_arg_value_t trace_make_uint64_arg_value(uint64_t value) {
-  trace_arg_value_t arg_value = {.type = TRACE_ARG_UINT64, {.uint64_value = value}};
+  trace_arg_value_t arg_value = {TRACE_ARG_UINT64, {.uint64_value = value}};
   return arg_value;
 }
 
 // Makes a double-precision floating point argument value.
 static inline trace_arg_value_t trace_make_double_arg_value(double value) {
-  trace_arg_value_t arg_value = {.type = TRACE_ARG_DOUBLE, {.double_value = value}};
+  trace_arg_value_t arg_value = {TRACE_ARG_DOUBLE, {.double_value = value}};
   return arg_value;
 }
 
 // Makes a string argument value.
 static inline trace_arg_value_t trace_make_string_arg_value(trace_string_ref_t value_ref) {
-  trace_arg_value_t arg_value = {.type = TRACE_ARG_STRING, {.string_value_ref = value_ref}};
+  trace_arg_value_t arg_value = {TRACE_ARG_STRING, {.string_value_ref = value_ref}};
   return arg_value;
 }
 
 // Makes a pointer argument value.
 static inline trace_arg_value_t trace_make_pointer_arg_value(uintptr_t value) {
-  trace_arg_value_t arg_value = {.type = TRACE_ARG_POINTER, {.pointer_value = value}};
+  trace_arg_value_t arg_value = {TRACE_ARG_POINTER, {.pointer_value = value}};
   return arg_value;
 }
 
 // Makes a koid argument value.
 static inline trace_arg_value_t trace_make_koid_arg_value(zx_koid_t value) {
-  trace_arg_value_t arg_value = {.type = TRACE_ARG_KOID, {.koid_value = value}};
+  trace_arg_value_t arg_value = {TRACE_ARG_KOID, {.koid_value = value}};
   return arg_value;
 }
 
 // Makes a boolean argument value.
 static inline trace_arg_value_t trace_make_bool_arg_value(bool value) {
-  trace_arg_value_t arg_value = {.type = TRACE_ARG_BOOL, {.bool_value = value}};
+  trace_arg_value_t arg_value = {TRACE_ARG_BOOL, {.bool_value = value}};
   return arg_value;
 }
 
