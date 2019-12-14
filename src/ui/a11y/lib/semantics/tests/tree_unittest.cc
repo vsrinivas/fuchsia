@@ -28,7 +28,7 @@
 namespace accessibility_test {
 namespace {
 
-using a11y::transition::SemanticTree;
+using ::a11y::SemanticTree;
 using fuchsia::accessibility::semantics::Node;
 using fuchsia::accessibility::semantics::Role;
 
@@ -42,18 +42,19 @@ const std::string kSemanticTreeWithMissingChildrenPath =
 
 class SemanticTreeTestTransition : public gtest::TestLoopFixture {
  public:
-  SemanticTreeTestTransition()
-      : tree_(
-            [this](uint32_t node_id, fuchsia::accessibility::semantics::Action action,
-                   fuchsia::accessibility::semantics::SemanticListener::
-                       OnAccessibilityActionRequestedCallback callback) {
-              this->action_handler_called_ = true;
-            },
-            [this](fuchsia::math::PointF local_point,
-                   fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback) {
-              this->hit_testing_called_ = true;
-            }) {
+  SemanticTreeTestTransition() {
     syslog::InitLogger();
+    tree_.set_action_handler([this](uint32_t node_id,
+                                    fuchsia::accessibility::semantics::Action action,
+                                    fuchsia::accessibility::semantics::SemanticListener::
+                                        OnAccessibilityActionRequestedCallback callback) {
+      this->action_handler_called_ = true;
+    });
+    tree_.set_hit_testing_handler(
+        [this](fuchsia::math::PointF local_point,
+               fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback) {
+          this->hit_testing_called_ = true;
+        });
   }
 
  protected:
@@ -321,6 +322,17 @@ TEST_F(SemanticTreeTestTransition, ReparentsNodes) {
   auto new_parent = tree_.GetNode(1);
   EXPECT_TRUE(new_parent);
   EXPECT_THAT(new_parent->child_ids(), testing::ElementsAre(3, 4, 2));
+}
+
+TEST_F(SemanticTreeTestTransition, GetParentNodeTest) {
+  SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeOddNodesPath);
+  EXPECT_TRUE(tree_.Update(std::move(updates)));
+  auto parent = tree_.GetParentNode(1);
+  auto missing_parent = tree_.GetParentNode(SemanticTree::kRootNodeId);
+  EXPECT_TRUE(parent);
+  EXPECT_FALSE(missing_parent);
+
+  EXPECT_EQ(parent->node_id(), SemanticTree::kRootNodeId);
 }
 
 TEST_F(SemanticTreeTestTransition, PerformAccessibilityActionRequested) {

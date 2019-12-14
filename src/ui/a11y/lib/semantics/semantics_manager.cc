@@ -40,8 +40,9 @@ void SemanticsManager::CompleteSemanticRegistration(
     fuchsia::ui::views::ViewRef view_ref,
     fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
     fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree> semantic_tree_request) {
-  auto semantic_tree = std::make_unique<SemanticTree>(
-      std::move(view_ref), std::move(semantic_listener), debug_dir_,
+  auto semantic_tree = std::make_unique<SemanticTreeService>(
+      std::make_unique<SemanticTree>(), std::move(view_ref), std::move(semantic_listener),
+      debug_dir_,
       /*commit_error_callback=*/[this](zx_koid_t koid) { CloseChannel(koid); });
   // As part of the registration, client should get notified about the current Semantics Manager
   // enable settings.
@@ -54,8 +55,14 @@ void SemanticsManager::CompleteSemanticRegistration(
 fuchsia::accessibility::semantics::NodePtr SemanticsManager::GetAccessibilityNode(
     const fuchsia::ui::views::ViewRef& view_ref, const int32_t node_id) {
   for (auto& binding : semantic_tree_bindings_.bindings()) {
-    if (binding->impl()->IsSameView(view_ref)) {
-      return binding->impl()->GetAccessibilityNode(node_id);
+    if (binding->impl()->view_ref_koid() == GetKoid(view_ref)) {
+      const auto* node = binding->impl()->Get()->GetNode(node_id);
+      if (!node) {
+        return nullptr;
+      }
+      auto node_ptr = fuchsia::accessibility::semantics::Node::New();
+      node->Clone(node_ptr.get());
+      return node_ptr;
     }
   }
 
@@ -65,8 +72,14 @@ fuchsia::accessibility::semantics::NodePtr SemanticsManager::GetAccessibilityNod
 fuchsia::accessibility::semantics::NodePtr SemanticsManager::GetAccessibilityNodeByKoid(
     const zx_koid_t koid, const int32_t node_id) {
   for (auto& binding : semantic_tree_bindings_.bindings()) {
-    if (binding->impl()->IsSameKoid(koid)) {
-      return binding->impl()->GetAccessibilityNode(node_id);
+    if (binding->impl()->view_ref_koid() == koid) {
+      const auto* node = binding->impl()->Get()->GetNode(node_id);
+      if (!node) {
+        return nullptr;
+      }
+      auto node_ptr = fuchsia::accessibility::semantics::Node::New();
+      node->Clone(node_ptr.get());
+      return node_ptr;
     }
   }
   return nullptr;
@@ -81,27 +94,17 @@ void SemanticsManager::PerformHitTesting(
     zx_koid_t koid, ::fuchsia::math::PointF local_point,
     fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback) {
   for (auto& binding : semantic_tree_bindings_.bindings()) {
-    if (binding->impl()->IsSameKoid(koid)) {
-      return binding->impl()->PerformHitTesting(local_point, std::move(callback));
+    if (binding->impl()->view_ref_koid() == koid) {
+      return binding->impl()->Get()->PerformHitTesting(local_point, std::move(callback));
     }
   }
 
   FX_LOGS(INFO) << "Given KOID(" << koid << ") doesn't match any existing ViewRef's koid.";
 }
 
-std::string SemanticsManager::LogSemanticTreeForView(const fuchsia::ui::views::ViewRef& view_ref) {
-  for (const auto& binding : semantic_tree_bindings_.bindings()) {
-    if (binding->impl()->IsSameView(view_ref)) {
-      return binding->impl()->LogSemanticTree();
-    }
-  }
-
-  return std::string();
-}
-
 void SemanticsManager::CloseChannel(zx_koid_t koid) {
   for (auto& binding : semantic_tree_bindings_.bindings()) {
-    if (binding->impl()->IsSameKoid(koid)) {
+    if (binding->impl()->view_ref_koid() == koid) {
       semantic_tree_bindings_.RemoveBinding(binding->impl());
     }
   }

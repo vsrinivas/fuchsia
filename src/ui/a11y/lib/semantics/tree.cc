@@ -12,7 +12,6 @@
 #include "src/lib/fxl/logging.h"
 
 namespace a11y {
-namespace transition {
 namespace {
 
 using SemanticTreeData = std::unordered_map<uint32_t, fuchsia::accessibility::semantics::Node>;
@@ -130,10 +129,7 @@ const Node& SemanticTree::TreeUpdate::node() const {
   return *node_;
 }
 
-SemanticTree::SemanticTree(ActionHandlerCallback action_handler,
-                           HitTestingHandlerCallback hit_testing_handler)
-    : action_handler_(std::move(action_handler)),
-      hit_testing_handler_(std::move(hit_testing_handler)) {}
+SemanticTree::SemanticTree() = default;
 
 const Node* SemanticTree::GetNode(const uint32_t node_id) const {
   const auto it = nodes_.find(node_id);
@@ -141,6 +137,20 @@ const Node* SemanticTree::GetNode(const uint32_t node_id) const {
     return nullptr;
   }
   return &it->second;
+}
+
+const Node* SemanticTree::GetParentNode(const uint32_t node_id) const {
+  for (const auto& kv : nodes_) {
+    const auto& [unused_id, node] = kv;
+    if (node.has_child_ids()) {
+      const auto& child_ids = node.child_ids();
+      const auto it = std::find(child_ids.begin(), child_ids.end(), node_id);
+      if (it != child_ids.end()) {
+        return &node;
+      }
+    }
+  }
+  return nullptr;
 }
 
 bool SemanticTree::Update(TreeUpdates updates) {
@@ -236,5 +246,4 @@ void SemanticTree::PerformHitTesting(
   hit_testing_handler_(local_point, std::move(callback));
 }
 
-}  // namespace transition
 }  // namespace a11y

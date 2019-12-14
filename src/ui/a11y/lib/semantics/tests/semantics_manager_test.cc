@@ -60,7 +60,7 @@ const std::string kDeletedSemanticSubtreePath = "/pkg/data/deleted_subtree_even_
 const std::string kMultipleSubtreePath = "/pkg/data/deleted_subtree_even_nodes.json";
 
 // Unit tests for src/ui/a11y/lib/semantics_manager.h and
-// semantic_tree.h
+// semantic_tree_service.h
 class SemanticsManagerTest : public gtest::TestLoopFixture {
  public:
   SemanticsManagerTest() : semantics_manager_(debug_dir()) { syslog::InitLogger(); }
@@ -325,50 +325,6 @@ TEST_F(SemanticsManagerTest, DetectCycleInCommit) {
   }
 }
 
-// CommitUpdates() should ensure that there are no nodes without a parent.
-// If there is a delete for a node, then semantic provider should ensure that all the nodes in that
-// subtree are also deleted.
-TEST_F(SemanticsManagerTest, ImproperDelete) {
-  accessibility_test::MockSemanticProvider semantic_provider(&semantics_manager_);
-  // We make sure the Semantic Action Listener has finished connecting to the
-  // root.
-  RunLoopUntilIdle();
-
-  // Create Semantic Tree;
-  std::vector<Node> nodes_list;
-  ASSERT_TRUE(semantic_tree_parser_.ParseSemanticTree(kSemanticTreeEvenNodesPath, &nodes_list));
-
-  {  // Call update on the newly created semantic tree with cycle.
-    // Update the node created above.
-    semantic_provider.UpdateSemanticNodes(std::move(nodes_list));
-
-    // Commit nodes.
-    semantic_provider.CommitUpdates();
-    RunLoopUntilIdle();
-
-    // Check that commit was successful.
-    NodePtr returned_node =
-        semantics_manager_.GetAccessibilityNode(semantic_provider.view_ref(), 0);
-    EXPECT_NE(returned_node, nullptr);
-  }
-  {
-    // Delete a node.
-    std::vector<uint32_t> delete_nodes;
-    delete_nodes.push_back(kDeleteNodeId);
-    semantic_provider.DeleteSemanticNodes(std::move(delete_nodes));
-
-    // Commit nodes.
-    semantic_provider.CommitUpdates();
-    RunLoopUntilIdle();
-
-    // Check root node is not present, since we tried to push an invalid update/delete and commit
-    // should catch the issue.
-    NodePtr returned_node =
-        semantics_manager_.GetAccessibilityNode(semantic_provider.view_ref(), 0);
-    EXPECT_EQ(returned_node, nullptr);
-  }
-}
-
 // Checks when update with multuiple subtrees are sent then commit fails.
 TEST_F(SemanticsManagerTest, MultipleSubtree) {
   accessibility_test::MockSemanticProvider semantic_provider(&semantics_manager_);
@@ -389,97 +345,6 @@ TEST_F(SemanticsManagerTest, MultipleSubtree) {
 
   NodePtr returned_node = semantics_manager_.GetAccessibilityNode(semantic_provider.view_ref(), 0);
   EXPECT_EQ(returned_node, nullptr);
-}
-
-// Checks that commit fails when a node is present in the update which doesn't have a parent.
-TEST_F(SemanticsManagerTest, NodeWithoutParent) {
-  accessibility_test::MockSemanticProvider semantic_provider(&semantics_manager_);
-  // We make sure the Semantic Action Listener has finished connecting to the
-  // root.
-  RunLoopUntilIdle();
-
-  // Create Semantic Tree;
-  std::vector<Node> nodes_list;
-  ASSERT_TRUE(semantic_tree_parser_.ParseSemanticTree(kSemanticTreeEvenNodesPath, &nodes_list));
-
-  // Call update on the newly created semantic tree with multiple subtree.
-  semantic_provider.UpdateSemanticNodes(std::move(nodes_list));
-
-  // Commit nodes.
-  semantic_provider.CommitUpdates();
-  RunLoopUntilIdle();
-
-  // Make sure tree is formed and commit doesn't fail.
-  {
-    NodePtr returned_node =
-        semantics_manager_.GetAccessibilityNode(semantic_provider.view_ref(), 0);
-    EXPECT_NE(returned_node, nullptr);
-  }
-
-  // Send a node update which doesn't currently exist in the semantic tree and is not associated
-  // with any parent node.
-  std::vector<Node> update_nodes;
-  Node node = CreateTestNode(100, "Label-100");
-  Node clone_node;
-  node.Clone(&clone_node);
-  update_nodes.push_back(std::move(clone_node));
-  semantic_provider.UpdateSemanticNodes(std::move(update_nodes));
-
-  // Commit Updates.
-  semantic_provider.CommitUpdates();
-  RunLoopUntilIdle();
-
-  {
-    // Check that commit fails and semantic tree is deleted.
-    NodePtr returned_node =
-        semantics_manager_.GetAccessibilityNode(semantic_provider.view_ref(), 0);
-    EXPECT_EQ(returned_node, nullptr);
-  }
-}
-
-// Update()/Delete(): These operations should happen in the order in
-// which these request came.
-// For example: Update 1, data 1
-//              delete 1
-//              update 1, data 2
-// should result in Update 1 , data2 and NOT Empty Tree.
-TEST_F(SemanticsManagerTest, InOrderUpdatesAndDelete) {
-  accessibility_test::MockSemanticProvider semantic_provider(&semantics_manager_);
-  // We make sure the Semantic Action Listener has finished connecting to the
-  // root.
-  RunLoopUntilIdle();
-
-  // Update Node 0 to Label-A
-  std::vector<Node> update_nodes;
-  Node node = CreateTestNode(0, "Label-A");
-  Node clone_node;
-  node.Clone(&clone_node);
-  update_nodes.push_back(std::move(clone_node));
-  semantic_provider.UpdateSemanticNodes(std::move(update_nodes));
-
-  // Delete Node 0.
-  std::vector<uint32_t> delete_nodes;
-  int delete_node_id = 0;
-  delete_nodes.push_back(delete_node_id);
-  semantic_provider.DeleteSemanticNodes(std::move(delete_nodes));
-
-  // Update Node 0 to Label-B
-  std::vector<Node> update_nodes2;
-  Node node2 = CreateTestNode(0, "Label-B");
-  Node clone_node2;
-  node2.Clone(&clone_node2);
-  update_nodes2.push_back(std::move(clone_node2));
-  semantic_provider.UpdateSemanticNodes(std::move(update_nodes2));
-
-  // Commit nodes.
-  semantic_provider.CommitUpdates();
-  RunLoopUntilIdle();
-
-  // Check Node 0 is present and has Label-B.
-  NodePtr returned_node = semantics_manager_.GetAccessibilityNode(semantic_provider.view_ref(), 0);
-  EXPECT_NE(returned_node, nullptr);
-  EXPECT_EQ(node2.node_id(), returned_node->node_id());
-  EXPECT_STREQ(node2.attributes().label().data(), returned_node->attributes().label().data());
 }
 
 // Test for LogSemanticTree() to make sure correct logs are generated,
@@ -534,48 +399,6 @@ TEST_F(SemanticsManagerTest, LogSemanticTree_SingleNode) {
   char buffer[kMaxLogBufferSize];
   ReadFile(node, kSemanticTreeSingle.size(), buffer);
   EXPECT_EQ(kSemanticTreeSingle, buffer);
-}
-
-// Test that calls LogSemanticTreeForView() with an unregistered ViewRef returns empty string.
-TEST_F(SemanticsManagerTest, LogSemanticTreeForView_NoViewRegistered) {
-  fuchsia::ui::views::ViewRef unregistered_view_ref;
-  zx::eventpair unused;
-
-  FX_CHECK(zx::eventpair::create(0u, &unregistered_view_ref.reference, &unused) == ZX_OK);
-
-  std::string semantic_tree_log = semantics_manager_.LogSemanticTreeForView(unregistered_view_ref);
-  EXPECT_TRUE(semantic_tree_log.empty());
-}
-
-// Test for LogSemanticTreeForView() to make sure correct logs are generated,
-// when there are multiple views registered with the semantics manager.
-TEST_F(SemanticsManagerTest, LogSemanticTreeForView_MultipleViews) {
-  // Create fake semantic provider and register view with semantics_manager_.
-  accessibility_test::MockSemanticProvider semantic_provider_single_node(&semantics_manager_);
-
-  // We make sure the Semantic Action Listener has finished connecting to the
-  // root.
-  RunLoopUntilIdle();
-
-  // Update tree for fake view.
-  InitializeActionListener(kSemanticTreeSingleNodePath, &semantic_provider_single_node);
-
-  // Add a second view and update its tree.
-  accessibility_test::MockSemanticProvider semantic_provider_odd_nodes(&semantics_manager_);
-
-  RunLoopUntilIdle();
-
-  InitializeActionListener(kSemanticTreeOddNodesPath, &semantic_provider_odd_nodes);
-
-  // Verify that LogSemanticTreeForView() returns the correct logs when supplied each of the
-  // two registered view refs.
-  std::string single_node_tree_log =
-      semantics_manager_.LogSemanticTreeForView(semantic_provider_single_node.view_ref());
-  EXPECT_EQ(single_node_tree_log, kSemanticTreeSingle);
-
-  std::string odd_nodes_tree_log =
-      semantics_manager_.LogSemanticTreeForView(semantic_provider_odd_nodes.view_ref());
-  EXPECT_EQ(odd_nodes_tree_log, kSemanticTreeOdd);
 }
 
 // Test for PerformHitTesting() to make sure correct node_id is passed from the
@@ -635,147 +458,6 @@ TEST_F(SemanticsManagerTest, GetAccessibilityNodeByKoid) {
   EXPECT_NE(returned_node, nullptr);
   EXPECT_EQ(node.node_id(), returned_node->node_id());
   EXPECT_STREQ(node.attributes().label().data(), returned_node->attributes().label().data());
-}
-
-// Basic test for partial node updates.
-TEST_F(SemanticsManagerTest, PartialNodeUpdateWithCommit) {
-  // Create ActionListener.
-  accessibility_test::MockSemanticProvider semantic_provider(&semantics_manager_);
-  // We make sure the Semantic Action Listener has finished connecting to the
-  // root.
-  RunLoopUntilIdle();
-
-  // Creating test node to update.
-  {
-    std::vector<Node> update_nodes;
-    Node node = CreateTestNode(0, kLabelA);
-    Node clone_node;
-    node.Clone(&clone_node);
-    update_nodes.push_back(std::move(clone_node));
-
-    // Update the node created above.
-    semantic_provider.UpdateSemanticNodes(std::move(update_nodes));
-    RunLoopUntilIdle();
-    update_nodes.clear();
-
-    // Commit nodes.
-    semantic_provider.CommitUpdates();
-    RunLoopUntilIdle();
-
-    // Check that the committed node is present in the semantic tree.
-    NodePtr returned_node =
-        semantics_manager_.GetAccessibilityNode(semantic_provider.view_ref(), 0);
-    EXPECT_NE(returned_node, nullptr);
-    EXPECT_EQ(node.node_id(), returned_node->node_id());
-    EXPECT_STREQ(node.attributes().label().data(), returned_node->attributes().label().data());
-  }
-
-  // Send a partial update by adding a new field, and ensure new field is added while previous
-  // fields are retained.
-  {
-    std::vector<Node> update_nodes;
-    Node node = CreateTestNode(0, kLabelA);
-    Node partial_node = Node();
-    partial_node.set_node_id(0);
-    partial_node.set_child_ids({1, 2});
-    Node clone_partial_node;
-    partial_node.Clone(&clone_partial_node);
-    update_nodes.push_back(std::move(clone_partial_node));
-
-    // Send nodes 1 and 2 otherwise, commit will fail.
-    {
-      Node child_node = CreateTestNode(1, kLabelA);
-      Node clone_node;
-      child_node.Clone(&clone_node);
-      update_nodes.push_back(std::move(clone_node));
-    }
-
-    {
-      Node child_node = CreateTestNode(2, kLabelA);
-      Node clone_node;
-      child_node.Clone(&clone_node);
-      update_nodes.push_back(std::move(clone_node));
-    }
-
-    // Update the node created above.
-    semantic_provider.UpdateSemanticNodes(std::move(update_nodes));
-    RunLoopUntilIdle();
-
-    // Commit nodes.
-    semantic_provider.CommitUpdates();
-    RunLoopUntilIdle();
-
-    // Check that the committed node is present in the semantic tree.
-    NodePtr returned_node =
-        semantics_manager_.GetAccessibilityNode(semantic_provider.view_ref(), 0);
-    EXPECT_NE(returned_node, nullptr);
-    EXPECT_EQ(node.node_id(), returned_node->node_id());
-    EXPECT_STREQ(node.attributes().label().data(), returned_node->attributes().label().data());
-    ASSERT_TRUE(returned_node->has_child_ids());
-    EXPECT_EQ(returned_node->child_ids(), partial_node.child_ids());
-  }
-}
-
-// Test for checking that Partial node updates are not applied if node-id is missing.
-TEST_F(SemanticsManagerTest, PartialNodeUpdateWithCommit_NodeIdMissing) {
-  // Create ActionListener.
-  accessibility_test::MockSemanticProvider semantic_provider(&semantics_manager_);
-  // We make sure the Semantic Action Listener has finished connecting to the
-  // root.
-  RunLoopUntilIdle();
-
-  // Creating test node to update.
-  {
-    std::vector<Node> update_nodes;
-    Node node = CreateTestNode(0, kLabelA);
-    Node clone_node;
-    node.Clone(&clone_node);
-    update_nodes.push_back(std::move(clone_node));
-
-    // Update the node created above.
-    semantic_provider.UpdateSemanticNodes(std::move(update_nodes));
-    RunLoopUntilIdle();
-    update_nodes.clear();
-
-    // Commit nodes.
-    semantic_provider.CommitUpdates();
-    RunLoopUntilIdle();
-
-    // Check that the committed node is present in the semantic tree.
-    NodePtr returned_node =
-        semantics_manager_.GetAccessibilityNode(semantic_provider.view_ref(), 0);
-    EXPECT_NE(returned_node, nullptr);
-    EXPECT_EQ(node.node_id(), returned_node->node_id());
-    EXPECT_STREQ(node.attributes().label().data(), returned_node->attributes().label().data());
-  }
-
-  // Send a partial update by adding a new field, and ensure node is unchanged.
-  {
-    std::vector<Node> update_nodes;
-    Node node = CreateTestNode(0, kLabelA);
-    Node partial_node = Node();
-    partial_node.set_child_ids({1, 2});
-    Node clone_partial_node;
-    partial_node.Clone(&clone_partial_node);
-    update_nodes.push_back(std::move(clone_partial_node));
-
-    // Update the node created above.
-    semantic_provider.UpdateSemanticNodes(std::move(update_nodes));
-    RunLoopUntilIdle();
-
-    // Commit nodes.
-    semantic_provider.CommitUpdates();
-    RunLoopUntilIdle();
-
-    // Check that the node is not updated.
-    NodePtr returned_node =
-        semantics_manager_.GetAccessibilityNode(semantic_provider.view_ref(), 0);
-    EXPECT_NE(returned_node, nullptr);
-    EXPECT_EQ(node.node_id(), returned_node->node_id());
-    EXPECT_STREQ(node.attributes().label().data(), returned_node->attributes().label().data());
-    ASSERT_TRUE(returned_node->has_child_ids());
-    EXPECT_NE(returned_node->child_ids(), partial_node.child_ids());
-  }
 }
 
 // Basic test to check that Semantic Provider gets notified and checks that semantic tree is

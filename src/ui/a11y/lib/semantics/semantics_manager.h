@@ -12,7 +12,7 @@
 #include <lib/vfs/cpp/pseudo_file.h>
 #include <zircon/types.h>
 
-#include "src/ui/a11y/lib/semantics/semantic_tree.h"
+#include "src/ui/a11y/lib/semantics/semantic_tree_service.h"
 
 namespace a11y {
 
@@ -46,11 +46,6 @@ class SemanticsManager : public fuchsia::accessibility::semantics::SemanticsMana
       zx_koid_t koid, ::fuchsia::math::PointF local_point,
       fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback);
 
-  // FOR TESTING ONLY
-  // Returns human-readable representation of semantic tree state for view with given ViewRef.
-  // Returns empty string if view_ref does not exist.
-  std::string LogSemanticTreeForView(const fuchsia::ui::views::ViewRef& view_ref);
-
  private:
   // |fuchsia::accessibility::semantics::SemanticsManager|:
   void RegisterViewForSemantics(
@@ -72,7 +67,8 @@ class SemanticsManager : public fuchsia::accessibility::semantics::SemanticsMana
   // Helper function to enable semantic updates for all the Views.
   void EnableSemanticsUpdates(bool enabled);
 
-  fidl::BindingSet<fuchsia::accessibility::semantics::SemanticTree, std::unique_ptr<SemanticTree>>
+  fidl::BindingSet<fuchsia::accessibility::semantics::SemanticTree,
+                   std::unique_ptr<SemanticTreeService>>
       semantic_tree_bindings_;
 
   bool semantics_enabled_ = false;

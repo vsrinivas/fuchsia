@@ -12,7 +12,7 @@
 
 namespace a11y {
 
-// Utility function to extract Koid from an event.
+// Utility function to extract Koid from a View Ref.
 zx_koid_t GetKoid(const fuchsia::ui::views::ViewRef& view_ref);
 
 // Multiply two 3x3 Matrix represented in Row Major form.

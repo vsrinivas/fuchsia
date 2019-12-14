@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 //
-// Note: this file is part of an ongoing refactor and will soon be renamed to
-// semantic_tree.h
 
 #ifndef SRC_UI_A11Y_LIB_SEMANTICS_TREE_H_
 #define SRC_UI_A11Y_LIB_SEMANTICS_TREE_H_
@@ -17,7 +15,6 @@
 #include <vector>
 
 namespace a11y {
-namespace transition {
 
 // A Semantic Tree represents the relationship of elements on an UI in the form of Semantic Nodes,
 // which are provided by runtimes and normally consumed by assistive technology.
@@ -65,15 +62,24 @@ class SemanticTree {
       fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback)>;
 
   // A SemanticTree object is normally maintained by a semantics provider while
-  // being consumed by a semantics consumer (such as a screen reader). This
-  // class takes two handlers, provided by the semantics provider, which answer
-  // to calls performed by assistive technology, such as actions on nodes and
-  // hit testing.
-  SemanticTree(ActionHandlerCallback action_handler, HitTestingHandlerCallback hit_testing_handler);
+  // being consumed by a semantics consumer (such as a screen reader).
+  SemanticTree();
   virtual ~SemanticTree() = default;
+
+  // The two methods below set the handlers for dealing with assistive technology requests.
+  void set_action_handler(ActionHandlerCallback action_handler) {
+    action_handler_ = std::move(action_handler);
+  }
+  void set_hit_testing_handler(HitTestingHandlerCallback hit_testing_handler) {
+    hit_testing_handler_ = std::move(hit_testing_handler);
+  }
 
   // Returns the node with |node_id|, nullptr otherwise.
   const fuchsia::accessibility::semantics::Node* GetNode(const uint32_t node_id) const;
+
+  // Returns the parent node of the node with |node_id| if found, nullptr otherwise.
+  virtual const fuchsia::accessibility::semantics::Node* GetParentNode(
+      const uint32_t node_id) const;
 
   // Applies the node updates in |updates| if they leave the final resulting
   // tree in a valid state, returning true if the operation was successful. If
@@ -148,7 +154,6 @@ class SemanticTree {
   HitTestingHandlerCallback hit_testing_handler_;
 };
 
-}  // namespace transition
 }  // namespace a11y
 
 #endif  // SRC_UI_A11Y_LIB_SEMANTICS_TREE_H_

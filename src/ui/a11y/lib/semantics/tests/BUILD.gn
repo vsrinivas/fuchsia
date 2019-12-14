@@ -18,7 +18,7 @@ executable("semantics_manager_tests") {
     "semantic_tree_parser.cc",
     "semantic_tree_parser.h",
     "semantic_tree_parser_test.cc",
-    "semantic_tree_test.cc",
+    "semantic_tree_service_unittest.cc",
     "semantics_manager_test.cc",
     "tree_unittest.cc",
   ]
