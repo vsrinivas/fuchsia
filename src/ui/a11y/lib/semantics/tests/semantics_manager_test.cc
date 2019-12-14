@@ -63,7 +63,7 @@ const std::string kMultipleSubtreePath = "/pkg/data/deleted_subtree_even_nodes.j
 // semantic_tree.h
 class SemanticsManagerTest : public gtest::TestLoopFixture {
  public:
-  SemanticsManagerTest() : semantics_manager_(context_provider_.context()) { syslog::InitLogger(); }
+  SemanticsManagerTest() : semantics_manager_(debug_dir()) { syslog::InitLogger(); }
 
   static Node CreateTestNode(uint32_t node_id, std::string label);
   void InitializeActionListener(const std::string &file_path,

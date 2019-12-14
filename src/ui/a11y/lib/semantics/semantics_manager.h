@@ -18,9 +18,7 @@ namespace a11y {
 
 class SemanticsManager : public fuchsia::accessibility::semantics::SemanticsManager {
  public:
-  // On initialization, this class exposes the services defined in
-  // |fuchsia.accessibility.semantics.SemanticsManager|
-  explicit SemanticsManager(sys::ComponentContext* startup_context);
+  explicit SemanticsManager(vfs::PseudoDir* debug_dir);
   ~SemanticsManager() override;
 
   // Provides the manager a way to query a node if it already knows
@@ -49,11 +47,6 @@ class SemanticsManager : public fuchsia::accessibility::semantics::SemanticsMana
       fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback);
 
   // FOR TESTING ONLY
-  // Returns interface request handler for this service.
-  fidl::InterfaceRequestHandler<fuchsia::accessibility::semantics::SemanticsManager> GetHandler(
-      async_dispatcher_t* dispatcher);
-
-  // FOR TESTING ONLY
   // Returns human-readable representation of semantic tree state for view with given ViewRef.
   // Returns empty string if view_ref does not exist.
   std::string LogSemanticTreeForView(const fuchsia::ui::views::ViewRef& view_ref);
@@ -78,8 +71,6 @@ class SemanticsManager : public fuchsia::accessibility::semantics::SemanticsMana
 
   // Helper function to enable semantic updates for all the Views.
   void EnableSemanticsUpdates(bool enabled);
-
-  fidl::BindingSet<fuchsia::accessibility::semantics::SemanticsManager> bindings_;
 
   fidl::BindingSet<fuchsia::accessibility::semantics::SemanticTree, std::unique_ptr<SemanticTree>>
       semantic_tree_bindings_;

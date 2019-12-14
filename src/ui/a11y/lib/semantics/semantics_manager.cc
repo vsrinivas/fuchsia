@@ -12,11 +12,7 @@
 
 namespace a11y {
 
-SemanticsManager::SemanticsManager(sys::ComponentContext* startup_context)
-    : debug_dir_(startup_context->outgoing()->debug_dir()) {
-  FXL_DCHECK(startup_context);
-  startup_context->outgoing()->AddPublicService(bindings_.GetHandler(this));
-}
+SemanticsManager::SemanticsManager(vfs::PseudoDir* debug_dir) : debug_dir_(debug_dir) {}
 
 SemanticsManager::~SemanticsManager() = default;
 
@@ -91,11 +87,6 @@ void SemanticsManager::PerformHitTesting(
   }
 
   FX_LOGS(INFO) << "Given KOID(" << koid << ") doesn't match any existing ViewRef's koid.";
-}
-
-fidl::InterfaceRequestHandler<fuchsia::accessibility::semantics::SemanticsManager>
-SemanticsManager::GetHandler(async_dispatcher_t* dispatcher) {
-  return bindings_.GetHandler(this, dispatcher);
 }
 
 std::string SemanticsManager::LogSemanticTreeForView(const fuchsia::ui::views::ViewRef& view_ref) {

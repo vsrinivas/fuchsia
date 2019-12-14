@@ -139,6 +139,8 @@ class App {
   GestureState gesture_state_;
   a11y::Magnifier magnifier_;
 
+  fidl::BindingSet<fuchsia::accessibility::semantics::SemanticsManager> semantics_manager_bindings_;
+
   // TODO(17180): This will be removed and replaced this with smaller configuration APIs.
   fidl::BindingSet<fuchsia::accessibility::SettingsManager> settings_manager_bindings_;
   fuchsia::accessibility::SettingsProviderPtr settings_provider_ptr_;
