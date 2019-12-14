@@ -45,7 +45,7 @@ static LOGGER: Logger = Logger;
 
 lazy_static::lazy_static! {
     static ref START_RESULT: Result<(), log::SetLoggerError> =
-        log::set_logger(&LOGGER).map(|()| log::set_max_level(LevelFilter::Trace));
+        log::set_logger(&LOGGER).map(|()| log::set_max_level(LevelFilter::Error));
 }
 
 pub fn init() -> Result<(), Error> {
