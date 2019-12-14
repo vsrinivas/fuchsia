@@ -5,6 +5,7 @@
 #include <endian.h>
 #include <fcntl.h>
 #include <fuchsia/boot/llcpp/fidl.h>
+#include <fuchsia/hardware/block/partition/llcpp/fidl.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
 #include <fuchsia/paver/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -34,6 +35,8 @@
 #include "test/test-utils.h"
 
 namespace {
+
+namespace partition = ::llcpp::fuchsia::hardware::block::partition;
 
 using devmgr_integration_test::IsolatedDevmgr;
 using devmgr_integration_test::RecursiveWaitForFile;
@@ -743,6 +746,15 @@ TEST_F(PaverServiceSkipBlockTest, WipeVolumeEmptyFvm) {
   ASSERT_TRUE(result->result.response().volume);
 }
 
+void CheckGuid(const fbl::unique_fd& device, const uint8_t type[GPT_GUID_LEN]) {
+  fzl::UnownedFdioCaller caller(device.get());
+  auto result = partition::Partition::Call::GetTypeGuid(caller.channel());
+  ASSERT_OK(result.status());
+  ASSERT_OK(result.value().status);
+  auto* guid = result.value().guid;
+  EXPECT_BYTES_EQ(type, guid, GPT_GUID_LEN);
+}
+
 TEST_F(PaverServiceSkipBlockTest, WipeVolumeCreatesFvm) {
   constexpr size_t kBufferSize = 8192;
   char buffer[kBufferSize];
@@ -757,13 +769,32 @@ TEST_F(PaverServiceSkipBlockTest, WipeVolumeCreatesFvm) {
   EXPECT_EQ(kBufferSize, pread(fvm_.get(), buffer, kBufferSize, 0));
   EXPECT_BYTES_EQ(fvm_magic, buffer, sizeof(fvm_magic));
 
-  int volume_fd;
   zx::channel channel = std::move(result->result.mutable_response().volume);
-  ASSERT_OK(fdio_fd_create(channel.release(), &volume_fd));
-  fbl::unique_fd block_device(volume_fd);
+  std::string path = GetTopologicalPath(channel);
+  ASSERT_FALSE(path.empty());
 
-  EXPECT_EQ(kBufferSize, pread(block_device.get(), buffer, kBufferSize, 0));
-  EXPECT_BYTES_EQ(fvm_magic, buffer, sizeof(fvm_magic));
+  std::string blob_path = path + "/blobfs-p-1/block";
+  fbl::unique_fd blob_device(openat(device_->devfs_root().get(), blob_path.c_str(), O_RDONLY));
+  ASSERT_TRUE(blob_device);
+
+  constexpr uint8_t kBlobType[GPT_GUID_LEN] = GUID_BLOB_VALUE;
+  ASSERT_NO_FAILURES(CheckGuid(blob_device, kBlobType));
+
+  uint8_t kEmptyData[kBufferSize];
+  memset(kEmptyData, 0xff, kBufferSize);
+
+  EXPECT_EQ(kBufferSize, pread(blob_device.get(), buffer, kBufferSize, 0));
+  EXPECT_BYTES_EQ(kEmptyData, buffer, kBufferSize);
+
+  std::string data_path = path + "/minfs-p-2/block";
+  fbl::unique_fd data_device(openat(device_->devfs_root().get(), data_path.c_str(), O_RDONLY));
+  ASSERT_TRUE(data_device);
+
+  constexpr uint8_t kDataType[GPT_GUID_LEN] = GUID_DATA_VALUE;
+  ASSERT_NO_FAILURES(CheckGuid(data_device, kDataType));
+
+  EXPECT_EQ(kBufferSize, pread(data_device.get(), buffer, kBufferSize, 0));
+  EXPECT_BYTES_EQ(kEmptyData, buffer, kBufferSize);
 }
 
 // TODO(34771): Re-enable once bug in GPT is fixed.

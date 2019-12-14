@@ -4,6 +4,7 @@
 
 #include "test/test-utils.h"
 
+#include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fzl/fdio.h>
@@ -81,4 +82,23 @@ void SkipBlockDevice::Create(const fuchsia_hardware_nand_RamNandInfo& nand_info,
   ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(ctl->devfs_root(), "misc/sysinfo", &fd));
   ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(ctl->devfs_root(), "sys/platform", &fd));
   device->reset(new SkipBlockDevice(std::move(ctl), *std::move(ram_nand), std::move(mapper)));
+}
+
+std::string GetTopologicalPath(const zx::channel& channel) {
+  std::string path;
+  auto result =
+      llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(zx::unowned_channel(channel));
+  if (!result.ok() || result->result.is_err()) {
+    return path;
+  }
+
+  auto& raw_path = result->result.response().path;
+
+  constexpr char kDevRoot[] = "/dev/";
+  if (strncmp(raw_path.data(), kDevRoot, strlen(kDevRoot)) != 0) {
+    return path;
+  }
+
+  path.assign(raw_path.data() + strlen(kDevRoot), raw_path.size() - strlen(kDevRoot));
+  return path;
 }

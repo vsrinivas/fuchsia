@@ -5,6 +5,7 @@
 library fuchsia.paver;
 
 using fuchsia.hardware.block;
+using fuchsia.hardware.block.volume;
 using fuchsia.io;
 using fuchsia.mem;
 using zx;
@@ -152,7 +153,7 @@ protocol Paver {
         -> (zx.status status);
 
     /// Wipes the FVM partition from the device. Should not be confused with factory reset, which
-    /// is less intrusive.
+    /// is less intrusive. The result is that the default FVM volumes are re-created, but empty.
     ///
     /// Notable use cases include recovering from corrupted FVM as well as setting device to a
     /// "clean" state for automation.
@@ -164,7 +165,7 @@ protocol Paver {
     ///
     /// On success, returns a channel to the initialized FVM volume.
     WipeVolume(request<fuchsia.hardware.block.Block>? block_device)
-        -> (request<fuchsia.hardware.block.Block> volume) error zx.status;
+        -> (request<fuchsia.hardware.block.volume.VolumeManager> volume) error zx.status;
 
     /// Initializes GPT on given block device and then adds an FVM partition.
     ///

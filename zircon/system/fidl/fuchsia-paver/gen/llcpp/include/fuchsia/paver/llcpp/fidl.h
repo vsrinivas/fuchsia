@@ -19,6 +19,7 @@
 #include <zircon/fidl.h>
 
 #include <fuchsia/hardware/block/llcpp/fidl.h>
+#include <fuchsia/hardware/block/volume/llcpp/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <fuchsia/mem/llcpp/fidl.h>
 
@@ -2229,7 +2230,7 @@ class Paver final {
     UnownedResultOf::WriteDataFile WriteDataFile(::fidl::BytePart _request_buffer, ::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer);
 
     // Wipes the FVM partition from the device. Should not be confused with factory reset, which
-    // is less intrusive.
+    // is less intrusive. The result is that the default FVM volumes are re-created, but empty.
     //
     // Notable use cases include recovering from corrupted FVM as well as setting device to a
     // "clean" state for automation.
@@ -2244,7 +2245,7 @@ class Paver final {
     ResultOf::WipeVolume WipeVolume(::zx::channel block_device);
 
     // Wipes the FVM partition from the device. Should not be confused with factory reset, which
-    // is less intrusive.
+    // is less intrusive. The result is that the default FVM volumes are re-created, but empty.
     //
     // Notable use cases include recovering from corrupted FVM as well as setting device to a
     // "clean" state for automation.
@@ -2486,7 +2487,7 @@ class Paver final {
     static UnownedResultOf::WriteDataFile WriteDataFile(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer);
 
     // Wipes the FVM partition from the device. Should not be confused with factory reset, which
-    // is less intrusive.
+    // is less intrusive. The result is that the default FVM volumes are re-created, but empty.
     //
     // Notable use cases include recovering from corrupted FVM as well as setting device to a
     // "clean" state for automation.
@@ -2501,7 +2502,7 @@ class Paver final {
     static ResultOf::WipeVolume WipeVolume(::zx::unowned_channel _client_end, ::zx::channel block_device);
 
     // Wipes the FVM partition from the device. Should not be confused with factory reset, which
-    // is less intrusive.
+    // is less intrusive. The result is that the default FVM volumes are re-created, but empty.
     //
     // Notable use cases include recovering from corrupted FVM as well as setting device to a
     // "clean" state for automation.
@@ -2642,7 +2643,7 @@ class Paver final {
     static ::fidl::DecodeResult<WriteDataFileResponse> WriteDataFile(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteDataFileRequest> params, ::fidl::BytePart response_buffer);
 
     // Wipes the FVM partition from the device. Should not be confused with factory reset, which
-    // is less intrusive.
+    // is less intrusive. The result is that the default FVM volumes are re-created, but empty.
     //
     // Notable use cases include recovering from corrupted FVM as well as setting device to a
     // "clean" state for automation.

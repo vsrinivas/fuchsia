@@ -88,10 +88,11 @@ zx_status_t FvmIsVirtualPartition(const fbl::unique_fd& fd, bool* out) {
 // Describes the state of a partition actively being written
 // out to disk.
 struct PartitionInfo {
-  PartitionInfo() : pd(nullptr) {}
+  PartitionInfo() : pd(nullptr), active(false) {}
 
   fvm::partition_descriptor_t* pd;
   fbl::unique_fd new_part;
+  bool active;
 };
 
 inline fvm::extent_descriptor_t* GetExtent(fvm::partition_descriptor_t* pd, size_t extent) {
@@ -226,7 +227,8 @@ zx_status_t StreamFvmPartition(fvm::SparseReader* reader, PartitionInfo* part,
   return ZX_OK;
 }
 
-// Attempt to bind an FVM driver to a partition fd.
+}  // namespace
+
 fbl::unique_fd TryBindToFvmDriver(const fbl::unique_fd& devfs_root,
                                   const fbl::unique_fd& partition_fd, zx::duration timeout) {
   char path[PATH_MAX] = {};
@@ -236,8 +238,6 @@ fbl::unique_fd TryBindToFvmDriver(const fbl::unique_fd& devfs_root,
     return fbl::unique_fd();
   }
 
-  // We assume the FVM will either have completed binding, or is not bound at all. This is ensured
-  // by the paver always waiting for the FVM to bind after invoking ControllerBind.
   char fvm_path[PATH_MAX];
   snprintf(fvm_path, sizeof(fvm_path), "%s/fvm", &path[5]);
 
@@ -256,7 +256,7 @@ fbl::unique_fd TryBindToFvmDriver(const fbl::unique_fd& devfs_root,
       status = resp->result.err();
     }
   }
-  if (status != ZX_OK) {
+  if (status != ZX_OK && status != ZX_ERR_ALREADY_BOUND) {
     ERROR("Could not rebind fvm driver, Error %d\n", status);
     return fbl::unique_fd();
   }
@@ -268,12 +268,6 @@ fbl::unique_fd TryBindToFvmDriver(const fbl::unique_fd& devfs_root,
   return fbl::unique_fd(openat(devfs_root.get(), fvm_path, O_RDWR));
 }
 
-}  // namespace
-
-// Formats the FVM within the provided partition if it is not already formatted.
-//
-// On success, returns a file descriptor to an FVM.
-// On failure, returns -1
 fbl::unique_fd FvmPartitionFormat(const fbl::unique_fd& devfs_root, fbl::unique_fd partition_fd,
                                   const fvm::sparse_image_t& header, BindOption option,
                                   FormatResult* format_result) {
@@ -556,29 +550,30 @@ zx_status_t PreProcessPartitions(const fbl::unique_fd& fvm_fd,
 // partitions and filling them with extents. This guarantees that
 // streaming the data to the device will not run into "no space" issues
 // later.
-zx_status_t AllocatePartitions(const fbl::unique_fd& fvm_fd,
-                               const fbl::Array<PartitionInfo>& parts) {
-  for (size_t p = 0; p < parts.size(); p++) {
-    fvm::extent_descriptor_t* ext = GetExtent(parts[p].pd, 0);
+zx_status_t AllocatePartitions(const fbl::unique_fd& devfs_root, const fbl::unique_fd& fvm_fd,
+                               fbl::Array<PartitionInfo>* parts) {
+  for (size_t p = 0; p < parts->size(); p++) {
+    fvm::extent_descriptor_t* ext = GetExtent((*parts)[p].pd, 0);
     alloc_req_t alloc;
     // Allocate this partition as inactive so it gets deleted on the next
     // reboot if this stream fails.
-    alloc.flags = volume::AllocatePartitionFlagInactive;
+    alloc.flags = (*parts)[p].active ? 0 : volume::AllocatePartitionFlagInactive;
     alloc.slice_count = ext->slice_count;
-    memcpy(&alloc.type, parts[p].pd->type, sizeof(alloc.type));
+    memcpy(&alloc.type, (*parts)[p].pd->type, sizeof(alloc.type));
     zx_cprng_draw(alloc.guid, GPT_GUID_LEN);
-    memcpy(&alloc.name, parts[p].pd->name, sizeof(alloc.name));
+    memcpy(&alloc.name, (*parts)[p].pd->name, sizeof(alloc.name));
     LOG("Allocating partition %s consisting of %zu slices\n", alloc.name, alloc.slice_count);
-    parts[p].new_part.reset(fvm_allocate_partition(fvm_fd.get(), &alloc));
-    if (!parts[p].new_part) {
+    (*parts)[p].new_part.reset(
+        fvm_allocate_partition_with_devfs(devfs_root.get(), fvm_fd.get(), &alloc));
+    if (!(*parts)[p].new_part) {
       ERROR("Couldn't allocate partition\n");
       return ZX_ERR_NO_SPACE;
     }
 
     // Add filter drivers.
-    if ((parts[p].pd->flags & fvm::kSparseFlagZxcrypt) != 0) {
+    if (((*parts)[p].pd->flags & fvm::kSparseFlagZxcrypt) != 0) {
       LOG("Creating zxcrypt volume\n");
-      zx_status_t status = ZxcryptCreate(&parts[p]);
+      zx_status_t status = ZxcryptCreate(&(*parts)[p]);
       if (status != ZX_OK) {
         return status;
       }
@@ -586,12 +581,12 @@ zx_status_t AllocatePartitions(const fbl::unique_fd& fvm_fd,
 
     // The 0th index extent is allocated alongside the partition, so we
     // begin indexing from the 1st extent here.
-    for (size_t e = 1; e < parts[p].pd->extent_count; e++) {
-      ext = GetExtent(parts[p].pd, e);
+    for (size_t e = 1; e < (*parts)[p].pd->extent_count; e++) {
+      ext = GetExtent((*parts)[p].pd, e);
       uint64_t offset = ext->slice_start;
       uint64_t length = ext->slice_count;
 
-      fzl::UnownedFdioCaller partition_connection(parts[p].new_part.get());
+      fzl::UnownedFdioCaller partition_connection((*parts)[p].new_part.get());
       auto result = volume::Volume::Call::Extend(partition_connection.channel(), offset, length);
       auto status = result.ok() ? result.value().status : result.status();
       if (status != ZX_OK) {
@@ -604,9 +599,36 @@ zx_status_t AllocatePartitions(const fbl::unique_fd& fvm_fd,
   return ZX_OK;
 }
 
+// Holds the description of a partition with a single extent.
+// Note that even though some code asks for a partition_descriptor_t, in reality
+// it treats that as a descriptor followed by a bunch of extents, so this copes
+// with that de-facto pattern.
+struct FvmPartition {
+  fvm::partition_descriptor_t descriptor;
+  fvm::extent_descriptor_t extent;
+};
+
+// Description of the basic FVM partitions, with no real information about extents.
+// In order to use the partitions, they should be formatted with the appropriate
+// filesystem.
+constexpr FvmPartition kBasicPartitions[] = {{{0, GUID_BLOB_VALUE, "blobfs", 0, 0}, {0, 0, 1, 0}},
+                                             {{0, GUID_DATA_VALUE, "minfs", 0, 0}, {0, 0, 1, 0}}};
+
 }  // namespace
 
-zx_status_t FvmStreamPartitions(std::unique_ptr<PartitionClient> partition_client,
+zx_status_t AllocateEmptyPartitions(const fbl::unique_fd& devfs_root,
+                                    const fbl::unique_fd& fvm_fd) {
+  fbl::Array<PartitionInfo> partitions(new PartitionInfo[2], 2);
+  partitions[0].pd = const_cast<fvm::partition_descriptor_t*>(&kBasicPartitions[0].descriptor);
+  partitions[1].pd = const_cast<fvm::partition_descriptor_t*>(&kBasicPartitions[1].descriptor);
+  partitions[0].active = true;
+  partitions[1].active = true;
+
+  return AllocatePartitions(devfs_root, fvm_fd, &partitions);
+}
+
+zx_status_t FvmStreamPartitions(const fbl::unique_fd& devfs_root,
+                                std::unique_ptr<PartitionClient> partition_client,
                                 std::unique_ptr<fvm::ReaderInterface> payload) {
   std::unique_ptr<fvm::SparseReader> reader;
   zx_status_t status;
@@ -615,12 +637,6 @@ zx_status_t FvmStreamPartitions(std::unique_ptr<PartitionClient> partition_clien
   }
 
   LOG("Header Validated - OK\n");
-
-  fbl::unique_fd devfs_root(open("/dev", O_RDWR));
-  if (!devfs_root) {
-    ERROR("Couldn't open devfs root\n");
-    return ZX_ERR_IO;
-  }
 
   fvm::sparse_image_t* hdr = reader->Image();
   // Acquire an fd to the FVM, either by finding one that already
@@ -674,7 +690,7 @@ zx_status_t FvmStreamPartitions(std::unique_ptr<PartitionClient> partition_clien
   LOG("Partitions pre-validated successfully: Enough space exists to pave.\n");
 
   // Actually allocate the storage for the incoming image.
-  if ((status = AllocatePartitions(fvm_fd, parts)) != ZX_OK) {
+  if ((status = AllocatePartitions(devfs_root, fvm_fd, &parts)) != ZX_OK) {
     ERROR("Failed to allocate partitions: %s\n", zx_status_get_string(status));
     return status;
   }

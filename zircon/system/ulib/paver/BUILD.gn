@@ -64,6 +64,7 @@ zx_test("paver-test") {
     "$zx/system/fidl/fuchsia-boot:llcpp",
     "$zx/system/fidl/fuchsia-device:llcpp",
     "$zx/system/fidl/fuchsia-hardware-block:llcpp",
+    "$zx/system/fidl/fuchsia-hardware-block-partition:llcpp",
     "$zx/system/fidl/fuchsia-hardware-nand:c",
     "$zx/system/fidl/fuchsia-hardware-skipblock:llcpp",
     "$zx/system/fidl/fuchsia-paver:llcpp",

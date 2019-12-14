@@ -63,4 +63,7 @@ class SkipBlockDevice {
   fzl::VmoMapper mapper_;
 };
 
+// Returns the relative topological path for a test device's channel.
+std::string GetTopologicalPath(const zx::channel& channel);
+
 #endif  // ZIRCON_SYSTEM_ULIB_PAVER_TEST_TEST_UTILS_H_

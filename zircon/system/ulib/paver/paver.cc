@@ -186,7 +186,7 @@ zx_status_t GetFvmPartition(const DevicePartitioner& partitioner,
   return ZX_OK;
 }
 
-zx_status_t FvmPave(const DevicePartitioner& partitioner,
+zx_status_t FvmPave(const fbl::unique_fd& devfs_root, const DevicePartitioner& partitioner,
                     std::unique_ptr<fvm::ReaderInterface> payload) {
   LOG("Paving FVM partition.\n");
   std::unique_ptr<PartitionClient> partition;
@@ -205,7 +205,8 @@ zx_status_t FvmPave(const DevicePartitioner& partitioner,
     }
   }
   LOG("Streaming partitions to FVM...\n");
-  if ((status = FvmStreamPartitions(std::move(partition), std::move(payload))) != ZX_OK) {
+  status = FvmStreamPartitions(devfs_root, std::move(partition), std::move(payload));
+  if (status != ZX_OK) {
     ERROR("Failed to stream partitions to FVM: %s\n", zx_status_get_string(status));
     return status;
   }
@@ -233,7 +234,18 @@ zx_status_t FormatFvm(const fbl::unique_fd& devfs_root, const DevicePartitioner&
     return ZX_ERR_IO;
   }
 
-  *channel = partition->GetChannel();
+  status = AllocateEmptyPartitions(devfs_root, fvm_fd);
+  if (status != ZX_OK) {
+    ERROR("Couldn't allocate empty partitions\n");
+    return status;
+  }
+
+  status = fdio_get_service_handle(fvm_fd.release(), channel->reset_and_get_address());
+  if (status != ZX_OK) {
+    ERROR("Couldn't get fvm handle\n");
+    return ZX_ERR_IO;
+  }
+
   return ZX_OK;
 }
 
@@ -458,7 +470,7 @@ void Paver::WriteVolumes(zx::channel payload_stream, WriteVolumesCompleter::Sync
     completer.Reply(status);
     return;
   }
-  completer.Reply(FvmPave(*partitioner_, std::move(reader)));
+  completer.Reply(FvmPave(devfs_root_, *partitioner_, std::move(reader)));
 }
 
 void Paver::WriteBootloader(::llcpp::fuchsia::mem::Buffer payload,
@@ -627,7 +639,24 @@ void Paver::WipeVolume(zx::channel block_device, WipeVolumeCompleter::Sync compl
     return;
   }
 
-  zx_status_t status = partitioner->WipeFvm();
+  std::unique_ptr<PartitionClient> partition;
+  zx_status_t status = GetFvmPartition(*partitioner, &partition);
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+    return;
+  }
+
+  // Bind the FVM driver to be in a well known state regarding races with block watcher.
+  // The block watcher will attempt to bind the FVM driver automatically based on
+  // the contents of the partition. However, that operation is not synchronized in
+  // any way with this service so the driver can be loaded at any time.
+  // WipeFvm basically writes underneath that driver, which means that we should
+  // eliminate the races at this point: assuming that the driver can load, either
+  // this call or the block watcher will succeed (and the other one will fail),
+  // but the driver will be loaded before moving on.
+  TryBindToFvmDriver(devfs_root_, partition->block_fd(), zx::sec(3));
+
+  status = partitioner->WipeFvm();
   if (status != ZX_OK) {
     ERROR("Failure wiping partition: %s\n", zx_status_get_string(status));
     completer.ReplyError(status);

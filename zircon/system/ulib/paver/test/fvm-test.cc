@@ -141,4 +141,21 @@ TEST_F(FvmTest, TryBindAlreadyFormattedWithBiggerSize) {
   ASSERT_EQ(paver::FormatResult::kReformatted, result);
 }
 
+TEST_F(FvmTest, AllocateEmptyPartitions) {
+  ASSERT_NO_FAILURES(CreateRamdisk());
+  fbl::unique_fd fvm_part = FvmPartitionFormat(
+      devfs_root(), fd(), SparseHeaderForSliceSize(kSliceSize), paver::BindOption::Reformat);
+  ASSERT_TRUE(fvm_part.is_valid());
+
+  ASSERT_OK(paver::AllocateEmptyPartitions(devfs_root(), fvm_part));
+
+  fbl::unique_fd blob(
+      openat(devfs_root().get(), "misc/ramctl/ramdisk-0/block/fvm/blobfs-p-1/block", O_RDONLY));
+  ASSERT_TRUE(blob.is_valid());
+
+  fbl::unique_fd data(
+      openat(devfs_root().get(), "misc/ramctl/ramdisk-0/block/fvm/minfs-p-2/block", O_RDONLY));
+  ASSERT_TRUE(data.is_valid());
+}
+
 }  // namespace
