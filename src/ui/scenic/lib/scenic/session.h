@@ -39,8 +39,6 @@ class Session final : public fuchsia::ui::scenic::Session {
   void SetCommandDispatchers(
       std::array<CommandDispatcherUniquePtr, System::TypeId::kMaxSystems> dispatchers);
 
-  void InitializeOnFramePresentedCallback();
-
   // |fuchsia::ui::scenic::Session|
   void Enqueue(std::vector<fuchsia::ui::scenic::Command> cmds) override;
 
@@ -57,6 +55,8 @@ class Session final : public fuchsia::ui::scenic::Session {
 
   // |fuchsia::ui::scenic::Session|
   void SetDebugName(std::string debug_name) override;
+
+  void SetFrameScheduler(const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler);
 
   SessionId id() const { return id_; }
 
@@ -155,6 +155,8 @@ class Session final : public fuchsia::ui::scenic::Session {
   fidl::InterfacePtr<fuchsia::ui::scenic::SessionListener> listener_;
 
   std::array<CommandDispatcherUniquePtr, System::TypeId::kMaxSystems> dispatchers_;
+
+  std::weak_ptr<scheduling::FrameScheduler> frame_scheduler_;
 
   // A flow event trace id for following |Session::Present| calls from client
   // to scenic.  This will be incremented each |Session::Present| call.  By

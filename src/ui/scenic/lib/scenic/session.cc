@@ -29,21 +29,26 @@ void Session::set_binding_error_handler(fit::function<void(zx_status_t)> error_h
   binding_.set_error_handler(std::move(error_handler));
 }
 
-void Session::InitializeOnFramePresentedCallback() {
-  OnFramePresentedCallback cb = [this](fuchsia::scenic::scheduling::FramePresentedInfo info) {
-    if (!valid_ || !binding_.is_bound())
-      return;
-    // Update and set num_presents_allowed before ultimately calling into the client provided
-    // callback.
-    num_presents_allowed_ += (info.presentation_infos.size());
-    FXL_DCHECK(num_presents_allowed_ <= kMaxPresentsInFlight);
-    info.num_presents_allowed = num_presents_allowed_;
-    binding_.events().OnFramePresented(std::move(info));
-  };
+void Session::SetFrameScheduler(
+    const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler) {
+  FXL_DCHECK(frame_scheduler_.expired()) << "Error: FrameScheduler already set";
+  frame_scheduler_ = frame_scheduler;
 
-  // Some tests don't initialize |TempSesionDelegate|s, so be defensive here.
-  if (auto temp_session_delegate = GetTempSessionDelegate())
-    temp_session_delegate->SetOnFramePresentedCallback(std::move(cb));
+  // Initialize OnFramePresented callback.
+  // Check validity because it's not always set in tests.
+  if (frame_scheduler)
+    frame_scheduler->SetOnFramePresentedCallbackForSession(
+        id_,
+        [weak = weak_factory_.GetWeakPtr()](fuchsia::scenic::scheduling::FramePresentedInfo info) {
+          if (!weak->binding_.is_bound())
+            return;
+          // Update and set num_presents_allowed before ultimately calling into the client provided
+          // callback.
+          weak->num_presents_allowed_ += (info.presentation_infos.size());
+          FXL_DCHECK(weak->num_presents_allowed_ <= kMaxPresentsInFlight);
+          info.num_presents_allowed = weak->num_presents_allowed_;
+          weak->binding_.events().OnFramePresented(std::move(info));
+        });
 }
 
 void Session::Enqueue(std::vector<fuchsia::ui::scenic::Command> cmds) {

@@ -157,6 +157,7 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
   engine_.emplace(app_context_.get(), frame_scheduler_, escher_->GetWeakPtr(),
                   scenic_.inspect_node()->CreateChild("Engine"));
   frame_scheduler_->SetFrameRenderer(engine_->GetWeakPtr());
+  scenic_.SetFrameScheduler(frame_scheduler_);
 
 #ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
   auto gfx = scenic_.RegisterSystem<gfx::GfxSystem>(&engine_.value(), escher_->GetWeakPtr(),

@@ -35,6 +35,12 @@ void Scenic::SetInitialized() {
   run_after_initialized_.clear();
 }
 
+void Scenic::SetFrameScheduler(const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler) {
+  FXL_DCHECK(!frame_scheduler_) << "Error: FrameScheduler already set";
+  FXL_DCHECK(frame_scheduler) << "Error: No FrameScheduler provided";
+  frame_scheduler_ = frame_scheduler;
+}
+
 void Scenic::CloseSession(scheduling::SessionId session_id) { sessions_.erase(session_id); }
 
 void Scenic::RunAfterInitialized(fit::closure closure) {
@@ -59,6 +65,8 @@ void Scenic::CreateSessionImmediately(
   auto session = std::make_unique<scenic_impl::Session>(
       next_session_id_++, std::move(session_request), std::move(listener));
 
+  session->SetFrameScheduler(frame_scheduler_);
+
   session->set_binding_error_handler(
       [this, session_id = session->id()](zx_status_t status) { CloseSession(session_id); });
 
@@ -72,8 +80,6 @@ void Scenic::CreateSessionImmediately(
     }
   }
   session->SetCommandDispatchers(std::move(dispatchers));
-
-  session->InitializeOnFramePresentedCallback();
 
   FXL_CHECK(sessions_.find(session->id()) == sessions_.end());
   sessions_[session->id()] = std::move(session);

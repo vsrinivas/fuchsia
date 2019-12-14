@@ -85,6 +85,8 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
 
   void SetInitialized();
 
+  void SetFrameScheduler(const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler);
+
   void InitializeSnapshotService(std::unique_ptr<fuchsia::ui::scenic::internal::Snapshot> snapshot);
 
   fuchsia::ui::scenic::internal::Snapshot* snapshot() { return snapshot_.get(); }
@@ -111,6 +113,8 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
   bool initialized_ = false;
   // Closures that will be run when all systems are initialized.
   std::vector<fit::closure> run_after_initialized_;
+
+  std::shared_ptr<scheduling::FrameScheduler> frame_scheduler_;
 
   // Session bindings rely on setup of systems_; order matters.
   std::unordered_map<scheduling::SessionId, std::unique_ptr<scenic_impl::Session>> sessions_;
