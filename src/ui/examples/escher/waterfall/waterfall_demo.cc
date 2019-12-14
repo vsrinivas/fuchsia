@@ -7,6 +7,7 @@
 #include "src/ui/examples/escher/waterfall/scenes/paper_demo_scene1.h"
 #include "src/ui/examples/escher/waterfall/scenes/paper_demo_scene2.h"
 #include "src/ui/lib/escher/defaults/default_shader_program_factory.h"
+#include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/mesh/tessellation.h"
 #include "src/ui/lib/escher/paper/paper_renderer_static_config.h"
 #include "src/ui/lib/escher/paper/paper_scene.h"
@@ -40,15 +41,17 @@ WaterfallDemo::WaterfallDemo(escher::EscherWeakPtr escher_in, int argc, char** a
 
   renderer_config_.debug_frame_number = true;
   renderer_config_.shadow_type = PaperRendererShadowType::kShadowVolume;
-  renderer_config_.msaa_sample_count = 2;
+  renderer_config_.msaa_sample_count =
+      ESCHER_CHECKED_VK_RESULT(escher()->device()->caps().GetMatchingSampleCount({2U, 4U, 1U}));
   renderer_config_.num_depth_buffers = 2;
-  renderer_config_.depth_stencil_format = escher()->device()->caps().GetMatchingDepthStencilFormat(
-      {vk::Format::eD24UnormS8Uint, vk::Format::eD32SfloatS8Uint});
+  renderer_config_.depth_stencil_format =
+      ESCHER_CHECKED_VK_RESULT(escher()->device()->caps().GetMatchingDepthStencilFormat(
+          {vk::Format::eD24UnormS8Uint, vk::Format::eD32SfloatS8Uint}));
 
   renderer_->SetConfig(renderer_config_);
 
-  // Start with 1 light.  Number of lights can be cycled via CycleNumLights().  Light positions and
-  // colors are animated by UpdateLighting().
+  // Start with 1 light.  Number of lights can be cycled via CycleNumLights().  Light positions
+  // and colors are animated by UpdateLighting().
   paper_scene_ = fxl::MakeRefCounted<PaperScene>();
   paper_scene_->point_lights.resize(1);
 }

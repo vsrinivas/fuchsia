@@ -5,6 +5,7 @@
 #ifndef SRC_UI_LIB_ESCHER_IMPL_VULKAN_UTILS_H_
 #define SRC_UI_LIB_ESCHER_IMPL_VULKAN_UTILS_H_
 
+#include <set>
 #include <vector>
 
 #include "src/lib/fxl/logging.h"
@@ -48,12 +49,14 @@ vk::BufferImageCopy GetDefaultBufferImageCopy(size_t width, size_t height);
 std::vector<vk::Format> GetSupportedDepthFormats(vk::PhysicalDevice device,
                                                  std::vector<vk::Format> desired_formats);
 
+// Get all the MSAA sample counts from the vk::SampleCountFlags
+std::set<size_t> GetSupportedColorSampleCounts(vk::SampleCountFlags flags);
+
 // Pick the lowest precision depth format that supports optimal tiling.
 typedef vk::ResultValueType<vk::Format>::type FormatResult;
 FormatResult GetSupportedDepthFormat(vk::PhysicalDevice device);
 
 // Pick the lowest precision depth/stencil format that supports optimal tiling.
-typedef vk::ResultValueType<vk::Format>::type FormatResult;
 FormatResult GetSupportedDepthStencilFormat(vk::PhysicalDevice device);
 
 // Search through all memory types specified by |type_bits| and return the index

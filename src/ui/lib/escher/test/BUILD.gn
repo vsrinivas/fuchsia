@@ -52,6 +52,7 @@ if (is_mac) {
       "mesh_spec_unittest.cc",
       "object_unittest.cc",
       "paper/paper_draw_call_factory_unittest.cc",
+      "paper/paper_render_config_unittest.cc",
       "paper/paper_shape_cache_unittest.cc",
       "paper/paper_transform_stack_unittest.cc",
       "pose_buffer_latching_test.cc",

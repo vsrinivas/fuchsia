@@ -4,7 +4,6 @@
 
 #include "src/ui/lib/escher/test/fixtures/readback_test.h"
 
-#include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/renderer/frame.h"
 #include "src/ui/lib/escher/util/image_utils.h"
@@ -22,8 +21,7 @@ void ReadbackTest::SetUp() {
       vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc |
           vk::ImageUsageFlagBits::eTransferDst);
 
-  auto depth_attachment_format_result =
-      impl::GetSupportedDepthStencilFormat(escher_->vk_physical_device());
+  auto depth_attachment_format_result = escher_->device()->caps().GetMatchingDepthStencilFormat();
   FXL_CHECK(depth_attachment_format_result.result == vk::Result::eSuccess)
       << "No depth stencil format is supported on this device.";
   depth_attachment_ =

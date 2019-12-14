@@ -12,6 +12,7 @@
     },
     "sandbox": {
         "features": [
+	    "isolated-temp",
             "vulkan"
         ],
         "services": [

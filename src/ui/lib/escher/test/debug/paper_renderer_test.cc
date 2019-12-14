@@ -31,7 +31,15 @@ class PaperRendererTest : public ReadbackTest {
 
     escher()->shader_program_factory()->filesystem()->InitializeWithRealFiles(
         kPaperRendererShaderPaths);
-    ren = PaperRenderer::New(escher());
+    PaperRendererConfig config;
+    auto depth_stencil_format = escher()->device()->caps().GetMatchingDepthStencilFormat();
+    if (depth_stencil_format.result == vk::Result::eSuccess) {
+      config.depth_stencil_format = depth_stencil_format.value;
+      FXL_LOG(INFO) << "Depth stencil format set to " << vk::to_string(config.depth_stencil_format);
+    } else {
+      GTEST_SKIP() << "Cannot find a valid depth stencil format, test skipped";
+    }
+    ren = PaperRenderer::New(escher(), config);
   }
 
   // |ReadbackTest|

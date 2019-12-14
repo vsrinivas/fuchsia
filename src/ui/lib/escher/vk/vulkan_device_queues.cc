@@ -17,6 +17,8 @@ VulkanDeviceQueues::Caps::Caps(vk::PhysicalDevice device) {
     max_image_width = props.limits.maxImageDimension2D;
     max_image_height = props.limits.maxImageDimension2D;
     device_api_version = props.apiVersion;
+    msaa_sample_counts =
+        impl::GetSupportedColorSampleCounts(props.limits.sampledImageColorSampleCounts);
   }
 
   {
@@ -33,15 +35,32 @@ VulkanDeviceQueues::Caps::Caps(vk::PhysicalDevice device) {
   }
 }
 
-vk::Format VulkanDeviceQueues::Caps::GetMatchingDepthStencilFormat(
-    std::vector<vk::Format> formats) const {
-  for (auto& fmt : formats) {
+vk::ResultValue<vk::Format> VulkanDeviceQueues::Caps::GetMatchingDepthStencilFormat(
+    const std::vector<vk::Format>& formats) const {
+  for (auto fmt : formats) {
     if (depth_stencil_formats.find(fmt) != depth_stencil_formats.end()) {
-      return fmt;
+      return {vk::Result::eSuccess, fmt};
     }
   }
-  FXL_CHECK(false) << "no matching depth format found.";
-  return vk::Format::eUndefined;
+  return {vk::Result::eErrorFeatureNotPresent, vk::Format::eUndefined};
+}
+
+vk::ResultValue<size_t> VulkanDeviceQueues::Caps::GetMatchingSampleCount(
+    const std::vector<size_t>& counts) const {
+  for (auto count : counts) {
+    if (msaa_sample_counts.find(count) != msaa_sample_counts.end()) {
+      return {vk::Result::eSuccess, count};
+    }
+  }
+  return {vk::Result::eErrorFeatureNotPresent, 0};
+}
+
+std::set<vk::Format> VulkanDeviceQueues::Caps::GetAllMatchingDepthStencilFormats(
+    const std::set<vk::Format>& formats) const {
+  std::set<vk::Format> result;
+  std::set_intersection(formats.begin(), formats.end(), depth_stencil_formats.begin(),
+                        depth_stencil_formats.end(), std::inserter(result, result.begin()));
+  return result;
 }
 
 namespace {

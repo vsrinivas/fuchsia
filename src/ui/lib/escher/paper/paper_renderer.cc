@@ -131,6 +131,24 @@ void PaperRenderer::SetConfig(const PaperRendererConfig& config) {
   FXL_DCHECK(config.msaa_sample_count == 1 || config.msaa_sample_count == 2 ||
              config.msaa_sample_count == 4);
 
+  const auto& supported_sample_counts = escher()->device()->caps().msaa_sample_counts;
+  if (supported_sample_counts.find(config.msaa_sample_count) == supported_sample_counts.end()) {
+    FXL_LOG(ERROR) << "PaperRenderer: MSAA sample count ("
+                   << static_cast<uint32_t>(config.msaa_sample_count)
+                   << ") is not supported on this device. SetConfig failed.";
+    return;
+  }
+  if (escher()
+          ->device()
+          ->caps()
+          .GetMatchingDepthStencilFormat({config.depth_stencil_format})
+          .result != vk::Result::eSuccess) {
+    FXL_LOG(ERROR) << "PaperRenderer: Depth stencil format ("
+                   << vk::to_string(config.depth_stencil_format)
+                   << ") is not supported on this device. SetConfig failed.";
+    return;
+  }
+
   if (config.msaa_sample_count != config_.msaa_sample_count) {
     FXL_VLOG(1) << "PaperRenderer: MSAA sample count set to: " << config.msaa_sample_count
                 << " (was: " << config_.msaa_sample_count << ")";

@@ -10,7 +10,7 @@
 static constexpr uint32_t kFramebufferWidth = 1024;
 static constexpr uint32_t kFramebufferHeight = 1024;
 
-VK_TEST(WaterfallDemo, DISABLED_SmokeTest) {
+VK_TEST(WaterfallDemo, SmokeTest) {
   WaterfallDemo demo(escher::test::GetEscher()->GetWeakPtr(), 0, nullptr);
   auto escher = demo.escher();
 
@@ -35,14 +35,14 @@ VK_TEST(WaterfallDemo, DISABLED_SmokeTest) {
   EXPECT_TRUE(frame_done);
 }
 
-VK_TEST(WaterfallDemo, DISABLED_OffscreenBenchmark) {
+VK_TEST(WaterfallDemo, OffscreenBenchmark) {
   WaterfallDemo demo(escher::test::GetEscher()->GetWeakPtr(), 0, nullptr);
   constexpr size_t kNumFrames = 20;
   Demo::RunOffscreenBenchmark(&demo, kFramebufferWidth, kFramebufferHeight,
                               vk::Format::eB8G8R8A8Unorm, kNumFrames);
 }
 
-VK_TEST(WaterfallDemo, DISABLED_KeyPresses) {
+VK_TEST(WaterfallDemo, KeyPresses) {
   WaterfallDemo demo(escher::test::GetEscher()->GetWeakPtr(), 0, nullptr);
   escher::PaperRenderer* renderer = demo.renderer();
 
@@ -64,9 +64,21 @@ VK_TEST(WaterfallDemo, DISABLED_KeyPresses) {
       EXPECT_NE(sample_count, next_sample_count);
       sample_count = next_sample_count;
     }
-    demo.HandleKeyPress("M");
-    EXPECT_EQ(2, renderer->config().msaa_sample_count);
-    demo.HandleKeyPress("M");
-    EXPECT_EQ(4, renderer->config().msaa_sample_count);
+    {
+      ::testing::internal::CaptureStderr();
+      demo.HandleKeyPress("M");
+      std::string output = ::testing::internal::GetCapturedStderr();
+      if (output.find("MSAA sample count (2) is not supported") == std::string::npos) {
+        EXPECT_EQ(2, renderer->config().msaa_sample_count);
+      }
+    }
+    {
+      ::testing::internal::CaptureStderr();
+      demo.HandleKeyPress("M");
+      std::string output = ::testing::internal::GetCapturedStderr();
+      if (output.find("MSAA sample count (2) is not supported") == std::string::npos) {
+        EXPECT_EQ(4, renderer->config().msaa_sample_count);
+      }
+    }
   }
 }

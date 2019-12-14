@@ -4,7 +4,6 @@
 
 #include "src/ui/lib/escher/vk/impl/render_pass_cache.h"
 
-#include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/resources/resource_recycler.h"
 #include "src/ui/lib/escher/test/gtest_escher.h"
 #include "src/ui/lib/escher/third_party/granite/vk/render_pass.h"
@@ -48,9 +47,11 @@ VK_TEST_F(RenderPassCacheTest, DefaultSubpass) {
   uint32_t height = 1024;
 
   // Get depth stencil texture format supported by the device.
-  std::vector<vk::Format> supported_depth_stencil_formats = impl::GetSupportedDepthFormats(
-      escher->vk_physical_device(),
-      {vk::Format::eD16UnormS8Uint, vk::Format::eD24UnormS8Uint, vk::Format::eD32SfloatS8Uint});
+  std::set<vk::Format> supported_depth_stencil_formats_set =
+      escher->device()->caps().GetAllMatchingDepthStencilFormats(
+          {vk::Format::eD16UnormS8Uint, vk::Format::eD24UnormS8Uint, vk::Format::eD32SfloatS8Uint});
+  std::vector<vk::Format> supported_depth_stencil_formats = std::vector(
+      supported_depth_stencil_formats_set.begin(), supported_depth_stencil_formats_set.end());
   if (supported_depth_stencil_formats.empty()) {
     FXL_LOG(ERROR) << "No depth stencil format is supported on this device, test terminated.";
     EXPECT_TRUE(escher->Cleanup());
@@ -168,7 +169,7 @@ VK_TEST_F(RenderPassCacheTest, RespectsSampleCount) {
 
   // Get depth stencil texture format supported by the device.
   auto depth_stencil_texture_format_result =
-      impl::GetSupportedDepthStencilFormat(escher->vk_physical_device());
+      escher->device()->caps().GetMatchingDepthStencilFormat();
   if (depth_stencil_texture_format_result.result != vk::Result::eSuccess) {
     FXL_LOG(ERROR) << "No depth stencil format is supported on this device.";
     return;

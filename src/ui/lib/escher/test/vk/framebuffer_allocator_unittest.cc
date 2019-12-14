@@ -83,12 +83,13 @@ VK_TEST_F(FramebufferAllocatorTest, Basic) {
   uint32_t width = 1024;
   uint32_t height = 1024;
 
-  std::vector<vk::Format> supported_depth_formats = impl::GetSupportedDepthFormats(
-      escher->vk_physical_device(), {vk::Format::eD24UnormS8Uint, vk::Format::eD32SfloatS8Uint});
-  bool d24_supported = std::find(supported_depth_formats.begin(), supported_depth_formats.end(),
-                                 vk::Format::eD24UnormS8Uint) != supported_depth_formats.end();
-  bool d32_supported = std::find(supported_depth_formats.begin(), supported_depth_formats.end(),
-                                 vk::Format::eD32SfloatS8Uint) != supported_depth_formats.end();
+  std::set<vk::Format> supported_depth_formats =
+      escher->device()->caps().GetAllMatchingDepthStencilFormats(
+          {vk::Format::eD24UnormS8Uint, vk::Format::eD32SfloatS8Uint});
+  bool d24_supported =
+      supported_depth_formats.find(vk::Format::eD24UnormS8Uint) != supported_depth_formats.end();
+  bool d32_supported =
+      supported_depth_formats.find(vk::Format::eD32SfloatS8Uint) != supported_depth_formats.end();
 
   // Create a pair of each of three types of framebuffers.
   auto textures_2colors_D24 = MakeFramebufferTextures(
@@ -149,7 +150,7 @@ VK_TEST_F(FramebufferAllocatorTest, CacheReclamation) {
 
   // Make a single set of textures (depth and 2 color attachments) that will be
   // used to make a framebuffer.
-  auto depth_format_result = impl::GetSupportedDepthStencilFormat(escher->vk_physical_device());
+  auto depth_format_result = escher->device()->caps().GetMatchingDepthFormat();
   vk::Format depth_format = depth_format_result.value;
   if (depth_format_result.result != vk::Result::eSuccess) {
     FXL_LOG(ERROR) << "No depth stencil format is supported on this device.";

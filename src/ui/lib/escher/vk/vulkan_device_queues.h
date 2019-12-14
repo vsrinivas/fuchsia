@@ -45,15 +45,31 @@ class VulkanDeviceQueues : public fxl::RefCountedThreadSafe<VulkanDeviceQueues> 
     uint32_t max_image_width = 0;
     uint32_t max_image_height = 0;
     std::set<vk::Format> depth_stencil_formats;
+    std::set<size_t> msaa_sample_counts;
     std::set<std::string> extensions;
     uint32_t device_api_version;
     bool allow_protected_memory;
 
     vk::PhysicalDeviceFeatures enabled_features;
 
-    // Return the first matching depth-stencil format.  CHECKs that there is
-    // a match.
-    vk::Format GetMatchingDepthStencilFormat(std::vector<vk::Format> formats) const;
+    // This function returns vk::eSuccess and the format if there is a matching
+    // depth-stencil format; otherwise it returns vk::eErrorFeatureNotPresent.
+    vk::ResultValue<vk::Format> GetMatchingDepthStencilFormat(
+        const std::vector<vk::Format>& formats) const;
+
+    vk::ResultValue<size_t> GetMatchingSampleCount(const std::vector<size_t>& counts) const;
+
+    vk::ResultValue<vk::Format> GetMatchingDepthStencilFormat() const {
+      return GetMatchingDepthStencilFormat(
+          {vk::Format::eD16UnormS8Uint, vk::Format::eD24UnormS8Uint, vk::Format::eD32SfloatS8Uint});
+    }
+
+    vk::ResultValue<vk::Format> GetMatchingDepthFormat() const {
+      return GetMatchingDepthStencilFormat({vk::Format::eD16Unorm, vk::Format::eD32Sfloat});
+    }
+
+    std::set<vk::Format> GetAllMatchingDepthStencilFormats(
+        const std::set<vk::Format>& formats) const;
 
     Caps() = default;
     Caps(vk::PhysicalDevice device);

@@ -66,6 +66,21 @@ std::vector<vk::Format> GetSupportedDepthFormats(vk::PhysicalDevice device,
   return result;
 }
 
+std::set<size_t> GetSupportedColorSampleCounts(vk::SampleCountFlags flags) {
+  const auto kSampleCountFlagBits = {vk::SampleCountFlagBits::e1,  vk::SampleCountFlagBits::e2,
+                                     vk::SampleCountFlagBits::e4,  vk::SampleCountFlagBits::e8,
+                                     vk::SampleCountFlagBits::e16, vk::SampleCountFlagBits::e32,
+                                     vk::SampleCountFlagBits::e64};
+
+  std::set<size_t> result;
+  for (const auto flag_bit : kSampleCountFlagBits) {
+    if (flag_bit & flags) {
+      result.insert(SampleCountFlagBitsToInt(flag_bit));
+    }
+  }
+  return result;
+}
+
 FormatResult GetSupportedDepthFormat(vk::PhysicalDevice device) {
   auto supported_formats =
       GetSupportedDepthFormats(device, {vk::Format::eD16Unorm, vk::Format::eD32Sfloat});

@@ -14,6 +14,7 @@
 
 #include <trace/event.h>
 
+#include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/util/fuchsia_utils.h"
 #include "src/ui/lib/escher/vk/chained_semaphore_generator.h"
@@ -38,8 +39,9 @@ Engine::Engine(sys::ComponentContext* app_context,
                escher::EscherWeakPtr weak_escher, inspect_deprecated::Node inspect_node)
     : escher_(std::move(weak_escher)),
       engine_renderer_(std::make_unique<EngineRenderer>(
-          escher_, escher_->device()->caps().GetMatchingDepthStencilFormat(
-                       {vk::Format::eD24UnormS8Uint, vk::Format::eD32SfloatS8Uint}))),
+          escher_,
+          escher::ESCHER_CHECKED_VK_RESULT(escher_->device()->caps().GetMatchingDepthStencilFormat(
+              {vk::Format::eD24UnormS8Uint, vk::Format::eD32SfloatS8Uint})))),
       image_factory_(std::make_unique<escher::ImageFactoryAdapter>(escher()->gpu_allocator(),
                                                                    escher()->resource_recycler())),
       rounded_rect_factory_(std::make_unique<escher::RoundedRectFactory>(escher_)),

@@ -186,7 +186,7 @@ VK_TEST_F(ShaderProgramTest, GeneratePipelines) {
 
   auto cb = CommandBuffer::NewForGraphics(escher, /*use_protected_memory=*/false);
 
-  auto depth_format_result = impl::GetSupportedDepthStencilFormat(escher->vk_physical_device());
+  auto depth_format_result = escher->device()->caps().GetMatchingDepthFormat();
   bool has_depth_attachment = depth_format_result.result != vk::Result::eSuccess;
 
   auto color_attachment =
