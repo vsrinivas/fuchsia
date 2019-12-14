@@ -162,6 +162,18 @@ impl AvrcpRelay {
                             }
                             hanging_watcher = Some(responder);
                         }
+                        sessions2::PlayerRequest::Pause { .. } => {
+                            let _ = controller.send_command(avrcp::AvcPanelCommand::Pause).await;
+                        },
+                        sessions2::PlayerRequest::Play { .. } => {
+                            let _ = controller.send_command(avrcp::AvcPanelCommand::Play).await;
+                        },
+                        sessions2::PlayerRequest::NextItem { .. } => {
+                            let _ = controller.send_command(avrcp::AvcPanelCommand::Forward).await;
+                        },
+                        sessions2::PlayerRequest::PrevItem { .. } => {
+                            let _ = controller.send_command(avrcp::AvcPanelCommand::Backward).await;
+                        },
                         x => fx_log_info!("Unhandled request from Player: {:?}", x),
                     }
                 }
@@ -789,6 +801,80 @@ mod tests {
             },
             info_delta.player_status.unwrap().try_into().expect("valid player status")
         );
+
+        Ok(())
+    }
+
+    fn expect_panel_command(
+        exec: &mut fasync::Executor,
+        controller_requests: &mut avrcp::ControllerRequestStream,
+        expected_command: avrcp::AvcPanelCommand,
+    ) -> Result<(), fidl::Error> {
+        match exec.run_until_stalled(&mut controller_requests.next()) {
+            Poll::Ready(Some(Ok(avrcp::ControllerRequest::SendCommand { command, responder }))) => {
+                assert_eq!(expected_command, command);
+                responder.send(&mut Ok(()))
+            }
+            x => panic!("Expected a SendCommand({:?}) request, got {:?}", expected_command, x),
+        }
+    }
+
+    #[test]
+    /// When commands come from the Player, they are relayed to the AVRCP commands.
+    fn test_relay_sends_commands() -> Result<(), Error> {
+        let mut exec = fasync::Executor::new().expect("executor needed");
+
+        let (publisher_proxy, publisher_request_stream) = setup_publisher_proxy()?;
+        let (avrcp_proxy, avrcp_request_stream) = setup_avrcp_proxy()?;
+
+        let (_stop_sender, receiver) = futures::channel::oneshot::channel();
+
+        let peer_id = PeerId(0);
+
+        let relay_fut = AvrcpRelay::relay(avrcp_proxy, publisher_proxy, peer_id, receiver);
+
+        pin_mut!(relay_fut);
+
+        assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
+
+        let (player_client, mut controller_request_stream) = finish_relay_setup(
+            &mut relay_fut,
+            &mut exec,
+            publisher_request_stream,
+            avrcp_request_stream,
+        )?;
+
+        assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
+
+        player_client.pause()?;
+        player_client.play()?;
+        player_client.next_item()?;
+        player_client.prev_item()?;
+
+        assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
+        expect_panel_command(
+            &mut exec,
+            &mut controller_request_stream,
+            avrcp::AvcPanelCommand::Pause,
+        )?;
+        assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
+        expect_panel_command(
+            &mut exec,
+            &mut controller_request_stream,
+            avrcp::AvcPanelCommand::Play,
+        )?;
+        assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
+        expect_panel_command(
+            &mut exec,
+            &mut controller_request_stream,
+            avrcp::AvcPanelCommand::Forward,
+        )?;
+        assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
+        expect_panel_command(
+            &mut exec,
+            &mut controller_request_stream,
+            avrcp::AvcPanelCommand::Backward,
+        )?;
 
         Ok(())
     }
