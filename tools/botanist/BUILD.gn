@@ -39,6 +39,7 @@ go_library("main") {
   deps = [
     ":botanist_lib",
     ":target",
+    "//src/sys/pkg/lib/repo",
     "//tools/lib/color",
     "//tools/lib/command",
     "//tools/lib/tarutil",

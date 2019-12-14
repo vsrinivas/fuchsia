@@ -50,7 +50,6 @@ func TestAddFromConfig(t *testing.T) {
 			},
 		},
 		Mirrors: []MirrorConfig{{
-			URL:       "https://example.com/repo",
 			Subscribe: true,
 		}},
 	}
@@ -58,11 +57,19 @@ func TestAddFromConfig(t *testing.T) {
 	sh := &mockShell{
 		writer: &mockWriteCloser{},
 	}
-
 	installPath := "/path/on/remote/filesystem"
-	if err := addFromConfig(cfg, installPath, sh); err != nil {
+
+	// This first call should fail, as the mirror does not specify a URL.
+	if err := addFromConfig(cfg, sh, installPath); err == nil {
+		t.Errorf("succeeded when we should have failed; mirrors need URLs")
+	}
+
+	// Set the mirror URL and try again.
+	cfg.Mirrors[0].URL = "https://example.com/repo"
+	if err := addFromConfig(cfg, sh, installPath); err != nil {
 		t.Fatalf("failed to configure: %v", err)
 	}
+
 	if len(sh.cmds) == 0 || len(sh.cmds) > 1 {
 		t.Errorf("%d commands run; expected 1", len(sh.cmds))
 	} else if sh.cmds[0] != repoAddCmd(installPath) {
@@ -72,7 +79,7 @@ func TestAddFromConfig(t *testing.T) {
 		t.Errorf("writer was not closed")
 	}
 
-	actualBytes, err := json.Marshal(cfg)
+	actualBytes, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
 		t.Fatalf("could not marshal repository config: %v", err)
 	}

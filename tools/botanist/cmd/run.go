@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/lib/repo"
 	"go.fuchsia.dev/fuchsia/tools/botanist/lib"
 	"go.fuchsia.dev/fuchsia/tools/botanist/target"
 	"go.fuchsia.dev/fuchsia/tools/build/lib"
@@ -29,6 +30,7 @@ import (
 
 const (
 	netstackTimeout time.Duration = 1 * time.Minute
+	repoId                        = "fuchsia-pkg://fuchsia.com"
 )
 
 // Target represents a fuchsia instance.
@@ -127,11 +129,7 @@ func (r *RunCommand) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&r.sshKey, "ssh", "", "file containing a private SSH user key; if not provided, a private key will be generated.")
 	f.StringVar(&r.serialLogFile, "serial-log", "", "file to write the serial logs to.")
 	f.StringVar(&r.repoURL, "repo", "", "URL at which to configure a package repository")
-	var defaultBlobURL string
-	if r.repoURL != "" {
-		defaultBlobURL = fmt.Sprintf("%s/blobs", r.repoURL)
-	}
-	f.StringVar(&r.blobURL, "blobs", defaultBlobURL, "URL at which to serve a package repository's blobs")
+	f.StringVar(&r.blobURL, "blobs", "", "URL at which to serve a package repository's blobs")
 }
 
 func (r *RunCommand) runCmd(ctx context.Context, args []string, t Target) error {
@@ -306,6 +304,12 @@ func (r *RunCommand) setupTargets(ctx context.Context, imgs []build.Image, targe
 					errs <- err
 					return
 				}
+				if r.repoURL != "" {
+					if err := repo.AddInsecurely(client, repoId, r.repoURL, r.blobURL); err != nil {
+						errs <- err
+						return
+					}
+				}
 				go func() {
 					syslogger.Stream(ctx, syslog)
 					syslogger.Close()
@@ -430,6 +434,10 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 }
 
 func (r *RunCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+	// TODO(crbug.com/1024709): Unresolved environment variables might be passed in.
+	r.repoURL = os.ExpandEnv(r.repoURL)
+	r.blobURL = os.ExpandEnv(r.blobURL)
+
 	args := f.Args()
 	if len(args) == 0 {
 		return subcommands.ExitUsageError
