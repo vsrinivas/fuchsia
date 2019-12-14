@@ -281,6 +281,37 @@ where
     }
 }
 
+impl<B: ByteSlice> UdpPacketRaw<B> {
+    /// The source UDP port, if any.
+    ///
+    /// The source port is optional, and may have been omitted by the sender.
+    pub(crate) fn src_port(&self) -> Option<NonZeroU16> {
+        NonZeroU16::new(
+            self.header
+                .as_ref()
+                .map(|header| header.src_port)
+                .map_incomplete(|partial_header| partial_header.flow.src_port)
+                .into_inner()
+                .get(),
+        )
+    }
+
+    /// The destination UDP port.
+    ///
+    /// UDP packets must not have a destination port of 0; thus, if this
+    /// function returns `None`, then the packet is malformed.
+    pub(crate) fn dst_port(&self) -> Option<NonZeroU16> {
+        NonZeroU16::new(
+            self.header
+                .as_ref()
+                .map(|header| header.dst_port)
+                .map_incomplete(|partial_header| partial_header.flow.dst_port)
+                .into_inner()
+                .get(),
+        )
+    }
+}
+
 // NOTE(joshlf): In order to ensure that the checksum is always valid, we don't
 // expose any setters for the fields of the UDP packet; the only way to set them
 // is via UdpPacketBuilder::serialize. This, combined with checksum validation

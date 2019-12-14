@@ -290,7 +290,7 @@ pub(crate) trait FrameHandler<Ctx, Id, Meta, B> {
 /// testing and debugging purposes. It is assumed that, if a no-op
 /// implementation of [`increment_counter`] is provided, then calls will be
 /// optimized out entirely by the compiler.
-pub(crate) trait CounterContext {
+pub trait CounterContext {
     /// Increment the counter with the given key.
     fn increment_counter(&mut self, key: &'static str);
 }
@@ -632,7 +632,7 @@ pub(crate) mod testutil {
 
     /// A dummy [`CounterContext`].
     #[derive(Default)]
-    pub(crate) struct DummyCounterContext {
+    pub struct DummyCounterContext {
         counters: HashMap<&'static str, usize>,
     }
 

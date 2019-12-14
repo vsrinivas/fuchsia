@@ -579,7 +579,9 @@ fn dispatch_receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>>(
             );
             Ok(())
         }
-        IpProto::Udp => crate::transport::udp::receive_ip_packet(ctx, src_ip, dst_ip, buffer),
+        IpProto::Udp => {
+            crate::transport::udp::receive_ip_packet::<Ipv4, _, _>(ctx, src_ip, dst_ip, buffer)
+        }
 
         _ => {
             // Undo the parsing of the IP packet header so that the buffer
@@ -648,7 +650,9 @@ fn dispatch_receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>>(
         // A value of `IpProto::NoNextHeader` tells us that there is no header whatsoever
         // following the last lower-level header so we stop processing here.
         IpProto::NoNextHeader => Ok(()),
-        IpProto::Udp => crate::transport::udp::receive_ip_packet(ctx, src_ip, dst_ip, buffer),
+        IpProto::Udp => {
+            crate::transport::udp::receive_ip_packet::<Ipv6, _, _>(ctx, src_ip, dst_ip, buffer)
+        }
         _ => {
             // Undo the parsing of the IP packet header so that the buffer
             // contains the entire original IP packet.
@@ -1752,9 +1756,7 @@ impl<B: BufferMut, D: BufferDispatcher<B>> Icmpv4Context<B> for Context<D> {
             IpProto::Icmp => {
                 crate::ip::icmp::receive_icmpv4_socket_error(self, original_packet, err)
             }
-            IpProto::Udp => {
-                log_unimplemented!((), "receive_icmpv4_error: receive ICMP error for UDP")
-            }
+            IpProto::Udp => crate::transport::udp::receive_icmpv4_error(self, original_packet, err),
             _ => trace!(
                 "receive_icmpv4_error: received ICMPv4 error message for unsupported protocol {:?}",
                 original_packet.proto()
@@ -1780,9 +1782,7 @@ impl<B: BufferMut, D: BufferDispatcher<B>> Icmpv6Context<B> for Context<D> {
             IpProto::Icmp => {
                 crate::ip::icmp::receive_icmpv6_socket_error(self, original_packet, err)
             }
-            IpProto::Udp => {
-                log_unimplemented!((), "receive_icmpv6_error: receive ICMPv6 error for UDP")
-            }
+            IpProto::Udp => crate::transport::udp::receive_icmpv6_error(self, original_packet, err),
             _ => trace!(
                 "receive_icmpv6_error: received ICMPv6 error message for unsupported protocol {:?}",
                 original_packet.next_header()

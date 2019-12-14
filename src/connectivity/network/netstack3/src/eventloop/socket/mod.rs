@@ -278,11 +278,7 @@ impl SockAddr for SockAddr4 {
 
     /// Creates a new `SockAddr4`.
     fn new(addr: Self::AddrType, port: u16) -> Self {
-        SockAddr4 {
-            family: U16::new(Self::FAMILY),
-            port: U16::new(port),
-            addr: addr.ipv4_bytes(),
-        }
+        SockAddr4 { family: U16::new(Self::FAMILY), port: U16::new(port), addr: addr.ipv4_bytes() }
     }
 
     fn addr(&self) -> Ipv4Addr {

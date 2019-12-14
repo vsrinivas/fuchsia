@@ -417,7 +417,7 @@ pub(crate) trait Icmpv6SocketContext:
 
 impl<D: EventDispatcher> IcmpSocketContext<Ipv4> for Context<D> {
     fn receive_icmp_error(&mut self, conn: IcmpConnId<Ipv4>, seq_num: u16, err: Icmpv4ErrorCode) {
-        self.dispatcher_mut().receive_icmp_error(conn, seq_num, err);
+        IcmpEventDispatcher::receive_icmp_error(self.dispatcher_mut(), conn, seq_num, err);
     }
 
     fn close_icmp_connection(&mut self, conn: IcmpConnId<Ipv4>, err: NoRouteError) {
@@ -427,7 +427,7 @@ impl<D: EventDispatcher> IcmpSocketContext<Ipv4> for Context<D> {
 
 impl<D: EventDispatcher> IcmpSocketContext<Ipv6> for Context<D> {
     fn receive_icmp_error(&mut self, conn: IcmpConnId<Ipv6>, seq_num: u16, err: Icmpv6ErrorCode) {
-        self.dispatcher_mut().receive_icmp_error(conn, seq_num, err);
+        IcmpEventDispatcher::receive_icmp_error(self.dispatcher_mut(), conn, seq_num, err);
     }
 
     fn close_icmp_connection(&mut self, conn: IcmpConnId<Ipv6>, err: NoRouteError) {

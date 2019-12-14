@@ -969,9 +969,9 @@ impl DummyEventDispatcher {
     }
 }
 
-impl<I: Ip> UdpEventDispatcher<I> for DummyEventDispatcher {}
+impl<I: IcmpIpExt> UdpEventDispatcher<I> for DummyEventDispatcher {}
 
-impl<I: Ip> TransportLayerEventDispatcher<I> for DummyEventDispatcher {}
+impl<I: IcmpIpExt> TransportLayerEventDispatcher<I> for DummyEventDispatcher {}
 
 impl<I: IcmpIpExt> IcmpEventDispatcher<I> for DummyEventDispatcher {
     fn receive_icmp_error(&mut self, _conn: IcmpConnId<I>, _seq_num: u16, _err: I::ErrorCode) {

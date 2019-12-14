@@ -10,19 +10,20 @@ use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll};
 
-use failure::{Error, format_err};
+use failure::{format_err, Error};
 use fidl_fuchsia_posix_socket as psocket;
 use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, prelude::HandleBased};
 use futures::{channel::mpsc, channel::oneshot, future::Either, TryFutureExt, TryStreamExt};
 use log::{debug, error, trace};
-use net_types::ip::{Ip, IpAddress, Ipv4, Ipv6, IpVersion};
+use net_types::ip::{Ip, IpAddress, IpVersion, Ipv4, Ipv6};
 use netstack3_core::{
-    connect_udp, get_udp_conn_info, get_udp_listener_info, listen_udp, remove_udp_conn, remove_udp_listener, send_udp,
-    send_udp_conn, send_udp_listener, IdMapCollection, LocalAddressError, RemoteAddressError,
-    SocketError, UdpConnId, UdpEventDispatcher, UdpListenerId,
+    connect_udp, get_udp_conn_info, get_udp_listener_info, icmp::IcmpIpExt, listen_udp,
+    remove_udp_conn, remove_udp_listener, send_udp, send_udp_conn, send_udp_listener,
+    IdMapCollection, LocalAddressError, RemoteAddressError, SocketError, UdpConnId,
+    UdpEventDispatcher, UdpListenerId,
 };
-use packet::{BufferView, serialize::Buf};
+use packet::{serialize::Buf, BufferView};
 use zerocopy::{AsBytes, LayoutVerified};
 
 use crate::{
@@ -31,7 +32,7 @@ use crate::{
 };
 
 use super::{
-    FdioSocketMsg, get_domain_ip_version, IpSockAddrExt, SockAddr, SocketEventInner,
+    get_domain_ip_version, FdioSocketMsg, IpSockAddrExt, SockAddr, SocketEventInner,
     SocketWorkerProperties,
 };
 
@@ -48,7 +49,7 @@ pub(crate) struct UdpSocketCollectionInner<I: Ip> {
 }
 
 /// Extension trait for [`Ip`] for UDP sockets operations.
-pub(crate) trait UdpSocketIpExt: IpSockAddrExt {
+pub(crate) trait UdpSocketIpExt: IpSockAddrExt + IcmpIpExt {
     fn get_collection(col: &UdpSocketCollection) -> &UdpSocketCollectionInner<Self>;
     fn get_collection_mut(col: &mut UdpSocketCollection) -> &mut UdpSocketCollectionInner<Self>;
 }
@@ -456,7 +457,7 @@ impl<I: UdpSocketIpExt> SocketWorkerInner<I> {
                     .remove(&listener_id)
                     .unwrap();
 
-                (list_info.local_addr, Some(list_info.local_port))
+                (list_info.local_ip, Some(list_info.local_port))
             }
             SocketState::BoundConnect { conn_id } => {
                 // if we're bound to a connect mode, we need to remove the
@@ -467,7 +468,7 @@ impl<I: UdpSocketIpExt> SocketWorkerInner<I> {
                     .conns
                     .remove(&conn_id)
                     .unwrap();
-                (Some(conn_info.local_addr), Some(conn_info.local_port))
+                (Some(conn_info.local_ip), Some(conn_info.local_port))
             }
         };
 
@@ -526,15 +527,15 @@ impl<I: UdpSocketIpExt> SocketWorkerInner<I> {
             }
             SocketState::BoundConnect { conn_id } => {
                 let info = get_udp_conn_info(&event_loop.ctx, conn_id);
-                Ok(I::SocketAddress::new(*info.local_addr, info.local_port.get()))
+                Ok(I::SocketAddress::new(*info.local_ip, info.local_port.get()))
             }
             SocketState::BoundListen { listener_id } => {
                 let info = get_udp_listener_info(&event_loop.ctx, listener_id);
-                let local_addr = match info.local_addr {
+                let local_ip = match info.local_ip {
                     Some(addr) => *addr,
                     None => I::UNSPECIFIED_ADDRESS,
                 };
-                Ok(I::SocketAddress::new(local_addr, info.local_port.get()))
+                Ok(I::SocketAddress::new(local_ip, info.local_port.get()))
             }
         }
     }
@@ -555,7 +556,7 @@ impl<I: UdpSocketIpExt> SocketWorkerInner<I> {
             }
             SocketState::BoundConnect { conn_id } => {
                 let info = get_udp_conn_info(&event_loop.ctx, conn_id);
-                Ok(I::SocketAddress::new(*info.remote_addr, info.remote_port.get()))
+                Ok(I::SocketAddress::new(*info.remote_ip, info.remote_port.get()))
             }
         }
     }
@@ -602,39 +603,23 @@ impl<I: UdpSocketIpExt> SocketWorkerInner<I> {
             psocket::ControlRequest::GetSockName { responder } => {
                 match self.get_sock_name(event_loop) {
                     Ok(sock_name) => {
-                        responder_send!(
-                            responder,
-                            0i16,
-                            &mut sock_name.as_bytes().iter().copied()
-                        );
+                        responder_send!(responder, 0i16, &mut sock_name.as_bytes().iter().copied());
                     }
                     Err(err) => {
-                        responder_send!(
-                            responder,
-                            err as i16,
-                            &mut None.into_iter()
-                        );
+                        responder_send!(responder, err as i16, &mut None.into_iter());
                     }
                 }
-            },
+            }
             psocket::ControlRequest::GetPeerName { responder } => {
                 match self.get_peer_name(event_loop) {
                     Ok(sock_name) => {
-                        responder_send!(
-                            responder,
-                            0i16,
-                            &mut sock_name.as_bytes().iter().copied()
-                        );
+                        responder_send!(responder, 0i16, &mut sock_name.as_bytes().iter().copied());
                     }
                     Err(err) => {
-                        responder_send!(
-                            responder,
-                            err as i16,
-                            &mut None.into_iter()
-                        );
+                        responder_send!(responder, err as i16, &mut None.into_iter());
                     }
                 }
-            },
+            }
             psocket::ControlRequest::SetSockOpt { .. } => {}
             psocket::ControlRequest::GetSockOpt { .. } => {}
             _ => {}
@@ -682,9 +667,9 @@ impl<I: UdpSocketIpExt> SocketWorkerInner<I> {
                     // this is a "sendto" call, use stateless UDP send using the
                     // local address and port in `conn_id`.
                     let conn_info = get_udp_conn_info(&event_loop.ctx, conn_id);
-                    send_udp(
+                    send_udp::<I, _, _>(
                         &mut event_loop.ctx,
-                        Some(conn_info.local_addr),
+                        Some(conn_info.local_ip),
                         Some(conn_info.local_port),
                         addr,
                         port,
@@ -1048,7 +1033,7 @@ mod tests {
         );
 
         // Verify that Alice is listening on the local socket, but still has no peer socket
-        let want_addr  = A::new(A::LOCAL_ADDR, 200);
+        let want_addr = A::new(A::LOCAL_ADDR, 200);
         assert_eq!(
             alice.run_future(alice_ctl.get_sock_name()).await.unwrap(),
             (0, want_addr.as_bytes().to_vec())
@@ -1088,7 +1073,7 @@ mod tests {
         );
 
         // Verify that Bob has the peer socket set correctly
-        let want_addr  = A::new(A::LOCAL_ADDR, 200);
+        let want_addr = A::new(A::LOCAL_ADDR, 200);
         assert_eq!(
             bob.run_future(bob_ctl.get_peer_name()).await.unwrap(),
             (0, want_addr.as_bytes().to_vec())

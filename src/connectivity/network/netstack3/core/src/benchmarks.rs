@@ -9,7 +9,7 @@
 
 use std::time::{Duration, Instant};
 
-use net_types::ip::{Ip, Ipv4};
+use net_types::ip::Ipv4;
 use packet::{Buf, BufferMut, InnerPacketBuilder, Serializer};
 use rand_xorshift::XorShiftRng;
 
@@ -42,9 +42,9 @@ struct BenchmarkEventDispatcher {
     frames_sent: usize,
 }
 
-impl<I: Ip> UdpEventDispatcher<I> for BenchmarkEventDispatcher {}
+impl<I: IcmpIpExt> UdpEventDispatcher<I> for BenchmarkEventDispatcher {}
 
-impl<I: Ip> TransportLayerEventDispatcher<I> for BenchmarkEventDispatcher {}
+impl<I: IcmpIpExt> TransportLayerEventDispatcher<I> for BenchmarkEventDispatcher {}
 
 impl<B: BufferMut> DeviceLayerEventDispatcher<B> for BenchmarkEventDispatcher {
     fn send_frame<S: Serializer<Buffer = B>>(

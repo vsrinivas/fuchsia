@@ -235,3 +235,45 @@ macro_rules! bench {
         }
     };
 }
+
+#[doc(hidden)]
+pub(crate) trait TryUnitHelper<T> {
+    fn into_option(self) -> Option<T>;
+}
+
+impl<T> TryUnitHelper<T> for Option<T> {
+    fn into_option(self) -> Option<T> {
+        self
+    }
+}
+
+impl<T, E> TryUnitHelper<T> for Result<T, E> {
+    fn into_option(self) -> Option<T> {
+        self.ok()
+    }
+}
+
+/// Like the `try!` macro, but for functions which return `()`.
+///
+/// `try_unit!($e)` tries to unwrap `$e` (either as `Result::Ok` or
+/// `Option::Some`). If `$e` is instead `Result::Err` or `Option::None`, it
+/// returns `()`. If `try_unit!` is invoked as `try_unit!($e, $trace)` and `$e`
+/// is `Result::Err` or `Option::None`, it will also invoke `trace!($trace)`
+/// before returning.
+macro_rules! try_unit {
+    ($e:expr) => {
+        match crate::macros::TryUnitHelper::<_>::into_option($e) {
+            Some(x) => x,
+            None => return,
+        }
+    };
+    ($e:expr, $trace:literal) => {
+        match crate::macros::TryUnitHelper::<_>::into_option($e) {
+            Some(x) => x,
+            None => {
+                trace!($trace);
+                return;
+            }
+        }
+    };
+}
