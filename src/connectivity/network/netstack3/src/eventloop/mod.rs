@@ -299,7 +299,18 @@ impl EventLoop {
                     .await
                     .map(|s| s.contains(EthernetStatus::ONLINE))
                     .unwrap_or(false);
-                let comm_info = CommonInfo::new(setup.path, setup.client, true, online);
+                // We do not support updating the device's mac-address,
+                // mtu, and features during it's lifetime, their cached
+                // states are hence not updated once initialized.
+                let comm_info = CommonInfo::new(
+                    setup.path,
+                    setup.client,
+                    setup.info.mac.into(),
+                    setup.info.mtu,
+                    setup.info.features,
+                    true,
+                    online,
+                );
 
                 let id = if online {
                     let eth_id =
@@ -495,8 +506,6 @@ impl EventLoop {
     async fn fidl_list_interfaces(&mut self) -> Vec<fidl_net_stack::InterfaceInfo> {
         let mut devices = vec![];
         for device in self.ctx.dispatcher().devices.iter_devices() {
-            // TODO(wesleyac): Cache info and status
-            let info = device.client().info().await;
             let mut addresses = vec![];
             if let Some(core_id) = device.core_id() {
                 for addr in get_all_ip_addr_subnets(&self.ctx, core_id) {
@@ -514,9 +523,9 @@ impl EventLoop {
                     name: "[TBD]".to_owned(), // TODO(porce): Follow up to populate the name
                     topopath: device.path().clone(),
                     filepath: "[TBD]".to_owned(), // TODO(porce): Follow up to populate
-                    mac: if let Ok(info) = &info { Some(Box::new(info.mac.into())) } else { None },
-                    mtu: if let Ok(info) = &info { info.mtu } else { 0 },
-                    features: if let Ok(info) = &info { info.features.bits() } else { 0 },
+                    mac: Some(Box::new(device.mac())),
+                    mtu: device.mtu(),
+                    features: device.features().bits(),
                     administrative_status: if device.admin_enabled() {
                         AdministrativeStatus::Enabled
                     } else {
@@ -540,8 +549,6 @@ impl EventLoop {
     ) -> Result<fidl_net_stack::InterfaceInfo, fidl_net_stack::Error> {
         let device =
             self.ctx.dispatcher().get_device_info(id).ok_or(fidl_net_stack::Error::NotFound)?;
-        // TODO(wesleyac): Cache info and status
-        let info = device.client().info().await.map_err(|_| fidl_net_stack::Error::Internal)?;
         let mut addresses = vec![];
         if let Some(core_id) = device.core_id() {
             for addr in get_all_ip_addr_subnets(&self.ctx, core_id) {
@@ -557,9 +564,9 @@ impl EventLoop {
                 name: "[TBD]".to_owned(), // TODO(porce): Follow up to populate the name
                 topopath: device.path().clone(),
                 filepath: "[TBD]".to_owned(), // TODO(porce): Follow up to populate
-                mac: Some(Box::new(info.mac.into())),
-                mtu: info.mtu,
-                features: info.features.bits(),
+                mac: Some(Box::new(device.mac())),
+                mtu: device.mtu(),
+                features: device.features().bits(),
                 administrative_status: if device.admin_enabled() {
                     AdministrativeStatus::Enabled
                 } else {
@@ -673,12 +680,11 @@ impl EventLoop {
         let device = disp.get_device_info(id).ok_or(fidl_net_stack::Error::NotFound)?;
 
         if device.admin_enabled() && device.phy_up() {
-            let info = device.client().info().await.map_err(|_| fidl_net_stack::Error::Internal)?;
             // TODO(rheacock, NET-2140): Handle core and driver state in two stages: add device to the
             // core to get an id, then reach into the driver to get updated info before triggering the
             // core to allow traffic on the interface.
-            let generate_core_id = |_dev_info: &DeviceInfo| {
-                state.add_ethernet_device(Mac::new(info.mac.octets), info.mtu)
+            let generate_core_id = |info: &DeviceInfo| {
+                state.add_ethernet_device(Mac::new(info.mac().octets), info.mtu())
             };
             match disp.devices.activate_device(id, generate_core_id) {
                 Ok(device_info) => {

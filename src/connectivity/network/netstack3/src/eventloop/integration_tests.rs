@@ -818,7 +818,7 @@ async fn test_list_interfaces() {
         assert_eq!(&ifc.properties.topopath, "fake_topo_path");
         assert_eq!(ifc.properties.mac.as_ref().unwrap().as_ref(), &ep_info.mac);
         assert_eq!(ifc.properties.mtu, ep_info.mtu);
-
+        assert_eq!(ifc.properties.features, ep_info.features);
         assert_eq!(ifc.properties.addresses, if_ip);
         assert_eq!(ifc.properties.administrative_status, AdministrativeStatus::Enabled);
         assert_eq!(ifc.properties.physical_status, PhysicalStatus::Up);
@@ -853,7 +853,7 @@ async fn test_get_interface_info() {
     assert_eq!(&if_info.properties.topopath, "fake_topo_path");
     assert_eq!(if_info.properties.mac.as_ref().unwrap().as_ref(), &ep_info.mac);
     assert_eq!(if_info.properties.mtu, ep_info.mtu);
-
+    assert_eq!(if_info.properties.features, ep_info.features);
     assert_eq!(if_info.properties.addresses, vec![ip.try_into_fidl().unwrap()]);
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);
