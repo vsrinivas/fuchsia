@@ -557,7 +557,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/59a2361f154972802a08f21a3b6ccb6643375488/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/1b67b325ce1bb501fc1ebfb3b211825931d193e0/runtime/dart/dart_component.gni#19)
 
 ### dart_enable_wasm
 Whether dart:wasm should be enabled.
@@ -572,7 +572,7 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/59a2361f154972802a08f21a3b6ccb6643375488/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/1b67b325ce1bb501fc1ebfb3b211825931d193e0/runtime/dart/config.gni#10)
 
 ### dart_lib_export_symbols
 Whether libdart should export the symbols of the Dart API.
@@ -622,7 +622,7 @@ Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/59a2361f154972802a08f21a3b6ccb6643375488/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/1b67b325ce1bb501fc1ebfb3b211825931d193e0/runtime/dart/dart_component.gni#35)
 
 ### dart_target_arch
 Explicitly set the target architecture to use a simulator.
@@ -843,20 +843,20 @@ From //build/fidl/wireformat.gni:9
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/59a2361f154972802a08f21a3b6ccb6643375488/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/1b67b325ce1bb501fc1ebfb3b211825931d193e0/runtime/dart/dart_component.gni#12)
 
 ### flutter_profile
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/59a2361f154972802a08f21a3b6ccb6643375488/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/1b67b325ce1bb501fc1ebfb3b211825931d193e0/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/59a2361f154972802a08f21a3b6ccb6643375488/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/1b67b325ce1bb501fc1ebfb3b211825931d193e0/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
@@ -1589,14 +1589,14 @@ ignore warnings.
 
 **Current value (from the default):** `"deny"`
 
-From //build/rust/config.gni:31
+From //build/rust/config.gni:37
 
 ### rust_lto
 Sets the default LTO type for rustc bulids.
 
 **Current value (from the default):** `""`
 
-From //build/rust/config.gni:23
+From //build/rust/config.gni:25
 
 ### rust_override_lto
 Overrides the LTO setting for all Rust builds, regardless of
@@ -1605,7 +1605,7 @@ Valid values are "none", "thin", and "fat".
 
 **Current value (from the default):** `""`
 
-From //build/rust/config.gni:41
+From //build/rust/config.gni:47
 
 ### rust_override_opt
 Overrides the optimization level for all Rust builds, regardless of
@@ -1614,14 +1614,22 @@ Valid values are 0-3, o, and z.
 
 **Current value (from the default):** `""`
 
-From //build/rust/config.gni:36
+From //build/rust/config.gni:42
+
+### rust_panic
+Sets the panic type for Rust on fuchsia.
+Valid values are "unwind" and "abort".
+
+**Current value (from the default):** `"unwind"`
+
+From //build/rust/config.gni:29
 
 ### rust_toolchain_triple_suffix
 Sets the fuchsia toolchain target triple suffix (after arch)
 
 **Current value (from the default):** `"fuchsia"`
 
-From //build/rust/config.gni:26
+From //build/rust/config.gni:32
 
 ### rustc_prefix
 Sets a custom base directory for `rustc` and `cargo`.
@@ -1629,7 +1637,7 @@ This can be used to test custom Rust toolchains.
 
 **Current value (from the default):** `"../prebuilt/third_party/rust/linux-x64/bin"`
 
-From //build/rust/config.gni:20
+From //build/rust/config.gni:22
 
 ### scenic_display_frame_number
 Draws the current frame number in the top-left corner.
