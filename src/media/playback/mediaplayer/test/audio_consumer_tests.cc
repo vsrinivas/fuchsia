@@ -79,9 +79,18 @@ class AudioConsumerTests : public sys::testing::TestWithEnvironment {
 
   void TearDown() override { EXPECT_FALSE(audio_consumer_connection_closed_); }
 
+  void StartWatcher() {
+    audio_consumer_->WatchStatus([this](fuchsia::media::AudioConsumerStatus status) {
+      got_status_ = true;
+      last_status_ = std::move(status);
+      StartWatcher();
+    });
+  }
+
   fuchsia::media::AudioConsumerPtr audio_consumer_;
   bool audio_consumer_connection_closed_;
   bool got_status_;
+  fuchsia::media::AudioConsumerStatus last_status_;
 
   FakeAudio fake_audio_;
   std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
@@ -475,6 +484,44 @@ TEST_F(AudioConsumerTests, BufferOrdering) {
   RunLoopUntil([&sent_packet]() { return sent_packet; });
 
   EXPECT_TRUE(fake_audio_.renderer().expected());
+  EXPECT_FALSE(sink_connection_closed);
+}
+
+// Test that status reports flow correctly when client always requeues watch requests
+TEST_F(AudioConsumerTests, StatusLoop) {
+  fuchsia::media::StreamSinkPtr sink;
+  fuchsia::media::AudioStreamType stream_type;
+  stream_type.frames_per_second = kFramesPerSecond;
+  stream_type.channels = kSamplesPerFrame;
+  stream_type.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
+  bool sink_connection_closed = false;
+
+  StartWatcher();
+
+  std::vector<zx::vmo> vmos(kNumVmos);
+  for (uint32_t i = 0; i < kNumVmos; i++) {
+    std::array<char, 1> test_data = {static_cast<char>(i)};
+    zx_status_t status = zx::vmo::create(kVmoSize, 0, &vmos[i]);
+    EXPECT_EQ(status, ZX_OK);
+    vmos[i].write(test_data.data(), 0, test_data.size());
+  }
+
+  audio_consumer_->CreateStreamSink(std::move(vmos), stream_type, nullptr, sink.NewRequest());
+
+  sink.set_error_handler(
+      [&sink_connection_closed](zx_status_t status) { sink_connection_closed = true; });
+
+  RunLoopUntil([this]() { return got_status_; });
+  got_status_ = false;
+
+  audio_consumer_->Start(fuchsia::media::AudioConsumerStartFlags::SUPPLY_DRIVEN, 0,
+                         fuchsia::media::NO_TIMESTAMP);
+
+  RunLoopUntil([this]() { return got_status_ && last_status_.has_presentation_timeline(); });
+
+  // test things are progressing
+  EXPECT_EQ(last_status_.presentation_timeline().subject_delta, 1u);
+
   EXPECT_FALSE(sink_connection_closed);
 }
 

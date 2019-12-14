@@ -180,11 +180,8 @@ void AudioConsumerImpl::MaybeSetNewSource() {
   core_.SetSourceSegment(audio_consumer_source->TakeSourceSegment(),
                          [this, simple_stream_sink = std::move(simple_stream_sink),
                           buffers = std::move(buffers)]() mutable {
-                           size_t buffer_index = buffers.size() - 1;
-                           while (!buffers.empty()) {
-                             simple_stream_sink->AddPayloadBuffer(buffer_index--,
-                                                                  std::move(*(buffers.end() - 1)));
-                             buffers.pop_back();
+                           for (size_t i = 0; i < buffers.size(); ++i) {
+                             simple_stream_sink->AddPayloadBuffer(i, std::move(buffers[i]));
                            }
 
                            SendStatusUpdate();
@@ -212,7 +209,6 @@ void AudioConsumerImpl::SetTimelineFunction(float rate, int64_t subject_time,
   core_.SetTimelineFunction(
       media::TimelineFunction(subject_time, reference_time, media::TimelineRate(rate)),
       std::move(callback));
-  // TODO(afoxley) update status
 }
 
 void AudioConsumerImpl::Start(fuchsia::media::AudioConsumerStartFlags flags, int64_t reference_time,
@@ -222,6 +218,7 @@ void AudioConsumerImpl::Start(fuchsia::media::AudioConsumerStartFlags flags, int
   SetTimelineFunction(1.0f, 0, zx::clock::get_monotonic().get() + kMinimumLeadTime, [this]() {
     core_.SetProgramRange(0, 0, Packet::kMaxPts);
     core_.Prime([]() {});
+    SendStatusUpdate();
   });
 }
 
@@ -235,7 +232,7 @@ void AudioConsumerImpl::BindVolumeControl(
 }
 
 void AudioConsumerImpl::Stop() {
-  SetTimelineFunction(0.0f, 0, zx::clock::get_monotonic().get(), []() {});
+  SetTimelineFunction(0.0f, 0, zx::clock::get_monotonic().get(), [this]() { SendStatusUpdate(); });
 }
 
 void AudioConsumerImpl::WatchStatus(fuchsia::media::AudioConsumer::WatchStatusCallback callback) {
