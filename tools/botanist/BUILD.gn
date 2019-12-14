@@ -28,8 +28,8 @@ go_library("target") {
     "//tools/bootserver:bootserver_lib",
     "//tools/botanist/power",
     "//tools/net/netutil",
-    "//tools/net/serial",
     "//tools/qemu",
+    "//tools/serial",
   ]
 }
 

@@ -5,7 +5,7 @@
 import("//build/go/go_library.gni")
 
 go_library("serial") {
-  name = "go.fuchsia.dev/fuchsia/tools/net/serial"
+  name = "go.fuchsia.dev/fuchsia/tools/serial"
   deps = [
     "//third_party/golibs:golang.org/x/sys",
   ]

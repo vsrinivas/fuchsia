@@ -21,8 +21,8 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/net/netboot"
 	"go.fuchsia.dev/fuchsia/tools/net/netutil"
-	"go.fuchsia.dev/fuchsia/tools/net/serial"
 	"go.fuchsia.dev/fuchsia/tools/net/tftp"
+	"go.fuchsia.dev/fuchsia/tools/serial"
 
 	"golang.org/x/crypto/ssh"
 )
