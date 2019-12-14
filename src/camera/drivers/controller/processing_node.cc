@@ -140,4 +140,29 @@ void ProcessNode::OnStopStreaming() {
   }
 }
 
+void ProcessNode::OnShutdown() {
+  switch (type_) {
+    case NodeType::kGdc: {
+      gdc_.RemoveTask(hw_accelerator_task_index_);
+      break;
+    }
+    case NodeType::kGe2d: {
+      // TODO(braval): Add support for this.
+      break;
+    }
+    case NodeType::kInputStream: {
+      // TODO(braval): Add support for this.
+      break;
+    }
+    case NodeType::kOutputStream: {
+      // No clean up required for output node.
+      break;
+    }
+    default: {
+      ZX_ASSERT_MSG(false, "Unknown NodeType\n");
+      return;
+    }
+  }
+}
+
 }  // namespace camera

@@ -40,8 +40,7 @@ class BufferLeakTest : public gtest::TestLoopFixture {
 
   static std::vector<fuchsia::camera2::StreamConstraints> GetStreamConstraints() {
     fuchsia::camera2::CameraStreamType types[] = {
-      fuchsia::camera2::CameraStreamType::FULL_RESOLUTION,
-#if 0
+        fuchsia::camera2::CameraStreamType::FULL_RESOLUTION,
         fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
             fuchsia::camera2::CameraStreamType::FULL_RESOLUTION,
         fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
@@ -50,7 +49,6 @@ class BufferLeakTest : public gtest::TestLoopFixture {
         fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE |
             fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
             fuchsia::camera2::CameraStreamType::FULL_RESOLUTION,
-#endif
     };
     std::vector<fuchsia::camera2::StreamConstraints> constraints_ret;
     for (auto type : types) {

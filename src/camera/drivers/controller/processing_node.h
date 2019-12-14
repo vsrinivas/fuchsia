@@ -84,6 +84,7 @@ class ProcessNode {
   ~ProcessNode() {
     // We need to ensure that the child nodes
     // are destructed before parent node.
+    OnShutdown();
     child_nodes_info_.clear();
   }
 
@@ -105,6 +106,9 @@ class ProcessNode {
   // Called by client
   void OnStartStreaming();
   void OnStopStreaming();
+
+  // This API gets called when a client disconnects the stream.
+  void OnShutdown();
 
   // Helper APIs
   void set_isp_stream_protocol(std::unique_ptr<camera::IspStreamProtocol> isp_stream_protocol) {
