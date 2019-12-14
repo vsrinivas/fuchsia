@@ -191,12 +191,13 @@ static void hci_handle_cmd_read_events(hci_t* hci, zx_wait_item_t* item) {
 
     buf[0] = HCI_COMMAND;
     length++;
-    serial_write(hci, buf, length);
 
     mtx_lock(&hci->mutex);
     snoop_channel_write_locked(hci, bt_hci_snoop_flags(BT_HCI_SNOOP_TYPE_CMD, false), buf + 1,
                                length - 1);
     mtx_unlock(&hci->mutex);
+
+    serial_write(hci, buf, length);
   }
 
   return;
@@ -221,9 +222,13 @@ static void hci_handle_acl_read_events(hci_t* hci, zx_wait_item_t* item) {
 
     buf[0] = HCI_ACL_DATA;
     length++;
-    serial_write(hci, buf, length);
+
+    mtx_lock(&hci->mutex);
     snoop_channel_write_locked(hci, bt_hci_snoop_flags(BT_HCI_SNOOP_TYPE_ACL, false), buf + 1,
                                length - 1);
+    mtx_unlock(&hci->mutex);
+
+    serial_write(hci, buf, length);
   }
 
   return;
