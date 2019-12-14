@@ -49,6 +49,9 @@ OutputBuffer SettingValueToString(ConsoleContext* context, const SettingValue& v
     case SettingType::kExecutionScope: {
       return ExecutionScopeToString(context, value.get_execution_scope());
     }
+    case SettingType::kInputLocations: {
+      return FormatInputLocations(value.get_input_locations());
+    }
     case SettingType::kNull: {
       return OutputBuffer(Syntax::kComment, "<null>");
     }

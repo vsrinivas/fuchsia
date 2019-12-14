@@ -41,6 +41,12 @@ void SettingSchema::AddExecutionScope(std::string name, std::string description,
   AddSetting(std::move(name), {std::move(info), SettingValue(v)});
 }
 
+void SettingSchema::AddInputLocations(std::string name, std::string description,
+                                      std::vector<InputLocation> v) {
+  SettingInfo info{name, std::move(description)};
+  AddSetting(std::move(name), {std::move(info), SettingValue(std::move(v))});
+}
+
 void SettingSchema::AddString(std::string name, std::string description, std::string v,
                               std::vector<std::string> valid_options) {
   SettingInfo info{name, std::move(description)};

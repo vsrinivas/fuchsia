@@ -39,6 +39,7 @@ fxl::RefPtr<SettingSchema> GetSchema() {
                     "Test string");
 
   schema->AddExecutionScope("setting-scope", "Scope description");
+  schema->AddInputLocations("setting-inputloc", "Input location description");
 
   schema->AddList("setting-list", "Setting list description");
   schema->AddList("setting-list2", R"(
@@ -120,6 +121,43 @@ TEST_F(FormatSettingTest, ExecutionScope) {
       "\n"
       "Value(s):\n"
       "pr 1 t 1\n",
+      out.AsString());
+}
+
+TEST_F(FormatSettingTest, InputLocations) {
+  MockConsole console(&session());
+  ConsoleContext context(&session());
+
+  SettingStore store(GetSchema(), nullptr);
+
+  // Empty.
+  Err err = store.SetInputLocations("setting-inputloc", {});
+  EXPECT_FALSE(err.has_error()) << err.msg();
+
+  Setting setting = store.GetSetting("setting-inputloc");
+  OutputBuffer out = FormatSetting(&context, setting);
+  EXPECT_EQ(
+      "setting-inputloc\n"
+      "Input location description\n"
+      "\n"
+      "Type: locations\n"
+      "\n"
+      "Value(s):\n"
+      "<no location>\n",
+      out.AsString());
+
+  // Test with some values. The InputLocation formatter has its own tests for the edge cases.
+  setting.value = SettingValue(
+      {InputLocation(Identifier("SomeFunction")), InputLocation(FileLine("file.cc", 23))});
+  out = FormatSetting(&context, setting);
+  EXPECT_EQ(
+      "setting-inputloc\n"
+      "Input location description\n"
+      "\n"
+      "Type: locations\n"
+      "\n"
+      "Value(s):\n"
+      "SomeFunction, file.cc:23\n",
       out.AsString());
 }
 

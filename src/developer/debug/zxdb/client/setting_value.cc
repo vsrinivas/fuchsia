@@ -24,6 +24,8 @@ const char* SettingTypeToString(SettingType type) {
       return "list";
     case SettingType::kExecutionScope:
       return "scope";
+    case SettingType::kInputLocations:
+      return "locations";
     case SettingType::kNull:
       return "<null>";
   }
@@ -46,6 +48,9 @@ SettingValue::SettingValue(std::vector<std::string> val)
 SettingValue::SettingValue(ExecutionScope scope)
     : type_(SettingType::kExecutionScope), value_(scope) {}
 
+SettingValue::SettingValue(std::vector<InputLocation> v)
+    : type_(SettingType::kInputLocations), value_(std::move(v)) {}
+
 std::string SettingValue::ToDebugString() const {
   std::stringstream ss;
   ss << "[" << SettingTypeToString(type_) << "]: ";
@@ -64,6 +69,10 @@ std::string SettingValue::ToDebugString() const {
       // Scope formatting depends on the frontend. Currently we don't have a client-agnostic
       // formatting for this.
       return "<execution scope>";
+    case SettingType::kInputLocations:
+      // Input location formatting depends on the frontend. Currently we don't have a
+      // client-agnostic formatting for this.
+      return "<input locations>";
     case SettingType::kList:
       for (auto& v : get_list()) {
         ss << v << ", ";

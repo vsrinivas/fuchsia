@@ -19,6 +19,7 @@
 #include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/format_settings.h"
+#include "src/developer/debug/zxdb/console/input_location_parser.h"
 #include "src/developer/debug/zxdb/console/nouns.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
@@ -480,12 +481,22 @@ Err SetExecutionScope(ConsoleContext* console_context, const SettingContext& set
   return store->SetExecutionScope(setting_context.setting.info.name, scope_or.value());
 }
 
+Err SetInputLocations(const Frame* optional_frame, const SettingContext& setting_context,
+                      const std::string& input, SettingStore* store) {
+  std::vector<InputLocation> locs;
+  if (Err err = ParseLocalInputLocation(optional_frame, input, &locs); err.has_error())
+    return err;
+
+  return store->SetInputLocations(setting_context.setting.info.name, std::move(locs));
+}
+
 // Will run the sets against the correct SettingStore:
 // |setting_context| represents the required context needed to reason about the command.
 // for user feedback.
 // |out| is the resultant setting, which is used for user feedback.
-Err SetSetting(ConsoleContext* console_context, const SettingContext& setting_context,
-               const std::vector<std::string>& values, SettingStore* store, Setting* out) {
+Err SetSetting(ConsoleContext* console_context, const Frame* optional_frame,
+               const SettingContext& setting_context, const std::vector<std::string>& values,
+               SettingStore* store, Setting* out) {
   Err err;
   if (setting_context.op != ParsedSetCommand::kAssign && !setting_context.setting.value.is_list())
     return Err("Appending/removing only works for list options.");
@@ -505,6 +516,9 @@ Err SetSetting(ConsoleContext* console_context, const SettingContext& setting_co
       break;
     case SettingType::kExecutionScope:
       err = SetExecutionScope(console_context, setting_context, values[0], store);
+      break;
+    case SettingType::kInputLocations:
+      err = SetInputLocations(optional_frame, setting_context, values[0], store);
       break;
     case SettingType::kNull:
       return Err("Unknown type for setting %s. Please file a bug with repro.",
@@ -581,8 +595,8 @@ Err DoSet(ConsoleContext* console_context, const Command& cmd) {
   }
 
   Setting out_setting;  // Used for showing the new value.
-  err = SetSetting(console_context, setting_context, parsed.value().values, setting_context.store,
-                   &out_setting);
+  err = SetSetting(console_context, cmd.frame(), setting_context, parsed.value().values,
+                   setting_context.store, &out_setting);
   if (!err.ok())
     return err;
 

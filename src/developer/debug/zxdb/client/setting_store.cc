@@ -57,6 +57,12 @@ const ExecutionScope& SettingStore::GetExecutionScope(const std::string& key) co
   return value.get_execution_scope();
 }
 
+const std::vector<InputLocation>& SettingStore::GetInputLocations(const std::string& key) const {
+  auto value = GetValue(key);
+  FXL_DCHECK(value.is_input_locations());
+  return value.get_input_locations();
+}
+
 std::vector<std::string> SettingStore::GetList(const std::string& key) const {
   auto value = GetValue(key);
   FXL_DCHECK(value.is_list());
@@ -105,6 +111,10 @@ Err SettingStore::SetString(const std::string& key, std::string val) {
 
 Err SettingStore::SetExecutionScope(const std::string& key, const ExecutionScope& scope) {
   return SetSetting(key, scope);
+}
+
+Err SettingStore::SetInputLocations(const std::string& key, std::vector<InputLocation> v) {
+  return SetSetting(key, std::move(v));
 }
 
 Err SettingStore::SetList(const std::string& key, std::vector<std::string> list) {

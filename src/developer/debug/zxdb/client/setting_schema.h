@@ -43,6 +43,8 @@ class SettingSchema : public fxl::RefCountedThreadSafe<SettingSchema> {
   void AddInt(std::string name, std::string description, int value = 0);
   void AddExecutionScope(std::string name, std::string description,
                          const ExecutionScope value = ExecutionScope());
+  void AddInputLocations(std::string name, std::string description,
+                         std::vector<InputLocation> = {});
   void AddString(std::string name, std::string description, std::string value = {},
                  std::vector<std::string> valid_options = {});
 

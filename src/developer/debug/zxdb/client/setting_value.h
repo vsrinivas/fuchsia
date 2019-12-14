@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "src/developer/debug/zxdb/client/execution_scope.h"
+#include "src/developer/debug/zxdb/symbols/input_location.h"
 
 namespace zxdb {
 
@@ -19,6 +20,7 @@ enum class SettingType : uint32_t {
   kString,
   kList,
   kExecutionScope,
+  kInputLocations,
   kNull,
 };
 const char* SettingTypeToString(SettingType);
@@ -37,6 +39,7 @@ class SettingValue {
   explicit SettingValue(std::string);
   explicit SettingValue(std::vector<std::string>);
   explicit SettingValue(ExecutionScope);
+  explicit SettingValue(std::vector<InputLocation>);
 
   SettingType type() const { return type_; }
 
@@ -45,6 +48,7 @@ class SettingValue {
   bool is_string() const { return type_ == SettingType::kString; }
   bool is_list() const { return type_ == SettingType::kList; }
   bool is_execution_scope() const { return type_ == SettingType::kExecutionScope; }
+  bool is_input_locations() const { return type_ == SettingType::kInputLocations; }
   bool is_null() const { return type_ == SettingType::kNull; }
 
   const auto& get_bool() const { return std::get<bool>(value_); }
@@ -52,17 +56,19 @@ class SettingValue {
   const auto& get_string() const { return std::get<std::string>(value_); }
   const auto& get_list() const { return std::get<std::vector<std::string>>(value_); }
   const auto& get_execution_scope() const { return std::get<ExecutionScope>(value_); }
+  const auto& get_input_locations() const { return std::get<std::vector<InputLocation>>(value_); }
 
   void set_bool(bool v) { value_ = v; }
   void set_int(int v) { value_ = v; }
   void set_string(std::string v) { value_ = std::move(v); }
   void set_list(std::vector<std::string> v) { value_ = std::move(v); }
   void set_execution_scope(const ExecutionScope& s) { value_ = s; }
+  void set_input_locations(std::vector<InputLocation> v) { value_ = std::move(v); }
 
   std::string ToDebugString() const;
 
-  using VariantValue =
-      std::variant<bool, int, std::string, std::vector<std::string>, ExecutionScope>;
+  using VariantValue = std::variant<bool, int, std::string, std::vector<std::string>,
+                                    ExecutionScope, std::vector<InputLocation>>;
 
  private:
   SettingType type_ = SettingType::kNull;
