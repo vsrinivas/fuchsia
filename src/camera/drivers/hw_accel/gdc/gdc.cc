@@ -145,7 +145,7 @@ void GdcDevice::ProcessTask(TaskInfo& info) {
     f_info.frame_status = FRAME_STATUS_OK;
     f_info.metadata.timestamp = static_cast<uint64_t>(zx_clock_get_monotonic());
     f_info.metadata.image_format_index = task->output_format_index();
-    task->res_callback()->frame_resolution_changed(task->res_callback()->ctx, &f_info);
+    task->ResolutionChangeCallback(&f_info);
     return;
   }
   auto input_buffer_index = info.index;
@@ -230,7 +230,7 @@ void GdcDevice::ProcessTask(TaskInfo& info) {
     info.metadata.input_buffer_index = input_buffer_index;
     info.metadata.timestamp = static_cast<uint64_t>(zx_clock_get_monotonic());
     info.metadata.image_format_index = task->output_format_index();
-    task->frame_callback()->frame_ready(task->frame_callback()->ctx, &info);
+    task->FrameReadyCallback(&info);
     return;
   }
 
@@ -288,7 +288,7 @@ void GdcDevice::ProcessTask(TaskInfo& info) {
     info.metadata.input_buffer_index = input_buffer_index;
     info.metadata.timestamp = static_cast<uint64_t>(zx_clock_get_monotonic());
     info.metadata.image_format_index = task->output_format_index();
-    task->frame_callback()->frame_ready(task->frame_callback()->ctx, &info);
+    task->FrameReadyCallback(&info);
   }
 }
 

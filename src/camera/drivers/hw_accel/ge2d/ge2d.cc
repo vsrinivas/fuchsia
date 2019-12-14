@@ -223,8 +223,7 @@ void Ge2dDevice::ProcessTask(TaskInfo& info) {
     f_info.frame_status = FRAME_STATUS_OK;
     f_info.metadata.timestamp = static_cast<uint64_t>(zx_clock_get_monotonic());
     f_info.metadata.image_format_index = task->output_format_index();
-    task->res_callback()->frame_resolution_changed(task->frame_callback()->ctx, &f_info);
-    return;
+    return task->ResolutionChangeCallback(&f_info);
   }
   auto input_buffer_index = info.index;
   zx_port_packet_t packet;
@@ -241,8 +240,7 @@ void Ge2dDevice::ProcessTask(TaskInfo& info) {
     info.metadata.input_buffer_index = input_buffer_index;
     info.metadata.timestamp = static_cast<uint64_t>(zx_clock_get_monotonic());
     info.metadata.image_format_index = task->output_format_index();
-    task->frame_callback()->frame_ready(task->frame_callback()->ctx, &info);
-    return;
+    return task->FrameReadyCallback(&info);
   }
 
   __UNUSED auto output_phy_addr = result.value();
@@ -256,7 +254,7 @@ void Ge2dDevice::ProcessTask(TaskInfo& info) {
     f_info.metadata.timestamp = static_cast<uint64_t>(zx_clock_get_monotonic());
     f_info.metadata.image_format_index = task->output_format_index();
     f_info.metadata.input_buffer_index = input_buffer_index;
-    task->frame_callback()->frame_ready(task->res_callback()->ctx, &f_info);
+    task->FrameReadyCallback(&f_info);
   }
 }
 

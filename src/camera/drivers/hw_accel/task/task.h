@@ -97,8 +97,14 @@ class GenericTask {
   image_format_2_t output_format() {
     return output_image_format_list_[cur_output_image_format_index_];
   }
-  const hw_accel_frame_callback_t* frame_callback() { return frame_callback_; }
-  const hw_accel_res_change_callback_t* res_callback() { return res_callback_; }
+
+  void FrameReadyCallback(const frame_available_info_t* info) {
+    frame_callback_->frame_ready(frame_callback_->ctx, info);
+  }
+
+  void ResolutionChangeCallback(const frame_available_info_t* info) {
+    res_callback_->frame_resolution_changed(res_callback_->ctx, info);
+  }
 
  protected:
   // Initializes a VMO pool from buffer collection for output buffer collection.
