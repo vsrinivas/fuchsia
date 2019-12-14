@@ -67,6 +67,19 @@ async fn read_sensor(sensor: &SensorProxy) -> Result<AmbientLightInputRpt, Error
     })
 }
 
+/// TODO(lingxueluo) Default and temporary report when sensor is not valid(fxb/42782).
+fn default_report() -> Result<AmbientLightInputRpt, Error> {
+    Ok(AmbientLightInputRpt {
+        rpt_id: 0,
+        state: 0,
+        event: 0,
+        illuminance: 200,
+        red: 200,
+        green: 200,
+        blue: 200,
+    })
+}
+
 fn open_input_device(path: &str) -> Result<SensorProxy, Error> {
     fx_log_info!("Opening sensor at {:?}", path);
     let (proxy, server) =
@@ -77,17 +90,27 @@ fn open_input_device(path: &str) -> Result<SensorProxy, Error> {
 }
 
 pub struct Sensor {
-    proxy: SensorProxy,
+    proxy: Option<SensorProxy>,
 }
 
 impl Sensor {
     pub async fn new() -> Sensor {
-        let proxy = open_sensor().await.unwrap();
-        Sensor { proxy }
+        let proxy = open_sensor().await;
+        match proxy {
+            Ok(proxy) => return Sensor { proxy: Some(proxy) },
+            Err(_e) => {
+                println!("No valid sensor found.");
+                return Sensor { proxy: None };
+            }
+        }
     }
 
     async fn read(&self) -> Result<AmbientLightInputRpt, Error> {
-        read_sensor(&self.proxy).await
+        if self.proxy.is_none() {
+            default_report()
+        } else {
+            read_sensor(self.proxy.as_ref().unwrap()).await
+        }
     }
 }
 
@@ -100,5 +123,25 @@ pub trait SensorControl: Send {
 impl SensorControl for Sensor {
     async fn read(&self) -> Result<AmbientLightInputRpt, Error> {
         self.read().await
+    }
+}
+
+#[cfg(test)]
+
+mod tests {
+    use super::*;
+    use fuchsia_async as fasync;
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_open_sensor_fail() {
+        let sensor = Sensor { proxy: None };
+        let ambient_light_input_rpt = sensor.read().await.unwrap();
+        assert_eq!(ambient_light_input_rpt.rpt_id, 0);
+        assert_eq!(ambient_light_input_rpt.state, 0);
+        assert_eq!(ambient_light_input_rpt.event, 0);
+        assert_eq!(ambient_light_input_rpt.illuminance, 200);
+        assert_eq!(ambient_light_input_rpt.red, 200);
+        assert_eq!(ambient_light_input_rpt.green, 200);
+        assert_eq!(ambient_light_input_rpt.blue, 200);
     }
 }
