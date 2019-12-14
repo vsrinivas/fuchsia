@@ -49,7 +49,7 @@ enum ExampleEnum {
 [OnProtocol]
 protocol ExampleProtocol {
     [OnMethod]
-    Method(exampleusing.Empty arg);
+    Method([OnParameter] exampleusing.Empty arg);
 };
 
 [OnService]
@@ -110,6 +110,8 @@ xunion ExampleXUnion {
   ASSERT_NONNULL(example_protocol);
   EXPECT_TRUE(example_protocol->attributes->HasAttribute("OnProtocol"));
   EXPECT_TRUE(example_protocol->methods.front().attributes->HasAttribute("OnMethod"));
+  ASSERT_NONNULL(example_protocol->methods.front().maybe_request);
+  EXPECT_TRUE(example_protocol->methods.front().maybe_request->members.front().attributes->HasAttribute("OnParameter"));
 
   auto example_service = library.LookupService("ExampleService");
   ASSERT_NONNULL(example_service);
@@ -656,6 +658,24 @@ table Foo {
   END_TEST;
 }
 
+bool parameter_attribute_incorrect_placement() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library fidl.test;
+
+protocol ExampleProtocol {
+    Method(exampleusing.Empty arg [OnParameter]);
+};
+
+)FIDL");
+  EXPECT_FALSE(library.Compile());
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "unexpected token LeftSquare, was expecting RightParen");
+
+  END_TEST;
+}
 }  // namespace
 
 BEGIN_TEST_CASE(attributes_tests)
@@ -679,4 +699,5 @@ RUN_TEST(constraint_only_three_members_on_protocol)
 RUN_TEST(max_bytes)
 RUN_TEST(max_handles)
 RUN_TEST(selector_incorrect_placement)
+RUN_TEST(parameter_attribute_incorrect_placement)
 END_TEST_CASE(attributes_tests)

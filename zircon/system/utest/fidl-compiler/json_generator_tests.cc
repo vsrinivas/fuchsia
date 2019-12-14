@@ -5051,7 +5051,7 @@ enum ExampleEnum {
 [OnProtocol]
 protocol ExampleProtocol {
     [OnMethod]
-    Method(exampleusing.Empty arg);
+    Method([OnParameter] exampleusing.Empty arg);
 };
 
 [OnStruct]
@@ -5265,8 +5265,14 @@ xunion ExampleXUnion {
               "location": {
                 "filename": "example.fidl",
                 "line": 26,
-                "column": 31
+                "column": 45
               },
+              "maybe_attributes": [
+                {
+                  "name": "OnParameter",
+                  "value": ""
+                }
+              ],
               "size": 1,
               "max_out_of_line": 0,
               "alignment": 1,

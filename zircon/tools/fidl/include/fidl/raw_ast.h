@@ -367,15 +367,17 @@ class EnumDeclaration final : public SourceElement {
 class Parameter final : public SourceElement {
  public:
   Parameter(SourceElement const& element, std::unique_ptr<TypeConstructor> type_ctor,
-            std::unique_ptr<Identifier> identifier)
+            std::unique_ptr<Identifier> identifier, std::unique_ptr<AttributeList> attributes)
       : SourceElement(element),
         type_ctor(std::move(type_ctor)),
-        identifier(std::move(identifier)) {}
+        identifier(std::move(identifier)),
+        attributes(std::move(attributes)) {}
 
   void Accept(TreeVisitor* visitor) const;
 
   std::unique_ptr<TypeConstructor> type_ctor;
   std::unique_ptr<Identifier> identifier;
+  std::unique_ptr<AttributeList> attributes;
 };
 
 class ParameterList final : public SourceElement {

@@ -306,6 +306,10 @@ void FormattingTreeVisitor::Segment::Indent(int& current_nesting) {
     if (output_[i] == ')') {
       visitor_->protocol_method_alignment_size_ = visitor_->offset_of_first_id_;
     }
+    if (output_[i] == ']') {
+      visitor_->protocol_method_alignment_size_ = visitor_->protocol_method_alignment_size_backup;
+      visitor_->protocol_method_alignment_size_backup = -1;
+    }
     if (output_[i] == ';') {
       visitor_->protocol_method_alignment_size_ = -1;
       visitor_->protocol_method_alignment_ = false;
@@ -320,6 +324,7 @@ void FormattingTreeVisitor::Segment::Indent(int& current_nesting) {
 //    indent past the beginning of the method name.
 //  - If there is a parameter on the same line after the '(' character,
 //    align at the same vertical column as that parameter.
+//  - If there is a parameter attribute, +1 indent past the beginning of '['
 void FormattingTreeVisitor::TrackProtocolMethodAlignment(const std::string& str) {
   static std::locale c_locale("C");
   if (protocol_method_alignment_) {
@@ -347,6 +352,12 @@ void FormattingTreeVisitor::TrackProtocolMethodAlignment(const std::string& str)
         if (align_on_oparen) {
           protocol_method_alignment_size_ = distance_from_last_newline_;
         }
+      }
+
+      // Alignment for attributes.
+      if (ch == '[') {
+        protocol_method_alignment_size_backup = protocol_method_alignment_size_;
+        protocol_method_alignment_size_ = distance_from_last_newline_;
       }
 
       if (isalpha(ch, c_locale) && protocol_method_alignment_size_ == -1) {

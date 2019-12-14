@@ -1695,8 +1695,10 @@ bool Library::ConsumeParameterList(Name name, std::unique_ptr<raw::ParameterList
     std::unique_ptr<TypeConstructor> type_ctor;
     if (!ConsumeTypeConstructor(std::move(parameter->type_ctor), name, &type_ctor))
       return false;
+    ValidateAttributesPlacement(AttributeSchema::Placement::kStructMember,
+                                parameter->attributes.get());
     members.emplace_back(std::move(type_ctor), name, nullptr /* maybe_default_value */,
-                         nullptr /* attributes */);
+                         std::move(parameter->attributes));
   }
 
   if (!RegisterDecl(std::make_unique<Struct>(nullptr /* attributes */, std::move(name),

@@ -355,12 +355,16 @@ std::unique_ptr<raw::Attribute> Parser::ParseDocComment() {
   return std::make_unique<raw::Attribute>(scope.GetSourceElement(), "Doc", str_value);
 }
 
-std::unique_ptr<raw::AttributeList> Parser::MaybeParseAttributeList() {
+std::unique_ptr<raw::AttributeList> Parser::MaybeParseAttributeList(bool for_parameter) {
   ASTScope scope(this);
   std::unique_ptr<raw::Attribute> doc_comment;
   // Doc comments must appear above attributes
   if (Peek().kind() == Token::Kind::kDocComment) {
     doc_comment = ParseDocComment();
+  }
+  if (for_parameter && doc_comment) {
+    error_reporter_->ReportError(previous_token_, "cannot have doc comment on parameters");
+    return Fail();
   }
   if (Peek().kind() == Token::Kind::kLeftSquare) {
     return ParseAttributeList(std::move(doc_comment), scope);
@@ -647,6 +651,9 @@ std::unique_ptr<raw::EnumDeclaration> Parser::ParseEnumDeclaration(
 
 std::unique_ptr<raw::Parameter> Parser::ParseParameter() {
   ASTScope scope(this);
+  auto attributes = MaybeParseAttributeList(/*for_parameter=*/true);
+  if (!Ok())
+    return Fail();
   auto type_ctor = ParseTypeConstructor();
   if (!Ok())
     return Fail();
@@ -655,7 +662,7 @@ std::unique_ptr<raw::Parameter> Parser::ParseParameter() {
     return Fail();
 
   return std::make_unique<raw::Parameter>(scope.GetSourceElement(), std::move(type_ctor),
-                                          std::move(identifier));
+                                          std::move(identifier), std::move(attributes));
 }
 
 std::unique_ptr<raw::ParameterList> Parser::ParseParameterList() {

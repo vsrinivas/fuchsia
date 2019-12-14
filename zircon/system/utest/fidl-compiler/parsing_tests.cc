@@ -463,6 +463,27 @@ struct Empty{};
   END_TEST;
 }
 
+bool doc_comment_not_allowed_on_params() {
+  BEGIN_TEST;
+
+  TestLibrary library("example.fidl", R"FIDL(
+library example;
+
+protocol Example {
+  Method(/// Doc comment
+         Bool b);
+};
+)FIDL");
+
+  std::unique_ptr<fidl::raw::File> ast;
+  library.Parse(&ast);
+  auto errors = library.errors();
+  ASSERT_EQ(errors.size(), 1);
+  ASSERT_STR_STR(errors[0].c_str(), "cannot have doc comment on parameters");
+
+  END_TEST;
+}
+
 bool comments_surrounding_doc_comment_test() {
   BEGIN_TEST;
 
@@ -563,6 +584,7 @@ RUN_TEST(warn_on_type_alias_before_imports)
 RUN_TEST(multiline_comment_has_correct_source_location)
 RUN_TEST(doc_comment_blank_line_test)
 RUN_TEST(doc_comment_with_comment_blank_line_test)
+RUN_TEST(doc_comment_not_allowed_on_params)
 RUN_TEST(comment_inside_doc_comment_test)
 RUN_TEST(comments_surrounding_doc_comment_test)
 RUN_TEST(blank_lines_after_doc_comment_test)

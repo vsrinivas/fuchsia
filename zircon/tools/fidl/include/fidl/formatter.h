@@ -76,12 +76,19 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
     // the next line needs to be indented more.  We don't want an indent
     // after a newline following an attribute list.  It will be reenabled by
     // the next visited AST node in the method.
-    newline_means_indent_more_ = false;
-    protocol_method_alignment_ = false;
+    newline_means_indent_more_ = is_param_decl_;
+    protocol_method_alignment_ = is_param_decl_;
     // This prevents the above from being reenabled during our walk of the
     // AttributeList
-    ScopedBool suppress(is_member_decl_, false);
-    TreeVisitor::OnAttributeList(element);
+    {
+      ScopedBool suppress(is_member_decl_, false);
+      TreeVisitor::OnAttributeList(element);
+    }
+
+    // After parameter attributes we need a whitespace.
+    if (is_param_decl_) {
+      ws_required_next_ = true;
+    }
   }
 
   virtual void OnUsing(std::unique_ptr<Using> const& element) override {
@@ -120,6 +127,11 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
     TreeVisitor::OnBitsDeclaration(element);
   }
 
+  virtual void OnParameterList(std::unique_ptr<ParameterList> const& element) override {
+    ScopedBool method(is_param_decl_);
+    TreeVisitor::OnParameterList(element);
+  }
+
   virtual void OnProtocolMethod(std::unique_ptr<ProtocolMethod> const& element) override {
     protocol_method_alignment_ = true;
     protocol_method_alignment_size_ = -1;
@@ -154,6 +166,7 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
   virtual void OnStructMember(std::unique_ptr<StructMember> const& element) override {
     OnBlankLineRespectingNode();
     ScopedBool mem(is_member_decl_);
+    // If we are inside a method declaration this is actually a parameter declaration.
     TreeVisitor::OnStructMember(element);
   }
 
@@ -257,6 +270,8 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
   int distance_from_last_newline_ = 0;
   int offset_of_first_id_ = 0;
   bool next_nonws_char_is_checkpoint_ = false;
+  // After closing a parameter attribute, we restore the protocol alignment.
+  int protocol_method_alignment_size_backup = -1;
 
   // When we complete a node and know the next thing needs to be whitespace
   bool ws_required_next_ = false;
@@ -401,6 +416,7 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
 
   bool is_enum_or_bits_decl_ = false;
   bool is_member_decl_ = false;
+  bool is_param_decl_ = false;
 
   // str is a gap plus the next meaningful token.
   void TrackProtocolMethodAlignment(const std::string& str);

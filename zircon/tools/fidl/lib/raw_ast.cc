@@ -146,6 +146,9 @@ void EnumDeclaration::Accept(TreeVisitor* visitor) const {
 
 void Parameter::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
+  if (attributes != nullptr) {
+    visitor->OnAttributeList(attributes);
+  }
   visitor->OnTypeConstructor(type_ctor);
   visitor->OnIdentifier(identifier);
 }

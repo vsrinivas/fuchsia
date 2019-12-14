@@ -208,4 +208,13 @@ protocol POfMany
 struct Hi {
 };
 
+protocol Example {
+    Method([Attribute1, Attribute2] uint32 name,
+           [Attribute = "value"] uint32 id,
+           [Attribute1,
+            Attribute2] uint32 id2,
+           unit32 id3)
+        -> ();
+};
+
 // Comments at EOF
