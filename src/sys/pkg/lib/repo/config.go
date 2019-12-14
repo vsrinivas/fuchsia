@@ -22,6 +22,8 @@ type Config struct {
 	RootKeys         []KeyConfig    `json:"root_keys"`
 	Mirrors          []MirrorConfig `json:"mirrors"`
 	UpdatePackageURL string         `json:"update_package_url"`
+	RootVersion      uint32         `json:"root_version"`
+	RootThreshold    uint32         `json:"root_threshold"`
 }
 
 type MirrorConfig struct {
@@ -43,17 +45,39 @@ type KeyConfig struct {
 // TODO(fxbug.dev/37022): Update the above source reference when the code is
 // moved under //src,
 //
+
+// This alias allows to make use of the default (un)marshalling logic of Config as we redefine it.
+type config Config
+
+func (cfg *Config) MarshalJSON() ([]byte, error) {
+	cfg2 := config(*cfg)
+	if cfg2.RootVersion == 0 {
+		cfg2.RootVersion = 1
+	}
+	if cfg2.RootThreshold == 0 {
+		cfg2.RootThreshold = 1
+	}
+	return json.Marshal(&cfg2)
+}
+
+func (cfg *Config) UnmarshalJSON(data []byte) error {
+	var cfg2 config
+	if err := json.Unmarshal(data, &cfg2); err != nil {
+		return err
+	}
+	if cfg2.RootVersion == 0 {
+		cfg2.RootVersion = 1
+	}
+	if cfg2.RootThreshold == 0 {
+		cfg2.RootThreshold = 1
+	}
+	*cfg = Config(cfg2)
+	return nil
+}
+
 type typeAndValue struct {
 	Type  string `json:"type"`
 	Value string `json:"value"`
-}
-
-type unexpectedKeyTypeError struct {
-	Type string
-}
-
-func (err unexpectedKeyTypeError) Error() string {
-	return fmt.Sprintf("unsupported key type: %s", err.Type)
 }
 
 func (key *KeyConfig) MarshalJSON() ([]byte, error) {
@@ -74,7 +98,7 @@ func (key *KeyConfig) UnmarshalJSON(data []byte) error {
 		key.ED25519Key = tv.Value
 		return nil
 	default:
-		return unexpectedKeyTypeError{Type: tv.Type}
+		return fmt.Errorf("unexpected key type: %q", tv.Type)
 	}
 }
 
@@ -89,7 +113,7 @@ func GetRootKeys(root *tuf_data.Root) ([]KeyConfig, error) {
 		case tuf_data.KeyTypeEd25519:
 			key.ED25519Key = v
 		default:
-			return nil, unexpectedKeyTypeError{Type: k.Type}
+			return nil, fmt.Errorf("unexpected key type: %q", k.Type)
 		}
 		rootKeys = append(rootKeys, key)
 	}

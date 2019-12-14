@@ -5,35 +5,37 @@
 package repo
 
 import (
-	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"reflect"
+	"sort"
 	"testing"
 
 	tuf_data "github.com/flynn/go-tuf/data"
 )
 
 func TestMarshaling(t *testing.T) {
-	cfg := &Config{
+	goldenCfg := Config{
 		URL: "fuchsia-pkg://example.com",
 		RootKeys: []KeyConfig{
 			{
-				ED25519Key: "00112233445566778899aabbccddeeffffeeddccbbaa99887766554433221100",
+				ED25519Key: "8e70ed31f117087a08ad23e00c2e1c353bf76fc0e0ac1aac334336e2b83ee7f4",
 			},
 		},
 		Mirrors: []MirrorConfig{{
 			URL:       "https://example.com/repo",
 			Subscribe: true,
 		}},
+		RootVersion:   1,
+		RootThreshold: 1,
 	}
-	goldenCfgStr := `
+
+	cfgStr := `
     {
       "repo_url": "fuchsia-pkg://example.com",
       "root_keys": [
         {
           "type": "ed25519",
-          "value": "00112233445566778899aabbccddeeffffeeddccbbaa99887766554433221100"
+          "value": "8e70ed31f117087a08ad23e00c2e1c353bf76fc0e0ac1aac334336e2b83ee7f4"
         }
       ],
       "mirrors": [
@@ -44,113 +46,99 @@ func TestMarshaling(t *testing.T) {
       ]
   }`
 
-	goldenCfg := &Config{}
-	if err := json.Unmarshal([]byte(goldenCfgStr), goldenCfg); err != nil {
-		t.Fatalf("could not unmarsal golden config string: %v", err)
+	var cfg Config
+	if err := json.Unmarshal([]byte(cfgStr), &cfg); err != nil {
+		t.Fatalf("could not unmarshal golden config string: %v", err)
 	}
+
 	if !reflect.DeepEqual(cfg, goldenCfg) {
 		t.Fatalf("expected\n%#v\nand\n%#v\nto be equal", cfg, goldenCfg)
 	}
 }
 
-type keyCase typeAndValue
-type testCase struct {
-	name     string
-	keys     []keyCase
-	expected []KeyConfig
-	err      error
-}
-
-var hexDecodingErr = errors.New("failed to decode string as hex")
-
 func TestGetRootKeys(t *testing.T) {
-	cases := []testCase{
-		{
-			name: "basic",
-			keys: []keyCase{
-				{
-					Type:  tuf_data.KeyTypeEd25519,
-					Value: "abc123",
-				},
-				{
-					Type:  tuf_data.KeyTypeEd25519,
-					Value: "321cba",
-				},
-			},
-			expected: []KeyConfig{
-				{
-					ED25519Key: "abc123",
-				},
-				{
-					ED25519Key: "321cba",
-				},
-			},
-			err: nil,
-		},
-		{
-			name: "unkown key type",
-			keys: []keyCase{
-				{
-					Type:  tuf_data.KeyTypeEd25519,
-					Value: "abc123",
-				},
-				{
-					Type:  "unknown",
-					Value: "321cba",
-				},
-			},
-			expected: nil,
-			err:      unexpectedKeyTypeError{Type: "unknown"},
-		},
-		{
-			name: "non-hex key",
-			keys: []keyCase{
-				{
-					Type:  tuf_data.KeyTypeEd25519,
-					Value: "odd", // Hex string values must att least be even-numbered in length.
-				},
-			},
-			expected: nil,
-			err:      hexDecodingErr,
-		},
-	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			actual, err := getActualKeys(c.keys)
-			if !reflect.DeepEqual(err, c.err) {
-				t.Errorf("unexpected error: %v\nactual: %v\n", c.err, err)
-				return
-			}
-			if !reflect.DeepEqual(actual, c.expected) {
-				t.Errorf("expected:\n%v\n\nactual:\n%v\n", c.expected, actual)
-			}
-		})
-	}
+	rootJSONStr := `
+{
+  "_type": "root",
+  "keys": {
+    "33efe3720e278de9ac57c810c1be71b9ef4dd49c0951edd9a2f9a39af08b5776": {
+      "keyid_hash_algorithms": [
+       "sha256"
+      ],
+      "keytype": "ed25519",
+      "keyval": {
+        "public": "8e70ed31f117087a08ad23e00c2e1c353bf76fc0e0ac1aac334336e2b83ee7f4"
+      },
+      "scheme": "ed25519"
+    },
+    "8bcc00bc3575eea5fb608dea6a521845d4f287d2fa80baa40a902f1f3ec7911e": {
+      "keyid_hash_algorithms": [
+        "sha256"
+      ],
+     "keytype": "ed25519",
+     "keyval": {
+        "public": "be0b983f7396da675c40c6b93e47fced7c1e9ea8a32a1fe952ba8f519760b307"
+      },
+      "scheme": "ed25519"
+    },
+    "c919b6e358fdb4ed062311ac5cebd44787d0f7ae9e5a5a213929dd4e3cde07c4": {
+      "keyid_hash_algorithms": [
+        "sha256"
+      ],
+      "keytype": "ed25519",
+      "keyval": {
+        "public": "be0b983f7396da675c40c6b93e47fced7c1e9ea8a32a1fe952ba8f519760b307"
+      },
+      "scheme": "ed25519"
+    },
+    "f6ee2f092af683f6c1d8cbf477c2a8b7e01cc496fb4324150a172a54f514e4e7": {
+      "keyid_hash_algorithms": [
+        "sha256"
+      ],
+      "keytype": "ed25519",
+      "keyval": {
+        "public": "8e70ed31f117087a08ad23e00c2e1c353bf76fc0e0ac1aac334336e2b83ee7f4"
+      },
+      "scheme": "ed25519"
+    }
+  },
+  "roles": {
+    "root": {
+      "keyids": [
+        "8bcc00bc3575eea5fb608dea6a521845d4f287d2fa80baa40a902f1f3ec7911e",
+        "c919b6e358fdb4ed062311ac5cebd44787d0f7ae9e5a5a213929dd4e3cde07c4",
+        "f6ee2f092af683f6c1d8cbf477c2a8b7e01cc496fb4324150a172a54f514e4e7"
+      ]
+    },
+    "other": {
+      "keyids": [
+        "33efe3720e278de9ac57c810c1be71b9ef4dd49c0951edd9a2f9a39af08b5776",
+        "f6ee2f092af683f6c1d8cbf477c2a8b7e01cc496fb4324150a172a54f514e4e7"
+      ]
+    }
+  }
 }
-
-func getActualKeys(ks []keyCase) ([]KeyConfig, error) {
-	root := tuf_data.NewRoot()
-	root.Roles["root"] = &tuf_data.Role{}
-
-	for _, k := range ks {
-		key, err := tufKey(k)
-		if err != nil {
-			return nil, err
-		}
-		root.AddKey(key)
-		root.Roles["root"].AddKeyIDs(key.IDs())
+`
+	var root tuf_data.Root
+	if err := json.Unmarshal([]byte(rootJSONStr), &root); err != nil {
+		t.Fatalf("failed to unmarshal root metadata: %v", err)
 	}
-	return GetRootKeys(root)
-}
-
-func tufKey(k keyCase) (*tuf_data.Key, error) {
-	hexVal, err := hex.DecodeString(k.Value)
+	actual, err := GetRootKeys(&root)
 	if err != nil {
-		return nil, hexDecodingErr
+		t.Fatalf("failed to derive root keys: %v", err)
 	}
-	return &tuf_data.Key{
-		Type:   k.Type,
-		Scheme: "scheme",
-		Value:  tuf_data.KeyValue{Public: tuf_data.HexBytes(hexVal)},
-	}, nil
+	sort.Slice(actual, func(i, j int) bool {
+		return actual[i].ED25519Key <= actual[j].ED25519Key
+	})
+	expected := []KeyConfig{
+		{
+			ED25519Key: "8e70ed31f117087a08ad23e00c2e1c353bf76fc0e0ac1aac334336e2b83ee7f4",
+		},
+		{
+			ED25519Key: "be0b983f7396da675c40c6b93e47fced7c1e9ea8a32a1fe952ba8f519760b307",
+		},
+	}
+	if !reflect.DeepEqual(expected, actual) {
+		t.Errorf("unexpected keys:\nexpected: %v\nactual: %v", expected, actual)
+	}
 }
