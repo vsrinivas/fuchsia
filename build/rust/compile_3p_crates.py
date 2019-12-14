@@ -49,6 +49,11 @@ def configure_triple(triple, args, clang_c_compiler, env):
         "-Copt-level=" + args.opt_level,
         "-Cdebuginfo=" + args.symbol_level,
     ]
+    if args.panic == "abort":
+        rustflags += [
+            "-Cpanic=abort",
+            "-Zpanic_abort_tests",
+        ]
 
     if triple.endswith("fuchsia"):
         if triple.startswith("aarch64"):
@@ -96,6 +101,11 @@ def main():
     parser.add_argument("--cargo", help="Path to the cargo tool", required=True)
     parser.add_argument(
         "--crate-root", help="Path to the crate root", required=True)
+    parser.add_argument(
+        "--panic",
+        help="Panic behavior to use",
+        required=True,
+        choices=["unwind", "abort"])
     parser.add_argument(
         "--opt-level",
         help="Optimization level",

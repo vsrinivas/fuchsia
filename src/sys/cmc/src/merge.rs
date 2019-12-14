@@ -40,14 +40,32 @@ pub fn merge(files: Vec<PathBuf>, output: Option<PathBuf>) -> Result<(), Error> 
     Ok(())
 }
 
+/// Merges the JSON values in `from` into the object in `res`.
+///
+/// If `from` is an array of objects, each object in the array will be merged
+/// into `res` one at a time, in order. If `from` is an object, that object will
+/// be merged into `res`.
 fn merge_json(mut res: &mut Value, from: &Value) -> Result<(), String> {
+    match &from {
+        Value::Array(from_arr) => {
+            for item in from_arr {
+                merge_json_inner(&mut res, &item)?;
+            }
+        }
+        Value::Object(_) => merge_json_inner(&mut res, &from)?,
+        _ => return Err("files to be merged must contain an object or an array of objects".into()),
+    }
+    Ok(())
+}
+
+fn merge_json_inner(mut res: &mut Value, from: &Value) -> Result<(), String> {
     match (&mut res, &from) {
         (Value::Object(res_map), Value::Object(from_map)) => {
             for (k, v) in from_map {
                 if !res_map.contains_key(k) {
                     res_map.insert(k.clone(), v.clone());
                 } else {
-                    merge_json(&mut res_map[k], v).map_err(|e| {
+                    merge_json_inner(&mut res_map[k], v).map_err(|e| {
                         if e == "" {
                             format!("{}", k)
                         } else {
@@ -64,7 +82,7 @@ fn merge_json(mut res: &mut Value, from: &Value) -> Result<(), String> {
                 }
             }
         }
-        _ => return Err(format!("")),
+        _ => return Err(format!("could not merge `{}` with `{}`", res, from)),
     }
     Ok(())
 }
@@ -82,6 +100,10 @@ mod tests {
         let tests = vec![
             // Valid merges
             (vec![json!({}), json!({})], Some(json!({}))),
+            (vec![json!({}), json!([])], Some(json!({}))),
+            (vec![json!({}), json!([{}])], Some(json!({}))),
+            (vec![json!([]), json!([])], Some(json!({}))),
+            (vec![json!([{}]), json!([{}])], Some(json!({}))),
             (vec![json!({"foo": 1}), json!({})], Some(json!({"foo": 1}))),
             (vec![json!({}), json!({"foo": 1})], Some(json!({"foo": 1}))),
             (vec![json!({"foo": 1}), json!({"bar": 2})], Some(json!({"foo": 1, "bar": 2}))),
@@ -100,12 +122,17 @@ mod tests {
                 vec![json!({"foo": [{"bar": 1}]}), json!({"foo": [{"bar": 2}]})],
                 Some(json!({"foo": [{"bar": 1},{"bar": 2}]})),
             ),
+            (
+                vec![json!({"foo": [{"bar": 1}]}), json!([{"foo": [{"bar": 2}]}, {"baz": 3}])],
+                Some(json!({"foo": [{"bar": 1},{"bar": 2}], "baz": 3})),
+            ),
             // merges that should fail
             (vec![json!({"foo": 1}), json!({"foo": 1})], None),
             (vec![json!({"foo": 1}), json!({"foo": 2})], None),
             (vec![json!({"foo": {"bar": 1}}), json!({"foo": 2})], None),
             (vec![json!({"foo": [1]}), json!({"foo": 1})], None),
             (vec![json!({"foo": [1]}), json!({"foo": {"bar": 1}})], None),
+            (vec![json!({"foo": [1]}), json!([{"foo": [2]}, {"foo": 3}])], None),
         ];
 
         for (vec_to_merge, expected_results) in tests {
@@ -113,7 +140,7 @@ mod tests {
 
             let mut counter = 0;
             let mut filenames = vec![];
-            for json_val in vec_to_merge {
+            for json_val in &vec_to_merge {
                 let tmp_file_path = tmp_dir.path().join(format!("{}.json", counter));
                 counter += 1;
                 File::create(&tmp_file_path)
@@ -128,7 +155,11 @@ mod tests {
             let result = merge(filenames, Some(output_file_path.clone()));
 
             if result.is_ok() != expected_results.is_some() {
-                println!("{:?}", result);
+                println!("example failed:");
+                for item in &vec_to_merge {
+                    println!(" - {}", item);
+                }
+                println!("result={:?}; expected={:?}", result, expected_results);
             }
             assert_eq!(result.is_ok(), expected_results.is_some());
 

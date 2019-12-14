@@ -601,6 +601,30 @@ template("package") {
       }
     }
 
+    # Some kinds of tests need to inject things into their test package
+    # manifests. For example, Rust tests all need access to the process
+    # launcher when rust_panic=abort. We collect this information as metadata.
+    if (pkg.tests != []) {
+      metadata_manifest_patches =
+          "$target_out_dir/pkg_meta/$target_name.test_metadata"
+      metadata_manifest_target_name = "${target_name}_test_metadata"
+      generated_file(metadata_manifest_target_name) {
+        outputs = [
+          metadata_manifest_patches,
+        ]
+        output_conversion = "json"
+        data_keys = [ "test_metadata_manifest_patches" ]
+        walk_keys = [ "test_barrier" ]
+        forward_variables_from(pkg,
+                               [
+                                 "deps",
+                                 "public_deps",
+                                 "data_deps",
+                               ])
+      }
+      pkg.deps += [ ":$metadata_manifest_target_name" ]
+    }
+
     # TODO: this doesn't handle the case where the profile variant is enabled only for
     # a single target rather than the entire build.
     needs_debugdata =
@@ -642,6 +666,25 @@ template("package") {
               rebase_path("//build/cmx/internal_allow_global_data.cmx"),
             ]
             deps = pkg.deps
+          }
+          manifest_deps += [ ":${merge_target}" ]
+          merged_outputs = []
+          merged_outputs = get_target_outputs(":${merge_target}")
+          manifest_path = merged_outputs[0]
+        }
+
+        # This is where we add sys.process.Launcher to test packages which
+        # need it (see above).
+        if (pkg.tests != []) {
+          merge_target = "process_launcher_" + pkg_target_name + "_" +
+                         get_path_info(meta.dest, "file")
+          cmx_merge(merge_target) {
+            #conditional_file = metadata_manifest_patches
+            sources = [
+              manifest_path,
+              metadata_manifest_patches,
+            ]
+            deps = manifest_deps + [ ":$metadata_manifest_target_name" ]
           }
           manifest_deps += [ ":${merge_target}" ]
           merged_outputs = []

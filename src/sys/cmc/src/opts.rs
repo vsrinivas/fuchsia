@@ -36,6 +36,9 @@ pub enum Commands {
     Merge {
         #[structopt(name = "FILE", parse(from_os_str))]
         /// files to process
+        ///
+        /// If any file contains an array at its root, every object in the array
+        /// will be merged into the final object.
         files: Vec<PathBuf>,
 
         #[structopt(short = "o", long = "output", parse(from_os_str))]
