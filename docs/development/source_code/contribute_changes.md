@@ -25,9 +25,9 @@ To generate the cookie, do the following:
 1.  At the top of [https://fuchsia.googlesource.com](https://fuchsia.googlesource.com), click **Generate Password**.
 1.  Copy the generated code and run it in a terminal of your workstation.
 
-## Create a Change in Gerrit {#create-a-change-in-gerrit}
+## Create a change in Gerrit {#create-a-change-in-gerrit}
 
-Follow these steps to create a Change in Gerrit:
+Follow these steps to create a [change](https://gerrit-review.googlesource.com/Documentation/concept-changes.html) in Gerrit:
 
 1.  Create a new branch:
 
@@ -80,7 +80,7 @@ See the [Gerrit documentation](https://gerrit-documentation.storage.googleapis.c
 ## Add commit message tags {#add-commit-message-tags}
 
 You must include `[tags]` in the subject of a commit message to indicate which
-module, library, and app are affected by your Change.
+module, library, and app are affected by your change.
 
 See the following example of a commit message, which shows the tags in the
 subject:
@@ -102,8 +102,8 @@ See these examples:
 *   [https://fuchsia-review.googlesource.com/c/peridot/+/113955](https://fuchsia-review.googlesource.com/c/peridot/+/113955)
 *   [https://fuchsia-review.googlesource.com/c/topaz/+/114013](https://fuchsia-review.googlesource.com/c/topaz/+/114013)
 
-Note: Gerrit flags your Change with
-`Needs Label: Commit-Message-has-tags` if the subject of the commit message doesn't include tags.
+Note: If the subject of the commit message doesn't include tags, Gerrit flags your change with
+`Needs Label: Commit-Message-has-tags`.
 
 ## Add test instructions {#add-test-instructions}
 
