@@ -19,3 +19,11 @@ group("config") {
     ]
   }
 }
+
+group("tests") {
+  testonly = true
+  deps = [
+    "netstack:tests",
+    "tests",
+  ]
+}

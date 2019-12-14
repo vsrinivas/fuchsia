@@ -338,7 +338,6 @@ group("all") {
     ":memory_metrics",
     ":netemul",
     ":netfilter",
-    ":netstack",
     ":netstack3",
     ":network",
     ":network_time",
@@ -401,6 +400,7 @@ group("all") {
     "//src/connectivity/network/dhcp:dhcp_tests",
     "//src/connectivity/network/dhcp:dhcpd_tests",
     "//src/connectivity/network/mdns/bundles:tests",
+    "//src/connectivity/network/netstack:tests",
   ]
 }
 
@@ -501,22 +501,6 @@ group("memory_metrics") {
   public_deps = [
     "//src/developer/memory/metrics/tests",
     "//src/developer/memory/monitor/tests",
-  ]
-}
-
-group("netstack") {
-  testonly = true
-  public_deps = [
-    "//garnet/packages/prod:netstack",
-    "//src/connectivity/network/netstack:netstack_gotests",
-    "//src/connectivity/network/netstack/dhcp:netstack_dhcp_gotests",
-    "//src/connectivity/network/netstack/dns:netstack_dns_gotests",
-    "//src/connectivity/network/netstack/link/bridge:netstack_link_bridge_test($host_toolchain)",
-    "//src/connectivity/network/netstack/routes:netstack_routes_gotests",
-    "//src/connectivity/network/netstack/schedule:netstack_schedule_test($host_toolchain)",
-    "//src/connectivity/network/netstack/tests:netstack_manual_tests",
-    "//src/connectivity/network/netstack/util:netstack_util_test($host_toolchain)",
-    "//src/connectivity/network/tests",
   ]
 }
 

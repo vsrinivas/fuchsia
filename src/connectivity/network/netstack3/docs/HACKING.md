@@ -62,11 +62,12 @@ for dynamic package download and install. So make sure that every package that
 you'll need is included in your `fx set` line using the `--with-base` argument,
 which will have those packages be part of the base system. Like this:
 
-`fx set core.x64
- --with-base //src/connectivity/network/net-cli \
- --with-base //garnet/packages/prod:netstack3 \
- --with-base //garnet/packages/prod:netcfg \
- --with-base //garnet/packages/prod:chrealm`
+```
+fx set core.x64
+ --with-base //path/to/targetA \
+ --with-base //path/to/targetB \
+ --args=use_netstack3=true
+```
 
 ### (Step 2) Running
 

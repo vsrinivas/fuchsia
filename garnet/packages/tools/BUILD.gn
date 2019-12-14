@@ -49,7 +49,6 @@ group("all") {
     ":fidlmerge",
     ":iperf",
     ":magma",
-    ":netstack",
     ":runmany",
     ":scenic",
 
@@ -60,15 +59,9 @@ group("all") {
     ":whereiscl",
     "//garnet/bin/pkg_ctl",
     "//src/connectivity/network/dhcpd-cli",
+    "//src/connectivity/network/netstack:tools",
     "//src/connectivity/wlan:tools",
     "//src/sys/locate",
-  ]
-}
-
-group("netstack") {
-  testonly = true
-  public_deps = [
-    "//src/connectivity/network/netstack:netstack_tools",
   ]
 }
 

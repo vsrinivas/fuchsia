@@ -12,7 +12,7 @@ group("netemul_empty_binaries") {
 test_package("netemul_dhcp_tests") {
   deps = [
     ":netemul_empty_binaries",
-    "//src/connectivity/network/tests/integration/dhcp/dhcp_validity:test",
+    "dhcp_validity:test",
   ]
 
   resources = [

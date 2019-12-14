@@ -15,6 +15,7 @@ group("tests") {
     ":netstack_c_api_tests",
     ":netstack_external_network_test_client($host_toolchain)",
     ":netstack_integration_tests",
+    "integration",
   ]
 }
 

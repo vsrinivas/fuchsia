@@ -200,7 +200,6 @@ group("all") {
     "//garnet/packages/prod:memory_monitor",
     "//garnet/packages/prod:netstack",
     "//garnet/packages/prod:netstack3",
-    "//garnet/packages/prod:netstack_tools",
     "//garnet/packages/prod:network",
     "//garnet/packages/prod:network-speed-test",
     "//garnet/packages/prod:odu",
@@ -245,6 +244,7 @@ group("all") {
     "//src/connectivity/network/dhcp:dhcpd",
     "//src/connectivity/network/mdns/bundles:services",
     "//src/connectivity/network/mdns/bundles:utils",
+    "//src/connectivity/network/netstack:tools",
     "//src/connectivity/telephony:drivers",
     "//src/connectivity/wlan:service",
     "//src/connectivity/wlan:tools",
@@ -552,13 +552,6 @@ group("run") {
   testonly = true
   public_deps = [
     "//garnet/bin/run",
-  ]
-}
-
-group("netstack_tools") {
-  testonly = true
-  public_deps = [
-    "//garnet/packages/tools:netstack",
   ]
 }
 

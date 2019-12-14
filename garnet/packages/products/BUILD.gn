@@ -21,7 +21,7 @@ group("network_wifi_devtools") {
   public_deps = [
     "//garnet/packages/products:devtools",
     "//garnet/packages/products:network_wifi",
-    "//garnet/packages/tools:netstack",
+    "//src/connectivity/network/netstack:tools",
     "//src/connectivity/wlan:tools",
   ]
 }

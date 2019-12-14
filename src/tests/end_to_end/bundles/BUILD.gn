@@ -24,7 +24,7 @@ group("end_to_end_deps") {
     "//src/media/audio/bundles:virtual_audio_service_with_config",
 
     # Needed for ifconfig.
-    "//garnet/packages/tools:netstack",
+    "//src/connectivity/network/netstack:tools",
 
     # SL4F to translate JSON-RPC to calls.
     "//garnet/packages/tools:sl4f",

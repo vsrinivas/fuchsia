@@ -31,7 +31,7 @@ package("netstack") {
   ]
 }
 
-package("netstack_tools") {
+package("tools") {
   deps = [
     "ifconfig",
   ]
@@ -165,5 +165,19 @@ go_test("netstack_test") {
   gopackages = [ "netstack" ]
   deps = [
     ":netstack_lib",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":netstack_gotests",
+    "dhcp:netstack_dhcp_gotests",
+    "dns:netstack_dns_gotests",
+    "link/bridge:netstack_link_bridge_test($host_toolchain)",
+    "routes:netstack_routes_gotests",
+    "schedule:netstack_schedule_test($host_toolchain)",
+    "tests:netstack_manual_tests",
+    "util:netstack_util_test($host_toolchain)",
   ]
 }
