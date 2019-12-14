@@ -6,7 +6,7 @@ use fidl_fuchsia_hardware_power as hpower;
 use fidl_fuchsia_power as fpower;
 use fidl_fuchsia_power_ext::CloneExt;
 use fuchsia_async as fasync;
-use fuchsia_syslog::{fx_log_err, fx_log_info, fx_vlog};
+use fuchsia_syslog::{fx_log_err, fx_vlog};
 use fuchsia_zircon as zx;
 use futures::lock::Mutex;
 use std::sync::{Arc, RwLock};
@@ -64,7 +64,8 @@ impl BatteryManager {
         power_info: hpower::SourceInfo,
         battery_info: Option<hpower::BatteryInfo>,
     ) -> Result<(), failure::Error> {
-        fx_log_info!(
+        fx_vlog!(
+            LOG_VERBOSITY,
             "update_status with power info: {:#?} and battery info: {:#?}",
             &power_info,
             &battery_info
