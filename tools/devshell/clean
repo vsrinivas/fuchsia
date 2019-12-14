@@ -5,11 +5,6 @@
 
 ### `gn clean` the ZIRCON_BUILDROOT and FUCHSIA_BUILD_DIR
 
-## If FUCHSIA_BUILD_DIR is out/x64, this is simply:
-##   gn clean out/build-zircon
-##   gn clean out/x64
-## It is useful to clean the build directory without having to re-run fx set.
-
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 fx-config-read
 

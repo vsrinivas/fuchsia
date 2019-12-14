@@ -62,7 +62,7 @@ $ nand-util --device /dev/sys/platform/05:00:f/aml-raw_nand/nand/fvm --read --bl
 `nand-util` can also be used to grab an image of the nand contents:
 
 Note: If a file system is already mounted, unbind will fail, and forcing it to work is
-likely to render the system unusable. Rememer to netboot or use Zedboot as
+likely to render the system unusable. Remember to netboot or use Zedboot as
 needed.
 
 ```shell
@@ -74,7 +74,7 @@ $ nand-util --device /dev/sys/platform/05:00:f/aml-raw_nand/nand/fvm --save --fi
 Transfer the image file to the host:
 
 ```shell
-$ zircon/build-gcc/tools/netcp :/tmp/image /tmp/saved_image_file
+$ out/default.zircon/tools/netcp :/tmp/image /tmp/saved_image_file
 ```
 
 ## Replay
@@ -85,7 +85,7 @@ First, transfer the image to a device running Zircon. For example, on the host:
 
 ```shell
 echo /nand.dmp=/tmp/saved_image_file > /tmp/manifest.txt
-zircon/build-gcc/tools/minfs /tmp/image.dsk create --manifest /tmp/manifest.txt
+out/default.zircon/tools/minfs /tmp/image.dsk create --manifest /tmp/manifest.txt
 fx set bringup.x64
 fx build
 fx qemu -k -- -hda /tmp/image.dsk

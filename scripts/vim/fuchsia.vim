@@ -65,7 +65,7 @@ if jiri_manifest != ""
           \ g:fuchsia_dir . "/*/public/," .
           \ g:fuchsia_build_dir . "," .
           \ g:fuchsia_build_dir . "/gen," .
-          \ g:fuchsia_dir . "/out/build-zircon/*/sysroot/include"
+          \ g:fuchsia_build_dir . "/sdk/exported/zircon_sysroot/arch/*/sysroot/include"
 
     " Make sure Dart files are recognized as such.
     if extension == "dart"

@@ -19,9 +19,7 @@ class TerminalEscapeCodes:
     UNDERLINE = '\033[4m'
 
 def simplify_cpp_file_path(path):
-  path = re.sub(r"^../../out/[^/]+/../../", "", path);
-  path = re.sub(r"^/[\S]+/build-zircon/../../", "", path);
-  return path
+  return re.sub(r"^../../out/[^/]+/../../", "", path)
 
 def simplify_cpp_function_signature(function):
   # To find "core part" to underline, strip out all param lists and templated

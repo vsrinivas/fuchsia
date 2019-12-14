@@ -67,10 +67,14 @@ arch_flags = []
 
 # Add the sysroot include if we found the zircon project
 if target_cpu:
-  arch_flags = ['-I' + os.path.join(fuchsia_root,
-                                    'out/build-zircon',
-                                    'build-' + target_cpu,
-                                    'sysroot/include')]
+  arch_flags = ['-I' + os.path.join(fuchsia_build,
+                                    'sdk',
+                                    'exported',
+                                    'zircon_sysroot',
+                                    'arch',
+                                    target_cpu,
+                                    'sysroot',
+                                    'include')]
 
 def GetClangCommandFromNinjaForFilename(filename):
   """Returns the command line to build |filename|.

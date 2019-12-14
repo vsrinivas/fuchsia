@@ -10,7 +10,7 @@ This tool takes in multiple manifest files:
    "core,misc,test").
  * "auxiliary" manifests
  ** one from the toolchain for the target libraries (libc++ et al)
- ** one from the build-zircon/*-ulib build, which has the Zircon ASan libraries
+ ** one from the Zircon/*-ulib build, which has the Zircon ASan libraries
  ** the unselected parts of the "main" manifests (i.e. Zircon)
 
 It emits final /boot and /system manifests used to make the actual images,

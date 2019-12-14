@@ -65,8 +65,8 @@ $ ktrace save /tmp/save.ktrace
 Then copy the file to the development host, and dump it:
 
 ```
-host$ ./out/build-zircon/tools/netcp :/tmp/save.ktrace save.ktrace
-host$ ./out/build-zircon/tools/ktrace-dump save.ktrace > save.dump
+host$ out/default.zircon/tools/netcp :/tmp/save.ktrace save.ktrace
+host$ out/default.zircon/tools/ktrace-dump save.ktrace > save.dump
 ```
 
 The pretty-printed output can be quite voluminous, thus it's recommended
