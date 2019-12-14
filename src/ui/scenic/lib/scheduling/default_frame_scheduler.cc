@@ -16,6 +16,8 @@
 #include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/scheduling/frame_timings.h"
 
+using scheduling::Present2Info;
+
 namespace scheduling {
 
 DefaultFrameScheduler::DefaultFrameScheduler(std::shared_ptr<VsyncTiming> vsync_timing,
@@ -492,7 +494,7 @@ void DefaultFrameScheduler::UpdateManager::SignalPresentCallbacks(
     current_session = it->first;
 
     // This inner loop creates a vector of the corresponding |Present2Info|s and coalesces them.
-    std::vector<scenic_impl::Present2Info> present2_infos = {};
+    std::vector<Present2Info> present2_infos = {};
     auto [start_iter, end_iter] = pending_present2_infos_.equal_range(current_session);
     for (auto iter = start_iter; iter != end_iter; ++iter) {
       present2_infos.push_back(std::move(iter->second));
@@ -504,8 +506,8 @@ void DefaultFrameScheduler::UpdateManager::SignalPresentCallbacks(
     TRACE_FLOW_BEGIN("gfx", "present_callback", presentation_info.presentation_time);
 
     fuchsia::scenic::scheduling::FramePresentedInfo frame_presented_info =
-        scenic_impl::Present2Info::CoalescePresent2Infos(
-            std::move(present2_infos), zx::time(presentation_info.presentation_time));
+        Present2Info::CoalescePresent2Infos(std::move(present2_infos),
+                                            zx::time(presentation_info.presentation_time));
 
     // Invoke the Session's OnFramePresented event.
     present2_callback_map_[current_session](std::move(frame_presented_info));

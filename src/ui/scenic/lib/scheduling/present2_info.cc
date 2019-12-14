@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/scenic/lib/scenic/present2_info.h"
+#include "src/ui/scenic/lib/scheduling/present2_info.h"
 
 #include "src/lib/fxl/logging.h"
 
-namespace scenic_impl {
+namespace scheduling {
 
 void Present2Info::SetPresentReceivedTime(zx::time present_received_time) {
   FXL_DCHECK(!present_received_info_.has_present_received_time());
@@ -43,4 +43,4 @@ fuchsia::scenic::scheduling::FramePresentedInfo Present2Info::CoalescePresent2In
   return frame_presented_info;
 }
 
-}  // namespace scenic_impl
+}  // namespace scheduling

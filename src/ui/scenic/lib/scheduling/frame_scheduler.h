@@ -14,7 +14,7 @@
 #include <unordered_set>
 
 #include "src/lib/fxl/memory/weak_ptr.h"
-#include "src/ui/scenic/lib/scenic/present2_info.h"
+#include "src/ui/scenic/lib/scheduling/present2_info.h"
 #include "src/ui/scenic/lib/scheduling/frame_timings.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
 
@@ -41,7 +41,7 @@ class SessionUpdater {
     std::deque<OnPresentedCallback> present1_callbacks;
     // A list of objects containing information needed for the OnFramePresented event associated
     // with one or more Present2 calls.
-    std::deque<scenic_impl::Present2Info> present2_infos;
+    std::deque<scheduling::Present2Info> present2_infos;
   };
 
   virtual ~SessionUpdater() = default;

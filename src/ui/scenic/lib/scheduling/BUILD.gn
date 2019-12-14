@@ -31,11 +31,11 @@ source_set("frame_scheduler") {
   ]
   deps = [
     ":frame_metrics_registry",
+    ":present2_info",
     "//sdk/fidl/fuchsia.images",
     "//sdk/fidl/fuchsia.scenic.scheduling",
     "//src/lib/fxl",
     "//src/lib/inspect_deprecated",
-    "//src/ui/scenic/lib/scenic:present2_info",
   ]
   public_deps = [
     ":id",
@@ -64,6 +64,18 @@ source_set("timings") {
   public_deps = [
     "//src/lib/fxl",
     "//zircon/public/lib/zx",
+  ]
+}
+
+source_set("present2_info") {
+  sources = [
+    "present2_info.cc",
+    "present2_info.h",
+  ]
+
+  public_deps = [
+    ":id",
+    "//sdk/fidl/fuchsia.ui.scenic",
   ]
 }
 

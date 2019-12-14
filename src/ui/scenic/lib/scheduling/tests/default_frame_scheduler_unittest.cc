@@ -6,6 +6,8 @@
 
 #include "src/ui/scenic/lib/scheduling/tests/frame_scheduler_test.h"
 
+using scheduling::Present2Info;
+
 namespace fuchsia {
 namespace images {
 inline bool operator==(const PresentationInfo& a, const PresentationInfo& b) {
@@ -35,7 +37,7 @@ static void SchedulePresent2Update(const std::unique_ptr<DefaultFrameScheduler>&
                                    zx::time acquire_fence_time = zx::time(0),
                                    zx::time latched_time = zx::time(0),
                                    zx::time present_received_time = zx::time(0)) {
-  scenic_impl::Present2Info info = scenic_impl::Present2Info(session_id);
+  Present2Info info = Present2Info(session_id);
   info.SetLatchedTime(latched_time);
   info.SetPresentReceivedTime(present_received_time);
 

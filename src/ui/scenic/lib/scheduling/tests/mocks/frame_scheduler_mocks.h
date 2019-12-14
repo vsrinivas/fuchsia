@@ -28,8 +28,7 @@ class MockFrameScheduler : public FrameScheduler {
   void SetRenderContinuously(bool render_continuously) override;
 
   // |FrameScheduler|
-  void ScheduleUpdateForSession(zx::time presentation_time,
-                                scenic_impl::SessionId session) override;
+  void ScheduleUpdateForSession(zx::time presentation_time, SessionId session) override;
 
   // |FrameScheduler|
   void GetFuturePresentationInfos(
@@ -38,16 +37,16 @@ class MockFrameScheduler : public FrameScheduler {
 
   // |FrameScheduler|
   void SetOnFramePresentedCallbackForSession(
-      scenic_impl::SessionId session, OnFramePresentedCallback frame_presented_callback) override;
+      SessionId session, OnFramePresentedCallback frame_presented_callback) override;
 
   // Testing only. Used for mock method callbacks.
   using OnSetRenderContinuouslyCallback = std::function<void(bool)>;
-  using OnScheduleUpdateForSessionCallback = std::function<void(zx::time, scenic_impl::SessionId)>;
+  using OnScheduleUpdateForSessionCallback = std::function<void(zx::time, SessionId)>;
   using OnGetFuturePresentationInfosCallback =
       std::function<std::vector<fuchsia::scenic::scheduling::PresentationInfo>(
           zx::duration requested_prediction_span)>;
   using OnSetOnFramePresentedCallbackForSessionCallback =
-      std::function<void(scenic_impl::SessionId session, OnFramePresentedCallback callback)>;
+      std::function<void(SessionId session, OnFramePresentedCallback callback)>;
 
   // Testing only. Sets mock method callback.
   void set_set_render_continuously_callback(OnSetRenderContinuouslyCallback callback) {
@@ -139,7 +138,7 @@ class MockSessionUpdater : public SessionUpdater {
   std::shared_ptr<const CallbackStatus> AddCallback(SessionId id, zx::time presentation_time,
                                                     zx::time acquire_fence_time);
 
-  void AddPresent2Info(scenic_impl::Present2Info info, zx::time presentation_time,
+  void AddPresent2Info(scheduling::Present2Info info, zx::time presentation_time,
                        zx::time acquire_fence_time);
 
   // By default, rendering is enabled and |UpdateSessions()| will return ".needs_render = true" if
@@ -190,7 +189,7 @@ class MockSessionUpdater : public SessionUpdater {
     zx::time target_presentation_time;
     zx::time fences_done_time;
 
-    scenic_impl::Present2Info present2_info;
+    scheduling::Present2Info present2_info;
   };
 
   std::map<SessionId, std::queue<Update>> updates_;

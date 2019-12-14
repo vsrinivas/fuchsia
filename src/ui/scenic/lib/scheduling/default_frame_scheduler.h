@@ -133,8 +133,8 @@ class DefaultFrameScheduler : public FrameScheduler {
     std::deque<OnPresentedCallback> present1_callbacks_this_frame_;
     std::deque<OnPresentedCallback> pending_present1_callbacks_;
 
-    std::deque<scenic_impl::Present2Info> present2_infos_this_frame_;
-    std::multimap<SessionId, scenic_impl::Present2Info> pending_present2_infos_;
+    std::deque<scheduling::Present2Info> present2_infos_this_frame_;
+    std::multimap<SessionId, scheduling::Present2Info> pending_present2_infos_;
 
     std::map<SessionId, OnFramePresentedCallback> present2_callback_map_;
   };

@@ -16,7 +16,7 @@ void MockFrameScheduler::SetRenderContinuously(bool render_continuously) {
 }
 
 void MockFrameScheduler::ScheduleUpdateForSession(zx::time presentation_time,
-                                                  scenic_impl::SessionId session) {
+                                                  SessionId session) {
   if (schedule_update_for_session_callback_) {
     schedule_update_for_session_callback_(presentation_time, session);
   }
@@ -32,7 +32,7 @@ void MockFrameScheduler::GetFuturePresentationInfos(
 }
 
 void MockFrameScheduler::SetOnFramePresentedCallbackForSession(
-    scenic_impl::SessionId session, OnFramePresentedCallback frame_presented_callback) {
+    SessionId session, OnFramePresentedCallback frame_presented_callback) {
   if (set_on_frame_presented_callback_for_session_callback_) {
     set_on_frame_presented_callback_for_session_callback_(session,
                                                           std::move(frame_presented_callback));
@@ -144,7 +144,7 @@ std::shared_ptr<const MockSessionUpdater::CallbackStatus> MockSessionUpdater::Ad
   return status;
 }
 
-void MockSessionUpdater::AddPresent2Info(scenic_impl::Present2Info info, zx::time presentation_time,
+void MockSessionUpdater::AddPresent2Info(scheduling::Present2Info info, zx::time presentation_time,
                                          zx::time acquire_fence_time) {
   present2_updates_[info.session_id()].push(
       {presentation_time, acquire_fence_time, std::move(info)});

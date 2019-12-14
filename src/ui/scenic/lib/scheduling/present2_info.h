@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_SCENIC_LIB_SCENIC_PRESENT2_INFO_H_
-#define SRC_UI_SCENIC_LIB_SCENIC_PRESENT2_INFO_H_
+#ifndef SRC_UI_SCENIC_LIB_SCHEDULING_PRESENT2_INFO_H_
+#define SRC_UI_SCENIC_LIB_SCHEDULING_PRESENT2_INFO_H_
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fit/function.h>
@@ -11,9 +11,9 @@
 #include <queue>
 
 #include "src/lib/fxl/logging.h"
-#include "src/ui/scenic/lib/scenic/forward_declarations.h"
+#include "src/ui/scenic/lib/scheduling/id.h"
 
-namespace scenic_impl {
+namespace scheduling {
 
 // Class used to keep track of state and logic for OnFramePresented() events corresponding to
 // content submitted by Present2() calls.
@@ -43,10 +43,10 @@ class Present2Info {
   }
 
  private:
-  SessionId session_id_;
+  const SessionId session_id_;
   fuchsia::scenic::scheduling::PresentReceivedInfo present_received_info_;
 };
 
-}  // namespace scenic_impl
+}  // namespace scheduling
 
-#endif  // SRC_UI_SCENIC_LIB_SCENIC_PRESENT2_INFO_H_
+#endif  // SRC_UI_SCENIC_LIB_SCHEDULING_PRESENT2_INFO_H_

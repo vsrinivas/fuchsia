@@ -36,7 +36,7 @@ void DelegatingFrameScheduler::SetRenderContinuously(bool render_continuously) {
 }
 
 void DelegatingFrameScheduler::ScheduleUpdateForSession(zx::time presentation_time,
-                                                        scenic_impl::SessionId session_id) {
+                                                        SessionId session_id) {
   CallWhenFrameSchedulerAvailable([presentation_time, session_id](FrameScheduler* frame_scheduler) {
     frame_scheduler->ScheduleUpdateForSession(presentation_time, session_id);
   });
@@ -52,7 +52,7 @@ void DelegatingFrameScheduler::GetFuturePresentationInfos(
 }
 
 void DelegatingFrameScheduler::SetOnFramePresentedCallbackForSession(
-    scenic_impl::SessionId session, OnFramePresentedCallback callback) {
+    SessionId session, OnFramePresentedCallback callback) {
   if (callback) {
     CallWhenFrameSchedulerAvailable(
         [session, callback = std::move(callback)](FrameScheduler* frame_scheduler) mutable {

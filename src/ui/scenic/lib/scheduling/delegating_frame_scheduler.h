@@ -45,8 +45,7 @@ class DelegatingFrameScheduler : public FrameScheduler {
   // |FrameScheduler|
   // Calls ScheduleUpdateForSession() immediately if a FrameScheduler has been set; otherwise defers
   // the call until one has been set.
-  void ScheduleUpdateForSession(zx::time presentation_time,
-                                scenic_impl::SessionId session_id) override;
+  void ScheduleUpdateForSession(zx::time presentation_time, SessionId session_id) override;
 
   // |FrameScheduler|
   // Calls GetFuturePresentationInfos() immediately if a FrameScheduler has been set; otherwise
@@ -58,7 +57,7 @@ class DelegatingFrameScheduler : public FrameScheduler {
   // |FrameScheduler|
   // Calls SetOnFramePresentedCallbackForSession() immediately if a FrameScheduler has been set;
   // otherwise defers the call until one has been set.
-  void SetOnFramePresentedCallbackForSession(scenic_impl::SessionId session,
+  void SetOnFramePresentedCallbackForSession(SessionId session,
                                              OnFramePresentedCallback callback) override;
 
   // Sets the frame scheduler, which triggers any pending callbacks. This method cannot be called

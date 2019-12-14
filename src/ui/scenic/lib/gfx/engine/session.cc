@@ -28,6 +28,8 @@
 #include "src/ui/scenic/lib/gfx/util/wrap.h"
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 
+using scheduling::Present2Info;
+
 namespace scenic_impl {
 namespace gfx {
 

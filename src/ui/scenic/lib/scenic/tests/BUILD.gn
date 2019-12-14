@@ -51,7 +51,6 @@ executable("unittests") {
   output_name = "scenic_unittests"
   testonly = true
   sources = [
-    "present2_info_unittest.cc",
     "scenic_unittest.cc",
   ]
   deps = [
