@@ -1114,6 +1114,7 @@ zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev, Devhost* t
   const char* arg0 = dev->args().data();
   const char* arg1 = strchr(arg0, ',');
   if (arg1 == nullptr) {
+    log(ERROR, "invalid proxy args: \"processname,args\" (see also fxb/33674)\n");
     return ZX_ERR_INTERNAL;
   }
   size_t arg0len = arg1 - arg0;
