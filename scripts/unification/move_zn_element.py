@@ -91,6 +91,7 @@ def transform_build_file(build):
             line = ''
         # Update references to libraries.
         line = line.replace('$zx/system/ulib', '//zircon/public/lib')
+        line = line.replace('$zx/system/dev/lib', '//zircon/public/lib')
         # Update references to Zircon in general.
         line = line.replace('$zx', '//zircon')
         # Print the line, if any content is left.
