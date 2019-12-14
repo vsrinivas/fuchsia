@@ -74,6 +74,8 @@ zx_status_t GdcDevice::GdcInitTask(const buffer_collection_info_2_t* input_buffe
                                    const hw_accel_frame_callback_t* frame_callback,
                                    const hw_accel_res_change_callback* res_callback,
                                    uint32_t* out_task_index) {
+  fbl::AutoLock al(&interface_lock_);
+
   if (out_task_index == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -126,8 +128,6 @@ void GdcDevice::Stop() {
 
 void GdcDevice::ProcessTask(TaskInfo& info) {
   auto task = info.task;
-  // clang-format off
-
   // The way we have our SW instrumented, GDC should never be busy
   // proccessing at this point. Doing a sanity check here to ensure
   // that its not busy processing an image.
@@ -153,8 +153,10 @@ void GdcDevice::ProcessTask(TaskInfo& info) {
   Stop();
 
   // Program the GDC configuration registers.
-  auto size = task->GetConfigVmoSize(task->output_format_index())/kWordSize;
+  auto size = task->GetConfigVmoSize(task->output_format_index()) / kWordSize;
   auto addr = AxiWordAlign(task->GetConfigVmoPhysAddr(task->output_format_index()));
+
+  // clang-format off
   ConfigAddr::Get()
       .ReadFrom(gdc_mmio())
       .set_config_addr(addr)
@@ -217,10 +219,12 @@ void GdcDevice::ProcessTask(TaskInfo& info) {
       .set_offset(input_line_offset)
       .WriteTo(gdc_mmio());
 
+  // clang-format on
+
   // Now programming the output DMA registers.
   // First fetch an unused buffer from the VMO pool.
   auto result = task->GetOutputBufferPhysAddr();
-  if(result.is_error()) {
+  if (result.is_error()) {
     frame_available_info info;
     info.frame_status = FRAME_STATUS_ERROR_BUFFER_FULL;
     info.metadata.input_buffer_index = input_buffer_index;
@@ -234,6 +238,8 @@ void GdcDevice::ProcessTask(TaskInfo& info) {
 
   // Program Data1Out Address Register (Y).
   auto output_line_offset = output_format.bytes_per_row;
+  // clang-format off
+
   Data1OutAddr::Get()
       .ReadFrom(gdc_mmio())
       .set_addr(AxiWordAlign(output_y_addr))
@@ -257,7 +263,6 @@ void GdcDevice::ProcessTask(TaskInfo& info) {
       .ReadFrom(gdc_mmio())
       .set_offset(output_line_offset)
       .WriteTo(gdc_mmio());
-
   // clang-format on
 
   // Start GDC processing.
@@ -290,9 +295,9 @@ void GdcDevice::ProcessTask(TaskInfo& info) {
 int GdcDevice::FrameProcessingThread() {
   FX_LOG(INFO, TAG, "start");
   for (;;) {
-    fbl::AutoLock al(&lock_);
+    fbl::AutoLock al(&processing_queue_lock_);
     while (processing_queue_.empty() && !shutdown_) {
-      frame_processing_signal_.Wait(&lock_);
+      frame_processing_signal_.Wait(&processing_queue_lock_);
     }
     if (shutdown_) {
       break;
@@ -307,6 +312,8 @@ int GdcDevice::FrameProcessingThread() {
 
 zx_status_t GdcDevice::GdcSetOutputResolution(uint32_t task_index,
                                               uint32_t new_output_image_format_index) {
+  fbl::AutoLock al(&interface_lock_);
+
   // Find the entry in hashmap.
   auto task_entry = task_map_.find(task_index);
   if (task_entry == task_map_.end()) {
@@ -322,15 +329,18 @@ zx_status_t GdcDevice::GdcSetOutputResolution(uint32_t task_index,
   info.op = GDC_OP_SETOUTPUTRES;
   info.task = task_entry->second.get();
   info.index = new_output_image_format_index;
+  info.task_index = task_index;
 
   // Put the task on queue.
-  fbl::AutoLock lock(&lock_);
+  fbl::AutoLock lock(&processing_queue_lock_);
   processing_queue_.push_front(info);
   frame_processing_signal_.Signal();
   return ZX_OK;
 }
 
 zx_status_t GdcDevice::GdcProcessFrame(uint32_t task_index, uint32_t input_buffer_index) {
+  fbl::AutoLock al(&interface_lock_);
+
   // Find the entry in hashmap.
   auto task_entry = task_map_.find(task_index);
   if (task_entry == task_map_.end()) {
@@ -346,9 +356,10 @@ zx_status_t GdcDevice::GdcProcessFrame(uint32_t task_index, uint32_t input_buffe
   info.op = GDC_OP_FRAME;
   info.task = task_entry->second.get();
   info.index = input_buffer_index;
+  info.task_index = task_index;
 
   // Put the task on queue.
-  fbl::AutoLock lock(&lock_);
+  fbl::AutoLock lock(&processing_queue_lock_);
   processing_queue_.push_front(info);
   frame_processing_signal_.Signal();
   return ZX_OK;
@@ -364,7 +375,7 @@ zx_status_t GdcDevice::StartThread() {
 zx_status_t GdcDevice::StopThread() {
   // Signal the worker thread and wait for it to terminate.
   {
-    fbl::AutoLock al(&lock_);
+    fbl::AutoLock al(&processing_queue_lock_);
     shutdown_ = true;
     frame_processing_signal_.Signal();
   }
@@ -377,6 +388,8 @@ zx_status_t GdcDevice::WaitForInterrupt(zx_port_packet_t* packet) {
 }
 
 void GdcDevice::GdcRemoveTask(uint32_t task_index) {
+  fbl::AutoLock al(&interface_lock_);
+
   // Find the entry in hashmap.
   auto task_entry = task_map_.find(task_index);
   ZX_ASSERT(task_entry != task_map_.end());
@@ -386,6 +399,8 @@ void GdcDevice::GdcRemoveTask(uint32_t task_index) {
 }
 
 void GdcDevice::GdcReleaseFrame(uint32_t task_index, uint32_t buffer_index) {
+  fbl::AutoLock al(&interface_lock_);
+
   // Find the entry in hashmap.
   auto task_entry = task_map_.find(task_index);
   ZX_ASSERT(task_entry != task_map_.end());

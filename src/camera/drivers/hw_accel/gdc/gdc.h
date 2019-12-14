@@ -95,7 +95,11 @@ class GdcDevice : public GdcDeviceType, public ddk::GdcProtocol<GdcDevice, ddk::
   struct TaskInfo {
     GdcOp op;
     GdcTask* task;
+    // case: GDC_OP_SETOUTPUTRES |index| = output format index
+    // case: GDC_OP_FRAME        |index| = input buffer index
     uint32_t index;
+    // Index of the task in the hashmap
+    uint32_t task_index;
   };
 
   zx::port port_;
@@ -115,19 +119,21 @@ class GdcDevice : public GdcDeviceType, public ddk::GdcProtocol<GdcDevice, ddk::
   zx_status_t WaitForInterrupt(zx_port_packet_t* packet);
 
   // Used to access the processing queue.
-  fbl::Mutex lock_;
+  fbl::Mutex processing_queue_lock_;
+  // Used to access the GDC's banjo interface.
+  fbl::Mutex interface_lock_;
 
   // HHI register block has the clock registers
   ddk::MmioBuffer clock_mmio_;
   ddk::MmioBuffer gdc_mmio_;
   zx::interrupt gdc_irq_;
   zx::bti bti_;
-  uint32_t next_task_index_ = 0;
-  std::unordered_map<uint32_t, std::unique_ptr<GdcTask>> task_map_;
-  std::deque<TaskInfo> processing_queue_ __TA_GUARDED(lock_);
+  uint32_t next_task_index_ __TA_GUARDED(interface_lock_) = 0;
+  std::unordered_map<uint32_t, std::unique_ptr<GdcTask>> task_map_ __TA_GUARDED(interface_lock_);
+  std::deque<TaskInfo> processing_queue_ __TA_GUARDED(processing_queue_lock_);
   thrd_t processing_thread_;
-  fbl::ConditionVariable frame_processing_signal_ __TA_GUARDED(lock_);
-  bool shutdown_ __TA_GUARDED(lock_) = false;
+  fbl::ConditionVariable frame_processing_signal_ __TA_GUARDED(processing_queue_lock_);
+  bool shutdown_ __TA_GUARDED(processing_queue_lock_) = false;
 };
 
 }  // namespace gdc
