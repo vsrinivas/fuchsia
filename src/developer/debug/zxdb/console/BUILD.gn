@@ -30,6 +30,8 @@ static_library("console") {
     "commands/verb_help.h",
     "commands/verb_opendump.cc",
     "commands/verb_opendump.h",
+    "commands/verb_ps.cc",
+    "commands/verb_ps.h",
     "commands/verb_quit.cc",
     "commands/verb_quit.h",
     "commands/verb_quit_agent.cc",
@@ -38,6 +40,8 @@ static_library("console") {
     "commands/verb_status.h",
     "commands/verb_steps.cc",
     "commands/verb_steps.h",
+    "commands/verb_sys_info.cc",
+    "commands/verb_sys_info.h",
     "console.cc",
     "console.h",
     "console_context.cc",
@@ -89,7 +93,6 @@ static_library("console") {
     "verbs_settings.cc",
     "verbs_shared.cc",
     "verbs_symbol.cc",
-    "verbs_system.cc",
     "verbs_thread.cc",
   ]
 

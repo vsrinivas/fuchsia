@@ -181,7 +181,6 @@ void AppendProcessVerbs(std::map<Verb, VerbRecord>* verbs);
 void AppendSettingsVerbs(std::map<Verb, VerbRecord>* verbs);
 void AppendSharedVerbs(std::map<Verb, VerbRecord>* verbs);
 void AppendSymbolVerbs(std::map<Verb, VerbRecord>* verbs);
-void AppendSystemVerbs(std::map<Verb, VerbRecord>* verbs);
 void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs);
 
 }  // namespace zxdb

@@ -9,9 +9,11 @@
 #include "src/developer/debug/zxdb/console/commands/verb_disconnect.h"
 #include "src/developer/debug/zxdb/console/commands/verb_help.h"
 #include "src/developer/debug/zxdb/console/commands/verb_opendump.h"
+#include "src/developer/debug/zxdb/console/commands/verb_ps.h"
 #include "src/developer/debug/zxdb/console/commands/verb_quit.h"
 #include "src/developer/debug/zxdb/console/commands/verb_quit_agent.h"
 #include "src/developer/debug/zxdb/console/commands/verb_status.h"
+#include "src/developer/debug/zxdb/console/commands/verb_sys_info.h"
 #include "src/lib/fxl/logging.h"
 
 namespace zxdb {
@@ -70,17 +72,18 @@ const std::map<Verb, VerbRecord>& GetVerbs() {
     AppendSettingsVerbs(&all_verbs);
     AppendSharedVerbs(&all_verbs);
     AppendSymbolVerbs(&all_verbs);
-    AppendSystemVerbs(&all_verbs);
     AppendThreadVerbs(&all_verbs);
 
-    all_verbs[Verb::kHelp] = GetHelpVerbRecord();
-    all_verbs[Verb::kQuit] = GetQuitVerbRecord();
+    all_verbs[Verb::kCls] = GetClsVerbRecord();
     all_verbs[Verb::kConnect] = GetConnectVerbRecord();
     all_verbs[Verb::kDisconnect] = GetDisconnectVerbRecord();
-    all_verbs[Verb::kQuitAgent] = GetQuitAgentVerbRecord();
+    all_verbs[Verb::kHelp] = GetHelpVerbRecord();
+    all_verbs[Verb::kListProcesses] = GetPsVerbRecord();
     all_verbs[Verb::kOpenDump] = GetOpendumpVerbRecord();
+    all_verbs[Verb::kQuitAgent] = GetQuitAgentVerbRecord();
+    all_verbs[Verb::kQuit] = GetQuitVerbRecord();
     all_verbs[Verb::kStatus] = GetStatusVerbRecord();
-    all_verbs[Verb::kCls] = GetClsVerbRecord();
+    all_verbs[Verb::kSysInfo] = GetSysInfoVerbRecord();
 
     // Everything but Noun::kNone (= 0) should be in the map.
     FXL_DCHECK(all_verbs.size() == static_cast<size_t>(Verb::kLast) - 1)
