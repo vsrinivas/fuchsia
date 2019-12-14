@@ -1010,7 +1010,7 @@ func (m *mDNS) Send(packet Packet) error {
 
 // connectToAnyAddr takes an mDNSConn and attempts to connect to the first
 // available addr on the interface.
-func connectToAnyAddr(c mDNSConn, iface *net.Interface, port int) (bool, error) {
+func connectToAnyAddr(c mDNSConn, iface *net.Interface, port int, ipv6 bool) (bool, error) {
 	if c == nil {
 		return false, nil
 	}
@@ -1035,6 +1035,14 @@ func connectToAnyAddr(c mDNSConn, iface *net.Interface, port int) (bool, error) 
 		if ip == nil {
 			continue
 		}
+		// If this is an ipv6 address and we're not connecting to ipv6, skip.
+		if ip.To4() == nil && !ipv6 {
+			continue
+		}
+		// If this is an ipv4 address and we're connecting to ipv6, skip.
+		if ip.To4() != nil && ipv6 {
+			continue
+		}
 		if err := c.ConnectTo(port, ip, iface); err != nil {
 			lastConnectErr = fmt.Errorf("creating socket for %v via %v: %v", iface, ip, err)
 			log.Println(lastConnectErr)
@@ -1048,7 +1056,7 @@ func connectToAnyAddr(c mDNSConn, iface *net.Interface, port int) (bool, error) 
 
 // connectOnAllIfaces is a helper function that takes an mDNSConn and attempts
 // to connect on the first available address of all accessible interfaces.
-func connectOnAllIfaces(c mDNSConn, ifaces []net.Interface, port int) error {
+func connectOnAllIfaces(c mDNSConn, ifaces []net.Interface, port int, ipv6 bool) error {
 	var lastConnectErr error
 	connected := false
 	for _, iface := range ifaces {
@@ -1060,7 +1068,7 @@ func connectOnAllIfaces(c mDNSConn, ifaces []net.Interface, port int) error {
 			log.Println(lastConnectErr)
 			continue
 		}
-		c, err := connectToAnyAddr(c, &iface, port)
+		c, err := connectToAnyAddr(c, &iface, port, ipv6)
 		if err != nil {
 			lastConnectErr = err
 		}
@@ -1093,7 +1101,7 @@ func (m *mDNS) initMDNSConns(port int) error {
 	var v4Err error
 	var v6Err error
 	if m.conn4 != nil {
-		v4Err = connectOnAllIfaces(m.conn4, ifaces, port)
+		v4Err = connectOnAllIfaces(m.conn4, ifaces, port, false)
 		if v4Err != nil {
 			m.conn4.Close()
 			m.conn4 = nil
@@ -1104,7 +1112,7 @@ func (m *mDNS) initMDNSConns(port int) error {
 		}
 	}
 	if m.conn6 != nil {
-		v6Err = connectOnAllIfaces(m.conn6, ifaces, port)
+		v6Err = connectOnAllIfaces(m.conn6, ifaces, port, true)
 		if v6Err != nil {
 			m.conn6.Close()
 			m.conn6 = nil

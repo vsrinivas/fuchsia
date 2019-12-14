@@ -13,10 +13,6 @@ import (
 	"github.com/google/subcommands"
 )
 
-const (
-	ipv4AddrLength = 4
-)
-
 type resolveCmd struct {
 	devFinderCmd
 }
@@ -41,7 +37,7 @@ func (cmd *resolveCmd) resolveDevices(ctx context.Context, domains ...string) ([
 	if len(domains) == 0 {
 		return nil, errors.New("no domains supplied")
 	}
-	f := make(chan *fuchsiaDevice)
+	f := make(chan *fuchsiaDevice, 1024)
 	for _, finder := range cmd.deviceFinders() {
 		if err := finder.resolve(ctx, f, domains...); err != nil {
 			return nil, err

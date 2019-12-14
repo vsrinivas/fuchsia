@@ -25,44 +25,64 @@ type mdnsFinder struct {
 
 const fuchsiaMDNSService = "_fuchsia._udp.local"
 
-func listMDNSHandler(resp mDNSResponse, localResolve bool, f chan<- *fuchsiaDevice) {
-	for _, a := range resp.rxPacket.Answers {
-		if a.Class == mdns.IN && a.Type == mdns.PTR {
-			// DX-1498: Some protection against malformed responses.
-			if len(a.Data) == 0 {
-				log.Print("Empty data in response. Ignoring...")
-				continue
+func parseAnswer(cmd *devFinderCmd, a mdns.Record, iface net.Interface) *fuchsiaDevice {
+	if a.Class == mdns.IN && (a.Type == mdns.A || a.Type == mdns.AAAA) &&
+		(len(a.Data) == net.IPv4len || len(a.Data) == net.IPv6len) {
+		localStr := ".local"
+		strIdx := strings.Index(a.Domain, localStr)
+		// Determines if ".local" is on the end of the string.
+		if strIdx == -1 || strIdx != len(a.Domain)-len(localStr) {
+			return nil
+		}
+		// Trims off localStr for proper formatting.
+		fuchsiaDomain := a.Domain[:strIdx]
+		if len(fuchsiaDomain) == 0 {
+			return &fuchsiaDevice{err: fmt.Errorf("fuchsia domain empty: %q", a.Domain)}
+		}
+		var zone string
+		if isIPv6LinkLocal(a.Data) {
+			zone = iface.Name
+		}
+		fdev := &fuchsiaDevice{
+			addr:   net.IP(a.Data),
+			domain: fuchsiaDomain,
+			zone:   zone,
+		}
+		if cmd.localResolve {
+			var err error
+			fdev, err = fdev.outbound()
+			if err != nil {
+				return &fuchsiaDevice{err: err}
 			}
-			nameLength := int(a.Data[0])
-			if len(a.Data) < nameLength+1 {
-				log.Printf("Too short data in response. Got %d bytes; expected %d", len(a.Data), nameLength+1)
-				continue
-			}
+		}
+		return fdev
+	}
+	return nil
+}
 
-			// This is a bit convoluted: the domain param is being used
-			// as a "service", and the Data field actually contains the
-			// domain of the device.
-			fuchsiaDomain := string(a.Data[1 : nameLength+1])
-			if localResolve {
-				recvIP, zone, err := resp.getReceiveIP()
-				if err != nil {
-					f <- &fuchsiaDevice{err: err}
-					return
-				}
-				f <- &fuchsiaDevice{addr: recvIP, domain: fuchsiaDomain, zone: zone}
-				continue
-			}
-			if ip, zone, err := addrToIP(resp.devAddr); err != nil {
-				f <- &fuchsiaDevice{
-					err: fmt.Errorf("could not find addr for %v: %v", resp.devAddr, err),
-				}
-			} else {
-				f <- &fuchsiaDevice{
-					addr:   ip,
-					domain: fuchsiaDomain,
-					zone:   zone,
-				}
-			}
+func listMDNSHandler(cmd *devFinderCmd, resp mDNSResponse, f chan<- *fuchsiaDevice) {
+	if len(resp.rxPacket.Answers) == 0 {
+		return
+	}
+	a := resp.rxPacket.Answers[0]
+	if a.Class != mdns.IN || a.Type != mdns.PTR || a.Domain != fuchsiaMDNSService {
+		return
+	}
+	// DX-1498: Some protection against malformed responses.
+	if len(a.Data) == 0 {
+		log.Print("Empty data in response. Ignoring...")
+		return
+	}
+	nameLength := int(a.Data[0])
+	if len(a.Data) < nameLength+1 {
+		log.Printf("Too short data in response. Got %d bytes; expected %d", len(a.Data), nameLength+1)
+		return
+	}
+
+	for _, a := range resp.rxPacket.Additional {
+		fdev := parseAnswer(cmd, a, resp.rxIface)
+		if fdev != nil {
+			f <- fdev
 		}
 	}
 }
@@ -82,32 +102,14 @@ func (m *mdnsFinder) list(ctx context.Context, f chan *fuchsiaDevice) error {
 	return m.cmd.sendMDNSPacket(ctx, listPacket, f)
 }
 
-func resolveMDNSHandler(resp mDNSResponse, localResolve bool, f chan<- *fuchsiaDevice) {
+func resolveMDNSHandler(cmd *devFinderCmd, resp mDNSResponse, f chan<- *fuchsiaDevice) {
 	for _, a := range resp.rxPacket.Answers {
-		if a.Class == mdns.IN && a.Type == mdns.A &&
-			len(a.Data) == ipv4AddrLength {
-			localStr := ".local"
-			strIdx := strings.Index(a.Domain, localStr)
-			// Determines if ".local" is on the end of the string.
-			if strIdx == -1 || strIdx != len(a.Domain)-len(localStr) {
-				continue
-			}
-			// Trims off localStr for proper formatting.
-			fuchsiaDomain := a.Domain[:strIdx]
-			if len(fuchsiaDomain) == 0 {
-				f <- &fuchsiaDevice{err: fmt.Errorf("fuchsia domain empty: %q", a.Domain)}
-				return
-			}
-			if localResolve {
-				recvIP, zone, err := resp.getReceiveIP()
-				if err != nil {
-					f <- &fuchsiaDevice{err: err}
-					return
-				}
-				f <- &fuchsiaDevice{addr: recvIP, domain: fuchsiaDomain, zone: zone}
-				continue
-			}
-			f <- &fuchsiaDevice{addr: net.IP(a.Data), domain: fuchsiaDomain}
+		if a.Type == mdns.A && !cmd.ipv4 || a.Type == mdns.AAAA && !cmd.ipv6 {
+			continue
+		}
+		fdev := parseAnswer(cmd, a, resp.rxIface)
+		if fdev != nil {
+			f <- fdev
 		}
 	}
 }
@@ -122,20 +124,28 @@ func (m *mdnsFinder) resolve(ctx context.Context, f chan *fuchsiaDevice, domains
 	return nil
 }
 
+func (m *mdnsFinder) close() {}
+
 type netbootFinder struct {
 	deviceFinderBase
 }
 
 func (n *netbootFinder) list(ctx context.Context, f chan *fuchsiaDevice) error {
+	if !n.cmd.ipv6 {
+		return fmt.Errorf("netboot finder is ipv6 only")
+	}
 	return n.resolve(ctx, f, netboot.NodenameWildcard)
 }
 
 func (n *netbootFinder) resolve(ctx context.Context, f chan *fuchsiaDevice, nodenames ...string) error {
+	if !n.cmd.ipv6 {
+		return fmt.Errorf("netboot finder is ipv6 only")
+	}
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(n.cmd.timeout)*time.Millisecond)
 	// Timeout isn't really used for this application of the client, so
 	// just pick an arbitrary timeout.
 	c := n.cmd.newNetbootClient(time.Second)
-	t := make(chan *netboot.Target)
+	t := make(chan *netboot.Target, 1024)
 	for _, nodename := range nodenames {
 		cleanup, err := c.StartDiscover(t, nodename, !n.cmd.useNetsvcAddress)
 		if err != nil {
@@ -158,14 +168,20 @@ func (n *netbootFinder) resolve(ctx context.Context, f chan *fuchsiaDevice, node
 						zone = target.Interface.Name
 					}
 					addr := target.TargetAddress
-					if n.cmd.localResolve {
-						addr = target.HostAddress
-					}
-					f <- &fuchsiaDevice{
+					fdev := &fuchsiaDevice{
 						addr:   addr,
 						domain: target.Nodename,
 						zone:   zone,
 					}
+					if n.cmd.localResolve {
+						var err error
+						fdev, err = fdev.outbound()
+						if err != nil {
+							f <- &fuchsiaDevice{err: err}
+							return
+						}
+					}
+					f <- fdev
 				case <-ctx.Done():
 					return
 				}
@@ -174,3 +190,5 @@ func (n *netbootFinder) resolve(ctx context.Context, f chan *fuchsiaDevice, node
 	}
 	return nil
 }
+
+func (n *netbootFinder) close() {}

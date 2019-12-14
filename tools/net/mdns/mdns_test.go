@@ -188,7 +188,7 @@ func TestConnectToAnyIface_noValidConnections(t *testing.T) {
 	}
 	c, _, _, _ := makeFakeMDNSConn(false)
 	defer c.Close()
-	if err := connectOnAllIfaces(c, ifaces, 1234); err == nil {
+	if err := connectOnAllIfaces(c, ifaces, 1234, false); err == nil {
 		t.Errorf("expected err. func successful")
 	}
 }
@@ -203,7 +203,7 @@ func TestConnectToAnyIface_oneValidConnection(t *testing.T) {
 	}
 	c, _, _, _ := makeFakeMDNSConn(false)
 	defer c.Close()
-	if err := connectOnAllIfaces(c, ifaces, 1234); err != nil {
+	if err := connectOnAllIfaces(c, ifaces, 1234, false); err != nil {
 		t.Errorf("expected successful connection, received err: %v", err)
 	}
 }

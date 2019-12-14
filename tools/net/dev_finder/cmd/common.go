@@ -4,6 +4,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -13,6 +14,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -22,39 +24,15 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/net/netboot"
 )
 
+var ipv6LinkLocalPrefix = []byte{0xfe, 0x80}
+
 type mDNSResponse struct {
 	rxIface  net.Interface
 	devAddr  net.Addr
 	rxPacket mdns.Packet
 }
 
-func (m *mDNSResponse) getReceiveIP() (net.IP, string, error) {
-	if unicastAddrs, err := m.rxIface.Addrs(); err != nil {
-		return nil, "", err
-	} else {
-		for _, addr := range unicastAddrs {
-			var ip net.IP
-			var zone string
-			switch v := addr.(type) {
-			case *net.IPNet:
-				ip = v.IP
-			case *net.IPAddr:
-				ip = v.IP
-				zone = v.Zone
-			case *net.UDPAddr:
-				ip = v.IP
-				zone = v.Zone
-			}
-			if ip == nil {
-				continue
-			}
-			return ip, zone, nil
-		}
-	}
-	return nil, "", fmt.Errorf("no unicast addresses found on iface %v", m.rxIface)
-}
-
-type mDNSHandler func(mDNSResponse, bool, chan<- *fuchsiaDevice)
+type mDNSHandler func(*devFinderCmd, mDNSResponse, chan<- *fuchsiaDevice)
 
 type mdnsInterface interface {
 	AddHandler(f func(net.Interface, net.Addr, mdns.Packet))
@@ -107,8 +85,11 @@ type devFinderCmd struct {
 	// If set to true, uses the netsvc address instead of the netstack
 	// address.
 	useNetsvcAddress bool
+	ipv4             bool
+	ipv6             bool
 
 	mdnsHandler mDNSHandler
+	finders     []deviceFinder
 
 	// Only for testing.
 	newMDNSFunc    newMDNSFunc
@@ -130,18 +111,43 @@ func (f *fuchsiaDevice) addrString() string {
 	return addr.String()
 }
 
+// outbound returns a copy of the device to containing the preferred outbound
+// connection, as is requested when using the `--local` flag.
+func (f *fuchsiaDevice) outbound() (*fuchsiaDevice, error) {
+	var udpProto string
+	if f.addr.To4() != nil {
+		udpProto = "udp4"
+	} else {
+		udpProto = "udp6"
+	}
+	// This is just dialing a nonsense port. No packets are being sent.
+	tmpConn, err := net.DialUDP(udpProto, nil, &net.UDPAddr{IP: f.addr, Zone: f.zone, Port: 22})
+	if err != nil {
+		return nil, fmt.Errorf("getting output ip of %q: %b", f.domain, err)
+	}
+	defer tmpConn.Close()
+	localAddr := tmpConn.LocalAddr().(*net.UDPAddr)
+	return &fuchsiaDevice{
+		domain: f.domain,
+		addr:   localAddr.IP,
+		zone:   localAddr.Zone,
+	}, nil
+}
+
 func (cmd *devFinderCmd) SetCommonFlags(f *flag.FlagSet) {
 	f.BoolVar(&cmd.json, "json", false, "Outputs in JSON format.")
-	f.StringVar(&cmd.mdnsAddrs, "addr", "224.0.0.251,ff02::fb", "Comma separated list of addresses to issue mDNS queries to.")
-	f.StringVar(&cmd.mdnsPorts, "port", "5353", "Comma separated list of ports to issue mDNS queries to.")
-	f.IntVar(&cmd.timeout, "timeout", 200, "The number of milliseconds before declaring a timeout.")
+	f.StringVar(&cmd.mdnsAddrs, "addr", "224.0.0.251,ff02::fb", "[linux only] Comma separated list of addresses to issue mDNS queries to.")
+	f.StringVar(&cmd.mdnsPorts, "port", "5353", "[linux only] Comma separated list of ports to issue mDNS queries to.")
+	f.IntVar(&cmd.timeout, "timeout", 500, "The number of milliseconds before declaring a timeout.")
 	f.BoolVar(&cmd.localResolve, "local", false, "Returns the address of the interface to the host when doing service lookup/domain resolution.")
-	f.BoolVar(&cmd.acceptUnicast, "accept-unicast", false, "Accepts unicast responses. For if the receiving device responds from a different subnet or behind port forwarding.")
+	f.BoolVar(&cmd.acceptUnicast, "accept-unicast", true, "[linux only] Accepts unicast responses. For if the receiving device responds from a different subnet or behind port forwarding.")
 	f.IntVar(&cmd.deviceLimit, "device-limit", 0, "Exits before the timeout at this many devices per resolution (zero means no limit).")
-	f.IntVar(&cmd.ttl, "ttl", -1, "Sets the TTL for outgoing mcast messages. Primarily for debugging and testing. Setting this to zero limits messages to the localhost.")
+	f.IntVar(&cmd.ttl, "ttl", -1, "[linux only] Sets the TTL for outgoing mcast messages. Primarily for debugging and testing. Setting this to zero limits messages to the localhost.")
 	f.BoolVar(&cmd.netboot, "netboot", false, "Determines whether to use netboot protocol")
 	f.BoolVar(&cmd.mdns, "mdns", true, "Determines whether to use mDNS protocol")
 	f.BoolVar(&cmd.useNetsvcAddress, "netsvc-address", false, "Determines whether to use the Fuchsia netsvc address. Ignored if |netboot| is set to false.")
+	f.BoolVar(&cmd.ipv6, "ipv6", true, "Set whether to query using IPv6. Disabling IPv6 will also disable netboot.")
+	f.BoolVar(&cmd.ipv4, "ipv4", true, "Set whether to query using IPv4")
 }
 
 func (cmd *devFinderCmd) Output() io.Writer {
@@ -149,6 +155,10 @@ func (cmd *devFinderCmd) Output() io.Writer {
 		return os.Stdout
 	}
 	return cmd.output
+}
+
+func isIPv6LinkLocal(b []byte) bool {
+	return len(b) == net.IPv6len && bytes.Equal(b[:len(ipv6LinkLocalPrefix)], ipv6LinkLocalPrefix)
 }
 
 // Extracts the IP from its argument, returning an error if the type is unsupported.
@@ -169,11 +179,24 @@ func (cmd *devFinderCmd) newMDNS(address string) mdnsInterface {
 		return cmd.newMDNSFunc(address)
 	}
 	m := mdns.NewMDNS()
+	if !cmd.ipv4 && !cmd.ipv6 {
+		log.Fatalf("either --ipv4 or --ipv6 must be set to true")
+	}
+	// Ultimately there can be only one MDNS per address, so either it is
+	// enabled somewhere in here or nil is returned.
 	ip := net.ParseIP(address)
-	if ip.To4() != nil {
-		m.EnableIPv4()
+	if ip.To4() == nil {
+		if cmd.ipv6 {
+			m.EnableIPv6()
+		} else {
+			return nil
+		}
 	} else {
-		m.EnableIPv6()
+		if cmd.ipv4 {
+			m.EnableIPv4()
+		} else {
+			return nil
+		}
 	}
 	m.SetAddress(address)
 	m.SetAcceptUnicastResponses(cmd.acceptUnicast)
@@ -211,7 +234,7 @@ func (cmd *devFinderCmd) sendMDNSPacket(ctx context.Context, packet mdns.Packet,
 		return fmt.Errorf("invalid timeout value: %v", cmd.timeout)
 	}
 
-	addrs := strings.Split(cmd.mdnsAddrs, ",")
+	cmdAddrs := strings.Split(cmd.mdnsAddrs, ",")
 	var ports []int
 	for _, s := range strings.Split(cmd.mdnsPorts, ",") {
 		p, err := strconv.ParseUint(s, 10, 16)
@@ -220,13 +243,26 @@ func (cmd *devFinderCmd) sendMDNSPacket(ctx context.Context, packet mdns.Packet,
 		}
 		ports = append(ports, int(p))
 	}
-
+	addrs := []string{}
+	for _, addr := range cmdAddrs {
+		ip := net.ParseIP(addr)
+		if ip == nil {
+			return fmt.Errorf("%q not a valid IP", addr)
+		}
+		if cmd.shouldIgnoreIP(ip) {
+			continue
+		}
+		addrs = append(addrs, addr)
+	}
+	if len(addrs) == 0 {
+		return fmt.Errorf("no viable addresses")
+	}
 	for _, addr := range addrs {
 		for _, p := range ports {
 			m := cmd.newMDNS(addr)
 			m.AddHandler(func(recv net.Interface, addr net.Addr, rxPacket mdns.Packet) {
 				response := mDNSResponse{recv, addr, rxPacket}
-				cmd.mdnsHandler(response, cmd.localResolve, f)
+				cmd.mdnsHandler(cmd, response, f)
 			})
 			m.AddErrorHandler(func(err error) {
 				f <- &fuchsiaDevice{err: err}
@@ -247,17 +283,35 @@ func (cmd *devFinderCmd) sendMDNSPacket(ctx context.Context, packet mdns.Packet,
 type deviceFinder interface {
 	list(context.Context, chan *fuchsiaDevice) error
 	resolve(context.Context, chan *fuchsiaDevice, ...string) error
+	close()
+}
+
+func (cmd *devFinderCmd) close() {
+	for _, finder := range cmd.deviceFinders() {
+		finder.close()
+	}
 }
 
 func (cmd *devFinderCmd) deviceFinders() []deviceFinder {
-	res := make([]deviceFinder, 0)
-	if cmd.netboot {
-		res = append(res, &netbootFinder{deviceFinderBase{cmd: cmd}})
+	if len(cmd.finders) == 0 {
+		res := make([]deviceFinder, 0)
+		if cmd.netboot && cmd.ipv6 {
+			res = append(res, &netbootFinder{deviceFinderBase{cmd: cmd}})
+		}
+		if cmd.mdns {
+			if runtime.GOOS == "darwin" {
+				res = append(res, newDNSSDFinder(cmd))
+			} else {
+				res = append(res, &mdnsFinder{deviceFinderBase{cmd: cmd}})
+			}
+		}
+		cmd.finders = append(cmd.finders, res...)
 	}
-	if cmd.mdns {
-		res = append(res, &mdnsFinder{deviceFinderBase{cmd: cmd}})
-	}
-	return res
+	return cmd.finders
+}
+
+func (cmd *devFinderCmd) shouldIgnoreIP(addr net.IP) bool {
+	return addr.To4() != nil && !cmd.ipv4 || addr.To4() == nil && !cmd.ipv6
 }
 
 // filterInboundDevices takes a context and a channel (which has already been passed to some setup
@@ -270,6 +324,7 @@ func (cmd *devFinderCmd) deviceFinders() []deviceFinder {
 func (cmd *devFinderCmd) filterInboundDevices(ctx context.Context, f <-chan *fuchsiaDevice, domains ...string) ([]*fuchsiaDevice, error) {
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(cmd.timeout)*time.Millisecond)
 	defer cancel()
+	defer cmd.close()
 	devices := make(map[string]*fuchsiaDevice)
 	resolveDomains := make(map[string]int)
 	for _, d := range domains {
@@ -292,6 +347,9 @@ func (cmd *devFinderCmd) filterInboundDevices(ctx context.Context, f <-chan *fuc
 		case device := <-f:
 			if err := device.err; err != nil {
 				return nil, err
+			}
+			if cmd.shouldIgnoreIP(device.addr) {
+				continue
 			}
 			devices[device.domain] = device
 			if cmd.deviceLimit != 0 && len(devices) == cmd.deviceLimit {

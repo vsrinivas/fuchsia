@@ -12,6 +12,7 @@ go_library("main") {
   deps = [
     "//third_party/golibs:github.com/google/go-cmp",
     "//third_party/golibs:github.com/google/subcommands",
+    "//third_party/golibs:golang.org/x/net",
     "//tools/net/mdns",
     "//tools/net/netboot",
   ]
