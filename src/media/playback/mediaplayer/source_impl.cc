@@ -247,6 +247,8 @@ void ElementarySourceImpl::AddStream(
       SimpleStreamSinkImpl::Create(
           *output_stream_type,
           media::TimelineRate(tick_per_second_numerator, tick_per_second_denominator),
+          /* discard_requested_callback= */
+          [this]() { elementary_source_segment_raw_ptr_->Flush(false, []() {}); },
           std::move(simple_stream_sink_request),
           /* connection_failure_callback= */
           [this]() {

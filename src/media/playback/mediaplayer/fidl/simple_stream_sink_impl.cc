@@ -13,35 +13,40 @@ namespace media_player {
 // static
 std::shared_ptr<SimpleStreamSinkImpl> SimpleStreamSinkImpl::Create(
     const StreamType& output_stream_type, media::TimelineRate pts_rate,
+    fit::closure discard_requested_callback,
     fidl::InterfaceRequest<fuchsia::media::SimpleStreamSink> request,
     fit::closure connection_failure_callback) {
   FX_DCHECK(request);
-  return std::make_shared<SimpleStreamSinkImpl>(output_stream_type, pts_rate, std::move(request),
-                                                std::move(connection_failure_callback));
+  return std::make_shared<SimpleStreamSinkImpl>(
+      output_stream_type, pts_rate, std::move(discard_requested_callback), std::move(request),
+      std::move(connection_failure_callback));
 }
 
 // static
 std::shared_ptr<SimpleStreamSinkImpl> SimpleStreamSinkImpl::Create(
     const StreamType& output_stream_type, media::TimelineRate pts_rate,
+    fit::closure discard_requested_callback,
     fidl::InterfaceRequest<fuchsia::media::StreamSink> request,
     fit::closure connection_failure_callback) {
   FX_DCHECK(request);
 
   fidl::InterfaceRequest<fuchsia::media::SimpleStreamSink> simple_stream_sink_request(
       request.TakeChannel());
-  return SimpleStreamSinkImpl::Create(output_stream_type, pts_rate,
-                                      std::move(simple_stream_sink_request),
-                                      std::move(connection_failure_callback));
+  return SimpleStreamSinkImpl::Create(
+      output_stream_type, pts_rate, std::move(discard_requested_callback),
+      std::move(simple_stream_sink_request), std::move(connection_failure_callback));
 }
 
 SimpleStreamSinkImpl::SimpleStreamSinkImpl(
     const StreamType& output_stream_type, media::TimelineRate pts_rate,
+    fit::closure discard_requested_callback,
     fidl::InterfaceRequest<fuchsia::media::SimpleStreamSink> request,
     fit::closure connection_failure_callback)
     : output_stream_type_(output_stream_type.Clone()),
       pts_rate_(pts_rate),
       binding_(this, std::move(request)),
-      connection_failure_callback_(std::move(connection_failure_callback)) {
+      connection_failure_callback_(std::move(connection_failure_callback)),
+      discard_requested_callback_(std::move(discard_requested_callback)) {
   FX_DCHECK(output_stream_type_);
   FX_DCHECK(binding_.is_bound());
 
@@ -221,8 +226,14 @@ void SimpleStreamSinkImpl::EndOfStream() {
 
 void SimpleStreamSinkImpl::DiscardAllPackets(DiscardAllPacketsCallback callback) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  // |callback| is nullptr when |DiscardAllPacketsNoReply| calls this method.
-  // TODO(dalesat): Implement.
+
+  if (discard_requested_callback_) {
+    discard_requested_callback_();
+  }
+
+  if (callback) {
+    callback();
+  }
 }
 
 void SimpleStreamSinkImpl::DiscardAllPacketsNoReply() {

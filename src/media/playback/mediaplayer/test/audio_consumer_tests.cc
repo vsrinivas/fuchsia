@@ -525,5 +525,47 @@ TEST_F(AudioConsumerTests, StatusLoop) {
   EXPECT_FALSE(sink_connection_closed);
 }
 
+// Test that packet discard returns packets to client
+TEST_F(AudioConsumerTests, DiscardAllPackets) {
+  fuchsia::media::StreamSinkPtr sink;
+  fuchsia::media::AudioStreamType stream_type;
+  stream_type.frames_per_second = kFramesPerSecond;
+  stream_type.channels = kSamplesPerFrame;
+  stream_type.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
+  bool sink_connection_closed = false;
+
+  std::vector<zx::vmo> vmos(kNumVmos);
+  for (uint32_t i = 0; i < kNumVmos; i++) {
+    std::array<char, 1> test_data = {static_cast<char>(i)};
+    zx_status_t status = zx::vmo::create(kVmoSize, 0, &vmos[i]);
+    EXPECT_EQ(status, ZX_OK);
+    vmos[i].write(test_data.data(), 0, test_data.size());
+  }
+
+  audio_consumer_->CreateStreamSink(std::move(vmos), stream_type, nullptr, sink.NewRequest());
+
+  sink.set_error_handler(
+      [&sink_connection_closed](zx_status_t status) { sink_connection_closed = true; });
+
+  auto packet = fuchsia::media::StreamPacket::New();
+  packet->payload_buffer_id = 0;
+  packet->payload_size = kVmoSize;
+  packet->payload_offset = 0;
+  packet->pts = 0;
+
+  bool sent_packet = false;
+  sink->SendPacket(*packet, [&sent_packet]() { sent_packet = true; });
+
+  // no start
+  RunLoopUntilIdle();
+  EXPECT_FALSE(sent_packet);
+
+  sink->DiscardAllPacketsNoReply();
+
+  RunLoopUntil([&sent_packet]() { return sent_packet; });
+
+  EXPECT_FALSE(sink_connection_closed);
+}
+
 }  // namespace test
 }  // namespace media_player

@@ -144,7 +144,9 @@ void AudioConsumerImpl::CreateStreamSink(
   // Only allow one pending stream sink.
   // Setup timeline rate in ns units per interface docs.
   pending_simple_stream_sink_ = SimpleStreamSinkImpl::Create(
-      stream_type, media::TimelineRate::NsPerSecond, std::move(stream_sink_request),
+      stream_type, media::TimelineRate::NsPerSecond,
+      /* discard_requested_callback= */
+      [this]() { core_.Flush(false, []() {}); }, std::move(stream_sink_request),
       /* connection_failure_callback= */
       [this]() {
         // On disconnect, check for any pending sinks

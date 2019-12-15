@@ -32,6 +32,8 @@ class ElementarySourceSegment : public SourceSegment {
   // SourceSegment overrides.
   std::vector<NodeRef> source_nodes() const override { return nodes_; }
 
+  void Flush(bool hold_frame, fit::closure callback) override;
+
  protected:
   // SourceSegment overrides.
   void DidProvision() override;
@@ -45,8 +47,6 @@ class ElementarySourceSegment : public SourceSegment {
   bool can_seek() const override { return can_seek_; }
 
   const Metadata* metadata() const override { return metadata_.get(); }
-
-  void Flush(bool hold_frame, fit::closure callback) override;
 
   void Seek(int64_t position, fit::closure callback) override;
 

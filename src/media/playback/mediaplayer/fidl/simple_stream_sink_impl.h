@@ -10,6 +10,7 @@
 #include <unordered_map>
 
 #include "lib/fidl/cpp/binding.h"
+#include "lib/fit/function.h"
 #include "src/lib/fxl/synchronization/thread_checker.h"
 #include "src/media/playback/mediaplayer/graph/nodes/node.h"
 
@@ -21,6 +22,7 @@ class SimpleStreamSinkImpl : public Node, public fuchsia::media::SimpleStreamSin
   // Creates a simple stream sink.
   static std::shared_ptr<SimpleStreamSinkImpl> Create(
       const StreamType& output_stream_type, media::TimelineRate pts_rate,
+      fit::closure discard_requested_callback,
       fidl::InterfaceRequest<fuchsia::media::SimpleStreamSink> request,
       fit::closure connection_failure_callback);
 
@@ -28,10 +30,12 @@ class SimpleStreamSinkImpl : public Node, public fuchsia::media::SimpleStreamSin
   // some other method
   static std::shared_ptr<SimpleStreamSinkImpl> Create(
       const StreamType& output_stream_type, media::TimelineRate pts_rate,
+      fit::closure discard_requested_callback,
       fidl::InterfaceRequest<fuchsia::media::StreamSink> stream_sink_request,
       fit::closure connection_failure_callback);
 
   SimpleStreamSinkImpl(const StreamType& output_stream_type, media::TimelineRate pts_rate,
+                       fit::closure discard_requested_callback,
                        fidl::InterfaceRequest<fuchsia::media::SimpleStreamSink> request,
                        fit::closure connection_failure_callback);
 
@@ -82,6 +86,7 @@ class SimpleStreamSinkImpl : public Node, public fuchsia::media::SimpleStreamSin
   media::TimelineRate pts_rate_;
   fidl::Binding<fuchsia::media::SimpleStreamSink> binding_;
   fit::closure connection_failure_callback_;
+  fit::closure discard_requested_callback_;
   int64_t pts_ = 0;
   std::unordered_map<uint32_t, PayloadVmoInfo> payload_vmo_infos_by_id_;
   bool flushing_ = false;
