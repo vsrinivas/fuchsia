@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/public/gn/toolchain/c_utils.gni")
+
 group("test") {
   testonly = true
   deps = [
@@ -49,6 +51,17 @@ zx_test("fdio") {
     ":accept-child",
     ":null-namespace-child",
   ]
+
+  # fdio must not have any static constructors, because its code must work
+  # before static constructors have run.  Some compiler instrumentation
+  # modes generate static constructors that are harmless and superfluous, so
+  # don't check those builds.  Note that it's important that this be in deps
+  # here rather than in the group() above, because this will be evaluated
+  # after variant selection has chosen which build to actually test.
+  if (toolchain.tags + [ "instrumented" ] - [ "instrumented" ] ==
+      toolchain.tags) {
+    deps += [ ":no-static-ctor" ]
+  }
 }
 
 zx_executable("accept-child") {
@@ -72,5 +85,37 @@ zx_executable("null-namespace-child") {
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",
+  ]
+}
+
+fdio_rspfile = "$target_gen_dir/fdio.rsp"
+link_output_rspfile("fdio-rspfile") {
+  visibility = [ ":*" ]
+  deps = [
+    "..",
+  ]
+  outputs = [
+    fdio_rspfile,
+  ]
+}
+
+toolchain_utils_action("no-static-ctor") {
+  testonly = true
+  script = "no-static-ctor.sh"
+  utils = [ "readelf" ]
+  outputs = [
+    "$target_out_dir/$target_name",
+  ]
+  depfile = "${outputs[0]}.d"
+  deps = [
+    ":fdio-rspfile",
+  ]
+  inputs = [
+    fdio_rspfile,
+  ]
+  args = [
+    "@" + rebase_path(fdio_rspfile, root_build_dir),
+    rebase_path(outputs[0], root_build_dir),
+    rebase_path(depfile, root_build_dir),
   ]
 }
