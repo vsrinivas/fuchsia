@@ -21,15 +21,15 @@ type Config struct {
 	URL              string         `json:"repo_url"`
 	RootKeys         []KeyConfig    `json:"root_keys"`
 	Mirrors          []MirrorConfig `json:"mirrors"`
+	UpdatePackageURL string         `json:"update_package_url"`
 	RootVersion      uint32         `json:"root_version"`
 	RootThreshold    uint32         `json:"root_threshold"`
-	UpdatePackageURL string         `json:"update_package_url,omitempty"`
 }
 
 type MirrorConfig struct {
 	URL       string `json:"mirror_url"`
 	Subscribe bool   `json:"subscribe"`
-	BlobURL   string `json:"blob_mirror_url,omitempty"`
+	BlobURL   string `json:"blob_mirror_url",omitempty`
 }
 
 type KeyConfig struct {
