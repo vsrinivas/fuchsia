@@ -199,9 +199,6 @@ if (is_fuchsia) {
     # TODO(mcgrathr): Perhaps restrict this to only affected code.
     # For now, safest to do it everywhere.
     "//build/config/fuchsia:zircon_asserts",
-
-    # TODO(27339): Remove this when it's default in the compiler.
-    "//build/config:shadow-call-stack",
   ]
 }
 

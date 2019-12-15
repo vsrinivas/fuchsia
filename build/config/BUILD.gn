@@ -194,21 +194,21 @@ config("minimal_symbols") {
   cflags = [ "-gline-tables-only" ]
   asmflags = cflags
   ldflags = cflags
-  rustflags = ["-Cdebuginfo=1"]
+  rustflags = [ "-Cdebuginfo=1" ]
 }
 
 config("symbols") {
   cflags = [ "-g3" ]
   asmflags = cflags
   ldflags = cflags
-  rustflags = ["-Cdebuginfo=2"]
+  rustflags = [ "-Cdebuginfo=2" ]
 }
 
 config("no_symbols") {
   cflags = [ "-g0" ]
   asmflags = cflags
   ldflags = cflags
-  rustflags = ["-Cdebuginfo=0"]
+  rustflags = [ "-Cdebuginfo=0" ]
 }
 
 # Default symbols.
@@ -324,12 +324,6 @@ config("default_libs") {
 
   if (current_os == "mac") {
     configs += [ "//build/config/mac:default_libs" ]
-  }
-}
-
-config("shadow-call-stack") {
-  if (current_cpu == "arm64") {
-    cflags = [ "-fsanitize=shadow-call-stack" ]
   }
 }
 

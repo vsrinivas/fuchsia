@@ -549,14 +549,6 @@ config("no_safestack") {
   configs = [ ":no_stack_protector" ]
 }
 
-config("shadow-call-stack") {
-  # TODO(TC-616): This will eventually be the default in clang for
-  # aarch64-fuchsia targets.
-  if (current_cpu == "arm64" && !is_gcc) {
-    cflags = [ "-fsanitize=shadow-call-stack" ]
-  }
-}
-
 config("no-shadow-call-stack") {
   if (current_cpu == "arm64" && !is_gcc) {
     cflags = [ "-fno-sanitize=shadow-call-stack" ]

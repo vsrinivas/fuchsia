@@ -140,9 +140,6 @@ standard_environments = [
         ]
         add = [ "$zx/public/gn/config:static-libc++" ]
       },
-
-      # TODO(27339): Remove this when it's default in the compiler.
-      "$zx/public/gn/config:shadow-call-stack",
     ]
     implicit_deps = [
       "$zx/system/ulib/c",
