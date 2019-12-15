@@ -264,6 +264,8 @@ fn get_deprecated_symbols() -> SymbolTable {
         symbol_table.insert(make_identifier!("deprecated", key), Symbol::DeprecatedKey(value));
     };
 
+    insert_deprecated("BIND_PROTOCOL", 0x0001);
+
     insert_deprecated("BIND_PLATFORM_DEV_VID", 0x0300);
     insert_deprecated("BIND_PCI_VID", 0x0100);
 
