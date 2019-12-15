@@ -10,11 +10,11 @@
 
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
+#include "src/ledger/lib/loop_fixture/test_loop_fixture.h"
 
 namespace ledger {
 
-class TestWithEnvironment : public gtest::TestLoopFixture {
+class TestWithEnvironment : public TestLoopFixture {
  public:
   // Creates a default test environment.
   TestWithEnvironment();

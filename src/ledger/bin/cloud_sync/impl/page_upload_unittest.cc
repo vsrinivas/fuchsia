@@ -30,7 +30,6 @@
 #include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/encoding/encoding.h"
 #include "src/ledger/lib/socket/strings.h"
-#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace cloud_sync {
 namespace {

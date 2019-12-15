@@ -27,9 +27,9 @@
 #include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
+#include "src/ledger/lib/loop_fixture/real_loop_fixture.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/fsl/io/fd.h"
-#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "third_party/abseil-cpp/absl/strings/escaping.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
@@ -80,7 +80,7 @@ std::vector<uint8_t> TestArray() {
   return result;
 }
 
-class LedgerEndToEndTest : public gtest::RealLoopFixture {
+class LedgerEndToEndTest : public ledger::RealLoopFixture {
  public:
   LedgerEndToEndTest() : component_context_(sys::ComponentContext::Create()) {
     component_context()->svc()->Connect(launcher_.NewRequest());

@@ -20,7 +20,6 @@
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/coroutine/coroutine_impl.h"
-#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace p2p_sync {
 class PageCommunicatorImplInspectorForTest {

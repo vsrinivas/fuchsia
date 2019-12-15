@@ -29,7 +29,7 @@ executable("cloud_provider") {
     "//sdk/lib/sys/cpp",
     "//src/ledger/bin/testing:gtest_main",
     "//src/ledger/lib/encoding",
-    "//src/lib/testing/loop_fixture",
+    "//src/ledger/lib/loop_fixture",
     "//third_party/abseil-cpp",
     "//third_party/googletest:gmock",
   ]

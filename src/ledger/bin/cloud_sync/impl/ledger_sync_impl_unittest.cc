@@ -11,7 +11,6 @@
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/callback/capture.h"
 #include "src/ledger/lib/callback/set_when_called.h"
-#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace cloud_sync {
 

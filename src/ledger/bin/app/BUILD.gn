@@ -274,6 +274,7 @@ source_set("unittests") {
     "//src/ledger/lib/callback",
     "//src/ledger/lib/convert",
     "//src/ledger/lib/logging",
+    "//src/ledger/lib/loop_fixture",
     "//src/ledger/lib/vmo",
     "//src/lib/inspect_deprecated",
     "//src/lib/inspect_deprecated:reader",

@@ -132,7 +132,7 @@ You can refer to the full [fuzzing] instructions for details.
 [Address Sanitizer]: https://github.com/google/sanitizers/wiki/AddressSanitizer
 [Google Test]: https://github.com/google/googletest
 [gtest_filter]: https://github.com/google/googletest/blob/master/googletest/docs/advanced.md#running-a-subset-of-the-tests
-[TestLoopFixture]: https://fuchsia.googlesource.com/fuchsia/+/master/src/lib/testing/loop_fixture/test_loop_fixture.h
+[TestLoopFixture]: https://fuchsia.googlesource.com/fuchsia/+/master/src/ledger/lib/loop_fixture/test_loop_fixture.h
 [IntegrationTest]: /src/ledger/bin/tests/integration/integration_test.h
 [/bin/ledger/tests/integration]: /src/ledger/bin/tests/integration
 [/bin/ledger/tests/e2e_local]: /src/ledger/bin/tests/e2e_local

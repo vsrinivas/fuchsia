@@ -15,7 +15,7 @@
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/ledger/lib/convert/convert.h"
-#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
+#include "src/ledger/lib/loop_fixture/test_loop_fixture.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace cloud_sync {
@@ -70,7 +70,7 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
   async_dispatcher_t* const dispatcher_;
 };
 
-class BatchDownloadTest : public gtest::TestLoopFixture {
+class BatchDownloadTest : public ledger::TestLoopFixture {
  public:
   BatchDownloadTest() : storage_(dispatcher()), encryption_service_(dispatcher()) {}
   BatchDownloadTest(const BatchDownloadTest&) = delete;

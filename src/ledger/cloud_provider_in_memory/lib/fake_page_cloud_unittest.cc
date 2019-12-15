@@ -19,7 +19,7 @@
 #include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/encoding/encoding.h"
-#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
+#include "src/ledger/lib/loop_fixture/test_loop_fixture.h"
 
 namespace ledger {
 namespace {
@@ -50,7 +50,7 @@ class FakeRandom : public rng::Random {
   uint8_t value_ = 0;
 };
 
-class FakePageCloudTest : public gtest::TestLoopFixture {
+class FakePageCloudTest : public TestLoopFixture {
  public:
   FakePageCloudTest()
       : fake_page_cloud_(dispatcher(), &fake_random_, InjectNetworkError::NO,

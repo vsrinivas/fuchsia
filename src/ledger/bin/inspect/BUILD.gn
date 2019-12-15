@@ -32,7 +32,7 @@ source_set("unittests") {
     ":inspect",
     "//src/ledger/bin/app:constants",
     "//src/ledger/bin/storage/public",
-    "//src/lib/testing/loop_fixture",
+    "//src/ledger/lib/loop_fixture",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]

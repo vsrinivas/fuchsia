@@ -5,11 +5,11 @@
 #ifndef SRC_LEDGER_BIN_TESTING_RUN_IN_COROUTINE_H_
 #define SRC_LEDGER_BIN_TESTING_RUN_IN_COROUTINE_H_
 
+#include <lib/async-testing/test_loop.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
 #include "src/ledger/bin/environment/environment.h"
-#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace ledger {
 

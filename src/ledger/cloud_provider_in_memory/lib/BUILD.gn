@@ -51,7 +51,7 @@ source_set("unittests") {
     "//src/ledger/lib/callback",
     "//src/ledger/lib/convert",
     "//src/ledger/lib/encoding",
-    "//src/lib/testing/loop_fixture",
+    "//src/ledger/lib/loop_fixture",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]

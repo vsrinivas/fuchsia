@@ -12,11 +12,11 @@
 
 #include "peridot/lib/rng/test_random.h"
 #include "src/ledger/bin/tests/cloud_provider/types.h"
-#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
+#include "src/ledger/lib/loop_fixture/test_loop_fixture.h"
 
 namespace cloud_provider {
 
-class ValidationTest : public ::gtest::TestLoopFixture {
+class ValidationTest : public ledger::TestLoopFixture {
  public:
   ValidationTest();
   ValidationTest(const ValidationTest&) = delete;

@@ -86,6 +86,7 @@ source_set("unittests") {
     "//src/ledger/lib/callback",
     "//src/ledger/lib/encoding",
     "//src/ledger/lib/logging",
+    "//src/ledger/lib/loop_fixture",
     "//src/ledger/lib/vmo",
     "//third_party/abseil-cpp",
     "//third_party/googletest:gmock",

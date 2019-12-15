@@ -12,13 +12,13 @@
 #include "peridot/lib/rng/test_random.h"
 #include "src/ledger/bin/environment/test_loop_notification.h"
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
+#include "src/ledger/lib/loop_fixture/test_loop_fixture.h"
 #include "src/lib/timekeeper/test_clock.h"
 
 namespace ledger {
 namespace {
 
-class EnvironmentTest : public ::gtest::TestLoopFixture {
+class EnvironmentTest : public TestLoopFixture {
  public:
   sys::testing::ComponentContextProvider component_context_provider_;
 };

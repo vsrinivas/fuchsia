@@ -42,7 +42,7 @@ source_set("unittests") {
 
   deps = [
     ":socket",
-    "//src/lib/testing/loop_fixture",
+    "//src/ledger/lib/loop_fixture",
     "//third_party/abseil-cpp",
     "//third_party/googletest:gtest",
   ]

@@ -6,13 +6,13 @@
 
 #include <lib/fit/function.h>
 
+#include "src/ledger/lib/loop_fixture/test_loop_fixture.h"
 #include "src/ledger/lib/socket/strings.h"
-#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace ledger {
 namespace {
 
-using SocketDrainerTest = ::gtest::TestLoopFixture;
+using SocketDrainerTest = TestLoopFixture;
 
 class Client : public SocketDrainer::Client {
  public:

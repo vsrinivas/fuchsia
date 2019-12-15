@@ -15,8 +15,8 @@
 #include "gtest/gtest.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
+#include "src/ledger/lib/loop_fixture/test_loop_fixture.h"
 #include "src/ledger/lib/vmo/strings.h"
-#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "third_party/abseil-cpp/absl/strings/str_format.h"
 
 namespace ledger {
@@ -51,7 +51,7 @@ std::string GetValue(size_t index, size_t min_value_size = 0u) {
   return ::testing::AssertionSuccess();
 }
 
-using SerializationSizeTest = gtest::TestLoopFixture;
+using SerializationSizeTest = TestLoopFixture;
 
 class FakeSnapshotImpl : public PageSnapshot {
  public:

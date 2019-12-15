@@ -10,12 +10,12 @@
 #include <string>
 
 #include "gtest/gtest.h"
-#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
+#include "src/ledger/lib/loop_fixture/test_loop_fixture.h"
 
 namespace ledger {
 namespace {
 
-class SyncWatcherSetTest : public gtest::TestLoopFixture {
+class SyncWatcherSetTest : public TestLoopFixture {
  public:
   SyncWatcherSetTest() = default;
   SyncWatcherSetTest(const SyncWatcherSetTest&) = delete;

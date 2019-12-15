@@ -9,8 +9,8 @@
 #include "gtest/gtest.h"
 #include "src/ledger/lib/callback/capture.h"
 #include "src/ledger/lib/callback/set_when_called.h"
+#include "src/ledger/lib/loop_fixture/test_loop_fixture.h"
 #include "src/lib/callback/scoped_task_runner.h"
-#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace storage {
 namespace {
@@ -41,7 +41,7 @@ class SplittingDataSource : public DataSource {
   callback::ScopedTaskRunner task_runner_;
 };
 
-using ReadDataSourceTest = gtest::TestLoopFixture;
+using ReadDataSourceTest = ledger::TestLoopFixture;
 
 TEST_F(ReadDataSourceTest, ReadDataSource) {
   std::string expected_content = "Hello World";

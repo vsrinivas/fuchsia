@@ -15,7 +15,7 @@
 #include "src/ledger/bin/storage/fake/fake_db_factory.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/convert/convert.h"
-#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
+#include "src/ledger/lib/loop_fixture/test_loop_fixture.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
@@ -57,7 +57,7 @@ class DiskCleanupManagerTest : public TestWithEnvironment {
   DiskCleanupManagerTest(const DiskCleanupManagerTest&) = delete;
   DiskCleanupManagerTest& operator=(const DiskCleanupManagerTest&) = delete;
 
-  // gtest::TestLoopFixture:
+  // ledger::TestLoopFixture:
   void SetUp() override {
     ResetPageUsageDb();
     disk_cleanup_manager_ = std::make_unique<DiskCleanupManagerImpl>(&environment_, db_.get());

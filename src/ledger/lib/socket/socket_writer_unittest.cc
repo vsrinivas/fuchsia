@@ -8,15 +8,15 @@
 
 #include <utility>
 
+#include "src/ledger/lib/loop_fixture/test_loop_fixture.h"
 #include "src/ledger/lib/socket/socket_drainer_client.h"
 #include "src/ledger/lib/socket/socket_pair.h"
-#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace socket {
 namespace {
 
-using SocketWriterTest = gtest::TestLoopFixture;
+using SocketWriterTest = ledger::TestLoopFixture;
 
 class StringClient : public SocketWriter::Client {
  public:

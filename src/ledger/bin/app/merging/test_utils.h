@@ -17,7 +17,6 @@
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
-#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace ledger {
 

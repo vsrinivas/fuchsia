@@ -4,13 +4,13 @@
 
 #include "src/ledger/lib/socket/socket_drainer_client.h"
 
+#include "src/ledger/lib/loop_fixture/test_loop_fixture.h"
 #include "src/ledger/lib/socket/socket_pair.h"
-#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace socket {
 namespace {
 
-using SocketDrainerClientTest = gtest::TestLoopFixture;
+using SocketDrainerClientTest = ledger::TestLoopFixture;
 
 // Regression test for LE-229.
 TEST_F(SocketDrainerClientTest, DoNotCallOnDelete) {

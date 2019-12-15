@@ -100,7 +100,6 @@ source_set("integration_lib") {
     "//sdk/fidl/fuchsia.ledger",
     "//src/ledger/bin/fidl",
     "//src/ledger/bin/testing:ledger_instance_factory",
-    "//src/lib/testing/loop_fixture",
     "//third_party/abseil-cpp",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop-cpp",

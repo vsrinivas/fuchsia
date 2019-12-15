@@ -1,0 +1,51 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+
+source_set("loop_fixture") {
+  testonly = true
+
+  sources = [
+    "real_loop_fixture.cc",
+    "real_loop_fixture.h",
+    "test_loop_fixture.cc",
+    "test_loop_fixture.h",
+  ]
+
+  deps = [
+    "//third_party/abseil-cpp",
+    "//zircon/public/lib/async-cpp",
+  ]
+
+  public_deps = [
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/async-testing",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
+  ]
+
+  configs += [ "//src/ledger:ledger_config" ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "real_loop_fixture_unittest.cc",
+    "test_loop_fixture_unittest.cc",
+  ]
+
+  deps = [
+    ":loop_fixture",
+    "//src/ledger/lib/logging",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-cpp",
+  ]
+
+  configs += [ "//src/ledger:ledger_config" ]
+}

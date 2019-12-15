@@ -6,7 +6,7 @@
 #include "src/ledger/bin/fidl/syncable/syncable_fidl_test.h"
 #include "src/ledger/lib/callback/capture.h"
 #include "src/ledger/lib/callback/set_when_called.h"
-#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
+#include "src/ledger/lib/loop_fixture/test_loop_fixture.h"
 
 namespace ledger {
 namespace {
@@ -75,7 +75,7 @@ class SyncableTestSyncableDelegateImpl
   fit::closure delayed_callback_;
 };
 
-class SyncableTest : public gtest::TestLoopFixture {
+class SyncableTest : public TestLoopFixture {
  protected:
   SyncableTest() : binding_(&impl_, ptr_.NewRequest()) {}
 

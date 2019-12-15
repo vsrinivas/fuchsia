@@ -17,7 +17,7 @@
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
-#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
+#include "src/ledger/lib/loop_fixture/test_loop_fixture.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
@@ -95,7 +95,7 @@ class BackgroundSyncManagerTest : public TestWithEnvironment {
       : tmp_location_(environment_.file_system()->CreateScopedTmpLocation()),
         db_factory_(environment_.file_system(), environment_.dispatcher()) {}
 
-  // gtest::TestLoopFixture:
+  // ledger::TestLoopFixture:
   void SetUp() override {
     ResetPageUsageDb();
     background_sync_manager_ =

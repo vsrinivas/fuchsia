@@ -8,17 +8,17 @@
 #include "gtest/gtest.h"
 #include "src/ledger/bin/testing/ledger_memory_usage.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/loop_fixture/test_loop_fixture.h"
 #include "src/ledger/lib/socket/socket_pair.h"
 #include "src/ledger/lib/socket/strings.h"
 #include "src/ledger/lib/vmo/strings.h"
-#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace storage {
 namespace {
 
 using ::testing::Lt;
 
-class DataSourceTest : public gtest::TestLoopFixture {
+class DataSourceTest : public ledger::TestLoopFixture {
  protected:
   ::testing::AssertionResult TestDataSource(std::string expected,
                                             std::unique_ptr<DataSource> source) {

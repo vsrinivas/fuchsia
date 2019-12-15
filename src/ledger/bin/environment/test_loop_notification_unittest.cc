@@ -7,12 +7,12 @@
 #include <lib/async/cpp/task.h>
 
 #include "gtest/gtest.h"
-#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
+#include "src/ledger/lib/loop_fixture/test_loop_fixture.h"
 
 namespace ledger {
 namespace {
 
-using TestLoopNotificationTest = ::gtest::TestLoopFixture;
+using TestLoopNotificationTest = TestLoopFixture;
 
 TEST_F(TestLoopNotificationTest, NotifyAcrossSubloops) {
   TestLoopNotification notification(&test_loop());
