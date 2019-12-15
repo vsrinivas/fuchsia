@@ -47,7 +47,7 @@ For the `BlackBoxTest` library to function correctly, the integration test
 component manifest must specify (at minimum) the following features and
 services:
 
-```
+```rust
 "sandbox": {
     "features": [
         "hub"
@@ -68,8 +68,8 @@ environment and launch component manager.
 
 In the simplest case, a black box test looks like the following:
 
-```
-let test = BlackBoxTest::default(“fuchsia-pkg://fuchsia.com/foo#meta/root.cm”).await?;
+```rust
+let test = BlackBoxTest::default("fuchsia-pkg://fuchsia.com/foo#meta/root.cm").await?;
 ```
 
 By the end of this statement:
@@ -93,7 +93,7 @@ resolved.
 The `BreakpointSystem` FIDL service is used to set breakpoints and unblock
 component manager. This code demonstrates using the `BreakpointSystem` service:
 
-```
+```rust
 let breakpoint_system = test.connect_to_breakpoint_system().await?;
 let receiver = breakpoint_system.set_breakpoints(vec![StopInstance::TYPE]).await?;
 breakpoint_system.start_component_manager().await?;
@@ -116,11 +116,11 @@ In some cases, you may want to customize `BlackBoxTest::default`.
 
 - A file descriptor to redirect output from components.
 
-```
+```rust
 let test = BlackBoxTest::custom(
-    “fuchsia-pkg://fuchsia.com/my_custom_cm#meta/component_manager.cmx”,
-    “fuchsia-pkg://fuchsia.com/foo#meta/root.cm”,
-    vec![(“my_dir”, my_dir_handle)],
+    "fuchsia-pkg://fuchsia.com/my_custom_cm#meta/component_manager.cmx",
+    "fuchsia-pkg://fuchsia.com/foo#meta/root.cm",
+    vec![("my_dir", my_dir_handle)],
     output_file_descriptor
 ).await?;
 ```
@@ -128,7 +128,7 @@ let test = BlackBoxTest::custom(
 The `BlackBoxTest` library also provides convenience methods for starting up
 component manager and expecting a particular output:
 
-```
+```rust
 launch_component_and_expect_output(
     "fuchsia-pkg://fuchsia.com/echo#meta/echo.cm",
     "Hippos rule!",
@@ -158,10 +158,10 @@ For reliable state verification, a test must be able to:
 
 The workflow for the `BreakpointSystemClient` library looks something like this:
 
-```
+```rust
 // Create a BreakpointSystemClient using ::new() or use the client
 // provided by BlackBoxTest
-let test = BlackBoxTest::default(“fuchsia-pkg://fuchsia.com/foo#meta/root.cm”).await?;
+let test = BlackBoxTest::default("fuchsia-pkg://fuchsia.com/foo#meta/root.cm").await?;
 
 // Get a receiver by setting breakpoints
 let breakpoint_system = test.connect_to_breakpoint_system().await?;
@@ -195,7 +195,7 @@ functionality:
 It is possible to register multiple receivers, each listening to their own set
 of events:
 
-```
+```rust
 // StartInstance and RouteFrameworkCapability events can be interleaved,
 // so use different receivers.
 let start_receiver = breakpoint_system.set_breakpoints(vec![StartInstance::TYPE]).await?;
@@ -210,7 +210,7 @@ for _ in 1..=5 {
 
 // Expect a RouteFrameworkCapability event from /foo:0
 let invocation =
-    route_receiver.expect_exact::<RouteFrameworkCapability>(“/foo:0”).await?;
+    route_receiver.expect_exact::<RouteFrameworkCapability>("/foo:0").await?;
 invocation.resume().await?;
 ```
 
@@ -219,7 +219,7 @@ invocation.resume().await?;
 It is possible to listen for specific invocations and then discard the receiver,
 causing future invocations to be ignored:
 
-```
+```rust
 // Set a breakpoint on StopInstance events
 let stop_receiver = breakpoint_system.set_breakpoints(vec![StopInstance::TYPE]).await?;
 
@@ -228,8 +228,8 @@ let stop_receiver = breakpoint_system.set_breakpoints(vec![StopInstance::TYPE]).
     let use_receiver = breakpoint_system.set_breakpoints(vec![UseCapability::TYPE]).await?;
 
     // Expect a UseCapability event from /bar:0
-    let invocation = route_receiver.expect_exact::<UseCapability>(“/bar:0”).await?;
-    println!(“/bar:0 used capability -> {}”, invocation.capability_path);
+    let invocation = route_receiver.expect_exact::<UseCapability>("/bar:0").await?;
+    println!("/bar:0 used capability -> {}", invocation.capability_path);
     invocation.resume().await?;
 }
 
@@ -239,7 +239,7 @@ let stop_receiver = breakpoint_system.set_breakpoints(vec![StopInstance::TYPE]).
 
 // Expect a StopInstance event
 let invocation = stop_receiver.expect_type::<StopInstance>().await?;
-println!(“{} was stopped!”, invocation.target_moniker);
+println!("{} was stopped!", invocation.target_moniker);
 invocation.resume().await?;
 ```
 
@@ -251,7 +251,7 @@ to do this is for a component to connect to a capability offered by the test.
 It is possible to listen for a `RouteFrameworkCapability` or
 `RouteBuiltinCapability` event and inject an external capability provider:
 
-```
+```rust
 // Create the server end of EchoService
 let echo_service = EchoService::new();
 
@@ -261,8 +261,8 @@ let receiver =
 
 // Wait until /foo:0 attempts to connect to the EchoService framework capability
 let invocation = receiver.wait_until_route_framework_capability(
-    “/foo:0”,
-    “/svc/fuchsia.echo.EchoService”,
+    "/foo:0",
+    "/svc/fuchsia.echo.EchoService",
 ).await?;
 
 // Inject the EchoService capability
@@ -278,7 +278,7 @@ invocation.resume().await?;
 It is possible to soak up events of certain types and drain them at a later
 point in time:
 
-```
+```rust
 let receiver = breakpoint_system.set_breakpoints(vec![PostDestroyInstance::TYPE]).await?;
 let sink = breakpoint_system.soak_events(vec![StartInstance::TYPE]).await?;
 
