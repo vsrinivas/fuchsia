@@ -5,9 +5,10 @@
 use {
     crate::key_util::get_input_sequence_for_key_event,
     crate::pty::Pty,
+    crate::ui::TerminalScene,
     carnelian::{
-        make_message, AnimationMode, App, Color, FontDescription, FontFace, Message, Paint, Point,
-        Size, ViewAssistant, ViewAssistantContext, ViewKey, ViewMessages,
+        make_message, AnimationMode, App, Message, Size, ViewAssistant, ViewAssistantContext,
+        ViewKey,
     },
     failure::{Error, ResultExt},
     fidl_fuchsia_hardware_pty::WindowSize,
@@ -26,13 +27,13 @@ use {
     },
 };
 
-static FONT_DATA: &'static [u8] =
-    include_bytes!("../../../../prebuilt/third_party/fonts/robotomono/RobotoMono-Regular.ttf");
-
 /// An enum representing messages that are incoming from the Pty.
 enum PtyIncomingMessages {
     /// Message sent when a byte comes in from the Pty.
     ByteReceived(u8),
+
+    /// Message sent when all the bytes in a read loop have been processed.
+    DidProcessBytes,
 }
 
 /// Messages which can be used to interact with the Pty.
@@ -45,21 +46,19 @@ enum PtyOutgoingMessages {
 }
 
 pub struct TerminalViewAssistant {
-    cell_size: Size,
-    font_face: FontFace<'static>,
     last_known_size: Size,
     output_buffer: Vec<u8>,
     parser: Processor,
     pty: Option<PtyWrapper>,
+    terminal_scene: TerminalScene,
     term: Term,
 }
 
 impl TerminalViewAssistant {
     /// Creates a new instance of the TerminalViewAssistant.
     pub fn new() -> TerminalViewAssistant {
-        let font_face = FontFace::new(FONT_DATA).expect("unable to load font data");
         let parser = Processor::new();
-        let cell_size = Size::new(14.0, 22.0);
+        let cell_size = Size::new(12.0, 22.0);
         let term = Term::new(
             &Config::default(),
             SizeInfo {
@@ -73,13 +72,12 @@ impl TerminalViewAssistant {
         );
 
         TerminalViewAssistant {
-            cell_size,
-            font_face,
             last_known_size: Size::zero(),
             output_buffer: Vec::new(),
             parser,
             pty: None,
             term,
+            terminal_scene: TerminalScene::default(),
         }
     }
 
@@ -91,20 +89,32 @@ impl TerminalViewAssistant {
 
     /// Checks to see if the size of terminal has changed and resizes if it has.
     fn resize_if_needed(&mut self, new_size: &Size, logical_size: &Size) -> Result<(), Error> {
+        // The shell works on logical size units but the views operate based on the size
         if TerminalViewAssistant::needs_resize(&self.last_known_size, new_size) {
+            let floored_size = new_size.floor();
+            let term_size = TerminalScene::calculate_term_size_from_size(&floored_size);
+
+            let last_size_info = self.term.size_info();
+            let cell_width = last_size_info.cell_width;
+            let cell_height = last_size_info.cell_height;
+            let padding_x = last_size_info.padding_x;
+            let padding_y = last_size_info.padding_y;
+
             self.term.resize(&SizeInfo {
-                width: new_size.width.floor(),
-                height: new_size.height.floor(),
-                cell_width: self.cell_size.width,
-                cell_height: self.cell_size.height,
-                padding_x: 0.0,
-                padding_y: 0.0,
+                width: term_size.width,
+                height: term_size.height,
+                cell_width,
+                cell_height,
+                padding_x,
+                padding_y,
             });
 
             self.queue_outgoing_message(PtyOutgoingMessages::Resize(*logical_size))
                 .context("unable to queue outgoing pty message")?;
 
-            self.last_known_size = new_size.floor();
+            self.last_known_size = floored_size;
+            self.terminal_scene.update_size(floored_size);
+            self.terminal_scene.update_cell_size(Size::new(cell_width, cell_height));
         }
         Ok(())
     }
@@ -162,7 +172,7 @@ impl TerminalViewAssistant {
                                     app.queue_message(view_key, make_message(PtyIncomingMessages::ByteReceived(*byte)));
                                 }
                                 // trigger a call to update
-                                app.queue_message(view_key, make_message(ViewMessages::Update));
+                                app.queue_message(view_key, make_message(PtyIncomingMessages::DidProcessBytes));
                             });
                         }
                     },
@@ -175,7 +185,6 @@ impl TerminalViewAssistant {
                                 });
                             },
                             PtyOutgoingMessages::Resize(size) => {
-                                println!("Sending resize message: {}", size);
                                 let pty = pty_clone.borrow_mut();
                                 let window_size = WindowSize { width: size.width as u32, height: size.height as u32 };
                                 pty.resize(window_size).await.unwrap_or_else(|e: failure::Error| {
@@ -197,6 +206,7 @@ impl TerminalViewAssistant {
         if let Some(pty) = &mut self.pty {
             pty.sender.try_send(message).context("Unable queue pty message")?;
         }
+
         Ok(())
     }
 
@@ -221,31 +231,12 @@ impl ViewAssistant for TerminalViewAssistant {
         self.spawn_pty_if_needed(&context.logical_size, context.key)?;
         self.resize_if_needed(&context.size, &context.logical_size)?;
 
+        // Tell the termnial scene to render the values
         let canvas = &mut context.canvas.as_ref().unwrap().borrow_mut();
-        if self.output_buffer.len() > 0 {
-            if let Some(pty) = &mut self.pty {
-                for byte in &self.output_buffer {
-                    self.parser.advance(&mut self.term, *byte, &mut pty.fd);
-                }
-                self.output_buffer.clear();
-            }
-        }
-
-        let size = self.cell_size;
-        let mut font = FontDescription { face: &self.font_face, size: 20, baseline: 18 };
-        for cell in self.term.renderable_cells(&Config::default(), None, true) {
-            let mut buffer = [0u8; 32];
-            canvas.fill_text_cells(
-                cell.c.encode_utf8(&mut buffer),
-                Point::new(size.width * cell.column.0 as f32, size.height * cell.line.0 as f32),
-                size,
-                &mut font,
-                &Paint {
-                    fg: Color { r: cell.fg.r, g: cell.fg.g, b: cell.fg.b, a: 0xFF },
-                    bg: Color { r: cell.bg.r, g: cell.bg.g, b: cell.bg.b, a: 0xFF },
-                },
-            )
-        }
+        let config = Config::default();
+        let iter =
+            self.term.renderable_cells(&config, None /* selection */, true /* focused */);
+        self.terminal_scene.render(canvas, iter);
         Ok(())
     }
 
@@ -258,7 +249,7 @@ impl ViewAssistant for TerminalViewAssistant {
     }
 
     fn initial_animation_mode(&mut self) -> AnimationMode {
-        AnimationMode::None
+        AnimationMode::EveryFrame
     }
 
     fn handle_message(&mut self, message: Message) {
@@ -266,6 +257,16 @@ impl ViewAssistant for TerminalViewAssistant {
             match pty_message {
                 PtyIncomingMessages::ByteReceived(value) => {
                     self.output_buffer.push(*value);
+                }
+                PtyIncomingMessages::DidProcessBytes => {
+                    if !self.output_buffer.is_empty() {
+                        if let Some(pty) = &mut self.pty {
+                            for byte in &self.output_buffer {
+                                self.parser.advance(&mut self.term, *byte, &mut pty.fd);
+                            }
+                            self.output_buffer.clear();
+                        }
+                    }
                 }
             }
         }
@@ -348,10 +349,12 @@ mod tests {
         view.resize_if_needed(&new_size, &Size::zero()).expect("call to resize failed");
 
         let size_info = view.term.size_info();
+        let expected_size = TerminalScene::calculate_term_size_from_size(&view.last_known_size);
 
-        // we want to make sure that the values are floored
-        assert_eq!(size_info.width, 100.0);
-        assert_eq!(size_info.height, 100.0);
+        // we want to make sure that the values are floored and that they
+        // match what the scene will render the terminal as.
+        assert_eq!(size_info.width, expected_size.width);
+        assert_eq!(size_info.height, expected_size.height);
     }
 
     #[test]

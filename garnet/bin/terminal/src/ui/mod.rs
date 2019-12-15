@@ -2,12 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![recursion_limit = "4096"]
+mod terminal_scene;
+mod terminal_views;
 
-mod app;
-mod key_util;
-mod pty;
-mod terminal_view;
-mod ui;
-
-pub use app::TerminalAssistant;
+pub use terminal_scene::TerminalScene;
