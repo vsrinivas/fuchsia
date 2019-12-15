@@ -128,35 +128,36 @@ double _computeFps(Model model, Thread uiThread, Thread gpuThread) {
     // Hitting this indicates a logic error in the above grouping code.
     assert(group.events.isNotEmpty);
 
-    // We only start counting time at the first "VSYNC", in order to ensure
-    // that the pipeline warming up does not penalize FPS throughput.  The
-    // part of the duration we're dropping here will be captured by latency
-    // benchmarks.
-    DurationEvent firstVsync;
-    TimePoint lastVsyncStart = TimePoint.fromEpochDelta(TimeDelta.zero());
-
     final vsyncCallbacks = filterEventsTyped<DurationEvent>(group.events,
         category: 'flutter', name: 'vsync callback');
     final followingVsyncs =
         vsyncCallbacks.map(findFollowingVsync).where((e) => e != null);
-    countedDisplayVsyncs.addAll(followingVsyncs);
 
-    firstVsync = followingVsyncs.first;
-    if (followingVsyncs.last.start != null) {
-      lastVsyncStart = followingVsyncs.last.start;
+    if (followingVsyncs.isEmpty) {
+      print('Warning, found frame group with event count '
+          '${group.events.length} and "vsync callback" count '
+          '${vsyncCallbacks.length} connected to 0 "VSYNC" events');
+      continue;
     }
 
+    countedDisplayVsyncs.addAll(followingVsyncs);
+
+    // We only start counting time at the first "VSYNC", in order to ensure
+    // that the pipeline warming up does not penalize FPS throughput.  The
+    // part of the duration we're dropping here will be captured by latency
+    // benchmarks.
+    final firstVsyncStart = followingVsyncs.first.start;
     // Since we started the window at the beginning of the first "VSYNC", we
     // need to end the window at the last "VSYNC" + refresh rate in order to
     // compute a correct FPS value.
-    final adjustedGroupEnd = _max(group.end, lastVsyncStart + refreshRate);
-    if (firstVsync == null) {
-      totalDuration += adjustedGroupEnd - group.events.first.start;
-      continue;
-    }
-    totalDuration += adjustedGroupEnd - firstVsync.start;
+    final adjustedGroupEnd =
+        _max(group.end, followingVsyncs.last.start + refreshRate);
+    totalDuration += adjustedGroupEnd - firstVsyncStart;
   }
 
+  if (countedDisplayVsyncs.isEmpty) {
+    return 0.0;
+  }
   return countedDisplayVsyncs.length / totalDuration.toSecondsF();
 }
 

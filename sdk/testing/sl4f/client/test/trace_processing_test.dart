@@ -390,6 +390,18 @@ void main(List<String> args) {
     expect(computeMean(results[2].values), _closeTo(2.0420014880952384));
   });
 
+  test('Flutter frame stats metric (no Scenic edge case)', () async {
+    final model = createModelFromJsonString(flutterAppNoScenicTraceJsonString);
+    final metricsSpec = MetricsSpec(
+        name: 'flutter_frame_stats',
+        extraArgs: {'flutterAppName': 'flutter_app'});
+    final results = flutterFrameStatsMetricsProcessor(model, metricsSpec);
+
+    expect(results[0].values[0], _closeTo(0.0));
+    expect(computeMean(results[1].values), _closeTo(2.7054272608695653));
+    expect(computeMean(results[2].values), _closeTo(4.908424297872341));
+  });
+
   test('Scenic frame stats metric', () async {
     final model = createModelFromJsonString(scenicTraceJsonString);
     final metricsSpec = MetricsSpec(name: 'scenic_frame_stats');
