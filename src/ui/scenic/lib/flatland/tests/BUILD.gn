@@ -16,6 +16,7 @@ executable("unittests") {
   sources = [
     "flatland_unittest.cc",
     "hanging_get_helper_unittest.cc",
+    "link_system_unittest.cc",
     "topology_system_unittest.cc",
     "transform_graph_unittest.cc",
   ]

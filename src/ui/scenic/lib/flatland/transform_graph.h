@@ -72,11 +72,25 @@ class TransformGraph {
   // transforms being added to the dead_transforms list the next time ComputeAndCleanup() is called.
   // The parent transform should be an unreleased transform created by calling CreateTransform() on
   // this object, but this is only enforced by DCHECK. Returns false if the child transform was not
-  // previously a child of the parent transform.
+  // previously a child of the parent transform. This function does not remove priority children.
   bool RemoveChild(TransformHandle parent, TransformHandle child);
 
-  // Removes all child edges from the parent transform.
+  // Removes all child edges from the parent transform. This function does not remove priority
+  // children.
   void ClearChildren(TransformHandle parent);
+
+  // Specifies a directed edge from the parent to the child transform that will always be traversed
+  // first for the parent transform. The TransformGraph does not prevent the new priority child
+  // from being in the normal child set as well. The parent transform should be an unreleased
+  // transform created by calling CreateTransform() on this object, but this is only enforced by
+  // DCHECK.
+  void SetPriorityChild(TransformHandle parent, TransformHandle child);
+
+  // Clears the priority child of a specific parent transform. This may result in one or more
+  // transforms being added to the dead_transforms list the next time ComputeAndCleanup() is
+  // called. The parent transform should be an  unreleased transform created by calling
+  // CreateTransform() on this object, but this is only enforced by DCHECK.
+  void ClearPriorityChild(TransformHandle parent);
 
   // Clears all data from this entire graph, with one exception. The passed in handle is maintained
   // as a member of the working set, but with all existing children removed.
@@ -111,13 +125,28 @@ class TransformGraph {
   TopologyData ComputeAndCleanup(TransformHandle start, uint64_t max_iterations);
 
  private:
+  // Store each transform with a priority to allow callers to specify a single child edge to be
+  // traversed first.
+  enum ChildPriority {
+    PRIORITY = 0,
+    NORMAL = 1,
+  };
+
+  using PriorityChildMap =
+      std::multimap<std::pair<TransformHandle, ChildPriority>, TransformHandle>;
+
+  using IteratorPair =
+      std::pair<PriorityChildMap::const_iterator, PriorityChildMap::const_iterator>;
+
+  static IteratorPair EqualRangeAllPriorities(const PriorityChildMap& map, TransformHandle handle);
+
   // A static helper function, returns the TopologyVector rooted at the "start" transform,
   // following edges defined in the "children" map. Cycles are returned through the out parameter
   // "cycles".
   //
   // Computation is halted once the return vector has grown to max_length in size.
-  static TopologyVector Traverse(TransformHandle start, const ChildMap& children, ChildMap* cycles,
-                                 uint64_t max_length);
+  static TopologyVector Traverse(TransformHandle start, const PriorityChildMap& children,
+                                 ChildMap* cycles, uint64_t max_length);
 
   const uint64_t graph_id_ = 0;
 
@@ -130,8 +159,9 @@ class TransformGraph {
   // The set of all alive transforms.
   TransformSet live_set_;
 
-  // A multimap. Each key is a global handle. The set of values are the children for that handle.
-  ChildMap children_;
+  // A multimap. Each key is a global handle, and a priority for ordering. The set of values are the
+  // children for that handle.
+  PriorityChildMap children_;
 
   // This variable is only used for DCHECKs. If ComputeAndCleanup() reaches its iteration limit,
   // this class will be in an invalid state, and most functions should not be called until the graph

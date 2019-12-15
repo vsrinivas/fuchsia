@@ -26,7 +26,7 @@ table LayoutInfo {
 };
 
 /// A protocol that provides information about a particular Link to the child client. Each Flatland
-/// instance may only specify a single root transform, so other objects in the graph can only be 
+/// instance may only specify a single root transform, so other objects in the graph can only be
 /// children of a single GraphLink. However, more than one GraphLink protocol may be active at a
 /// time for a particular Flatland instance. Specifically, when a Flatland instance is transitioning
 /// from using one Link to another, each Link will have a separate protocol instance, and more than
@@ -41,9 +41,9 @@ protocol GraphLink {
 };
 
 enum ContentLinkStatus {
-  /// The underlying Graph has connected its Link, called Present(), and the acquisition fences of
-  /// the Present() call have all be reached.
-  CONTENT_HAS_PRESENTED = 0;
+    /// The underlying Graph has connected its Link, called Present(), and the acquisition fences of
+    /// the Present() call have all be reached.
+    CONTENT_HAS_PRESENTED = 0;
 };
 
 /// A protocol that provides information about a particular Link to the parent client. Flatland
@@ -68,13 +68,13 @@ struct ContentLinkToken {
 /// The properties of a Link as defined by the parent. This data, along with the set of attached
 /// Transforms, will be used to compute the LayoutInfo for the child of the Link.
 table LinkProperties {
-  /// The size of the Link in logical pixels. This maps directly to the logical_size field in
-  /// LayoutInfo.
-  1: Vec2 logical_size;
+    /// The size of the Link in logical pixels. This maps directly to the logical_size field in
+    /// LayoutInfo.
+    1: Vec2 logical_size;
 };
 
 /// A user-defined identifier for a particular transform. See CreateTransform() and
-/// ReleaseTransform() for more information. 
+/// ReleaseTransform() for more information.
 using TransformId = uint64;
 
 /// A user-defined identifier for a particular Link. See CreateLink() for more information.
@@ -202,7 +202,15 @@ protocol Flatland {
     /// another process. The parent process has control over how the linked content is integrated
     /// into their Graph through this Link object, and the object's associated Link properties.
     CreateLink(LinkId link_id, ContentLinkToken token, LinkProperties properties,
-        request<ContentLink> content_link);
+               request<ContentLink> content_link);
+
+    // Content management
+
+    /// Setting a Link on a Transform makes the content from the Link visible in the render tree
+    /// as long as the Transform is visible from the root Transform. The contents of the Link will
+    /// be rendered before, and therefore "behind", any content attached to the descendants of the
+    /// Transform.
+    SetLinkOnTransform(TransformId transform_id, LinkId link_id);
 
     // Content mutators
 

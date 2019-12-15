@@ -34,7 +34,8 @@ class TransformHandle {
     return graph_id_ != rhs.graph_id_ || transform_id_ != rhs.transform_id_;
   }
   bool operator<(const TransformHandle& rhs) const {
-    return graph_id_ < rhs.graph_id_ || transform_id_ < rhs.transform_id_;
+    return graph_id_ < rhs.graph_id_ ||
+           (graph_id_ == rhs.graph_id_ && transform_id_ < rhs.transform_id_);
   }
 
  private:

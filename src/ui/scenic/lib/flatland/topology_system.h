@@ -46,6 +46,9 @@ class TopologySystem {
   // TransformHandle in the vector to be cleared.
   void ClearLocalTopology(TransformHandle transform);
 
+  // For validating cleanup logic in tests.
+  size_t GetSize();
+
  private:
   using TopologyMap = std::unordered_map<TransformHandle, TransformGraph::TopologyVector>;
 

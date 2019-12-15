@@ -374,5 +374,80 @@ TEST(TransformGraphTest, IterationTestTooManyPathsToChildren) {
   EXPECT_EQ(good_data.dead_transforms.size(), 0u);
 }
 
+TEST(TransformGraphTest, PriorityChildOrdering) {
+  TransformGraph graph;
+
+  // Create a normal child edge.
+  auto parent = graph.CreateTransform();
+  auto normal_child1 = graph.CreateTransform();
+  graph.AddChild(parent, normal_child1);
+
+  // Create a priority child edge.
+  auto priority_child = graph.CreateTransform();
+  graph.SetPriorityChild(parent, priority_child);
+
+  // Create a second normal child edge.
+  auto normal_child2 = graph.CreateTransform();
+  graph.AddChild(parent, normal_child2);
+
+  // Traverse the graph. The priority edge should come first, and the other two edges should be in
+  // creation order.
+  auto data = graph.ComputeAndCleanup(parent, kLongIterationLength);
+  EXPECT_EQ(data.sorted_transforms.size(), 4u);
+  EXPECT_EQ(data.sorted_transforms[0].handle, parent);
+  EXPECT_EQ(data.sorted_transforms[1].handle, priority_child);
+  EXPECT_EQ(data.sorted_transforms[2].handle, normal_child1);
+  EXPECT_EQ(data.sorted_transforms[3].handle, normal_child2);
+
+  // Remove the priority child.
+  graph.ClearPriorityChild(parent);
+
+  // Traverse the graph again. The priority child should no longer be present.
+  data = graph.ComputeAndCleanup(parent, kLongIterationLength);
+
+  EXPECT_EQ(data.sorted_transforms.size(), 3u);
+  EXPECT_EQ(data.sorted_transforms[0].handle, parent);
+  EXPECT_EQ(data.sorted_transforms[1].handle, normal_child1);
+  EXPECT_EQ(data.sorted_transforms[2].handle, normal_child2);
+}
+
+TEST(TransformGraphTest, PriorityChildTrackedSeparately) {
+  TransformGraph graph;
+
+  // Create a normal child edge.
+  auto parent = graph.CreateTransform();
+  auto normal_child = graph.CreateTransform();
+  graph.AddChild(parent, normal_child);
+
+  // Create a priority child edge.
+  auto priority_child = graph.CreateTransform();
+  graph.SetPriorityChild(parent, priority_child);
+
+  // Traverse the graph. The priority edge should come first, and the other two edges should be in
+  // creation order.
+  auto data = graph.ComputeAndCleanup(parent, kLongIterationLength);
+  EXPECT_EQ(data.sorted_transforms.size(), 3u);
+  EXPECT_EQ(data.sorted_transforms[0].handle, parent);
+  EXPECT_EQ(data.sorted_transforms[1].handle, priority_child);
+  EXPECT_EQ(data.sorted_transforms[2].handle, normal_child);
+
+  // Clearing children from the parent shouldn't clear the priority child.
+  graph.ClearChildren(parent);
+
+  data = graph.ComputeAndCleanup(parent, kLongIterationLength);
+  EXPECT_EQ(data.sorted_transforms.size(), 2u);
+  EXPECT_EQ(data.sorted_transforms[0].handle, parent);
+  EXPECT_EQ(data.sorted_transforms[1].handle, priority_child);
+
+  // Nor should explicitly calling RemoveChild() on the priority child.
+  bool result = graph.RemoveChild(parent, priority_child);
+  EXPECT_FALSE(result);
+
+  data = graph.ComputeAndCleanup(parent, kLongIterationLength);
+  EXPECT_EQ(data.sorted_transforms.size(), 2u);
+  EXPECT_EQ(data.sorted_transforms[0].handle, parent);
+  EXPECT_EQ(data.sorted_transforms[1].handle, priority_child);
+}
+
 }  // namespace test
 }  // namespace flatland

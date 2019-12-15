@@ -15,54 +15,13 @@
 #include <unordered_set>
 #include <vector>
 
-#include "src/ui/scenic/lib/flatland/hanging_get_helper.h"
+#include "src/ui/scenic/lib/flatland/link_system.h"
 #include "src/ui/scenic/lib/flatland/topology_system.h"
 #include "src/ui/scenic/lib/flatland/transform_graph.h"
 #include "src/ui/scenic/lib/flatland/transform_handle.h"
 #include "src/ui/scenic/lib/gfx/engine/object_linker.h"
 
 namespace flatland {
-
-// An implementation of the GraphLink protocol, consisting of hanging gets for various updateable
-// pieces of information.
-class GraphLinkImpl : public fuchsia::ui::scenic::internal::GraphLink {
- public:
-  void UpdateLayoutInfo(fuchsia::ui::scenic::internal::LayoutInfo info) {
-    layout_helper_.Update(std::move(info));
-  }
-
-  // |fuchsia::ui::scenic::internal::GraphLink|
-  void GetLayout(GetLayoutCallback callback) override {
-    // TODO(37750): Handle duplicate calls to a hanging get with an error, as the client is not
-    // assuming the appropriate flow control.
-    layout_helper_.SetCallback(
-        [callback = std::move(callback)](fuchsia::ui::scenic::internal::LayoutInfo info) {
-          callback(std::move(info));
-        });
-  }
-
- private:
-  HangingGetHelper<fuchsia::ui::scenic::internal::LayoutInfo> layout_helper_;
-};
-
-// An implementation of the ContentLink protocol, consisting of hanging gets for various updateable
-// pieces of information.
-class ContentLinkImpl : public fuchsia::ui::scenic::internal::ContentLink {
- public:
-  void UpdateLinkStatus(fuchsia::ui::scenic::internal::ContentLinkStatus status) {
-    status_helper_.Update(std::move(status));
-  }
-
-  // |fuchsia::ui::scenic::internal::ContentLink|
-  void GetStatus(GetStatusCallback callback) override {
-    // TODO(37750): Handle duplicate calls to a hanging get with an error, as the client is not
-    // assuming the appropriate flow control.
-    status_helper_.SetCallback(std::move(callback));
-  }
-
- private:
-  HangingGetHelper<fuchsia::ui::scenic::internal::ContentLinkStatus> status_helper_;
-};
 
 // This is a WIP implementation of the 2D Layer API. It currently exists to run unit tests, and to
 // provide a platform for features to be iterated and implemented over time.
@@ -71,20 +30,12 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   using TransformId = uint64_t;
   using LinkId = uint64_t;
 
-  // Linked Flatland instances only implement a small piece of link functionality. For now, directly
-  // sharing link requests is a clean way to implement that functionality. This will become more
-  // complicated as the Flatland API evolves.
-  using ObjectLinker = scenic_impl::gfx::ObjectLinker<
-      fidl::InterfaceRequest<fuchsia::ui::scenic::internal::GraphLink>,
-      fidl::InterfaceRequest<fuchsia::ui::scenic::internal::ContentLink>>;
-
-  // Passing the same ObjectLinker and TopologySystem to multiple Flatland instances will allow them
+  // Passing the same LinkSystem and TopologySystem to multiple Flatland instances will allow them
   // to link to each other through operations that involve tokens and parent/child relationships
   // (e.g., by calling LinkToParent() and CreateLink()).
-  explicit Flatland(const std::shared_ptr<ObjectLinker>& linker,
-                    const std::shared_ptr<TopologySystem>& system);
-
-  ~Flatland() = default;
+  explicit Flatland(const std::shared_ptr<LinkSystem>& link_system,
+                    const std::shared_ptr<TopologySystem>& topology_system);
+  ~Flatland();
 
   // Because this object captures its "this" pointer in internal closures, it is unsafe to copy or
   // move it. Disable all copy and move operations.
@@ -115,10 +66,15 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
       fuchsia::ui::scenic::internal::LinkProperties properties,
       fidl::InterfaceRequest<fuchsia::ui::scenic::internal::ContentLink> content_link) override;
   // |fuchsia::ui::scenic::internal::Flatland|
+  void SetLinkOnTransform(TransformId transform_id, LinkId link_id) override;
+  // |fuchsia::ui::scenic::internal::Flatland|
   void SetLinkProperties(LinkId id,
                          fuchsia::ui::scenic::internal::LinkProperties properties) override;
   // |fuchsia::ui::scenic::internal::Flatland|
   void ReleaseTransform(TransformId transform_id) override;
+
+  // For validating the transform hierarchy in tests only.
+  TransformHandle GetLinkOrigin() const;
 
  private:
   // Users are not allowed to use zero as a transform ID.
@@ -131,30 +87,13 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   static constexpr uint32_t kMaxPresents = 1;
 
   using TransformMap = std::map<TransformId, TransformHandle>;
+  using LinkMap = std::unordered_map<LinkId, LinkSystem::ChildLink>;
 
-  // This is a strong reference to the GraphLink in the child Flatland instance. This makes it easy
-  // for methods called on the ContentLink (e.g., SetLinkProperties()) to be transformed into output
-  // events on the child's channel.
-  struct ChildLink {
-    std::shared_ptr<GraphLinkImpl> impl;
-    ObjectLinker::ImportLink importer;
-  };
-
-  // This is a strong reference to the ContentLinkImpl in the parent Flatland instance. This makes
-  // it easy for methods that effect the ContentLink (e.g., Present()) to be transformed into output
-  // events on the parent's channel.
-  struct ParentLink {
-    std::shared_ptr<ContentLinkImpl> impl;
-    ObjectLinker::ExportLink exporter;
-  };
-
-  using LinkMap = std::unordered_map<LinkId, ChildLink>;
-
-  // An object linker shared between Flatland instances, so that links can be made between them.
-  std::shared_ptr<ObjectLinker> linker_;
+  // A link system shared between Flatland instances, so that links can be made between them.
+  std::shared_ptr<LinkSystem> link_system_;
 
   // A topology system shared between Flatland instances, so that child edges can be made between
-  // them.
+  // them (by way of local topologies on Transforms that are not the link_origin_).
   std::shared_ptr<TopologySystem> topology_system_;
 
   // The set of operations that are pending a call to Present().
@@ -180,17 +119,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   LinkMap child_links_;
 
   // The link from this Flatland instance to our parent.
-  ParentLink parent_link_;
-
-  // Any FIDL requests that have to be bound, are bound in these BindingSets. Despite using shared
-  // pointers, the Impl classes are only owned by this Flatland instance, so the values in the
-  // Impl classes can be updated immediately as operations are processed. The impl classes are
-  // managed through a shared pointer because they are placed in two collections (e.g.
-  // graph_link_bindings_ and child_links_) in response to two different events.
-  fidl::BindingSet<fuchsia::ui::scenic::internal::GraphLink, std::shared_ptr<GraphLinkImpl>>
-      graph_link_bindings_;
-  fidl::BindingSet<fuchsia::ui::scenic::internal::ContentLink, std::shared_ptr<ContentLinkImpl>>
-      content_link_bindings_;
+  std::optional<LinkSystem::ParentLink> parent_link_;
 };
 
 }  // namespace flatland

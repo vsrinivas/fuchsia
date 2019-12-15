@@ -35,14 +35,14 @@ bool TransformGraph::AddChild(TransformHandle parent, TransformHandle child) {
   FXL_DCHECK(is_valid_);
   FXL_DCHECK(working_set_.count(parent));
 
-  auto [iter, end_iter] = children_.equal_range(parent);
+  auto [iter, end_iter] = children_.equal_range({parent, NORMAL});
   for (; iter != end_iter; ++iter) {
     if (iter->second == child) {
       return false;
     }
   }
 
-  children_.insert({parent, child});
+  children_.insert({{parent, NORMAL}, child});
   return true;
 }
 
@@ -50,7 +50,7 @@ bool TransformGraph::RemoveChild(TransformHandle parent, TransformHandle child) 
   FXL_DCHECK(is_valid_);
   FXL_DCHECK(working_set_.count(parent));
 
-  auto [iter, end_iter] = children_.equal_range(parent);
+  auto [iter, end_iter] = children_.equal_range({parent, NORMAL});
   for (; iter != end_iter; ++iter) {
     if (iter->second == child) {
       children_.erase(iter);
@@ -64,7 +64,22 @@ bool TransformGraph::RemoveChild(TransformHandle parent, TransformHandle child) 
 void TransformGraph::ClearChildren(TransformHandle parent) {
   FXL_DCHECK(is_valid_);
   FXL_DCHECK(working_set_.count(parent));
-  children_.erase(parent);
+  children_.erase({parent, NORMAL});
+}
+
+void TransformGraph::SetPriorityChild(TransformHandle parent, TransformHandle child) {
+  FXL_DCHECK(is_valid_);
+  FXL_DCHECK(working_set_.count(parent));
+
+  children_.erase({parent, PRIORITY});
+  children_.insert({{parent, PRIORITY}, child});
+}
+
+void TransformGraph::ClearPriorityChild(TransformHandle parent) {
+  FXL_DCHECK(is_valid_);
+  FXL_DCHECK(working_set_.count(parent));
+
+  children_.erase({parent, PRIORITY});
 }
 
 void TransformGraph::ResetGraph(TransformHandle exception) {
@@ -88,14 +103,17 @@ TransformGraph::TopologyData TransformGraph::ComputeAndCleanup(TransformHandle s
 
   // Clone our children map. We will remove child links after we visit them, to avoid duplicate
   // work when traversing the entire working set of transforms.
-  ChildMap children_copy = children_;
+  PriorityChildMap children_copy = children_;
 
   // Compute the topological set starting from the start transform.
   data.sorted_transforms =
       Traverse(start, children_copy, &data.cyclical_edges, max_iterations - data.iterations);
   data.iterations += data.sorted_transforms.size();
   for (auto [transform, parent_index] : data.sorted_transforms) {
-    children_copy.erase(transform);
+    auto [start, end] = EqualRangeAllPriorities(children_copy, transform);
+    if (start != children_copy.cend()) {
+      children_copy.erase(start, end);
+    }
     data.dead_transforms.erase(transform);
     live_set_.insert(transform);
   }
@@ -106,7 +124,10 @@ TransformGraph::TopologyData TransformGraph::ComputeAndCleanup(TransformHandle s
         Traverse(transform, children_copy, &data.cyclical_edges, max_iterations - data.iterations);
     data.iterations += working_transforms.size();
     for (auto [transform, parent_index] : working_transforms) {
-      children_copy.erase(transform);
+      auto [start, end] = EqualRangeAllPriorities(children_copy, transform);
+      if (start != children_copy.cend()) {
+        children_copy.erase(start, end);
+      }
       data.dead_transforms.erase(transform);
       live_set_.insert(transform);
     }
@@ -114,7 +135,10 @@ TransformGraph::TopologyData TransformGraph::ComputeAndCleanup(TransformHandle s
 
   // Cleanup child state for all dead nodes.
   for (auto transform : data.dead_transforms) {
-    children_.erase(transform);
+    auto [start, end] = EqualRangeAllPriorities(children_, transform);
+    if (start != children_.cend()) {
+      children_.erase(start, end);
+    }
   }
 
   if (data.iterations >= max_iterations) {
@@ -124,17 +148,25 @@ TransformGraph::TopologyData TransformGraph::ComputeAndCleanup(TransformHandle s
   return data;
 }
 
+TransformGraph::IteratorPair TransformGraph::EqualRangeAllPriorities(const PriorityChildMap& map,
+                                                                     TransformHandle handle) {
+  auto start = map.lower_bound({handle, PRIORITY});
+  auto end = map.upper_bound({handle, NORMAL});
+  FXL_DCHECK(std::distance(start, end) >= 0);
+  return {start, end};
+}
+
 TransformGraph::TopologyVector TransformGraph::Traverse(TransformHandle start,
-                                                        const ChildMap& children, ChildMap* cycles,
-                                                        uint64_t max_length) {
+                                                        const PriorityChildMap& children,
+                                                        ChildMap* cycles, uint64_t max_length) {
   TopologyVector retval;
 
-  std::vector<std::pair<ChildMap::const_iterator, ChildMap::const_iterator>> iterator_stack;
+  std::vector<IteratorPair> iterator_stack;
   std::vector<TransformHandle> ancestors;
 
   // Add the starting handle to the output, and initialize our state.
   retval.push_back({start, 0});
-  iterator_stack.push_back(children.equal_range(start));
+  iterator_stack.push_back(EqualRangeAllPriorities(children, start));
   ancestors.push_back(start);
   uint64_t parent_index = 0;
 
@@ -165,7 +197,7 @@ TransformGraph::TopologyVector TransformGraph::Traverse(TransformHandle start,
       // If the child is not part of a cycle, add it to the sorted list and update our state.
       int new_parent_index = retval.size();
       retval.push_back({child, parent_index});
-      iterator_stack.push_back(children.equal_range(child));
+      iterator_stack.push_back(EqualRangeAllPriorities(children, child));
       ancestors.push_back(child);
       parent_index = new_parent_index;
     }

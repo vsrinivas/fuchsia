@@ -11,7 +11,10 @@
 
 using flatland::Flatland;
 using LinkId = flatland::Flatland::LinkId;
+using flatland::LinkSystem;
 using flatland::TopologySystem;
+using flatland::TransformGraph;
+using flatland::TransformHandle;
 using fuchsia::ui::scenic::internal::ContentLink;
 using fuchsia::ui::scenic::internal::ContentLinkStatus;
 using fuchsia::ui::scenic::internal::ContentLinkToken;
@@ -38,8 +41,8 @@ using fuchsia::ui::scenic::internal::LinkProperties;
   }
 
 namespace {
-void CreateLink(const std::shared_ptr<Flatland::ObjectLinker>& linker, Flatland* parent,
-                Flatland* child, LinkId id, fidl::InterfacePtr<ContentLink>* content_link,
+void CreateLink(Flatland* parent, Flatland* child, LinkId id,
+                fidl::InterfacePtr<ContentLink>* content_link,
                 fidl::InterfacePtr<GraphLink>* graph_link) {
   ContentLinkToken parent_token;
   GraphLinkToken child_token;
@@ -56,13 +59,26 @@ void CreateLink(const std::shared_ptr<Flatland::ObjectLinker>& linker, Flatland*
 class FlatlandTest : public gtest::TestLoopFixture {
  public:
   FlatlandTest()
-      : linker_(std::make_shared<Flatland::ObjectLinker>()),
-        system_(std::make_shared<TopologySystem>()) {}
+      : topology_system_(std::make_shared<TopologySystem>()),
+        link_system_(std::make_shared<LinkSystem>(topology_system_)) {}
 
-  Flatland CreateFlatland() { return Flatland(linker_, system_); }
+  void TearDown() override { EXPECT_EQ(topology_system_->GetSize(), 0u); }
 
-  const std::shared_ptr<Flatland::ObjectLinker> linker_;
-  const std::shared_ptr<TopologySystem> system_;
+  Flatland CreateFlatland() { return Flatland(link_system_, topology_system_); }
+
+  // The parent transform must be a topology root or ComputeGlobalTopologyVector() will crash.
+  bool IsDescendantOf(TransformHandle parent, TransformHandle child) {
+    auto topology = topology_system_->ComputeGlobalTopologyVector(parent);
+    for (auto entry : topology) {
+      if (entry.handle == child) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  const std::shared_ptr<TopologySystem> topology_system_;
+  const std::shared_ptr<LinkSystem> link_system_;
 };
 
 }  // namespace
@@ -409,7 +425,7 @@ TEST_F(FlatlandTest, GraphLinkReplaceWithConnection) {
 
   fidl::InterfacePtr<ContentLink> content_link;
   fidl::InterfacePtr<GraphLink> graph_link;
-  CreateLink(linker_, &parent, &child, kLinkId1, &content_link, &graph_link);
+  CreateLink(&parent, &child, kLinkId1, &content_link, &graph_link);
   RunLoopUntilIdle();
 
   fidl::InterfacePtr<GraphLink> graph_link2;
@@ -604,7 +620,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesDefaultBehavior) {
 
   fidl::InterfacePtr<ContentLink> content_link;
   fidl::InterfacePtr<GraphLink> graph_link;
-  CreateLink(linker_, &parent, &child, kLinkId, &content_link, &graph_link);
+  CreateLink(&parent, &child, kLinkId, &content_link, &graph_link);
   RunLoopUntilIdle();
 
   const float kDefaultSize = 1.0f;
@@ -675,7 +691,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesMultisetBehavior) {
 
   fidl::InterfacePtr<ContentLink> content_link;
   fidl::InterfacePtr<GraphLink> graph_link;
-  CreateLink(linker_, &parent, &child, kLinkId, &content_link, &graph_link);
+  CreateLink(&parent, &child, kLinkId, &content_link, &graph_link);
   RunLoopUntilIdle();
 
   const float kFinalSize = 100.0f;
@@ -751,7 +767,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesOnMultipleChildren) {
   fidl::InterfacePtr<GraphLink> graph_link[kNumChildren];
 
   for (int i = 0; i < kNumChildren; ++i) {
-    CreateLink(linker_, &parent, &children[i], kLinkIds[i], &content_link[i], &graph_link[i]);
+    CreateLink(&parent, &children[i], kLinkIds[i], &content_link[i], &graph_link[i]);
   }
   RunLoopUntilIdle();
 
@@ -792,6 +808,193 @@ TEST_F(FlatlandTest, SetLinkPropertiesOnMultipleChildren) {
     RunLoopUntilIdle();
     EXPECT_TRUE(layout_updated);
   }
+}
+
+TEST_F(FlatlandTest, SetLinkOnTransformErrorCases) {
+  Flatland flatland = CreateFlatland();
+
+  // Setup.
+  ContentLinkToken parent_token;
+  GraphLinkToken child_token;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+
+  const uint64_t kId1 = 1;
+  const uint64_t kId2 = 2;
+
+  flatland.CreateTransform(kId1);
+
+  const uint64_t kLinkId1 = 1;
+  const uint64_t kLinkId2 = 2;
+
+  fidl::InterfacePtr<ContentLink> content_link;
+  LinkProperties properties;
+  flatland.CreateLink(kLinkId1, std::move(parent_token), std::move(properties),
+                      content_link.NewRequest());
+
+  PRESENT(flatland, true);
+
+  // Zero is not a valid transform_id.
+  flatland.SetLinkOnTransform(0, kLinkId1);
+  PRESENT(flatland, false);
+
+  // Setting a valid link on an ivnalid transform is not valid.
+  flatland.SetLinkOnTransform(kId2, kLinkId1);
+  PRESENT(flatland, false);
+
+  // Setting an invalid link on a valid transform is not valid.
+  flatland.SetLinkOnTransform(kId1, kLinkId2);
+  PRESENT(flatland, false);
+}
+
+TEST_F(FlatlandTest, CreateLinkPresentedBeforeLinkToParent) {
+  Flatland parent = CreateFlatland();
+  Flatland child = CreateFlatland();
+
+  ContentLinkToken parent_token;
+  GraphLinkToken child_token;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+
+  // Create a transform, add it to the parent, then create a link and assign to the transform.
+  const uint64_t kId1 = 1;
+  parent.CreateTransform(kId1);
+  parent.SetRootTransform(kId1);
+
+  const uint64_t kLinkId = 1;
+
+  fidl::InterfacePtr<ContentLink> parent_content_link;
+  LinkProperties properties;
+  parent.CreateLink(kLinkId, std::move(parent_token), std::move(properties),
+                    parent_content_link.NewRequest());
+  parent.SetLinkOnTransform(kId1, kLinkId);
+
+  PRESENT(parent, true);
+
+  // Link the child to the parent.
+  fidl::InterfacePtr<GraphLink> child_graph_link;
+  child.LinkToParent(std::move(child_token), child_graph_link.NewRequest());
+
+  // The child should only be accessible from the parent when Present() is called on the child.
+  EXPECT_FALSE(IsDescendantOf(parent.GetLinkOrigin(), child.GetLinkOrigin()));
+
+  PRESENT(child, true);
+
+  EXPECT_TRUE(IsDescendantOf(parent.GetLinkOrigin(), child.GetLinkOrigin()));
+}
+
+TEST_F(FlatlandTest, LinkToParentPresentedBeforeCreateLink) {
+  Flatland parent = CreateFlatland();
+  Flatland child = CreateFlatland();
+
+  ContentLinkToken parent_token;
+  GraphLinkToken child_token;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+
+  // Link the child to the parent
+  fidl::InterfacePtr<GraphLink> child_graph_link;
+  child.LinkToParent(std::move(child_token), child_graph_link.NewRequest());
+
+  PRESENT(child, true);
+
+  // Create a transform, add it to the parent, then create a link and assign to the transform.
+  const uint64_t kId1 = 1;
+  parent.CreateTransform(kId1);
+  parent.SetRootTransform(kId1);
+
+  // Present the parent once so that it has a topology or else IsDescendantOf() will crash.
+  PRESENT(parent, true);
+
+  const uint64_t kLinkId = 1;
+
+  fidl::InterfacePtr<ContentLink> parent_content_link;
+  LinkProperties properties;
+  parent.CreateLink(kLinkId, std::move(parent_token), std::move(properties),
+                    parent_content_link.NewRequest());
+  parent.SetLinkOnTransform(kId1, kLinkId);
+
+  // The child should only be accessible from the parent when Present() is called on the parent.
+  EXPECT_FALSE(IsDescendantOf(parent.GetLinkOrigin(), child.GetLinkOrigin()));
+
+  PRESENT(parent, true);
+
+  EXPECT_TRUE(IsDescendantOf(parent.GetLinkOrigin(), child.GetLinkOrigin()));
+}
+
+TEST_F(FlatlandTest, LinkResolvedBeforeEitherPresent) {
+  Flatland parent = CreateFlatland();
+  Flatland child = CreateFlatland();
+
+  ContentLinkToken parent_token;
+  GraphLinkToken child_token;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+
+  // Create a transform, add it to the parent, then create a link and assign to the transform.
+  const uint64_t kId1 = 1;
+  parent.CreateTransform(kId1);
+  parent.SetRootTransform(kId1);
+
+  // Present the parent once so that it has a topology or else IsDescendantOf() will crash.
+  PRESENT(parent, true);
+
+  const uint64_t kLinkId = 1;
+
+  fidl::InterfacePtr<ContentLink> parent_content_link;
+  LinkProperties properties;
+  parent.CreateLink(kLinkId, std::move(parent_token), std::move(properties),
+                    parent_content_link.NewRequest());
+  parent.SetLinkOnTransform(kId1, kLinkId);
+
+  // Link the child to the parent.
+  fidl::InterfacePtr<GraphLink> child_graph_link;
+  child.LinkToParent(std::move(child_token), child_graph_link.NewRequest());
+
+  // The child should only be accessible from the parent when Present() is called on both the parent
+  // and the child.
+  EXPECT_FALSE(IsDescendantOf(parent.GetLinkOrigin(), child.GetLinkOrigin()));
+
+  PRESENT(parent, true);
+
+  EXPECT_FALSE(IsDescendantOf(parent.GetLinkOrigin(), child.GetLinkOrigin()));
+
+  PRESENT(child, true);
+
+  EXPECT_TRUE(IsDescendantOf(parent.GetLinkOrigin(), child.GetLinkOrigin()));
+}
+
+TEST_F(FlatlandTest, ClearChildLink) {
+  Flatland parent = CreateFlatland();
+  Flatland child = CreateFlatland();
+
+  ContentLinkToken parent_token;
+  GraphLinkToken child_token;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+
+  // Create and link the two instances.
+  const uint64_t kId1 = 1;
+  parent.CreateTransform(kId1);
+  parent.SetRootTransform(kId1);
+
+  const uint64_t kLinkId = 1;
+
+  fidl::InterfacePtr<ContentLink> parent_content_link;
+  LinkProperties properties;
+  parent.CreateLink(kLinkId, std::move(parent_token), std::move(properties),
+                    parent_content_link.NewRequest());
+  parent.SetLinkOnTransform(kId1, kLinkId);
+
+  fidl::InterfacePtr<GraphLink> child_graph_link;
+  child.LinkToParent(std::move(child_token), child_graph_link.NewRequest());
+
+  PRESENT(parent, true);
+  PRESENT(child, true);
+
+  EXPECT_TRUE(IsDescendantOf(parent.GetLinkOrigin(), child.GetLinkOrigin()));
+
+  // Reset the child link using zero as the link id.
+  parent.SetLinkOnTransform(kId1, 0);
+
+  PRESENT(parent, true);
+
+  EXPECT_FALSE(IsDescendantOf(parent.GetLinkOrigin(), child.GetLinkOrigin()));
 }
 
 #undef PRESENT

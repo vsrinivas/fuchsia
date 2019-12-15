@@ -111,9 +111,10 @@ void TopologySystem::ClearLocalTopology(TransformHandle transform) {
   // Acquire the lock and update.
   {
     std::scoped_lock lock(map_mutex_);
-    FXL_DCHECK(topology_map_.count(transform));
     topology_map_.erase(transform);
   }
 }
+
+size_t TopologySystem::GetSize() { return topology_map_.size(); }
 
 }  // namespace flatland
