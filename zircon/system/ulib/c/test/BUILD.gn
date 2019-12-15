@@ -130,7 +130,7 @@ zx_test("clock-gettime") {
   ]
   deps = [
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
   ]
 }
 
