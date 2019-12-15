@@ -97,6 +97,7 @@ declare_args() {
     default_deps = [
                      "//:legacy-$target_cpu",
                      "//:legacy_unification-$target_cpu",
+                     "//tools:all-hosts",
                    ] + zircon_extra_deps
     enable_netsvc_debugging_features = zircon_enable_netsvc_debugging_features
     forward_variables_from(zircon_extra_args, "*")

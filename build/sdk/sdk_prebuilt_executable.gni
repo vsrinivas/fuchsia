@@ -34,8 +34,48 @@ template("sdk_prebuilt_executable") {
   tool_name = get_path_info(invoker.prebuilt, "file")
   file_base = "tools/$tool_name"
 
+  # TODO(fxb/42999): remove extra atom
+  if (current_cpu == host_cpu) {
+    sdk_atom("${target_name}_sdk_legacy") {
+      id = "sdk://$file_base"
+
+      category = invoker.category
+
+      meta = {
+        dest = "$file_base-meta.json"
+        schema = "host_tool"
+        value = {
+          type = "host_tool"
+          name = tool_name
+          root = "tools"
+          files = [ file_base ]
+        }
+      }
+
+      files = [
+        {
+          source = invoker.prebuilt
+          dest = file_base
+        },
+      ]
+
+      if (defined(invoker.sdk_deps)) {
+        deps = invoker.sdk_deps
+      }
+
+      non_sdk_deps = [ ":$main_target_name" ]
+      if (defined(invoker.non_sdk_deps)) {
+        non_sdk_deps += invoker.non_sdk_deps
+      }
+    }
+  }
+
+  if (host_os == "linux" || host_os == "mac") {
+    file_base = "tools/$current_cpu/$tool_name"
+  }
+
   sdk_atom("${target_name}_sdk") {
-    id = "sdk://tools/$tool_name"
+    id = "sdk://$file_base"
 
     category = invoker.category
 

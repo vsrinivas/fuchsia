@@ -6,9 +6,6 @@ import("//build/config/fuchsia/zircon.gni")
 import("//build/sdk/sdk_atom.gni")
 
 template("zircon_host_tool") {
-  assert(current_toolchain == host_toolchain,
-         "The $target_name tool is host-only.")
-
   tool_name = target_name
 
   copy(tool_name) {
@@ -20,25 +17,58 @@ template("zircon_host_tool") {
     ]
   }
 
+  file_base = "tools/$tool_name"
+  tool_src = "$zircon_root_build_dir/tools-$current_os-$current_cpu/$tool_name"
+
+  # TODO(fxb/42999): remove extra atom
+  if (current_cpu == host_cpu) {
+    sdk_atom("${target_name}_sdk_legacy") {
+      id = "sdk://$file_base"
+      category = "partner"
+
+      meta = {
+        dest = "$file_base-meta.json"
+        schema = "host_tool"
+        value = {
+          type = "host_tool"
+          name = tool_name
+          root = "tools"
+          files = [ file_base ]
+        }
+      }
+
+      files = [
+        {
+          source = tool_src
+          dest = file_base
+        },
+      ]
+    }
+  }
+
+  if (host_os == "linux" || host_os == "mac") {
+    file_base = "tools/$current_cpu/$tool_name"
+  }
+
   sdk_atom("${tool_name}_sdk") {
-    id = "sdk://tools/$tool_name"
+    id = "sdk://$file_base"
     category = "partner"
 
     meta = {
-      dest = "tools/$tool_name-meta.json"
+      dest = "$file_base-meta.json"
       schema = "host_tool"
       value = {
         type = "host_tool"
         name = tool_name
         root = "tools"
-        files = [ "tools/$tool_name" ]
+        files = [ file_base ]
       }
     }
 
     files = [
       {
-        source = "$zircon_root_build_dir/${invoker.path}"
-        dest = "tools/$tool_name"
+        source = tool_src
+        dest = file_base
       },
     ]
   }
