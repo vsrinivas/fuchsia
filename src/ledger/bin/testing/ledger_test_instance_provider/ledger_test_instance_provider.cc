@@ -35,7 +35,6 @@ int main(int argc, char const *argv[]) {
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kLedgerBinaryPath;
   launch_info.directory_request = child_directory.NewRequest().TakeChannel();
-  launch_info.arguments->push_back("--disable_reporting");
   // This instance exists to allow tests built outside of peridot (ie. clients of ledger) to get
   // access to a Ledger instance backed by memfs. We want this instance to use the default garbage
   // collection policy because we are testing the clients, not Ledger itself.

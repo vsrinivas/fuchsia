@@ -138,7 +138,6 @@ source_set("lib") {
     ":file_index",
     ":object_identifier_lib",
     "//sdk/lib/fidl/cpp",
-    "//src/ledger/bin/cobalt",
     "//src/ledger/bin/encryption/impl",
     "//src/ledger/bin/encryption/primitives",
     "//src/ledger/bin/encryption/public",

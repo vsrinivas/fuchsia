@@ -61,7 +61,6 @@ Status GetLedger(sys::ComponentContext* context,
   launch_info.url = "fuchsia-pkg://fuchsia.com/ledger#meta/ledger.cmx";
   launch_info.directory_request = child_directory.NewRequest().TakeChannel();
   AppendGarbageCollectionPolicyFlags(gc_policy, &launch_info);
-  launch_info.arguments->push_back("--disable_reporting");
   launch_info.arguments->push_back("--verbose=" +
                                    std::to_string(-static_cast<int>(GetLogSeverity())));
   fuchsia::sys::LauncherPtr launcher;

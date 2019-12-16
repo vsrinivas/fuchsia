@@ -7,7 +7,6 @@ Implementation of Ledger.
  - [app](app) implements Ledger fidl API
  - [cache](cache)
  - [cloud_sync](cloud_sync) implements Ledger synchronisation via cloud
- - [cobalt](cobalt) contains helper methods for reporting Cobalt events
  - [coroutine](../lib/coroutine) coroutine library
  - [encryption](encryption) implements encryption service for Ledger
  - [environment](environment)

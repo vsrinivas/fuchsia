@@ -26,7 +26,6 @@
 #include <utility>
 #include <vector>
 
-#include "src/ledger/bin/cobalt/cobalt.h"
 #include "src/ledger/bin/public/status.h"
 #include "src/ledger/bin/storage/impl/btree/builder.h"
 #include "src/ledger/bin/storage/impl/btree/diff.h"
@@ -1826,7 +1825,6 @@ Status PageStorageImpl::SynchronousAddCommits(CoroutineHandler* handler,
           LEDGER_LOG(ERROR) << "Failed to find parent commit \"" << ToHex(parent_id)
                             << "\" of commit \"" << convert::ToHex(commit->GetId()) << "\".";
           if (s == Status::INTERNAL_NOT_FOUND) {
-            ledger::ReportEvent(ledger::CobaltEvent::COMMITS_RECEIVED_OUT_OF_ORDER_NOT_RECOVERED);
             return s;
           } else {
             return Status::INTERNAL_ERROR;

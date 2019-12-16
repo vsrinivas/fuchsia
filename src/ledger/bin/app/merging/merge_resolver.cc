@@ -18,7 +18,6 @@
 #include "src/ledger/bin/app/merging/ledger_merge_manager.h"
 #include "src/ledger/bin/app/merging/merge_strategy.h"
 #include "src/ledger/bin/app/page_utils.h"
-#include "src/ledger/bin/cobalt/cobalt.h"
 #include "src/ledger/lib/callback/trace_callback.h"
 #include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
@@ -279,8 +278,6 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
       }
       return;
     }
-    // If delayed_status is not initial, report the merge.
-    ReportEvent(CobaltEvent::MERGED_COMMITS_MERGED);
   } else {
     // No longer merging 2 merge commits, reinitialize the exponential
     // backoff.
@@ -291,7 +288,7 @@ void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
   // base.
   RecursiveMergeOneStep(std::move(head1), std::move(head2),
                         [cleanup = std::move(cleanup), tracing = std::move(tracing)] {
-                          ReportEvent(CobaltEvent::COMMITS_MERGED);
+                          // Do nothing – beyond destruction of |cleanup| and |tracing|.
                         });
 }
 

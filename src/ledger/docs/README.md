@@ -58,7 +58,6 @@ Documentation for integrating with Ledger in client apps:
 Documentation for developing Ledger:
 
  - [C++ in Ledger](cpp.md)
- - [Field Data](field_data.md)
  - [Style Guide](style_guide.md)
  - [Inspection](inspection.md)
  - [Testing](testing.md)

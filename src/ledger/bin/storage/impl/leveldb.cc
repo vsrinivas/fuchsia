@@ -10,7 +10,6 @@
 
 #include <utility>
 
-#include "src/ledger/bin/cobalt/cobalt.h"
 #include "src/ledger/bin/storage/impl/object_impl.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
@@ -187,7 +186,6 @@ Status LevelDb::Init() {
                       << " with leveldb status: " << status.ToString();
     LEDGER_LOG(WARNING) << "Trying to recover by erasing the local state.";
     LEDGER_LOG(WARNING) << "***** ALL LOCAL CHANGES IN THIS PAGE WILL BE LOST *****";
-    ledger::ReportEvent(ledger::CobaltEvent::LEDGER_LEVELDB_STATE_CORRUPTED);
 
     if (!file_system_->DeletePathRecursively(db_path_)) {
       LEDGER_LOG(ERROR) << "Failed to delete corrupted ledger at " << db_path_.path();

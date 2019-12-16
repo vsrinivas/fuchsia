@@ -19,7 +19,6 @@
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/app/ledger_repository_factory_impl.h"
-#include "src/ledger/bin/cobalt/cobalt.h"
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/fidl/syncable.h"
@@ -33,7 +32,6 @@
 #include "third_party/abseil-cpp/absl/flags/flag.h"
 #include "third_party/abseil-cpp/absl/flags/parse.h"
 
-ABSL_FLAG(bool, disable_reporting, false, "disable sending statistics to Cobalt");
 ABSL_FLAG(bool, disable_p2p_sync, false, "disable peer-to-peer syncing");
 ABSL_FLAG(int, verbose, 0, "level of verbosity");
 
@@ -51,15 +49,6 @@ struct InspectObjects {
   inspect_deprecated::StringProperty statistic_gathering;
 };
 
-fit::deferred_action<fit::closure> SetupCobalt(bool disable_statistics,
-                                               async_dispatcher_t* dispatcher,
-                                               sys::ComponentContext* component_context) {
-  if (disable_statistics) {
-    return fit::defer<fit::closure>([] {});
-  }
-  return InitializeCobalt(dispatcher, component_context);
-};
-
 // App is the main entry point of the Ledger application.
 //
 // It is responsible for setting up the LedgerRepositoryFactory, which connects
@@ -74,12 +63,8 @@ class App : public ledger_internal::LedgerController {
         io_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
         trace_provider_(loop_.dispatcher()),
         component_context_(sys::ComponentContext::Create()),
-        cobalt_cleaner_(SetupCobalt(app_params_.disable_statistics, loop_.dispatcher(),
-                                    component_context_.get())),
         factory_bindings_(loop_.dispatcher()) {
     LEDGER_DCHECK(component_context_);
-
-    ReportEvent(CobaltEvent::LEDGER_STARTED);
   }
   App(const App&) = delete;
   App& operator=(const App&) = delete;
@@ -139,7 +124,6 @@ class App : public ledger_internal::LedgerController {
   async::Loop io_loop_;
   trace::TraceProviderWithFdio trace_provider_;
   std::unique_ptr<sys::ComponentContext> component_context_;
-  fit::deferred_action<fit::closure> cobalt_cleaner_;
   std::unique_ptr<Environment> environment_;
   std::unique_ptr<LedgerRepositoryFactoryImpl> factory_impl_;
   callback::AutoCleanableSet<
@@ -154,7 +138,6 @@ int Main(int argc, char** argv) {
   SetLogVerbosity(absl::GetFlag(FLAGS_verbose));
 
   AppParams app_params;
-  app_params.disable_statistics = absl::GetFlag(FLAGS_disable_reporting);
   app_params.disable_p2p_sync = absl::GetFlag(FLAGS_disable_p2p_sync);
   app_params.gc_policy = absl::GetFlag(FLAGS_gc_policy);
 
