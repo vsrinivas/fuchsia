@@ -27,14 +27,14 @@ extern "C" {
 //
 
 spn_path_t *
-spn_svg_paths_decode(struct svg * const svg, spn_path_builder_t pb);
+spn_svg_paths_decode(struct svg const * const svg, spn_path_builder_t pb);
 
 //
 // Defines all rasters in the SVG doc
 //
 
 spn_raster_t *
-spn_svg_rasters_decode(struct svg * const             svg,
+spn_svg_rasters_decode(struct svg const * const       svg,
                        spn_raster_builder_t           rb,
                        spn_path_t const * const       paths,
                        struct transform_stack * const ts);
@@ -44,7 +44,7 @@ spn_svg_rasters_decode(struct svg * const             svg,
 //
 
 void
-spn_svg_layers_decode(struct svg * const         svg,
+spn_svg_layers_decode(struct svg const * const   svg,
                       spn_raster_t const * const rasters,
                       spn_composition_t          composition,
                       spn_styling_t              styling,

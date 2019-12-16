@@ -13,26 +13,36 @@
 #include <stdint.h>
 
 //
-// This is a minimalist SVG parser that very quickly parses an SVG into
-// a representation that can be efficiently played back without
-// reparsing.
+// This is a minimalist SVG parser that creates a representation of the
+// input document as three parallel lists of the following types:
 //
-// The SVG doc is parsed into 3 "dictionaries":
+//   - Path items:
+//       Corresponding to SVG path/shape elements as they appear in the
+//       document (i.e. without any transforms applied).
 //
-//   - Paths:   SVG path 'd' attributes
-//   - Rasters: SVG path rasterization attributes
-//   - Layers:  SVG path presentation attributes
+//   - Raster items:
+//       Corresponding to rasterization attributes of the paths above (i.e.
+//       transforms or path fill / path stroke operations).
 //
-// The dictionaries can be iterated over independently:
+//   - Layer items:
+//       Corresponding to presentation attributes (e.g. color, opacity, fill
+//       rule) of the rasters above.
 //
-//   - all paths in the SVG doc can enumerated
-//   - all path rasterization attributes can be enumerated
-//   - all path presentation attributes can be enumerated
+// Each item is stored as an array of simple tagged structs describing
+// 'commands' from the input SVG document. See the definitions of
+// svg_{path,raster,layer}_cmd below for details.
 //
-// The output of each dictionary is a typed command.
+// The number of items in each list can be retrieved by calling
+// svg_{path,raster,layer}_count(), and each individual item can be enumerated
+// (as a series of commands) with svg_iterator_create_for_{path,raster,layer}().
+//
+// Each list stores its items' in a single concatenated array of commands in
+// memory. This allows enumerating the whole list as a series of commands too,
+// since each item type has specific 'begin' and 'end' tags.
+// See svg_iterator_create_for_all_{paths,rasters,layers}().
 //
 // The following table lists which SVG elements are associated with the
-// path, raster and layer dictionaries:
+// path, raster and layer lists:
 //
 // element attributes : id
 // container elements : svg, g
@@ -93,53 +103,75 @@ void
 svg_dispose(struct svg * const sd);
 
 //
-// Rewind all dictionaries once or individually.
+// Return the number of entries in each list.
 //
 
-void
-svg_rewind(struct svg * const sd);
-
-void
-svg_rewind_paths(struct svg * const sd);
-
-void
-svg_rewind_rasters(struct svg * const sd);
-
-void
-svg_rewind_layers(struct svg * const sd);
-
-//
-// Return how many commands are in a dictionary.
-//
-
-uint32_t
+extern uint32_t
 svg_path_count(struct svg const * const sd);
 
-uint32_t
+extern uint32_t
 svg_raster_count(struct svg const * const sd);
 
-uint32_t
+extern uint32_t
 svg_layer_count(struct svg const * const sd);
 
 //
-// Get the next command in a dictionary and return true.
-//
-// If no command is available, return false.
+// Path iteration
 //
 
-bool
-svg_path_next(struct svg * const sd, union svg_path_cmd ** cmd);
+struct svg_path_iterator;
 
-bool
-svg_raster_next(struct svg * const sd, union svg_raster_cmd ** cmd);
+// Create new iterator to loop over all commands of a given path, or if
+// |path_index| is UINT32_MAX, all path commands in the document.
+extern struct svg_path_iterator *
+svg_path_iterator_create(struct svg const * const sd, uint32_t const path_index);
 
-bool
-svg_layer_next(struct svg * const sd, union svg_layer_cmd ** cmd);
+// Return next path command. Return false at the end of the list,
+// otherwise set |*cmd| and return true.
+extern bool
+svg_path_iterator_next(struct svg_path_iterator * iterator, union svg_path_cmd const ** cmd);
+
+// Destroy a path iterator instance.
+extern void
+svg_path_iterator_dispose(struct svg_path_iterator * iterator);
+
+//
+// Raster iteration
+//
+
+struct svg_raster_iterator;
+
+// Create new iterator to loop over all commands of a given raster, or if
+// |raster_index| is UINT32_MAX, all raster commands in the document.
+extern struct svg_raster_iterator *
+svg_raster_iterator_create(struct svg const * const sd, uint32_t const raster_index);
+
+extern bool
+svg_raster_iterator_next(struct svg_raster_iterator * iterator, union svg_raster_cmd const ** cmd);
+
+// Destroy a raster iterator instance.
+extern void
+svg_raster_iterator_dispose(struct svg_raster_iterator * iterator);
+
+//
+// Layer iteration
+//
+
+struct svg_layer_iterator;
+
+extern struct svg_layer_iterator *
+svg_layer_iterator_create(struct svg const * const sd, uint32_t const layer_index);
+
+extern bool
+svg_layer_iterator_next(struct svg_layer_iterator * iterator, union svg_layer_cmd const ** cmd);
+
+extern void
+svg_layer_iterator_dispose(struct svg_layer_iterator * iterator);
 
 //
 // SVG COLOR
 //
-// An SVG color is stored in RGB word order:
+// An SVG color is stored as a big-endian R8:G8:B8 value.
 //
 //   0   8  16  24
 //   +---+---+---+

@@ -145,9 +145,6 @@ fxt_spinel_vk_svg::SetUp()
   //
   for (uint32_t ii = 0; ii < param.loops; ii++)
     {
-      // start over
-      svg_rewind(svg);
-
       // define paths
       spn_path_t * const paths = spn_svg_paths_decode(svg, pb);
 

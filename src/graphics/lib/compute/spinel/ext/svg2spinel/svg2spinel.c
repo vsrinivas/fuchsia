@@ -51,13 +51,13 @@ spn_svg_rasters_release(struct svg * const svg, spn_context_t context, spn_raste
 //
 
 static void
-spn_svg_poly_read(struct svg * svg, spn_path_builder_t pb, bool const close)
+spn_svg_poly_read(struct svg_path_iterator * iter, spn_path_builder_t pb, bool const close)
 {
-  union svg_path_cmd * cmd;
-  float                x0, y0;
-  bool                 lineto = false;
+  union svg_path_cmd const * cmd;
+  float                      x0, y0;
+  bool                       lineto = false;
 
-  while (svg_path_next(svg, &cmd))
+  while (svg_path_iterator_next(iter, &cmd))
     {
       if (cmd->type != SVG_PATH_CMD_POLY_POINT)
         break;
@@ -115,15 +115,17 @@ spn_svg_arc_decode(bool const                               is_relative,
 //
 
 spn_path_t *
-spn_svg_paths_decode(struct svg * const svg, spn_path_builder_t pb)
+spn_svg_paths_decode(struct svg const * const svg, spn_path_builder_t pb)
 {
   spn_path_t * const paths = malloc(sizeof(*paths) * svg_path_count(svg));
 
-  union svg_path_cmd * cmd;
+  union svg_path_cmd const * cmd;
 
   float x0, y0, x, y;
 
-  while (svg_path_next(svg, &cmd))
+  struct svg_path_iterator * iter = svg_path_iterator_create(svg, UINT32_MAX);
+
+  while (svg_path_iterator_next(iter, &cmd))
     {
       switch (cmd->type)
         {
@@ -157,11 +159,11 @@ spn_svg_paths_decode(struct svg * const svg, spn_path_builder_t pb)
             break;
 
           case SVG_PATH_CMD_POLYGON:
-            spn_svg_poly_read(svg, pb, true);
+            spn_svg_poly_read(iter, pb, true);
             break;
 
           case SVG_PATH_CMD_POLYLINE:
-            spn_svg_poly_read(svg, pb, false);
+            spn_svg_poly_read(iter, pb, false);
             break;
 
           case SVG_PATH_CMD_RECT:
@@ -309,6 +311,8 @@ spn_svg_paths_decode(struct svg * const svg, spn_path_builder_t pb)
         }
     }
 
+  svg_path_iterator_dispose(iter);
+
   return paths;
 }
 
@@ -317,7 +321,7 @@ spn_svg_paths_decode(struct svg * const svg, spn_path_builder_t pb)
 //
 
 spn_raster_t *
-spn_svg_rasters_decode(struct svg * const             svg,
+spn_svg_rasters_decode(struct svg const * const       svg,
                        spn_raster_builder_t           rb,
                        spn_path_t const * const       paths,
                        struct transform_stack * const ts)
@@ -327,9 +331,11 @@ spn_svg_rasters_decode(struct svg * const             svg,
   spn_raster_t * const rasters    = malloc(sizeof(*rasters) * svg_raster_count(svg));
   uint32_t const       ts_restore = transform_stack_save(ts);
 
-  union svg_raster_cmd * cmd;
+  union svg_raster_cmd const * cmd;
 
-  while (svg_raster_next(svg, &cmd))
+  struct svg_raster_iterator * iter = svg_raster_iterator_create(svg, UINT32_MAX);
+
+  while (svg_raster_iterator_next(iter, &cmd))
     {
       switch (cmd->type)
         {
@@ -408,6 +414,8 @@ spn_svg_rasters_decode(struct svg * const             svg,
   // restore stack depth
   transform_stack_restore(ts, ts_restore);
 
+  svg_raster_iterator_dispose(iter);
+
   return rasters;
 }
 
@@ -423,7 +431,7 @@ spn_styling_background_over_encoder(spn_styling_cmd_t * const cmds, float const 
 //
 
 void
-spn_svg_layers_decode(struct svg * const         svg,
+spn_svg_layers_decode(struct svg const * const   svg,
                       spn_raster_t const * const rasters,
                       spn_composition_t          composition,
                       spn_styling_t              styling,
@@ -477,7 +485,7 @@ spn_svg_layers_decode(struct svg * const         svg,
   //
   //
   //
-  union svg_layer_cmd * cmd;
+  union svg_layer_cmd const * cmd;
 
   spn_layer_id layer_id;
 
@@ -488,7 +496,9 @@ spn_svg_layers_decode(struct svg * const         svg,
   float       opacity      = 1.0f;
   float       fill_opacity = 1.0f;
 
-  while (svg_layer_next(svg, &cmd))
+  struct svg_layer_iterator * iter = svg_layer_iterator_create(svg, UINT32_MAX);
+
+  while (svg_layer_iterator_next(iter, &cmd))
     {
       switch (cmd->type)
         {
@@ -572,6 +582,8 @@ spn_svg_layers_decode(struct svg * const         svg,
             }
         }
     }
+
+  svg_layer_iterator_dispose(iter);
 }
 
 //

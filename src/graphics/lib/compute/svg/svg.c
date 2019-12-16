@@ -537,7 +537,7 @@ svg_stack_push(struct svg_stack * s, void * v, uint32_t const len)
 }
 
 static void
-svg_stack_entry_get(struct svg_stack * s, uint32_t idx, void ** v, uint32_t * len)
+svg_stack_entry_get(struct svg_stack const * s, uint32_t idx, void ** v, uint32_t * len)
 {
   struct svg_stack_entry * e = s->entries + idx;
 
@@ -545,8 +545,23 @@ svg_stack_entry_get(struct svg_stack * s, uint32_t idx, void ** v, uint32_t * le
   *len = e->len;
 }
 
+static void
+svg_stack_entry_get_range(struct svg_stack const * s,
+                          uint32_t                 idx,
+                          uint32_t *               pos,
+                          uint32_t *               limit)
+{
+  *pos = *limit = 0u;
+  if (idx < s->entry_count)
+    {
+      struct svg_stack_entry const * const e = s->entries + idx;
+      *pos                                   = e->idx;
+      *limit                                 = e->idx + e->len;
+    }
+}
+
 static void *
-svg_stack_tos(struct svg_stack * s)
+svg_stack_tos(struct svg_stack const * s)
 {
   struct svg_stack_entry * e = s->entries + s->entry_count - 1;
 
@@ -570,13 +585,13 @@ svg_stack_tos_append(struct svg_stack * s, void * v, uint32_t len)
 }
 
 static void
-svg_stack_tos_copy(struct svg_stack * to, struct svg_stack * from)
+svg_stack_tos_copy(struct svg_stack * to, struct svg_stack const * from)
 {
   svg_stack_tos_append(to, from->buf, from->buf_count);
 }
 
 static bool
-svg_stack_entry_not_equal(struct svg_stack * s, struct svg_stack * t, uint32_t idx)
+svg_stack_entry_not_equal(struct svg_stack const * s, struct svg_stack const * t, uint32_t idx)
 {
   struct svg_stack_entry * s_entry = s->entries + idx;
   struct svg_stack_entry * t_entry = t->entries + idx;
@@ -590,7 +605,7 @@ svg_stack_entry_not_equal(struct svg_stack * s, struct svg_stack * t, uint32_t i
 }
 
 static bool
-svg_stack_equal(struct svg_stack * s, struct svg_stack * t)
+svg_stack_equal(struct svg_stack const * s, struct svg_stack const * t)
 {
   if ((s->entry_count != t->entry_count) || (s->buf_count != t->buf_count))
     return false;
@@ -871,40 +886,131 @@ struct svg
   struct svg_stack * p;  // path   dictionary
   struct svg_stack * r;  // raster dictionary
   struct svg_stack * l;  // layer  dictionary
-
-  uint32_t p_idx;
-  uint32_t r_idx;
-  uint32_t l_idx;
 };
 
 //
+// Common iterator struct.
 //
+
+// Common struct used by all iterator types.
+struct svg_iterator
+{
+  uintptr_t                     buf;
+  uint32_t                      pos;
+  uint32_t                      limit;
+  struct svg_lookup_cmd const * lookups;
+};
+
+static void
+svg_iterator_init(struct svg_iterator *               iterator,
+                  struct svg_stack const * const      stack,
+                  struct svg_lookup_cmd const * const lookups,
+                  uint32_t                            path_index)
+{
+  iterator->buf     = (uintptr_t)stack->buf;
+  iterator->pos     = 0;
+  iterator->limit   = stack->buf_count;
+  iterator->lookups = lookups;
+  if (path_index != UINT32_MAX)
+    svg_stack_entry_get_range(stack, path_index, &iterator->pos, &iterator->limit);
+}
+
+static bool
+svg_iterator_next_internal(struct svg_iterator * iterator, void ** ptr)
+{
+  if (iterator->pos >= iterator->limit)
+    return false;
+
+  *ptr = (void *)(iterator->buf + iterator->pos);
+  iterator->pos += iterator->lookups[*(unsigned char *)(*ptr)].size;
+  return true;
+}
+
+//
+// Path iterator
 //
 
-void
-svg_rewind(struct svg * const sd)
+struct svg_path_iterator
 {
-  sd->p_idx = 0;
-  sd->r_idx = 0;
-  sd->l_idx = 0;
+  struct svg_iterator base;
+};
+
+struct svg_path_iterator *
+svg_path_iterator_create(struct svg const * sd, uint32_t path_index)
+{
+  struct svg_path_iterator * iterator = malloc(sizeof(*iterator));
+  svg_iterator_init(&iterator->base, sd->p, path_lookup_cmds, path_index);
+  return iterator;
+}
+
+bool
+svg_path_iterator_next(struct svg_path_iterator * iterator, union svg_path_cmd const ** cmd)
+{
+  return svg_iterator_next_internal(&iterator->base, (void **)cmd);
 }
 
 void
-svg_rewind_paths(struct svg * const sd)
+svg_path_iterator_dispose(struct svg_path_iterator * iterator)
 {
-  sd->p_idx = 0;
+  free(iterator);
+}
+
+//
+// Raster iterator
+//
+
+struct svg_raster_iterator
+{
+  struct svg_iterator base;
+};
+
+struct svg_raster_iterator *
+svg_raster_iterator_create(struct svg const * sd, uint32_t raster_index)
+{
+  struct svg_raster_iterator * iterator = malloc(sizeof(*iterator));
+  svg_iterator_init(&iterator->base, sd->r, raster_lookup_cmds, raster_index);
+  return iterator;
+}
+
+bool
+svg_raster_iterator_next(struct svg_raster_iterator * iterator, union svg_raster_cmd const ** cmd)
+{
+  return svg_iterator_next_internal(&iterator->base, (void **)cmd);
 }
 
 void
-svg_rewind_rasters(struct svg * const sd)
+svg_raster_iterator_dispose(struct svg_raster_iterator * iterator)
 {
-  sd->r_idx = 0;
+  free(iterator);
+}
+
+//
+// Layer iterator
+//
+
+struct svg_layer_iterator
+{
+  struct svg_iterator base;
+};
+
+struct svg_layer_iterator *
+svg_layer_iterator_create(struct svg const * sd, uint32_t layer_index)
+{
+  struct svg_layer_iterator * iterator = malloc(sizeof(*iterator));
+  svg_iterator_init(&iterator->base, sd->l, layer_lookup_cmds, layer_index);
+  return iterator;
+}
+
+bool
+svg_layer_iterator_next(struct svg_layer_iterator * iterator, union svg_layer_cmd const ** cmd)
+{
+  return svg_iterator_next_internal(&iterator->base, (void **)cmd);
 }
 
 void
-svg_rewind_layers(struct svg * const sd)
+svg_layer_iterator_dispose(struct svg_layer_iterator * iterator)
 {
-  sd->l_idx = 0;
+  free(iterator);
 }
 
 //
@@ -942,8 +1048,6 @@ svg_create(struct svg_parser * sp)
   sd->r = sp->r;
   sd->l = sp->l;
 
-  svg_rewind(sd);
-
   // steal stacks from svg_parser
   sp->p = NULL;
   sp->r = NULL;
@@ -961,86 +1065,12 @@ svg_dispose(struct svg * const sd)
 {
   if (sd != NULL)
     {
-
       svg_stack_dispose(sd->p);
       svg_stack_dispose(sd->r);
       svg_stack_dispose(sd->l);
 
       free(sd);
     }
-}
-
-//
-//
-//
-
-bool
-svg_path_next(struct svg * const sd, union svg_path_cmd ** cmd)
-{
-  if (sd->p_idx >= sd->p->buf_count)
-    {
-      sd->p_idx = 0;
-
-      return false;
-    }
-
-  // set cmd
-  *cmd = (union svg_path_cmd *)((uintptr_t)sd->p->buf + sd->p_idx);
-
-  // update index
-  struct svg_lookup_cmd const * lookup = path_lookup_cmds + (*cmd)->type;
-
-  sd->p_idx += lookup->size;
-
-  // fprintf(stderr,"%s\n",lookup->name);
-
-  return true;
-}
-
-bool
-svg_raster_next(struct svg * const sd, union svg_raster_cmd ** cmd)
-{
-  if (sd->r_idx >= sd->r->buf_count)
-    {
-      sd->r_idx = 0;
-
-      return false;
-    }
-
-  // set cmd
-  *cmd = (union svg_raster_cmd *)((uintptr_t)sd->r->buf + sd->r_idx);
-
-  // update index
-  struct svg_lookup_cmd const * lookup = raster_lookup_cmds + (*cmd)->type;
-
-  sd->r_idx += lookup->size;
-
-  // fprintf(stderr,"%s\n",lookup->name);
-
-  return true;
-}
-
-bool
-svg_layer_next(struct svg * const sd, union svg_layer_cmd ** cmd)
-{
-  if (sd->l_idx >= sd->l->buf_count)
-    {
-      sd->l_idx = 0;
-
-      return false;
-    }
-
-  // set cmd
-  *cmd = (union svg_layer_cmd *)((uintptr_t)sd->l->buf + sd->l_idx);
-
-  // update index
-  struct svg_lookup_cmd const * lookup = layer_lookup_cmds + (*cmd)->type;
-
-  sd->l_idx += lookup->size;
-
-  // fprintf(stderr,"%s\n",lookup->name);
-
-  return true;
 }
 
 //
