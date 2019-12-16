@@ -87,7 +87,7 @@ def transform_build_file(build):
                 line = new_type_line
                 break
         # Remove references to libzircon.
-        if '$zx/system/ulib/zircon' in line:
+        if '$zx/system/ulib/zircon' in line and not 'zircon-internal' in line:
             line = ''
         # Update references to libraries.
         line = line.replace('$zx/system/ulib', '//zircon/public/lib')
