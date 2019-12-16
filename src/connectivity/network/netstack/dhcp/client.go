@@ -18,7 +18,7 @@ import (
 	"github.com/pkg/errors"
 	"gvisor.dev/gvisor/pkg/rand"
 	"gvisor.dev/gvisor/pkg/tcpip"
-	tcpipHeader "gvisor.dev/gvisor/pkg/tcpip/header"
+	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 	"gvisor.dev/gvisor/pkg/waiter"
@@ -306,19 +306,19 @@ func (c *Client) acquire(ctx context.Context, info *Info) (Config, error) {
 	}
 	writeOpts := tcpip.WriteOptions{
 		To: &tcpip.FullAddress{
-			Addr: tcpipHeader.IPv4Broadcast,
+			Addr: header.IPv4Broadcast,
 			Port: ServerPort,
 			NIC:  info.NICID,
 		},
 	}
 	switch info.State {
 	case initSelecting:
-		bindAddress.Addr = tcpipHeader.IPv4Broadcast
+		bindAddress.Addr = header.IPv4Broadcast
 
 		protocolAddress := tcpip.ProtocolAddress{
 			Protocol: ipv4.ProtocolNumber,
 			AddressWithPrefix: tcpip.AddressWithPrefix{
-				Address:   tcpipHeader.IPv4Any,
+				Address:   header.IPv4Any,
 				PrefixLen: 0,
 			},
 		}
@@ -337,7 +337,7 @@ func (c *Client) acquire(ctx context.Context, info *Info) (Config, error) {
 	default:
 		panic(fmt.Sprintf("unknown client state: c.State=%s", info.State))
 	}
-	ep, err := c.stack.NewEndpoint(tcpipHeader.UDPProtocolNumber, tcpipHeader.IPv4ProtocolNumber, &c.wq)
+	ep, err := c.stack.NewEndpoint(header.UDPProtocolNumber, header.IPv4ProtocolNumber, &c.wq)
 	if err != nil {
 		return Config{}, fmt.Errorf("stack.NewEndpoint(): %s", err)
 	}
@@ -346,7 +346,7 @@ func (c *Client) acquire(ctx context.Context, info *Info) (Config, error) {
 	if err := ep.SetSockOpt(tcpip.ReusePortOption(1)); err != nil {
 		return Config{}, fmt.Errorf("SetSockOpt(ReusePortOption): %s", err)
 	}
-	if writeOpts.To.Addr == tcpipHeader.IPv4Broadcast {
+	if writeOpts.To.Addr == header.IPv4Broadcast {
 		if err := ep.SetSockOpt(tcpip.BroadcastOption(1)); err != nil {
 			return Config{}, fmt.Errorf("SetSockOpt(BroadcastOption): %s", err)
 		}
@@ -539,7 +539,7 @@ retransmitRequest:
 }
 
 func (c *Client) send(ctx context.Context, info *Info, ep tcpip.Endpoint, opts options, writeOpts tcpip.WriteOptions, xid []byte, broadcast, ciaddr bool) error {
-	h := make(header, headerBaseSize+opts.len()+1)
+	h := make(hdr, headerBaseSize+opts.len()+1)
 	h.init()
 	h.setOp(opRequest)
 	copy(h.xidbytes(), xid)
@@ -602,10 +602,10 @@ func (c *Client) recv(ctx context.Context, info *Info, ep tcpip.Endpoint, ch <-c
 			return tcpip.FullAddress{}, "", nil, 0, false, fmt.Errorf("read: %s", err)
 		}
 
-		h := header(v)
+		h := hdr(v)
 
 		if !h.isValid() {
-			return tcpip.FullAddress{}, "", nil, 0, false, fmt.Errorf("invalid header: %x", h)
+			return tcpip.FullAddress{}, "", nil, 0, false, fmt.Errorf("invalid hdr: %x", h)
 		}
 
 		if op := h.op(); op != opReply {

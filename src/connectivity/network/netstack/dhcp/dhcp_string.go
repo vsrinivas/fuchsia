@@ -11,7 +11,7 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip"
 )
 
-func (h header) String() string {
+func (h hdr) String() string {
 	opts, err := h.options()
 	var msgtype dhcpMsgType
 	if err == nil {

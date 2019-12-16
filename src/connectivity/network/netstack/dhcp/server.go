@@ -24,7 +24,7 @@ import (
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/buffer"
-	tcpipHeader "gvisor.dev/gvisor/pkg/tcpip/header"
+	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/udp"
@@ -39,7 +39,7 @@ type Server struct {
 	cfg       Config
 	cfgopts   []option // cfg to send to client
 
-	handlers []chan header
+	handlers []chan hdr
 
 	mu     sync.Mutex
 	leases map[tcpip.LinkAddress]serverLease
@@ -147,12 +147,12 @@ func NewServer(ctx context.Context, c conn, addrs []tcpip.Address, cfg Config) (
 			Port: ClientPort,
 		},
 
-		handlers: make([]chan header, 8),
+		handlers: make([]chan hdr, 8),
 		leases:   make(map[tcpip.LinkAddress]serverLease),
 	}
 
 	for i := 0; i < len(s.handlers); i++ {
-		ch := make(chan header, 8)
+		ch := make(chan hdr, 8)
 		s.handlers[i] = ch
 		go s.handler(ctx, ch)
 	}
@@ -191,7 +191,7 @@ func (s *Server) reader(ctx context.Context) {
 			return
 		}
 
-		h := header(v)
+		h := hdr(v)
 		if !h.isValid() || h.op() != opRequest {
 			continue
 		}
@@ -213,7 +213,7 @@ func (s *Server) reader(ctx context.Context) {
 	}
 }
 
-func (s *Server) handler(ctx context.Context, ch chan header) {
+func (s *Server) handler(ctx context.Context, ch chan hdr) {
 	for {
 		select {
 		case h := <-ch:
@@ -241,7 +241,7 @@ func (s *Server) handler(ctx context.Context, ch chan header) {
 	}
 }
 
-func (s *Server) handleDiscover(hreq header, opts options) {
+func (s *Server) handleDiscover(hreq hdr, opts options) {
 	linkAddr := tcpip.LinkAddress(hreq.chaddr()[:6])
 	xid := hreq.xid()
 
@@ -304,7 +304,7 @@ func (s *Server) handleDiscover(hreq header, opts options) {
 		{optDHCPServer, []byte(s.cfg.ServerAddress)},
 	}
 	opts = append(opts, s.cfgopts...)
-	h := make(header, headerBaseSize+opts.len()+1)
+	h := make(hdr, headerBaseSize+opts.len()+1)
 	h.init()
 	h.setOp(opReply)
 	copy(h.xidbytes(), hreq.xidbytes())
@@ -314,13 +314,13 @@ func (s *Server) handleDiscover(hreq header, opts options) {
 	s.conn.Write([]byte(h), &s.broadcast)
 }
 
-func (s *Server) nack(hreq header) {
+func (s *Server) nack(hreq hdr) {
 	// DHCPNACK
 	opts := options([]option{
 		{optDHCPMsgType, []byte{byte(dhcpNAK)}},
 		{optDHCPServer, []byte(s.cfg.ServerAddress)},
 	})
-	h := make(header, headerBaseSize+opts.len()+1)
+	h := make(hdr, headerBaseSize+opts.len()+1)
 	h.init()
 	h.setOp(opReply)
 	copy(h.xidbytes(), hreq.xidbytes())
@@ -329,7 +329,7 @@ func (s *Server) nack(hreq header) {
 	s.conn.Write([]byte(h), &s.broadcast)
 }
 
-func (s *Server) handleRequest(hreq header, opts options) {
+func (s *Server) handleRequest(hreq hdr, opts options) {
 	linkAddr := tcpip.LinkAddress(hreq.chaddr()[:6])
 	xid := hreq.xid()
 
@@ -343,7 +343,7 @@ func (s *Server) handleRequest(hreq header, opts options) {
 		s.nack(hreq)
 		return
 	}
-	if reqcfg.ServerAddress != s.cfg.ServerAddress && tcpip.Address(hreq.ciaddr()) == tcpipHeader.IPv4Any {
+	if reqcfg.ServerAddress != s.cfg.ServerAddress && tcpip.Address(hreq.ciaddr()) == header.IPv4Any {
 		// This request is for a different DHCP server. Ignore it.
 		return
 	}
@@ -373,7 +373,7 @@ func (s *Server) handleRequest(hreq header, opts options) {
 		{optDHCPServer, []byte(s.cfg.ServerAddress)},
 	}
 	opts = append(opts, s.cfgopts...)
-	h := make(header, headerBaseSize+opts.len()+1)
+	h := make(hdr, headerBaseSize+opts.len()+1)
 	h.init()
 	h.setOp(opReply)
 	copy(h.xidbytes(), hreq.xidbytes())

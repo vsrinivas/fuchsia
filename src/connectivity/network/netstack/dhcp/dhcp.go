@@ -106,9 +106,9 @@ var magicCookie = []byte{99, 130, 83, 99} // RFC 1497
 
 type xid uint32
 
-type header []byte
+type hdr []byte
 
-func (h header) init() {
+func (h hdr) init() {
 	h[1] = 0x01       // htype
 	h[2] = 0x06       // hlen
 	h[3] = 0x00       // hops
@@ -116,7 +116,7 @@ func (h header) init() {
 	copy(h[236:240], magicCookie)
 }
 
-func (h header) isValid() bool {
+func (h hdr) isValid() bool {
 	if len(h) < 241 {
 		return false
 	}
@@ -129,21 +129,21 @@ func (h header) isValid() bool {
 	return bytes.Equal(h[236:240], magicCookie)
 }
 
-func (h header) op() op           { return op(h[0]) }
-func (h header) setOp(o op)       { h[0] = byte(o) }
-func (h header) xidbytes() []byte { return h[4:8] }
-func (h header) xid() xid         { return xid(h[4])<<24 | xid(h[5])<<16 | xid(h[6])<<8 | xid(h[7]) }
-func (h header) setBroadcast()    { h[10] |= 1 << 7 }
-func (h header) broadcast() bool  { return h[10]&1<<7 != 0 }
-func (h header) ciaddr() []byte   { return h[12:16] }
-func (h header) yiaddr() []byte   { return h[16:20] }
-func (h header) siaddr() []byte   { return h[20:24] }
-func (h header) giaddr() []byte   { return h[24:28] }
-func (h header) chaddr() []byte   { return h[28:44] }
-func (h header) sname() []byte    { return h[44:108] }
-func (h header) file() []byte     { return h[108:236] }
+func (h hdr) op() op           { return op(h[0]) }
+func (h hdr) setOp(o op)       { h[0] = byte(o) }
+func (h hdr) xidbytes() []byte { return h[4:8] }
+func (h hdr) xid() xid         { return xid(h[4])<<24 | xid(h[5])<<16 | xid(h[6])<<8 | xid(h[7]) }
+func (h hdr) setBroadcast()    { h[10] |= 1 << 7 }
+func (h hdr) broadcast() bool  { return h[10]&1<<7 != 0 }
+func (h hdr) ciaddr() []byte   { return h[12:16] }
+func (h hdr) yiaddr() []byte   { return h[16:20] }
+func (h hdr) siaddr() []byte   { return h[20:24] }
+func (h hdr) giaddr() []byte   { return h[24:28] }
+func (h hdr) chaddr() []byte   { return h[28:44] }
+func (h hdr) sname() []byte    { return h[44:108] }
+func (h hdr) file() []byte     { return h[108:236] }
 
-func (h header) options() (opts options, err error) {
+func (h hdr) options() (opts options, err error) {
 	i := headerBaseSize
 	for i < len(h) {
 		if h[i] == 0 {
@@ -169,7 +169,7 @@ func (h header) options() (opts options, err error) {
 	return opts, nil
 }
 
-func (h header) setOptions(opts []option) {
+func (h hdr) setOptions(opts []option) {
 	i := headerBaseSize
 	for _, opt := range opts {
 		h[i] = byte(opt.code)

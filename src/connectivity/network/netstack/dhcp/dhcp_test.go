@@ -15,7 +15,7 @@ import (
 	"github.com/pkg/errors"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/buffer"
-	tcpipHeader "gvisor.dev/gvisor/pkg/tcpip/header"
+	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/link/channel"
 	"gvisor.dev/gvisor/pkg/tcpip/link/sniffer"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
@@ -64,7 +64,7 @@ func addChannelToStack(t *testing.T, addresses []tcpip.Address, nicid tcpip.NICI
 	}
 
 	s.SetRouteTable([]tcpip.Route{{
-		Destination: tcpipHeader.IPv4EmptySubnet,
+		Destination: header.IPv4EmptySubnet,
 		NIC:         nicid,
 	}})
 
@@ -304,7 +304,7 @@ func TestDelayRetransmission(t *testing.T) {
 					discoverRcvd := 0
 					requestRcvd := 0
 					for pktInfo := range clientLinkEP.C {
-						dhcp := header(pktInfo.Pkt.Data.First())
+						dhcp := hdr(pktInfo.Pkt.Data.First())
 						opts, err := dhcp.options()
 						if err != nil {
 							return err
@@ -438,7 +438,7 @@ func TestStateTransition(t *testing.T) {
 						// Only pass client broadcast packets back into the stack. This simulates
 						// packet loss during the client's unicast RENEWING state, forcing
 						// it into broadcast REBINDING state.
-						if tcpipHeader.IPv4(pktInfo.Pkt.Header.View()).DestinationAddress() != tcpipHeader.IPv4Broadcast {
+						if header.IPv4(pktInfo.Pkt.Header.View()).DestinationAddress() != header.IPv4Broadcast {
 							continue
 						}
 					}
@@ -567,7 +567,7 @@ func TestNoNullTerminator(t *testing.T) {
 		"\xa8\x2b\xff\x03\x04\xc0\xa8\x2b\x01\x06\x04\xc0\xa8\x2b\x01\x2b" +
 		"\x0f\x41\x4e\x44\x52\x4f\x49\x44\x5f\x4d\x45\x54\x45\x52\x45\x44" +
 		"\xff"
-	h := header(v)
+	h := hdr(v)
 	if !h.isValid() {
 		t.Error("failed to decode header")
 	}
