@@ -115,11 +115,11 @@ class Controller : public ControllerParent,
                       const display_params_t** params) __TA_REQUIRES(mtx());
   bool GetSupportedPixelFormats(uint64_t display_id, fbl::Array<zx_pixel_format_t>* fmts_out)
       __TA_REQUIRES(mtx());
-  bool GetCursorInfo(uint64_t display_id, fbl::Array<cursor_info_t>* cursor_info_out)
-      __TA_REQUIRES(mtx());
+  bool GetCursorInfo(uint64_t display_id,
+                     fbl::Array<cursor_info_t>* cursor_info_out) __TA_REQUIRES(mtx());
   bool GetDisplayIdentifiers(uint64_t display_id, const char** manufacturer_name,
-                             const char** monitor_name, const char** monitor_serial)
-      __TA_REQUIRES(mtx());
+                             const char** monitor_name,
+                             const char** monitor_serial) __TA_REQUIRES(mtx());
 
   ddk::DisplayControllerImplProtocolClient* dc() { return &dc_; }
   ddk::DisplayCaptureImplProtocolClient* dc_capture() {
@@ -137,16 +137,13 @@ class Controller : public ControllerParent,
 
  private:
   friend ControllerTest;
-  void HandleClientOwnershipChanges() __TA_REQUIRES(client_mtx_);
+  void HandleClientOwnershipChanges() __TA_REQUIRES(mtx());
   void PopulateDisplayTimings(const fbl::RefPtr<DisplayInfo>& info) __TA_EXCLUDES(mtx());
   void PopulateDisplayAudio(const fbl::RefPtr<DisplayInfo>& info);
   zx_status_t CreateClient(bool is_vc, zx::channel device, zx::channel client);
 
   zx_status_t OpenVirtconController(zx_handle_t device, zx_handle_t controller, fidl_txn_t* txn);
   zx_status_t OpenController(zx_handle_t device, zx_handle_t controller, fidl_txn_t* txn);
-
-  void ApplyPendingChanges(DisplayInfo* info, const uint64_t* handles, size_t handle_count)
-      __TA_REQUIRES(mtx()) __TA_EXCLUDES(client_mtx_);
 
   static constexpr fuchsia_hardware_display_Provider_ops_t fidl_ops_ = {
       .OpenVirtconController =
@@ -159,19 +156,17 @@ class Controller : public ControllerParent,
   bool unbinding_ __TA_GUARDED(mtx()) = false;
 
   DisplayInfo::Map displays_ __TA_GUARDED(mtx());
+  bool vc_applied_ = false;
+  uint32_t applied_stamp_ = UINT32_MAX;
+  uint32_t applied_client_id_ = UINT32_MAX;
 
-  // client_mtx_ protects client devices
-  mtx_t client_mtx_;
-  bool vc_applied_ __TA_GUARDED(client_mtx_) = false;
-  uint32_t applied_stamp_ __TA_GUARDED(client_mtx_) = UINT32_MAX;
-  uint32_t applied_client_id_ __TA_GUARDED(client_mtx_) = UINT32_MAX;
-  uint32_t next_client_id_ __TA_GUARDED(client_mtx_) = 1;
-  ClientProxy* vc_client_ __TA_GUARDED(client_mtx_) = nullptr;
-  bool vc_ready_ __TA_GUARDED(client_mtx_);
-  ClientProxy* primary_client_ __TA_GUARDED(client_mtx_) = nullptr;
-  bool primary_ready_ __TA_GUARDED(client_mtx_);
-  uint8_t vc_mode_ __TA_GUARDED(client_mtx_) = fuchsia_hardware_display_VirtconMode_INACTIVE;
-  ClientProxy* active_client_ __TA_GUARDED(client_mtx_) = nullptr;
+  uint32_t next_client_id_ __TA_GUARDED(mtx()) = 1;
+  ClientProxy* vc_client_ __TA_GUARDED(mtx()) = nullptr;
+  bool vc_ready_ __TA_GUARDED(mtx());
+  ClientProxy* primary_client_ __TA_GUARDED(mtx()) = nullptr;
+  bool primary_ready_ __TA_GUARDED(mtx());
+  uint8_t vc_mode_ __TA_GUARDED(mtx()) = fuchsia_hardware_display_VirtconMode_INACTIVE;
+  ClientProxy* active_client_ __TA_GUARDED(mtx()) = nullptr;
 
   async::Loop loop_;
   thrd_t loop_thread_;

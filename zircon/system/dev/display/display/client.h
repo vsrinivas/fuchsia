@@ -316,21 +316,22 @@ class ClientProxy : public ClientParent {
   void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
 
+  // Requires holding controller_->mtx() lock
   zx_status_t OnDisplayVsync(uint64_t display_id, zx_time_t timestamp, uint64_t* image_ids,
-                             size_t count) __TA_EXCLUDES(mtx());
+                             size_t count);
   void OnDisplaysChanged(const uint64_t* displays_added, size_t added_count,
                          const uint64_t* displays_removed, size_t removed_count);
   void SetOwnership(bool is_owner);
   void ReapplyConfig();
-  zx_status_t OnCaptureComplete() __TA_EXCLUDES(mtx());
+  zx_status_t OnCaptureComplete();
 
-  void EnableVsync(bool enable) __TA_EXCLUDES(mtx()) {
-    fbl::AutoLock lock(mtx());
+  void EnableVsync(bool enable) {
+    fbl::AutoLock lock(controller_->mtx());
     enable_vsync_ = enable;
   }
 
-  void EnableCapture(bool enable) __TA_EXCLUDES(mtx()) {
-    fbl::AutoLock lock(mtx());
+  void EnableCapture(bool enable) {
+    ZX_DEBUG_ASSERT(mtx_trylock(controller_->mtx()) == thrd_busy);
     enable_capture_ = enable;
   }
   void OnClientDead();
@@ -340,18 +341,15 @@ class ClientProxy : public ClientParent {
   // This is used for testing
   void CloseTest();
 
-  mtx_t* mtx() { return &mtx_; }
-
  private:
   void CloseOnControllerLoop();
 
-  mtx_t mtx_;
   Controller* controller_;
   bool is_vc_;
   zx::channel server_channel_;
   Client handler_;
-  bool enable_vsync_ __TA_GUARDED(mtx()) = false;
-  bool enable_capture_ __TA_GUARDED(mtx()) = false;
+  bool enable_vsync_ = false;
+  bool enable_capture_ = false;
 
   // This variable is used to limit the number of errors logged in case of channel oom error
   static constexpr uint32_t kChannelOomPrintFreq = 600;  // 1 per 10 seconds (assuming 60fps)
