@@ -29,6 +29,7 @@ recovery_packages = [
   "//src/connectivity/network/netcfg:config",
   "//src/connectivity/network/netcfg",
   "//src/connectivity/network/netstack",
+  "//src/connectivity/network:config",
   "//src/connectivity/wlan/wlancfg",
   "//src/connectivity/wlan/wlanstack",
   "//src/recovery/system",

@@ -56,7 +56,7 @@ base_package_labels += [
   "//src/connectivity/network/netcfg",
   "//src/connectivity/network/netcfg:config",
   "//src/connectivity/network/netcfg:filter_config",
-  "//src/connectivity/network/netstack",
+  "//src/connectivity/network:config",
   "//src/connectivity/lowpan/service",
   "//src/connectivity/wlan:service",
   "//src/developer/exception_broker",

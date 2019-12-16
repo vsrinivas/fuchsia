@@ -53,38 +53,14 @@ machine.
 The following instructions are for running Netstack3 as a replacement for the
 default netstack.
 
-### (Step 1) `sysmgr` Setup
+### (Step 1) Build Configuration
 
-To run Netstack3 as the replacement netstack, you'll probably want to disable
-the Go `netstack` first, so as to avoid conflicts and confusion between the two
-stacks.
-
-In [`src/sys/sysmgr/config/services.config`](
-../../../sys/sysmgr/config/services.config):
-
-* Replace `fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx` on the
-  `fuchsia.net.stack.Stack` line with
-  `fuchsia-pkg://fuchsia.com/netstack3#meta/netstack3.cmx`
-* Remove all of the lines from `services` referencing
-  `fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx`.
-* Remove `fuchsia.netstack.Netstack` from `startup_services` and
-  `update_dependencies`.
-* Note that trailing commas are not allowed, and will cause `sysmgr` to fail -
-  make sure to check your config for that.
-
-If you frequently work on Netstack3 like this, consider telling git to ignore
-changes to `src/sys/sysmgr/config/services.config` - you can do this with the
-command `git update-index --skip-worktree
-src/sys/sysmgr/config/services.config`.  This comes with the caveat that when
-you _do_ want to edit the file and check it in (or someone else has made a
-breaking change to the config format), you need to remember that you've done
-this, though. It can be undone by the same command with the `--no-skip-worktree`
-flag.
+`fx set ... --args=use_netstack3=true`
 
 **NOTE:** At the time of this writing, Netstack3 is not complete enough to allow
 for dynamic package download and install. So make sure that every package that
 you'll need is included in your `fx set` line using the `--with-base` argument,
-which will have those packages be part of the base system.  Like this:
+which will have those packages be part of the base system. Like this:
 
 `fx set core.x64
  --with-base //src/connectivity/network/net-cli \

@@ -1,0 +1,21 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  use_netstack3 = false
+}
+
+group("config") {
+  if (use_netstack3) {
+    deps = [
+      "netstack3",
+      "netstack3/config",
+    ]
+  } else {
+    deps = [
+      "netstack",
+      "netstack/config",
+    ]
+  }
+}
