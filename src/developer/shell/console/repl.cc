@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include <cctype>
+#include <iostream>
 #include <set>
 #include <sstream>
 #include <string>
@@ -17,7 +18,7 @@ namespace shell::repl {
 Repl::Repl(JSContext* ctx, const std::string& prompt)
     : li_([this](const std::string& s) { HandleLine(s); }, prompt),
       ctx_(ctx),
-      output_fd_(stdout),
+      output_(&std::cout),
       exit_shell_cmd_(false),
       running_(false) {
   Write("Type \\h for help\n");
@@ -45,16 +46,15 @@ Repl::Repl(JSContext* ctx, const std::string& prompt)
 Repl::Repl(JSContext* ctx, const std::string& prompt, fit::function<void(const std::string&)> cb)
     : li_(std::move(cb), prompt),
       ctx_(ctx),
-      output_fd_(stdout),
+      output_(&std::cout),
       exit_shell_cmd_(false),
       running_(false) {
   Write("Type \\h for help\n");
   li_.Show();
 }
 
-void Repl::Write(const char* output) { fprintf(output_fd_, "%s", output); }
-// TODO(aparadis) take an ostringstream as argument for simpler tests
-void Repl::ChangeOutput(FILE* fd) { output_fd_ = fd; }
+void Repl::Write(const char* output) { *output_ << output; }
+void Repl::ChangeOutput(std::ostream* ss) { output_ = ss; }
 
 void Repl::ShowPrompt() {
   running_ = false;
@@ -74,7 +74,7 @@ bool Repl::FeedInput(uint8_t* bytes, size_t num_bytes) {
     return false;
   }
   for (size_t i = 0; i < num_bytes; i++) {
-    li_.OnInput((char)bytes[i]);
+    li_.OnInput(static_cast<char>(bytes[i]));
     if (exit_shell_cmd_) {
       return true;
     }
@@ -92,7 +92,7 @@ void Repl::HandleLine(const std::string& line) {
   std::string shell_cmd = GetAndExecuteShellCmd(cmd);
   if (shell_cmd == "\\q") {
     exit_shell_cmd_ = true;
-  } else if (shell_cmd != "") {
+  } else if (!shell_cmd.empty()) {
     mexpr_ = "";
     exit_shell_cmd_ = false;
     ShowPrompt();
@@ -125,7 +125,7 @@ std::string Repl::GetAndExecuteShellCmd(std::string cmd) {
   return "";
 }
 
-void Repl::EvalCmd(std::string& cmd) {
+void Repl::EvalCmd(const std::string& cmd) {
   cur_cmd_ = cmd;  // saving the cmd in the Repl class instance, to be executed through a JS call
   std::string script = "repl.evalScriptAwaitsPromise()";
   JSValue res = JS_Eval(ctx_, script.c_str(), script.length(), "<evalScript>", JS_EVAL_TYPE_GLOBAL);
@@ -151,7 +151,7 @@ bool isIdentifierAllowed(char c) {
   return std::isalpha(c) || std::isdigit(c) || c == '_' || c == '$';
 }
 
-std::string Repl::OpenSymbols(std::string& cmd) {
+std::string Repl::OpenSymbols(const std::string& cmd) {
   std::string open_symbols;
   bool regex_possible = true;
   size_t n = cmd.length();

@@ -3,9 +3,6 @@
 // found in the LICENSE file.
 #include "repl.h"
 
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
-#include <lib/memfs/memfs.h>
 #include <stdlib.h>
 #include <zircon/syscalls.h>
 
@@ -28,8 +25,10 @@ namespace shell::repl {
 
 class TestRepl : public Repl {
  public:
-  TestRepl(JSContext* ctx, const std::string& prompt, bool ev, bool pr)
-      : Repl(ctx, prompt, [this](const std::string& s) { HandleLine(s); }), eval_(ev), print_(pr) {}
+  TestRepl(JSContext* ctx, const std::string& prompt, bool ev)
+      : Repl(ctx, prompt, [this](const std::string& s) { HandleLine(s); }), eval_(ev) {
+    ChangeOutput(&shell_out_);
+  }
 
   std::queue<std::string> GetListFullLines() {
     std::queue<std::string> res(full_lines_);
@@ -43,28 +42,17 @@ class TestRepl : public Repl {
     return res;
   }
 
-  std::queue<const char*> GetListOutputs() {
-    std::queue res(output_);
-    std::queue<const char*>().swap(output_);
-    return res;
-  }
+  std::string PublicOpenSymbols(const std::string& cmd) { return OpenSymbols(cmd); }
 
-  std::string PublicOpenSymbols(std::string& cmd) { return OpenSymbols(cmd); }
-
-  void Write(const char* output) {
-    if (print_)
-      Repl::Write(output);
-    else
-      output_.push(output);
-  }
+  std::string GetOutput() { return shell_out_.str(); }
 
  protected:
-  void HandleLine(const std::string& line) {
+  void HandleLine(const std::string& line) override {
     full_lines_.push(line);
     Repl::HandleLine(line);
   }
 
-  void EvalCmd(std::string& cmd) {
+  void EvalCmd(const std::string& cmd) override {
     full_cmds_.push(cmd);
     if (eval_) {
       Repl::EvalCmd(cmd);
@@ -77,22 +65,11 @@ class TestRepl : public Repl {
   std::queue<std::string> full_lines_;
   std::queue<std::string> full_cmds_;
   bool eval_ = false;
-  bool print_ = false;
-  std::queue<const char*> output_;
+  std::ostringstream shell_out_;
 };
 
 TEST(Repl, Sanity) {
-  // set up a file to output to
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_EQ(loop.StartThread(), ZX_OK);
-  ASSERT_EQ(ZX_OK, memfs_install_at(loop.dispatcher(), "/test_tmp2"));
-  constexpr const char* name = "/test_tmp2/tmp.XXXXXX";
-  std::unique_ptr<char[]> buffer(new char[strlen(name) + 1]);
-  strcpy(buffer.get(), name);
-  int cfd = mkstemp(buffer.get());
-  ASSERT_NE(cfd, -1);
-  std::string filename = buffer.get();
-  FILE* output_fd = fdopen(cfd, "rw+");
+  std::ostringstream captured_output;
 
   // set up the repl
   shell::Runtime rt;
@@ -112,14 +89,12 @@ TEST(Repl, Sanity) {
       JS_Eval(ctx_ptr, script.c_str(), script.length(), "<evalScript>", JS_EVAL_TYPE_GLOBAL);
   repl::Repl* repl = li::GetRepl(ctx_ptr, res);
 
-  repl->ChangeOutput(output_fd);
+  repl->ChangeOutput(&captured_output);
 
   std::string test_string = "print(4);\n";
   repl->FeedInput(reinterpret_cast<unsigned char*>(test_string.data()), test_string.size());
 
-  fflush(output_fd);
-  std::ifstream in(filename.c_str());
-  std::string actual((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+  std::string actual = captured_output.str();
   std::string expected("undefined\n");
   ASSERT_STREQ(expected.c_str(), actual.c_str());
 
@@ -128,16 +103,14 @@ TEST(Repl, Sanity) {
   repl->FeedInput(reinterpret_cast<unsigned char*>(test_string2.data()), test_string2.size());
   js_std_loop(ctx_ptr);
 
-  fflush(output_fd);
-  std::ifstream in2(filename.c_str());
-  std::string actual2((std::istreambuf_iterator<char>(in2)), std::istreambuf_iterator<char>());
+  std::string actual2 = captured_output.str();
   std::string expected2("undefined\nd\n");
   ASSERT_STREQ(expected2.c_str(), actual2.c_str());
 }
 
 TEST(Repl, SpecialCharacters) {
-  JSContext* ctx_ptr = 0;
-  TestRepl repl(ctx_ptr, "li >", false, false);
+  JSContext* ctx_ptr = nullptr;
+  TestRepl repl(ctx_ptr, "li >", false);
 
   std::string test_string = "pr\x1b[Dint(3)\n";
   std::string expected = "pint(3)r";
@@ -151,13 +124,13 @@ TEST(Repl, SpecialCharacters) {
 }
 
 TEST(Repl, MultipleLines) {
-  JSContext* ctx_ptr = 0;
-  TestRepl repl(ctx_ptr, "li >", false, false);
+  JSContext* ctx_ptr = nullptr;
+  TestRepl repl(ctx_ptr, "li >", false);
 
   constexpr int kNumLines = 4;
   std::array<std::string, kNumLines> test_string1 = {"function (\n", "a){\n", "\tprint(a)\n",
                                                      "};\n"};
-  std::string cur_cmd = "";
+  std::string cur_cmd;
   std::string expected = "function (a){print(a)};";
   std::array<std::string, kNumLines> expected_open_symbols = {"(", "{", "{", ""};
   for (int i = 0; i < kNumLines; i++) {
@@ -165,7 +138,7 @@ TEST(Repl, MultipleLines) {
                    test_string1[i].size());
     std::queue<std::string> res_lines = repl.GetListFullLines();
     ASSERT_EQ(res_lines.size(), 1);
-    cur_cmd = cur_cmd + res_lines.front();
+    cur_cmd += res_lines.front();
     EXPECT_STREQ(repl.PublicOpenSymbols(cur_cmd).c_str(), expected_open_symbols[i].c_str());
   }
   std::queue<std::string> res_cmds = repl.GetListFullCmds();
@@ -184,7 +157,7 @@ TEST(Repl, MultipleLines) {
                    test_string2[i].size());
     std::queue<std::string> res_lines = repl.GetListFullLines();
     ASSERT_EQ(res_lines.size(), 1);
-    cur_cmd = cur_cmd + res_lines.front();
+    cur_cmd += res_lines.front();
     EXPECT_STREQ(repl.PublicOpenSymbols(cur_cmd).c_str(), expected_open_symbols2[i].c_str());
   }
   res_cmds = repl.GetListFullCmds();
@@ -193,17 +166,7 @@ TEST(Repl, MultipleLines) {
 }
 
 TEST(Repl, TabCompletionAndHistory) {
-  // set up a file to output to
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_EQ(loop.StartThread(), ZX_OK);
-  ASSERT_EQ(ZX_OK, memfs_install_at(loop.dispatcher(), "/test_tmpTabCompletion"));
-  constexpr const char* name = "/test_tmpTabCompletion/tmp.XXXXXX";
-  std::unique_ptr<char[]> buffer(new char[strlen(name) + 1]);
-  strcpy(buffer.get(), name);
-  int cfd = mkstemp(buffer.get());
-  ASSERT_NE(cfd, -1);
-  std::string filename = buffer.get();
-  FILE* output_fd = fdopen(cfd, "rw+");
+  std::ostringstream captured_output;
 
   // set up the repl
   shell::Runtime rt;
@@ -221,18 +184,16 @@ TEST(Repl, TabCompletionAndHistory) {
   std::string script = "os.setReadHandler(std.in.fileno(), null); repl.repl;";
   JSValue res =
       JS_Eval(ctx_ptr, script.c_str(), script.length(), "<evalScript>", JS_EVAL_TYPE_GLOBAL);
-  repl::Repl* repl = reinterpret_cast<repl::Repl*>(li::GetRepl(ctx_ptr, res));
+  auto repl = reinterpret_cast<repl::Repl*>(li::GetRepl(ctx_ptr, res));
 
-  repl->ChangeOutput(output_fd);
+  repl->ChangeOutput(&captured_output);
 
   std::string test_string = "a = \"dddd\";\n";
   repl->FeedInput(reinterpret_cast<unsigned char*>(test_string.data()), test_string.size());
   std::string test_string2 = "b =a.le\t;\n";
   repl->FeedInput(reinterpret_cast<unsigned char*>(test_string2.data()), test_string2.size());
 
-  fflush(output_fd);
-  std::ifstream in(filename.c_str());
-  std::string actual((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+  std::string actual = captured_output.str();
   std::string expected("dddd\n4\n");
   ASSERT_STREQ(expected.c_str(), actual.c_str());
 
@@ -240,9 +201,7 @@ TEST(Repl, TabCompletionAndHistory) {
   std::string test_string3 = "\x1b[A\n";
   repl->FeedInput(reinterpret_cast<unsigned char*>(test_string3.data()), test_string3.size());
 
-  fflush(output_fd);
-  std::ifstream in2(filename.c_str());
-  std::string actual2((std::istreambuf_iterator<char>(in2)), std::istreambuf_iterator<char>());
+  std::string actual2 = captured_output.str();
   std::string expected2("dddd\n4\n4\n");
   ASSERT_STREQ(expected2.c_str(), actual2.c_str());
 }

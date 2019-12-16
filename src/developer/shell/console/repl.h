@@ -40,7 +40,7 @@ class Repl {
   // Shows the prompt, and sets running_ to false
   void ShowPrompt();
   void Write(const char* output);
-  void ChangeOutput(FILE* fd);
+  void ChangeOutput(std::ostream* os);
   virtual ~Repl() = default;
 
  protected:
@@ -49,17 +49,17 @@ class Repl {
   // sets exit_shell_cmd_ to true if "\q" (exiting the shell) was typed
   virtual void HandleLine(const std::string& line);
   // calls the JS function evalScriptAwaitsPromise()
-  virtual void EvalCmd(std::string& cmd);
+  virtual void EvalCmd(const std::string& cmd);
   // Given a possibly incomplete Javascript script, returns the list of currently open brackets ({[,
   // * for block comments and / for regular expressions
-  std::string OpenSymbols(std::string& cmd);
+  std::string OpenSymbols(const std::string& cmd);
 
  private:
   std::string GetAndExecuteShellCmd(std::string cmd);
   std::string mexpr_;
   line_input::LineInputStdout li_;
   JSContext* ctx_;
-  FILE* output_fd_;
+  std::ostream* output_;
   bool exit_shell_cmd_;
   bool running_;  // set to true at the beginning of a JS script execution, and set to false by
                   // ShowPrompt().

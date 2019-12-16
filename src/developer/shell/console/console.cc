@@ -26,7 +26,9 @@ int ConsoleMain(int argc, const char **argv) {
   CommandLineOptions options;
   std::vector<std::string> params;
 
-  if (!ParseCommandLine(argc, argv, &options, &params).ok()) {
+  cmdline::Status status = ParseCommandLine(argc, argv, &options, &params);
+  if (status.has_error()) {
+    fprintf(stderr, "%s\n", status.error_message().c_str());
     return 1;
   }
 

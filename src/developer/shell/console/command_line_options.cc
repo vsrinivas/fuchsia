@@ -8,6 +8,14 @@
 
 namespace shell {
 
+const char* const kHelpIntro = R"(josh [ <options> ]
+
+  josh is a JavaScript shell for Fuchsia.
+
+Options:
+
+)";
+
 const char kCommandStringHelp[] = R"(  --command-string=<command-string>
   -c <command string>
       Execute the given command string instead of reading commands
@@ -19,6 +27,7 @@ const char kFidlIrPathHelp[] = R"(  --fidl-ir-path=<path>
       /pkgfs/packages/josh/0/data/fidling, and only takes a single path
       element.  This should be fixed, which requires turning the shell
       into a component.)";
+
 const char kLineEditorHelp[] = R"(  --fuchsia-line-editor
   -l
       Use Fuchsia line_input line editor.)";
@@ -30,6 +39,10 @@ const char kBootJsLibPathHelp[] = R"(  --boot-js-lib-path=<path>
       element.  This should be fixed, which requires turning the shell
       into a component.)";
 
+const char* const kHelpHelp = R"(  --help
+  -h
+      Prints all command-line switches.)";
+
 cmdline::Status ParseCommandLine(int argc, const char** argv, CommandLineOptions* options,
                                  std::vector<std::string>* params) {
   cmdline::ArgsParser<CommandLineOptions> parser;
@@ -40,9 +53,16 @@ cmdline::Status ParseCommandLine(int argc, const char** argv, CommandLineOptions
                    &CommandLineOptions::boot_js_lib_path);
   parser.AddSwitch("fuchsia-line-editor", 'l', kLineEditorHelp, &CommandLineOptions::line_editor);
 
+  bool requested_help = false;
+  parser.AddGeneralSwitch("help", 'h', kHelpHelp, [&requested_help]() { requested_help = true; });
+
   cmdline::Status status = parser.Parse(argc, argv, options, params);
   if (status.has_error()) {
     return status;
+  }
+
+  if (requested_help) {
+    return cmdline::Status::Error(kHelpIntro + parser.GetHelp());
   }
 
   // TODO(jeremymanson): This is a bad default.

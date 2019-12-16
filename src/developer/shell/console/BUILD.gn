@@ -37,6 +37,7 @@ compiled_js("repl_init") {
 source_set("tests") {
   testonly = true
   sources = [
+    "command_line_options_test.cc",
     "console_test.cc",
     "repl_test.cc",
   ]
