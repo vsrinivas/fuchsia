@@ -22,6 +22,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.identity.external:fuchsia.identity.external-rustc",
     "//sdk/fidl/fuchsia.identity.keys:fuchsia.identity.keys-rustc",
     "//sdk/fidl/fuchsia.kms:fuchsia.kms-rustc",
+    "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
     "//src/identity/fidl:account-rustc",
     "//src/identity/lib/account_common",
     "//src/identity/lib/identity_common",
@@ -41,6 +42,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:serde_derive",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
+    "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]
 }
 

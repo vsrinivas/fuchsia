@@ -1,10 +1,20 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.stash.Store": "fuchsia-pkg://fuchsia.com/stash#meta/stash_tests.cmx"
+            }
+        }
+    },
     "program": {
         "binary": "test/account_handler_bin_test"
     },
     "sandbox": {
         "features": [
             "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.stash.Store"
         ]
     }
 }
