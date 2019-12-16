@@ -104,13 +104,9 @@ impl Realm {
                     *state = Some(RealmState::new(realm, component.decl).await?);
                 }
             }
-            if realm.abs_moniker.is_root() {
-                let event = Event {
-                    target_realm: realm.clone(),
-                    payload: EventPayload::RootComponentResolved,
-                };
-                realm.hooks.dispatch(&event).await?;
-            }
+            let event =
+                Event { target_realm: realm.clone(), payload: EventPayload::ResolveInstance };
+            realm.hooks.dispatch(&event).await?;
         }
         Ok(())
     }

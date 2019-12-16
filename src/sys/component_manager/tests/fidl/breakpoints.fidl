@@ -32,8 +32,8 @@ enum EventType {
     /// TODO(fxb/39417): Ensure the instance is stopped before this event.
     PRE_DESTROY_INSTANCE = 3;
 
-    /// The root component instance's declaration was resolved successfully for the first time.
-    ROOT_COMPONENT_RESOLVED = 4;
+    /// An instance's declaration was resolved successfully for the first time.
+    RESOLVE_INSTANCE = 4;
 
     /// A builtin capability is being requested by a component and requires routing.
     /// The event propagation system is used to supply the capability being requested.

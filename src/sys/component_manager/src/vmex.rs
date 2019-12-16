@@ -93,7 +93,7 @@ impl Hook for VmexServiceInner {
     fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
             if let EventPayload::RouteCapability {
-                source: CapabilitySource::Framework { capability, scope_realm: None },
+                source: CapabilitySource::Framework { capability, scope_moniker: None },
                 capability_provider,
             } = &event.payload
             {
@@ -220,7 +220,7 @@ mod tests {
         let capability_provider = Arc::new(Mutex::new(None));
         let source = CapabilitySource::Framework {
             capability: FrameworkCapability::ServiceProtocol(VMEX_CAPABILITY_PATH.clone()),
-            scope_realm: None,
+            scope_moniker: None,
         };
 
         let (client, server) = zx::Channel::create()?;

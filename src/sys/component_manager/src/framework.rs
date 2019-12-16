@@ -10,7 +10,7 @@ use {
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             model::{ComponentManagerConfig, Model},
-            moniker::PartialMoniker,
+            moniker::{AbsoluteMoniker, PartialMoniker},
             realm::Realm,
         },
     },
@@ -36,13 +36,13 @@ lazy_static! {
 
 // The default implementation for framework services.
 pub struct RealmCapabilityProvider {
-    realm: Arc<Realm>,
+    scope_moniker: AbsoluteMoniker,
     host: RealmCapabilityHost,
 }
 
 impl RealmCapabilityProvider {
-    pub fn new(realm: Arc<Realm>, host: RealmCapabilityHost) -> Self {
-        Self { realm, host }
+    pub fn new(scope_moniker: AbsoluteMoniker, host: RealmCapabilityHost) -> Self {
+        Self { scope_moniker, host }
     }
 
     pub async fn open_async(
@@ -55,10 +55,10 @@ impl RealmCapabilityProvider {
         let stream = ServerEnd::<fsys::RealmMarker>::new(server_end)
             .into_stream()
             .expect("could not convert channel into stream");
-        let realm = self.realm.clone();
+        let scope_moniker = self.scope_moniker.clone();
         let host = self.host.clone();
         fasync::spawn(async move {
-            if let Err(e) = host.serve(realm, stream).await {
+            if let Err(e) = host.serve(scope_moniker, stream).await {
                 // TODO: Set an epitaph to indicate this was an unexpected error.
                 warn!("serve_realm failed: {}", e);
             }
@@ -104,10 +104,10 @@ impl RealmCapabilityHost {
 
     pub async fn serve(
         &self,
-        realm: Arc<Realm>,
+        scope_moniker: AbsoluteMoniker,
         stream: fsys::RealmRequestStream,
     ) -> Result<(), Error> {
-        self.inner.serve(realm, stream).await
+        self.inner.serve(scope_moniker, stream).await
     }
 }
 
@@ -118,9 +118,13 @@ impl RealmCapabilityHostInner {
 
     async fn serve(
         &self,
-        realm: Arc<Realm>,
+        scope_moniker: AbsoluteMoniker,
         mut stream: fsys::RealmRequestStream,
     ) -> Result<(), Error> {
+        // We only need to look up the realm matching this scope.
+        // These realm operations should all work, even if the scope realm is not running.
+        // A successful call to BindChild will cause the scope realm to start running.
+        let realm = self.model.look_up_realm(&scope_moniker).await?;
         while let Some(request) = stream.try_next().await? {
             match request {
                 fsys::RealmRequest::CreateChild { responder, collection, decl } => {
@@ -312,7 +316,7 @@ impl RealmCapabilityHostInner {
 
     async fn on_route_scoped_framework_capability_async<'a>(
         self: Arc<Self>,
-        realm: Arc<Realm>,
+        scope_moniker: AbsoluteMoniker,
         capability: &'a FrameworkCapability,
         capability_provider: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
@@ -323,7 +327,7 @@ impl RealmCapabilityHostInner {
                 if *capability_path == *REALM_SERVICE =>
             {
                 return Ok(Some(Box::new(RealmCapabilityProvider::new(
-                    realm.clone(),
+                    scope_moniker,
                     RealmCapabilityHost { inner: self.clone() },
                 )) as Box<dyn CapabilityProvider>));
             }
@@ -336,14 +340,15 @@ impl Hook for RealmCapabilityHostInner {
     fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
             if let EventPayload::RouteCapability {
-                source: CapabilitySource::Framework { capability, scope_realm: Some(scope_realm) },
+                source:
+                    CapabilitySource::Framework { capability, scope_moniker: Some(scope_moniker) },
                 capability_provider,
             } = &event.payload
             {
                 let mut capability_provider = capability_provider.lock().await;
                 *capability_provider = self
                     .on_route_scoped_framework_capability_async(
-                        scope_realm.clone(),
+                        scope_moniker.clone(),
                         &capability,
                         capability_provider.take(),
                     )
@@ -423,18 +428,16 @@ mod tests {
             model.root_realm.hooks.install(hooks).await;
 
             // Look up and bind to realm.
-            let realm = model.look_up_realm(&realm_moniker).await.expect("failed to look up realm");
-            model.bind(&realm.abs_moniker).await.expect("failed to bind to realm");
+            let realm = model.bind(&realm_moniker).await.expect("failed to bind to realm");
 
             // Host framework service.
             let (realm_proxy, stream) =
                 endpoints::create_proxy_and_stream::<fsys::RealmMarker>().unwrap();
             {
-                let realm = realm.clone();
                 fasync::spawn(async move {
                     builtin_environment_inner
                         .realm_capability_host
-                        .serve(realm, stream)
+                        .serve(realm_moniker, stream)
                         .await
                         .expect("failed serving realm service");
                 });

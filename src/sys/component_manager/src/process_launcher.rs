@@ -274,7 +274,7 @@ impl Hook for ProcessLauncherInner {
     fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
             if let EventPayload::RouteCapability {
-                source: CapabilitySource::Framework { capability, scope_realm: None },
+                source: CapabilitySource::Framework { capability, scope_moniker: None },
                 capability_provider,
             } = &event.payload
             {
@@ -381,7 +381,7 @@ mod tests {
             capability: FrameworkCapability::ServiceProtocol(
                 PROCESS_LAUNCHER_CAPABILITY_PATH.clone(),
             ),
-            scope_realm: None,
+            scope_moniker: None,
         };
 
         let (client, server) = zx::Channel::create()?;

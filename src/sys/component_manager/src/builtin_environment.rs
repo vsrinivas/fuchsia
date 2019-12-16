@@ -146,18 +146,21 @@ impl BuiltinEnvironment {
             // This ensures that all events will reach this breakpoint system.
             model.root_realm.hooks.install(breakpoint_system.hooks()).await;
 
-            // Register for RootComponentResolved event to halt the ComponentManager when the
+            // Register for ResolveInstance event to halt the ComponentManager when the
             // root realm is first resolved.
-            let root_realm_created_receiver =
-                breakpoint_system.register(vec![EventType::RootComponentResolved]).await;
+            let receiver = breakpoint_system.register(vec![EventType::ResolveInstance]).await;
+            let mut receiver = Some(receiver);
 
             // Setup a capability provider for external use. This provider is not used
             // by components within component manager, hence there is no associated hook for it.
             // Instead, it is used by external components that wish to debug component manager.
             let breakpoint_capability_provider = breakpoint_system.create_capability_provider();
             service_fs.dir("svc").add_fidl_service(move |stream| {
+                // The receiver is held inside this closure as a `mut Option`. Since we only
+                // want to use this receiver once and drop it after, take the receiver.
+                let receiver = receiver.take();
                 breakpoint_capability_provider
-                    .serve_async(stream, Some(root_realm_created_receiver.clone()))
+                    .serve_async(stream, receiver)
                     .expect("failed to serve debug breakpoint capability");
             });
         }

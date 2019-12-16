@@ -9,7 +9,7 @@ use {
         model::{
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
-            realm::Realm,
+            moniker::AbsoluteMoniker,
             testing::{routing_test_helpers::*, test_helpers::*},
         },
     },
@@ -37,13 +37,13 @@ use {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn use_framework_service() {
     pub struct MockRealmCapabilityProvider {
-        realm: Arc<Realm>,
+        scope_moniker: AbsoluteMoniker,
         host: MockRealmCapabilityHost,
     }
 
     impl MockRealmCapabilityProvider {
-        pub fn new(realm: Arc<Realm>, host: MockRealmCapabilityHost) -> Self {
-            Self { realm, host }
+        pub fn new(scope_moniker: AbsoluteMoniker, host: MockRealmCapabilityHost) -> Self {
+            Self { scope_moniker, host }
         }
 
         pub async fn open_async(
@@ -56,10 +56,10 @@ async fn use_framework_service() {
             let stream = ServerEnd::<fsys::RealmMarker>::new(server_end)
                 .into_stream()
                 .expect("could not convert channel into stream");
-            let realm = self.realm.clone();
+            let scope_moniker = self.scope_moniker.clone();
             let host = self.host.clone();
             fasync::spawn(async move {
-                if let Err(e) = host.serve(realm, stream).await {
+                if let Err(e) = host.serve(scope_moniker, stream).await {
                     // TODO: Set an epitaph to indicate this was an unexpected error.
                     warn!("serve_realm failed: {}", e);
                 }
@@ -85,14 +85,14 @@ async fn use_framework_service() {
             Box::pin(async move {
                 if let EventPayload::RouteCapability {
                     source:
-                        CapabilitySource::Framework { capability, scope_realm: Some(scope_realm) },
+                        CapabilitySource::Framework { capability, scope_moniker: Some(scope_moniker) },
                     capability_provider,
                 } = &event.payload
                 {
                     let mut capability_provider = capability_provider.lock().await;
                     *capability_provider = self
                         .on_route_scoped_framework_capability_async(
-                            scope_realm.clone(),
+                            scope_moniker.clone(),
                             &capability,
                             capability_provider.take(),
                         )
@@ -120,15 +120,14 @@ async fn use_framework_service() {
 
         async fn serve(
             &self,
-            realm: Arc<Realm>,
+            scope_moniker: AbsoluteMoniker,
             mut stream: fsys::RealmRequestStream,
         ) -> Result<(), Error> {
             while let Some(request) = stream.try_next().await? {
                 match request {
                     fsys::RealmRequest::BindChild { responder, .. } => {
                         self.bind_calls.lock().await.push(
-                            realm
-                                .abs_moniker
+                            scope_moniker
                                 .path()
                                 .last()
                                 .expect("did not expect root component")
@@ -145,7 +144,7 @@ async fn use_framework_service() {
 
         pub async fn on_route_scoped_framework_capability_async<'a>(
             &'a self,
-            realm: Arc<Realm>,
+            scope_moniker: AbsoluteMoniker,
             capability: &'a FrameworkCapability,
             capability_provider: Option<Box<dyn CapabilityProvider>>,
         ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
@@ -156,7 +155,7 @@ async fn use_framework_service() {
                     if *capability_path == *REALM_SERVICE =>
                 {
                     return Ok(Some(Box::new(MockRealmCapabilityProvider::new(
-                        realm.clone(),
+                        scope_moniker.clone(),
                         self.clone(),
                     )) as Box<dyn CapabilityProvider>));
                 }

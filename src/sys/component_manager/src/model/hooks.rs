@@ -34,8 +34,8 @@ pub enum EventType {
     /// TODO(fxb/39417): Ensure the instance is stopped before this event.
     PreDestroyInstance,
 
-    /// The root component instance's declaration was resolved successfully for the first time.
-    RootComponentResolved,
+    /// An instance's declaration was resolved successfully for the first time.
+    ResolveInstance,
 
     /// A capability is being requested by a component and requires routing.
     /// The event propagation system is used to supply the capability being requested.
@@ -72,7 +72,7 @@ pub enum EventPayload {
     AddDynamicChild,
     PostDestroyInstance,
     PreDestroyInstance,
-    RootComponentResolved,
+    ResolveInstance,
     RouteCapability {
         source: CapabilitySource,
         // Events are passed to hooks as immutable borrows. In order to mutate,
@@ -94,7 +94,7 @@ impl EventPayload {
             EventPayload::AddDynamicChild => EventType::AddDynamicChild,
             EventPayload::PostDestroyInstance => EventType::PostDestroyInstance,
             EventPayload::PreDestroyInstance => EventType::PreDestroyInstance,
-            EventPayload::RootComponentResolved => EventType::RootComponentResolved,
+            EventPayload::ResolveInstance => EventType::ResolveInstance,
             EventPayload::RouteCapability { .. } => EventType::RouteCapability,
             EventPayload::StartInstance { .. } => EventType::StartInstance,
             EventPayload::StopInstance => EventType::StopInstance,
@@ -110,7 +110,7 @@ impl fmt::Debug for EventPayload {
             EventPayload::AddDynamicChild
             | EventPayload::PostDestroyInstance
             | EventPayload::PreDestroyInstance
-            | EventPayload::RootComponentResolved
+            | EventPayload::ResolveInstance
             | EventPayload::StopInstance => formatter.finish(),
             EventPayload::RouteCapability { source: capability, .. } => {
                 formatter.field("capability", &capability).finish()

@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        model::{binding::Binder, error::ModelError, moniker::AbsoluteMoniker, realm::Realm},
+        model::{binding::Binder, error::ModelError, moniker::AbsoluteMoniker},
         work_scheduler::{work_item::WorkItem, work_scheduler::WORKER_CAPABILITY_PATH},
     },
     failure::Fail,
@@ -68,31 +68,31 @@ impl Hash for dyn Dispatcher {
 // TODO(markdittmer): `Realm` can be replaced by an `AbsoluteMoniker` when `Model` (and
 // `Binder`) interface methods accept `AbsoluteMoniker` instead of `Realm`.
 pub(super) struct RealDispatcher {
-    /// `Realm` where component instance receiving dispatch resides.
-    realm: Arc<Realm>,
+    /// `AbsoluteMoniker` of component instance receiving dispatch.
+    target_moniker: AbsoluteMoniker,
     /// Implementation for binding to component and connecting to a service in its outgoing
     /// directory, in this case, the component instance's `fuchsia.sys2.Worker` server.
     binder: Weak<dyn Binder>,
 }
 
 impl RealDispatcher {
-    pub(super) fn new(realm: Arc<Realm>, binder: Weak<dyn Binder>) -> Arc<Self> {
-        Arc::new(Self { realm, binder })
+    pub(super) fn new(target_moniker: AbsoluteMoniker, binder: Weak<dyn Binder>) -> Arc<Self> {
+        Arc::new(Self { target_moniker, binder })
     }
 }
 
 impl Dispatcher for RealDispatcher {
     fn abs_moniker(&self) -> &AbsoluteMoniker {
-        &self.realm.abs_moniker
+        &self.target_moniker
     }
 
     fn dispatch(&self, work_items: Vec<WorkItem>) -> BoxFuture<Result<(), Error>> {
-        Box::pin(async move { dispatch(&self.realm, &self.binder, work_items).await })
+        Box::pin(async move { dispatch(&self.target_moniker, &self.binder, work_items).await })
     }
 }
 
 async fn dispatch(
-    realm: &Arc<Realm>,
+    target_moniker: &AbsoluteMoniker,
     binder: &Weak<dyn Binder>,
     work_items: Vec<WorkItem>,
 ) -> Result<(), Error> {
@@ -101,7 +101,7 @@ async fn dispatch(
     binder
         .upgrade()
         .ok_or_else(|| Error::ModelNotFound)?
-        .bind(&realm.abs_moniker)
+        .bind(&target_moniker)
         .await
         .map_err(|err| Error::Model(err))?
         .open_outgoing(OPEN_RIGHT_READABLE, MODE_TYPE_SERVICE, &*WORKER_CAPABILITY_PATH, server_end)

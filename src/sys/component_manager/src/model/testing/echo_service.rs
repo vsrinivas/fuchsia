@@ -97,7 +97,7 @@ impl Hook for EchoServiceInner {
     fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
             if let EventPayload::RouteCapability {
-                source: CapabilitySource::Framework { capability, scope_realm: None },
+                source: CapabilitySource::Framework { capability, scope_moniker: None },
                 capability_provider,
             } = &event.payload
             {

@@ -493,7 +493,7 @@ impl HubInner {
         // If this is a scoped framework directory capability, then check the source path
         if let CapabilitySource::Framework {
             capability: FrameworkCapability::Directory(source_path),
-            scope_realm: Some(scope_realm),
+            scope_moniker: Some(scope_moniker),
         } = source
         {
             let mut relative_path = source_path.split();
@@ -506,7 +506,7 @@ impl HubInner {
             let mut capability_provider = capability_provider.lock().await;
             if capability_provider.is_none() {
                 *capability_provider = Some(Box::new(HubCapabilityProvider::new(
-                    scope_realm.abs_moniker.clone(),
+                    scope_moniker.clone(),
                     relative_path,
                     self,
                 )))

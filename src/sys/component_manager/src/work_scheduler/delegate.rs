@@ -2,10 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::model::moniker::AbsoluteMoniker;
+use crate::model::realm::Realm;
 use {
     crate::work_scheduler::{
-        dispatcher::Dispatcher, timer::WorkSchedulerTimer, work_item::WorkItem,
-        work_scheduler::WorkScheduler,
+        dispatcher::Dispatcher,
+        timer::WorkSchedulerTimer,
+        work_item::WorkItem,
+        work_scheduler::{WorkScheduler, WORKER_CAPABILITY_PATH},
     },
     fidl_fuchsia_sys2 as fsys,
     fuchsia_async::{self as fasync, Time},
@@ -32,6 +36,8 @@ pub(super) struct WorkSchedulerDelegate {
     /// `WorkSchedulerDelegate.dispatch_work()` is _not_ an option because it could violate mutual
     /// exclusion over pub methods on `WorkSchedulerDelegate'.
     weak_work_scheduler: Option<Weak<WorkScheduler>>,
+    /// Instances that have exposed the Worker capability to the framework
+    worker_monikers: Vec<AbsoluteMoniker>,
 }
 
 impl WorkSchedulerDelegate {
@@ -42,12 +48,32 @@ impl WorkSchedulerDelegate {
     }
 
     fn new_raw() -> Self {
-        Self { work_items: Vec::new(), batch_period: None, timer: None, weak_work_scheduler: None }
+        Self {
+            work_items: Vec::new(),
+            batch_period: None,
+            timer: None,
+            weak_work_scheduler: None,
+            worker_monikers: Vec::new(),
+        }
     }
 
     /// Invoked immediately by `WorkScheduler` during initialization.
     pub(super) fn init(&mut self, weak_work_scheduler: Weak<WorkScheduler>) {
         self.weak_work_scheduler = Some(weak_work_scheduler);
+    }
+
+    /// Adds the realm's moniker to the list of instances that exposes the Worker capability
+    /// to the framework.
+    pub async fn try_add_realm_as_worker(&mut self, realm: &Arc<Realm>) {
+        if realm.is_service_exposed_to_framework(&WORKER_CAPABILITY_PATH).await {
+            self.worker_monikers.push(realm.abs_moniker.clone());
+        }
+    }
+
+    /// Checks that this moniker is in the list of instances that expose the Worker capability
+    /// to the framework.
+    pub fn verify_worker_exposed_to_framework(&self, moniker: &AbsoluteMoniker) -> bool {
+        self.worker_monikers.contains(&moniker)
     }
 
     /// `fuchsia.sys2.WorkScheduler.ScheduleWork` FIDL protocol method implementation.

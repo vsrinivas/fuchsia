@@ -18,7 +18,7 @@
 
 use {
     crate::{
-        model::{binding::Binder, realm::Realm},
+        model::{binding::Binder, moniker::AbsoluteMoniker, realm::Realm},
         work_scheduler::{delegate::WorkSchedulerDelegate, dispatcher::RealDispatcher},
     },
     cm_rust::CapabilityPath,
@@ -69,27 +69,40 @@ impl WorkScheduler {
     /// constructed late to keep it out of the public interface to `WorkScheduler`.
     pub async fn schedule_work<'a>(
         &'a self,
-        realm: Arc<Realm>,
+        target_moniker: &AbsoluteMoniker,
         work_id: &'a str,
         work_request: &'a fsys::WorkRequest,
     ) -> Result<(), fsys::Error> {
         let mut delegate = self.delegate.lock().await;
         delegate.schedule_work(
-            RealDispatcher::new(realm, self.binder.clone()),
+            RealDispatcher::new(target_moniker.clone(), self.binder.clone()),
             work_id,
             work_request,
         )
     }
 
+    /// `try_add_realm_as_worker()` interface method is forwarded to delegate.
+    pub async fn try_add_realm_as_worker(&self, realm: &Arc<Realm>) {
+        let mut delegate = self.delegate.lock().await;
+        delegate.try_add_realm_as_worker(realm).await;
+    }
+
+    /// `verify_worker_exposed_to_framework()` interface method is forwarded to delegate.
+    pub async fn verify_worker_exposed_to_framework(&self, moniker: &AbsoluteMoniker) -> bool {
+        let delegate = self.delegate.lock().await;
+        delegate.verify_worker_exposed_to_framework(moniker)
+    }
+
     /// `cancel_work()` interface method is forwarded to delegate. `Arc<dyn Dispatcher>` is
     /// constructed late to keep it out of the public interface to `WorkScheduler`.
-    pub async fn cancel_work<'a>(
-        &'a self,
-        realm: Arc<Realm>,
-        work_id: &'a str,
+    pub async fn cancel_work(
+        &self,
+        target_moniker: &AbsoluteMoniker,
+        work_id: &str,
     ) -> Result<(), fsys::Error> {
         let mut delegate = self.delegate.lock().await;
-        delegate.cancel_work(RealDispatcher::new(realm, self.binder.clone()), work_id)
+        delegate
+            .cancel_work(RealDispatcher::new(target_moniker.clone(), self.binder.clone()), work_id)
     }
 
     /// `get_batch_period()` interface method is forwarded to delegate.
@@ -746,7 +759,7 @@ mod connect_tests {
             capability: FrameworkCapability::ServiceProtocol(
                 WORK_SCHEDULER_CONTROL_CAPABILITY_PATH.clone(),
             ),
-            scope_realm: None,
+            scope_moniker: None,
         };
 
         let (client, server) = zx::Channel::create()?;

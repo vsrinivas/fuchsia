@@ -47,7 +47,7 @@ impl Hook for BuiltinRunnerInner {
     fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
             if let EventPayload::RouteCapability {
-                source: CapabilitySource::Framework { capability, scope_realm: None },
+                source: CapabilitySource::Framework { capability, scope_moniker: None },
                 capability_provider,
             } = &event.payload
             {
@@ -169,7 +169,7 @@ mod tests {
                 payload: EventPayload::RouteCapability {
                     source: CapabilitySource::Framework {
                         capability: FrameworkCapability::Runner("elf".into()),
-                        scope_realm: None,
+                        scope_moniker: None,
                     },
                     capability_provider: provider_result.clone(),
                 },

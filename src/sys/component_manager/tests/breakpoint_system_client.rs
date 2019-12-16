@@ -466,7 +466,7 @@ macro_rules! create_event {
 create_event!(AddDynamicChild);
 create_event!(PostDestroyInstance);
 create_event!(PreDestroyInstance);
-create_event!(RootComponentResolved);
+create_event!(ResolveInstance);
 create_event!(StartInstance);
 create_event!(StopInstance);
 create_event!(

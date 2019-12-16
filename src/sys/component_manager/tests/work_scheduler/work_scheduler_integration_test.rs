@@ -97,12 +97,11 @@ async fn unbound_work_scheduler_test() -> Result<(), Error> {
     let root_component_url =
         "fuchsia-pkg://fuchsia.com/work_scheduler_integration_test#meta/worker_client.cm";
     let test_runner = TestRunner::new(root_component_url).await?;
-    let model = test_runner.model;
     let work_scheduler = test_runner.builtin_environment.work_scheduler.clone();
 
     work_scheduler
         .schedule_work(
-            model.root_realm.clone(),
+            &AbsoluteMoniker::root(),
             "TEST",
             &fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(0)), period: None },
         )

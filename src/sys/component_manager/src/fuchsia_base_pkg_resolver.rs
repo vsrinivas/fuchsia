@@ -50,7 +50,7 @@ impl FuchsiaPkgResolver {
             let model_guard = self.model.lock().await;
             let model = model_guard.as_ref().expect("model reference missing");
             let model = model.upgrade().ok_or(ResolverError::model_not_available())?;
-            let (capability_path, realm) = routing::find_exposed_root_directory_capability(
+            let (capability_path, abs_moniker) = routing::find_exposed_root_directory_capability(
                 &model,
                 "/pkgfs".try_into().unwrap(),
             )
@@ -65,7 +65,7 @@ impl FuchsiaPkgResolver {
                 ResolverError::component_not_available(component_package_url.to_string(), e)
             })?;
             model
-                .bind(&realm.abs_moniker)
+                .bind(&abs_moniker)
                 .await
                 .map_err(|e| {
                     ResolverError::component_not_available(

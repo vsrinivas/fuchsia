@@ -406,14 +406,10 @@ impl ActionsTest {
         let realm_proxy = if let Some(realm_moniker) = realm_moniker {
             let (realm_proxy, stream) =
                 endpoints::create_proxy_and_stream::<fsys::RealmMarker>().unwrap();
-            let realm = model
-                .look_up_realm(&realm_moniker)
-                .await
-                .expect(&format!("could not look up {}", realm_moniker));
             fasync::spawn(async move {
                 builtin_environment_inner
                     .realm_capability_host
-                    .serve(realm, stream)
+                    .serve(realm_moniker, stream)
                     .await
                     .expect("failed serving realm service");
             });

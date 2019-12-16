@@ -57,7 +57,7 @@ impl Hook for BreakpointCapabilityHook {
     fn on(self: Arc<Self>, event: &Event) -> BoxFuture<'_, Result<(), ModelError>> {
         Box::pin(async move {
             if let EventPayload::RouteCapability {
-                source: CapabilitySource::Framework { capability, scope_realm: Some(_) },
+                source: CapabilitySource::Framework { capability, scope_moniker: Some(_) },
                 capability_provider,
             } = &event.payload
             {
@@ -250,15 +250,15 @@ fn maybe_create_event_payload(event_payload: EventPayload) -> Option<fbreak::Eve
             );
 
             let source = Some(match source {
-                CapabilitySource::Framework { scope_realm, .. } => {
+                CapabilitySource::Framework { scope_moniker, .. } => {
                     fbreak::CapabilitySource::Framework(fbreak::FrameworkCapability {
-                        scope_moniker: scope_realm.map(|realm| realm.abs_moniker.to_string()),
+                        scope_moniker: scope_moniker.map(|m| m.to_string()),
                         ..fbreak::FrameworkCapability::empty()
                     })
                 }
-                CapabilitySource::Component { source_realm, .. } => {
+                CapabilitySource::Component { source_moniker, .. } => {
                     fbreak::CapabilitySource::Component(fbreak::ComponentCapability {
-                        source_moniker: Some(source_realm.abs_moniker.to_string()),
+                        source_moniker: Some(source_moniker.to_string()),
                         ..fbreak::ComponentCapability::empty()
                     })
                 }
@@ -330,7 +330,7 @@ fn convert_fidl_event_type_to_std(event_type: fbreak::EventType) -> EventType {
         fbreak::EventType::AddDynamicChild => EventType::AddDynamicChild,
         fbreak::EventType::PostDestroyInstance => EventType::PostDestroyInstance,
         fbreak::EventType::PreDestroyInstance => EventType::PreDestroyInstance,
-        fbreak::EventType::RootComponentResolved => EventType::RootComponentResolved,
+        fbreak::EventType::ResolveInstance => EventType::ResolveInstance,
         fbreak::EventType::RouteCapability => EventType::RouteCapability,
         fbreak::EventType::StartInstance => EventType::StartInstance,
         fbreak::EventType::StopInstance => EventType::StopInstance,
@@ -342,7 +342,7 @@ fn convert_std_event_type_to_fidl(event_type: EventType) -> fbreak::EventType {
         EventType::AddDynamicChild => fbreak::EventType::AddDynamicChild,
         EventType::PostDestroyInstance => fbreak::EventType::PostDestroyInstance,
         EventType::PreDestroyInstance => fbreak::EventType::PreDestroyInstance,
-        EventType::RootComponentResolved => fbreak::EventType::RootComponentResolved,
+        EventType::ResolveInstance => fbreak::EventType::ResolveInstance,
         EventType::RouteCapability => fbreak::EventType::RouteCapability,
         EventType::StartInstance => fbreak::EventType::StartInstance,
         EventType::StopInstance => fbreak::EventType::StopInstance,

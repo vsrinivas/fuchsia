@@ -3,13 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::{error::ModelError, moniker::ChildMoniker, realm::Realm},
+    crate::model::{
+        error::ModelError,
+        moniker::{AbsoluteMoniker, ChildMoniker},
+    },
     cm_rust::*,
     failure::Fail,
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
     futures::future::BoxFuture,
     std::collections::HashSet,
-    std::sync::Arc,
 };
 
 #[derive(Debug, Fail)]
@@ -25,14 +27,14 @@ pub enum Error {
 pub enum CapabilitySource {
     /// This capability originates from the component instance for the given Realm.
     /// point.
-    Component { capability: ComponentCapability, source_realm: Arc<Realm> },
+    Component { capability: ComponentCapability, source_moniker: AbsoluteMoniker },
     /// This capability originates from component manager itself and is optionally
     /// scoped to a component's realm.
-    Framework { capability: FrameworkCapability, scope_realm: Option<Arc<Realm>> },
+    Framework { capability: FrameworkCapability, scope_moniker: Option<AbsoluteMoniker> },
     /// This capability originates from a storage declaration in a component's decl.  `StorageDecl`
     /// describes the backing directory capability offered to this realm, into which storage
     /// requests should be fed.
-    StorageDecl(StorageDecl, Arc<Realm>),
+    StorageDecl(StorageDecl, AbsoluteMoniker),
 }
 
 impl CapabilitySource {

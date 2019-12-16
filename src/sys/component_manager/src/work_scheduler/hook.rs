@@ -8,11 +8,10 @@ use {
         model::{
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
-            realm::Realm,
+            moniker::AbsoluteMoniker,
         },
         work_scheduler::work_scheduler::{
-            WorkScheduler, WORKER_CAPABILITY_PATH, WORK_SCHEDULER_CAPABILITY_PATH,
-            WORK_SCHEDULER_CONTROL_CAPABILITY_PATH,
+            WorkScheduler, WORK_SCHEDULER_CAPABILITY_PATH, WORK_SCHEDULER_CONTROL_CAPABILITY_PATH,
         },
     },
     failure::{format_err, Error},
@@ -30,7 +29,7 @@ impl WorkScheduler {
     /// produce references needed by `HooksRegistration` without consuming `Arc`.
     pub fn hooks(work_scheduler: &Arc<Self>) -> Vec<HooksRegistration> {
         vec![HooksRegistration {
-            events: vec![EventType::RouteCapability],
+            events: vec![EventType::ResolveInstance, EventType::RouteCapability],
             callback: Arc::downgrade(work_scheduler) as Weak<dyn Hook>,
         }]
     }
@@ -57,7 +56,7 @@ impl WorkScheduler {
     /// capability.
     async fn on_route_scoped_framework_capability_async<'a>(
         self: Arc<Self>,
-        realm: Arc<Realm>,
+        scope_moniker: AbsoluteMoniker,
         capability: &'a FrameworkCapability,
         capability_provider: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
@@ -67,26 +66,19 @@ impl WorkScheduler {
             {
                 // Only clients that expose the Worker protocol to the framework can
                 // use WorkScheduler.
-                Self::verify_worker_exposed_to_framework(&*realm).await?;
+                if !self.verify_worker_exposed_to_framework(&scope_moniker).await {
+                    return Err(ModelError::capability_discovery_error(format_err!(
+                        "Component {} does not expose Worker to framework",
+                        scope_moniker
+                    )));
+                }
+
                 Ok(Some(
-                    Box::new(WorkSchedulerCapabilityProvider::new(realm.clone(), self.clone()))
+                    Box::new(WorkSchedulerCapabilityProvider::new(scope_moniker, self.clone()))
                         as Box<dyn CapabilityProvider>,
                 ))
             }
             _ => Ok(capability_provider),
-        }
-    }
-
-    /// Ensure that `fuchsia.sys2.WorkScheduler` clients expose `fuchsia.sys2.Worker` to recieve
-    /// work dispatch callbacks.
-    async fn verify_worker_exposed_to_framework(realm: &Realm) -> Result<(), ModelError> {
-        if realm.is_service_exposed_to_framework(&*WORKER_CAPABILITY_PATH).await {
-            Ok(())
-        } else {
-            Err(ModelError::capability_discovery_error(format_err!(
-                "Component {} does not expose Worker",
-                realm.abs_moniker
-            )))
         }
     }
 }
@@ -95,8 +87,11 @@ impl Hook for WorkScheduler {
     fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
             match &event.payload {
+                EventPayload::ResolveInstance => {
+                    self.try_add_realm_as_worker(&event.target_realm).await;
+                }
                 EventPayload::RouteCapability {
-                    source: CapabilitySource::Framework { capability, scope_realm: None },
+                    source: CapabilitySource::Framework { capability, scope_moniker: None },
                     capability_provider,
                 } => {
                     let mut capability_provider = capability_provider.lock().await;
@@ -109,13 +104,13 @@ impl Hook for WorkScheduler {
                 }
                 EventPayload::RouteCapability {
                     source:
-                        CapabilitySource::Framework { capability, scope_realm: Some(scope_realm) },
+                        CapabilitySource::Framework { capability, scope_moniker: Some(scope_moniker) },
                     capability_provider,
                 } => {
                     let mut capability_provider = capability_provider.lock().await;
                     *capability_provider = self
                         .on_route_scoped_framework_capability_async(
-                            scope_realm.clone(),
+                            scope_moniker.clone(),
                             &capability,
                             capability_provider.take(),
                         )
@@ -195,20 +190,20 @@ impl CapabilityProvider for WorkSchedulerControlCapabilityProvider {
 /// component instance's `AbsoluteMoniker`. All FIDL operations bound to the same object and moniker
 /// observe the same collection of `WorkItem` objects.
 struct WorkSchedulerCapabilityProvider {
-    realm: Arc<Realm>,
+    scope_moniker: AbsoluteMoniker,
     work_scheduler: Arc<WorkScheduler>,
 }
 
 impl WorkSchedulerCapabilityProvider {
-    fn new(realm: Arc<Realm>, work_scheduler: Arc<WorkScheduler>) -> Self {
-        WorkSchedulerCapabilityProvider { realm, work_scheduler }
+    fn new(scope_moniker: AbsoluteMoniker, work_scheduler: Arc<WorkScheduler>) -> Self {
+        WorkSchedulerCapabilityProvider { scope_moniker, work_scheduler }
     }
 
     /// Service `open` invocation via an event loop that dispatches FIDL operations to
     /// `work_scheduler`.
     async fn open_async(
         work_scheduler: Arc<WorkScheduler>,
-        realm: Arc<Realm>,
+        scope_moniker: AbsoluteMoniker,
         mut stream: fsys::WorkSchedulerRequestStream,
     ) -> Result<(), Error> {
         while let Some(request) = stream.try_next().await? {
@@ -221,11 +216,11 @@ impl WorkSchedulerCapabilityProvider {
                     ..
                 } => {
                     let mut result =
-                        work_scheduler.schedule_work(realm.clone(), &work_id, &work_request).await;
+                        work_scheduler.schedule_work(&scope_moniker, &work_id, &work_request).await;
                     responder.send(&mut result)?;
                 }
                 fsys::WorkSchedulerRequest::CancelWork { responder, work_id, .. } => {
-                    let mut result = work_scheduler.cancel_work(realm.clone(), &work_id).await;
+                    let mut result = work_scheduler.cancel_work(&scope_moniker, &work_id).await;
                     responder.send(&mut result)?;
                 }
             }
@@ -246,9 +241,9 @@ impl CapabilityProvider for WorkSchedulerCapabilityProvider {
         let server_end = ServerEnd::<fsys::WorkSchedulerMarker>::new(server_end);
         let stream: fsys::WorkSchedulerRequestStream = server_end.into_stream().unwrap();
         let work_scheduler = self.work_scheduler.clone();
-        let realm = self.realm.clone();
+        let scope_moniker = self.scope_moniker.clone();
         fasync::spawn(async move {
-            let result = Self::open_async(work_scheduler, realm, stream).await;
+            let result = Self::open_async(work_scheduler, scope_moniker, stream).await;
             if let Err(e) = result {
                 // TODO(markdittmer): Set an epitaph to indicate this was an unexpected error.
                 warn!("WorkSchedulerCapabilityProvider.open failed: {}", e);

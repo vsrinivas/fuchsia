@@ -12,7 +12,6 @@ use {
             error::ModelError,
             hooks::{Event, EventPayload, Hook},
             moniker::AbsoluteMoniker,
-            realm::Realm,
         },
     },
     fidl::endpoints::ServerEnd,
@@ -114,7 +113,7 @@ impl WorkSchedulerTestHook {
 
     async fn on_route_scoped_framework_capability_async(
         self: Arc<Self>,
-        realm: Arc<Realm>,
+        scope_moniker: AbsoluteMoniker,
         capability: &FrameworkCapability,
         capability_provider: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
@@ -123,7 +122,7 @@ impl WorkSchedulerTestHook {
                 if *capability_path == *REPORT_SERVICE =>
             {
                 Ok(Some(Box::new(WorkSchedulerTestCapabilityProvider::new(
-                    realm.abs_moniker.clone(),
+                    scope_moniker.clone(),
                     self.clone(),
                 )) as Box<dyn CapabilityProvider>))
             }
@@ -136,14 +135,15 @@ impl Hook for WorkSchedulerTestHook {
     fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
             if let EventPayload::RouteCapability {
-                source: CapabilitySource::Framework { capability, scope_realm: Some(scope_realm) },
+                source:
+                    CapabilitySource::Framework { capability, scope_moniker: Some(scope_moniker) },
                 capability_provider,
             } = &event.payload
             {
                 let mut capability_provider = capability_provider.lock().await;
                 *capability_provider = self
                     .on_route_scoped_framework_capability_async(
-                        scope_realm.clone(),
+                        scope_moniker.clone(),
                         &capability,
                         capability_provider.take(),
                     )

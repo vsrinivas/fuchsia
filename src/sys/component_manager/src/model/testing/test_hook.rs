@@ -306,7 +306,7 @@ impl HubInjectionTestHook {
 
     pub async fn on_route_scoped_framework_capability_async<'a>(
         &'a self,
-        realm: Arc<Realm>,
+        scope_moniker: AbsoluteMoniker,
         capability: &'a FrameworkCapability,
         mut capability_provider: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
@@ -322,7 +322,7 @@ impl HubInjectionTestHook {
         }
 
         Ok(Some(Box::new(HubInjectionCapabilityProvider::new(
-            realm.abs_moniker.clone(),
+            scope_moniker,
             relative_path,
             capability_provider.take().expect("Unable to take original capability."),
         ))))
@@ -333,14 +333,15 @@ impl Hook for HubInjectionTestHook {
     fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
             if let EventPayload::RouteCapability {
-                source: CapabilitySource::Framework { capability, scope_realm: Some(scope_realm) },
+                source:
+                    CapabilitySource::Framework { capability, scope_moniker: Some(scope_moniker) },
                 capability_provider,
             } = &event.payload
             {
                 let mut capability_provider = capability_provider.lock().await;
                 *capability_provider = self
                     .on_route_scoped_framework_capability_async(
-                        scope_realm.clone(),
+                        scope_moniker.clone(),
                         capability,
                         capability_provider.take(),
                     )
