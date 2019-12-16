@@ -49,9 +49,11 @@ source_set("frame_scheduler") {
 
 source_set("vsync_timing") {
   sources = [
+    "vsync_timing.cc",
     "vsync_timing.h",
   ]
   deps = [
+    "//src/lib/fxl",
     "//zircon/public/lib/zx",
   ]
 }

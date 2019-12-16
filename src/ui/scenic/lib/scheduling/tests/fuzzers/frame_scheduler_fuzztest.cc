@@ -32,9 +32,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   zx::time schedule_present_time = zx::time(fuzzed_data.ConsumeIntegral<uint64_t>());
 
   // Set up DefaultFrameScheduler.
-  auto vsync_timing = std::make_shared<FakeVsyncTiming>();
-  vsync_timing->SetVsyncInterval(vsync_interval);
-  vsync_timing->SetLastVsyncTime(last_vsync_time);
+  auto vsync_timing = std::make_shared<VsyncTiming>();
+  vsync_timing->set_vsync_interval(vsync_interval);
+  vsync_timing->set_last_vsync_time(last_vsync_time);
 
   MockSessionUpdater updater;
   MockFrameRenderer renderer;

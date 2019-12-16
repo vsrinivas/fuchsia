@@ -148,7 +148,7 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
     FX_LOGS(ERROR) << "CobaltLogger creation failed!";
   }
   frame_scheduler_ = std::make_shared<scheduling::DefaultFrameScheduler>(
-      display,
+      display->vsync_timing(),
       std::make_unique<scheduling::WindowedFramePredictor>(
           scheduling::DefaultFrameScheduler::kInitialRenderDuration,
           scheduling::DefaultFrameScheduler::kInitialUpdateDuration),

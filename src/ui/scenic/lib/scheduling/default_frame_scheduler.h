@@ -25,7 +25,7 @@ namespace scheduling {
 // scheduler should be added to it as well.
 class DefaultFrameScheduler : public FrameScheduler {
  public:
-  explicit DefaultFrameScheduler(const std::shared_ptr<VsyncTiming> vsync_timing,
+  explicit DefaultFrameScheduler(std::shared_ptr<const VsyncTiming> vsync_timing,
                                  std::unique_ptr<FramePredictor> predictor,
                                  inspect_deprecated::Node inspect_node = inspect_deprecated::Node(),
                                  std::unique_ptr<cobalt::CobaltLogger> cobalt_logger = nullptr);
@@ -167,7 +167,7 @@ class DefaultFrameScheduler : public FrameScheduler {
 
   // References.
   async_dispatcher_t* const dispatcher_;
-  std::shared_ptr<VsyncTiming> const vsync_timing_;
+  const std::shared_ptr<const VsyncTiming> vsync_timing_;
 
   fxl::WeakPtr<FrameRenderer> frame_renderer_;
 

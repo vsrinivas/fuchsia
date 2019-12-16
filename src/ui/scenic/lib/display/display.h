@@ -22,7 +22,7 @@ namespace display {
 
 // Display is a placeholder that provides make-believe values for screen
 // resolution, vsync interval, last vsync time, etc.
-class Display : public scheduling::VsyncTiming {
+class Display {
  public:
   Display(uint64_t id, uint32_t width_in_px, uint32_t height_in_px,
           std::vector<zx_pixel_format_t> pixel_formats);
@@ -33,13 +33,7 @@ class Display : public scheduling::VsyncTiming {
   // vsync signal.
   void OnVsync(zx::time timestamp);
 
-  // |VsyncTiming|
-  // Obtain the time of the last Vsync, in nanoseconds.
-  zx::time GetLastVsyncTime() const override { return last_vsync_time_; };
-
-  // |VsyncTiming|
-  // Obtain the interval between Vsyncs, in nanoseconds.
-  zx::duration GetVsyncInterval() const override { return vsync_interval_; };
+  std::shared_ptr<const scheduling::VsyncTiming> vsync_timing() { return vsync_timing_; }
 
   // Claiming a display means that no other display renderer can use it.
   bool is_claimed() const { return claimed_; }
@@ -57,17 +51,11 @@ class Display : public scheduling::VsyncTiming {
   const zx::event& ownership_event() { return ownership_event_; };
 
  protected:
-  // Protected for testing purposes.
-  zx::duration vsync_interval_;
-  zx::time last_vsync_time_;
+  std::shared_ptr<scheduling::VsyncTiming> vsync_timing_;
 
  private:
   // The maximum vsync interval we would ever expect.
   static constexpr zx::duration kMaximumVsyncInterval = zx::msec(100);
-
-  // Vsync interval of a 60 Hz screen.
-  // Used as a default value before real timings arrive.
-  static constexpr zx::duration kNsecsFor60fps = zx::duration(16'666'667);  // 16.666667ms
 
   const uint64_t display_id_;
   const uint32_t width_in_px_;

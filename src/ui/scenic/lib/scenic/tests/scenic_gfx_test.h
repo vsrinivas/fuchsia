@@ -6,10 +6,10 @@
 #define SRC_UI_SCENIC_LIB_SCENIC_TESTS_SCENIC_GFX_TEST_H_
 
 #include "src/ui/lib/escher/impl/command_buffer_sequencer.h"
-#include "src/ui/scenic/lib/display/display.h"
 #include "src/ui/scenic/lib/gfx/engine/engine.h"
 #include "src/ui/scenic/lib/scenic/tests/scenic_test.h"
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
+#include "src/ui/scenic/lib/scheduling/vsync_timing.h"
 
 namespace scenic_impl {
 namespace test {
@@ -22,7 +22,6 @@ class ScenicGfxTest : public ScenicTest {
 
  private:
   std::unique_ptr<escher::impl::CommandBufferSequencer> command_buffer_sequencer_;
-  std::shared_ptr<display::Display> display_;
   std::shared_ptr<scheduling::FrameScheduler> frame_scheduler_;
   std::unique_ptr<gfx::Engine> engine_;
 };
