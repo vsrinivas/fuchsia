@@ -156,16 +156,17 @@ impl InvocationReceiverClient {
         loop {
             let invocation =
                 self.wait_until_exact::<RouteCapability>(expected_target_moniker).await?;
-            let expected_scope_moniker = expected_scope_moniker.map(|m| m.to_string());
 
             // If the capability ID matches and the capability source is framework
             // with a matching optional scope moniker, then return the invocation.
             if expected_capability_id == invocation.capability_id {
                 match &invocation.source {
                     fbreak::CapabilitySource::Framework(fbreak::FrameworkCapability {
-                        scope_moniker: expected_scope_moniker,
+                        scope_moniker,
                         ..
-                    }) => return Ok(invocation),
+                    }) if scope_moniker.as_ref().map(|s| s.as_str()) == expected_scope_moniker => {
+                        return Ok(invocation)
+                    }
                     _ => {}
                 }
             }
