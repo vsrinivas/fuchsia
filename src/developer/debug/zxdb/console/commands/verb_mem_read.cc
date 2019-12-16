@@ -27,7 +27,7 @@ void MemoryReadComplete(const Err& err, MemoryDump dump) {
     out.Append(err);
   } else {
     MemoryFormatOptions opts;
-    opts.show_addrs = true;
+    opts.address_mode = MemoryFormatOptions::kAddresses;
     opts.show_ascii = true;
     opts.values_per_line = 16;
     opts.separator_every = 8;

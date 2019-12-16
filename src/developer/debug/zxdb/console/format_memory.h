@@ -9,23 +9,33 @@
 
 #include <string>
 
+#include "src/developer/debug/zxdb/console/output_buffer.h"
+
 namespace zxdb {
 
 class MemoryDump;
 
 struct MemoryFormatOptions {
-  bool show_addrs = false;
+  enum AddressMode {
+    kNoAddresses,  // Don't show location information on the left.
+    kAddresses,    // Show absolute hex addresses: "0x000012360"
+    kOffsets,      // Show offsets from the beginning of the dump: "+0x10".
+  };
+
+  AddressMode address_mode = kNoAddresses;
+
+  // Shows printable characters on the right.
   bool show_ascii = false;
 
   int values_per_line = 16;
 
-  // Instead of a space, every this many values on a line will use a hyphen
-  // instead. 0 means no separators.
+  // Instead of a space, every this many values on a line will use a hyphen instead. 0 means no
+  // separators.
   int separator_every = 0;
 };
 
-std::string FormatMemory(const MemoryDump& dump, uint64_t begin, uint32_t size,
-                         const MemoryFormatOptions& opts);
+OutputBuffer FormatMemory(const MemoryDump& dump, uint64_t begin, uint32_t size,
+                          const MemoryFormatOptions& opts);
 
 }  // namespace zxdb
 
