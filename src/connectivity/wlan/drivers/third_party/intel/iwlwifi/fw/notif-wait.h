@@ -86,9 +86,17 @@ struct iwl_notification_wait {
   bool triggered, aborted;
 };
 
-/* caller functions -- used by fw/ code */
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// caller functions -- used by fw/ code
+//
+
 void iwl_notification_wait_init(struct iwl_notif_wait_data* notif_data);
+
+// Called by Rx ISR. The Rx packet will be passed to check the command sets in waiting list.
+//
 bool iwl_notification_wait(struct iwl_notif_wait_data* notif_data, struct iwl_rx_packet* pkt);
+
 void iwl_abort_notification_waits(struct iwl_notif_wait_data* notif_data);
 
 static inline void iwl_notification_notify(struct iwl_notif_wait_data* notif_data) {
@@ -102,7 +110,26 @@ static inline void iwl_notification_wait_notify(struct iwl_notif_wait_data* noti
   }
 }
 
-/* user functions -- used by the other code in driver */
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// user functions -- used by the other code in driver */
+//
+
+// Add the 'wait_entry' into 'notif_data' (the waiting list).
+//
+// The 'wait_entry' contains:
+//
+//   - a command set it cares about,
+//   - a callback function,
+//   - and an argument passed to the callback function.
+//
+// When a response packet arrives, iwl_notification_wait() will be called to traverse the waiting
+// list. If a command is matched, its 'fn' callback will be called to check the content of response
+// packet. Then, the 'fn_data' will be passed in 'data' parameter.
+//
+// The callback function shall return true to indicate that the response packet is what it is
+// waiting for. Otherwise, return false to ignore the packet (and stay in un-triggered state).
+//
 void iwl_init_notification_wait(struct iwl_notif_wait_data* notif_data,
                                 struct iwl_notification_wait* wait_entry, const uint16_t* cmds,
                                 int n_cmds,
@@ -110,9 +137,15 @@ void iwl_init_notification_wait(struct iwl_notif_wait_data* notif_data,
                                            struct iwl_rx_packet* pkt, void* data),
                                 void* fn_data);
 
+// The actual waiting for 'wait_entry'. No matter the result is successful or not, the 'wait_entry'
+// will be removed from the waiting list 'notif_data'.
+//
 zx_status_t iwl_wait_notification(struct iwl_notif_wait_data* notif_data,
                                   struct iwl_notification_wait* wait_entry, zx_duration_t timeout);
 
+// Used to remove a 'wait_entry' when it is added in iwl_init_notification_wait(), but not used in
+// iwl_wait_notification().
+//
 void iwl_remove_notification(struct iwl_notif_wait_data* notif_data,
                              struct iwl_notification_wait* wait_entry);
 

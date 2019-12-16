@@ -602,12 +602,15 @@ zx_status_t iwl_run_init_mvm_ucode(struct iwl_mvm* mvm, bool read_nvm) {
   } else {
     IWL_ERR(mvm, "Failed to run INIT calibrations: %d\n", ret);
   }
-#endif  // NEEDS_PORTING
+
   goto out;
+#endif  // NEEDS_PORTING
 
 remove_notif:
   iwl_remove_notification(&mvm->notif_wait, &calib_wait);
+#if 0   // NEEDS_PORTING
 out:
+#endif  // NEEDS_PORTING
   mvm->calibrating = false;
 
 #if 0   // NEEDS_PORTING
