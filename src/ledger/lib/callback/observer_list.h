@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LIB_FXL_OBSERVER_LIST_H_
-#define SRC_LIB_FXL_OBSERVER_LIST_H_
+#ifndef SRC_LEDGER_LIB_CALLBACK_OBSERVER_LIST_H_
+#define SRC_LEDGER_LIB_CALLBACK_OBSERVER_LIST_H_
 
 // Derived from chromium/src/base/observer_list.h
 
@@ -13,9 +13,8 @@
 #include <limits>
 #include <vector>
 
-#include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/macros.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/ledger/lib/logging/logging.h"
+#include "src/ledger/lib/memory/weak_ptr.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -65,13 +64,13 @@
 //     }
 //
 //    private:
-//     fxl::ObserverList<Observer> observer_list_;
+//     ledger::ObserverList<Observer> observer_list_;
 //   };
 //
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-namespace fxl {
+namespace ledger {
 
 template <class ObserverType>
 class ObserverListBase {
@@ -103,7 +102,7 @@ class ObserverListBase {
 
     // Methods for accessing the underlying container and current element. DO
     // NOT call these methods directly: these are public for testing only.
-    const fxl::WeakPtr<ObserverListBase<ObserverType>>& GetContainer() { return list_; }
+    const WeakPtr<ObserverListBase<ObserverType>>& GetContainer() { return list_; }
     ObserverType* GetCurrent() const;
 
    private:
@@ -113,7 +112,7 @@ class ObserverListBase {
 
     bool is_end() const { return !list_ || index_ == clamped_max_index(); }
 
-    fxl::WeakPtr<ObserverListBase<ObserverType>> list_;
+    WeakPtr<ObserverListBase<ObserverType>> list_;
 
     // When initially constructed and each time the iterator is incremented,
     // |index_| is guaranteed to point to a non-null index if the iterator
@@ -137,6 +136,8 @@ class ObserverListBase {
   ObserverListBase() : notify_depth_(0), what_(NotifyWhat::kAll), weak_ptr_factory_(this) {}
   explicit ObserverListBase(NotifyWhat what)
       : notify_depth_(0), what_(what), weak_ptr_factory_(this) {}
+  ObserverListBase(const ObserverListBase&) = delete;
+  ObserverListBase& operator=(const ObserverListBase&) = delete;
 
   // Add an observer to the list.  An observer should not be added to
   // the same list more than once.
@@ -158,7 +159,7 @@ class ObserverListBase {
  private:
   using ListType = std::vector<ObserverType*>;
 
-  fxl::WeakPtr<ObserverListBase> AsWeakPtr() { return weak_ptr_factory_.GetWeakPtr(); }
+  WeakPtr<ObserverListBase> AsWeakPtr() { return weak_ptr_factory_.GetWeakPtr(); }
 
   ListType observers_;
   int notify_depth_;
@@ -167,9 +168,7 @@ class ObserverListBase {
   template <class ContainerType>
   friend class Iter;
 
-  fxl::WeakPtrFactory<ObserverListBase> weak_ptr_factory_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(ObserverListBase);
+  WeakPtrFactory<ObserverListBase> weak_ptr_factory_;
 };
 
 template <class ObserverType>
@@ -184,7 +183,7 @@ ObserverListBase<ObserverType>::Iter<ContainerType>::Iter(ContainerType* list)
       max_index_(list->what_ == NotifyWhat::kAll ? std::numeric_limits<size_t>::max()
                                                  : list->observers_.size()) {
   EnsureValidIndex();
-  FXL_DCHECK(list_);
+  LEDGER_DCHECK(list_);
   ++list_->notify_depth_;
 }
 
@@ -224,7 +223,7 @@ template <class ObserverType>
 template <class ContainerType>
 ObserverType* ObserverListBase<ObserverType>::Iter<ContainerType>::operator->() const {
   ObserverType* current = GetCurrent();
-  FXL_DCHECK(current);
+  LEDGER_DCHECK(current);
   return current;
 }
 
@@ -232,7 +231,7 @@ template <class ObserverType>
 template <class ContainerType>
 ObserverType& ObserverListBase<ObserverType>::Iter<ContainerType>::operator*() const {
   ObserverType* current = GetCurrent();
-  FXL_DCHECK(current);
+  LEDGER_DCHECK(current);
   return *current;
 }
 
@@ -257,9 +256,9 @@ void ObserverListBase<ObserverType>::Iter<ContainerType>::EnsureValidIndex() {
 
 template <class ObserverType>
 void ObserverListBase<ObserverType>::AddObserver(ObserverType* obs) {
-  FXL_DCHECK(obs);
+  LEDGER_DCHECK(obs);
   if (std::find(observers_.begin(), observers_.end(), obs) != observers_.end()) {
-    FXL_NOTREACHED() << "Observers can only be added once!";
+    LEDGER_NOTREACHED() << "Observers can only be added once!";
     return;
   }
   observers_.push_back(obs);
@@ -267,7 +266,7 @@ void ObserverListBase<ObserverType>::AddObserver(ObserverType* obs) {
 
 template <class ObserverType>
 void ObserverListBase<ObserverType>::RemoveObserver(ObserverType* obs) {
-  FXL_DCHECK(obs);
+  LEDGER_DCHECK(obs);
   typename ListType::iterator it = std::find(observers_.begin(), observers_.end(), obs);
   if (it != observers_.end()) {
     if (notify_depth_) {
@@ -308,20 +307,20 @@ class ObserverList : public ObserverListBase<ObserverType> {
  public:
   using NotifyWhat = typename ObserverListBase<ObserverType>::NotifyWhat;
 
-  ObserverList() {}
+  ObserverList() = default;
   explicit ObserverList(NotifyWhat what) : ObserverListBase<ObserverType>(what) {}
 
   ~ObserverList() {
     // When check_empty is true, assert that the list is empty on destruction.
     if (check_empty) {
       ObserverListBase<ObserverType>::Compact();
-      FXL_DCHECK(!might_have_observers());
+      LEDGER_DCHECK(!might_have_observers());
     }
   }
 
   bool might_have_observers() const { return ObserverListBase<ObserverType>::size() != 0; }
 };
 
-}  // namespace fxl
+}  // namespace ledger
 
-#endif  // SRC_LIB_FXL_OBSERVER_LIST_H_
+#endif  // SRC_LEDGER_LIB_CALLBACK_OBSERVER_LIST_H_

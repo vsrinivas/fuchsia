@@ -4,7 +4,6 @@
 
 #include "src/ledger/bin/storage/impl/page_storage_impl.h"
 
-#include <errno.h>
 #include <fcntl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fit/defer.h>
@@ -25,6 +24,7 @@
 #include <optional>
 #include <set>
 #include <utility>
+#include <vector>
 
 #include "src/ledger/bin/cobalt/cobalt.h"
 #include "src/ledger/bin/public/status.h"

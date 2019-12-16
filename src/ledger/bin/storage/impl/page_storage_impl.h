@@ -22,6 +22,7 @@
 #include "src/ledger/bin/storage/public/page_sync_delegate.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/callback/managed_container.h"
+#include "src/ledger/lib/callback/observer_list.h"
 #include "src/ledger/lib/callback/operation_serializer.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
@@ -29,7 +30,6 @@
 #include "src/ledger/lib/memory/ref_ptr.h"
 #include "src/ledger/lib/memory/weak_ptr.h"
 #include "src/ledger/lib/vmo/sized_vmo.h"
-#include "src/lib/fxl/observer_list.h"
 #include "third_party/abseil-cpp/absl/base/attributes.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
@@ -312,7 +312,7 @@ class PageStorageImpl : public PageStorage, public CommitPruner::CommitPrunerDel
   std::unique_ptr<PageDb> db_;
   // The commit pruner accesses the database, it must be destructed before |db_|.
   CommitPruner commit_pruner_;
-  fxl::ObserverList<CommitWatcher> watchers_;
+  ledger::ObserverList<CommitWatcher> watchers_;
   ledger::ManagedContainer managed_container_;
   PageSyncDelegate* page_sync_;
   bool page_is_online_ = false;

@@ -20,6 +20,7 @@ source_set("callback") {
     "ensure_called.h",
     "managed_container.cc",
     "managed_container.h",
+    "observer_list.h",
     "operation_serializer.h",
     "waiter.h",
   ]
@@ -43,6 +44,7 @@ source_set("unittests") {
     "capture_unittest.cc",
     "ensure_called_unittest.cc",
     "managed_container_unittest.cc",
+    "observer_list_unittest.cc",
     "operation_serializer_unittest.cc",
     "set_when_called_unittest.cc",
     "waiter_unittest.cc",
