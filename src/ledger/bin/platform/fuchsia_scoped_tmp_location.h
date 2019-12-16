@@ -5,23 +5,30 @@
 #ifndef SRC_LEDGER_BIN_PLATFORM_FUCHSIA_SCOPED_TMP_LOCATION_H_
 #define SRC_LEDGER_BIN_PLATFORM_FUCHSIA_SCOPED_TMP_LOCATION_H_
 
-#include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/memfs/memfs.h>
+
 #include "src/ledger/bin/platform/scoped_tmp_location.h"
+#include "src/ledger/bin/platform/unique_fd.h"
 
 namespace ledger {
 
 class FuchsiaScopedTmpLocation : public ScopedTmpLocation {
  public:
-  FuchsiaScopedTmpLocation() = default;
-  ~FuchsiaScopedTmpLocation() = default;
+  FuchsiaScopedTmpLocation();
+  ~FuchsiaScopedTmpLocation() override;
 
   FuchsiaScopedTmpLocation(const FuchsiaScopedTmpLocation&) = delete;
   FuchsiaScopedTmpLocation& operator=(const FuchsiaScopedTmpLocation&) = delete;
 
-  DetachedPath path() override { return DetachedPath(scoped_tmp_fs_.root_fd()); };
+  DetachedPath path() override { return DetachedPath(root_fd_.get()); };
 
  private:
-  scoped_tmpfs::ScopedTmpFS scoped_tmp_fs_;
+  async_loop_config_t config_;
+  async::Loop loop_;
+  memfs_filesystem_t* memfs_;
+  unique_fd root_fd_;
 };
 
 }  // namespace ledger

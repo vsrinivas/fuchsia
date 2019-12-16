@@ -61,7 +61,7 @@ class FileSystem {
   // Creates a new ScopedTmpDir under the given |parent_path|.
   virtual std::unique_ptr<ScopedTmpDir> CreateScopedTmpDir(DetachedPath parent_path) = 0;
 
-  // Creates a new ScopedTmpFs.
+  // Creates a new ScopedTmpLocation.
   virtual std::unique_ptr<ScopedTmpLocation> CreateScopedTmpLocation() = 0;
 
   // Paths.
