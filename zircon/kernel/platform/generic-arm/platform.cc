@@ -156,12 +156,12 @@ void platform_halt_secondary_cpus(void) {
   DEBUG_ASSERT(result == ZX_OK);
 }
 
-static zx_status_t platform_start_cpu(uint64_t mpid) {
+static zx_status_t platform_start_cpu(uint cpu_id, uint64_t mpid) {
   // Issue memory barrier before starting to ensure previous stores will be visible to new CPU.
   smp_mb();
 
   uint32_t ret = psci_cpu_on(mpid, kernel_entry_paddr);
-  dprintf(INFO, "Trying to start cpu %lu returned: %d\n", mpid, (int)ret);
+  dprintf(INFO, "Trying to start cpu %u, mpid %lu returned: %d\n", cpu_id, mpid, (int)ret);
   if (ret != 0) {
     return ZX_ERR_INTERNAL;
   }
@@ -191,7 +191,7 @@ static void topology_cpu_init(void) {
       DEBUG_ASSERT(status == ZX_OK);
 
       // start the cpu
-      status = platform_start_cpu(mpid);
+      status = platform_start_cpu(processor.logical_ids[i], mpid);
 
       if (status != ZX_OK) {
         // TODO(maniscalco): Is continuing really the right thing to do here?
