@@ -1,5 +1,5 @@
 use super::*;
-use crate::derive::{Data, DeriveInput};
+use crate::derive::{Data, DataEnum, DataStruct, DataUnion, DeriveInput};
 use crate::punctuated::Punctuated;
 use proc_macro2::TokenStream;
 
@@ -491,6 +491,53 @@ impl From<DeriveInput> for Item {
                 ident: input.ident,
                 generics: input.generics,
                 fields: data.fields,
+            }),
+        }
+    }
+}
+
+impl From<ItemStruct> for DeriveInput {
+    fn from(input: ItemStruct) -> DeriveInput {
+        DeriveInput {
+            attrs: input.attrs,
+            vis: input.vis,
+            ident: input.ident,
+            generics: input.generics,
+            data: Data::Struct(DataStruct {
+                struct_token: input.struct_token,
+                fields: input.fields,
+                semi_token: input.semi_token,
+            }),
+        }
+    }
+}
+
+impl From<ItemEnum> for DeriveInput {
+    fn from(input: ItemEnum) -> DeriveInput {
+        DeriveInput {
+            attrs: input.attrs,
+            vis: input.vis,
+            ident: input.ident,
+            generics: input.generics,
+            data: Data::Enum(DataEnum {
+                enum_token: input.enum_token,
+                brace_token: input.brace_token,
+                variants: input.variants,
+            }),
+        }
+    }
+}
+
+impl From<ItemUnion> for DeriveInput {
+    fn from(input: ItemUnion) -> DeriveInput {
+        DeriveInput {
+            attrs: input.attrs,
+            vis: input.vis,
+            ident: input.ident,
+            generics: input.generics,
+            data: Data::Union(DataUnion {
+                union_token: input.union_token,
+                fields: input.fields,
             }),
         }
     }
@@ -1017,6 +1064,24 @@ ast_struct! {
     }
 }
 
+impl Signature {
+    /// A method's `self` receiver, such as `&self` or `self: Box<Self>`.
+    pub fn receiver(&self) -> Option<&FnArg> {
+        let arg = self.inputs.first()?;
+        match arg {
+            FnArg::Receiver(_) => Some(arg),
+            FnArg::Typed(PatType { pat, .. }) => {
+                if let Pat::Ident(PatIdent { ident, .. }) = &**pat {
+                    if ident == "self" {
+                        return Some(arg);
+                    }
+                }
+                None
+            }
+        }
+    }
+}
+
 ast_enum_of_structs! {
     /// An argument in a function signature: the `n: usize` in `fn f(n: usize)`.
     ///
@@ -1024,6 +1089,9 @@ ast_enum_of_structs! {
     pub enum FnArg {
         /// The `self` argument of an associated method, whether taken by value
         /// or by reference.
+        ///
+        /// Note that `self` receivers with a specified type, such as `self:
+        /// Box<Self>`, are parsed as a `FnArg::Typed`.
         Receiver(Receiver),
 
         /// A function argument accepted by pattern and type.
@@ -1034,6 +1102,9 @@ ast_enum_of_structs! {
 ast_struct! {
     /// The `self` argument of an associated method, whether taken by value
     /// or by reference.
+    ///
+    /// Note that `self` receivers with a specified type, such as `self:
+    /// Box<Self>`, are parsed as a `FnArg::Typed`.
     ///
     /// *This type is available if Syn is built with the `"full"` feature.*
     pub struct Receiver {
@@ -1492,6 +1563,22 @@ pub mod parsing {
     }
 
     fn fn_arg_typed(input: ParseStream) -> Result<PatType> {
+        // Hack to parse pre-2018 syntax in
+        // test/ui/rfc-2565-param-attrs/param-attrs-pretty.rs
+        // because the rest of the test case is valuable.
+        if input.peek(Ident) && input.peek2(Token![<]) {
+            let span = input.fork().parse::<Ident>()?.span();
+            return Ok(PatType {
+                attrs: Vec::new(),
+                pat: Box::new(Pat::Wild(PatWild {
+                    attrs: Vec::new(),
+                    underscore_token: Token![_](span),
+                })),
+                colon_token: Token![:](span),
+                ty: input.parse()?,
+            });
+        }
+
         Ok(PatType {
             attrs: Vec::new(),
             pat: input.parse()?,
@@ -2905,6 +2992,25 @@ mod printing {
         }
     }
 
+    fn has_variadic(inputs: &Punctuated<FnArg, Token![,]>) -> bool {
+        let last = match inputs.last() {
+            Some(last) => last,
+            None => return false,
+        };
+
+        let pat = match last {
+            FnArg::Typed(pat) => pat,
+            FnArg::Receiver(_) => return false,
+        };
+
+        let tokens = match pat.ty.as_ref() {
+            Type::Verbatim(tokens) => tokens,
+            _ => return false,
+        };
+
+        tokens.to_string() == "..."
+    }
+
     impl ToTokens for Signature {
         fn to_tokens(&self, tokens: &mut TokenStream) {
             self.constness.to_tokens(tokens);
@@ -2916,10 +3022,12 @@ mod printing {
             self.generics.to_tokens(tokens);
             self.paren_token.surround(tokens, |tokens| {
                 self.inputs.to_tokens(tokens);
-                if self.variadic.is_some() && !self.inputs.empty_or_trailing() {
-                    <Token![,]>::default().to_tokens(tokens);
+                if self.variadic.is_some() && !has_variadic(&self.inputs) {
+                    if !self.inputs.empty_or_trailing() {
+                        <Token![,]>::default().to_tokens(tokens);
+                    }
+                    self.variadic.to_tokens(tokens);
                 }
-                self.variadic.to_tokens(tokens);
             });
             self.output.to_tokens(tokens);
             self.generics.where_clause.to_tokens(tokens);

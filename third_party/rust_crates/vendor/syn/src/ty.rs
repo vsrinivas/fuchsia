@@ -407,6 +407,8 @@ pub mod parsing {
     use crate::ext::IdentExt;
     use crate::parse::{Parse, ParseStream, Result};
     use crate::path;
+    use proc_macro2::{Punct, Spacing, TokenTree};
+    use std::iter::FromIterator;
 
     impl Parse for Type {
         fn parse(input: ParseStream) -> Result<Self> {
@@ -723,7 +725,7 @@ pub mod parsing {
     impl Parse for TypeBareFn {
         fn parse(input: ParseStream) -> Result<Self> {
             let args;
-            let allow_variadic;
+            let mut variadic = None;
             Ok(TypeBareFn {
                 lifetimes: input.parse()?,
                 unsafety: input.parse()?,
@@ -732,26 +734,32 @@ pub mod parsing {
                 paren_token: parenthesized!(args in input),
                 inputs: {
                     let mut inputs = Punctuated::new();
-                    while !args.is_empty() && !args.peek(Token![...]) {
-                        inputs.push_value(args.parse()?);
+
+                    while !args.is_empty() {
+                        let attrs = args.call(Attribute::parse_outer)?;
+
+                        if inputs.empty_or_trailing() && args.peek(Token![...]) {
+                            variadic = Some(Variadic {
+                                attrs,
+                                dots: args.parse()?,
+                            });
+                            break;
+                        }
+
+                        inputs.push_value(BareFnArg {
+                            attrs,
+                            ..args.parse()?
+                        });
                         if args.is_empty() {
                             break;
                         }
+
                         inputs.push_punct(args.parse()?);
                     }
-                    allow_variadic = inputs.empty_or_trailing();
+
                     inputs
                 },
-                variadic: {
-                    if allow_variadic && args.peek(Token![...]) {
-                        Some(Variadic {
-                            attrs: Vec::new(),
-                            dots: args.parse()?,
-                        })
-                    } else {
-                        None
-                    }
-                },
+                variadic,
                 output: input.call(ReturnType::without_plus)?,
             })
         }
@@ -776,9 +784,27 @@ pub mod parsing {
     impl Parse for TypeTuple {
         fn parse(input: ParseStream) -> Result<Self> {
             let content;
+            let paren_token = parenthesized!(content in input);
+
+            if content.is_empty() {
+                return Ok(TypeTuple {
+                    paren_token,
+                    elems: Punctuated::new(),
+                });
+            }
+
+            let first: Type = content.parse()?;
             Ok(TypeTuple {
-                paren_token: parenthesized!(content in input),
-                elems: content.parse_terminated(Type::parse)?,
+                paren_token,
+                elems: {
+                    let mut elems = Punctuated::new();
+                    elems.push_value(first);
+                    elems.push_punct(content.parse()?);
+                    let rest: Punctuated<Type, Token![,]> =
+                        content.parse_terminated(Parse::parse)?;
+                    elems.extend(rest);
+                    elems
+                },
             })
         }
     }
@@ -940,7 +966,23 @@ pub mod parsing {
                         None
                     }
                 },
-                ty: input.parse()?,
+                ty: match input.parse::<Option<Token![...]>>()? {
+                    Some(dot3) => {
+                        let args = vec![
+                            TokenTree::Punct(Punct::new('.', Spacing::Joint)),
+                            TokenTree::Punct(Punct::new('.', Spacing::Joint)),
+                            TokenTree::Punct(Punct::new('.', Spacing::Alone)),
+                        ];
+                        let tokens = TokenStream::from_iter(args.into_iter().zip(&dot3.spans).map(
+                            |(mut arg, span)| {
+                                arg.set_span(*span);
+                                arg
+                            },
+                        ));
+                        Type::Verbatim(tokens)
+                    }
+                    None => input.parse()?,
+                },
             })
         }
     }

@@ -1,6 +1,3 @@
-extern crate proc_macro2;
-extern crate syn;
-
 #[macro_use]
 mod macros;
 
@@ -24,17 +21,17 @@ fn test_await() {
     let expr = syn::parse_str::<Expr>("fut.await").unwrap();
 
     snapshot!(expr, @r###"
-   ⋮Expr::Await {
-   ⋮    base: Expr::Path {
-   ⋮        path: Path {
-   ⋮            segments: [
-   ⋮                PathSegment {
-   ⋮                    ident: "fut",
-   ⋮                    arguments: None,
-   ⋮                },
-   ⋮            ],
-   ⋮        },
-   ⋮    },
-   ⋮}
+    Expr::Await {
+        base: Expr::Path {
+            path: Path {
+                segments: [
+                    PathSegment {
+                        ident: "fut",
+                        arguments: None,
+                    },
+                ],
+            },
+        },
+    }
     "###);
 }

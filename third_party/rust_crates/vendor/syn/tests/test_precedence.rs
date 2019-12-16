@@ -14,15 +14,10 @@
 //!    spans.
 //! 5. Compare the expressions with one another, if they are not equal fail.
 
-extern crate quote;
-extern crate rayon;
-extern crate regex;
 extern crate rustc_data_structures;
 extern crate smallvec;
-extern crate syn;
 extern crate syntax;
 extern crate syntax_pos;
-extern crate walkdir;
 
 mod features;
 
@@ -91,7 +86,6 @@ fn test_simple_precedence() {
 
 /// Test expressions from rustc, like in `test_round_trip`.
 #[test]
-#[cfg_attr(target_os = "windows", ignore = "requires nix .sh")]
 fn test_rustc_precedence() {
     repo::clone_rust();
     let abort_after = common::abort_after();
@@ -230,19 +224,19 @@ fn libsyntax_brackets(mut libsyntax_expr: P<ast::Expr>) -> Option<P<ast::Expr>> 
     impl MutVisitor for BracketsVisitor {
         fn visit_expr(&mut self, e: &mut P<Expr>) {
             noop_visit_expr(e, self);
-            match e.node {
+            match e.kind {
                 ExprKind::If(..) | ExprKind::Block(..) | ExprKind::Let(..) => {}
                 _ => {
                     let inner = mem::replace(
                         e,
                         P(Expr {
                             id: ast::DUMMY_NODE_ID,
-                            node: ExprKind::Err,
+                            kind: ExprKind::Err,
                             span: DUMMY_SP,
                             attrs: ThinVec::new(),
                         }),
                     );
-                    e.node = ExprKind::Paren(inner);
+                    e.kind = ExprKind::Paren(inner);
                 }
             }
         }
@@ -268,7 +262,7 @@ fn libsyntax_brackets(mut libsyntax_expr: P<ast::Expr>) -> Option<P<ast::Expr>> 
         }
 
         fn flat_map_stmt(&mut self, stmt: Stmt) -> SmallVec<[Stmt; 1]> {
-            let node = match stmt.node {
+            let kind = match stmt.kind {
                 // Don't wrap toplevel expressions in statements.
                 StmtKind::Expr(mut e) => {
                     noop_visit_expr(&mut e, self);
@@ -281,7 +275,7 @@ fn libsyntax_brackets(mut libsyntax_expr: P<ast::Expr>) -> Option<P<ast::Expr>> 
                 s => s,
             };
 
-            smallvec![Stmt { node, ..stmt }]
+            smallvec![Stmt { kind, ..stmt }]
         }
 
         fn visit_mac(&mut self, mac: &mut Mac) {
@@ -318,9 +312,9 @@ fn syn_brackets(syn_expr: syn::Expr) -> syn::Expr {
                 Expr::If(..) | Expr::Unsafe(..) | Expr::Block(..) | Expr::Let(..) => {
                     fold_expr(self, expr)
                 }
-                node => Expr::Paren(ExprParen {
+                _ => Expr::Paren(ExprParen {
                     attrs: Vec::new(),
-                    expr: Box::new(fold_expr(self, node)),
+                    expr: Box::new(fold_expr(self, expr)),
                     paren_token: token::Paren::default(),
                 }),
             }

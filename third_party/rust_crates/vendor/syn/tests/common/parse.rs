@@ -1,13 +1,13 @@
-extern crate proc_macro2;
-extern crate syn;
+extern crate rustc_parse as parse;
 extern crate syntax;
+extern crate syntax_expand;
 extern crate syntax_pos;
 
-use self::syntax::ast;
-use self::syntax::parse::{self, ParseSess};
-use self::syntax::ptr::P;
-use self::syntax::source_map::FilePathMapping;
-use self::syntax_pos::FileName;
+use syntax::ast;
+use syntax::ptr::P;
+use syntax::sess::ParseSess;
+use syntax::source_map::FilePathMapping;
+use syntax_pos::FileName;
 
 use std::panic;
 

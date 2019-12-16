@@ -3,7 +3,10 @@ use crate::punctuated::Punctuated;
 #[cfg(feature = "extra-traits")]
 use crate::tt::TokenStreamHelper;
 use proc_macro2::{Span, TokenStream};
-#[cfg(feature = "extra-traits")]
+#[cfg(feature = "printing")]
+use quote::IdentFragment;
+#[cfg(feature = "printing")]
+use std::fmt::{self, Display};
 use std::hash::{Hash, Hasher};
 #[cfg(all(feature = "parsing", feature = "full"))]
 use std::mem;
@@ -998,11 +1001,29 @@ ast_enum! {
     ///
     /// *This type is available if Syn is built with the `"derive"` or `"full"`
     /// feature.*
-    pub enum Member {
+    #[derive(Eq, PartialEq, Hash)]
+    pub enum Member #manual_extra_traits {
         /// A named field like `self.x`.
         Named(Ident),
         /// An unnamed field like `self.0`.
         Unnamed(Index),
+    }
+}
+
+#[cfg(feature = "printing")]
+impl IdentFragment for Member {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Member::Named(m) => Display::fmt(m, formatter),
+            Member::Unnamed(m) => Display::fmt(&m.index, formatter),
+        }
+    }
+
+    fn span(&self) -> Option<Span> {
+        match self {
+            Member::Named(m) => Some(m.span()),
+            Member::Unnamed(m) => Some(m.span),
+        }
     }
 }
 
@@ -1027,20 +1048,28 @@ impl From<usize> for Index {
     }
 }
 
-#[cfg(feature = "extra-traits")]
 impl Eq for Index {}
 
-#[cfg(feature = "extra-traits")]
 impl PartialEq for Index {
     fn eq(&self, other: &Self) -> bool {
         self.index == other.index
     }
 }
 
-#[cfg(feature = "extra-traits")]
 impl Hash for Index {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.index.hash(state);
+    }
+}
+
+#[cfg(feature = "printing")]
+impl IdentFragment for Index {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        Display::fmt(&self.index, formatter)
+    }
+
+    fn span(&self) -> Option<Span> {
+        Some(self.span)
     }
 }
 
@@ -1048,7 +1077,7 @@ impl Hash for Index {
 ast_struct! {
     #[derive(Default)]
     pub struct Reserved {
-        private: (),
+        _private: (),
     }
 }
 

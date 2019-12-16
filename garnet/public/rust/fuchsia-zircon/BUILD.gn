@@ -16,7 +16,6 @@ rustc_library("fuchsia-zircon") {
     "fuchsia-zircon-status",
     "fuchsia-zircon-sys",
     "//third_party/rust_crates:bitflags",
-    "//third_party/rust_crates:failure",
   ]
 }
 
@@ -30,7 +29,6 @@ rustc_test("fuchsia-zircon-unittest") {
     "fuchsia-zircon-status",
     "fuchsia-zircon-sys",
     "//third_party/rust_crates:bitflags",
-    "//third_party/rust_crates:failure",
 
     # Test-only deps
     ":fuchsia-zircon",

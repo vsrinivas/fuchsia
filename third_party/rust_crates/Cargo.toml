@@ -17,10 +17,10 @@
 [package]
 name = "fuchsia-third-party"
 version = "0.1.0"
-authors = ["cramertj <cramertj@google.com>"]
 
 [dependencies]
 # Keep this sorted alphabetically, please.
+anyhow = "1.0.25"
 bitfield = "0.13"
 bitflags = "1"
 byteorder = { version = "1", features = ["i128"] }
@@ -74,6 +74,7 @@ structopt = "0.2.14"
 tempfile = "3.1"
 termion = "1.5.3"
 timebomb = "0.1.2"
+thiserror = "1.0.9"
 unicase = "2.2.0"
 url = "2.1"
 uuid = { version = "0.7.2", features = ["v4"] } # move ?
