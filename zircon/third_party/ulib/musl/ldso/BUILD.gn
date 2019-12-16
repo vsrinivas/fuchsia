@@ -27,6 +27,11 @@ source_set("ldso") {
 
   configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
   public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
+
+  # TODO(41901): UBSan has found an instance of undefined behavior in this target.
+  # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+  configs +=
+      [ "$zx_build/public/gn/config:temporarily_disable_ubsan_do_not_use" ]
 }
 
 source_set("dlstart") {

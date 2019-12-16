@@ -19,7 +19,11 @@
 #include <unittest/unittest.h>
 
 #if __has_feature(address_sanitizer)
+#if __has_feature(undefined_behavior_sanitizer)
+#define LIBPREFIX "/boot/lib/asan-ubsan/"
+#else
 #define LIBPREFIX "/boot/lib/asan/"
+#endif
 #else
 #define LIBPREFIX "/boot/lib/"
 #endif

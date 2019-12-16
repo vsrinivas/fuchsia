@@ -15,9 +15,9 @@ if (is_fuchsia) {
       "spaceship_tests.cc",
     ]
     deps = [
+      ":fidl.test.ctransformer.c",
       ":fidl.test.echo.c",
       ":fidl.test.spaceship.c",
-      ":fidl.test.ctransformer.c",
       "$zx/system/fidl/fuchsia-ldsvc:c",
       "$zx/system/fidl/fuchsia-mem:c",
       "$zx/system/ulib/async",
@@ -33,6 +33,11 @@ if (is_fuchsia) {
       "$zx/system/ulib/zircon",
       "$zx/system/ulib/zx",
     ]
+
+    # TODO(42496): UBSan has found an instance of undefined behavior in this target.
+    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+    configs +=
+        [ "$zx_build/public/gn/config:temporarily_disable_ubsan_do_not_use" ]
   }
 }
 
@@ -56,6 +61,6 @@ fidl_library("fidl.test.ctransformer") {
     "ctransformer.test.fidl",
   ]
   public_deps = [
-    "$zx/system/utest/fidl:example"
+    "$zx/system/utest/fidl:example",
   ]
 }

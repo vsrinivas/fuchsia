@@ -26,14 +26,14 @@ source_set("collector-test") {
     "$zx/system/ulib/cobalt-client:collector",
     "$zx/system/ulib/cobalt-client:in-memory-logger",
     "$zx/system/ulib/fidl-async:fidl-async-cpp",
-    "$zx/system/ulib/sync",
     "$zx/system/ulib/fit",
+    "$zx/system/ulib/sync",
     "$zx/system/ulib/zxtest",
   ]
 }
 
 source_set("metrics-test") {
-  testonly= true
+  testonly = true
   sources = [
     "counter_test.cc",
     "histogram_test.cc",
@@ -41,24 +41,29 @@ source_set("metrics-test") {
   ]
   include_dirs = [ "../include/" ]
   deps = [
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/cobalt-client:types-internal",
-    "$zx/system/ulib/cobalt-client:metrics",
     "$zx/system/ulib/cobalt-client:collector",
+    "$zx/system/ulib/cobalt-client:metrics",
+    "$zx/system/ulib/cobalt-client:types-internal",
     "$zx/system/ulib/fit",
+    "$zx/system/ulib/sync",
     "$zx/system/ulib/zxtest",
   ]
+
+  # TODO(42493): UBSan has found an instance of undefined behavior in this target.
+  # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+  configs +=
+      [ "$zx_build/public/gn/config:temporarily_disable_ubsan_do_not_use" ]
 }
 
 source_set("in-memory-logger-test") {
-  testonly= true
+  testonly = true
   sources = [
     "in_memory_logger_test.cc",
   ]
   include_dirs = [ "../include/" ]
   deps = [
-    "$zx/system/ulib/cobalt-client:metrics",
     "$zx/system/ulib/cobalt-client:in-memory-logger",
+    "$zx/system/ulib/cobalt-client:metrics",
     "$zx/system/ulib/zxtest",
   ]
 }
@@ -67,7 +72,7 @@ zx_test("cobalt-client-unit") {
   sources = []
   deps = [
     ":collector-test",
-    ":metrics-test",
     ":in-memory-logger-test",
+    ":metrics-test",
   ]
 }

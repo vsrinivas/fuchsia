@@ -250,4 +250,9 @@ static_library("acpica") {
       defines += [ "ACPI_DEBUG_OUTPUT" ]
     }
   }
+
+  # TODO(41663): UBSan has found an instance of undefined behavior in this target.
+  # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+  configs +=
+      [ "$zx_build/public/gn/config:temporarily_disable_ubsan_do_not_use" ]
 }

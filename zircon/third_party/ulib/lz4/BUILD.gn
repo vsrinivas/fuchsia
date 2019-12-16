@@ -30,6 +30,11 @@ zx_library("lz4") {
 
   # This code doesn't use the annotation attribute.
   configs -= [ "$zx_build/public/gn/config:warn-implicit-fallthrough" ]
+
+  # TODO(41766): UBSan has found an instance of undefined behavior in this target.
+  # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+  configs +=
+      [ "$zx_build/public/gn/config:temporarily_disable_ubsan_do_not_use" ]
 }
 
 group("test") {
