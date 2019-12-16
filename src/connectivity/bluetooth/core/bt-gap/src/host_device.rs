@@ -5,8 +5,10 @@
 use {
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_bluetooth::DeviceClass,
+    fidl_fuchsia_bluetooth::PeerId as FidlPeerId,
     fidl_fuchsia_bluetooth_control::{
-        self as control, HostData, InputCapabilityType, OutputCapabilityType, PairingDelegateMarker,
+        self as control, HostData, InputCapabilityType, OutputCapabilityType,
+        PairingDelegateMarker, PairingOptions,
     },
     fidl_fuchsia_bluetooth_gatt::ClientProxy,
     fidl_fuchsia_bluetooth_host::{HostEvent, HostProxy},
@@ -90,6 +92,14 @@ impl HostDevice {
 
     pub fn disconnect(&mut self, device_id: String) -> impl Future<Output = types::Result<()>> {
         self.host.disconnect(&device_id).map(from_fidl_status)
+    }
+
+    pub fn pair(
+        &mut self,
+        mut id: FidlPeerId,
+        options: PairingOptions,
+    ) -> impl Future<Output = types::Result<()>> {
+        self.host.pair(&mut id, options).map(from_fidl_status)
     }
 
     pub fn forget(&mut self, peer_id: String) -> impl Future<Output = types::Result<()>> {

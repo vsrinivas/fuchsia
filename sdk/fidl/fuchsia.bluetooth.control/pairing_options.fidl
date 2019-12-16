@@ -1,0 +1,36 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.control;
+
+/// The security level required for this pairing - corresponds to the security
+/// levels defined in the Security Manager Protocol in Vol 3, Part H, Section 2.3.1
+enum PairingSecurityLevel {
+    /// Encrypted without MITM protection (unauthenticated)
+    ENCRYPTED = 1;
+
+    /// Encrypted with MITM protection (authenticated), although this level of security does not
+    /// fully protect against passive eavesdroppers
+    AUTHENTICATED = 2;
+};
+
+/// Parameters that give a caller more fine-grained control over the pairing process. All of the
+/// fields of this table are optional and pairing can still succeed if none of them are set.
+table PairingOptions {
+    /// Only relevant for LE. If present, determines the Security Manager security level to pair
+    /// with. If not present, defaults to PairingSecurityLevel.AUTHENTICATED.
+    1: PairingSecurityLevel le_security_level;
+
+    /// If not present or false, the pairing will default to bondable mode. Otherwise, setting this
+    /// parameter to true will initiate a non-bondable pairing.
+    ///
+    /// TODO(fxb/42403): Only implemented for LE transport. Support this for BR/EDR.
+    2: bool non_bondable;
+
+    /// If transport is LOW_ENERGY or CLASSIC, pairing will be performed over the transport
+    /// corresponding to the specified technology, which must already be connected. If transport
+    /// is not present or DUAL_MODE, the pairing will be performed over whichever transport is
+    /// connected, and defaults to LE for dual-mode connections.
+    3: TechnologyType transport;
+};

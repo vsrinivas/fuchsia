@@ -108,7 +108,13 @@ protocol Control {
     /// Note: This does not remove a device bond, see Control::Forget.
     Disconnect(string device_id) -> (fuchsia.bluetooth.Status status);
 
-    /// Forgets `device_id` completely, removing all bonding information.
+    /// Initiate a pairing to the remote `id` with the given `options`. Returns an error
+    /// variant of fuchsia.bluetooth.Status if no connected peer with `id` is found or the pairing
+    /// procedure fails. If already paired, this will do nothing unless the pairing is over LE and
+    /// the PairingOptions.le_security_level is more secure than the current security level.
+    Pair(fuchsia.bluetooth.PeerId id, PairingOptions options) -> (fuchsia.bluetooth.Status status);
+
+    /// Forget `device_id` completely, removing all bonding information.
     /// This will disconnect a device if it is connected.
     Forget(string device_id) -> (fuchsia.bluetooth.Status status);
 

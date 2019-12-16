@@ -5,11 +5,13 @@
 use {
     failure::{err_msg, Error, ResultExt},
     fidl::endpoints::{self, ServerEnd},
-    fidl_fuchsia_bluetooth::{Appearance, DeviceClass, Error as FidlError, ErrorCode},
+    fidl_fuchsia_bluetooth::{
+        Appearance, DeviceClass, Error as FidlError, ErrorCode, PeerId as FidlPeerId,
+    },
     fidl_fuchsia_bluetooth_bredr::ProfileMarker,
     fidl_fuchsia_bluetooth_control::{
         self as control, ControlControlHandle, HostData, InputCapabilityType, LocalKey,
-        OutputCapabilityType, PairingDelegateProxy,
+        OutputCapabilityType, PairingDelegateProxy, PairingOptions,
     },
     fidl_fuchsia_bluetooth_gatt::{LocalServiceDelegateRequest, Server_Marker, Server_Proxy},
     fidl_fuchsia_bluetooth_host::HostProxy,
@@ -477,6 +479,21 @@ impl HostDispatcher {
         match host {
             Some(host) => {
                 let fut = host.write().connect(peer_id);
+                fut.await
+            }
+            None => Err(types::Error::no_host()),
+        }
+    }
+
+    pub async fn pair(
+        &mut self,
+        id: FidlPeerId,
+        pairing_options: PairingOptions,
+    ) -> types::Result<()> {
+        let host = self.get_active_adapter().await;
+        match host {
+            Some(host) => {
+                let fut = host.write().pair(id, pairing_options);
                 fut.await
             }
             None => Err(types::Error::no_host()),

@@ -125,6 +125,16 @@ protocol Host {
     ///                     disconnected.
     Disconnect(string peer_id) -> (fuchsia.bluetooth.Status status);
 
+    /// Initiates pairing to the peer with the supplied `id` and `options`. Returns an error
+    /// variant of fuchsia.bluetooth.Status if no connected peer with `id` is found or the pairing
+    /// procedure fails. If already paired, this will do nothing unless the pairing is over LE and
+    /// the PairingOptions.le_security_level is more secure than the current security level.
+    ///
+    /// NOTE: This is intended to satisfy test scenarios that require pairing procedures to be
+    /// initiated without relying on service access. In normal operation, Bluetooth security is
+    /// enforced during service access.
+    Pair(fuchsia.bluetooth.PeerId id, fuchsia.bluetooth.control.PairingOptions options) -> (fuchsia.bluetooth.Status status);
+
     /// Deletes a peer from the Bluetooth host. If the peer is connected, it will be disconnected,
     /// then OnDeviceUpdated will be sent. OnDeviceRemoved will be sent. `device_id` will no longer
     /// refer to any peer, even if a device with the same address(es) is discovered again.

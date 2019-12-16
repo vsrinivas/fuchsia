@@ -52,6 +52,10 @@ async fn handler(
             let result = hd.connect(device_id).await;
             responder.send(&mut status_response(result))
         }
+        ControlRequest::Pair { id, options, responder } => {
+            let result = hd.pair(id, options).await;
+            responder.send(&mut status_response(result))
+        }
         ControlRequest::SetDiscoverable { discoverable, responder } => {
             let mut resp = if discoverable {
                 match hd.set_discoverable().await {

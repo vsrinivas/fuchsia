@@ -18,6 +18,7 @@ fidl("fuchsia.bluetooth.control") {
     "bonding.fidl",
     "control.fidl",
     "pairing_delegate.fidl",
+    "pairing_options.fidl",
     "remote_device.fidl",
   ]
 
