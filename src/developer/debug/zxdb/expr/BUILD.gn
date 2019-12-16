@@ -150,9 +150,9 @@ source_set("tests") {
   deps = [
     ":expr",
     ":test_support",
-    "//garnet/third_party/llvm:LLVMBinaryFormat",
     "//src/developer/debug/zxdb/common:test_support",
     "//src/developer/debug/zxdb/symbols:test_support",
+    "//src/lib/llvm:LLVMBinaryFormat",
     "//third_party/googletest:gtest",
   ]
 }

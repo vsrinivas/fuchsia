@@ -49,7 +49,6 @@ exceptions = {
     ],
     '//src/developer/debug': [
          '//garnet/lib/process:process',
-         '//garnet/third_party/llvm',
     ],
     '//src/developer/feedback_agent': [
         '//src/ui/lib/escher/test',

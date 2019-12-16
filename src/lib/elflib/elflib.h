@@ -16,7 +16,7 @@
 
 #include <fbl/macros.h>
 
-#include "garnet/third_party/llvm/include/llvm/BinaryFormat/ELF.h"
+#include "prebuilt/third_party/llvm/include/llvm/BinaryFormat/ELF.h"
 
 namespace elflib {
 

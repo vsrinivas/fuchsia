@@ -127,10 +127,6 @@ static_library("client") {
   ]
 
   public_deps = [
-    "//garnet/third_party/llvm:LLVMAArch64Desc",
-    "//garnet/third_party/llvm:LLVMAArch64Disassembler",
-    "//garnet/third_party/llvm:LLVMX86Desc",
-    "//garnet/third_party/llvm:LLVMX86Disassembler",
     "//src/developer/debug/ipc:client",
     "//src/developer/debug/shared",
     "//src/developer/debug/third_party/libunwindstack",
@@ -139,14 +135,18 @@ static_library("client") {
     "//src/developer/debug/zxdb/symbols",
     "//src/lib/containers/cpp",
     "//src/lib/fxl",
+    "//src/lib/llvm:LLVMAArch64Desc",
+    "//src/lib/llvm:LLVMAArch64Disassembler",
+    "//src/lib/llvm:LLVMX86Desc",
+    "//src/lib/llvm:LLVMX86Disassembler",
     "//third_party/curl:libcurl",
     "//zircon/public/lib/fit",
   ]
 
   deps = [
-    "//garnet/third_party/llvm:LLVMMC",
-    "//garnet/third_party/llvm:LLVMObject",
     "//src/lib/elflib",
+    "//src/lib/llvm:LLVMMC",
+    "//src/lib/llvm:LLVMObject",
     "//third_party/crashpad/client",
     "//third_party/crashpad/compat",
     "//third_party/crashpad/snapshot",

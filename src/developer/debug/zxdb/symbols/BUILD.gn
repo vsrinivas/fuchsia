@@ -151,8 +151,8 @@ static_library("symbols") {
   ]
 
   deps = [
-    "//garnet/third_party/llvm:LLVMDebugInfoDWARF",
     "//src/lib/elflib",
+    "//src/lib/llvm:LLVMDebugInfoDWARF",
   ]
 }
 
@@ -182,8 +182,8 @@ static_library("test_support") {
 
   public_deps = [
     ":symbols",
-    "//garnet/third_party/llvm:LLVMDebugInfoDWARF",
     "//src/developer/debug/zxdb/common:test_support",
+    "//src/lib/llvm:LLVMDebugInfoDWARF",
   ]
 }
 
@@ -277,8 +277,8 @@ source_set("tests") {
     ":copy_test_elf_file($host_toolchain)",
     ":symbols",
     ":test_support",
-    "//garnet/third_party/llvm:LLVMDebugInfoDWARF",
     "//src/developer/debug/zxdb/common:test_support",
+    "//src/lib/llvm:LLVMDebugInfoDWARF",
     "//third_party/googletest:gtest",
   ]
 

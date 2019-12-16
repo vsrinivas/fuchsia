@@ -3,11 +3,11 @@
 # found in the LICENSE file.
 
 config("LLVM_config") {
-  include_dirs = [ "include" ]
+  include_dirs = [ "//prebuilt/third_party/llvm/include" ]
   if (current_os == "linux") {
-    libs = [ "lib/libLLVM-8svn.so" ]
+    libs = [ "//prebuilt/third_party/llvm/lib/libLLVM-8svn.so" ]
   } else if (current_os == "mac") {
-    libs = [ "lib/libLLVM.dylib" ]
+    libs = [ "//prebuilt/third_party/llvm/lib/libLLVM.dylib" ]
   }
 }
 
@@ -18,8 +18,8 @@ group("LLVM") {
 template("llvm_library") {
   config(target_name + "_config") {
     visibility = [ ":*" ]
-    include_dirs = [ "include" ]
-    libs = [ "lib/lib${target_name}.a" ]
+    include_dirs = [ "//prebuilt/third_party/llvm/include" ]
+    libs = [ "//prebuilt/third_party/llvm/lib/lib${target_name}.a" ]
   }
 
   group(target_name) {

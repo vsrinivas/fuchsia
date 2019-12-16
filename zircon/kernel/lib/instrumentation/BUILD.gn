@@ -34,7 +34,7 @@ source_set("profile") {
     sources = [
       "profile.cc",
     ]
-    include_dirs = [ "$zx/../garnet/third_party/llvm/include" ]
+    include_dirs = [ "$zx/../prebuilt/third_party/llvm/include" ]
 
     if (current_os == "win") {
       # The LLVM header file describing the instrumentation data tests this.

@@ -7,9 +7,9 @@
 
 #include <map>
 
-#include "garnet/third_party/llvm/include/llvm/BinaryFormat/ELF.h"
 #include "gtest/gtest_prod.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/symbols/elf_symbol_record.h"
 #include "src/developer/debug/zxdb/symbols/index.h"
