@@ -41,6 +41,13 @@ static pbus_bti_t nna_btis[] = {
   },
 };
 
+static pbus_irq_t nna_irqs[] = {
+  {
+    .irq = T931_NNA_IRQ,
+    .mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
+  },
+};
+
 static pbus_dev_t nna_dev = []() {
   pbus_dev_t dev = {};
   dev.name = "aml-nna";
@@ -51,6 +58,8 @@ static pbus_dev_t nna_dev = []() {
   dev.mmio_count = countof(sherlock_nna_mmios);
   dev.bti_list = nna_btis;
   dev.bti_count = countof(nna_btis);
+  dev.irq_list = nna_irqs;
+  dev.irq_count = countof(nna_irqs);
   return dev;
 }();
 
