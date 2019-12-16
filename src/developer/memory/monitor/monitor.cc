@@ -28,6 +28,7 @@
 #include "src/developer/memory/metrics/capture.h"
 #include "src/developer/memory/metrics/printer.h"
 #include "src/developer/memory/monitor/high_water.h"
+#include "src/developer/memory/monitor/memory_metrics_registry.cb.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
@@ -127,11 +128,6 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
 
   if (send_metrics) {
     fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
-    // Create a Cobalt Logger. The project name is the one we specified in the
-    // Cobalt metrics registry. We specify that our release stage is DOGFOOD.
-    // This means we are not allowed to use any metrics declared as DEBUG
-    // or FISHFOOD.
-    static const char kProjectName[] = "memory";
     // Connect to the cobalt fidl service provided by the environment.
     fuchsia::cobalt::LoggerFactorySyncPtr factory;
 
@@ -141,8 +137,9 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
       return;
     }
 
-    factory->CreateLoggerFromProjectName(kProjectName, fuchsia::cobalt::ReleaseStage::DOGFOOD,
-                                         logger_.NewRequest(), &status);
+    // Create a Cobalt Logger. The ID name is the one we specified in the
+    // Cobalt metrics registry.
+    factory->CreateLoggerFromProjectId(cobalt_registry::kProjectId, logger_.NewRequest(), &status);
     if (status != fuchsia::cobalt::Status::OK) {
       FXL_LOG(ERROR) << "Unable to get Logger from factory";
       return;
