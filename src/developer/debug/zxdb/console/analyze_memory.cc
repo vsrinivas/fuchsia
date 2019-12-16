@@ -15,6 +15,7 @@
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/console/format_register.h"
 #include "src/developer/debug/zxdb/console/format_table.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
@@ -158,22 +159,17 @@ void MemoryAnalysis::DoAnalysis() {
       row.emplace_back("<invalid memory>");
     }
 
-    std::string annotation = GetAnnotationsBetween(address, address + kAlign);
-    std::string pointed_to;
+    OutputBuffer annotation = GetAnnotationsBetween(address, address + kAlign);
+    OutputBuffer pointed_to;
     if (has_data)
       pointed_to = GetPointedToAnnotation(data_value);
 
-    OutputBuffer comments;
-    if (!annotation.empty()) {
-      // Mark things pointing into the stack as special since they're important
-      // and can get drowned out by the "pointed to" annotations.
-      comments.Append(Syntax::kSpecial, std::move(annotation));
-      if (!pointed_to.empty())
-        comments.Append(". ");  // Separator between sections.
+    if (!pointed_to.empty()) {
+      if (!annotation.empty())
+        annotation.Append(". ");  // Separator between sections.
+      annotation.Append(std::move(pointed_to));
     }
-    if (!pointed_to.empty())
-      comments.Append(std::move(pointed_to));
-    row.push_back(comments);
+    row.push_back(annotation);
   }
 
   OutputBuffer out;
@@ -290,31 +286,33 @@ bool MemoryAnalysis::GetData(uint64_t address, uint64_t* out_value) const {
   return true;
 }
 
-std::string MemoryAnalysis::GetAnnotationsBetween(uint64_t address_begin,
-                                                  uint64_t address_end) const {
+OutputBuffer MemoryAnalysis::GetAnnotationsBetween(uint64_t address_begin,
+                                                   uint64_t address_end) const {
   auto lower = annotations_.lower_bound(address_begin);
   auto upper = annotations_.upper_bound(address_end - 1);
   if (lower == upper)
-    return std::string();  // No annotations in this range.
+    return OutputBuffer();  // No annotations in this range.
 
-  std::string result = ("◁ ");
+  // Mark "pointing to here" annotations as special since they can get drowned out by all of the
+  // other pointer stuff.
+  OutputBuffer result(Syntax::kSpecial, "◁ ");
   for (auto cur = lower; cur != upper; ++cur) {
     if (cur != lower) {
       // Not the first annotation, needs a separator.
-      result += "; ";
+      result.Append("; ");
     }
     if (cur->first != address_begin) {
       // Not at the address but inside of the range. Annotate that carefully.
-      result += fxl::StringPrintf("@ 0x%" PRIx64 ": ", cur->first);
+      result.Append(Syntax::kSpecial, fxl::StringPrintf("@ 0x%" PRIx64 ": ", cur->first));
     }
-    result += cur->second;
+    result.Append(Syntax::kSpecial, cur->second);
   }
   return result;
 }
 
-std::string MemoryAnalysis::GetPointedToAnnotation(uint64_t data) const {
+OutputBuffer MemoryAnalysis::GetPointedToAnnotation(uint64_t data) const {
   if (!process_)
-    return std::string();
+    return OutputBuffer();
   auto locations = process_->GetSymbols()->ResolveInputLocation(InputLocation(data));
   FXL_DCHECK(locations.size() == 1);
 
@@ -333,12 +331,23 @@ std::string MemoryAnalysis::GetPointedToAnnotation(uint64_t data) const {
     }
 
     if (found_entry == aspace_.size())
-      return std::string();  // Not found.
+      return OutputBuffer();  // Not found.
     return fxl::StringPrintf("▷ inside map \"%s\"", aspace_[found_entry].name.c_str());
   }
-  // TODO(brettw) this should indicate the byte offset from the beginning of
-  // the function, or maybe the file/line number.
-  return "▷ inside " + locations[0].symbol().Get()->GetFullName();
+
+  FormatLocationOptions opts;
+  opts.func.name.show_global_qual = false;
+  opts.func.name.elide_templates = true;
+  opts.func.name.bold_last = true;
+  opts.func.params = FormatFunctionNameOptions::kNoParams;
+  opts.always_show_addresses = false;
+  opts.show_params = false;
+  opts.show_file_line = false;
+  opts.show_file_path = false;
+
+  OutputBuffer out("▷ ");
+  out.Append(FormatLocation(locations[0], opts));
+  return out;
 }
 
 }  // namespace internal

@@ -103,11 +103,11 @@ class MemoryAnalysis : public fxl::RefCountedThreadSafe<MemoryAnalysis> {
   bool GetData(uint64_t address, uint64_t* out_value) const;
 
   // Returns a formatted string representing all annotations in the range (end non-inclusive).
-  std::string GetAnnotationsBetween(uint64_t address_begin, uint64_t address_end) const;
+  OutputBuffer GetAnnotationsBetween(uint64_t address_begin, uint64_t address_end) const;
 
   // Returns a formatted string representing with the given data value points to (if possible).
   // Returns an empty string otherwise.
-  std::string GetPointedToAnnotation(uint64_t data) const;
+  OutputBuffer GetPointedToAnnotation(uint64_t data) const;
 
   // May become invalid across the async callbacks, check before using.
   fxl::WeakPtr<Process> process_;
