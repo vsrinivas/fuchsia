@@ -472,8 +472,6 @@ impl<I: UdpSocketIpExt> SocketWorkerInner<I> {
             }
         };
 
-        // TODO(maufflick): convert connect_udp result response to appropriate libc::c_int values
-        // for `connect`.
         let conn_id =
             connect_udp(&mut event_loop.ctx, local_addr, local_port, remote_addr, remote_port)
                 .map_err(SocketError::into_errno)?;
