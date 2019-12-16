@@ -89,6 +89,7 @@ struct x86_percpu bp_percpu = {
 
     .cpu_num = 0,
     .num_spinlocks = 0,
+    .last_user_aspace = nullptr,
 
     .default_tss = {},
     .interrupt_stacks = {},

@@ -161,13 +161,21 @@ __NO_SAFESTACK __attribute__((target("fsgsbase"))) void arch_context_switch(thre
   x86_write_gs_offset64(ZX_TLS_UNSAFE_SP_OFFSET, newthread->arch.unsafe_sp);
 #endif
 
-  // Flush Indirect Branch Predictor State if we are switching processes.
-  // Do not bother if we're switching to the kernel address space - the kernel protects
-  // itself from indirect branch predictor poisoning attacks via alternative mechanisms.
-  if (oldthread->aspace != newthread->aspace && newthread->aspace != nullptr &&
-      x86_cpu_should_ibpb_on_ctxt_switch()) {
+  auto* const percpu = x86_get_percpu();
+  // Flush Indirect Branch Predictor State, if:
+  // 1) We are switching from a user address space to another user address space OR
+  // 2) We are switching from the kernel address space to a user address space and the
+  //    new user address space is not the same as the last user address space that ran
+  //    on this core.
+  // TODO(fxb/39621): Handle aspace* reuse.
+  if (x86_cpu_should_ibpb_on_ctxt_switch() &&
+      (((oldthread->aspace && newthread->aspace) && (oldthread->aspace != newthread->aspace)) ||
+      ((!oldthread->aspace && newthread->aspace) && (percpu->last_user_aspace != newthread->aspace)))) {
     MsrAccess msr;
     x86_cpu_ibpb(&msr);
+  }
+  if (oldthread->aspace && !newthread->aspace) {
+    percpu->last_user_aspace = oldthread->aspace;
   }
 
   x86_64_context_switch(&oldthread->arch.sp, newthread->arch.sp);

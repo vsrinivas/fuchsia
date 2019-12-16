@@ -81,6 +81,9 @@ struct x86_percpu {
   /* Number of spinlocks currently held */
   uint32_t num_spinlocks;
 
+  /* Last user vmm_aspace_t that was active on this core. Lazily updated. */
+  void* last_user_aspace;
+
   /* This CPU's default TSS */
   tss_t default_tss __ALIGNED(16);
 
