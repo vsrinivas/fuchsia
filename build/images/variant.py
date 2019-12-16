@@ -14,6 +14,8 @@ ZIRCON_DRIVER_IDENT = ('Zircon\0', ZIRCON_NOTE_DRIVER)
 
 LIBCXX_SONAMES = ['libc++.so.2', 'libc++abi.so.1', 'libunwind.so.1']
 
+FUZZER_VARIANT_SUFFIX = '-fuzzer'
+
 
 def binary_info(filename):
     return elfinfo.get_elf_info(filename, [ZIRCON_DRIVER_IDENT])
@@ -65,20 +67,12 @@ def make_variant(name, info):
             # ASan drivers need devhost.asan.
             aux = [(file + '.asan', group) for file, group in aux]
             has_libcxx = True
-        if name == 'asan-ubsan':
-            libprefix = 'asan-ubsan/'
-            runtime = 'libclang_rt.asan.so'
-            # ASan drivers need devhost.asan.
-            aux = [(file + '.asan', group) for file, group in aux]
-            has_libcxx = True
-        elif name == 'profile' or name.startswith('fuzzer.'):
-            libprefix = name + '/'
-            if name.find('asan') != -1:
-                runtime = 'libclang_rt.asan.so'
-            elif name.find('ubsan') != -1:
-                runtime = 'libclang_rt.ubsan_standalone.so'
         elif 'ubsan' in name or 'sancov' in name:
             runtime = 'libclang_rt.ubsan_standalone.so'
+        if name.endswith(FUZZER_VARIANT_SUFFIX):
+            # Fuchsia-built fuzzers don't have their own separate libprefix.
+            # They just use the base variant.
+            libprefix = name[:-len(FUZZER_VARIANT_SUFFIX)] + '/'
     return variant(tc, libprefix, runtime, aux, has_libcxx)
 
 
