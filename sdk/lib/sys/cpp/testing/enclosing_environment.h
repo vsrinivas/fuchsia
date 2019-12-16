@@ -230,6 +230,8 @@ class EnclosingEnvironment {
   std::unique_ptr<EnclosingEnvironment> CreateNestedEnclosingEnvironmentWithLoader(
       const std::string& label, std::shared_ptr<vfs::Service> loader_service);
 
+  std::shared_ptr<sys::ServiceDirectory> service_directory() { return service_provider_; }
+
   // Connects to service provided by this environment.
   void ConnectToService(std::string service_name, zx::channel channel) {
     service_provider_->Connect(service_name, std::move(channel));
