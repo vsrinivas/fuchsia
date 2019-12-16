@@ -6,6 +6,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <lib/async/cpp/task.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 #include <lib/trace/event.h>
@@ -25,7 +26,6 @@
 #include <set>
 #include <utility>
 
-#include "lib/async/cpp/task.h"
 #include "src/ledger/bin/cobalt/cobalt.h"
 #include "src/ledger/bin/public/status.h"
 #include "src/ledger/bin/storage/impl/btree/builder.h"

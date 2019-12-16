@@ -5,10 +5,11 @@
 #ifndef SRC_LEDGER_BIN_STORAGE_IMPL_OBJECT_IDENTIFIER_FACTORY_IMPL_H_
 #define SRC_LEDGER_BIN_STORAGE_IMPL_OBJECT_IDENTIFIER_FACTORY_IMPL_H_
 
+#include <lib/fit/function.h>
+
 #include <map>
 #include <memory>
 
-#include "lib/fit/function.h"
 #include "src/ledger/bin/storage/public/object.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/synchronization/dispatcher_checker.h"

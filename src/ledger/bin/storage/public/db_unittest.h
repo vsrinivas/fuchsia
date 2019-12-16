@@ -6,12 +6,12 @@
 #define SRC_LEDGER_BIN_STORAGE_PUBLIC_DB_UNITTEST_H_
 
 #include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 
 #include <functional>
 #include <memory>
 
 #include "gtest/gtest.h"
-#include "lib/fit/function.h"
 #include "src/ledger/bin/platform/scoped_tmp_location.h"
 #include "src/ledger/bin/storage/public/db.h"
 #include "src/ledger/bin/testing/test_with_environment.h"

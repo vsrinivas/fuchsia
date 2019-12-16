@@ -5,11 +5,11 @@
 #ifndef SRC_LEDGER_BIN_APP_BRANCH_TRACKER_H_
 #define SRC_LEDGER_BIN_APP_BRANCH_TRACKER_H_
 
+#include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
 
 #include <memory>
 
-#include "lib/async/dispatcher.h"
 #include "src/ledger/bin/app/page_snapshot_impl.h"
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/storage/public/commit_watcher.h"

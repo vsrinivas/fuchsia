@@ -4,9 +4,9 @@
 
 #include "src/ledger/bin/tests/cloud_provider/launcher/validation_tests_launcher.h"
 
+#include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/optional.h>
 
-#include "lib/async/dispatcher.h"
 #include "src/ledger/lib/logging/logging.h"
 
 namespace cloud_provider {

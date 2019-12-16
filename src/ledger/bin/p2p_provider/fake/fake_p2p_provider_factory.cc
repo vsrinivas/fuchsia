@@ -4,10 +4,11 @@
 
 #include "src/ledger/bin/p2p_provider/fake/fake_p2p_provider_factory.h"
 
+#include <lib/async/cpp/task.h>
+#include <lib/fit/function.h>
+
 #include <memory>
 
-#include "lib/async/cpp/task.h"
-#include "lib/fit/function.h"
 #include "src/ledger/bin/p2p_provider/impl/make_client_id.h"
 #include "src/ledger/bin/p2p_provider/public/types.h"
 #include "src/ledger/lib/logging/logging.h"
