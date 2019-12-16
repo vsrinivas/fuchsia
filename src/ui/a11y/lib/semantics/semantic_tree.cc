@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/a11y/lib/semantics/tree.h"
+#include "src/ui/a11y/lib/semantics/semantic_tree.h"
 
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
 #include <lib/syslog/cpp/logger.h>

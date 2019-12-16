@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/a11y/lib/semantics/tree.h"
-
 #include <fuchsia/accessibility/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -21,6 +19,7 @@
 
 #include "gmock/gmock.h"
 #include "src/lib/syslog/cpp/logger.h"
+#include "src/ui/a11y/lib/semantics/semantic_tree.h"
 #include "src/ui/a11y/lib/semantics/semantics_manager.h"
 #include "src/ui/a11y/lib/semantics/tests/semantic_tree_parser.h"
 #include "src/ui/a11y/lib/util/util.h"
@@ -40,9 +39,9 @@ const std::string kSemanticTreeWithCyclePath = "/pkg/data/cyclic_semantic_tree.j
 const std::string kSemanticTreeWithMissingChildrenPath =
     "/pkg/data/semantic_tree_not_parseable.json";
 
-class SemanticTreeTestTransition : public gtest::TestLoopFixture {
+class SemanticTreeTest : public gtest::TestLoopFixture {
  public:
-  SemanticTreeTestTransition() {
+  SemanticTreeTest() {
     syslog::InitLogger();
     tree_.set_action_handler([this](uint32_t node_id,
                                     fuchsia::accessibility::semantics::Action action,
@@ -103,7 +102,7 @@ class SemanticTreeTestTransition : public gtest::TestLoopFixture {
   SemanticTree tree_;
 };
 
-TEST_F(SemanticTreeTestTransition, GetNodesById) {
+TEST_F(SemanticTreeTest, GetNodesById) {
   SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeSingleNodePath);
 
   EXPECT_TRUE(tree_.Update(std::move(updates)));
@@ -116,7 +115,7 @@ TEST_F(SemanticTreeTestTransition, GetNodesById) {
   EXPECT_EQ(root->node_id(), SemanticTree::kRootNodeId);
 }
 
-TEST_F(SemanticTreeTestTransition, ClearsTheTree) {
+TEST_F(SemanticTreeTest, ClearsTheTree) {
   SemanticTree::TreeUpdates updates;
   updates.emplace_back(CreateTestNode(SemanticTree::kRootNodeId, "node0", {1, 2}));
   updates.emplace_back(CreateTestNode(1u, "node1"));
@@ -128,7 +127,7 @@ TEST_F(SemanticTreeTestTransition, ClearsTheTree) {
   EXPECT_EQ(tree_.Size(), 0u);
 }
 
-TEST_F(SemanticTreeTestTransition, ReceivesTreeInOneSingleUpdate) {
+TEST_F(SemanticTreeTest, ReceivesTreeInOneSingleUpdate) {
   SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeOddNodesPath);
   std::vector<uint32_t> added_ids;
   for (const auto& update : updates) {
@@ -138,7 +137,7 @@ TEST_F(SemanticTreeTestTransition, ReceivesTreeInOneSingleUpdate) {
   TreeContainsNodes(added_ids);
 }
 
-TEST_F(SemanticTreeTestTransition, BuildsTreeFromTheLeaves) {
+TEST_F(SemanticTreeTest, BuildsTreeFromTheLeaves) {
   SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeOddNodesPath);
   // Updates is in ascending order. Sort it in descending order to send the
   // updates from the leaves.
@@ -153,20 +152,20 @@ TEST_F(SemanticTreeTestTransition, BuildsTreeFromTheLeaves) {
   TreeContainsNodes(added_ids);
 }
 
-TEST_F(SemanticTreeTestTransition, InvalidTreeWithoutParent) {
+TEST_F(SemanticTreeTest, InvalidTreeWithoutParent) {
   SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeOddNodesPath);
   // Remove the root (first node).
   updates.erase(updates.begin());
   EXPECT_FALSE(tree_.Update(std::move(updates)));
 }
 
-TEST_F(SemanticTreeTestTransition, InvalidTreeWithCycle) {
+TEST_F(SemanticTreeTest, InvalidTreeWithCycle) {
   SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeWithCyclePath);
   EXPECT_FALSE(tree_.Update(std::move(updates)));
   EXPECT_EQ(tree_.Size(), 0u);
 }
 
-TEST_F(SemanticTreeTestTransition, DeletingNodesByUpdatingTheParent) {
+TEST_F(SemanticTreeTest, DeletingNodesByUpdatingTheParent) {
   SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeOddNodesPath);
   std::vector<uint32_t> added_ids;
   for (const auto& update : updates) {
@@ -203,7 +202,7 @@ TEST_F(SemanticTreeTestTransition, DeletingNodesByUpdatingTheParent) {
   }
 }
 
-TEST_F(SemanticTreeTestTransition, ExplicitlyDeletingNodes) {
+TEST_F(SemanticTreeTest, ExplicitlyDeletingNodes) {
   SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeOddNodesPath);
   std::vector<uint32_t> added_ids;
   for (const auto& update : updates) {
@@ -231,7 +230,7 @@ TEST_F(SemanticTreeTestTransition, ExplicitlyDeletingNodes) {
   TreeContainsNodes(added_ids);
 }
 
-TEST_F(SemanticTreeTestTransition, DeletingRootNodeClearsTheTree) {
+TEST_F(SemanticTreeTest, DeletingRootNodeClearsTheTree) {
   SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeOddNodesPath);
   EXPECT_TRUE(tree_.Update(std::move(updates)));
 
@@ -242,7 +241,7 @@ TEST_F(SemanticTreeTestTransition, DeletingRootNodeClearsTheTree) {
   EXPECT_EQ(tree_.Size(), 0u);
 }
 
-TEST_F(SemanticTreeTestTransition, ReplaceNodeWithADeletion) {
+TEST_F(SemanticTreeTest, ReplaceNodeWithADeletion) {
   SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeOddNodesPath);
   EXPECT_TRUE(tree_.Update(std::move(updates)));
 
@@ -259,7 +258,7 @@ TEST_F(SemanticTreeTestTransition, ReplaceNodeWithADeletion) {
   EXPECT_THAT(node->child_ids(), testing::ElementsAre(5, 6));
 }
 
-TEST_F(SemanticTreeTestTransition, SemanticTreeWithMissingChildren) {
+TEST_F(SemanticTreeTest, SemanticTreeWithMissingChildren) {
   SemanticTree::TreeUpdates updates;
   updates.emplace_back(CreateTestNode(SemanticTree::kRootNodeId, "node0", {1, 2}));
   updates.emplace_back(CreateTestNode(1u, "node1"));
@@ -268,7 +267,7 @@ TEST_F(SemanticTreeTestTransition, SemanticTreeWithMissingChildren) {
   EXPECT_EQ(tree_.Size(), 0u);
 }
 
-TEST_F(SemanticTreeTestTransition, PartialUpdateCopiesNewInfo) {
+TEST_F(SemanticTreeTest, PartialUpdateCopiesNewInfo) {
   {
     SemanticTree::TreeUpdates updates;
     updates.emplace_back(CreateTestNode(SemanticTree::kRootNodeId, "node0", {1, 2}));
@@ -302,7 +301,7 @@ TEST_F(SemanticTreeTestTransition, PartialUpdateCopiesNewInfo) {
   EXPECT_FALSE(root->states().selected());
 }
 
-TEST_F(SemanticTreeTestTransition, ReparentsNodes) {
+TEST_F(SemanticTreeTest, ReparentsNodes) {
   // A common use case of semantic trees is to reparent a node. Within an
   // update, reparenting would look like as a removal of a child node ID of one
   // node and the addition of that same child node ID to another node (new
@@ -324,7 +323,7 @@ TEST_F(SemanticTreeTestTransition, ReparentsNodes) {
   EXPECT_THAT(new_parent->child_ids(), testing::ElementsAre(3, 4, 2));
 }
 
-TEST_F(SemanticTreeTestTransition, GetParentNodeTest) {
+TEST_F(SemanticTreeTest, GetParentNodeTest) {
   SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeOddNodesPath);
   EXPECT_TRUE(tree_.Update(std::move(updates)));
   auto parent = tree_.GetParentNode(1);
@@ -335,13 +334,13 @@ TEST_F(SemanticTreeTestTransition, GetParentNodeTest) {
   EXPECT_EQ(parent->node_id(), SemanticTree::kRootNodeId);
 }
 
-TEST_F(SemanticTreeTestTransition, PerformAccessibilityActionRequested) {
+TEST_F(SemanticTreeTest, PerformAccessibilityActionRequested) {
   tree_.PerformAccessibilityAction(1, fuchsia::accessibility::semantics::Action::DEFAULT,
                                    [](auto...) {});
   EXPECT_TRUE(action_handler_called_);
 }
 
-TEST_F(SemanticTreeTestTransition, PerformHitTestingRequested) {
+TEST_F(SemanticTreeTest, PerformHitTestingRequested) {
   tree_.PerformHitTesting({1, 1}, [](auto...) {});
   EXPECT_TRUE(hit_testing_called_);
 }

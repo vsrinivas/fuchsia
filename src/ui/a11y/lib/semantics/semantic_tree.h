@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 //
 
-#ifndef SRC_UI_A11Y_LIB_SEMANTICS_TREE_H_
-#define SRC_UI_A11Y_LIB_SEMANTICS_TREE_H_
+#ifndef SRC_UI_A11Y_LIB_SEMANTICS_SEMANTIC_TREE_H_
+#define SRC_UI_A11Y_LIB_SEMANTICS_SEMANTIC_TREE_H_
 
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
 #include <fuchsia/math/cpp/fidl.h>
@@ -156,4 +156,4 @@ class SemanticTree {
 
 }  // namespace a11y
 
-#endif  // SRC_UI_A11Y_LIB_SEMANTICS_TREE_H_
+#endif  // SRC_UI_A11Y_LIB_SEMANTICS_SEMANTIC_TREE_H_

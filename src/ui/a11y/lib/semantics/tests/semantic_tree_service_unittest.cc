@@ -20,9 +20,9 @@
 
 #include "gmock/gmock.h"
 #include "src/lib/syslog/cpp/logger.h"
+#include "src/ui/a11y/lib/semantics/semantic_tree.h"
 #include "src/ui/a11y/lib/semantics/semantics_manager.h"
 #include "src/ui/a11y/lib/semantics/tests/semantic_tree_parser.h"
-#include "src/ui/a11y/lib/semantics/tree.h"
 #include "src/ui/a11y/lib/util/util.h"
 
 namespace accessibility_test {

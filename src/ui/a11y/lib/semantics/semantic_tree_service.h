@@ -18,7 +18,7 @@
 
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
-#include "src/ui/a11y/lib/semantics/tree.h"
+#include "src/ui/a11y/lib/semantics/semantic_tree.h"
 #include "src/ui/a11y/lib/util/util.h"
 
 namespace a11y {
