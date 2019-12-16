@@ -39,7 +39,7 @@ pub const __SIZEOF_PTHREAD_MUTEX_T: usize = 24;
 
 pub const TIOCINQ: ::c_int = ::FIONREAD;
 
-extern {
+extern "C" {
     pub fn ioctl(fd: ::c_int, request: ::c_int, ...) -> ::c_int;
 }
 
@@ -56,6 +56,9 @@ cfg_if! {
     } else if #[cfg(any(target_arch = "powerpc"))] {
         mod powerpc;
         pub use self::powerpc::*;
+    } else if #[cfg(any(target_arch = "hexagon"))] {
+        mod hexagon;
+        pub use self::hexagon::*;
     } else {
         // Unknown target_arch
     }

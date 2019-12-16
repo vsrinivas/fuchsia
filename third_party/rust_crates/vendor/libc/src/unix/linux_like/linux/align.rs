@@ -60,14 +60,18 @@ macro_rules! expand_align {
             #[cfg_attr(all(target_pointer_width = "32",
                            any(target_arch = "mips",
                                target_arch = "arm",
+                               target_arch = "hexagon",
                                target_arch = "powerpc",
+                               target_arch = "sparc",
                                target_arch = "x86_64",
                                target_arch = "x86")),
                        repr(align(4)))]
             #[cfg_attr(any(target_pointer_width = "64",
                            not(any(target_arch = "mips",
                                    target_arch = "arm",
+                                   target_arch = "hexagon",
                                    target_arch = "powerpc",
+                                   target_arch = "sparc",
                                    target_arch = "x86_64",
                                    target_arch = "x86"))),
                        repr(align(8)))]
@@ -79,14 +83,18 @@ macro_rules! expand_align {
             #[cfg_attr(all(target_pointer_width = "32",
                            any(target_arch = "mips",
                                target_arch = "arm",
+                               target_arch = "hexagon",
                                target_arch = "powerpc",
+                               target_arch = "sparc",
                                target_arch = "x86_64",
                                target_arch = "x86")),
                        repr(align(4)))]
             #[cfg_attr(any(target_pointer_width = "64",
                            not(any(target_arch = "mips",
                                    target_arch = "arm",
+                                   target_arch = "hexagon",
                                    target_arch = "powerpc",
+                                   target_arch = "sparc",
                                    target_arch = "x86_64",
                                    target_arch = "x86"))),
                        repr(align(8)))]
@@ -94,5 +102,5 @@ macro_rules! expand_align {
                 size: [u8; ::__SIZEOF_PTHREAD_RWLOCK_T],
             }
         }
-    }
+    };
 }

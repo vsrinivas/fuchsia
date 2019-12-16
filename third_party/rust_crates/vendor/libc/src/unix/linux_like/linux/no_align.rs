@@ -48,12 +48,14 @@ macro_rules! expand_align {
                 #[cfg(any(target_arch = "mips",
                           target_arch = "arm",
                           target_arch = "powerpc",
+                          target_arch = "sparc",
                           all(target_arch = "x86_64",
                               target_pointer_width = "32")))]
                 __align: [::c_long; 0],
                 #[cfg(not(any(target_arch = "mips",
                               target_arch = "arm",
                               target_arch = "powerpc",
+                              target_arch = "sparc",
                               all(target_arch = "x86_64",
                                   target_pointer_width = "32"))))]
                 __align: [::c_longlong; 0],
@@ -64,17 +66,19 @@ macro_rules! expand_align {
                 #[cfg(any(target_arch = "mips",
                           target_arch = "arm",
                           target_arch = "powerpc",
+                          target_arch = "sparc",
                           all(target_arch = "x86_64",
                               target_pointer_width = "32")))]
                 __align: [::c_long; 0],
                 #[cfg(not(any(target_arch = "mips",
                               target_arch = "arm",
                               target_arch = "powerpc",
+                              target_arch = "sparc",
                               all(target_arch = "x86_64",
                                   target_pointer_width = "32"))))]
                 __align: [::c_longlong; 0],
                 size: [u8; ::__SIZEOF_PTHREAD_RWLOCK_T],
             }
         }
-    }
+    };
 }

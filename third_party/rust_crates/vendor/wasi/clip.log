@@ -1,0 +1,20 @@
+    Updating crates.io index
+    Checking wasi v0.6.0 (/home/sunfish/rust-wasi)
+warning: use of `offset` with a `usize` casted to an `isize`
+   --> src/wasi_unstable/mod.rs:629:21
+    |
+629 |                 if *ptr.offset(n as isize) == 0 {
+    |                     ^^^^^^^^^^^^^^^^^^^^^^ help: try: `ptr.add(n)`
+    |
+    = note: #[warn(clippy::ptr_offset_with_cast)] on by default
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#ptr_offset_with_cast
+
+warning: use of `offset` with a `usize` casted to an `isize`
+   --> src/wasi_unstable/mod.rs:684:24
+    |
+684 |                 match *ptr.offset(n as isize) {
+    |                        ^^^^^^^^^^^^^^^^^^^^^^ help: try: `ptr.add(n)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#ptr_offset_with_cast
+
+    Finished dev [unoptimized + debuginfo] target(s) in 3.08s
