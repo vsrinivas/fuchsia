@@ -5,7 +5,6 @@
 #include <ddk/binding.h>
 
 // clang-format off
-#define ZIRCON_DRIVER(Driver, Ops, VendorName, Version)                               \
-  ZIRCON_DRIVER_BEGIN(Driver, Ops, VendorName, Version, {bind_count})                 \
-      {binding}                                                                       \
-  ZIRCON_DRIVER_END(rndishost)                                                        \
+#define ZIRCON_DRIVER(Driver, Ops, VendorName, Version) \
+  ZIRCON_DRIVER_BEGIN(Driver, Ops, VendorName, Version, {bind_count}) {binding} \
+  ZIRCON_DRIVER_END(Driver)
