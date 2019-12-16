@@ -20,6 +20,7 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.auth:fuchsia.auth-rustc",
     "//sdk/fidl/fuchsia.identity.external:fuchsia.identity.external-rustc",
+    "//sdk/fidl/fuchsia.identity.tokens:fuchsia.identity.tokens-rustc",
     "//sdk/fidl/fuchsia.net.oldhttp:fuchsia.net.oldhttp-rustc",
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
     "//sdk/fidl/fuchsia.web:fuchsia.web-rustc",

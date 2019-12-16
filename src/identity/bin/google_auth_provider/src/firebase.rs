@@ -5,7 +5,7 @@
 use crate::constants::FIREBASE_TOKEN_URI;
 use crate::error::{ResultExt, TokenProviderError};
 use crate::http::{HttpRequest, HttpRequestBuilder};
-use crate::openid::IdToken;
+use crate::oauth_open_id_connect::IdToken;
 
 use fidl_fuchsia_auth::FirebaseToken;
 use fidl_fuchsia_identity_external::Error as ApiError;

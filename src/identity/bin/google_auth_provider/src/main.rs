@@ -14,11 +14,14 @@ mod error;
 mod firebase;
 mod http;
 mod oauth;
-mod openid;
+mod oauth_open_id_connect;
+mod time;
 mod web;
 
 use crate::auth_provider::GoogleAuthProvider;
 use crate::http::UrlLoaderHttpClient;
+use crate::oauth_open_id_connect::OauthOpenIdConnect;
+use crate::time::UtcClock;
 use crate::web::DefaultStandaloneWebFrame;
 use failure::{Error, ResultExt};
 use fidl::endpoints::{create_proxy, ClientEnd};
@@ -43,8 +46,9 @@ fn main() -> Result<(), Error> {
     http_service.create_url_loader(url_loader_service)?;
     let frame_supplier = WebFrameSupplier::new();
     let http_client = UrlLoaderHttpClient::new(url_loader);
-    let google_auth_provider = Arc::new(GoogleAuthProvider::new(frame_supplier, http_client));
 
+    let google_auth_provider =
+        Arc::new(GoogleAuthProvider::new(frame_supplier, http_client.clone()));
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(move |stream| {
         let auth_provider_clone = Arc::clone(&google_auth_provider);
@@ -55,6 +59,18 @@ fn main() -> Result<(), Error> {
                 .unwrap_or_else(|e| error!("Error handling AuthProvider channel {:?}", e));
         });
     });
+
+    let oauth_open_id_connect = Arc::new(OauthOpenIdConnect::<_, UtcClock>::new(http_client));
+    fs.dir("svc").add_fidl_service(move |stream| {
+        let oauth_open_id_connect_clone = Arc::clone(&oauth_open_id_connect);
+        fasync::spawn(async move {
+            oauth_open_id_connect_clone
+                .handle_requests_from_stream(stream)
+                .await
+                .unwrap_or_else(|e| error!("Error handling OauthOpenIdConnect channel {:?}", e));
+        });
+    });
+
     fs.take_and_serve_directory_handle()?;
 
     executor.run_singlethreaded(fs.collect::<()>());

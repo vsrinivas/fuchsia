@@ -108,6 +108,7 @@ pub trait HttpClient {
 
 /// A client capable of making HTTP requests using the Fuchsia oldhttp URL
 /// Loader service.
+#[derive(Clone)]
 pub struct UrlLoaderHttpClient {
     url_loader: UrlLoaderProxy,
 }

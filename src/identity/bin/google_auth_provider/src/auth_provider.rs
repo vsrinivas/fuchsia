@@ -14,7 +14,7 @@ use crate::oauth::{
     parse_response_without_refresh_token, parse_revocation_response, AccessToken, AuthCode,
     RefreshToken,
 };
-use crate::openid::{
+use crate::oauth_open_id_connect::{
     build_id_token_request, build_user_info_request, parse_id_token_response,
     parse_user_info_response, IdToken,
 };
@@ -328,7 +328,13 @@ where
     ) -> AuthProviderResult<UserProfileInfo> {
         let request = build_user_info_request(access_token)?;
         let (response_body, status_code) = self.http_client.request(request).await?;
-        parse_user_info_response(response_body, status_code).map_err(AuthProviderError::from)
+        let user_info_response = parse_user_info_response(response_body, status_code)?;
+        Ok(UserProfileInfo {
+            id: user_info_response.sub,
+            display_name: user_info_response.name,
+            url: user_info_response.profile,
+            image_url: user_info_response.picture,
+        })
     }
 }
 
