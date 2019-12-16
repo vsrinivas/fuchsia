@@ -516,20 +516,9 @@ void AstroDisplay::PopulatePanelType() {
 zx_status_t AstroDisplay::SetupDisplayInterface() {
   fbl::AutoLock lock(&display_lock_);
 
-  // Figure out board rev and panel type for Astro only
-  if (board_info_.pid == PDEV_PID_ASTRO) {
-    panel_type_ = PANEL_UNKNOWN;
-    skip_disp_init_ = false;
-    if (board_info_.board_revision < BOARD_REV_EVT_1) {
-      DISP_INFO("Unsupported Board REV (%d). Will skip display driver initialization\n",
-                board_info_.board_revision);
-      skip_disp_init_ = true;
-    }
-  } else if (board_info_.pid == PDEV_PID_SHERLOCK) {
-    panel_type_ = PANEL_UNKNOWN;
-    skip_disp_init_ = false;
-  } else {
-    skip_disp_init_ = true;
+  // Support Astro and Sherlock at the moment
+  if (board_info_.pid != PDEV_PID_ASTRO && board_info_.pid != PDEV_PID_SHERLOCK) {
+    return ZX_ERR_NOT_SUPPORTED;
   }
 
   format_ = ZX_PIXEL_FORMAT_RGB_x888;
