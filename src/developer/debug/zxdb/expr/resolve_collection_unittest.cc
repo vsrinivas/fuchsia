@@ -5,6 +5,7 @@
 #include "src/developer/debug/zxdb/expr/resolve_collection.h"
 
 #include "gtest/gtest.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
@@ -340,7 +341,98 @@ TEST_F(ResolveCollectionTest, DerivedClass) {
   EXPECT_EQ(expected_base, base_value.value());
 }
 
-// Tests resolving datat members with "const values" given in the symbols.
+// Like DerivedClass but using virtual inheritance. This data was copied from a test program.
+TEST_F(ResolveCollectionTest, VirtualInheritance) {
+  // This is the vtable information (from the ELF file).
+  constexpr uint64_t kVtableAddress = 0x70f355000;
+  const std::vector<uint8_t> vtable_data{
+      0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // +0x00: Offset of base from derived.
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // +0x08: ?
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // +0x10: ?
+      0xf0, 0x11, 0x15, 0x0f, 0x07, 0x00, 0x00, 0x00,  // +0x18: Derived Vtable (ptr to virt fn).
+      0xf0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // +0x20: Offset of derived from base.
+      0xf0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // +0x28: ?
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // +0x30: ?
+      0x10, 0x12, 0x15, 0x0f, 0x07, 0x00, 0x00, 0x00,  // +0x38: Base vtable (I think).
+  };
+  data_provider_->AddMemory(kVtableAddress, vtable_data);
+
+  // Derived class data (on the heap).
+  constexpr uint64_t kDerivedAddress = 0x9aaa319ba8;
+  const std::vector<uint8_t> derived_data{
+      0x18, 0x50, 0x35, 0x0f, 0x07, 0x00, 0x00, 0x00,  // Derived vtable.
+      0x63, 0x00, 0x00, 0x00,                          // Derived object data (uint32_t) 99.
+      0xaa, 0xaa, 0xaa, 0xaa,                          // Padding.
+      0x38, 0x50, 0x35, 0x0f, 0x07, 0x00, 0x00, 0x00,  // Base vtable.
+      0x2a, 0x00, 0x00, 0x00,                          // Base object data (uint32_t) 42.
+      0xaa, 0xaa, 0xaa, 0xaa};                         // Padding.
+  data_provider_->AddMemory(kDerivedAddress, derived_data);
+
+  // Base class data is inside the derived data above.
+  constexpr uint64_t kBaseOffset = 0x10;
+  constexpr uint64_t kBaseAddress = kDerivedAddress + kBaseOffset;
+  constexpr size_t kBaseSize = 12;  // Not counting the padding.
+
+  // Clang uses "vtbl_ptr_type*" as the type for the vtable pointers at the beginning of a virtual
+  // class. Clang defines the vtable as being pointers to functions "int()", so a pointer to a table
+  // is a pointer to that. For simplicity, we define it as uint64_t instead of "int()".
+  auto vtbl_entry_type = MakeUint64Type();  // Pointer to function "int()" in real life.
+  auto vtbl_ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, vtbl_entry_type);
+  auto vtbl_ptr_type_ptr = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, vtbl_ptr_type);
+
+  // Base type definition.
+  auto int32_type = MakeInt32Type();
+  auto base_type =
+      MakeCollectionType(DwarfTag::kClassType, "MyBase",
+                         {{"_vptr$MyBase", vtbl_ptr_type_ptr}, {"base_i", int32_type}});
+
+  // Derived type definition.
+  auto derived_type =
+      MakeCollectionType(DwarfTag::kClassType, "MyDerived",
+                         {{"_vptr$MyDerived", vtbl_ptr_type_ptr}, {"derived_i", int32_type}});
+
+  // Inheritance information. The derived class' address will be placed at the top of the stack to
+  // run this. The computation steps are:
+  //
+  //   1. derived        = Pointer to derived class.
+  //   2. (*derived)     = Dereference derived vtable = 0x70f355018
+  //   3. - 0x18         = Compute address of offset of base inside of derived.
+  //   4. Dereference    = Offset of base inside of derived = 0x10
+  //   5. derived + 0x10 = Location of base.
+  std::vector<uint8_t> base_loc_expr{
+      llvm::dwarf::DW_OP_dup,   llvm::dwarf::DW_OP_deref, llvm::dwarf::DW_OP_constu, 0x18,
+      llvm::dwarf::DW_OP_minus, llvm::dwarf::DW_OP_deref, llvm::dwarf::DW_OP_plus};
+  auto inherited = fxl::MakeRefCounted<InheritedFrom>(base_type, base_loc_expr);
+  derived_type->set_inherited_from({LazySymbol(inherited)});
+
+  ExprValue derived(derived_type, derived_data, ExprValueSource(kDerivedAddress));
+
+  // Asynchronously evaluate the base class.
+  bool called = false;
+  ErrOrValue result(Err("Uncalled"));
+  ResolveInherited(eval_context_, derived, inherited.get(), module_symbol_context_,
+                   [&called, &result](ErrOrValue r) {
+                     called = true;
+                     result = r;
+                   });
+  ASSERT_FALSE(called);
+  loop().RunUntilNoTasks();
+  ASSERT_TRUE(called);
+
+  ASSERT_TRUE(result.ok()) << result.err().msg();
+  ExprValue base = result.value();
+
+  // Should be located at the expected place in memory.
+  EXPECT_EQ(ExprValueSource::Type::kMemory, base.source().type());
+  EXPECT_EQ(kBaseAddress, base.source().address());
+
+  EXPECT_EQ(base_type.get(), base.type());
+  std::vector<uint8_t> expected_base_data(derived_data.begin() + kBaseOffset,
+                                          derived_data.begin() + kBaseOffset + kBaseSize);
+  EXPECT_EQ(expected_base_data, base.data());
+}
+
+// Tests resolving data members with "const values" given in the symbols.
 TEST_F(ResolveCollectionTest, ConstValue) {
   // Regular member.
   auto int32_type = MakeInt32Type();

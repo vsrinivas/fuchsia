@@ -4,6 +4,7 @@
 
 #include "src/developer/debug/zxdb/expr/resolve_collection.h"
 
+#include "src/developer/debug/zxdb/expr/async_dwarf_expr_eval.h"
 #include "src/developer/debug/zxdb/expr/bitfield.h"
 #include "src/developer/debug/zxdb/expr/eval_context.h"
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
@@ -261,6 +262,40 @@ void ResolveMemberByPointer(const fxl::RefPtr<EvalContext>& context, const ExprV
                            [cb = std::move(cb), found = found.value()](ErrOrValue value) mutable {
                              cb(std::move(value), found);
                            });
+}
+
+void ResolveInherited(const fxl::RefPtr<EvalContext>& context, const ExprValue& value,
+                      const InheritedFrom* from, const SymbolContext& from_symbol_context,
+                      fit::callback<void(ErrOrValue)> cb) {
+  const Type* from_type = from->from().Get()->AsType();
+  if (!from_type)
+    return cb(GetErrorForInvalidMemberOf(value));
+
+  if (from->kind() == InheritedFrom::kConstant)  // Easy constant case.
+    return cb(ExtractSubType(context, value, RefPtrTo(from_type), from->offset()));
+
+  // Everything else is an expression which needs to be evaluated.
+  if (value.source().type() != ExprValueSource::Type::kMemory || value.source().is_bitfield())
+    return cb(Err("Can't evaluate virtual inheritance on an object without a memory address."));
+  TargetPointer object_ptr = value.source().address();
+
+  // This is normally async for virtual inheritance. Virtual inheritance is implemented as every
+  // derived class having a pointer to the base class rather than an offset (so multiple derived
+  // classes can point to the same base). Therefore, the expressions normally look like
+  // "take offset from object pointer and dereference."
+  FXL_DCHECK(from->kind() == InheritedFrom::kExpression);
+  auto evaluator = fxl::MakeRefCounted<AsyncDwarfExprEval>(std::move(cb), RefPtrTo(from_type));
+
+  // Inheritance expressions are evaluated by pushing the object pointer on the stack before
+  // execution.
+  evaluator->dwarf_eval().Push(object_ptr);
+
+  // This will normally have to do some memory fetches to request the vtable data that will be
+  // referenced by the expression. Then it will fetch the base class anew from memory. This second
+  // fetch is unnecessary because we know it's contained inside |value| (since it's a base class of
+  // our input). It could be optimized to take advantage of this, but virtual inheritance is usually
+  // uncommon and this implementation is simpler.
+  evaluator->Eval(context, from_symbol_context, from->location_expression());
 }
 
 ErrOrValue ResolveInherited(const fxl::RefPtr<EvalContext>& context, const ExprValue& value,

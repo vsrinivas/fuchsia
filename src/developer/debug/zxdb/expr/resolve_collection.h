@@ -70,9 +70,16 @@ void ResolveMemberByPointer(const fxl::RefPtr<EvalContext>& context, const ExprV
 // "value" collection, not an indirect base.
 // TODO(brettw) this variant should take a FoundMember instead.
 //
+// The asynchronous version supports virtual inheritance, while the other variants do not. The
+// from_symbol_context should be the symbol context associated with the module from which the
+// InheritedFrom object came. It will be used to evaluate the location expression.
+//
 // For the version that takes a type and an offset, the type must already have been computed as some
 // type of base class that lives at the given offset. It need not be a direct base and no type
 // checking is done as long as the offsets and sizes are valid.
+void ResolveInherited(const fxl::RefPtr<EvalContext>& context, const ExprValue& value,
+                      const InheritedFrom* from, const SymbolContext& from_symbol_context,
+                      fit::callback<void(ErrOrValue)> cb);
 ErrOrValue ResolveInherited(const fxl::RefPtr<EvalContext>& context, const ExprValue& value,
                             const InheritedFrom* from);
 ErrOrValue ResolveInherited(const fxl::RefPtr<EvalContext>& context, const ExprValue& value,

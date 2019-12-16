@@ -22,14 +22,20 @@ class Type;
 // management), and constructs the proper type of ExprValue with the result.
 //
 // This keeps itself and the expression evaluator alive during the computation.
+//
+// Example:
+//
+//   auto eval = fxl::MakeRefCounted<AsyncDwarfExprEval>(std::move(cb), std::move(type));
+//   eval->Eval(eval_context, symbol_context, expression);
+//
 class AsyncDwarfExprEval : public fxl::RefCountedThreadSafe<AsyncDwarfExprEval> {
  public:
   // Alows the expression evaluator to be set up before Eval() is called for cases where it needs
   // initial state.
   DwarfExprEval& dwarf_eval() { return dwarf_eval_; }
 
-  // Starts evaluation. The callback passed into the constructor will be issued on completion.
-  // This can only be called once.
+  // Starts evaluation. It will take a reference to itself during execution and the callback passed
+  // into the constructor will be issued on completion. This can only be called once.
   //
   // The symbol context should be the one for the module the expression came from so that addresses
   // within the expression can be interpreted correctly.

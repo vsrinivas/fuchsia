@@ -57,6 +57,8 @@ void DwarfExprEvalTest::DoEvalTest(const std::vector<uint8_t> data, bool expecte
                                    uint128_t expected_result,
                                    DwarfExprEval::ResultType expected_result_type,
                                    const char* expected_message) {
+  eval_.Clear();
+
   bool callback_issued = false;
   EXPECT_EQ(
       expected_completion,

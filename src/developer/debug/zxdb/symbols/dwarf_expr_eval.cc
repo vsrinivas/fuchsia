@@ -29,6 +29,8 @@ DwarfExprEval::~DwarfExprEval() {
   FXL_CHECK(!in_completion_callback_);
 }
 
+void DwarfExprEval::Push(StackEntry value) { stack_.push_back(value); }
+
 DwarfExprEval::ResultType DwarfExprEval::GetResultType() const {
   FXL_DCHECK(is_complete_);
   FXL_DCHECK(is_success_);
@@ -53,7 +55,6 @@ DwarfExprEval::Completion DwarfExprEval::Eval(fxl::RefPtr<SymbolDataProvider> da
   expr_ = std::move(expr);
   expr_index_ = 0;
   completion_callback_ = std::move(cb);
-  stack_.clear();
 
   if (!expr_.empty()) {
     // Assume little-endian.
@@ -367,8 +368,6 @@ DwarfExprEval::Completion DwarfExprEval::PushRegisterWithOffset(int dwarf_regist
 
   return Completion::kAsync;
 }
-
-void DwarfExprEval::Push(StackEntry value) { stack_.push_back(value); }
 
 bool DwarfExprEval::ReadSigned(int byte_size, SignedStackEntry* output) {
   uint32_t old_expr_index = expr_index_;

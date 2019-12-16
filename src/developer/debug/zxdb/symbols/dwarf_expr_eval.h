@@ -86,6 +86,13 @@ class DwarfExprEval {
   DwarfExprEval();
   ~DwarfExprEval();
 
+  // Pushes a value on the stack. Call before Eval() for the cases where an expression requires
+  // some intitial state.
+  void Push(StackEntry value);
+
+  // Clears any existing values in the stack.
+  void Clear() { stack_.clear(); }
+
   // A complete expression has finished executing but may or may not have had an error. A successful
   // expression indicates execution is complete and there is a valid result to read.
   bool is_complete() const { return is_complete_; }
@@ -111,6 +118,9 @@ class DwarfExprEval {
   // the DWARF expression) or is the result of reading some memory or registers.
   bool result_is_constant() const { return result_is_constant_; }
 
+  // Evaluates the expression using the current stack. If the stack needs initial setup, callers
+  // should call Push() first, or Clear() if there might be unwanted data.
+  //
   // This will take a reference to the SymbolDataProvider until the computation is complete.
   //
   // The symbol context is used to evaluate relative addresses. It should be the context associated
@@ -137,9 +147,6 @@ class DwarfExprEval {
   // Adds a register's contents + an offset to the stack. Use 0 for the offset to get the raw
   // register value.
   Completion PushRegisterWithOffset(int dwarf_register_number, int128_t offset);
-
-  // Pushes a value on the stack.
-  void Push(StackEntry value);
 
   // These read constant data from the current index in the stream. The size of the data is in
   // byte_size, and the result will be extended to 64 bits according to the type.
