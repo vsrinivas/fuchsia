@@ -1,6 +1,7 @@
 # SDK
 
-This folder contains information about developing the Fuchsia SDK.
+This folder contains information about developing the Core Fuchsia SDK.
+For information on the GN C++ Frontend SDK see [this getting started guide](/docs/development/sdk/gn).
 
 > [Download the Fuchsia Core SDK](download.md)
 

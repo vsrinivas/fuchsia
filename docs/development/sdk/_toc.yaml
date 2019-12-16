@@ -10,7 +10,7 @@ toc:
   path: /docs/development/sdk/layout.md
 - title: "SDK standards"
   path: /docs/development/sdk/standards.md
-- title: Using the SDK
+- title: Using the Core SDK
   section:
     - title: "Integrating the SDK into your build environment"
       path: /docs/development/sdk/integrating.md
@@ -32,3 +32,7 @@ toc:
       path: /docs/development/sdk/documentation/packages.md
     - title: "SSH"
       path: /docs/development/sdk/documentation/ssh.md
+- title: GN C++ Frontend SDK
+  section:
+  - title: "Getting started"
+    path: /docs/development/sdk/gn
