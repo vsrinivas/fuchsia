@@ -13,6 +13,7 @@ use {
         mac::{self, Aid, Bssid, MacAddr, StatusCode},
         mgmt_writer,
         sequence::SequenceManager,
+        TimeUnit,
     },
 };
 
@@ -150,6 +151,57 @@ pub fn write_disassoc_frame<B: Appendable>(
     Ok(())
 }
 
+pub fn write_probe_resp_frame<B: Appendable>(
+    buf: &mut B,
+    client_addr: MacAddr,
+    bssid: Bssid,
+    seq_mgr: &mut SequenceManager,
+    timestamp: u64,
+    beacon_interval: TimeUnit,
+    capabilities: mac::CapabilityInfo,
+    ssid: &[u8],
+    rates: &[u8],
+    channel: u8,
+    rsne: &[u8],
+) -> Result<(), Error> {
+    let frame_ctrl = mac::FrameControl(0)
+        .with_frame_type(mac::FrameType::MGMT)
+        .with_mgmt_subtype(mac::MgmtSubtype::PROBE_RESP);
+    let seq_ctrl = mac::SequenceControl(0).with_seq_num(seq_mgr.next_sns1(&client_addr) as u16);
+    mgmt_writer::write_mgmt_hdr(
+        buf,
+        // The sequence control is 0 because the firmware will set it.
+        mgmt_writer::mgmt_hdr_from_ap(frame_ctrl, client_addr, bssid, seq_ctrl),
+        None,
+    )?;
+
+    // Probe responses have the same headers as beacons.
+    buf.append_value(&mac::BeaconHdr { timestamp, beacon_interval, capabilities })?;
+
+    let rates_writer = RatesWriter::try_new(rates)?;
+
+    // Order of beacon frame body IEs is according to IEEE Std 802.11-2016, Table 9-27, numbered
+    // below.
+
+    // 4. Service Set Identifier (SSID)
+    write_ssid(buf, ssid)?;
+
+    // 5. Supported Rates and BSS Membership Selectors
+    rates_writer.write_supported_rates(buf);
+
+    // 6. DSSS Parameter Set
+    write_dsss_param_set(buf, &DsssParamSet { current_chan: channel })?;
+
+    // 16. Extended Supported Rates and BSS Membership Selectors
+    rates_writer.write_ext_supported_rates(buf);
+
+    // 17. RSN
+    // |rsne| already contains the IE prefix.
+    buf.append_bytes(rsne)?;
+
+    Ok(())
+}
+
 pub fn write_data_frame<B: Appendable>(
     buf: &mut B,
     seq_mgr: &mut SequenceManager,
@@ -268,6 +320,7 @@ mod tests {
             &buf[..]
         );
     }
+
     #[test]
     fn assoc_resp_frame_error() {
         let mut buf = vec![];
@@ -294,6 +347,49 @@ mod tests {
                 0, 0, // Capabilities
                 94, 0, // status code
                 0, 0, // AID
+            ][..],
+            &buf[..]
+        );
+    }
+
+    #[test]
+    fn probe_resp_frame() {
+        let mut buf = vec![];
+        let mut seq_mgr = SequenceManager::new();
+        write_probe_resp_frame(
+            &mut buf,
+            [1; 6],
+            Bssid([2; 6]),
+            &mut seq_mgr,
+            0,
+            TimeUnit(10),
+            mac::CapabilityInfo(33),
+            &[1, 2, 3, 4, 5],
+            &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
+            2,
+            &[48, 2, 77, 88][..],
+        )
+        .expect("failed writing probe response");
+
+        assert_eq!(
+            &[
+                // Mgmt header
+                0b01010000, 0, // Frame Control
+                0, 0, // Duration
+                1, 1, 1, 1, 1, 1, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                2, 2, 2, 2, 2, 2, // addr3
+                0x10, 0, // Sequence Control
+                // Beacon header:
+                0, 0, 0, 0, 0, 0, 0, 0, // Timestamp
+                10, 0, // Beacon interval
+                33, 0, // Capabilities
+                // IEs:
+                0, 5, 1, 2, 3, 4, 5, // SSID
+                1, 8, 1, 2, 3, 4, 5, 6, 7, 8, // Supported rates
+                3, 1, 2, // DSSS parameter set
+                50, 2, 9, 10, // Extended rates
+                48, 2, 77, 88, // RSNE
             ][..],
             &buf[..]
         );

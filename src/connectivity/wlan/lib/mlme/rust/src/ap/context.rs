@@ -21,6 +21,7 @@ use {
             Presence, StatusCode,
         },
         sequence::SequenceManager,
+        TimeUnit,
     },
 };
 
@@ -255,7 +256,7 @@ impl Context {
         let out_buf = OutBuf::from(buf, bytes_written);
         self.device
             .send_wlan_frame(out_buf, TxFlags::NONE)
-            .map_err(|s| Error::Status(format!("error sending open auth frame"), s))
+            .map_err(|s| Error::Status(format!("error sending deauth frame"), s))
     }
 
     /// Sends a WLAN disassociation frame (IEEE Std 802.11-2016, 9.3.3.5) to the PHY.
@@ -271,7 +272,55 @@ impl Context {
         let out_buf = OutBuf::from(buf, bytes_written);
         self.device
             .send_wlan_frame(out_buf, TxFlags::NONE)
-            .map_err(|s| Error::Status(format!("error sending open auth frame"), s))
+            .map_err(|s| Error::Status(format!("error sending disassoc frame"), s))
+    }
+
+    /// Sends a WLAN probe response frame (IEEE Std 802.11-2016, 9.3.3.11) to the PHY.
+    // TODO(42088): Use this for devices that don't support probe request offload.
+    #[allow(dead_code)]
+    pub fn send_probe_resp_frame(
+        &mut self,
+        addr: MacAddr,
+        timestamp: u64,
+        beacon_interval: TimeUnit,
+        capabilities: mac::CapabilityInfo,
+        ssid: &[u8],
+        rates: &[u8],
+        channel: u8,
+        rsne: &[u8],
+    ) -> Result<(), Error> {
+        let frame_len = frame_len!(mac::MgmtHdr, mac::BeaconHdr);
+        let ssid_len = IE_PREFIX_LEN + ssid.len();
+        let dsss_len = IE_PREFIX_LEN + std::mem::size_of::<ie::DsssParamSet>();
+        let rates_len = IE_PREFIX_LEN
+            + rates.len()
+            // If there are too many rates, they will be split into two IEs.
+            // In this case, the total length would be the sum of:
+            // 1) 1st IE: IE_PREFIX_LEN + SUPPORTED_RATES_MAX_LEN
+            // 2) 2nd IE: IE_PREFIX_LEN + rates().len - SUPPORTED_RATES_MAX_LEN
+            // The total length is IE_PREFIX_LEN + rates.len() + IE_PREFIX_LEN.
+            + if rates.len() > SUPPORTED_RATES_MAX_LEN { IE_PREFIX_LEN } else { 0 };
+        let frame_len = frame_len + ssid_len + rates_len + dsss_len + rsne.len();
+        let mut buf = self.buf_provider.get_buffer(frame_len)?;
+        let mut w = BufferWriter::new(&mut buf[..]);
+        write_probe_resp_frame(
+            &mut w,
+            addr,
+            self.bssid,
+            &mut self.seq_mgr,
+            timestamp,
+            beacon_interval,
+            capabilities,
+            ssid,
+            rates,
+            channel,
+            rsne,
+        )?;
+        let bytes_written = w.bytes_written();
+        let out_buf = OutBuf::from(buf, bytes_written);
+        self.device
+            .send_wlan_frame(out_buf, TxFlags::NONE)
+            .map_err(|s| Error::Status(format!("error sending probe resp frame"), s))
     }
 
     /// Sends a WLAN data frame (IEEE Std 802.11-2016, 9.3.2) to the PHY.
@@ -653,6 +702,47 @@ mod test {
             // Disassoc header:
             8, 0, // reason code
         ][..]);
+    }
+
+    #[test]
+    fn send_probe_resp_frame() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        ctx.send_probe_resp_frame(
+            CLIENT_ADDR,
+            0,
+            TimeUnit(10),
+            mac::CapabilityInfo(33),
+            &[1, 2, 3, 4, 5],
+            &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
+            2,
+            &[48, 2, 77, 88][..],
+        )
+        .expect("error delivering WLAN frame");
+        assert_eq!(fake_device.wlan_queue.len(), 1);
+        assert_eq!(
+            &fake_device.wlan_queue[0].0[..],
+            &[
+                // Mgmt header
+                0b01010000, 0, // Frame Control
+                0, 0, // Duration
+                1, 1, 1, 1, 1, 1, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                2, 2, 2, 2, 2, 2, // addr3
+                0x10, 0, // Sequence Control
+                // Beacon header:
+                0, 0, 0, 0, 0, 0, 0, 0, // Timestamp
+                10, 0, // Beacon interval
+                33, 0, // Capabilities
+                // IEs:
+                0, 5, 1, 2, 3, 4, 5, // SSID
+                1, 8, 1, 2, 3, 4, 5, 6, 7, 8, // Supported rates
+                3, 1, 2, // DSSS parameter set
+                50, 2, 9, 10, // Extended rates
+                48, 2, 77, 88, // RSNE
+            ][..]
+        );
     }
 
     #[test]
