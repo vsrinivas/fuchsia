@@ -6,7 +6,7 @@
 
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/ui/a11y/lib/gesture_manager/recognizers/any_recognizer.h"
-#include "src/ui/a11y/lib/gesture_manager/recognizers/one_finger_tap_recognizer.h"
+#include "src/ui/a11y/lib/gesture_manager/recognizers/one_finger_n_tap_recognizer.h"
 
 namespace a11y {
 
@@ -39,11 +39,13 @@ bool GestureHandler::OnGesture(GestureType gesture_type, GestureArguments args) 
 void GestureHandler::BindOneFingerTapAction(OnGestureCallback callback) {
   if (gesture_recognizers_.find(kOneFingerTap) == gesture_recognizers_.end()) {
     one_finger_tap_callback_ = std::move(callback);
-    gesture_recognizers_[kOneFingerTap] =
-        std::make_unique<OneFingerTapRecognizer>([this](GestureContext context) {
+    static constexpr int number_of_taps = 1;
+    gesture_recognizers_[kOneFingerTap] = std::make_unique<OneFingerNTapRecognizer>(
+        [this](GestureContext context) {
           OnGesture(kOneFingerTap,
                     {.viewref_koid = context.view_ref_koid, .coordinates = context.local_point});
-        });
+        },
+        number_of_taps);
     arena_->Add(gesture_recognizers_[kOneFingerTap].get());
   }
 }

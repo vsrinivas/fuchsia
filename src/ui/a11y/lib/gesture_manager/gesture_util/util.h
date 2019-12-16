@@ -30,6 +30,10 @@ struct GestureInfo {
   bool is_winner_ = false;
 };
 
+// Max value by which pointer events can move(relative to the first point of contact), and still
+// are valid for tap gestures, in NDC.
+constexpr float kGestureMoveThreshold = 1.f / 16;
+
 // Helper function to initialize GestureInfo and GestureContext using the provided pointer_event.
 // This function returns falls when pointer_event is missing required fields like pointer id,
 // ndc_point, device_id and event_time.
