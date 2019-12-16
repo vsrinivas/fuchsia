@@ -30,6 +30,7 @@ source_set("unittests") {
   testonly = true
   sources = [
     "crypto_test_util.cc",
+    "crypto_test_util.h",
     "encrypt_unittest.cc",
     "hmac_unittest.cc",
     "kdf_unittest.cc",
