@@ -54,9 +54,26 @@ typedef struct fdio_ops {
   two_path_op link;
   zx_status_t (*get_flags)(fdio_t* io, uint32_t* out_flags);
   zx_status_t (*set_flags)(fdio_t* io, uint32_t flags);
-  zx_status_t (*recvmsg)(fdio_t* io, struct msghdr* msg, int flags, size_t* out_actual);
-  zx_status_t (*sendmsg)(fdio_t* io, const struct msghdr* msg, int flags, size_t* out_actual);
-  zx_status_t (*shutdown)(fdio_t* io, int how);
+
+  zx_status_t (*bind)(fdio_t* io, const struct sockaddr* addr, socklen_t addrlen,
+                      int16_t* out_code);
+  zx_status_t (*connect)(fdio_t* io, const struct sockaddr* addr, socklen_t addrlen,
+                         int16_t* out_code);
+  zx_status_t (*listen)(fdio_t* io, int backlog, int16_t* out_code);
+  zx_status_t (*accept)(fdio_t* io, int flags, zx_handle_t* out_handle, int16_t* out_code);
+  zx_status_t (*getsockname)(fdio_t* io, struct sockaddr* addr, socklen_t* addrlen,
+                             int16_t* out_code);
+  zx_status_t (*getpeername)(fdio_t* io, struct sockaddr* addr, socklen_t* addrlen,
+                             int16_t* out_code);
+  zx_status_t (*getsockopt)(fdio_t* io, int level, int optname, void* optval, socklen_t* optlen,
+                            int16_t* out_code);
+  zx_status_t (*setsockopt)(fdio_t* io, int level, int optname, const void* optval,
+                            socklen_t optlen, int16_t* out_code);
+  zx_status_t (*recvmsg)(fdio_t* io, struct msghdr* msg, int flags, size_t* out_actual,
+                         int16_t* out_code);
+  zx_status_t (*sendmsg)(fdio_t* io, const struct msghdr* msg, int flags, size_t* out_actual,
+                         int16_t* out_code);
+  zx_status_t (*shutdown)(fdio_t* io, int how, int16_t* out_code);
 } fdio_ops_t;
 
 // fdio_t ioflag values
@@ -86,8 +103,10 @@ zxio_t* fdio_get_zxio(fdio_t* io);
 zx_status_t fdio_zxio_close(fdio_t* io);
 zx_status_t fdio_zxio_clone(fdio_t* io, zx_handle_t* out_handle);
 zx_status_t fdio_zxio_unwrap(fdio_t* io, zx_handle_t* out_handle);
-zx_status_t fdio_zxio_recvmsg(fdio_t* io, struct msghdr* msg, int flags, size_t* out_actual);
-zx_status_t fdio_zxio_sendmsg(fdio_t* io, const struct msghdr* msg, int flags, size_t* out_actual);
+zx_status_t fdio_zxio_recvmsg(fdio_t* io, struct msghdr* msg, int flags, size_t* out_actual,
+                              int16_t* out_code);
+zx_status_t fdio_zxio_sendmsg(fdio_t* io, const struct msghdr* msg, int flags, size_t* out_actual,
+                              int16_t* out_code);
 
 zx_status_t fdio_zx_socket_posix_ioctl(const zx::socket& socket, int request, va_list va);
 zx_status_t fdio_zx_socket_shutdown(const zx::socket& socket, int how);
@@ -281,7 +300,21 @@ void fdio_default_wait_begin(fdio_t* io, uint32_t events, zx_handle_t* handle,
                              zx_signals_t* _signals);
 void fdio_default_wait_end(fdio_t* io, zx_signals_t signals, uint32_t* _events);
 zx_status_t fdio_default_unwrap(fdio_t* io, zx_handle_t* out_handle);
-zx_status_t fdio_default_shutdown(fdio_t* io, int how);
+zx_status_t fdio_default_bind(fdio_t* io, const struct sockaddr* addr, socklen_t addrlen,
+                              int16_t* out_code);
+zx_status_t fdio_default_connect(fdio_t* io, const struct sockaddr* addr, socklen_t addrlen,
+                                 int16_t* out_code);
+zx_status_t fdio_default_listen(fdio_t* io, int backlog, int16_t* out_code);
+zx_status_t fdio_default_accept(fdio_t* io, int flags, zx_handle_t* out_handle, int16_t* out_code);
+zx_status_t fdio_default_getsockname(fdio_t* io, struct sockaddr* addr, socklen_t* addrlen,
+                                     int16_t* out_code);
+zx_status_t fdio_default_getpeername(fdio_t* io, struct sockaddr* addr, socklen_t* addrlen,
+                                     int16_t* out_code);
+zx_status_t fdio_default_getsockopt(fdio_t* io, int level, int optname, void* optval,
+                                    socklen_t* optlen, int16_t* out_code);
+zx_status_t fdio_default_setsockopt(fdio_t* io, int level, int optname, const void* optval,
+                                    socklen_t optlen, int16_t* out_code);
+zx_status_t fdio_default_shutdown(fdio_t* io, int how, int16_t* out_code);
 zx_status_t fdio_default_posix_ioctl(fdio_t* io, int req, va_list va);
 zx_status_t fdio_default_get_vmo(fdio_t* io, int flags, zx::vmo* out);
 

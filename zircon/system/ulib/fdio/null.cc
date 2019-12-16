@@ -60,7 +60,55 @@ zx_status_t fdio_default_unwrap(fdio_t* io, zx_handle_t* out_handle) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t fdio_default_shutdown(fdio_t* io, int how) { return ZX_ERR_WRONG_TYPE; }
+zx_status_t fdio_default_bind(fdio_t* io, const struct sockaddr* addr, socklen_t addrlen,
+                              int16_t* out_code) {
+  *out_code = EBADF;
+  return ZX_OK;
+}
+
+zx_status_t fdio_default_connect(fdio_t* io, const struct sockaddr* addr, socklen_t addrlen,
+                                 int16_t* out_code) {
+  *out_code = EBADF;
+  return ZX_OK;
+}
+
+zx_status_t fdio_default_listen(fdio_t* io, int backlog, int16_t* out_code) {
+  *out_code = EBADF;
+  return ZX_OK;
+}
+
+zx_status_t fdio_default_accept(fdio_t* io, int flags, zx_handle_t* out_handle, int16_t* out_code) {
+  *out_code = EBADF;
+  return ZX_OK;
+}
+
+zx_status_t fdio_default_getsockname(fdio_t* io, struct sockaddr* addr, socklen_t* addrlen,
+                                     int16_t* out_code) {
+  *out_code = EBADF;
+  return ZX_OK;
+}
+
+zx_status_t fdio_default_getpeername(fdio_t* io, struct sockaddr* addr, socklen_t* addrlen,
+                                     int16_t* out_code) {
+  *out_code = EBADF;
+  return ZX_OK;
+}
+
+zx_status_t fdio_default_getsockopt(fdio_t* io, int level, int optname, void* optval,
+                                    socklen_t* optlen, int16_t* out_code) {
+  *out_code = EBADF;
+  return ZX_OK;
+}
+
+zx_status_t fdio_default_setsockopt(fdio_t* io, int level, int optname, const void* optval,
+                                    socklen_t optlen, int16_t* out_code) {
+  *out_code = EBADF;
+  return ZX_OK;
+}
+
+zx_status_t fdio_default_shutdown(fdio_t* io, int how, int16_t* out_code) {
+  return ZX_ERR_WRONG_TYPE;
+}
 
 void fdio_default_wait_begin(fdio_t* io, uint32_t events, zx_handle_t* handle,
                              zx_signals_t* _signals) {

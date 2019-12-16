@@ -177,6 +177,14 @@ static fdio_ops_t fdio_zxio_ops = {
     .link = fdio_default_link,
     .get_flags = fdio_zxio_get_flags,
     .set_flags = fdio_zxio_set_flags,
+    .bind = fdio_default_bind,
+    .connect = fdio_default_connect,
+    .listen = fdio_default_listen,
+    .accept = fdio_default_accept,
+    .getsockname = fdio_default_getsockname,
+    .getpeername = fdio_default_getpeername,
+    .getsockopt = fdio_default_getsockopt,
+    .setsockopt = fdio_default_setsockopt,
     .recvmsg = fdio_zxio_recvmsg,
     .sendmsg = fdio_zxio_sendmsg,
     .shutdown = fdio_default_shutdown,
@@ -305,6 +313,14 @@ static fdio_ops_t fdio_zxio_remote_ops = {
     .link = fdio_zxio_remote_link,
     .get_flags = fdio_zxio_get_flags,
     .set_flags = fdio_zxio_set_flags,
+    .bind = fdio_default_bind,
+    .connect = fdio_default_connect,
+    .listen = fdio_default_listen,
+    .accept = fdio_default_accept,
+    .getsockname = fdio_default_getsockname,
+    .getpeername = fdio_default_getpeername,
+    .getsockopt = fdio_default_getsockopt,
+    .setsockopt = fdio_default_setsockopt,
     .recvmsg = fdio_zxio_recvmsg,
     .sendmsg = fdio_zxio_sendmsg,
     .shutdown = fdio_default_shutdown,
@@ -493,6 +509,14 @@ static fdio_ops_t fdio_zxio_vmofile_ops = {
     .link = fdio_default_link,
     .get_flags = fdio_zxio_get_flags,
     .set_flags = fdio_zxio_set_flags,
+    .bind = fdio_default_bind,
+    .connect = fdio_default_connect,
+    .listen = fdio_default_listen,
+    .accept = fdio_default_accept,
+    .getsockname = fdio_default_getsockname,
+    .getpeername = fdio_default_getpeername,
+    .getsockopt = fdio_default_getsockopt,
+    .setsockopt = fdio_default_setsockopt,
     .recvmsg = fdio_zxio_recvmsg,
     .sendmsg = fdio_zxio_sendmsg,
     .shutdown = fdio_default_shutdown,
@@ -544,7 +568,8 @@ static zx_status_t fdio_zxio_pipe_posix_ioctl(fdio_t* io, int request, va_list v
   return fdio_zx_socket_posix_ioctl(fdio_get_zxio_pipe(io)->socket, request, va);
 }
 
-zx_status_t fdio_zxio_recvmsg(fdio_t* io, struct msghdr* msg, int flags, size_t* out_actual) {
+zx_status_t fdio_zxio_recvmsg(fdio_t* io, struct msghdr* msg, int flags, size_t* out_actual,
+                              int16_t* out_code) {
   zxio_flags_t zxio_flags = 0;
   if (flags & MSG_PEEK) {
     zxio_flags |= ZXIO_PEEK;
@@ -561,15 +586,22 @@ zx_status_t fdio_zxio_recvmsg(fdio_t* io, struct msghdr* msg, int flags, size_t*
         .capacity = msg->msg_iov[i].iov_len,
     };
   }
+
+  *out_code = 0;
+
   return zxio_read_vector(fdio_get_zxio(io), zx_iov, msg->msg_iovlen, zxio_flags, out_actual);
 }
 
-zx_status_t fdio_zxio_sendmsg(fdio_t* io, const struct msghdr* msg, int flags, size_t* out_actual) {
+zx_status_t fdio_zxio_sendmsg(fdio_t* io, const struct msghdr* msg, int flags, size_t* out_actual,
+                              int16_t* out_code) {
   if (flags) {
     // TODO: support MSG_NOSIGNAL
     // TODO: support MSG_OOB
     return ZX_ERR_NOT_SUPPORTED;
   }
+
+  *out_code = 0;
+
   zx_iovec_t zx_iov[msg->msg_iovlen];
   for (int i = 0; i < msg->msg_iovlen; ++i) {
     zx_iov[i] = {
@@ -581,7 +613,7 @@ zx_status_t fdio_zxio_sendmsg(fdio_t* io, const struct msghdr* msg, int flags, s
 }
 
 zx_status_t fdio_zx_socket_shutdown(const zx::socket& socket, int how) {
-  uint32_t options = 0;
+  uint32_t options;
   switch (how) {
     case SHUT_RD:
       options = ZX_SOCKET_SHUTDOWN_READ;
@@ -596,7 +628,9 @@ zx_status_t fdio_zx_socket_shutdown(const zx::socket& socket, int how) {
   return socket.shutdown(options);
 }
 
-static zx_status_t fdio_zxio_pipe_shutdown(fdio_t* io, int how) {
+static zx_status_t fdio_zxio_pipe_shutdown(fdio_t* io, int how, int16_t* out_code) {
+  *out_code = 0;
+
   return fdio_zx_socket_shutdown(fdio_get_zxio_pipe(io)->socket, how);
 }
 
@@ -620,6 +654,14 @@ static fdio_ops_t fdio_zxio_pipe_ops = {
     .link = fdio_default_link,
     .get_flags = fdio_default_get_flags,
     .set_flags = fdio_default_set_flags,
+    .bind = fdio_default_bind,
+    .connect = fdio_default_connect,
+    .listen = fdio_default_listen,
+    .accept = fdio_default_accept,
+    .getsockname = fdio_default_getsockname,
+    .getpeername = fdio_default_getpeername,
+    .getsockopt = fdio_default_getsockopt,
+    .setsockopt = fdio_default_setsockopt,
     .recvmsg = fdio_zxio_recvmsg,
     .sendmsg = fdio_zxio_sendmsg,
     .shutdown = fdio_zxio_pipe_shutdown,

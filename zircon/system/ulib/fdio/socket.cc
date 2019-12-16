@@ -7,7 +7,9 @@
 #include <lib/zx/socket.h>
 #include <lib/zxio/inception.h>
 #include <lib/zxs/protocol.h>
+#include <netinet/in.h>
 #include <poll.h>
+#include <sys/param.h>
 #include <zircon/syscalls.h>
 
 #include "private-socket.h"
@@ -16,12 +18,8 @@
 
 namespace fsocket = ::llcpp::fuchsia::posix::socket;
 
-static inline zxio_socket_t* fdio_get_zxio_socket(fdio_t* io) {
-  return reinterpret_cast<zxio_socket_t*>(fdio_get_zxio(io));
-}
-
 static zx_status_t zxsio_recvmsg_dgram(fdio_t* io, struct msghdr* msg, int flags,
-                                       size_t* out_actual) {
+                                       size_t* out_actual, int16_t* out_code) {
   size_t maximum = 0;
   // We are going to pad the "real" message:
   // - a buffer at the front of the vector into which we'll read the header.
@@ -57,9 +55,14 @@ static zx_status_t zxsio_recvmsg_dgram(fdio_t* io, struct msghdr* msg, int flags
     //
     // This flag has no effect for datagram sockets.
     flags &= ~MSG_WAITALL;
-    zx_status_t status = fdio_zxio_recvmsg(io, &padded_msg, flags, &actual);
+    int16_t code;
+    zx_status_t status = fdio_zxio_recvmsg(io, &padded_msg, flags, &actual, &code);
     if (status != ZX_OK) {
       return status;
+    }
+    *out_code = code;
+    if (code) {
+      return ZX_OK;
     }
   }
   if (actual < sizeof(header)) {
@@ -80,15 +83,15 @@ static zx_status_t zxsio_recvmsg_dgram(fdio_t* io, struct msghdr* msg, int flags
 }
 
 static zx_status_t zxsio_recvmsg_stream(fdio_t* io, struct msghdr* msg, int flags,
-                                        size_t* out_actual) {
+                                        size_t* out_actual, int16_t* out_code) {
   if (!(*fdio_get_ioflag(io) & IOFLAG_SOCKET_CONNECTED)) {
     return ZX_ERR_NOT_CONNECTED;
   }
-  return fdio_zxio_recvmsg(io, msg, flags, out_actual);
+  return fdio_zxio_recvmsg(io, msg, flags, out_actual, out_code);
 }
 
 static zx_status_t zxsio_sendmsg_dgram(fdio_t* io, const struct msghdr* msg, int flags,
-                                       size_t* out_actual) {
+                                       size_t* out_actual, int16_t* out_code) {
   if (msg->msg_namelen > sizeof(((fdio_socket_msg_t*)nullptr)->addr)) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -115,9 +118,14 @@ static zx_status_t zxsio_sendmsg_dgram(fdio_t* io, const struct msghdr* msg, int
     struct msghdr padded_msg = *msg;
     padded_msg.msg_iov = iov;
     padded_msg.msg_iovlen = iovlen;
-    zx_status_t status = fdio_zxio_sendmsg(io, &padded_msg, flags, &actual);
+    int16_t code;
+    zx_status_t status = fdio_zxio_sendmsg(io, &padded_msg, flags, &actual, &code);
     if (status != ZX_OK) {
       return status;
+    }
+    *out_code = code;
+    if (code) {
+      return ZX_OK;
     }
   }
   *out_actual = actual - sizeof(header);
@@ -125,17 +133,17 @@ static zx_status_t zxsio_sendmsg_dgram(fdio_t* io, const struct msghdr* msg, int
 }
 
 static zx_status_t zxsio_sendmsg_stream(fdio_t* io, const struct msghdr* msg, int flags,
-                                        size_t* out_actual) {
+                                        size_t* out_actual, int16_t* out_code) {
   // TODO: support flags and control messages
   if (!(*fdio_get_ioflag(io) & IOFLAG_SOCKET_CONNECTED)) {
     return ZX_ERR_NOT_CONNECTED;
   }
-  return fdio_zxio_sendmsg(io, msg, flags, out_actual);
+  return fdio_zxio_sendmsg(io, msg, flags, out_actual, out_code);
 }
 
 static void zxsio_wait_begin_stream(fdio_t* io, uint32_t events, zx_handle_t* handle,
                                     zx_signals_t* _signals) {
-  zxio_socket_t* sio = fdio_get_zxio_socket(io);
+  auto sio = reinterpret_cast<zxio_socket_t*>(fdio_get_zxio(io));
   *handle = sio->pipe.socket.get();
   // TODO: locking for flags/state
   if (*fdio_get_ioflag(io) & IOFLAG_SOCKET_CONNECTING) {
@@ -219,12 +227,13 @@ static void zxsio_wait_end_stream(fdio_t* io, zx_signals_t signals, uint32_t* _e
 }
 
 static zx_status_t zxsio_posix_ioctl_stream(fdio_t* io, int request, va_list va) {
-  return fdio_zx_socket_posix_ioctl(fdio_get_zxio_socket(io)->pipe.socket, request, va);
+  auto sio = reinterpret_cast<zxio_socket_t*>(fdio_get_zxio(io));
+  return fdio_zx_socket_posix_ioctl(sio->pipe.socket, request, va);
 }
 
 static void zxsio_wait_begin_dgram(fdio_t* io, uint32_t events, zx_handle_t* handle,
                                    zx_signals_t* _signals) {
-  zxio_socket_t* sio = fdio_get_zxio_socket(io);
+  auto sio = reinterpret_cast<zxio_socket_t*>(fdio_get_zxio(io));
   *handle = sio->pipe.socket.get();
   zx_signals_t signals = ZX_SOCKET_PEER_CLOSED;
   if (events & POLLIN) {
@@ -256,11 +265,164 @@ static void zxsio_wait_end_dgram(fdio_t* io, zx_signals_t signals, uint32_t* _ev
   *_events = events;
 }
 
-static zx_status_t fdio_socket_shutdown(fdio_t* io, int how) {
+static zx_status_t fdio_socket_bind(fdio_t* io, const struct sockaddr* addr, socklen_t addrlen,
+                                    int16_t* out_code) {
+  auto sio = reinterpret_cast<zxio_socket_t*>(fdio_get_zxio(io));
+  auto result = sio->control.Bind(
+      fidl::VectorView(reinterpret_cast<uint8_t*>(const_cast<sockaddr*>(addr)), addrlen));
+  zx_status_t status = result.status();
+  if (status != ZX_OK) {
+    return status;
+  }
+  *out_code = result.Unwrap()->code;
+  return ZX_OK;
+}
+
+static zx_status_t fdio_socket_connect(fdio_t* io, const struct sockaddr* addr, socklen_t addrlen,
+                                       int16_t* out_code) {
+  auto sio = reinterpret_cast<zxio_socket_t*>(fdio_get_zxio(io));
+  auto result = sio->control.Connect(
+      fidl::VectorView(reinterpret_cast<uint8_t*>(const_cast<sockaddr*>(addr)), addrlen));
+  zx_status_t status = result.status();
+  if (status != ZX_OK) {
+    return status;
+  }
+  *out_code = result.Unwrap()->code;
+  return ZX_OK;
+}
+
+static zx_status_t fdio_socket_listen(fdio_t* io, int backlog, int16_t* out_code) {
+  auto sio = reinterpret_cast<zxio_socket_t*>(fdio_get_zxio(io));
+  auto result = sio->control.Listen(static_cast<int16_t>(backlog));
+  zx_status_t status = result.status();
+  if (status != ZX_OK) {
+    return status;
+  }
+  *out_code = result.Unwrap()->code;
+  return ZX_OK;
+}
+
+static zx_status_t fdio_socket_accept(fdio_t* io, int flags, zx_handle_t* out_handle,
+                                      int16_t* out_code) {
+  auto sio = reinterpret_cast<zxio_socket_t*>(fdio_get_zxio(io));
+  auto result = sio->control.Accept(static_cast<int16_t>(flags));
+  zx_status_t status = result.status();
+  if (status != ZX_OK) {
+    return status;
+  }
+  auto response = result.Unwrap();
+  *out_code = response->code;
+  *out_handle = response->s.release();
+  return ZX_OK;
+}
+
+static zx_status_t fdio_socket_getsockname(fdio_t* io, struct sockaddr* addr, socklen_t* addrlen,
+                                           int16_t* out_code) {
+  auto sio = reinterpret_cast<zxio_socket_t*>(fdio_get_zxio(io));
+  auto result = sio->control.GetSockName();
+  zx_status_t status = result.status();
+  if (status != ZX_OK) {
+    return status;
+  }
+  auto response = result.Unwrap();
+  *out_code = response->code;
+  auto out = response->addr;
+  memcpy(addr, out.data(), MIN(*addrlen, out.count()));
+  *addrlen = static_cast<socklen_t>(out.count());
+  return ZX_OK;
+}
+
+static zx_status_t fdio_socket_getpeername(fdio_t* io, struct sockaddr* addr, socklen_t* addrlen,
+                                           int16_t* out_code) {
+  auto sio = reinterpret_cast<zxio_socket_t*>(fdio_get_zxio(io));
+  auto result = sio->control.GetPeerName();
+  zx_status_t status = result.status();
+  if (status != ZX_OK) {
+    return status;
+  }
+  auto response = result.Unwrap();
+  *out_code = response->code;
+  auto out = response->addr;
+  memcpy(addr, out.data(), MIN(*addrlen, out.count()));
+  *addrlen = static_cast<socklen_t>(out.count());
+  return ZX_OK;
+}
+
+static zx_status_t fdio_socket_getsockopt(fdio_t* io, int level, int optname, void* optval,
+                                          socklen_t* optlen, int16_t* out_code) {
+  auto sio = reinterpret_cast<zxio_socket_t*>(fdio_get_zxio(io));
+  auto result = sio->control.GetSockOpt(static_cast<int16_t>(level), static_cast<int16_t>(optname));
+  zx_status_t status = result.status();
+  if (status != ZX_OK) {
+    return status;
+  }
+  auto response = result.Unwrap();
+  *out_code = response->code;
+  auto out = response->optval;
+  socklen_t copy_len = MIN(*optlen, static_cast<socklen_t>(out.count()));
+  bool do_optlen_check = true;
+  // The following code block is to just keep up with Linux parity.
+  switch (level) {
+    case IPPROTO_IP:
+      switch (optname) {
+        case IP_TOS:
+          // On Linux, when the optlen is < sizeof(int), only a single byte is
+          // copied. As the TOS size is just a byte value, we are not losing
+          // any information here.
+          if (*optlen > 0 && *optlen < sizeof(int)) {
+            copy_len = 1;
+          }
+          do_optlen_check = false;
+          break;
+        default:
+          break;
+      }
+      break;
+    case IPPROTO_IPV6:
+      switch (optname) {
+        case IPV6_TCLASS:
+          do_optlen_check = false;
+          break;
+        default:
+          break;
+      }
+      break;
+    default:
+      break;
+  }
+  if (do_optlen_check) {
+    if (out.count() > *optlen) {
+      *out_code = EINVAL;
+      return ZX_OK;
+    }
+  }
+  memcpy(optval, out.data(), copy_len);
+  *optlen = copy_len;
+
+  return ZX_OK;
+}
+
+static zx_status_t fdio_socket_setsockopt(fdio_t* io, int level, int optname, const void* optval,
+                                          socklen_t optlen, int16_t* out_code) {
+  auto sio = reinterpret_cast<zxio_socket_t*>(fdio_get_zxio(io));
+  auto result = sio->control.SetSockOpt(
+      static_cast<int16_t>(level), static_cast<int16_t>(optname),
+      fidl::VectorView(static_cast<uint8_t*>(const_cast<void*>(optval)), optlen));
+  zx_status_t status = result.status();
+  if (status != ZX_OK) {
+    return status;
+  }
+  *out_code = result.Unwrap()->code;
+  return ZX_OK;
+}
+
+static zx_status_t fdio_socket_shutdown(fdio_t* io, int how, int16_t* out_code) {
   if (!(*fdio_get_ioflag(io) & IOFLAG_SOCKET_CONNECTED)) {
     return ZX_ERR_BAD_STATE;
   }
-  return fdio_zx_socket_shutdown(fdio_get_zxio_socket(io)->pipe.socket, how);
+  *out_code = 0;
+  auto sio = reinterpret_cast<zxio_socket_t*>(fdio_get_zxio(io));
+  return fdio_zx_socket_shutdown(sio->pipe.socket, how);
 }
 
 static fdio_ops_t fdio_socket_stream_ops = {
@@ -283,6 +445,14 @@ static fdio_ops_t fdio_socket_stream_ops = {
     .link = fdio_default_link,
     .get_flags = fdio_default_get_flags,
     .set_flags = fdio_default_set_flags,
+    .bind = fdio_socket_bind,
+    .connect = fdio_socket_connect,
+    .listen = fdio_socket_listen,
+    .accept = fdio_socket_accept,
+    .getsockname = fdio_socket_getsockname,
+    .getpeername = fdio_socket_getpeername,
+    .getsockopt = fdio_socket_getsockopt,
+    .setsockopt = fdio_socket_setsockopt,
     .recvmsg = zxsio_recvmsg_stream,
     .sendmsg = zxsio_sendmsg_stream,
     .shutdown = fdio_socket_shutdown,
@@ -308,6 +478,14 @@ static fdio_ops_t fdio_socket_dgram_ops = {
     .link = fdio_default_link,
     .get_flags = fdio_default_get_flags,
     .set_flags = fdio_default_set_flags,
+    .bind = fdio_socket_bind,
+    .connect = fdio_socket_connect,
+    .listen = fdio_socket_listen,
+    .accept = fdio_socket_accept,
+    .getsockname = fdio_socket_getsockname,
+    .getpeername = fdio_socket_getpeername,
+    .getsockopt = fdio_socket_getsockopt,
+    .setsockopt = fdio_socket_setsockopt,
     .recvmsg = zxsio_recvmsg_dgram,
     .sendmsg = zxsio_sendmsg_dgram,
     .shutdown = fdio_socket_shutdown,
@@ -339,21 +517,4 @@ bool fdio_is_socket(fdio_t* io) {
   }
   const fdio_ops_t* ops = fdio_get_ops(io);
   return ops == &fdio_socket_dgram_ops || ops == &fdio_socket_stream_ops;
-}
-
-fdio_t* fd_to_socket(int fd, zxio_socket_t** out_socket) {
-  fdio_t* io = fd_to_io(fd);
-  if (io == nullptr) {
-    *out_socket = nullptr;
-    return nullptr;
-  }
-
-  if (fdio_is_socket(io)) {
-    *out_socket = fdio_get_zxio_socket(io);
-    return io;
-  }
-
-  fdio_release(io);
-  *out_socket = nullptr;
-  return nullptr;
 }

@@ -2,31 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <assert.h>
-#include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/net/llcpp/fidl.h>
-#include <lib/fdio/directory.h>
-#include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
-#include <lib/zircon-internal/debug.h>
 #include <netdb.h>
 #include <poll.h>
-#include <stdarg.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/param.h>
 #include <sys/socket.h>
-#include <unistd.h>
-#include <zircon/assert.h>
 #include <zircon/device/vfs.h>
 #include <zircon/lookup.h>
-#include <zircon/syscalls.h>
 
+#include <cerrno>
+#include <cstdarg>
+#include <cstdlib>
+#include <cstring>
 #include <mutex>
 
-#include "private-socket.h"
 #include "private.h"
 #include "unistd.h"
 
@@ -105,41 +96,32 @@ int socket(int domain, int type, int protocol) {
 
 __EXPORT
 int connect(int fd, const struct sockaddr* addr, socklen_t len) {
-  zxio_socket_t* socket;
-  fdio_t* io = fd_to_socket(fd, &socket);
-  if (io == NULL) {
+  fdio_t* io = fd_to_io(fd);
+  if (io == nullptr) {
     return ERRNO(EBADF);
   }
 
-  auto result = socket->control.Connect(
-      fidl::VectorView(reinterpret_cast<uint8_t*>(const_cast<sockaddr*>(addr)), len));
-  zx_status_t status = result.status();
-  if (status != ZX_OK) {
+  int16_t out_code;
+  zx_status_t status;
+  if ((status = fdio_get_ops(io)->connect(io, addr, len, &out_code)) != ZX_OK) {
     fdio_release(io);
     return ERROR(status);
   }
-  int16_t out_code = result.Unwrap()->code;
   if (out_code == EINPROGRESS) {
     bool nonblocking = *fdio_get_ioflag(io) & IOFLAG_NONBLOCK;
 
     if (nonblocking) {
       *fdio_get_ioflag(io) |= IOFLAG_SOCKET_CONNECTING;
     } else {
-      zx_signals_t observed;
-      status = socket->pipe.socket.wait_one(ZXSIO_SIGNAL_OUTGOING, zx::time::infinite(), &observed);
-      if (status != ZX_OK) {
+      if ((status = fdio_wait(io, FDIO_EVT_WRITABLE, zx::time::infinite(), nullptr)) != ZX_OK) {
         fdio_release(io);
         return ERROR(status);
       }
       // Call Connect() again after blocking to find connect's result.
-      auto result = socket->control.Connect(
-          fidl::VectorView(reinterpret_cast<uint8_t*>(const_cast<sockaddr*>(addr)), len));
-      status = result.status();
-      if (status != ZX_OK) {
+      if ((status = fdio_get_ops(io)->connect(io, addr, len, &out_code)) != ZX_OK) {
         fdio_release(io);
         return ERROR(status);
       }
-      out_code = result.Unwrap()->code;
     }
   }
 
@@ -157,45 +139,36 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
   }
 }
 
-__EXPORT
-int bind(int fd, const struct sockaddr* addr, socklen_t len) {
-  zxio_socket_t* socket;
-  fdio_t* io = fd_to_socket(fd, &socket);
-  if (io == NULL) {
+template <typename F>
+static int delegate(int fd, F fn) {
+  fdio_t* io = fd_to_io(fd);
+  if (io == nullptr) {
     return ERRNO(EBADF);
   }
-
-  auto result = socket->control.Bind(
-      fidl::VectorView(reinterpret_cast<uint8_t*>(const_cast<sockaddr*>(addr)), len));
+  int16_t out_code;
+  zx_status_t status = fn(io, &out_code);
   fdio_release(io);
-  zx_status_t status = result.status();
   if (status != ZX_OK) {
     return ERROR(status);
   }
-  if (int16_t out_code = result.Unwrap()->code) {
+  if (out_code) {
     return ERRNO(out_code);
   }
-  return 0;
+  return out_code;
+}
+
+__EXPORT
+int bind(int fd, const struct sockaddr* addr, socklen_t len) {
+  return delegate(fd, [&](fdio_t* io, int16_t* out_code) {
+    return fdio_get_ops(io)->bind(io, addr, len, out_code);
+  });
 }
 
 __EXPORT
 int listen(int fd, int backlog) {
-  zxio_socket_t* socket;
-  fdio_t* io = fd_to_socket(fd, &socket);
-  if (io == NULL) {
-    return ERRNO(EBADF);
-  }
-
-  auto result = socket->control.Listen(static_cast<int16_t>(backlog));
-  fdio_release(io);
-  zx_status_t status = result.status();
-  if (status != ZX_OK) {
-    return ERROR(status);
-  }
-  if (int16_t out_code = result.Unwrap()->code) {
-    return ERRNO(out_code);
-  }
-  return 0;
+  return delegate(fd, [&](fdio_t* io, int16_t* out_code) {
+    return fdio_get_ops(io)->listen(io, backlog, out_code);
+  });
 }
 
 __EXPORT
@@ -212,14 +185,13 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len,
     return nfd;
   }
 
-  zx::channel accepted;
+  zx::handle accepted;
   {
     zx_status_t status;
     int16_t out_code;
 
-    zxio_socket_t* socket;
-    fdio_t* io = fd_to_socket(fd, &socket);
-    if (io == NULL) {
+    fdio_t* io = fd_to_io(fd);
+    if (io == nullptr) {
       fdio_release_reserved(nfd);
       return ERRNO(EBADF);
     }
@@ -229,36 +201,21 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len,
     for (;;) {
       // We're going to manage blocking on the client side, so always ask the
       // provider for a non-blocking socket.
-      auto result = socket->control.Accept(static_cast<int16_t>(flags) | SOCK_NONBLOCK);
-      status = result.status();
-      if (status != ZX_OK) {
+      if ((status = fdio_get_ops(io)->accept(
+               io, flags | SOCK_NONBLOCK, accepted.reset_and_get_address(), &out_code)) != ZX_OK) {
         break;
       }
-      fsocket::Control::AcceptResponse* response = result.Unwrap();
-      out_code = response->code;
 
       // This condition should also apply to EAGAIN; it happens to have the
       // same value as EWOULDBLOCK.
       if (out_code == EWOULDBLOCK) {
         if (!nonblocking) {
-          zx_signals_t observed;
-          status = socket->pipe.socket.wait_one(ZXSIO_SIGNAL_INCOMING | ZX_SOCKET_PEER_CLOSED,
-                                                zx::time::infinite(), &observed);
-          if (status != ZX_OK) {
+          if ((status = fdio_wait(io, FDIO_EVT_READABLE, zx::time::infinite(), nullptr)) != ZX_OK) {
             break;
           }
-          if (observed & ZXSIO_SIGNAL_INCOMING) {
-            continue;
-          }
-          ZX_ASSERT(observed & ZX_SOCKET_PEER_CLOSED);
-          status = ZX_ERR_PEER_CLOSED;
-          break;
+          continue;
         }
       }
-      if (out_code) {
-        break;
-      }
-      accepted = std::move(response->s);
       break;
     }
     fdio_release(io);
@@ -273,28 +230,28 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len,
     }
   }
 
-  if (len) {
-    auto result = fsocket::Control::Call::GetPeerName(zx::unowned(accepted));
-    zx_status_t status = result.status();
-    if (status != ZX_OK) {
-      fdio_release_reserved(nfd);
-      return ERROR(status);
-    }
-    fsocket::Control::GetPeerNameResponse* response = result.Unwrap();
-    if (int16_t out_code = response->code) {
-      fdio_release_reserved(nfd);
-      return ERRNO(out_code);
-    }
-    auto out = response->addr;
-    memcpy(addr, out.data(), MIN(*len, out.count()));
-    *len = static_cast<socklen_t>(out.count());
-  }
-
   fdio_t* accepted_io;
-  zx_status_t status = fdio_from_channel(std::move(accepted), &accepted_io);
+  zx_status_t status = fdio_create(accepted.release(), &accepted_io);
   if (status != ZX_OK) {
     fdio_release_reserved(nfd);
     return ERROR(status);
+  }
+
+  if (len) {
+    int16_t out_code;
+    if ((status = fdio_get_ops(accepted_io)->getpeername(accepted_io, addr, len, &out_code)) !=
+        ZX_OK) {
+      fdio_release_reserved(nfd);
+      fdio_get_ops(accepted_io)->close(accepted_io);
+      fdio_release(accepted_io);
+      return ERROR(status);
+    }
+    if (out_code) {
+      fdio_release_reserved(nfd);
+      fdio_get_ops(accepted_io)->close(accepted_io);
+      fdio_release(accepted_io);
+      return ERRNO(out_code);
+    }
   }
 
   // TODO(tamird): we're not handling this flag in fdio_from_channel, which seems bad.
@@ -389,33 +346,15 @@ int _getaddrinfo_from_dns(struct address buf[MAXADDRS], char canon[256], const c
 
   return count;
 }
-
 __EXPORT
 int getsockname(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len) {
   if (len == NULL || addr == NULL) {
     return ERRNO(EINVAL);
   }
 
-  zxio_socket_t* socket;
-  fdio_t* io = fd_to_socket(fd, &socket);
-  if (io == NULL) {
-    return ERRNO(EBADF);
-  }
-
-  auto result = socket->control.GetSockName();
-  fdio_release(io);
-  zx_status_t status = result.status();
-  if (status != ZX_OK) {
-    return ERROR(status);
-  }
-  fsocket::Control::GetSockNameResponse* response = result.Unwrap();
-  if (int16_t out_code = response->code) {
-    return ERRNO(out_code);
-  }
-  auto out = response->addr;
-  memcpy(addr, out.data(), MIN(*len, out.count()));
-  *len = static_cast<socklen_t>(out.count());
-  return 0;
+  return delegate(fd, [&](fdio_t* io, int16_t* out_code) {
+    return fdio_get_ops(io)->getsockname(io, addr, len, out_code);
+  });
 }
 
 __EXPORT
@@ -424,26 +363,9 @@ int getpeername(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict 
     return ERRNO(EINVAL);
   }
 
-  zxio_socket_t* socket;
-  fdio_t* io = fd_to_socket(fd, &socket);
-  if (io == NULL) {
-    return ERRNO(EBADF);
-  }
-
-  auto result = socket->control.GetPeerName();
-  fdio_release(io);
-  zx_status_t status = result.status();
-  if (status != ZX_OK) {
-    return ERROR(status);
-  }
-  fsocket::Control::GetPeerNameResponse* response = result.Unwrap();
-  if (int16_t out_code = response->code) {
-    return ERRNO(out_code);
-  }
-  auto out = response->addr;
-  memcpy(addr, out.data(), MIN(*len, out.count()));
-  *len = static_cast<socklen_t>(out.count());
-  return 0;
+  return delegate(fd, [&](fdio_t* io, int16_t* out_code) {
+    return fdio_get_ops(io)->getpeername(io, addr, len, out_code);
+  });
 }
 
 __EXPORT
@@ -453,9 +375,8 @@ int getsockopt(int fd, int level, int optname, void* __restrict optval,
     return ERRNO(EFAULT);
   }
 
-  zxio_socket_t* socket;
-  fdio_t* io = fd_to_socket(fd, &socket);
-  if (io == NULL) {
+  fdio_t* io = fd_to_io(fd);
+  if (io == nullptr) {
     return ERRNO(EBADF);
   }
 
@@ -469,13 +390,15 @@ int getsockopt(int fd, int level, int optname, void* __restrict optval,
       case SO_SNDTIMEO:
         timeout = fdio_get_sndtimeo(io);
         break;
+      default:
+        break;
     }
     if (timeout) {
       if (optlen == NULL || *optlen < sizeof(struct timeval)) {
         return ERRNO(EINVAL);
       }
       *optlen = sizeof(struct timeval);
-      struct timeval* duration_tv = static_cast<struct timeval*>(optval);
+      auto duration_tv = static_cast<struct timeval*>(optval);
       if (*timeout == zx::duration::infinite()) {
         duration_tv->tv_sec = 0;
         duration_tv->tv_usec = 0;
@@ -487,63 +410,21 @@ int getsockopt(int fd, int level, int optname, void* __restrict optval,
     }
   }
 
-  auto result =
-      socket->control.GetSockOpt(static_cast<int16_t>(level), static_cast<int16_t>(optname));
+  int16_t out_code;
+  zx_status_t status = fdio_get_ops(io)->getsockopt(io, level, optname, optval, optlen, &out_code);
   fdio_release(io);
-  zx_status_t status = result.status();
   if (status != ZX_OK) {
     return ERROR(status);
   }
-  fsocket::Control::GetSockOptResponse* response = result.Unwrap();
-  if (int16_t out_code = response->code) {
+  if (out_code) {
     return ERRNO(out_code);
   }
-  auto out = response->optval;
-  socklen_t copy_len = MIN(*optlen, static_cast<socklen_t>(out.count()));
-  bool do_optlen_check = true;
-  // The following code block is to just keep up with Linux parity.
-  switch (level) {
-    case IPPROTO_IP:
-      switch (optname) {
-        case IP_TOS:
-          // On Linux, when the optlen is < sizeof(int), only a single byte is
-          // copied. As the TOS size is just a byte value, we are not losing
-          // any information here.
-          if (*optlen > 0 && *optlen < sizeof(int)) {
-            copy_len = 1;
-          }
-          do_optlen_check = false;
-          break;
-        default:
-          break;
-      }
-      break;
-    case IPPROTO_IPV6:
-      switch (optname) {
-        case IPV6_TCLASS:
-          do_optlen_check = false;
-          break;
-        default:
-          break;
-      }
-      break;
-    default:
-      break;
-  }
-  if (do_optlen_check) {
-    if (out.count() > *optlen) {
-      return ERRNO(EINVAL);
-    }
-  }
-  memcpy(optval, out.data(), copy_len);
-  *optlen = copy_len;
   return 0;
 }
 
 __EXPORT
 int setsockopt(int fd, int level, int optname, const void* optval, socklen_t optlen) {
-  zxio_socket_t* socket;
-  fdio_t* io = fd_to_socket(fd, &socket);
+  fdio_t* io = fd_to_io(fd);
   if (io == NULL) {
     return ERRNO(EBADF);
   }
@@ -602,15 +483,13 @@ int setsockopt(int fd, int level, int optname, const void* optval, socklen_t opt
       break;
   }
 
-  auto result = socket->control.SetSockOpt(
-      static_cast<int16_t>(level), static_cast<int16_t>(optname),
-      fidl::VectorView(static_cast<uint8_t*>(const_cast<void*>(optval)), optlen));
+  int16_t out_code;
+  zx_status_t status = fdio_get_ops(io)->setsockopt(io, level, optname, optval, optlen, &out_code);
   fdio_release(io);
-  zx_status_t status = result.status();
   if (status != ZX_OK) {
     return ERROR(status);
   }
-  if (int16_t out_code = result.Unwrap()->code) {
+  if (out_code) {
     return ERRNO(out_code);
   }
   return 0;

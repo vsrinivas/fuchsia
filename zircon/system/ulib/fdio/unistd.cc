@@ -737,8 +737,7 @@ zx_status_t fdio_ns_get_installed(fdio_ns_t** ns) {
   return status;
 }
 
-static zx_status_t fdio_wait_signals(fdio_t* io, uint32_t events, zx::time deadline,
-                                     uint32_t* out_events, zx_signals_t* out_signals) {
+zx_status_t fdio_wait(fdio_t* io, uint32_t events, zx::time deadline, uint32_t* out_pending) {
   zx_handle_t h = ZX_HANDLE_INVALID;
   zx_signals_t signals = 0;
   fdio_get_ops(io)->wait_begin(io, events, &h, &signals);
@@ -750,17 +749,12 @@ static zx_status_t fdio_wait_signals(fdio_t* io, uint32_t events, zx::time deadl
   zx_status_t status = zx_object_wait_one(h, signals, deadline.get(), &pending);
   if (status == ZX_OK || status == ZX_ERR_TIMED_OUT) {
     fdio_get_ops(io)->wait_end(io, pending, &events);
-    if (out_events != nullptr)
-      *out_events = events;
-    if (out_signals != nullptr)
-      *out_signals = pending;
+    if (out_pending != nullptr) {
+      *out_pending = events;
+    }
   }
 
   return status;
-}
-
-zx_status_t fdio_wait(fdio_t* io, uint32_t events, zx::time deadline, uint32_t* out_pending) {
-  return fdio_wait_signals(io, events, deadline, out_pending, nullptr);
 }
 
 __EXPORT
@@ -960,8 +954,7 @@ ssize_t preadv(int fd, const struct iovec* iov, int iovcnt, off_t offset) {
     size_t actual;
     zx_status_t status = zxio_read_vector_at(fdio_get_zxio(io), offset, zx_iov, iovcnt, 0, &actual);
     if (status == ZX_ERR_SHOULD_WAIT && !nonblocking) {
-      if (fdio_wait(io, FDIO_EVT_READABLE | FDIO_EVT_PEER_CLOSED, deadline, nullptr) !=
-          ZX_ERR_TIMED_OUT) {
+      if (fdio_wait(io, FDIO_EVT_READABLE, deadline, nullptr) != ZX_ERR_TIMED_OUT) {
         continue;
       }
     }
@@ -995,8 +988,7 @@ ssize_t pwritev(int fd, const struct iovec* iov, int iovcnt, off_t offset) {
     zx_status_t status =
         zxio_write_vector_at(fdio_get_zxio(io), offset, zx_iov, iovcnt, 0, &actual);
     if (status == ZX_ERR_SHOULD_WAIT && !nonblocking) {
-      if (fdio_wait(io, FDIO_EVT_WRITABLE | FDIO_EVT_PEER_CLOSED, deadline, nullptr) !=
-          ZX_ERR_TIMED_OUT) {
+      if (fdio_wait(io, FDIO_EVT_WRITABLE, deadline, nullptr) != ZX_ERR_TIMED_OUT) {
         continue;
       }
     }
@@ -2201,15 +2193,16 @@ ssize_t sendmsg(int fd, const struct msghdr* msg, int flags) {
   zx::time deadline = zx::deadline_after(*fdio_get_sndtimeo(io));
   for (;;) {
     size_t actual;
-    zx_status_t status = fdio_get_ops(io)->sendmsg(io, msg, flags, &actual);
-    zx_signals_t signals;
-    if (status == ZX_ERR_SHOULD_WAIT && !nonblocking) {
-      switch (fdio_wait_signals(io, FDIO_EVT_WRITABLE | FDIO_EVT_PEER_CLOSED, deadline, nullptr,
-                                &signals)) {
+    int16_t out_code;
+    zx_status_t status = fdio_get_ops(io)->sendmsg(io, msg, flags, &actual, &out_code);
+    if ((status == ZX_ERR_SHOULD_WAIT || (status == ZX_OK && out_code == EWOULDBLOCK)) &&
+        !nonblocking) {
+      uint32_t pending;
+      switch (fdio_wait(io, FDIO_EVT_WRITABLE, deadline, &pending)) {
         case ZX_ERR_TIMED_OUT:
           break;
         case ZX_OK:
-          if (signals & ZX_SOCKET_WRITE_DISABLED) {
+          if (pending & POLLHUP) {
             status = ZX_ERR_PEER_CLOSED;
             break;
           }
@@ -2221,6 +2214,9 @@ ssize_t sendmsg(int fd, const struct msghdr* msg, int flags) {
     fdio_release(io);
     if (status != ZX_OK) {
       return ERROR(status);
+    }
+    if (out_code) {
+      return ERRNO(out_code);
     }
     return actual;
   }
@@ -2237,10 +2233,10 @@ ssize_t recvmsg(int fd, struct msghdr* msg, int flags) {
   zx::time deadline = zx::deadline_after(*fdio_get_rcvtimeo(io));
   for (;;) {
     size_t actual;
-    zx_status_t status = fdio_get_ops(io)->recvmsg(io, msg, flags, &actual);
+    int16_t out_code;
+    zx_status_t status = fdio_get_ops(io)->recvmsg(io, msg, flags, &actual, &out_code);
     if (status == ZX_ERR_SHOULD_WAIT && !nonblocking) {
-      if (fdio_wait(io, FDIO_EVT_READABLE | FDIO_EVT_PEER_CLOSED, deadline, nullptr) !=
-          ZX_ERR_TIMED_OUT) {
+      if (fdio_wait(io, FDIO_EVT_READABLE, deadline, nullptr) != ZX_ERR_TIMED_OUT) {
         continue;
       }
     }
@@ -2248,25 +2244,30 @@ ssize_t recvmsg(int fd, struct msghdr* msg, int flags) {
     if (status != ZX_OK) {
       return ERROR(status);
     }
+    if (out_code) {
+      return ERRNO(out_code);
+    }
     return actual;
   }
 }
 
 __EXPORT
 int shutdown(int fd, int how) {
-  fdio_t* io;
-  if ((io = fd_to_io(fd)) == NULL) {
+  fdio_t* io = fd_to_io(fd);
+  if (io == nullptr) {
     return ERRNO(EBADF);
   }
-  zx_status_t r = fdio_get_ops(io)->shutdown(io, how);
+
+  int16_t out_code;
+  zx_status_t status = fdio_get_ops(io)->shutdown(io, how, &out_code);
   fdio_release(io);
-  if (r == ZX_ERR_BAD_STATE) {
-    return ERRNO(ENOTCONN);
+  if (status != ZX_OK) {
+    return ERROR(status);
   }
-  if (r == ZX_ERR_WRONG_TYPE) {
-    return ERRNO(ENOTSOCK);
+  if (out_code) {
+    return ERRNO(out_code);
   }
-  return STATUS(r);
+  return out_code;
 }
 
 // The common denominator between the Linux-y fstatfs and the POSIX
