@@ -180,6 +180,8 @@ void ArchProvider::SaveGeneralRegs(const zx_thread_state_general_regs& input,
   out->push_back(CreateRegister(RegisterID::kX64_r15, 8u, &input.r15));
   out->push_back(CreateRegister(RegisterID::kX64_rip, 8u, &input.rip));
   out->push_back(CreateRegister(RegisterID::kX64_rflags, 8u, &input.rflags));
+  out->push_back(CreateRegister(RegisterID::kX64_fsbase, 8u, &input.fs_base));
+  out->push_back(CreateRegister(RegisterID::kX64_gsbase, 8u, &input.gs_base));
 }
 
 std::pair<uint64_t, int> ArchProvider::InstructionForWatchpointHit(

@@ -182,6 +182,7 @@ void ArchProvider::SaveGeneralRegs(const zx_thread_state_general_regs& input,
   out->push_back(CreateRegister(RegisterID::kARMv8_sp, 8u, &input.sp));
   out->push_back(CreateRegister(RegisterID::kARMv8_pc, 8u, &input.pc));
   out->push_back(CreateRegister(RegisterID::kARMv8_cpsr, 8u, &input.cpsr));
+  out->push_back(CreateRegister(RegisterID::kARMv8_tpidr, 8u, &input.tpidr));
 }
 
 uint64_t* ArchProvider::IPInRegs(zx_thread_state_general_regs* regs) { return &regs->pc; }

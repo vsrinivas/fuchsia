@@ -182,6 +182,9 @@ enum class RegisterID : uint32_t {
 
   kARMv8_x30 = 1066,  // Alias for "LR" above.
 
+  // Thread Pointer/ID register
+  kARMv8_tpidr = 1067,
+
   // FP (None on ARMv8).
 
   // Vector.
@@ -313,6 +316,10 @@ enum class RegisterID : uint32_t {
 
   kX64_di = 2036,
   kX64_edi = 2037,
+
+  // Segment registers
+  kX64_fsbase = 2038,
+  kX64_gsbase = 2039,
 
   // FP (x87 FPU/MMX).
 

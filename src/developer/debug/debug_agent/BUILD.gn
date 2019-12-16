@@ -184,7 +184,10 @@ executable("unit_tests") {
   ]
 
   if (current_cpu == "x64") {
-    sources += [ "arch_x64_helpers_unittest.cc" ]
+    sources += [
+      "arch_x64_helpers_unittest.cc",
+      "arch_x64_unittest.cc",
+    ]
   } else if (current_cpu == "arm64") {
     sources += [
       "arch_arm64_helpers_unittest.cc",
