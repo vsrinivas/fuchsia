@@ -34,11 +34,10 @@ async fn main() -> Result<(), Error> {
 
     // Create a channel that peer manager will receive requests for peer controllers from the FIDL
     // service runner.
-    let (client_sender, peer_controller_request_receiver) = mpsc::channel(1);
+    let (client_sender, service_request_receiver) = mpsc::channel(1);
 
-    let mut peer_manager =
-        PeerManager::new(Box::new(profile_svc), peer_controller_request_receiver)
-            .expect("Unable to create Peer Manager");
+    let mut peer_manager = PeerManager::new(Box::new(profile_svc), service_request_receiver)
+        .expect("Unable to create Peer Manager");
 
     let service_fut =
         service::run_services(client_sender).expect("Unable to start AVRCP FIDL service");

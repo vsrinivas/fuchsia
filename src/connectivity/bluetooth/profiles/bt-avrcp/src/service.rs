@@ -26,10 +26,7 @@ use {
 
 use crate::{
     packets::PlaybackStatus as PacketPlaybackStatus,
-    peer::{
-        Controller, ControllerEvent as PeerControllerEvent,
-        ControllerRequest as PeerControllerRequest,
-    },
+    peer::{Controller, ControllerEvent as PeerControllerEvent, ServiceRequest},
     types::PeerError,
 };
 
@@ -321,10 +318,7 @@ pub fn spawn_test_avrcp_client_controller(
 }
 
 /// Spawns a future that listens and responds to requests for a controller object over FIDL.
-fn spawn_avrcp_client(
-    stream: PeerManagerRequestStream,
-    sender: mpsc::Sender<PeerControllerRequest>,
-) {
+fn spawn_avrcp_client(stream: PeerManagerRequestStream, sender: mpsc::Sender<ServiceRequest>) {
     fx_log_info!("Spawning avrcp client handler");
     fasync::spawn(
         avrcp_client_stream_handler(stream, sender, &spawn_avrcp_client_controller)
@@ -335,7 +329,7 @@ fn spawn_avrcp_client(
 /// Polls the stream for the PeerManager FIDL interface and responds with new controller clients.
 pub async fn avrcp_client_stream_handler<F>(
     mut stream: PeerManagerRequestStream,
-    mut sender: mpsc::Sender<PeerControllerRequest>,
+    mut sender: mpsc::Sender<ServiceRequest>,
     spawn_fn: F,
 ) -> Result<(), anyhow::Error>
 where
@@ -354,7 +348,7 @@ where
                 responder.send(&mut Err(zx::Status::UNAVAILABLE.into_raw()))?;
             }
             Ok(client_stream) => {
-                let (response, pcr) = PeerControllerRequest::new(peer_id);
+                let (response, pcr) = ServiceRequest::new_controller_request(peer_id);
                 sender.try_send(pcr)?;
                 let controller = response.into_future().await?;
                 spawn_fn(controller, client_stream);
@@ -368,7 +362,7 @@ where
 /// spawns a future that listens and responds to requests for a controller object over FIDL.
 fn spawn_test_avrcp_client(
     stream: PeerManagerExtRequestStream,
-    sender: mpsc::Sender<PeerControllerRequest>,
+    sender: mpsc::Sender<ServiceRequest>,
 ) {
     fx_log_info!("Spawning test avrcp client handler");
     fasync::spawn(
@@ -380,7 +374,7 @@ fn spawn_test_avrcp_client(
 /// polls the stream for the PeerManagerExt FIDL interface and responds with new test controller clients.
 pub async fn test_avrcp_client_stream_handler<F>(
     mut stream: PeerManagerExtRequestStream,
-    mut sender: mpsc::Sender<PeerControllerRequest>,
+    mut sender: mpsc::Sender<ServiceRequest>,
     spawn_fn: F,
 ) -> Result<(), anyhow::Error>
 where
@@ -399,7 +393,7 @@ where
                         responder.send(&mut Err(zx::Status::UNAVAILABLE.into_raw()))?;
                     }
                     Ok(client_stream) => {
-                        let (response, pcr) = PeerControllerRequest::new(peer_id);
+                        let (response, pcr) = ServiceRequest::new_controller_request(peer_id);
                         sender.try_send(pcr)?;
                         let controller = response.into_future().await?;
                         spawn_fn(controller, client_stream);
@@ -414,7 +408,7 @@ where
 
 /// Sets up public FIDL services and client handlers.
 pub fn run_services(
-    sender: mpsc::Sender<PeerControllerRequest>,
+    sender: mpsc::Sender<ServiceRequest>,
 ) -> Result<impl Future<Output = Result<(), Error>>, Error> {
     let mut fs = ServiceFs::new();
     let sender_avrcp = sender.clone();

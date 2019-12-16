@@ -7,27 +7,24 @@ use super::*;
 /// Handles commands received from the peer, typically when we are acting in target role for A2DP
 /// source and absolute volume support for A2DP sink. Maintains state such as continuations and
 /// registered notifications by the peer.
-/// FIXME: This is a stub that mostly logs incoming commands as we implement out features in TARGET.
 #[derive(Debug)]
 pub struct ControlChannelHandler {
-    /// Handle back to the remote peer. Weak to prevent a reference cycle since the remote peer owns this object.
-    pub remote_peer: Weak<RwLock<RemotePeer>>,
+    peer_id: PeerId,
 }
 
 impl ControlChannelHandler {
-    pub fn new(remote_peer: Weak<RwLock<RemotePeer>>) -> Self {
-        Self { remote_peer }
+    pub fn new(peer_id: &PeerId) -> Self {
+        Self { peer_id: peer_id.clone() }
     }
 
-    fn handle_passthrough_command(
-        &self,
-        remote_peer: &Arc<RwLock<RemotePeer>>,
+    async fn handle_passthrough_command(
+        _handler: Arc<Mutex<Self>>,
         command: &AvcCommand,
     ) -> Result<AvcResponseType, Error> {
         let body = command.body();
         let command = AvcPanelCommand::from_primitive(body[0]);
 
-        fx_log_info!("Received passthrough command {:x?} {}", command, &remote_peer.read().peer_id);
+        fx_log_info!("Received passthrough command {:x?}", command);
 
         match command {
             Some(_) => Ok(AvcResponseType::Accepted),
@@ -35,7 +32,7 @@ impl ControlChannelHandler {
         }
     }
 
-    fn handle_notify_vendor_command(&self, command: &AvcCommand) {
+    fn handle_notify_vendor_command(_handler: Arc<Mutex<Self>>, command: &AvcCommand) {
         let packet_body = command.body();
 
         let preamble = match VendorDependentPreamble::decode(packet_body) {
@@ -104,7 +101,7 @@ impl ControlChannelHandler {
     }
 
     fn handle_status_vendor_command(
-        &self,
+        _handler: Arc<Mutex<Self>>,
         pdu_id: PduId,
         body: &[u8],
     ) -> Result<(AvcResponseType, Vec<u8>), Error> {
@@ -154,17 +151,13 @@ impl ControlChannelHandler {
         }
     }
 
-    fn handle_vendor_command(
-        &self,
-        remote_peer: &Arc<RwLock<RemotePeer>>,
-        command: &AvcCommand,
-    ) -> Result<(), Error> {
+    fn handle_vendor_command(handler: Arc<Mutex<Self>>, command: &AvcCommand) -> Result<(), Error> {
         let packet_body = command.body();
         let preamble = match VendorDependentPreamble::decode(packet_body) {
             Err(e) => {
                 fx_log_info!(
                     "Unable to parse vendor dependent preamble {}: {:?}",
-                    remote_peer.read().peer_id,
+                    handler.lock().peer_id,
                     e
                 );
                 // TODO: validate this correct error code to respond in this case.
@@ -180,7 +173,7 @@ impl ControlChannelHandler {
                 fx_log_err!(
                     "Unsupported vendor dependent command pdu {} received from peer {} {:#?}: {:?}",
                     preamble.pdu_id,
-                    remote_peer.read().peer_id,
+                    handler.lock().peer_id,
                     body,
                     e
                 );
@@ -200,7 +193,7 @@ impl ControlChannelHandler {
         match command.avc_header().packet_type() {
             AvcPacketType::Command(AvcCommandType::Notify) => {
                 fx_vlog!(tag: "avrcp", 2, "Received ctype=notify command {:?}", pdu_id);
-                self.handle_notify_vendor_command(&command);
+                Self::handle_notify_vendor_command(handler.clone(), &command);
                 Ok(())
             }
             AvcPacketType::Command(AvcCommandType::Status) => {
@@ -210,12 +203,12 @@ impl ControlChannelHandler {
                 //        of delegating it back up here to send. Originally it was done this
                 //        way so that it would be easier to test but behavior difference is
                 //        more confusing than the testability convenience
-                match self.handle_status_vendor_command(pdu_id, &body[..]) {
+                match Self::handle_status_vendor_command(handler.clone(), pdu_id, &body[..]) {
                     Ok((response_type, buf)) => {
                         if let Err(e) = command.send_response(response_type, &buf[..]) {
                             fx_log_err!(
                                 "Error sending vendor response to peer {}, {:?}",
-                                remote_peer.read().peer_id,
+                                handler.lock().peer_id,
                                 e
                             );
                             // unrecoverable
@@ -227,7 +220,7 @@ impl ControlChannelHandler {
                     Err(e) => {
                         fx_log_err!(
                             "Error parsing command packet from peer {}, {:?}",
-                            remote_peer.read().peer_id,
+                            handler.lock().peer_id,
                             e
                         );
 
@@ -243,7 +236,7 @@ impl ControlChannelHandler {
                                 {
                                     fx_log_err!(
                                         "Error sending not implemented response to peer {}, {:?}",
-                                        remote_peer.read().peer_id,
+                                        handler.lock().peer_id,
                                         e
                                     );
                                     return Err(Error::from(e));
@@ -274,7 +267,7 @@ impl ControlChannelHandler {
                             {
                                 fx_log_err!(
                                     "Error sending vendor reject response to peer {}, {:?}",
-                                    remote_peer.read().peer_id,
+                                    handler.lock().peer_id,
                                     e
                                 );
                                 return Err(Error::from(e));
@@ -302,52 +295,53 @@ impl ControlChannelHandler {
         }
     }
 
-    pub fn handle_command(&self, command: AvcCommand) -> Result<(), Error> {
-        match Weak::upgrade(&self.remote_peer) {
-            Some(remote_peer) => {
-                fx_vlog!(tag: "avrcp", 2, "received command {:#?}", command);
-                match command.avc_header().op_code() {
-                    &AvcOpCode::VendorDependent => {
-                        self.handle_vendor_command(&remote_peer, &command)
-                    }
-                    &AvcOpCode::Passthrough => {
-                        match self.handle_passthrough_command(&remote_peer, &command) {
-                            Ok(response_type) => {
-                                if let Err(e) = command.send_response(response_type, &[]) {
-                                    fx_log_err!(
-                                        "Unable to send passthrough response to peer {}, {:?}",
-                                        remote_peer.read().peer_id,
-                                        e
-                                    );
-                                    return Err(Error::from(e));
-                                }
-                                fx_vlog!(tag: "avrcp", 2, "sent response {:?} to passthrough command", response_type);
-                                Ok(())
-                            }
-                            Err(e) => {
-                                fx_log_err!(
-                                    "Error parsing command packet from peer {}, {:?}",
-                                    remote_peer.read().peer_id,
-                                    e
-                                );
-
-                                // Sending the error response. This is best effort since the peer
-                                // has sent us malformed packet, so we are ignoring and purposefully
-                                // not handling and error received to us sending a rejection response.
-                                // TODO(BT-2220): audit this behavior and consider logging.
-                                let _ = command.send_response(AvcResponseType::Rejected, &[]);
-                                fx_vlog!(tag: "avrcp", 2, "sent reject response to passthrough command: {:?}", command);
-                                Ok(())
-                            }
+    pub async fn handle_command(
+        handler: Arc<Mutex<Self>>,
+        command: AvcCommand,
+    ) -> Result<(), Error> {
+        fx_vlog!(tag: "avrcp", 2, "received command {:#?}", command);
+        match command.avc_header().op_code() {
+            &AvcOpCode::VendorDependent => Self::handle_vendor_command(handler.clone(), &command),
+            &AvcOpCode::Passthrough => {
+                match Self::handle_passthrough_command(handler.clone(), &command).await {
+                    Ok(response_type) => {
+                        if let Err(e) = command.send_response(response_type, &[]) {
+                            fx_log_err!(
+                                "Unable to send passthrough response to peer {}, {:?}",
+                                handler.lock().peer_id,
+                                e
+                            );
+                            return Err(Error::from(e));
                         }
+                        fx_vlog!(tag: "avrcp", 2, "sent response {:?} to passthrough command", response_type);
+                        Ok(())
                     }
-                    _ => {
-                        fx_vlog!(tag: "avrcp", 2, "unexpected on command packet: {:?}", command.avc_header().op_code());
+                    Err(e) => {
+                        fx_log_err!(
+                            "Error parsing command packet from peer {}, {:?}",
+                            handler.lock().peer_id,
+                            e
+                        );
+
+                        // Sending the error response. This is best effort since the peer
+                        // has sent us malformed packet, so we are ignoring and purposefully
+                        // not handling and error received to us sending a rejection response.
+                        // TODO(BT-2220): audit this behavior and consider logging.
+                        let _ = command.send_response(AvcResponseType::Rejected, &[]);
+                        fx_vlog!(tag: "avrcp", 2, "sent reject response to passthrough command: {:?}", command);
                         Ok(())
                     }
                 }
             }
-            None => panic!("Unexpected state. remote peer should not be deallocated"),
+            _ => {
+                fx_vlog!(tag: "avrcp", 2, "unexpected on command packet: {:?}", command.avc_header().op_code());
+                Ok(())
+            }
         }
     }
+
+    /// Clears any continuations and state. Should be called after connection with the peer has
+    /// closed.
+    // TODO(41699): add continuations for get_element_attributes and wire up reset logic here
+    pub fn reset(&mut self) {}
 }

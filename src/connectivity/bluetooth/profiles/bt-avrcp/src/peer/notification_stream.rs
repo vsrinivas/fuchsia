@@ -36,7 +36,7 @@ impl NotificationStream {
         } else {
             RegisterNotificationCommand::new(self.event_id)
         };
-        let conn = self.peer.read().get_control_connection()?;
+        let conn = RemotePeer::get_control_connection(&self.peer)?;
         let packet = command.encode_packet().expect("unable to encode packet");
         let stream = conn
             .send_vendor_dependent_command(AvcCommandType::Notify, &packet[..])

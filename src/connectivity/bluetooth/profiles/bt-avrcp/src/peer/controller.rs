@@ -19,11 +19,11 @@ pub type ControllerEventStream = mpsc::Receiver<ControllerEvent>;
 /// ControllerRequest stream for a given ControllerRequest.
 #[derive(Debug)]
 pub struct Controller {
-    peer: Arc<RwLock<RemotePeer>>,
+    peer: Arc<RemotePeerHandle>,
 }
 
 impl Controller {
-    pub fn new(peer: Arc<RwLock<RemotePeer>>) -> Controller {
+    pub fn new(peer: Arc<RemotePeerHandle>) -> Controller {
         Controller { peer }
     }
 
@@ -163,7 +163,7 @@ impl Controller {
         // TODO(41253): Use return value of ListPlayerApplicationSettingValuesResponse::decode()
         // to get current custom settings. For now, get current settings for default settings.
         self.get_current_player_application_settings(
-            response.player_application_setting_attribute_ids(),
+            response.player_application_setting_attribute_ids().into(),
         )
         .await
     }
@@ -224,14 +224,13 @@ impl Controller {
     /// For the FIDL test controller. Informational only and intended for logging only. The state is
     /// inherently racey.
     pub fn is_connected(&self) -> bool {
-        self.peer.read().is_connected()
+        RemotePeer::is_connected(&self.peer)
     }
 
     /// Returns notification events from the peer.
     pub fn take_event_stream(&self) -> ControllerEventStream {
-        let mut peer_guard = self.peer.write();
         let (sender, receiver) = mpsc::channel(2);
-        peer_guard.add_control_listener(sender);
+        RemotePeer::add_control_listener(&self.peer, sender);
         receiver
     }
 }
