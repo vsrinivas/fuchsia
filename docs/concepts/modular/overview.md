@@ -1,10 +1,9 @@
+# Overview
+
 Warning: Modular was an experimental application framework for Fuchsia. Its
 functionality is being ported to the Session Framework and the [Component
-Framework](/docs/concepts/components).
-
-The original documentation for Modular follows.
-
-## Overview
+Framework](/docs/concepts/components). The following is
+the original documentation for Modular.
 
 Modular manages user experiences by composing UI, data, and users from a
 diverse set of components into logical and visual containers called Stories.
@@ -13,15 +12,15 @@ The framework defines classes of components to extend user experiences and
 provides software primitives for component composition, communication, task
 delegation, state management and data sharing.
 
-### Requirements to use Modular
+## Requirements to use Modular
 
-Modular supports software written in any language (e.g. Flutter, C++) for any
+Modular supports software written in any language (for example, Flutter and C++) for any
 Fuchsia supported runtime, as long as it is a Fuchsia Component.
 
 The Modular Framework communicates with components it launches via FIDL, the
 standard IPC mechanism for Fuchsia.
 
-### Extension Points
+## Extension Points
 
 The framework defines several different classes of components which can be
 implemented by developers to extend the behavior of user experiences:
@@ -34,7 +33,7 @@ implemented by developers to extend the behavior of user experiences:
 1.  [EntityProviders](entity.md) are components which provide access to data
     object (entities) which are shared between components running in modular.
 
-### `basemgr` and `sessionmgr`
+## `basemgr` and `sessionmgr`
 
 After Fuchsia device startup, `basemgr` and `sessionmgr` are processes that
 provide session management, component lifecycle management and state management.
@@ -47,6 +46,6 @@ provide session management, component lifecycle management and state management.
     It leverages Session and Story Shells to manage the visual composition of
     these components.
 
-### Read More
+## Read More
 
 * [Configuring Modular](guide/config.md)
