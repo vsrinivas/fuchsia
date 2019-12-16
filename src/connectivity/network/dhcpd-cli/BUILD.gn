@@ -66,6 +66,7 @@ test_package("dhcpd_cli_tests") {
   deps = [
     ":bin_test",
     ":tests",
+    "//src/connectivity/network/dhcp",
   ]
 
   tests = [
