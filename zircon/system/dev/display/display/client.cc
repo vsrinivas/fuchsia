@@ -1835,7 +1835,6 @@ void Client::CaptureCompleted() {
   if (signal_fence != nullptr) {
     signal_fence->Signal();
   }
-  proxy_->EnableCapture(false);
 
   // release any pending capture images
   if (pending_capture_release_image_ == current_capture_image_) {
@@ -2059,6 +2058,7 @@ zx_status_t ClientProxy::OnCaptureComplete() {
   if (enable_capture_) {
     handler_.CaptureCompleted();
   }
+  enable_capture_ = false;
   return ZX_OK;
 }
 
