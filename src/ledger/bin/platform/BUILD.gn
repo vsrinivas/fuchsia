@@ -55,6 +55,7 @@ source_set("unittests") {
   ]
 
   deps = [
+    ":implementation",
     ":platform",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
