@@ -67,7 +67,7 @@ From //public/gn/config/BUILD.gn:12
 Defines the `//:default` target: what `ninja` with no arguments does.
 TODO(BLD-353): This must be set by the controlling Fuchsia GN build.
 
-**Current value for `target_cpu = `:** `["//:legacy-x64", "//:legacy_unification-x64", "//tools:all-hosts"]`
+**Current value for `target_cpu = `:** `["//:legacy-x64", "//:legacy_unification-x64"]`
 
 From /b/s/w/ir/k/root_build_dir.zircon/args.gn:5
 
@@ -127,7 +127,7 @@ netsvc build.
 
 **Current value for `target_cpu = `:** `false`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:10
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:9
 
 **Overridden from the default:** `false`
 
@@ -279,7 +279,7 @@ source-absolute path ("//...") or a system absolute path.
 
 **Current value for `target_cpu = `:** `"/home/swarming/goma"`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:11
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:10
 
 **Overridden from the default:** `"/home/swarming/goma"`
 
@@ -449,7 +449,7 @@ one of those variants.  Note that setting this nonempty may conflict
 with programs that define their own `__ubsan_default_options` C
 function.
 
-**Current value (from the default):** `"print_stacktrace=1"`
+**Current value (from the default):** `"print_stacktrace=1:halt_on_error=1"`
 
 From //public/gn/config/instrumentation/BUILD.gn:24
 
@@ -458,7 +458,7 @@ Set to true to enable compiling with ccache.
 
 **Current value for `target_cpu = `:** `false`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:12
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:11
 
 **Overridden from the default:** `false`
 
@@ -469,7 +469,7 @@ Set to true to enable distributed compilation using Goma.
 
 **Current value for `target_cpu = `:** `false`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:13
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:12
 
 **Overridden from the default:** `false`
 
@@ -713,7 +713,7 @@ Variant scope parameters
 
 **Current value for `target_cpu = `:** `[]`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:14
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:13
 
 **Overridden from the default:** `[]`
 
@@ -732,7 +732,7 @@ compression available) probably makes sense.
 
 **Current value for `target_cpu = `:** `"zstd"`
 
-From /b/s/w/ir/k/root_build_dir.zircon/args.gn:15
+From /b/s/w/ir/k/root_build_dir.zircon/args.gn:14
 
 **Overridden from the default:** `"zstd"`
 
