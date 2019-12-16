@@ -79,6 +79,23 @@ type ndpInvalidatedPrefixEvent struct {
 	ndpPrefixEventCommon
 }
 
+// ndpAutoGenAddrEventCommon holds the common fields for all events related to
+// auto-generated address events.
+type ndpAutoGenAddrEventCommon struct {
+	nicID          tcpip.NICID
+	addrWithPrefix tcpip.AddressWithPrefix
+}
+
+// isNDPEvent implements ndpEvent.isNDPEvent.
+func (*ndpAutoGenAddrEventCommon) isNDPEvent() {}
+
+type ndpGeneratedAutoGenAddrEvent struct {
+	ndpAutoGenAddrEventCommon
+}
+type ndpInvalidatedAutoGenAddrEvent struct {
+	ndpAutoGenAddrEventCommon
+}
+
 var _ stack.NDPDispatcher = (*ndpDispatcher)(nil)
 
 // ndpDispatcher is a type that implements stack.NDPDispatcher to handle the
@@ -162,14 +179,19 @@ func (n *ndpDispatcher) OnOnLinkPrefixInvalidated(nicID tcpip.NICID, prefix tcpi
 }
 
 // OnAutoGenAddress implements stack.NDPDispatcher.OnAutoGenAddress.
-func (*ndpDispatcher) OnAutoGenAddress(tcpip.NICID, tcpip.AddressWithPrefix) bool {
-	// TODO(ghanan): enable auto-generating addresses (SLAAC).
-	return false
+//
+// Adds the event to the event queue and returns true so Stack adds the
+// auto-generated address.
+func (n *ndpDispatcher) OnAutoGenAddress(nicID tcpip.NICID, addrWithPrefix tcpip.AddressWithPrefix) bool {
+	syslog.Infof("ndp: OnAutoGenAddress(%d, %s)", nicID, addrWithPrefix)
+	n.addEvent(&ndpGeneratedAutoGenAddrEvent{ndpAutoGenAddrEventCommon: ndpAutoGenAddrEventCommon{nicID: nicID, addrWithPrefix: addrWithPrefix}})
+	return true
 }
 
 // OnAutoGenAddressInvalidated implements stack.NDPDispatcher.OnAutoGenAddressInvalidated.
-func (*ndpDispatcher) OnAutoGenAddressInvalidated(nicID tcpip.NICID, addrWithPrefix tcpip.AddressWithPrefix) {
-	panic(fmt.Sprintf("should never end up here since we never accept a SLAAC address; got addrWithPrefix = %s on nicID = %d", addrWithPrefix, nicID))
+func (n *ndpDispatcher) OnAutoGenAddressInvalidated(nicID tcpip.NICID, addrWithPrefix tcpip.AddressWithPrefix) {
+	syslog.Infof("ndp: OnAutoGenAddressInvalidated(%d, %s)", nicID, addrWithPrefix)
+	n.addEvent(&ndpInvalidatedAutoGenAddrEvent{ndpAutoGenAddrEventCommon: ndpAutoGenAddrEventCommon{nicID: nicID, addrWithPrefix: addrWithPrefix}})
 }
 
 // OnRecursiveDNSServerOption implements stack.NDPDispatcher.OnRecursiveDNSServerOption.
@@ -279,6 +301,20 @@ func (n *ndpDispatcher) start(ctx context.Context) {
 				syslog.Infof("ndp: invalidating an on-link prefix (%s) from nicID (%d), removing the on-link route to it: [%s]", prefix, nicID, rt)
 				if err := n.ns.DelRoute(rt); err != nil {
 					syslog.Errorf("ndp: failed to remove the on-link route [%s] for the invalidated on-link prefix (%s) on nicID (%d): %s", rt, prefix, nicID, err)
+				}
+
+			case *ndpGeneratedAutoGenAddrEvent:
+				nicID, addrWithPrefix := event.nicID, event.addrWithPrefix
+				syslog.Infof("ndp: added an auto-generated address (%s) on nicID (%d), remembering it locally...", addrWithPrefix, nicID)
+				if err := n.ns.rememberSLAACAddress(nicID, addrWithPrefix); err != nil {
+					syslog.Errorf("ndp: failed to remember auto-generated address (%s) on nicID (%d): %s", addrWithPrefix, nicID, err)
+				}
+
+			case *ndpInvalidatedAutoGenAddrEvent:
+				nicID, addrWithPrefix := event.nicID, event.addrWithPrefix
+				syslog.Infof("ndp: invalidated an auto-generated address (%s) on nicID (%d), forgetting it locally...", addrWithPrefix, nicID)
+				if err := n.ns.forgetSLAACAddress(nicID, addrWithPrefix); err != nil {
+					syslog.Errorf("ndp: failed to forget auto-generated address (%s) on nicID (%d): %s", addrWithPrefix, nicID, err)
 				}
 
 			default:

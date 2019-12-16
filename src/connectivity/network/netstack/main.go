@@ -105,6 +105,7 @@ func Main() {
 			HandleRAs:              true,
 			DiscoverDefaultRouters: true,
 			DiscoverOnLinkPrefixes: true,
+			AutoGenGlobalAddresses: true,
 		},
 		NDPDisp:              ndpDisp,
 		AutoGenIPv6LinkLocal: true,

@@ -245,6 +245,112 @@ func TestIpv6LinkLocalAddr(t *testing.T) {
 	}
 }
 
+func TestRememberForgetSlaacAddrs(t *testing.T) {
+	addr1 := tcpip.AddressWithPrefix{
+		Address:   "\xa0\x80\x00\x00\x00\x00\x00\x00\x00\x03\x04\xff\xfe\x05\x06\x07",
+		PrefixLen: 64,
+	}
+	addr2 := tcpip.AddressWithPrefix{
+		Address:   "\xa0\x81\x00\x00\x00\x00\x00\x00\x00\x03\x04\xff\xfe\x05\x06\x07",
+		PrefixLen: 64,
+	}
+
+	ns := newNetstack(t)
+
+	eth := deviceForAddEth(ethernet.Info{}, t)
+	var ifs *ifState
+	{
+		var err error
+		ifs, err = ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: testDeviceName}, &eth)
+		if err != nil {
+			t.Fatalf("addEth(_, _, _): %s", err)
+		}
+	}
+
+	// Remember addr1.
+	has, err := ns.hasSLAACAddress(ifs.nicid, addr1)
+	if err != nil {
+		t.Fatalf("ns.hasSLAACAddress(%d, %s): %s", ifs.nicid, addr1, err)
+	}
+	if has {
+		t.Fatalf("unexpectedly remember addr = %s for nicID (%d)", addr1, ifs.nicid)
+	}
+	if err := ns.rememberSLAACAddress(ifs.nicid, addr1); err != nil {
+		t.Fatalf("ns.rememberSLAACAddress(%d, %s): %s", ifs.nicid, addr1, err)
+	}
+	has, err = ns.hasSLAACAddress(ifs.nicid, addr1)
+	if err != nil {
+		t.Fatalf("ns.hasSLAACAddress(%d, %s): %s", ifs.nicid, addr1, err)
+	}
+	if !has {
+		t.Fatalf("missing addr = %s for nicID (%d)", addr1, ifs.nicid)
+	}
+
+	// Remember addr2.
+	has, err = ns.hasSLAACAddress(ifs.nicid, addr2)
+	if err != nil {
+		t.Fatalf("ns.hasSLAACAddress(%d, %s): %s", ifs.nicid, addr2, err)
+	}
+	if has {
+		t.Fatalf("unexpectedly remember addr = %s for nicID (%d)", addr2, ifs.nicid)
+	}
+	if err := ns.rememberSLAACAddress(ifs.nicid, addr2); err != nil {
+		t.Fatalf("ns.rememberSLAACAddress(%d, %s): %s", ifs.nicid, addr2, err)
+	}
+	has, err = ns.hasSLAACAddress(ifs.nicid, addr2)
+	if err != nil {
+		t.Fatalf("ns.hasSLAACAddress(%d, %s): %s", ifs.nicid, addr2, err)
+	}
+	if !has {
+		t.Fatalf("missing addr = %s for nicID (%d)", addr2, ifs.nicid)
+	}
+
+	// Forget addr1.
+	if err := ns.forgetSLAACAddress(ifs.nicid, addr1); err != nil {
+		t.Fatalf("ns.forgetSLAACAddress(%d, %s): %s", ifs.nicid, addr1, err)
+	}
+	has, err = ns.hasSLAACAddress(ifs.nicid, addr1)
+	if err != nil {
+		t.Fatalf("ns.hasSLAACAddress(%d, %s): %s", ifs.nicid, addr1, err)
+	}
+	if has {
+		t.Fatalf("unexpectedly remember addr = %s for nicID (%d)", addr1, ifs.nicid)
+	}
+	has, err = ns.hasSLAACAddress(ifs.nicid, addr2)
+	if err != nil {
+		t.Fatalf("ns.hasSLAACAddress(%d, %s): %s", ifs.nicid, addr2, err)
+	}
+	if !has {
+		t.Fatalf("missing addr = %s for nicID (%d)", addr2, ifs.nicid)
+	}
+
+	// Forget addr1 again.
+	if err := ns.forgetSLAACAddress(ifs.nicid, addr1); err != tcpip.ErrBadAddress {
+		t.Fatalf("got ns.forgetSLAACAddress(%d, %s) = %v, want = %s", ifs.nicid, addr1, err, tcpip.ErrBadAddress)
+	}
+
+	// Remember addr2 again.
+	if err := ns.rememberSLAACAddress(ifs.nicid, addr2); err != tcpip.ErrBadAddress {
+		t.Fatalf("got ns.rememberSLAACAddress(%d, %s) = %v, want = %s", ifs.nicid, addr2, err, tcpip.ErrBadAddress)
+	}
+
+	// Try unknown NICID.
+	unknownNICID := ifs.nicid + 1
+	has, err = ns.hasSLAACAddress(unknownNICID, addr1)
+	if err != tcpip.ErrUnknownNICID {
+		t.Fatalf("got ns.hasSLAACAddress(%d, %s) = (_, %v), want = (_, %s)", unknownNICID, addr1, err, tcpip.ErrUnknownNICID)
+	}
+	if has {
+		t.Fatalf("got ns.hasSLAACAddress(%d, %s) = (true, _), want = (false, _)", unknownNICID, addr1)
+	}
+	if err := ns.rememberSLAACAddress(unknownNICID, addr1); err != tcpip.ErrUnknownNICID {
+		t.Fatalf("got ns.rememberSLAACAddress(%d, %s) = %v, want = %s", unknownNICID, addr1, err, tcpip.ErrUnknownNICID)
+	}
+	if err := ns.forgetSLAACAddress(unknownNICID, addr1); err != tcpip.ErrUnknownNICID {
+		t.Fatalf("got ns.forgetSLAACAddress(%d, %s) = %v, want = %s", unknownNICID, addr1, err, tcpip.ErrUnknownNICID)
+	}
+}
+
 func TestIpv6LinkLocalOnLinkRoute(t *testing.T) {
 	if got, want := ipv6LinkLocalOnLinkRoute(6), (tcpip.Route{Destination: header.IPv6LinkLocalPrefix.Subnet(), NIC: 6}); got != want {
 		t.Fatalf("got ipv6LinkLocalOnLinkRoute(6) = %s, want = %s", got, want)
