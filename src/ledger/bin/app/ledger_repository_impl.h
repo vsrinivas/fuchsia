@@ -29,9 +29,9 @@
 #include "src/ledger/bin/platform/detached_path.h"
 #include "src/ledger/bin/storage/public/db_factory.h"
 #include "src/ledger/bin/sync_coordinator/public/user_sync.h"
+#include "src/ledger/lib/callback/auto_cleanable.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
-#include "src/lib/callback/auto_cleanable.h"
 #include "src/lib/inspect_deprecated/deprecated/expose.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
@@ -115,8 +115,7 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
   Environment* const environment_;
 
   InternalState state_ = InternalState::ACTIVE;
-  callback::AutoCleanableSet<
-      SyncableBinding<fuchsia::ledger::internal::LedgerRepositorySyncableDelegate>>
+  AutoCleanableSet<SyncableBinding<fuchsia::ledger::internal::LedgerRepositorySyncableDelegate>>
       bindings_;
   std::unique_ptr<storage::DbFactory> db_factory_;
   std::unique_ptr<DbViewFactory> dbview_factory_;
@@ -129,8 +128,7 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
   std::unique_ptr<BackgroundSyncManager> background_sync_manager_;
   // The LedgerManager depends on disk_cleanup_manager_ and background_sync_manager_ in its
   // |page_usage_listeners_|.
-  callback::AutoCleanableMap<std::string, LedgerManager, convert::StringViewComparator>
-      ledger_managers_;
+  AutoCleanableMap<std::string, LedgerManager, convert::StringViewComparator> ledger_managers_;
   fit::closure on_discardable_;
 
   std::unique_ptr<clocks::DeviceIdManager> device_id_manager_;

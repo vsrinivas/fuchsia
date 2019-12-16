@@ -20,10 +20,10 @@ source_set("socket") {
   ]
 
   public_deps = [
+    "//src/ledger/lib/callback",
     "//src/ledger/lib/convert",
     "//src/ledger/lib/logging",
     "//src/ledger/lib/vmo",
-    "//src/lib/callback",
     "//third_party/abseil-cpp",
     "//zircon/public/lib/zx",
   ]

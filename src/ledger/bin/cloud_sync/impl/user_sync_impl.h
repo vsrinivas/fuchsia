@@ -18,8 +18,8 @@
 #include "src/ledger/bin/cloud_sync/public/user_sync.h"
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/lib/backoff/backoff.h"
+#include "src/ledger/lib/callback/scoped_task_runner.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
-#include "src/lib/callback/scoped_task_runner.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace cloud_sync {
@@ -81,7 +81,7 @@ class UserSyncImpl : public UserSync, cloud_provider::DeviceSetWatcher {
 
   coroutine::CoroutineManager coroutine_manager_;
   // This must be the last member of this class.
-  callback::ScopedTaskRunner task_runner_;
+  ledger::ScopedTaskRunner task_runner_;
 };
 
 }  // namespace cloud_sync

@@ -9,7 +9,7 @@
 
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/sync_coordinator/public/sync_state_watcher.h"
-#include "src/lib/callback/auto_cleanable.h"
+#include "src/ledger/lib/callback/auto_cleanable.h"
 
 namespace ledger {
 
@@ -32,7 +32,7 @@ class SyncWatcherSet : public sync_coordinator::SyncStateWatcher {
   void SendIfPending();
 
   SyncStateContainer current_;
-  callback::AutoCleanableSet<SyncWatcherContainer> watchers_;
+  AutoCleanableSet<SyncWatcherContainer> watchers_;
 };
 
 }  // namespace ledger

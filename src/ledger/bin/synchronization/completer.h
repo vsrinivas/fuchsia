@@ -10,8 +10,8 @@
 #include <vector>
 
 #include "src/ledger/bin/public/status.h"
+#include "src/ledger/lib/callback/scoped_task_runner.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
-#include "src/lib/callback/scoped_task_runner.h"
 
 namespace ledger {
 
@@ -45,7 +45,7 @@ class Completer {
   // Closures invoked upon completion to unblock the waiting coroutines.
   std::vector<fit::function<void(Status)>> callbacks_;
 
-  callback::ScopedTaskRunner task_runner_;
+  ScopedTaskRunner task_runner_;
 };
 
 Status SyncWaitUntilDone(coroutine::CoroutineHandler* handler, Completer* completer);

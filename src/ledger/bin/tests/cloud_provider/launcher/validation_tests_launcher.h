@@ -13,7 +13,7 @@
 #include <functional>
 #include <string>
 
-#include "src/lib/callback/auto_cleanable.h"
+#include "src/ledger/lib/callback/auto_cleanable.h"
 
 namespace cloud_provider {
 
@@ -64,7 +64,7 @@ class ValidationTestsLauncher {
   sys::testing::ServiceDirectoryProvider service_directory_provider_;
   fuchsia::sys::ComponentControllerPtr validation_tests_controller_;
   fit::function<void(int32_t)> callback_;
-  callback::AutoCleanableSet<CloudProviderProxy> proxies_;
+  ledger::AutoCleanableSet<CloudProviderProxy> proxies_;
 };
 
 }  // namespace cloud_provider

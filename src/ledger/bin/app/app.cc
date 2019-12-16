@@ -126,7 +126,7 @@ class App : public ledger_internal::LedgerController {
   std::unique_ptr<sys::ComponentContext> component_context_;
   std::unique_ptr<Environment> environment_;
   std::unique_ptr<LedgerRepositoryFactoryImpl> factory_impl_;
-  callback::AutoCleanableSet<
+  AutoCleanableSet<
       SyncableBinding<fuchsia::ledger::internal::LedgerRepositoryFactorySyncableDelegate>>
       factory_bindings_;
   fidl::BindingSet<LedgerController> controller_bindings_;

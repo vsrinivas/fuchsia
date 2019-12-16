@@ -20,7 +20,7 @@ source_set("fake") {
 
   deps = [
     "//src/ledger/bin/environment",
+    "//src/ledger/lib/callback",
     "//src/ledger/lib/convert",
-    "//src/lib/callback",
   ]
 }

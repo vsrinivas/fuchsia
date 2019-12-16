@@ -160,7 +160,7 @@ class BasePageDownloadTest : public ledger::TestWithEnvironment, public PageDown
   }
 
   fit::closure new_state_callback_;
-  callback::ScopedTaskRunner task_runner_;
+  ledger::ScopedTaskRunner task_runner_;
 };
 
 using PageDownloadTest = BasePageDownloadTest<encryption::FakeEncryptionService>;

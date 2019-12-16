@@ -13,9 +13,9 @@
 #include "src/ledger/bin/app/active_page_manager.h"
 #include "src/ledger/bin/app/merging/conflict_resolver_client.h"
 #include "src/ledger/bin/app/page_utils.h"
+#include "src/ledger/lib/callback/scoped_callback.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/memory/weak_ptr.h"
-#include "src/lib/callback/scoped_callback.h"
 
 namespace ledger {
 class AutoMergeStrategy::AutoMerger {
@@ -93,14 +93,14 @@ void AutoMergeStrategy::AutoMerger::Start() {
     return true;
   };
 
-  auto callback = callback::MakeScoped(weak_factory_.GetWeakPtr(),
-                                       [this, changes = std::move(changes)](Status status) mutable {
-                                         if (cancelled_) {
-                                           Done(Status::INTERNAL_ERROR);
-                                           return;
-                                         }
-                                         OnRightChangeReady(status, std::move(changes));
-                                       });
+  auto callback = MakeScoped(weak_factory_.GetWeakPtr(),
+                             [this, changes = std::move(changes)](Status status) mutable {
+                               if (cancelled_) {
+                                 Done(Status::INTERNAL_ERROR);
+                                 return;
+                               }
+                               OnRightChangeReady(status, std::move(changes));
+                             });
 
   storage_->GetCommitContentsDiff(*ancestor_, *right_, "", std::move(on_next), std::move(callback));
 }
@@ -153,9 +153,9 @@ void AutoMergeStrategy::AutoMerger::OnRightChangeReady(
   };
 
   // |callback| is called when the full diff is computed.
-  auto callback = callback::MakeScoped(
-      weak_factory_.GetWeakPtr(), [this, right_change = std::move(right_change),
-                                   index = std::move(index)](Status status) mutable {
+  auto callback =
+      MakeScoped(weak_factory_.GetWeakPtr(), [this, right_change = std::move(right_change),
+                                              index = std::move(index)](Status status) mutable {
         if (cancelled_) {
           Done(Status::INTERNAL_ERROR);
           return;
@@ -186,8 +186,7 @@ void AutoMergeStrategy::AutoMerger::OnComparisonDone(
     // of re-computing the diff inside |ConflictResolverClient|.
     delegated_merge_ = std::make_unique<ConflictResolverClient>(
         storage_, manager_, conflict_resolver_, std::move(left_), std::move(right_),
-        std::move(ancestor_),
-        callback::MakeScoped(weak_factory_.GetWeakPtr(), [this](Status status) {
+        std::move(ancestor_), MakeScoped(weak_factory_.GetWeakPtr(), [this](Status status) {
           if (cancelled_) {
             Done(Status::INTERNAL_ERROR);
             return;

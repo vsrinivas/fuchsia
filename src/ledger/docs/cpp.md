@@ -173,20 +173,20 @@ provides additional features:
 See [Testing](testing.md) for documentation on different types of tests and how
 to run them.
 
-[auto_cleanable.h]: /src/lib/callback/auto_cleanable.h
+[auto_cleanable.h]: /src/ledger/lib/callback/auto_cleanable.h
 [callback]: /src/lib/callback
 [cancellable.h]: /src/lib/callback/cancellable.h
 [capture.h]: /src/ledger/lib/callback/capture.h
 [defer.h]: /zircon/system/ulib/fit/include/lib/fit/defer.h
-[destruction_sentinel.h]: /src/lib/callback/destruction_sentinel.h
+[destruction_sentinel.h]: /src/ledger/lib/callback/destruction_sentinel.h
 [ensure_called.h]: /src/ledger/lib/callback/ensure_called.h
 [fit]: /zircon/system/ulib/fit
 [managed_container.h]: /src/ledger/lib/callback/managed_container.h
 [operation_serializer.h]: /src/ledger/lib/callback/operation_serializer.h
 [run_all_unittests_main.cc]: /src/ledger/bin/testing/run_all_unittests_main.cc
-[scoped_callback.h]: /src/lib/callback/scoped_callback.h
-[scoped_task_runner.h]: /src/lib/callback/scoped_task_runner.h
-[scoped_task_runner.h]: /src/lib/callback/scoped_task_runner.h
+[scoped_callback.h]: /src/ledger/lib/callback/scoped_callback.h
+[scoped_task_runner.h]: /src/ledger/lib/callback/scoped_task_runner.h
+[scoped_task_runner.h]: /src/ledger/lib/callback/scoped_task_runner.h
 [set_when_called.h]: /src/ledger/lib/callback/set_when_called.h
 [test_loop_fixture.h]: /src/ledger/lib/loop_fixture/test_loop_fixture.h
 [trace_callback.h]: /src/ledger/lib/callback/trace_callback.h

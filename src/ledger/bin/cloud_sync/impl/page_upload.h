@@ -19,9 +19,9 @@
 #include "src/ledger/bin/storage/public/commit_watcher.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/backoff/backoff.h"
+#include "src/ledger/lib/callback/scoped_task_runner.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/memory/weak_ptr.h"
-#include "src/lib/callback/scoped_task_runner.h"
 
 namespace cloud_sync {
 // Internal state of PageUpload.
@@ -52,9 +52,8 @@ class PageUpload : public storage::CommitWatcher {
     virtual bool IsDownloadIdle() = 0;
   };
 
-  PageUpload(coroutine::CoroutineService* coroutine_service,
-             callback::ScopedTaskRunner* task_runner, storage::PageStorage* storage,
-             encryption::EncryptionService* encryption_service,
+  PageUpload(coroutine::CoroutineService* coroutine_service, ledger::ScopedTaskRunner* task_runner,
+             storage::PageStorage* storage, encryption::EncryptionService* encryption_service,
              cloud_provider::PageCloudPtr* page_cloud, Delegate* delegate,
              std::unique_ptr<ledger::Backoff> backoff);
   PageUpload(const PageUpload&) = delete;
@@ -107,7 +106,7 @@ class PageUpload : public storage::CommitWatcher {
 
   // Owned by whoever owns this class.
   coroutine::CoroutineService* const coroutine_service_;
-  callback::ScopedTaskRunner* const task_runner_;
+  ledger::ScopedTaskRunner* const task_runner_;
   storage::PageStorage* const storage_;
   encryption::EncryptionService* const encryption_service_;
   cloud_provider::PageCloudPtr* const page_cloud_;

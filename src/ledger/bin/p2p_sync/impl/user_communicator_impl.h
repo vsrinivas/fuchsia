@@ -17,7 +17,6 @@
 #include "src/ledger/bin/p2p_sync/public/user_communicator.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
-#include "src/lib/callback/auto_cleanable.h"
 
 namespace p2p_sync {
 class LedgerCommunicatorImpl;

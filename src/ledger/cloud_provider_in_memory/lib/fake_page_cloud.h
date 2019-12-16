@@ -13,7 +13,7 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/cloud_provider_in_memory/lib/diff_tree.h"
 #include "src/ledger/cloud_provider_in_memory/lib/types.h"
-#include "src/lib/callback/auto_cleanable.h"
+#include "src/ledger/lib/callback/auto_cleanable.h"
 
 namespace ledger {
 
@@ -73,7 +73,7 @@ class FakePageCloud : public cloud_provider::PageCloud {
 
   // Watchers set by the client.
   class WatcherContainer;
-  callback::AutoCleanableSet<WatcherContainer> containers_;
+  AutoCleanableSet<WatcherContainer> containers_;
 };
 
 }  // namespace ledger

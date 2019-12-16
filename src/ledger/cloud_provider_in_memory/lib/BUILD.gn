@@ -21,7 +21,7 @@ source_set("lib") {
 
   public_deps = [
     "//src/ledger/bin/fidl/include",
-    "//src/lib/callback",
+    "//src/ledger/lib/callback",
   ]
 
   deps = [

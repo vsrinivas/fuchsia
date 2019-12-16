@@ -8,9 +8,9 @@
 
 #include "gtest/gtest.h"
 #include "src/ledger/lib/callback/capture.h"
+#include "src/ledger/lib/callback/scoped_task_runner.h"
 #include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/loop_fixture/test_loop_fixture.h"
-#include "src/lib/callback/scoped_task_runner.h"
 
 namespace storage {
 namespace {
@@ -38,7 +38,7 @@ class SplittingDataSource : public DataSource {
   const std::string content_;
   size_t index_;
 
-  callback::ScopedTaskRunner task_runner_;
+  ledger::ScopedTaskRunner task_runner_;
 };
 
 using ReadDataSourceTest = ledger::TestLoopFixture;

@@ -12,14 +12,14 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/public/status.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/callback/scoped_callback.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/callback/scoped_callback.h"
 
 namespace cloud_sync {
 
 PageUpload::PageUpload(coroutine::CoroutineService* coroutine_service,
-                       callback::ScopedTaskRunner* task_runner, storage::PageStorage* storage,
+                       ledger::ScopedTaskRunner* task_runner, storage::PageStorage* storage,
                        encryption::EncryptionService* encryption_service,
                        cloud_provider::PageCloudPtr* page_cloud, Delegate* delegate,
                        std::unique_ptr<ledger::Backoff> backoff)
@@ -93,7 +93,7 @@ void PageUpload::UploadUnsyncedCommits() {
   // Retrieve the list of existing unsynced commits and enqueue them for upload.
   // TODO(ppi): either switch to a paginating API or (better?) ensure that long backlogs of local
   // commits are squashed in storage, as otherwise the list of commits can be possibly very big.
-  storage_->GetUnsyncedCommits(callback::MakeScoped(
+  storage_->GetUnsyncedCommits(ledger::MakeScoped(
       weak_ptr_factory_.GetWeakPtr(),
       [this](ledger::Status status, std::vector<std::unique_ptr<const storage::Commit>> commits) {
         if (status != ledger::Status::OK) {

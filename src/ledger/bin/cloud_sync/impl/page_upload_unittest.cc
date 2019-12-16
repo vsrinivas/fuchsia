@@ -88,7 +88,7 @@ class PageUploadTest : public ledger::TestWithEnvironment, public PageUpload::De
 
  private:
   fit::closure new_state_callback_;
-  callback::ScopedTaskRunner task_runner_;
+  ledger::ScopedTaskRunner task_runner_;
 };
 
 // Verifies that the backlog of commits to upload returned from

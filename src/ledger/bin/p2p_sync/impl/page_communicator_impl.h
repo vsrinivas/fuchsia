@@ -18,11 +18,11 @@
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/page_sync_client.h"
 #include "src/ledger/bin/storage/public/page_sync_delegate.h"
+#include "src/ledger/lib/callback/auto_cleanable.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
 #include "src/ledger/lib/memory/weak_ptr.h"
-#include "src/lib/callback/auto_cleanable.h"
 #include "third_party/flatbuffers/include/flatbuffers/flatbuffers.h"
 
 namespace p2p_sync {
@@ -117,10 +117,10 @@ class PageCommunicatorImpl : public PageCommunicator,
   void SendHead(const p2p_provider::P2PClientId& device);
 
   // Map of pending requests for objects.
-  callback::AutoCleanableMap<storage::ObjectIdentifier, PendingObjectRequestHolder>
+  ledger::AutoCleanableMap<storage::ObjectIdentifier, PendingObjectRequestHolder>
       pending_object_requests_;
   // Map of pending commit batch insertions.
-  callback::AutoCleanableMap<p2p_provider::P2PClientId, CommitBatch> pending_commit_batches_;
+  ledger::AutoCleanableMap<p2p_provider::P2PClientId, CommitBatch> pending_commit_batches_;
   // List of devices we know are interested in this page.
   std::set<p2p_provider::P2PClientId> interested_devices_;
   // List of devices we know are not interested in this page.

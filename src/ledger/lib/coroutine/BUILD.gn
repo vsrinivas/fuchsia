@@ -14,9 +14,9 @@ source_set("coroutine") {
   ]
 
   public_deps = [
+    "//src/ledger/lib/callback",
     "//src/ledger/lib/logging",
     "//src/ledger/lib/memory",
-    "//src/lib/callback",
     "//third_party/abseil-cpp",
   ]
 

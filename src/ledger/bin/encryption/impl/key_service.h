@@ -13,7 +13,6 @@
 #include "src/ledger/bin/cache/lru_cache.h"
 #include "src/ledger/bin/encryption/public/encryption_service.h"
 #include "src/ledger/lib/memory/weak_ptr.h"
-#include "src/lib/callback/scoped_callback.h"
 
 namespace encryption {
 

@@ -24,6 +24,5 @@ source_set("impl") {
     "//src/ledger/bin/environment",
     "//src/ledger/lib/convert",
     "//src/ledger/lib/logging",
-    "//src/lib/callback",
   ]
 }

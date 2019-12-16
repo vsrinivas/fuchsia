@@ -7,8 +7,8 @@
 #include <lib/fit/function.h>
 
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/callback/scoped_callback.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/callback/scoped_callback.h"
 
 namespace ledger {
 
@@ -22,7 +22,7 @@ void TokenManager::SetOnDiscardable(fit::closure on_discardable) {
 
 ExpiringToken TokenManager::CreateToken() {
   ++outstanding_token_count_;
-  return ExpiringToken(callback::MakeScoped(weak_factory_.GetWeakPtr(), [this] {
+  return ExpiringToken(MakeScoped(weak_factory_.GetWeakPtr(), [this] {
     LEDGER_DCHECK(outstanding_token_count_ > 0);
     --outstanding_token_count_;
     if (outstanding_token_count_ == 0 && on_discardable_) {

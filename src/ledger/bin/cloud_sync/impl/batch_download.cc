@@ -11,11 +11,11 @@
 
 #include "src/ledger/bin/cloud_sync/impl/constants.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/callback/scoped_callback.h"
 #include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/memory/ref_ptr.h"
-#include "src/lib/callback/scoped_callback.h"
 
 namespace cloud_sync {
 
@@ -53,7 +53,7 @@ void BatchDownload::Start() {
     }
     encryption_service_->DecryptCommit(
         remote_commit.data(),
-        callback::MakeScoped(
+        ledger::MakeScoped(
             weak_ptr_factory_.GetWeakPtr(),
             [this, id = std::move(remote_commit.id()), callback = waiter->NewCallback()](
                 encryption::Status status, std::string content) mutable {
@@ -73,7 +73,7 @@ void BatchDownload::Start() {
                                                                       std::move(content)));
             }));
   }
-  waiter->Finalize(callback::MakeScoped(
+  waiter->Finalize(ledger::MakeScoped(
       weak_ptr_factory_.GetWeakPtr(),
       [this](encryption::Status status,
              std::vector<storage::PageStorage::CommitIdAndBytes> commits) {
@@ -84,7 +84,7 @@ void BatchDownload::Start() {
 
         storage_->AddCommitsFromSync(
             std::move(commits), storage::ChangeSource::CLOUD,
-            callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(), [this](ledger::Status status) {
+            ledger::MakeScoped(weak_ptr_factory_.GetWeakPtr(), [this](ledger::Status status) {
               if (status != ledger::Status::OK) {
                 on_error_();
                 return;
@@ -104,7 +104,7 @@ void BatchDownload::UpdateTimestampAndQuit() {
 
   storage_->SetSyncMetadata(
       kTimestampKey, convert::ToString(position_token_->opaque_id),
-      callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(), [this](ledger::Status status) {
+      ledger::MakeScoped(weak_ptr_factory_.GetWeakPtr(), [this](ledger::Status status) {
         if (status != ledger::Status::OK) {
           on_error_();
           return;

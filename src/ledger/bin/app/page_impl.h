@@ -14,7 +14,7 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/fidl/syncable.h"
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/lib/callback/scoped_task_runner.h"
+#include "src/ledger/lib/callback/scoped_task_runner.h"
 
 namespace ledger {
 class PageDelegate;
@@ -72,7 +72,7 @@ class PageImpl : public fuchsia::ledger::PageSyncableDelegate {
   SyncableBinding<fuchsia::ledger::PageSyncableDelegate> binding_;
 
   // Must be the last member field.
-  callback::ScopedTaskRunner task_runner_;
+  ScopedTaskRunner task_runner_;
 };
 
 }  // namespace ledger

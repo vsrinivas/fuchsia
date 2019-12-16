@@ -15,7 +15,7 @@ source_set("launcher") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
-    "//src/lib/callback",
+    "//src/ledger/lib/callback",
   ]
 
   deps = [

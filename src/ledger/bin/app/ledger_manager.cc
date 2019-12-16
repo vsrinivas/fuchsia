@@ -26,7 +26,6 @@
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/callback/scoped_callback.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {

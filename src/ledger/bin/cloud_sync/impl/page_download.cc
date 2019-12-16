@@ -101,7 +101,7 @@ bool NormalizeDiff(std::vector<storage::EntryChange>* changes) {
 
 }  // namespace
 
-PageDownload::PageDownload(callback::ScopedTaskRunner* task_runner, storage::PageStorage* storage,
+PageDownload::PageDownload(ledger::ScopedTaskRunner* task_runner, storage::PageStorage* storage,
                            encryption::EncryptionService* encryption_service,
                            cloud_provider::PageCloudPtr* page_cloud, Delegate* delegate,
                            std::unique_ptr<ledger::Backoff> backoff)
@@ -438,7 +438,7 @@ void PageDownload::ReadDiffEntry(
 
   encryption_service_->DecryptEntryPayload(
       convert::ToString(change.data()),
-      callback::MakeScoped(
+      ledger::MakeScoped(
           weak_factory_.GetWeakPtr(),
           [this, entry_id = change.entry_id(), result = std::move(result),
            callback = std::move(callback)](encryption::Status status,
@@ -554,7 +554,7 @@ void PageDownload::GetDiff(
 
             DecodeAndParseDiff(
                 *diff_pack,
-                callback::MakeScoped(
+                ledger::MakeScoped(
                     weak_factory_.GetWeakPtr(),
                     [this, commit_id, possible_bases = std::move(possible_bases),
                      callback = std::move(callback)](

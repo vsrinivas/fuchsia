@@ -27,10 +27,10 @@
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/callback/ensure_called.h"
+#include "src/ledger/lib/callback/scoped_callback.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/memory/weak_ptr.h"
-#include "src/lib/callback/scoped_callback.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
@@ -99,8 +99,7 @@ void PageManager::DeletePageStorage(fit::function<void(storage::Status)> callbac
   // Block all page requests until MarkAvailable is called.
   page_availability_manager_.MarkPageBusy();
   ledger_storage_->DeletePageStorage(
-      page_id_,
-      callback::MakeScoped(weak_factory_.GetWeakPtr(),
+      page_id_, MakeScoped(weak_factory_.GetWeakPtr(),
                            [this, callback = std::move(callback)](storage::Status status) {
                              // This may destruct this
                              // |PageManager|.
@@ -306,32 +305,32 @@ void PageManager::PageIsClosedAndSatisfiesPredicate(
       return;
     }
     LEDGER_DCHECK(active_page_manager);
-    predicate(active_page_manager,
-              callback::MakeScoped(
-                  weak_factory_.GetWeakPtr(),
-                  [this, tracker = std::move(tracker), callback = std::move(callback),
-                   token = std::move(token)](storage::Status status, bool condition) mutable {
-                    if (status != storage::Status::OK) {
-                      callback(status, PagePredicateResult::PAGE_OPENED);
+    predicate(
+        active_page_manager,
+        MakeScoped(
+            weak_factory_.GetWeakPtr(),
+            [this, tracker = std::move(tracker), callback = std::move(callback),
+             token = std::move(token)](storage::Status status, bool condition) mutable {
+              if (status != storage::Status::OK) {
+                callback(status, PagePredicateResult::PAGE_OPENED);
+              }
+              // |token| is expected to go out of scope. The
+              // PageManager is kept non-empty by |tracker|.
+              async::PostTask(
+                  environment_->dispatcher(),
+                  MakeScoped(weak_factory_.GetWeakPtr(), [condition, callback = std::move(callback),
+                                                          tracker = std::move(tracker)]() mutable {
+                    if (!tracker()) {
+                      // If |RemoveTrackedPage| returns false, this
+                      // means that the page was opened during this
+                      // operation and |PAGE_OPENED| must be returned.
+                      callback(storage::Status::OK, PagePredicateResult::PAGE_OPENED);
+                      return;
                     }
-                    // |token| is expected to go out of scope. The
-                    // PageManager is kept non-empty by |tracker|.
-                    async::PostTask(
-                        environment_->dispatcher(),
-                        callback::MakeScoped(
-                            weak_factory_.GetWeakPtr(), [condition, callback = std::move(callback),
-                                                         tracker = std::move(tracker)]() mutable {
-                              if (!tracker()) {
-                                // If |RemoveTrackedPage| returns false, this
-                                // means that the page was opened during this
-                                // operation and |PAGE_OPENED| must be returned.
-                                callback(storage::Status::OK, PagePredicateResult::PAGE_OPENED);
-                                return;
-                              }
-                              callback(storage::Status::OK, condition ? PagePredicateResult::YES
-                                                                      : PagePredicateResult::NO);
-                            }));
+                    callback(storage::Status::OK,
+                             condition ? PagePredicateResult::YES : PagePredicateResult::NO);
                   }));
+            }));
   });
 }
 

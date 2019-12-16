@@ -12,7 +12,7 @@
 #include "src/ledger/cloud_provider_in_memory/lib/fake_device_set.h"
 #include "src/ledger/cloud_provider_in_memory/lib/fake_page_cloud.h"
 #include "src/ledger/cloud_provider_in_memory/lib/types.h"
-#include "src/lib/callback/auto_cleanable.h"
+#include "src/ledger/lib/callback/auto_cleanable.h"
 
 namespace ledger {
 
@@ -63,7 +63,7 @@ class FakeCloudProvider : public cloud_provider::CloudProvider {
 
   fidl_helpers::BoundInterfaceSet<cloud_provider::DeviceSet, FakeDeviceSet> device_set_;
 
-  callback::AutoCleanableMap<std::string, FakePageCloud> page_clouds_;
+  AutoCleanableMap<std::string, FakePageCloud> page_clouds_;
 
   InjectNetworkError inject_network_error_;
   InjectMissingDiff inject_missing_diff_;

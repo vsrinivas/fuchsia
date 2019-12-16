@@ -11,10 +11,10 @@
 
 #include "src/ledger/bin/p2p_provider/impl/make_client_id.h"
 #include "src/ledger/bin/p2p_provider/public/types.h"
+#include "src/ledger/lib/callback/scoped_callback.h"
+#include "src/ledger/lib/callback/scoped_task_runner.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/memory/weak_ptr.h"
-#include "src/lib/callback/scoped_callback.h"
-#include "src/lib/callback/scoped_task_runner.h"
 
 namespace p2p_provider {
 class FakeP2PProviderFactory::FakeP2PProvider : public P2PProvider {
@@ -33,20 +33,19 @@ class FakeP2PProviderFactory::FakeP2PProvider : public P2PProvider {
   }
 
   void ReceiveMessage(P2PClientId source, std::string data) {
-    async::PostTask(dispatcher_, callback::MakeScoped(
-                                     weak_factory_.GetWeakPtr(),
-                                     [this, source = std::move(source), data = std::move(data)] {
-                                       client_->OnNewMessage(source, data);
-                                     }));
+    async::PostTask(dispatcher_,
+                    ledger::MakeScoped(weak_factory_.GetWeakPtr(),
+                                       [this, source = std::move(source), data = std::move(data)] {
+                                         client_->OnNewMessage(source, data);
+                                       }));
   }
 
   void OnDeviceChange(P2PClientId source, DeviceChangeType change_type) {
-    async::PostTask(
-        dispatcher_,
-        callback::MakeScoped(weak_factory_.GetWeakPtr(), [this, source = std::move(source),
-                                                          change_type = std::move(change_type)] {
-          client_->OnDeviceChange(source, change_type);
-        }));
+    async::PostTask(dispatcher_, ledger::MakeScoped(weak_factory_.GetWeakPtr(),
+                                                    [this, source = std::move(source),
+                                                     change_type = std::move(change_type)] {
+                                                      client_->OnDeviceChange(source, change_type);
+                                                    }));
   }
 
  private:

@@ -12,7 +12,7 @@
 #include "src/ledger/bin/app/inspectable_page.h"
 #include "src/ledger/bin/app/inspected_head.h"
 #include "src/ledger/bin/app/token_manager.h"
-#include "src/lib/callback/auto_cleanable.h"
+#include "src/ledger/lib/callback/auto_cleanable.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
@@ -41,7 +41,7 @@ class HeadsChildrenManager final : public inspect_deprecated::ChildrenManager {
   inspect_deprecated::Node* heads_node_;
   InspectablePage* inspectable_page_;
   fit::closure on_discardable_;
-  callback::AutoCleanableMap<storage::CommitId, InspectedHead> inspected_heads_;
+  AutoCleanableMap<storage::CommitId, InspectedHead> inspected_heads_;
   TokenManager token_manager_;
 };
 }  // namespace ledger

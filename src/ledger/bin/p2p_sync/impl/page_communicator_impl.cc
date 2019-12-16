@@ -16,7 +16,6 @@
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/memory/ref_ptr.h"
-#include "src/lib/callback/scoped_callback.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 #include "third_party/flatbuffers/include/flatbuffers/flatbuffers.h"
 

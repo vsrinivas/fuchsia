@@ -12,8 +12,8 @@
 #include <utility>
 
 #include "src/ledger/bin/sync_helper/mutable.h"
+#include "src/ledger/lib/callback/scoped_callback.h"
 #include "src/ledger/lib/memory/weak_ptr.h"
-#include "src/lib/callback/scoped_callback.h"
 
 namespace ledger {
 
@@ -48,12 +48,11 @@ class SyncHelper {
   auto WrapOperation(A callback) {
     auto sync_point = current_sync_point_;
     in_flight_operation_counts_per_sync_point_[sync_point]++;
-    auto on_first_call =
-        fit::defer(callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(), [this, sync_point] {
-          if (--in_flight_operation_counts_per_sync_point_[sync_point] == 0) {
-            CallSynchronizationCallbacks();
-          }
-        }));
+    auto on_first_call = fit::defer(MakeScoped(weak_ptr_factory_.GetWeakPtr(), [this, sync_point] {
+      if (--in_flight_operation_counts_per_sync_point_[sync_point] == 0) {
+        CallSynchronizationCallbacks();
+      }
+    }));
     // The lambda is not marked mutable, because the original callback might
     // have a const operator, and this should not force the receiver to use
     // only non-const operator.

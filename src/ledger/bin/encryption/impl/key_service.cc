@@ -10,7 +10,7 @@
 #include <string>
 
 #include "src/ledger/bin/encryption/primitives/kdf.h"
-#include "src/lib/callback/scoped_callback.h"
+#include "src/ledger/lib/callback/scoped_callback.h"
 #include "third_party/abseil-cpp/absl/strings/str_cat.h"
 
 namespace encryption {
@@ -33,11 +33,11 @@ void KeyService::GetReferenceKey(const std::string& namespace_id,
                                  fit::function<void(const std::string&)> callback) {
   std::string result =
       HMAC256KDF(absl::StrCat(namespace_id, reference_key_id), kRandomlyGeneratedKeySize);
-  async::PostTask(dispatcher_, callback::MakeScoped(weak_factory_.GetWeakPtr(),
-                                                    [result = std::move(result),
-                                                     callback = std::move(callback)]() mutable {
-                                                      callback(result);
-                                                    }));
+  async::PostTask(dispatcher_, ledger::MakeScoped(weak_factory_.GetWeakPtr(),
+                                                  [result = std::move(result),
+                                                   callback = std::move(callback)]() mutable {
+                                                    callback(result);
+                                                  }));
 }
 
 void KeyService::GetWrappingKey(uint32_t key_index,
@@ -112,13 +112,13 @@ void KeyService::GetRemoteObjectIdKey(uint32_t key_index,
 
 void KeyService::GenerateMasterKey(uint32_t key_index,
                                    fit::function<void(Status, std::string)> callback) {
-  async::PostTask(dispatcher_, callback::MakeScoped(weak_factory_.GetWeakPtr(),
-                                                    [key_index, callback = std::move(callback)]() {
-                                                      std::string master_key(16u, 0);
-                                                      memcpy(&master_key[0], &key_index,
-                                                             sizeof(key_index));
-                                                      callback(Status::OK, std::move(master_key));
-                                                    }));
+  async::PostTask(
+      dispatcher_,
+      ledger::MakeScoped(weak_factory_.GetWeakPtr(), [key_index, callback = std::move(callback)]() {
+        std::string master_key(16u, 0);
+        memcpy(&master_key[0], &key_index, sizeof(key_index));
+        callback(Status::OK, std::move(master_key));
+      }));
 }
 
 }  // namespace encryption

@@ -18,12 +18,12 @@
 #include "src/ledger/bin/app/page_snapshot_impl.h"
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/ledger/lib/callback/scoped_callback.h"
 #include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/memory/ref_ptr.h"
 #include "src/ledger/lib/socket/strings.h"
-#include "src/lib/callback/scoped_callback.h"
 
 namespace ledger {
 
@@ -108,20 +108,20 @@ void PageDelegate::PutWithPriority(std::vector<uint8_t> key, std::vector<uint8_t
   operation_serializer_.Serialize<Status>(
       std::move(callback), [this, promise = std::move(promise), key = std::move(key),
                             priority](fit::function<void(Status)> callback) mutable {
-        promise->Finalize(callback::MakeScoped(
-            weak_factory_.GetWeakPtr(),
-            [this, key = std::move(key), priority, callback = std::move(callback)](
-                Status status, storage::ObjectIdentifier object_identifier) mutable {
-              if (status != Status::OK) {
-                callback(status);
-                return;
-              }
+        promise->Finalize(
+            MakeScoped(weak_factory_.GetWeakPtr(),
+                       [this, key = std::move(key), priority, callback = std::move(callback)](
+                           Status status, storage::ObjectIdentifier object_identifier) mutable {
+                         if (status != Status::OK) {
+                           callback(status);
+                           return;
+                         }
 
-              PutInCommit(std::move(key), std::move(object_identifier),
-                          priority == Priority::EAGER ? storage::KeyPriority::EAGER
-                                                      : storage::KeyPriority::LAZY,
-                          std::move(callback));
-            }));
+                         PutInCommit(std::move(key), std::move(object_identifier),
+                                     priority == Priority::EAGER ? storage::KeyPriority::EAGER
+                                                                 : storage::KeyPriority::LAZY,
+                                     std::move(callback));
+                       }));
       });
 }
 
@@ -170,28 +170,27 @@ void PageDelegate::CreateReference(
     fit::function<void(Status, fit::result<Reference, zx_status_t>)> callback) {
   storage_->AddObjectFromLocal(
       storage::ObjectType::BLOB, std::move(data), {},
-      callback::MakeScoped(
-          weak_factory_.GetWeakPtr(),
-          [this, callback = std::move(callback)](Status status,
+      MakeScoped(weak_factory_.GetWeakPtr(), [this, callback = std::move(callback)](
+                                                 Status status,
                                                  storage::ObjectIdentifier object_identifier) {
-            if (status != Status::OK && status != Status::IO_ERROR) {
-              callback(status, fit::error(ZX_ERR_INTERNAL));
-              return;
-            }
+        if (status != Status::OK && status != Status::IO_ERROR) {
+          callback(status, fit::error(ZX_ERR_INTERNAL));
+          return;
+        }
 
-            // Convert IO_ERROR into INVALID_ARGUMENT.
-            // TODO(qsr): Refactor status handling so that io error due to
-            // storage and io error due to invalid argument can be
-            // distinguished.
-            // An INVALID_ARGUMENT should not cause the page to get
-            // disconnected, so use OK as status.
-            if (status == Status::IO_ERROR) {
-              callback(Status::OK, fit::error(ZX_ERR_INVALID_ARGS));
-              return;
-            }
+        // Convert IO_ERROR into INVALID_ARGUMENT.
+        // TODO(qsr): Refactor status handling so that io error due to
+        // storage and io error due to invalid argument can be
+        // distinguished.
+        // An INVALID_ARGUMENT should not cause the page to get
+        // disconnected, so use OK as status.
+        if (status == Status::IO_ERROR) {
+          callback(Status::OK, fit::error(ZX_ERR_INVALID_ARGS));
+          return;
+        }
 
-            callback(Status::OK, fit::ok(manager_->CreateReference(std::move(object_identifier))));
-          }));
+        callback(Status::OK, fit::ok(manager_->CreateReference(std::move(object_identifier))));
+      }));
 }
 
 void PageDelegate::StartTransaction(fit::function<void(Status)> callback) {
@@ -216,9 +215,8 @@ void PageDelegate::Commit(fit::function<void(Status)> callback) {
           callback(Status::ILLEGAL_STATE);
           return;
         }
-        CommitJournal(
-            std::move(journal_),
-            callback::MakeScoped(weak_factory_.GetWeakPtr(),
+        CommitJournal(std::move(journal_),
+                      MakeScoped(weak_factory_.GetWeakPtr(),
                                  [this, callback = std::move(callback)](
                                      Status status, std::unique_ptr<const storage::Commit> commit) {
                                    branch_tracker_.StopTransaction(std::move(commit));
@@ -287,9 +285,8 @@ void PageDelegate::RunInTransaction(fit::function<void(storage::Journal*)> runna
   std::unique_ptr<storage::Journal> journal = storage_->StartCommit(std::move(commit));
   runnable(journal.get());
 
-  CommitJournal(
-      std::move(journal),
-      callback::MakeScoped(weak_factory_.GetWeakPtr(),
+  CommitJournal(std::move(journal),
+                MakeScoped(weak_factory_.GetWeakPtr(),
                            [this, callback = std::move(callback)](
                                Status status, std::unique_ptr<const storage::Commit> commit) {
                              branch_tracker_.StopTransaction(

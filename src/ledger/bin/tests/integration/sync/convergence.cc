@@ -21,7 +21,6 @@
 #include "src/ledger/lib/memory/ref_counted.h"
 #include "src/ledger/lib/memory/ref_ptr.h"
 #include "src/ledger/lib/vmo/vector.h"
-#include "src/lib/callback/auto_cleanable.h"
 
 namespace ledger {
 namespace {

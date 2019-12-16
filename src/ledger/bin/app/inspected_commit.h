@@ -17,8 +17,8 @@
 #include "src/ledger/bin/app/inspected_entry.h"
 #include "src/ledger/bin/app/types.h"
 #include "src/ledger/bin/storage/public/commit.h"
+#include "src/ledger/lib/callback/auto_cleanable.h"
 #include "src/ledger/lib/memory/weak_ptr.h"
-#include "src/lib/callback/auto_cleanable.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
@@ -59,8 +59,7 @@ class InspectedCommit final : public inspect_deprecated::ChildrenManager {
   std::vector<inspect_deprecated::Node> parents_;
   inspect_deprecated::Node entries_node_;
   fit::deferred_callback entries_children_manager_retainer_;
-  callback::AutoCleanableMap<std::string, InspectedContainer<InspectedEntry>>
-      inspected_entry_containers_;
+  AutoCleanableMap<std::string, InspectedContainer<InspectedEntry>> inspected_entry_containers_;
   fit::closure on_discardable_;
   // TODO(nathaniel): Replace this integer with a weak_ptr-less-in-this-case TokenManager.
   int64_t ongoing_storage_accesses_;

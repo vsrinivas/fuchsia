@@ -12,10 +12,10 @@
 #include <utility>
 #include <vector>
 
+#include "src/ledger/lib/callback/scoped_callback.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/memory/ref_counted.h"
 #include "src/ledger/lib/memory/ref_ptr.h"
-#include "src/lib/callback/scoped_callback.h"
 
 namespace ledger {
 
@@ -154,7 +154,7 @@ class CompletionAccumulator {
   bool Result() { return true; }
 };
 
-// Implements operator bool() for a waiter, for use in |callback::MakeScoped|.
+// Implements operator bool() for a waiter, for use in |MakeScoped|.
 template <typename W>
 class WaiterWitness {
  public:
@@ -259,7 +259,7 @@ class BaseWaiter : public RefCountedThreadSafe<BaseWaiter<A, R, Args...>> {
   // implies that the finalizer is still alive, so callbacks can use objects owned by the finalizer.
   template <typename Callback>
   auto MakeScoped(Callback callback) {
-    return callback::MakeScoped(internal::WaiterWitness(RefPtr<BaseWaiter<A, R, Args...>>(this)),
+    return ::ledger::MakeScoped(internal::WaiterWitness(RefPtr<BaseWaiter<A, R, Args...>>(this)),
                                 std::move(callback));
   }
 

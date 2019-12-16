@@ -17,11 +17,17 @@ source_set("crossplatform") {
 
 source_set("callback") {
   sources = [
+    "auto_cleanable.h",
+    "destruction_sentinel.cc",
+    "destruction_sentinel.h",
     "ensure_called.h",
     "managed_container.cc",
     "managed_container.h",
     "observer_list.h",
     "operation_serializer.h",
+    "scoped_callback.h",
+    "scoped_task_runner.cc",
+    "scoped_task_runner.h",
     "waiter.h",
   ]
 
@@ -29,11 +35,9 @@ source_set("callback") {
     ":crossplatform",
     "//src/ledger/lib/logging",
     "//src/ledger/lib/memory",
+    "//zircon/public/lib/async-default",
     "//zircon/public/lib/fit",
-  ]
-
-  deps = [
-    "//src/lib/callback",
+    "//zircon/public/lib/zx",
   ]
 }
 
@@ -41,11 +45,15 @@ source_set("unittests") {
   testonly = true
 
   sources = [
+    "auto_cleanable_unittest.cc",
     "capture_unittest.cc",
+    "destruction_sentinel_unittest.cc",
     "ensure_called_unittest.cc",
     "managed_container_unittest.cc",
     "observer_list_unittest.cc",
     "operation_serializer_unittest.cc",
+    "scoped_callback_unittest.cc",
+    "scoped_task_runner_unittest.cc",
     "set_when_called_unittest.cc",
     "waiter_unittest.cc",
   ]
@@ -54,5 +62,6 @@ source_set("unittests") {
     ":callback",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-testing",
   ]
 }

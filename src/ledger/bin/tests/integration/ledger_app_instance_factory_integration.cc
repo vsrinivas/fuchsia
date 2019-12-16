@@ -31,6 +31,7 @@
 #include "src/ledger/cloud_provider_in_memory/lib/fake_cloud_provider.h"
 #include "src/ledger/cloud_provider_in_memory/lib/types.h"
 #include "src/ledger/lib/backoff/exponential_backoff.h"
+#include "src/ledger/lib/callback/scoped_callback.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/memory/weak_ptr.h"
 #include "src/ledger/lib/socket/socket_pair.h"
@@ -191,10 +192,10 @@ cloud_provider::CloudProviderPtr LedgerAppInstanceImpl::MakeCloudProvider() {
   }
   cloud_provider::CloudProviderPtr cloud_provider;
   async::PostTask(services_dispatcher_,
-                  callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
-                                       [this, request = cloud_provider.NewRequest()]() mutable {
-                                         cloud_provider_->AddBinding(std::move(request));
-                                       }));
+                  MakeScoped(weak_ptr_factory_.GetWeakPtr(),
+                             [this, request = cloud_provider.NewRequest()]() mutable {
+                               cloud_provider_->AddBinding(std::move(request));
+                             }));
   return cloud_provider;
 }
 

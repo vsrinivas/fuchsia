@@ -15,7 +15,7 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
-#include "src/lib/callback/auto_cleanable.h"
+#include "src/ledger/lib/callback/auto_cleanable.h"
 
 namespace ledger {
 
@@ -47,7 +47,7 @@ class LedgerMergeManager {
   class ConflictResolverFactoryPtrContainer;
 
   // Inactive, available conflict resolver factories
-  callback::AutoCleanableSet<ConflictResolverFactoryPtrContainer> conflict_resolver_factories_;
+  AutoCleanableSet<ConflictResolverFactoryPtrContainer> conflict_resolver_factories_;
   // The ConflictResolverFactory that is currently in use
   fidl::InterfacePtr<ConflictResolverFactory> current_conflict_resolver_factory_;
   // |true| if using the default last-one-wins conflict resolver factory

@@ -24,8 +24,8 @@
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/page_sync_delegate.h"
 #include "src/ledger/bin/sync_coordinator/public/page_sync.h"
-#include "src/lib/callback/auto_cleanable.h"
-#include "src/lib/callback/scoped_task_runner.h"
+#include "src/ledger/lib/callback/auto_cleanable.h"
+#include "src/ledger/lib/callback/scoped_task_runner.h"
 
 namespace ledger {
 // Manages an "active" ledger page.
@@ -113,11 +113,11 @@ class ActivePageManager {
   std::unique_ptr<sync_coordinator::PageSync> page_sync_;
   std::unique_ptr<MergeResolver> merge_resolver_;
   const zx::duration sync_timeout_;
-  callback::AutoCleanableSet<
+  AutoCleanableSet<
       fidl_helpers::BoundInterface<PageSnapshot, PageSnapshotImpl,
                                    SyncableBinding<fuchsia::ledger::PageSnapshotSyncableDelegate>>>
       snapshots_;
-  callback::AutoCleanableSet<PageDelegate> page_delegates_;
+  AutoCleanableSet<PageDelegate> page_delegates_;
   fit::closure on_discardable_;
 
   bool sync_backlog_downloaded_ = false;
@@ -133,7 +133,7 @@ class ActivePageManager {
   int64_t ongoing_page_storage_uses_;
 
   // Must be the last member field.
-  callback::ScopedTaskRunner task_runner_;
+  ScopedTaskRunner task_runner_;
 };
 
 }  // namespace ledger

@@ -14,9 +14,9 @@
 #include <tuple>
 #include <type_traits>
 
+#include "src/ledger/lib/callback/destruction_sentinel.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/callback/destruction_sentinel.h"
 #include "third_party/abseil-cpp/absl/utility/utility.h"
 
 namespace coroutine {
@@ -193,7 +193,7 @@ class CoroutineManager {
   // Currently allocated coroutines.
   std::list<coroutine::CoroutineHandler*> handlers_;
   // Each coroutine creates a sentinel to detect destruction of this coroutine manager.
-  std::list<callback::DestructionSentinel> sentinels_;
+  std::list<ledger::DestructionSentinel> sentinels_;
   // Queue of pending tasks to execute when coroutines are available.
   std::queue<fit::function<void(CoroutineHandler*)>> pending_tasks_;
   CoroutineService* const service_;

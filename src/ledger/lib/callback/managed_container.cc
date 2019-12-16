@@ -8,8 +8,8 @@
 
 #include <algorithm>
 
+#include "src/ledger/lib/callback/scoped_callback.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/callback/scoped_callback.h"
 
 namespace ledger {
 
@@ -23,7 +23,7 @@ fit::closure ManagedContainer::ManageElement(std::unique_ptr<Element> element) {
 
   // We use a scoped callback to ManagedContainer to allow the manager to
   // be deleted.
-  return callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(), [this, ptr]() {
+  return MakeScoped(weak_ptr_factory_.GetWeakPtr(), [this, ptr]() {
     auto it = std::find_if(managed_elements_.begin(), managed_elements_.end(),
                            [ptr](const std::unique_ptr<Element>& c) { return c.get() == ptr; });
     LEDGER_DCHECK(it != managed_elements_.end());

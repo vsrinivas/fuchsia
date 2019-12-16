@@ -16,8 +16,8 @@
 #include "src/ledger/bin/storage/public/page_sync_delegate.h"
 #include "src/ledger/lib/backoff/backoff.h"
 #include "src/ledger/lib/callback/managed_container.h"
+#include "src/ledger/lib/callback/scoped_task_runner.h"
 #include "src/ledger/lib/memory/weak_ptr.h"
-#include "src/lib/callback/scoped_task_runner.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace cloud_sync {
@@ -31,7 +31,7 @@ class PageDownload : public cloud_provider::PageCloudWatcher {
     virtual void SetDownloadState(DownloadSyncState sync_state) = 0;
   };
 
-  PageDownload(callback::ScopedTaskRunner* task_runner, storage::PageStorage* storage,
+  PageDownload(ledger::ScopedTaskRunner* task_runner, storage::PageStorage* storage,
                encryption::EncryptionService* encryption_service,
                cloud_provider::PageCloudPtr* page_cloud, Delegate* delegate,
                std::unique_ptr<ledger::Backoff> backoff);
@@ -122,7 +122,7 @@ class PageDownload : public cloud_provider::PageCloudWatcher {
   void RetryWithBackoff(fit::closure callable);
 
   // Owned by whoever owns this class.
-  callback::ScopedTaskRunner* const task_runner_;
+  ledger::ScopedTaskRunner* const task_runner_;
   storage::PageStorage* const storage_;
   encryption::EncryptionService* const encryption_service_;
   cloud_provider::PageCloudPtr* const page_cloud_;

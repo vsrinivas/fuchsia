@@ -22,9 +22,9 @@
 #include "src/ledger/bin/p2p_provider/public/p2p_provider_factory.h"
 #include "src/ledger/bin/platform/fd.h"
 #include "src/ledger/bin/sync_coordinator/impl/user_sync_impl.h"
+#include "src/ledger/lib/callback/auto_cleanable.h"
 #include "src/ledger/lib/callback/managed_container.h"
 #include "src/ledger/lib/memory/weak_ptr.h"
-#include "src/lib/callback/auto_cleanable.h"
 #include "src/lib/inspect_deprecated/deprecated/expose.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 
@@ -80,7 +80,7 @@ class LedgerRepositoryFactoryImpl
   Environment* const environment_;
   p2p_provider::P2PProviderFactory* const p2p_provider_factory_;
 
-  callback::AutoCleanableMap<std::string, LedgerRepositoryContainer> repositories_;
+  AutoCleanableMap<std::string, LedgerRepositoryContainer> repositories_;
 
   inspect_deprecated::Node inspect_node_;
 

@@ -7,10 +7,10 @@
 #include <utility>
 #include <vector>
 
+#include "src/ledger/lib/callback/scoped_callback.h"
 #include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/memory/ref_ptr.h"
-#include "src/lib/callback/scoped_callback.h"
 
 namespace p2p_sync {
 
@@ -45,7 +45,7 @@ void CommitBatch::AddToBatch(std::vector<storage::PageStorage::CommitIdAndBytes>
         });
   }
 
-  waiter->Finalize(callback::MakeScoped(
+  waiter->Finalize(ledger::MakeScoped(
       weak_factory_.GetWeakPtr(),
       [this](ledger::Status status,
              std::vector<std::tuple<storage::PageStorage::CommitIdAndBytes, uint64_t,
@@ -121,7 +121,7 @@ void CommitBatch::AddCommits() {
 
   storage_->AddCommitsFromSync(
       std::move(commits), storage::ChangeSource::P2P,
-      callback::MakeScoped(weak_factory_.GetWeakPtr(), [this](ledger::Status status) {
+      ledger::MakeScoped(weak_factory_.GetWeakPtr(), [this](ledger::Status status) {
         if (status != ledger::Status::OK) {
           LEDGER_LOG(ERROR) << "Error while adding commits, aborting batch: " << status;
         }

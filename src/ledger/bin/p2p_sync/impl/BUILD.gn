@@ -30,8 +30,8 @@ source_set("impl") {
     "//src/ledger/bin/p2p_provider/impl",
     "//src/ledger/bin/p2p_sync/public",
     "//src/ledger/bin/storage/public",
+    "//src/ledger/lib/callback",
     "//src/ledger/lib/convert",
-    "//src/lib/callback",
     "//third_party/abseil-cpp",
   ]
 

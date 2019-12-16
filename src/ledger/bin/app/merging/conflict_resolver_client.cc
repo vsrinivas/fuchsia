@@ -16,6 +16,7 @@
 #include "src/ledger/bin/app/fidl/serialization_size.h"
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/public/status.h"
+#include "src/ledger/lib/callback/scoped_callback.h"
 #include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
@@ -23,7 +24,6 @@
 #include "src/ledger/lib/memory/weak_ptr.h"
 #include "src/ledger/lib/socket/strings.h"
 #include "src/ledger/lib/util/ptr.h"
-#include "src/lib/callback/scoped_callback.h"
 
 namespace ledger {
 ConflictResolverClient::ConflictResolverClient(storage::PageStorage* storage,
@@ -153,31 +153,30 @@ void ConflictResolverClient::GetDiff(
   diff_utils::ComputeThreeWayDiff(
       storage_, *ancestor_, *left_, *right_, "", token ? convert::ToString(token->opaque_id) : "",
       type,
-      callback::MakeScoped(
-          weak_factory_.GetWeakPtr(),
-          [this, callback = std::move(callback)](
-              Status status, std::pair<std::vector<DiffEntry>, std::string> page_change) {
-            if (cancelled_) {
-              callback(Status::INTERNAL_ERROR, {}, nullptr);
-              Finalize(Status::INTERNAL_ERROR);
-              return;
-            }
-            if (status != Status::OK) {
-              LEDGER_LOG(ERROR) << "Unable to compute diff due to error " << status
-                                << ", aborting.";
-              callback(status, {}, nullptr);
-              Finalize(status);
-              return;
-            }
+      MakeScoped(weak_factory_.GetWeakPtr(),
+                 [this, callback = std::move(callback)](
+                     Status status, std::pair<std::vector<DiffEntry>, std::string> page_change) {
+                   if (cancelled_) {
+                     callback(Status::INTERNAL_ERROR, {}, nullptr);
+                     Finalize(Status::INTERNAL_ERROR);
+                     return;
+                   }
+                   if (status != Status::OK) {
+                     LEDGER_LOG(ERROR)
+                         << "Unable to compute diff due to error " << status << ", aborting.";
+                     callback(status, {}, nullptr);
+                     Finalize(status);
+                     return;
+                   }
 
-            const std::string& next_token = page_change.second;
-            std::unique_ptr<Token> token;
-            if (!next_token.empty()) {
-              token = std::make_unique<Token>();
-              token->opaque_id = convert::ToArray(next_token);
-            }
-            callback(Status::OK, std::move(page_change.first), std::move(token));
-          }));
+                   const std::string& next_token = page_change.second;
+                   std::unique_ptr<Token> token;
+                   if (!next_token.empty()) {
+                     token = std::make_unique<Token>();
+                     token->opaque_id = convert::ToArray(next_token);
+                   }
+                   callback(Status::OK, std::move(page_change.first), std::move(token));
+                 }));
 }
 
 void ConflictResolverClient::Merge(std::vector<MergedValue> merged_values,
@@ -276,15 +275,15 @@ void ConflictResolverClient::Done(fit::function<void(Status)> callback) {
 
         storage_->CommitJournal(
             std::move(journal_),
-            callback::MakeScoped(weak_factory_.GetWeakPtr(),
-                                 [this, weak_this, callback = std::move(callback)](
-                                     Status status, std::unique_ptr<const storage::Commit>) {
-                                   if (!IsInValidStateAndNotify(weak_this, callback, status)) {
-                                     return;
-                                   }
-                                   callback(Status::OK);
-                                   Finalize(Status::OK);
-                                 }));
+            MakeScoped(weak_factory_.GetWeakPtr(),
+                       [this, weak_this, callback = std::move(callback)](
+                           Status status, std::unique_ptr<const storage::Commit>) {
+                         if (!IsInValidStateAndNotify(weak_this, callback, status)) {
+                           return;
+                         }
+                         callback(Status::OK);
+                         Finalize(Status::OK);
+                       }));
       });
 }
 

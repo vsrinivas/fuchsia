@@ -17,9 +17,9 @@
 #include "src/ledger/bin/platform/scoped_tmp_dir.h"
 #include "src/ledger/bin/storage/impl/page_storage_impl.h"
 #include "src/ledger/bin/storage/public/constants.h"
+#include "src/ledger/lib/callback/scoped_callback.h"
 #include "src/ledger/lib/callback/trace_callback.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/callback/scoped_callback.h"
 #include "third_party/abseil-cpp/absl/strings/escaping.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
@@ -170,16 +170,16 @@ void LedgerStorageImpl::GetOrCreateDb(
     fit::function<void(Status, std::unique_ptr<PageStorage>)> callback) {
   db_factory_->GetOrCreateDb(
       std::move(path), on_db_not_found,
-      callback::MakeScoped(weak_factory_.GetWeakPtr(),
-                           [this, page_id = std::move(page_id), callback = std::move(callback)](
-                               Status status, std::unique_ptr<Db> db) mutable {
-                             if (status != Status::OK) {
-                               callback(status, nullptr);
-                               return;
-                             }
-                             InitializePageStorage(std::move(page_id), std::move(db),
-                                                   std::move(callback));
-                           }));
+      ledger::MakeScoped(weak_factory_.GetWeakPtr(),
+                         [this, page_id = std::move(page_id), callback = std::move(callback)](
+                             Status status, std::unique_ptr<Db> db) mutable {
+                           if (status != Status::OK) {
+                             callback(status, nullptr);
+                             return;
+                           }
+                           InitializePageStorage(std::move(page_id), std::move(db),
+                                                 std::move(callback));
+                         }));
 }
 
 ledger::DetachedPath LedgerStorageImpl::GetPathFor(PageIdView page_id) {

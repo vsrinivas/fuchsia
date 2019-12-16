@@ -13,11 +13,11 @@
 #include "src/ledger/bin/app/diff_utils.h"
 #include "src/ledger/bin/app/fidl/serialization_size.h"
 #include "src/ledger/bin/app/page_utils.h"
+#include "src/ledger/lib/callback/scoped_callback.h"
 #include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/memory/ref_ptr.h"
 #include "src/ledger/lib/memory/weak_ptr.h"
-#include "src/lib/callback/scoped_callback.h"
 
 namespace ledger {
 class BranchTracker::PageWatcherContainer {
@@ -179,7 +179,7 @@ class BranchTracker::PageWatcherContainer {
     diff_utils::ComputePageChange(
         storage_, *last_commit_, *current_commit_, key_prefix_, key_prefix_,
         diff_utils::PaginationBehavior::NO_PAGINATION,
-        callback::MakeScoped(
+        MakeScoped(
             weak_factory_.GetWeakPtr(),
             [this, new_commit = std::move(current_commit_)](
                 Status status, std::pair<PageChangePtr, std::string> page_change_ptr) mutable {

@@ -15,9 +15,9 @@
 #include "src/ledger/bin/storage/public/commit_watcher.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/callback/auto_cleanable.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/memory/weak_ptr.h"
-#include "src/lib/callback/auto_cleanable.h"
 
 namespace ledger {
 class ActivePageManager;
@@ -75,7 +75,7 @@ class BranchTracker : public storage::CommitWatcher {
   coroutine::CoroutineService* coroutine_service_;
   ActivePageManager* manager_;
   storage::PageStorage* storage_;
-  callback::AutoCleanableSet<PageWatcherContainer> watchers_;
+  AutoCleanableSet<PageWatcherContainer> watchers_;
   fit::closure on_discardable_;
 
   bool transaction_in_progress_;

@@ -16,7 +16,7 @@
 #include "src/ledger/bin/app/inspected_commit.h"
 #include "src/ledger/bin/app/inspected_container.h"
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/lib/callback/auto_cleanable.h"
+#include "src/ledger/lib/callback/auto_cleanable.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
@@ -45,7 +45,7 @@ class CommitsChildrenManager final : public inspect_deprecated::ChildrenManager 
   inspect_deprecated::Node* commits_node_;
   InspectablePage* inspectable_page_;
   fit::closure on_discardable_;
-  callback::AutoCleanableMap<storage::CommitId, InspectedContainer<InspectedCommit>>
+  AutoCleanableMap<storage::CommitId, InspectedContainer<InspectedCommit>>
       inspected_commit_containers_;
 };
 

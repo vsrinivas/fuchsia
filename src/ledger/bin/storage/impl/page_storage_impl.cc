@@ -43,6 +43,7 @@
 #include "src/ledger/bin/storage/public/object.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/synchronization/lock.h"
+#include "src/ledger/lib/callback/scoped_callback.h"
 #include "src/ledger/lib/callback/trace_callback.h"
 #include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/convert/convert.h"
@@ -52,7 +53,6 @@
 #include "src/ledger/lib/memory/ref_ptr.h"
 #include "src/ledger/lib/vmo/sized_vmo.h"
 #include "src/ledger/lib/vmo/strings.h"
-#include "src/lib/callback/scoped_callback.h"
 #include "third_party/abseil-cpp/absl/base/attributes.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
@@ -525,7 +525,7 @@ Status PageStorageImpl::DeleteObject(coroutine::CoroutineHandler* handler,
     return Status::CANCELED;
   }
   auto cleanup_pending =
-      fit::defer(callback::MakeScoped(weak_factory_.GetWeakPtr(), [this, object_digest] {
+      fit::defer(ledger::MakeScoped(weak_factory_.GetWeakPtr(), [this, object_digest] {
         pending_garbage_collection_.erase(object_digest);
       }));
   if (environment_->gc_policy() == GarbageCollectionPolicy::EAGER_LIVE_REFERENCES) {
@@ -773,7 +773,7 @@ void PageStorageImpl::GetDiffForCloud(
   // Use the first parent as the base commit.
   const CommitId base_id = convert::ToString(target_commit.GetParentIds()[0]);
   GetCommit(base_id,
-            callback::MakeScoped(
+            ledger::MakeScoped(
                 weak_factory_.GetWeakPtr(),
                 [this, target_commit = target_commit.Clone(), callback = std::move(callback)](
                     Status status, std::unique_ptr<const Commit> base_commit) mutable {
@@ -1538,7 +1538,7 @@ Status PageStorageImpl::SynchronousInit(CoroutineHandler* handler,
   commit_pruner_.LoadClock(std::move(device_id), std::move(clock));
 
   object_identifier_factory_.SetUntrackedCallback(
-      callback::MakeScoped(weak_factory_.GetWeakPtr(), [this](const ObjectDigest& object_digest) {
+      ledger::MakeScoped(weak_factory_.GetWeakPtr(), [this](const ObjectDigest& object_digest) {
         ScheduleObjectGarbageCollection(object_digest);
       }));
 

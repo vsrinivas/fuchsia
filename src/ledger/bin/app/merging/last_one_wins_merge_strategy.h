@@ -12,7 +12,6 @@
 #include "src/ledger/bin/app/merging/merge_strategy.h"
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
-#include "src/lib/callback/auto_cleanable.h"
 
 namespace ledger {
 // Strategy for merging commits using a last-one-wins policy for conflicts.

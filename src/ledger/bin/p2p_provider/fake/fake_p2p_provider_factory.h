@@ -13,8 +13,8 @@
 #include "src/ledger/bin/p2p_provider/public/p2p_provider.h"
 #include "src/ledger/bin/p2p_provider/public/p2p_provider_factory.h"
 #include "src/ledger/bin/p2p_provider/public/types.h"
+#include "src/ledger/lib/callback/scoped_task_runner.h"
 #include "src/ledger/lib/memory/weak_ptr.h"
-#include "src/lib/callback/scoped_task_runner.h"
 
 namespace p2p_provider {
 // P2PProvider handles the peer-to-peer connections between devices.
@@ -38,7 +38,7 @@ class FakeP2PProviderFactory : public P2PProviderFactory {
   std::map<P2PClientId, ledger::WeakPtr<FakeP2PProvider>> providers_;
 
   rng::Random* const random_;
-  callback::ScopedTaskRunner task_runner_;
+  ledger::ScopedTaskRunner task_runner_;
 };
 
 }  // namespace p2p_provider

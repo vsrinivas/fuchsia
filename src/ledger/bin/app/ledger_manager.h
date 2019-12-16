@@ -28,9 +28,9 @@
 #include "src/ledger/bin/fidl/syncable/syncable_binding.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/sync_coordinator/public/ledger_sync.h"
+#include "src/ledger/lib/callback/auto_cleanable.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/memory/weak_ptr.h"
-#include "src/lib/callback/auto_cleanable.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
@@ -128,11 +128,10 @@ class LedgerManager : public LedgerImpl::Delegate, inspect_deprecated::ChildrenM
   // |merge_manager_| must be destructed after |active_page_manager_containers_|
   // to ensure it outlives any page-specific merge resolver.
   LedgerMergeManager merge_manager_;
-  callback::AutoCleanableSet<SyncableBinding<fuchsia::ledger::LedgerSyncableDelegate>> bindings_;
+  AutoCleanableSet<SyncableBinding<fuchsia::ledger::LedgerSyncableDelegate>> bindings_;
 
   // Mapping from each page id to the manager of that page.
-  callback::AutoCleanableMap<storage::PageId, PageManager, convert::StringViewComparator>
-      page_managers_;
+  AutoCleanableMap<storage::PageId, PageManager, convert::StringViewComparator> page_managers_;
   std::vector<PageUsageListener*> page_usage_listeners_;
   fit::closure on_discardable_;
 

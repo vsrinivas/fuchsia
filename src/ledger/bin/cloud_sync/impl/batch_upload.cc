@@ -14,6 +14,7 @@
 #include "src/ledger/bin/cloud_sync/impl/entry_payload_encoding.h"
 #include "src/ledger/bin/cloud_sync/impl/status.h"
 #include "src/ledger/bin/storage/public/constants.h"
+#include "src/ledger/lib/callback/scoped_callback.h"
 #include "src/ledger/lib/callback/trace_callback.h"
 #include "src/ledger/lib/callback/waiter.h"
 #include "src/ledger/lib/convert/convert.h"
@@ -24,7 +25,6 @@
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/memory/ref_ptr.h"
 #include "src/ledger/lib/vmo/strings.h"
-#include "src/lib/callback/scoped_callback.h"
 
 namespace cloud_sync {
 
@@ -95,7 +95,7 @@ void BatchUpload::Start() {
   LEDGER_DCHECK(!started_);
   LEDGER_DCHECK(status_ == UploadStatus::OK);
   started_ = true;
-  storage_->GetUnsyncedPieces(callback::MakeScoped(
+  storage_->GetUnsyncedPieces(ledger::MakeScoped(
       weak_ptr_factory_.GetWeakPtr(),
       [this](ledger::Status status, std::vector<storage::ObjectIdentifier> object_identifiers) {
         if (status != ledger::Status::OK) {
@@ -243,7 +243,7 @@ void BatchUpload::FilterAndUploadCommits() {
   // Remove all commits that have been synced since this upload object was
   // created. This will happen if a merge is executed on multiple devices at the
   // same time.
-  storage_->GetUnsyncedCommits(callback::MakeScoped(
+  storage_->GetUnsyncedCommits(ledger::MakeScoped(
       weak_ptr_factory_.GetWeakPtr(),
       [this](ledger::Status status, std::vector<std::unique_ptr<const storage::Commit>> commits) {
         std::set<storage::CommitId> commit_ids;
@@ -289,7 +289,7 @@ void BatchUpload::EncodeCommit(
   // This callback needs an additional level of scoping because EncodeDiff accesses the storage.
   storage_->GetDiffForCloud(
       commit,
-      callback::MakeScoped(
+      ledger::MakeScoped(
           weak_ptr_factory_.GetWeakPtr(),
           waiter->MakeScoped([this, waiter, callback = waiter->NewCallback(), remote_commit_ptr](
                                  storage::Status status, storage::CommitIdView base_commit,
@@ -384,7 +384,7 @@ void BatchUpload::UploadCommits() {
     ids.push_back(storage_commit->GetId());
   }
 
-  waiter->Finalize(callback::MakeScoped(
+  waiter->Finalize(ledger::MakeScoped(
       weak_ptr_factory_.GetWeakPtr(),
       [this, ids = std::move(ids)](UploadStatus status,
                                    std::vector<cloud_provider::Commit> commits) mutable {
@@ -402,7 +402,7 @@ void BatchUpload::UploadCommits() {
         }
         (*page_cloud_)
             ->AddCommits(std::move(commit_pack),
-                         callback::MakeScoped(
+                         ledger::MakeScoped(
                              weak_ptr_factory_.GetWeakPtr(),
                              [this, commit_ids = std::move(ids)](cloud_provider::Status status) {
                                // UploadCommit() is called as a last step of a
@@ -421,7 +421,7 @@ void BatchUpload::UploadCommits() {
                                for (auto& id : commit_ids) {
                                  storage_->MarkCommitSynced(id, waiter->NewCallback());
                                }
-                               waiter->Finalize(callback::MakeScoped(
+                               waiter->Finalize(ledger::MakeScoped(
                                    weak_ptr_factory_.GetWeakPtr(), [this](ledger::Status status) {
                                      if (status != ledger::Status::OK) {
                                        SetUploadStatus(UploadStatus::PERMANENT_ERROR);

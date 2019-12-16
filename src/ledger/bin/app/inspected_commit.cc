@@ -17,10 +17,10 @@
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/callback/ensure_called.h"
+#include "src/ledger/lib/callback/scoped_callback.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/memory/weak_ptr.h"
-#include "src/lib/callback/scoped_callback.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
@@ -69,7 +69,7 @@ void InspectedCommit::GetNames(fit::function<void(std::set<std::string>)> callba
   fit::function<void(std::set<std::string>)> call_ensured_callback =
       EnsureCalled(std::move(callback), std::set<std::string>());
   ongoing_storage_accesses_++;
-  inspectable_page_->NewInspection(callback::MakeScoped(
+  inspectable_page_->NewInspection(MakeScoped(
       weak_factory_.GetWeakPtr(),
       [this, callback = std::move(call_ensured_callback)](
           Status status, ExpiringToken token, ActivePageManager* active_page_manager) mutable {
@@ -105,9 +105,8 @@ void InspectedCommit::GetNames(fit::function<void(std::set<std::string>)> callba
               ongoing_storage_accesses_--;
               CheckDiscardable();
             };
-        active_page_manager->GetEntries(
-            *commit_, "", std::move(on_next),
-            callback::MakeScoped(weak_factory_.GetWeakPtr(), std::move(on_done)));
+        active_page_manager->GetEntries(*commit_, "", std::move(on_next),
+                                        MakeScoped(weak_factory_.GetWeakPtr(), std::move(on_done)));
       }));
 }
 
@@ -128,7 +127,7 @@ void InspectedCommit::Attach(std::string name, fit::function<void(fit::closure)>
       key, EnsureCalled(std::move(callback), fit::closure([] {})));
   ongoing_storage_accesses_++;
   WeakPtr<InspectedCommit> weak_this = weak_factory_.GetWeakPtr();
-  inspectable_page_->NewInspection(callback::MakeScoped(
+  inspectable_page_->NewInspection(MakeScoped(
       weak_this,
       [this, name = std::move(name), key = std::move(key), emplacement = std::move(emplacement),
        weak_this](Status status, ExpiringToken token,
@@ -144,7 +143,7 @@ void InspectedCommit::Attach(std::string name, fit::function<void(fit::closure)>
         LEDGER_DCHECK(active_page_manager);
         active_page_manager->GetValue(
             *commit_, key,
-            callback::MakeScoped(
+            MakeScoped(
                 weak_this, [this, name = std::move(name), emplacement = std::move(emplacement),
                             token = std::move(token)](Status status, std::vector<uint8_t> value) {
                   ongoing_storage_accesses_--;

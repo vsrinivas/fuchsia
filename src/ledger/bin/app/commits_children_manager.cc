@@ -17,9 +17,9 @@
 #include "src/ledger/bin/inspect/inspect.h"
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/callback/auto_cleanable.h"
 #include "src/ledger/lib/callback/ensure_called.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/callback/auto_cleanable.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {

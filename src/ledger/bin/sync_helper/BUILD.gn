@@ -12,8 +12,8 @@ source_set("sync_helper") {
   ]
 
   public_deps = [
+    "//src/ledger/lib/callback",
     "//src/ledger/lib/memory",
-    "//src/lib/callback",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]

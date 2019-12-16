@@ -36,7 +36,6 @@
 #include "src/ledger/bin/sync_coordinator/impl/user_sync_impl.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/callback/scoped_callback.h"
 #include "src/lib/inspect_deprecated/deprecated/expose.h"
 #include "src/lib/inspect_deprecated/deprecated/object_dir.h"
 #include "src/lib/inspect_deprecated/inspect.h"

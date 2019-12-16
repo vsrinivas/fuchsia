@@ -37,7 +37,7 @@ class CommitBatch {
 
   // Registers a callback to be called when the batch processing is completed,
   // either through success or an unrecoverable error. Part of the
-  // callback::AutoCleanable* client API.
+  // ledger::AutoCleanable* client API.
   void SetOnDiscardable(fit::closure on_discardable);
 
   bool IsDiscardable() const;

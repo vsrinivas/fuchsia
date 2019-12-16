@@ -22,10 +22,10 @@
 #include "src/ledger/bin/storage/public/commit_watcher.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/lib/backoff/backoff.h"
+#include "src/ledger/lib/callback/destruction_sentinel.h"
+#include "src/ledger/lib/callback/scoped_task_runner.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/callback/destruction_sentinel.h"
-#include "src/lib/callback/scoped_task_runner.h"
 
 namespace cloud_sync {
 
@@ -150,10 +150,10 @@ class PageSyncImpl : public PageSync,
   DownloadSyncState download_state_ = DOWNLOAD_NOT_STARTED;
   UploadSyncState upload_state_ = UPLOAD_NOT_STARTED;
 
-  callback::DestructionSentinel sentinel_;
+  ledger::DestructionSentinel sentinel_;
 
   // Must be the last member field.
-  callback::ScopedTaskRunner task_runner_;
+  ledger::ScopedTaskRunner task_runner_;
 };
 
 }  // namespace cloud_sync

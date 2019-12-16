@@ -11,8 +11,8 @@
 #include <memory>
 #include <string>
 
+#include "src/ledger/lib/callback/destruction_sentinel.h"
 #include "src/ledger/lib/socket/socket_drainer.h"
-#include "src/lib/callback/destruction_sentinel.h"
 
 namespace socket {
 
@@ -39,7 +39,7 @@ class SocketDrainerClient : public ledger::SocketDrainer::Client {
   ledger::SocketDrainer drainer_;
   fit::closure on_discardable_;
   bool discardable_ = false;
-  callback::DestructionSentinel destruction_sentinel_;
+  ledger::DestructionSentinel destruction_sentinel_;
 };
 
 }  // namespace socket

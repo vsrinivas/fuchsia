@@ -13,8 +13,8 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/lib/backoff/backoff.h"
+#include "src/ledger/lib/callback/scoped_task_runner.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
-#include "src/lib/callback/scoped_task_runner.h"
 
 namespace ledger {
 class ActivePageManager;
@@ -147,7 +147,7 @@ class MergeResolver : public storage::CommitWatcher {
   std::vector<fit::function<void(ConflictResolutionWaitStatus)>> no_conflict_callbacks_;
 
   // ScopedTaskRunner must be the last member of the class.
-  callback::ScopedTaskRunner task_runner_;
+  ScopedTaskRunner task_runner_;
 };
 
 }  // namespace ledger
