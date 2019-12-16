@@ -7,9 +7,9 @@ import 'dart:collection';
 
 import 'package:io/ansi.dart';
 
+// ignore: one_member_abstracts
 abstract class Collector {
-  FutureOr<List<Item>> collect(bool includeSlow,
-      {List<Category> restrictCategories});
+  Future<List<Item>> collect();
 }
 
 enum CategoryType {
@@ -28,7 +28,7 @@ class Category {
   };
 
   final CategoryType type;
-  final LinkedHashMap<String, Item> items = new LinkedHashMap();
+  final LinkedHashMap<String, Item> items = LinkedHashMap();
 
   Category(this.type);
 
@@ -37,6 +37,7 @@ class Category {
   }
 
   void addAll(List<Item> newItems) {
+    // ignore: avoid_function_literals_in_foreach_calls
     newItems.forEach((i) {
       items[i.key] = i;
     });
@@ -49,7 +50,7 @@ class Category {
 
   @override
   String toString() {
-    StringBuffer sb = new StringBuffer()
+    StringBuffer sb = StringBuffer()
       ..writeln(wrapWith('${labels[type]}:', [styleBold, styleUnderlined]))
       ..writeAll(items.values, '\n');
     return sb.toString();
@@ -72,7 +73,7 @@ class Item<T> {
 
   @override
   String toString() {
-    StringBuffer sb = new StringBuffer()
+    StringBuffer sb = StringBuffer()
       ..write('  ${styleBold.wrap(title)}: $value');
     if (notes != null) {
       sb..write(' ')..write(styleDim.wrap('($notes)'));

@@ -7,29 +7,23 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:args/args.dart';
-
-import 'collector/collector.dart';
-import 'collector/args_gn_collector.dart';
-import 'collector/environment_collector.dart';
-import 'collector/git_collector.dart';
+import 'package:pedantic/pedantic.dart';
+import 'package:status/status.dart';
 
 class StatusCmd {
-  bool all;
   List<Collector> collectors = [
-    new ArgsGnCollector(),
-    new EnvironmentCollector(),
-    new GitCollector()
+    ArgsGnCollector(),
+    EnvironmentCollector(),
+    GitCollector(),
   ];
-  Map<String, Category> aggregatedInfo = new Map();
-
-  StatusCmd(this.all);
+  Map<String, Category> aggregatedInfo = {};
 
   void _aggregate(List<Item> data) {
     for (Item item in data) {
       String categoryName = item.categoryType.toString();
       Category category = aggregatedInfo[categoryName];
       if (category == null) {
-        category = new Category(item.categoryType);
+        category = Category(item.categoryType);
         aggregatedInfo[categoryName] = category;
       }
       category.add(item);
@@ -39,14 +33,9 @@ class StatusCmd {
   Future<void> aggregate() async {
     List<Future> allFutures = [];
     for (var collector in collectors) {
-      var result = collector.collect(this.all);
-      if (result is Future) {
-        var future = result as Future<List<Item>>;
-        future.then(_aggregate);
-        allFutures.add(future);
-      } else {
-        _aggregate(result);
-      }
+      Future<List<Item>> result = collector.collect();
+      unawaited(result.then(_aggregate));
+      allFutures.add(result);
     }
     return Future.wait(allFutures);
   }
@@ -55,11 +44,7 @@ class StatusCmd {
 
   @override
   String toString() {
-    StringBuffer sb = new StringBuffer();
-    for (Category category in aggregatedInfo.values) {
-      sb..writeln(category.toString());
-    }
-    return sb.toString();
+    return aggregatedInfo.values.join('\n');
   }
 }
 
@@ -72,23 +57,19 @@ void usage(ArgParser parser) {
 }
 
 Future main(List<String> args) async {
-  final parser = new ArgParser()
+  final parser = ArgParser()
     ..addFlag('help', abbr: 'h', help: 'Show this help')
-    ..addFlag('all',
-        abbr: 'a',
-        defaultsTo: false,
-        help: 'Also show information that can take longer to collect')
     ..addOption('format',
         abbr: 'f',
         defaultsTo: 'text',
         allowed: ['text', 'json'],
         help: 'Format of the output');
 
-  ArgResults argResults = null;
+  ArgResults argResults;
   try {
     argResults = parser.parse(args);
-  } catch (ex) {
-    stderr.writeln('Invalid syntax. ${ex.message}');
+  } on Exception catch (ex) {
+    stderr.writeln('Invalid syntax. $ex');
     usage(parser);
     return;
   }
@@ -98,8 +79,7 @@ Future main(List<String> args) async {
     return;
   }
 
-  bool all = argResults['all'];
-  StatusCmd cmd = new StatusCmd(all);
+  StatusCmd cmd = StatusCmd();
   await cmd.aggregate();
 
   if (argResults['format'] == 'json') {

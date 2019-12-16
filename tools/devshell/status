@@ -16,4 +16,4 @@ cd "${FUCHSIA_BUILD_DIR}"
 
 exec "${PREBUILT_DART_DIR}/bin/dart" \
   --packages="${FUCHSIA_DIR}/scripts/status/status.packages" \
-  "${FUCHSIA_DIR}/scripts/status/status.dart" "$@"
+  "${FUCHSIA_DIR}/scripts/status/bin/main.dart" "$@"

@@ -8,24 +8,22 @@ class BasicGnParser {
   List<String> parseErrors;
 
   BasicGnParser(List gnJson) {
-    imports = new List<String>();
-    assignedVariables = new Map();
-    parseErrors = new List<String>();
+    imports = [];
+    assignedVariables = {};
+    parseErrors = [];
     _parse(gnJson);
   }
 
   static String parseIdentifier(Map el) {
     if (el['type'] != 'IDENTIFIER') {
-      throw UnsupportedError(
-          'Element must be of type IDENTIFIER: ' + el.toString());
+      throw UnsupportedError('Element must be of type IDENTIFIER: $el');
     }
     return el['value'];
   }
 
-  static dynamic parseLiteral(Map el) {
+  static String parseLiteral(Map el) {
     if (el['type'] != 'LITERAL') {
-      throw UnsupportedError(
-          'Element must be of type LITERAL: ' + el.toString());
+      throw UnsupportedError('Element must be of type LITERAL: $el');
     }
     var value = el['value'];
     // remove leading and trailing quotes, faster than regex:
@@ -36,16 +34,14 @@ class BasicGnParser {
     if ((end - start) > 0 && value[end - 1] == '\'') {
       end--;
     }
-    value = value.substring(start, end);
-    return value;
+    return value.substring(start, end);
   }
 
-  static List parseListOfLiterals(Map listEl) {
+  static List<String> parseListOfLiterals(Map listEl) {
     if (listEl['type'] != 'LIST') {
-      throw UnsupportedError(
-          'Element must be of type LIST: ' + listEl.toString());
+      throw UnsupportedError('Element must be of type LIST: $listEl');
     }
-    List<String> result = new List<String>();
+    List<String> result = [];
     for (var el in listEl['child']) {
       result.add(parseLiteral(el));
     }
@@ -55,8 +51,7 @@ class BasicGnParser {
   static dynamic parseLiterals(Map el) {
     String type = el['type'];
     if (type != 'LITERAL' && type != 'LIST') {
-      throw UnsupportedError(
-          'Element must be of type LITERAL or LIST: ' + el.toString());
+      throw UnsupportedError('Element must be of type LITERAL or LIST: $el');
     }
     if (type == 'LITERAL') {
       return parseLiteral(el);
@@ -65,22 +60,21 @@ class BasicGnParser {
     }
   }
 
-  _parseAssigment(Map el) {
+  void _parseAssigment(Map el) {
     if (el['type'] != 'BINARY') {
-      throw UnsupportedError(
-          'Element must be of type BINARY: ' + el.toString());
+      throw UnsupportedError('Element must be of type BINARY: $el');
     }
     String id = parseIdentifier(el['child'][0]);
     dynamic value = parseLiterals(el['child'][1]);
 
     bool append = el['value'] == '+=';
     if (append) {
-      dynamic previous = assignedVariables[id] ?? new List<String>();
+      dynamic previous = assignedVariables[id] ?? [];
       if (previous is! List) {
         previous = [previous];
       }
       if (value is List) {
-        value.addAll(previous);
+        value.addAll(List<String>.from(value));
       } else {
         previous.add(value);
         value = previous;
@@ -89,10 +83,9 @@ class BasicGnParser {
     assignedVariables[id] = value;
   }
 
-  _parseFunction(Map el) {
+  void _parseFunction(Map el) {
     if (el['type'] != 'FUNCTION') {
-      throw UnsupportedError(
-          'Element must be of type FUNCTION: ' + el.toString());
+      throw UnsupportedError('Element must be of type FUNCTION: $el');
     }
     if (el['value'] != 'import') {
       // silently ignore functions that are not import
@@ -106,8 +99,8 @@ class BasicGnParser {
     }
   }
 
-  _parse(List gnJson) {
-    for (var el in gnJson) {
+  void _parse(List gnJson) {
+    for (Map<String, dynamic> el in gnJson) {
       try {
         switch (el['type']) {
           case 'BINARY':
@@ -118,6 +111,7 @@ class BasicGnParser {
             break;
           default: // ignore
         }
+        // ignore: avoid_catching_errors
       } on UnsupportedError catch (ex) {
         parseErrors.add(ex.message);
       }

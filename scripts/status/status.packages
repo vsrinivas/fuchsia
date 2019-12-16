@@ -2,8 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+status:lib/
+args:../../third_party/dart-pkg/pub/args/lib/
 async:../../third_party/dart-pkg/pub/async/lib/
 convert:../../third_party/dart-pkg/pub/convert/lib/
 io:../../third_party/dart-pkg/pub/io/lib/
-args:../../third_party/dart-pkg/pub/args/lib/
-ansi:../../third_party/dart-pkg/pub/io/lib/
+mockito:../../third_party/dart-pkg/pub/mockito/lib/
+meta:../../third_party/dart-pkg/pub/meta/lib/
+pedantic:../../third_party/dart-pkg/pub/pedantic/lib/
+test:../../third_party/dart-pkg/pub/test/lib/
