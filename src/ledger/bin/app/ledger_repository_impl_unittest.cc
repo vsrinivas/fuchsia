@@ -24,7 +24,6 @@
 #include "src/ledger/bin/clocks/testing/device_id_manager_empty_impl.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/inspect/inspect.h"
-#include "src/ledger/bin/platform/scoped_tmp_dir.h"
 #include "src/ledger/bin/public/status.h"
 #include "src/ledger/bin/storage/fake/fake_db.h"
 #include "src/ledger/bin/storage/fake/fake_db_factory.h"
