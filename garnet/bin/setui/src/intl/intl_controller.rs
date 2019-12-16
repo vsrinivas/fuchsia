@@ -20,7 +20,7 @@ use crate::service_context::ServiceContext;
 use crate::switchboard::base::{
     Merge, SettingRequest, SettingRequestResponder, SettingResponse, SettingType,
 };
-use crate::switchboard::intl_types::IntlInfo;
+use crate::switchboard::intl_types::{IntlInfo, LocaleId, TemperatureUnit};
 
 type IntlStorage = Arc<Mutex<DeviceStorage<IntlInfo>>>;
 
@@ -28,7 +28,11 @@ impl DeviceStorageCompatible for IntlInfo {
     const KEY: &'static str = "intl_info";
 
     fn default_value() -> Self {
-        IntlInfo { locales: None, temperature_unit: None, time_zone_id: None }
+        IntlInfo {
+            locales: Some(vec![LocaleId { id: "en-US".to_string() }]),
+            temperature_unit: Some(TemperatureUnit::Celsius),
+            time_zone_id: Some("UTC".to_string()),
+        }
     }
 }
 

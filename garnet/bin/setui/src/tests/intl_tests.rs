@@ -79,9 +79,17 @@ async fn test_intl_e2e() {
     let store = factory.get_store::<IntlInfo>();
     let intl_service = create_test_intl_env(factory).await;
 
-    // Initial value is None.
+    // Check if the initial value is correct.
     let settings = intl_service.watch().await.expect("watch completed").expect("watch successful");
-    assert_eq!(settings.time_zone_id, None);
+    assert_eq!(
+        settings.time_zone_id,
+        Some(fidl_fuchsia_intl::TimeZoneId { id: "UTC".to_string() })
+    );
+    assert_eq!(
+        settings.locales,
+        Some(vec![fidl_fuchsia_intl::LocaleId { id: "en-US".to_string() }])
+    );
+    assert_eq!(settings.temperature_unit, Some(fidl_fuchsia_intl::TemperatureUnit::Celsius));
 
     // Set new values.
     let intl_settings = fidl_fuchsia_settings::IntlSettings {
@@ -108,9 +116,17 @@ async fn test_intl_e2e_set_twice() {
     let store = factory.get_store::<IntlInfo>();
     let intl_service = create_test_intl_env(factory).await;
 
-    // Initial value is None.
+    // Initial value is not None.
     let settings = intl_service.watch().await.expect("watch completed").expect("watch successful");
-    assert_eq!(settings.time_zone_id, None);
+    assert_eq!(
+        settings.time_zone_id,
+        Some(fidl_fuchsia_intl::TimeZoneId { id: "UTC".to_string() })
+    );
+    assert_eq!(
+        settings.locales,
+        Some(vec![fidl_fuchsia_intl::LocaleId { id: "en-US".to_string() }])
+    );
+    assert_eq!(settings.temperature_unit, Some(fidl_fuchsia_intl::TemperatureUnit::Celsius));
 
     // Set new values.
     let mut intl_settings = fidl_fuchsia_settings::IntlSettings::empty();
@@ -139,9 +155,17 @@ async fn test_intl_e2e_idempotent_set() {
     let store = factory.get_store::<IntlInfo>();
     let intl_service = create_test_intl_env(factory).await;
 
-    // Initial value is None.
+    // Check if the initial value is correct.
     let settings = intl_service.watch().await.expect("watch completed").expect("watch successful");
-    assert_eq!(settings.time_zone_id, None);
+    assert_eq!(
+        settings.time_zone_id,
+        Some(fidl_fuchsia_intl::TimeZoneId { id: "UTC".to_string() })
+    );
+    assert_eq!(
+        settings.locales,
+        Some(vec![fidl_fuchsia_intl::LocaleId { id: "en-US".to_string() }])
+    );
+    assert_eq!(settings.temperature_unit, Some(fidl_fuchsia_intl::TemperatureUnit::Celsius));
 
     // Set new values.
     let mut intl_settings = fidl_fuchsia_settings::IntlSettings::empty();
