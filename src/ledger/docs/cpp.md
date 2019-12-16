@@ -162,11 +162,11 @@ concisely verifying results of an async call:
  EXPECT_EQ(storage::Status::OK, status);
 ```
 
-The tests use the main function defined in
-//src/lib/fxl/test/run_all_unittests.cc. This provides additional features:
+The tests use the main function defined in [run_all_unittests_main.cc]. This
+provides additional features:
 
-*   control log settings via --verbose, --quiet and --log_file,
-*   control TestLoop's random seed via --test_seed_loop to easily reproduce a
+*   control log settings via `--verbose`,
+*   control `TestLoop`'s random seed via `--test_seed_loop` to easily reproduce a
     random-related flakiness (the random seed is logged whenever a test is
     started)
 
@@ -183,6 +183,7 @@ to run them.
 [fit]: /zircon/system/ulib/fit
 [managed_container.h]: /src/ledger/lib/callback/managed_container.h
 [operation_serializer.h]: /src/ledger/lib/callback/operation_serializer.h
+[run_all_unittests_main.cc]: /src/ledger/bin/testing/run_all_unittests_main.cc
 [scoped_callback.h]: /src/lib/callback/scoped_callback.h
 [scoped_task_runner.h]: /src/lib/callback/scoped_task_runner.h
 [scoped_task_runner.h]: /src/lib/callback/scoped_task_runner.h
