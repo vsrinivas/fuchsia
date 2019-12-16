@@ -57,6 +57,7 @@ group("test") {
   testonly = true
   deps = [
     ":journal-fuzzer",
+    ":journal-entry-fuzzer",
     ":journal-unit",
   ]
 }
@@ -101,6 +102,16 @@ source_set("fuzz-utils") {
 fuzzer("journal-fuzzer") {
   sources = [
     "test/journal_fuzztest.cc",
+  ]
+  deps = [
+    ":fuzz-utils",
+  ]
+  include_dirs = [ "test" ]
+}
+
+fuzzer("journal-entry-fuzzer") {
+  sources = [
+    "test/entry_parse_fuzztest.cc",
   ]
   deps = [
     ":fuzz-utils",

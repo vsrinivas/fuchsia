@@ -63,6 +63,10 @@ void JournalEntryView::DecodePayloadBlocks() {
 }
 
 uint32_t JournalEntryView::CalculateChecksum() const {
+#ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
+  // Always return 0 when fuzzing.
+  return 0;
+#else
   // Currently, the checksum includes all blocks excluding the commit block.
   // If additional data is to be added to the commit block, we should consider
   // making the checksum include the commit block (excluding the checksum location).
@@ -71,6 +75,7 @@ uint32_t JournalEntryView::CalculateChecksum() const {
     checksum = crc32(checksum, static_cast<const uint8_t*>(view_.Data(i)), kJournalBlockSize);
   }
   return checksum;
+#endif
 }
 
 }  // namespace fs
