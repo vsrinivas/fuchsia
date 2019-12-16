@@ -47,15 +47,20 @@ struct CalendarId {
     string id;
 };
 
+/// This is the time zone reported when no time zones have been set.
+const string DEFAULT_TIME_ZONE_ID = "UTC";
+
 /// Typed identifier for a time zone.
 struct TimeZoneId {
     /// Time zone ID from tzdata, e.g. "America/New_York". See https://www.iana.org/time-zones.
     string id;
 };
 
-/// Selection of temperature unit.
+/// Selection of [temperature units](https://en.wikipedia.org/wiki/Degree_(temperature)).
 enum TemperatureUnit {
+    /// The temperature should be formatted to show temperature in degrees Celsius.
     CELSIUS = 0;
+    /// The temperature should be formatted to show temperature in degrees Fahrenheit.
     FAHRENHEIT = 1;
 };
 
@@ -67,12 +72,17 @@ enum TemperatureUnit {
 /// Language-independent properties that are supported by Unicode BCP-47 Locale IDs (e.g.
 /// first-day-of-week, time zone) are denormalized into the locale IDs in `locales`.
 table Profile {
-    /// Ranked list of locales (in descending order).
+    /// Ranked list of locales (in descending order of preference).  The vector will always
+    /// contain at least one element.  For example, locales = [ LocaleId("en-US") ] is valid, but
+    /// locales = [], or locales = <unset> is not.
     1: vector<LocaleId> locales;
 
-    /// Ranked list of calendars (in descending order). The first entry is the primary calendar, and
-    /// will be equal to the calendar indicated in `locales`.
-    /// The list is intended for use by applications that can display multiple calendar systems.
+    /// Ranked list of calendars (in descending order of preference).
+    /// The first entry is the primary calendar, and will be equal to the calendar indicated
+    /// in `locales`.
+    /// The vector will always contain at least one element.
+    /// The list allows multiple ranked preferences, and is intended for use
+    /// by applications that can display multiple calendar systems.
     2: vector<CalendarId> calendars;
 
     /// Ranked list of time zones (in descending order). The first entry is the primary time zone,
@@ -80,9 +90,14 @@ table Profile {
     /// calendar indicated in `locales`.
     /// The list is intended for use by applications that can display multiple time zones, e.g.
     /// a world clock.
+    /// The vector will always contain at least one element.
+    /// On Fuchsia, the default time zone is always `DEFAULT_TIME_ZONE_ID` when
+    /// no more specific time zones have been defined or selected.
     3: vector<TimeZoneId> time_zones;
 
-    /// Selected temperature unit.
+    /// Selected temperature unit. The unit is always reported: if there is no
+    /// setting in the current environment, the default value of CELSIUS is
+    /// used.
     4: TemperatureUnit temperature_unit;
 
     // TODO(CF-168): Other properties that don't fit into locale IDs. Examples:
