@@ -74,7 +74,7 @@ static bool netaddr_opt_callback(int ch, int argc, char* const* argv) {
 
 int main(int argc, char** argv) {
   appname = argv[0];
-  int index = netboot_handle_custom_getopt(argc, argv, netaddr_opts, 1, netaddr_opt_callback);
+  int index = netboot_handle_custom_getopt(argc, argv, netaddr_opts, netaddr_opt_callback);
   if (index < 0) {
     usage();
     return -1;

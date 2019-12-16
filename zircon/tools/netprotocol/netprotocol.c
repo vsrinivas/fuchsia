@@ -188,7 +188,6 @@ static void netboot_copy_opts(struct option* dst_opts, const struct option* src_
 }
 
 int netboot_handle_custom_getopt(int argc, char* const* argv, const struct option* custom_opts,
-                                 size_t num_custom_opts0,
                                  bool (*opt_callback)(int ch, int argc, char* const* argv)) {
   size_t num_default_opts = netboot_count_opts(default_opts);
   size_t num_custom_opts = netboot_count_opts(custom_opts);
@@ -232,7 +231,7 @@ err:
 }
 
 int netboot_handle_getopt(int argc, char* const* argv) {
-  return netboot_handle_custom_getopt(argc, argv, NULL, 0, NULL);
+  return netboot_handle_custom_getopt(argc, argv, NULL, NULL);
 }
 
 void netboot_usage(bool show_tftp_opts) {
