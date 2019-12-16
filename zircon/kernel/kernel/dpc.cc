@@ -188,6 +188,16 @@ void dpc_init_for_cpu(void) {
   cpu->dpc_thread = thread_create(name, &dpc_thread, NULL, DPC_THREAD_PRIORITY);
   DEBUG_ASSERT(cpu->dpc_thread != nullptr);
   thread_set_cpu_affinity(cpu->dpc_thread, cpu_num_to_mask(cpu_num));
+
+#if WITH_UNIFIED_SCHEDULER
+  // The DPC thread may use up to 150us out of every 300us (i.e. 50% of the CPU)
+  // in the worst case. DPCs usually take only a small fraction of this and have
+  // a much lower frequency than 3.333KHz.
+  // TODO(38571): Make this runtime tunable. It may be necessary to change the
+  // DPC deadline params later in boot, after configuration is loaded somehow.
+  thread_set_deadline(cpu->dpc_thread, {ZX_USEC(150), ZX_USEC(300), ZX_USEC(300)});
+#endif
+
   thread_resume(cpu->dpc_thread);
 }
 
