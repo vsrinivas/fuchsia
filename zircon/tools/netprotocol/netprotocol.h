@@ -53,6 +53,4 @@ int netboot_discover(unsigned port, const char* ifname, on_device_cb callback, v
 int netboot_open(const char* hostname, const char* ifname, struct sockaddr_in6* addr,
                  bool make_connection);
 
-int netboot_txn(int s, msg* in, msg* out, int outlen);
-
 #endif  // ZIRCON_TOOLS_NETPROTOCOL_NETPROTOCOL_H_
