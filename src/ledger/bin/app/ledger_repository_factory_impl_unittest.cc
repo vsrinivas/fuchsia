@@ -12,13 +12,13 @@
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/inspect/inspect.h"
 #include "src/ledger/bin/platform/detached_path.h"
+#include "src/ledger/bin/platform/fd.h"
 #include "src/ledger/bin/platform/scoped_tmp_dir.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/callback/capture.h"
 #include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/lib/files/unique_fd.h"
-#include "src/lib/fsl/io/fd.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 #include "src/lib/inspect_deprecated/reader.h"
 #include "src/lib/inspect_deprecated/testing/inspect.h"
@@ -94,8 +94,8 @@ class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
   bool callback_called;
   Status status;
 
-  repository_factory_->GetRepository(fsl::CloneChannelFromFileDescriptor(fd.get()), nullptr,
-                                     kUserID, ledger_repository_ptr->NewRequest(),
+  repository_factory_->GetRepository(CloneChannelFromFileDescriptor(fd.get()), nullptr, kUserID,
+                                     ledger_repository_ptr->NewRequest(),
                                      Capture(SetWhenCalled(&callback_called), &status));
 
   RunLoopUntilIdle();
@@ -273,9 +273,9 @@ TEST_F(LedgerRepositoryFactoryImplTest, CloseFactory) {
   bool get_repository_called;
   Status status;
 
-  repository_factory->GetRepository(
-      fsl::CloneChannelFromFileDescriptor(tmp_location->path().root_fd()), nullptr, "",
-      ledger_repository_ptr.NewRequest(), Capture(SetWhenCalled(&get_repository_called), &status));
+  repository_factory->GetRepository(CloneChannelFromFileDescriptor(tmp_location->path().root_fd()),
+                                    nullptr, "", ledger_repository_ptr.NewRequest(),
+                                    Capture(SetWhenCalled(&get_repository_called), &status));
 
   bool channel_closed;
   zx_status_t zx_status;

@@ -30,7 +30,7 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/p2p_provider/impl/static_user_id_provider.h"
 #include "src/ledger/bin/p2p_sync/impl/user_communicator_impl.h"
-#include "src/ledger/bin/p2p_sync/public/user_communicator.h"
+#include "src/ledger/bin/platform/fd.h"
 #include "src/ledger/bin/platform/platform.h"
 #include "src/ledger/bin/platform/scoped_tmp_dir.h"
 #include "src/ledger/bin/storage/impl/leveldb_factory.h"
@@ -38,7 +38,6 @@
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/lib/callback/scoped_callback.h"
-#include "src/lib/fsl/io/fd.h"
 #include "src/lib/inspect_deprecated/deprecated/expose.h"
 #include "src/lib/inspect_deprecated/deprecated/object_dir.h"
 #include "src/lib/inspect_deprecated/inspect.h"
@@ -126,7 +125,7 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
     // too. This prevents us from trying to write on disk when there's no disk
     // anymore. This situation can happen when the Ledger is shut down, if the
     // storage is shut down at the same time.
-    fd_chan_ = fsl::CloneChannelFromFileDescriptor(root_fd_->get());
+    fd_chan_ = CloneChannelFromFileDescriptor(root_fd_->get());
     fd_wait_ = std::make_unique<async::Wait>(
         fd_chan_.get(), ZX_CHANNEL_PEER_CLOSED, 0,
         [](async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
@@ -264,7 +263,7 @@ void LedgerRepositoryFactoryImpl::GetRepository(
     fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider, std::string user_id,
     fidl::InterfaceRequest<ledger_internal::LedgerRepository> repository_request,
     fit::function<void(Status)> callback) {
-  fbl::unique_fd root_fd = fsl::OpenChannelAsFileDescriptor(std::move(repository_handle));
+  fbl::unique_fd root_fd = OpenChannelAsFileDescriptor(std::move(repository_handle));
   if (!root_fd.is_valid()) {
     callback(Status::IO_ERROR);
     return;

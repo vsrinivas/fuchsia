@@ -7,8 +7,8 @@
 #include <lib/fidl/cpp/clone.h>
 
 #include "gtest/gtest.h"
+#include "src/ledger/bin/platform/fd.h"
 #include "src/ledger/bin/testing/inspect.h"
-#include "src/lib/fsl/io/fd.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
@@ -46,7 +46,7 @@ LedgerAppInstanceFactory::LedgerAppInstance::GetTestLedgerRepository() {
     }
   });
   ledger_repository_factory_->GetRepository(
-      fsl::CloneChannelFromFileDescriptor(tmp_location_->path().root_fd()), MakeCloudProvider(),
+      CloneChannelFromFileDescriptor(tmp_location_->path().root_fd()), MakeCloudProvider(),
       GetUserId(), repository.NewRequest());
   return repository;
 }

@@ -8,6 +8,8 @@ source_set("platform") {
   sources = [
     "detached_path.cc",
     "detached_path.h",
+    "fd.cc",
+    "fd.h",
     "platform.h",
     "scoped_tmp_dir.h",
     "scoped_tmp_location.h",

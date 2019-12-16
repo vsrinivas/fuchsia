@@ -17,6 +17,7 @@
 #include "src/ledger/bin/app/serialization_version.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/platform/detached_path.h"
+#include "src/ledger/bin/platform/fd.h"
 #include "src/ledger/bin/platform/platform.h"
 #include "src/ledger/bin/platform/scoped_tmp_location.h"
 #include "src/ledger/bin/public/status.h"
@@ -29,7 +30,6 @@
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/loop_fixture/real_loop_fixture.h"
 #include "src/ledger/lib/vmo/strings.h"
-#include "src/lib/fsl/io/fd.h"
 #include "third_party/abseil-cpp/absl/strings/escaping.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
@@ -147,7 +147,7 @@ TEST_F(LedgerEndToEndTest, PutAndGet) {
   std::unique_ptr<ledger::ScopedTmpLocation> tmp_location =
       platform_->file_system()->CreateScopedTmpLocation();
   ledger_repository_factory_->GetRepository(
-      fsl::CloneChannelFromFileDescriptor(tmp_location->path().root_fd()), nullptr, "",
+      ledger::CloneChannelFromFileDescriptor(tmp_location->path().root_fd()), nullptr, "",
       ledger_repository.NewRequest());
 
   ledger_repository->GetLedger(TestArray(), ledger_.NewRequest());
@@ -189,7 +189,7 @@ TEST_F(LedgerEndToEndTest, ClearPage) {
   std::unique_ptr<ledger::ScopedTmpLocation> tmp_location =
       platform_->file_system()->CreateScopedTmpLocation();
   ledger_repository_factory_->GetRepository(
-      fsl::CloneChannelFromFileDescriptor(tmp_location->path().root_fd()), nullptr, "",
+      ledger::CloneChannelFromFileDescriptor(tmp_location->path().root_fd()), nullptr, "",
       ledger_repository.NewRequest());
 
   ledger_repository->GetLedger(TestArray(), ledger_.NewRequest());
@@ -276,7 +276,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
         cloud_provider.get(), cloud_provider_ptr.NewRequest());
     ledger_internal::LedgerRepositoryPtr ledger_repository;
     ledger_repository_factory_->GetRepository(
-        fsl::CloneChannelFromFileDescriptor(tmp_location->path().root_fd()),
+        ledger::CloneChannelFromFileDescriptor(tmp_location->path().root_fd()),
         std::move(cloud_provider_ptr), "user_id", ledger_repository.NewRequest());
 
     RunLoopUntil([&] { return device_set_watcher_set; });
@@ -295,7 +295,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
       cloud_provider.get(), cloud_provider_ptr.NewRequest());
   ledger_internal::LedgerRepositoryPtr ledger_repository;
   ledger_repository_factory_->GetRepository(
-      fsl::CloneChannelFromFileDescriptor(tmp_location->path().root_fd()),
+      ledger::CloneChannelFromFileDescriptor(tmp_location->path().root_fd()),
       std::move(cloud_provider_ptr), "user_id", ledger_repository.NewRequest());
 
   bool repo_disconnected = false;
@@ -351,7 +351,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryFromTheWatcher) {
       cloud_provider.get(), cloud_provider_ptr.NewRequest());
 
   ledger_repository_factory_->GetRepository(
-      fsl::CloneChannelFromFileDescriptor(tmp_location_path.root_fd()),
+      ledger::CloneChannelFromFileDescriptor(tmp_location_path.root_fd()),
       std::move(cloud_provider_ptr), "user_id", ledger_repository.NewRequest());
 
   bool repo_disconnected = false;
@@ -387,7 +387,7 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBeforePageInit) {
   fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
       &cloud_provider, cloud_provider_ptr.NewRequest());
   ledger_repository_factory_->GetRepository(
-      fsl::CloneChannelFromFileDescriptor(tmp_location->path().root_fd()),
+      ledger::CloneChannelFromFileDescriptor(tmp_location->path().root_fd()),
       std::move(cloud_provider_ptr), "user_id", ledger_repository.NewRequest());
 
   ledger_repository->GetLedger(TestArray(), ledger_.NewRequest());
@@ -434,7 +434,7 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBetweenReadAndWrite) {
   fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
       &cloud_provider, cloud_provider_ptr.NewRequest());
   ledger_repository_factory_->GetRepository(
-      fsl::CloneChannelFromFileDescriptor(tmp_location->path().root_fd()),
+      ledger::CloneChannelFromFileDescriptor(tmp_location->path().root_fd()),
       std::move(cloud_provider_ptr), "user_id", ledger_repository.NewRequest());
 
   ledger_repository->GetLedger(TestArray(), ledger_.NewRequest());

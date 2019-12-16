@@ -12,10 +12,10 @@
 #include <cstdlib>
 
 #include "src/ledger/bin/app/flags.h"
+#include "src/ledger/bin/platform/fd.h"
 #include "src/ledger/bin/platform/platform.h"
 #include "src/ledger/bin/platform/scoped_tmp_dir.h"
 #include "src/ledger/lib/convert/convert.h"
-#include "src/lib/fsl/io/fd.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace {
@@ -51,7 +51,8 @@ int main(int argc, char const *argv[]) {
   std::unique_ptr<ledger::Platform> platform = ledger::MakePlatform();
   std::unique_ptr<ledger::ScopedTmpLocation> tmp_location =
       platform->file_system()->CreateScopedTmpLocation();
-  zx::channel memfs_channel = fsl::CloneChannelFromFileDescriptor(tmp_location->path().root_fd());
+  zx::channel memfs_channel =
+      ledger::CloneChannelFromFileDescriptor(tmp_location->path().root_fd());
 
   // Get a repository.
   fuchsia::ledger::internal::LedgerRepositorySyncPtr repository;
