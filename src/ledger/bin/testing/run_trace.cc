@@ -4,9 +4,9 @@
 
 #include "src/ledger/bin/testing/run_trace.h"
 
+#include <fuchsia/io/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
-#include <zircon/device/vfs.h>
 
 #include "src/ledger/lib/logging/logging.h"
 
@@ -24,7 +24,7 @@ void RunTrace(sys::ComponentContext* component_context,
   zx::channel dir, server;
   zx_status_t status = zx::channel::create(0, &dir, &server);
   LEDGER_CHECK(status == ZX_OK);
-  status = fdio_open(kTraceTestDataLocalPath, ZX_FS_RIGHT_READABLE, server.release());
+  status = fdio_open(kTraceTestDataLocalPath, fuchsia::io::OPEN_RIGHT_READABLE, server.release());
   LEDGER_CHECK(status == ZX_OK);
   launch_info.flat_namespace = fuchsia::sys::FlatNamespace::New();
   launch_info.flat_namespace->paths.push_back(kTraceTestDataRemotePath);
