@@ -18,7 +18,7 @@ use {
     std::collections::HashMap,
     wlan_common::{
         appendable::Appendable,
-        mac::{self, Bssid, CapabilityInfo, MacAddr},
+        mac::{self, MacAddr},
         TimeUnit,
     },
     zerocopy::ByteSlice,
@@ -84,7 +84,7 @@ impl InfraBss {
 
         // We only support drivers that perform beaconing in hardware, for now.
         let mut buf = vec![];
-        let beacon_offload_params = bss.write_beacon_template(&mut buf, ctx.bssid)?;
+        let beacon_offload_params = bss.write_beacon_template(ctx, &mut buf)?;
         ctx.device
             .enable_beaconing(&buf, beacon_offload_params.tim_ele_offset, beacon_interval)
             .map_err(|s| Error::Status(format!("failed to enable beaconing"), s))?;
@@ -157,7 +157,7 @@ impl InfraBss {
                 self.channel,
                 // We don't set the ESS bit here: IEEE Std 802.11-2016, 9.4.1.4 only specifies it
                 // for Beacon and Probe Response frames, and NOT Association Response frames.
-                CapabilityInfo(0)
+                ctx.capabilities
                     // IEEE Std 802.11-2016, 9.4.1.4: An AP sets the Privacy subfield to 1 within
                     // transmitted Beacon, Probe Response, (Re)Association Response frames if data
                     // confidentiality is required for all Data frames exchanged within the BSS.
@@ -203,15 +203,15 @@ impl InfraBss {
 
     fn write_beacon_template<B: Appendable>(
         &self,
+        ctx: &Context,
         buf: &mut B,
-        bssid: Bssid,
     ) -> Result<BeaconOffloadParams, Error> {
         write_beacon_frame(
             buf,
-            bssid,
+            ctx.bssid,
             0,
             self.beacon_interval,
-            CapabilityInfo(0)
+            ctx.capabilities
                 // IEEE Std 802.11-2016, 9.4.1.4: An AP sets the ESS subfield to 1 and the IBSS
                 // subfield to 0 within transmitted Beacon or Probe Response frames.
                 .with_ess(true)
@@ -363,7 +363,11 @@ mod tests {
             key::{KeyType, Protection},
             timer::{FakeScheduler, Scheduler, Timer},
         },
-        wlan_common::{assert_variant, test_utils::fake_frames::fake_wpa2_rsne},
+        wlan_common::{
+            assert_variant,
+            mac::{Bssid, CapabilityInfo},
+            test_utils::fake_frames::fake_wpa2_rsne,
+        },
     };
 
     const CLIENT_ADDR: MacAddr = [1u8; 6];
@@ -371,7 +375,13 @@ mod tests {
     const CLIENT_ADDR2: MacAddr = [3u8; 6];
 
     fn make_context(device: Device, scheduler: Scheduler) -> Context {
-        Context::new(device, FakeBufferProvider::new(), Timer::<TimedEvent>::new(scheduler), BSSID)
+        Context::new(
+            device,
+            CapabilityInfo(0),
+            FakeBufferProvider::new(),
+            Timer::<TimedEvent>::new(scheduler),
+            BSSID,
+        )
     }
 
     #[test]

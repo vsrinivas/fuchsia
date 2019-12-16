@@ -19,7 +19,7 @@ use {
     log::{error, info, log},
     std::fmt,
     wlan_common::{
-        mac::{self, Bssid, MacAddr},
+        mac::{self, Bssid, CapabilityInfo, MacAddr},
         TimeUnit,
     },
     zerocopy::ByteSlice,
@@ -112,7 +112,14 @@ impl Ap {
         logger::install();
 
         Self {
-            ctx: Context::new(device, buf_provider, Timer::<TimedEvent>::new(scheduler), bssid),
+            ctx: Context::new(
+                device,
+                // TODO(42089): Get capabilities here.
+                CapabilityInfo(0),
+                buf_provider,
+                Timer::<TimedEvent>::new(scheduler),
+                bssid,
+            ),
             bss: None,
         }
     }
