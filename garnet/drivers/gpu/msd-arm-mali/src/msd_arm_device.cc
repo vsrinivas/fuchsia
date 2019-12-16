@@ -936,7 +936,7 @@ void MsdArmDevice::ExecuteAtomOnDevice(MsdArmAtom* atom, magma::RegisterIo* regi
   slot.CommandNext().FromValue(registers::JobSlotCommand::kCommandStart).WriteTo(register_io);
 
   // Begin the virtual duration trace event to measure GPU work.
-  uint64_t current_ticks = magma::PlatformTrace::GetCurrentTicks();
+  uint64_t ATTRIBUTE_UNUSED current_ticks = magma::PlatformTrace::GetCurrentTicks();
   TRACE_VTHREAD_DURATION_BEGIN("magma", MsdArmAtom::AtomRunningString(atom->slot()),
                                MsdArmAtom::AtomRunningString(atom->slot()), atom->slot_id(),
                                current_ticks, "client_id", connection->client_id());

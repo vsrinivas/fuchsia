@@ -10,7 +10,6 @@
 #include "magma.h"
 #include "magma_util/macros.h"
 #include "magma_util/status.h"
-#include "msd_defs.h"
 #include "platform_buffer.h"
 #include "platform_object.h"
 #include "platform_thread.h"

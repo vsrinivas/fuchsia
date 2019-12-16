@@ -124,7 +124,7 @@ source_set("connection_client") {
     "$magma_build_root/include:msd_abi",
     "$magma_build_root/src/magma_util",
     "$zircon_build_root/public/lib/zx",
-    "..:connection_header",
+    "..:connection_client_header",
     "..:trace",
     "//sdk/fidl/fuchsia.gpu.magma",
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
@@ -204,6 +204,7 @@ source_set("event") {
   deps = [
     "$magma_build_root/src/magma_util",
     "$zircon_build_root/public/lib/zx",
+    "..:event_header",
   ]
 }
 
@@ -265,6 +266,8 @@ source_set("object") {
 
   deps = [
     "$magma_build_root/src/magma_util",
+    "..:object_header",
+    "//zircon/public/lib/zx",
   ]
 }
 
@@ -273,14 +276,19 @@ source_set("semaphore") {
 
   sources = [
     "zircon_platform_semaphore.cc",
+    "zircon_platform_semaphore.h",
+  ]
+
+  public_deps = [
+    "$magma_build_root/src/magma_util",
+    "$zircon_build_root/public/lib/zx",
+    "..:semaphore_header",
+    "..:trace",
   ]
 
   deps = [
-    "$magma_build_root/src/magma_util",
-    "$magma_build_root/src/magma_util/platform:trace",
-    "$zircon_build_root/public/lib/zx",
+    ":port",
     "..:object",
-    "..:semaphore_header",
   ]
 }
 
@@ -295,6 +303,7 @@ source_set("port") {
     "$magma_build_root/src/magma_util",
     "$zircon_build_root/public/lib/fit",
     "$zircon_build_root/public/lib/zx",
+    "..:port_header",
   ]
 }
 
@@ -311,21 +320,16 @@ source_set("trace") {
 
   deps = [
     "$magma_build_root/src/magma_util",
+    "$zircon_build_root/public/lib/async-cpp",
+    "$zircon_build_root/public/lib/async-loop-cpp",
+    "$zircon_build_root/public/lib/trace-vthread-with-static-engine",
+    "$zircon_build_root/public/lib/trace-with-static-engine",
     "..:trace_header",
   ]
 
   public_deps = [
     "//zircon/public/lib/fit",
   ]
-
-  if (magma_enable_tracing) {
-    deps += [
-      "$zircon_build_root/public/lib/async-cpp",
-      "$zircon_build_root/public/lib/async-loop-cpp",
-      "$zircon_build_root/public/lib/trace-vthread-with-static-engine",
-      "$zircon_build_root/public/lib/trace-with-static-engine",
-    ]
-  }
 }
 
 source_set("trace_provider") {
@@ -341,20 +345,16 @@ source_set("trace_provider") {
 
   deps = [
     "$magma_build_root/src/magma_util",
+    "$zircon_build_root/public/lib/async-cpp",
     "..:trace_provider_header",
   ]
 
   public_deps = [
+    "$zircon_build_root/public/lib/async-loop-cpp",
     "//zircon/public/lib/fit",
+    "//zircon/public/lib/trace-provider-with-static-engine",
   ]
 
-  if (magma_enable_tracing) {
-    deps += [ "$zircon_build_root/public/lib/async-cpp" ]
-    public_deps += [
-      "$zircon_build_root/public/lib/async-loop-cpp",
-      "//zircon/public/lib/trace-provider-with-static-engine",
-    ]
-  }
   assert_no_deps = [ "//zircon/public/lib/fdio" ]
 }
 

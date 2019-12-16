@@ -250,21 +250,21 @@ void MsdIntelDevice::StartDeviceThread() {
   DASSERT(!device_thread_.joinable());
   device_thread_ = std::thread([this] { this->DeviceThreadLoop(); });
 
-  if (MAGMA_ENABLE_TRACING) {
-    freq_monitor_context_ = std::make_shared<FreqMonitorContext>();
-    freq_monitor_device_thread_ = std::thread([this] { this->FrequencyMonitorDeviceThreadLoop(); });
-    trace_observer_ = magma::PlatformTraceObserver::Create();
+#if MAGMA_ENABLE_TRACING
+  freq_monitor_context_ = std::make_shared<FreqMonitorContext>();
+  freq_monitor_device_thread_ = std::thread([this] { this->FrequencyMonitorDeviceThreadLoop(); });
+  trace_observer_ = magma::PlatformTraceObserver::Create();
 
-    trace_observer_->SetObserver(
-        [weak_context = std::weak_ptr<FreqMonitorContext>(freq_monitor_context_)](bool is_enabled) {
-          auto context = weak_context.lock();
-          if (context && context->tracing_enabled != is_enabled) {
-            context->tracing_enabled = is_enabled;
-            if (context->tracing_enabled)
-              context->semaphore->Signal();
-          }
-        });
-  }
+  trace_observer_->SetObserver(
+      [weak_context = std::weak_ptr<FreqMonitorContext>(freq_monitor_context_)](bool is_enabled) {
+        auto context = weak_context.lock();
+        if (context && context->tracing_enabled != is_enabled) {
+          context->tracing_enabled = is_enabled;
+          if (context->tracing_enabled)
+            context->semaphore->Signal();
+        }
+      });
+#endif
 
   // Don't start interrupt processing until the device thread is running.
   interrupt_manager_->RegisterCallback(
@@ -412,9 +412,10 @@ void MsdIntelDevice::FrequencyMonitorDeviceThreadLoop() {
 
     while (!device_thread_quit_flag_ && freq_monitor_context_->tracing_enabled) {
       auto registers = register_io_.get();  // bypass thread id check
-      uint32_t actual_mhz =
+      uint32_t ATTRIBUTE_UNUSED actual_mhz =
           registers::RenderPerformanceStatus::read_current_frequency_gen9(registers);
-      uint32_t requested_mhz = registers::RenderPerformanceNormalFrequencyRequest::read(registers);
+      uint32_t ATTRIBUTE_UNUSED requested_mhz =
+          registers::RenderPerformanceNormalFrequencyRequest::read(registers);
       TRACE_COUNTER("magma", "gpu freq", 0, "request_mhz", requested_mhz, "actual_mhz", actual_mhz);
       std::this_thread::sleep_for(std::chrono::milliseconds(16));
     }
@@ -527,7 +528,7 @@ magma::Status MsdIntelDevice::ProcessBatch(std::unique_ptr<MappedBatch> batch) {
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to initialize context");
   }
 
-  uint64_t buffer_id = batch->GetBatchBufferId();
+  uint64_t ATTRIBUTE_UNUSED buffer_id = batch->GetBatchBufferId();
   {
     TRACE_DURATION("magma", "Device::SubmitBatch");
     TRACE_FLOW_STEP("magma", "command_buffer", buffer_id);

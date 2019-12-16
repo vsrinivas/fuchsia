@@ -14,8 +14,6 @@
 
 namespace magma {
 
-#if MAGMA_ENABLE_TRACING
-
 static std::unique_ptr<ZirconPlatformTraceProvider> g_platform_trace;
 
 ZirconPlatformTraceProvider::ZirconPlatformTraceProvider()
@@ -57,14 +55,5 @@ PlatformTraceProvider* PlatformTraceProvider::Get() {
 std::unique_ptr<PlatformTraceProvider> PlatformTraceProvider::CreateForTesting() {
   return std::make_unique<ZirconPlatformTraceProvider>();
 }
-
-#else
-
-PlatformTraceProvider* PlatformTraceProvider::Get() { return nullptr; }
-
-// static
-std::unique_ptr<PlatformTrace> PlatformTrace::CreateForTesting() { return nullptr; }
-
-#endif
 
 }  // namespace magma

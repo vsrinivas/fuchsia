@@ -50,8 +50,8 @@ std::shared_ptr<MsdIntelContext> FifoScheduler::ScheduleContext() {
   if (current_context_ == nullptr || current_context_ == context) {
     if (current_context_ == nullptr) {
       auto connection = context->connection().lock();
-      uint64_t current_id = connection ? connection->client_id() : 0;
-      uint64_t current_ticks = magma::PlatformTrace::GetCurrentTicks();
+      uint64_t ATTRIBUTE_UNUSED current_id = connection ? connection->client_id() : 0;
+      uint64_t ATTRIBUTE_UNUSED current_ticks = magma::PlatformTrace::GetCurrentTicks();
 
       TRACE_VTHREAD_DURATION_BEGIN("magma", "Context Exec", "GPU", current_id, current_ticks, "id",
                                    current_id);
@@ -70,8 +70,8 @@ void FifoScheduler::CommandBufferCompleted(std::shared_ptr<MsdIntelContext> cont
   DASSERT(current_count_);
   if (--current_count_ == 0) {
     auto connection = context->connection().lock();
-    uint64_t current_id = connection ? connection->client_id() : 0;
-    uint64_t current_ticks = magma::PlatformTrace::GetCurrentTicks();
+    uint64_t ATTRIBUTE_UNUSED current_id = connection ? connection->client_id() : 0;
+    uint64_t ATTRIBUTE_UNUSED current_ticks = magma::PlatformTrace::GetCurrentTicks();
 
     TRACE_VTHREAD_DURATION_END("magma", "Context Exec", "GPU", current_id, current_ticks, "id",
                                current_id);

@@ -15,8 +15,6 @@
 
 namespace magma {
 
-#if MAGMA_ENABLE_TRACING
-
 ZirconPlatformTraceObserver::ZirconPlatformTraceObserver()
     : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
 
@@ -47,8 +45,6 @@ std::unique_ptr<PlatformTraceObserver> PlatformTraceObserver::Create() {
     return nullptr;
   return observer;
 }
-
-#endif
 
 // static
 uint64_t PlatformTrace::GetCurrentTicks() { return zx_ticks_get(); }

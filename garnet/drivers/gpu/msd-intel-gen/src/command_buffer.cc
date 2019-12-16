@@ -55,8 +55,8 @@ CommandBuffer::~CommandBuffer() {
     return;
 
   std::shared_ptr<MsdIntelConnection> connection = locked_context_->connection().lock();
-  uint64_t connection_id = connection ? connection->client_id() : 0;
-  uint64_t current_ticks = magma::PlatformTrace::GetCurrentTicks();
+  uint64_t ATTRIBUTE_UNUSED connection_id = connection ? connection->client_id() : 0;
+  uint64_t ATTRIBUTE_UNUSED current_ticks = magma::PlatformTrace::GetCurrentTicks();
 
   uint64_t ATTRIBUTE_UNUSED buffer_id = GetBatchBufferId();
   TRACE_DURATION("magma", "Command Buffer End");

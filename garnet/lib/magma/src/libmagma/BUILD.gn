@@ -27,11 +27,15 @@ static_library("libmagma_static") {
     "$magma_build_root/src/magma_util/platform:logger_impl",
     "$magma_build_root/src/magma_util/platform:port",
     "$magma_build_root/src/magma_util/platform:semaphore",
-    "$magma_build_root/src/magma_util/platform:sysmem_connection",
     "$magma_build_root/src/magma_util/platform:thread",
     "$magma_build_root/src/magma_util/platform:trace",
     "$magma_build_root/src/magma_util/platform:trace_provider",
   ]
+
+  if (is_fuchsia) {
+    sources += [ "magma_sysmem.cc" ]
+    deps += [ "$magma_build_root/src/magma_util/platform:sysmem_connection" ]
+  }
 
   # Magma ICDs are only allowed to depend on (parts of) libc and libzircon, and no other shared libraries.
   assert_no_deps = [ "//zircon/system/lib/fdio" ]
