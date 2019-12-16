@@ -106,9 +106,7 @@ class Debug {
   // Enabled debug log categories. Include WLANIF messages in the log output (at level INFO) to
   // aid in recognizing important events.
   // http://fxb/29792 - Remove WLANIF once things have stabilized.
-  // TODO(fxr/336233) enable console log for debugging issues, disable after system stability
-  static constexpr uint32_t kBrcmfMsgFilter =
-      static_cast<uint32_t>(Filter::kFWCON) | static_cast<uint32_t>(Filter::kWLANIF);
+  static constexpr uint32_t kBrcmfMsgFilter = static_cast<uint32_t>(Filter::kWLANIF);
 
   // Check if a given debugging filter class is turned on.
   static constexpr bool IsFilterOn(Filter filter) {
