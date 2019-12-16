@@ -2,96 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Modules which depend on uboringssl should have a "#define BORINGSSL_NO_CXX"
-# statement before any "#include <openssl/...>" statements to avoid pulling in
-# C++ headers.
-zx_library("uboringssl") {
-  kernel = true
-  host = true
-  static = true
+# TODO(42701): Workaround for soft transition in renaming to $zx/third_party/ulib/boringssl
 
-  sources = [
-    "crypto/fipsmodule/sha/sha256.c",
-    "crypto/mem.c",
+group("uboringssl") {
+  public_deps = [
+    "$zx/third_party/ulib/boringssl",
   ]
+}
 
-  if (is_kernel) {
-    sources += [ "crypto/chacha/chacha.c" ]
-
-    # Avoid circularity.
-    configs -= [ "$zx/kernel/vm:headers.config" ]
-
-    defines = [
-      # The assembly code uses vector registers, which is not allowed in
-      # kernel code.
-      "OPENSSL_NO_ASM",
-      "OPENSSL_NO_THREADS_CORRUPT_MEMORY_AND_LEAK_SECRETS_IF_THREADED",
-    ]
-  } else {
-    if (is_fuchsia) {
-      deps = [
-        "$zx/system/ulib/zircon",
-      ]
-    } else {
-      defines = [
-        # Required for `pthread_rwlock_t`.
-        "_XOPEN_SOURCE=700",
-      ]
-    }
-
-    sources += [
-      "crypto/cipher_extra/e_aesgcmsiv.c",
-      "crypto/cpu-aarch64-fuchsia.c",
-      "crypto/cpu-arm.c",
-      "crypto/cpu-intel.c",
-      "crypto/crypto.c",
-      "crypto/err/err.c",
-      "crypto/fipsmodule/aes/aes.c",
-      "crypto/fipsmodule/aes/mode_wrappers.c",
-      "crypto/fipsmodule/cipher/aead.c",
-      "crypto/fipsmodule/cipher/cipher.c",
-      "crypto/fipsmodule/cipher/e_aes.c",
-      "crypto/fipsmodule/digest/digest.c",
-      "crypto/fipsmodule/digest/digests.c",
-      "crypto/fipsmodule/hmac/hmac.c",
-      "crypto/fipsmodule/modes/gcm.c",
-      "crypto/fipsmodule/modes/polyval.c",
-      "crypto/hkdf/hkdf.c",
-      "crypto/thread_pthread.c",
-      "zircon-unused.c",
-
-      # TODO(aarongreen): Replace or get upstream to support more fully.
-      "decrepit/xts/xts.c",
-
-      # Auto-generated sources.
-      "err_data.c",
-    ]
-
-    if (current_cpu == "arm64") {
-      sources += [
-        "linux-aarch64/crypto/fipsmodule/aesv8-armx64.S",
-        "linux-aarch64/crypto/fipsmodule/ghashv8-armx64.S",
-        "linux-aarch64/crypto/fipsmodule/sha256-armv8.S",
-      ]
-    } else if (current_cpu == "x64") {
-      if (current_os == "mac") {
-        asm_dir = "mac-x86_64/crypto"
-      } else {
-        asm_dir = "linux-x86_64/crypto"
-      }
-      sources += [
-        "$asm_dir/cipher_extra/aes128gcmsiv-x86_64.S",
-        "$asm_dir/fipsmodule/aes-x86_64.S",
-        "$asm_dir/fipsmodule/aesni-gcm-x86_64.S",
-        "$asm_dir/fipsmodule/aesni-x86_64.S",
-        "$asm_dir/fipsmodule/bsaes-x86_64.S",
-        "$asm_dir/fipsmodule/ghash-x86_64.S",
-        "$asm_dir/fipsmodule/sha256-x86_64.S",
-        "$asm_dir/fipsmodule/vpaes-x86_64.S",
-      ]
-    }
-  }
-
-  # This code doesn't use the annotation attribute.
-  configs -= [ "$zx_build/public/gn/config:warn-implicit-fallthrough" ]
+group("headers") {
+  public_deps = [
+    "$zx/third_party/ulib/boringssl:headers",
+  ]
 }

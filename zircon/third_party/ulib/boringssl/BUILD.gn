@@ -1,0 +1,71 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Note this leads to "$root_out_dir/obj/ABS_PATH/..." files in the build.
+bssl_dir = "$zx/../third_party/boringssl"
+
+import("$bssl_dir/zircon.gni")
+
+# Zircon code that depends on BoringSSL should have a "#define BORINGSSL_NO_CXX"
+# statement before any "#include <openssl/...>" statements to avoid pulling in
+# C++ headers.
+zx_library("boringssl") {
+  kernel = true
+  host = true
+  static = true
+
+  if (is_kernel) {
+    sources = rebase_path(boringssl_zircon_kernel_sources, ".", bssl_dir) +
+              [ "zircon-mem.c" ]
+    include_dirs = rebase_path(boringssl_zircon_include_dirs, ".", bssl_dir)
+
+    # Avoid circularity.
+    configs -= [ "$zx/kernel/vm:headers.config" ]
+
+    defines = [
+      # The assembly code uses vector registers, which is not allowed in
+      # kernel code.
+      "OPENSSL_NO_ASM",
+      "OPENSSL_NO_THREADS_CORRUPT_MEMORY_AND_LEAK_SECRETS_IF_THREADED",
+    ]
+  } else {
+    sources = rebase_path(boringssl_zircon_system_sources, ".", bssl_dir) +
+              [ "zircon-unused.c" ]
+    if (current_cpu == "arm64") {
+      sources +=
+          rebase_path(boringssl_zircon_system_arm64_sources, ".", bssl_dir)
+    } else if (current_cpu == "x64") {
+      if (current_os == "mac") {
+        sources += rebase_path(boringssl_zircon_system_x64_darwin_sources,
+                               ".",
+                               bssl_dir)
+      } else if (current_os == "linux" || current_os == "fuchsia") {
+        # Fuchsia can use the Linux optimized assembly without modification.
+        sources += rebase_path(boringssl_zircon_system_x64_linux_sources,
+                               ".",
+                               bssl_dir)
+      } else {
+        assert(false, "Unsupported OS")
+      }
+    } else {
+      assert("Unsupported CPU")
+    }
+    include_dirs = rebase_path(boringssl_zircon_include_dirs, ".", bssl_dir) +
+                   [ "$bssl_dir/src" ]
+
+    if (is_fuchsia) {
+      deps = [
+        "$zx/system/ulib/zircon",
+      ]
+    } else {
+      defines = [
+        # Required for `pthread_rwlock_t`.
+        "_XOPEN_SOURCE=700",
+      ]
+    }
+  }
+
+  # This code doesn't use the annotation attribute.
+  configs -= [ "$zx_build/public/gn/config:warn-implicit-fallthrough" ]
+}
