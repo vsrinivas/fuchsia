@@ -71,11 +71,12 @@ source_set("handle") {
   configs += [ "..:platform_include_config" ]
 
   sources = [
+    "linux_platform_handle.cc",
     "linux_platform_handle.h",
   ]
 
   public_deps = [
-    "//garnet/lib/magma/src/magma_util/platform:handle_header",
+    "..:handle_header",
   ]
 
   deps = [

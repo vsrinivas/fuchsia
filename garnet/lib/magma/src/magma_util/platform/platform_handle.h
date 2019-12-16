@@ -21,6 +21,8 @@ class PlatformHandle {
 
   static std::unique_ptr<PlatformHandle> Create(uint32_t handle);
 
+  static bool SupportsGetCount();
+
  private:
   PlatformHandle(const PlatformHandle&) = delete;
   PlatformHandle& operator=(const PlatformHandle&) = delete;

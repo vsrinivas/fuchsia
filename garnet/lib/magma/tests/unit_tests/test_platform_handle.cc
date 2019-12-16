@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <unistd.h>
+
 #include "gtest/gtest.h"
 #include "platform_buffer.h"
 #include "platform_handle.h"
@@ -9,14 +11,16 @@
 class TestPlatformHandle {
  public:
   static void Test() {
-    uint32_t mock_handle = 0xabba1001;
+    uint32_t mock_handle = 0x1001abba;
     auto platform_handle = magma::PlatformHandle::Create(mock_handle);
     ASSERT_TRUE(platform_handle);
     EXPECT_EQ(platform_handle->release(), mock_handle);
   }
 
   static void Count() {
-    auto buffer = magma::PlatformBuffer::Create(PAGE_SIZE, "test");
+    if (!magma::PlatformHandle::SupportsGetCount())
+      GTEST_SKIP();
+    auto buffer = magma::PlatformBuffer::Create(sysconf(_SC_PAGESIZE), "test");
     ASSERT_NE(buffer, nullptr);
     uint32_t raw_handle;
     EXPECT_TRUE(buffer->duplicate_handle(&raw_handle));
@@ -30,7 +34,7 @@ class TestPlatformHandle {
   }
 
   static void Duplicate() {
-    auto buffer = magma::PlatformBuffer::Create(PAGE_SIZE, "test");
+    auto buffer = magma::PlatformBuffer::Create(sysconf(_SC_PAGESIZE), "test");
     ASSERT_NE(buffer, nullptr);
     uint32_t raw_handle;
     EXPECT_TRUE(buffer->duplicate_handle(&raw_handle));

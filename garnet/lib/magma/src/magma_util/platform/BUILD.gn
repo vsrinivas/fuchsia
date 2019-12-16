@@ -132,6 +132,11 @@ source_set("handle") {
       "zircon:handle",
     ]
   }
+  if (is_linux) {
+    deps = [
+      "linux:handle",
+    ]
+  }
 }
 
 source_set("iommu_header") {

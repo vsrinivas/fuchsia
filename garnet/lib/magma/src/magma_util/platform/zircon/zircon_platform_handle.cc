@@ -27,6 +27,8 @@ bool PlatformHandle::duplicate_handle(uint32_t handle_in, uint32_t* handle_out) 
   return true;
 }
 
+bool PlatformHandle::SupportsGetCount() { return true; }
+
 std::unique_ptr<PlatformHandle> PlatformHandle::Create(uint32_t handle) {
   return std::make_unique<ZirconPlatformHandle>(zx::handle(handle));
 }
