@@ -7,8 +7,8 @@ use {
         buffer_reader::BufferReader, mac::MacAddr, mac::ReasonCode, organization::Oui,
         unaligned_view::UnalignedView,
     },
-    banjo_ddk_hw_wlan_ieee80211 as banjo_80211,
-    std::mem::size_of,
+    banjo_ddk_hw_wlan_ieee80211 as banjo_80211, banjo_wlan_protocol_info as banjo_wlan,
+    std::{convert::TryInto, mem::size_of},
     wlan_bitfield::bitfield,
     zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned},
 };
@@ -84,6 +84,31 @@ impl From<banjo_80211::Ieee80211HtCapabilities> for HtCapabilities {
             ht_ext_cap: HtExtCapabilities(cap.ht_ext_capabilities),
             txbf_cap: TxBfCapability(cap.tx_beamforming_capabilities),
             asel_cap: AselCapability(cap.asel_capabilities),
+        }
+    }
+}
+
+impl From<HtCapabilities> for banjo_80211::Ieee80211HtCapabilities {
+    fn from(cap: HtCapabilities) -> Self {
+        Self {
+            ht_capability_info: *&{ cap.ht_cap_info }.raw(),
+            ampdu_params: *&{ cap.ampdu_params }.raw(),
+            supported_mcs_set: cap.mcs_set.into(),
+            ht_ext_capabilities: *&{ cap.ht_ext_cap }.raw(),
+            tx_beamforming_capabilities: *&{ cap.txbf_cap }.raw(),
+            asel_capabilities: *&{ cap.asel_cap }.raw(),
+        }
+    }
+}
+
+impl From<SupportedMcsSet> for banjo_80211::Ieee80211HtCapabilitiesSupportedMcsSet {
+    fn from(mcs: SupportedMcsSet) -> Self {
+        Self {
+            fields: banjo_80211::Ieee80211HtCapabilitiesSupportedMcsSetFields {
+                rx_mcs_head: (mcs.raw() & ((1 << 64) - 1)) as u64,
+                rx_mcs_tail: ((mcs.raw() >> 64) & ((1 << 32) - 1)) as u32,
+                tx_mcs: ((mcs.raw() >> 96) & ((1 << 32) - 1)) as u32,
+            },
         }
     }
 }
@@ -388,6 +413,17 @@ pub struct HtOperation {
     pub ht_op_info_head: HtOpInfoHead,     // u8
     pub ht_op_info_tail: HtOpInfoTail,     // u32
     pub basic_ht_mcs_set: SupportedMcsSet, // u128
+}
+
+impl From<HtOperation> for banjo_wlan::WlanHtOp {
+    fn from(op: HtOperation) -> Self {
+        let mut info = [0; 5];
+        info[0] = op.ht_op_info_head.raw();
+        info[1..].clone_from_slice(*&{ op.ht_op_info_tail }.as_bytes());
+        // Safe to unwrap because DDK definition and bitfield definition both follow wire format
+        let supported_mcs_set = *&{ op.basic_ht_mcs_set }.as_bytes().try_into().unwrap();
+        Self { primary_chan: op.primary_chan, info, supported_mcs_set }
+    }
 }
 
 // IEEE Std 802.11-2016, Figure 9-339
@@ -739,6 +775,15 @@ impl From<banjo_80211::Ieee80211VhtCapabilities> for VhtCapabilities {
     }
 }
 
+impl From<VhtCapabilities> for banjo_80211::Ieee80211VhtCapabilities {
+    fn from(cap: VhtCapabilities) -> Self {
+        Self {
+            vht_capability_info: *&{ cap.vht_cap_info }.raw(),
+            supported_vht_mcs_and_nss_set: *&{ cap.vht_mcs_nss }.raw(),
+        }
+    }
+}
+
 // IEEE Std 802.11-2016, 9.4.2.158.2
 #[bitfield(
     0..=1   max_mpdu_len as MaxMpduLen(u8),
@@ -887,6 +932,18 @@ pub struct VhtOperation {
     pub center_freq_seg1: u8,         // Channel index
 
     pub basic_mcs_nss: VhtMcsNssMap, // u16
+}
+
+impl From<VhtOperation> for banjo_wlan::WlanVhtOp {
+    fn from(op: VhtOperation) -> Self {
+        Self {
+            // vht_cbw is a NewType for u8 instead of a bitfield, thus does not have raw() defined.
+            vht_cbw: op.vht_cbw.0,
+            center_freq_seg0: op.center_freq_seg0,
+            center_freq_seg1: op.center_freq_seg1,
+            basic_mcs: *&{ op.basic_mcs_nss }.raw(),
+        }
+    }
 }
 
 // IEEE Std 802.11-2016, Table 9-252
@@ -1055,5 +1112,43 @@ mod tests {
             map.set_ss(1, VhtMcsSet(4)),
             Err("bitfield is only 2 bit wide, 4 invalid".to_string())
         );
+    }
+
+    unsafe fn as_bytes<T>(s: &T) -> &[u8] {
+        std::slice::from_raw_parts((s as *const T) as *const u8, ::std::mem::size_of::<T>())
+    }
+
+    #[test]
+    fn ddk_conversion_ht_capabilities() {
+        let ht_cap = crate::ie::fake_ies::fake_ht_capabilities();
+        let ddk: banjo_80211::Ieee80211HtCapabilities = ht_cap.into();
+        assert_eq!(ht_cap.as_bytes(), unsafe { as_bytes(&ddk) });
+
+        let ht_cap: HtCapabilities = ddk.into();
+        assert_eq!(unsafe { as_bytes(&ddk) }, ht_cap.as_bytes());
+    }
+
+    #[test]
+    fn ddk_conversion_vht_capabilities() {
+        let vht_cap = crate::ie::fake_ies::fake_vht_capabilities();
+        let ddk: banjo_80211::Ieee80211VhtCapabilities = vht_cap.into();
+        assert_eq!(vht_cap.as_bytes(), unsafe { as_bytes(&ddk) });
+
+        let vht_cap: VhtCapabilities = ddk.into();
+        assert_eq!(unsafe { as_bytes(&ddk) }, vht_cap.as_bytes());
+    }
+
+    #[test]
+    fn ddk_conversion_ht_operation() {
+        let ht_op = crate::ie::fake_ies::fake_ht_operation();
+        let ddk: banjo_wlan::WlanHtOp = ht_op.into();
+        assert_eq!(ht_op.as_bytes(), unsafe { as_bytes(&ddk) });
+    }
+
+    #[test]
+    fn ddk_conversion_vht_operation() {
+        let vht_op = crate::ie::fake_ies::fake_vht_operation();
+        let ddk: banjo_wlan::WlanVhtOp = vht_op.into();
+        assert_eq!(vht_op.as_bytes(), unsafe { as_bytes(&ddk) });
     }
 }

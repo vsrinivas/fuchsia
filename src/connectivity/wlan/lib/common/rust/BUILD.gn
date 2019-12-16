@@ -30,6 +30,7 @@ rustc_library("wlan-common") {
     "//third_party/rust_crates:num-derive",
     "//third_party/rust_crates:num-traits",
     "//zircon/system/banjo/ddk.hw.wlan.ieee80211:ddk.hw.wlan.ieee80211-rustc",
+    "//zircon/system/banjo/wlan.protocol.info:wlan.protocol.info-rustc",
   ]
 }
 
