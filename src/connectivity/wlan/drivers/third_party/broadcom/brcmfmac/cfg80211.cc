@@ -959,8 +959,8 @@ static void cfg80211_disconnected(struct brcmf_cfg80211_vif* vif, uint16_t reaso
   ind.reason_code = reason;
 
   BRCMF_DBG(WLANIF,
-            "Sending deauth indication to SME. address: " MAC_FMT_STR
-            ", "
+            "Link Down: Sending deauth indication to SME. address: " MAC_FMT_STR
+            ",  "
             "reason: %" PRIu16 "\n",
             MAC_FMT_ARGS(ind.peer_sta_address), ind.reason_code);
 
@@ -3908,8 +3908,11 @@ static zx_status_t brcmf_notify_connect_status_ap(struct brcmf_cfg80211_info* cf
     deauth_ind_params.reason_code = e->reason;
 
     BRCMF_DBG(WLANIF,
-              "Sending deauth indication to SME. address: " MAC_FMT_STR ", reason: %" PRIu16 "\n",
-              MAC_FMT_ARGS(deauth_ind_params.peer_sta_address), deauth_ind_params.reason_code);
+              "Sending deauth indication to SME. address: " MAC_FMT_STR
+              ", type: %s reason: %" PRIu16 "\n",
+              MAC_FMT_ARGS(deauth_ind_params.peer_sta_address),
+              (event == BRCMF_E_DEAUTH_IND) ? "DEAUTH_IND" : "DEAUTH",
+              deauth_ind_params.reason_code);
 
     wlanif_impl_ifc_deauth_ind(&ndev->if_proto, &deauth_ind_params);
   }
