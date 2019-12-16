@@ -1,0 +1,10 @@
+# Please, read https://fuchsia.dev/fuchsia-src/contribute/best-practices/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "USB system overview"
+  path: /docs/concepts/usb/overview.md
+- title: "Lifecycle of a USB request"
+  path: /docs/concepts/usb/request-lifecycle.md
+- title: "Testing a USB device"
+  path: /docs/concepts/usb/testing.md
