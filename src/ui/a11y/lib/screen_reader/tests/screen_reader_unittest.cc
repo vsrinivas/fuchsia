@@ -35,7 +35,8 @@ class ScreenReaderTest : public gtest::TestLoopFixture {
  public:
   ScreenReaderTest()
       : tts_manager_(context_provider_.context()),
-        semantics_manager_(context_provider_.context()->outgoing()->debug_dir()),
+        semantics_manager_(std::make_unique<a11y::SemanticTreeServiceFactory>(),
+                           context_provider_.context()->outgoing()->debug_dir()),
         screen_reader_(&semantics_manager_, &tts_manager_),
         semantic_provider_(&semantics_manager_) {
     screen_reader_.BindGestures(gesture_manager_.gesture_handler());

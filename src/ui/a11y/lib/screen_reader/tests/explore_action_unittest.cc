@@ -31,7 +31,8 @@ constexpr int kMaxLogBufferSize = 1024;
 class ExploreActionTest : public gtest::TestLoopFixture {
  public:
   ExploreActionTest()
-      : semantics_manager_(context_provider_.context()->outgoing()->debug_dir()),
+      : semantics_manager_(std::make_unique<a11y::SemanticTreeServiceFactory>(),
+                           context_provider_.context()->outgoing()->debug_dir()),
         tts_manager_(context_provider_.context()),
         semantic_provider_(&semantics_manager_) {
     action_context_.semantics_manager = &semantics_manager_;

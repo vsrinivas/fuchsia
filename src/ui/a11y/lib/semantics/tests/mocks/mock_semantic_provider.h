@@ -19,7 +19,7 @@ namespace accessibility_test {
 class MockSemanticProvider {
  public:
   // On initialization, MockSemanticProvider tries to connect to
-  // |fuchsia::accessibility::SemanticsManager| service in |context_| and
+  // |fuchsia::accessibility::SemanticsManager| service in |manager| and
   // registers with it's view_ref, binding and interface request.
   explicit MockSemanticProvider(fuchsia::accessibility::semantics::SemanticsManager* manager);
   ~MockSemanticProvider() = default;

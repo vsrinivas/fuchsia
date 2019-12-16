@@ -94,8 +94,8 @@ class SemanticTreeServiceTest : public gtest::TestLoopFixture {
   void SetUp() override {
     TestLoopFixture::SetUp();
     // Create View Ref.
-    zx::eventpair a, b;
-    zx::eventpair::create(0u, &a, &b);
+    zx::eventpair a;
+    zx::eventpair::create(0u, &a, &b_);
     view_ref_ = fuchsia::ui::views::ViewRef({
         .reference = std::move(a),
     });
@@ -174,6 +174,9 @@ class SemanticTreeServiceTest : public gtest::TestLoopFixture {
   fuchsia::ui::views::ViewRef view_ref_;
   sys::testing::ComponentContextProvider context_provider_;
   SemanticTreeParser semantic_tree_parser_;
+
+  // The event signaling pair member, used to invalidate the View Ref.
+  zx::eventpair b_;
 };
 
 TEST_F(SemanticTreeServiceTest, IsSameViewReturnsTrueForTreeViewRef) {
@@ -254,6 +257,16 @@ TEST_F(SemanticTreeServiceTest, LogsSemanticTree) {
   ReadFile(node, expected_semantic_tree_odd.size(), buffer);
 
   EXPECT_EQ(expected_semantic_tree_odd, buffer);
+}
+
+TEST_F(SemanticTreeServiceTest, ClosesChannelWhenViewRefIsInvalidated) {
+  InitializeTreeNodesFromFile(kSemanticTreeSingleNodePath);
+  EXPECT_EQ(semantic_tree_->Get()->Size(), 1u);
+  // Invalidates the View Ref by signaling the event pair member.
+  b_.reset();
+  RunLoopUntilIdle();
+  // This should have invoked the callback to close the channel.
+  EXPECT_TRUE(close_channel_called_);
 }
 
 }  // namespace accessibility_test

@@ -14,12 +14,12 @@ const float kDefaultMagnificationZoomFactor = 1.0;
 
 App::App(std::unique_ptr<sys::ComponentContext> context)
     : startup_context_(std::move(context)),
-      // The following services publish themselves upon initialization.
-      semantics_manager_(startup_context_->outgoing()->debug_dir()),
+      semantics_manager_(std::make_unique<a11y::SemanticTreeServiceFactory>(),
+                         startup_context_->outgoing()->debug_dir()),
       tts_manager_(startup_context_.get()),
+      color_transform_manager_(startup_context_.get()),
       // For now, we use a simple Tts Engine which only logs the output.
       // On initialization, it registers itself with the Tts manager.
-      color_transform_manager_(startup_context_.get()),
       log_engine_(startup_context_.get()) {
   startup_context_->outgoing()->AddPublicService(
       semantics_manager_bindings_.GetHandler(&semantics_manager_));

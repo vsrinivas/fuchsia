@@ -16,35 +16,41 @@
 
 namespace a11y {
 
+// Factory class to build a new Semantic Tree Service.
+class SemanticTreeServiceFactory {
+ public:
+  SemanticTreeServiceFactory() = default;
+  virtual ~SemanticTreeServiceFactory() = default;
+
+  virtual std::unique_ptr<SemanticTreeService> NewService(
+      fuchsia::ui::views::ViewRef view_ref,
+      fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
+      vfs::PseudoDir* debug_dir, SemanticTreeService::CloseChannelCallback close_channel_callback);
+};
+
+// A service to manage producing and consuming of semantics.
+//
+// Semantic Providers connect to this service to start supplying semantic
+// information for a particular View while Semantic Consumers query available
+// semantic information managed by this service.
 class SemanticsManager : public fuchsia::accessibility::semantics::SemanticsManager {
  public:
-  explicit SemanticsManager(vfs::PseudoDir* debug_dir);
+  explicit SemanticsManager(std::unique_ptr<SemanticTreeServiceFactory> factory,
+                            vfs::PseudoDir* debug_dir);
   ~SemanticsManager() override;
-
-  // Provides the manager a way to query a node if it already knows
-  // what view id and node id it wants to query for. This method returns
-  // a copy of the queried node. It may return a nullptr if no node is found.
-  fuchsia::accessibility::semantics::NodePtr GetAccessibilityNode(
-      const fuchsia::ui::views::ViewRef& view_ref, const int32_t node_id);
-
-  // Provides the manager a way to query a node in the semantic tree based on
-  // koid(of the ViewRef associated with the semantic tree) and node id.
-  // If node is found, this method returns a copy of the queried node, otherwise nullptr is
-  // returned.
-  fuchsia::accessibility::semantics::NodePtr GetAccessibilityNodeByKoid(const zx_koid_t koid,
-                                                                        const int32_t node_id);
 
   // Function to Enable/Disable Semantics Manager.
   // When Semantics Manager is disabled, all the semantic tree bindings are
   // closed, which deletes all the semantic tree data.
   void SetSemanticsManagerEnabled(bool enabled);
 
-  // Matches ViewRef with given koid, and calls HitTesting() on the matched
-  // view.
-  // If no view matches given koid, then this function doesn't use callback.
-  void PerformHitTesting(
-      zx_koid_t koid, ::fuchsia::math::PointF local_point,
-      fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback);
+  // Returns a weak pointer to the Semantic Tree owned by the service with
+  // |koid| if it exists, nullptr otherwise. Caller must always check if the
+  // pointer is valid before accessing, as the pointer may be invalidated. The
+  // pointer may become invalidated if the semantic provider disconnects or if
+  // an error occurred. This is not thread safe. This pointer may only be used
+  // in the same thread as this service is running.
+  const fxl::WeakPtr<::a11y::SemanticTree> GetTreeByKoid(const zx_koid_t koid) const;
 
  private:
   // |fuchsia::accessibility::semantics::SemanticsManager|:
@@ -54,15 +60,8 @@ class SemanticsManager : public fuchsia::accessibility::semantics::SemanticsMana
       fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree> semantic_tree_request)
       override;
 
-  // Helper function for semantic registration.
-  void CompleteSemanticRegistration(
-      fuchsia::ui::views::ViewRef view_ref,
-      fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
-      fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree>
-          semantic_tree_request);
-
-  // Closes channel for semantic tree that matches the given "koid".
-  void CloseChannel(zx_koid_t koid);
+  // Closes the service channel of the View with |view_ref_koid| in |semantic_tree_bindings_|.
+  void CloseChannel(zx_koid_t view_ref_koid);
 
   // Helper function to enable semantic updates for all the Views.
   void EnableSemanticsUpdates(bool enabled);
@@ -72,6 +71,8 @@ class SemanticsManager : public fuchsia::accessibility::semantics::SemanticsMana
       semantic_tree_bindings_;
 
   bool semantics_enabled_ = false;
+
+  std::unique_ptr<SemanticTreeServiceFactory> factory_;
 
   vfs::PseudoDir* const debug_dir_;
 };
