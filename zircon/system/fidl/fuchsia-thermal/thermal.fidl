@@ -1,0 +1,87 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.thermal;
+
+/// A value to indicate which type of subsystem an Actor connection represents. The Controller may
+/// leverage this extra information to thermally limit only specific subsystems as needed.
+enum ActorType {
+    UNSPECIFIED = 1;
+    AUDIO = 2;
+};
+
+/// Error codes for the thermal protocol.
+enum Error {
+    /// The component encountered an unspecified error while performing the operation.
+    INTERNAL = 1;
+
+    /// At least one argument was invalid.
+    INVALID_ARGUMENTS = 2;
+};
+
+/// The maximum number of trip points that may be specified in the `trip_points` vector argument to
+/// `Subscribe`.
+const uint32 MAX_TRIP_POINT_COUNT = 100;
+
+/// The maximum value of the normalized thermal load. This value bounds the width (and therefore
+/// also the precision) of the normalized thermal limiting range starting from 0. Trip points must
+/// be specified within this range.
+const uint32 MAX_THERMAL_LOAD = 100;
+
+/// A protocol providing the API for a client service to subscribe to receive thermal state updates.
+[Discoverable]
+protocol Controller {
+    /// Subscribes with the Controller to receive thermal state changes on the specified
+    /// [fuchsia.thermal/Actor] proxy handle.
+    ///
+    /// The current thermal state will be sent immediately, with all subsequent state changes
+    /// occuring based on the changing system thermal load and specified `trip_points`.
+    ///
+    /// + request `actor` a [fuchsia.thermal/Actor] proxy to handle the SetThermalState callbacks
+    /// + request `actor_type` a [fuchsia.thermal/ActorType] value to indicate the type of
+    ///     subsystem this actor is representing. The Controller may leverage this extra
+    ///     information to thermally limit only specific subsystems as needed.
+    /// + request `trip_points` a vector containing the points within the normalized thermal
+    ///     limiting range [0 - `MAX_THERMAL_LOAD`] at which the Actor should be transitioned to
+    ///     the next thermal state. The Controller will call SetThermalState on the Actor each
+    ///     time these points are crossed within the normalized range. The vector must:
+    ///       - have length in the range [1 - `MAX_TRIP_POINT_COUNT`]
+    ///       - have values in the range [1 - `MAX_THERMAL_LOAD`]
+    ///       - be monotonically increasing
+    /// * error a [fuchsia.thermal/Error] value indicating the reason (if any) that Subscribe failed
+    Subscribe(Actor actor,
+              ActorType actor_type,
+              vector<uint32>:MAX_TRIP_POINT_COUNT trip_points) -> () error Error;
+};
+
+/// The protocol to receive thermal state updates from the fuchsia.thermal/Controller.
+protocol Actor {
+    /// Sets the Actor's thermal state.
+    ///
+    /// The Actor is expected to ACK each call before subsequent calls will be made. `state` is
+    /// defined as an index into the Actor's reported thermal ranges. The Actor's thermal ranges
+    /// are defined by dividing the normalized thermal limiting range [0 - `MAX_THERMAL_LOAD`] at
+    /// the locations specified by the `trip_points` argument to Subscribe. `state` is therefore in
+    /// the range [0 - len(trip_points)]. For each value of `state`, the subsystem should remain
+    /// operational. The value of `state` should be interpreted as:
+    ///     0: "normal operation"
+    ///     1..[len(trip_points) - 1]: The subsystem is operating in such a way that each state
+    ///                                produces less heat than the previous state
+    ///     len(trip_points): max thermal limiting while still operational
+    ///
+    /// As a simple example, consider that Subscribe was called with a vector of two trip points:
+    /// [50, 90]. We can think of these trip points as boundaries within the normalized range
+    /// [0 - `MAX_THERMAL_LOAD`] such that three thermal ranges are created: [0 - 49], [50 - 89],
+    /// and [90 - `MAX_THERMAL_LOAD`]. Now, as the Controller observes the system thermal load
+    /// increase through the normalized range, it calls SetThermalState at the specified trip
+    /// points and indicates the index of which thermal range is now active. In this example, the
+    /// Controller would initially call `SetThermalState(0)` when there is no thermal limiting
+    /// required. As the device heats up, the Controller would call `SetThermalState(1)` and finally
+    /// `SetThermalState(2)` as the Controller observes the system thermal load cross 50 and 90,
+    /// respectively.
+    ///
+    /// + request `state` the new thermal state as an index into the Actor's reported thermal
+    ///     ranges, which are defined based on the Actor's specified `trip_points`.
+    SetThermalState(uint32 state) -> ();
+};
