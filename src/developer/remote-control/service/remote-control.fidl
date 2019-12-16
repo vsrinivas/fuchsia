@@ -1,0 +1,33 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.developer.remotecontrol;
+
+// This is copied from `fuchsia.sys.types`.
+// Unfortunately we can't depend on it directly,
+// because this protocol needs to build on the host.
+const uint16 MAX_URL_LENGTH = 2083;
+
+// TODO(fxb/42833): improve this API by making it async.
+table RunComponentResponse {
+    // Component's exit code.
+    1: uint32 exit_code;
+    // stdout from the component.
+    // This would be called just 'stdout', except for fxb/42108.
+    2: string:MAX component_stdout;
+    // stderr from the component.
+    // This would be called just 'stderr', except for fxb/42108.
+    3: string:MAX component_stderr;
+};
+
+[Discoverable]
+protocol FdbRemoteControl {
+    // Starts a component and waits for it finish.
+    RunComponent(
+        // Name of the component to start.
+        string:MAX_URL_LENGTH component_url,
+        // Arguments to pass to the component.
+        vector<string:MAX>:MAX args
+        ) -> (RunComponentResponse response);
+};
