@@ -1,0 +1,17 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library deprecated.pci;
+
+extend uint deprecated.BIND_PROTOCOL {
+  DEVICE = 31,
+};
+
+extend uint deprecated.BIND_PCI_VID {
+  AMD = 0x1002,
+  REALTEK = 0x10ec,
+  NVIDIA = 0x10de,
+  ATHEROS = 0x168c,
+  INTEL = 0x8086,
+};
