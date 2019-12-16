@@ -155,7 +155,6 @@ source_set("lib") {
     "//src/ledger/lib/util:ptr",
     "//src/ledger/lib/vmo",
     "//third_party/abseil-cpp",
-    "//zircon/public/lib/trace",
   ]
 
   public_deps = [
@@ -163,6 +162,7 @@ source_set("lib") {
     "//sdk/lib/sys/cpp",
     "//src/ledger/lib/logging",
     "//src/lib/inspect_deprecated",
+    "//zircon/public/lib/trace",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]
