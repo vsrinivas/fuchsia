@@ -62,9 +62,9 @@ config("musl_internal.config") {
   # TODO(kulakowski): Clean up the junkier -Wno flags below.
   cflags = [
     "-Wno-sign-compare",
-    "-Werror=incompatible-pointer-types",
     "-Wno-implicit-fallthrough",
   ]
+  cflags_c = [ "-Werror=incompatible-pointer-types" ]
 
   if (!is_gcc) {
     # Some of this code runs before the TLS area for the canary is set up.
