@@ -16,6 +16,8 @@
             "fuchsia.sys.Launcher",
             "fuchsia.logger.LogSink",
             "fuchsia.sys.Loader",
+            "fuchsia.ui.input.ImeService",
+            "fuchsia.ui.input2.Keyboard",
             "fuchsia.ui.scenic.Scenic"
         ]
     }
