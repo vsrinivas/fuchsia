@@ -7,8 +7,8 @@ import("//build/sdk/sdk_prebuilt_executable.gni")
 sdk_prebuilt_executable("symbolize") {
   category = "partner"
 
-  prebuilt = "$root_out_dir/symbolize"
-  non_sdk_deps = [ "//tools/debug/symbolize" ]
+  prebuilt = "$host_out_dir/symbolize"
+  non_sdk_deps = [ "//tools/debug/symbolize($host_toolchain)" ]
 }
 
 sdk_prebuilt_executable("banjo") {

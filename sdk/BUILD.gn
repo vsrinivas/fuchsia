@@ -140,10 +140,10 @@ sdk_molecule("fidl") {
     "//sdk/fidl/fuchsia.web:fuchsia.web_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.wlan.service:fuchsia.wlan.service_sdk($fidl_toolchain)",
     "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt_sdk($fidl_toolchain)",
-    "//zircon/system/fidl/fuchsia-hardware-power-statecontrol:fuchsia-hardware-power-statecontrol_sdk($fidl_toolchain)",
     "//zircon/system/fidl/fuchsia-inspect:fuchsia-inspect_sdk($fidl_toolchain)",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io_sdk($fidl_toolchain)",
     "//zircon/system/fidl/fuchsia-logger:fuchsia-logger_sdk($fidl_toolchain)",
+    "//zircon/system/fidl/fuchsia-hardware-power-statecontrol:fuchsia-hardware-power-statecontrol_sdk($fidl_toolchain)",
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem_sdk($fidl_toolchain)",
     "//zircon/system/fidl/fuchsia-posix-socket:fuchsia-posix-socket_sdk($fidl_toolchain)",
     "//zircon/system/fidl/fuchsia-process:fuchsia-process_sdk($fidl_toolchain)",
@@ -154,61 +154,25 @@ sdk_molecule("fidl") {
 
 sdk_molecule("core_tools") {
   visibility = [ ":*" ]
-
-  # TODO: Move to cross_compiled once it's possible to cross-compile them.
-  not_cross_compiled = [
-    "//src/developer/debug/zxdb:zxdb_sdk",
-    "//src/sys/cmc:cmc_sdk",
-    "//tools/fidlcat:fidlcat_sdk",
+  deps = [
+    "tools:symbolize_sdk($host_toolchain)",
+    "//garnet/bin/far:bin_sdk($host_toolchain)",
+    "//garnet/go/src/fidl:fidlgen_sdk($host_toolchain)",
+    "//garnet/go/src/pm:pm_bin_sdk($host_toolchain)",
+    "//src/developer/debug/zxdb:zxdb_sdk($host_toolchain)",
+    "//src/sys/cmc:cmc_sdk($host_toolchain)",
+    "//tools/fidlcat:fidlcat_sdk($host_toolchain)",
+    "//tools/net/dev_finder:dev_finder_sdk($host_toolchain)",
+    "//zircon/public/tool/bootserver:bootserver_sdk($host_toolchain)",
+    "//zircon/public/tool/fidl-format:fidl-format_sdk($host_toolchain)",
+    "//zircon/public/tool/fidlc:fidlc_sdk($host_toolchain)",
+    "//zircon/public/tool/fvm:fvm_sdk($host_toolchain)",
+    "//zircon/public/tool/loglistener:loglistener_sdk($host_toolchain)",
+    "//zircon/public/tool/merkleroot:merkleroot_sdk($host_toolchain)",
+    "//zircon/public/tool/minfs:minfs_sdk($host_toolchain)",
+    "//zircon/public/tool/zbi:zbi_sdk($host_toolchain)",
   ]
-
-  cross_compiled = [
-    "tools:symbolize_sdk",
-    "//garnet/bin/far:bin_sdk",
-    "//garnet/go/src/fidl:fidlgen_sdk",
-    "//garnet/go/src/pm:pm_bin_sdk",
-    "//tools/net/dev_finder:dev_finder_sdk",
-    "//zircon/public/tool/bootserver:bootserver_sdk",
-    "//zircon/public/tool/fidl-format:fidl-format_sdk",
-    "//zircon/public/tool/fidlc:fidlc_sdk",
-    "//zircon/public/tool/fvm:fvm_sdk",
-    "//zircon/public/tool/loglistener:loglistener_sdk",
-    "//zircon/public/tool/merkleroot:merkleroot_sdk",
-    "//zircon/public/tool/minfs:minfs_sdk",
-    "//zircon/public/tool/zbi:zbi_sdk",
-  ]
-
-  toolchains = []
-  if (host_os == "linux") {
-    toolchains += [
-      host_x64_toolchain,
-      host_arm64_toolchain,
-    ]
-  } else if (host_os == "mac") {
-    toolchains += [ host_toolchain ]
-  }
-
-  deps = []
-
-  foreach(toolchain, toolchains) {
-    foreach(dep, cross_compiled) {
-      deps += [ "$dep($toolchain)" ]
-      if (toolchain == host_toolchain) {
-        deps += [ "${dep}_legacy($toolchain)" ]
-      }
-    }
-
-    if (toolchain == host_toolchain) {
-      foreach(dep, not_cross_compiled) {
-        deps += [
-          "$dep($toolchain)",
-          "${dep}_legacy($toolchain)",
-        ]
-      }
-    }
-  }
 }
-
 sdk_molecule("core_lib") {
   visibility = [ ":*" ]
   testonly = true
@@ -284,7 +248,7 @@ sdk("fuchsia_dart2") {
     # Temporarily added as a direct dependency so that it can be removed from
     # //sdk/fidl/fuchsia.ui.views.
     "//sdk/fidl/fuchsia.intl:fuchsia.intl_sdk",
-    "//topaz/bin/fidlgen_dart:fidlgen_dart_sdk_legacy($host_toolchain)",
+    "//topaz/bin/fidlgen_dart:fidlgen_dart_sdk($host_toolchain)",
     "//topaz/public/dart/composition_delegate:composition_delegate_sdk($dart_toolchain)",
     "//topaz/public/dart/fidl:fidl_sdk($dart_toolchain)",
     "//topaz/public/dart/fuchsia:fuchsia_sdk($dart_toolchain)",
