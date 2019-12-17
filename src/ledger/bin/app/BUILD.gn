@@ -121,6 +121,7 @@ source_set("lib") {
     "//src/ledger/bin/fidl",
     "//src/ledger/bin/fidl:syncable",
     "//src/ledger/bin/fidl/include",
+    "//src/ledger/bin/fidl/syncable",
     "//src/ledger/bin/fidl_helpers",
     "//src/ledger/bin/filesystem",
     "//src/ledger/bin/p2p_provider/impl",

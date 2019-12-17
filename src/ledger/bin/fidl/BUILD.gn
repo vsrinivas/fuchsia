@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/fidl/fidl.gni")
-import("//src/ledger/bin/fidl/syncable/syncable.gni")
 
 fidl("fidl") {
   # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
@@ -24,22 +23,20 @@ fidl("fidl") {
   ]
 }
 
-syncable_fidl("syncable_internal") {
-  fidl_target = ":fidl"
-}
-
-syncable_fidl("syncable_public") {
-  fidl_target = "//sdk/fidl/fuchsia.ledger"
-}
-
 source_set("syncable") {
   sources = [
     "syncable.h",
+
+    # TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=43106): Generate these two headers
+    # rather than using checked-in copies.
+    "syncable_internal.h",
+    "syncable_public.h",
   ]
 
   public_deps = [
-    ":syncable_internal",
-    ":syncable_public",
+    ":fidl",
+    "//src/ledger/bin/fidl/syncable",
+    "//src/ledger/bin/public",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]
