@@ -5,6 +5,8 @@
 #pragma once
 
 #include <cstdint>
+#include <memory>
+#include <utility>
 
 #include <cobalt-client/cpp/collector.h>
 #include <cobalt-client/cpp/histogram.h>
@@ -16,7 +18,7 @@ struct VnodeMetrics {
   // Number of buckets used for the vnode metrics.
   static constexpr uint32_t kHistogramBuckets = 10;
 
-  VnodeMetrics(cobalt_client::Collector* collector, const fbl::String& fs_name, bool local_metrics);
+  VnodeMetrics(cobalt_client::Collector* collector, const fbl::String& fs_name);
 
   cobalt_client::Histogram<kHistogramBuckets> close;
   cobalt_client::Histogram<kHistogramBuckets> read;
@@ -46,8 +48,7 @@ struct VnodeMetrics {
 class Metrics {
  public:
   Metrics() = delete;
-  Metrics(cobalt_client::CollectorOptions collector_options, bool local_metrics,
-          const fbl::String& fs_name);
+  Metrics(std::unique_ptr<cobalt_client::Collector> collector, const fbl::String& fs_name);
   Metrics(const Metrics&) = delete;
   Metrics(Metrics&&) = delete;
   Metrics& operator=(const Metrics&) = delete;
@@ -61,16 +62,16 @@ class Metrics {
   bool IsEnabled() const;
 
   // Returns the collector.
-  const cobalt_client::Collector& collector() const { return collector_; }
+  const cobalt_client::Collector& collector() const { return *collector_; }
 
   // Returns the collector.
-  cobalt_client::Collector* mutable_collector() { return &collector_; }
+  cobalt_client::Collector* mutable_collector() { return collector_.get(); }
 
   const VnodeMetrics& vnode_metrics() const;
   VnodeMetrics* mutable_vnode_metrics();
 
  protected:
-  cobalt_client::Collector collector_;
+  std::unique_ptr<cobalt_client::Collector> collector_;
 
   VnodeMetrics vnode_metrics_;
 

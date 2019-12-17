@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fs/metrics/composite_latency_event.h>
+
 #include <lib/inspect/cpp/inspect.h>
 #include <zircon/types.h>
 
@@ -12,7 +14,6 @@
 #include <cobalt-client/cpp/collector.h>
 #include <cobalt-client/cpp/in_memory_logger.h>
 #include <fs/metrics/cobalt_metrics.h>
-#include <fs/metrics/composite_latency_event.h>
 #include <fs/metrics/events.h>
 #include <fs/metrics/histograms.h>
 #include <zxtest/zxtest.h>
@@ -31,7 +32,7 @@ class CompositeLatencyEventTest : public zxtest::Test {
         std::make_unique<cobalt_client::InMemoryLogger>();
     logger_ = logger.get();
     collector_ = std::make_unique<cobalt_client::Collector>(std::move(logger));
-    metrics_ = std::make_unique<fs_metrics::VnodeMetrics>(collector_.get(), kComponentName, false);
+    metrics_ = std::make_unique<fs_metrics::VnodeMetrics>(collector_.get(), kComponentName);
     histograms_ = std::make_unique<Histograms>(&inspector_.GetRoot());
   }
 

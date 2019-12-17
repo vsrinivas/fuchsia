@@ -44,6 +44,7 @@ zx_test("metrics-cobalt") {
 
   deps = [
     "$zx/system/ulib/cobalt-client",
+    "$zx/system/ulib/cobalt-client:in-memory-logger",
     "$zx/system/ulib/fs/metrics:metrics-cobalt",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",

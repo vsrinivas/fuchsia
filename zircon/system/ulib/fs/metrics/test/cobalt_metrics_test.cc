@@ -13,6 +13,7 @@
 #include <cobalt-client/cpp/collector.h>
 #include <cobalt-client/cpp/counter.h>
 #include <cobalt-client/cpp/histogram.h>
+#include <cobalt-client/cpp/in_memory_logger.h>
 #include <zxtest/zxtest.h>
 
 namespace fs_metrics {
@@ -23,10 +24,9 @@ constexpr uint32_t kLatencyNs = 5000;
 
 constexpr uint32_t kBuckets = 20;
 
-cobalt_client::CollectorOptions MakeOptions() {
-  cobalt_client::CollectorOptions options = cobalt_client::CollectorOptions::Debug();
-  options.project_id = 20;
-  return options;
+std::unique_ptr<cobalt_client::Collector> MakeCollector() {
+  return std::make_unique<cobalt_client::Collector>(
+      std::make_unique<cobalt_client::InMemoryLogger>());
 }
 
 cobalt_client::HistogramOptions MakeHistogramOptions() {
@@ -45,7 +45,7 @@ cobalt_client::MetricOptions MakeCounterOptions() {
 }
 
 TEST(CobaltMetricsTest, LogWhileEnabled) {
-  fs_metrics::Metrics metrics(MakeOptions(), /*local_metrics*/ false, "TestFs");
+  fs_metrics::Metrics metrics(MakeCollector(), "TestFs");
   metrics.EnableMetrics(/*should_collect*/ true);
 
   fs_metrics::VnodeMetrics* vnodes = metrics.mutable_vnode_metrics();
@@ -58,7 +58,7 @@ TEST(CobaltMetricsTest, LogWhileEnabled) {
 }
 
 TEST(CobaltMetricsTest, LogWhileNotEnabled) {
-  fs_metrics::Metrics metrics(MakeOptions(), /*local_metrics*/ false, "TestFs");
+  fs_metrics::Metrics metrics(MakeCollector(), "TestFs");
   metrics.EnableMetrics(/*should_collect*/ false);
 
   fs_metrics::VnodeMetrics* vnodes = metrics.mutable_vnode_metrics();
@@ -70,7 +70,7 @@ TEST(CobaltMetricsTest, LogWhileNotEnabled) {
 }
 
 TEST(CobaltMetricsTest, EnableMetricsEnabled) {
-  fs_metrics::Metrics metrics(MakeOptions(), /*local_metrics*/ false, "TestFs");
+  fs_metrics::Metrics metrics(MakeCollector(), "TestFs");
   fs_metrics::VnodeMetrics* vnodes = metrics.mutable_vnode_metrics();
   ASSERT_NOT_NULL(vnodes);
   ASSERT_EQ(vnodes->metrics_enabled, metrics.IsEnabled());
@@ -81,7 +81,7 @@ TEST(CobaltMetricsTest, EnableMetricsEnabled) {
 }
 
 TEST(CobaltMetricsTest, EnableMetricsDisabled) {
-  fs_metrics::Metrics metrics(MakeOptions(), /*local_metrics*/ false, "TestFs");
+  fs_metrics::Metrics metrics(MakeCollector(), "TestFs");
   metrics.EnableMetrics(/*should_collect*/ true);
   fs_metrics::VnodeMetrics* vnodes = metrics.mutable_vnode_metrics();
 
@@ -94,7 +94,7 @@ TEST(CobaltMetricsTest, EnableMetricsDisabled) {
 }
 
 TEST(CobaltMetrics, AddCustomMetric) {
-  fs_metrics::Metrics metrics(MakeOptions(), /*local_metrics*/ false, "TestFs");
+  fs_metrics::Metrics metrics(MakeCollector(), "TestFs");
   metrics.EnableMetrics(/*should_collect*/ false);
 
   cobalt_client::Histogram<kBuckets> hist =

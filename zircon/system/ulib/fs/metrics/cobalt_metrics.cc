@@ -4,6 +4,7 @@
 
 #include <fs/metrics/cobalt_metrics.h>
 
+#include <memory>
 #include <utility>
 
 #include <fs/metrics/events.h>
@@ -42,8 +43,7 @@ cobalt_client::HistogramOptions MakeHistogramOptions(const cobalt_client::Histog
 
 }  // namespace
 
-VnodeMetrics::VnodeMetrics(cobalt_client::Collector* collector, const fbl::String& fs_name,
-                           bool local_metrics) {
+VnodeMetrics::VnodeMetrics(cobalt_client::Collector* collector, const fbl::String& fs_name) {
   // Initialize all the metrics for the collector.
   cobalt_client::HistogramOptions nano_base = kVnodeOptionsNanoOp;
   cobalt_client::HistogramOptions micro_base = kVnodeOptionsMicroOp;
@@ -86,10 +86,9 @@ VnodeMetrics::VnodeMetrics(cobalt_client::Collector* collector, const fbl::Strin
                   collector);
 }
 
-Metrics::Metrics(cobalt_client::CollectorOptions options, bool local_metrics,
-                 const fbl::String& fs_name)
-    : collector_(std::move(options)),
-      vnode_metrics_(&collector_, fs_name, local_metrics),
+Metrics::Metrics(std::unique_ptr<cobalt_client::Collector> collector, const fbl::String& fs_name)
+    : collector_(std::move(collector)),
+      vnode_metrics_(collector_.get(), fs_name),
       is_enabled_(false) {}
 
 const VnodeMetrics& Metrics::vnode_metrics() const { return vnode_metrics_; }
