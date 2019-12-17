@@ -16,7 +16,7 @@
             "class/sysmem"
         ],
         "features": [
-            "isolated-temp"
+            "system-temp"
         ],
         "services": [
             "fuchsia.mediacodec.CodecFactory",

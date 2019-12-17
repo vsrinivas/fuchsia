@@ -481,6 +481,14 @@ CodecAdapterAacEncoder::CreateEncoder(const fuchsia::media::PcmFormat& pcm_forma
   uint32_t transmux = INT_MAX;
   if (encoder_settings.transport.is_raw()) {
     transmux = TT_MP4_RAW;
+  } else if (encoder_settings.transport.is_latm()) {
+    if (encoder_settings.transport.latm().mux_config_present) {
+      transmux = TT_MP4_LATM_MCP1;
+    } else {
+      transmux = TT_MP4_LATM_MCP0;
+    }
+  } else if (encoder_settings.transport.is_adts()) {
+    transmux = TT_MP4_ADTS;
   } else {
     return fit::error(kUnsupportedTransport);
   }

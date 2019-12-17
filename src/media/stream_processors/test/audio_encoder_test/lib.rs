@@ -76,7 +76,7 @@ fn sbc_test_suite() -> Result<()> {
 #[test]
 fn aac_test_suite() -> Result<()> {
     with_large_stack(|| {
-        let sbc_tests = AudioEncoderTestCase {
+        let aac_raw_tests = AudioEncoderTestCase {
             input_framelength: 1024,
             settings: Rc::new(move || -> EncoderSettings {
                 EncoderSettings::Aac(AacEncoderSettings {
@@ -103,6 +103,103 @@ fn aac_test_suite() -> Result<()> {
             }],
         };
 
-        fasync::Executor::new().unwrap().run_singlethreaded(sbc_tests.run())
+        fasync::Executor::new().unwrap().run_singlethreaded(aac_raw_tests.run())
+    })
+}
+
+#[test]
+fn aac_adts_test_suite() -> Result<()> {
+    with_large_stack(|| {
+        let aac_adts_tests = AudioEncoderTestCase {
+            input_framelength: 1024,
+            settings: Rc::new(move || -> EncoderSettings {
+                EncoderSettings::Aac(AacEncoderSettings {
+                    transport: AacTransport::Adts(AacTransportAdts {}),
+                    channel_mode: AacChannelMode::Mono,
+                    bit_rate: AacBitRate::Variable(AacVariableBitRate::V5),
+                    aot: AacAudioObjectType::Mpeg2AacLc,
+                })
+            }),
+            channel_count: 1,
+            hash_tests: vec![AudioEncoderHashTest {
+                input_format: PcmFormat {
+                    pcm_mode: AudioPcmMode::Linear,
+                    bits_per_sample: 16,
+                    frames_per_second: 44100,
+                    channel_map: vec![AudioChannelId::Cf],
+                },
+                output_packet_count: 5,
+                output_file: None,
+                expected_digest: ExpectedDigest::new(
+                    "Aac: 44.1kHz/Mono/V5/Mpeg2 LC/Adts",
+                    "5c4f55f178d08805ad31db5b1b3c999936c67cd334e7630f653785d50a270963",
+                ),
+            }],
+        };
+
+        fasync::Executor::new().unwrap().run_singlethreaded(aac_adts_tests.run())
+    })
+}
+
+#[test]
+fn aac_latm_test_suite() -> Result<()> {
+    with_large_stack(|| {
+        let aac_latm_with_mux_config_test = AudioEncoderTestCase {
+            input_framelength: 1024,
+            settings: Rc::new(move || -> EncoderSettings {
+                EncoderSettings::Aac(AacEncoderSettings {
+                    transport: AacTransport::Latm(AacTransportLatm { mux_config_present: true }),
+                    channel_mode: AacChannelMode::Mono,
+                    bit_rate: AacBitRate::Variable(AacVariableBitRate::V5),
+                    aot: AacAudioObjectType::Mpeg2AacLc,
+                })
+            }),
+            channel_count: 1,
+            hash_tests: vec![AudioEncoderHashTest {
+                input_format: PcmFormat {
+                    pcm_mode: AudioPcmMode::Linear,
+                    bits_per_sample: 16,
+                    frames_per_second: 44100,
+                    channel_map: vec![AudioChannelId::Cf],
+                },
+                output_packet_count: 5,
+                output_file: None,
+                expected_digest: ExpectedDigest::new(
+                    "Aac: 44.1kHz/Mono/V5/Mpeg2 LC/Latm/MuxConfig",
+                    "3af2677520134b8d4f48f95575e26389136d3698cb83ed5c293dda865b2b18e3",
+                ),
+            }],
+        };
+
+        fasync::Executor::new().unwrap().run_singlethreaded(aac_latm_with_mux_config_test.run())?;
+
+        let aac_latm_without_mux_config_test = AudioEncoderTestCase {
+            input_framelength: 1024,
+            settings: Rc::new(move || -> EncoderSettings {
+                EncoderSettings::Aac(AacEncoderSettings {
+                    transport: AacTransport::Latm(AacTransportLatm { mux_config_present: false }),
+                    channel_mode: AacChannelMode::Mono,
+                    bit_rate: AacBitRate::Variable(AacVariableBitRate::V5),
+                    aot: AacAudioObjectType::Mpeg2AacLc,
+                })
+            }),
+            channel_count: 1,
+            hash_tests: vec![AudioEncoderHashTest {
+                input_format: PcmFormat {
+                    pcm_mode: AudioPcmMode::Linear,
+                    bits_per_sample: 16,
+                    frames_per_second: 44100,
+                    channel_map: vec![AudioChannelId::Cf],
+                },
+                output_packet_count: 5,
+                output_file: None,
+                expected_digest: ExpectedDigest::new(
+                    "Aac: 44.1kHz/Mono/V5/Mpeg2 LC/Latm/NoMuxConfig",
+                    "a3e77ac5c6c4118afd01a53bb53fd9e524e9daedd0a7ad85608206347ad271e9",
+                ),
+            }],
+        };
+
+        fasync::Executor::new().unwrap().run_singlethreaded(aac_latm_without_mux_config_test.run())
     })
 }
