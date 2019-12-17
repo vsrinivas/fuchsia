@@ -40,14 +40,8 @@ class WlanManager extends StatelessWidget {
 
     Widget widget;
     if (!model.hasWifiAdapter) {
-      widget = SettingsPage(
-        scale: scale,
-        sections: [
-          SettingsSection.error(
-              description: 'No wireless adapters are available on this device',
-              scale: scale),
-          _buildDebugSection(model, scale)
-        ],
+      widget = Center(
+        child: Text('No wireless adapters are available on this device'),
       );
     } else if (model.loading) {
       widget = _buildLoading(model, scale);
