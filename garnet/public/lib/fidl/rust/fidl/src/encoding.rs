@@ -357,7 +357,8 @@ impl<'a> Decoder<'a> {
         handles: &'a mut [Handle],
         value: &mut T,
     ) -> Result<()> {
-        let out_of_line_offset = round_up_to_align(T::inline_size(&context), 8);
+        let inline_size = T::inline_size(context);
+        let out_of_line_offset = round_up_to_align(inline_size, 8);
         if buf.len() < out_of_line_offset {
             return Err(Error::OutOfRange);
         }
@@ -379,6 +380,29 @@ impl<'a> Decoder<'a> {
         }
         if decoder.handles.len() != 0 {
             return Err(Error::ExtraHandles);
+        }
+        debug_assert!(
+            decoder.buf.len() == out_of_line_offset - inline_size,
+            "Inline part of the buffer was not completely consumed. Most likely, this indicates a \
+             bug in the FIDL decoders.\n\
+             Inline buffer size: {}\n\
+             Type size: {}\n\
+             Consumed: {}\n\
+             Leftover size: {}\n\
+             Buffer: {:X?}",
+            out_of_line_offset,
+            inline_size,
+            out_of_line_offset - decoder.buf.len(),
+            decoder.buf.len(),
+            decoder.buf,
+        );
+        for i in 0..decoder.buf.len() {
+            if decoder.buf[i] != 0 {
+                return Err(Error::NonZeroPadding {
+                    padding_start: inline_size,
+                    non_zero_pos: inline_size + i,
+                });
+            }
         }
         Ok(())
     }
@@ -1592,8 +1616,7 @@ impl<T: Autonull> Decodable for Option<Box<T>> {
                 *self = None;
                 // Eat the full `inline_size` bytes including the
                 // ALLOC_ABSENT that we only peeked at before
-                // TODO(FIDL-598) Switch to `skip_padding` when other bindings are ready.
-                decoder.next_slice(inline_size)?;
+                decoder.skip_padding(inline_size)?;
                 Ok(())
             }
         } else {
@@ -1672,16 +1695,14 @@ macro_rules! fidl_struct {
                     let mut cur_offset = 0;
                     $(
                         // Skip to the start of the next field
-                        // TODO(FIDL-598) Switch to `skip_padding` when other bindings are ready.
                         let member_offset = $member_offset_v1;
-                        decoder.next_slice(member_offset - cur_offset)?;
+                        decoder.skip_padding(member_offset - cur_offset)?;
                         cur_offset = member_offset;
                         $crate::fidl_decode!(&mut self.$member_name, decoder)?;
                         cur_offset += decoder.inline_size_of::<$member_ty>();
                     )*
                     // Skip to the end of the struct's size
-                    // TODO(FIDL-598) Switch to `skip_padding` when other bindings are ready.
-                    decoder.next_slice(decoder.inline_size_of::<Self>() - cur_offset)?;
+                    decoder.skip_padding(decoder.inline_size_of::<Self>() - cur_offset)?;
                     Ok(())
                 })
             }
@@ -2487,15 +2508,13 @@ macro_rules! tuple_impls {
                         // Skip to the start of the next field
                         let member_offset =
                             round_up_to_align(cur_offset, decoder.inline_align_of::<$ntyp>());
-                        // TODO(FIDL-598) Switch to `skip_padding` when other bindings are ready.
-                        decoder.next_slice(member_offset - cur_offset)?;
+                        decoder.skip_padding(member_offset - cur_offset)?;
                         cur_offset = member_offset;
                         self.$nidx.decode(decoder)?;
                         cur_offset += decoder.inline_size_of::<$ntyp>();
                     )*
                     // Skip to the end of the struct's size
-                    // TODO(FIDL-598) Switch to `skip_padding` when other bindings are ready.
-                    decoder.next_slice(decoder.inline_size_of::<Self>() - cur_offset)?;
+                    decoder.skip_padding(decoder.inline_size_of::<Self>() - cur_offset)?;
                     Ok(())
                 })
             }
@@ -2897,6 +2916,24 @@ mod test {
 
             let out_foo: Option<Box<Foo>> = encode_decode(ctx, &mut Box::new(None));
             assert!(out_foo.is_none());
+        }
+    }
+
+    #[test]
+    fn decode_struct_with_invalid_padding_fails() {
+        for ctx in CONTEXTS {
+            let foo = &mut Foo { byte: 0, bignum: 0, string: String::new() };
+            let buf = &mut Vec::new();
+            let handle_buf = &mut Vec::new();
+            Encoder::encode_with_context(ctx, buf, handle_buf, foo).expect("Encoding failed");
+
+            buf[1] = 42;
+            let out = &mut Foo::new_empty();
+            let result = Decoder::decode_with_context(ctx, buf, handle_buf, out);
+            assert_matches!(
+                result,
+                Err(Error::NonZeroPadding { padding_start: 1, non_zero_pos: 1 })
+            );
         }
     }
 

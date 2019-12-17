@@ -2444,17 +2444,14 @@ __NO_SAFESTACK zx_status_t dl_clone_loader_service(zx_handle_t* out) {
   struct {
     fidl_message_header_t hdr;
     ldmsg_clone_t clone;
-  } req = {
-      .hdr =
-          {
-              .ordinal = LDMSG_OP_CLONE,
-              .magic_number = kFidlWireFormatMagicNumberInitial,
-          },
-      .clone =
-          {
-              .object = FIDL_HANDLE_PRESENT,
-          },
-  };
+  } req;
+  // Memset to 0 first because ldmsg_clone_t has 4 bytes of padding, which the
+  // FIDL wire format requires to be zero.
+  // TODO(fxb/42907): Make these cases less error-prone.
+  memset(&req, 0, sizeof(req));
+  req.hdr.ordinal = LDMSG_OP_CLONE;
+  req.hdr.magic_number = kFidlWireFormatMagicNumberInitial;
+  req.clone.object = FIDL_HANDLE_PRESENT;
 
   ldmsg_rsp_t rsp;
   memset(&rsp, 0, sizeof(rsp));
