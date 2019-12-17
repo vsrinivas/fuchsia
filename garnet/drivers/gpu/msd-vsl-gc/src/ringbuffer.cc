@@ -18,11 +18,15 @@ bool Ringbuffer::Overwrite32(uint32_t dwords_before_tail, uint32_t value) {
     return DRETF(false, "Invalid offset from tail 0x%x bytes, cur ringbuffer size 0x%x",
                  offset_bytes, rb_bytes_stored);
   }
-  uint32_t write_offset = (tail() >= offset_bytes)
-    ? tail() - offset_bytes
-    : size() - offset_bytes + tail();
+  uint32_t write_offset = SubtractOffset(offset_bytes);
   DASSERT(write_offset < size());
 
   vaddr()[write_offset >> 2] = value;
   return true;
+}
+
+uint32_t Ringbuffer::SubtractOffset(uint32_t offset_bytes) {
+  return (tail() >= offset_bytes)
+    ? tail() - offset_bytes
+    : size() - offset_bytes + tail();
 }

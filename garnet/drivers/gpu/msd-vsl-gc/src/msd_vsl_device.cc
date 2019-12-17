@@ -7,9 +7,11 @@
 #include <chrono>
 #include <thread>
 
+#include "instructions.h"
 #include "magma_util/macros.h"
 #include "magma_vendor_queries.h"
 #include "msd.h"
+#include "platform_barriers.h"
 #include "platform_logger.h"
 #include "platform_mmio.h"
 #include "registers.h"
@@ -71,6 +73,12 @@ bool MsdVslDevice::Init(void* device_handle, bool enable_mmu) {
   if (!page_table_arrays_)
     return DRETF(false, "failed to create page table arrays");
 
+  // TODO(fxb/43043): Implement and test ringbuffer wrapping.
+  const uint32_t kRingbufferSize = magma::page_size();
+  auto buffer = MsdVslBuffer::Create(kRingbufferSize, "ring-buffer");
+  buffer->platform_buffer()->SetCachePolicy(MAGMA_CACHE_POLICY_UNCACHED);
+  ringbuffer_ = std::make_unique<Ringbuffer>(std::move(buffer), 0 /* start_offset */);
+
   Reset();
   HardwareInit(enable_mmu);
 
@@ -124,6 +132,19 @@ bool MsdVslDevice::IsIdle() {
   return registers::IdleState::Get().ReadFrom(register_io_.get()).IsIdle();
 }
 
+bool MsdVslDevice::StopRingbuffer() {
+  if (IsIdle()) {
+    return true;
+  }
+  // Overwrite the last WAIT with an END.
+  bool res =
+      ringbuffer_->Overwrite32(kWaitLinkDwords /* dwords_before_tail */, MiEnd::kCommandType);
+  if (!res) {
+    return DRETF(false, "Failed to overwrite WAIT in ringbuffer");
+  }
+  return true;
+}
+
 bool MsdVslDevice::SubmitCommandBufferNoMmu(uint64_t bus_addr, uint32_t length,
                                             uint16_t* prefetch_out) {
   if (bus_addr & 0xFFFFFFFF00000000ul)
@@ -155,29 +176,128 @@ bool MsdVslDevice::SubmitCommandBufferNoMmu(uint64_t bus_addr, uint32_t length,
   return true;
 }
 
-bool MsdVslDevice::SubmitCommandBuffer(uint32_t gpu_addr, uint32_t length, uint16_t* prefetch_out) {
+bool MsdVslDevice::InitRingbuffer(std::shared_ptr<AddressSpace> address_space) {
+  auto mapped_address_space = ringbuffer_->GetMappedAddressSpace().lock();
+  if (mapped_address_space) {
+    if (mapped_address_space.get() != address_space.get()) {
+      return DRETF(false, "Switching ringbuffer contexts not yet supported");
+    }
+    // Ringbuffer is already mapped and initialized.
+    return true;
+  }
+  bool res = ringbuffer_->Map(address_space);
+  if (!res) {
+    return DRETF(res, "Could not map ringbuffer");
+  }
+  uint64_t rb_gpu_addr;
+  res = ringbuffer_->GetGpuAddress(&rb_gpu_addr);
+  if (!res) {
+    return DRETF(res, "Could not get ringbuffer gpu address");
+  }
+
+  const uint16_t kRbPrefetch = 2;
+
+  // Write the initial WAIT-LINK to the ringbuffer. The LINK points back to the WAIT,
+  // and will keep looping until the WAIT is replaced with a LINK on command buffer submission.
+  uint32_t wait_gpu_addr = rb_gpu_addr + ringbuffer_->tail();
+  MiWait::write(ringbuffer_.get());
+  MiLink::write(ringbuffer_.get(), kRbPrefetch, wait_gpu_addr);
+
+  auto reg_cmd_addr = registers::FetchEngineCommandAddress::Get().FromValue(0);
+  reg_cmd_addr.addr().set(static_cast<uint32_t>(rb_gpu_addr) /* WAIT gpu addr */);
+
+  auto reg_cmd_ctrl = registers::FetchEngineCommandControl::Get().FromValue(0);
+  reg_cmd_ctrl.enable().set(1);
+  reg_cmd_ctrl.prefetch().set(kRbPrefetch);
+
+  auto reg_sec_cmd_ctrl = registers::SecureCommandControl::Get().FromValue(0);
+  reg_sec_cmd_ctrl.enable().set(1);
+  reg_sec_cmd_ctrl.prefetch().set(kRbPrefetch);
+
+  reg_cmd_addr.WriteTo(register_io_.get());
+  reg_cmd_ctrl.WriteTo(register_io_.get());
+  reg_sec_cmd_ctrl.WriteTo(register_io_.get());
+  return true;
+}
+
+bool MsdVslDevice::WriteLinkCommand(magma::PlatformBuffer* buf, uint32_t length,
+                                    uint16_t link_prefetch, uint32_t link_addr) {
+  // Check if we have enough space for the LINK command.
+  uint32_t link_instr_size = kInstructionDwords * sizeof(uint32_t);
+
+  if (buf->size() < length + link_instr_size) {
+    return DRETF(false, "Buffer does not have %d free bytes for ringbuffer LINK", link_instr_size);
+  }
+
+  uint32_t* buf_cpu_addr;
+  bool res = buf->MapCpu(reinterpret_cast<void**>(&buf_cpu_addr));
+  if (!res) {
+    return DRETF(false, "Failed to map command buffer");
+  }
+
+  BufferWriter buf_writer(buf_cpu_addr, buf->size(), length);
+  MiLink::write(&buf_writer, link_prefetch, link_addr);
+  if (!buf->UnmapCpu()) {
+    return DRETF(false, "Failed to unmap command buffer");
+  }
+  return true;
+}
+
+// When submitting a command buffer, we modify the following:
+//  1) add a LINK from the command buffer to the end of the ringbuffer
+//  2) add a WAIT-LINK pair to the end of the ringbuffer
+//  3) modify the penultimate WAIT in the ringbuffer to LINK to the command buffer
+bool MsdVslDevice::SubmitCommandBuffer(std::shared_ptr<AddressSpace> address_space,
+                                       magma::PlatformBuffer* buf, uint32_t gpu_addr,
+                                       uint32_t length, uint16_t* prefetch_out) {
+  if (!InitRingbuffer(address_space)) {
+    return DRETF(false, "Error initializing ringbuffer");
+  }
+  uint64_t rb_gpu_addr;
+  bool res = ringbuffer_->GetGpuAddress(&rb_gpu_addr);
+  if (!res) {
+    return DRETF(false, "Failed to get ringbuffer gpu address");
+  }
+  length = magma::round_up(length, sizeof(uint64_t));
+
+  // Number of new commands to be added to the ringbuffer. This should be changed once we add
+  // more than just WAIT-LINK.
+  const uint16_t kRbPrefetch = 2;
+
+  // Write a LINK at the end of the command buffer that links back to the ringbuffer.
+  if (!WriteLinkCommand(buf, length, kRbPrefetch,
+                        static_cast<uint32_t>(rb_gpu_addr + ringbuffer_->tail()))) {
+    return DRETF(false, "Failed to write LINK from command buffer to ringbuffer");
+  }
+  // Increment the command buffer length to account for the LINK command size.
+  length += (kInstructionDwords * sizeof(uint32_t));
+
   uint32_t prefetch = magma::round_up(length, sizeof(uint64_t)) / sizeof(uint64_t);
   if (prefetch & 0xFFFF0000)
     return DRETF(false, "Can't submit length %u (prefetch 0x%x)", length, prefetch);
 
   *prefetch_out = prefetch & 0xFFFF;
 
+  // Add a new WAIT-LINK to the end of the ringbuffer.
+  uint32_t wait_gpu_addr = rb_gpu_addr + ringbuffer_->tail();
+  MiWait::write(ringbuffer_.get());
+  MiLink::write(ringbuffer_.get(), 2 /* prefetch */, wait_gpu_addr);
+
   DLOG("Submitting buffer at gpu addr 0x%x", gpu_addr);
 
-  auto reg_cmd_addr = registers::FetchEngineCommandAddress::Get().FromValue(0);
-  reg_cmd_addr.addr().set(gpu_addr);
+  // Replace the penultimate WAIT (before the newly added one) with a LINK to the command buffer.
+  // We need to calculate the offset from the current tail, skipping past the new commands
+  // we wrote into the ringbuffer and also the WAIT-LINK that we are modifying.
+  uint32_t prev_wait_offset_dwords = (kRbPrefetch * 2) + kWaitLinkDwords;
+  DASSERT(prev_wait_offset_dwords > 0);
 
-  auto reg_cmd_ctrl = registers::FetchEngineCommandControl::Get().FromValue(0);
-  reg_cmd_ctrl.enable().set(1);
-  reg_cmd_ctrl.prefetch().set(*prefetch_out);
-
-  auto reg_sec_cmd_ctrl = registers::SecureCommandControl::Get().FromValue(0);
-  reg_sec_cmd_ctrl.enable().set(1);
-  reg_sec_cmd_ctrl.prefetch().set(*prefetch_out);
-
-  reg_cmd_addr.WriteTo(register_io_.get());
-  reg_cmd_ctrl.WriteTo(register_io_.get());
-  reg_sec_cmd_ctrl.WriteTo(register_io_.get());
+  // prev_wait_offset_dwords is pointing to the beginning of the WAIT instruction.
+  // We will first modify the second dword which specifies the address,
+  // as the hardware may be executing at the address of the current WAIT.
+  ringbuffer_->Overwrite32(prev_wait_offset_dwords - 1 /* dwords_before_tail */, gpu_addr);
+  magma::barriers::Barrier();
+  ringbuffer_->Overwrite32(prev_wait_offset_dwords, MiLink::kCommandType | (*prefetch_out));
+  magma::barriers::Barrier();
 
   return true;
 }

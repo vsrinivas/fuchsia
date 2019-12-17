@@ -45,6 +45,12 @@ class Ringbuffer : public InstructionWriter {
 
   bool GetGpuAddress(uint64_t* addr_out);
 
+  std::weak_ptr<AddressSpace<GpuMapping>> GetMappedAddressSpace() const {
+    return gpu_mapping_ ?
+           gpu_mapping_->address_space() :
+           std::weak_ptr<AddressSpace<GpuMapping>>();
+  }
+
  protected:
   uint32_t* vaddr() { return vaddr_; }
 

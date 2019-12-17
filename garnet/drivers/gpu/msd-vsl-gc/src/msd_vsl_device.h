@@ -17,6 +17,7 @@
 #include "page_table_slot_allocator.h"
 #include "platform_bus_mapper.h"
 #include "platform_device.h"
+#include "ringbuffer.h"
 
 class MsdVslDevice : public msd_device_t, public MsdVslConnection::Owner {
  public:
@@ -30,6 +31,7 @@ class MsdVslDevice : public msd_device_t, public MsdVslConnection::Owner {
   uint32_t device_id() { return device_id_; }
 
   bool IsIdle();
+  bool StopRingbuffer();
 
   std::unique_ptr<MsdVslConnection> Open(msd_client_id_t client_id);
 
@@ -47,8 +49,17 @@ class MsdVslDevice : public msd_device_t, public MsdVslConnection::Owner {
   void HardwareInit(bool enable_mmu);
   void Reset();
 
+  // Returns true if initializing the ringbuffer succeeded,
+  // or the ringbuffer was already initialized.
+  bool InitRingbuffer(std::shared_ptr<AddressSpace> address_space);
+
+  // Writes a LINK command at the end of the given buffer.
+  bool WriteLinkCommand(magma::PlatformBuffer* buf, uint32_t length,
+                        uint16_t prefetch, uint32_t link_addr);
+
   bool SubmitCommandBufferNoMmu(uint64_t bus_addr, uint32_t length, uint16_t* prefetch_out);
-  bool SubmitCommandBuffer(uint32_t gpu_addr, uint32_t length, uint16_t* prefetch_out);
+  bool SubmitCommandBuffer(std::shared_ptr<AddressSpace>, magma::PlatformBuffer* buf,
+                           uint32_t gpu_addr, uint32_t length, uint16_t* prefetch_out);
 
   magma::RegisterIo* register_io() { return register_io_.get(); }
 
@@ -70,6 +81,9 @@ class MsdVslDevice : public msd_device_t, public MsdVslConnection::Owner {
   std::unique_ptr<magma::PlatformBusMapper> bus_mapper_;
   std::unique_ptr<PageTableArrays> page_table_arrays_;
   std::unique_ptr<PageTableSlotAllocator> page_table_slot_allocator_;
+
+  // The command queue.
+  std::unique_ptr<Ringbuffer> ringbuffer_;
 
   friend class TestMsdVslDevice;
   friend class MsdVslDeviceTest_FetchEngineDma_Test;

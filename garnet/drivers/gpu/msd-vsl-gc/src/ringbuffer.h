@@ -19,6 +19,9 @@ class Ringbuffer : public magma::Ringbuffer<GpuMapping> {
   // value in the ringbuffer.
   bool Overwrite32(uint32_t dwords_before_tail, uint32_t value);
 
+  // Returns the position corresponding to negative |offset| from the current tail.
+  uint32_t SubtractOffset(uint32_t offset);
+
   friend class RingbufferTest;
 };
 

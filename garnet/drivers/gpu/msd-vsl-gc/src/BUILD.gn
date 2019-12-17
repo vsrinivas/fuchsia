@@ -35,6 +35,7 @@ source_set("src") {
     "//garnet/lib/magma/src/magma_util",
     "//garnet/lib/magma/src/magma_util:address_space",
     "//garnet/lib/magma/src/magma_util:registers",
+    "//garnet/lib/magma/src/magma_util/platform:barriers",
     "//garnet/lib/magma/src/magma_util/platform:buffer",
     "//garnet/lib/magma/src/magma_util/platform:bus_mapper",
     "//garnet/lib/magma/src/magma_util/platform:device",

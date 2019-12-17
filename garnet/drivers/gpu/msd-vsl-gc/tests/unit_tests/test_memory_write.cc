@@ -11,6 +11,7 @@ int etnaviv_cl_test_gc7000(int argc, char* argv[]);
 #include <thread>
 
 #include "garnet/drivers/gpu/msd-vsl-gc/src/address_space.h"
+#include "garnet/drivers/gpu/msd-vsl-gc/src/instructions.h"
 #include "garnet/drivers/gpu/msd-vsl-gc/src/msd_vsl_device.h"
 #include "gtest/gtest.h"
 #include "helper/platform_device_helper.h"
@@ -118,6 +119,20 @@ class TestMsdVslDevice : public drm_test_info {
     return true;
   }
 
+  void StopRingbuffer() {
+    device()->StopRingbuffer();
+
+    auto start = std::chrono::high_resolution_clock::now();
+    while (!device()->IsIdle() &&
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+              std::chrono::high_resolution_clock::now() - start)
+                  .count() < 1000) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    auto reg = registers::IdleState::Get().ReadFrom(register_io());
+    EXPECT_EQ(0x7FFFFFFFu, reg.reg_value());
+  }
+
   struct EtnaDevice : public etna_dev {
     std::unique_ptr<MsdVslDevice> msd_vsl_device;
     TestMsdVslDevice* test = nullptr;
@@ -137,15 +152,18 @@ class TestMsdVslDevice : public drm_test_info {
   };
 
   MsdVslDevice* device() { return device_.msd_vsl_device.get(); }
+  Ringbuffer* ringbuffer() { return device()->ringbuffer_.get(); }
 
   magma::PlatformBusMapper* GetBusMapper() { return device_.msd_vsl_device->GetBusMapper(); }
 
   magma::RegisterIo* register_io() { return device_.msd_vsl_device->register_io(); }
 
-  AddressSpace* address_space() { return address_space_.get(); }
+  std::shared_ptr<AddressSpace> address_space() { return address_space_; }
 
-  bool SubmitCommandBuffer(uint32_t gpu_addr, uint32_t length, uint16_t* prefetch_out) {
-    return device_.msd_vsl_device->SubmitCommandBuffer(gpu_addr, length, prefetch_out);
+  bool SubmitCommandBuffer(TestMsdVslDevice::EtnaBuffer* etna_buf, uint32_t length,
+                           uint16_t* prefetch_out) {
+    return device_.msd_vsl_device->SubmitCommandBuffer(address_space_, etna_buf->buffer.get(),
+                                                       etna_buf->gpu_addr, length, prefetch_out);
   }
 
   uint32_t next_gpu_addr(uint32_t size) {
@@ -170,7 +188,7 @@ class TestMsdVslDevice : public drm_test_info {
   EtnaCommandStream command_stream_;
 
   std::unique_ptr<AddressSpaceOwner> address_space_owner_;
-  std::unique_ptr<AddressSpace> address_space_;
+  std::shared_ptr<AddressSpace> address_space_;
   uint32_t next_gpu_addr_ = 0x10000;
 };
 
@@ -181,7 +199,11 @@ struct drm_test_info* drm_test_setup(int argc, char** argv) {
   return test_info.release();
 }
 
-void drm_test_teardown(struct drm_test_info* info) { delete static_cast<TestMsdVslDevice*>(info); }
+void drm_test_teardown(struct drm_test_info* info) {
+  auto msd_device = static_cast<TestMsdVslDevice*>(info);
+  msd_device->StopRingbuffer();
+  delete static_cast<TestMsdVslDevice*>(info);
+}
 
 void etna_set_state(struct etna_cmd_stream* stream, uint32_t address, uint32_t value) {
   DLOG("set state 0x%x 0x%x", address, value);
@@ -230,7 +252,7 @@ struct etna_bo* etna_bo_new(void* dev, uint32_t size, uint32_t flags) {
     return DRETP(nullptr, "failed to alloc buffer size %u", size);
 
   if (flags & DRM_ETNA_GEM_CACHE_UNCACHED)
-    etna_buffer->buffer->SetCachePolicy(MAGMA_CACHE_POLICY_UNCACHED);
+    etna_buffer->buffer->SetCachePolicy(MAGMA_CACHE_POLICY_WRITE_COMBINING);
 
   auto etna_device = static_cast<TestMsdVslDevice::EtnaDevice*>(dev);
   uint32_t page_count = etna_buffer->buffer->size() / PAGE_SIZE;
@@ -258,9 +280,31 @@ void* etna_bo_map(struct etna_bo* bo) {
   return addr;
 }
 
+// Returns true if the |gpu_addr| lies between the addresses of the last WAIT-LINK command.
+bool matches_last_wait_link(Ringbuffer* ringbuffer, uint32_t gpu_addr) {
+  // The last WAIT-LINK will be between [tail - 16, tail].
+  auto wait_link_start = ringbuffer->SubtractOffset(kWaitLinkDwords * sizeof(uint32_t));
+  auto wait_link_end = ringbuffer->tail();
+
+  uint64_t rb_gpu_addr;
+  if (!ringbuffer->GetGpuAddress(&rb_gpu_addr)) {
+    return DRETF(false, "Failed to get ringbuffer gpu addr");
+  }
+  // The address lies before the start of the ringbuffer.
+  if (gpu_addr < rb_gpu_addr) {
+    return false;
+  }
+  auto rb_offset = gpu_addr - rb_gpu_addr;
+  if (rb_offset >= ringbuffer->size()) {
+    return false;
+  }
+  return wait_link_start <= wait_link_end ?
+      (rb_offset >= wait_link_start) && (rb_offset < wait_link_end) :
+      (rb_offset >= wait_link_start) || (rb_offset < wait_link_end);
+}
+
 void etna_cmd_stream_finish(struct etna_cmd_stream* stream) {
   auto cmd_stream = static_cast<TestMsdVslDevice::EtnaCommandStream*>(stream);
-  cmd_stream->cmd_ptr[cmd_stream->index++] = (2 << 27);  // end
 
   uint32_t length = cmd_stream->index * sizeof(uint32_t);
   uint16_t prefetch = 0;
@@ -268,26 +312,33 @@ void etna_cmd_stream_finish(struct etna_cmd_stream* stream) {
   DLOG("etna_cmd_stream_finish length %u", length);
 
   EXPECT_TRUE(
-      cmd_stream->test->SubmitCommandBuffer(cmd_stream->etna_buffer->gpu_addr, length, &prefetch));
-  EXPECT_EQ(magma::round_up(length, sizeof(uint64_t)) / sizeof(uint64_t), prefetch);
+      cmd_stream->test->SubmitCommandBuffer(cmd_stream->etna_buffer, length, &prefetch));
+  // The prefetch should be 1 longer than expected, as the driver inserts an additional
+  // LINK at the end.
+  EXPECT_EQ((magma::round_up(length, sizeof(uint64_t)) / sizeof(uint64_t)) + 1, prefetch);
 
+  // When the command buffer completes, we expect to return back to the next WAIT-LINK
+  // in the ringbuffer. Wait until that happens or we timeout.
   auto start = std::chrono::high_resolution_clock::now();
-  while (!cmd_stream->test->device()->IsIdle() &&
-         std::chrono::duration_cast<std::chrono::milliseconds>(
+  while (std::chrono::duration_cast<std::chrono::milliseconds>(
              std::chrono::high_resolution_clock::now() - start)
                  .count() < 1000) {
+    auto dma_addr = registers::DmaAddress::Get().ReadFrom(cmd_stream->test->register_io());
+    if (matches_last_wait_link(cmd_stream->test->ringbuffer(), dma_addr.reg_value())) {
+      break;
+    }
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
-  }
-
-  {
-    auto reg = registers::IdleState::Get().ReadFrom(cmd_stream->test->register_io());
-    EXPECT_EQ(0x7FFFFFFFu, reg.reg_value());
   }
   {
     auto dma_addr = registers::DmaAddress::Get().ReadFrom(cmd_stream->test->register_io());
-    EXPECT_EQ(dma_addr.reg_value(),
-              cmd_stream->etna_buffer->gpu_addr + prefetch * sizeof(uint64_t));
+    EXPECT_TRUE(matches_last_wait_link(cmd_stream->test->ringbuffer(), dma_addr.reg_value()));
     DLOG("dma_addr 0x%x", dma_addr.reg_value());
+  }
+
+  {
+    // The ringbuffer should be in WAIT-LINK until we explicitly stop it.
+    auto reg = registers::IdleState::Get().ReadFrom(cmd_stream->test->register_io());
+    EXPECT_NE(0x7FFFFFFFu, reg.reg_value());
   }
 
   DLOG("execution took %lld ms", std::chrono::duration_cast<std::chrono::milliseconds>(
