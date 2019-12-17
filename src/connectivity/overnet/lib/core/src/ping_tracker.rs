@@ -138,13 +138,15 @@ impl PingTracker {
                 this.sent_ping_map
             );
             this.scheduled_timeout = None;
-            let epoch = now - MAX_SAMPLE_AGE;
-            while this.samples.len() > 3 && this.samples[0].when < epoch {
-                this.samples.pop_front();
+            if let Some(epoch) = now.checked_sub(MAX_SAMPLE_AGE) {
+                while this.samples.len() > 3 && this.samples[0].when < epoch {
+                    this.samples.pop_front();
+                }
             }
-            let epoch = now - MAX_PING_AGE;
-            while this.sent_ping_list.len() > 1 && this.sent_ping_list[0].1 < epoch {
-                this.sent_ping_map.remove(&this.sent_ping_list.pop_front().unwrap().0);
+            if let Some(epoch) = now.checked_sub(MAX_PING_AGE) {
+                while this.sent_ping_list.len() > 1 && this.sent_ping_list[0].1 < epoch {
+                    this.sent_ping_map.remove(&this.sent_ping_list.pop_front().unwrap().0);
+                }
             }
         })
         .1
