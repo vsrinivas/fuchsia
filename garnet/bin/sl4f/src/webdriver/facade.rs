@@ -161,7 +161,7 @@ impl WebdriverFacadeInternal {
     /// Locate debug service published in the Hub.
     async fn get_path_to_debug() -> Result<String, Error> {
         // Find debug service in the Hub.
-        let glob_query = format!("/hub/c/chromium.cmx/*/out/debug/{}", DebugMarker::NAME);
+        let glob_query = format!("/hub/c/context_provider.cmx/*/out/debug/{}", DebugMarker::NAME);
         if let Some(found_path) = glob(&glob_query)?.filter_map(|entry| entry.ok()).next() {
             Ok(found_path.to_string_lossy().to_string())
         } else {
