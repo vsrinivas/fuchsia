@@ -5,6 +5,7 @@
 use {failure::Error, fuchsia_async as fasync, test_utils::BlackBoxTest};
 
 #[fasync::run_singlethreaded(test)]
+#[ignore]
 async fn test() -> Result<(), Error> {
     // For the root component manifest, pass in the path the component manager
     // itself, which should be completely invalid.
@@ -17,7 +18,7 @@ async fn test() -> Result<(), Error> {
     // manifest is invalid.
     let run_result = test.component_manager_app.wait_with_output().await?;
     if run_result.exit_status.success() {
-        panic!("component manager should have exited with error, but  exited normally");
+        panic!("component manager should have exited with error, but exited normally");
     }
     Ok(())
 }
