@@ -77,12 +77,29 @@ pub trait InputDeviceBinding: Sized {
     /// Creates a new [`InputDeviceBinding`] for the input type's default input device.
     ///
     /// The binding will start listening for input reports immediately, and they
-    /// can be read from [`input_reports()`].
+    /// can be read from [`input_report_stream()`].
     ///
     /// # Errors
     /// If there was an error finding or binding to the default input device.
-    async fn new() -> Result<Self, Error> {
+    async fn any_device() -> Result<Self, Error> {
         let device_proxy: InputDeviceProxy = Self::any_input_device().await?;
+        let device_binding = Self::bind_device(&device_proxy).await?;
+        device_binding.initialize_report_stream(device_proxy);
+
+        Ok(device_binding)
+    }
+
+    /// Creates a new [`InputDeviceBinding`] from the `device_proxy`.
+    ///
+    /// The binding will start listening for input reports immediately, and they
+    /// can be read from [`input_report_stream()`].
+    ///
+    /// # Parameters
+    /// `device_proxy`: The proxy to bind the new [`InputDeviceBinding`] to.
+    ///
+    /// # Errors
+    /// If there was an error binding to the proxy.
+    async fn new(device_proxy: InputDeviceProxy) -> Result<Self, Error> {
         let device_binding = Self::bind_device(&device_proxy).await?;
         device_binding.initialize_report_stream(device_proxy);
 
@@ -92,7 +109,8 @@ pub trait InputDeviceBinding: Sized {
     /// Initializes the input report stream for the bound device.
     ///
     /// Spawns a future which awaits input reports from the device and forwards them to
-    /// clients via [`input_report_sender()`]. The reports are observed via [`input_reports()`].
+    /// clients via [`input_report_sender()`]. The reports are observed via
+    /// [`input_report_stream()`].
     ///
     /// # Parameters
     /// - `device_proxy`: The device proxy which is used to get input reports.

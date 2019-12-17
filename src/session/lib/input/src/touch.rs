@@ -5,11 +5,14 @@
 use {
     crate::conversion_utils::to_range,
     crate::input_device,
+    crate::input_device::InputDeviceBinding,
     async_trait::async_trait,
     failure::{self, format_err, Error},
     fidl_fuchsia_input_report as fidl,
     fidl_fuchsia_input_report::{InputDeviceProxy, InputReport, TouchDescriptor},
+    fuchsia_async as fasync,
     futures::channel::mpsc::{Receiver, Sender},
+    futures::StreamExt,
     std::ops::Range,
 };
 
@@ -18,13 +21,13 @@ use {
 /// The [`TouchBinding`] parses and exposes touch descriptor properties (e.g., the range of
 /// possible x values for touch contacts) for the device it is associated with.
 /// It also parses [`InputReport`]s from the device, and sends them to clients
-/// via [`TouchBinding::report_stream`].
+/// via [`TouchBinding::input_report_stream()`].
 ///
 /// # Example
 /// ```
 /// let mut touch_device: TouchBinding = input_device::InputDeviceBinding::new().await?;
 ///
-/// while let Some(report) = touch_device.input_reports().next().await {}
+/// while let Some(report) = touch_device.input_report_stream().next().await {}
 /// ```
 pub struct TouchBinding {
     /// The channel to stream InputReports to
@@ -44,7 +47,8 @@ pub struct TouchBinding {
 ///
 /// ```
 /// // Determine the scaling factor between the display and the touch device's x range.
-/// let scaling_factor = display_width / (contact_descriptor._x_range.end - contact_descriptor._x_range.start);
+/// let scaling_factor =
+///     display_width / (contact_descriptor._x_range.end - contact_descriptor._x_range.start);
 /// // Use the scaling factor to scale the contact report's x position.
 /// let hit_location = scaling_factor * contact_report.position_x;
 /// ```
@@ -133,4 +137,41 @@ impl TouchBinding {
             }
         }
     }
+}
+
+/// Returns a vector of [`TouchBindings`] for all currently connected touch devices.
+///
+/// # Errors
+/// If there was an error binding to any touch device.
+async fn all_touch_bindings() -> Result<Vec<TouchBinding>, Error> {
+    let device_proxies = input_device::all_devices(input_device::InputDeviceType::Touch).await?;
+    let mut device_bindings: Vec<TouchBinding> = vec![];
+
+    for device_proxy in device_proxies {
+        let device_binding: TouchBinding =
+            input_device::InputDeviceBinding::new(device_proxy).await?;
+        device_bindings.push(device_binding);
+    }
+
+    Ok(device_bindings)
+}
+
+/// Returns a stream of InputReports from all touch devices.
+///
+/// # Errors
+/// If there was an error binding to any touch device.
+pub async fn all_touch_reports() -> Result<Receiver<InputReport>, Error> {
+    let bindings = all_touch_bindings().await?;
+    let (report_sender, report_receiver) = futures::channel::mpsc::channel(1);
+
+    for mut touch in bindings {
+        let mut sender = report_sender.clone();
+        fasync::spawn(async move {
+            while let Some(report) = touch.input_report_stream().next().await {
+                let _ = sender.try_send(report);
+            }
+        });
+    }
+
+    Ok(report_receiver)
 }

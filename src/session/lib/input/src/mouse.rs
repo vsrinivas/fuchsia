@@ -5,10 +5,13 @@
 use {
     crate::conversion_utils::to_range,
     crate::input_device,
+    crate::input_device::InputDeviceBinding,
     async_trait::async_trait,
     failure::{self, format_err, Error},
     fidl_fuchsia_input_report::{InputDeviceProxy, InputReport, MouseDescriptor},
+    fuchsia_async as fasync,
     futures::channel::mpsc::{Receiver, Sender},
+    futures::StreamExt,
     std::ops::Range,
 };
 
@@ -16,20 +19,20 @@ use {
 ///
 /// The [`MouseBinding`] parses and exposes mouse descriptor properties (e.g., the range of
 /// possible x values) for the device it is associated with. It also parses [`InputReport`]s
-/// from the device, and sends them to clients via [`MouseBinding::report_stream`].
+/// from the device, and sends them to clients via [`MouseBinding::input_report_stream()`].
 ///
 /// # Example
 /// ```
 /// let mut mouse_device: MouseBinding = input_device::InputDeviceBinding::new().await?;
 ///
-/// while let Some(report) = mouse_device.input_reports().next().await {}
+/// while let Some(report) = mouse_device.input_report_stream().next().await {}
 /// ```
 pub struct MouseBinding {
     /// The sender used to send available input reports.
     report_sender: Sender<InputReport>,
 
     /// The receiving end of the input report channel. Clients use this indirectly via
-    /// [`input_reports()`].
+    /// [`input_report_stream()`].
     report_receiver: Receiver<InputReport>,
 
     /// The range of possible x values for this device.
@@ -93,4 +96,41 @@ impl input_device::InputDeviceBinding for MouseBinding {
             descriptor => Err(format_err!("Mouse Descriptor failed to parse: \n {:?}", descriptor)),
         }
     }
+}
+
+/// Returns a vector of [`MouseBindings`] for all currently connected mice.
+///
+/// # Errors
+/// If there was an error binding to any mouse.
+async fn get_all_mouse_bindings() -> Result<Vec<MouseBinding>, Error> {
+    let device_proxies = input_device::all_devices(input_device::InputDeviceType::Mouse).await?;
+    let mut device_bindings: Vec<MouseBinding> = vec![];
+
+    for device_proxy in device_proxies {
+        let device_binding: MouseBinding =
+            input_device::InputDeviceBinding::new(device_proxy).await?;
+        device_bindings.push(device_binding);
+    }
+
+    Ok(device_bindings)
+}
+
+/// Returns a stream of InputReports from all mouse devices.
+///
+/// # Errors
+/// If there was an error binding to any mouse.
+pub async fn all_mouse_reports() -> Result<Receiver<InputReport>, Error> {
+    let bindings = get_all_mouse_bindings().await?;
+    let (report_sender, report_receiver) = futures::channel::mpsc::channel(1);
+
+    for mut mouse in bindings {
+        let mut sender = report_sender.clone();
+        fasync::spawn(async move {
+            while let Some(report) = mouse.input_report_stream().next().await {
+                let _ = sender.try_send(report);
+            }
+        });
+    }
+
+    Ok(report_receiver)
 }
