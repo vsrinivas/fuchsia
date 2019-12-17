@@ -17,6 +17,8 @@
 #include <dev/pcie_device.h>
 #include <fbl/algorithm.h>
 
+#include "dev/pcie_irqs.h"
+
 class PcieDebugConsole {
  public:
   static int CmdLsPci(int argc, const cmd_args* argv, uint32_t flags);
@@ -44,6 +46,7 @@ typedef struct lspci_params {
   uint dev_id;
   uint func_id;
   uint cfg_dump_amt;
+  bool cfg_dump_ints;
   bool force_dump_cfg;
   uint found;
 } lspci_params_t;
@@ -60,6 +63,8 @@ typedef struct lspci_params {
   LUT_ENTRY(_class, _subclass, _pif, _pif, _desc)
 
 #define LUT_ENTRY_ALL_PIF(_class, _subclass, _desc) LUT_ENTRY(_class, _subclass, 0x00, 0xFF, _desc)
+
+static const char* IRQ_MODE_LABELS[] = {"Disabled", "Legacy", "MSI", "MSI-X"};
 
 static const pci_dev_type_lut_entry_t PCI_DEV_TYPE_LUT[] = {
     LUT_ENTRY_ONE_PIF(0x00, 0x00, 0x00, "Any device except for VGA-Compatible devices"),
@@ -468,6 +473,18 @@ static bool dump_pcie_device(const fbl::RefPtr<PcieDevice>& dev, void* ctx, uint
   bool match;
   auto cfg = dev->config();
 
+  // Caching IRQ information up front because these methods are designed to be called from the
+  // protocol outside of the device lock.
+  struct irq_info_t {
+    zx_status_t status;
+    pcie_irq_mode_caps_t caps;
+    const char* label;
+  } irq_info[2] = {};
+  irq_info[0].label = IRQ_MODE_LABELS[PCIE_IRQ_MODE_LEGACY];
+  irq_info[0].status = dev->QueryIrqModeCapabilities(PCIE_IRQ_MODE_LEGACY, &irq_info[0].caps);
+  irq_info[1].label = IRQ_MODE_LABELS[PCIE_IRQ_MODE_MSI];
+  irq_info[1].status = dev->QueryIrqModeCapabilities(PCIE_IRQ_MODE_MSI, &irq_info[1].caps);
+
   /* Grab the device's lock so it cannot be unplugged out from under us while
    * we print details. */
   Guard<Mutex> guard{dev->dev_lock()};
@@ -531,8 +548,22 @@ static bool dump_pcie_device(const fbl::RefPtr<PcieDevice>& dev, void* ctx, uint
     dump_pcie_capabilities(dev, params);
   }
 
-  if (params->cfg_dump_amt)
+  if (params->cfg_dump_ints) {
+    params->indent_level++;
+    LSPCI_PRINTF("IRQ Information:\n");
+    params->indent_level++;
+    for (auto irq : irq_info) {
+      if (irq.status == ZX_OK) {
+        LSPCI_PRINTF("%s (max_irqs = %u, pvm = %s)\n", irq.label, irq.caps.max_irqs,
+                     (irq.caps.per_vector_masking_supported) ? "true" : "false");
+      }
+    }
+    params->indent_level -= 2;
+  }
+
+  if (params->cfg_dump_amt) {
     dump_pcie_raw_config(params->cfg_dump_amt, dev->config());
+  }
 
   return true;
 }
@@ -561,7 +592,9 @@ int PcieDebugConsole::CmdLsPci(int argc, const cmd_args* argv, uint32_t flags) {
               params.cfg_dump_amt = PCIE_BASE_CONFIG_SIZE;
             params.force_dump_cfg = true;
             break;
-
+          case 'i':
+            params.cfg_dump_ints = true;
+            break;
           case 'e':
             if (params.cfg_dump_amt < PCIE_EXTENDED_CONFIG_SIZE)
               params.cfg_dump_amt = PCIE_EXTENDED_CONFIG_SIZE;
@@ -616,6 +649,7 @@ int PcieDebugConsole::CmdLsPci(int argc, const cmd_args* argv, uint32_t flags) {
       printf("       -l : Be verbose when dumping info about discovered devices.\n");
       printf("       -c : Dump raw standard config (implies -l)\n");
       printf("       -e : Dump raw extended config (implies -l -c)\n");
+      printf("       -i : Dump interrupt information\n");
       printf(
           "       -f : Force dump at least standard config, even if the device didn't "
           "enumerate (requires a full BDF address)\n");
