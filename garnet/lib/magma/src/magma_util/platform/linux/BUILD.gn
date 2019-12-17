@@ -38,6 +38,19 @@ source_set("bus_mapper") {
   ]
 }
 
+source_set("connection_client") {
+  configs += [ "..:platform_include_config" ]
+
+  public_deps = [
+    "..:connection_client_header",
+  ]
+
+  sources = [
+    "linux_platform_connection_client.cc",
+    "linux_platform_connection_client.h",
+  ]
+}
+
 source_set("device") {
   configs += [ "..:platform_include_config" ]
 
@@ -52,6 +65,18 @@ source_set("device") {
     "linux_platform_device.cc",
     "linux_platform_device.h",
     "linux_platform_mmio.h",
+  ]
+}
+
+source_set("device_client") {
+  configs += [ "..:platform_include_config" ]
+
+  public_deps = [
+    "..:device_client_header",
+  ]
+
+  sources = [
+    "linux_platform_device_client.cc",
   ]
 }
 
@@ -108,6 +133,41 @@ source_set("logger") {
   ]
   sources = [
     "linux_platform_logger.cc",
+  ]
+}
+
+source_set("object") {
+  sources = [
+    "linux_platform_object.cc",
+  ]
+
+  deps = [
+    "$magma_build_root/src/magma_util",
+    "..:object_header",
+  ]
+}
+
+source_set("port") {
+  configs += [ "..:platform_include_config" ]
+
+  sources = [
+    "linux_platform_port.cc",
+  ]
+
+  deps = [
+    "..:port_header",
+  ]
+}
+
+source_set("semaphore") {
+  configs += [ "..:platform_include_config" ]
+
+  sources = [
+    "linux_platform_semaphore.cc",
+  ]
+
+  deps = [
+    "..:semaphore_header",
   ]
 }
 

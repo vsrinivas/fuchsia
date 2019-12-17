@@ -4,9 +4,7 @@
 
 #include "linux_platform_buffer.h"
 
-#include <asm/unistd.h>
 #include <fcntl.h>
-#include <linux/memfd.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -14,6 +12,9 @@
 
 #include <map>
 #include <mutex>
+
+#include <asm/unistd.h>
+#include <linux/memfd.h>
 
 namespace {
 
@@ -30,6 +31,11 @@ static int memfd_create(const char* name, unsigned int flags) {
 }  // namespace
 
 namespace magma {
+
+std::unique_ptr<PlatformBuffer::MappingAddressRange> PlatformBuffer::MappingAddressRange::Create(
+    std::unique_ptr<magma::PlatformHandle> handle) {
+  return DRETP(nullptr, "PlatformBuffer::MappingAddressRange::Create not supported");
+}
 
 bool LinuxPlatformBuffer::duplicate_handle(uint32_t* handle_out) const {
   int fd = dup(memfd_);

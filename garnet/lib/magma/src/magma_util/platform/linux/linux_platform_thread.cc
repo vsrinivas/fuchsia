@@ -8,4 +8,8 @@ namespace magma {
 
 bool PlatformThreadHelper::SetProfile(PlatformHandle* profile) { return false; }
 
+std::string PlatformThreadHelper::GetCurrentThreadName() { return ""; }
+
+void PlatformThreadHelper::SetCurrentThreadName(const std::string& name) {}
+
 }  // namespace magma

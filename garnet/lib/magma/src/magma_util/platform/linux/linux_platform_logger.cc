@@ -9,6 +9,10 @@
 
 namespace magma {
 
+bool PlatformLogger::IsInitialized() { return true; }
+
+bool PlatformLogger::Initialize(std::unique_ptr<PlatformHandle> handle) { return true; }
+
 static void print_level(PlatformLogger::LogLevel level) {
   switch (level) {
     case PlatformLogger::LOG_ERROR:

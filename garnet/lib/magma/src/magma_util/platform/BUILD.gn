@@ -270,6 +270,11 @@ source_set("connection_client") {
       "zircon:connection_client",
     ]
   }
+  if (is_linux) {
+    deps = [
+      "linux:connection_client",
+    ]
+  }
 }
 
 source_set("connection_header") {
@@ -323,6 +328,11 @@ source_set("device_client") {
   if (is_fuchsia) {
     deps = [
       "zircon:device_client",
+    ]
+  }
+  if (is_linux) {
+    deps = [
+      "linux:device_client",
     ]
   }
 }
@@ -444,6 +454,11 @@ source_set("object") {
       "zircon:object",
     ]
   }
+  if (is_linux) {
+    deps = [
+      "linux:object",
+    ]
+  }
 }
 
 source_set("semaphore_header") {
@@ -471,6 +486,11 @@ source_set("semaphore") {
       "zircon:semaphore",
     ]
   }
+  if (is_linux) {
+    deps = [
+      "linux:semaphore",
+    ]
+  }
 }
 
 source_set("port_header") {
@@ -478,6 +498,10 @@ source_set("port_header") {
 
   sources = [
     "platform_port.h",
+  ]
+
+  public_deps = [
+    "$magma_build_root/src/magma_util",
   ]
 }
 
@@ -492,6 +516,9 @@ source_set("port") {
 
   if (is_fuchsia) {
     deps += [ "zircon:port" ]
+  }
+  if (is_linux) {
+    deps += [ "linux:port" ]
   }
 }
 
