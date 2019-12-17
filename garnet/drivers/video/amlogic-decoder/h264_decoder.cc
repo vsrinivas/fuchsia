@@ -553,7 +553,7 @@ void H264Decoder::TryReturnFrames() {
 }
 
 zx_status_t H264Decoder::InitializeStream() {
-LOG(INFO, "H264Decoder::InitializeStream()");
+  LOG(INFO, "H264Decoder::InitializeStream()");
   ZX_DEBUG_ASSERT(state_ == DecoderState::kRunning);
   state_ = DecoderState::kWaitingForNewFrames;
   BarrierBeforeRelease();  // For reference_mv_buffer_
@@ -580,8 +580,8 @@ LOG(INFO, "H264Decoder::InitializeStream()");
 
   uint32_t max_dpb_size = GetMaxDpbSize(level_idc, mb_width, mb_height);
   if (max_dpb_size == 0) {
-    LOG(WARN, "mb_width and/or mb_height invalid? - mb_width: %u mb_height: %u",
-        mb_width, mb_height);
+    LOG(WARN, "mb_width and/or mb_height invalid? - mb_width: %u mb_height: %u", mb_width,
+        mb_height);
     max_dpb_size = kMaxActualDPBSize;
   }
   // GetMaxDpbSize() returns max 16, but kMaxActualDPBSize is 24.
@@ -601,9 +601,12 @@ LOG(INFO, "H264Decoder::InitializeStream()");
   }
 
   // The HW decoder / firmware seems to require several extra frames or it won't continue decoding
-  // frames.
+  // frames. TODO(fxb/43085): Verify that min_buffer_count_for_camping (as opposed to
+  // min_buffer_count) can't be reduced.
   constexpr uint32_t kDbpSizeAdj = 6;
-  uint32_t min_buffer_count = max_dpb_size + kDbpSizeAdj;
+  // Use kDpbSizeAdj should include the frame that's decoded into, so we don't need to add 1 extra
+  // here.
+  uint32_t min_buffer_count = max_reference_size + kDbpSizeAdj;
   min_buffer_count = std::min(min_buffer_count, kMaxActualDPBSize);
 
   // Add 1 because firmware may expect this.
@@ -696,15 +699,15 @@ LOG(INFO, "H264Decoder::InitializeStream()");
   // The "max" means the max the stream might require, so that's actually the min # of buffers we
   // need.  The +1 accounts for the decode-into buffer (AFAICT).  Reduce this number at your own
   // risk - YMMV.
-  LOG(INFO, "max_reference_size: %u max_dpb_size: %u min_buffer_count: %u",
-      max_reference_size, max_dpb_size, min_buffer_count);
+  LOG(INFO, "max_reference_size: %u max_dpb_size: %u min_buffer_count: %u", max_reference_size,
+      max_dpb_size, min_buffer_count);
   uint32_t min_frame_count = min_buffer_count;
   // Also constrained by the maximum number of buffers this driver knows how to track for now, which
   // is kMaxActualDPBSize (24).
   uint32_t max_frame_count = kMaxActualDPBSize;
-  zx_status_t status = InitializeFrames(min_frame_count, max_frame_count, coded_width, coded_height,
-                                        display_width, display_height, has_sar, sar_width,
-                                        sar_height);
+  zx_status_t status =
+      InitializeFrames(min_frame_count, max_frame_count, coded_width, coded_height, display_width,
+                       display_height, has_sar, sar_width, sar_height);
   if (status != ZX_OK) {
     if (status != ZX_ERR_STOP) {
       DECODE_ERROR("InitializeFrames() failed: status: %d\n", status);

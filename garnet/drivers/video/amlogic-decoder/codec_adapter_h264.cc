@@ -165,7 +165,7 @@ void CodecAdapterH264::CoreCodecSetSecureMemoryMode(
   if (secure_memory_mode != fuchsia::mediacodec::SecureMemoryMode::OFF &&
       !video_->is_tee_available()) {
     events_->onCoreCodecFailCodec(
-      "BUG 40198 - Codec factory should catch earlier when secure requested without TEE.");
+        "BUG 40198 - Codec factory should catch earlier when secure requested without TEE.");
     return;
   }
   secure_memory_mode_[port] = secure_memory_mode;
@@ -509,20 +509,20 @@ CodecAdapterH264::CoreCodecBuildNewOutputConstraints(
   constraints->set_per_packet_buffer_bytes_recommended(per_packet_buffer_bytes);
   constraints->set_per_packet_buffer_bytes_max(per_packet_buffer_bytes);
 
-  // These constraints do not include an overall packet_count_max, so don't help
-  // a client avoid specifying a packet count that exceeds max_buffer_count_,
-  // which will fail.  Clients which want to push toward more buffers should do
-  // so via sysmem, as sysmem will know about the max_buffer_count_, and the
-  // overall # of actual packets will be the same as
-  // BufferCollectionInfo_2.buffer_count.  The client can camp on as many
-  // buffers and as many packets as the client told sysmem it intended to camp
-  // on.
+  // The hardware only needs min_buffer_count_ buffers - more aren't better.
   constraints->set_packet_count_for_server_min(min_buffer_count_[kOutputPort]);
   constraints->set_packet_count_for_server_recommended(min_buffer_count_[kOutputPort]);
-  constraints->set_packet_count_for_server_recommended_max(max_buffer_count_[kOutputPort]);
-  constraints->set_packet_count_for_server_max(max_buffer_count_[kOutputPort]);
+  constraints->set_packet_count_for_server_recommended_max(min_buffer_count_[kOutputPort]);
+  constraints->set_packet_count_for_server_max(min_buffer_count_[kOutputPort]);
   constraints->set_packet_count_for_client_min(0);
-  constraints->set_packet_count_for_client_max(max_buffer_count_[kOutputPort]);
+  // Ensure that if the client allocates its max + the server max that it won't go over the hardware
+  // limit (max_buffer_count).
+  if (max_buffer_count_[kOutputPort] <= min_buffer_count_[kOutputPort]) {
+    events_->onCoreCodecFailCodec("Impossible for client to satisfy buffer counts");
+    return nullptr;
+  }
+  constraints->set_packet_count_for_client_max(max_buffer_count_[kOutputPort] -
+                                               min_buffer_count_[kOutputPort]);
 
   // False because it's not required and not encouraged for a video decoder
   // output to allow single buffer mode.
@@ -613,17 +613,17 @@ CodecAdapterH264::CoreCodecGetBufferCollectionConstraints(
 
   if (IsPortSecurePermitted(port)) {
     result.buffer_memory_constraints.inaccessible_domain_supported = true;
-    fuchsia::sysmem::HeapType secure_heap = (port == kInputPort) ?
-        fuchsia::sysmem::HeapType::AMLOGIC_SECURE_VDEC :
-        fuchsia::sysmem::HeapType::AMLOGIC_SECURE;
-    result.buffer_memory_constraints.heap_permitted[
-        result.buffer_memory_constraints.heap_permitted_count++] = secure_heap;
+    fuchsia::sysmem::HeapType secure_heap = (port == kInputPort)
+                                                ? fuchsia::sysmem::HeapType::AMLOGIC_SECURE_VDEC
+                                                : fuchsia::sysmem::HeapType::AMLOGIC_SECURE;
+    result.buffer_memory_constraints
+        .heap_permitted[result.buffer_memory_constraints.heap_permitted_count++] = secure_heap;
   }
 
   if (!IsPortSecureRequired(port)) {
-    result.buffer_memory_constraints.heap_permitted[
-        result.buffer_memory_constraints.heap_permitted_count++] =
-            fuchsia::sysmem::HeapType::SYSTEM_RAM;
+    result.buffer_memory_constraints
+        .heap_permitted[result.buffer_memory_constraints.heap_permitted_count++] =
+        fuchsia::sysmem::HeapType::SYSTEM_RAM;
   }
 
   if (port == kOutputPort) {
@@ -1225,9 +1225,9 @@ bool CodecAdapterH264::ParseVideoAnnexB(const CodecBuffer* buffer, const uint8_t
 }
 
 zx_status_t CodecAdapterH264::InitializeFramesHandler(::zx::bti bti, uint32_t min_frame_count,
-                                                      uint32_t max_frame_count,
-                                                      uint32_t width, uint32_t height,
-                                                      uint32_t stride, uint32_t display_width,
+                                                      uint32_t max_frame_count, uint32_t width,
+                                                      uint32_t height, uint32_t stride,
+                                                      uint32_t display_width,
                                                       uint32_t display_height, bool has_sar,
                                                       uint32_t sar_width, uint32_t sar_height) {
   // First handle the special case of EndOfStream marker showing up at the output.

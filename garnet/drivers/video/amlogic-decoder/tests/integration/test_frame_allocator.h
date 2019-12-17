@@ -8,11 +8,12 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 
-#include "amlogic-video.h"
-#include "video_decoder.h"
-#include "macros.h"
-
 #include <random>
+
+#include "amlogic-video.h"
+#include "gtest/gtest.h"
+#include "macros.h"
+#include "video_decoder.h"
 
 class TestFrameAllocator {
  public:
@@ -32,12 +33,16 @@ class TestFrameAllocator {
                              uint32_t coded_width, uint32_t coded_height, uint32_t stride,
                              uint32_t display_width, uint32_t display_height, bool has_sar,
                              uint32_t sar_width, uint32_t sar_height) {
+    // Ensure client is allowed to allocate at least 2 frames for itself.
+    constexpr uint32_t kMinFramesForClient = 2;
+    EXPECT_LE(min_frame_count + kMinFramesForClient, max_frame_count);
     // Post to other thread so that we initialize the frames in a different callstack.
     async::PostTask(loop_.dispatcher(), [this, bti = std::move(bti), min_frame_count,
                                          max_frame_count, coded_width, coded_height, stride]() {
       std::vector<CodecFrame> frames;
       uint32_t frame_vmo_bytes = coded_height * stride * 3 / 2;
-      std::uniform_int_distribution<uint32_t> frame_count_distribution(min_frame_count, max_frame_count);
+      std::uniform_int_distribution<uint32_t> frame_count_distribution(min_frame_count,
+                                                                       max_frame_count);
       uint32_t frame_count = frame_count_distribution(prng_);
       LOG(INFO, "AllocateFrames() - frame_count: %u min_frame_count: %u max_frame_count: %u",
           frame_count, min_frame_count, max_frame_count);
