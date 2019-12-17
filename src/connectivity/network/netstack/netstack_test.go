@@ -26,6 +26,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/network/arp"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
@@ -193,6 +194,42 @@ func TestNotStartedByDefault(t *testing.T) {
 
 	if startCalled {
 		t.Error("expected no calls to ethernet.Device.Start by addEth")
+	}
+}
+
+// Test that NICs get an IPv6 link-local address using the same algorithm that
+// netsvc uses. It does not matter whether the address is generated
+// automatically by the netstack or manually by the bindings (Netstack).
+func TestIpv6LinkLocalAddr(t *testing.T) {
+	ns := newNetstack(t)
+
+	eth := deviceForAddEth(ethernet.Info{
+		Mac: ethernet.MacAddress{
+			Octets: [6]byte{2, 3, 4, 5, 6, 7},
+		},
+	}, t)
+	ifs, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: testDeviceName}, &eth)
+	if err != nil {
+		t.Fatalf("addEth(_, _, _): %s", err)
+	}
+
+	ns.mu.Lock()
+	nicInfos := ns.mu.stack.NICInfo()
+	ns.mu.Unlock()
+
+	nicInfo, ok := nicInfos[ifs.nicid]
+	if !ok {
+		t.Fatalf("stack.NICInfo()[%d]: %s", ifs.nicid, tcpip.ErrUnknownNICID)
+	}
+
+	want := tcpip.ProtocolAddress{
+		Protocol: header.IPv6ProtocolNumber,
+		AddressWithPrefix: tcpip.AddressWithPrefix{
+			Address: "\xfe\x80\x00\x00\x00\x00\x00\x00\x00\x03\x04\xff\xfe\x05\x06\x07",
+		},
+	}
+	if _, found := findAddress(nicInfo.ProtocolAddresses, want); !found {
+		t.Fatalf("got NIC addrs = %+v, want = %+v", nicInfo.ProtocolAddresses, want)
 	}
 }
 

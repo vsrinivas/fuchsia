@@ -94,7 +94,8 @@ func Main() {
 			tcp.NewProtocol(),
 			udp.NewProtocol(),
 		},
-		HandleLocal: true,
+		HandleLocal:          true,
+		AutoGenIPv6LinkLocal: true,
 		// Raw sockets are typically used for implementing custom protocols. We intend
 		// to support custom protocols through structured FIDL APIs in the future, so
 		// disable raw sockets to prevent them from accidentally becoming load-bearing.
