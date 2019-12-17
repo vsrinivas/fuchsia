@@ -5,6 +5,7 @@
 
 import argparse
 import fileinput
+import json
 import os
 import re
 import subprocess
@@ -155,11 +156,27 @@ def transform_build_file(build):
 def main():
     parser = argparse.ArgumentParser(
             description='Moves a binary from ZN to GN.')
-    parser.add_argument('binary',
+    commands = parser.add_subparsers()
+
+    convert_parser = commands.add_parser('convert',
+                                         help='Migrate from ZN to GN')
+    convert_parser.add_argument('binary',
                         help='The binary under //zircon/system to migrate, '
                              'e.g. uapp/audio, utest/fit, dev/bus/pci')
-    args = parser.parse_args()
+    convert_parser.set_defaults(func=run_convert)
 
+    list_parser = commands.add_parser('list',
+                                      help='List available binaries')
+    list_parser.add_argument('--build-dir',
+                             help='path to the ZN build dir',
+                             default=os.path.join(FUCHSIA_ROOT, 'out', 'default.zircon'))
+    list_parser.set_defaults(func=run_list)
+
+    args = parser.parse_args()
+    args.func(args)
+
+
+def run_convert(args):
     # Check that the fuchsia.git tree is clean.
     diff = run_command(['git', 'status', '--porcelain'])
     if diff:
@@ -206,6 +223,29 @@ def main():
           'identify further required changes.')
 
     return 0
+
+
+def run_list(args):
+    targets = set()
+    for arch in ['arm64', 'x64']:
+        manifest_path = os.path.join(args.build_dir,
+                                     'legacy_unification-%s.json' % arch)
+        with open(manifest_path, 'r') as manifest_file:
+            data = json.load(manifest_file)
+        for item in data:
+            if item['name'].startswith('lib.'):
+                # Libraries will be migrated through a different process.
+                continue
+            label = item['label']
+            # Labels are always full, i.e. "//foo/bar:blah(//toolchain)".
+            label = label[0:label.index('(')]
+            label = label[0:label.index(':')]
+            if not label.startswith('//system'):
+                continue
+            label = label[len('//system/'):]
+            targets.add(label)
+    for target in sorted(targets):
+        print(target)
 
 
 if __name__ == '__main__':
