@@ -137,14 +137,14 @@ func getMulticastIP() net.IP {
 
 var (
 	port    int
-	timeout int
+	timeout time.Duration
 	ipAddr  string
 )
 
 func init() {
 	flag.StringVar(&ipAddr, "ip", "", "the ip to respond with when serving.")
 	flag.IntVar(&port, "port", 5353, "the port your mDNS servers operate on")
-	flag.IntVar(&timeout, "timeout", 2000, "the number of milliseconds before declaring a timeout")
+	flag.DurationVar(&timeout, "timeout", 2*time.Second, "the duration before declaring a timeout")
 }
 
 func publish(args ...string) error {
@@ -174,7 +174,7 @@ func resolve(args ...string) error {
 		return fmt.Errorf("missing domain to request")
 	}
 	domain := args[0]
-	ip, err := mDNSResolve(context.Background(), domain, port, time.Duration(timeout)*time.Millisecond)
+	ip, err := mDNSResolve(context.Background(), domain, port, timeout)
 	if err != nil {
 		return err
 	}

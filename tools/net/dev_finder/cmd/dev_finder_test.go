@@ -147,7 +147,7 @@ func newDevFinderCmd(handler mDNSHandler, answerDomains []string, sendEmptyData 
 		mdnsHandler: handler,
 		mdnsAddrs:   "224.0.0.251",
 		mdnsPorts:   "5353",
-		timeout:     10,
+		timeout:     10 * time.Millisecond,
 		netboot:     true,
 		mdns:        true,
 		ipv6:        true,

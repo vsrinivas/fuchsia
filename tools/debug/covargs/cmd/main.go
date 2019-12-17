@@ -37,8 +37,8 @@ func (a *argList) Set(value string) error {
 }
 
 const (
-	symbolCacheSize   uint64        = 100
-	cloudFetchTimeout time.Duration = time.Duration(5) * time.Second
+	symbolCacheSize   = 100
+	cloudFetchTimeout = 5 * time.Second
 )
 
 var (

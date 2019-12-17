@@ -59,9 +59,9 @@ type devFinderCmd struct {
 	mdnsAddrs string
 	// The mDNS ports to connect to.
 	mdnsPorts string
-	// The timeout in ms to either give up or to exit the program after finding at least one
-	// device.
-	timeout int
+	// The timeout to either give up or to exit the program after finding at
+	// least one device.
+	timeout time.Duration
 	// Determines whether to return the address of the address of the interface that
 	// established a connection to the Fuchsia device (rather than the address of the
 	// Fuchsia device on its own).
@@ -138,7 +138,7 @@ func (cmd *devFinderCmd) SetCommonFlags(f *flag.FlagSet) {
 	f.BoolVar(&cmd.json, "json", false, "Outputs in JSON format.")
 	f.StringVar(&cmd.mdnsAddrs, "addr", "224.0.0.251,ff02::fb", "[linux only] Comma separated list of addresses to issue mDNS queries to.")
 	f.StringVar(&cmd.mdnsPorts, "port", "5353", "[linux only] Comma separated list of ports to issue mDNS queries to.")
-	f.IntVar(&cmd.timeout, "timeout", 500, "The number of milliseconds before declaring a timeout.")
+	f.DurationVar(&cmd.timeout, "timeout", 500*time.Millisecond, "The duration before declaring a timeout.")
 	f.BoolVar(&cmd.localResolve, "local", false, "Returns the address of the interface to the host when doing service lookup/domain resolution.")
 	f.BoolVar(&cmd.acceptUnicast, "accept-unicast", true, "[linux only] Accepts unicast responses. For if the receiving device responds from a different subnet or behind port forwarding.")
 	f.IntVar(&cmd.deviceLimit, "device-limit", 0, "Exits before the timeout at this many devices per resolution (zero means no limit).")
@@ -231,7 +231,7 @@ func (cmd *devFinderCmd) sendMDNSPacket(ctx context.Context, packet mdns.Packet,
 		return fmt.Errorf("packet handler is nil")
 	}
 	if cmd.timeout <= 0 {
-		return fmt.Errorf("invalid timeout value: %v", cmd.timeout)
+		return fmt.Errorf("invalid timeout value: %s", cmd.timeout)
 	}
 
 	cmdAddrs := strings.Split(cmd.mdnsAddrs, ",")
@@ -322,7 +322,7 @@ func (cmd *devFinderCmd) shouldIgnoreIP(addr net.IP) bool {
 //
 // This function executes synchronously.
 func (cmd *devFinderCmd) filterInboundDevices(ctx context.Context, f <-chan *fuchsiaDevice, domains ...string) ([]*fuchsiaDevice, error) {
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(cmd.timeout)*time.Millisecond)
+	ctx, cancel := context.WithTimeout(ctx, cmd.timeout)
 	defer cancel()
 	defer cmd.close()
 	devices := make(map[string]*fuchsiaDevice)

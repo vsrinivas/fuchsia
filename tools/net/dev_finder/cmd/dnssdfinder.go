@@ -30,7 +30,6 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-	"time"
 	"unsafe"
 )
 
@@ -73,8 +72,8 @@ func newDNSSDRef(allocator dnsRefAllocator) (*dnsSDRef, int) {
 
 func freeDNSSDRef(d *dnsSDRef) {
 	cptr := atomic.SwapPointer(
-    (*unsafe.Pointer)(unsafe.Pointer(d.cptr)),  // Converts d.cptr from *C.DNSServiceRef to (void **) so this function works.
-    unsafe.Pointer(C.NULL))
+		(*unsafe.Pointer)(unsafe.Pointer(d.cptr)), // Converts d.cptr from *C.DNSServiceRef to (void **) so this function works.
+		unsafe.Pointer(C.NULL))
 	if cptr != unsafe.Pointer(C.NULL) {
 		C.dnsDeallocate(C.DNSServiceRef(cptr))
 	}
@@ -142,7 +141,7 @@ func (d *dnsSDContext) poll() {
 // such in the parent work group.
 func (d *dnsSDContext) processResults(ctx context.Context) {
 	d.finder.wg.Add(1)
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(d.finder.cmd.timeout)*time.Millisecond)
+	ctx, cancel := context.WithTimeout(ctx, d.finder.cmd.timeout)
 	go func() {
 		defer cancel()
 		defer d.finder.wg.Done()
