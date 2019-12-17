@@ -11,13 +11,9 @@ import (
 )
 
 const (
-	// This means that this code is considered GA (Generally Available) and so it
-	// will not be allowed to use any Cobalt metrics that are marked as being only
-	// for "DEBUG" or "FISHFOOD" etc.
-	releaseStage = cobalt.ReleaseStageGa
-	// This must match the name of our project as specified in Cobalt's metrics registry:
+	// This must match the ID of our project as specified in Cobalt's metrics registry:
 	// https://cobalt-analytics.googlesource.com/config/+/refs/heads/master/projects.yaml
-	projectName = "software_delivery"
+	projectId = 4247972873
 )
 
 var (
@@ -106,7 +102,7 @@ func connect() error {
 		return err
 	}
 
-	status, err := factory.CreateLoggerFromProjectName(projectName, releaseStage, loggerRequest)
+	status, err := factory.CreateLoggerFromProjectId(projectId, loggerRequest)
 	if err != nil {
 		proxy.Close()
 		return err

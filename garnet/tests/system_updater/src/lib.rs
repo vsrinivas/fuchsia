@@ -404,16 +404,12 @@ impl MockLoggerFactory {
         }
         while let Some(event) = stream.try_next().await? {
             match event {
-                fidl_fuchsia_cobalt::LoggerFactoryRequest::CreateLoggerFromProjectName {
-                    project_name,
-                    release_stage: _,
+                fidl_fuchsia_cobalt::LoggerFactoryRequest::CreateLoggerFromProjectId {
+                    project_id,
                     logger,
                     responder,
                 } => {
-                    eprintln!(
-                        "TEST: Got CreateLogger request with project_name {:?}",
-                        project_name
-                    );
+                    eprintln!("TEST: Got CreateLogger request with project_id {:?}", project_id);
                     let mock_logger = Arc::new(MockLogger::new());
                     self.loggers.lock().push(mock_logger.clone());
                     fasync::spawn(
