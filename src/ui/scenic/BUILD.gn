@@ -23,6 +23,7 @@ group("tests") {
     ":scenic_tests",
     "lib/gfx/tests:mock_pose_buffer_provider",
     "lib/gfx/tests/rotated_square_test",
+    "lib/utils:tests",
   ]
 }
 

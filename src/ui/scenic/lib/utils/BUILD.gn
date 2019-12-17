@@ -1,0 +1,50 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+
+source_set("fence_utils") {
+  sources = [
+    "sequential_fence_signaller.cc",
+    "sequential_fence_signaller.h",
+  ]
+  deps = [
+    "//sdk/lib/fidl/cpp:cpp_base",
+    "//src/lib/fxl",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+unittest_package("tests") {
+  package_name = "scenic_utils_tests"
+  deps = [
+    ":sequential_fence_signaller_unittest",
+  ]
+  tests = [
+    {
+      name = "sequential_fence_signaller_unittest"
+      environments = basic_envs
+    },
+  ]
+}
+
+executable("sequential_fence_signaller_unittest") {
+  testonly = true
+  sources = [
+    "test/sequential_fence_signaller_unittest.cc",
+    "test/util.cc",
+    "test/util.h",
+  ]
+  deps = [
+    ":fence_utils",
+    "//sdk/lib/fidl/cpp:cpp_base",
+    "//src/lib/fxl",
+    "//src/lib/fxl:fxl_logging",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+  ]
+}
