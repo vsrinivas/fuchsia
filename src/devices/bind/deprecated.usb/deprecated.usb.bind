@@ -1,0 +1,47 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library deprecated.usb;
+
+extend uint deprecated.BIND_PROTOCOL {
+  DEVICE = 34,
+  FUNCTION = 40,
+};
+
+extend uint deprecated.BIND_USB_VID {
+  FTDI = 0x0403,
+  CYPRESS = 0x04b4,
+  ASIX = 0x0b95,
+  REALTEK = 0x0bda,
+  ATHEROS = 0x0cf3,
+  SIERRA = 0x1199,
+  RALINK = 0x148f,
+  GOOGLE = 0x18d1,
+  INTEL = 0x8087,
+};
+
+// See https://www.usb.org/defined-class-codes
+extend uint deprecated.BIND_USB_CLASS {
+  AUDIO = 0x01,
+  COMM = 0x02,
+  HID = 0x03,
+  PHYSICAL = 0x05,
+  IMAGE = 0x06,
+  PRINTER = 0x07,
+  MASS_STORAGE = 0x08,
+  HUB = 0x09,
+  CDC_DATA = 0x10,
+  SMART_CARD = 0x0b,
+  CONTENT_SECURITY = 0x0d,
+  VIDEO = 0x0e,
+  PERSONAL_HEALTHCARE = 0x0f,
+  AUDIO_VIDEO = 0x10,
+  BILLBOARD = 0x11,
+  USB_C_BRIDGE = 0x12,
+  DIAGNOSTIC = 0xdc,
+  WIRELESS = 0xe0,
+  MISC = 0xef,
+  APPLICATION_SPECIFIC = 0xfe,
+  VENDOR_SPECIFIC = 0xff,
+};
