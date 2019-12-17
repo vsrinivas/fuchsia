@@ -12,3 +12,8 @@ bool DebuggingSyscallsEnabled() {
   static bool enabled = gCmdline.GetBool("kernel.enable-debugging-syscalls", false);
   return enabled;
 }
+
+bool SerialSyscallsEnabled() {
+  static bool enabled = gCmdline.GetBool("kernel.enable-serial-syscalls", false);
+  return enabled;
+}

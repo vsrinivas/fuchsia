@@ -8,6 +8,7 @@ zircon_enable_netsvc_debugging_features = true
 
 kernel_cmdline_args = [
   "kernel.enable-debugging-syscalls=true",
+  "kernel.enable-serial-syscalls=true",
   "kernel.oom.behavior=jobkill",
   "netsvc.all-features=true",
   "netsvc.disable=false",

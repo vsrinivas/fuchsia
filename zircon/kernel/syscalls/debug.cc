@@ -35,7 +35,9 @@ zx_status_t sys_debug_read(zx_handle_t handle, user_out_ptr<char> ptr, size_t ma
                            user_out_ptr<size_t> len) {
   LTRACEF("ptr %p\n", ptr.get());
 
-  // TODO(fxb/38409): This should return ZX_ERR_NOT_SUPPORTED when !DebuggingSyscallsEnabled().
+  if (!SerialSyscallsEnabled()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
   // TODO(ZX-971): finer grained validation
   zx_status_t status;
@@ -68,7 +70,9 @@ zx_status_t sys_debug_read(zx_handle_t handle, user_out_ptr<char> ptr, size_t ma
 zx_status_t sys_debug_write(user_in_ptr<const char> ptr, size_t len) {
   LTRACEF("ptr %p, len %zu\n", ptr.get(), len);
 
-  // TODO(fxb/38409): This should return ZX_ERR_NOT_SUPPORTED when !DebuggingSyscallsEnabled().
+  if (!SerialSyscallsEnabled()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
   if (len > kMaxDebugWriteSize)
     len = kMaxDebugWriteSize;

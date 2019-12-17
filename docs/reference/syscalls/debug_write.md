@@ -21,7 +21,7 @@ zx_status_t zx_debug_write(const char* buffer, size_t buffer_size);
 TODO(fxbug.dev/32938)
 
 To use the `zx_debug_write()` function, you must specify
-`kernel.enable-debugging-syscalls=true` on the kernel command line. Otherwise,
+`kernel.enable-serial-syscalls=true` on the kernel command line. Otherwise,
 the function returns **ZX_ERR_NOT_SUPPORTED**.
 
 ## RIGHTS
@@ -38,7 +38,7 @@ TODO(fxbug.dev/32938)
 
 TODO(fxbug.dev/32938)
 
-**ZX_ERR_NOT_SUPPORTED**  `kernel.enable-debugging-syscalls` is not set to `true`
+**ZX_ERR_NOT_SUPPORTED**  `kernel.enable-serial-syscalls` is not set to `true`
 on the kernel command line.
 
 ## SEE ALSO

@@ -215,7 +215,23 @@ line, CPRNG panics. Defaults to false.
 ## kernel.enable-debugging-syscalls=\<bool>
 
 When disabled, certain debugging-related syscalls will fail with
-`ZX_ERR_NOT_SUPPORTED`. Defaults to false (debugging syscalls disabled).
+`ZX_ERR_NOT_SUPPORTED`. Defaults to false (debugging syscalls disabled). These
+are:
+- `zx_debug_send_command()`
+- `zx_ktrace_control()`
+- `zx_ktrace_init()`
+- `zx_ktrace_read()`
+- `zx_mtrace_control()`
+- `zx_process_write_memory()`
+- `zx_system_mexec()`
+- `zx_system_mexec_payload_get()`
+
+## kernel.enable-serial-syscalls=\<bool>
+
+When disabled, the serial port syscalls will fail with `ZX_ERR_NOT_SUPPORTED`.
+Defaults to false (serial port disabled). These are:
+- `zx_debug_read()`
+- `zx_debug_write()`
 
 ## kernel.entropy-mixin=\<hex>
 

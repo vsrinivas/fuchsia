@@ -42,7 +42,7 @@ func ensureDoesNotContain(t *testing.T, output string, lookFor string) {
 	}
 }
 
-func TestDisableDebuggingSyscalls(t *testing.T) {
+func TestDisableDebuggingEnableSerialSyscalls(t *testing.T) {
 	distro, err := qemu.Unpack()
 	if err != nil {
 		t.Fatal(err)
@@ -60,15 +60,54 @@ func TestDisableDebuggingSyscalls(t *testing.T) {
 		qemu.Params{
 			Arch:          arch,
 			ZBI:           zbiPath(t),
-			AppendCmdline: "kernel.enable-debugging-syscalls=false",
+			AppendCmdline: "kernel.enable-debugging-syscalls=false kernel.enable-serial-syscalls=true",
 		})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// TODO(fxb/38409): Temporarily excluded from disabled set; these should be "disabled".
 	ensureContains(t, stdout, "zx_debug_read: enabled")
 	ensureContains(t, stdout, "zx_debug_write: enabled")
+
+	ensureContains(t, stdout, "zx_debug_send_command: disabled")
+	ensureContains(t, stdout, "zx_ktrace_control: disabled")
+	ensureContains(t, stdout, "zx_ktrace_read: disabled")
+	ensureContains(t, stdout, "zx_ktrace_write: disabled")
+	ensureContains(t, stdout, "zx_mtrace_control: disabled")
+	ensureContains(t, stdout, "zx_process_write_memory: disabled")
+	ensureContains(t, stdout, "zx_system_mexec: disabled")
+	ensureContains(t, stdout, "zx_system_mexec_payload_get: disabled")
+	if stderr != "" {
+		t.Fatal(stderr)
+	}
+}
+
+func TestDisableDebuggingDisableSerialSyscalls(t *testing.T) {
+	distro, err := qemu.Unpack()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer distro.Delete()
+	arch, err := distro.TargetCPU()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	stdout, stderr, err := distro.RunNonInteractive(
+		"/boot/bin/syscall-check",
+		toolPath(t, "minfs"),
+		toolPath(t, "zbi"),
+		qemu.Params{
+			Arch:          arch,
+			ZBI:           zbiPath(t),
+			AppendCmdline: "kernel.enable-debugging-syscalls=false kernel.enable-serial-syscalls=false",
+		})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ensureContains(t, stdout, "zx_debug_read: disabled")
+	ensureContains(t, stdout, "zx_debug_write: disabled")
 
 	ensureContains(t, stdout, "zx_debug_send_command: disabled")
 	ensureContains(t, stdout, "zx_ktrace_control: disabled")
@@ -131,7 +170,7 @@ func TestEnableDebuggingSyscalls(t *testing.T) {
 		qemu.Params{
 			Arch:          arch,
 			ZBI:           zbiPath(t),
-			AppendCmdline: "kernel.enable-debugging-syscalls=true",
+			AppendCmdline: "kernel.enable-debugging-syscalls=true kernel.enable-serial-syscalls=true",
 		})
 	if err != nil {
 		t.Fatal(err)

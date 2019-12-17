@@ -70,4 +70,7 @@ class user_out_handle final {
 // Returns |true| if debugging syscalls have been enabled (see kernel.enable-debugging-syscalls).
 bool DebuggingSyscallsEnabled();
 
+// Returns |true| if serial port syscalls have been enabled (see kernel.enable-serial-syscalls).
+bool SerialSyscallsEnabled();
+
 #endif  // ZIRCON_KERNEL_SYSCALLS_PRIV_H_
