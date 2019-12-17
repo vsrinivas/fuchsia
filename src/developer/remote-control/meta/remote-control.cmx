@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "bin/remote_control_bin"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.device.manager.Administrator",
+            "fuchsia.logger.LogSink",
+            "fuchsia.overnet.Overnet",
+            "fuchsia.overnet.ServicePublisher",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

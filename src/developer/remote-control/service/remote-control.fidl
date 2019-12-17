@@ -30,4 +30,10 @@ protocol FdbRemoteControl {
         // Arguments to pass to the component.
         vector<string:MAX>:MAX args
         ) -> (RunComponentResponse response);
+
+    // This should be a fire-and-forget, but that seems to do
+    // nothing in Overnet.
+    // TODO(fxb/43011) look into this.
+    // TODO(fxb/43046) Add parameters for other reboot types.
+    RebootDevice() -> ();
 };

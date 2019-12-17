@@ -1,0 +1,12 @@
+{
+    "program": {
+        "binary": "test/remote_control_lib_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.device.manager.Administrator",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}
