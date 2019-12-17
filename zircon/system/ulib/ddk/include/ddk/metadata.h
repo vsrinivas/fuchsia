@@ -113,6 +113,9 @@ static_assert(DEVICE_METADATA_BOARD_PRIVATE == ZBI_TYPE_DRV_BOARD_PRIVATE, "");
 // type: double
 #define DEVICE_METADATA_BACKLIGHT_MAX_BRIGHTNESS_NITS 0x4C4B4342  // BCKL
 
+// list of lights_config_t
+#define DEVICE_METADATA_LIGHTS 0x5448474C  // LGHT
+
 // Metadata types that have least significant byte set to lowercase 'd'
 // signify private driver data.
 // This allows creating metadata types to be defined local to a particular

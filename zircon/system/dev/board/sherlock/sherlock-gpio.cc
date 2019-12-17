@@ -98,6 +98,9 @@ static const gpio_pin_t gpio_pins[] = {
     // For OpenThread radio
     {GPIO_OT_RADIO_RESET},
     {GPIO_OT_RADIO_INTERRUPT},
+    // LED
+    {GPIO_AMBER_LED},
+    {GPIO_GREEN_LED},
 };
 
 static const pbus_metadata_t gpio_metadata[] = {
@@ -159,16 +162,6 @@ zx_status_t Sherlock::GpioInit() {
   if (!gpio_impl_.is_valid()) {
     zxlogf(ERROR, "%s: device_get_protocol failed %d\n", __func__, status);
     return ZX_ERR_INTERNAL;
-  }
-
-  // Enable the mute LED so it will be controlled by the mute switch.
-  status = gpio_impl_.SetAltFunction(GPIO_MUTE_LED, 0);  // Set as GPIO.
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Configure mute LED GPIO failed %d\n", __func__, status);
-  }
-  status = gpio_impl_.ConfigOut(GPIO_MUTE_LED, 1);  // Turn on (not configured as PWM).
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Configure mute LED GPIO on failed %d\n", __func__, status);
   }
 
   return ZX_OK;
