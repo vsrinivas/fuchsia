@@ -4,18 +4,10 @@
 
 library fuchsia.ui.brightness;
 
-/// Allows a presentation owner to register a handler for color adjustments.
-/// This API is implemented by the Brightness Manager and
-/// called by Root Presenter.
-[Discoverable]
-protocol ColorAdjustment {
-    /// Registers a handler for changes in the color adjustment configuration.
-    RegisterColorAdjustmentHandler(ColorAdjustmentHandler handler);
-};
-
 /// Handler implemented by the owner of the presentation.
-/// The brightness manager uses this protocol to request changes to the
-/// screen's color adjustment matrix.
+/// The UI component that controls brightness and screen tint uses this protocol to request changes
+/// to the screen's color adjustment matrix.
+[Discoverable]
 protocol ColorAdjustmentHandler {
     /// Called when the color adjustment  has changed.
     SetColorAdjustment(ColorAdjustmentTable color_adjustment);
