@@ -3036,11 +3036,22 @@ zx_status_t VmObjectPaged::SetMappingCachePolicy(const uint32_t cache_policy) {
   Guard<fbl::Mutex> guard{&lock_};
 
   // conditions for allowing the cache policy to be set:
-  // 1) vmo has no pages committed currently
-  // 2) vmo has no mappings
-  // 3) vmo has no children
-  // 4) vmo is not a child
-  if (!page_list_.IsEmpty()) {
+  // 1) vmo either has no pages committed currently or is transitioning from being cached
+  // 2) vmo has no pinned pages
+  // 3) vmo has no mappings
+  // 4) vmo has no children
+  // 5) vmo is not a child
+  if (!page_list_.IsEmpty() && cache_policy_ != ARCH_MMU_FLAG_CACHED) {
+    // We forbid to transitioning committed pages from any kind of uncached->cached policy as we do
+    // not currently have a story for dealing with the speculative loads that may have happened
+    // against the cached physmap. That is, whilst a page was uncached the cached physmap version
+    // may have been loaded and sitting in cache. If we switch to cached mappings we may then use
+    // stale data out of the cache.
+    // This isn't a problem if going *from* an cached state, as we can safely clean+invalidate.
+    // Similarly it's not a problem if there aren't actually any committed pages.
+    return ZX_ERR_BAD_STATE;
+  }
+  if (pinned_page_count_ > 0) {
     return ZX_ERR_BAD_STATE;
   }
   if (!mapping_list_.is_empty()) {
@@ -3051,6 +3062,18 @@ zx_status_t VmObjectPaged::SetMappingCachePolicy(const uint32_t cache_policy) {
   }
   if (parent_) {
     return ZX_ERR_BAD_STATE;
+  }
+
+  // If transitioning from a cached policy we must clean/invalidate all the pages as the kernel may
+  // have written to them on behalf of the user.
+  if (cache_policy_ == ARCH_MMU_FLAG_CACHED && cache_policy != ARCH_MMU_FLAG_CACHED) {
+    page_list_.ForEveryPage([](const auto& p, uint64_t off) {
+      if (p.IsPage()) {
+        vm_page_t* page = p.Page();
+        arch_clean_invalidate_cache_range((addr_t)paddr_to_physmap(page->paddr()), PAGE_SIZE);
+      }
+      return ZX_ERR_NEXT;
+    });
   }
 
   cache_policy_ = cache_policy;

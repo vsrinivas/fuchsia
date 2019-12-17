@@ -973,12 +973,6 @@ TEST(VmoTestCase, Cache) {
   // bad cache policy
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_MASK + 1));
 
-  // commit a page, make sure the policy doesn't set
-  EXPECT_OK(zx_vmo_op_range(vmo, ZX_VMO_OP_COMMIT, 0, size, nullptr, 0));
-  EXPECT_EQ(ZX_ERR_BAD_STATE, zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_CACHED));
-  EXPECT_OK(zx_vmo_op_range(vmo, ZX_VMO_OP_DECOMMIT, 0, size, nullptr, 0));
-  EXPECT_OK(zx_vmo_set_cache_policy(vmo, ZX_CACHE_POLICY_CACHED));
-
   // map the vmo, make sure policy doesn't set
   uintptr_t ptr;
   EXPECT_OK(zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ, 0, vmo, 0, size, &ptr));
@@ -1333,6 +1327,47 @@ TEST(VmoTestCase, CompressedContiguous) {
     EXPECT_EQ(ZX_ERR_INVALID_ARGS,
               bti.pin(ZX_BTI_COMPRESS | ZX_BTI_PERM_READ, contig_vmo, 0, size, paddrs, 1, &pmt2));
   }
+}
+
+TEST(VmoTestCase, UncachedContiguous) {
+  if (!get_root_resource) {
+    printf("Root resource not available, skipping\n");
+    return;
+  }
+
+  zx::unowned_resource root_res(get_root_resource());
+
+  zx::iommu iommu;
+  zx::bti bti;
+
+  zx_iommu_desc_dummy_t desc;
+  EXPECT_OK(zx::iommu::create(*root_res, ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc), &iommu));
+
+  EXPECT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
+
+  constexpr uint64_t kSize = PAGE_SIZE * 4;
+
+  zx::vmo contig_vmo;
+  EXPECT_OK(zx::vmo::create_contiguous(bti, kSize, 0, &contig_vmo));
+
+  // Attempt to make the vmo uncached.
+  EXPECT_OK(contig_vmo.set_cache_policy(ZX_CACHE_POLICY_UNCACHED));
+
+  // Validate that it really is uncached by making sure operations that should fail, do.
+  uint64_t data = 42;
+  EXPECT_EQ(contig_vmo.write(&data, 0, sizeof(data)), ZX_ERR_BAD_STATE);
+
+  // Pin part of the vmo and validate we cannot change the cache policy whilst pinned.
+  zx_paddr_t paddr;
+
+  zx::pmt pmt;
+  EXPECT_OK(bti.pin(ZX_BTI_COMPRESS | ZX_BTI_PERM_READ, contig_vmo, 0, PAGE_SIZE, &paddr, 1, &pmt));
+
+  EXPECT_EQ(contig_vmo.set_cache_policy(ZX_CACHE_POLICY_CACHED), ZX_ERR_BAD_STATE);
+
+  // Unpin and then validate that we cannot move committed pages from uncached->cached
+  pmt.unpin();
+  EXPECT_EQ(contig_vmo.set_cache_policy(ZX_CACHE_POLICY_CACHED), ZX_ERR_BAD_STATE);
 }
 
 }  // namespace

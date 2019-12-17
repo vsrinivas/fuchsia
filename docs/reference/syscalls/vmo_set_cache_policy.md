@@ -26,7 +26,9 @@ regular memory backed VMO with similar limitations and uses.
 
 A handle must have the **ZX_RIGHT_MAP** right for this call to be
 permitted. Additionally, the VMO must not presently be mapped by any process,
-have any children, be a child itself, or have any memory committed.
+have any children, be a child itself, or have any pinned pages. Having committed
+pages is only allowed if transitioning from a cached state, and the pages will be
+cleaned and invalidated.
 
 *cache_policy* cache flags to use:
 
@@ -71,7 +73,8 @@ above, or *cache_policy* contains an invalid mix of cache policy flags.
 physical memory.
 
 **ZX_ERR_BAD_STATE** Cache policy cannot be changed because the VMO is presently
-mapped, has children, is a child itself, or have any memory committed.
+mapped, has children, is a child itself, has pinned pages, or has committed pages
+and the VMO is currently not cached.
 
 ## SEE ALSO
 
