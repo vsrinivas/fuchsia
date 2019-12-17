@@ -124,13 +124,13 @@ int main(int argc, char** argv) {
   }
 
   // Get the string form of the address.
-  char addr_s[INET6_ADDRSTRLEN];
-  inet_ntop(AF_INET6, &addr.sin6_addr, addr_s, sizeof(addr_s));
-
-  // Get the name of the interface.
-  char ifname[IF_NAMESIZE];
-  if_indextoname(addr.sin6_scope_id, ifname);
-  fprintf(stdout, "%s%%%s\n", addr_s, ifname);
+  char tmp[INET6_ADDRSTRLEN];
+  const char* addr_s = inet_ntop(AF_INET6, &addr.sin6_addr, tmp, sizeof(tmp));
+  if (addr_s == NULL) {
+    fprintf(stderr, "error: %s\n", strerror(errno));
+    return -1;
+  }
+  fprintf(stdout, "%s%%%d\n", addr_s, addr.sin6_scope_id);
 
   return 0;
 }
