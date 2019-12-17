@@ -28,7 +28,6 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
-    "//sdk/fidl/fuchsia.ledger:fuchsia.ledger-rustc",
     "//sdk/fidl/fuchsia.terminal:fuchsia.terminal-rustc",
     "//sdk/fidl/fuchsia.ui.types:fuchsia.ui.types-rustc",
     "//third_party/rust_crates:failure",
