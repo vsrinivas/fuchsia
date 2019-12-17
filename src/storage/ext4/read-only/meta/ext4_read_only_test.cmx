@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/ext4_read_only_test"
+    }
+}

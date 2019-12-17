@@ -1,0 +1,53 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_library("ext4-read-only") {
+  name = "ext4-read-only"
+  version = "0.1.0"
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-vfs/pseudo-fs-mt",
+    "//garnet/public/rust/fuchsia-vfs/pseudo-fs-mt/macros",
+    "//garnet/public/rust/zerocopy",
+    "//third_party/rust_crates:byteorder",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:rust-crypto",
+    "//third_party/rust_crates:static_assertions",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+    "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
+  ]
+}
+
+test_package("ext4-read-only-tests") {
+  deps = [
+    ":ext4-read-only_test",
+  ]
+
+  resources = [
+    {
+      path = "1file.img"
+      dest = "1file.img"
+    },
+    {
+      path = "nest.img"
+      dest = "nest.img"
+    },
+  ]
+
+  tests = [
+    {
+      name = "ext4_read_only_lib_test"
+      dest = "ext4_read_only_test"
+      environments = basic_envs
+    },
+  ]
+}
