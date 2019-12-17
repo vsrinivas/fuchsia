@@ -59,12 +59,14 @@ TEST(ExternalNetworkTest, ConnectToNonRoutableINET6) {
   ASSERT_EQ(connect(s, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), -1);
 
 // If host test env does not support ipv6, the errno is set to ENETUNREACH.
+// If host test env does not have a route to the remote, the errno is set to
+// EHOSTUNREACH.
 // TODO(sshrivy): See if there's a way to detect this in program and assert
 // accordingly.
 #if defined(__linux__)
   ASSERT_TRUE(errno == EINPROGRESS || errno == ENETUNREACH) << strerror(errno);
 #else
-  ASSERT_EQ(errno, EINPROGRESS) << strerror(errno);
+  ASSERT_EQ(errno, EHOSTUNREACH) << strerror(errno);
 #endif
 
   ASSERT_EQ(close(s), 0) << strerror(errno);

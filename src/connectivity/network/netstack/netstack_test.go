@@ -233,6 +233,84 @@ func TestIpv6LinkLocalAddr(t *testing.T) {
 	}
 }
 
+func TestIpv6LinkLocalOnLinkRoute(t *testing.T) {
+	if got, want := ipv6LinkLocalOnLinkRoute(6), (tcpip.Route{Destination: header.IPv6LinkLocalPrefix.Subnet(), NIC: 6}); got != want {
+		t.Fatalf("got ipv6LinkLocalOnLinkRoute(6) = %s, want = %s", got, want)
+	}
+}
+
+// Test that NICs get an on-link route to the IPv6 link-local subnet when it is
+// brought up.
+func TestIpv6LinkLocalOnLinkRouteOnUp(t *testing.T) {
+	ns := newNetstack(t)
+
+	eth := deviceForAddEth(ethernet.Info{
+		Mac: ethernet.MacAddress{
+			Octets: [6]byte{2, 3, 4, 5, 6, 7},
+		},
+	}, t)
+	eth.StopImpl = func() error { return nil }
+	ifs, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: testDeviceName}, &eth)
+	if err != nil {
+		t.Fatalf("addEth(_, _, _): %s", err)
+	}
+
+	found := false
+	linkLocalRoute := ipv6LinkLocalOnLinkRoute(ifs.nicid)
+
+	// Initially should not have the link-local route.
+	ns.mu.Lock()
+	rt := ns.mu.stack.GetRouteTable()
+	ns.mu.Unlock()
+	for _, r := range rt {
+		if r == linkLocalRoute {
+			found = true
+			break
+		}
+	}
+	if found {
+		t.Fatalf("got GetRouteTable() = %+v, don't want = %s", rt, linkLocalRoute)
+	}
+
+	// Bringing the ethernet device up should result in the link-local
+	// route being added.
+	if err := ifs.eth.Up(); err != nil {
+		t.Fatalf("eth.Up(): %s", err)
+	}
+	ns.mu.Lock()
+	rt = ns.mu.stack.GetRouteTable()
+	ns.mu.Unlock()
+	found = false
+	for _, r := range rt {
+		if r == linkLocalRoute {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("got GetRouteTable() = %+v, want = %s", rt, linkLocalRoute)
+	}
+
+	// Bringing the ethernet device down should result in the link-local
+	// route being removed.
+	if err := ifs.eth.Down(); err != nil {
+		t.Fatalf("eth.Down(): %s", err)
+	}
+	ns.mu.Lock()
+	rt = ns.mu.stack.GetRouteTable()
+	ns.mu.Unlock()
+	found = false
+	for _, r := range rt {
+		if r == linkLocalRoute {
+			found = true
+			break
+		}
+	}
+	if found {
+		t.Fatalf("got GetRouteTable() = %+v, don't want = %s", rt, linkLocalRoute)
+	}
+}
+
 func TestMulticastPromiscuousModeEnabledByDefault(t *testing.T) {
 	ns := newNetstack(t)
 
@@ -778,10 +856,6 @@ func TestDHCPAcquired(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	destination3, err := tcpip.NewSubnet(util.Parse("::"), tcpip.AddressMask(util.Parse("::")))
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	tests := []struct {
 		name               string
@@ -818,16 +892,6 @@ func TestDHCPAcquired(t *testing.T) {
 					Route: tcpip.Route{
 						Destination: destination2,
 						Gateway:     util.Parse("192.168.42.18"),
-						NIC:         1,
-					},
-					Metric:                0,
-					MetricTracksInterface: true,
-					Dynamic:               true,
-					Enabled:               false,
-				},
-				{
-					Route: tcpip.Route{
-						Destination: destination3,
 						NIC:         1,
 					},
 					Metric:                0,

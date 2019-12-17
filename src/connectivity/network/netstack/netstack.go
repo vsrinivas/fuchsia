@@ -67,6 +67,13 @@ var ipv6LoopbackBytes = func() [16]byte {
 	return b
 }()
 
+func ipv6LinkLocalOnLinkRoute(nicID tcpip.NICID) tcpip.Route {
+	return tcpip.Route{
+		Destination: header.IPv6LinkLocalPrefix.Subnet(),
+		NIC:         nicID,
+	}
+}
+
 type stats struct {
 	tcpip.Stats
 	SocketCount      bindingSetCounterStat
@@ -181,19 +188,13 @@ type ifState struct {
 	filterEndpoint *filter.Endpoint
 }
 
-// defaultRoutes returns the IPv4 and IPv6 default routes.
-func defaultRoutes(nicid tcpip.NICID, gateway tcpip.Address) []tcpip.Route {
-	return []tcpip.Route{
-		{
-			Destination: header.IPv4EmptySubnet,
-			Gateway:     gateway,
-			NIC:         nicid,
-		},
-		{
-			Destination: header.IPv6EmptySubnet,
-			NIC:         nicid,
-		},
-	}
+// defaultRoutes returns the default IPv4 route appended to rs.
+func defaultRoutes(nicid tcpip.NICID, gateway tcpip.Address, rs ...tcpip.Route) []tcpip.Route {
+	return append(rs, tcpip.Route{
+		Destination: header.IPv4EmptySubnet,
+		Gateway:     gateway,
+		NIC:         nicid,
+	})
 }
 
 func addressWithPrefixRoute(nicid tcpip.NICID, addr tcpip.AddressWithPrefix) tcpip.Route {
@@ -507,6 +508,10 @@ func (ifs *ifState) stateChange(s link.State) {
 			ifs.ns.UpdateRoutesByInterfaceLocked(ifs.nicid, routes.ActionDisableStatic)
 		}
 
+		if err := ifs.ns.DelRouteLocked(ipv6LinkLocalOnLinkRoute(ifs.nicid)); err != nil {
+			syslog.Infof("error deleting link-local on-link route for nicID (%d): %s", ifs.nicid, err)
+		}
+
 	case link.StateStarted:
 		syslog.Infof("NIC %s: link.StateStarted", name)
 		// Re-enable static routes out this interface.
@@ -520,8 +525,16 @@ func (ifs *ifState) stateChange(s link.State) {
 		// this.
 		// Update the state before adding the routes, so they are properly enabled.
 		ifs.mu.state = s
-		if err := ifs.ns.AddRoutesLocked(defaultRoutes(ifs.nicid, ""), lowPriorityRoute, true /* dynamic */); err != nil {
-			syslog.Infof("error adding default routes: %v", err)
+		if err := ifs.ns.AddRoutesLocked(
+			defaultRoutes(
+				ifs.nicid,
+				"",
+				ipv6LinkLocalOnLinkRoute(ifs.nicid),
+			),
+			lowPriorityRoute,
+			true, /* dynamic */
+		); err != nil {
+			syslog.Infof("error adding default routes: %s", err)
 		}
 	}
 	ifs.mu.state = s
