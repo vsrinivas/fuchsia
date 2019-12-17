@@ -44,12 +44,14 @@ def main():
 
 %s
 
+typedef ZeroArgFunction = void Function();
+
 /// Wraps main invocations to support both main(List<String> args) and main().
 void _delegate(Function f, List<String> args) {
-  try {
-    f(args);
-  } on NoSuchMethodError catch(_) {
+  if (f is ZeroArgFunction) {
     f();
+  } else {
+    f(args);
   }
 }
 
