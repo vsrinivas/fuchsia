@@ -10,8 +10,11 @@
 namespace scheduling {
 
 // ID used to schedule an update on a FrameScheduler client. Each client is assumed to have a
-// globally unique SessionId.
+// globally and temporally unique SessionId.
 using SessionId = uint64_t;
+
+// Value 0 reserved as invalid.
+constexpr scheduling::SessionId INVALID_SESSION_ID = 0u;
 
 }  // namespace scheduling
 

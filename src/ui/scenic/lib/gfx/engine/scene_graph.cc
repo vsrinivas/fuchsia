@@ -5,6 +5,7 @@
 #include "src/ui/scenic/lib/gfx/engine/scene_graph.h"
 
 #include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
+#include <zircon/status.h>
 
 #include <sstream>
 
@@ -19,6 +20,9 @@ namespace gfx {
 
 using fuchsia::ui::focus::FocusChainListener;
 using fuchsia::ui::focus::FocusChainListenerRegistry;
+using fuchsia::ui::views::Error;
+using fuchsia::ui::views::ViewRef;
+using ViewFocuser = fuchsia::ui::views::Focuser;
 
 CompositorWeakPtr SceneGraph::GetCompositor(GlobalId compositor_id) const {
   for (const CompositorWeakPtr& compositor : compositors_) {
@@ -39,7 +43,7 @@ SceneGraph::SceneGraph(sys::ComponentContext* app_context)
         });
 
   } else {
-    FXL_LOG(ERROR) << "SceneGraph failed to register FocusChainListenerRegistry.";
+    FXL_LOG(ERROR) << "SceneGraph failed to register fuchsia.ui.focus.FocusChainListenerRegistry.";
   }
 }
 
@@ -67,7 +71,6 @@ void SceneGraph::StageViewTreeUpdates(ViewTreeUpdates updates) {
 // destructive.  This operation must preserve any needed state before applying updates.
 void SceneGraph::ProcessViewTreeUpdates() {
   std::vector<zx_koid_t> old_focus_chain = view_tree_.focus_chain();
-
   // Process all updates.
   for (auto& update : view_tree_updates_) {
     if (auto ptr = std::get_if<ViewTreeNewRefNode>(&update)) {
@@ -104,9 +107,39 @@ ViewTree::FocusChangeStatus SceneGraph::RequestFocusChange(zx_koid_t requestor, 
   return status;
 }
 
-void SceneGraph::Register(
-    fidl::InterfaceHandle<fuchsia::ui::focus::FocusChainListener> focus_chain_listener) {
+void SceneGraph::Register(fidl::InterfaceHandle<FocusChainListener> focus_chain_listener) {
   focus_chain_listener_.Bind(std::move(focus_chain_listener));
+}
+
+void SceneGraph::RegisterViewFocuser(SessionId session_id,
+                                     fidl::InterfaceRequest<ViewFocuser> view_focuser) {
+  FXL_DCHECK(session_id != 0u) << "precondition";
+  FXL_DCHECK(view_focuser_endpoints_.count(session_id) == 0u) << "precondition";
+
+  fit::function<void(ViewRef, ViewFocuser::RequestFocusCallback)> request_focus_handler =
+      [this, session_id](ViewRef view_ref, ViewFocuser::RequestFocusCallback response) {
+        bool is_honored = false;
+        std::optional<zx_koid_t> requestor = this->view_tree().ConnectedViewRefKoidOf(session_id);
+        if (requestor) {
+          auto status = this->RequestFocusChange(requestor.value(), ExtractKoid(view_ref));
+          if (status == ViewTree::FocusChangeStatus::kAccept) {
+            is_honored = true;
+          }
+        }
+
+        if (is_honored) {
+          response(fit::ok());  // Request received, and honored.
+        } else {
+          response(fit::error(Error::DENIED));  // Report a problem.
+        }
+      };
+
+  view_focuser_endpoints_.emplace(
+      session_id, ViewFocuserEndpoint(std::move(view_focuser), std::move(request_focus_handler)));
+}
+
+void SceneGraph::UnregisterViewFocuser(SessionId session_id) {
+  view_focuser_endpoints_.erase(session_id);
 }
 
 std::string FocusChainToString(const std::vector<zx_koid_t>& focus_chain) {
@@ -168,6 +201,25 @@ void SceneGraph::MaybeDispatchFidlFocusChainAndFocusEvents(
       }
     }
   }
+}
+
+SceneGraph::ViewFocuserEndpoint::ViewFocuserEndpoint(
+    fidl::InterfaceRequest<ViewFocuser> view_focuser,
+    fit::function<void(ViewRef, RequestFocusCallback)> request_focus_handler)
+    : request_focus_handler_(std::move(request_focus_handler)),
+      endpoint_(this, std::move(view_focuser)) {
+  FXL_DCHECK(request_focus_handler_) << "invariant";
+}
+
+SceneGraph::ViewFocuserEndpoint::ViewFocuserEndpoint(ViewFocuserEndpoint&& original)
+    : request_focus_handler_(std::move(original.request_focus_handler_)),
+      endpoint_(this, original.endpoint_.Unbind()) {
+  FXL_DCHECK(request_focus_handler_) << "invariant";
+}
+
+void SceneGraph::ViewFocuserEndpoint::RequestFocus(ViewRef view_ref,
+                                                   RequestFocusCallback response) {
+  request_focus_handler_(std::move(view_ref), std::move(response));
 }
 
 }  // namespace gfx

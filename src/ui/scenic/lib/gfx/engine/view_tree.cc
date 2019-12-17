@@ -75,6 +75,17 @@ EventReporterWeakPtr ViewTree::EventReporterOf(zx_koid_t koid) const {
   return EventReporterWeakPtr(/*nullptr*/);
 }
 
+std::optional<zx_koid_t> ViewTree::ConnectedViewRefKoidOf(SessionId session_id) const {
+  const auto range = ref_node_koids_.equal_range(session_id);
+  for (auto it = range.first; it != range.second; ++it) {
+    const zx_koid_t koid = it->second;
+    if (IsConnected(koid)) {
+      return std::optional<zx_koid_t>(koid);
+    }
+  }
+  return std::nullopt;
+}
+
 bool ViewTree::IsTracked(zx_koid_t koid) const { return IsValid(koid) && nodes_.count(koid) > 0; }
 
 bool ViewTree::IsConnected(zx_koid_t koid) const {
@@ -170,6 +181,44 @@ bool ViewTree::IsStateValid() const {
     } else {
       FXL_NOTREACHED() << "unknown type";
       return false;
+    }
+  }
+
+  // SessionId -> RefNode KOID  map state
+  for (const auto& item : ref_node_koids_) {
+    const SessionId session_id = item.first;
+    const zx_koid_t koid = item.second;
+    if (session_id == 0u) {
+      FXL_LOG(ERROR) << "Map key is invalid SessionId.";
+      return false;
+    }
+    if (!IsValid(koid) || !IsTracked(koid)) {
+      FXL_LOG(ERROR) << "Map value isn't a valid and tracked koid.";
+      return false;
+    }
+    const auto ptr = std::get_if<RefNode>(&nodes_.at(koid));
+    if (ptr == nullptr) {
+      FXL_LOG(ERROR) << "Map item should refer to a RefNode: " << koid;
+      return false;
+    }
+    if (ptr->session_id != session_id) {
+      FXL_LOG(ERROR) << "Declared SessionId doesn't match: " << ptr->session_id << ", "
+                     << session_id;
+      return false;
+    }
+    // Count of connected KOIDs from this session_id is at most 1.
+    int connected_koid = 0;
+    const auto range = ref_node_koids_.equal_range(session_id);
+    for (auto it = range.first; it != range.second; ++it) {
+      if (IsConnected(it->second)) {
+        ++connected_koid;
+      }
+    }
+    if (connected_koid > 1) {
+      FXL_LOG(ERROR) << "Count of scene-connected ViewRefs for session " << session_id
+                     << " exceeds 1. Reference SCN-1249.";
+      // TODO(SCN-1249): Enable invariant check when one-view-per-session is enforced.
+      //return false;
     }
   }
 
@@ -337,6 +386,7 @@ void ViewTree::NewRefNode(fuchsia::ui::views::ViewRef view_ref, EventReporterWea
   FXL_DCHECK(!IsTracked(koid)) << "precondition";
   FXL_DCHECK(may_receive_focus) << "precondition";  // Callback exists.
   FXL_DCHECK(global_transform) << "precondition";   // Callback exists.
+  FXL_DCHECK(session_id != scheduling::INVALID_SESSION_ID) << "precondition";
 
   if (!IsValid(koid) || IsTracked(koid))
     return;  // Bail.
@@ -346,6 +396,8 @@ void ViewTree::NewRefNode(fuchsia::ui::views::ViewRef view_ref, EventReporterWea
                          .may_receive_focus = std::move(may_receive_focus),
                          .global_transform = std::move(global_transform),
                          .session_id = session_id};
+
+  ref_node_koids_.insert({session_id, koid});
 
   FXL_DCHECK(IsStateValid()) << "postcondition";
 }
@@ -364,6 +416,16 @@ void ViewTree::NewAttachNode(zx_koid_t koid) {
 
 void ViewTree::DeleteNode(const zx_koid_t koid) {
   FXL_DCHECK(IsTracked(koid)) << "precondition";
+
+  // Remove from view ref koid mapping, if applicable.
+  if (IsRefNode(koid)) {
+    for (auto it = ref_node_koids_.begin(); it != ref_node_koids_.end(); ++it) {
+      if (it->second == koid) {
+        ref_node_koids_.erase(it);
+        break;  // |it| is invalid, but we exit loop immediately.
+      }
+    }
+  }
 
   // Remove from node set.
   nodes_.erase(koid);
@@ -462,12 +524,17 @@ std::string ViewTree::ToString() const {
     if (const auto ptr = std::get_if<AttachNode>(&item.second)) {
       output << "    attach-node(" << item.first << ") -> parent: " << ptr->parent << std::endl;
     } else if (const auto ptr = std::get_if<RefNode>(&item.second)) {
-      output << "    ref-node(" << item.first << ") -> parent:" << ptr->parent
+      output << "    ref-node(" << item.first << ") -> parent: " << ptr->parent
              << ", event-reporter: " << ptr->event_reporter.get()
-             << ", may-receive-focus: " << std::boolalpha << ptr->may_receive_focus() << std::endl;
+             << ", may-receive-focus: " << std::boolalpha << ptr->may_receive_focus()
+             << ", session-id: " << ptr->session_id << std::endl;
     } else {
       FXL_NOTREACHED() << "impossible";
     }
+  }
+  output << "  ref-node-koids:" << std::endl;
+  for (const auto& item : ref_node_koids_) {
+    output << "    session-id " << item.first << " has koid " << item.second << std::endl;
   }
   output << "  focus-chain: [ ";
   for (auto koid : focus_chain_) {

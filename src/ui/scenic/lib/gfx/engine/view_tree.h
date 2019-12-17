@@ -41,9 +41,10 @@ namespace scenic_impl::gfx {
 // creation, node destruction, and node connectivity changes. Modifications directly mutate the
 // global tree [2].
 //
-// Invariants. Tree update operations and focus transfer operations are required to keep the map,
+// Invariants. Tree update operations and focus transfer operations are required to keep the maps,
 // root, and focus chain in a valid state, where each parent pointer refers to a valid entry in the
-// map, the root is a valid entry in the map, and the focus chain is correctly updated [3].
+// nodes_ map, the root is a valid entry in the nodes_ map, the focus chain is correctly updated
+// [3], and each SessionId/RefNode pair has an entry in the ref_node_koids_ map.
 //
 // Ownership. The global ViewTree instance is owned by SceneGraph.
 //
@@ -116,9 +117,16 @@ class ViewTree {
   // Note that a valid and tracked koid may still return null, or later become null.
   EventReporterWeakPtr EventReporterOf(zx_koid_t koid) const;
 
+
   // Return the global transform of the node attached to a tracked |koid|.
   // Returns std::nullopt if no node was found or the node had no valid global transform.
   std::optional<glm::mat4> GlobalTransformOf(zx_koid_t koid) const;
+
+  // A session may have registered one or more RefNodes (typically just one).
+  // Return the *connected* RefNode KOID associated with a particular SessionId.
+  // Invariant: at most one RefNode KOID transitively connects to root_.
+  // - This operation is O(N^2) in the number of RefNodes, but typically is linear in depth of tree.
+  std::optional<zx_koid_t> ConnectedViewRefKoidOf(SessionId session_id) const;
 
   // Return true if koid is (1) valid and (2) exists in nodes_ map.
   bool IsTracked(zx_koid_t koid) const;
@@ -214,6 +222,17 @@ class ViewTree {
 
   // The root of this ViewTree: a RefNode.
   zx_koid_t root_ = ZX_KOID_INVALID;
+
+  // Multimap of Session ID to RefNode's KOID.
+  // Each RefNode is tied to a particular Session ID. If a query against a particular Session ID
+  // comes up empty, then that Session has not yet created a RefNode.
+  // - This map must be kept in sync with the nodes_ map.
+  // - Invariant: a map key must never be 0u - an invalid Session Id.
+  // - Invariant: a map value's KOID must refer to a RefNode in the nodes_ map.
+  // - Invariant: a KOID is the map value for at most one SessionId.
+  // - Invariant: for each session, at most one RefNode is connected to root_.
+  // - Lifecycle (add/remove) is handled by callbacks from command processors.
+  std::unordered_multimap<SessionId, zx_koid_t> ref_node_koids_;
 
   // The focus chain. The last element is the ViewRef considered to "have focus".
   // - Mutator operations are required to keep the focus chain updated.

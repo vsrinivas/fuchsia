@@ -239,6 +239,7 @@ source_set("gfx") {
   deps = [
     ":ids",
     ":object_linker",
+    ":view_focuser_registry",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/inspect_deprecated",
     "//src/ui/lib/escher/util:check_vulkan_support",
@@ -264,6 +265,17 @@ source_set("object_linker") {
     "//src/lib/fxl",
     "//src/ui/scenic/lib/scenic/util",
     "//zircon/public/lib/fit",
+  ]
+}
+
+source_set("view_focuser_registry") {
+  sources = [
+    "engine/view_focuser_registry.h",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.ui.views",
+    "//src/ui/scenic/lib/gfx:ids",
   ]
 }
 

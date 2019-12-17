@@ -57,7 +57,11 @@ fxl::RefPtr<fsl::SharedVmo> CreateSharedVmo(size_t size);
 class SessionWrapper {
  public:
   explicit SessionWrapper(scenic_impl::Scenic* scenic);
+  explicit SessionWrapper(scenic_impl::Scenic* scenic,
+                          fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser_request);
   virtual ~SessionWrapper();
+
+  scenic::Session* session() { return session_.get(); }
 
   // Allow caller to run some code in the context of this particular session.
   void RunNow(fit::function<void(scenic::Session* session, scenic::EntityNode* session_anchor)>

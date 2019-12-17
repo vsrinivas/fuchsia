@@ -36,7 +36,7 @@ void GfxSystemTest::InitializeScenic(Scenic* scenic) {
                                                   /* display_manager */ nullptr);
   gfx_system_ = system->GetWeakPtr();
   frame_scheduler_->AddSessionUpdater(gfx_system_);
-  scenic_->SetInitialized();
+  scenic_->SetInitialized(engine_->scene_graph());
 }
 
 }  // namespace test

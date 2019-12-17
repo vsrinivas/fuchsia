@@ -8,11 +8,14 @@
 #include <fuchsia/ui/focus/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <vector>
 
+#include "src/ui/scenic/lib/gfx/engine/view_focuser_registry.h"
 #include "src/ui/scenic/lib/gfx/engine/view_tree.h"
+#include "src/ui/scenic/lib/gfx/id.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/compositor.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/display_compositor.h"
 
@@ -27,7 +30,8 @@ using SceneGraphWeakPtr = fxl::WeakPtr<SceneGraph>;
 //
 // SceneGraph is the source of truth for the tree of ViewRefs, from which a FocusChain is generated.
 // Command processors update this tree, and the input system may read or modify the focus.
-class SceneGraph : public fuchsia::ui::focus::FocusChainListenerRegistry {
+class SceneGraph : public fuchsia::ui::focus::FocusChainListenerRegistry,
+                   public ViewFocuserRegistry {
  public:
   explicit SceneGraph(sys::ComponentContext* app_context);
 
@@ -78,9 +82,43 @@ class SceneGraph : public fuchsia::ui::focus::FocusChainListenerRegistry {
   ViewTree::FocusChangeStatus RequestFocusChange(zx_koid_t requestor, zx_koid_t request);
 
   // |fuchsia.ui.focus.FocusChainListenerRegistry|
-  void Register(fidl::InterfaceHandle<fuchsia::ui::focus::FocusChainListener> focus_chain_listener);
+  void Register(
+      fidl::InterfaceHandle<fuchsia::ui::focus::FocusChainListener> focus_chain_listener) override;
+
+  //
+  // Focus transfer functionality
+  //
+
+  // |ViewFocuserRegistry|
+  // A command processor, such as GFX or Flatland, may forward a view focuser to be bound here.
+  void RegisterViewFocuser(
+      SessionId session_id,
+      fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser) override;
+
+  // |ViewFocuserRegistry|
+  // Session cleanup terminates a view focuser connection and removes the binding.
+  void UnregisterViewFocuser(SessionId session_id) override;
 
  private:
+  // A small object that associates each Focuser request with a SessionId.
+  // Close of channel does not trigger object cleanup; instead, we rely on Session cleanup.
+  class ViewFocuserEndpoint : public fuchsia::ui::views::Focuser {
+   public:
+    ViewFocuserEndpoint(fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser,
+                        fit::function<void(fuchsia::ui::views::ViewRef, RequestFocusCallback)>
+                            request_focus_handler);
+    ViewFocuserEndpoint(ViewFocuserEndpoint&& original);  // Needed for emplace.
+
+    // |fuchsia.ui.views.Focuser|
+    void RequestFocus(fuchsia::ui::views::ViewRef view_ref, RequestFocusCallback response) override;
+
+   private:
+    // Capture SceneGraph* and SessionId, no explicit pointer management.
+    // Note that it does *not* capture |this|, so it's movable in the move constructor.
+    fit::function<void(fuchsia::ui::views::ViewRef, RequestFocusCallback)> request_focus_handler_;
+    fidl::Binding<fuchsia::ui::views::Focuser> endpoint_;
+  };
+
   friend class Compositor;
 
   // SceneGraph notify us upon creation/destruction.
@@ -91,12 +129,21 @@ class SceneGraph : public fuchsia::ui::focus::FocusChainListenerRegistry {
   // and (2) dispatch a FocusEvent to the clients that have gained and lost focus.
   void MaybeDispatchFidlFocusChainAndFocusEvents(const std::vector<zx_koid_t>& old_focus_chain);
 
+  //
+  // Fields
+  //
+
   std::vector<CompositorWeakPtr> compositors_;
 
   ViewTree view_tree_;
   ViewTreeUpdates view_tree_updates_;
+
   fidl::Binding<fuchsia::ui::focus::FocusChainListenerRegistry> focus_chain_listener_registry_;
   fuchsia::ui::focus::FocusChainListenerPtr focus_chain_listener_;
+
+  // Lifetime of ViewFocuserEndpoint is tied to owning Session's lifetime.
+  // An early disconnect of ViewFocuserEndpoint is okay.
+  std::unordered_map<SessionId, ViewFocuserEndpoint> view_focuser_endpoints_;
 
   fxl::WeakPtrFactory<SceneGraph> weak_factory_;  // Must be last.
 };

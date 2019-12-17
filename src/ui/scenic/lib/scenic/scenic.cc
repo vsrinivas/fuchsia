@@ -27,7 +27,9 @@ Scenic::Scenic(sys::ComponentContext* app_context, inspect_deprecated::Node insp
 
 Scenic::~Scenic() = default;
 
-void Scenic::SetInitialized() {
+void Scenic::SetInitialized(fxl::WeakPtr<gfx::ViewFocuserRegistry> view_focuser_registry) {
+  view_focuser_registry_ = view_focuser_registry;
+
   initialized_ = true;
   for (auto& closure : run_after_initialized_) {
     closure();
@@ -41,7 +43,12 @@ void Scenic::SetFrameScheduler(const std::shared_ptr<scheduling::FrameScheduler>
   frame_scheduler_ = frame_scheduler;
 }
 
-void Scenic::CloseSession(scheduling::SessionId session_id) { sessions_.erase(session_id); }
+void Scenic::CloseSession(scheduling::SessionId session_id) {
+  sessions_.erase(session_id);
+  if (view_focuser_registry_) {
+    view_focuser_registry_->UnregisterViewFocuser(session_id);
+  }
+}
 
 void Scenic::RunAfterInitialized(fit::closure closure) {
   if (initialized_) {
@@ -55,20 +62,34 @@ void Scenic::CreateSession(fidl::InterfaceRequest<fuchsia::ui::scenic::Session> 
                            fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) {
   RunAfterInitialized([this, session_request = std::move(session_request),
                        listener = std::move(listener)]() mutable {
-    CreateSessionImmediately(std::move(session_request), std::move(listener));
+    CreateSessionImmediately(std::move(session_request), std::move(listener),
+                             fidl::InterfaceRequest<fuchsia::ui::views::Focuser>(/*invalid*/));
+  });
+}
+
+void Scenic::CreateSession2(fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
+                           fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener,
+                           fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser) {
+  RunAfterInitialized([this, session_request = std::move(session_request),
+                       listener = std::move(listener),
+                       view_focuser = std::move(view_focuser)]() mutable {
+    CreateSessionImmediately(std::move(session_request), std::move(listener),
+                             std::move(view_focuser));
   });
 }
 
 void Scenic::CreateSessionImmediately(
     fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
-    fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) {
+    fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener,
+    fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser) {
   auto session = std::make_unique<scenic_impl::Session>(
       next_session_id_++, std::move(session_request), std::move(listener));
 
   session->SetFrameScheduler(frame_scheduler_);
 
+  const SessionId session_id = session->id();
   session->set_binding_error_handler(
-      [this, session_id = session->id()](zx_status_t status) { CloseSession(session_id); });
+      [this, session_id](zx_status_t status) { CloseSession(session_id); });
 
   // Give each installed System an opportunity to install a CommandDispatcher in
   // the newly-created Session.
@@ -81,8 +102,16 @@ void Scenic::CreateSessionImmediately(
   }
   session->SetCommandDispatchers(std::move(dispatchers));
 
-  FXL_CHECK(sessions_.find(session->id()) == sessions_.end());
-  sessions_[session->id()] = std::move(session);
+  FXL_CHECK(sessions_.find(session_id) == sessions_.end());
+  sessions_[session_id] = std::move(session);
+
+  if (view_focuser && view_focuser_registry_) {
+    view_focuser_registry_->RegisterViewFocuser(session_id, std::move(view_focuser));
+  } else if (!view_focuser) {
+    FXL_VLOG(2) << "Invalid fuchsia.ui.views.Focuser request.";
+  } else if (!view_focuser_registry_) {
+    FXL_LOG(ERROR) << "Failed to register fuchsia.ui.views.Focuser request.";
+  }
 }
 
 void Scenic::GetDisplayInfo(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) {

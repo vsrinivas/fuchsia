@@ -181,7 +181,7 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
       std::make_unique<gfx::InternalSnapshotImpl>(engine_->scene_graph(), escher_->GetWeakPtr());
   scenic_.InitializeSnapshotService(std::move(snapshotter));
 
-  scenic_.SetInitialized();
+  scenic_.SetInitialized(engine_->scene_graph());
 }
 
 }  // namespace scenic_impl

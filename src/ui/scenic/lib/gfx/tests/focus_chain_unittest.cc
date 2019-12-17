@@ -29,9 +29,6 @@
 //
 // Since GFX Views have their origin coordinate at the top-left, we don't need to perform
 // translation to center each View on the owning Layer.
-//
-// To test various focus scenarios, we employ the ViewTree's RequestFocusChange() method,
-// which is not yet available as a general FIDL interface (Bug 24391).
 
 namespace src_ui_scenic_lib_gfx_tests {
 
@@ -39,9 +36,12 @@ using fuchsia::ui::focus::FocusChain;
 using fuchsia::ui::focus::FocusChainListener;
 using fuchsia::ui::focus::FocusChainListenerRegistry;
 using fuchsia::ui::focus::FocusChainListenerRegistryPtr;
+using fuchsia::ui::views::ViewRef;
 using scenic_impl::gfx::ExtractKoid;
 using scenic_impl::gfx::ViewTree;
 using scenic_impl::gfx::test::SessionWrapper;
+using ViewFocuserPtr = fuchsia::ui::views::FocuserPtr;
+using ViewFocuserRequest = fidl::InterfaceRequest<fuchsia::ui::views::Focuser>;
 
 // Class fixture for TEST_F.
 class FocusChainTest : public scenic_impl::gfx::test::GfxSystemTest, public FocusChainListener {
@@ -71,6 +71,24 @@ class FocusChainTest : public scenic_impl::gfx::test::GfxSystemTest, public Focu
   void RequestToPresent(scenic::Session* session) {
     session->Present(/*presentation time*/ 0, [](auto) {});
     RunLoopFor(zx::msec(20));  // "Good enough" deadline to ensure session update gets scheduled.
+  }
+
+  bool RequestFocusChange(ViewFocuserPtr* view_focuser_ptr, const ViewRef& target) {
+    ViewRef clone;
+    fidl::Clone(target, &clone);
+
+    bool request_processed = false;
+    bool request_honored = false;
+    (*view_focuser_ptr)
+        ->RequestFocus(std::move(clone), [&request_processed, &request_honored](auto result) {
+          request_processed = true;
+          if (!result.is_err()) {
+            request_honored = true;
+          }
+        });
+    RunLoopUntilIdle();
+    EXPECT_TRUE(request_processed);
+    return request_honored;
   }
 
   // |fuchsia::ui::focus::FocusChainListener|
@@ -937,6 +955,85 @@ TEST_F(ThreeNodeFocusChainTest, ViewHolderDisconnectShortensFocusChain) {
   EXPECT_EQ(LastFocusChain()->focus_chain().size(), 2u);
   EXPECT_EQ(ExtractKoid(LastFocusChain()->focus_chain()[0]), root);
   EXPECT_EQ(ExtractKoid(LastFocusChain()->focus_chain()[1]), client_b->view_ref_koid);
+}
+
+TEST_F(FocusChainTest, LateViewConnectTriggersViewTreeUpdate) {
+  struct ParentClient : public SessionWrapper {
+    ParentClient(scenic_impl::Scenic* scenic, ViewFocuserRequest view_focuser_request)
+        : SessionWrapper(scenic, std::move(view_focuser_request)) {}
+    std::unique_ptr<scenic::Compositor> compositor;
+    std::unique_ptr<scenic::ViewHolder> holder_child;
+  };
+  struct ChildClient : public SessionWrapper {
+    ChildClient(scenic_impl::Scenic* scenic) : SessionWrapper(scenic) {}
+    std::unique_ptr<scenic::View> view;
+  };
+
+  ViewFocuserPtr parent_focuser;
+  ParentClient parent_client(scenic(), parent_focuser.NewRequest());
+  ChildClient child_client(scenic());
+
+  auto token_pair = scenic::ViewTokenPair::New();  // parent-child view tokens
+  auto child_refs = scenic::ViewRefPair::New();    // child view's view ref pair
+
+  ViewRef target;
+  fidl::Clone(child_refs.view_ref, &target);
+
+  parent_client.RunNow([test = this, state = &parent_client](scenic::Session* session,
+                                                             scenic::EntityNode* session_anchor) {
+    // Minimal scene, but without a ViewHolder.
+    state->compositor = std::make_unique<scenic::Compositor>(session);
+    scenic::LayerStack layer_stack(session);
+    state->compositor->SetLayerStack(layer_stack);
+
+    scenic::Layer layer(session);
+    layer.SetSize(9 /*px*/, 9 /*px*/);
+    layer_stack.AddLayer(layer);
+    scenic::Renderer renderer(session);
+    layer.SetRenderer(renderer);
+    scenic::Scene scene(session);
+    scenic::Camera camera(scene);
+    renderer.SetCamera(camera);
+
+    scene.AddChild(*session_anchor);
+
+    test->RequestToPresent(session);
+  });
+
+  EXPECT_EQ(CountReceivedFocusChains(), 1u);
+
+  child_client.RunNow(
+      [test = this, state = &child_client, child_token = std::move(token_pair.view_token),
+       control_ref = std::move(child_refs.control_ref), view_ref = std::move(child_refs.view_ref)](
+          scenic::Session* session, scenic::EntityNode*) mutable {
+        state->view =
+            std::make_unique<scenic::View>(session, std::move(child_token), std::move(control_ref),
+                                           std::move(view_ref), "child view");
+        test->RequestToPresent(session);
+      });
+
+  EXPECT_EQ(CountReceivedFocusChains(), 1u);
+
+  parent_client.RunNow(
+      [test = this, state = &parent_client, parent_token = std::move(token_pair.view_holder_token)](
+          scenic::Session* session, scenic::EntityNode* session_anchor) mutable {
+        const float kZero[3] = {0, 0, 0};
+        state->holder_child =
+            std::make_unique<scenic::ViewHolder>(session, std::move(parent_token), "child holder");
+        state->holder_child->SetViewProperties(kZero, (float[3]){9, 9, 1}, kZero, kZero);
+
+        session_anchor->Attach(*state->holder_child);
+
+        test->RequestToPresent(session);
+      });
+
+  // TODO(42737): Remove when session update logic guarantees view tree updates in every session.
+  child_client.RunNow([test = this](scenic::Session* session, scenic::EntityNode* session_anchor) {
+    test->RequestToPresent(session);
+  });
+
+  EXPECT_TRUE(RequestFocusChange(&parent_focuser, target));
+  EXPECT_EQ(CountReceivedFocusChains(), 2u);
 }
 
 }  // namespace src_ui_scenic_lib_gfx_tests

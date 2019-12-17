@@ -11,13 +11,17 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
 
-#include <set>
+#include <array>
+#include <memory>
+#include <unordered_map>
+#include <vector>
 
 #include "src/lib/fxl/macros.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 #include "src/ui/scenic/lib/scenic/session.h"
 #include "src/ui/scenic/lib/scenic/system.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
+#include "src/ui/scenic/lib/gfx/engine/view_focuser_registry.h"
 
 namespace scenic_impl {
 
@@ -78,12 +82,17 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
   void CreateSession(fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session,
                      fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) override;
 
+  // |fuchsia::ui::scenic::Scenic|
+  void CreateSession2(fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session,
+                      fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener,
+                      fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser) override;
+
   sys::ComponentContext* app_context() const { return app_context_; }
   inspect_deprecated::Node* inspect_node() { return &inspect_node_; }
 
   size_t num_sessions();
 
-  void SetInitialized();
+  void SetInitialized(fxl::WeakPtr<gfx::ViewFocuserRegistry> view_focuser_registry = nullptr);
 
   void SetFrameScheduler(const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler);
 
@@ -94,7 +103,8 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
  private:
   void CreateSessionImmediately(
       fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
-      fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener);
+      fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener,
+      fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser);
 
   // If a System is not initially initialized, this method will be called when
   // it is ready.
@@ -121,10 +131,13 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
   fidl::BindingSet<fuchsia::ui::scenic::Scenic> scenic_bindings_;
   fidl::BindingSet<fuchsia::ui::scenic::internal::Snapshot> snapshot_bindings_;
 
+  // See lib/scheduling/id.h for SessionId properties.
   scheduling::SessionId next_session_id_ = 1;
 
   GetDisplayInfoDelegateDeprecated* display_delegate_ = nullptr;
   TakeScreenshotDelegateDeprecated* screenshot_delegate_ = nullptr;
+
+  fxl::WeakPtr<gfx::ViewFocuserRegistry> view_focuser_registry_;
 
  protected:
   std::unique_ptr<fuchsia::ui::scenic::internal::Snapshot> snapshot_;

@@ -91,11 +91,13 @@ TEST_F(SceneGraphTest, RequestFocusChange) {
     ViewTreeUpdates updates;
     updates.push_back(ViewTreeNewRefNode{.view_ref = std::move(parent_view_pair.view_ref),
                                          .may_receive_focus = [] { return true; },
-                                         .global_transform = NoGlobalTransform()});
+                                         .global_transform = NoGlobalTransform(),
+                                         .session_id = 1u});
     updates.push_back(ViewTreeNewAttachNode{.koid = 1111u});
     updates.push_back(ViewTreeNewRefNode{.view_ref = std::move(child_view_pair.view_ref),
                                          .may_receive_focus = [] { return true; },
-                                         .global_transform = NoGlobalTransform()});
+                                         .global_transform = NoGlobalTransform(),
+                                         .session_id = 2u});
     updates.push_back(ViewTreeMakeGlobalRoot{.koid = parent_koid});
     updates.push_back(ViewTreeConnectToParent{.child = child_koid, .parent = 1111u});
     updates.push_back(ViewTreeConnectToParent{.child = 1111u, .parent = parent_koid});
@@ -127,11 +129,13 @@ TEST_F(SceneGraphTest, RequestFocusChangeButMayNotReceiveFocus) {
     ViewTreeUpdates updates;
     updates.push_back(ViewTreeNewRefNode{.view_ref = std::move(parent_view_pair.view_ref),
                                          .may_receive_focus = [] { return true; },
-                                         .global_transform = NoGlobalTransform()});
+                                         .global_transform = NoGlobalTransform(),
+                                         .session_id = 1u});
     updates.push_back(ViewTreeNewAttachNode{.koid = 1111u});
     updates.push_back(ViewTreeNewRefNode{.view_ref = std::move(child_view_pair.view_ref),
                                          .may_receive_focus = [] { return false; },  // Different!
-                                         .global_transform = NoGlobalTransform()});
+                                         .global_transform = NoGlobalTransform(),
+                                         .session_id = 2u});
     updates.push_back(ViewTreeMakeGlobalRoot{.koid = parent_koid});
     updates.push_back(ViewTreeConnectToParent{.child = child_koid, .parent = 1111u});
     updates.push_back(ViewTreeConnectToParent{.child = 1111u, .parent = parent_koid});
