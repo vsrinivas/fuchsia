@@ -317,6 +317,30 @@ if (internal_access) {
       "brcmfmac43455-sdio.txt",
       "brcmfmac43455-sdio.clm_blob",
     ]
+  } else if (target_cpu == "x64") {
+    # Assume for now that x64 boards use the PCIE interface.
+    copy("brcmfmac-firmware-copy") {
+      sources = [
+        "firmware/brcmfmac4356-pcie-ap6356sdp.bin",
+      ]
+      outputs = [
+        "$root_out_dir/firmware/brcmfmac/brcmfmac4356-pcie.bin",
+      ]
+    }
+    copy("brcmfmac-nvram-copy") {
+      sources = [
+        "firmware/brcmfmac4356-pcie-ap6356sdp.txt",
+      ]
+      outputs = [
+        "$root_out_dir/firmware/brcmfmac/brcmfmac4356-pcie.txt",
+      ]
+    }
+    group("brcmfmac-clm-copy") {
+    }
+    driver_library_files += [
+      "brcmfmac4356-pcie.bin",
+      "brcmfmac4356-pcie.txt",
+    ]
   } else {
     copy("brcmfmac-firmware-copy") {
       sources = [

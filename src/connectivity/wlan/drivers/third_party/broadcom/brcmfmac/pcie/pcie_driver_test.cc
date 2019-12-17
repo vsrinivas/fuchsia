@@ -23,6 +23,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_bus.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_buscore.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_device.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_firmware.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_regs.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/soc.h"
 
@@ -86,6 +87,7 @@ zx_status_t StubDdkDevice::DeviceGetMetadata(uint32_t type, void* buf, size_t bu
 // Unit tests for the components of PcieBus.
 zx_status_t RunPcieBusComponentsTest(zx_device_t* parent) {
   zx_status_t status = ZX_OK;
+  StubDdkDevice device(parent);
 
   std::unique_ptr<PcieBuscore> pcie_buscore;
   if ((status = PcieBuscore::Create(parent, &pcie_buscore)) != ZX_OK) {
@@ -184,6 +186,17 @@ zx_status_t RunPcieBusComponentsTest(zx_device_t* parent) {
   if (!std::equal(dma_data.begin(), dma_data.end(), dma_read_data.begin())) {
     BRCMF_ERR("DMA buffer read did not return written data\n");
     return ZX_ERR_IO_DATA_INTEGRITY;
+  }
+
+  std::unique_ptr<PcieFirmware> pcie_firmware;
+  if ((status = PcieFirmware::Create(&device, pcie_buscore.get(), &pcie_firmware)) != ZX_OK) {
+    BRCMF_ERR("PcieFirmware creation failed: %s\n", zx_status_get_string(status));
+    return status;
+  }
+  BRCMF_INFO("Firmware console output:\n");
+  std::string console;
+  while (!(console = pcie_firmware->ReadConsole()).empty()) {
+    BRCMF_INFO("%s\n", console.c_str());
   }
 
   return ZX_OK;

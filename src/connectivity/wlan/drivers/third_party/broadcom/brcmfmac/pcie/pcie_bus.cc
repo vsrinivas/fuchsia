@@ -15,6 +15,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/device.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/firmware.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_buscore.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_firmware.h"
 
 namespace wlan {
 namespace brcmfmac {
@@ -43,6 +44,11 @@ zx_status_t PcieBus::Create(Device* device, std::unique_ptr<PcieBus>* bus_out) {
     return status;
   }
 
+  std::unique_ptr<PcieFirmware> pcie_firmware;
+  if ((status = PcieFirmware::Create(device, pcie_buscore.get(), &pcie_firmware)) != ZX_OK) {
+    return status;
+  }
+
   auto bus = std::make_unique<brcmf_bus>();
   bus->bus_priv.pcie = pcie_bus.get();
   bus->ops = PcieBus::GetBusOps();
@@ -56,6 +62,7 @@ zx_status_t PcieBus::Create(Device* device, std::unique_ptr<PcieBus>* bus_out) {
 
   pcie_bus->device_ = device;
   pcie_bus->pcie_buscore_ = std::move(pcie_buscore);
+  pcie_bus->pcie_firmware_ = std::move(pcie_firmware);
   pcie_bus->brcmf_bus_ = std::move(bus);
   pcie_bus->brcmf_mp_device_ = std::move(mp_device);
 
