@@ -7,6 +7,7 @@ library fuchsia.ui.scenic;
 using fuchsia.images;
 using fuchsia.mem;
 using fuchsia.ui.gfx;
+using fuchsia.ui.views;
 
 /// Scenic.TakeScreenshot() returns a raw BGRA formatted image in this struct.
 struct ScreenshotData {
@@ -18,6 +19,16 @@ struct ScreenshotData {
 protocol Scenic {
     /// Create a new Session, which is the primary way to interact with Scenic.
     CreateSession(request<Session> session, SessionListener? listener);
+
+    /// Create a new Session, which is the primary way to interact with Scenic.
+    ///
+    /// In this variant, the caller may register a request for focus management.
+    /// The |view_focuser|'s client is coupled to the requested |session|, and
+    /// this coupling acts as a security boundary: the ViewRef used as the basis
+    /// for authority by |view_focuser| must come from |session|.
+    [Transitional]
+    CreateSession2(request<Session> session, SessionListener? listener,
+                   request<fuchsia.ui.views.Focuser>? view_focuser);
 
     /// Get information about the Scenic's primary display.
     // TODO(SCN-453): in the future there will probably be a DisplayManager, and

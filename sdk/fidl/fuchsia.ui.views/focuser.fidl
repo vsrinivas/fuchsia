@@ -1,0 +1,38 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.views;
+
+/// Problematic situations that occur on Focuser.RequestFocus.
+enum Error {
+    /// Value returned when RequestFocus is denied.
+    DENIED = 1;
+};
+
+/// A method of programmatically transferring view focus.
+///
+/// The protocol client has implicit access to a requestor ViewRef, which is
+/// used as the basis for request authority.
+protocol Focuser {
+    /// Asks the server to transfer focus to the view specified by |view_ref|,
+    /// with the authority of the requestor ViewRef. Such a request may be
+    /// honored or denied.
+    ///
+    /// If the request was honored, and it triggers a focus change, a FocusEvent
+    /// (with focused=true) is issued to the newly-focused view, and a
+    /// FocusEvent (with focused=false) is issued to the previous view.
+    ///
+    /// The result callback indicates that the request was received and honored.
+    /// It does not guarantee that the requested view actually received a
+    /// FocusEvent in time.
+    ///
+    /// The request may be denied for many reasons, for example:
+    /// - if |view_ref| is invalid
+    /// - if there is no view backed by |view_ref|
+    /// - if there is no requestor ViewRef accessible to Focuser
+    /// - if the requestor ViewRef lacks authority over |view_ref|'s view
+    /// - if |view_ref|'s view is not hittable or may not receive focus
+    /// etc. A denied request is indicated with a Error.
+    RequestFocus(ViewRef view_ref) -> () error Error;
+};
