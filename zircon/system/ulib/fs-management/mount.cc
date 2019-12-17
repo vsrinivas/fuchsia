@@ -109,7 +109,7 @@ zx_status_t StartFilesystem(fbl::unique_fd device_fd, disk_format_t df,
 
   // launch the filesystem process
   zx::channel export_root;
-  status = fs_init(device.get(), df, &init_options, export_root.reset_and_get_address());
+  status = fs_init(device.release(), df, &init_options, export_root.reset_and_get_address());
   if (status != ZX_OK) {
     return status;
   }
