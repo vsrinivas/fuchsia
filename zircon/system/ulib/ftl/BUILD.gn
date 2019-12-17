@@ -55,6 +55,7 @@ config("config") {
 zx_test("ftl_test") {
   output_name = "ftl-lib-test"
   sources = [
+    "test/ndm_driver_test.cc",
     "test/ndm_test.cc",
   ]
   deps = [

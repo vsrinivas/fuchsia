@@ -8,6 +8,7 @@
 #include <zircon/compiler.h>
 
 struct ndm;
+struct NDMDrvr;
 
 namespace ftl {
 
@@ -130,6 +131,9 @@ class __EXPORT NdmBaseDriver : public NdmDriver {
  protected:
   // This is exposed for unit tests only.
   ndm* GetNdmForTest() const { return ndm_; }
+
+  // This is exposed for unit tests only.
+  void FillNdmDriver(const VolumeOptions& options, NDMDrvr* driver) const;
 
  private:
   ndm* ndm_ = nullptr;

@@ -126,9 +126,19 @@ int IsEmpty(uint32_t page, uint8_t* data, uint8_t* spare, void* dev) {
   return device->IsEmptyPage(page, data, spare) ? kTrue : kFalse;
 }
 
-// Returns kNdmOk or kNdmError.
+// Returns kNdmOk or kNdmError, but kNdmError implies aborting initialization.
 int CheckPage(uint32_t page, uint8_t* data, uint8_t* spare, int* status, void* dev) {
-  *status = IsEmpty(page, data, spare, dev) ? NDM_PAGE_ERASED : NDM_PAGE_VALID;
+  int result = ReadPagesImpl(page, 1, data, spare, dev);
+
+  if (result == kNdmUncorrectableEcc || result == kNdmFatalError) {
+    *status = NDM_PAGE_INVALID;
+    return kNdmOk;
+  }
+
+  NdmDriver* device = reinterpret_cast<NdmDriver*>(dev);
+  bool empty = device->IsEmptyPage(page, data, spare) ? kTrue : kFalse;
+
+  *status = empty ? NDM_PAGE_ERASED : NDM_PAGE_VALID;
   return kNdmOk;
 }
 
@@ -137,25 +147,8 @@ int CheckPage(uint32_t page, uint8_t* data, uint8_t* spare, int* status, void* d
 NdmBaseDriver::~NdmBaseDriver() { RemoveNdmVolume(); }
 
 bool NdmBaseDriver::IsNdmDataPresent(const VolumeOptions& options) {
-  NDMDrvr driver = {};
-  driver.num_blocks = options.num_blocks;
-  driver.max_bad_blocks = options.max_bad_blocks;
-  driver.block_size = options.block_size;
-  driver.page_size = options.page_size;
-  driver.eb_size = options.eb_size;
-  driver.flags = FSF_MULTI_ACCESS | FSF_FREE_SPARE_ECC | options.flags;
-  driver.dev = this;
-  driver.type = NDM_SLC;
-  driver.read_pages = ReadPages;
-  driver.write_pages = WritePages;
-  driver.write_data_and_spare = WritePage;
-  driver.read_decode_data = ReadPage;
-  driver.read_decode_spare = ReadSpare;
-  driver.read_spare = ReadSpareNoEcc;
-  driver.data_and_spare_erased = IsEmpty;
-  driver.data_and_spare_check = CheckPage;
-  driver.erase_block = EraseBlock;
-  driver.is_block_bad = IsBadBlockImpl;
+  NDMDrvr driver;
+  FillNdmDriver(options, &driver);
 
   SetFsErrCode(NDM_OK);
   ndm_ = ndmAddDev(&driver);
@@ -277,6 +270,28 @@ const VolumeOptions* NdmBaseDriver::GetSavedOptions() const {
   }
 
   return &info->exploded.data.options;
+}
+
+void NdmBaseDriver::FillNdmDriver(const VolumeOptions& options, NDMDrvr* driver) const {
+  *driver = {};
+  driver->num_blocks = options.num_blocks;
+  driver->max_bad_blocks = options.max_bad_blocks;
+  driver->block_size = options.block_size;
+  driver->page_size = options.page_size;
+  driver->eb_size = options.eb_size;
+  driver->flags = FSF_MULTI_ACCESS | FSF_FREE_SPARE_ECC | options.flags;
+  driver->dev = const_cast<NdmBaseDriver*>(this);
+  driver->type = NDM_SLC;
+  driver->read_pages = ReadPages;
+  driver->write_pages = WritePages;
+  driver->write_data_and_spare = WritePage;
+  driver->read_decode_data = ReadPage;
+  driver->read_decode_spare = ReadSpare;
+  driver->read_spare = ReadSpareNoEcc;
+  driver->data_and_spare_erased = IsEmpty;
+  driver->data_and_spare_check = CheckPage;
+  driver->erase_block = EraseBlock;
+  driver->is_block_bad = IsBadBlockImpl;
 }
 
 __EXPORT

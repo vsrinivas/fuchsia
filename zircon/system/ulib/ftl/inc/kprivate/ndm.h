@@ -81,7 +81,7 @@ typedef struct {
 } NdmDvrStats;
 
 // TargetNDM Configuration Structure
-typedef struct {
+typedef struct NDMDrvr {
   ui32 num_blocks;      // total number of blocks on device
   ui32 max_bad_blocks;  // maximum number of bad blocks
   ui32 block_size;      // block size in bytes
