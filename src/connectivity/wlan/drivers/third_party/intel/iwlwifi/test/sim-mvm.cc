@@ -32,6 +32,7 @@ zx_status_t SimMvm::SendCmd(struct iwl_host_cmd* cmd) {
         case PHY_CONTEXT_CMD:
         case REPLY_THERMAL_MNG_BACKOFF:
         case POWER_TABLE_CMD:
+        case BT_CONFIG:
           return ZX_OK;
 
         case NVM_ACCESS_CMD:

@@ -33,20 +33,17 @@
  *
  *****************************************************************************/
 
-#include "fw/api/coex.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/coex.h"
 
-#include <linux/etherdevice.h>
-#include <linux/ieee80211.h>
-#include <net/mac80211.h>
-
-#include "iwl-debug.h"
-#include "iwl-modparams.h"
-#include "mvm.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-modparams.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 
 #ifdef CPTCFG_IWLWIFI_LTE_COEX
 #include "lte-coex.h"
 #endif
 
+#if 0   // NEEDS_PORTING
 /* 20MHz / 40MHz below / 40Mhz above*/
 static const __le64 iwl_ci_mask[][3] = {
     /* dummy entry for channel 0 */
@@ -153,8 +150,9 @@ static enum iwl_bt_coex_lut_type iwl_get_coex_type(struct iwl_mvm* mvm,
 
   return ret;
 }
+#endif  // NEEDS_PORTING
 
-int iwl_mvm_send_bt_init_conf(struct iwl_mvm* mvm) {
+zx_status_t iwl_mvm_send_bt_init_conf(struct iwl_mvm* mvm) {
   struct iwl_bt_coex_cmd bt_cmd = {};
   uint32_t mode;
 
@@ -197,6 +195,7 @@ send_cmd:
   return iwl_mvm_send_cmd_pdu(mvm, BT_CONFIG, 0, sizeof(bt_cmd), &bt_cmd);
 }
 
+#if 0  // NEEDS_PORTING
 static int iwl_mvm_bt_coex_reduced_txp(struct iwl_mvm* mvm, uint8_t sta_id, bool enable) {
   struct iwl_bt_coex_reduced_txp_update_cmd cmd = {};
   struct iwl_mvm_sta* mvmsta;
@@ -843,4 +842,5 @@ void iwl_mvm_send_lte_commands(struct iwl_mvm* mvm) {
     iwl_mvm_send_lte_fine_tuning_params_cmd(mvm);
   }
 }
-#endif /* CPTCFG_IWLWIFI_LTE_COEX */
+#endif  /* CPTCFG_IWLWIFI_LTE_COEX */
+#endif  // NEEDS_PORTING

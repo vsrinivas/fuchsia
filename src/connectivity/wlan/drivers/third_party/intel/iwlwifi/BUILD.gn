@@ -39,6 +39,7 @@ source_set("core") {
     "iwl-prph.h",
     "iwl-trans.c",
     "iwl-trans.h",
+    "mvm/coex.c",
     "mvm/fw.c",
     "mvm/mac80211.c",
     "mvm/nvm.c",

@@ -1834,7 +1834,7 @@ int _iwl_mvm_exit_d0i3(struct iwl_mvm* mvm);
 #endif
 
 /* BT Coex */
-int iwl_mvm_send_bt_init_conf(struct iwl_mvm* mvm);
+zx_status_t iwl_mvm_send_bt_init_conf(struct iwl_mvm* mvm);
 void iwl_mvm_rx_bt_coex_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb);
 void iwl_mvm_bt_rssi_event(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
                            enum ieee80211_rssi_event_data);

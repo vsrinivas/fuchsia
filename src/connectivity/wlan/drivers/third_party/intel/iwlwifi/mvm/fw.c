@@ -536,14 +536,12 @@ zx_status_t iwl_run_init_mvm_ucode(struct iwl_mvm* mvm, bool read_nvm) {
   iwl_dnt_start(mvm->trans);
 #endif
 
-#if 0   // NEEDS_PORTING
   if (mvm->cfg->device_family < IWL_DEVICE_FAMILY_8000) {
     ret = iwl_mvm_send_bt_init_conf(mvm);
-    if (ret) {
+    if (ret != ZX_OK) {
       goto remove_notif;
     }
   }
-#endif  // NEEDS_PORTING
 
   /* Read the NVM only at driver load time, no need to do this twice */
   if (read_nvm) {
@@ -1118,10 +1116,10 @@ zx_status_t iwl_mvm_up(struct iwl_mvm* mvm) {
     }
   }
 
-#if 0   // NEEDS_PORTING
-    ret = iwl_mvm_send_bt_init_conf(mvm);
-    if (ret) { goto error; }
-#endif  // NEEDS_PORTING
+  ret = iwl_mvm_send_bt_init_conf(mvm);
+  if (ret != ZX_OK) {
+    goto error;
+  }
 
   if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_SOC_LATENCY_SUPPORT)) {
     ret = iwl_set_soc_latency(mvm);
