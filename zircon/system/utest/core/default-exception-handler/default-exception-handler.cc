@@ -94,8 +94,9 @@ TEST(DefaultExceptionHandlerTest, UnhandledPolicyException) {
   ASSERT_OK(zx::job::create(*zx::job::default_job(), 0u, &job));
 
   // Create a job with policy that generates an excpetion when an object is created.
-  zx_policy_basic_v1_t policy[] = {{ZX_POL_NEW_ANY, ZX_POL_ACTION_ALLOW_EXCEPTION}};
-  ASSERT_OK(job.set_policy(ZX_JOB_POL_ABSOLUTE, ZX_JOB_POL_BASIC, policy,
+  zx_policy_basic_v2_t policy[] = {
+      {ZX_POL_NEW_ANY, ZX_POL_ACTION_ALLOW_EXCEPTION, ZX_POL_OVERRIDE_DENY}};
+  ASSERT_OK(job.set_policy(ZX_JOB_POL_ABSOLUTE, ZX_JOB_POL_BASIC_V2, policy,
                            static_cast<uint32_t>(fbl::count_of(policy))));
 
   // Tell the process to create an event.  See that it's killed because the exception is unhandled.

@@ -102,11 +102,12 @@ TEST(SpawnTest, SpawnLauncher) {
   {
     zx::job job;
     ASSERT_EQ(ZX_OK, zx::job::create(*zx::job::default_job(), 0, &job));
-    zx_policy_basic_t policy = {
+    zx_policy_basic_v2_t policy = {
         .condition = ZX_POL_NEW_PROCESS,
-        .policy = ZX_POL_ACTION_DENY,
+        .action = ZX_POL_ACTION_DENY,
+        .flags = ZX_POL_OVERRIDE_DENY
     };
-    ASSERT_EQ(ZX_OK, job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC, &policy, 1));
+    ASSERT_EQ(ZX_OK, job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC_V2, &policy, 1));
 
     status = fdio_spawn(job.get(), FDIO_SPAWN_CLONE_ALL, launcher_bin_path, argv,
                         process.reset_and_get_address());

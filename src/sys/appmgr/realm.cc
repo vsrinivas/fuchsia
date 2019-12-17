@@ -826,7 +826,7 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
 
   // If meta/*.cmx exists, attempt to read sandbox data from it.
   const std::vector<std::string>* service_whitelist = nullptr;
-  std::vector<zx_policy_basic_t> policies;
+  std::vector<zx_policy_basic_v2_t> policies;
 
   bool should_have_ambient_executable = false;
   if (!cmx.sandbox_meta().IsNull()) {
@@ -861,8 +861,9 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
     }
   }
   if (!should_have_ambient_executable) {
-    policies.push_back(
-        zx_policy_basic_t{.condition = ZX_POL_AMBIENT_MARK_VMO_EXEC, .policy = ZX_POL_ACTION_DENY});
+    policies.push_back(zx_policy_basic_v2_t{.condition = ZX_POL_AMBIENT_MARK_VMO_EXEC,
+                                            .action = ZX_POL_ACTION_DENY,
+                                            .flags = ZX_POL_OVERRIDE_DENY});
   }
 
   fxl::RefPtr<Namespace> ns = fxl::MakeRefCounted<Namespace>(
@@ -899,7 +900,7 @@ void Realm::CreateElfBinaryComponentFromPackage(
     fuchsia::sys::LaunchInfo launch_info, zx::vmo executable, const std::string& app_argv0,
     const std::vector<std::string>& env_vars, zx::channel loader_service,
     fdio_flat_namespace_t* flat, ComponentRequestWrapper component_request,
-    fxl::RefPtr<Namespace> ns, const std::vector<zx_policy_basic_t>& policies,
+    fxl::RefPtr<Namespace> ns, const std::vector<zx_policy_basic_v2_t>& policies,
     ComponentObjectCreatedCallback callback) {
   TRACE_DURATION("appmgr", "Realm::CreateElfBinaryComponentFromPackage", "launch_info.url",
                  launch_info.url);
@@ -910,7 +911,7 @@ void Realm::CreateElfBinaryComponentFromPackage(
     return;
   }
   if (!policies.empty()) {
-    status = child_job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC, policies.data(),
+    status = child_job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC_V2, policies.data(),
                                   policies.size());
     if (status != ZX_OK) {
       return;

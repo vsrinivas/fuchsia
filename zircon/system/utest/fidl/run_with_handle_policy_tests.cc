@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/algorithm.h>
-#include <fbl/auto_call.h>
-#include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/spawn.h>
@@ -12,7 +9,6 @@
 #include <lib/zx/process.h>
 #include <limits.h>
 #include <stdio.h>
-#include <unittest/unittest.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
@@ -24,6 +20,11 @@
 #include <memory>
 #include <string>
 #include <utility>
+
+#include <fbl/algorithm.h>
+#include <fbl/auto_call.h>
+#include <fbl/unique_fd.h>
+#include <unittest/unittest.h>
 
 namespace {
 
@@ -56,11 +57,13 @@ bool LaunchHelper(const char* argv[]) {
   const char name[] = "handle-policy-test-app";
   status = test_job.set_property(ZX_PROP_NAME, name, sizeof(name));
   ASSERT_EQ(status, ZX_OK);
-  static const zx_policy_basic_t policy[] = {
-      zx_policy_basic_t{.condition = ZX_POL_BAD_HANDLE, .policy = ZX_POL_ACTION_ALLOW_EXCEPTION},
+  static const zx_policy_basic_v2_t policy[] = {
+      zx_policy_basic_v2_t{.condition = ZX_POL_BAD_HANDLE,
+                           .action = ZX_POL_ACTION_ALLOW_EXCEPTION,
+                           .flags = ZX_POL_OVERRIDE_DENY},
   };
   status =
-      test_job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC, &policy, fbl::count_of(policy));
+      test_job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC_V2, &policy, fbl::count_of(policy));
   ASSERT_EQ(status, ZX_OK);
 
   fds[1].release();  // To avoid double close since fdio_spawn_etc() closes it.

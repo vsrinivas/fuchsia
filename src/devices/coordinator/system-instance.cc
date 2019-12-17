@@ -110,11 +110,13 @@ zx_status_t SystemInstance::CreateFuchsiaJob(const zx::job& root_job) {
 
   fuchsia_job_.set_property(ZX_PROP_NAME, "fuchsia", 7);
 
-  const zx_policy_basic_t basic_policy[] = {
+  const zx_policy_basic_v2_t basic_policy[] = {
       // Lock down process creation. Child tasks must use fuchsia.process.Launcher.
-      {.condition = ZX_POL_NEW_PROCESS, .policy = ZX_POL_ACTION_DENY}};
+      {.condition = ZX_POL_NEW_PROCESS,
+       .action = ZX_POL_ACTION_DENY,
+       .flags = ZX_POL_OVERRIDE_DENY}};
 
-  status = fuchsia_job_.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC, basic_policy,
+  status = fuchsia_job_.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC_V2, basic_policy,
                                    fbl::count_of(basic_policy));
   if (status != ZX_OK) {
     printf("devcoordinator: unable to set basic policy for fuchsia job: %d (%s)\n", status,

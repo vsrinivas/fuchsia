@@ -144,11 +144,11 @@ zx_status_t CreateDevhostJob(const zx::job& root_job, zx::job* devhost_job_out) 
     log(ERROR, "devcoordinator: unable to create devhost job\n");
     return status;
   }
-  static const zx_policy_basic_t policy[] = {
-      {ZX_POL_BAD_HANDLE, ZX_POL_ACTION_ALLOW_EXCEPTION},
+  static const zx_policy_basic_v2_t policy[] = {
+      {ZX_POL_BAD_HANDLE, ZX_POL_ACTION_ALLOW_EXCEPTION, ZX_POL_OVERRIDE_DENY},
   };
-  status =
-      devhost_job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC, &policy, fbl::count_of(policy));
+  status = devhost_job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC_V2, &policy,
+                                  fbl::count_of(policy));
   if (status != ZX_OK) {
     log(ERROR, "devcoordinator: zx_job_set_policy() failed\n");
     return status;
