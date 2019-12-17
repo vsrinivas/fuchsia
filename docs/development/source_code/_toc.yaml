@@ -8,6 +8,8 @@ toc:
   path: /docs/development/source_code/layout.md
 - title: "Contribute changes"
   path: /docs/development/source_code/contribute_changes.md
+- title: "Working across different petals"
+  path: /docs/development/source_code/working_across_petals.md
 - title: "Upload changes from multiple repositories"
   path: /docs/development/source_code/upload_changes_from_multiple_repositories.md
 - title: "Owners"
@@ -16,3 +18,5 @@ toc:
   path: /docs/development/source_code/third-party-metadata.md
 - title: "Fuchsia endian policy and recommendations"
   path: /docs/development/source_code/endian.md
+- title: "Tips and FAQ"
+  path: /docs/development/source_code/workflow_tips_and_faq.md

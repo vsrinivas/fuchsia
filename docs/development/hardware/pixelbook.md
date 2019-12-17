@@ -2,7 +2,7 @@
 
 ## Prerequisites
 Ensure that you have a chromebook build for Fuchsia. Note that Chromebook is now a
-distinct board configuration from other x64 devices. See [Paving](/docs/development/workflows/paving.md#building) for
+distinct board configuration from other x64 devices. See [Paving](/docs/development/hardware/paving.md#building) for
 more information.
 
 ## Update ChromeOS

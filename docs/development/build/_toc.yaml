@@ -8,10 +8,16 @@ toc:
   path: /docs/development/build/build_information.md
 - title: "The build system"
   path: /docs/development/build/overview.md
+- title: "Build and pave quickstart"
+  path: /docs/development/build/build_and_pave_quickstart.md
+- title: "fx workflows"
+  path: /docs/development/build/fx.md
 - title: "Run the examples"
   path: /docs/development/build/run-examples.md
 - title: "Boards and products"
   path: /docs/development/build/boards_and_products.md
+- title: "Multi device setup"
+  path: /docs/development/build/multi_device.md
 - title: "Toolchain"
   path: /docs/development/build/toolchain.md
 - title: "Tools dashboards"
@@ -20,8 +26,8 @@ toc:
   path: /docs/development/build/variants.md
 - title: "Bundles"
   path: /docs/development/build/bundles.md
-- title: "Multi device setup"
-  path: /docs/development/build/multi_device.md
+- title: "Developing with Fuchsia packages"
+  path: /docs/development/build/package_update.md
 - title: "A short introduction to GN"
   path: /docs/development/build/intro.md
 - title: "GN in Zircon"

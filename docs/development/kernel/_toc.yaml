@@ -4,5 +4,7 @@
 toc:
 - title: "Getting started"
   path: /docs/development/kernel/getting_started.md
+- title: "Cross translation unit static analysis in Zircon"
+  path: /docs/development/kernel/ctu_analysis.md
 - title: "Notes on kernel development"
   path: /docs/development/kernel/notes_on_kernel_development.md

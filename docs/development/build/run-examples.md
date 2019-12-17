@@ -79,7 +79,7 @@ will be included:
 *   Universe: Packages that are additional optional packages that can be
     fetched and run on-demand, but are not pre-baked into any paving images.
 
-(For more information, see [fx workflows](/docs/development/workflows/fx.md).)
+(For more information, see [fx workflows](/docs/development/build/fx.md).)
 
 To include this package in Universe so it can be fetched on-demand, use the
 `--with` flag when setting the product and board:

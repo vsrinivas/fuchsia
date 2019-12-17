@@ -2,6 +2,8 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
+- title: "Install Fuchsia on a device"
+  path: /docs/development/hardware/paving.md
 - title: "Install Fuchsia on Pixelbook"
   path: /docs/development/hardware/pixelbook.md
 - title: "Install Fuchsia on Intel NUC"

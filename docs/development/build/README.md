@@ -1,6 +1,6 @@
 # Build system
 
-Most users control the build through [fx](/docs/development/workflows/fx.md).
+Most users control the build through [fx](/docs/development/build/fx.md).
 The following documents provide details of build configuration and internal
 structure.
 

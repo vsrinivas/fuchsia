@@ -159,7 +159,7 @@ for more information on how to introduce testable and tested code in the Fuchsia
 To understand how to manage changes that span different repositories (petals),
 see the following pages:
 
-*   [Working across different petals](/docs/development/workflows/working_across_petals.md)
+*   [Working across different petals](/docs/development/source_code/working_across_petals.md)
 *   [Upload changes from multiple repositories](/docs/development/source_code/upload_changes_from_multiple_repositories.md)
 
 More information on the structure of the `fuchsia.git` respository is available in

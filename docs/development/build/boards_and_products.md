@@ -88,6 +88,6 @@ important configurations to be familiar with:
 
 [products-source]: /products/
 [boards-source]: /boards/
-[fx]: /docs/development/workflows/fx.md
-[fx-netboot]: /docs/development/workflows/fx.md#what-is-netbooting
-[fx-paving]: /docs/development/workflows/fx.md#what-is-paving
+[fx]: /docs/development/build/fx.md
+[fx-netboot]: /docs/development/build/fx.md#what-is-netbooting
+[fx-paving]: /docs/development/build/fx.md#what-is-paving

@@ -11,12 +11,12 @@ and debugging Fuchsia and programs running on Fuchsia.
  - [Getting started](/docs/getting_started.md) - **start here**. This document
    covers getting the source, building and running Fuchsia.
  - [Source code](source_code/README.md)
- - [fx workflows](workflows/fx.md)
+ - [fx workflows](build/fx.md)
  - [Multiple device setup](build/multi_device.md)
- - [Pushing a package](workflows/package_update.md)
- - [Working across different petals](workflows/working_across_petals.md)
+ - [Pushing a package](build/package_update.md)
+ - [Working across different petals](source_code/working_across_petals.md)
  - [Build system](build/README.md)
- - [Workflow tips and FAQ](workflows/workflow_tips_and_faq.md)
+ - [Workflow tips and FAQ](source_code/workflow_tips_and_faq.md)
  - [Testing FAQ](testing/faq.md)
 
 ## Languages
@@ -102,9 +102,9 @@ This section covers Fuchsia-wide conventions and best practices.
 
 ## Miscellaneous
 
- - [CTU analysis in Zircon](workflows/ctu_analysis.md)
+ - [CTU analysis in Zircon](kernel/ctu_analysis.md)
  - [Component Inspection](inspect/README.md)
- - [Packet capture](workflows/packet_capture.md)
+ - [Packet capture](debugging/packet_capture.md)
  - [Editor configurations](/docs/development/editors/README.md)
 
 

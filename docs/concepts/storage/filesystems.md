@@ -325,7 +325,7 @@ The slice allocation table is made up of tightly packed slice entries
 
 FVM library can be found
 [here](/zircon/system/ulib/fvm/). During
-[paving](/docs/development/workflows/paving.md),
+[paving](/docs/development/hardware/paving.md),
 some partitions are copied from host to target. So the partitions and FVM
 file itself may be created on host. To do this there is host side utility
 [here](/zircon/tools/fvm).

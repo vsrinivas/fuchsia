@@ -1,4 +1,4 @@
-# Putting Fuchsia on a Device
+# Install Fuchsia on a Device
 
 One of the best ways to experience Fuchsia is by running it on actual hardware.
 This guide will help you get Fuchsia installed on your device. Fuchsia has good
@@ -23,7 +23,7 @@ extend to allow you to build what you need.
 ## TL;DR
 
 Read this all before? See the
-[quickstart guide](build_and_pave_quickstart.md)
+[quickstart guide](/docs/development/build/build_and_pave_quickstart.md)
 for a workflow summary.
 
 ## Building {#building}

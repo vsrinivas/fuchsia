@@ -64,9 +64,6 @@ toc:
 - title: "Internationalization"
   section:
   - include: /docs/development/internationalization/_toc.yaml
-- title: "Workflows"
-  section:
-  - include: /docs/development/workflows/_toc.yaml
 - title: "Tools"
   section:
   - include: /docs/development/tools/_toc.yaml

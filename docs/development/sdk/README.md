@@ -159,5 +159,5 @@ for more details.
 [backend]: /build/sdk/README.md
 [frontends]: /scripts/sdk/README.md
 [bazel]: https://bazel.build/
-[fx-config]: /docs/development/workflows/fx.md#configure-a-build
-[fx-build-target]: /docs/development/workflows/fx.md#building-a-specific-target
+[fx-config]: /docs/development/build/fx.md#configure-a-build
+[fx-build-target]: /docs/development/build/fx.md#building-a-specific-target

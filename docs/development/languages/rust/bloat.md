@@ -131,6 +131,6 @@ File .text     Size        Crate Name
 
 [bloat]: https://github.com/RazrFalcon/cargo-bloat
 [fargo]: https://fuchsia.googlesource.com/fargo/#getting-started
-[fx-common-tools]: ../../workflows/fx.md#common-daily-tools
+[fx-common-tools]: /docs/development/build/fx.md#common-daily-tools
 [gen-cargo]: ./README.md#cargotoml
 [google-bloaty]: https://github.com/google/bloaty

@@ -40,7 +40,7 @@ and then return to this document.
 
 ## Build Fuchsia
 
-Note: A quick overview of the basic build-and-pave workflow can be found [here](development/workflows/build_and_pave_quickstart.md).
+Note: A quick overview of the basic build-and-pave workflow can be found [here](development/build/build_and_pave_quickstart.md).
 
 
 If you added `.jiri_root/bin` to your path as part of getting the source code,
@@ -105,11 +105,11 @@ To override the default behaviors, pass flags to `fx set`:
 ### Installing and booting from hardware
 
 To get Fuchsia running on hardware requires using the paver, which these
-[instructions](development/workflows/paving.md) will help you get up and running
+[instructions](development/hardware/paving.md) will help you get up and running
 with.
 
 Note: A quick overview of the basic build-and-pave workflow can be found
-[here](development/workflows/build_and_pave_quickstart.md).
+[here](development/build/build_and_pave_quickstart.md).
 
 ### Boot from QEMU
 
@@ -186,7 +186,7 @@ dm reboot
 
 Almost everything that exists on a Fuchsia system is stored in a Fuchsia
 package. A typical development
-[workflow](development/workflows/package_update.md) involves re-building and
+[workflow](development/build/package_update.md) involves re-building and
 pushing Fuchsia packages to a development device or QEMU virtual device.
 
 Make a change to the rolldice binary in `examples/rolldice/src/main.rs`.
@@ -274,5 +274,5 @@ more](/docs/development/kernel/getting_started.md#Copying-files-to-and-from-Zirc
 * [Documentation Standards](/docs/contribute/best-practices/documentation_standards.md) - best practices
   for documentation
 * [Information on the system bootstrap component](/src/sys/sysmgr/).
-* [Workflow tips and FAQ](development/workflows/workflow_tips_and_faq.md) that help increase
+* [Workflow tips and FAQ](development/source_code/workflow_tips_and_faq.md) that help increase
   productivity.
