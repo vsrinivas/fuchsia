@@ -445,6 +445,7 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
   TRACE_INSTANT("gfx", "VSYNC", TRACE_SCOPE_THREAD, "display_id", display_id);
   TRACE_DURATION("gfx", "Display::Controller::OnDisplayVsync", "display_id", display_id);
   fbl::AutoLock lock(mtx());
+  size_t found_handles = 0;
   DisplayInfo* info = nullptr;
   for (auto& display_config : displays_) {
     if (display_config.id == display_id) {
@@ -555,9 +556,15 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
         // corresponding FLOW_BEGIN in display_swapchain.cc.
         TRACE_FLOW_END("gfx", "present_image", cur->self->id);
         images[i] = cur->self->id;
+        found_handles++;
         break;
       }
     }
+  }
+
+  if (found_handles != handle_count) {
+    zxlogf(ERROR, "OnDisplayVsync with %lu unmatched images\n", handle_count - found_handles);
+    return;
   }
 
   if (vc_applied_ && vc_client_) {

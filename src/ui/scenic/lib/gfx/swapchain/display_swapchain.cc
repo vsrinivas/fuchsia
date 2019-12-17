@@ -443,7 +443,7 @@ void DisplaySwapchain::OnVsync(uint64_t display_id, uint64_t timestamp,
       outstanding_frame_count_--;
     }
   }
-  FXL_DCHECK(match) << "Unhandled vsync";
+  FXL_DCHECK(match) << "Unhandled vsync image_id=" << image_id;
 }
 
 uint64_t DisplaySwapchain::ImportEvent(const zx::event& event) {
