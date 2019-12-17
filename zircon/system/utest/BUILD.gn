@@ -205,6 +205,7 @@ if (current_cpu != "") {
       "$zx/system/ulib/zx/test",
       "$zx/system/ulib/zxio/test",
       "$zx/system/ulib/zxtest/test",
+      "$zx/third_party/ulib/backtrace:test",
       "$zx/third_party/ulib/linenoise:test",
       "$zx/third_party/ulib/lz4:test",
       "abi-type-validator",
