@@ -1,16 +1,15 @@
 use {
+    crate::fidl_processor::process_stream,
     crate::switchboard::base::*,
-    crate::switchboard::hanging_get_handler::{HangingGetHandler, Sender},
-    crate::switchboard::switchboard_impl::SwitchboardImpl,
+    crate::switchboard::hanging_get_handler::Sender,
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_settings::{
         DoNotDisturbMarker, DoNotDisturbRequest, DoNotDisturbRequestStream, DoNotDisturbSettings,
         DoNotDisturbWatchResponder, Error,
     },
     fuchsia_async as fasync,
-    fuchsia_syslog::fx_log_err,
-    futures::lock::Mutex,
-    futures::TryStreamExt,
+    futures::future::LocalBoxFuture,
+    futures::FutureExt,
     parking_lot::RwLock,
     std::sync::Arc,
 };
@@ -42,59 +41,64 @@ fn to_request(settings: DoNotDisturbSettings) -> Option<SettingRequest> {
 }
 
 pub fn spawn_do_not_disturb_fidl_handler(
-    switchboard_handle: Arc<RwLock<SwitchboardImpl>>,
-    mut stream: DoNotDisturbRequestStream,
+    switchboard_handle: Arc<RwLock<dyn Switchboard + Send + Sync>>,
+    stream: DoNotDisturbRequestStream,
 ) {
-    let switchboard_lock = switchboard_handle.clone();
-
-    type DNDHangingGetHandler =
-        Arc<Mutex<HangingGetHandler<DoNotDisturbSettings, DoNotDisturbWatchResponder>>>;
-    let hanging_get_handler: DNDHangingGetHandler =
-        HangingGetHandler::create(switchboard_handle, SettingType::DoNotDisturb);
-
-    fasync::spawn(async move {
-        while let Ok(Some(req)) = stream.try_next().await {
-            // Support future expansion of FIDL
-            #[allow(unreachable_patterns)]
-            match req {
-                DoNotDisturbRequest::Set { settings, responder } => {
-                    if let Some(request) = to_request(settings) {
-                        let (response_tx, response_rx) =
-                            futures::channel::oneshot::channel::<SettingResponseResult>();
-                        if switchboard_lock
-                            .write()
-                            .request(SettingType::DoNotDisturb, request, response_tx)
-                            .is_ok()
-                        {
-                            fasync::spawn(async move {
-                                match response_rx.await {
-                                    Ok(_) => responder
-                                        .send(&mut Ok(()))
-                                        .log_fidl_response_error(DoNotDisturbMarker::DEBUG_NAME),
-                                    Err(_) => responder
+    process_stream::<DoNotDisturbMarker, DoNotDisturbSettings, DoNotDisturbWatchResponder>(stream, switchboard_handle, SettingType::DoNotDisturb, Box::new(
+                move |context, req| -> LocalBoxFuture<'_, Result<Option<DoNotDisturbRequest>, failure::Error>> {
+                    async move {
+                        // Support future expansion of FIDL
+                        #[allow(unreachable_patterns)]
+                        match req {
+                            DoNotDisturbRequest::Set { settings, responder } => {
+                                if let Some(request) = to_request(settings) {
+                                    let (response_tx, response_rx) =
+                                        futures::channel::oneshot::channel::<SettingResponseResult>(
+                                        );
+                                    if context
+                                        .switchboard
+                                        .write()
+                                        .request(SettingType::DoNotDisturb, request, response_tx)
+                                        .is_ok()
+                                    {
+                                        fasync::spawn(async move {
+                                            match response_rx.await {
+                                                Ok(_) => responder
+                                                    .send(&mut Ok(()))
+                                                    .log_fidl_response_error(
+                                                        DoNotDisturbMarker::DEBUG_NAME,
+                                                    ),
+                                                Err(_) => responder
+                                                    .send(&mut Err(Error::Failed))
+                                                    .log_fidl_response_error(
+                                                        DoNotDisturbMarker::DEBUG_NAME,
+                                                    ),
+                                            };
+                                        });
+                                    } else {
+                                        responder
+                                            .send(&mut Err(Error::Failed))
+                                            .log_fidl_response_error(
+                                                DoNotDisturbMarker::DEBUG_NAME,
+                                            );
+                                    }
+                                } else {
+                                    responder
                                         .send(&mut Err(Error::Failed))
-                                        .log_fidl_response_error(DoNotDisturbMarker::DEBUG_NAME),
-                                };
-                            });
-                        } else {
-                            responder
-                                .send(&mut Err(Error::Failed))
-                                .log_fidl_response_error(DoNotDisturbMarker::DEBUG_NAME);
+                                        .log_fidl_response_error(DoNotDisturbMarker::DEBUG_NAME);
+                                }
+                            }
+                            DoNotDisturbRequest::Watch { responder } => {
+                                context.watch(responder).await
+                            }
+                            _ => {
+                                return Ok(Some(req));
+                            }
                         }
-                    } else {
-                        responder
-                            .send(&mut Err(Error::Failed))
-                            .log_fidl_response_error(DoNotDisturbMarker::DEBUG_NAME);
+
+                        return Ok(None);
                     }
-                }
-                DoNotDisturbRequest::Watch { responder } => {
-                    let mut hanging_get_lock = hanging_get_handler.lock().await;
-                    hanging_get_lock.watch(responder).await;
-                }
-                _ => {
-                    fx_log_err!("Unsupported DoNotDisturbRequest type");
-                }
-            }
-        }
-    })
+                    .boxed_local()
+                },
+            ));
 }

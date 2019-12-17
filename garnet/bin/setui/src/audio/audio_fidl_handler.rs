@@ -2,17 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    crate::switchboard::base::*,
-    crate::switchboard::hanging_get_handler::{HangingGetHandler, Sender},
-    crate::switchboard::switchboard_impl::SwitchboardImpl,
-    fidl::endpoints::ServiceMarker,
-    fidl_fuchsia_media::AudioRenderUsage,
-    fidl_fuchsia_settings::*,
-    fuchsia_async as fasync,
-    futures::lock::Mutex,
-    futures::prelude::*,
-    parking_lot::RwLock,
-    std::sync::Arc,
+    crate::fidl_processor::process_stream, crate::switchboard::base::*,
+    crate::switchboard::hanging_get_handler::Sender,
+    crate::switchboard::switchboard_impl::SwitchboardImpl, fidl::endpoints::ServiceMarker,
+    fidl_fuchsia_media::AudioRenderUsage, fidl_fuchsia_settings::*, fuchsia_async as fasync,
+    futures::future::LocalBoxFuture, futures::prelude::*, parking_lot::RwLock, std::sync::Arc,
 };
 
 impl Sender<AudioSettings> for AudioWatchResponder {
@@ -120,35 +114,41 @@ fn to_request(settings: AudioSettings) -> Option<SettingRequest> {
 
 pub fn spawn_audio_fidl_handler(
     switchboard_handle: Arc<RwLock<SwitchboardImpl>>,
-    mut stream: AudioRequestStream,
+    stream: AudioRequestStream,
 ) {
-    let switchboard_lock = switchboard_handle.clone();
-
-    let hanging_get_handler: Arc<Mutex<HangingGetHandler<AudioSettings, AudioWatchResponder>>> =
-        HangingGetHandler::create(switchboard_handle, SettingType::Audio);
-
-    fasync::spawn(async move {
-        while let Ok(Some(req)) = stream.try_next().await {
-            // Support future expansion of FIDL
-            #[allow(unreachable_patterns)]
-            match req {
-                AudioRequest::Set { settings, responder } => {
-                    if let Some(request) = to_request(settings) {
-                        set_volume(switchboard_lock.clone(), request, responder)
-                    } else {
-                        responder
-                            .send(&mut Err(Error::Unsupported))
-                            .log_fidl_response_error(AudioMarker::DEBUG_NAME);
+    process_stream::<AudioMarker, AudioSettings, AudioWatchResponder>(
+        stream,
+        switchboard_handle,
+        SettingType::Audio,
+        Box::new(
+            move |context,
+                  req|
+                  -> LocalBoxFuture<'_, Result<Option<AudioRequest>, failure::Error>> {
+                async move {
+                    // Support future expansion of FIDL
+                    #[allow(unreachable_patterns)]
+                    match req {
+                        AudioRequest::Set { settings, responder } => {
+                            if let Some(request) = to_request(settings) {
+                                set_volume(context.switchboard.clone(), request, responder)
+                            } else {
+                                responder
+                                    .send(&mut Err(Error::Unsupported))
+                                    .log_fidl_response_error(AudioMarker::DEBUG_NAME);
+                            }
+                        }
+                        AudioRequest::Watch { responder } => context.watch(responder).await,
+                        _ => {
+                            return Ok(Some(req));
+                        }
                     }
+
+                    return Ok(None);
                 }
-                AudioRequest::Watch { responder } => {
-                    let mut hanging_get_lock = hanging_get_handler.lock().await;
-                    hanging_get_lock.watch(responder).await;
-                }
-                _ => {}
-            }
-        }
-    });
+                .boxed_local()
+            },
+        ),
+    );
 }
 
 fn set_volume(

@@ -4,8 +4,11 @@
 use parking_lot::RwLock;
 use std::sync::Arc;
 
-use futures::lock::Mutex;
-use futures::TryStreamExt;
+use crate::fidl_processor::process_stream;
+
+use futures::FutureExt;
+
+use futures::future::LocalBoxFuture;
 
 use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_settings::{
@@ -18,10 +21,8 @@ use crate::switchboard::base::{
     FidlResponseErrorLogger, SettingRequest, SettingResponse, SettingResponseResult, SettingType,
     Switchboard,
 };
-use crate::switchboard::hanging_get_handler::{HangingGetHandler, Sender};
 
-type PrivacyHangingGetHandler =
-    Arc<Mutex<HangingGetHandler<PrivacySettings, PrivacyWatchResponder>>>;
+use crate::switchboard::hanging_get_handler::Sender;
 
 impl Sender<PrivacySettings> for PrivacyWatchResponder {
     fn send_response(self, data: PrivacySettings) {
@@ -45,74 +46,62 @@ impl From<PrivacySettings> for SettingRequest {
     }
 }
 
-pub struct PrivacyFidlHandler {
+fn set(
     switchboard_handle: Arc<RwLock<dyn Switchboard + Send + Sync>>,
-    hanging_get_handler: PrivacyHangingGetHandler,
-}
-
-/// Handler for translating Privacy service requests into SetUI switchboard commands.
-impl PrivacyFidlHandler {
-    pub fn spawn(
-        switchboard: Arc<RwLock<dyn Switchboard + Send + Sync>>,
-        mut stream: PrivacyRequestStream,
-    ) {
-        fasync::spawn(async move {
-            let handler = Self {
-                switchboard_handle: switchboard.clone(),
-                hanging_get_handler: HangingGetHandler::create(
-                    switchboard.clone(),
-                    SettingType::Privacy,
-                ),
-            };
-
-            while let Ok(Some(req)) = stream.try_next().await {
-                // Support future expansion of FIDL
-                #[allow(unreachable_patterns)]
-                match req {
-                    PrivacyRequest::Set { settings, responder } => {
-                        handler.set(settings, responder);
-                    }
-                    PrivacyRequest::Watch { responder } => {
-                        handler.watch(responder).await;
-                    }
-                    _ => {}
-                }
-            }
-        })
-    }
-
-    fn set(&self, settings: PrivacySettings, responder: PrivacySetResponder) {
-        let (response_tx, response_rx) =
-            futures::channel::oneshot::channel::<SettingResponseResult>();
-        match self.switchboard_handle.write().request(
-            SettingType::Privacy,
-            settings.into(),
-            response_tx,
-        ) {
-            Ok(_) => {
-                fasync::spawn(async move {
-                    let result = match response_rx.await {
-                        Ok(_) => responder.send(&mut Ok(())),
-                        Err(_) => responder.send(&mut Err(Error::Failed)),
-                    };
-                    result.log_fidl_response_error(PrivacyMarker::DEBUG_NAME);
-                });
-            }
-            Err(_) => {
-                // Report back an error immediately if we could not successfully make the privacy
-                // set request. The return result can be ignored as there is no actionable steps
-                // that can be taken.
-                responder
-                    .send(&mut Err(Error::Failed))
-                    .log_fidl_response_error(PrivacyMarker::DEBUG_NAME);
-            }
+    settings: PrivacySettings,
+    responder: PrivacySetResponder,
+) {
+    let (response_tx, response_rx) = futures::channel::oneshot::channel::<SettingResponseResult>();
+    match switchboard_handle.write().request(SettingType::Privacy, settings.into(), response_tx) {
+        Ok(_) => {
+            fasync::spawn(async move {
+                let result = match response_rx.await {
+                    Ok(_) => responder.send(&mut Ok(())),
+                    Err(_) => responder.send(&mut Err(Error::Failed)),
+                };
+                result.log_fidl_response_error(PrivacyMarker::DEBUG_NAME);
+            });
+        }
+        Err(_) => {
+            // Report back an error immediately if we could not successfully make the privacy
+            // set request. The return result can be ignored as there is no actionable steps
+            // that can be taken.
+            responder
+                .send(&mut Err(Error::Failed))
+                .log_fidl_response_error(PrivacyMarker::DEBUG_NAME);
         }
     }
+}
 
-    async fn watch(&self, responder: PrivacyWatchResponder) {
-        let mut hanging_get_lock = self.hanging_get_handler.lock().await;
-        hanging_get_lock.watch(responder).await;
-    }
+pub fn spawn_privacy_fidl_handler(
+    switchboard: Arc<RwLock<dyn Switchboard + Send + Sync>>,
+    stream: PrivacyRequestStream,
+) {
+    process_stream::<PrivacyMarker, PrivacySettings, PrivacyWatchResponder>(
+        stream,
+        switchboard,
+        SettingType::Privacy,
+        Box::new(move |context, req|-> LocalBoxFuture<'_, Result<Option<PrivacyRequest>, failure::Error>> {
+                async move {
+                        #[allow(unreachable_patterns)]
+                match req {
+                    PrivacyRequest::Set { settings, responder } => {
+                        set(context.switchboard, settings, responder);
+                    }
+                    PrivacyRequest::Watch { responder } => {
+                        context.watch(responder).await;
+                    }
+                    _ => {
+                            return Ok(Some(req));
+                    }
+                }
+
+                    return Ok(None);
+                }
+                .boxed_local()
+            },
+        ),
+    );
 }
 
 #[cfg(test)]

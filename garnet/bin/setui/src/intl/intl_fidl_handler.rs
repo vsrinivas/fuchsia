@@ -10,17 +10,16 @@ use fidl_fuchsia_settings::{
     IntlWatchResponder,
 };
 use fuchsia_async as fasync;
-use futures::lock::Mutex;
-use futures::TryStreamExt;
+use futures::future::LocalBoxFuture;
+use futures::FutureExt;
 use parking_lot::RwLock;
 
+use crate::fidl_processor::{process_stream, RequestContext};
 use crate::switchboard::base::{
     FidlResponseErrorLogger, SettingRequest, SettingResponse, SettingResponseResult, SettingType,
     Switchboard,
 };
-use crate::switchboard::hanging_get_handler::{HangingGetHandler, Sender};
-
-type IntlHangingGetHandler = Arc<Mutex<HangingGetHandler<IntlSettings, IntlWatchResponder>>>;
+use crate::switchboard::hanging_get_handler::Sender;
 
 impl Sender<IntlSettings> for IntlWatchResponder {
     fn send_response(self, data: IntlSettings) {
@@ -44,74 +43,62 @@ impl From<IntlSettings> for SettingRequest {
     }
 }
 
-pub struct IntlFidlHandler {
-    switchboard_handle: Arc<RwLock<dyn Switchboard + Send + Sync>>,
-    hanging_get_handler: IntlHangingGetHandler,
-}
-
-/// Handler for translating Intl service requests into SetUI switchboard commands.
-impl IntlFidlHandler {
-    pub fn spawn(
-        switchboard: Arc<RwLock<dyn Switchboard + Send + Sync>>,
-        mut stream: IntlRequestStream,
-    ) {
-        fasync::spawn(async move {
-            let handler = Self {
-                switchboard_handle: switchboard.clone(),
-                hanging_get_handler: HangingGetHandler::create(
-                    switchboard.clone(),
-                    SettingType::Intl,
-                ),
-            };
-
-            while let Ok(Some(req)) = stream.try_next().await {
-                // Support future expansion of FIDL
-                #[allow(unreachable_patterns)]
-                match req {
-                    IntlRequest::Set { settings, responder } => {
-                        handler.set(settings, responder);
-                    }
-                    IntlRequest::Watch { responder } => {
-                        handler.watch(responder).await;
-                    }
-                    _ => {}
-                }
-            }
-        })
-    }
-
-    fn set(&self, settings: IntlSettings, responder: IntlSetResponder) {
-        let (response_tx, response_rx) =
-            futures::channel::oneshot::channel::<SettingResponseResult>();
-        match self.switchboard_handle.write().request(
-            SettingType::Intl,
-            settings.into(),
-            response_tx,
-        ) {
-            Ok(_) => {
-                fasync::spawn(async move {
-                    let result = match response_rx.await {
-                        Ok(Ok(_)) => responder.send(&mut Ok(())),
-                        _ => responder.send(&mut Err(Error::Failed)),
-                    };
-                    result.log_fidl_response_error(IntlMarker::DEBUG_NAME);
-                });
-            }
-            Err(_) => {
-                // Report back an error immediately if we could not successfully make the intl set
-                // request. The return result can be ignored as there is no actionable steps that
-                // can be taken.
-                responder
-                    .send(&mut Err(Error::Failed))
-                    .log_fidl_response_error(IntlMarker::DEBUG_NAME);
-            }
+fn set(
+    context: RequestContext<IntlSettings, IntlWatchResponder>,
+    settings: IntlSettings,
+    responder: IntlSetResponder,
+) {
+    let (response_tx, response_rx) = futures::channel::oneshot::channel::<SettingResponseResult>();
+    match context.switchboard.write().request(SettingType::Intl, settings.into(), response_tx) {
+        Ok(_) => {
+            fasync::spawn(async move {
+                let result = match response_rx.await {
+                    Ok(Ok(_)) => responder.send(&mut Ok(())),
+                    _ => responder.send(&mut Err(Error::Failed)),
+                };
+                result.log_fidl_response_error(IntlMarker::DEBUG_NAME);
+            });
+        }
+        Err(_) => {
+            // Report back an error immediately if we could not successfully make the intl set
+            // request. The return result can be ignored as there is no actionable steps that
+            // can be taken.
+            responder.send(&mut Err(Error::Failed)).log_fidl_response_error(IntlMarker::DEBUG_NAME);
         }
     }
+}
 
-    async fn watch(&self, responder: IntlWatchResponder) {
-        let mut hanging_get_lock = self.hanging_get_handler.lock().await;
-        hanging_get_lock.watch(responder).await;
-    }
+pub fn spawn_intl_fidl_handler(
+    switchboard: Arc<RwLock<dyn Switchboard + Send + Sync>>,
+    stream: IntlRequestStream,
+) {
+    process_stream::<IntlMarker, IntlSettings, IntlWatchResponder>(
+        stream,
+        switchboard,
+        SettingType::Intl,
+        Box::new(
+            move |context,
+                  req|
+                  -> LocalBoxFuture<'_, Result<Option<IntlRequest>, failure::Error>> {
+                async move {
+                    // Support future expansion of FIDL
+                    #[allow(unreachable_patterns)]
+                    match req {
+                        IntlRequest::Set { settings, responder } => {
+                            set(context.clone(), settings, responder);
+                        }
+                        IntlRequest::Watch { responder } => context.watch(responder).await,
+                        _ => {
+                            return Ok(Some(req));
+                        }
+                    }
+
+                    return Ok(None);
+                }
+                .boxed_local()
+            },
+        ),
+    );
 }
 
 #[cfg(test)]

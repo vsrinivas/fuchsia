@@ -1,14 +1,14 @@
 use {
+    crate::fidl_processor::process_stream,
     crate::switchboard::base::*,
-    crate::switchboard::hanging_get_handler::{HangingGetHandler, Sender},
+    crate::switchboard::hanging_get_handler::Sender,
     crate::switchboard::switchboard_impl::SwitchboardImpl,
     fidl_fuchsia_settings::{
-        DeviceRequest, DeviceRequestStream, DeviceSettings, DeviceWatchResponder,
+        DeviceMarker, DeviceRequest, DeviceRequestStream, DeviceSettings, DeviceWatchResponder,
     },
-    fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
-    futures::lock::Mutex,
-    futures::TryStreamExt,
+    futures::future::LocalBoxFuture,
+    futures::FutureExt,
     parking_lot::RwLock,
     std::sync::Arc,
 };
@@ -36,26 +36,32 @@ impl From<SettingResponse> for DeviceSettings {
 
 pub fn spawn_device_fidl_handler(
     switchboard_handle: Arc<RwLock<SwitchboardImpl>>,
-    mut stream: DeviceRequestStream,
+    stream: DeviceRequestStream,
 ) {
-    type DeviceHangingGetHandler =
-        Arc<Mutex<HangingGetHandler<DeviceSettings, DeviceWatchResponder>>>;
-    let hanging_get_handler: DeviceHangingGetHandler =
-        HangingGetHandler::create(switchboard_handle, SettingType::Device);
+    process_stream::<DeviceMarker, DeviceSettings, DeviceWatchResponder>(
+        stream,
+        switchboard_handle,
+        SettingType::Device,
+        Box::new(
+            move |context,
+                  req|
+                  -> LocalBoxFuture<'_, Result<Option<DeviceRequest>, failure::Error>> {
+                async move {
+                    // Support future expansion of FIDL
+                    #[allow(unreachable_patterns)]
+                    match req {
+                        DeviceRequest::Watch { responder } => {
+                            context.watch(responder).await;
+                        }
+                        _ => {
+                            return Ok(Some(req));
+                        }
+                    }
 
-    fasync::spawn(async move {
-        while let Ok(Some(req)) = stream.try_next().await {
-            // Support future expansion of FIDL
-            #[allow(unreachable_patterns)]
-            match req {
-                DeviceRequest::Watch { responder } => {
-                    let mut hanging_get_lock = hanging_get_handler.lock().await;
-                    hanging_get_lock.watch(responder).await;
+                    return Ok(None);
                 }
-                _ => {
-                    fx_log_err!("Unsupported DeviceRequest type");
-                }
-            }
-        }
-    });
+                .boxed_local()
+            },
+        ),
+    );
 }

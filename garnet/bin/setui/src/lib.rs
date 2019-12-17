@@ -16,16 +16,16 @@ use {
     crate::do_not_disturb::spawn_do_not_disturb_controller,
     crate::do_not_disturb::spawn_do_not_disturb_fidl_handler,
     crate::intl::intl_controller::IntlController,
-    crate::intl::intl_fidl_handler::IntlFidlHandler,
+    crate::intl::intl_fidl_handler::spawn_intl_fidl_handler,
     crate::power::spawn_power_controller,
     crate::privacy::privacy_controller::PrivacyController,
-    crate::privacy::privacy_fidl_handler::PrivacyFidlHandler,
+    crate::privacy::spawn_privacy_fidl_handler,
     crate::registry::base::Registry,
     crate::registry::device_storage::DeviceStorageFactory,
     crate::registry::registry_impl::RegistryImpl,
     crate::service_context::ServiceContext,
     crate::setup::setup_controller::SetupController,
-    crate::setup::setup_fidl_handler::SetupFidlHandler,
+    crate::setup::spawn_setup_fidl_handler,
     crate::switchboard::base::{SettingAction, SettingType},
     crate::switchboard::switchboard_impl::SwitchboardImpl,
     crate::system::spawn_setui_fidl_handler,
@@ -47,6 +47,7 @@ mod device;
 mod display;
 mod do_not_disturb;
 mod fidl_clone;
+mod fidl_processor;
 mod input;
 mod intl;
 mod power;
@@ -206,7 +207,7 @@ pub fn create_fidl_service<'a, T: DeviceStorageFactory>(
 
         let switchboard_handle_clone = switchboard_handle.clone();
         service_dir.add_fidl_service(move |stream: IntlRequestStream| {
-            IntlFidlHandler::spawn(switchboard_handle_clone.clone(), stream);
+            spawn_intl_fidl_handler(switchboard_handle_clone.clone(), stream);
         });
     }
 
@@ -224,7 +225,7 @@ pub fn create_fidl_service<'a, T: DeviceStorageFactory>(
 
         let switchboard_handle_clone = switchboard_handle.clone();
         service_dir.add_fidl_service(move |stream: PrivacyRequestStream| {
-            PrivacyFidlHandler::spawn(switchboard_handle_clone.clone(), stream);
+            spawn_privacy_fidl_handler(switchboard_handle_clone.clone(), stream);
         });
     }
 
@@ -265,7 +266,7 @@ pub fn create_fidl_service<'a, T: DeviceStorageFactory>(
             .unwrap();
         let switchboard_handle_clone = switchboard_handle.clone();
         service_dir.add_fidl_service(move |stream: SetupRequestStream| {
-            SetupFidlHandler::spawn(switchboard_handle_clone.clone(), stream);
+            spawn_setup_fidl_handler(switchboard_handle_clone.clone(), stream);
         });
     }
 }

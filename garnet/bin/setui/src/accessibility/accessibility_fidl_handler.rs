@@ -4,8 +4,9 @@
 use parking_lot::RwLock;
 use std::sync::Arc;
 
-use futures::lock::Mutex;
-use futures::TryStreamExt;
+use crate::fidl_processor::process_stream;
+use futures::future::LocalBoxFuture;
+use futures::FutureExt;
 
 use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_settings::{
@@ -21,11 +22,7 @@ use crate::switchboard::base::{
     FidlResponseErrorLogger, SettingRequest, SettingResponse, SettingResponseResult, SettingType,
     Switchboard,
 };
-use crate::switchboard::hanging_get_handler::{HangingGetHandler, Sender};
-use crate::switchboard::switchboard_impl::SwitchboardImpl;
-
-type AccessibilityHangingGetHandler =
-    Arc<Mutex<HangingGetHandler<AccessibilitySettings, AccessibilityWatchResponder>>>;
+use crate::switchboard::hanging_get_handler::Sender;
 
 impl Sender<AccessibilitySettings> for AccessibilityWatchResponder {
     fn send_response(self, data: AccessibilitySettings) {
@@ -72,36 +69,42 @@ impl From<AccessibilitySettings> for SettingRequest {
 }
 
 pub fn spawn_accessibility_fidl_handler(
-    switchboard_handle: Arc<RwLock<SwitchboardImpl>>,
-    mut stream: AccessibilityRequestStream,
+    switchboard_handle: Arc<RwLock<dyn Switchboard + Send + Sync>>,
+    stream: AccessibilityRequestStream,
 ) {
-    let switchboard_lock = switchboard_handle.clone();
+    process_stream::<AccessibilityMarker, AccessibilitySettings, AccessibilityWatchResponder>(
+        stream,
+        switchboard_handle,
+        SettingType::Accessibility,
+        Box::new(
+            move |context, req| -> LocalBoxFuture<'_, Result<Option<AccessibilityRequest>, failure::Error>> {
+                async move {
+                    // Support future expansion of FIDL.
+                    #[allow(unreachable_patterns)]
+                    match req {
+                        AccessibilityRequest::Set { settings, responder } => {
+                            set_accessibility(context.switchboard.clone(), settings, responder);
+                        }
+                        AccessibilityRequest::Watch { responder } => {
+                            context.watch(responder).await;
+                        }
+                        _ => {
+                            return Ok(Some(req));
+                        }
+                    }
 
-    let hanging_get_handler: AccessibilityHangingGetHandler =
-        HangingGetHandler::create(switchboard_handle, SettingType::Accessibility);
-
-    fasync::spawn(async move {
-        while let Ok(Some(req)) = stream.try_next().await {
-            // Support future expansion of FIDL.
-            #[allow(unreachable_patterns)]
-            match req {
-                AccessibilityRequest::Set { settings, responder } => {
-                    set_accessibility(switchboard_lock.clone(), settings, responder);
+                    return Ok(None);
                 }
-                AccessibilityRequest::Watch { responder } => {
-                    let mut hanging_get_lock = hanging_get_handler.lock().await;
-                    hanging_get_lock.watch(responder).await;
-                }
-                _ => {}
-            }
-        }
-    });
+                .boxed_local()
+            },
+        ),
+    );
 }
 
 /// Sends a request to set the accessibility settings through the switchboard and responds with an
 /// appropriate result to the given responder.
 fn set_accessibility(
-    switchboard_handle: Arc<RwLock<SwitchboardImpl>>,
+    switchboard_handle: Arc<RwLock<dyn Switchboard + Send + Sync>>,
     settings: AccessibilitySettings,
     responder: AccessibilitySetResponder,
 ) {

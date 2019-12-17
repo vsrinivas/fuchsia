@@ -2,17 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::fidl_processor::{process_stream, RequestContext};
 use crate::switchboard::base::{
     ConfigurationInterfaceFlags, SettingRequest, SettingResponse, SettingResponseResult,
     SettingType, SetupInfo, Switchboard,
 };
-use crate::switchboard::hanging_get_handler::{HangingGetHandler, Sender};
+use crate::switchboard::hanging_get_handler::Sender;
 use fidl_fuchsia_settings::{
-    SetupRequest, SetupRequestStream, SetupSetResponder, SetupSettings, SetupWatchResponder,
+    SetupMarker, SetupRequest, SetupRequestStream, SetupSetResponder, SetupSettings,
+    SetupWatchResponder,
 };
 use fuchsia_async as fasync;
-use futures::lock::Mutex;
-use futures::TryStreamExt;
+use futures::future::LocalBoxFuture;
+use futures::FutureExt;
 use parking_lot::RwLock;
 use std::convert::TryFrom;
 use std::sync::Arc;
@@ -21,11 +23,6 @@ impl Sender<SetupSettings> for SetupWatchResponder {
     fn send_response(self, data: SetupSettings) {
         self.send(data).unwrap();
     }
-}
-
-pub struct SetupFidlHandler {
-    switchboard_handle: Arc<RwLock<dyn Switchboard + Send + Sync>>,
-    hanging_get_handler: Arc<Mutex<HangingGetHandler<SetupSettings, SetupWatchResponder>>>,
 }
 
 impl TryFrom<SetupSettings> for SettingRequest {
@@ -122,62 +119,68 @@ fn reboot(
     });
 }
 
-impl SetupFidlHandler {
-    fn set(&self, settings: SetupSettings, responder: SetupSetResponder) {
-        if let Ok(request) = SettingRequest::try_from(settings) {
-            let (response_tx, response_rx) =
-                futures::channel::oneshot::channel::<SettingResponseResult>();
+fn set(
+    context: RequestContext<SetupSettings, SetupWatchResponder>,
+    settings: SetupSettings,
+    responder: SetupSetResponder,
+) {
+    if let Ok(request) = SettingRequest::try_from(settings) {
+        let (response_tx, response_rx) =
+            futures::channel::oneshot::channel::<SettingResponseResult>();
 
-            let mut switchboard = self.switchboard_handle.write();
+        let mut switchboard = context.switchboard.write();
 
-            if switchboard.request(SettingType::Setup, request, response_tx).is_err() {
-                // Respond immediately with an error if request was not possible.
-                responder.send(&mut Err(fidl_fuchsia_settings::Error::Failed)).ok();
+        if switchboard.request(SettingType::Setup, request, response_tx).is_err() {
+            // Respond immediately with an error if request was not possible.
+            responder.send(&mut Err(fidl_fuchsia_settings::Error::Failed)).ok();
+            return;
+        }
+
+        let switchboard_clone = context.switchboard.clone();
+        fasync::spawn(async move {
+            // Return success if we get a Ok result from the
+            // switchboard.
+            if let Ok(Ok(_)) = response_rx.await {
+                reboot(switchboard_clone, responder);
                 return;
             }
 
-            let switchboard_clone = self.switchboard_handle.clone();
-            fasync::spawn(async move {
-                // Return success if we get a Ok result from the
-                // switchboard.
-                if let Ok(Ok(_)) = response_rx.await {
-                    reboot(switchboard_clone, responder);
-                    return;
-                }
-
-                responder.send(&mut Err(fidl_fuchsia_settings::Error::Failed)).ok();
-            });
-        }
+            responder.send(&mut Err(fidl_fuchsia_settings::Error::Failed)).ok();
+        });
     }
+}
 
-    async fn watch(&self, responder: SetupWatchResponder) {
-        let mut hanging_get_lock = self.hanging_get_handler.lock().await;
-        hanging_get_lock.watch(responder).await;
-    }
-
-    pub fn spawn(
-        switchboard: Arc<RwLock<dyn Switchboard + Send + Sync>>,
-        mut stream: SetupRequestStream,
-    ) {
-        fasync::spawn(async move {
-            let handler = Self {
-                switchboard_handle: switchboard.clone(),
-                hanging_get_handler: HangingGetHandler::create(
-                    switchboard.clone(),
-                    SettingType::Setup,
-                ),
-            };
-
-            while let Some(req) = stream.try_next().await.unwrap() {
-                match req {
-                    SetupRequest::Set { settings, responder } => {
-                        handler.set(settings, responder);
+pub fn spawn_setup_fidl_handler(
+    switchboard: Arc<RwLock<dyn Switchboard + Send + Sync>>,
+    stream: SetupRequestStream,
+) {
+    process_stream::<SetupMarker, SetupSettings, SetupWatchResponder>(
+        stream,
+        switchboard,
+        SettingType::Setup,
+        Box::new(
+            move |context,
+                  req|
+                  -> LocalBoxFuture<'_, Result<Option<SetupRequest>, failure::Error>> {
+                async move {
+                    // Support future expansion of FIDL
+                    #[allow(unreachable_patterns)]
+                    match req {
+                        SetupRequest::Set { settings, responder } => {
+                            set(context, settings, responder);
+                        }
+                        SetupRequest::Watch { responder } => {
+                            context.watch(responder).await;
+                        }
+                        _ => {
+                            return Ok(Some(req));
+                        }
                     }
-                    SetupRequest::Watch { responder } => {
-                        handler.watch(responder).await;
-                    }
+
+                    return Ok(None);
                 }
-            }
-        })
-    }
+                .boxed_local()
+            },
+        ),
+    );
 }

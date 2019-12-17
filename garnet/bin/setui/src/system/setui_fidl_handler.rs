@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
+  crate::fidl_processor::process_stream,
   crate::switchboard::base::{
     SettingRequest, SettingResponseResult, SettingType, Switchboard, SystemLoginOverrideMode,
   },
-  crate::switchboard::hanging_get_handler::{HangingGetHandler, Sender},
+  crate::switchboard::hanging_get_handler::Sender,
   crate::switchboard::switchboard_impl::SwitchboardImpl,
   fidl_fuchsia_settings::*,
   fidl_fuchsia_setui::*,
   fuchsia_async as fasync,
-  futures::lock::Mutex,
-  futures::prelude::*,
+  futures::future::LocalBoxFuture,
+  futures::FutureExt,
   parking_lot::RwLock,
   std::sync::Arc,
 };
@@ -58,46 +59,57 @@ impl Sender<SystemSettings> for SetUiServiceWatchResponder {
 }
 
 pub fn spawn_setui_fidl_handler(
-  switchboard_handle: Arc<RwLock<SwitchboardImpl>>,
-  mut stream: SetUiServiceRequestStream,
+  switchboard: Arc<RwLock<SwitchboardImpl>>,
+  stream: SetUiServiceRequestStream,
 ) {
-  let hanging_get_handler: Arc<
-    Mutex<HangingGetHandler<SystemSettings, SetUiServiceWatchResponder>>,
-  > = HangingGetHandler::create(switchboard_handle.clone(), SettingType::System);
+  process_stream::<SetUiServiceMarker, SystemSettings, SetUiServiceWatchResponder>(
+    stream,
+    switchboard,
+    SettingType::System,
+    Box::new(
+      move |context,
+            req|
+            -> LocalBoxFuture<'_, Result<Option<SetUiServiceRequest>, failure::Error>> {
+        async move {
+          #[allow(unreachable_patterns)]
+          match req {
+            SetUiServiceRequest::Mutate { setting_type: _, mutation, responder } => {
+              if let Mutation::AccountMutationValue(mutation_info) = mutation {
+                if let Some(operation) = mutation_info.operation {
+                  if operation == AccountOperation::SetLoginOverride {
+                    if let Some(login_override) = mutation_info.login_override {
+                      set_login_override(
+                        context.switchboard.clone(),
+                        SystemLoginOverrideMode::from(login_override),
+                        responder,
+                      );
 
-  fasync::spawn(async move {
-    while let Ok(Some(req)) = stream.try_next().await {
-      #[allow(unreachable_patterns)]
-      match req {
-        SetUiServiceRequest::Mutate { setting_type: _, mutation, responder } => {
-          if let Mutation::AccountMutationValue(mutation_info) = mutation {
-            if let Some(operation) = mutation_info.operation {
-              if operation == AccountOperation::SetLoginOverride {
-                if let Some(login_override) = mutation_info.login_override {
-                  set_login_override(
-                    switchboard_handle.clone(),
-                    SystemLoginOverrideMode::from(login_override),
-                    responder,
-                  );
-                  continue;
+                      return Ok(None);
+                    }
+                  }
                 }
               }
+
+              responder.send(&mut MutationResponse { return_code: ReturnCode::Failed }).ok();
+            }
+            SetUiServiceRequest::Watch { setting_type, responder } => {
+              if setting_type != fidl_fuchsia_setui::SettingType::Account {
+                return Ok(None);
+              }
+
+              context.watch(responder).await;
+            }
+            _ => {
+              return Ok(Some(req));
             }
           }
 
-          responder.send(&mut MutationResponse { return_code: ReturnCode::Failed }).ok();
+          return Ok(None);
         }
-        SetUiServiceRequest::Watch { setting_type, responder } => {
-          if setting_type != fidl_fuchsia_setui::SettingType::Account {
-            continue;
-          }
-          let mut hanging_get_lock = hanging_get_handler.lock().await;
-          hanging_get_lock.watch(responder).await;
-        }
-        _ => {}
-      }
-    }
-  });
+        .boxed_local()
+      },
+    ),
+  );
 }
 
 fn set_login_override(
