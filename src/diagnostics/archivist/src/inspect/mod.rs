@@ -23,7 +23,7 @@ use {
     futures::future::{join_all, BoxFuture},
     futures::{FutureExt, TryFutureExt, TryStreamExt},
     inspect_fidl_load as deprecated_inspect,
-    inspect_formatter::{self, HierarchyData, HierarchyFormatter, JsonFormatter},
+    inspect_formatter::{self, DeprecatedHierarchyFormatter, HierarchyData},
     io_util,
     regex::{Regex, RegexSet},
     selectors,
@@ -604,7 +604,7 @@ impl ReaderServer {
             .map(|hierarchy_data| {
                 let formatted_string_result = match format {
                     fidl_fuchsia_diagnostics::Format::Json => {
-                        JsonFormatter::format_multiple(vec![hierarchy_data])
+                        inspect_formatter::DeprecatedJsonFormatter::format(hierarchy_data)
                     }
                     fidl_fuchsia_diagnostics::Format::Text => {
                         Err(format_err!("Text formatting not supported for inspect."))
@@ -1055,23 +1055,21 @@ mod tests {
         let result_string = read_snapshot(reader_server.clone()).await;
 
         let expected_result = format!(
-            "[
-    {{
-        \"contents\": {{
-            \"root\": {{
-                \"child_1\": {{
-                    \"child_1_1\": {{
-                        \"some-int\": 3
-                    }}
-                }},
-                \"child_2\": {{
-                    \"some-int\": 2
+            r#"{{
+    "contents": {{
+        "root": {{
+            "child_1": {{
+                "child_1_1": {{
+                    "some-int": 3
                 }}
+            }},
+            "child_2": {{
+                "some-int": 2
             }}
-        }},
-        \"path\": \"/{}/out\"
-    }}
-]",
+        }}
+    }},
+    "path": "/{}/out"
+}}"#,
             bindings_dir
         );
 

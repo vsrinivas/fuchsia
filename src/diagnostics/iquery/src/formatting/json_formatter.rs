@@ -9,7 +9,7 @@ use {
         result::IqueryResult,
     },
     failure::{bail, format_err, Error},
-    inspect_formatter::{self, HierarchyFormatter},
+    inspect_formatter::{self, DeprecatedHierarchyFormatter},
     serde::ser::Serialize,
     serde_json::{
         json,
@@ -49,7 +49,7 @@ impl Formatter for JsonFormatter {
                 })
             })
             .collect::<Result<Vec<inspect_formatter::HierarchyData>, Error>>()?;
-        inspect_formatter::JsonFormatter::format_multiple(hierachies)
+        inspect_formatter::DeprecatedJsonFormatter::format_multiple(hierachies)
     }
 
     fn format_locations(&self, results: Vec<IqueryResult>) -> Result<String, Error> {

@@ -40,7 +40,7 @@ async fn main() -> Result<(), Error> {
         std::fs::write(full_path, filename.as_bytes())?;
     }
 
-    let expected = json!([{
+    let expected = json!({
         "path": "/out/test_data",
         "contents": {
             "root": {
@@ -68,7 +68,7 @@ async fn main() -> Result<(), Error> {
                 },
             },
         },
-    }]);
+    });
 
     let launcher = launcher()?;
     let mut archivist = AppBuilder::new(ARCHIVIST_URL)

@@ -3,26 +3,229 @@
 // found in the LICENSE file.
 
 use {
-    crate::{utils::format_parts, *},
+    crate::{HierarchyDeserializer, HierarchySerializer},
     base64,
     failure::{bail, format_err, Error},
     fuchsia_inspect::format::block::ArrayFormat,
     fuchsia_inspect::reader::{ArrayBucket, ArrayValue, NodeHierarchy, Property},
-    maplit::hashmap,
+    lazy_static::lazy_static,
     paste,
-    serde::ser::{Serialize, SerializeMap, SerializeSeq, SerializeStruct, Serializer},
+    serde::ser::{Serialize, SerializeMap, SerializeSeq, Serializer},
     serde_json::{
         self, json,
         ser::{PrettyFormatter, Serializer as JsonSerializer},
         Map, Value,
     },
-    std::str::from_utf8,
+    std::str,
 };
 
-static HISTOGRAM_OBJECT_KEY: &str = "buckets";
-static COUNT_KEY: &str = "count";
-static FLOOR_KEY: &str = "floor";
-static UPPER_BOUND_KEY: &str = "upper_bound";
+/// Allows to serialize a `NodeHierarchy` into a Serde JSON Value.
+pub struct JsonNodeHierarchySerializer {}
+
+/// Allows to serialize a `NodeHierarchy` into a Serde JSON Value.
+pub struct RawJsonNodeHierarchySerializer {}
+
+/// Implements serialization of a `NodeHierarchy` into a Serde JSON Value.
+impl HierarchySerializer for RawJsonNodeHierarchySerializer {
+    type Type = serde_json::Value;
+
+    fn serialize(hierarchy: NodeHierarchy) -> serde_json::Value {
+        json!(JsonSerializableNodeHierarchy { hierarchy })
+    }
+}
+
+/// Implements serialization of a `NodeHierarchy` into a String.
+impl HierarchySerializer for JsonNodeHierarchySerializer {
+    type Type = Result<String, failure::Error>;
+
+    fn serialize(hierarchy: NodeHierarchy) -> Result<String, failure::Error> {
+        let mut bytes = vec![];
+        let mut serializer =
+            JsonSerializer::with_formatter(&mut bytes, PrettyFormatter::with_indent(b"    "));
+        let value = json!(JsonSerializableNodeHierarchy { hierarchy });
+        value.serialize(&mut serializer)?;
+        Ok(str::from_utf8(&bytes)?.to_string())
+    }
+}
+
+/// Implements deserialization of a `NodeHierarchy` from a String.
+impl HierarchyDeserializer for JsonNodeHierarchySerializer {
+    // The Json Formatter deserializes JSON Strings encoding a single node hierarchy.
+    type Object = String;
+
+    fn deserialize(data_format: String) -> Result<NodeHierarchy, Error> {
+        let root_node: serde_json::Value = serde_json::from_str(&data_format)?;
+        deserialize_json(root_node)
+    }
+}
+
+/// A wrapper of a Node hierarchy that allows to serialize it as JSON.
+struct JsonSerializableNodeHierarchy {
+    /// The hierarchy that will be serialized.
+    pub hierarchy: NodeHierarchy,
+}
+
+impl Serialize for JsonSerializableNodeHierarchy {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut s = serializer.serialize_map(Some(1))?;
+        let name = self.hierarchy.name.clone();
+        s.serialize_entry(&name, &SerializableHierarchyFields { hierarchy: &self.hierarchy })?;
+        s.end()
+    }
+}
+
+// The following wrapping structs are used to implement Serialize on them given
+// that it's not possible to implement traits for structs in other crates.
+
+pub(in crate) struct SerializableHierarchyFields<'a> {
+    pub(in crate) hierarchy: &'a NodeHierarchy,
+}
+
+struct SerializableArrayValue<'a, T> {
+    array: &'a ArrayValue<T>,
+}
+
+struct SerializableArrayBucket<'a, T> {
+    bucket: &'a ArrayBucket<T>,
+}
+
+impl<'a> Serialize for SerializableHierarchyFields<'a> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let items = self.hierarchy.properties.len() + self.hierarchy.children.len();
+        let mut s = serializer.serialize_map(Some(items))?;
+        for property in self.hierarchy.properties.iter() {
+            let _ = match property {
+                Property::String(name, value) => s.serialize_entry(&name, &value)?,
+                Property::Int(name, value) => s.serialize_entry(&name, &value)?,
+                Property::Uint(name, value) => s.serialize_entry(&name, &value)?,
+                Property::Double(name, value) => s.serialize_entry(&name, &value)?,
+                Property::Bytes(name, array) => {
+                    s.serialize_entry(&name, &format!("b64:{}", base64::encode(&array)))?
+                }
+                Property::DoubleArray(name, array) => {
+                    let wrapped_value = SerializableArrayValue { array };
+                    s.serialize_entry(&name, &wrapped_value)?;
+                }
+                Property::IntArray(name, array) => {
+                    let wrapped_value = SerializableArrayValue { array };
+                    s.serialize_entry(&name, &wrapped_value)?;
+                }
+                Property::UintArray(name, array) => {
+                    let wrapped_value = SerializableArrayValue { array };
+                    s.serialize_entry(&name, &wrapped_value)?;
+                }
+            };
+        }
+        for child in self.hierarchy.children.iter() {
+            s.serialize_entry(&child.name, &SerializableHierarchyFields { hierarchy: child })?;
+        }
+        s.end()
+    }
+}
+
+macro_rules! impl_serialize_for_array_value {
+    ($($type:ty,)*) => {
+        $(
+            impl<'a> Serialize for SerializableArrayValue<'a, $type> {
+                fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+                    match self.array.buckets() {
+                        Some(buckets) => {
+                            let mut s = serializer.serialize_map(Some(1))?;
+                            let wrapped_buckets = buckets
+                                .iter()
+                                .map(|bucket| SerializableArrayBucket { bucket })
+                                .collect::<Vec<SerializableArrayBucket<'_, $type>>>();
+                            s.serialize_entry("buckets", &wrapped_buckets)?;
+                            s.end()
+                        }
+                        None => {
+                            let mut s = serializer.serialize_seq(Some(self.array.values.len()))?;
+                            for value in self.array.values.iter() {
+                                s.serialize_element(&value)?;
+                            }
+                            s.end()
+                        }
+                    }
+                }
+            }
+        )*
+    }
+}
+
+macro_rules! impl_serialize_for_array_bucket {
+    ($($type:ty,)*) => {
+        $(
+            impl<'a> Serialize for SerializableArrayBucket<'a, $type> {
+                fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+                    let mut s = serializer.serialize_map(Some(3))?;
+                    s.serialize_entry("floor", &self.bucket.floor)?;
+                    s.serialize_entry("upper_bound", &self.bucket.upper)?;
+                    s.serialize_entry("count", &self.bucket.count)?;
+                    s.end()
+                }
+            }
+        )*
+    }
+}
+
+impl_serialize_for_array_value![i64, u64, f64,];
+impl_serialize_for_array_bucket![i64, u64,];
+
+impl<'a> Serialize for SerializableArrayBucket<'a, f64> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut s = serializer.serialize_map(Some(3))?;
+        let parts = [
+            ("floor", self.bucket.floor),
+            ("upper_bound", self.bucket.upper),
+            ("count", self.bucket.count),
+        ];
+        for (entry_key, value) in parts.iter() {
+            if *value == std::f64::MAX || *value == std::f64::INFINITY {
+                s.serialize_entry(entry_key, "Infinity")?;
+            } else if *value == std::f64::MIN || *value == std::f64::NEG_INFINITY {
+                s.serialize_entry(entry_key, "-Infinity")?;
+            } else {
+                s.serialize_entry(entry_key, value)?;
+            }
+        }
+        s.end()
+    }
+}
+
+/// Converts a JSON object encoding a NodeHierarchy into that NodeHierarchy. Expects
+/// that the top-level serde_value is an object which is convertable into a NodeHierarchy node.:
+/// eg:  "{
+///          'root': {...}
+///       }"
+///
+// TODO(43030): Remove explicit root nodes from serialized diagnostics data.
+fn deserialize_json(root_node: serde_json::Value) -> Result<NodeHierarchy, Error> {
+    match root_node {
+        serde_json::Value::Object(v) => {
+            if v.len() > 1 {
+                bail!("We expect there to be only one root to the tree.");
+            }
+            let (name, value) = v.iter().next().unwrap();
+
+            parse_node_object(
+                &name,
+                value
+                    .as_object()
+                    .ok_or(format_err!("The first `value` in the tree must be a node."))?,
+            )
+        }
+        _ => bail!("The first entry in a NodeHierarchy Json must be a node."),
+    }
+}
+
+lazy_static! {
+    static ref HISTOGRAM_OBJECT_KEY: String = "buckets".to_string();
+    static ref COUNT_KEY: String = "count".to_string();
+    static ref FLOOR_KEY: String = "floor".to_string();
+    static ref UPPER_BOUND_KEY: String = "upper_bound".to_string();
+    static ref REQUIRED_BUCKET_KEYS: Vec<&'static String> =
+        vec![&*COUNT_KEY, &*FLOOR_KEY, &*UPPER_BOUND_KEY];
+}
 
 macro_rules! parse_array_fns {
     ($type:ty) => {
@@ -40,17 +243,17 @@ macro_rules! parse_array_fns {
             {
                 for bucket in vec {
                     let count_value =
-                        sanitize_value(bucket.get(&COUNT_KEY.to_string())
+                        sanitize_value(bucket.get(&*COUNT_KEY)
                                        .ok_or(format_err!(
                                            "All histogram buckets need `count` key."))?);
 
                     let floor_value =
-                        sanitize_value(bucket.get(&FLOOR_KEY.to_string())
+                        sanitize_value(bucket.get(&*FLOOR_KEY)
                                        .ok_or(format_err!(
                                            "All histogram buckets need `floor` key."))?);
 
                     let upper_value =
-                        sanitize_value(bucket.get(&UPPER_BOUND_KEY.to_string())
+                        sanitize_value(bucket.get(&*UPPER_BOUND_KEY)
                                        .ok_or(format_err!(
                                            "All histogram buckets need `upper_bound` key."))?);
 
@@ -94,7 +297,7 @@ macro_rules! parse_array_fns {
                 // The first legitimate floor is the upper bound of the underflow bucket.
                 histogram.get(index)
                     .ok_or(format_err!("We've already validated the size of this histogram.."))?
-                    .get(&FLOOR_KEY.to_string())
+                    .get(&*FLOOR_KEY)
                     .ok_or(format_err!("All histogram buckets need `upper_bound` key."))?
                     .[<as_ $type>]()
                     .ok_or(format_err!("Since this histogram already passed verification for
@@ -117,7 +320,7 @@ macro_rules! parse_array_fns {
                 // floor + (initial_step * step_multiplier) - initial_step / initial_step == step_multiplier
                 let first_upper = histogram.get(1)
                     .ok_or(format_err!("We've already validated the size of this histogram.."))?
-                    .get(&UPPER_BOUND_KEY.to_string())
+                    .get(&*UPPER_BOUND_KEY)
                     .ok_or(format_err!("All histogram buckets need `upper_bound` key."))?
                     .[<as_ $type>]()
                     .ok_or(format_err!("Since this histogram already passed verification for
@@ -126,7 +329,7 @@ macro_rules! parse_array_fns {
 
                 let second_upper = histogram.get(2)
                     .ok_or(format_err!("We've already validated the size of this histogram.."))?
-                    .get(&UPPER_BOUND_KEY.to_string())
+                    .get(&*UPPER_BOUND_KEY)
                     .ok_or(format_err!("All histogram buckets need `upper_bound` key."))?
                     .[<as_ $type>]()
                     .ok_or(format_err!("Since this histogram already passed verification for
@@ -165,7 +368,7 @@ macro_rules! parse_array_fns {
 enough data to encode 3 buckets, or one non overflow bucket, so this shouldn't happen."))?;
 
                 let legitimate_upper_bound = non_edge_bucket
-                    .get(&UPPER_BOUND_KEY.to_string())
+                    .get(&*UPPER_BOUND_KEY)
                     .ok_or(format_err!("All histogram buckets need `upper_bound` key."))?
                     .[<as_ $type>]()
                     .ok_or(format_err!("Since this histogram already passed verification for
@@ -173,7 +376,7 @@ this type, the only way this could occur is if there exists a string encoding of
 present as a upper bound in a non-overflow bucket. This is a verification error in Inspect."))?;
 
                 let legitimate_floor_bound = non_edge_bucket
-                    .get(&FLOOR_KEY.to_string())
+                    .get(&*FLOOR_KEY)
                     .ok_or(format_err!("All histogram buckets need `floor ` key."))?
                     .[<as_ $type>]()
                     .ok_or(format_err!("Since this histogram already passed verification for
@@ -189,7 +392,7 @@ present as a floor in a non-overflow bucket. This is a verification error in Ins
                                           -> Result<Vec<$type>, Error> {
                     histogram.into_iter().map(|serde_val| {
                         serde_val
-                            .get(&COUNT_KEY.to_string())
+                            .get(&*COUNT_KEY)
                             .and_then(|val| val.[<as_ $type>]())
                             .ok_or(format_err!("Since this histogram already passed verification
  for this type, the only way this could occur is if there exists a string encoding of infinity
@@ -322,397 +525,153 @@ fn sanitize_value(val: &serde_json::Value) -> serde_json::Value {
     val.clone()
 }
 
-/// A JSON formatter for an inspect node hierarchy.
-pub struct JsonFormatter {}
+/// Pattern matches on the expected structure of a Histogram serialization, and returns
+/// the underlying bucket vector if it matches, otherwise returns None.
+fn fetch_object_histogram(contents: &Map<String, Value>) -> Option<&Vec<serde_json::Value>> {
+    if contents.len() != 1 {
+        return None;
+    }
 
-impl JsonFormatter {
-    /// Pattern matches on the expected structure of a Histogram serialization, and returns
-    /// the underlying bucket vector if it matches, otherwise returns None.
-    fn fetch_object_histogram(contents: &Map<String, Value>) -> Option<&Vec<serde_json::Value>> {
-        if contents.len() != 1 {
-            return None;
-        }
-
-        let required_bucket_keys = vec![COUNT_KEY, FLOOR_KEY, UPPER_BOUND_KEY];
-
-        if let Some(serde_json::Value::Array(vec)) = contents.get(&HISTOGRAM_OBJECT_KEY.to_string())
-        {
-            if let Some(serde_json::Value::Object(obj)) = vec.first() {
-                let mut obj_is_histogram_bucket = obj.len() == required_bucket_keys.len();
-
-                for required_key in required_bucket_keys {
-                    if !obj_is_histogram_bucket {
-                        break;
-                    }
-
-                    obj_is_histogram_bucket =
-                        obj_is_histogram_bucket && obj.contains_key(&required_key.to_string());
-                }
-
-                if obj_is_histogram_bucket {
-                    return Some(vec);
-                }
+    if let Some(serde_json::Value::Array(vec)) = contents.get(&*HISTOGRAM_OBJECT_KEY) {
+        if let Some(serde_json::Value::Object(obj)) = vec.first() {
+            let obj_is_histogram_bucket = REQUIRED_BUCKET_KEYS.iter().all(|k| obj.contains_key(*k));
+            if obj_is_histogram_bucket {
+                return Some(vec);
             }
         }
-        None
+    }
+    None
+}
+
+/// Parses a JSON representation of an Inspect histogram into its ArrayValue form.
+fn parse_histogram(name: &String, histogram: &Vec<serde_json::Value>) -> Result<Property, Error> {
+    if histogram.len() < 3 {
+        bail!(
+            "Histograms require a minimum of 5 entries to be validly serialized. We can only
+uce 5 entries if there exist 3 or more buckets. If this isn't the case, this histogram is
+ormed."
+        );
     }
 
-    /// Parses a JSON representation of an Inspect histogram into its ArrayValue form.
-    fn parse_histogram(
-        name: &String,
-        histogram: &Vec<serde_json::Value>,
-    ) -> Result<Property, Error> {
-        if histogram.len() < 3 {
-            bail!(
-                "Histograms require a minimum of 5 entries to be validly serialized. We can only
-produce 5 entries if there exist 3 or more buckets. If this isn't the case, this histogram is
-malformed."
-            );
-        }
-
-        if is_f64_histogram(histogram)? {
-            return Ok(Property::DoubleArray(name.to_string(), parse_f64_histogram(histogram)?));
-        }
-
-        if is_i64_histogram(histogram)? {
-            return Ok(Property::IntArray(name.to_string(), parse_i64_histogram(histogram)?));
-        }
-
-        if is_u64_histogram(histogram)? {
-            return Ok(Property::UintArray(name.to_string(), parse_u64_histogram(histogram)?));
-        }
-
-        bail!("Histograms must be one of i64, u64, or f64. Property name: {:?}", name);
+    if is_f64_histogram(histogram)? {
+        return Ok(Property::DoubleArray(name.to_string(), parse_f64_histogram(histogram)?));
     }
 
-    /// Parses a JSON array into its numerical Inspect ArrayValue.
-    fn parse_array(name: &String, vec: &Vec<serde_json::Value>) -> Result<Property, Error> {
-        let array_format = ArrayFormat::Default;
-
-        if is_f64_vec(vec) {
-            return Ok(Property::DoubleArray(
-                name.to_string(),
-                ArrayValue::new(transform_numerical_f64_vec(vec)?, array_format),
-            ));
-        }
-
-        if is_i64_vec(vec) {
-            return Ok(Property::IntArray(
-                name.to_string(),
-                ArrayValue::new(transform_numerical_i64_vec(vec)?, array_format),
-            ));
-        }
-
-        if is_u64_vec(vec) {
-            return Ok(Property::UintArray(
-                name.to_string(),
-                ArrayValue::new(transform_numerical_u64_vec(vec)?, array_format),
-            ));
-        }
-
-        bail!("Histograms must be one of i64, u64, or f64. Property name: {:?}", name);
+    if is_i64_histogram(histogram)? {
+        return Ok(Property::IntArray(name.to_string(), parse_i64_histogram(histogram)?));
     }
 
-    /// Parses a serde_json Number into an Inspect number Property.
-    fn parse_number(name: &String, num: &serde_json::Number) -> Result<Property, Error> {
-        if num.is_i64() {
-            Ok(Property::Int(name.to_string(), num.as_i64().unwrap()))
-        } else if num.is_u64() {
-            Ok(Property::Uint(name.to_string(), num.as_u64().unwrap()))
-        } else if num.is_f64() {
-            Ok(Property::Double(name.to_string(), num.as_f64().unwrap()))
-        } else {
-            bail!("Diagnostics numbers must fit within 64 bits.")
-        }
+    if is_u64_histogram(histogram)? {
+        return Ok(Property::UintArray(name.to_string(), parse_u64_histogram(histogram)?));
     }
 
-    /// Creates a NodeHierarchy from a serde_json Object map, evaluating each of
-    /// the entries in the map and parsing them into their relevant Inspect in-memory
-    /// representation.
-    fn parse_node_object(
-        node_name: &String,
-        contents: &Map<String, Value>,
-    ) -> Result<NodeHierarchy, Error> {
-        let mut properties: Vec<Property> = Vec::new();
-        let mut children: Vec<NodeHierarchy> = Vec::new();
-        for (name, value) in contents.iter() {
-            match value {
-                serde_json::Value::Object(obj) => {
-                    match JsonFormatter::fetch_object_histogram(obj) {
-                        Some(histogram_vec) => {
-                            properties.push(JsonFormatter::parse_histogram(name, histogram_vec)?);
-                        }
-                        None => {
-                            let child_node = JsonFormatter::parse_node_object(name, obj)?;
-                            children.push(child_node);
-                        }
-                    }
+    bail!("Histograms must be one of i64, u64, or f64. Property name: {:?}", name);
+}
+
+/// Parses a JSON array into its numerical Inspect ArrayValue.
+fn parse_array(name: &String, vec: &Vec<serde_json::Value>) -> Result<Property, Error> {
+    let array_format = ArrayFormat::Default;
+
+    if is_f64_vec(vec) {
+        return Ok(Property::DoubleArray(
+            name.to_string(),
+            ArrayValue::new(transform_numerical_f64_vec(vec)?, array_format),
+        ));
+    }
+
+    if is_i64_vec(vec) {
+        return Ok(Property::IntArray(
+            name.to_string(),
+            ArrayValue::new(transform_numerical_i64_vec(vec)?, array_format),
+        ));
+    }
+
+    if is_u64_vec(vec) {
+        return Ok(Property::UintArray(
+            name.to_string(),
+            ArrayValue::new(transform_numerical_u64_vec(vec)?, array_format),
+        ));
+    }
+
+    bail!("Arrays must be one of i64, u64, or f64. Property name: {:?}", name);
+}
+
+/// Parses a serde_json Number into an Inspect number Property.
+fn parse_number(name: &String, num: &serde_json::Number) -> Result<Property, Error> {
+    if num.is_i64() {
+        Ok(Property::Int(name.to_string(), num.as_i64().unwrap()))
+    } else if num.is_u64() {
+        Ok(Property::Uint(name.to_string(), num.as_u64().unwrap()))
+    } else if num.is_f64() {
+        Ok(Property::Double(name.to_string(), num.as_f64().unwrap()))
+    } else {
+        bail!("Diagnostics numbers must fit within 64 bits.")
+    }
+}
+
+/// Creates a NodeHierarchy from a serde_json Object map, evaluating each of
+/// the entries in the map and parsing them into their relevant Inspect in-memory
+/// representation.
+fn parse_node_object(
+    node_name: &String,
+    contents: &Map<String, Value>,
+) -> Result<NodeHierarchy, Error> {
+    let mut properties: Vec<Property> = Vec::new();
+    let mut children: Vec<NodeHierarchy> = Vec::new();
+    for (name, value) in contents.iter() {
+        match value {
+            serde_json::Value::Object(obj) => match fetch_object_histogram(obj) {
+                Some(histogram_vec) => {
+                    properties.push(parse_histogram(name, histogram_vec)?);
                 }
-                serde_json::Value::Bool(_) => {
-                    // TODO(37140): Deserialize booleans when supported.
-                    bail!("Booleans are not part of the diagnostics schema.");
+                None => {
+                    let child_node = parse_node_object(name, obj)?;
+                    children.push(child_node);
                 }
-                serde_json::Value::Number(num) => {
-                    properties.push(JsonFormatter::parse_number(name, num)?);
-                }
-                serde_json::Value::String(string) => {
-                    let string_property = Property::String(name.to_string(), string.to_string());
-                    properties.push(string_property);
-                }
-                serde_json::Value::Array(vec) => {
-                    properties.push(JsonFormatter::parse_array(name, vec)?);
-                }
-                serde_json::Value::Null => {
-                    bail!("Null isn't an existing part of the diagnostics schema.");
-                }
+            },
+            serde_json::Value::Bool(_) => {
+                // TODO(37140): Deserialize booleans when supported.
+                bail!("Booleans are not part of the diagnostics schema.");
+            }
+            serde_json::Value::Number(num) => {
+                properties.push(parse_number(name, num)?);
+            }
+            serde_json::Value::String(string) => {
+                let string_property = Property::String(name.to_string(), string.to_string());
+                properties.push(string_property);
+            }
+            serde_json::Value::Array(vec) => {
+                properties.push(parse_array(name, vec)?);
+            }
+            serde_json::Value::Null => {
+                bail!("Null isn't an existing part of the diagnostics schema.");
             }
         }
-
-        Ok(NodeHierarchy::new(node_name, properties, children))
     }
 
-    /// Converts a JSON object encoding a NodeHierarchy into that NodeHierarchy. Expects
-    /// that the top-level serde_value is an object which is convertable into a NodeHierarchy node.:
-    /// eg:  "{
-    ///          'root': {...}
-    ///       }"
-    ///
-    // TODO(43030): Remove explicit root nodes from serialized diagnostics data.
-    fn deserialize_json(root_node: serde_json::Value) -> Result<NodeHierarchy, Error> {
-        match root_node {
-            serde_json::Value::Object(v) => {
-                if v.len() > 1 {
-                    bail!("We expect there to be only one root to the tree.");
-                }
-                let (name, value) = v.iter().next().unwrap();
-
-                JsonFormatter::parse_node_object(
-                    &name,
-                    value
-                        .as_object()
-                        .ok_or(format_err!("The first `value` in the tree must be a node."))?,
-                )
-            }
-            _ => bail!("The first entry in a NodeHierarchy Json must be a node."),
-        }
-    }
-}
-
-impl HierarchyDeserializer for JsonFormatter {
-    // The Json Formatter deserializes JSON Strings encoding a single node hierarchy.
-    type Object = String;
-
-    fn deserialize(data_format: String) -> Result<NodeHierarchy, Error> {
-        let root_node: serde_json::Value = serde_json::from_str(&data_format)?;
-        JsonFormatter::deserialize_json(root_node)
-    }
-}
-
-impl HierarchyFormatter for JsonFormatter {
-    fn format(hierarchy: HierarchyData) -> Result<String, Error> {
-        let mut bytes = Vec::new();
-        let mut serializer =
-            JsonSerializer::with_formatter(&mut bytes, PrettyFormatter::with_indent(b"    "));
-        json!(SerializableHierarchy { hierarchy_data: hierarchy }).serialize(&mut serializer)?;
-        Ok(from_utf8(&bytes)?.to_string())
-    }
-
-    fn format_multiple(hierarchies: Vec<HierarchyData>) -> Result<String, Error> {
-        let values = hierarchies
-            .into_iter()
-            .map(|hierarchy_data| SerializableHierarchy { hierarchy_data })
-            .collect::<Vec<SerializableHierarchy>>();
-        let mut bytes = Vec::new();
-        let mut serializer =
-            JsonSerializer::with_formatter(&mut bytes, PrettyFormatter::with_indent(b"    "));
-        json!(values).serialize(&mut serializer)?;
-        Ok(from_utf8(&bytes)?.to_string())
-    }
-}
-
-// The following wrapping structs are used to implement Serialize on them given
-// that it's not possible to implement traits for structs in other crates.
-struct SerializableHierarchy {
-    hierarchy_data: HierarchyData,
-}
-
-struct WrappedNodeHierarchy<'a> {
-    hierarchy: &'a NodeHierarchy,
-}
-
-struct WrappedArrayValue<'a, T> {
-    array: &'a ArrayValue<T>,
-}
-
-struct WrappedArrayBucket<'a, T> {
-    bucket: &'a ArrayBucket<T>,
-}
-
-impl Serialize for SerializableHierarchy {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut s = serializer.serialize_struct("NodeHierarchy", 2)?;
-        let path = format_parts(&self.hierarchy_data.file_path, &self.hierarchy_data.fields);
-        s.serialize_field("path", &path)?;
-        let name = self.hierarchy_data.hierarchy.name.clone();
-        let contents =
-            hashmap!(name => WrappedNodeHierarchy { hierarchy: &self.hierarchy_data.hierarchy });
-        s.serialize_field("contents", &contents)?;
-        s.end()
-    }
-}
-
-impl<'a> Serialize for WrappedNodeHierarchy<'a> {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let items = self.hierarchy.properties.len() + self.hierarchy.children.len();
-        let mut s = serializer.serialize_map(Some(items))?;
-        for property in self.hierarchy.properties.iter() {
-            let _ = match property {
-                Property::String(name, value) => s.serialize_entry(&name, &value)?,
-                Property::Int(name, value) => s.serialize_entry(&name, &value)?,
-                Property::Uint(name, value) => s.serialize_entry(&name, &value)?,
-                Property::Double(name, value) => s.serialize_entry(&name, &value)?,
-                Property::Bytes(name, array) => {
-                    s.serialize_entry(&name, &format!("b64:{}", base64::encode(&array)))?
-                }
-                Property::DoubleArray(name, array) => {
-                    let wrapped_value = WrappedArrayValue { array };
-                    s.serialize_entry(&name, &wrapped_value)?;
-                }
-                Property::IntArray(name, array) => {
-                    let wrapped_value = WrappedArrayValue { array };
-                    s.serialize_entry(&name, &wrapped_value)?;
-                }
-                Property::UintArray(name, array) => {
-                    let wrapped_value = WrappedArrayValue { array };
-                    s.serialize_entry(&name, &wrapped_value)?;
-                }
-            };
-        }
-        for child in self.hierarchy.children.iter() {
-            s.serialize_entry(&child.name, &WrappedNodeHierarchy { hierarchy: child })?;
-        }
-        s.end()
-    }
-}
-
-macro_rules! impl_serialize_for_array_value {
-    ($($type:ty,)*) => {
-        $(
-            impl<'a> Serialize for WrappedArrayValue<'a, $type> {
-                fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-                    match self.array.buckets() {
-                        Some(buckets) => {
-                            let mut s = serializer.serialize_map(Some(1))?;
-                            let wrapped_buckets = buckets
-                                .iter()
-                                .map(|bucket| WrappedArrayBucket { bucket })
-                                .collect::<Vec<WrappedArrayBucket<'_, $type>>>();
-                            s.serialize_entry("buckets", &wrapped_buckets)?;
-                            s.end()
-                        }
-                        None => {
-                            let mut s = serializer.serialize_seq(Some(self.array.values.len()))?;
-                            for value in self.array.values.iter() {
-                                s.serialize_element(&value)?;
-                            }
-                            s.end()
-                        }
-                    }
-                }
-            }
-        )*
-    }
-}
-
-macro_rules! impl_serialize_for_array_bucket {
-    ($($type:ty,)*) => {
-        $(
-            impl<'a> Serialize for WrappedArrayBucket<'a, $type> {
-                fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-                    let mut s = serializer.serialize_map(Some(3))?;
-                    s.serialize_entry("floor", &self.bucket.floor)?;
-                    s.serialize_entry("upper_bound", &self.bucket.upper)?;
-                    s.serialize_entry("count", &self.bucket.count)?;
-                    s.end()
-                }
-            }
-        )*
-    }
-}
-
-impl_serialize_for_array_value![i64, u64, f64,];
-impl_serialize_for_array_bucket![i64, u64,];
-
-impl<'a> Serialize for WrappedArrayBucket<'a, f64> {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut s = serializer.serialize_map(Some(3))?;
-        let parts = [
-            ("floor", self.bucket.floor),
-            ("upper_bound", self.bucket.upper),
-            ("count", self.bucket.count),
-        ];
-        for (entry_key, value) in parts.iter() {
-            if *value == std::f64::MAX || *value == std::f64::INFINITY {
-                s.serialize_entry(entry_key, "Infinity")?;
-            } else if *value == std::f64::MIN || *value == std::f64::NEG_INFINITY {
-                s.serialize_entry(entry_key, "-Infinity")?;
-            } else {
-                s.serialize_entry(entry_key, value)?;
-            }
-        }
-        s.end()
-    }
+    Ok(NodeHierarchy::new(node_name, properties, children))
 }
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fuchsia_inspect::reader::ArrayFormat};
+    use {
+        super::*,
+        fuchsia_inspect::reader::{ArrayFormat, ArrayValue, Property},
+    };
 
     #[test]
-    fn format_json() {
-        let hierarchy =
-            NodeHierarchy::new("root", vec![Property::Double("double".to_string(), 2.5)], vec![]);
-        let data = HierarchyData {
-            hierarchy,
-            file_path: "/some/path/out/objects/root.inspect".to_string(),
-            fields: vec![],
-        };
-        let result = JsonFormatter::format(data).expect("failed to format hierarchy");
-        let expected = "{
-    \"contents\": {
-        \"root\": {
-            \"double\": 2.5
-        }
-    },
-    \"path\": \"/some/path/out/objects/root.inspect\"
-}";
+    fn serialize_json() {
+        let hierarchy = test_hierarchy();
+        let expected = expected_json();
+        let result =
+            JsonNodeHierarchySerializer::serialize(hierarchy).expect("failed to serialize");
         assert_eq!(result, expected);
-    }
-
-    #[test]
-    fn format_json_multiple() -> Result<(), Error> {
-        let (a, b) = get_hierarchies();
-        let datas = vec![
-            HierarchyData {
-                hierarchy: a,
-                file_path: "/some/path/out/diagnostics/root.inspect".to_string(),
-                fields: vec![],
-            },
-            HierarchyData {
-                hierarchy: b,
-                file_path: "/other/path/out/diagnostics".to_string(),
-                fields: vec!["root".to_string(), "x".to_string(), "y".to_string()],
-            },
-        ];
-        let result = JsonFormatter::format_multiple(datas).expect("failed to format hierarchies");
-        assert_eq!(get_expected_multi_json(), result);
-        Ok(())
     }
 
     #[test]
     fn deserialize_json() -> Result<(), Error> {
         let json_string = get_single_json_hierarchy();
-        let mut parsed_hierarchy = JsonFormatter::deserialize(json_string)?;
+        let mut parsed_hierarchy = JsonNodeHierarchySerializer::deserialize(json_string)?;
         let mut expected_hierarchy = get_unambigious_deserializable_hierarchy();
         parsed_hierarchy.sort();
         expected_hierarchy.sort();
@@ -723,22 +682,9 @@ mod tests {
     #[test]
     fn reversible_deserialize() -> Result<(), Error> {
         let mut original_hierarchy = get_unambigious_deserializable_hierarchy();
-        let result = JsonFormatter::format(HierarchyData {
-            hierarchy: original_hierarchy.clone(),
-            file_path: "/some/path/out/objects/root.inspect".to_string(),
-            fields: vec![],
-        })
-        .expect("failed to format hierarchy");
-
-        let json_encoding: serde_json::Value = serde_json::from_str(&result)?;
-
-        let node_string = json_encoding
-            .as_object()
-            .expect("Top json should be a map with path and contents.")
-            .get(&"contents".to_string())
-            .expect("Top json should have a contents field.")
-            .to_string();
-        let mut parsed_hierarchy = JsonFormatter::deserialize(node_string)?;
+        let result = JsonNodeHierarchySerializer::serialize(original_hierarchy.clone())
+            .expect("failed to format hierarchy");
+        let mut parsed_hierarchy = JsonNodeHierarchySerializer::deserialize(result)?;
         parsed_hierarchy.sort();
         original_hierarchy.sort();
         assert_eq!(original_hierarchy, parsed_hierarchy);
@@ -784,119 +730,101 @@ mod tests {
         )
     }
 
-    fn get_hierarchies() -> (NodeHierarchy, NodeHierarchy) {
-        (
-            NodeHierarchy::new(
-                "root",
-                vec![Property::UintArray(
-                    "array".to_string(),
-                    ArrayValue::new(vec![0, 2, 4], ArrayFormat::Default),
-                )],
-                vec![
-                    NodeHierarchy::new(
-                        "a",
-                        vec![
-                            Property::Double("double".to_string(), 2.5),
-                            Property::DoubleArray(
-                                "histogram".to_string(),
-                                ArrayValue::new(
-                                    vec![0.0, 2.0, 4.0, 1.0, 3.0, 4.0],
-                                    ArrayFormat::ExponentialHistogram,
-                                ),
+    fn test_hierarchy() -> NodeHierarchy {
+        NodeHierarchy::new(
+            "root",
+            vec![Property::UintArray(
+                "array".to_string(),
+                ArrayValue::new(vec![0, 2, 4], ArrayFormat::Default),
+            )],
+            vec![
+                NodeHierarchy::new(
+                    "a",
+                    vec![
+                        Property::Double("double".to_string(), 2.5),
+                        Property::DoubleArray(
+                            "histogram".to_string(),
+                            ArrayValue::new(
+                                vec![0.0, 2.0, 4.0, 1.0, 3.0, 4.0],
+                                ArrayFormat::ExponentialHistogram,
                             ),
-                        ],
-                        vec![],
-                    ),
-                    NodeHierarchy::new(
-                        "b",
-                        vec![
-                            Property::Int("int".to_string(), -2),
-                            Property::String("string".to_string(), "some value".to_string()),
-                            Property::IntArray(
-                                "histogram".to_string(),
-                                ArrayValue::new(vec![0, 2, 4, 1, 3], ArrayFormat::LinearHistogram),
-                            ),
-                        ],
-                        vec![],
-                    ),
-                ],
-            ),
-            NodeHierarchy::new(
-                "y",
-                vec![Property::Bytes("bytes".to_string(), vec![5u8, 0xf1, 0xab])],
-                vec![],
-            ),
+                        ),
+                        Property::Bytes("bytes".to_string(), vec![5u8, 0xf1, 0xab]),
+                    ],
+                    vec![],
+                ),
+                NodeHierarchy::new(
+                    "b",
+                    vec![
+                        Property::Int("int".to_string(), -2),
+                        Property::String("string".to_string(), "some value".to_string()),
+                        Property::IntArray(
+                            "histogram".to_string(),
+                            ArrayValue::new(vec![0, 2, 4, 1, 3], ArrayFormat::LinearHistogram),
+                        ),
+                    ],
+                    vec![],
+                ),
+            ],
         )
     }
 
-    fn get_expected_multi_json() -> String {
-        "[
-    {
-        \"contents\": {
-            \"root\": {
-                \"a\": {
-                    \"double\": 2.5,
-                    \"histogram\": {
-                        \"buckets\": [
-                            {
-                                \"count\": 1.0,
-                                \"floor\": \"-Infinity\",
-                                \"upper_bound\": 0.0
-                            },
-                            {
-                                \"count\": 3.0,
-                                \"floor\": 0.0,
-                                \"upper_bound\": 2.0
-                            },
-                            {
-                                \"count\": 4.0,
-                                \"floor\": 2.0,
-                                \"upper_bound\": \"Infinity\"
-                            }
-                        ]
-                    }
-                },
-                \"array\": [
-                    0,
-                    2,
-                    4
-                ],
-                \"b\": {
-                    \"histogram\": {
-                        \"buckets\": [
-                            {
-                                \"count\": 4,
-                                \"floor\": -9223372036854775808,
-                                \"upper_bound\": 0
-                            },
-                            {
-                                \"count\": 1,
-                                \"floor\": 0,
-                                \"upper_bound\": 2
-                            },
-                            {
-                                \"count\": 3,
-                                \"floor\": 2,
-                                \"upper_bound\": 9223372036854775807
-                            }
-                        ]
+    fn expected_json() -> String {
+        r#"{
+    "root": {
+        "a": {
+            "bytes": "b64:BfGr",
+            "double": 2.5,
+            "histogram": {
+                "buckets": [
+                    {
+                        "count": 1.0,
+                        "floor": "-Infinity",
+                        "upper_bound": 0.0
                     },
-                    \"int\": -2,
-                    \"string\": \"some value\"
-                }
+                    {
+                        "count": 3.0,
+                        "floor": 0.0,
+                        "upper_bound": 2.0
+                    },
+                    {
+                        "count": 4.0,
+                        "floor": 2.0,
+                        "upper_bound": "Infinity"
+                    }
+                ]
             }
         },
-        \"path\": \"/some/path/out/diagnostics/root.inspect\"
-    },
-    {
-        \"contents\": {
-            \"y\": {
-                \"bytes\": \"b64:BfGr\"
-            }
-        },
-        \"path\": \"/other/path/out/diagnostics#x/y\"
+        "array": [
+            0,
+            2,
+            4
+        ],
+        "b": {
+            "histogram": {
+                "buckets": [
+                    {
+                        "count": 4,
+                        "floor": -9223372036854775808,
+                        "upper_bound": 0
+                    },
+                    {
+                        "count": 1,
+                        "floor": 0,
+                        "upper_bound": 2
+                    },
+                    {
+                        "count": 3,
+                        "floor": 2,
+                        "upper_bound": 9223372036854775807
+                    }
+                ]
+            },
+            "int": -2,
+            "string": "some value"
+        }
     }
-]"
+}"#
         .to_string()
     }
 
