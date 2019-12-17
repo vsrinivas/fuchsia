@@ -142,6 +142,9 @@ protocol DisplayControllerInterface {
     /// |timestamp| is the ZX_CLOCK_MONOTONIC timestamp at which the vsync occurred.
     /// |handles| points to an array of image handles of each framebuffer being
     /// displayed, in increasing z-order.
+    ///
+    /// The driver must call this function for all vsync events, even
+    /// if the display has no images displayed.
     OnDisplayVsync(uint64 display_id, zx.time timestamp, vector<uint64> @handle) -> ();
 
     GetAudioFormat(uint64 display_id, uint32 fmt_idx)
