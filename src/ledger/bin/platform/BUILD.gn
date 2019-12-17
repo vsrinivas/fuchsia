@@ -10,6 +10,7 @@ source_set("platform") {
     "detached_path.h",
     "fd.cc",
     "fd.h",
+    "ledger_memory_estimator.h",
     "platform.h",
     "scoped_tmp_dir.h",
     "scoped_tmp_location.h",
@@ -27,6 +28,8 @@ source_set("platform") {
 # Fuchsia implementation of platform.
 source_set("implementation") {
   sources = [
+    "fuchsia_ledger_memory_estimator.cc",
+    "fuchsia_ledger_memory_estimator.h",
     "fuchsia_platform.cc",
     "fuchsia_platform.h",
     "fuchsia_scoped_tmp_dir.h",
@@ -41,6 +44,7 @@ source_set("implementation") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/memfs",
+    "//zircon/public/lib/task-utils",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]
@@ -69,6 +73,7 @@ source_set("implementation_unittests") {
   testonly = true
 
   sources = [
+    "fuchsia_ledger_memory_estimator_unittest.cc",
     "fuchsia_platform_unittest.cc",
     "fuchsia_scoped_tmp_location_unittest.cc",
     "platform_unittest.cc",
@@ -76,6 +81,8 @@ source_set("implementation_unittests") {
 
   deps = [
     ":implementation",
+    "//src/ledger/bin/testing:get_ledger",
+    "//src/ledger/bin/testing:run_trace",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]

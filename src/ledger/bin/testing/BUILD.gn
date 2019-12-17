@@ -31,8 +31,6 @@ source_set("lib") {
     "get_page_ensure_initialized.h",
     "ledger_matcher.cc",
     "ledger_matcher.h",
-    "ledger_memory_usage.cc",
-    "ledger_memory_usage.h",
     "loop_controller.h",
     "loop_controller_real_loop.cc",
     "loop_controller_real_loop.h",
@@ -72,7 +70,6 @@ source_set("lib") {
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-testing",
     "//zircon/public/lib/fit",
-    "//zircon/public/lib/task-utils",
     "//zircon/public/lib/trace-provider-with-fdio",
     "//zircon/public/lib/zx",
   ]
@@ -179,7 +176,6 @@ source_set("unittests") {
   sources = [
     "blocking_callback_waiter_unittest.cc",
     "ledger_matcher_unittest.cc",
-    "ledger_memory_usage_unittest.cc",
     "test_with_environment_unittest.cc",
   ]
 

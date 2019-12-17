@@ -9,10 +9,10 @@
 
 #include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/platform/detached_path.h"
+#include "src/ledger/bin/platform/ledger_memory_estimator.h"
 #include "src/ledger/bin/platform/platform.h"
 #include "src/ledger/bin/platform/scoped_tmp_location.h"
 #include "src/ledger/bin/testing/get_ledger.h"
-#include "src/ledger/bin/testing/ledger_memory_usage.h"
 #include "src/ledger/bin/testing/run_with_tracing.h"
 #include "src/ledger/lib/logging/logging.h"
 
@@ -22,8 +22,8 @@
 
 namespace {
 
-int TryGetMemory(sys::ComponentContext* context, fuchsia::sys::ComponentControllerPtr* controller,
-                 int root_fd) {
+int TryGetMemory(ledger::Platform* platform, sys::ComponentContext* context,
+                 fuchsia::sys::ComponentControllerPtr* controller, int root_fd) {
   ledger::LedgerPtr benchmark_ledger;
   ledger::Status status = ledger::GetLedger(
       context, controller->NewRequest(), nullptr, "", "benchmark_ledger",
@@ -34,15 +34,10 @@ int TryGetMemory(sys::ComponentContext* context, fuchsia::sys::ComponentControll
     return EXIT_FAILURE;
   }
 
-  ledger::LedgerMemoryEstimator memory_estimator;
-  if (!memory_estimator.Init()) {
-    LEDGER_LOG(ERROR) << "MemoryEstimator::Init() failed";
-    return EXIT_FAILURE;
-  }
-
+  ledger::LedgerMemoryEstimator* memory_estimator = platform->memory_estimator();
   uint64_t memory;
-  if (!memory_estimator.GetLedgerMemoryUsage(&memory)) {
-    LEDGER_LOG(ERROR) << "MemoryEstimator::GetLedgerMemoryUsage() failed";
+  if (!memory_estimator->GetLedgerMemoryUsage(&memory)) {
+    LEDGER_LOG(ERROR) << "LedgerMemoryEstimator::GetLedgerMemoryUsage() failed";
     return EXIT_FAILURE;
   }
   return EXIT_SUCCESS;
@@ -58,7 +53,8 @@ int main() {
   std::unique_ptr<ledger::ScopedTmpLocation> tmp_location =
       platform->file_system()->CreateScopedTmpLocation();
 
-  int return_code = TryGetMemory(context.get(), &controller, tmp_location->path().root_fd());
+  int return_code =
+      TryGetMemory(platform.get(), context.get(), &controller, tmp_location->path().root_fd());
 
   ledger::KillLedgerProcess(&controller);
   loop.Quit();

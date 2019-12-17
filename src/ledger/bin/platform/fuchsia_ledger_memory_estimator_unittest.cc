@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ledger/bin/testing/ledger_memory_usage.h"
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fit/function.h>
@@ -13,6 +11,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/ledger/bin/app/flags.h"
+#include "src/ledger/bin/platform/ledger_memory_estimator.h"
 #include "src/ledger/bin/platform/platform.h"
 #include "src/ledger/bin/platform/scoped_tmp_location.h"
 #include "src/ledger/bin/testing/get_ledger.h"
@@ -52,12 +51,12 @@ int64_t LaunchTestBenchmark(async::Loop* loop) {
   return return_code;
 }
 
-TEST(LedgerMemoryUsage, Simple) {
+TEST(FuchsiaLedgerMemoryEstimator, Simple) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   EXPECT_EQ(LaunchTestBenchmark(&loop), EXIT_SUCCESS);
 }
 
-TEST(LedgerMemoryUsage, LaunchTwoLedgers) {
+TEST(FuchsiaLedgerMemoryEstimator, LaunchTwoLedgers) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto component_context = sys::ComponentContext::Create();
   fuchsia::sys::ComponentControllerPtr component_controller;
@@ -85,9 +84,10 @@ TEST(LedgerMemoryUsage, LaunchTwoLedgers) {
   loop.Run();
 }
 
-TEST(LedgerMemoryUsage, GetCurrentProcessMemoryUsage) {
+TEST(FuchsiaLedgerMemoryEstimator, GetCurrentProcessMemoryUsage) {
+  std::unique_ptr<Platform> platform = MakePlatform();
   uint64_t memory;
-  ASSERT_TRUE(GetCurrentProcessMemoryUsage(&memory));
+  ASSERT_TRUE(platform->memory_estimator()->GetCurrentProcessMemoryUsage(&memory));
   EXPECT_THAT(memory, Gt(0u));
 }
 

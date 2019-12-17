@@ -15,12 +15,12 @@
 
 #include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/ledger/bin/platform/ledger_memory_estimator.h"
 #include "src/ledger/bin/platform/platform.h"
 #include "src/ledger/bin/platform/scoped_tmp_location.h"
 #include "src/ledger/bin/testing/data_generator.h"
 #include "src/ledger/bin/testing/get_ledger.h"
 #include "src/ledger/bin/testing/get_page_ensure_initialized.h"
-#include "src/ledger/bin/testing/ledger_memory_usage.h"
 #include "src/ledger/bin/testing/page_data_generator.h"
 #include "src/ledger/bin/testing/quit_on_error.h"
 #include "src/ledger/bin/testing/run_with_tracing.h"
@@ -198,7 +198,7 @@ class StoriesBenchmark {
   std::unique_ptr<Platform> platform_;
   std::unique_ptr<ScopedTmpLocation> tmp_location_;
   std::unique_ptr<sys::ComponentContext> component_context_;
-  LedgerMemoryEstimator memory_estimator_;
+  LedgerMemoryEstimator* memory_estimator_;
 
   // Input arguments.
   const size_t story_count_;
@@ -236,6 +236,7 @@ StoriesBenchmark::StoriesBenchmark(async::Loop* loop,
       platform_(MakePlatform()),
       tmp_location_(platform_->file_system()->CreateScopedTmpLocation()),
       component_context_(std::move(component_context)),
+      memory_estimator_(platform_->memory_estimator()),
       story_count_(story_count),
       active_story_count_(active_story_count),
       wait_for_cached_page_(wait_for_cached_page) {
@@ -250,7 +251,6 @@ void StoriesBenchmark::Run() {
   if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
     return;
   }
-  LEDGER_CHECK(memory_estimator_.Init());
 
   InitializeDefaultPages();
 }
@@ -329,7 +329,7 @@ void StoriesBenchmark::RunSingle(int i) {
 
     // Measure memory before the cleanup.
     uint64_t memory;
-    LEDGER_CHECK(memory_estimator_.GetLedgerMemoryUsage(&memory));
+    LEDGER_CHECK(memory_estimator_->GetLedgerMemoryUsage(&memory));
     TRACE_COUNTER("benchmark", "memory_stories", i, "memory", TA_UINT64(memory));
 
     MaybeCleanup(i, [this, i] { RunSingle(i + 1); });

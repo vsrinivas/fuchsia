@@ -6,7 +6,8 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "src/ledger/bin/testing/ledger_memory_usage.h"
+#include "src/ledger/bin/platform/ledger_memory_estimator.h"
+#include "src/ledger/bin/platform/platform.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/loop_fixture/test_loop_fixture.h"
 #include "src/ledger/lib/socket/socket_pair.h"
@@ -74,8 +75,9 @@ TEST_F(DataSourceTest, Vmo) {
 }
 
 TEST_F(DataSourceTest, VmoIsDestroyed) {
+  std::unique_ptr<ledger::Platform> platform = ledger::MakePlatform();
   uint64_t memory_before;
-  ASSERT_TRUE(ledger::GetCurrentProcessMemoryUsage(&memory_before));
+  ASSERT_TRUE(platform->memory_estimator()->GetCurrentProcessMemoryUsage(&memory_before));
 
   // Create 10 VMOs and let them get destructed.
   for (int i = 0; i < 10; ++i) {
@@ -87,7 +89,7 @@ TEST_F(DataSourceTest, VmoIsDestroyed) {
 
   // Make sure there are no leftover VMOs in-memory.
   uint64_t memory_after;
-  ASSERT_TRUE(ledger::GetCurrentProcessMemoryUsage(&memory_after));
+  ASSERT_TRUE(platform->memory_estimator()->GetCurrentProcessMemoryUsage(&memory_after));
 
 #if !__has_feature(address_sanitizer)
   // If the VMOs have been destroyed there should be no additional memory used at the end of this

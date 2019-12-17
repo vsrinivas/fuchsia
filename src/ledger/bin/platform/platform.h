@@ -10,6 +10,7 @@
 
 #include "leveldb/env.h"
 #include "src/ledger/bin/platform/detached_path.h"
+#include "src/ledger/bin/platform/ledger_memory_estimator.h"
 #include "src/ledger/bin/platform/scoped_tmp_dir.h"
 #include "src/ledger/bin/platform/scoped_tmp_location.h"
 
@@ -86,6 +87,8 @@ class Platform {
   virtual ~Platform() = default;
 
   virtual FileSystem* file_system() = 0;
+
+  virtual LedgerMemoryEstimator* memory_estimator() = 0;
 };
 
 // Returns the default Platform based on the current operating system.

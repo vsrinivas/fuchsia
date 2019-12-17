@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ledger/bin/testing/ledger_memory_usage.h"
+#include "src/ledger/bin/platform/fuchsia_ledger_memory_estimator.h"
 
 #include <lib/zx/job.h>
 #include <lib/zx/object.h>
@@ -34,18 +34,6 @@ bool GetTaskName(zx::unowned<zx::process>& task, std::string* name) {
     return false;
   }
   *name = convert::ToString(task_name);
-  return true;
-}
-
-// Retrieves the private bytes used by the given task. Returns true on success,
-// or false otherwise.
-bool GetMemoryUsageForTask(const zx::process& task, uint64_t* memory) {
-  zx_info_task_stats_t info;
-  zx_status_t status = task.get_info(ZX_INFO_TASK_STATS, &info, sizeof(info), nullptr, nullptr);
-  if (status != ZX_OK) {
-    return false;
-  }
-  *memory = info.mem_private_bytes;
   return true;
 }
 
@@ -121,12 +109,37 @@ class Walker final : public TaskEnumerator {
   zx::process ledger_handle_;
 };
 
+// Retrieves the private bytes used by the given task. Returns true on success,
+// or false otherwise.
+bool GetMemoryUsageForTask(const zx::process& task, uint64_t* memory) {
+  zx_info_task_stats_t info;
+  zx_status_t status = task.get_info(ZX_INFO_TASK_STATS, &info, sizeof(info), nullptr, nullptr);
+  if (status != ZX_OK) {
+    return false;
+  }
+  *memory = info.mem_private_bytes;
+  return true;
+}
+
 }  // namespace
 
-LedgerMemoryEstimator::LedgerMemoryEstimator() = default;
-LedgerMemoryEstimator::~LedgerMemoryEstimator() = default;
+bool FuchsiaLedgerMemoryEstimator::GetLedgerMemoryUsage(uint64_t* memory) {
+  if (!ledger_task_) {
+    if (!Init()) {
+      // If initialization failed we can't get Ledger's memory usage.
+      return false;
+    }
+  }
+  LEDGER_CHECK(ledger_task_);
+  return GetMemoryUsageForTask(ledger_task_, memory);
+}
 
-bool LedgerMemoryEstimator::Init() {
+bool FuchsiaLedgerMemoryEstimator::GetCurrentProcessMemoryUsage(uint64_t* memory) {
+  zx::unowned<zx::process> self = zx::process::self();
+  return GetMemoryUsageForTask(*self, memory);
+}
+
+bool FuchsiaLedgerMemoryEstimator::Init() {
   LEDGER_DCHECK(!ledger_task_.is_valid()) << "Init should only be called once";
   Walker walker;
   zx_status_t status = walker.WalkRootJobTree();
@@ -141,16 +154,6 @@ bool LedgerMemoryEstimator::Init() {
     return false;
   }
   return true;
-}
-
-bool LedgerMemoryEstimator::GetLedgerMemoryUsage(uint64_t* memory) {
-  LEDGER_CHECK(ledger_task_);
-  return GetMemoryUsageForTask(ledger_task_, memory);
-}
-
-bool GetCurrentProcessMemoryUsage(uint64_t* memory) {
-  zx::unowned<zx::process> self = zx::process::self();
-  return GetMemoryUsageForTask(*self, memory);
 }
 
 }  // namespace ledger

@@ -5,6 +5,7 @@
 #ifndef SRC_LEDGER_BIN_PLATFORM_FUCHSIA_PLATFORM_H_
 #define SRC_LEDGER_BIN_PLATFORM_FUCHSIA_PLATFORM_H_
 
+#include "src/ledger/bin/platform/fuchsia_ledger_memory_estimator.h"
 #include "src/ledger/bin/platform/platform.h"
 #include "src/ledger/bin/platform/unique_fd.h"
 #include "util/env_fuchsia.h"
@@ -43,10 +44,13 @@ class FuchsiaFileSystem : public FileSystem {
 
 class FuchsiaPlatform : public Platform {
  public:
-  FileSystem* file_system() override { return &file_system_; };
+  FileSystem* file_system() override { return &file_system_; }
+
+  LedgerMemoryEstimator* memory_estimator() override { return &memory_estimator_; }
 
  private:
   FuchsiaFileSystem file_system_;
+  FuchsiaLedgerMemoryEstimator memory_estimator_;
 };
 
 }  // namespace ledger
