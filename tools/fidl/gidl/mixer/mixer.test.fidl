@@ -1,0 +1,17 @@
+library test.mixer;
+
+struct ExampleStruct {
+    string s;
+};
+
+table ExampleTable {
+    1: string t;
+};
+
+union ExampleUnion {
+    1: string u;
+};
+
+xunion ExampleXUnion {
+    1: string x;
+};

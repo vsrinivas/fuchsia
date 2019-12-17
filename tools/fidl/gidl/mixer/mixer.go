@@ -88,7 +88,7 @@ func Visit(visitor ValueVisitor, value interface{}, decl Declaration) {
 		case *UnionDecl:
 			visitor.OnUnion(value, decl)
 		default:
-			panic(fmt.Sprintf("not implemented: %T", decl))
+			panic(fmt.Sprintf("expected %T, got %T: %v", decl, value, value))
 		}
 	case []interface{}:
 		switch decl := decl.(type) {
@@ -140,7 +140,7 @@ type PrimitiveDeclaration interface {
 }
 
 // Assert that wrappers conform to the PrimitiveDeclaration interface.
-var _ = []Declaration{
+var _ = []PrimitiveDeclaration{
 	&BoolDecl{},
 	&NumberDecl{},
 	&FloatDecl{},
@@ -156,6 +156,7 @@ type KeyedDeclaration interface {
 var _ = []KeyedDeclaration{
 	&StructDecl{},
 	&TableDecl{},
+	&UnionDecl{},
 	&XUnionDecl{},
 }
 
@@ -189,7 +190,7 @@ func (decl *BoolDecl) Subtype() fidlir.PrimitiveSubtype {
 func (decl *BoolDecl) conforms(value interface{}) error {
 	switch value.(type) {
 	default:
-		return fmt.Errorf("expecting number, found %T (%s)", value, value)
+		return fmt.Errorf("expecting bool, found %T (%s)", value, value)
 	case bool:
 		return nil
 	}
@@ -209,7 +210,7 @@ func (decl *NumberDecl) Subtype() fidlir.PrimitiveSubtype {
 func (decl *NumberDecl) conforms(value interface{}) error {
 	switch value := value.(type) {
 	default:
-		return fmt.Errorf("expecting number, found %T (%s)", value, value)
+		return fmt.Errorf("expecting int64 or uint64, found %T (%s)", value, value)
 	case int64:
 		if value < 0 {
 			if value < decl.lower {
@@ -239,7 +240,19 @@ func (decl *FloatDecl) Subtype() fidlir.PrimitiveSubtype {
 }
 
 func (decl *FloatDecl) conforms(value interface{}) error {
-	return nil
+	switch value := value.(type) {
+	default:
+		return fmt.Errorf("expecting float64, found %T (%s)", value, value)
+	case float64:
+		// TODO(fxb/43020): Allow these once each backend supports them.
+		if math.IsNaN(value) {
+			return fmt.Errorf("NaN not supported: %v", value)
+		}
+		if math.IsInf(value, 0) {
+			return fmt.Errorf("infinity not supported: %v", value)
+		}
+		return nil
+	}
 }
 
 type StringDecl struct {
@@ -301,25 +314,43 @@ func (decl *StructDecl) ForKey(key gidlir.FieldKey) (Declaration, bool) {
 	return nil, false
 }
 
-func (decl *StructDecl) conforms(value interface{}) error {
+// objectConforms is a helper function for implementing Declarations.conforms on
+// types that expect a gidlir.Object value. It takes the kind ("struct", etc.),
+// expected type name, schema, and nullability, and returns the object or an
+// error. It can also return (nil, nil) when value is nil and nullable is true.
+func objectConforms(value interface{}, kind string, name fidlir.EncodedCompoundIdentifier, schema schema, nullable bool) (*gidlir.Object, error) {
 	switch value := value.(type) {
 	default:
-		return fmt.Errorf("expecting struct %s, found %T (%v)", decl.Name, value, value)
+		return nil, fmt.Errorf("expecting %s, found %T (%v)", kind, value, value)
 	case gidlir.Object:
-		for _, field := range value.Fields {
-			if fieldDecl, ok := decl.ForKey(field.Key); !ok {
-				return fmt.Errorf("field %s: unknown", field.Key.Name)
-			} else if err := fieldDecl.conforms(field.Value); err != nil {
-				return fmt.Errorf("field %s: %s", field.Key.Name, err)
-			}
+		if actualName := schema.name(value.Name); actualName != name {
+			return nil, fmt.Errorf("expecting %s %s, found %s", kind, name, actualName)
 		}
-		return nil
+		return &value, nil
 	case nil:
-		if decl.nullable {
-			return nil
+		if nullable {
+			return nil, nil
 		}
-		return fmt.Errorf("expecting non-null struct %s, found nil", decl.Name)
+		return nil, fmt.Errorf("expecting non-null %s %s, found nil", kind, name)
 	}
+}
+
+func (decl *StructDecl) conforms(value interface{}) error {
+	object, err := objectConforms(value, "struct", decl.Name, decl.schema, decl.nullable)
+	if err != nil {
+		return err
+	}
+	if object == nil {
+		return nil
+	}
+	for _, field := range object.Fields {
+		if fieldDecl, ok := decl.ForKey(field.Key); !ok {
+			return fmt.Errorf("field %s: unknown", field.Key.Name)
+		} else if err := fieldDecl.conforms(field.Value); err != nil {
+			return fmt.Errorf("field %s: %s", field.Key.Name, err)
+		}
+	}
+	return nil
 }
 
 // TableDecl describes a table declaration.
@@ -346,26 +377,28 @@ func (decl *TableDecl) ForKey(key gidlir.FieldKey) (Declaration, bool) {
 	return nil, false
 }
 
-func (decl *TableDecl) conforms(untypedValue interface{}) error {
-	switch value := untypedValue.(type) {
-	default:
-		return fmt.Errorf("expecting table %s, found %T (%v)", decl.Name, untypedValue, untypedValue)
-	case gidlir.Object:
-		for _, field := range value.Fields {
-			if field.Key.Name == "" {
-				if _, ok := decl.ForKey(field.Key); ok {
-					return fmt.Errorf("field name must be used rather than ordinal %d t", field.Key.Ordinal)
-				}
-				continue
-			}
-			if fieldDecl, ok := decl.ForKey(field.Key); !ok {
-				return fmt.Errorf("field %s: unknown", field.Key.Name)
-			} else if err := fieldDecl.conforms(field.Value); err != nil {
-				return fmt.Errorf("field %s: %s", field.Key.Name, err)
-			}
-		}
-		return nil
+func (decl *TableDecl) conforms(value interface{}) error {
+	object, err := objectConforms(value, "table", decl.Name, decl.schema, false)
+	if err != nil {
+		return err
 	}
+	if object == nil {
+		panic("tables cannot be nullable")
+	}
+	for _, field := range object.Fields {
+		if field.Key.Name == "" {
+			if _, ok := decl.ForKey(field.Key); ok {
+				return fmt.Errorf("field name must be used rather than ordinal %d t", field.Key.Ordinal)
+			}
+			continue
+		}
+		if fieldDecl, ok := decl.ForKey(field.Key); !ok {
+			return fmt.Errorf("field %s: unknown", field.Key.Name)
+		} else if err := fieldDecl.conforms(field.Value); err != nil {
+			return fmt.Errorf("field %s: %s", field.Key.Name, err)
+		}
+	}
+	return nil
 }
 
 // XUnionDecl describes a xunion declaration.
@@ -396,34 +429,31 @@ func (decl XUnionDecl) ForKey(key gidlir.FieldKey) (Declaration, bool) {
 	return nil, false
 }
 
-func (decl XUnionDecl) conforms(untypedValue interface{}) error {
-	switch value := untypedValue.(type) {
-	default:
-		return fmt.Errorf("expecting xunion %s, found %T (%v)", decl.Name, untypedValue, untypedValue)
-	case gidlir.Object:
-		if num := len(value.Fields); num != 1 {
-			return fmt.Errorf("must have one field, found %d", num)
-		}
-		for _, field := range value.Fields {
-			if field.Key.Name == "" {
-				if _, ok := decl.ForKey(field.Key); ok {
-					return fmt.Errorf("field name must be used rather than ordinal %d t", field.Key.Ordinal)
-				}
-				continue
-			}
-			if fieldDecl, ok := decl.ForKey(field.Key); !ok {
-				return fmt.Errorf("field %s: unknown", field.Key.Name)
-			} else if err := fieldDecl.conforms(field.Value); err != nil {
-				return fmt.Errorf("field %s: %s", field.Key.Name, err)
-			}
-		}
-		return nil
-	case nil:
-		if decl.nullable {
-			return nil
-		}
-		return fmt.Errorf("expecting non-null xunion %s, found nil", decl.Name)
+func (decl XUnionDecl) conforms(value interface{}) error {
+	object, err := objectConforms(value, "xunion", decl.Name, decl.schema, decl.nullable)
+	if err != nil {
+		return err
 	}
+	if object == nil {
+		return nil
+	}
+	if num := len(object.Fields); num != 1 {
+		return fmt.Errorf("must have one field, found %d", num)
+	}
+	for _, field := range object.Fields {
+		if field.Key.Name == "" {
+			if _, ok := decl.ForKey(field.Key); ok {
+				return fmt.Errorf("field name must be used rather than ordinal %d t", field.Key.Ordinal)
+			}
+			continue
+		}
+		if fieldDecl, ok := decl.ForKey(field.Key); !ok {
+			return fmt.Errorf("field %s: unknown", field.Key.Name)
+		} else if err := fieldDecl.conforms(field.Value); err != nil {
+			return fmt.Errorf("field %s: %s", field.Key.Name, err)
+		}
+	}
+	return nil
 }
 
 // UnionDecl describes a xunion declaration.
@@ -454,28 +484,25 @@ func (decl UnionDecl) ForKey(key gidlir.FieldKey) (Declaration, bool) {
 	return nil, false
 }
 
-func (decl UnionDecl) conforms(untypedValue interface{}) error {
-	switch value := untypedValue.(type) {
-	default:
-		return fmt.Errorf("expecting object, found %T (%v)", untypedValue, untypedValue)
-	case gidlir.Object:
-		if num := len(value.Fields); num != 1 {
-			return fmt.Errorf("must have one field, found %d", num)
-		}
-		for _, field := range value.Fields {
-			if fieldDecl, ok := decl.ForKey(field.Key); !ok {
-				return fmt.Errorf("field %s: unknown", field.Key.Name)
-			} else if err := fieldDecl.conforms(field.Value); err != nil {
-				return fmt.Errorf("field %s: %s", field.Key.Name, err)
-			}
-		}
-		return nil
-	case nil:
-		if decl.nullable {
-			return nil
-		}
-		return fmt.Errorf("expecting non-null union %s, found nil", decl.Name)
+func (decl UnionDecl) conforms(value interface{}) error {
+	object, err := objectConforms(value, "union", decl.Name, decl.schema, decl.nullable)
+	if err != nil {
+		return err
 	}
+	if object == nil {
+		return nil
+	}
+	if num := len(object.Fields); num != 1 {
+		return fmt.Errorf("must have one field, found %d", num)
+	}
+	for _, field := range object.Fields {
+		if fieldDecl, ok := decl.ForKey(field.Key); !ok {
+			return fmt.Errorf("field %s: unknown", field.Key.Name)
+		} else if err := fieldDecl.conforms(field.Value); err != nil {
+			return fmt.Errorf("field %s: %s", field.Key.Name, err)
+		}
+	}
+	return nil
 }
 
 type ArrayDecl struct {
@@ -494,17 +521,24 @@ func (decl ArrayDecl) Size() int {
 }
 
 func (decl ArrayDecl) conforms(untypedValue interface{}) error {
-	if list, ok := untypedValue.([]interface{}); ok {
-		if len(list) > decl.Size() {
-			return fmt.Errorf("%d elements exceeds limits of an array of length %d", len(list), decl.Size())
+	switch value := untypedValue.(type) {
+	default:
+		return fmt.Errorf("expecting array, found %T (%v)", untypedValue, untypedValue)
+	case []interface{}:
+		if len(value) != decl.Size() {
+			return fmt.Errorf("expecting %d elements, got %d", decl.Size(), len(value))
 		}
-	} else {
-		return fmt.Errorf("expecting []interface{}, got %T (%v)", untypedValue, untypedValue)
+		elemDecl, ok := decl.Elem()
+		if !ok {
+			return fmt.Errorf("error resolving elem declaration")
+		}
+		for i, elem := range value {
+			if err := elemDecl.conforms(elem); err != nil {
+				return fmt.Errorf("[%d]: %s", i, err)
+			}
+		}
+		return nil
 	}
-	if _, ok := decl.Elem(); !ok {
-		return fmt.Errorf("error resolving elem declaration")
-	}
-	return nil
 }
 
 type VectorDecl struct {
@@ -521,20 +555,37 @@ func (decl VectorDecl) Elem() (Declaration, bool) {
 	return decl.schema.LookupDeclByType(*decl.typ.ElementType)
 }
 
+func (decl VectorDecl) MaxSize() (int, bool) {
+	if decl.typ.ElementCount != nil {
+		return *decl.typ.ElementCount, true
+	}
+	return 0, false
+}
+
 func (decl VectorDecl) conforms(untypedValue interface{}) error {
-	if untypedValue == nil {
+	switch value := untypedValue.(type) {
+	default:
+		return fmt.Errorf("expecting vector, found %T (%v)", untypedValue, untypedValue)
+	case []interface{}:
+		if maxSize, ok := decl.MaxSize(); ok && len(value) > maxSize {
+			return fmt.Errorf("expecting at most %d elements, got %d", maxSize, len(value))
+		}
+		elemDecl, ok := decl.Elem()
+		if !ok {
+			return fmt.Errorf("error resolving elem declaration")
+		}
+		for i, elem := range value {
+			if err := elemDecl.conforms(elem); err != nil {
+				return fmt.Errorf("[%d]: %s", i, err)
+			}
+		}
+		return nil
+	case nil:
 		if decl.typ.Nullable {
 			return nil
 		}
 		return fmt.Errorf("expecting non-nullable vector, got nil")
 	}
-	if _, ok := untypedValue.([]interface{}); !ok {
-		return fmt.Errorf("expecting []interface{}, got %T (%v)", untypedValue, untypedValue)
-	}
-	if _, ok := decl.Elem(); !ok {
-		return fmt.Errorf("error resolving elem declaration")
-	}
-	return nil
 }
 
 type schema fidlir.Root

@@ -537,6 +537,7 @@ group("fidl") {
     "//sdk/lib/fidl/cpp:fidl_tests",
     "//sdk/lib/sys/service/cpp:sys_service_tests",
     "//tools/fidl/gidl:gidl_golang_test($host_toolchain)",
+    "//tools/fidl/gidl:gidl_mixer_test($host_toolchain)",
     "//tools/fidl/gidl:gidl_parser_test($host_toolchain)",
   ]
 }
