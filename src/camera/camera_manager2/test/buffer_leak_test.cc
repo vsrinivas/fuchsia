@@ -38,26 +38,17 @@ class BufferLeakTest : public gtest::TestLoopFixture {
     RunLoopUntilIdle();
   }
 
-  // NOTE: The commented out streams below are causing the tests to
-  //       timeout. The timeout is caused because the frames are not
-  //       getting released somewhere in the pipeline.
-  //       TODO(43029): Enable buffer leak tests for all streams supported
-  //       by HAL.
   static std::vector<fuchsia::camera2::StreamConstraints> GetStreamConstraints() {
     fuchsia::camera2::CameraStreamType types[] = {
-      fuchsia::camera2::CameraStreamType::FULL_RESOLUTION,
-      fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
-          fuchsia::camera2::CameraStreamType::FULL_RESOLUTION,
-#if 0
+        fuchsia::camera2::CameraStreamType::FULL_RESOLUTION,
         fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
-        fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION,
-#endif
-      fuchsia::camera2::CameraStreamType::MONITORING,
-#if 0
-      fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE |
-          fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
-          fuchsia::camera2::CameraStreamType::FULL_RESOLUTION,
-#endif
+            fuchsia::camera2::CameraStreamType::FULL_RESOLUTION,
+        fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
+            fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION,
+        fuchsia::camera2::CameraStreamType::MONITORING,
+        fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE |
+            fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
+            fuchsia::camera2::CameraStreamType::FULL_RESOLUTION,
     };
     std::vector<fuchsia::camera2::StreamConstraints> constraints_ret;
     for (auto type : types) {

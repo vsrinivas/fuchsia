@@ -210,7 +210,7 @@ void GdcDevice::ProcessTask(TaskInfo& info) {
   auto input_uv_addr = input_y_addr + (input_line_offset * input_format.display_height);
   Data2InAddr::Get()
       .ReadFrom(gdc_mmio())
-      .set_addr(input_uv_addr)
+      .set_addr(AxiWordAlign(input_uv_addr))
       .WriteTo(gdc_mmio());
 
   // Program Data2In Offset Register (UV)

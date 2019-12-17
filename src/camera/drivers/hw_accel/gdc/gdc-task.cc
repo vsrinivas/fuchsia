@@ -62,6 +62,13 @@ zx_status_t GdcTask::PinConfigVmos(const gdc_config_info* config_vmo_list, size_
 
     memcpy(mapped_buffer_contig_vmo.start(), mapped_buffer_vmo.start(), size);
 
+    // Clean and invalidate the contiguous VMO.
+    status = contig_vmo.op_range(ZX_VMO_OP_CACHE_CLEAN, 0, size, nullptr, 0);
+    if (status != ZX_OK) {
+      FX_LOG(ERROR, TAG, "Unable to clean and invalidate the cache");
+      return status;
+    }
+
     status = pinned_config_vmos_[i].Pin(contig_vmo, bti, ZX_BTI_CONTIGUOUS | ZX_VM_PERM_READ);
     if (status != ZX_OK) {
       FX_LOG(ERROR, TAG, "Failed to pin config VMO");
