@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "test/rust_test_adapter_bin_test"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

@@ -12,6 +12,7 @@ rustc_library("lib") {
   # Only for internal use.
   visibility = [
     "gtest/*",
+    "rust/*",
     ":*",
   ]
 
@@ -30,6 +31,7 @@ group("test_adapters") {
   testonly = true
   deps = [
     "gtest",
+    "rust",
   ]
 }
 
@@ -37,5 +39,6 @@ group("tests") {
   testonly = true
   deps = [
     "gtest:tests",
+    "rust:tests",
   ]
 }
