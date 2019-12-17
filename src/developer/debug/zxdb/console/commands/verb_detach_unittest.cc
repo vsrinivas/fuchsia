@@ -1,5 +1,8 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include "src/developer/debug/zxdb/console/commands/verb_detach.h"
 
 #include <gtest/gtest.h>
 
@@ -47,6 +50,8 @@ class VerbsProcessTest : public RemoteAPITest {
   TestRemoteAPI* remote_api_;
 };
 
+}  // namespace
+
 TEST_F(VerbsProcessTest, Detach) {
   MockConsole console(&session());
 
@@ -79,5 +84,4 @@ TEST_F(VerbsProcessTest, Detach) {
   EXPECT_EQ(remote_api()->detaches()[2].koid, kSomeOtherKoid);
 }
 
-}  // namespace
 }  // namespace zxdb

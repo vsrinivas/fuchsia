@@ -4,19 +4,27 @@
 
 #include "src/developer/debug/zxdb/console/verbs.h"
 
+#include "src/developer/debug/zxdb/console/commands/verb_aspace.h"
+#include "src/developer/debug/zxdb/console/commands/verb_attach.h"
 #include "src/developer/debug/zxdb/console/commands/verb_cls.h"
 #include "src/developer/debug/zxdb/console/commands/verb_connect.h"
+#include "src/developer/debug/zxdb/console/commands/verb_detach.h"
 #include "src/developer/debug/zxdb/console/commands/verb_disassemble.h"
 #include "src/developer/debug/zxdb/console/commands/verb_disconnect.h"
 #include "src/developer/debug/zxdb/console/commands/verb_help.h"
+#include "src/developer/debug/zxdb/console/commands/verb_kill.h"
+#include "src/developer/debug/zxdb/console/commands/verb_libs.h"
 #include "src/developer/debug/zxdb/console/commands/verb_mem_analyze.h"
 #include "src/developer/debug/zxdb/console/commands/verb_mem_read.h"
 #include "src/developer/debug/zxdb/console/commands/verb_opendump.h"
 #include "src/developer/debug/zxdb/console/commands/verb_ps.h"
 #include "src/developer/debug/zxdb/console/commands/verb_quit.h"
 #include "src/developer/debug/zxdb/console/commands/verb_quit_agent.h"
+#include "src/developer/debug/zxdb/console/commands/verb_run.h"
 #include "src/developer/debug/zxdb/console/commands/verb_stack.h"
 #include "src/developer/debug/zxdb/console/commands/verb_status.h"
+#include "src/developer/debug/zxdb/console/commands/verb_stderr.h"
+#include "src/developer/debug/zxdb/console/commands/verb_stdout.h"
 #include "src/developer/debug/zxdb/console/commands/verb_sys_info.h"
 #include "src/lib/fxl/logging.h"
 
@@ -71,24 +79,31 @@ const std::map<Verb, VerbRecord>& GetVerbs() {
   static std::map<Verb, VerbRecord> all_verbs;
   if (all_verbs.empty()) {
     AppendBreakpointVerbs(&all_verbs);
-    AppendProcessVerbs(&all_verbs);
     AppendSettingsVerbs(&all_verbs);
     AppendSharedVerbs(&all_verbs);
     AppendSymbolVerbs(&all_verbs);
     AppendThreadVerbs(&all_verbs);
 
+    all_verbs[Verb::kAspace] = GetAspaceVerbRecord();
+    all_verbs[Verb::kAttach] = GetAttachVerbRecord();
     all_verbs[Verb::kCls] = GetClsVerbRecord();
     all_verbs[Verb::kConnect] = GetConnectVerbRecord();
+    all_verbs[Verb::kDetach] = GetDetachVerbRecord();
     all_verbs[Verb::kDisconnect] = GetDisconnectVerbRecord();
     all_verbs[Verb::kDisassemble] = GetDisassembleVerbRecord();
     all_verbs[Verb::kHelp] = GetHelpVerbRecord();
+    all_verbs[Verb::kKill] = GetKillVerbRecord();
+    all_verbs[Verb::kLibs] = GetLibsVerbRecord();
     all_verbs[Verb::kListProcesses] = GetPsVerbRecord();
     all_verbs[Verb::kMemAnalyze] = GetMemAnalyzeVerbRecord();
     all_verbs[Verb::kMemRead] = GetMemReadVerbRecord();
     all_verbs[Verb::kOpenDump] = GetOpendumpVerbRecord();
     all_verbs[Verb::kQuitAgent] = GetQuitAgentVerbRecord();
     all_verbs[Verb::kQuit] = GetQuitVerbRecord();
+    all_verbs[Verb::kRun] = GetRunVerbRecord();
     all_verbs[Verb::kStatus] = GetStatusVerbRecord();
+    all_verbs[Verb::kStdout] = GetStdoutVerbRecord();
+    all_verbs[Verb::kStderr] = GetStderrVerbRecord();
     all_verbs[Verb::kSysInfo] = GetSysInfoVerbRecord();
     all_verbs[Verb::kStack] = GetStackVerbRecord();
 

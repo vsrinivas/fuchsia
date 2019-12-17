@@ -14,6 +14,8 @@
 #include "src/developer/debug/zxdb/client/breakpoint_settings.h"
 #include "src/developer/debug/zxdb/client/symbol_server.h"
 #include "src/developer/debug/zxdb/client/target.h"
+#include "src/developer/debug/zxdb/common/err_or.h"
+#include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/format_name.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/expr/eval_callback.h"
@@ -172,6 +174,20 @@ Err EvalCommandAddressExpression(
 // But if there are spaces or unprintable characters, this will quote or escape in such a way that
 // the console/setting formatter will interpret the string the same way as a single entity.
 std::string FormatConsoleString(const std::string& input);
+
+// Makes sure there is a runnable target, creating one if necessary. In the success case, the
+// returned target should be used instead of the one from the command (it may be a new one).
+ErrOr<Target*> GetRunnableTarget(ConsoleContext* context, const Command& cmd);
+
+// Callback for the process/job commands that displays the current process/job and what happened.
+// The verb affects the message printed to the screen.
+//
+// The optional callback parameter will be issued with the error for calling code to identify the
+// error.
+void ProcessCommandCallback(fxl::WeakPtr<Target> target, bool display_message_on_success,
+                            const Err& err, CommandCallback callback);
+void JobCommandCallback(const char* verb, fxl::WeakPtr<JobContext> job_context,
+                        bool display_message_on_success, const Err& err, CommandCallback callback);
 
 }  // namespace zxdb
 

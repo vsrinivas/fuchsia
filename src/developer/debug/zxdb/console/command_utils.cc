@@ -24,8 +24,10 @@
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/console/command.h"
+#include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/console_context.h"
 #include "src/developer/debug/zxdb/console/format_context.h"
+#include "src/developer/debug/zxdb/console/format_job.h"
 #include "src/developer/debug/zxdb/console/format_name.h"
 #include "src/developer/debug/zxdb/console/format_target.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
@@ -589,6 +591,77 @@ std::string FormatConsoleString(const std::string& input) {
     result += "\"";
   }
   return result;
+}
+
+ErrOr<Target*> GetRunnableTarget(ConsoleContext* context, const Command& cmd) {
+  Target::State state = cmd.target()->GetState();
+  if (state == Target::State::kNone)
+    return cmd.target();  // Current one is usable.
+
+  if (cmd.GetNounIndex(Noun::kProcess) != Command::kNoIndex) {
+    // A process was specified explicitly in the command. Since it's not usable, report an error.
+    if (state == Target::State::kStarting || state == Target::State::kAttaching) {
+      return Err(
+          "The specified process is in the process of starting or attaching.\n"
+          "Either \"kill\" it or create a \"new\" process context.");
+    }
+    return Err(
+        "The specified process is already running.\n"
+        "Either \"kill\" it or create a \"new\" process context.");
+  }
+
+  // Create a new target based on the given one.
+  Target* new_target = context->session()->system().CreateNewTarget(cmd.target());
+  context->SetActiveTarget(new_target);
+  return new_target;
+}
+
+void ProcessCommandCallback(fxl::WeakPtr<Target> target, bool display_message_on_success,
+                            const Err& err, CommandCallback callback) {
+  if (display_message_on_success || err.has_error()) {
+    // Display messaging.
+    Console* console = Console::get();
+
+    OutputBuffer out;
+    if (err.has_error()) {
+      if (target) {
+        out.Append(fxl::StringPrintf("Process %d ", console->context().IdForTarget(target.get())));
+      }
+      out.Append(err);
+    } else if (target) {
+      out.Append(FormatTarget(&console->context(), target.get()));
+    }
+
+    console->Output(out);
+  }
+
+  if (callback)
+    callback(err);
+}
+
+void JobCommandCallback(const char* verb, fxl::WeakPtr<JobContext> job_context,
+                        bool display_message_on_success, const Err& err, CommandCallback callback) {
+  if (!display_message_on_success && !err.has_error())
+    return;
+
+  Console* console = Console::get();
+
+  OutputBuffer out;
+  if (err.has_error()) {
+    if (job_context) {
+      out.Append(fxl::StringPrintf("Job %d %s failed.\n",
+                                   console->context().IdForJobContext(job_context.get()), verb));
+    }
+    out.Append(err);
+  } else if (job_context) {
+    out.Append(FormatJobContext(&console->context(), job_context.get()));
+  }
+
+  console->Output(out);
+
+  if (callback) {
+    callback(err);
+  }
 }
 
 }  // namespace zxdb
