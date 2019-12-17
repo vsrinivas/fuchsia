@@ -77,9 +77,9 @@ TEST(TimersTest, Basic) {
   EXPECT_EQ(timer.wait_one(ZX_TIMER_SIGNALED, zx::time(), &pending), ZX_ERR_TIMED_OUT);
   EXPECT_EQ(pending, 0u);
 
-  for (int ix = 0; ix != 10; ++ix) {
-    const auto deadline_timer = zx::deadline_after(zx::msec(50));
-    const auto deadline_wait = zx::deadline_after(zx::sec(1));
+  for (int ix = 0; ix != 3; ++ix) {
+    const auto deadline_timer = zx::deadline_after(zx::msec(10));
+    const auto deadline_wait = zx::deadline_after(zx::sec(1000));
     // Timer should fire faster than the wait timeout.
     ASSERT_OK(timer.set(deadline_timer, zx::nsec(0)));
 
