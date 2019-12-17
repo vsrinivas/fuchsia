@@ -469,13 +469,13 @@ From //build/config/BUILD.gn:10
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/d3d0c8d3ca5b85c950e30a169a656129c553f117/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/4dd9124e2fa42c53e137cf831e5d9193f189b543/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/d3d0c8d3ca5b85c950e30a169a656129c553f117/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/4dd9124e2fa42c53e137cf831e5d9193f189b543/util/net/tls.gni#22)
 
 ### create_kernel_service_snapshot
 
@@ -965,7 +965,7 @@ From //build/go/go_build.gni:21
     will have build and test results cached, and is safe to be written to
     concurrently. If overridden, this directory must be a full path.
 
-**Current value (from the default):** `"/b/s/w/ir/k/root_build_dir/host_arm64/.gocache"`
+**Current value (from the default):** `"/b/s/w/ir/k/root_build_dir/fidling/.gocache"`
 
 From //build/go/go_build.gni:17
 
@@ -1102,7 +1102,7 @@ List of kernel command line arguments to bake into the boot image.
 See also [kernel_cmdline](/docs/reference/kernel/kernel_cmdline.md) and
 [`devmgr_config`](#devmgr_config).
 
-**Current value for `target_cpu = "arm64"`:** `["kernel.enable-debugging-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
+**Current value for `target_cpu = "arm64"`:** `["kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
 
 From //products/core.gni:10
 
@@ -1110,7 +1110,7 @@ From //products/core.gni:10
 
 From //build/images/BUILD.gn:512
 
-**Current value for `target_cpu = "x64"`:** `["kernel.enable-debugging-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
+**Current value for `target_cpu = "x64"`:** `["kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
 
 From //products/core.gni:10
 
@@ -2274,7 +2274,7 @@ silently clobber the default value shown here.
 **Current value (from the default):**
 ```
 {
-  default_deps = ["//:legacy-arm64", "//:legacy_unification-arm64"]
+  default_deps = ["//:legacy-arm64", "//:legacy_unification-arm64", "//tools:all-hosts"]
   enable_netsvc_debugging_features = false
   goma_dir = "/home/swarming/goma"
   use_ccache = false
