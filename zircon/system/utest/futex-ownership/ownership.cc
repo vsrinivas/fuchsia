@@ -1079,6 +1079,19 @@ TEST(FutexOwnershipTestCase, DeadThreadsCantOwnFutexes) {
         return zx_futex_wait(&futex1, 0, ZX_HANDLE_INVALID, ZX_TIME_INFINITE);
       }));
 
+  // Wait until our thread becomes blocked in futex1.  It is important to
+  // confirm that this has happened before allowing the rest of the test to
+  // proceed.  Futexes with no waiters have no state and can have no owners.  We
+  // need to be certain that futex1 has at least one waiter in order for the
+  // rest of the tests to function properly.
+  ASSERT_TRUE(WaitFor(ZX_SEC(20), [&the_waiter, &res]() -> bool {
+    uint32_t run_state;
+    res = the_waiter.GetRunState(&run_state);
+    // stop waiting if there was an error, or we have achieved the blocked state.
+    return (res != ZX_OK) || (run_state == ZX_THREAD_STATE_BLOCKED_FUTEX);
+  }));
+  ASSERT_OK(res);
+
   // Create a thread, duplicate it's handle, and then stop the thread.  This
   // will serve as our "dead" owner.
   {
@@ -1091,7 +1104,7 @@ TEST(FutexOwnershipTestCase, DeadThreadsCantOwnFutexes) {
 
   // Wait until we are certain that our thread has achieved the DEAD state from the kernel's
   // user-mode thread perspective.
-  ASSERT_TRUE(WaitFor(ZX_SEC(10), [&dead_owner, &res]() -> bool {
+  ASSERT_TRUE(WaitFor(ZX_SEC(20), [&dead_owner, &res]() -> bool {
     zx_info_thread_t info;
     res = dead_owner.get_info(ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr);
     // stop waiting if there was an error, or we have achieved the dead state.
