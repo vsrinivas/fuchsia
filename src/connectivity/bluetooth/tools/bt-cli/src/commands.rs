@@ -89,6 +89,7 @@ gen_commands! {
     Cmd {
         Connect = ("connect", ["id|addr"], "connect to a peer"),
         Disconnect = ("disconnect", ["id|addr"], "disconnect from a peer"),
+        Pair = ("pair", ["id|addr", "security_level", "bondable_mode", "transport (optional)"], "pair to a peer"),
         Forget = ("forget", ["id|addr"], "delete and disconnect a remote peer"),
         ActiveAdapter = ("adapter", [], "Show the Active Adapter"),
         SetActiveAdapter = ("set-adapter", ["id"], "Set the Active Adapter"),
@@ -139,6 +140,7 @@ impl Completer for CmdHelper {
             if command == "connect"
                 || command == "disconnect"
                 || command == "peer"
+                || command == "pair"
                 || command == "forget"
             {
                 // connect and peer have 'id|addr' arguments

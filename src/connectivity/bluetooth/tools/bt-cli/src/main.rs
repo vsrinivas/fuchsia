@@ -4,8 +4,10 @@
 
 use {
     failure::{bail, Error, ResultExt},
+    fidl_fuchsia_bluetooth::PeerId as FidlPeerId,
     fidl_fuchsia_bluetooth_control::{
-        ControlEvent, ControlEventStream, ControlMarker, ControlProxy,
+        ControlEvent, ControlEventStream, ControlMarker, ControlProxy, PairingOptions,
+        PairingSecurityLevel, TechnologyType,
     },
     fuchsia_async::{self as fasync, futures::select},
     fuchsia_bluetooth::types::{AdapterInfo, Peer, Status},
@@ -226,6 +228,81 @@ async fn disconnect<'a>(
     }
 }
 
+fn parse_pairing_security_level(level: &str) -> Result<PairingSecurityLevel, String> {
+    match level.to_ascii_uppercase().as_str() {
+        "AUTH" => Ok(PairingSecurityLevel::Authenticated),
+        "ENC" => Ok(PairingSecurityLevel::Encrypted),
+        _ => {
+            return Err(
+                "Unable to pair: security level must be either \"AUTH\" or \"ENC\"".to_string()
+            )
+        }
+    }
+}
+
+fn parse_bondable_mode(mode: &str) -> Result<bool, String> {
+    match mode.to_ascii_uppercase().as_str() {
+        "T" => Ok(true),
+        "F" => Ok(false),
+        _ => return Err("Bondable mode must be either \"T\" or \"F\"".to_string()),
+    }
+}
+
+fn parse_pairing_transport(transport: &str) -> Result<TechnologyType, String> {
+    match transport.to_ascii_uppercase().as_str() {
+        "BREDR" | "CLASSIC" => Ok(TechnologyType::Classic),
+        "LE" => Ok(TechnologyType::LowEnergy),
+        _ => {
+            return Err("If present, transport must be \"BREDR\"/\"CLASSIC\" or \"LE\"".to_string())
+        }
+    }
+}
+
+fn parse_pair(args: &[&str], state: &Mutex<State>) -> Result<(FidlPeerId, PairingOptions), String> {
+    if args.len() < 3 || args.len() > 4 {
+        return Err(format!("usage: {}", Cmd::Pair.cmd_help()));
+    }
+    // `args[0]` is the identifier of the peer to connect to
+    let peer_id = match to_identifier(state, args[0]).map(|id| u64::from_str_radix(&id, 16)) {
+        Some(Ok(value)) => FidlPeerId { value },
+        Some(Err(e)) => return Err(format!("Unable to pair - invalid peer address: {:?}", e)),
+        None => return Err(format!("Unable to pair: Unknown address {}", args[0])),
+    };
+    let le_security_level = Some(parse_pairing_security_level(args[1])?);
+    // `args[2]` is the requested bonding preference of the pairing
+    let bondable_mode = parse_bondable_mode(args[2])?;
+    // if `args[3]` is present, it corresponds to the connected transport over which to pair
+    let transport = if args.len() == 4 { Some(parse_pairing_transport(args[3])?) } else { None };
+    Ok((
+        peer_id,
+        PairingOptions { le_security_level, non_bondable: Some(!bondable_mode), transport },
+    ))
+}
+
+async fn handle_pair(
+    mut peer_id: FidlPeerId,
+    pairing_opts: PairingOptions,
+    control_svc: &ControlProxy,
+) -> Result<String, Error> {
+    let response = control_svc.pair(&mut peer_id, pairing_opts).await?;
+    if response.error.is_some() {
+        Ok(Status::from(response).to_string())
+    } else {
+        Ok(String::new())
+    }
+}
+
+async fn pair(
+    args: &[&str],
+    state: &Mutex<State>,
+    control_svc: &ControlProxy,
+) -> Result<String, Error> {
+    match parse_pair(args, state) {
+        Ok((peer_id, pairing_opts)) => handle_pair(peer_id, pairing_opts, control_svc).await,
+        Err(e) => Ok(e),
+    }
+}
+
 async fn forget<'a>(
     args: &'a [&'a str],
     state: &'a Mutex<State>,
@@ -391,6 +468,7 @@ async fn handle_cmd(
     let res = match cmd {
         Cmd::Connect => connect(args, &state, &bt_svc).await,
         Cmd::Disconnect => disconnect(args, &state, &bt_svc).await,
+        Cmd::Pair => pair(args, &state, &bt_svc).await,
         Cmd::Forget => forget(args, &state, &bt_svc).await,
         Cmd::StartDiscovery => set_discovery(true, &bt_svc).await,
         Cmd::StopDiscovery => set_discovery(false, &bt_svc).await,
@@ -554,6 +632,22 @@ mod tests {
         }
     }
 
+    fn custom_peer(id: PeerId, address: Address, connected: bool, bonded: bool) -> Peer {
+        Peer {
+            id,
+            address,
+            technology: fsys::TechnologyType::LowEnergy,
+            connected,
+            bonded,
+            name: None,
+            appearance: Some(fbt::Appearance::Phone),
+            device_class: None,
+            rssi: None,
+            tx_power: None,
+            services: vec![],
+        }
+    }
+
     fn state_with(p: Peer) -> State {
         let mut peers = HashMap::new();
         peers.insert(p.id.to_string(), p);
@@ -696,6 +790,104 @@ mod tests {
         parse_disconnect(args, state)
     }
 
+    // Tests that command lines entered parse correctly to the expected pairing calls
+    #[test]
+    fn test_parse_pairing_security_level() {
+        let cases = vec![
+            ("Enc", Ok(PairingSecurityLevel::Encrypted)),
+            ("AUTH", Ok(PairingSecurityLevel::Authenticated)),
+            (
+                "SC",
+                Err("Unable to pair: security level must be either \"AUTH\" or \"ENC\"".to_string()),
+            ),
+        ];
+        for (input_str, expected) in cases {
+            assert_eq!(parse_pairing_security_level(input_str), expected);
+        }
+    }
+
+    #[test]
+    fn test_parse_bondable_mode() {
+        let cases = vec![
+            ("T", Ok(true)),
+            ("f", Ok(false)),
+            ("TEST", Err("Bondable mode must be either \"T\" or \"F\"".to_string())),
+        ];
+        for (input_str, expected) in cases {
+            assert_eq!(parse_bondable_mode(input_str), expected);
+        }
+    }
+
+    #[test]
+    fn test_parse_pairing_transport() {
+        let cases = vec![
+            ("CLAssIC", Ok(TechnologyType::Classic)),
+            ("BrEdr", Ok(TechnologyType::Classic)),
+            ("LE", Ok(TechnologyType::LowEnergy)),
+            (
+                "TEST",
+                Err("If present, transport must be \"BREDR\"/\"CLASSIC\" or \"LE\"".to_string()),
+            ),
+        ];
+        for (input_str, expected) in cases {
+            assert_eq!(parse_pairing_transport(input_str), expected);
+        }
+    }
+    #[test]
+    fn test_parse_pair() {
+        let state = Mutex::new(state_with(custom_peer(
+            PeerId(0xbeef),
+            Address::Public([1, 0, 0, 0, 0, 0]),
+            true,
+            false,
+        )));
+        let cases = vec![
+            // valid peer id
+            (
+                "pair beef ENC T LE",
+                Ok((
+                    FidlPeerId { value: u64::from_str_radix("beef", 16).unwrap() },
+                    PairingOptions {
+                        le_security_level: Some(PairingSecurityLevel::Encrypted),
+                        non_bondable: Some(false),
+                        transport: Some(TechnologyType::LowEnergy),
+                    },
+                )),
+            ),
+            // known address, no transport
+            (
+                "pair 00:00:00:00:00:01 AUTH F",
+                Ok((
+                    FidlPeerId { value: u64::from_str_radix("beef", 16).unwrap() },
+                    PairingOptions {
+                        le_security_level: Some(PairingSecurityLevel::Authenticated),
+                        non_bondable: Some(true),
+                        transport: None,
+                    },
+                )),
+            ),
+            // no id param
+            ("pair", Err(format!("usage: {}", Cmd::Pair.cmd_help()))),
+        ];
+        for (line, expected) in cases {
+            assert_eq!(parse_pair_args(line, &state), expected);
+        }
+    }
+
+    fn parse_pair_args(
+        line: &str,
+        state: &Mutex<State>,
+    ) -> Result<(FidlPeerId, PairingOptions), String> {
+        let args = match parse_cmd(line.to_string()) {
+            ParseResult::Valid((Cmd::Pair, args)) => Ok(args),
+            ParseResult::Valid((_, _)) => Err("Command is not pair"),
+            _ => Err("failed"),
+        }?;
+        let args: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
+        let args: &[&str] = &*args;
+        parse_pair(args, state)
+    }
+
     fn timeout() -> Duration {
         20.seconds()
     }
@@ -766,6 +958,54 @@ mod tests {
         let cmd = forget(args.as_slice(), &state, &proxy);
         let mock_expect =
             mock.expect_forget(peer_id.clone(), bt_fidl_status!(Failed, err_msg(error_msg)));
+        let (result, mock_result) = join!(cmd, mock_expect);
+
+        assert!(mock_result.is_ok());
+        assert!(result.expect("expected a result").contains(error_msg));
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_pair() {
+        let peer = custom_peer(PeerId(0xbeef), Address::Public([1, 0, 0, 0, 0, 0]), true, false);
+        let peer_id: FidlPeerId = peer.id.into();
+        let peer_id_string = peer.id.to_string();
+        let pairing_options = PairingOptions {
+            le_security_level: Some(PairingSecurityLevel::Encrypted),
+            non_bondable: Some(false),
+            transport: None,
+        };
+
+        let args = vec![peer_id_string.as_str(), "ENC", "T"];
+        let state = Mutex::new(state_with(peer));
+        let (proxy, mut mock) = ControlMock::new(1.second()).expect("failed to create mock");
+
+        let cmd = pair(args.as_slice(), &state, &proxy);
+        let mock_expect = mock.expect_pair(peer_id, pairing_options, bt_fidl_status!());
+        let (result, mock_result) = join!(cmd, mock_expect);
+
+        assert!(mock_result.is_ok());
+        assert_eq!("".to_string(), result.expect("expected success"));
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_pair_error() {
+        let peer = custom_peer(PeerId(0xbeef), Address::Public([1, 0, 0, 0, 0, 0]), true, false);
+        let peer_id: FidlPeerId = peer.id.into();
+        let peer_id_string = peer.id.to_string();
+        let pairing_options = PairingOptions {
+            le_security_level: Some(PairingSecurityLevel::Encrypted),
+            non_bondable: Some(false),
+            transport: None,
+        };
+
+        let args = vec![peer_id_string.as_str(), "ENC", "T"];
+        let state = Mutex::new(state_with(peer));
+        let (proxy, mut mock) = ControlMock::new(1.second()).expect("failed to create mock");
+
+        let error_msg = "oopsy daisy";
+        let cmd = pair(args.as_slice(), &state, &proxy);
+        let mock_expect =
+            mock.expect_pair(peer_id, pairing_options, bt_fidl_status!(Failed, err_msg(error_msg)));
         let (result, mock_result) = join!(cmd, mock_expect);
 
         assert!(mock_result.is_ok());

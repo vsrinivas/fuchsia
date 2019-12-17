@@ -5,9 +5,9 @@
 use {
     crate::expect::{expect_call, Status},
     failure::Error,
-    fidl_fuchsia_bluetooth::Status as FidlStatus,
+    fidl_fuchsia_bluetooth::{PeerId as FidlPeerId, Status as FidlStatus},
     fidl_fuchsia_bluetooth_control::{
-        ControlMarker, ControlProxy, ControlRequest, ControlRequestStream,
+        ControlMarker, ControlProxy, ControlRequest, ControlRequestStream, PairingOptions,
     },
     fuchsia_bluetooth::bt_fidl_status,
     fuchsia_zircon::Duration,
@@ -17,6 +17,33 @@ use {
 pub struct ControlMock {
     stream: ControlRequestStream,
     timeout: Duration,
+}
+
+/// Provides a way to generate simple FIDL responses to specific Control Requests. |control_req|
+/// must be the name of a variant of ControlRequest. |req_param_name| must be the name of a field
+/// in |control_req|. Each |req_param_name| must have a matching |expected_req_param| parameter.
+/// The future the macro returns will yield Status::Satisfied once the Mock receives a FIDL call
+/// of |control_req| where all the fields of |control_req| are equal to |expected_req_param|s.
+macro_rules! expect_control_req {
+    ($self:ident, $fidl_status:expr, $enum_name:ident::$control_req:ident, $(($req_param_name:tt, $expected_req_param:expr)),*) => {
+        expect_call(&mut $self.stream, $self.timeout, move |req| {
+            Ok(if let $enum_name::$control_req { $($req_param_name,)* responder } = req {
+                    // The true at the end of this is a hacky way to allow us to check an arbitrary number
+                    // of req_param_names
+                    if $($req_param_name == $expected_req_param && )* true {
+                        responder.send(&mut $fidl_status)?;
+                        Status::Satisfied(())
+                    }
+                    else {
+                        // Respond with success for an ignored call
+                        responder.send(&mut bt_fidl_status!())?;
+                        Status::Pending
+                    }
+                }
+                else { Status::Pending }
+            )
+        })
+    };
 }
 
 impl ControlMock {
@@ -32,22 +59,7 @@ impl ControlMock {
         peer_id: String,
         mut status: FidlStatus,
     ) -> Result<(), Error> {
-        expect_call(&mut self.stream, self.timeout, move |req| {
-            Ok(match req {
-                ControlRequest::Disconnect { device_id, responder } => {
-                    if device_id == peer_id {
-                        responder.send(&mut status)?;
-                        Status::Satisfied(())
-                    } else {
-                        // Respond with success for the ignored call.
-                        responder.send(&mut bt_fidl_status!())?;
-                        Status::Pending
-                    }
-                }
-                _ => Status::Pending,
-            })
-        })
-        .await
+        expect_control_req!(self, status, ControlRequest::Disconnect, (device_id, peer_id)).await
     }
 
     /// Wait until a Forget message is received with the given `peer_id`. `status` will be sent in
@@ -57,21 +69,24 @@ impl ControlMock {
         peer_id: String,
         mut status: FidlStatus,
     ) -> Result<(), Error> {
-        expect_call(&mut self.stream, self.timeout, move |req| {
-            Ok(match req {
-                ControlRequest::Forget { device_id, responder } => {
-                    if device_id == peer_id {
-                        responder.send(&mut status)?;
-                        Status::Satisfied(())
-                    } else {
-                        // Respond with success for the ignored call.
-                        responder.send(&mut bt_fidl_status!())?;
-                        Status::Pending
-                    }
-                }
-                _ => Status::Pending,
-            })
-        })
+        expect_control_req!(self, status, ControlRequest::Forget, (device_id, peer_id)).await
+    }
+
+    /// Wait until a Pair message is received with the `pairing_params`. `status` will be sent in
+    /// response to the matching FIDL request
+    pub async fn expect_pair(
+        &mut self,
+        expected_peer_id: FidlPeerId,
+        expected_options: PairingOptions,
+        mut status: FidlStatus,
+    ) -> Result<(), Error> {
+        expect_control_req!(
+            self,
+            status,
+            ControlRequest::Pair,
+            (id, expected_peer_id),
+            (options, expected_options)
+        )
         .await
     }
 }
