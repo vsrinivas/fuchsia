@@ -69,6 +69,21 @@ TEST(TimersTest, SetNegativeSlack) {
   CheckInfo(timer, 0, 0, 0);
 }
 
+TEST(TimersTest, AlreadyPassedDeadlineOnWaitOne) {
+  zx::timer timer;
+  ASSERT_OK(zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timer));
+  CheckInfo(timer, 0, 0, 0);
+
+  zx::duration slack;
+  ASSERT_OK(timer.set(zx::time(ZX_TIME_INFINITE_PAST), slack));
+  CheckInfo(timer, 0, 0, slack.get());
+
+  zx_signals_t pending;
+  ASSERT_OK(timer.wait_one(ZX_TIMER_SIGNALED, zx::time::infinite_past(), &pending));
+  ASSERT_EQ(pending, ZX_TIMER_SIGNALED);
+  CheckInfo(timer, 0, 0, 0);
+}
+
 TEST(TimersTest, Basic) {
   zx::timer timer;
   ASSERT_OK(zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timer));

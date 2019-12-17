@@ -24,7 +24,8 @@ zx_status_t zx_object_wait_one(zx_handle_t handle,
 `zx_object_wait_one()` is a blocking syscall which causes the caller to
 wait until either the *deadline* passes or the object to which *handle* refers
 asserts at least one of the specified *signals*. If the object is already
-asserting at least one of the specified *signals*, the wait ends immediately.
+asserting at least one of the specified *signals*, the wait ends immediately
+with **ZX_OK**.
 
 Upon return, if non-NULL, *observed* is a bitmap of *all* of the
 signals which were observed asserted on that object while waiting.
@@ -47,8 +48,8 @@ forever.
 
 ## RETURN VALUE
 
-`zx_object_wait_one()` returns **ZX_OK** if any of *signals* were observed
-on the object before *deadline* passes.
+`zx_object_wait_one()` returns **ZX_OK** if any of *signals* were active when
+the call was made, or observed on the object before *deadline* passes.
 
 In the event of **ZX_ERR_TIMED_OUT**, *observed* may reflect state changes
 that occurred after the deadline passed, but before the syscall returned.

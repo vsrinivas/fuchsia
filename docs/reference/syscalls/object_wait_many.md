@@ -24,7 +24,7 @@ zx_status_t zx_object_wait_many(zx_wait_item_t* items,
 wait until either the *deadline* passes or at least one of the specified
 signals is asserted by the object to which the associated handle refers.
 If an object is already asserting at least one of the specified signals,
-the wait ends immediately.
+the wait ends immediately with **ZX_OK**.
 
 ```
 typedef struct {
@@ -62,7 +62,8 @@ Every entry of *items* must have a *handle* field with **ZX_RIGHT_WAIT**.
 ## RETURN VALUE
 
 `zx_object_wait_many()` returns **ZX_OK** if any of *waitfor* signals were
-observed on their respective object before *deadline* passed.
+active when the call was made, or observed on their respective object before
+*deadline* passed.
 
 In the event of **ZX_ERR_TIMED_OUT**, *items* may reflect state changes
 that occurred after the deadline passed, but before the syscall returned.
