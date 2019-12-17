@@ -72,6 +72,14 @@ package("sshd-host") {
       dest = "sshd-host.cmx"
     },
   ]
+
+  # Used by programs that need to load ICU locale data, such as tz-util.
+  resources = [
+    {
+      path = rebase_path("//third_party/icu/common/icudtl.dat")
+      dest = "icudtl.dat"
+    },
+  ]
 }
 
 config_data("config") {

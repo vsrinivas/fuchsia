@@ -15,6 +15,7 @@
 
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
+#include "third_party/icu/source/common/unicode/errorcode.h"
 #include "third_party/icu/source/common/unicode/udata.h"
 #include "third_party/icu/source/i18n/unicode/timezone.h"
 
@@ -25,6 +26,9 @@ static constexpr char kIcuDataPath[] = "/pkg/data/icudtl.dat";
 
 static uintptr_t g_icu_data_ptr = 0u;
 static size_t g_icu_data_size = 0;
+
+// Maximum number of bytes a revision ID length may be (e.g. "2019c").
+static const size_t kRevisionIdLength = 5;
 
 // Map the memory into the process and return a pointer to the memory.
 // |size_out| is required and is set with the size of the mapped memory
@@ -78,11 +82,13 @@ zx_status_t InitializeWithTzResourceDirAndValidate(const char tz_files_dir[],
   if (tz_revision_file_path) {
     std::ifstream in(tz_revision_file_path);
     if (in.fail()) {
+      FXL_LOG(WARNING) << "could not read: " << tz_revision_file_path;
       return ZX_ERR_IO;
     }
     expected_tz_revision_id =
         std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
-    if (expected_tz_revision_id->length() != 5) {
+    if (expected_tz_revision_id->length() != kRevisionIdLength) {
+      FXL_LOG(WARNING) << "corrupted time zone revision ID: " << expected_tz_revision_id.value();
       return ZX_ERR_IO_DATA_INTEGRITY;
     }
   } else {
@@ -90,8 +96,10 @@ zx_status_t InitializeWithTzResourceDirAndValidate(const char tz_files_dir[],
   }
 
   fsl::SizedVmo icu_data;
-  if (!fsl::VmoFromFilename(kIcuDataPath, &icu_data))
+  if (!fsl::VmoFromFilename(kIcuDataPath, &icu_data)) {
+    FXL_LOG(ERROR) << "could not create VMO from filename: " << kIcuDataPath;
     return ZX_ERR_IO;
+  }
 
   size_t data_size = 0;
   uintptr_t data = GetData(icu_data, &data_size);
@@ -103,6 +111,9 @@ zx_status_t InitializeWithTzResourceDirAndValidate(const char tz_files_dir[],
     g_icu_data_ptr = data;
     g_icu_data_size = data_size;
     if (err != U_ZERO_ERROR) {
+      icu::ErrorCode ec;
+      ec.set(err);
+      FXL_LOG(WARNING) << "failed to set common data: " << ec.errorName();
       return ZX_ERR_INTERNAL;
     }
 
@@ -110,9 +121,14 @@ zx_status_t InitializeWithTzResourceDirAndValidate(const char tz_files_dir[],
     if (expected_tz_revision_id.has_value()) {
       const char* actual_tz_revision_id = icu::TimeZone::getTZDataVersion(err);
       if (err != U_ZERO_ERROR) {
+        icu::ErrorCode ec;
+        ec.set(err);
+        FXL_LOG(WARNING) << "could not get tzdata version: " << ec.errorName();
         return ZX_ERR_INTERNAL;
       }
-      if (expected_tz_revision_id != std::string(actual_tz_revision_id, 5)) {
+      if (expected_tz_revision_id != std::string(actual_tz_revision_id, kRevisionIdLength)) {
+        FXL_LOG(WARNING) << "mismatched revision id: " << actual_tz_revision_id
+                         << ", expected: " << expected_tz_revision_id.value();
         return ZX_ERR_IO_DATA_INTEGRITY;
       }
     }

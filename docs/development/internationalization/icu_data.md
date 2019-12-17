@@ -27,6 +27,12 @@ Note the section that adds a resource for `icudtl.dat`.
 Since the library's footprint can be large, we do not simply import it as a
 public dependency on any rust program that uses ICU.
 
+# Modifying the time zone information on a system
+
+In development you may need to check or set the time zone ID.  The program `tz-util`
+allows you to do exactly this.  See more information about `tz-util` on [tz-util README
+page](/src/sys/tz-util/README.md).
+
 # Using the ICU data
 
 You *must* load the ICU data in your program to make the locale data available.

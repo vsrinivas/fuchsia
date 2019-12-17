@@ -31,5 +31,6 @@ group("tests") {
     "test_manager:tests",
     "timekeeper:tests",
     "tools/cs2:tests",
+    "tz-util:tests",
   ]
 }

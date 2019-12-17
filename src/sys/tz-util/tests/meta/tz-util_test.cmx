@@ -1,0 +1,26 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.stash.Store": "fuchsia-pkg://fuchsia.com/stash#meta/stash_tests.cmx",
+                "fuchsia.settings.Intl": "fuchsia-pkg://fuchsia.com/setui_service#meta/setui_service.cmx",
+                "fuchsia.ui.policy.DeviceListenerRegistry": "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx"
+            }
+        }
+    },
+    "program": {
+        "binary": "test/tz-util_test"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp",
+            "isolated-persistent-storage"
+        ],
+        "services": [
+            "fuchsia.settings.Intl",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}
+

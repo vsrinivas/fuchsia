@@ -4,6 +4,13 @@
 
 import("//build/package.gni")
 
+group("tests") {
+  testonly = true
+  deps = [
+    "tests",
+  ]
+}
+
 executable("bin") {
   output_name = "tz-util"
 
@@ -12,10 +19,13 @@ executable("bin") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.deprecatedtimezone",
+    "//sdk/fidl/fuchsia.intl",
+    "//sdk/fidl/fuchsia.settings",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
+    "//src/lib/icu_data/cpp",
+    "//third_party/icu",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]
@@ -30,6 +40,20 @@ package("tz-util") {
     {
       name = "tz-util"
       shell = true
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("//third_party/icu/common/icudtl.dat")
+      dest = "icudtl.dat"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/tz-util.cmx")
+      dest = "tz-util.cmx"
     },
   ]
 }
