@@ -7,7 +7,7 @@
 #include "gtest/gtest.h"
 #include "src/ledger/bin/platform/detached_path.h"
 #include "src/ledger/bin/platform/platform.h"
-#include "src/ledger/bin/platform/scoped_tmp_dir.h"
+#include "src/ledger/bin/platform/scoped_tmp_location.h"
 
 namespace ledger {
 namespace {

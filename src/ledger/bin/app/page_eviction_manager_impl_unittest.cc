@@ -13,7 +13,7 @@
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/db_view_factory.h"
 #include "src/ledger/bin/app/serialization.h"
-#include "src/ledger/bin/platform/scoped_tmp_dir.h"
+#include "src/ledger/bin/platform/scoped_tmp_location.h"
 #include "src/ledger/bin/public/status.h"
 #include "src/ledger/bin/storage/fake/fake_db_factory.h"
 #include "src/ledger/bin/testing/test_with_environment.h"

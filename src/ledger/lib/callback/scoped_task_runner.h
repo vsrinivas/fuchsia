@@ -58,9 +58,9 @@ class SimpleTaskController : public TaskController {
   // not synchronized, in correct code I don't think there's a case where this
   // makes a difference.
   //
-  // A common idiom is to use |fxl::WeakPtr| for this kind of guard. However,
-  // that is not thread-safe as |fxl::WeakPtr| contains non-atomic flag
-  // twiddling, and |fxl::WeakPtr::InvalidateWeakPtrs| allows new valid pointers
+  // A common idiom is to use |WeakPtr| for this kind of guard. However,
+  // that is not thread-safe as |WeakPtr| contains non-atomic flag
+  // twiddling, and |WeakPtr::InvalidateWeakPtrs| allows new valid pointers
   // to be created after it is called so it cannot be used as a |ShutDown|
   // method. Despite being unsynchronized, |SimpleTaskController| lets the
   // caller |ShutDown| on the dispatch thread.

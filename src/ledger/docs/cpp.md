@@ -82,14 +82,6 @@ a single util within the [fit] library under `//zircon/system/ulib/fit`).
 
 Facilities that help manage **lifetime**:
 
-*   [cancellable.h] – can be used as a return type of an asynchronous function
-    if the caller needs to be able to cancel the operation. The caller can then
-    use a CancellableContainer to store pending cancellable calls that it is
-    making – when the caller is deleted, the cancellable operations are
-    automatically cancelled.
-    *   **tip**: this is useful only if there is actual meaningful cancellation
-        that can happen – if you need to just ignore the resulting callback, use
-        “scoped_callback” below
 *   [scoped_task_runner.h] and [scoped_callback.h] – useful when an object posts
     tasks that refer to the object itself, but could end up being executed after
     the object itself is deleted.
@@ -174,8 +166,7 @@ See [Testing](testing.md) for documentation on different types of tests and how
 to run them.
 
 [auto_cleanable.h]: /src/ledger/lib/callback/auto_cleanable.h
-[callback]: /src/lib/callback
-[cancellable.h]: /src/lib/callback/cancellable.h
+[callback]: /src/ledger/lib/callback
 [capture.h]: /src/ledger/lib/callback/capture.h
 [defer.h]: /zircon/system/ulib/fit/include/lib/fit/defer.h
 [destruction_sentinel.h]: /src/ledger/lib/callback/destruction_sentinel.h

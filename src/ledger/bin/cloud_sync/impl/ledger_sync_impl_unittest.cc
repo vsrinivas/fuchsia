@@ -7,7 +7,7 @@
 #include "src/ledger/bin/cloud_sync/impl/testing/test_cloud_provider.h"
 #include "src/ledger/bin/cloud_sync/impl/testing/test_page_storage.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
-#include "src/ledger/bin/platform/scoped_tmp_dir.h"
+#include "src/ledger/bin/platform/scoped_tmp_location.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/callback/capture.h"
 #include "src/ledger/lib/callback/set_when_called.h"

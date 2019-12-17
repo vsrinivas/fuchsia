@@ -160,7 +160,6 @@ source_set("lib") {
     "//src/ledger/lib/convert",
     "//src/ledger/lib/coroutine",
     "//src/ledger/third_party/bup",
-    "//src/lib/fxl",
     "//third_party/leveldb",
   ]
 

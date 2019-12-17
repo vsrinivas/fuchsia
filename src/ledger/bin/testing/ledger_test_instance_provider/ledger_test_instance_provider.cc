@@ -14,7 +14,7 @@
 #include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/platform/fd.h"
 #include "src/ledger/bin/platform/platform.h"
-#include "src/ledger/bin/platform/scoped_tmp_dir.h"
+#include "src/ledger/bin/platform/scoped_tmp_location.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 

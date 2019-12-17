@@ -6,7 +6,7 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "src/ledger/bin/platform/scoped_tmp_dir.h"
+#include "src/ledger/bin/platform/scoped_tmp_location.h"
 
 namespace ledger {
 namespace {

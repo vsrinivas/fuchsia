@@ -16,9 +16,5 @@ source_set("testing") {
     "//src/ledger/bin/cloud_sync/public",
   ]
 
-  deps = [
-    "//src/lib/fsl",
-  ]
-
   configs += [ "//src/ledger:ledger_config" ]
 }
