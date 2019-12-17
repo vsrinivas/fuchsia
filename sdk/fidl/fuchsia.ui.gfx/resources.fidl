@@ -11,19 +11,19 @@ using fuchsia.ui.views;
 /// `Session`. Add new fields only to the bottom of the list.
 union ResourceArgs {
     // Memory resources.
-     1: MemoryArgs memory;
-     2: ImageArgs image;
-     3: ImagePipeArgs image_pipe;
-     4: BufferArgs buffer;
+    1: MemoryArgs memory;
+    2: ImageArgs image;
+    3: ImagePipeArgs image_pipe;
+    4: BufferArgs buffer;
 
     // Views.
-     5: ViewArgs view;
-     6: ViewHolderArgs view_holder;
+    5: ViewArgs view;
+    6: ViewHolderArgs view_holder;
 
     // Shapes (see shapes.fidl).
-     7: RectangleArgs rectangle;
-     8: RoundedRectangleArgs rounded_rectangle;
-     9: CircleArgs circle;
+    7: RectangleArgs rectangle;
+    8: RoundedRectangleArgs rounded_rectangle;
+    9: CircleArgs circle;
     10: MeshArgs mesh;
 
     // Nodes (see nodes.fidl).
@@ -58,8 +58,8 @@ union ResourceArgs {
     // TODO(SCN-1225): Move these where they belong.  They're added to the end
     // of the struct temporarily until we transition to xunions.
     28: PointLightArgs point_light;
-    29: ViewArgs2 view2;
-    30: ViewHolderArgs2 view_holder2;
+    29: reserved;
+    30: reserved;
     31: ViewArgs3 view3;
     32: ImagePipe2Args image_pipe2;
 };
@@ -120,11 +120,6 @@ struct ViewArgs {
     string? debug_name;
 };
 
-struct ViewArgs2 {
-    fuchsia.ui.views.ViewToken token;
-    string? debug_name;
-};
-
 /// Represents the root of a subgraph within a larger scene graph.  Nodes can be
 /// attached to the |View| as children, and these Nodes will have the |View|s'
 /// coordinate transform applied to their own, in addition to being clipped to
@@ -161,11 +156,6 @@ struct ViewArgs3 {
 /// processes.  By combining them, the UI for an entire system can be built
 /// using content contributed from many different processes.
 struct ViewHolderArgs {
-    fuchsia.ui.views.ViewHolderToken token;
-    string? debug_name;
-};
-
-struct ViewHolderArgs2 {
     fuchsia.ui.views.ViewHolderToken token;
     string? debug_name;
 };

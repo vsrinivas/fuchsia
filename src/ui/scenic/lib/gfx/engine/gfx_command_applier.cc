@@ -292,19 +292,6 @@ bool GfxCommandApplier::ApplyCreateResourceCmd(Session* session, CommandContext*
       return ApplyCreateView(session, id, std::move(command.resource.view()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kViewHolder:
       return ApplyCreateViewHolder(session, id, std::move(command.resource.view_holder()));
-    case fuchsia::ui::gfx::ResourceArgs::Tag::kView2:
-      return ApplyCreateView(session, id,
-                             fuchsia::ui::gfx::ViewArgs{
-                                 .token = std::move(command.resource.view2().token),
-                                 .debug_name = std::move(command.resource.view2().debug_name),
-                             });
-    case fuchsia::ui::gfx::ResourceArgs::Tag::kViewHolder2:
-      return ApplyCreateViewHolder(
-          session, id,
-          fuchsia::ui::gfx::ViewHolderArgs{
-              .token = std::move(command.resource.view_holder2().token),
-              .debug_name = std::move(command.resource.view_holder2().debug_name),
-          });
     case fuchsia::ui::gfx::ResourceArgs::Tag::kView3:
       return ApplyCreateView(session, id, std::move(command.resource.view3()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kClipNode:

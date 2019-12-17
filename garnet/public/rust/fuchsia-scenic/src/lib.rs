@@ -11,7 +11,7 @@ use fidl_fuchsia_ui_gfx::{
     AmbientLightArgs, CameraArgs, CircleArgs, ColorRgb, ColorRgba, DirectionalLightArgs,
     DisplayCompositorArgs, EntityNodeArgs, ImageArgs, LayerArgs, LayerStackArgs, MaterialArgs,
     MemoryArgs, PointLightArgs, RectangleArgs, RendererArgs, ResourceArgs, RoundedRectangleArgs,
-    SceneArgs, ShapeNodeArgs, Value, ViewArgs2, ViewHolderArgs2, ViewProperties,
+    SceneArgs, ShapeNodeArgs, Value, ViewArgs, ViewHolderArgs, ViewProperties,
 };
 use fidl_fuchsia_ui_scenic::{Command, SessionProxy};
 use fidl_fuchsia_ui_views::{ViewHolderToken, ViewToken};
@@ -529,8 +529,8 @@ pub struct View {
 
 impl View {
     pub fn new(session: SessionPtr, token: ViewToken, debug_name: Option<String>) -> View {
-        let args = ViewArgs2 { token: token, debug_name: debug_name };
-        View { resource: Resource::new(session, ResourceArgs::View2(args)) }
+        let args = ViewArgs { token: token, debug_name: debug_name };
+        View { resource: Resource::new(session, ResourceArgs::View(args)) }
     }
 
     pub fn id(&self) -> u32 {
@@ -556,8 +556,8 @@ impl ViewHolder {
         token: ViewHolderToken,
         debug_name: Option<String>,
     ) -> ViewHolder {
-        let args = ViewHolderArgs2 { token: token, debug_name: debug_name };
-        ViewHolder { resource: Resource::new(session, ResourceArgs::ViewHolder2(args)) }
+        let args = ViewHolderArgs { token: token, debug_name: debug_name };
+        ViewHolder { resource: Resource::new(session, ResourceArgs::ViewHolder(args)) }
     }
 
     pub fn id(&self) -> u32 {

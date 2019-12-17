@@ -6,7 +6,7 @@
   "fidl/fuchsia.ui.gfx/nodes.fidl": "57caa0d7afc502e15fe6965fb60d3e2b",
   "fidl/fuchsia.ui.gfx/pose_buffer_provider.fidl": "9f60a6e12ba6b04aa1a0e26f5c02cc0b",
   "fidl/fuchsia.ui.gfx/renderer.fidl": "185fa6cb6e04828d253c44fcf70660c8",
-  "fidl/fuchsia.ui.gfx/resources.fidl": "036c32db487193fa64e5f5e1970ef8e8",
+  "fidl/fuchsia.ui.gfx/resources.fidl": "c856232543bf227361050727db53147c",
   "fidl/fuchsia.ui.gfx/shapes.fidl": "5bdd1edc2d70898a5b7aa3e1a6bc969d",
   "fidl/fuchsia.ui.gfx/tokens.fidl": "00d93d452e0445cabe6bfe5455887bd0",
   "fidl/fuchsia.ui.gfx/types.fidl": "7d1d42cdc39ccbb257e8c077e61e1088"
