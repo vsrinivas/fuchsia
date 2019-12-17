@@ -347,10 +347,17 @@ extern "C" {
         requirements: *mut HotsortVkTargetRequirements,
     ) -> bool;
 
+    pub fn spn_vk_target_get_feature_structures(
+        target: *const SpnVkTarget,
+        structures_size: *const usize,
+        structures: *mut raw::c_void,
+    ) -> SpnResult;
+
     pub fn spn_vk_target_get_requirements(
         target: *const SpnVkTarget,
         requirements: *mut SpnVkTargetRequirements,
     ) -> SpnResult;
+
     pub fn spn_vk_context_create(
         environment: *mut SpnVkEnvironment,
         create_info: *const SpnVkContextCreateInfo,

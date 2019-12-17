@@ -136,8 +136,8 @@ union spn_vk_target_features
 //   * ShaderFloat16Int8FeaturesKHR
 //   * SubgroupSizeControlFeaturesEXT
 //
-// The following VkPhysicalDevice feature structures will be added in
-// the next revision of Fuchsia's Vulkan SDK:
+// The following VkPhysicalDevice feature structures will likely be
+// added once Fuchsia's Vulkan SDK is updated:
 //
 //   * BufferDeviceAddressFeaturesKHR
 //   * TimelineSemaphoreFeaturesKHR

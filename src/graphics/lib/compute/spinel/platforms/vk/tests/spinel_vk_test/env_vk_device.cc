@@ -4,6 +4,7 @@
 
 #include "env_vk_device.h"
 
+#include <stdalign.h>
 #include <stdlib.h>
 
 #include "common/macros.h"
@@ -68,31 +69,17 @@ env_vk_device::SetUp()
   //
   // feature structures
   //
-  struct
-  {
-    VkPhysicalDeviceHostQueryResetFeaturesEXT               a;
-    VkPhysicalDevicePipelineExecutablePropertiesFeaturesKHR b;
-    VkPhysicalDeviceScalarBlockLayoutFeaturesEXT            c;
-    VkPhysicalDeviceShaderFloat16Int8FeaturesKHR            d;
-    VkPhysicalDeviceSubgroupSizeControlFeaturesEXT          e;
-  } features = {
-    .a.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES_EXT,
-    .b.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_EXECUTABLE_PROPERTIES_FEATURES_KHR,
-    .c.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SCALAR_BLOCK_LAYOUT_FEATURES_EXT,
-    .d.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES_KHR,
-    .e.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_SIZE_CONTROL_FEATURES_EXT,
-  };
+  size_t structures_size;
 
-  features.a.pNext = &features.b;
-  features.b.pNext = &features.c;
-  features.c.pNext = &features.d;
-  features.d.pNext = &features.e;
-  features.e.pNext = NULL;
+  ASSERT_EQ(spn_vk_target_get_feature_structures(target->spn, &structures_size, NULL),
+            SPN_ERROR_PARTIAL_TARGET_REQUIREMENTS);
 
-  VkPhysicalDeviceFeatures2 pdf2 = {
-    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
-    .pNext = &features.a,
-  };
+  alignas(VkBaseOutStructure) uint8_t structures[structures_size];
+
+  spn(vk_target_get_feature_structures(target->spn, &structures_size, structures));
+
+  VkPhysicalDeviceFeatures2 pdf2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+                                     .pNext = structures };
 
   //
   // populate Spinel device requirements
@@ -117,7 +104,7 @@ env_vk_device::SetUp()
   VkDeviceCreateInfo const device_info = {
 
     .sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-    .pNext                   = pdf2.pNext,
+    .pNext                   = &pdf2,
     .flags                   = 0,
     .queueCreateInfoCount    = spn_tr.qci_count,
     .pQueueCreateInfos       = qcis,
@@ -125,7 +112,7 @@ env_vk_device::SetUp()
     .ppEnabledLayerNames     = NULL,
     .enabledExtensionCount   = ext_name_count,
     .ppEnabledExtensionNames = ext_names,
-    .pEnabledFeatures        = &pdf2.features
+    .pEnabledFeatures        = NULL
   };
 
   vk(CreateDevice(instance->vk.pd, &device_info, NULL, &vk.d));

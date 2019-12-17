@@ -4,6 +4,6 @@
     "spinel/spinel_opcodes.h": "1b6b8612a10d39d4f9b8d2cd5d09b5df8324d629", 
     "spinel/spinel_result.h": "dfee08e10a53cb54ce3af2380dbd97f4224efb3d", 
     "spinel/spinel_types.h": "6836ecf840f85a615d76fab416f2b8b8a7792760", 
-    "spinel/spinel_vk.h": "a701f73292b04342ff9d6e90f6b28bea9a8d449f", 
+    "spinel/spinel_vk.h": "6c391f16ddfcb8fde8f5248abcffaa3bbf73a031", 
     "spinel/spinel_vk_types.h": "1590a4dfe2685f73d87042ff03ec127a31a8d842"
 }

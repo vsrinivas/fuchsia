@@ -11,7 +11,99 @@
 #include "vk_target.h"
 
 //
-// TARGET PROPERTIES: VULKAN
+// TARGET FEATURE STRUCTS
+//
+
+struct spn_vk_target_feature_structure_chain
+{
+#undef SPN_VK_TARGET_FEATURE_STRUCTURE_MEMBER_X
+#define SPN_VK_TARGET_FEATURE_STRUCTURE_MEMBER_X(feature_, bX_)
+
+#undef SPN_VK_TARGET_FEATURE_STRUCTURE
+#define SPN_VK_TARGET_FEATURE_STRUCTURE(feature_, stype_, ...) VkPhysicalDevice##feature_ feature_;
+
+  SPN_VK_TARGET_FEATURE_STRUCTURES()
+};
+
+union spn_vk_target_feature_structure_chain_pointer
+{
+  struct
+  {
+    VkStructureType sType;
+    void *          pNext;
+  } * prev;
+
+#undef SPN_VK_TARGET_FEATURE_STRUCTURE_MEMBER_X
+#define SPN_VK_TARGET_FEATURE_STRUCTURE_MEMBER_X(feature_, bX_)
+
+#undef SPN_VK_TARGET_FEATURE_STRUCTURE
+#define SPN_VK_TARGET_FEATURE_STRUCTURE(feature_, stype_, ...)                                     \
+  VkPhysicalDevice##feature_ * feature_;
+
+  SPN_VK_TARGET_FEATURE_STRUCTURES()
+};
+
+spn_result_t
+spn_vk_target_get_feature_structures(struct spn_vk_target const * const target,
+                                     size_t * const                     structures_size,
+                                     void *                             structures)
+{
+  //
+  // NOTE(allanmac): For now, we ignore the target since it's unclear
+  // there is any benefit to returning a "tight" set of feature
+  // structures for a particular target since the list is relatively
+  // small.
+  //
+  if ((target == NULL) || (structures_size == NULL))
+    return SPN_ERROR_PARTIAL_TARGET_REQUIREMENTS;
+
+  //
+  // Initialize structures_size or structures
+  //
+  if (structures == NULL)
+    {
+      *structures_size = sizeof(struct spn_vk_target_feature_structure_chain);
+
+      return SPN_ERROR_PARTIAL_TARGET_REQUIREMENTS;
+    }
+  else
+    {
+      if (*structures_size < sizeof(struct spn_vk_target_feature_structure_chain))
+        return SPN_ERROR_PARTIAL_TARGET_REQUIREMENTS;
+
+      //
+      // otherwise, zero and link structures
+      //
+      struct spn_vk_target_feature_structure_chain * const tfsc = structures;
+
+      memset(tfsc, 0, sizeof(*tfsc));
+
+      union spn_vk_target_feature_structure_chain_pointer cp = { .prev = NULL };
+
+#undef SPN_VK_TARGET_FEATURE_STRUCTURE_MEMBER_X
+#define SPN_VK_TARGET_FEATURE_STRUCTURE_MEMBER_X(feature_, bX_)
+
+#undef SPN_VK_TARGET_FEATURE_STRUCTURE
+#define SPN_VK_TARGET_FEATURE_STRUCTURE(feature_, stype_, ...)                                     \
+  {                                                                                                \
+    tfsc->feature_.sType = stype_;                                                                 \
+    if (cp.prev != NULL)                                                                           \
+      {                                                                                            \
+        cp.prev->pNext = &tfsc->feature_;                                                          \
+      }                                                                                            \
+    cp.feature_ = &tfsc->feature_;                                                                 \
+  }
+
+      SPN_VK_TARGET_FEATURE_STRUCTURES();
+
+      cp.prev->pNext = NULL;
+
+      return SPN_SUCCESS;
+    }
+}
+
+//
+// TARGET REQUIREMENTS: VULKAN
 //
 
 spn_result_t

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <float.h>
+#include <stdalign.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -408,15 +409,16 @@ main(int argc, char const * argv[])
   //
   struct spn_vk_target_requirements spn_tr = { 0 };
 
-  assert(spn_vk_target_get_requirements(spn_target, &spn_tr) ==
-         SPN_ERROR_PARTIAL_TARGET_REQUIREMENTS);
+  if (spn_vk_target_get_requirements(spn_target, &spn_tr) != SPN_ERROR_PARTIAL_TARGET_REQUIREMENTS)
+    return EXIT_FAILURE;
 
   //
   // probe HotSort device requirements for this target
   //
   struct hotsort_vk_target_requirements hs_tr = { 0 };
 
-  assert(hotsort_vk_target_get_requirements(hs_target, &hs_tr) == false);
+  if (hotsort_vk_target_get_requirements(hs_target, &hs_tr) != false)
+    return EXIT_FAILURE;
 
   //
   // populate accumulated device requirements
@@ -428,31 +430,18 @@ main(int argc, char const * argv[])
   //
   // feature structures
   //
-  struct
-  {
-    VkPhysicalDeviceHostQueryResetFeaturesEXT               a;
-    VkPhysicalDevicePipelineExecutablePropertiesFeaturesKHR b;
-    VkPhysicalDeviceScalarBlockLayoutFeaturesEXT            c;
-    VkPhysicalDeviceShaderFloat16Int8FeaturesKHR            d;
-    VkPhysicalDeviceSubgroupSizeControlFeaturesEXT          e;
-  } features = {
-    .a.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES_EXT,
-    .b.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_EXECUTABLE_PROPERTIES_FEATURES_KHR,
-    .c.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SCALAR_BLOCK_LAYOUT_FEATURES_EXT,
-    .d.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES_KHR,
-    .e.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_SIZE_CONTROL_FEATURES_EXT,
-  };
+  size_t structures_size;
 
-  features.a.pNext = &features.b;
-  features.b.pNext = &features.c;
-  features.c.pNext = &features.d;
-  features.d.pNext = &features.e;
-  features.e.pNext = NULL;
+  if (spn_vk_target_get_feature_structures(spn_target, &structures_size, NULL) !=
+      SPN_ERROR_PARTIAL_TARGET_REQUIREMENTS)
+    return EXIT_FAILURE;
 
-  VkPhysicalDeviceFeatures2 pdf2 = {
-    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
-    .pNext = &features.a,
-  };
+  alignas(VkBaseOutStructure) uint8_t structures[structures_size];
+
+  spn(vk_target_get_feature_structures(spn_target, &structures_size, structures));
+
+  VkPhysicalDeviceFeatures2 pdf2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+                                     .pNext = structures };
 
   //
   // populate Spinel device requirements
@@ -469,7 +458,8 @@ main(int argc, char const * argv[])
   hs_tr.ext_names = ext_names + spn_tr.ext_name_count;
   hs_tr.pdf       = &pdf2.features;
 
-  assert(hotsort_vk_target_get_requirements(hs_target, &hs_tr));
+  if (!hotsort_vk_target_get_requirements(hs_target, &hs_tr))
+    return EXIT_FAILURE;
 
   //
   // create VkDevice
@@ -477,7 +467,7 @@ main(int argc, char const * argv[])
   VkDeviceCreateInfo const device_info = {
 
     .sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-    .pNext                   = pdf2.pNext,
+    .pNext                   = &pdf2,
     .flags                   = 0,
     .queueCreateInfoCount    = spn_tr.qci_count,
     .pQueueCreateInfos       = qcis,
@@ -485,7 +475,7 @@ main(int argc, char const * argv[])
     .ppEnabledLayerNames     = NULL,
     .enabledExtensionCount   = ext_name_count,
     .ppEnabledExtensionNames = ext_names,
-    .pEnabledFeatures        = &pdf2.features
+    .pEnabledFeatures        = NULL
   };
 
   vk(CreateDevice(environment.pd, &device_info, NULL, &environment.d));
