@@ -49,7 +49,7 @@ pub struct InspectLocation {
 impl InspectLocation {
     pub fn absolute_path(&self) -> Result<String, Error> {
         // Note: self.path.canonicalize() returns error for files such as:
-        // /hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect
+        // /hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics/root.inspect
         // Hence, getting the absolute path manually.
         let current_dir = std::env::current_dir()?.to_string_lossy().to_string();
         let path_string =
@@ -196,7 +196,7 @@ mod tests {
     fn query_path() {
         let location = InspectLocation {
             inspect_type: InspectType::Vmo,
-            path: PathBuf::from("/hub/c/test.cmx/123/objects"),
+            path: PathBuf::from("/hub/c/test.cmx/123/out/diagnostics"),
             parts: vec!["a".to_string(), "b".to_string()],
         };
         assert_eq!(location.query_path(), vec!["root".to_string(), "a".to_string()]);

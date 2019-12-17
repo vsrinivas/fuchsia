@@ -61,8 +61,8 @@ struct Location {
   // appropriate for use in Open calls.
   //
   // Example:
-  //   /hub/r/sys/1/c/component.cmx/2/out/objects/fuchsia.inspect.Inspect
-  //   /hub/r/sys/1/c/component.cmx/2/out/objects/root.inspect
+  //   /hub/r/sys/1/c/component.cmx/2/out/diagnostics/fuchsia.inspect.Inspect
+  //   /hub/r/sys/1/c/component.cmx/2/out/diagnostics/root.inspect
   std::string AbsoluteFilePath() const;
 
   // Gets the simplified relative file path to the object entry point. The

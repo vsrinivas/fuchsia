@@ -125,7 +125,7 @@ mod tests {
         IqueryResult {
             location: InspectLocation {
                 inspect_type: InspectType::Vmo,
-                path: PathBuf::from("/hub/c/test.cmx/123/objects"),
+                path: PathBuf::from("/hub/c/test.cmx/123/out/diagnostics"),
                 parts,
             },
             hierarchy: Some(NodeHierarchy::new(

@@ -499,7 +499,7 @@ $ iquery --find /hub | grep my_component.cmx
 > "system\_objects." This Inspect data is placed there by the Component Runtime
 > itself.
 
-Your component's endpoint will be listed as `<path>/my_component.cmx/<id>/out/inspect/root.inspect`.
+Your component's endpoint will be listed as `<path>/my_component.cmx/<id>/out/diagnostics/root.inspect`.
 
 Note: If you followed [Dynamic Value Support](#dynamic-value-support) above,
 "root.inspect" will be missing.

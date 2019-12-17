@@ -77,7 +77,7 @@ their hub.
 
 *Top-level* nodes are exposed as VmoFiles in the Hub ending in the extension `.inspect`.
 It is customary for components to expose their primary or root tree as
-`out/objects/root.inspect`.
+`out/diagnostics/root.inspect`.
 
 The manager for a component's environment may expose its own information
 about the component to the hub. For instance, appmgr exposes

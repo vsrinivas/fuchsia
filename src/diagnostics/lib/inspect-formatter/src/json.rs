@@ -695,12 +695,12 @@ mod tests {
         let datas = vec![
             HierarchyData {
                 hierarchy: a,
-                file_path: "/some/path/out/objects/root.inspect".to_string(),
+                file_path: "/some/path/out/diagnostics/root.inspect".to_string(),
                 fields: vec![],
             },
             HierarchyData {
                 hierarchy: b,
-                file_path: "/other/path/out/objects".to_string(),
+                file_path: "/other/path/out/diagnostics".to_string(),
                 fields: vec!["root".to_string(), "x".to_string(), "y".to_string()],
             },
         ];
@@ -886,7 +886,7 @@ mod tests {
                 }
             }
         },
-        \"path\": \"/some/path/out/objects/root.inspect\"
+        \"path\": \"/some/path/out/diagnostics/root.inspect\"
     },
     {
         \"contents\": {
@@ -894,7 +894,7 @@ mod tests {
                 \"bytes\": \"b64:BfGr\"
             }
         },
-        \"path\": \"/other/path/out/objects#x/y\"
+        \"path\": \"/other/path/out/diagnostics#x/y\"
     }
 ]"
         .to_string()

@@ -454,12 +454,12 @@ got registered after startup.
 
 ```
 $ iquery --find /hub
-/hub/c/sysmgr.cmx/4248/out/objects
+/hub/c/sysmgr.cmx/4248/out/diagnostics
 /hub/c/sysmgr.cmx/4248/system_objects
-/hub/r/sys/4566/c/http.cmx/19226/out/objects
+/hub/r/sys/4566/c/http.cmx/19226/out/diagnostics
 /hub/r/sys/4566/c/http.cmx/19226/system_objects
 ...
-/hub/r/sys/4566/c/libinspect_example_component.cmx/8123/out/objects
+/hub/r/sys/4566/c/libinspect_example_component.cmx/8123/out/diagnostics
 /hub/r/sys/4566/c/libinspect_example_component.cmx/8123/system_objects
 ...
 ```
@@ -473,24 +473,25 @@ correspond to our employee database example.
 The `8123` is the process ID of the employee database, and there are two paths
 containing nodes:
 
-Path             | Meaning
------------------|-------------------------------------------
-`out/objects`    | our exposed Inspect data nodes
-`system_objects` | system nodes
+Path                 | Meaning
+---------------------|-----------------------------------------------------------------
+`out/diagnostics`    | contains diagnostics data such as our exposed Inspect data nodes
+`system_objects`     | system nodes
 
 The `system_objects` entry is populated by `appmgr` and includes
 information about the process itself (open handles, memory information,
 CPU registers, shared objects, and so on) &mdash; so we'll skip that one.
 
-The `out/objects` tree is the information exposed by the component itself
-(which is the tree from our example above).
+The `out/diagnostics` directory contains the files that map to the information
+exposed by the component itself for diagnostics purposes, like an inspect VMO file (which is the
+tree from our example above).
 
 To view the employee database's exposed nodes, you can run `iquery` with the
 `--recursive` command line option:
 
 ```
-$ iquery --recursive /hub/r/sys/4566/c/libinspect_example_component.cmx/8123/out/objects
-objects:
+$ iquery --recursive /hub/r/sys/4566/c/libinspect_example_component.cmx/8123/out/diagnostics
+root:
   task_count = 16
   employee_count = 12
   reporting_tree:
@@ -513,12 +514,12 @@ If you wanted to dump the data in JSON (perhaps for some post processing), you
 can specify the `--format=json` parameter to `iquery`:
 
 ```
-$ iquery --recursive --format=json /hub/r/sys/4566/c/libinspect_example_component.cmx/8123/out/objects
+$ iquery --recursive --format=json /hub/r/sys/4566/c/libinspect_example_component.cmx/8123/out/diagnostics
 [
   {
-    "path": "objects",
+    "path": "diagnostics",
     "contents": {
-      "objects": {
+      "root": {
         "task_count": "16",
         "employee_count": "12",
         "reporting_tree": {
@@ -601,25 +602,25 @@ From Chris:
     the target. `fx shell` logs the user into the "sys" realm. If you use fx
     shell you will see:
 
-    /hub/c/libinspect_example_component.cmx/<process_id>/out/objects
+    /hub/c/libinspect_example_component.cmx/<process_id>/out/diagnostics
     /hub/c/libinspect_example_component.cmx/<process_id>/system_objects
 
     If you directly type in the target you will see:
 
-    /hub/r/sys/<realm_id>/c/libinspect_example_component.cmx/<process_id>/out/objects
+    /hub/r/sys/<realm_id>/c/libinspect_example_component.cmx/<process_id>/out/diagnostics
     /hub/r/sys/<realm_id>/c/libinspect_example_component.cmx/<process_id>/system_objects
 
     There are two node trees exposed for the example. The system_objects tree
     is populated by appmgr and includes data about the process itself (open
-    handles, memory in use, stack dumps). The out/objects tree is the
-    information exposed by the component itself (which is the tree we are
+    handles, memory in use, stack dumps). The out/diagnostics directory contains
+    information exposed by the component itself (one file there contains the tree we are
     describing in the example!).
 
     A comprehensive command to automatically find your component and output its
     nodes is:
 
     $ iquery --recursive `iquery --find /hub | grep libinspect_example_component.cmx
-    | grep out/objects`
+    | grep out/diagnostics
 
     This will find the component wherever it is and output its information.
 

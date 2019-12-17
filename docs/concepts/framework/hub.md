@@ -120,7 +120,7 @@ The hub is organized as follows:
 > purposes, such as introspection files and services.  May contain read-write
 > objects.
 
-**\<component instance id\>/out/objects**: component’s exported structured objects
+**\<component instance id\>/out/diagnostics**: component’s diagnostics data
 > A directory tree exposing objects conforming to the [Inspect API](/docs/development/inspect/README.md).
 > This directory tree is exposed by the component itself to allow inspection
 > of component-specific data.

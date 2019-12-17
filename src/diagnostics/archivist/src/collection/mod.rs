@@ -745,8 +745,8 @@ mod tests {
                 }),
             ),
             ("c/my_component.cmx/1/out", None),
-            ("c/my_component.cmx/1/out/objects", None),
-            ("c/my_component.cmx/1/out/objects/root.inspect", None),
+            ("c/my_component.cmx/1/out/diagnostics", None),
+            ("c/my_component.cmx/1/out/diagnostics/root.inspect", None),
             ("c/my_component.cmx/1/c", None),
             ("c/my_component.cmx/1/c/running.cmx", None),
             (
