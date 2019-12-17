@@ -108,7 +108,6 @@ AudioConsumerImpl::AudioConsumerImpl(uint64_t session_id, sys::ComponentContext*
       if (core_.problem()->type == fuchsia::media::playback::PROBLEM_AUDIO_ENCODING_NOT_SUPPORTED) {
         FX_LOGS(WARNING) << "Unsupported codec";
         if (simple_stream_sink_) {
-          core_.ClearSourceSegment();
           simple_stream_sink_->Close(ZX_ERR_INVALID_ARGS);
           simple_stream_sink_ = nullptr;
         }
