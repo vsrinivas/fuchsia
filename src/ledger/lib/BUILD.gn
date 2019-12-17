@@ -29,6 +29,7 @@ executable("ledger_lib_unittests") {
     "//src/ledger/lib/encoding:unittests",
     "//src/ledger/lib/logging:unittests",
     "//src/ledger/lib/loop_fixture:unittests",
+    "//src/ledger/lib/rng:unittests",
     "//src/ledger/lib/socket:unittests",
     "//src/ledger/lib/timekeeper:unittests",
     "//src/ledger/lib/vmo:unittests",

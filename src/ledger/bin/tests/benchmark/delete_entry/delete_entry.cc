@@ -13,7 +13,6 @@
 #include <iostream>
 #include <memory>
 
-#include "peridot/lib/rng/test_random.h"
 #include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/filesystem/get_directory_content_size.h"
@@ -27,6 +26,7 @@
 #include "src/ledger/bin/testing/run_with_tracing.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
+#include "src/ledger/lib/rng/test_random.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "third_party/abseil-cpp/absl/flags/flag.h"
 #include "third_party/abseil-cpp/absl/flags/parse.h"
@@ -69,7 +69,7 @@ class DeleteEntryBenchmark {
   fit::closure QuitLoopClosure();
 
   async::Loop* const loop_;
-  rng::TestRandom random_;
+  TestRandom random_;
   DataGenerator generator_;
   PageDataGenerator page_data_generator_;
   std::unique_ptr<sys::ComponentContext> component_context_;

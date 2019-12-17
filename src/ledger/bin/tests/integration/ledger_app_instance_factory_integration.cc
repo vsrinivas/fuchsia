@@ -13,8 +13,6 @@
 #include <string>
 
 #include "gtest/gtest.h"
-#include "peridot/lib/rng/random.h"
-#include "peridot/lib/rng/test_random.h"
 #include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/app/ledger_repository_factory_impl.h"
 #include "src/ledger/bin/environment/test_loop_notification.h"
@@ -34,6 +32,8 @@
 #include "src/ledger/lib/callback/scoped_callback.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/memory/weak_ptr.h"
+#include "src/ledger/lib/rng/random.h"
+#include "src/ledger/lib/rng/test_random.h"
 #include "src/ledger/lib/socket/socket_pair.h"
 #include "src/ledger/lib/socket/socket_writer.h"
 #include "src/ledger/lib/socket/strings.h"
@@ -60,23 +60,23 @@ constexpr zx::duration kBackoffDuration = zx::msec(5);
 const char kUserId[] = "user";
 constexpr absl::string_view kTestTopLevelNodeName = "top-level-of-test node";
 
-// Implementation of rng::Random that delegates to another instance. This is
+// Implementation of Random that delegates to another instance. This is
 // needed because EnvironmentBuilder requires taking ownership of the random
 // implementation.
-class DelegatedRandom final : public rng::Random {
+class DelegatedRandom final : public Random {
  public:
-  explicit DelegatedRandom(rng::Random* base) : base_(base) {}
+  explicit DelegatedRandom(Random* base) : base_(base) {}
   ~DelegatedRandom() override = default;
 
  private:
   void InternalDraw(void* buffer, size_t buffer_size) override { base_->Draw(buffer, buffer_size); }
 
-  rng::Random* base_;
+  Random* base_;
 };
 
 Environment BuildEnvironment(async::TestLoop* loop, async_dispatcher_t* dispatcher,
                              async_dispatcher_t* io_dispatcher,
-                             sys::ComponentContext* component_context, rng::Random* random,
+                             sys::ComponentContext* component_context, Random* random,
                              storage::DiffCompatibilityPolicy diff_compatibility_policy) {
   return EnvironmentBuilder()
       .SetAsync(dispatcher)
@@ -242,13 +242,13 @@ class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
 
   LoopController* GetLoopController() override;
 
-  rng::Random* GetRandom() override;
+  Random* GetRandom() override;
 
  private:
   async::TestLoop loop_;
   sys::testing::ComponentContextProvider component_context_provider_;
   LoopControllerTestLoop loop_controller_;
-  rng::TestRandom random_;
+  TestRandom random_;
   const TestDiffs test_diffs_;
   // Loop on which to run services.
   std::unique_ptr<SubLoop> services_loop_;
@@ -299,7 +299,7 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
 
 LoopController* LedgerAppInstanceFactoryImpl::GetLoopController() { return &loop_controller_; }
 
-rng::Random* LedgerAppInstanceFactoryImpl::GetRandom() { return &random_; }
+Random* LedgerAppInstanceFactoryImpl::GetRandom() { return &random_; }
 
 namespace {
 

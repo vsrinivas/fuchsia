@@ -9,10 +9,10 @@
 #include <lib/async/cpp/task.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
-#include "peridot/lib/rng/test_random.h"
 #include "src/ledger/bin/environment/test_loop_notification.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/loop_fixture/test_loop_fixture.h"
+#include "src/ledger/lib/rng/test_random.h"
 #include "src/ledger/lib/timekeeper/test_clock.h"
 
 namespace ledger {
@@ -53,7 +53,7 @@ TEST_F(EnvironmentTest, InitializationClock) {
 
 TEST_F(EnvironmentTest, InitializationRandom) {
   auto io_loop = test_loop().StartNewLoop();
-  auto random = std::make_unique<rng::TestRandom>(0);
+  auto random = std::make_unique<TestRandom>(0);
   auto random_ptr = random.get();
   Environment env = EnvironmentBuilder()
                         .SetStartupContext(component_context_provider_.context())

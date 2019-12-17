@@ -53,7 +53,6 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//peridot/lib/rng:testing",
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.ledger.cloud",
     "//sdk/lib/fidl/cpp",
@@ -68,6 +67,7 @@ source_set("lib") {
     "//src/ledger/bin/storage/public:public",
     "//src/ledger/lib/convert",
     "//src/ledger/lib/loop_fixture",
+    "//src/ledger/lib/rng:testing",
     "//src/ledger/lib/timekeeper:testing",
     "//src/ledger/lib/vmo",
     "//src/lib/inspect_deprecated",

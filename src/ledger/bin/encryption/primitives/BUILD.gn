@@ -17,8 +17,8 @@ source_set("primitives") {
   ]
 
   deps = [
-    "//peridot/lib/rng",
     "//src/ledger/lib/logging",
+    "//src/ledger/lib/rng",
     "//third_party/abseil-cpp",
     "//third_party/boringssl",
   ]
@@ -38,8 +38,8 @@ source_set("unittests") {
 
   deps = [
     ":primitives",
-    "//peridot/lib/rng:testing",
     "//src/ledger/lib/logging",
+    "//src/ledger/lib/rng:testing",
     "//third_party/abseil-cpp",
     "//third_party/googletest:gtest",
   ]

@@ -17,12 +17,12 @@
 #include "src/ledger/lib/callback/capture.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
+#include "src/ledger/lib/rng/random.h"
 #include "src/ledger/lib/vmo/strings.h"
 
 namespace ledger {
 
-std::vector<uint8_t> RandomArray(rng::Random* random, size_t size,
-                                 const std::vector<uint8_t>& prefix) {
+std::vector<uint8_t> RandomArray(Random* random, size_t size, const std::vector<uint8_t>& prefix) {
   EXPECT_TRUE(size >= prefix.size());
   std::vector<uint8_t> array(size);
   for (size_t i = 0; i < prefix.size(); ++i) {

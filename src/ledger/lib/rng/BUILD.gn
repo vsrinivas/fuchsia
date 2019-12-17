@@ -2,15 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=42220): Unless new
-# code begins making use of this, it will be unused following the removal of
-# inspect_deprecated and should be removed.
-visibility = [
-  ":*",
-  "//src/lib/inspect_deprecated/*",
-  "//peridot/lib:*",
-]
-
 source_set("rng") {
   sources = [
     "random.h",
@@ -51,7 +42,7 @@ source_set("unittests") {
   deps = [
     ":system",
     ":testing",
-    "//garnet/public/lib/gtest",
+    "//src/ledger/lib/loop_fixture",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]

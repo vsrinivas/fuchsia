@@ -15,10 +15,10 @@
 
 #include <gtest/gtest.h>
 
-#include "peridot/lib/rng/random.h"
 #include "src/ledger/bin/platform/platform.h"
 #include "src/ledger/bin/platform/scoped_tmp_location.h"
 #include "src/ledger/bin/testing/loop_controller.h"
+#include "src/ledger/lib/rng/random.h"
 #include "src/lib/inspect_deprecated/hierarchy.h"
 
 namespace ledger {
@@ -92,7 +92,7 @@ class LedgerAppInstanceFactory {
   virtual LoopController* GetLoopController() = 0;
 
   // Returns a random instance to control the randomness of the test.
-  virtual rng::Random* GetRandom() = 0;
+  virtual Random* GetRandom() = 0;
 };
 
 // Whether tests should only be performed with cloud synchronization enabled, or whether P2P and

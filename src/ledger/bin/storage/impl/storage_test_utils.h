@@ -7,11 +7,11 @@
 
 #include <string>
 
-#include "peridot/lib/rng/random.h"
 #include "src/ledger/bin/storage/impl/btree/tree_node.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/rng/random.h"
 #include "src/ledger/lib/socket/strings.h"
 
 namespace storage {
@@ -64,16 +64,16 @@ ObjectIdentifier ForEachPiece(std::string content, ObjectType type,
                               fit::function<void(std::unique_ptr<const Piece>)> callback);
 
 // Returns a random string of the given length.
-std::string RandomString(rng::Random* random, size_t size);
+std::string RandomString(ledger::Random* random, size_t size);
 
 // Create a new random commit id.
-CommitId RandomCommitId(rng::Random* random);
+CommitId RandomCommitId(ledger::Random* random);
 
 // Create a new random, non-inline object digest.
-ObjectDigest RandomObjectDigest(rng::Random* random);
+ObjectDigest RandomObjectDigest(ledger::Random* random);
 
 // Create a new random object identifier.
-ObjectIdentifier RandomObjectIdentifier(rng::Random* random, ObjectIdentifierFactory* factory);
+ObjectIdentifier RandomObjectIdentifier(ledger::Random* random, ObjectIdentifierFactory* factory);
 
 // Creates and returns a new EntryChange adding or updating the entry with the
 // given information.

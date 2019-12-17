@@ -69,6 +69,7 @@ source_set("integration_sharded") {
     "//src/ledger/lib/callback",
     "//src/ledger/lib/convert",
     "//src/ledger/lib/logging",
+    "//src/ledger/lib/rng",
     "//src/ledger/lib/socket",
     "//src/ledger/lib/timekeeper:testing",
     "//src/ledger/lib/vmo",

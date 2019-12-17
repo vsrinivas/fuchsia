@@ -9,6 +9,7 @@
 
 #include "src/ledger/bin/tests/integration/test_utils.h"
 #include "src/ledger/lib/logging/logging.h"
+#include "src/ledger/lib/rng/random.h"
 #include "src/ledger/lib/socket/socket_pair.h"
 #include "src/ledger/lib/socket/socket_writer.h"
 #include "src/ledger/lib/socket/strings.h"
@@ -78,7 +79,7 @@ LoopController* BaseIntegrationTest::GetLoopController() {
   return GetAppFactory()->GetLoopController();
 }
 
-rng::Random* BaseIntegrationTest::GetRandom() { return GetAppFactory()->GetRandom(); }
+Random* BaseIntegrationTest::GetRandom() { return GetAppFactory()->GetRandom(); }
 
 IntegrationTest::IntegrationTest() : BaseIntegrationTest(GetParam()) {}
 

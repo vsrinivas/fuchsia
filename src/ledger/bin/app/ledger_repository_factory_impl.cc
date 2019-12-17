@@ -36,6 +36,7 @@
 #include "src/ledger/bin/sync_coordinator/impl/user_sync_impl.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/logging/logging.h"
+#include "src/ledger/lib/rng/random.h"
 #include "src/lib/inspect_deprecated/deprecated/expose.h"
 #include "src/lib/inspect_deprecated/deprecated/object_dir.h"
 #include "src/lib/inspect_deprecated/inspect.h"
@@ -87,8 +88,8 @@ constexpr absl::string_view kLedgersPath = "ledgers";
 constexpr absl::string_view kStagingPath = "staging";
 constexpr absl::string_view kNamePath = "name";
 
-bool GetRepositoryName(rng::Random* random, FileSystem* file_system,
-                       const DetachedPath& content_path, std::string* name) {
+bool GetRepositoryName(Random* random, FileSystem* file_system, const DetachedPath& content_path,
+                       std::string* name) {
   DetachedPath name_path = content_path.SubPath(kNamePath);
 
   if (file_system->ReadFileToString(name_path, name)) {
@@ -226,7 +227,7 @@ struct LedgerRepositoryFactoryImpl::RepositoryInformation {
   RepositoryInformation(const RepositoryInformation& other) = default;
   RepositoryInformation(RepositoryInformation&& other) = default;
 
-  bool Init(rng::Random* random, FileSystem* file_system) {
+  bool Init(Random* random, FileSystem* file_system) {
     return GetRepositoryName(random, file_system, content_path, &name);
   }
 

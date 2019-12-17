@@ -17,6 +17,7 @@ source_set("impl") {
     "//src/ledger/bin/filesystem",
     "//src/ledger/bin/p2p_provider/public",
     "//src/ledger/lib/convert",
+    "//src/ledger/lib/rng",
     "//third_party/abseil-cpp",
   ]
 

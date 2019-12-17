@@ -17,6 +17,7 @@
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/rng/random.h"
 
 using ::testing::_;
 using ::testing::AllOf;
@@ -151,13 +152,13 @@ TEST_F(CommitPrunerTest, NoPruningPolicy) {
 
 class FakeCommit : public CommitRandomImpl {
  public:
-  FakeCommit(rng::Random* random, ObjectIdentifierFactory* factory, CommitId parent,
+  FakeCommit(ledger::Random* random, ObjectIdentifierFactory* factory, CommitId parent,
              uint64_t generation)
       : CommitRandomImpl(random, factory), generation_(generation) {
     parents_.push_back(std::move(parent));
   }
 
-  FakeCommit(rng::Random* random, ObjectIdentifierFactory* factory, CommitId parent_1,
+  FakeCommit(ledger::Random* random, ObjectIdentifierFactory* factory, CommitId parent_1,
              CommitId parent_2, uint64_t generation)
       : CommitRandomImpl(random, factory), generation_(generation) {
     parents_.push_back(std::move(parent_1));

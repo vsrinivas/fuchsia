@@ -13,13 +13,13 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "peridot/lib/rng/random.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/lib/callback/capture.h"
 #include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/encoding/encoding.h"
 #include "src/ledger/lib/loop_fixture/test_loop_fixture.h"
+#include "src/ledger/lib/rng/random.h"
 
 namespace ledger {
 namespace {
@@ -39,7 +39,7 @@ cloud_provider::Commit MakeCommit(std::string id, std::optional<std::string> dif
   return commit;
 }
 
-class FakeRandom : public rng::Random {
+class FakeRandom : public Random {
  public:
   // Sets the value returned by the generator.
   void set_value(uint8_t value) { value_ = value; }

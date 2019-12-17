@@ -12,7 +12,6 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "peridot/lib/rng/system_random.h"
 #include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/app/serialization_version.h"
 #include "src/ledger/bin/fidl/include/types.h"
@@ -29,6 +28,8 @@
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/loop_fixture/real_loop_fixture.h"
+#include "src/ledger/lib/rng/random.h"
+#include "src/ledger/lib/rng/system_random.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "third_party/abseil-cpp/absl/strings/escaping.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
@@ -125,14 +126,14 @@ class LedgerEndToEndTest : public ledger::RealLoopFixture {
 
   sys::ComponentContext* component_context() { return component_context_.get(); }
 
-  rng::Random* random() { return &random_; }
+  ledger::Random* random() { return &random_; }
 
  private:
   fuchsia::sys::ComponentControllerPtr ledger_controller_;
   std::vector<fit::function<void()>> ledger_shutdown_callbacks_;
   std::unique_ptr<sys::ComponentContext> component_context_;
   fuchsia::sys::LauncherPtr launcher_;
-  rng::SystemRandom random_;
+  ledger::SystemRandom random_;
 
  protected:
   std::unique_ptr<ledger::Platform> platform_;

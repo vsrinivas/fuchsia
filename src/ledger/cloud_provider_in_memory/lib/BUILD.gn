@@ -25,12 +25,12 @@ source_set("lib") {
   ]
 
   deps = [
-    "//peridot/lib/rng",
     "//sdk/fidl/fuchsia.ledger.cloud",
     "//src/ledger/bin/fidl_helpers",
     "//src/ledger/lib/convert",
     "//src/ledger/lib/encoding",
     "//src/ledger/lib/logging",
+    "//src/ledger/lib/rng",
     "//src/ledger/lib/socket",
     "//third_party/murmurhash",
   ]
@@ -46,12 +46,12 @@ source_set("unittests") {
   ]
   deps = [
     ":lib",
-    "//peridot/lib/rng",
     "//src/ledger/bin/fidl/include",
     "//src/ledger/lib/callback",
     "//src/ledger/lib/convert",
     "//src/ledger/lib/encoding",
     "//src/ledger/lib/loop_fixture",
+    "//src/ledger/lib/rng",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]

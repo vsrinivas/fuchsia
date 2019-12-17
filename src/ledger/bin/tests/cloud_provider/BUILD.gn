@@ -16,9 +16,9 @@ executable("cloud_provider") {
   ]
 
   deps = [
-    "//peridot/lib/rng:testing",
     "//src/ledger/bin/fidl/include",
     "//src/ledger/lib/convert",
+    "//src/ledger/lib/rng:testing",
     "//src/ledger/lib/socket",
     "//src/ledger/lib/vmo",
   ]

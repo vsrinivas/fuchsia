@@ -14,7 +14,6 @@ source_set("environment") {
   ]
 
   public_deps = [
-    "//peridot/lib/rng",
     "//sdk/lib/sys/cpp",
     "//src/ledger/bin/platform",
     "//src/ledger/bin/platform:implementation",
@@ -22,12 +21,13 @@ source_set("environment") {
     "//src/ledger/bin/storage/public",
     "//src/ledger/lib/backoff",
     "//src/ledger/lib/coroutine",
+    "//src/ledger/lib/rng",
     "//src/ledger/lib/timekeeper:system",
   ]
 
   deps = [
-    "//peridot/lib/rng:system",
     "//src/ledger/lib/logging",
+    "//src/ledger/lib/rng:system",
     "//zircon/public/lib/async-cpp",
   ]
 
@@ -64,9 +64,9 @@ source_set("unittests") {
   deps = [
     ":environment",
     ":test_loop_notification",
-    "//peridot/lib/rng:testing",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/ledger/lib/loop_fixture",
+    "//src/ledger/lib/rng:testing",
     "//src/ledger/lib/timekeeper:testing",
     "//third_party/googletest:gmock",
     "//zircon/public/lib/async-cpp",

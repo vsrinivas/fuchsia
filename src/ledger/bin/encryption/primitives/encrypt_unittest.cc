@@ -10,7 +10,7 @@
 
 #include <gtest/gtest.h>
 
-#include "peridot/lib/rng/test_random.h"
+#include "src/ledger/lib/rng/test_random.h"
 
 namespace encryption {
 namespace {
@@ -19,7 +19,7 @@ using EncryptTest = ::testing::TestWithParam<size_t>;
 
 TEST_P(EncryptTest, Correctness) {
   const size_t kMessageSize = GetParam();
-  rng::TestRandom random(0);
+  ledger::TestRandom random(0);
 
   std::string key;
   key.resize(16);

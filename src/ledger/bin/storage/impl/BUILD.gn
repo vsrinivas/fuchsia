@@ -148,6 +148,7 @@ source_set("lib") {
     "//src/ledger/bin/synchronization:lock",
     "//src/ledger/lib/callback",
     "//src/ledger/lib/logging",
+    "//src/ledger/lib/rng",
     "//third_party/abseil-cpp",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/trace",
@@ -184,10 +185,10 @@ source_set("test_utils") {
   ]
 
   public_deps = [
-    "//peridot/lib/rng",
     "//src/ledger/bin/storage/impl/btree:lib",
     "//src/ledger/bin/storage/public",
     "//src/ledger/bin/testing:lib",
+    "//src/ledger/lib/rng",
     "//src/ledger/lib/vmo",
     "//third_party/abseil-cpp",
   ]
@@ -226,7 +227,6 @@ source_set("unittests") {
     ":file_index",
     ":lib",
     ":test_utils",
-    "//peridot/lib/rng",
     "//src/ledger/bin/clocks/testing",
     "//src/ledger/bin/cloud_sync/impl",
     "//src/ledger/bin/encryption/fake",
@@ -238,6 +238,7 @@ source_set("unittests") {
     "//src/ledger/bin/storage/testing",
     "//src/ledger/bin/testing:lib",
     "//src/ledger/lib/logging",
+    "//src/ledger/lib/rng",
     "//src/ledger/lib/timekeeper",
     "//src/ledger/lib/vmo",
     "//third_party/abseil-cpp",

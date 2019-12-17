@@ -36,6 +36,7 @@
 #include "src/ledger/lib/callback/capture.h"
 #include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/rng/random.h"
 #include "src/ledger/lib/vmo/strings.h"
 
 namespace ledger {
@@ -53,7 +54,7 @@ constexpr int kMaximumConcurrency = 30;
 
 // TODO(nathaniel): Deduplicate this duplicated-throughout-a-few-tests utility function into a
 // library in... peridot? In the rng namespace?
-bool NextBool(rng::Random* random) {
+bool NextBool(Random* random) {
   auto bit_generator = random->NewBitGenerator<bool>();
   return bool(std::uniform_int_distribution(0, 1)(bit_generator));
 }
@@ -69,7 +70,7 @@ std::unique_ptr<MergeResolver> GetDummyResolver(Environment* environment,
 class SubstitutePageStorage final : public storage::PageStorageEmptyImpl {
  public:
   explicit SubstitutePageStorage(std::map<storage::CommitId, std::set<storage::CommitId>> graph,
-                                 rng::Random* random, async_dispatcher_t* dispatcher)
+                                 Random* random, async_dispatcher_t* dispatcher)
       : graph_(std::move(graph)), random_(random), dispatcher_(dispatcher), fail_(-1) {
     for (const auto& [child, parents] : graph_) {
       heads_.insert(child);
@@ -131,7 +132,7 @@ class SubstitutePageStorage final : public storage::PageStorageEmptyImpl {
 
   std::set<storage::CommitId> heads_;
   std::map<storage::CommitId, std::set<storage::CommitId>> graph_;
-  rng::Random* random_;
+  Random* random_;
   async_dispatcher_t* dispatcher_;
 
   // The number of calls to complete successfully before terminating calls unsuccessfully. -1 to
@@ -142,7 +143,7 @@ class SubstitutePageStorage final : public storage::PageStorageEmptyImpl {
 class SubstituteInspectablePage : public InspectablePage {
  public:
   explicit SubstituteInspectablePage(std::unique_ptr<ActivePageManager> active_page_manager,
-                                     rng::Random* random, async_dispatcher_t* dispatcher)
+                                     Random* random, async_dispatcher_t* dispatcher)
       : active_page_manager_(std::move(active_page_manager)),
         random_(random),
         dispatcher_(dispatcher) {}
@@ -166,7 +167,7 @@ class SubstituteInspectablePage : public InspectablePage {
 
  private:
   std::unique_ptr<ActivePageManager> active_page_manager_;
-  rng::Random* random_;
+  Random* random_;
   async_dispatcher_t* dispatcher_;
 };
 

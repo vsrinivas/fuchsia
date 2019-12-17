@@ -11,6 +11,7 @@
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/rng/random.h"
 
 namespace storage {
 namespace {
@@ -20,14 +21,14 @@ using ::testing::Field;
 
 using ClockSerializationTest = ::ledger::TestWithEnvironment;
 
-clocks::DeviceId RandomDeviceId(rng::Random* random) {
+clocks::DeviceId RandomDeviceId(ledger::Random* random) {
   std::string device_fingerprint;
   device_fingerprint.resize(16);
   random->Draw(&device_fingerprint);
   return clocks::DeviceId{convert::ToHex(device_fingerprint), random->Draw<uint64_t>()};
 }
 
-ClockEntry RandomClockEntry(rng::Random* random) {
+ClockEntry RandomClockEntry(ledger::Random* random) {
   return ClockEntry{RandomCommitId(random), random->Draw<uint64_t>()};
 }
 

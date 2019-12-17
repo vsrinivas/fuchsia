@@ -13,12 +13,13 @@
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
+#include "src/ledger/lib/rng/random.h"
 
 namespace storage {
 namespace fake {
 namespace {
 
-storage::CommitId RandomCommitId(rng::Random* random) {
+storage::CommitId RandomCommitId(ledger::Random* random) {
   storage::CommitId result;
   result.resize(kCommitIdSize);
   random->Draw(&result);
@@ -27,8 +28,9 @@ storage::CommitId RandomCommitId(rng::Random* random) {
 
 }  // namespace
 
-FakeJournalDelegate::FakeJournalDelegate(rng::Random* random, FakeObjectIdentifierFactory* factory,
-                                         Data initial_data, CommitId parent_id, bool autocommit,
+FakeJournalDelegate::FakeJournalDelegate(ledger::Random* random,
+                                         FakeObjectIdentifierFactory* factory, Data initial_data,
+                                         CommitId parent_id, bool autocommit,
                                          uint64_t generation = 0)
     : autocommit_(autocommit),
       id_(RandomCommitId(random)),
@@ -37,9 +39,10 @@ FakeJournalDelegate::FakeJournalDelegate(rng::Random* random, FakeObjectIdentifi
       generation_(generation),
       factory_(factory) {}
 
-FakeJournalDelegate::FakeJournalDelegate(rng::Random* random, FakeObjectIdentifierFactory* factory,
-                                         Data initial_data, CommitId parent_id, CommitId other_id,
-                                         bool autocommit, uint64_t generation = 0)
+FakeJournalDelegate::FakeJournalDelegate(ledger::Random* random,
+                                         FakeObjectIdentifierFactory* factory, Data initial_data,
+                                         CommitId parent_id, CommitId other_id, bool autocommit,
+                                         uint64_t generation = 0)
     : autocommit_(autocommit),
       id_(RandomCommitId(random)),
       parent_id_(std::move(parent_id)),

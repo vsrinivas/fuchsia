@@ -12,6 +12,7 @@
 
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
+#include "src/ledger/lib/rng/random.h"
 #include "third_party/abseil-cpp/absl/strings/str_cat.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
@@ -22,8 +23,7 @@ constexpr absl::string_view kKeyIdSeparator = "-";
 
 }  // namespace
 
-DataGenerator::DataGenerator(rng::Random* random)
-    : generator_(random->NewBitGenerator<uint64_t>()) {}
+DataGenerator::DataGenerator(Random* random) : generator_(random->NewBitGenerator<uint64_t>()) {}
 
 DataGenerator::~DataGenerator() = default;
 

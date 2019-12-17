@@ -4,12 +4,13 @@
 
 #include "src/ledger/bin/environment/environment.h"
 
-#include "peridot/lib/rng/system_random.h"
 #include "src/ledger/bin/environment/thread_notification.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/backoff/exponential_backoff.h"
 #include "src/ledger/lib/coroutine/coroutine_impl.h"
 #include "src/ledger/lib/logging/logging.h"
+#include "src/ledger/lib/rng/random.h"
+#include "src/ledger/lib/rng/system_random.h"
 #include "src/ledger/lib/timekeeper/system_clock.h"
 
 namespace ledger {
@@ -19,7 +20,7 @@ Environment::Environment(std::unique_ptr<Platform> platform, bool disable_statis
                          sys::ComponentContext* component_context,
                          std::unique_ptr<coroutine::CoroutineService> coroutine_service,
                          BackoffFactory backoff_factory, NotificationFactory notification_factory,
-                         std::unique_ptr<Clock> clock, std::unique_ptr<rng::Random> random,
+                         std::unique_ptr<Clock> clock, std::unique_ptr<Random> random,
                          storage::GarbageCollectionPolicy gc_policy,
                          storage::DiffCompatibilityPolicy diff_compatibility_policy)
     : platform_(std::move(platform)),
@@ -108,7 +109,7 @@ EnvironmentBuilder& EnvironmentBuilder::SetClock(std::unique_ptr<Clock> clock) {
   return *this;
 }
 
-EnvironmentBuilder& EnvironmentBuilder::SetRandom(std::unique_ptr<rng::Random> random) {
+EnvironmentBuilder& EnvironmentBuilder::SetRandom(std::unique_ptr<Random> random) {
   random_ = std::move(random);
   return *this;
 }
@@ -135,7 +136,7 @@ Environment EnvironmentBuilder::Build() {
     clock_ = std::make_unique<SystemClock>();
   }
   if (!random_) {
-    random_ = std::make_unique<rng::SystemRandom>();
+    random_ = std::make_unique<SystemRandom>();
   }
   if (!backoff_factory_) {
     backoff_factory_ = [random = random_.get()] {

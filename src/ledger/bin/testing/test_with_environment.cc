@@ -6,11 +6,11 @@
 
 #include <lib/fit/function.h>
 
-#include "peridot/lib/rng/test_random.h"
 #include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/environment/test_loop_notification.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/run_in_coroutine.h"
+#include "src/ledger/lib/rng/test_random.h"
 #include "src/ledger/lib/timekeeper/test_loop_test_clock.h"
 
 namespace ledger {
@@ -31,7 +31,7 @@ Environment TestWithEnvironment::MakeTestEnvironment(
       .SetNotificationFactory(TestLoopNotification::NewFactory(&test_loop()))
       .SetStartupContext(component_context_provider_.context())
       .SetClock(std::make_unique<TestLoopTestClock>(&test_loop()))
-      .SetRandom(std::make_unique<rng::TestRandom>(test_loop().initial_state()))
+      .SetRandom(std::make_unique<TestRandom>(test_loop().initial_state()))
       .SetGcPolicy(kTestingGarbageCollectionPolicy);
   builder_transformer(&builder);
   return builder.Build();

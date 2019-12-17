@@ -6,11 +6,12 @@
 
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
 #include "src/ledger/bin/storage/public/constants.h"
+#include "src/ledger/lib/rng/random.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 
-CommitRandomImpl::CommitRandomImpl(rng::Random* random, ObjectIdentifierFactory* factory)
+CommitRandomImpl::CommitRandomImpl(ledger::Random* random, ObjectIdentifierFactory* factory)
     : id_(RandomCommitId(random)),
       timestamp_(random->Draw<zx::time_utc>()),
       generation_(random->Draw<uint64_t>()),

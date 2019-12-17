@@ -11,9 +11,9 @@
 
 #include <memory>
 
-#include "peridot/lib/rng/system_random.h"
 #include "src/ledger/cloud_provider_in_memory/lib/fake_cloud_provider.h"
 #include "src/ledger/lib/logging/logging.h"
+#include "src/ledger/lib/rng/system_random.h"
 
 namespace cloud_provider {
 namespace {
@@ -41,7 +41,7 @@ class App {
 
  private:
   async_dispatcher_t* dispatcher_;
-  rng::SystemRandom random_;
+  ledger::SystemRandom random_;
   std::unique_ptr<sys::ComponentContext> component_context_;
   std::unique_ptr<ledger::FakeCloudProvider> cloud_provider_impl_;
   fidl::BindingSet<CloudProvider> cloud_provider_bindings_;

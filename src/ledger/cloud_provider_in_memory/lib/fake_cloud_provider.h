@@ -20,7 +20,7 @@ class FakeCloudProvider : public cloud_provider::CloudProvider {
  public:
   class Builder {
    public:
-    Builder(async_dispatcher_t* dispatcher, rng::Random* random);
+    Builder(async_dispatcher_t* dispatcher, Random* random);
     ~Builder();
 
     Builder& SetInjectNetworkError(InjectNetworkError inject_network_error);
@@ -36,7 +36,7 @@ class FakeCloudProvider : public cloud_provider::CloudProvider {
     friend FakeCloudProvider;
 
     async_dispatcher_t* const dispatcher_;
-    rng::Random* const random_;
+    Random* const random_;
     InjectNetworkError inject_network_error_ = InjectNetworkError::NO;
     InjectMissingDiff inject_missing_diff_ = InjectMissingDiff::NO;
     CloudEraseOnCheck cloud_erase_on_check_ = CloudEraseOnCheck::NO;
@@ -44,7 +44,7 @@ class FakeCloudProvider : public cloud_provider::CloudProvider {
     fit::closure on_watcher_set_ = nullptr;
   };
 
-  explicit FakeCloudProvider(async_dispatcher_t* dispatcher, rng::Random* random);
+  explicit FakeCloudProvider(async_dispatcher_t* dispatcher, Random* random);
   explicit FakeCloudProvider(Builder&& builder);
   FakeCloudProvider(const FakeCloudProvider&) = delete;
   FakeCloudProvider& operator=(const FakeCloudProvider&) = delete;
@@ -59,7 +59,7 @@ class FakeCloudProvider : public cloud_provider::CloudProvider {
                     GetPageCloudCallback callback) override;
 
   async_dispatcher_t* const dispatcher_;
-  rng::Random* const random_;
+  Random* const random_;
 
   fidl_helpers::BoundInterfaceSet<cloud_provider::DeviceSet, FakeDeviceSet> device_set_;
 

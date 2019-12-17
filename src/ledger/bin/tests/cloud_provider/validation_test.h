@@ -10,9 +10,9 @@
 
 #include <gtest/gtest.h>
 
-#include "peridot/lib/rng/test_random.h"
 #include "src/ledger/bin/tests/cloud_provider/types.h"
 #include "src/ledger/lib/loop_fixture/test_loop_fixture.h"
+#include "src/ledger/lib/rng/test_random.h"
 
 namespace cloud_provider {
 
@@ -31,7 +31,7 @@ class ValidationTest : public ledger::TestLoopFixture {
 
  private:
   std::unique_ptr<sys::ComponentContext> component_context_;
-  rng::TestRandom random_;
+  ledger::TestRandom random_;
 };
 
 }  // namespace cloud_provider

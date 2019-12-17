@@ -8,11 +8,12 @@
 
 #include <openssl/aead.h>
 
+#include "src/ledger/lib/rng/random.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace encryption {
 
-bool AES128GCMSIVEncrypt(rng::Random* random, absl::string_view key, absl::string_view data,
+bool AES128GCMSIVEncrypt(ledger::Random* random, absl::string_view key, absl::string_view data,
                          std::string* output) {
   if (key.size() != 16) {
     return false;

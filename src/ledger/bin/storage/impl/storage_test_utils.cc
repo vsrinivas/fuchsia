@@ -24,6 +24,7 @@
 #include "src/ledger/lib/callback/capture.h"
 #include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
+#include "src/ledger/lib/rng/random.h"
 #include "third_party/abseil-cpp/absl/strings/str_format.h"
 
 namespace storage {
@@ -114,22 +115,22 @@ ObjectIdentifier ForEachPiece(std::string content, ObjectType type,
   return encryption::MakeDefaultObjectIdentifier(factory, std::move(result));
 }
 
-std::string RandomString(rng::Random* random, size_t size) {
+std::string RandomString(ledger::Random* random, size_t size) {
   std::string value;
   value.resize(size);
   random->Draw(&value);
   return value;
 }
 
-CommitId RandomCommitId(rng::Random* random) { return RandomString(random, kCommitIdSize); }
+CommitId RandomCommitId(ledger::Random* random) { return RandomString(random, kCommitIdSize); }
 
-ObjectDigest RandomObjectDigest(rng::Random* random) {
+ObjectDigest RandomObjectDigest(ledger::Random* random) {
   fake::FakeObjectIdentifierFactory factory;
   ObjectData data(&factory, RandomString(random, 16), InlineBehavior::PREVENT);
   return data.object_identifier.object_digest();
 }
 
-ObjectIdentifier RandomObjectIdentifier(rng::Random* random, ObjectIdentifierFactory* factory) {
+ObjectIdentifier RandomObjectIdentifier(ledger::Random* random, ObjectIdentifierFactory* factory) {
   return encryption::MakeDefaultObjectIdentifier(factory, RandomObjectDigest(random));
 }
 

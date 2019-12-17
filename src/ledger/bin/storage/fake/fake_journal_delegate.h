@@ -10,11 +10,11 @@
 #include <map>
 #include <string>
 
-#include "peridot/lib/rng/random.h"
 #include "src/ledger/bin/storage/fake/fake_object_identifier_factory.h"
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/rng/random.h"
 
 namespace storage {
 namespace fake {
@@ -28,13 +28,14 @@ class FakeJournalDelegate {
   // Regular commit.
   // |initial_data| must contain the content of the page when the transaction
   // starts.
-  FakeJournalDelegate(rng::Random* random, FakeObjectIdentifierFactory* factory, Data initial_data,
-                      CommitId parent_id, bool autocommit, uint64_t generation);
+  FakeJournalDelegate(ledger::Random* random, FakeObjectIdentifierFactory* factory,
+                      Data initial_data, CommitId parent_id, bool autocommit, uint64_t generation);
   // Merge commit.
   // |initial_data| must contain the content of the page when the transaction
   // starts.
-  FakeJournalDelegate(rng::Random* random, FakeObjectIdentifierFactory* factory, Data initial_data,
-                      CommitId parent_id, CommitId other_id, bool autocommit, uint64_t generation);
+  FakeJournalDelegate(ledger::Random* random, FakeObjectIdentifierFactory* factory,
+                      Data initial_data, CommitId parent_id, CommitId other_id, bool autocommit,
+                      uint64_t generation);
   FakeJournalDelegate(const FakeJournalDelegate&) = delete;
   FakeJournalDelegate& operator=(const FakeJournalDelegate&) = delete;
   ~FakeJournalDelegate();

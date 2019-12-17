@@ -9,18 +9,18 @@
 
 #include <map>
 
-#include "peridot/lib/rng/random.h"
 #include "src/ledger/bin/p2p_provider/public/p2p_provider.h"
 #include "src/ledger/bin/p2p_provider/public/p2p_provider_factory.h"
 #include "src/ledger/bin/p2p_provider/public/types.h"
 #include "src/ledger/lib/callback/scoped_task_runner.h"
 #include "src/ledger/lib/memory/weak_ptr.h"
+#include "src/ledger/lib/rng/random.h"
 
 namespace p2p_provider {
 // P2PProvider handles the peer-to-peer connections between devices.
 class FakeP2PProviderFactory : public P2PProviderFactory {
  public:
-  FakeP2PProviderFactory(rng::Random* random, async_dispatcher_t* dispatcher);
+  FakeP2PProviderFactory(ledger::Random* random, async_dispatcher_t* dispatcher);
   FakeP2PProviderFactory(const FakeP2PProviderFactory&) = delete;
   FakeP2PProviderFactory& operator=(const FakeP2PProviderFactory&) = delete;
   ~FakeP2PProviderFactory() override;
@@ -37,7 +37,7 @@ class FakeP2PProviderFactory : public P2PProviderFactory {
 
   std::map<P2PClientId, ledger::WeakPtr<FakeP2PProvider>> providers_;
 
-  rng::Random* const random_;
+  ledger::Random* const random_;
   ledger::ScopedTaskRunner task_runner_;
 };
 

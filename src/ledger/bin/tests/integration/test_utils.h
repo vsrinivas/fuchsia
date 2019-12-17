@@ -8,16 +8,16 @@
 #include <string>
 #include <vector>
 
-#include "peridot/lib/rng/random.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/testing/ledger_app_instance_factory.h"
+#include "src/ledger/lib/rng/random.h"
 #include "src/ledger/lib/vmo/sized_vmo.h"
 
 namespace ledger {
 
 // Builds an array of length |size|, starting with |prefix| and completed with
 // random data.
-std::vector<uint8_t> RandomArray(rng::Random* random, size_t size,
+std::vector<uint8_t> RandomArray(Random* random, size_t size,
                                  const std::vector<uint8_t>& prefix = {});
 
 // Extracts the content of |vmo| as a std::string.

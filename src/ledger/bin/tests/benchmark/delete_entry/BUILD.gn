@@ -26,6 +26,7 @@ executable("ledger_benchmark_delete_entry") {
     "//src/ledger/bin/testing:lib",
     "//src/ledger/lib/convert",
     "//src/ledger/lib/logging",
+    "//src/ledger/lib/rng:testing",
     "//src/ledger/lib/vmo",
     "//third_party/abseil-cpp",
     "//zircon/public/lib/async-loop-cpp",

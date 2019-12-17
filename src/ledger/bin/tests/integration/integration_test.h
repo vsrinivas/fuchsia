@@ -15,6 +15,7 @@
 #include "gtest/gtest.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/testing/ledger_app_instance_factory.h"
+#include "src/ledger/lib/rng/random.h"
 
 namespace ledger {
 
@@ -55,7 +56,7 @@ class BaseIntegrationTest : public ::testing::Test, public LoopController {
 
   LoopController* GetLoopController();
 
-  rng::Random* GetRandom();
+  Random* GetRandom();
 
  private:
   const LedgerAppInstanceFactoryBuilder* factory_builder_;

@@ -9,9 +9,9 @@
 #include <string>
 #include <vector>
 
-#include "peridot/lib/rng/random.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/storage/testing/commit_empty_impl.h"
+#include "src/ledger/lib/rng/random.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
@@ -19,7 +19,7 @@ namespace storage {
 // Implementaton of Commit returning random values (fixed for each instance).
 class CommitRandomImpl : public CommitEmptyImpl {
  public:
-  CommitRandomImpl(rng::Random* random, ObjectIdentifierFactory* factory);
+  CommitRandomImpl(ledger::Random* random, ObjectIdentifierFactory* factory);
   ~CommitRandomImpl() override;
   CommitRandomImpl(const CommitRandomImpl& other);
   CommitRandomImpl& operator=(const CommitRandomImpl& other);

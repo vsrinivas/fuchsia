@@ -10,7 +10,6 @@
 #include <algorithm>
 #include <utility>
 
-#include "peridot/lib/rng/random.h"
 #include "src/ledger/bin/storage/impl/btree/tree_node.h"
 #include "src/ledger/bin/storage/impl/commit_generated.h"
 #include "src/ledger/bin/storage/impl/commit_serialization.h"
@@ -23,6 +22,7 @@
 #include "src/ledger/lib/memory/ref_counted.h"
 #include "src/ledger/lib/memory/ref_ptr.h"
 #include "src/ledger/lib/memory/weak_ptr.h"
+#include "src/ledger/lib/rng/random.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 #include "third_party/flatbuffers/include/flatbuffers/flatbuffers.h"
 
@@ -207,7 +207,7 @@ Status CommitFactory::FromStorageBytes(CommitId id, std::string storage_bytes,
 }
 
 std::unique_ptr<const Commit> CommitFactory::FromContentAndParents(
-    ledger::Clock* clock, rng::Random* random, ObjectIdentifier root_node_identifier,
+    ledger::Clock* clock, ledger::Random* random, ObjectIdentifier root_node_identifier,
     std::vector<std::unique_ptr<const Commit>> parent_commits) {
   LEDGER_DCHECK(parent_commits.size() == 1 || parent_commits.size() == 2);
 

@@ -9,11 +9,11 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
 
-#include "peridot/lib/rng/random.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/cloud_provider_in_memory/lib/diff_tree.h"
 #include "src/ledger/cloud_provider_in_memory/lib/types.h"
 #include "src/ledger/lib/callback/auto_cleanable.h"
+#include "src/ledger/lib/rng/random.h"
 
 namespace ledger {
 
@@ -24,7 +24,7 @@ struct CommitRecord {
 
 class FakePageCloud : public cloud_provider::PageCloud {
  public:
-  explicit FakePageCloud(async_dispatcher_t* dispatcher, rng::Random* random,
+  explicit FakePageCloud(async_dispatcher_t* dispatcher, Random* random,
                          InjectNetworkError inject_network_error,
                          InjectMissingDiff inject_missing_diff);
   FakePageCloud(const FakePageCloud&) = delete;
@@ -55,7 +55,7 @@ class FakePageCloud : public cloud_provider::PageCloud {
                GetDiffCallback callback) override;
   void UpdateClock(cloud_provider::ClockPack clock, UpdateClockCallback callback) override;
 
-  rng::Random* const random_;
+  Random* const random_;
   InjectNetworkError inject_network_error_;
   std::map<uint64_t, size_t> remaining_errors_to_inject_;
   InjectMissingDiff inject_missing_diff_;

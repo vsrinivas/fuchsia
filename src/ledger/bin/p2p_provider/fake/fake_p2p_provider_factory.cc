@@ -15,6 +15,7 @@
 #include "src/ledger/lib/callback/scoped_task_runner.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/memory/weak_ptr.h"
+#include "src/ledger/lib/rng/random.h"
 
 namespace p2p_provider {
 class FakeP2PProviderFactory::FakeP2PProvider : public P2PProvider {
@@ -58,7 +59,8 @@ class FakeP2PProviderFactory::FakeP2PProvider : public P2PProvider {
   ledger::WeakPtrFactory<FakeP2PProviderFactory::FakeP2PProvider> weak_factory_;
 };
 
-FakeP2PProviderFactory::FakeP2PProviderFactory(rng::Random *random, async_dispatcher_t *dispatcher)
+FakeP2PProviderFactory::FakeP2PProviderFactory(ledger::Random *random,
+                                               async_dispatcher_t *dispatcher)
     : random_(random), task_runner_(dispatcher) {}
 
 FakeP2PProviderFactory::~FakeP2PProviderFactory() {

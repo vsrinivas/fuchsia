@@ -10,6 +10,7 @@
 
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
+#include "src/ledger/lib/rng/random.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
@@ -29,7 +30,7 @@ bool LogOnError(Status status, absl::string_view description) {
 
 }  // namespace
 
-PageDataGenerator::PageDataGenerator(rng::Random* random) : generator_(random) {}
+PageDataGenerator::PageDataGenerator(Random* random) : generator_(random) {}
 
 void PageDataGenerator::PutEntry(PagePtr* page, std::vector<uint8_t> key,
                                  std::vector<uint8_t> value, ReferenceStrategy ref_strategy,

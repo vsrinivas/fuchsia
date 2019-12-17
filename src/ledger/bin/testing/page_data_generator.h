@@ -9,10 +9,10 @@
 
 #include <vector>
 
-#include "peridot/lib/rng/random.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/public/status.h"
 #include "src/ledger/bin/testing/data_generator.h"
+#include "src/ledger/lib/rng/random.h"
 
 namespace ledger {
 
@@ -27,7 +27,7 @@ class PageDataGenerator {
     REFERENCE,
   };
 
-  PageDataGenerator(rng::Random* random);
+  PageDataGenerator(Random* random);
 
   // Put an entry (|key|, |value|) to the given page |page|, inline or as
   // reference depending on |ref_strategy| and with priority specified by

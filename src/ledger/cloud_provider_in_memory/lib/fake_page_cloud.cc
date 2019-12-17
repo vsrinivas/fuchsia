@@ -10,10 +10,10 @@
 
 #include <functional>
 
-#include "peridot/lib/rng/random.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/encoding/encoding.h"
 #include "src/ledger/lib/logging/logging.h"
+#include "src/ledger/lib/rng/random.h"
 #include "src/ledger/lib/socket/strings.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "third_party/murmurhash/murmurhash.h"
@@ -172,7 +172,7 @@ void FakePageCloud::WatcherContainer::SendCommits(std::vector<cloud_provider::Co
                          });
 }
 
-FakePageCloud::FakePageCloud(async_dispatcher_t* dispatcher, rng::Random* random,
+FakePageCloud::FakePageCloud(async_dispatcher_t* dispatcher, Random* random,
                              InjectNetworkError inject_network_error,
                              InjectMissingDiff inject_missing_diff)
     : random_(random),

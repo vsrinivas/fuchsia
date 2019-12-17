@@ -4,12 +4,12 @@
 
 #include "src/ledger/cloud_provider_in_memory/lib/fake_cloud_provider.h"
 
-#include "peridot/lib/rng/random.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/rng/random.h"
 
 namespace ledger {
 
-FakeCloudProvider::Builder::Builder(async_dispatcher_t* dispatcher, rng::Random* random)
+FakeCloudProvider::Builder::Builder(async_dispatcher_t* dispatcher, Random* random)
     : dispatcher_(dispatcher), random_(random) {}
 
 FakeCloudProvider::Builder::~Builder() = default;
@@ -56,7 +56,7 @@ FakeCloudProvider::FakeCloudProvider(Builder&& builder)
       inject_network_error_(builder.inject_network_error_),
       inject_missing_diff_(builder.inject_missing_diff_) {}
 
-FakeCloudProvider::FakeCloudProvider(async_dispatcher_t* dispatcher, rng::Random* random)
+FakeCloudProvider::FakeCloudProvider(async_dispatcher_t* dispatcher, Random* random)
     : FakeCloudProvider(Builder(dispatcher, random)) {}
 
 FakeCloudProvider::~FakeCloudProvider() = default;

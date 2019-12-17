@@ -6,7 +6,6 @@
 
 #include <lib/fit/function.h>
 
-#include "peridot/lib/rng/test_random.h"
 #include "src/ledger/bin/app/flags.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 

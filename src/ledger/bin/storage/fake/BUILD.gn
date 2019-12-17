@@ -40,6 +40,7 @@ source_set("lib") {
     "//src/ledger/bin/environment",
     "//src/ledger/bin/storage/public",
     "//src/ledger/bin/storage/testing",
+    "//src/ledger/lib/rng",
     "//third_party/abseil-cpp",
   ]
 
