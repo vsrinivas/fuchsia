@@ -10,13 +10,13 @@ group("audio") {
     ":tests",
     "//src/media/audio/audio",
     "//src/media/audio/audio_core",
+    "//src/media/audio/bundles:virtual_audio_service_with_config",
     "//src/media/audio/config",
     "//src/media/audio/drivers",
     "//src/media/audio/examples",
     "//src/media/audio/lib",
     "//src/media/audio/tools",
     "//src/media/audio/vim2_media_config",
-    "//src/media/audio/virtual_audio_service",
   ]
 }
 
