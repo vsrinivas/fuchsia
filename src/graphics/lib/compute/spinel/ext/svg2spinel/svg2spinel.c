@@ -4,6 +4,7 @@
 
 #include "svg2spinel.h"
 
+#include <float.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -326,7 +327,7 @@ spn_svg_rasters_decode(struct svg const * const       svg,
                        spn_path_t const * const       paths,
                        struct transform_stack * const ts)
 {
-  static struct spn_clip const raster_clips[] = { { 0.0f, 0.0f, 0.f, 0.0f } };
+  static struct spn_clip const raster_clips[] = { { 0.0f, 0.0f, FLT_MAX, FLT_MAX } };
 
   spn_raster_t * const rasters    = malloc(sizeof(*rasters) * svg_raster_count(svg));
   uint32_t const       ts_restore = transform_stack_save(ts);

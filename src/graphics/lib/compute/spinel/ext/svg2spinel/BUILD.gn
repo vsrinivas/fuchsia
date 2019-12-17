@@ -32,7 +32,7 @@ graphics_compute_unittests("svg2spinel_unittests") {
   include_dirs = [ "${graphics_compute_dir}/spinel" ]
   deps = [
     ":svg2spinel",
-    "${graphics_compute_dir}/spinel",
     "${graphics_compute_dir}/svg",
+    "${graphics_compute_dir}/tests/mock_spinel:mock_spinel_test_utils",
   ]
 }
