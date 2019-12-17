@@ -23,6 +23,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_bus.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_buscore.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_device.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_regs.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/soc.h"
 
 namespace wlan {
@@ -39,6 +40,7 @@ class StubDdkDevice : public Device {
   zx_status_t DeviceAdd(device_add_args_t* args, zx_device_t** out_device) override;
   void DeviceAsyncRemove(zx_device_t* dev) override;
   zx_status_t LoadFirmware(const char* path, zx_handle_t* fw, size_t* size) override;
+  zx_status_t DeviceGetMetadata(uint32_t type, void* buf, size_t buflen, size_t* actual) override;
 };
 
 StubDdkDevice::StubDdkDevice(zx_device_t* device) : Device(device) { Device::Init(); }
@@ -53,6 +55,11 @@ void StubDdkDevice::DeviceAsyncRemove(zx_device_t* dev) { device_async_remove(de
 
 zx_status_t StubDdkDevice::LoadFirmware(const char* path, zx_handle_t* fw, size_t* size) {
   return load_firmware(parent(), path, fw, size);
+}
+
+zx_status_t StubDdkDevice::DeviceGetMetadata(uint32_t type, void* buf, size_t buflen,
+                                             size_t* actual) {
+  return device_get_metadata(parent(), type, buf, buflen, actual);
 }
 
 // The following are unit tests for the individual components of the PCIE driver.  The testing
@@ -107,6 +114,48 @@ zx_status_t RunPcieBusComponentsTest(zx_device_t* parent) {
     BRCMF_ERR("Bus chip read returned chip 0x%x rev. %d, expected 0x%x rev. %d\n", chipreg_chip,
               chipreg_rev, chip->chip, chip->chiprev);
     return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  // Check the PcieBuscore::CoreRegs locking model.
+  {
+    // Hold a CoreRegs instance for PCIE2_CORE.  We should then fail getting a conflicting
+    // ARM_CR4_CORE instance, but succeed in getting a simultaneous PCIE2_CORE instance.
+    {
+      PcieBuscore::CoreRegs pcie2_core_coreregs;
+      if (pcie2_core_coreregs.is_valid()) {
+        BRCMF_ERR("Empty CoreRegs instance should not be valid\n");
+        return ZX_ERR_BAD_STATE;
+      }
+      if ((status = pcie_buscore->GetCoreRegs(CHIPSET_PCIE2_CORE, &pcie2_core_coreregs)) != ZX_OK) {
+        BRCMF_ERR("Failed to get CoreRegs instance for PCIE2_CORE: %s\n",
+                  zx_status_get_string(status));
+        return status;
+      }
+      PcieBuscore::CoreRegs arm_cr4_coreregs;
+      if ((status = pcie_buscore->GetCoreRegs(CHIPSET_ARM_CR4_CORE, &arm_cr4_coreregs)) == ZX_OK) {
+        BRCMF_ERR("Got conflicting CoreRegs instance for ARM_CR4_CORE: %s\n",
+                  zx_status_get_string(status));
+        return status;
+      }
+      PcieBuscore::CoreRegs pcie2_core_coreregs_2;
+      if ((status = pcie_buscore->GetCoreRegs(CHIPSET_PCIE2_CORE, &pcie2_core_coreregs_2)) !=
+          ZX_OK) {
+        BRCMF_ERR("Failed to get simultaneous CoreRegs instance for PCIE2_CORE: %s\n",
+                  zx_status_get_string(status));
+        return status;
+      }
+      // Perform a smoke-test read.
+      pcie2_core_coreregs_2.RegRead(BRCMF_PCIE_PCIE2REG_INTMASK);
+    }
+
+    // Now that the CoreRegs instance for PCIE2_CORE has dropped out of scope, we can get
+    // ARM_CR4_CORE.
+    PcieBuscore::CoreRegs arm_cr4_coreregs;
+    if ((status = pcie_buscore->GetCoreRegs(CHIPSET_ARM_CR4_CORE, &arm_cr4_coreregs)) != ZX_OK) {
+      BRCMF_ERR("Failed to get CoreRegs instance for ARM_CR4_CORE: %s\n",
+                zx_status_get_string(status));
+      return status;
+    }
   }
 
   // Smoke-test CPU access to DMA-visible memory.
