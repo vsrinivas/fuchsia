@@ -421,6 +421,16 @@ zx_status_t DeviceContext::SecondLevelUnmap(paddr_t virt_paddr, size_t size) {
   return ZX_OK;
 }
 
+void DeviceContext::SecondLevelUnmapAllLocked() {
+  while (allocated_regions_.size() > 0) {
+    auto &region = allocated_regions_[allocated_regions_.size() - 1];
+    zx_status_t status = SecondLevelUnmap(region->base, region->size);
+    // SecondLevelUnmap only fails on invalid inputs, and our inputs would only be invalid if our
+    // internals are corrupt.
+    ASSERT(status == ZX_OK);
+  }
+}
+
 uint64_t DeviceContext::minimum_contiguity() const {
   // TODO(teisenbe): Do not hardcode this.
   return 1ull << 20;

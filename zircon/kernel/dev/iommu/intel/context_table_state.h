@@ -49,6 +49,10 @@ class ContextTableState : public fbl::DoublyLinkedListable<ktl::unique_ptr<Conte
 
   zx_status_t GetDeviceContext(ds::Bdf bdf, DeviceContext** context);
 
+  // Removes all mappings from all device contexts. This is only intended to be used just prior to
+  // destruction as it requires holding the parent lock.
+  void UnmapAllFromDeviceContextsLocked();
+
  private:
   ContextTableState(uint8_t bus, bool extended, bool upper, IommuImpl* parent,
                     volatile ds::RootEntrySubentry* root_entry, IommuPage page);

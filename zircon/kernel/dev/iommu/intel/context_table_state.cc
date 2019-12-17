@@ -104,4 +104,10 @@ zx_status_t ContextTableState::GetDeviceContext(ds::Bdf bdf, DeviceContext** con
   return ZX_ERR_NOT_FOUND;
 }
 
+void ContextTableState::UnmapAllFromDeviceContextsLocked() {
+  for (auto& dev : devices_) {
+    dev.SecondLevelUnmapAllLocked();
+  }
+}
+
 }  // namespace intel_iommu

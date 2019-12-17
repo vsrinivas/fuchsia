@@ -88,6 +88,13 @@ IommuImpl::~IommuImpl() {
     msi_free_block(&irq_block_);
   }
 
+  // Before destroying the tables we must first unmap all entries from the device contexts as the
+  // unmapping must be done with lock_ held, whilst object destruction must be done without the
+  // lock beind held.
+  for (auto &table : context_tables_) {
+    table.UnmapAllFromDeviceContextsLocked();
+  }
+
   // Need to free any context tables before mmio_ is unmapped (and before this destructor
   // concludes) as the context_tables_ hold raw pointers back into us. As the destructors of the
   // tables will call operations that acquire the lock_ we drop them with the lock temporarily
