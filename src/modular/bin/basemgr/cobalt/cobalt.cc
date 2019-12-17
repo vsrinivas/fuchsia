@@ -20,8 +20,8 @@ fit::deferred_action<fit::closure> InitializeCobalt(async_dispatcher_t* dispatch
                                                     sys::ComponentContext* context) {
   FXL_DCHECK(!g_cobalt_logger) << "Cobalt has already been initialized.";
 
-  std::unique_ptr<cobalt::CobaltLogger> cobalt_logger = cobalt::NewCobaltLoggerFromProjectName(
-      dispatcher, context->svc(), cobalt_registry::kProjectName);
+  std::unique_ptr<cobalt::CobaltLogger> cobalt_logger = cobalt::NewCobaltLoggerFromProjectId(
+      dispatcher, context->svc(), cobalt_registry::kProjectId);
 
   g_cobalt_logger = cobalt_logger.get();
   return fit::defer<fit::closure>(
