@@ -139,7 +139,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
 
   // This helper API does the basic validation of an Input Node.
   fit::result<std::unique_ptr<camera::ProcessNode>, zx_status_t> GetInputNode(
-      const fuchsia::camera2::CameraStreamType stream_type, PipelineInfo* info) {
+      const fuchsia::camera2::CameraStreamType stream_type, StreamCreationData* info) {
     fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
     buffer_collection.buffer_count = kNumBuffers;
     EXPECT_NE(nullptr, info);
@@ -156,7 +156,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
   }
 
   // This helper API does the basic validation of an Output Node.
-  fit::result<camera::ProcessNode*, zx_status_t> GetGraphNode(PipelineInfo* info,
+  fit::result<camera::ProcessNode*, zx_status_t> GetGraphNode(StreamCreationData* info,
                                                               ProcessNode* input_node) {
     auto graph_result = pipeline_manager_->CreateGraph(info, info->node, input_node);
     EXPECT_TRUE(graph_result.is_ok());
@@ -190,7 +190,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     auto stream_type = kStreamTypeFR;
     auto stream_config_node = GetStreamConfigNode(kDebugConfig, stream_type);
     ASSERT_NE(nullptr, stream_config_node);
-    PipelineInfo info;
+    StreamCreationData info;
     fuchsia::camera2::hal::StreamConfig stream_config;
     stream_config.properties.set_stream_type(stream_type);
     info.stream_config = &stream_config;
@@ -204,7 +204,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     auto stream_type = kStreamTypeDS | kStreamTypeML;
     auto stream_config_node = GetStreamConfigNode(kMonitorConfig, stream_type);
     ASSERT_NE(nullptr, stream_config_node);
-    PipelineInfo info;
+    StreamCreationData info;
     fuchsia::camera2::hal::StreamConfig stream_config;
     stream_config.properties.set_stream_type(stream_type);
     info.stream_config = &stream_config;
@@ -264,7 +264,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
   void TestConfigureMonitorConfigStreamDS() {
     auto stream_config_node = GetStreamConfigNode(kMonitorConfig, kStreamTypeMonitoring);
     ASSERT_NE(nullptr, stream_config_node);
-    PipelineInfo info;
+    StreamCreationData info;
     fuchsia::camera2::hal::StreamConfig stream_config;
     stream_config.properties.set_stream_type(kStreamTypeMonitoring);
     info.stream_config = &stream_config;
@@ -296,7 +296,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
         GetStreamConfigNode(kVideoConfig, kStreamTypeFR | kStreamTypeML | kStreamTypeVideo);
     ASSERT_NE(nullptr, stream_config_node);
 
-    PipelineInfo info;
+    StreamCreationData info;
     fuchsia::camera2::hal::StreamConfig stream_config;
     stream_config.properties.set_stream_type(kStreamTypeFR | kStreamTypeML | kStreamTypeVideo);
     info.stream_config = &stream_config;
@@ -358,7 +358,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     auto stream_config_node = GetStreamConfigNode(kDebugConfig, kStreamTypeFR);
     ASSERT_NE(nullptr, stream_config_node);
 
-    PipelineInfo info;
+    StreamCreationData info;
     fuchsia::camera2::hal::StreamConfig stream_config;
     stream_config.properties.set_stream_type(kStreamTypeFR);
     info.stream_config = &stream_config;
@@ -399,7 +399,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     auto stream_config_node = GetStreamConfigNode(kDebugConfig, kStreamTypeFR);
     ASSERT_NE(nullptr, stream_config_node);
 
-    PipelineInfo info;
+    StreamCreationData info;
     fuchsia::camera2::hal::StreamConfig stream_config;
     stream_config.properties.set_stream_type(kStreamTypeFR);
     info.stream_config = &stream_config;
@@ -418,7 +418,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     auto stream_config_node = GetStreamConfigNode(kMonitorConfig, kStreamTypeDS | kStreamTypeML);
     ASSERT_NE(nullptr, stream_config_node);
 
-    PipelineInfo info;
+    StreamCreationData info;
     fuchsia::camera2::hal::StreamConfig stream_config;
     stream_config.properties.set_stream_type(kStreamTypeDS | kStreamTypeML);
     info.stream_config = &stream_config;
@@ -439,7 +439,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     auto stream_config_node = GetStreamConfigNode(kMonitorConfig, kStreamTypeFR | kStreamTypeML);
     EXPECT_NE(nullptr, stream_config_node);
 
-    PipelineInfo info;
+    StreamCreationData info;
     fuchsia::camera2::hal::StreamConfig stream_config;
     stream_config.properties.set_stream_type(kStreamTypeFR | kStreamTypeML);
     info.stream_config = &stream_config;
@@ -524,7 +524,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     auto stream_config_node = GetStreamConfigNode(kMonitorConfig, kStreamTypeFR | kStreamTypeML);
     EXPECT_NE(nullptr, stream_config_node);
 
-    PipelineInfo info;
+    StreamCreationData info;
     fuchsia::camera2::hal::StreamConfig stream_config;
     stream_config.properties.set_stream_type(kStreamTypeFR | kStreamTypeML);
     info.stream_config = &stream_config;

@@ -17,6 +17,7 @@
 #include "isp_stream_protocol.h"
 #include "pipeline_manager.h"
 #include "processing_node.h"
+#include "stream_pipeline_info.h"
 
 namespace camera {
 

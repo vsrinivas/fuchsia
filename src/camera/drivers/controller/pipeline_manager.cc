@@ -22,7 +22,7 @@ bool HasStreamType(const std::vector<fuchsia::camera2::CameraStreamType>& stream
   return true;
 }
 
-const InternalConfigNode* PipelineManager::GetNextNodeInPipeline(PipelineInfo* info,
+const InternalConfigNode* PipelineManager::GetNextNodeInPipeline(StreamCreationData* info,
                                                                  const InternalConfigNode& node) {
   for (const auto& child_node : node.child_nodes) {
     for (uint32_t i = 0; i < child_node.supported_streams.size(); i++) {
@@ -34,7 +34,7 @@ const InternalConfigNode* PipelineManager::GetNextNodeInPipeline(PipelineInfo* i
   return nullptr;
 }
 
-bool PipelineManager::IsStreamAlreadyCreated(PipelineInfo* info, ProcessNode* node) {
+bool PipelineManager::IsStreamAlreadyCreated(StreamCreationData* info, ProcessNode* node) {
   auto requested_stream_type = info->stream_config->properties.stream_type();
   for (const auto& stream_type : node->configured_streams()) {
     if (stream_type == requested_stream_type) {
@@ -46,7 +46,7 @@ bool PipelineManager::IsStreamAlreadyCreated(PipelineInfo* info, ProcessNode* no
 
 // NOTE: This API currently supports only single consumer node use cases.
 fit::result<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t> PipelineManager::GetBuffers(
-    const InternalConfigNode& producer, PipelineInfo* info, ProcessNode* producer_graph_node) {
+    const InternalConfigNode& producer, StreamCreationData* info, ProcessNode* producer_graph_node) {
   fuchsia::sysmem::BufferCollectionInfo_2 buffers;
   auto consumer = GetNextNodeInPipeline(info, producer);
   if (!consumer) {
@@ -86,7 +86,7 @@ fit::result<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t> PipelineManage
 }
 
 fit::result<std::unique_ptr<ProcessNode>, zx_status_t> PipelineManager::CreateInputNode(
-    PipelineInfo* info) {
+    StreamCreationData* info) {
   uint8_t isp_stream_type;
   if (info->node.input_stream_type == fuchsia::camera2::CameraStreamType::FULL_RESOLUTION) {
     isp_stream_type = STREAM_TYPE_FULL_RESOLUTION;
@@ -141,7 +141,8 @@ fit::result<std::unique_ptr<ProcessNode>, zx_status_t> PipelineManager::CreateIn
 }
 
 fit::result<ProcessNode*, zx_status_t> PipelineManager::CreateOutputNode(
-    PipelineInfo* info, ProcessNode* parent_node, const InternalConfigNode& internal_output_node) {
+    StreamCreationData* info, ProcessNode* parent_node,
+    const InternalConfigNode& internal_output_node) {
   // Create Output Node
   auto output_node = std::make_unique<camera::ProcessNode>(
       internal_output_node.type, parent_node, info->stream_config->properties.stream_type(),
@@ -170,7 +171,7 @@ fit::result<ProcessNode*, zx_status_t> PipelineManager::CreateOutputNode(
 }
 
 fit::result<ProcessNode*, zx_status_t> PipelineManager::CreateGraph(
-    PipelineInfo* info, const InternalConfigNode& internal_node, ProcessNode* parent_node) {
+    StreamCreationData* info, const InternalConfigNode& internal_node, ProcessNode* parent_node) {
   fit::result<ProcessNode*, zx_status_t> result;
   auto next_node_internal = GetNextNodeInPipeline(info, internal_node);
   if (!next_node_internal) {
@@ -217,7 +218,7 @@ fit::result<ProcessNode*, zx_status_t> PipelineManager::CreateGraph(
 
 fit::result<std::unique_ptr<ProcessNode>, zx_status_t>
 PipelineManager::ConfigureStreamPipelineHelper(
-    PipelineInfo* info, fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream) {
+    StreamCreationData* info, fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream) {
   // Configure Input node
   auto input_result = CreateInputNode(info);
   if (input_result.is_error()) {
@@ -245,7 +246,7 @@ PipelineManager::ConfigureStreamPipelineHelper(
 }
 
 fit::result<std::pair<InternalConfigNode, ProcessNode*>, zx_status_t>
-PipelineManager::FindNodeToAttachNewStream(PipelineInfo* info,
+PipelineManager::FindNodeToAttachNewStream(StreamCreationData* info,
                                            const InternalConfigNode& current_internal_node,
                                            ProcessNode* node) {
   auto requested_stream_type = info->stream_config->properties.stream_type();
@@ -279,7 +280,7 @@ PipelineManager::FindNodeToAttachNewStream(PipelineInfo* info,
 }
 
 zx_status_t PipelineManager::AppendToExistingGraph(
-    PipelineInfo* info, ProcessNode* graph_head,
+    StreamCreationData* info, ProcessNode* graph_head,
     fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream) {
   auto result = FindNodeToAttachNewStream(info, info->node, graph_head);
   if (result.is_error()) {
@@ -331,7 +332,7 @@ zx_status_t PipelineManager::AppendToExistingGraph(
 }
 
 zx_status_t PipelineManager::ConfigureStreamPipeline(
-    PipelineInfo* info, fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream) {
+    StreamCreationData* info, fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream) {
   // Input Validations
   if (info == nullptr || info->stream_config == nullptr) {
     return ZX_ERR_INVALID_ARGS;
@@ -393,7 +394,7 @@ zx_status_t PipelineManager::ConfigureStreamPipeline(
   return ZX_OK;
 }
 
-void PipelineManager::OnClientStreamDisconnect(PipelineInfo* info) {
+void PipelineManager::OnClientStreamDisconnect(StreamCreationData* info) {
   ZX_ASSERT(info != nullptr);
   // TODO(braval): When we add support N > 1 substreams of FR and DS
   // being present at the same time, we need to ensure to only

@@ -102,7 +102,7 @@ void ControllerImpl::CreateStream(uint32_t config_index, uint32_t stream_index,
     return;
   }
 
-  PipelineInfo info;
+  StreamCreationData info;
   info.output_buffers = std::move(buffer_collection);
   info.image_format_index = image_format_index;
   info.node = *stream_config_node;
