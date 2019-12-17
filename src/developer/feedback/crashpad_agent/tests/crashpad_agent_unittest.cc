@@ -35,6 +35,7 @@
 #include "src/developer/feedback/crashpad_agent/tests/stub_feedback_data_provider.h"
 #include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
+#include "src/developer/feedback/utils/cobalt_event.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
@@ -254,8 +255,9 @@ class CrashpadAgentTest : public UnitTestFixture {
   }
 
   void CheckLastCobaltCrashState(const CrashState crash_state) {
-    EXPECT_EQ(kCrashMetricId, cobalt_logger_factory_->LastMetricId());
-    EXPECT_EQ(crash_state, cobalt_logger_factory_->LastEventCode());
+    RunLoopUntilIdle();
+    EXPECT_EQ(cobalt_logger_factory_->LastEvent(),
+              CobaltEvent(CobaltEvent::Type::Occurrence, kCrashMetricId, crash_state));
   }
 
   // Checks that the crash server is still expecting at least one more request.

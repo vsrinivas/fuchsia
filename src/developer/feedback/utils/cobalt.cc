@@ -36,10 +36,6 @@ std::string ToString(const Status& status) {
 
 }  // namespace
 
-std::string Cobalt::Event::ToString() const {
-  return fxl::StringPrintf("(metric_id: %u, event_code: %u)", metric_id, event_code);
-}
-
 Cobalt::Cobalt(std::shared_ptr<sys::ServiceDirectory> services) : services_(services) {
   SetUpLogger();
 }
@@ -73,19 +69,41 @@ void Cobalt::SetUpLogger() {
       });
 }
 
-void Cobalt::Log(Event event) {
-  // We copy the integer fields of |event| becuase the order of evaluation of function parameters in
+void Cobalt::LogOrEnqueue(CobaltEvent event) {
+  if (can_log_event_) {
+    Log(std::move(event));
+  } else if (earliest_pending_events_.size() < kMaxQueueSize) {
+    earliest_pending_events_.push_back(std::move(event));
+  } else {
+    FX_LOGS(WARNING) << fxl::StringPrintf("Dropping Cobalt event %s - pending queue is full",
+                                          event.ToString().c_str());
+  }
+}
+
+void Cobalt::Log(CobaltEvent event) {
+  // We copy the integer fields of |event| because the order of evaluation of function parameters in
   // underfined and event may be moved before its metric_id and event_code are evaluated.
   uint32_t metric_id = event.metric_id;
   uint32_t event_code = event.event_code;
+  uint64_t count = event.count;
 
-  logger_->LogEvent(metric_id, event_code, [event = std::move(event)](Status status) mutable {
+  auto cb = [event = std::move(event)](Status status) mutable {
     if (status != Status::OK) {
       FX_LOGS(INFO) << StringPrintf("Cobalt logging error: status %s, event %s",
                                     ToString(status).c_str(), event.ToString().c_str());
     }
     event.callback(status);
-  });
+  };
+
+  switch (event.type) {
+    case CobaltEvent::Type::Occurrence:
+      logger_->LogEvent(metric_id, event_code, std::move(cb));
+      break;
+    case CobaltEvent::Type::Count:
+      logger_->LogEventCount(metric_id, event_code, /*component=*/"", /*period_duration_micros=*/0u,
+                             count, std::move(cb));
+      break;
+  }
 }
 
 void Cobalt::FlushPendingEvents() {
@@ -99,17 +117,16 @@ void Cobalt::FlushPendingEvents() {
   }
 }
 
-void Cobalt::Log(uint32_t metric_id, uint32_t event_code,
-                 fit::callback<void(fuchsia::cobalt::Status)> callback) {
-  Event event(metric_id, event_code, std::move(callback));
-  if (can_log_event_) {
-    Log(std::move(event));
-  } else if (earliest_pending_events_.size() < kMaxQueueSize) {
-    earliest_pending_events_.push_back(std::move(event));
-  } else {
-    FX_LOGS(WARNING) << fxl::StringPrintf("Dropping Cobalt event %s - pending queue is full",
-                                          event.ToString().c_str());
-  }
+void Cobalt::LogOccurrence(uint32_t metric_id, uint32_t event_code,
+                           fit::callback<void(fuchsia::cobalt::Status)> callback) {
+  LogOrEnqueue(
+      CobaltEvent(CobaltEvent::Type::Occurrence, metric_id, event_code, std::move(callback)));
+}
+
+void Cobalt::LogCount(uint32_t metric_id, uint32_t event_code, uint64_t count,
+                      fit::callback<void(fuchsia::cobalt::Status)> callback) {
+  LogOrEnqueue(
+      CobaltEvent(CobaltEvent::Type::Count, metric_id, event_code, count, std::move(callback)));
 }
 
 }  // namespace feedback

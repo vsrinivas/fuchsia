@@ -10,9 +10,11 @@
 #include <memory>
 #include <vector>
 
+#include "src/developer/feedback/testing/gpretty_printers.h"
 #include "src/developer/feedback/testing/stubs/stub_cobalt_logger.h"
 #include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
+#include "src/developer/feedback/utils/cobalt_event.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
@@ -44,12 +46,10 @@ class CobaltTest : public UnitTestFixture {
     RunLoopUntilIdle();
   }
 
-  void CheckStubLastEvents(uint32_t metric_id, uint32_t event_code) {
-    EXPECT_EQ(logger_factory_->LastMetricId(), metric_id);
-    EXPECT_EQ(logger_factory_->LastEventCode(), event_code);
-  }
+  const CobaltEvent& LastEvent() { return logger_factory_->LastEvent(); }
 
   bool WasLogEventCalled() { return logger_factory_->WasLogEventCalled(); }
+  bool WasLogEventCountCalled() { return logger_factory_->WasLogEventCountCalled(); }
 
   void CloseAllConnections() { logger_factory_->CloseAllConnections(); }
   void CloseFactoryConnection() { logger_factory_->CloseFactoryConnection(); }
@@ -82,9 +82,25 @@ TEST_F(CobaltTest, Check_Log) {
     metric_id = NextMetricId();
     event_code = NextEventCode();
 
-    cobalt_->Log(metric_id, event_code);
+    cobalt_->LogOccurrence(metric_id, event_code);
     RunLoopUntilIdle();
-    CheckStubLastEvents(metric_id, event_code);
+    EXPECT_EQ(LastEvent(), CobaltEvent(CobaltEvent::Type::Occurrence, metric_id, event_code));
+  }
+}
+
+TEST_F(CobaltTest, Check_LogCount) {
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+
+  uint32_t metric_id = 0;
+  uint32_t event_code = 0;
+
+  for (size_t i = 0; i < 5; ++i) {
+    metric_id = NextMetricId();
+    event_code = NextEventCode();
+
+    cobalt_->LogCount(metric_id, event_code, i);
+    RunLoopUntilIdle();
+    EXPECT_EQ(LastEvent(), CobaltEvent(CobaltEvent::Type::Count, metric_id, event_code, i));
   }
 }
 
@@ -96,8 +112,8 @@ TEST_F(CobaltTest, Check_CallbackExecutes) {
   uint32_t metric_id = NextMetricId();
   uint32_t event_code = NextEventCode();
 
-  cobalt_->Log(metric_id, event_code,
-               [&log_event_status](Status status) { log_event_status = status; });
+  cobalt_->LogOccurrence(metric_id, event_code,
+                         [&log_event_status](Status status) { log_event_status = status; });
   RunLoopUntilIdle();
   EXPECT_EQ(log_event_status, Status::INVALID_ARGUMENTS);
 }
@@ -112,9 +128,9 @@ TEST_F(CobaltTest, Check_LoggerLosesConnection) {
     metric_id = NextMetricId();
     event_code = NextEventCode();
 
-    cobalt_->Log(metric_id, event_code);
+    cobalt_->LogOccurrence(metric_id, event_code);
     RunLoopUntilIdle();
-    CheckStubLastEvents(metric_id, event_code);
+    EXPECT_EQ(LastEvent(), CobaltEvent(CobaltEvent::Type::Occurrence, metric_id, event_code));
   }
 
   CloseLoggerConnection();
@@ -122,10 +138,10 @@ TEST_F(CobaltTest, Check_LoggerLosesConnection) {
 
   // Attempt to log more, but the values should not be stored by the Logger.
   for (size_t i = 0; i < 5; ++i) {
-    cobalt_->Log(NextMetricId(), NextEventCode());
+    cobalt_->LogOccurrence(NextMetricId(), NextEventCode());
     RunLoopUntilIdle();
     // The stub is stuck on the last value before we closed the connection.
-    CheckStubLastEvents(metric_id, event_code);
+    EXPECT_EQ(LastEvent(), CobaltEvent(CobaltEvent::Type::Occurrence, metric_id, event_code));
   }
 }
 
@@ -145,13 +161,13 @@ TEST_F(CobaltTest, Check_QueueReachesMaxSize) {
     metric_id = NextMetricId();
     event_code = NextEventCode();
 
-    cobalt_->Log(metric_id, event_code);
+    cobalt_->LogOccurrence(metric_id, event_code);
     RunLoopUntilIdle();
     ASSERT_FALSE(WasLogEventCalled());
   }
 
   RunLoopFor(delay);
-  CheckStubLastEvents(metric_id, event_code);
+  EXPECT_EQ(LastEvent(), CobaltEvent(CobaltEvent::Type::Occurrence, metric_id, event_code));
 }
 
 }  // namespace

@@ -29,11 +29,14 @@ source_set("archive") {
 source_set("cobalt") {
   public = [
     "cobalt.h",
+    "cobalt_event.h",
   ]
 
   sources = [
     "cobalt.cc",
     "cobalt.h",
+    "cobalt_event.cc",
+    "cobalt_event.h",
   ]
 
   public_deps = [

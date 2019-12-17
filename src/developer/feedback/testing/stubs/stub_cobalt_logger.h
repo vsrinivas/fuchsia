@@ -7,6 +7,9 @@
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 
+#include <utility>
+
+#include "src/developer/feedback/utils/cobalt_event.h"
 #include "src/lib/fxl/logging.h"
 
 namespace feedback {
@@ -16,15 +19,8 @@ class StubCobaltLoggerBase : public fuchsia::cobalt::Logger {
  public:
   virtual ~StubCobaltLoggerBase() = default;
 
-  uint32_t LastMetricId() const {
-    FXL_CHECK(was_function_called_);
-    return last_metric_id_;
-  }
-
-  uint32_t LastEventCode() const {
-    FXL_CHECK(was_function_called_);
-    return last_event_code_;
-  }
+  const CobaltEvent& LastEvent() const { return events_.back(); }
+  const std::vector<CobaltEvent>& Events() const { return events_; }
 
   bool WasLogEventCalled() const { return WasFunctionCalled(Function::LogEvent); }
   bool WasLogEventCountCalled() const { return WasFunctionCalled(Function::LogEventCount); }
@@ -39,9 +35,9 @@ class StubCobaltLoggerBase : public fuchsia::cobalt::Logger {
   bool WasLogCobaltEventsCalled() const { return WasFunctionCalled(Function::LogCobaltEvents); }
 
  protected:
-  void SetLastMetricIdAndEventCode(uint32_t metric_id, uint32_t event_code) {
-    last_metric_id_ = metric_id;
-    last_event_code_ = event_code;
+  template <typename... Args>
+  void SetLastEvent(Args&&... args) {
+    events_.emplace_back(std::forward<Args>(args)...);
   }
 
   void MarkLogEventAsCalled() { MarkFunctionAsCalled(Function::LogEvent); }
@@ -136,15 +132,14 @@ class StubCobaltLoggerBase : public fuchsia::cobalt::Logger {
   };
 
   // Record a function as having been called.
-  inline void MarkFunctionAsCalled(Function f) { was_function_called_ |= static_cast<uint32_t>(f); }
+  void MarkFunctionAsCalled(Function f) { was_function_called_ |= static_cast<uint32_t>(f); }
 
   // Determine if a function was called.
-  inline bool WasFunctionCalled(Function f) const {
+  bool WasFunctionCalled(Function f) const {
     return was_function_called_ & static_cast<uint32_t>(f);
   }
 
-  uint32_t last_metric_id_ = 0;
-  uint32_t last_event_code_ = 0;
+  std::vector<CobaltEvent> events_;
 
   // Store whether or not a function was called in a bit field.
   uint32_t was_function_called_ = 0;
@@ -154,6 +149,9 @@ class StubCobaltLoggerBase : public fuchsia::cobalt::Logger {
 class StubCobaltLogger : public StubCobaltLoggerBase {
   void LogEvent(uint32_t metric_id, uint32_t event_code,
                 fuchsia::cobalt::Logger::LogEventCallback callback) override;
+  void LogEventCount(uint32_t metric_id, uint32_t event_code, ::std::string component,
+                     int64_t period_duration_micros, int64_t count,
+                     fuchsia::cobalt::Logger::LogEventCountCallback callback) override;
 };
 
 // Fail to acknowledge that LogEvent() was called and return |Status::INVALID_ARGUMENTS|.

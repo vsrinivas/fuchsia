@@ -21,6 +21,7 @@
 #include "src/developer/feedback/testing/stubs/stub_cobalt_logger.h"
 #include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
+#include "src/developer/feedback/utils/cobalt_event.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
@@ -174,8 +175,9 @@ TEST_P(RebootLogHandlerTest, Succeed) {
   EXPECT_STREQ(crash_reporter_->reboot_log().c_str(), param.input_reboot_log.c_str());
   EXPECT_EQ(crash_reporter_->uptime(), param.output_uptime);
 
-  EXPECT_EQ(logger_factory_->LastMetricId(), cobalt_registry::kRebootMetricId);
-  EXPECT_EQ(logger_factory_->LastEventCode(), param.output_cobalt_event_code);
+  EXPECT_EQ(logger_factory_->LastEvent(),
+            CobaltEvent(CobaltEvent::Type::Occurrence, cobalt_registry::kRebootMetricId,
+                        param.output_cobalt_event_code));
 }
 
 TEST_F(RebootLogHandlerTest, Pending_NetworkNotReachable) {

@@ -133,8 +133,8 @@ class DatabaseTest : public UnitTestFixture {
 
   void CheckLastCobaltCrashState(const CrashState crash_state) {
     RunLoopUntilIdle();
-    EXPECT_EQ(kCrashMetricId, cobalt_logger_factory_->LastMetricId());
-    EXPECT_EQ(crash_state, cobalt_logger_factory_->LastEventCode());
+    EXPECT_EQ(cobalt_logger_factory_->LastEvent(),
+              CobaltEvent(CobaltEvent::Type::Occurrence, kCrashMetricId, crash_state));
   }
 
   std::string GetMetadataFilepath(const UUID& local_report_id) {

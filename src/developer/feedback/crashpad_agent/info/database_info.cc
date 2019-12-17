@@ -28,17 +28,17 @@ void DatabaseInfo::IncrementUploadAttempt(const std::string& local_report_id) {
 void DatabaseInfo::MarkReportAsUploaded(const std::string& local_report_id,
                                         const std::string& server_report_id) {
   context_->InspectManager().MarkReportAsUploaded(local_report_id, server_report_id);
-  context_->Cobalt().Log(kCrashMetricId, CrashState::Uploaded);
+  context_->Cobalt().LogOccurrence(kCrashMetricId, CrashState::Uploaded);
 }
 
 void DatabaseInfo::MarkReportAsArchived(const std::string& local_report_id) {
   context_->InspectManager().MarkReportAsArchived(local_report_id);
-  context_->Cobalt().Log(kCrashMetricId, CrashState::Archived);
+  context_->Cobalt().LogOccurrence(kCrashMetricId, CrashState::Archived);
 }
 
 void DatabaseInfo::MarkReportAsGarbageCollected(const std::string& local_report_id) {
   context_->InspectManager().MarkReportAsGarbageCollected(local_report_id);
-  context_->Cobalt().Log(kCrashMetricId, CrashState::GarbageCollected);
+  context_->Cobalt().LogOccurrence(kCrashMetricId, CrashState::GarbageCollected);
 }
 
 }  // namespace feedback

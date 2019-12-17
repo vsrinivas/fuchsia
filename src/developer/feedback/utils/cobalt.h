@@ -11,6 +11,9 @@
 
 #include <deque>
 #include <memory>
+#include <utility>
+
+#include "src/developer/feedback/utils/cobalt_event.h"
 
 namespace feedback {
 
@@ -20,39 +23,29 @@ class Cobalt {
   // We expect fuchsia.cobalt.LoggerFactory to be in |services|.
   Cobalt(std::shared_ptr<sys::ServiceDirectory> services);
 
-  // Log an event with fuchsia.cobalt.Logger with the provided parameters. If the service is not
-  // accessible, keep the parameters to try again later.
-  void Log(
+  // Log an occurrence event with fuchsia.cobalt.Logger with the provided parameters. If the service
+  // is not accessible, keep the parameters to try again later.
+  void LogOccurrence(
       uint32_t metric_id, uint32_t event_code,
       fit::callback<void(fuchsia::cobalt::Status)> callback = [](fuchsia::cobalt::Status) {});
 
+  // Log a count event with fuchsia.cobalt.Logger with the provided parameters. If the service is
+  // not accessible, keep the parameters to try again later.
+  void LogCount(
+      uint32_t metric_id, uint32_t event_code, uint64_t count,
+      fit::callback<void(fuchsia::cobalt::Status)> callback = [](fuchsia::cobalt::Status) {});
+
  private:
-  struct Event {
-    Event(uint32_t metric_id, uint32_t event_code,
-          fit::callback<void(fuchsia::cobalt::Status)> callback)
-        : metric_id(metric_id), event_code(event_code), callback(std::move(callback)) {}
-
-    // Make this object move only
-    Event(const Event& other) = delete;
-    Event& operator=(const Event& other) = delete;
-    Event(Event&& other) = default;
-    Event& operator=(Event&& other) = default;
-
-    uint32_t metric_id = 0;
-    uint32_t event_code = 0;
-    fit::callback<void(fuchsia::cobalt::Status)> callback;
-    std::string ToString() const;
-  };
-
   void SetUpLogger();
-  void Log(Event event);
+  void LogOrEnqueue(CobaltEvent event);
+  void Log(CobaltEvent event);
   void FlushPendingEvents();
 
   std::shared_ptr<sys::ServiceDirectory> services_;
 
   fuchsia::cobalt::LoggerFactoryPtr logger_factory_;
   fuchsia::cobalt::LoggerPtr logger_;
-  std::deque<Event> earliest_pending_events_;
+  std::deque<CobaltEvent> earliest_pending_events_;
 
   bool can_log_event_ = false;
 };

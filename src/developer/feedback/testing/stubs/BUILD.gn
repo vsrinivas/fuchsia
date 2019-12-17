@@ -18,6 +18,7 @@ source_set("stub_cobalt_logger_factory") {
   ]
 
   deps = [
+    "//src/developer/feedback/utils:cobalt",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",

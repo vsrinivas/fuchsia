@@ -26,7 +26,7 @@ void AgentInfo::ExposeSettings(feedback::Settings* settings) {
 }
 
 void AgentInfo::LogCrashState(CrashState state) {
-  context_->Cobalt().Log(kCrashMetricId, state);
+  context_->Cobalt().LogOccurrence(kCrashMetricId, state);
 }
 
 }  // namespace feedback

@@ -12,6 +12,7 @@
 #include <memory>
 
 #include "src/developer/feedback/testing/stubs/stub_cobalt_logger.h"
+#include "src/developer/feedback/utils/cobalt_event.h"
 #include "src/lib/fxl/logging.h"
 
 namespace feedback {
@@ -28,8 +29,8 @@ class StubCobaltLoggerFactoryBase : public fuchsia::cobalt::LoggerFactory {
     return factory_bindings_.GetHandler(this);
   }
 
-  uint32_t LastMetricId() const { return logger_->LastMetricId(); }
-  uint32_t LastEventCode() const { return logger_->LastEventCode(); }
+  const CobaltEvent& LastEvent() const { return logger_->LastEvent(); }
+  const std::vector<CobaltEvent>& Events() const { return logger_->Events(); }
 
   bool WasLogEventCalled() const { return logger_->WasLogEventCalled(); }
   bool WasLogEventCountCalled() const { return logger_->WasLogEventCountCalled(); }

@@ -27,6 +27,7 @@ source_set("gpretty_printers") {
     "//garnet/public/lib/fostr",
     "//garnet/public/lib/fostr/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.feedback",
+    "//src/developer/feedback/utils:cobalt",
     "//src/lib/fsl",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-mem",
