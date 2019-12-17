@@ -5,6 +5,8 @@
 #ifndef ZXTEST_BASE_RUNNER_H_
 #define ZXTEST_BASE_RUNNER_H_
 
+#include <lib/fit/string_view.h>
+
 #include <cstdio>
 
 #include <fbl/string.h>
@@ -20,6 +22,9 @@
 #include <zxtest/base/test-info.h>
 
 namespace zxtest {
+
+// Prefix used to prevent a test from executing, without explicitly requesting disabled test to run.
+static constexpr fit::string_view kDisabledTestPrefix = "DISABLED_";
 
 namespace internal {
 
@@ -101,6 +106,7 @@ struct FilterOp {
   bool operator()(const fbl::String& test_case, const fbl::String& test) const;
 
   fbl::String pattern;
+  bool run_disabled = false;
 };
 
 // This class is the entry point for test and constructs registration.
@@ -130,6 +136,9 @@ class Runner {
 
     // When set list all registered tests.
     bool list = false;
+
+    // When set, disabled tests will be executed.
+    bool run_disabled = false;
 
     // Whether the test suite should stop running upon encountering the first fatal failure.
     bool break_on_failure = false;

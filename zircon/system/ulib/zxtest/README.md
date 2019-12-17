@@ -233,7 +233,8 @@ We preserve the gtest flag names intentionally, so binaries that interact throug
 - ``--gtest_filter(-f) pattern`` Follows gtest syntax for defining patterns that match a given test name.
 - ``--gtest_break_on_failure(-b)`` Will finish test execution upon encountering a fatal failure.
 - ``--gtest_repeat(-i) iter`` Will run all matching tests |iter| times. If |iter| is -1 will run until killed.
-- ``--gtest_list_tests(-l)`` List all matching tests.
+- ``--gtest_list_tests(-l)`` List all tests that would be executed with the current options and filters.
 - ``--gtest_shuffle(-s)`` Shuffle test execution order.
+- ``--gtest_also_run_disabled_tests(-a)`` Will also execute and list tests prefixed with ``DISABLED``.
 - ``--gtest_random_seed(-r)`` Provides a seed for random decisions, such as shuffling. The value is available to the user, through ``zxtest::Runner::GetInstance()->random_seed();``. If unset a random seed is provided.
 - ``--help(-h)`` Prints help message.

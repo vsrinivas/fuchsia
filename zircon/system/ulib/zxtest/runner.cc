@@ -6,6 +6,7 @@
 
 #include <fbl/auto_call.h>
 #include <fbl/string_piece.h>
+#include <fbl/string_printf.h>
 #include <zxtest/base/log-sink.h>
 #include <zxtest/base/runner.h>
 
@@ -161,7 +162,8 @@ void Runner::List(const Runner::Options& options) {
 void Runner::EnforceOptions(const Runner::Options& options) {
   summary_.active_test_count = 0;
   summary_.active_test_case_count = 0;
-  const FilterOp filter_op = {.pattern = options.filter};
+  fbl::String filter_pattern = options.filter;
+  const FilterOp filter_op = {.pattern = filter_pattern, .run_disabled = options.run_disabled};
   for (auto& test_case : test_cases_) {
     // TODO(gevalentino): replace with filter function.
     test_case.Filter(filter_op);
@@ -189,7 +191,7 @@ int RunAllTests(int argc, char** argv) {
 
   if (!errors.is_empty()) {
     for (const auto& error : errors) {
-      fprintf(stderr, "%s\n", error.c_str());
+      log_sink->Write("%s\n", error.c_str());
     }
     options.help = true;
   }
@@ -231,6 +233,10 @@ bool MatchPatterns(fbl::StringPiece pattern, fbl::StringPiece str) {
     return advance(pattern, str, advance);
   };
 
+  if (pattern.empty()) {
+    return true;
+  }
+
   bool has_next = true;
   const char* curr_pattern = pattern.data();
   while (has_next) {
@@ -250,6 +256,13 @@ bool MatchPatterns(fbl::StringPiece pattern, fbl::StringPiece str) {
 
 bool FilterOp::operator()(const fbl::String& test_case, const fbl::String& test) const {
   fbl::String full_test_name = fbl::StringPrintf("%s.%s", test_case.c_str(), test.c_str());
+  if (!run_disabled) {
+    fit::string_view test_case_view(test_case.c_str(), test_case.size());
+    fit::string_view test_view(test.c_str(), test.size());
+    if (test_case_view.find(kDisabledTestPrefix) == 0 || test_view.find(kDisabledTestPrefix) == 0) {
+      return false;
+    }
+  }
 
   const char* p = pattern.c_str();
   const char* d = strchr(p, '-');
@@ -260,6 +273,11 @@ bool FilterOp::operator()(const fbl::String& test_case, const fbl::String& test)
     positive = fbl::StringPiece(p, pattern.size());
   } else {
     size_t delta = d - p;
+    // No positive pattern.
+    // E.g. ":-"
+    if (delta == 1) {
+      delta--;
+    }
     positive = fbl::StringPiece(p, delta);
     negative = fbl::StringPiece(d + 1, pattern.size() - delta - 1);
   }

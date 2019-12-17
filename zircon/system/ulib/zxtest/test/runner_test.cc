@@ -2,20 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "test-registry.h"
+#include <zircon/assert.h>
 
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
 #include <memory>
+#include <set>
 #include <utility>
 
-#include <zircon/assert.h>
 #include <zxtest/base/environment.h>
 #include <zxtest/base/reporter.h>
 #include <zxtest/base/runner.h>
 #include <zxtest/base/test-driver.h>
 #include <zxtest/base/test.h>
+
+#include "test-registry.h"
 
 namespace zxtest {
 
@@ -119,30 +121,81 @@ void RunnerRunAllTests() {
   Runner runner(MakeSilentReporter());
   int test_counter = 0;
   int test_2_counter = 0;
+  int test_3_counter = 0;
+  int test_4_counter = 0;
+
+  int disabled_test_counter = 0;
+  int disabled_test_case_counter = 0;
 
   TestRef ref = runner.RegisterTest<Test, FakeTest>(
       kTestCaseName, kTestName, kFileName, kLineNumber, FakeTest::MakeFactory(&test_counter));
   TestRef ref2 = runner.RegisterTest<Test, FakeTest>("TestCase2", kTestName, kFileName, kLineNumber,
                                                      FakeTest::MakeFactory(&test_2_counter));
+  TestRef ref3 =
+      runner.RegisterTest<Test, FakeTest>("DisabledTestCase3", "TestName", kFileName, kLineNumber,
+                                          FakeTest::MakeFactory(&test_3_counter));
+  TestRef ref4 = runner.RegisterTest<Test, FakeTest>(
+      "TestCase4", "TestName", kFileName, kLineNumber, FakeTest::MakeFactory(&test_4_counter));
+  TestRef ref5 =
+      runner.RegisterTest<Test, FakeTest>("TestCase5", "DISABLED_TestName", kFileName, kLineNumber,
+                                          FakeTest::MakeFactory(&disabled_test_counter));
+  TestRef ref6 =
+      runner.RegisterTest<Test, FakeTest>("DISABLED_TestCase6", "TestName", kFileName, kLineNumber,
+                                          FakeTest::MakeFactory(&disabled_test_case_counter));
 
-  ZX_ASSERT_MSG(ref.test_case_index != ref2.test_case_index,
-                "Different TestCase share same index.\n");
+  std::set<decltype(ref.test_case_index)> test_cases_ids;
+  test_cases_ids.insert(ref.test_case_index);
+  test_cases_ids.insert(ref2.test_case_index);
+  test_cases_ids.insert(ref3.test_case_index);
+  test_cases_ids.insert(ref4.test_case_index);
+  test_cases_ids.insert(ref5.test_case_index);
+  test_cases_ids.insert(ref6.test_case_index);
+
+  ZX_ASSERT_MSG(test_cases_ids.size() == 6, "Different TestCase share same index.\n");
 
   // Verify that the runner actually claims to hold two tests from one test case.
-  ZX_ASSERT_MSG(runner.summary().registered_test_count == 2,
+  ZX_ASSERT_MSG(runner.summary().registered_test_count == test_cases_ids.size(),
                 "Test failed to register correctly.\n");
-  ZX_ASSERT_MSG(runner.summary().registered_test_case_count == 2,
+  ZX_ASSERT_MSG(runner.summary().registered_test_case_count == 6,
                 "TestCase failed to register correctly.\n");
 
   ZX_ASSERT_MSG(runner.Run(Runner::kDefaultOptions) == 0, "Test Execution Failed.\n");
 
   // Check that the active count reflects a filter matching all.
-  ZX_ASSERT_MSG(runner.summary().active_test_count == 2, "Failed to register both tests.\n");
-  ZX_ASSERT_MSG(runner.summary().active_test_case_count == 2, "Failed to register both tests.\n");
+  ZX_ASSERT_MSG(runner.summary().active_test_case_count == 4,
+                "Failed to register all test cases.\n");
+  ZX_ASSERT_MSG(runner.summary().active_test_count == 4, "Failed to register all tests.\n");
+
+  ZX_ASSERT_MSG(test_counter == 1, "test was not executed.\n");
+  ZX_ASSERT_MSG(test_2_counter == 1, "test_2 was not executed.\n");
+  ZX_ASSERT_MSG(test_3_counter == 1, "DisabledTestCase was not executed.\n");
+  ZX_ASSERT_MSG(test_4_counter == 1, "DisabledTest was not executed.\n");
+  ZX_ASSERT_MSG(disabled_test_counter == 0, "DISABLED_TestName was executed.\n");
+  ZX_ASSERT_MSG(disabled_test_case_counter == 0, "DISABLED_TestCase was executed.\n");
+
+  test_counter = 0;
+  test_2_counter = 0;
+  test_3_counter = 0;
+  test_4_counter = 0;
+  disabled_test_counter = 0;
+  disabled_test_case_counter = 0;
+
+  // Run with disabled tests.
+  Runner::Options options = Runner::kDefaultOptions;
+  options.run_disabled = true;
+  ZX_ASSERT_MSG(runner.Run(options) == 0, "Test Execution Failed.\n");
+
+  // Check that the active count reflects a filter matching all.
+  ZX_ASSERT_MSG(runner.summary().active_test_count == 6, "Failed to register both tests.\n");
+  ZX_ASSERT_MSG(runner.summary().active_test_case_count == 6, "Failed to register both tests.\n");
 
   // Check that both tests were executed once.
   ZX_ASSERT_MSG(test_counter == 1, "test was not executed.\n");
   ZX_ASSERT_MSG(test_2_counter == 1, "test_2 was not executed.\n");
+  ZX_ASSERT_MSG(test_3_counter == 1, "DisabledTestCase was not executed.\n");
+  ZX_ASSERT_MSG(test_4_counter == 1, "DisabledTest was not executed.\n");
+  ZX_ASSERT_MSG(disabled_test_counter == 1, "DISABLED_TestName was not executed.\n");
+  ZX_ASSERT_MSG(disabled_test_case_counter == 1, "DISABLED_TestCase was not executed.\n");
 }
 
 // This test Will increase |counter_| each time is executed, until |*counter_| equals |fail_at|.
@@ -333,7 +386,7 @@ void RunnerLifecycleObserversRegisteredAndNotified() {
 
   // For each type of notification ensure that it only notified the appropriate
   // LifecycleObserver the correct number of times.
-  ZX_ASSERT_MSG(runner.Run(options) != 0, "Test Execution Failed.\n");
+  ZX_ASSERT_MSG(runner.Run(options) != 0, "Test Execution suceeded with a failing test.\n");
   // |obs| received all notifications related to execution and environment.
   ZX_ASSERT_MSG(obs.ProgramStartCnt == 1, "ProgramStart notified incorrectly.\n");
   ZX_ASSERT_MSG(obs.IterationStartCnt == 2, "IterationStart notified incorrectly.\n");
@@ -501,7 +554,7 @@ void TestDriverImplResetOnTestCompletion() {
 }
 
 void RunnerOptionsParseFromCmdLineShort() {
-  const char* kArgs[13] = {};
+  const char* kArgs[15] = {};
   kArgs[0] = "mybin";
   kArgs[1] = "-f";
   kArgs[2] = "+*:-ZxTest";
@@ -513,8 +566,10 @@ void RunnerOptionsParseFromCmdLineShort() {
   kArgs[8] = "-l";
   kArgs[9] = "false";
   kArgs[10] = "-b";
-  kArgs[11] = "-h";
+  kArgs[11] = "-a";
   kArgs[12] = "true";
+  kArgs[13] = "-h";
+  kArgs[14] = "true";
 
   fbl::Vector<fbl::String> errors;
   Runner::Options options =
@@ -530,14 +585,15 @@ void RunnerOptionsParseFromCmdLineShort() {
   ZX_ASSERT_MSG(options.repeat == 100, "Runner::Options::repeat not parsed correctly.\n");
   ZX_ASSERT_MSG(options.seed == 10, "Runner::Options::seed not parsed correctly.\n");
   ZX_ASSERT_MSG(options.shuffle, "Runner::Options::shuffle not parsed correctly.\n");
-  ZX_ASSERT_MSG(options.list, "Runner::Options::list not parsed correctly.\n");
-  ZX_ASSERT_MSG(!options.help, "Runner::Options::help not parsed correctly.\n");
+  ZX_ASSERT_MSG(!options.list, "Runner::Options::list not parsed correctly.\n");
+  ZX_ASSERT_MSG(options.run_disabled, "Runner::Options::run_disabled not parsed correctly.\n");
+  ZX_ASSERT_MSG(options.help, "Runner::Options::help not parsed correctly.\n");
   ZX_ASSERT_MSG(options.break_on_failure,
                 "Runner::Options::break_on_failure not parsed correctly.\n");
 }
 
 void RunnerOptionsParseFromCmdLineLong() {
-  const char* kArgs[13] = {};
+  const char* kArgs[15] = {};
   kArgs[0] = "mybin";
   kArgs[1] = "--gtest_filter";
   kArgs[2] = "+*:-ZxTest";
@@ -549,8 +605,10 @@ void RunnerOptionsParseFromCmdLineLong() {
   kArgs[8] = "--gtest_list_tests";
   kArgs[9] = "false";
   kArgs[10] = "--gtest_break_on_failure";
-  kArgs[11] = "--help";
+  kArgs[11] = "--gtest_also_run_disabled_tests";
   kArgs[12] = "true";
+  kArgs[13] = "--help";
+  kArgs[14] = "true";
 
   fbl::Vector<fbl::String> errors;
   Runner::Options options =
@@ -566,8 +624,9 @@ void RunnerOptionsParseFromCmdLineLong() {
   ZX_ASSERT_MSG(options.repeat == 100, "Runner::Options::repeat not parsed correctly\n.");
   ZX_ASSERT_MSG(options.seed == 10, "Runner::Options::seed not parsed correctly\n.");
   ZX_ASSERT_MSG(options.shuffle, "Runner::Options::shuffle not parsed correctly\n.");
-  ZX_ASSERT_MSG(options.list, "Runner::Options::list not parsed correctly\n.");
-  ZX_ASSERT_MSG(!options.help, "Runner::Options::help not parsed correctly\n.");
+  ZX_ASSERT_MSG(!options.list, "Runner::Options::list not parsed correctly\n.");
+  ZX_ASSERT_MSG(options.run_disabled, "Runner::Options::run_disabled not parsed correctly.\n");
+  ZX_ASSERT_MSG(options.help, "Runner::Options::help not parsed correctly\n.");
   ZX_ASSERT_MSG(options.break_on_failure,
                 "Runner::Options::break_on_failure not parsed correctly.\n");
 }
