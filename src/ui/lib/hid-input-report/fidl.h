@@ -13,9 +13,8 @@
 namespace hid_input_report {
 
 struct FidlMouseDescriptor {
-  FidlMouseDescriptor() {}
-  ::llcpp::fuchsia::input::report::MouseDescriptor mouse_descriptor;
-  ::llcpp::fuchsia::input::report::MouseDescriptor::Builder mouse_builder =
+  ::llcpp::fuchsia::input::report::MouseDescriptor descriptor;
+  ::llcpp::fuchsia::input::report::MouseDescriptor::Builder builder =
       ::llcpp::fuchsia::input::report::MouseDescriptor::Build();
 
   ::llcpp::fuchsia::input::report::Axis movement_x = {};
@@ -27,9 +26,8 @@ struct FidlMouseDescriptor {
 };
 
 struct FidlSensorDescriptor {
-  FidlSensorDescriptor() {}
-  ::llcpp::fuchsia::input::report::SensorDescriptor sensor_descriptor;
-  ::llcpp::fuchsia::input::report::SensorDescriptor::Builder sensor_builder =
+  ::llcpp::fuchsia::input::report::SensorDescriptor descriptor;
+  ::llcpp::fuchsia::input::report::SensorDescriptor::Builder builder =
       ::llcpp::fuchsia::input::report::SensorDescriptor::Build();
   std::array<::llcpp::fuchsia::input::report::SensorAxis,
              ::llcpp::fuchsia::input::report::SENSOR_MAX_VALUES>
@@ -38,8 +36,7 @@ struct FidlSensorDescriptor {
 };
 
 struct FidlContactDescriptor {
-  FidlContactDescriptor() {}
-  ::llcpp::fuchsia::input::report::ContactDescriptor::Builder contact_builder =
+  ::llcpp::fuchsia::input::report::ContactDescriptor::Builder builder =
       ::llcpp::fuchsia::input::report::ContactDescriptor::Build();
 
   // The data for the ContactDescriptor.
@@ -54,9 +51,8 @@ struct FidlContactDescriptor {
 };
 
 struct FidlTouchDescriptor {
-  FidlTouchDescriptor() {}
-  ::llcpp::fuchsia::input::report::TouchDescriptor touch_descriptor;
-  ::llcpp::fuchsia::input::report::TouchDescriptor::Builder touch_builder =
+  ::llcpp::fuchsia::input::report::TouchDescriptor descriptor;
+  ::llcpp::fuchsia::input::report::TouchDescriptor::Builder builder =
       ::llcpp::fuchsia::input::report::TouchDescriptor::Build();
 
   fidl::VectorView<::llcpp::fuchsia::input::report::ContactDescriptor> contacts_view;
@@ -70,9 +66,8 @@ struct FidlTouchDescriptor {
 };
 
 struct FidlKeyboardDescriptor {
-  FidlKeyboardDescriptor() {}
-  ::llcpp::fuchsia::input::report::KeyboardDescriptor keyboard_descriptor;
-  ::llcpp::fuchsia::input::report::KeyboardDescriptor::Builder keyboard_builder =
+  ::llcpp::fuchsia::input::report::KeyboardDescriptor descriptor;
+  ::llcpp::fuchsia::input::report::KeyboardDescriptor::Builder builder =
       ::llcpp::fuchsia::input::report::KeyboardDescriptor::Build();
   fidl::VectorView<::llcpp::fuchsia::ui::input2::Key> keys_view;
 
@@ -83,47 +78,43 @@ struct FidlKeyboardDescriptor {
 };
 
 struct FidlDescriptor {
-  FidlDescriptor() {}
-  ::llcpp::fuchsia::input::report::DeviceDescriptor::Builder descriptor_builder =
+  ::llcpp::fuchsia::input::report::DeviceDescriptor::Builder builder =
       ::llcpp::fuchsia::input::report::DeviceDescriptor::Build();
 
-  FidlMouseDescriptor mouse_descriptor;
-  FidlSensorDescriptor sensor_descriptor;
-  FidlTouchDescriptor touch_descriptor;
-  FidlKeyboardDescriptor keyboard_descriptor;
+  FidlMouseDescriptor mouse;
+  FidlSensorDescriptor sensor;
+  FidlTouchDescriptor touch;
+  FidlKeyboardDescriptor keyboard;
 };
 
 struct FidlMouseReport {
-  FidlMouseReport() {}
-  ::llcpp::fuchsia::input::report::MouseReport mouse_report;
-  ::llcpp::fuchsia::input::report::MouseReport::Builder mouse_builder =
+  ::llcpp::fuchsia::input::report::MouseReport report;
+  ::llcpp::fuchsia::input::report::MouseReport::Builder builder =
       ::llcpp::fuchsia::input::report::MouseReport::Build();
   fidl::VectorView<uint8_t> buttons_view;
 
   // Holds the actual data that the builders/views point to.
-  MouseReport report_data;
+  MouseReport data;
 };
 
 struct FidlSensorReport {
-  FidlSensorReport() {}
-  ::llcpp::fuchsia::input::report::SensorReport sensor_report;
-  ::llcpp::fuchsia::input::report::SensorReport::Builder sensor_builder =
+  ::llcpp::fuchsia::input::report::SensorReport report;
+  ::llcpp::fuchsia::input::report::SensorReport::Builder builder =
       ::llcpp::fuchsia::input::report::SensorReport::Build();
   fidl::VectorView<int64_t> values_view;
 
   // Holds the actual data that the builders/views point to.
-  SensorReport report_data;
+  SensorReport data;
 };
 
 struct FidlContactReport {
-  ::llcpp::fuchsia::input::report::ContactReport::Builder contact =
+  ::llcpp::fuchsia::input::report::ContactReport::Builder builder =
       ::llcpp::fuchsia::input::report::ContactReport::Build();
 };
 
 struct FidlTouchReport {
-  FidlTouchReport() {}
-  ::llcpp::fuchsia::input::report::TouchReport touch_report;
-  ::llcpp::fuchsia::input::report::TouchReport::Builder touch_builder =
+  ::llcpp::fuchsia::input::report::TouchReport report;
+  ::llcpp::fuchsia::input::report::TouchReport::Builder builder =
       ::llcpp::fuchsia::input::report::TouchReport::Build();
   std::array<FidlContactReport, ::llcpp::fuchsia::input::report::TOUCH_MAX_CONTACTS> contacts;
   std::array<::llcpp::fuchsia::input::report::ContactReport,
@@ -132,13 +123,12 @@ struct FidlTouchReport {
   fidl::VectorView<::llcpp::fuchsia::input::report::ContactReport> contacts_view;
 
   // Holds the actual data that the builders/views point to.
-  TouchReport report_data;
+  TouchReport data;
 };
 
 struct FidlKeyboardReport {
-  FidlKeyboardReport() {}
-  ::llcpp::fuchsia::input::report::KeyboardReport keyboard_report;
-  ::llcpp::fuchsia::input::report::KeyboardReport::Builder keyboard_builder =
+  ::llcpp::fuchsia::input::report::KeyboardReport report;
+  ::llcpp::fuchsia::input::report::KeyboardReport::Builder builder =
       ::llcpp::fuchsia::input::report::KeyboardReport::Build();
   fidl::VectorView<::llcpp::fuchsia::ui::input2::Key> pressed_keys_view;
 
@@ -149,8 +139,7 @@ struct FidlKeyboardReport {
 };
 
 struct FidlReport {
-  FidlReport() {}
-  ::llcpp::fuchsia::input::report::InputReport::Builder report_builder =
+  ::llcpp::fuchsia::input::report::InputReport::Builder builder =
       ::llcpp::fuchsia::input::report::InputReport::Build();
   std::variant<FidlMouseReport, FidlSensorReport, FidlTouchReport, FidlKeyboardReport> report;
 };

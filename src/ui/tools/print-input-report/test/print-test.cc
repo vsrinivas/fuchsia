@@ -83,7 +83,7 @@ class FakeDevice final : public llcpp_report::InputDevice::Interface {
       return;
     }
 
-    llcpp_report::InputReport report = fidl.report_builder.view();
+    llcpp_report::InputReport report = fidl.builder.view();
     reports_event_.signal(DEV_STATE_READABLE, 0);
     completer.Reply(fidl::VectorView<llcpp_report::InputReport>(&report, 1));
   }
@@ -102,7 +102,7 @@ class FakeDevice final : public llcpp_report::InputDevice::Interface {
     hid_input_report::FidlDescriptor fidl;
     ASSERT_EQ(hid_input_report::SetFidlDescriptor(descriptor_, &fidl), ZX_OK);
 
-    llcpp_report::DeviceDescriptor descriptor = fidl.descriptor_builder.view();
+    llcpp_report::DeviceDescriptor descriptor = fidl.builder.view();
     completer.Reply(std::move(descriptor));
   }
 

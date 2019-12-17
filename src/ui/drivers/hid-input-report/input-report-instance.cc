@@ -61,7 +61,7 @@ void InputReportInstance::GetDescriptor(GetDescriptorCompleter::Sync _completer)
     }
   }
 
-  descriptor = descriptor_data.descriptor_builder.view();
+  descriptor = descriptor_data.builder.view();
   _completer.Reply(std::move(descriptor));
 }
 
@@ -76,7 +76,7 @@ void InputReportInstance::GetReports(GetReportsCompleter::Sync _completer) {
     if (status != ZX_OK) {
       break;
     }
-    reports_[index] = reports_fidl_data_[index].report_builder.view();
+    reports_[index] = reports_fidl_data_[index].builder.view();
     index++;
   }
 

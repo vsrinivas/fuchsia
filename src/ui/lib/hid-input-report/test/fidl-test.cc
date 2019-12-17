@@ -43,7 +43,7 @@ TEST(FidlTest, MouseDescriptor) {
   hid_input_report::FidlDescriptor fidl_desc = {};
   ASSERT_OK(SetFidlDescriptor(desc, &fidl_desc));
 
-  llcpp_report::DeviceDescriptor fidl = fidl_desc.descriptor_builder.view();
+  llcpp_report::DeviceDescriptor fidl = fidl_desc.builder.view();
   ASSERT_TRUE(fidl.has_mouse());
   auto& fidl_mouse = fidl.mouse();
 
@@ -80,7 +80,7 @@ TEST(FidlTest, MouseReport) {
   hid_input_report::FidlReport fidl_report = {};
   ASSERT_OK(SetFidlReport(report, &fidl_report));
 
-  llcpp_report::InputReport fidl = fidl_report.report_builder.view();
+  llcpp_report::InputReport fidl = fidl_report.builder.view();
   ASSERT_TRUE(fidl.has_mouse());
   auto& fidl_mouse = fidl.mouse();
 
@@ -119,7 +119,7 @@ TEST(FidlTest, SensorDescriptor) {
   hid_input_report::FidlDescriptor fidl_desc = {};
   ASSERT_OK(SetFidlDescriptor(desc, &fidl_desc));
 
-  llcpp_report::DeviceDescriptor fidl = fidl_desc.descriptor_builder.view();
+  llcpp_report::DeviceDescriptor fidl = fidl_desc.builder.view();
   ASSERT_TRUE(fidl.has_sensor());
   auto& fidl_sensor = fidl.sensor();
 
@@ -146,7 +146,7 @@ TEST(FidlTest, SensorReport) {
   hid_input_report::FidlReport fidl_report = {};
   ASSERT_OK(SetFidlReport(report, &fidl_report));
 
-  llcpp_report::InputReport fidl = fidl_report.report_builder.view();
+  llcpp_report::InputReport fidl = fidl_report.builder.view();
   ASSERT_TRUE(fidl.has_sensor());
   auto& fidl_sensor = fidl.sensor();
 
@@ -184,7 +184,7 @@ TEST(FidlTest, TouchDescriptor) {
   hid_input_report::FidlDescriptor fidl_desc = {};
   ASSERT_OK(SetFidlDescriptor(desc, &fidl_desc));
 
-  llcpp_report::DeviceDescriptor fidl = fidl_desc.descriptor_builder.view();
+  llcpp_report::DeviceDescriptor fidl = fidl_desc.builder.view();
   ASSERT_TRUE(fidl.has_touch());
   auto& fidl_touch = fidl.touch();
 
@@ -226,7 +226,7 @@ TEST(FidlTest, TouchReport) {
   hid_input_report::FidlReport fidl_report = {};
   ASSERT_OK(SetFidlReport(report, &fidl_report));
 
-  llcpp_report::InputReport fidl = fidl_report.report_builder.view();
+  llcpp_report::InputReport fidl = fidl_report.builder.view();
   ASSERT_TRUE(fidl.has_touch());
   auto& fidl_touch = fidl.touch();
 
@@ -252,7 +252,7 @@ TEST(FidlTest, KeyboardDescriptor) {
   hid_input_report::FidlDescriptor fidl_desc = {};
   ASSERT_OK(SetFidlDescriptor(descriptor, &fidl_desc));
 
-  llcpp_report::DeviceDescriptor fidl = fidl_desc.descriptor_builder.view();
+  llcpp_report::DeviceDescriptor fidl = fidl_desc.builder.view();
   ASSERT_TRUE(fidl.has_keyboard());
   auto& fidl_keyboard = fidl.keyboard();
 
@@ -275,7 +275,7 @@ TEST(FidlTest, KeyboardReport) {
   hid_input_report::FidlReport fidl_report = {};
   ASSERT_OK(SetFidlReport(report, &fidl_report));
 
-  llcpp_report::InputReport fidl = fidl_report.report_builder.view();
+  llcpp_report::InputReport fidl = fidl_report.builder.view();
   ASSERT_TRUE(fidl.has_keyboard());
   auto& fidl_keyboard = fidl.keyboard();
 

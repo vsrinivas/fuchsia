@@ -106,244 +106,201 @@ llcpp_report::Axis HidAxisToLlcppAxis(Axis axis) {
 
 }  // namespace
 
-zx_status_t SetMouseDescriptor(const MouseDescriptor& hid_mouse_desc, FidlDescriptor* descriptor) {
-  FidlMouseDescriptor& mouse_desc = descriptor->mouse_descriptor;
-  auto& mouse_builder = mouse_desc.mouse_builder;
-  mouse_builder = llcpp_report::MouseDescriptor::Build();
-
+void SetMouseDescriptor(const MouseDescriptor& hid_mouse_desc, FidlMouseDescriptor* descriptor) {
   if (hid_mouse_desc.movement_x.enabled) {
-    mouse_desc.movement_x = HidAxisToLlcppAxis(hid_mouse_desc.movement_x);
-    mouse_builder.set_movement_x(&mouse_desc.movement_x);
+    descriptor->movement_x = HidAxisToLlcppAxis(hid_mouse_desc.movement_x);
+    descriptor->builder.set_movement_x(&descriptor->movement_x);
   }
   if (hid_mouse_desc.movement_y.enabled) {
-    mouse_desc.movement_y = HidAxisToLlcppAxis(hid_mouse_desc.movement_y);
-    mouse_builder.set_movement_y(&mouse_desc.movement_y);
+    descriptor->movement_y = HidAxisToLlcppAxis(hid_mouse_desc.movement_y);
+    descriptor->builder.set_movement_y(&descriptor->movement_y);
   }
 
   for (size_t i = 0; i < hid_mouse_desc.num_buttons; i++) {
-    mouse_desc.buttons[i] = hid_mouse_desc.button_ids[i];
+    descriptor->buttons[i] = hid_mouse_desc.button_ids[i];
   }
-  mouse_desc.buttons_view =
-      fidl::VectorView<uint8_t>(mouse_desc.buttons, hid_mouse_desc.num_buttons);
-  mouse_builder.set_buttons(&mouse_desc.buttons_view);
+  descriptor->buttons_view =
+      fidl::VectorView<uint8_t>(descriptor->buttons, hid_mouse_desc.num_buttons);
+  descriptor->builder.set_buttons(&descriptor->buttons_view);
 
-  descriptor->mouse_descriptor.mouse_descriptor = mouse_builder.view();
-  descriptor->descriptor_builder.set_mouse(&descriptor->mouse_descriptor.mouse_descriptor);
-
-  return ZX_OK;
+  descriptor->descriptor = descriptor->builder.view();
 }
 
-zx_status_t SetMouseReport(const MouseReport& hid_mouse_report, FidlReport* report) {
-  FidlMouseReport& mouse_report = std::get<FidlMouseReport>(report->report);
-  auto& mouse_builder = mouse_report.mouse_builder;
-  mouse_builder = llcpp_report::MouseReport::Build();
-
-  mouse_report.report_data = hid_mouse_report;
-  MouseReport& report_data = mouse_report.report_data;
+void SetMouseReport(const MouseReport& hid_mouse_report, FidlMouseReport* report) {
+  report->data = hid_mouse_report;
 
   if (hid_mouse_report.has_movement_x) {
-    mouse_builder.set_movement_x(&report_data.movement_x);
+    report->builder.set_movement_x(&report->data.movement_x);
   }
   if (hid_mouse_report.has_movement_y) {
-    mouse_builder.set_movement_y(&report_data.movement_y);
+    report->builder.set_movement_y(&report->data.movement_y);
   }
-  mouse_report.buttons_view =
-      fidl::VectorView<uint8_t>(report_data.buttons_pressed, report_data.num_buttons_pressed);
+  report->buttons_view =
+      fidl::VectorView<uint8_t>(report->data.buttons_pressed, report->data.num_buttons_pressed);
 
-  mouse_builder.set_pressed_buttons(&mouse_report.buttons_view);
+  report->builder.set_pressed_buttons(&report->buttons_view);
 
-  mouse_report.mouse_report = mouse_builder.view();
-  report->report_builder.set_mouse(&mouse_report.mouse_report);
-
-  return ZX_OK;
+  report->report = report->builder.view();
 }
 
-zx_status_t SetSensorDescriptor(const SensorDescriptor& hid_sensor_desc,
-                                FidlDescriptor* descriptor) {
-  FidlSensorDescriptor& sensor_desc = descriptor->sensor_descriptor;
-  auto& sensor_builder = sensor_desc.sensor_builder;
-
+void SetSensorDescriptor(const SensorDescriptor& hid_sensor_desc,
+                         FidlSensorDescriptor* descriptor) {
   size_t fidl_value_index = 0;
   for (size_t i = 0; i < hid_sensor_desc.num_values; i++) {
     zx_status_t status = HidSensorUsageToLlcppSensorType(
-        hid_sensor_desc.values[i].type, &sensor_desc.values[fidl_value_index].type);
+        hid_sensor_desc.values[i].type, &descriptor->values[fidl_value_index].type);
     if (status != ZX_OK) {
       continue;
     }
-    sensor_desc.values[fidl_value_index].axis = HidAxisToLlcppAxis(hid_sensor_desc.values[i].axis);
+    descriptor->values[fidl_value_index].axis = HidAxisToLlcppAxis(hid_sensor_desc.values[i].axis);
     fidl_value_index++;
   }
 
-  sensor_desc.values_view =
-      fidl::VectorView<llcpp_report::SensorAxis>(sensor_desc.values.data(), fidl_value_index);
-  sensor_builder.set_values(&sensor_desc.values_view);
+  descriptor->values_view =
+      fidl::VectorView<llcpp_report::SensorAxis>(descriptor->values.data(), fidl_value_index);
+  descriptor->builder.set_values(&descriptor->values_view);
 
-  descriptor->sensor_descriptor.sensor_descriptor = sensor_builder.view();
-  descriptor->descriptor_builder.set_sensor(&descriptor->sensor_descriptor.sensor_descriptor);
-
-  return ZX_OK;
+  descriptor->descriptor = descriptor->builder.view();
 }
 
-zx_status_t SetSensorReport(const SensorReport& hid_sensor_report, FidlReport* report) {
-  FidlSensorReport& sensor_report = std::get<FidlSensorReport>(report->report);
-  auto& sensor_builder = sensor_report.sensor_builder;
-  sensor_builder = llcpp_report::SensorReport::Build();
+void SetSensorReport(const SensorReport& hid_sensor_report, FidlSensorReport* report) {
+  report->data = hid_sensor_report;
 
-  sensor_report.report_data = hid_sensor_report;
+  report->values_view = fidl::VectorView<int64_t>(report->data.values, report->data.num_values);
+  report->builder.set_values(&report->values_view);
 
-  sensor_report.values_view = fidl::VectorView<int64_t>(sensor_report.report_data.values,
-                                                        sensor_report.report_data.num_values);
-  sensor_builder.set_values(&sensor_report.values_view);
-
-  sensor_report.sensor_report = sensor_builder.view();
-  report->report_builder.set_sensor(&sensor_report.sensor_report);
-
-  return ZX_OK;
+  report->report = report->builder.view();
 }
 
-zx_status_t SetTouchDescriptor(const TouchDescriptor& hid_touch_desc, FidlDescriptor* descriptor) {
-  FidlTouchDescriptor& touch_desc = descriptor->touch_descriptor;
-  auto& touch_builder = touch_desc.touch_builder;
-
+void SetTouchDescriptor(const TouchDescriptor& hid_touch_desc, FidlTouchDescriptor* descriptor) {
   for (size_t i = 0; i < hid_touch_desc.num_contacts; i++) {
-    FidlContactDescriptor& contact = touch_desc.contacts[i];
+    FidlContactDescriptor& contact = descriptor->contacts[i];
 
     if (hid_touch_desc.contacts[i].position_x.enabled) {
       contact.position_x = HidAxisToLlcppAxis(hid_touch_desc.contacts[i].position_x);
-      contact.contact_builder.set_position_x(&touch_desc.contacts[i].position_x);
+      contact.builder.set_position_x(&contact.position_x);
     }
     if (hid_touch_desc.contacts[i].position_y.enabled) {
       contact.position_y = HidAxisToLlcppAxis(hid_touch_desc.contacts[i].position_y);
-      contact.contact_builder.set_position_y(&touch_desc.contacts[i].position_y);
+      contact.builder.set_position_y(&contact.position_y);
     }
     if (hid_touch_desc.contacts[i].pressure.enabled) {
       contact.pressure = HidAxisToLlcppAxis(hid_touch_desc.contacts[i].pressure);
-      contact.contact_builder.set_pressure(&touch_desc.contacts[i].pressure);
+      contact.builder.set_pressure(&contact.pressure);
     }
     if (hid_touch_desc.contacts[i].contact_width.enabled) {
       contact.contact_width = HidAxisToLlcppAxis(hid_touch_desc.contacts[i].contact_width);
-      contact.contact_builder.set_contact_width(&touch_desc.contacts[i].contact_width);
+      contact.builder.set_contact_width(&contact.contact_width);
     }
     if (hid_touch_desc.contacts[i].contact_height.enabled) {
       contact.contact_height = HidAxisToLlcppAxis(hid_touch_desc.contacts[i].contact_height);
-      contact.contact_builder.set_contact_height(&touch_desc.contacts[i].contact_height);
+      contact.builder.set_contact_height(&contact.contact_height);
     }
-    touch_desc.contacts_built[i] = contact.contact_builder.view();
+    descriptor->contacts_built[i] = contact.builder.view();
   }
-  touch_desc.contacts_view = fidl::VectorView<llcpp_report::ContactDescriptor>(
-      touch_desc.contacts_built.data(), hid_touch_desc.num_contacts);
-  touch_builder.set_contacts(&touch_desc.contacts_view);
+  descriptor->contacts_view = fidl::VectorView<llcpp_report::ContactDescriptor>(
+      descriptor->contacts_built.data(), hid_touch_desc.num_contacts);
+  descriptor->builder.set_contacts(&descriptor->contacts_view);
 
-  touch_desc.max_contacts = hid_touch_desc.max_contacts;
-  touch_builder.set_max_contacts(&touch_desc.max_contacts);
+  descriptor->max_contacts = hid_touch_desc.max_contacts;
+  descriptor->builder.set_max_contacts(&descriptor->max_contacts);
 
-  touch_desc.touch_type = hid_touch_desc.touch_type;
-  touch_builder.set_touch_type(&touch_desc.touch_type);
+  descriptor->touch_type = hid_touch_desc.touch_type;
+  descriptor->builder.set_touch_type(&descriptor->touch_type);
 
-  descriptor->touch_descriptor.touch_descriptor = touch_builder.view();
-  descriptor->descriptor_builder.set_touch(&descriptor->touch_descriptor.touch_descriptor);
-
-  return ZX_OK;
+  descriptor->descriptor = descriptor->builder.view();
 }
 
-zx_status_t SetTouchReport(const TouchReport& hid_touch_report, FidlReport* report) {
-  FidlTouchReport& touch_report = std::get<FidlTouchReport>(report->report);
-  auto& touch_builder = touch_report.touch_builder;
+void SetTouchReport(const TouchReport& hid_touch_report, FidlTouchReport* report) {
+  report->data = hid_touch_report;
 
-  touch_report.report_data = hid_touch_report;
-  TouchReport& report_data = touch_report.report_data;
-
-  for (size_t i = 0; i < report_data.num_contacts; i++) {
-    llcpp_report::ContactReport::Builder& fidl_contact = touch_report.contacts[i].contact;
-    fidl_contact = llcpp_report::ContactReport::Build();
-
-    ContactReport& contact = report_data.contacts[i];
+  for (size_t i = 0; i < report->data.num_contacts; i++) {
+    llcpp_report::ContactReport::Builder& contact_builder = report->contacts[i].builder;
+    ContactReport& contact = report->data.contacts[i];
 
     if (contact.has_contact_id) {
-      fidl_contact.set_contact_id(&contact.contact_id);
+      contact_builder.set_contact_id(&contact.contact_id);
     }
     if (contact.has_position_x) {
-      fidl_contact.set_position_x(&contact.position_x);
+      contact_builder.set_position_x(&contact.position_x);
     }
     if (contact.has_position_y) {
-      fidl_contact.set_position_y(&contact.position_y);
+      contact_builder.set_position_y(&contact.position_y);
     }
     if (contact.has_pressure) {
-      fidl_contact.set_pressure(&contact.pressure);
+      contact_builder.set_pressure(&contact.pressure);
     }
     if (contact.has_contact_width) {
-      fidl_contact.set_contact_width(&contact.contact_width);
+      contact_builder.set_contact_width(&contact.contact_width);
     }
     if (contact.has_contact_height) {
-      fidl_contact.set_contact_height(&contact.contact_height);
+      contact_builder.set_contact_height(&contact.contact_height);
     }
-    touch_report.contacts_built[i] = fidl_contact.view();
+    report->contacts_built[i] = contact_builder.view();
   }
 
-  touch_report.contacts_view = fidl::VectorView<llcpp_report::ContactReport>(
-      touch_report.contacts_built.data(), hid_touch_report.num_contacts);
-  touch_builder.set_contacts(&touch_report.contacts_view);
+  report->contacts_view = fidl::VectorView<llcpp_report::ContactReport>(
+      report->contacts_built.data(), hid_touch_report.num_contacts);
+  report->builder.set_contacts(&report->contacts_view);
 
-  touch_report.touch_report = touch_builder.view();
-  report->report_builder.set_touch(&touch_report.touch_report);
-
-  return ZX_OK;
+  report->report = report->builder.view();
 }
 
-zx_status_t SetKeyboardDescriptor(const KeyboardDescriptor& hid_keyboard_desc,
-                                  FidlDescriptor* descriptor) {
-  FidlKeyboardDescriptor& keyboard_desc = descriptor->keyboard_descriptor;
+void SetKeyboardDescriptor(const KeyboardDescriptor& hid_keyboard_desc,
+                           FidlKeyboardDescriptor* descriptor) {
   size_t fidl_key_index = 0;
   for (size_t i = 0; i < hid_keyboard_desc.num_keys; i++) {
     std::optional<fuchsia::ui::input2::Key> key = key_util::hid_key_to_fuchsia_key(
         hid::USAGE(hid::usage::Page::kKeyboardKeypad, hid_keyboard_desc.keys[i]));
     if (key) {
       // Cast the key enum from HLCPP to LLCPP. We are guaranteed that this will be equivalent.
-      keyboard_desc.keys_data[fidl_key_index++] =
-          static_cast<llcpp::fuchsia::ui::input2::Key>(*key);
+      descriptor->keys_data[fidl_key_index++] = static_cast<llcpp::fuchsia::ui::input2::Key>(*key);
     }
   }
-  keyboard_desc.keys_view = fidl::VectorView<llcpp::fuchsia::ui::input2::Key>(
-      keyboard_desc.keys_data.data(), fidl_key_index);
-  keyboard_desc.keyboard_builder.set_keys(&keyboard_desc.keys_view);
-  keyboard_desc.keyboard_descriptor = keyboard_desc.keyboard_builder.view();
-  descriptor->descriptor_builder.set_keyboard(&keyboard_desc.keyboard_descriptor);
-  return ZX_OK;
+  descriptor->keys_view = fidl::VectorView<llcpp::fuchsia::ui::input2::Key>(
+      descriptor->keys_data.data(), fidl_key_index);
+  descriptor->builder.set_keys(&descriptor->keys_view);
+  descriptor->descriptor = descriptor->builder.view();
 }
 
-zx_status_t SetKeyboardReport(const KeyboardReport& hid_keyboard_report, FidlReport* report) {
-  FidlKeyboardReport& keyboard_report = std::get<FidlKeyboardReport>(report->report);
+void SetKeyboardReport(const KeyboardReport& hid_keyboard_report, FidlKeyboardReport* report) {
   size_t fidl_key_index = 0;
   for (size_t i = 0; i < hid_keyboard_report.num_pressed_keys; i++) {
     std::optional<fuchsia::ui::input2::Key> key = key_util::hid_key_to_fuchsia_key(
         hid::USAGE(hid::usage::Page::kKeyboardKeypad, hid_keyboard_report.pressed_keys[i]));
     if (key) {
       // Cast the key enum from HLCPP to LLCPP. We are guaranteed that this will be equivalent.
-      keyboard_report.pressed_keys_data[fidl_key_index++] =
+      report->pressed_keys_data[fidl_key_index++] =
           static_cast<llcpp::fuchsia::ui::input2::Key>(*key);
     }
   }
-  keyboard_report.pressed_keys_view = fidl::VectorView<llcpp::fuchsia::ui::input2::Key>(
-      keyboard_report.pressed_keys_data.data(), fidl_key_index);
-  keyboard_report.keyboard_builder.set_pressed_keys(&keyboard_report.pressed_keys_view);
-  keyboard_report.keyboard_report = keyboard_report.keyboard_builder.view();
-  report->report_builder.set_keyboard(&keyboard_report.keyboard_report);
-  return ZX_OK;
+  report->pressed_keys_view = fidl::VectorView<llcpp::fuchsia::ui::input2::Key>(
+      report->pressed_keys_data.data(), fidl_key_index);
+  report->builder.set_pressed_keys(&report->pressed_keys_view);
+  report->report = report->builder.view();
 }
 
 zx_status_t SetFidlDescriptor(const hid_input_report::ReportDescriptor& hid_desc,
                               FidlDescriptor* descriptor) {
   if (std::holds_alternative<MouseDescriptor>(hid_desc.descriptor)) {
-    return SetMouseDescriptor(std::get<MouseDescriptor>(hid_desc.descriptor), descriptor);
+    SetMouseDescriptor(std::get<MouseDescriptor>(hid_desc.descriptor), &descriptor->mouse);
+    descriptor->builder.set_mouse(&descriptor->mouse.descriptor);
+    return ZX_OK;
   }
   if (std::holds_alternative<SensorDescriptor>(hid_desc.descriptor)) {
-    return SetSensorDescriptor(std::get<SensorDescriptor>(hid_desc.descriptor), descriptor);
+    SetSensorDescriptor(std::get<SensorDescriptor>(hid_desc.descriptor), &descriptor->sensor);
+    descriptor->builder.set_sensor(&descriptor->sensor.descriptor);
+    return ZX_OK;
   }
   if (std::holds_alternative<TouchDescriptor>(hid_desc.descriptor)) {
-    return SetTouchDescriptor(std::get<TouchDescriptor>(hid_desc.descriptor), descriptor);
+    SetTouchDescriptor(std::get<TouchDescriptor>(hid_desc.descriptor), &descriptor->touch);
+    descriptor->builder.set_touch(&descriptor->touch.descriptor);
+    return ZX_OK;
   }
   if (std::holds_alternative<KeyboardDescriptor>(hid_desc.descriptor)) {
-    return SetKeyboardDescriptor(std::get<KeyboardDescriptor>(hid_desc.descriptor), descriptor);
+    SetKeyboardDescriptor(std::get<KeyboardDescriptor>(hid_desc.descriptor), &descriptor->keyboard);
+    descriptor->builder.set_keyboard(&descriptor->keyboard.descriptor);
+    return ZX_OK;
   }
   return ZX_ERR_NOT_SUPPORTED;
 }
@@ -351,19 +308,31 @@ zx_status_t SetFidlDescriptor(const hid_input_report::ReportDescriptor& hid_desc
 zx_status_t SetFidlReport(const hid_input_report::Report& hid_report, FidlReport* report) {
   if (std::holds_alternative<MouseReport>(hid_report.report)) {
     report->report = FidlMouseReport();
-    return SetMouseReport(std::get<MouseReport>(hid_report.report), report);
+    FidlMouseReport* mouse = &std::get<FidlMouseReport>(report->report);
+    SetMouseReport(std::get<MouseReport>(hid_report.report), mouse);
+    report->builder.set_mouse(&mouse->report);
+    return ZX_OK;
   }
   if (std::holds_alternative<SensorReport>(hid_report.report)) {
     report->report = FidlSensorReport();
-    return SetSensorReport(std::get<SensorReport>(hid_report.report), report);
+    FidlSensorReport* sensor = &std::get<FidlSensorReport>(report->report);
+    SetSensorReport(std::get<SensorReport>(hid_report.report), sensor);
+    report->builder.set_sensor(&sensor->report);
+    return ZX_OK;
   }
   if (std::holds_alternative<TouchReport>(hid_report.report)) {
     report->report = FidlTouchReport();
-    return SetTouchReport(std::get<TouchReport>(hid_report.report), report);
+    FidlTouchReport* touch = &std::get<FidlTouchReport>(report->report);
+    SetTouchReport(std::get<TouchReport>(hid_report.report), touch);
+    report->builder.set_touch(&touch->report);
+    return ZX_OK;
   }
   if (std::holds_alternative<KeyboardReport>(hid_report.report)) {
     report->report = FidlKeyboardReport();
-    return SetKeyboardReport(std::get<KeyboardReport>(hid_report.report), report);
+    FidlKeyboardReport* keyboard = &std::get<FidlKeyboardReport>(report->report);
+    SetKeyboardReport(std::get<KeyboardReport>(hid_report.report), keyboard);
+    report->builder.set_keyboard(&keyboard->report);
+    return ZX_OK;
   }
   return ZX_ERR_NOT_SUPPORTED;
 }
