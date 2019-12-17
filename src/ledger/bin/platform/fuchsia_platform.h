@@ -7,7 +7,7 @@
 
 #include "src/ledger/bin/platform/fuchsia_ledger_memory_estimator.h"
 #include "src/ledger/bin/platform/platform.h"
-#include "src/ledger/bin/platform/unique_fd.h"
+#include "src/ledger/lib/files/unique_fd.h"
 #include "util/env_fuchsia.h"
 
 namespace ledger {

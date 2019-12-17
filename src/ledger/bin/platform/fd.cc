@@ -11,7 +11,7 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
-#include "src/ledger/bin/platform/unique_fd.h"
+#include "src/ledger/lib/files/unique_fd.h"
 
 namespace ledger {
 

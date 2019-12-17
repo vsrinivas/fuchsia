@@ -8,7 +8,7 @@
 #include <unistd.h>
 
 #include "gtest/gtest.h"
-#include "src/ledger/bin/platform/unique_fd.h"
+#include "src/ledger/lib/files/unique_fd.h"
 
 namespace ledger {
 namespace {

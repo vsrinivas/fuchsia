@@ -10,9 +10,9 @@
 #include "src/ledger/bin/platform/fuchsia_scoped_tmp_dir.h"
 #include "src/ledger/bin/platform/fuchsia_scoped_tmp_location.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/files/file.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/lib/files/directory.h"
-#include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 #include "util/env_fuchsia.h"
@@ -45,19 +45,17 @@ std::unique_ptr<leveldb::Env> FuchsiaFileSystem::MakeLevelDbEnvironment(
 }
 
 bool FuchsiaFileSystem::ReadFileToString(DetachedPath path, std::string* content) {
-  return files::ReadFileToStringAt(path.root_fd(), path.path(), content);
+  return ReadFileToStringAt(path.root_fd(), path.path(), content);
 }
 
 bool FuchsiaFileSystem::WriteFile(DetachedPath path, const std::string& content) {
-  return files::WriteFileAt(path.root_fd(), path.path(), content.c_str(), content.size());
+  return WriteFileAt(path.root_fd(), path.path(), content.c_str(), content.size());
 }
 
-bool FuchsiaFileSystem::IsFile(DetachedPath path) {
-  return files::IsFileAt(path.root_fd(), path.path());
-}
+bool FuchsiaFileSystem::IsFile(DetachedPath path) { return IsFileAt(path.root_fd(), path.path()); }
 
 bool FuchsiaFileSystem::GetFileSize(DetachedPath path, uint64_t* size) {
-  return files::GetFileSizeAt(path.root_fd(), path.path(), size);
+  return GetFileSizeAt(path.root_fd(), path.path(), size);
 }
 
 bool FuchsiaFileSystem::CreateDirectory(DetachedPath path) {

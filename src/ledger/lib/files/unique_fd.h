@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LEDGER_BIN_PLATFORM_UNIQUE_FD_H_
-#define SRC_LEDGER_BIN_PLATFORM_UNIQUE_FD_H_
+#ifndef SRC_LEDGER_LIB_FILES_UNIQUE_FD_H_
+#define SRC_LEDGER_LIB_FILES_UNIQUE_FD_H_
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -80,4 +80,4 @@ class unique_fd {
 
 }  // namespace ledger
 
-#endif  // SRC_LEDGER_BIN_PLATFORM_UNIQUE_FD_H_
+#endif  // SRC_LEDGER_LIB_FILES_UNIQUE_FD_H_

@@ -7,7 +7,7 @@
 
 #include <lib/zx/channel.h>
 
-#include "src/ledger/bin/platform/unique_fd.h"
+#include "src/ledger/lib/files/unique_fd.h"
 
 namespace ledger {
 

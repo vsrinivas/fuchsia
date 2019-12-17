@@ -14,10 +14,10 @@ source_set("platform") {
     "platform.h",
     "scoped_tmp_dir.h",
     "scoped_tmp_location.h",
-    "unique_fd.h",
   ]
 
   public_deps = [
+    "//src/ledger/lib/files",
     "//third_party/abseil-cpp",
     "//third_party/leveldb",
   ]
@@ -40,6 +40,7 @@ source_set("implementation") {
   public_deps = [
     ":platform",
     "//src/ledger/lib/convert",
+    "//src/ledger/lib/files",
     "//src/ledger/lib/logging",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
