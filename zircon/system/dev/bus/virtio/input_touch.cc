@@ -15,7 +15,7 @@
 namespace virtio {
 
 zx_status_t HidTouch::GetDescriptor(uint8_t desc_type, void* out_data_buffer, size_t data_size,
-                                       size_t* out_data_actual) {
+                                    size_t* out_data_actual) {
   if (out_data_buffer == nullptr || out_data_actual == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }

@@ -1,11 +1,12 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#pragma once
-
-#include "input_device.h"
+#ifndef ZIRCON_SYSTEM_DEV_BUS_VIRTIO_INPUT_TOUCH_H_
+#define ZIRCON_SYSTEM_DEV_BUS_VIRTIO_INPUT_TOUCH_H_
 
 #include <hid/paradise.h>
+
+#include "input_device.h"
 
 namespace virtio {
 
@@ -35,3 +36,5 @@ class HidTouch : public HidDevice {
 };
 
 }  // namespace virtio
+
+#endif  // ZIRCON_SYSTEM_DEV_BUS_VIRTIO_INPUT_TOUCH_H_

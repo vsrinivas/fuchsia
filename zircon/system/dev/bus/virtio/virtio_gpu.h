@@ -37,7 +37,8 @@
 
 /* taken from qemu sources */
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_BUS_VIRTIO_VIRTIO_GPU_H_
+#define ZIRCON_SYSTEM_DEV_BUS_VIRTIO_VIRTIO_GPU_H_
 
 #include <stdint.h>
 
@@ -203,3 +204,5 @@ enum virtio_gpu_formats {
   VIRTIO_GPU_FORMAT_A8B8G8R8_UNORM = 121,
   VIRTIO_GPU_FORMAT_R8G8B8X8_UNORM = 134,
 };
+
+#endif  // ZIRCON_SYSTEM_DEV_BUS_VIRTIO_VIRTIO_GPU_H_

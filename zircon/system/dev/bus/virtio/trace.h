@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_BUS_VIRTIO_TRACE_H_
+#define ZIRCON_SYSTEM_DEV_BUS_VIRTIO_TRACE_H_
 
 #include <stdio.h>
 
@@ -27,3 +28,5 @@
 #define LTRACEF_LEVEL(level, x...) do { if (LOCAL_TRACE >= (level)) { TRACEF(x); } } while (0)
 
 // clang-format on
+
+#endif  // ZIRCON_SYSTEM_DEV_BUS_VIRTIO_TRACE_H_

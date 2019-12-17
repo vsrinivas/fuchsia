@@ -2,14 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_BUS_VIRTIO_BACKENDS_FAKE_H_
+#define ZIRCON_SYSTEM_DEV_BUS_VIRTIO_BACKENDS_FAKE_H_
 
 #include <assert.h>
+
 #include <initializer_list>
 #include <map>
 #include <set>
 #include <utility>
+
 #include <zxtest/zxtest.h>
+
 #include "backend.h"
 
 namespace virtio {
@@ -173,3 +177,5 @@ class FakeBackend : public Backend {
 };
 
 }  // namespace virtio
+
+#endif  // ZIRCON_SYSTEM_DEV_BUS_VIRTIO_BACKENDS_FAKE_H_

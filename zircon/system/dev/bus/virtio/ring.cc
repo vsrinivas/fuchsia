@@ -6,13 +6,13 @@
 
 #include <assert.h>
 #include <inttypes.h>
+#include <lib/zx/vmar.h>
 #include <limits.h>
 #include <stdint.h>
 #include <string.h>
 
 #include <ddk/debug.h>
 #include <ddk/driver.h>
-#include <lib/zx/vmar.h>
 
 #include "device.h"
 #include "trace.h"

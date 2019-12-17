@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "input.h"
+#include <zircon/status.h>
 
 #include <ddk/debug.h>
 #include <fbl/algorithm.h>
-#include <zircon/status.h>
 
+#include "input.h"
 #include "trace.h"
 
 #define LOCAL_TRACE 0

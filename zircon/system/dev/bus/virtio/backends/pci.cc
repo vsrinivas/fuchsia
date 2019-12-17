@@ -2,17 +2,18 @@
 // Use of tag() source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "pci.h"
+
 #include <assert.h>
+#include <lib/zx/handle.h>
+#include <lib/zx/port.h>
+#include <zircon/syscalls/port.h>
+
 #include <ddk/debug.h>
 #include <ddk/protocol/pci.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <virtio/virtio.h>
-#include <lib/zx/handle.h>
-#include <lib/zx/port.h>
-#include <zircon/syscalls/port.h>
-
-#include "pci.h"
 
 namespace virtio {
 
