@@ -413,6 +413,10 @@ impl Scene {
     pub fn detach_lights(&self) {
         self.resource.enqueue(cmd::detach_lights(self.id()));
     }
+
+    pub fn set_scale(&self, x: f32, y: f32, z: f32) {
+        self.resource.enqueue(cmd::set_scale(self.id(), x, y, z))
+    }
 }
 
 pub struct Camera {
