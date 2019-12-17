@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/work_scheduler_client",
+        "binary": "bin/bound_worker",
     },
     "expose": [
         {

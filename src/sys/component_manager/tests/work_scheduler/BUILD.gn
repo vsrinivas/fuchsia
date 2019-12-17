@@ -7,40 +7,10 @@ import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
 
-rustc_binary("worker_client_bin") {
-  name = "worker_client"
+rustc_library("work_scheduler_dispatch_reporter") {
+  name = "work_scheduler_dispatch_reporter"
   edition = "2018"
-  source_root = "worker_client.rs"
-  deps = [
-    "//garnet/lib/rust/files_async",
-    "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-component",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
-    "//src/sys/component_manager/tests/fidl:fuchsia.test.workscheduler-rustc",
-    "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures",
-  ]
-}
-
-rustc_binary("work_scheduler_client_bin") {
-  name = "work_scheduler_client"
-  edition = "2018"
-  source_root = "work_scheduler_client.rs"
-  deps = [
-    "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-component",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
-    "//src/sys/component_manager/tests/fidl:fuchsia.test.workscheduler-rustc",
-    "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures",
-  ]
-}
-
-rustc_library("work_scheduler_test_hook") {
-  name = "work_scheduler_test_hook"
-  edition = "2018"
-  source_root = "work_scheduler_test_hook.rs"
+  source_root = "work_scheduler_dispatch_reporter.rs"
   deps = [
     "//garnet/lib/rust/cm_rust",
     "//garnet/public/lib/fidl/rust/fidl",
@@ -58,11 +28,12 @@ rustc_test("work_scheduler_integration_test_bin") {
   edition = "2018"
   source_root = "//src/sys/component_manager/tests/work_scheduler/work_scheduler_integration_test.rs"
   deps = [
-    ":work_scheduler_test_hook",
+    ":work_scheduler_dispatch_reporter",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/sys/component_manager:lib",
+    "//src/sys/component_manager/tests:test_utils",
     "//src/sys/component_manager/tests/fidl:fuchsia.test.workscheduler-rustc",
     "//third_party/rust_crates:failure",
   ]
@@ -70,28 +41,40 @@ rustc_test("work_scheduler_integration_test_bin") {
 
 test_package("work_scheduler_integration_test") {
   deps = [
-    ":work_scheduler_client_bin",
     ":work_scheduler_integration_test_bin",
-    ":worker_client_bin",
+    "components:bound_worker_bin",
+    "components:unbound_child_worker_child_bin",
+    "components:unbound_child_worker_sibling_bin",
   ]
 
   meta = [
     {
-      path = rebase_path("meta/worker_client.cml")
-      dest = "worker_client.cm"
+      path = rebase_path("components/unbound_child/meta/worker_child.cml")
+      dest = "unbound_child_worker_child.cm"
     },
     {
-      path = rebase_path("meta/work_scheduler_client.cml")
-      dest = "work_scheduler_client.cm"
+      path = rebase_path("components/unbound_child/meta/worker_sibling.cml")
+      dest = "unbound_child_worker_sibling.cm"
+    },
+    {
+      path = rebase_path("components/unbound_child/meta/worker_parent.cml")
+      dest = "unbound_child_worker_parent.cm"
+    },
+    {
+      path = rebase_path("components/bound/meta/worker.cml")
+      dest = "bound_worker.cm"
     },
   ]
 
   binaries = [
     {
-      name = "worker_client"
+      name = "unbound_child_worker_child"
     },
     {
-      name = "work_scheduler_client"
+      name = "unbound_child_worker_sibling"
+    },
+    {
+      name = "bound_worker"
     },
   ]
 

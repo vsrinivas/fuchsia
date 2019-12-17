@@ -1,11 +1,14 @@
 {
     "program": {
-        "binary": "bin/worker_client",
+        "binary": "bin/unbound_child_worker_child",
     },
     "expose": [
         {
             "service_protocol": "/svc/fuchsia.sys2.Worker", "from": "self", "to": "framework",
         },
+        {
+            "service_protocol": "/svc/fuchsia.sys2.WorkScheduler", "from": "framework"
+        }
     ],
     "use": [
         {

@@ -143,11 +143,12 @@ async fn try_open_capability_manually(
                 .map_err(|e| ModelError::capability_discovery_error(e))?;
             Ok(())
         }
-        CapabilitySource::Framework { scope_moniker: Some(_), .. } => {
+        CapabilitySource::Framework { capability, scope_moniker: Some(_) } => {
             // If a hook did not set a capability provider for a scoped framework
             // capability, nothing can be done.
             Err(ModelError::capability_discovery_error(format_err!(
-                "no provider found for scoped framework capability"
+                "no provider found for scoped framework capability {:?}",
+                capability
             )))
         }
         CapabilitySource::Component { capability, source_moniker } => {

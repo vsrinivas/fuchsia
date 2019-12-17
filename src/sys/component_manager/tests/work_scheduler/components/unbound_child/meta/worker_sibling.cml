@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "bin/unbound_child_worker_sibling",
+    },
+    "use": [
+        {
+            "service_protocol": "/svc/fuchsia.sys2.WorkScheduler",
+             "from": "realm",
+        },
+        {
+            "service_protocol": "/svc/fuchsia.sys2.WorkSchedulerControl",
+             "from": "realm",
+        },
+    ],
+}

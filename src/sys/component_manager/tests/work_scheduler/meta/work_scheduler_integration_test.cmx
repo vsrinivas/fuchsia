@@ -4,10 +4,14 @@
     },
     "sandbox": {
         "features": [
-            "deprecated-ambient-replace-as-executable"
+            "deprecated-ambient-replace-as-executable",
+            "hub"
         ],
         "services": [
             "fuchsia.process.Launcher",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Environment",
+            "fuchsia.logger.LogSink",
             "fuchsia.sys.Loader",
             "fuchsia.sys2.WorkSchedulerControl"
         ]

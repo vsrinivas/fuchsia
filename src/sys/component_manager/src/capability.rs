@@ -123,6 +123,9 @@ impl FrameworkCapability {
 
     pub fn framework_from_offer_decl(decl: &OfferDecl) -> Result<Self, Error> {
         match decl {
+            OfferDecl::ServiceProtocol(s) if s.source == OfferServiceSource::Realm => {
+                Ok(FrameworkCapability::ServiceProtocol(s.source_path.clone()))
+            }
             OfferDecl::Directory(d) if d.source == OfferDirectorySource::Framework => {
                 Ok(FrameworkCapability::Directory(d.source_path.clone()))
             }
@@ -134,6 +137,9 @@ impl FrameworkCapability {
 
     pub fn framework_from_expose_decl(decl: &ExposeDecl) -> Result<Self, Error> {
         match decl {
+            ExposeDecl::ServiceProtocol(d) if d.source == ExposeSource::Framework => {
+                Ok(FrameworkCapability::ServiceProtocol(d.source_path.clone()))
+            }
             ExposeDecl::Directory(d) if d.source == ExposeSource::Framework => {
                 Ok(FrameworkCapability::Directory(d.source_path.clone()))
             }

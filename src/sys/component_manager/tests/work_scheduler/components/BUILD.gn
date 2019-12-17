@@ -1,0 +1,41 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+
+rustc_binary("unbound_child_worker_child_bin") {
+  name = "unbound_child_worker_child"
+  edition = "2018"
+  source_root = "unbound_child/worker_child.rs"
+  deps = [
+    "//garnet/public/rust/fuchsia-component",
+    "//src/sys/component_manager/tests/fidl:fuchsia.test.workscheduler-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures",
+  ]
+}
+
+rustc_binary("unbound_child_worker_sibling_bin") {
+  name = "unbound_child_worker_sibling"
+  edition = "2018"
+  source_root = "unbound_child/worker_sibling.rs"
+  deps = [
+    "//garnet/public/rust/fuchsia-component",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//third_party/rust_crates:failure",
+  ]
+}
+
+rustc_binary("bound_worker_bin") {
+  name = "bound_worker"
+  edition = "2018"
+  source_root = "bound/worker.rs"
+  deps = [
+    "//garnet/public/rust/fuchsia-component",
+    "//src/sys/component_manager/tests/fidl:fuchsia.test.workscheduler-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures",
+  ]
+}
