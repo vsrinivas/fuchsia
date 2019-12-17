@@ -14,7 +14,7 @@ ExploreAction::~ExploreAction() = default;
 void ExploreAction::ProcessHitTestResult(::fuchsia::accessibility::semantics::Hit hit,
                                          ActionData process_data) {
   if (hit.has_node_id()) {
-    const auto tree_weak_ptr = action_context_->semantics_manager->GetTreeByKoid(process_data.koid);
+    const auto tree_weak_ptr = GetTreePointer(action_context_, process_data);
     if (!tree_weak_ptr) {
       FX_LOGS(INFO) << "The semantic tree of the View with View Ref Koid = " << process_data.koid
                     << " is no longer valid.";
@@ -50,16 +50,10 @@ void ExploreAction::ProcessHitTestResult(::fuchsia::accessibility::semantics::Hi
 }
 
 void ExploreAction::Run(ActionData process_data) {
-  const auto tree_weak_ptr = action_context_->semantics_manager->GetTreeByKoid(process_data.koid);
-  if (!tree_weak_ptr) {
-    FX_LOGS(INFO) << "The semantic tree of the View with View Ref Koid = " << process_data.koid
-                  << " is no longer valid.";
-    return;
-  }
-  tree_weak_ptr->PerformHitTesting(
-      process_data.local_point, [this, process_data](::fuchsia::accessibility::semantics::Hit hit) {
-        ProcessHitTestResult(std::move(hit), process_data);
-      });
+  ExecuteHitTesting(action_context_, process_data,
+                    [this, process_data](::fuchsia::accessibility::semantics::Hit hit) {
+                      ProcessHitTestResult(std::move(hit), process_data);
+                    });
 }
 
 }  // namespace a11y

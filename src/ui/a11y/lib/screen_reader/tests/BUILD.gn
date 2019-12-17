@@ -13,6 +13,7 @@ executable("screen_reader_tests") {
   testonly = true
 
   sources = [
+    "default_action_unittest.cc",
     "explore_action_unittest.cc",
     "screen_reader_unittest.cc",
   ]

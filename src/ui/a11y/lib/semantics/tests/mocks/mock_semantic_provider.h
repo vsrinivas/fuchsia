@@ -39,10 +39,17 @@ class MockSemanticProvider {
   void SetHitTestResult(uint32_t hit_test_result);
 
   // Returns Commit Failed status.
-  bool CommitFailedStatus() { return commit_failed_; };
+  bool CommitFailedStatus() const { return commit_failed_; };
 
   // Returns Semantics Enabled field from Semantic Listener.
   bool GetSemanticsEnabled();
+
+  // Sets receive_action_ with the given action.
+  void SetRequestedAction(fuchsia::accessibility::semantics::Action action);
+
+  // Returns receive_action_ with the given action. This will be used to track if
+  // OnAccessibilityActionRequested() is called with correct action.
+  fuchsia::accessibility::semantics::Action GetRequestedAction() const;
 
   // Function for sending signal to the view ref peer.
   void SendEventPairSignal();

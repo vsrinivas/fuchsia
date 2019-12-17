@@ -41,6 +41,14 @@ class ScreenReaderAction {
   // Action implementations override this method with the necessary method parameters to perform
   // that action.
   virtual void Run(ActionData process_data) = 0;
+
+  // Helper function to get the tree pointer based on ActionContext and ActionData.
+  fxl::WeakPtr<::a11y::SemanticTree> GetTreePointer(ActionContext* context, ActionData data);
+
+  // Helper function to call hit testing based on ActionContext and ActionData.
+  void ExecuteHitTesting(
+      ActionContext* context, ActionData process_data,
+      fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback);
 };
 
 }  // namespace a11y

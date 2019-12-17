@@ -61,6 +61,14 @@ void MockSemanticProvider::SendEventPairSignal() {
   eventpair_peer_.reset();
 }
 
+void MockSemanticProvider::SetRequestedAction(fuchsia::accessibility::semantics::Action action) {
+  semantic_listener_.SetRequestedAction(action);
+}
+
+fuchsia::accessibility::semantics::Action MockSemanticProvider::GetRequestedAction() const {
+  return semantic_listener_.GetRequestedAction();
+}
+
 bool MockSemanticProvider::IsChannelClosed() { return !tree_ptr_.channel().is_valid(); }
 
 }  // namespace accessibility_test

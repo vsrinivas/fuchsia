@@ -25,7 +25,7 @@ class MockSemanticListener : public fuchsia::accessibility::semantics::SemanticL
   void OnAccessibilityActionRequested(
       uint32_t node_id, fuchsia::accessibility::semantics::Action action,
       fuchsia::accessibility::semantics::SemanticListener::OnAccessibilityActionRequestedCallback
-          callback) override {}
+          callback) override;
 
   // |fuchsia::accessibility::semantics::SemanticListener|
   void HitTest(::fuchsia::math::PointF local_point, HitTestCallback callback) override;
@@ -38,6 +38,20 @@ class MockSemanticListener : public fuchsia::accessibility::semantics::SemanticL
   // HitTest() is called.
   void SetHitTestResult(int node_id);
 
+  // Sets is_accessibility_action_requested_called_ with the given boolean value. This will be used
+  // to track if OnAccessibilityActionRequested() is called.
+  void SetIsAccessibilityActionRequestedCalled(bool is_called);
+
+  // Returns is_accessibility_action_requested_called_ flag.
+  bool GetIsAccessibilityActionRequestedCalled() const;
+
+  // Sets receive_action_ with the given action.
+  void SetRequestedAction(fuchsia::accessibility::semantics::Action action);
+
+  // Returns receive_action_ with the given action. This will be used to track if
+  // OnAccessibilityActionRequested() is called with correct action.
+  fuchsia::accessibility::semantics::Action GetRequestedAction() const;
+
   void Bind(fidl::InterfaceHandle<fuchsia::accessibility::semantics::SemanticListener> *listener);
 
   bool GetSemanticsEnabled() { return semantics_enabled_; }
@@ -49,6 +63,8 @@ class MockSemanticListener : public fuchsia::accessibility::semantics::SemanticL
   uint32_t hit_test_node_id_ = 1;
 
   bool semantics_enabled_ = false;
+
+  fuchsia::accessibility::semantics::Action received_action_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MockSemanticListener);
 };
