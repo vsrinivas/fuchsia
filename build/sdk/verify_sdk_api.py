@@ -5,6 +5,7 @@
 
 import argparse
 import json
+import platform
 import sys
 
 
@@ -33,15 +34,22 @@ def main():
         manifest = json.load(manifest_file)
 
     ids = map(lambda a: a['id'], manifest['atoms'])
+
     # Ignore images which are very architecture-dependent.
     # TODO(DX-981): remove this exception when obsolete.
-    ids = filter(lambda i: not i.startswith('sdk://images'), ids)
+    ids = filter(
+        lambda i: not (i.startswith('sdk://images')), ids)
 
     with open(args.updated, 'w') as updated_file:
         updated_file.write('\n'.join(ids))
 
     with open(args.reference, 'r') as reference_file:
         old_ids = map(lambda l: l.strip(), reference_file.readlines())
+
+    # tools/arm64 should not exist on mac hosts
+    # TODO(fxb/42999): remove when SDK transition is complete.
+    if platform.mac_ver()[0]:
+        old_ids = filter(lambda i: not i.startswith('sdk://tools/arm64'), old_ids)
 
     new_id_set = set(ids)
     old_id_set = set(old_ids)
