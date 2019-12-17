@@ -18,7 +18,7 @@ pub struct CobaltMetricsReporter {
 impl CobaltMetricsReporter {
     pub fn new() -> (Self, impl Future<Output = ()>) {
         let (cobalt_sender, fut) = CobaltConnector::default()
-            .serve(ConnectionType::project_name(mos_metrics_registry::PROJECT_NAME));
+            .serve(ConnectionType::project_id(mos_metrics_registry::PROJECT_ID));
         (CobaltMetricsReporter { cobalt_sender }, fut)
     }
 
@@ -180,5 +180,4 @@ mod tests {
             }
         );
     }
-
 }
