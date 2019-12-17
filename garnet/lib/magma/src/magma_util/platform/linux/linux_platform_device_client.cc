@@ -23,7 +23,7 @@ class LinuxPlatformDeviceClient : public PlatformDeviceClient {
     return DRETF(false, "LinuxPlatformDeviceClient::QueryReturnsBuffer not implemented");
   }
 
-private:
+ private:
   uint32_t handle_;
 };
 

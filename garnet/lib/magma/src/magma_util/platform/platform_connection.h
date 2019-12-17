@@ -6,6 +6,7 @@
 #define GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_PLATFORM_CONNECTION_H_
 
 #include <memory>
+#include <vector>
 
 #include "magma.h"
 #include "magma_util/macros.h"

@@ -10,11 +10,17 @@
 #include "gtest/gtest.h"
 #include "platform_connection.h"
 #include "platform_connection_client.h"
+#ifdef __linux__
+#include "linux/linux_platform_connection_client.h"  // nogncheck
+#endif
 
 namespace {
 constexpr uint32_t kImmediateCommandCount = 128;
 // The total size of all commands should not be a multiple of the receive buffer size.
 constexpr uint32_t kImmediateCommandSize = 2048 * 3 / 2 / kImmediateCommandCount;
+
+static inline int page_size() { return sysconf(_SC_PAGESIZE); }
+
 }  // namespace
 
 class TestPlatformConnection {
@@ -52,6 +58,7 @@ class TestPlatformConnection {
 
   void TestImportObject() {
     auto semaphore = magma::PlatformSemaphore::Create();
+    ASSERT_TRUE(semaphore);
     test_semaphore_id = semaphore->id();
     uint32_t handle;
     EXPECT_TRUE(semaphore->duplicate_handle(&handle));
@@ -60,6 +67,7 @@ class TestPlatformConnection {
   }
   void TestReleaseObject() {
     auto semaphore = magma::PlatformSemaphore::Create();
+    ASSERT_TRUE(semaphore);
     test_semaphore_id = semaphore->id();
     uint32_t handle;
     EXPECT_TRUE(semaphore->duplicate_handle(&handle));
@@ -100,8 +108,8 @@ class TestPlatformConnection {
     auto buf = magma::PlatformBuffer::Create(1, "test");
     test_buffer_id = buf->id();
     EXPECT_EQ(client_connection_->ImportBuffer(buf.get()), 0);
-    EXPECT_EQ(client_connection_->MapBufferGpu(buf->id(), PAGE_SIZE * 1000, 1u, 2u, 5), 0);
-    EXPECT_EQ(client_connection_->UnmapBufferGpu(buf->id(), PAGE_SIZE * 1000), 0);
+    EXPECT_EQ(client_connection_->MapBufferGpu(buf->id(), page_size() * 1000, 1u, 2u, 5), 0);
+    EXPECT_EQ(client_connection_->UnmapBufferGpu(buf->id(), page_size() * 1000), 0);
     EXPECT_EQ(client_connection_->CommitBuffer(buf->id(), 1000, 2000), 0);
     EXPECT_EQ(client_connection_->GetError(), 0);
   }
@@ -109,7 +117,7 @@ class TestPlatformConnection {
   void TestNotificationChannel() {
     constexpr uint64_t kFiveSecondsInNs = 5000000000;
     magma_status_t status = client_connection_->WaitNotificationChannel(kFiveSecondsInNs);
-    EXPECT_EQ(MAGMA_STATUS_OK, status);
+    ASSERT_EQ(MAGMA_STATUS_OK, status);
 
     uint32_t out_data;
     uint64_t out_data_size;
@@ -227,6 +235,8 @@ class TestDelegate : public magma::PlatformConnection::Delegate {
 
   bool ImportObject(uint32_t handle, magma::PlatformObject::Type object_type) override {
     auto semaphore = magma::PlatformSemaphore::Import(handle);
+    if (!semaphore)
+      return false;
     EXPECT_EQ(semaphore->id(), TestPlatformConnection::test_semaphore_id);
     TestPlatformConnection::test_complete = true;
     return true;
@@ -268,7 +278,7 @@ class TestDelegate : public magma::PlatformConnection::Delegate {
   bool MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va, uint64_t page_offset, uint64_t page_count,
                     uint64_t flags) override {
     EXPECT_EQ(TestPlatformConnection::test_buffer_id, buffer_id);
-    EXPECT_EQ(PAGE_SIZE * 1000lu, gpu_va);
+    EXPECT_EQ(page_size() * 1000lu, gpu_va);
     EXPECT_EQ(1u, page_offset);
     EXPECT_EQ(2u, page_count);
     EXPECT_EQ(5u, flags);
@@ -277,7 +287,7 @@ class TestDelegate : public magma::PlatformConnection::Delegate {
 
   bool UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va) override {
     EXPECT_EQ(TestPlatformConnection::test_buffer_id, buffer_id);
-    EXPECT_EQ(PAGE_SIZE * 1000lu, gpu_va);
+    EXPECT_EQ(page_size() * 1000lu, gpu_va);
     return true;
   }
 
@@ -339,11 +349,21 @@ std::unique_ptr<TestPlatformConnection> TestPlatformConnection::Create() {
   got_null_notification = false;
   auto delegate = std::make_unique<TestDelegate>();
 
+  std::unique_ptr<magma::PlatformConnectionClient> client_connection;
+#ifdef __linux__
+  // Using in-process connection
+  client_connection = std::make_unique<magma::LinuxPlatformConnectionClient>(delegate.get());
+#endif
+
   auto connection = magma::PlatformConnection::Create(std::move(delegate), 1u);
   if (!connection)
     return DRETP(nullptr, "failed to create PlatformConnection");
-  auto client_connection = magma::PlatformConnectionClient::Create(
-      connection->GetClientEndpoint(), connection->GetClientNotificationEndpoint());
+
+  if (!client_connection) {
+    client_connection = magma::PlatformConnectionClient::Create(
+        connection->GetClientEndpoint(), connection->GetClientNotificationEndpoint());
+  }
+
   if (!client_connection)
     return DRETP(nullptr, "failed to create PlatformConnectionClient");
 

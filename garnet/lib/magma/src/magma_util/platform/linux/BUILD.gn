@@ -49,6 +49,28 @@ source_set("connection_client") {
     "linux_platform_connection_client.cc",
     "linux_platform_connection_client.h",
   ]
+
+  # Calls directly through to the delegate
+  deps = [
+    "..:connection_header",
+  ]
+}
+
+source_set("connection") {
+  configs += [ "..:platform_include_config" ]
+
+  public_deps = [
+    "..:connection_header",
+  ]
+
+  sources = [
+    "linux_platform_connection.cc",
+    "linux_platform_connection.h",
+  ]
+
+  deps = [
+    "..:connection_header",
+  ]
 }
 
 source_set("device") {
@@ -77,18 +99,6 @@ source_set("device_client") {
 
   sources = [
     "linux_platform_device_client.cc",
-  ]
-}
-
-source_set("firmware_loader") {
-  configs += [ "..:platform_include_config" ]
-
-  sources = [
-    "linux_platform_firmware_loader.cc",
-  ]
-
-  deps = [
-    "..:firmware_loader_header",
   ]
 }
 

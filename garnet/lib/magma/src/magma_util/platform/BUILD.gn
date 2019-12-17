@@ -306,6 +306,11 @@ source_set("connection") {
       "zircon:connection",
     ]
   }
+  if (is_linux) {
+    deps = [
+      "linux:connection",
+    ]
+  }
 }
 
 source_set("device_client_header") {
