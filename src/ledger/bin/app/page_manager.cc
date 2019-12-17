@@ -16,13 +16,10 @@
 
 #include "src/ledger/bin/app/active_page_manager.h"
 #include "src/ledger/bin/app/active_page_manager_container.h"
-#include "src/ledger/bin/app/commits_children_manager.h"
-#include "src/ledger/bin/app/heads_children_manager.h"
 #include "src/ledger/bin/app/ledger_impl.h"
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/app/types.h"
 #include "src/ledger/bin/fidl/include/types.h"
-#include "src/ledger/bin/inspect/inspect.h"
 #include "src/ledger/bin/p2p_sync/public/page_communicator.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
@@ -31,7 +28,6 @@
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/memory/weak_ptr.h"
-#include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
 
@@ -39,8 +35,7 @@ PageManager::PageManager(Environment* environment, std::string ledger_name, stor
                          std::vector<PageUsageListener*> page_usage_listeners,
                          storage::LedgerStorage* ledger_storage,
                          sync_coordinator::LedgerSync* ledger_sync,
-                         LedgerMergeManager* ledger_merge_manager,
-                         inspect_deprecated::Node inspect_node)
+                         LedgerMergeManager* ledger_merge_manager)
     : environment_(environment),
       ledger_name_(std::move(ledger_name)),
       page_id_(std::move(page_id)),
@@ -48,18 +43,8 @@ PageManager::PageManager(Environment* environment, std::string ledger_name, stor
       ledger_storage_(ledger_storage),
       ledger_sync_(ledger_sync),
       ledger_merge_manager_(ledger_merge_manager),
-      inspect_node_(std::move(inspect_node)),
-      heads_node_(inspect_node_.CreateChild(convert::ToString(kHeadsInspectPathComponent))),
-      heads_children_manager_(environment_->dispatcher(), &heads_node_, this),
-      heads_children_manager_retainer_(heads_node_.SetChildrenManager(&heads_children_manager_)),
-      commits_node_(inspect_node_.CreateChild(convert::ToString(kCommitsInspectPathComponent))),
-      commits_children_manager_(environment_->dispatcher(), &commits_node_, this),
-      commits_children_manager_retainer_(
-          commits_node_.SetChildrenManager(&commits_children_manager_)),
       weak_factory_(this) {
   page_availability_manager_.SetOnDiscardable([this] { CheckDiscardable(); });
-  heads_children_manager_.SetOnDiscardable([this] { CheckDiscardable(); });
-  commits_children_manager_.SetOnDiscardable([this] { CheckDiscardable(); });
 }
 
 PageManager::~PageManager() = default;
@@ -133,22 +118,6 @@ void PageManager::GetPage(LedgerImpl::Delegate::PageState page_state,
                                  });
 }
 
-void PageManager::NewInspection(fit::function<void(storage::Status status, ExpiringToken token,
-                                                   ActivePageManager* active_page_manager)>
-                                    callback) {
-  if (!active_page_manager_container_) {
-    ActivePageManagerContainer* container = CreateActivePageManagerContainer();
-    InitActivePageManagerContainer(container, [](Status status) {
-      if (status != Status::OK) {
-        // It's odd that the page storage failed to come up; we will just report to Inspect that
-        // there is no data for the page.
-        LEDGER_LOG(WARNING) << "Tried to bring up a page for Inspect but got status: " << status;
-      }
-    });
-  }
-  active_page_manager_container_->NewInternalRequest(std::move(callback));
-}
-
 void PageManager::SetOnDiscardable(fit::closure on_discardable) {
   on_discardable_ = std::move(on_discardable);
 }
@@ -156,8 +125,7 @@ void PageManager::SetOnDiscardable(fit::closure on_discardable) {
 bool PageManager::IsDiscardable() const {
   return (!active_page_manager_container_ || active_page_manager_container_->IsDiscardable()) &&
          outstanding_operations_ == 0 && page_availability_manager_.IsDiscardable() &&
-         outstanding_detachers_ == 0 && heads_children_manager_.IsDiscardable() &&
-         commits_children_manager_.IsDiscardable();
+         outstanding_detachers_ == 0;
 }
 
 void PageManager::StartPageSync() {

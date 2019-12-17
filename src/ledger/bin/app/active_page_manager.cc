@@ -16,7 +16,6 @@
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/fidl/include/types.h"
-#include "src/ledger/bin/inspect/inspect.h"
 #include "src/ledger/bin/storage/impl/data_serialization.h"
 #include "src/ledger/lib/callback/trace_callback.h"
 #include "src/ledger/lib/convert/convert.h"

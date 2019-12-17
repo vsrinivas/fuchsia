@@ -5,7 +5,6 @@
 #ifndef SRC_LEDGER_BIN_TESTING_LEDGER_APP_INSTANCE_FACTORY_H_
 #define SRC_LEDGER_BIN_TESTING_LEDGER_APP_INSTANCE_FACTORY_H_
 
-#include <fuchsia/inspect/deprecated/cpp/fidl.h>
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_ptr.h>
@@ -19,7 +18,6 @@
 #include "src/ledger/bin/platform/scoped_tmp_location.h"
 #include "src/ledger/bin/testing/loop_controller.h"
 #include "src/ledger/lib/rng/random.h"
-#include "src/lib/inspect_deprecated/hierarchy.h"
 
 namespace ledger {
 
@@ -46,8 +44,7 @@ class LedgerAppInstanceFactory {
   class LedgerAppInstance {
    public:
     LedgerAppInstance(LoopController* loop_controller, std::vector<uint8_t> test_ledger_name,
-                      ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory,
-                      fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> inspect_ptr);
+                      ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory);
     LedgerAppInstance(const LedgerAppInstance&) = delete;
     LedgerAppInstance& operator=(const LedgerAppInstance&) = delete;
     virtual ~LedgerAppInstance();
@@ -65,8 +62,6 @@ class LedgerAppInstanceFactory {
     PagePtr GetTestPage();
     // Returns a connection to the given page on the default Ledger object.
     PagePtr GetPage(const PageIdPtr& page_id);
-    // Populates |hierarchy| with the results of an inspection of the Ledger app under test.
-    bool Inspect(LoopController* loop_controller, inspect_deprecated::ObjectHierarchy* hierarchy);
 
    private:
     virtual cloud_provider::CloudProviderPtr MakeCloudProvider() = 0;
@@ -75,7 +70,6 @@ class LedgerAppInstanceFactory {
     LoopController* loop_controller_;
     std::vector<uint8_t> test_ledger_name_;
     ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory_;
-    fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> inspect_;
 
     std::unique_ptr<Platform> platform_;
     std::unique_ptr<ScopedTmpLocation> tmp_location_;

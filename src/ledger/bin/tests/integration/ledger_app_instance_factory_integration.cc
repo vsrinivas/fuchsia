@@ -18,7 +18,6 @@
 #include "src/ledger/bin/environment/test_loop_notification.h"
 #include "src/ledger/bin/fidl/syncable.h"
 #include "src/ledger/bin/fidl_helpers/bound_interface_set.h"
-#include "src/ledger/bin/inspect/inspect.h"
 #include "src/ledger/bin/p2p_provider/fake/fake_p2p_provider_factory.h"
 #include "src/ledger/bin/p2p_provider/public/p2p_provider_factory.h"
 #include "src/ledger/bin/p2p_sync/impl/user_communicator_impl.h"
@@ -58,7 +57,6 @@ enum class TestDiffs {
 constexpr absl::string_view kLedgerName = "AppTests";
 constexpr zx::duration kBackoffDuration = zx::msec(5);
 const char kUserId[] = "user";
-constexpr absl::string_view kTestTopLevelNodeName = "top-level-of-test node";
 
 // Implementation of Random that delegates to another instance. This is
 // needed because EnvironmentBuilder requires taking ownership of the random
@@ -104,9 +102,7 @@ class LedgerAppInstanceImpl final : public LedgerAppInstanceFactory::LedgerAppIn
       fidl::InterfacePtr<ledger_internal::LedgerRepositoryFactory> repository_factory_ptr,
       fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider, FakeCloudProvider>*
           cloud_provider,
-      p2p_provider::P2PProviderFactory* p2p_provider_factory,
-      fidl::InterfaceRequest<fuchsia::inspect::deprecated::Inspect> inspect_request,
-      fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> inspect_ptr);
+      p2p_provider::P2PProviderFactory* p2p_provider_factory);
   ~LedgerAppInstanceImpl() override;
 
  private:
@@ -115,14 +111,10 @@ class LedgerAppInstanceImpl final : public LedgerAppInstanceFactory::LedgerAppIn
     LedgerRepositoryFactoryContainer(
         Environment* environment,
         fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory> request,
-        p2p_provider::P2PProviderFactory* p2p_provider_factory,
-        inspect_deprecated::Node repositories_node,
-        fidl::InterfaceRequest<fuchsia::inspect::deprecated::Inspect> inspect_request,
-        fuchsia::inspect::deprecated::Inspect* inspect_impl)
+        p2p_provider::P2PProviderFactory* p2p_provider_factory)
         : environment_(environment),
-          factory_impl_(environment_, p2p_provider_factory, std::move(repositories_node)),
-          binding_(&factory_impl_, std::move(request)),
-          inspect_binding_(inspect_impl, std::move(inspect_request)) {}
+          factory_impl_(environment_, p2p_provider_factory),
+          binding_(&factory_impl_, std::move(request)) {}
     LedgerRepositoryFactoryContainer(const LedgerRepositoryFactoryContainer&) = delete;
     LedgerRepositoryFactoryContainer& operator=(const LedgerRepositoryFactoryContainer&) = delete;
     ~LedgerRepositoryFactoryContainer() = default;
@@ -131,7 +123,6 @@ class LedgerAppInstanceImpl final : public LedgerAppInstanceFactory::LedgerAppIn
     Environment* environment_;
     LedgerRepositoryFactoryImpl factory_impl_;
     SyncableBinding<fuchsia::ledger::internal::LedgerRepositoryFactorySyncableDelegate> binding_;
-    fidl::Binding<fuchsia::inspect::deprecated::Inspect> inspect_binding_;
   };
 
   cloud_provider::CloudProviderPtr MakeCloudProvider() override;
@@ -140,7 +131,6 @@ class LedgerAppInstanceImpl final : public LedgerAppInstanceFactory::LedgerAppIn
   std::unique_ptr<SubLoop> loop_;
   std::unique_ptr<SubLoop> io_loop_;
   std::unique_ptr<Environment> environment_;
-  inspect_deprecated::Node top_level_inspect_node_;
   std::unique_ptr<LedgerRepositoryFactoryContainer> factory_container_;
   async_dispatcher_t* services_dispatcher_;
   fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider, FakeCloudProvider>* const
@@ -158,31 +148,19 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
     fidl::InterfacePtr<ledger_internal::LedgerRepositoryFactory> repository_factory_ptr,
     fidl_helpers::BoundInterfaceSet<cloud_provider::CloudProvider, FakeCloudProvider>*
         cloud_provider,
-    p2p_provider::P2PProviderFactory* p2p_provider_factory,
-    fidl::InterfaceRequest<fuchsia::inspect::deprecated::Inspect> inspect_request,
-    fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> inspect_ptr)
+    p2p_provider::P2PProviderFactory* p2p_provider_factory)
     : LedgerAppInstanceFactory::LedgerAppInstance(loop_controller, convert::ToArray(kLedgerName),
-                                                  std::move(repository_factory_ptr),
-                                                  std::move(inspect_ptr)),
+                                                  std::move(repository_factory_ptr)),
       loop_(std::move(loop)),
       io_loop_(std::move(io_loop)),
       environment_(std::move(environment)),
       services_dispatcher_(services_dispatcher),
       cloud_provider_(cloud_provider),
       weak_ptr_factory_(this) {
-  auto top_level_objects = component::Object::Make(convert::ToString(kTestTopLevelNodeName));
-  auto top_level_object_dir = component::ObjectDir(top_level_objects);
-  std::shared_ptr<component::Object> top_level_component_object = top_level_object_dir.object();
-  top_level_inspect_node_ = inspect_deprecated::Node(std::move(top_level_object_dir));
-
   async::PostTask(loop_->dispatcher(), [this, request = std::move(repository_factory_request),
-                                        p2p_provider_factory,
-                                        inspect_request = std::move(inspect_request),
-                                        top_level_component_object]() mutable {
+                                        p2p_provider_factory]() mutable {
     factory_container_ = std::make_unique<LedgerRepositoryFactoryContainer>(
-        environment_.get(), std::move(request), p2p_provider_factory,
-        top_level_inspect_node_.CreateChild(convert::ToString(kRepositoriesInspectPathComponent)),
-        std::move(inspect_request), top_level_component_object.get());
+        environment_.get(), std::move(request), p2p_provider_factory);
   });
 }
 
@@ -271,9 +249,6 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
   ledger_internal::LedgerRepositoryFactoryPtr repository_factory_ptr;
   fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory> repository_factory_request =
       repository_factory_ptr.NewRequest();
-  fuchsia::inspect::deprecated::InspectPtr inspect_ptr;
-  fidl::InterfaceRequest<fuchsia::inspect::deprecated::Inspect> inspect_request =
-      inspect_ptr.NewRequest();
   auto loop = loop_controller_.StartNewLoop();
   auto io_loop = loop_controller_.StartNewLoop();
   auto diff_compatibility_policy = test_diffs_ == TestDiffs::TEST_COMPATIBILITY
@@ -293,8 +268,7 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
   return std::make_unique<LedgerAppInstanceImpl>(
       &loop_controller_, std::move(loop), std::move(io_loop), std::move(environment),
       services_loop_->dispatcher(), std::move(repository_factory_request),
-      std::move(repository_factory_ptr), cloud_provider, p2p_factory, std::move(inspect_request),
-      std::move(inspect_ptr));
+      std::move(repository_factory_ptr), cloud_provider, p2p_factory);
 }
 
 LoopController* LedgerAppInstanceFactoryImpl::GetLoopController() { return &loop_controller_; }

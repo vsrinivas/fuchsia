@@ -37,9 +37,6 @@
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "src/ledger/lib/rng/random.h"
-#include "src/lib/inspect_deprecated/deprecated/expose.h"
-#include "src/lib/inspect_deprecated/deprecated/object_dir.h"
-#include "src/lib/inspect_deprecated/inspect.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
@@ -246,12 +243,10 @@ struct LedgerRepositoryFactoryImpl::RepositoryInformation {
 };
 
 LedgerRepositoryFactoryImpl::LedgerRepositoryFactoryImpl(
-    Environment* environment, p2p_provider::P2PProviderFactory* p2p_provider_factory,
-    inspect_deprecated::Node inspect_node)
+    Environment* environment, p2p_provider::P2PProviderFactory* p2p_provider_factory)
     : environment_(environment),
       p2p_provider_factory_(p2p_provider_factory),
       repositories_(environment_->dispatcher()),
-      inspect_node_(std::move(inspect_node)),
       coroutine_manager_(environment_->coroutine_service()),
       weak_factory_(this) {}
 
@@ -362,8 +357,7 @@ Status LedgerRepositoryFactoryImpl::SynchronousCreateLedgerRepository(
       std::move(dbview_factory), std::move(page_usage_db), std::move(watchers),
       std::move(user_sync), std::move(disk_cleanup_manager), std::move(background_sync_manager),
       std::vector<PageUsageListener*>{disk_cleanup_manager_ptr, background_sync_manager_ptr},
-      std::move(device_id_manager),
-      inspect_node_.CreateChild(convert::ToHex(repository_information.name)));
+      std::move(device_id_manager));
   disk_cleanup_manager_ptr->SetPageEvictionDelegate(repository->get());
   background_sync_manager_ptr->SetDelegate(repository->get());
   return Status::OK;

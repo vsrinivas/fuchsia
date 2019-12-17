@@ -25,8 +25,6 @@
 #include "src/ledger/lib/callback/auto_cleanable.h"
 #include "src/ledger/lib/callback/managed_container.h"
 #include "src/ledger/lib/memory/weak_ptr.h"
-#include "src/lib/inspect_deprecated/deprecated/expose.h"
-#include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
 
@@ -34,8 +32,7 @@ class LedgerRepositoryFactoryImpl
     : public ::fuchsia::ledger::internal::LedgerRepositoryFactorySyncableDelegate {
  public:
   explicit LedgerRepositoryFactoryImpl(Environment* environment,
-                                       p2p_provider::P2PProviderFactory* p2p_provider_factory,
-                                       inspect_deprecated::Node inspect_node);
+                                       p2p_provider::P2PProviderFactory* p2p_provider_factory);
   LedgerRepositoryFactoryImpl(const LedgerRepositoryFactoryImpl&) = delete;
   LedgerRepositoryFactoryImpl& operator=(const LedgerRepositoryFactoryImpl&) = delete;
   ~LedgerRepositoryFactoryImpl() override;
@@ -81,8 +78,6 @@ class LedgerRepositoryFactoryImpl
   p2p_provider::P2PProviderFactory* const p2p_provider_factory_;
 
   AutoCleanableMap<std::string, LedgerRepositoryContainer> repositories_;
-
-  inspect_deprecated::Node inspect_node_;
 
   coroutine::CoroutineManager coroutine_manager_;
 

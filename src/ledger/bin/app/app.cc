@@ -11,7 +11,6 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/trace-provider/provider.h>
 #include <unistd.h>
-#include <zircon/device/vfs.h>
 
 #include <memory>
 #include <utility>
@@ -22,13 +21,10 @@
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/fidl/syncable.h"
-#include "src/ledger/bin/inspect/inspect.h"
 #include "src/ledger/bin/p2p_provider/public/p2p_provider_factory.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/inspect_deprecated/deprecated/object_dir.h"
-#include "src/lib/inspect_deprecated/inspect.h"
 #include "third_party/abseil-cpp/absl/flags/flag.h"
 #include "third_party/abseil-cpp/absl/flags/parse.h"
 
@@ -42,11 +38,6 @@ struct AppParams {
   bool disable_statistics = false;
   bool disable_p2p_sync = false;
   storage::GarbageCollectionPolicy gc_policy = kDefaultGarbageCollectionPolicy;
-};
-
-struct InspectObjects {
-  inspect_deprecated::Node top_level_node;
-  inspect_deprecated::StringProperty statistic_gathering;
 };
 
 // App is the main entry point of the Ledger application.
@@ -72,17 +63,6 @@ class App : public ledger_internal::LedgerController {
 
   bool Start() {
     io_loop_.StartThread("io thread");
-    auto objects = component::Object::Make(convert::ToString(kTopLevelNodeName));
-    auto object_dir = component::ObjectDir(objects);
-
-    component_context_->outgoing()
-        ->GetOrCreateDirectory(convert::ToString(kInspectNodesDirectory))
-        ->AddEntry(fuchsia::inspect::deprecated::Inspect::Name_,
-                   std::make_unique<vfs::Service>(
-                       inspect_bindings_.GetHandler(object_dir.object().get())));
-    inspect_objects_.top_level_node = inspect_deprecated::Node(std::move(object_dir));
-    inspect_objects_.statistic_gathering = inspect_objects_.top_level_node.CreateStringProperty(
-        "statistic_gathering", app_params_.disable_statistics ? "off" : "on");
 
     EnvironmentBuilder builder;
 
@@ -94,10 +74,7 @@ class App : public ledger_internal::LedgerController {
                                           .SetGcPolicy(app_params_.gc_policy)
                                           .Build());
 
-    factory_impl_ = std::make_unique<LedgerRepositoryFactoryImpl>(
-        environment_.get(), nullptr,
-        inspect_objects_.top_level_node.CreateChild(
-            convert::ToString(kRepositoriesInspectPathComponent)));
+    factory_impl_ = std::make_unique<LedgerRepositoryFactoryImpl>(environment_.get(), nullptr);
 
     component_context_->outgoing()->AddPublicService<ledger_internal::LedgerRepositoryFactory>(
         [this](fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory> request) {
@@ -118,8 +95,6 @@ class App : public ledger_internal::LedgerController {
   void Terminate() override { loop_.Quit(); }
 
   const AppParams app_params_;
-  InspectObjects inspect_objects_;
-  fidl::BindingSet<fuchsia::inspect::deprecated::Inspect> inspect_bindings_;
   async::Loop loop_;
   async::Loop io_loop_;
   trace::TraceProviderWithFdio trace_provider_;

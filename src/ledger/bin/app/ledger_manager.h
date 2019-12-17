@@ -31,7 +31,6 @@
 #include "src/ledger/lib/callback/auto_cleanable.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/memory/weak_ptr.h"
-#include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
 
@@ -41,10 +40,9 @@ namespace ledger {
 // LedgerManager owns all per-ledger-instance objects: LedgerStorage and a FIDL
 // LedgerImpl. It is safe to delete it at any point - this closes all channels,
 // deletes the LedgerImpl and tears down the storage.
-class LedgerManager : public LedgerImpl::Delegate, inspect_deprecated::ChildrenManager {
+class LedgerManager : public LedgerImpl::Delegate {
  public:
   LedgerManager(Environment* environment, std::string ledger_name,
-                inspect_deprecated::Node inspect_node,
                 std::unique_ptr<encryption::EncryptionService> encryption_service,
                 std::unique_ptr<storage::LedgerStorage> storage,
                 std::unique_ptr<sync_coordinator::LedgerSync> ledger_sync,
@@ -82,10 +80,6 @@ class LedgerManager : public LedgerImpl::Delegate, inspect_deprecated::ChildrenM
                fidl::InterfaceRequest<Page> page_request,
                fit::function<void(Status)> callback) override;
   void SetConflictResolverFactory(fidl::InterfaceHandle<ConflictResolverFactory> factory) override;
-
-  // inspect_deprecated::ChildrenManager:
-  void GetNames(fit::function<void(std::set<std::string>)> callback) override;
-  void Attach(std::string name, fit::function<void(fit::closure)> callback) override;
 
   void SetOnDiscardable(fit::closure on_discardable);
   bool IsDiscardable() const;
@@ -134,13 +128,6 @@ class LedgerManager : public LedgerImpl::Delegate, inspect_deprecated::ChildrenM
   AutoCleanableMap<storage::PageId, PageManager, convert::StringViewComparator> page_managers_;
   std::vector<PageUsageListener*> page_usage_listeners_;
   fit::closure on_discardable_;
-
-  // The static Inspect object maintaining in Inspect a representation of this
-  // LedgerManager.
-  inspect_deprecated::Node inspect_node_;
-  // The static Inspect object to which this LedgerManager's pages are attached.
-  inspect_deprecated::Node pages_node_;
-  fit::deferred_callback children_manager_retainer_;
 
   // Must be the last member.
   WeakPtrFactory<LedgerManager> weak_factory_;

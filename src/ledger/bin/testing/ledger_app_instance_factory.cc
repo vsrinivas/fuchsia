@@ -8,19 +8,15 @@
 
 #include "gtest/gtest.h"
 #include "src/ledger/bin/platform/fd.h"
-#include "src/ledger/bin/testing/inspect.h"
-#include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
 
 LedgerAppInstanceFactory::LedgerAppInstance::LedgerAppInstance(
     LoopController* loop_controller, std::vector<uint8_t> test_ledger_name,
-    ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory,
-    fuchsia::inspect::deprecated::InspectPtr inspect)
+    ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory)
     : loop_controller_(loop_controller),
       test_ledger_name_(std::move(test_ledger_name)),
       ledger_repository_factory_(std::move(ledger_repository_factory)),
-      inspect_(std::move(inspect)),
       platform_(MakePlatform()),
       tmp_location_(platform_->file_system()->CreateScopedTmpLocation()) {
   ledger_repository_factory_.set_error_handler([](zx_status_t status) {
@@ -80,11 +76,6 @@ PagePtr LedgerAppInstanceFactory::LedgerAppInstance::GetPage(const PageIdPtr& pa
   PagePtr page_ptr;
   GetTestLedger()->GetPage(fidl::Clone(page_id), page_ptr.NewRequest());
   return page_ptr;
-}
-
-bool LedgerAppInstanceFactory::LedgerAppInstance::Inspect(
-    LoopController* loop_controller, inspect_deprecated::ObjectHierarchy* hierarchy) {
-  return ledger::Inspect(&inspect_, loop_controller, hierarchy);
 }
 
 }  // namespace ledger

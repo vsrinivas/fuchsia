@@ -13,9 +13,6 @@
 #include <vector>
 
 #include "src/ledger/bin/app/active_page_manager_container.h"
-#include "src/ledger/bin/app/commits_children_manager.h"
-#include "src/ledger/bin/app/heads_children_manager.h"
-#include "src/ledger/bin/app/inspectable_page.h"
 #include "src/ledger/bin/app/ledger_impl.h"
 #include "src/ledger/bin/app/merging/ledger_merge_manager.h"
 #include "src/ledger/bin/app/page_availability_manager.h"
@@ -28,7 +25,6 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/sync_coordinator/public/ledger_sync.h"
 #include "src/ledger/lib/memory/weak_ptr.h"
-#include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
 // Manages a ledger page.
@@ -40,15 +36,15 @@ namespace ledger {
 //
 // When a PageManager becomes empty, client is notified through
 // |on_discardable|.
-class PageManager : InspectablePage {
+class PageManager {
  public:
   PageManager(Environment* environment, std::string ledger_name, storage::PageId page_id,
               std::vector<PageUsageListener*> page_usage_listeners,
               storage::LedgerStorage* ledger_storage, sync_coordinator::LedgerSync* ledger_sync,
-              LedgerMergeManager* ledger_merge_manager, inspect_deprecated::Node inspect_node);
+              LedgerMergeManager* ledger_merge_manager);
   PageManager(const PageManager&) = delete;
   PageManager& operator=(const PageManager&) = delete;
-  ~PageManager() override;
+  ~PageManager();
 
   // Checks whether the given page is closed and synced. The result returned in
   // the callback will be |PAGE_OPENED| if the page is opened after calling this
@@ -81,11 +77,6 @@ class PageManager : InspectablePage {
   // deregister the "interest" in this |PageManager| (and potentially cause this
   // |PageManager|'s on_discardable_ to be called).
   fit::closure CreateDetacher();
-
-  // InspectablePage:
-  void NewInspection(fit::function<void(storage::Status status, ExpiringToken token,
-                                        ActivePageManager* active_page_manager)>
-                         callback) override;
 
   void SetOnDiscardable(fit::closure on_discardable);
 
@@ -162,19 +153,6 @@ class PageManager : InspectablePage {
   // |outstanding_operations_| counts the number of active tracking operations.
   // The super manager is not empty until all operations have completed.
   uint64_t outstanding_operations_ = 0;
-
-  // The static Inspect object maintaining in Inspect a representation of this
-  // |PageManager|.
-  inspect_deprecated::Node inspect_node_;
-  // The static Inspect object to which this |PageManager|'s heads are attached.
-  inspect_deprecated::Node heads_node_;
-  HeadsChildrenManager heads_children_manager_;
-  fit::deferred_callback heads_children_manager_retainer_;
-  // The static Inspect object to which this |PageManager|'s commits are
-  // attached.
-  inspect_deprecated::Node commits_node_;
-  CommitsChildrenManager commits_children_manager_;
-  fit::deferred_callback commits_children_manager_retainer_;
 
   // A nonnegative count of the number of "registered interests" for this
   // |PageManager|. This field is incremented by calls to |CreateDetacher| and

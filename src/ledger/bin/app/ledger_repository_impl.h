@@ -32,16 +32,13 @@
 #include "src/ledger/lib/callback/auto_cleanable.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
-#include "src/lib/inspect_deprecated/deprecated/expose.h"
-#include "src/lib/inspect_deprecated/inspect.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 
 class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositorySyncableDelegate,
                              public PageEvictionManager::Delegate,
-                             public BackgroundSyncManager::Delegate,
-                             public inspect_deprecated::ChildrenManager {
+                             public BackgroundSyncManager::Delegate {
  public:
   // Creates a new LedgerRepositoryImpl object. Guarantees that |db_factory|
   // will outlive the given |disk_cleanup_manager|.
@@ -53,8 +50,7 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
                        std::unique_ptr<DiskCleanupManager> disk_cleanup_manager,
                        std::unique_ptr<BackgroundSyncManager> background_sync_manager,
                        std::vector<PageUsageListener*> page_usage_listeners,
-                       std::unique_ptr<clocks::DeviceIdManager> device_id_manager,
-                       inspect_deprecated::Node inspect_node);
+                       std::unique_ptr<clocks::DeviceIdManager> device_id_manager);
   LedgerRepositoryImpl(const LedgerRepositoryImpl&) = delete;
   LedgerRepositoryImpl& operator=(const LedgerRepositoryImpl&) = delete;
   ~LedgerRepositoryImpl() override;
@@ -86,10 +82,6 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
                            fit::function<void(Status)> callback) override;
   void DiskCleanUp(fit::function<void(Status)> callback) override;
   void Close(fit::function<void(Status)> callback) override;
-
-  // inspect_deprecated::ChildrenManager:
-  void GetNames(fit::function<void(std::set<std::string>)> callback) override;
-  void Attach(std::string ledger_name, fit::function<void(fit::closure)> callback) override;
 
  private:
   // The internal state of LedgerRepositoryImpl.
@@ -139,11 +131,6 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
   std::vector<fit::function<void(Status)>> close_callbacks_;
 
   coroutine::CoroutineManager coroutine_manager_;
-
-  inspect_deprecated::Node inspect_node_;
-  inspect_deprecated::UIntMetric requests_metric_;
-  inspect_deprecated::Node ledgers_inspect_node_;
-  fit::deferred_callback children_manager_retainer_;
 };
 
 }  // namespace ledger

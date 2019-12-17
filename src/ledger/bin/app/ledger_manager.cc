@@ -21,17 +21,14 @@
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/app/types.h"
 #include "src/ledger/bin/fidl/include/types.h"
-#include "src/ledger/bin/inspect/inspect.h"
 #include "src/ledger/bin/p2p_sync/public/page_communicator.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {
 
 LedgerManager::LedgerManager(Environment* environment, std::string ledger_name,
-                             inspect_deprecated::Node inspect_node,
                              std::unique_ptr<encryption::EncryptionService> encryption_service,
                              std::unique_ptr<storage::LedgerStorage> storage,
                              std::unique_ptr<sync_coordinator::LedgerSync> ledger_sync,
@@ -46,9 +43,6 @@ LedgerManager::LedgerManager(Environment* environment, std::string ledger_name,
       bindings_(environment->dispatcher()),
       page_managers_(environment_->dispatcher()),
       page_usage_listeners_(std::move(page_usage_listeners)),
-      inspect_node_(std::move(inspect_node)),
-      pages_node_(inspect_node_.CreateChild(convert::ToString(kPagesInspectPathComponent))),
-      children_manager_retainer_(pages_node_.SetChildrenManager(this)),
       weak_factory_(this) {
   bindings_.SetOnDiscardable([this] { CheckDiscardable(); });
   page_managers_.SetOnDiscardable([this] { CheckDiscardable(); });
@@ -105,40 +99,15 @@ void LedgerManager::GetPage(storage::PageIdView page_id, PageState page_state,
                                            std::move(callback));
 }
 
-void LedgerManager::GetNames(fit::function<void(std::set<std::string>)> callback) {
-  storage_->ListPages(
-      [callback = std::move(callback)](storage::Status status, std::set<storage::PageId> page_ids) {
-        if (status != storage::Status::OK) {
-          LEDGER_LOG(WARNING) << "Status wasn't OK; rather it was " << status << "!";
-        }
-        std::set<std::string> display_names;
-        for (const auto& page_id : page_ids) {
-          display_names.insert(PageIdToDisplayName(page_id));
-        }
-        callback(display_names);
-      });
-}
-
-void LedgerManager::Attach(std::string name, fit::function<void(fit::closure)> callback) {
-  storage::PageId page_id;
-  if (!PageDisplayNameToPageId(name, &page_id)) {
-    LEDGER_DCHECK(false) << "Page display name \"" << name << "\" not convertable into a PageId!";
-    callback([]() {});
-    return;
-  }
-  callback(GetOrCreatePageManager(page_id)->CreateDetacher());
-};
-
 PageManager* LedgerManager::GetOrCreatePageManager(convert::ExtendedStringView page_id) {
   auto it = page_managers_.find(page_id);
   if (it != page_managers_.end()) {
     return &it->second;
   }
 
-  auto ret = page_managers_.try_emplace(
-      convert::ToString(page_id), environment_, ledger_name_, convert::ToString(page_id),
-      page_usage_listeners_, storage_.get(), ledger_sync_.get(), &merge_manager_,
-      pages_node_.CreateChild(PageIdToDisplayName(convert::ToString(page_id))));
+  auto ret = page_managers_.try_emplace(convert::ToString(page_id), environment_, ledger_name_,
+                                        convert::ToString(page_id), page_usage_listeners_,
+                                        storage_.get(), ledger_sync_.get(), &merge_manager_);
   LEDGER_DCHECK(ret.second);
   return &ret.first->second;
 }

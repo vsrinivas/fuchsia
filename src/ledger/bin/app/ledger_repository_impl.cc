@@ -15,15 +15,12 @@
 #include "src/ledger/bin/app/serialization.h"
 #include "src/ledger/bin/cloud_sync/impl/ledger_sync_impl.h"
 #include "src/ledger/bin/fidl/include/types.h"
-#include "src/ledger/bin/inspect/inspect.h"
 #include "src/ledger/bin/p2p_sync/public/ledger_communicator.h"
 #include "src/ledger/bin/storage/impl/ledger_storage_impl.h"
 #include "src/ledger/bin/sync_coordinator/public/ledger_sync.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/inspect_deprecated/deprecated/expose.h"
-#include "src/lib/inspect_deprecated/deprecated/object_dir.h"
 #include "third_party/abseil-cpp/absl/strings/escaping.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
@@ -41,8 +38,7 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(
     std::unique_ptr<DiskCleanupManager> disk_cleanup_manager,
     std::unique_ptr<BackgroundSyncManager> background_sync_manager,
     std::vector<PageUsageListener*> page_usage_listeners,
-    std::unique_ptr<clocks::DeviceIdManager> device_id_manager,
-    inspect_deprecated::Node inspect_node)
+    std::unique_ptr<clocks::DeviceIdManager> device_id_manager)
     : content_path_(std::move(content_path)),
       environment_(environment),
       bindings_(environment->dispatcher()),
@@ -57,17 +53,11 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(
       background_sync_manager_(std::move(background_sync_manager)),
       ledger_managers_(environment_->dispatcher()),
       device_id_manager_(std::move(device_id_manager)),
-      coroutine_manager_(environment_->coroutine_service()),
-      inspect_node_(std::move(inspect_node)),
-      requests_metric_(
-          inspect_node_.CreateUIntMetric(convert::ToString(kRequestsInspectPathComponent), 0UL)),
-      ledgers_inspect_node_(
-          inspect_node_.CreateChild(convert::ToString(kLedgersInspectPathComponent))) {
+      coroutine_manager_(environment_->coroutine_service()) {
   bindings_.SetOnDiscardable([this] { CheckDiscardable(); });
   ledger_managers_.SetOnDiscardable([this] { CheckDiscardable(); });
   disk_cleanup_manager_->SetOnDiscardable([this] { CheckDiscardable(); });
   background_sync_manager_->SetOnDiscardable([this] { CheckDiscardable(); });
-  children_manager_retainer_ = ledgers_inspect_node_.SetChildrenManager(this);
 }
 
 LedgerRepositoryImpl::~LedgerRepositoryImpl() {
@@ -107,7 +97,6 @@ bool LedgerRepositoryImpl::IsDiscardable() const {
 void LedgerRepositoryImpl::BindRepository(
     fidl::InterfaceRequest<ledger_internal::LedgerRepository> repository_request) {
   bindings_.emplace(this, std::move(repository_request));
-  requests_metric_.Add(1);
 }
 
 void LedgerRepositoryImpl::PageIsClosedAndSynced(
@@ -188,49 +177,6 @@ void LedgerRepositoryImpl::TrySyncClosedPage(absl::string_view ledger_name,
   return ledger_manager->TrySyncClosedPage(page_id);
 }
 
-// TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=12326): The disk
-// scan should be made to happen either asynchronously or not on the main
-// thread.
-void LedgerRepositoryImpl::GetNames(fit::function<void(std::set<std::string>)> callback) {
-  std::set<std::string> child_names;
-  std::vector<std::string> contents;
-  if (!environment_->file_system()->GetDirectoryContents(content_path_, &contents)) {
-    LEDGER_LOG(ERROR) << "Failed to get directory entries at " << content_path_.path();
-    callback({});
-    return;
-  }
-
-  for (const std::string& content : contents) {
-    std::string decoded;
-    if (absl::WebSafeBase64Unescape(content, &decoded)) {
-      child_names.insert(decoded);
-    } else {
-      // NOTE(nathaniel): The ChildrenManager API does not currently have a
-      // means to indicate errors; our response to an error here is to
-      // simply log and refrain from telling Inspect that the problematic
-      // child exists.
-      LEDGER_LOG(ERROR) << "Failed to decode encoded ledger name \"" << content << "\"!";
-      break;
-    }
-  };
-  callback(child_names);
-};
-
-void LedgerRepositoryImpl::Attach(std::string ledger_name,
-                                  fit::function<void(fit::closure)> callback) {
-  LedgerManager* ledger_manager;
-  // TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=12327): This will
-  // create a new ledger on disk if no ledger with the given name is found -
-  // GetLedgerManager should be split into separate "GetOrCreateLedgerManager"
-  // and "GetButDoNotCreateLedgerManager" functions with the latter called here.
-  storage::Status status = GetLedgerManager(ledger_name, &ledger_manager);
-  if (status != storage::Status::OK) {
-    callback([]() {});
-    return;
-  }
-  callback(ledger_manager->CreateDetacher());
-};
-
 Status LedgerRepositoryImpl::GetLedgerManager(convert::ExtendedStringView ledger_name,
                                               LedgerManager** ledger_manager) {
   LEDGER_DCHECK(!ledger_name.empty());
@@ -258,8 +204,7 @@ Status LedgerRepositoryImpl::GetLedgerManager(convert::ExtendedStringView ledger
       pruning_policy, device_id_manager_.get());
   RETURN_ON_ERROR(ledger_storage->Init());
   auto result = ledger_managers_.try_emplace(
-      name_as_string, environment_, name_as_string,
-      ledgers_inspect_node_.CreateChild(name_as_string), std::move(encryption_service),
+      name_as_string, environment_, name_as_string, std::move(encryption_service),
       std::move(ledger_storage), std::move(ledger_sync), page_usage_listeners_);
   LEDGER_DCHECK(result.second);
   *ledger_manager = &(result.first->second);
