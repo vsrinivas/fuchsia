@@ -84,7 +84,6 @@ source_set("lib") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.net.oldhttp",
     "//src/ledger/bin/fidl",
     "//src/ledger/lib/callback",
     "//src/ledger/lib/coroutine",

@@ -17,7 +17,6 @@ executable("app") {
     ":constants",
     ":flags",
     ":lib",
-    "//sdk/fidl/fuchsia.net.oldhttp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/ledger/bin/environment",
