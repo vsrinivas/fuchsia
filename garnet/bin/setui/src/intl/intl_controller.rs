@@ -61,7 +61,6 @@ impl IntlController {
                 stored_value = storage_lock.get().await;
             }
 
-            let _icu_data_loader = icu_data::Loader::new().expect("icu data loaded");
             let time_zone_ids = IntlController::load_time_zones();
 
             let handle = Arc::new(RwLock::new(Self {
@@ -82,6 +81,7 @@ impl IntlController {
 
     /// Loads the set of valid time zones from resources.
     fn load_time_zones() -> std::collections::HashSet<String> {
+        let _icu_data_loader = icu_data::Loader::new().expect("icu data loaded");
         let mut time_zone_set = HashSet::new();
 
         let time_zone_list = match uenum::open_time_zones() {
