@@ -10,6 +10,7 @@
 #include "src/developer/debug/zxdb/expr/eval_context.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/resolve_collection.h"
+#include "src/developer/debug/zxdb/expr/resolve_ptr_ref.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/enumeration.h"
@@ -273,21 +274,22 @@ enum CastPointer { kAllowBaseToDerived, kDisallowBaseToDerived };
 // static_cast rules.
 //
 // The source and dest types should already be concrete (from EvalContext::GetConcreteType()).
-ErrOrValue StaticCastPointerOrRef(const fxl::RefPtr<EvalContext>& eval_context,
-                                  const ExprValue& source, const fxl::RefPtr<Type>& dest_type,
-                                  const Type* concrete_from, const Type* concrete_to,
-                                  const ExprValueSource& dest_source, CastPointer cast_pointer) {
+void StaticCastPointerOrRef(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& source,
+                            const fxl::RefPtr<Type>& dest_type, const Type* concrete_from,
+                            const Type* concrete_to, const ExprValueSource& dest_source,
+                            CastPointer cast_pointer, EvalCallback cb) {
   if (!DwarfTagIsPointerOrReference(concrete_from->tag()) ||
       !DwarfTagIsPointerOrReference(concrete_to->tag()))
-    return MakeCastError(concrete_from, concrete_to);
+    return cb(MakeCastError(concrete_from, concrete_to));
 
   // The pointer/ref-ness must match from the source to the dest. This code treats rvalue references
   // and regular references the same.
   if ((concrete_from->tag() == DwarfTag::kPointerType) !=
           (concrete_to->tag() == DwarfTag::kPointerType) ||
       DwarfTagIsEitherReference(concrete_from->tag()) !=
-          DwarfTagIsEitherReference(concrete_to->tag()))
-    return MakeCastError(concrete_from, concrete_to);
+          DwarfTagIsEitherReference(concrete_to->tag())) {
+    return cb(MakeCastError(concrete_from, concrete_to));
+  }
 
   // Can assume they're ModifiedTypes due to tag checks above.
   const ModifiedType* modified_from = concrete_from->AsModifiedType();
@@ -295,17 +297,17 @@ ErrOrValue StaticCastPointerOrRef(const fxl::RefPtr<EvalContext>& eval_context,
   if (modified_from->ModifiesVoid() || modified_to->ModifiesVoid()) {
     // Always allow conversions to and from void*. This technically handles void& which isn't
     // expressible C++, but should be fine.
-    return CastIntToInt(source, concrete_from, dest_type, dest_source);
+    return cb(CastIntToInt(source, concrete_from, dest_type, dest_source));
   }
 
   // Currently we assume all pointers and references are 64-bit.
   if (modified_from->byte_size() != sizeof(uint64_t) ||
       modified_to->byte_size() != sizeof(uint64_t)) {
-    return Err(
-        "Can only cast 64-bit pointers and references: "
-        "'%s' is %u bytes and '%s' is %u bytes.",
-        concrete_from->GetFullName().c_str(), concrete_from->byte_size(),
-        concrete_to->GetFullName().c_str(), concrete_to->byte_size());
+    return cb(
+        Err("Can only cast 64-bit pointers and references: "
+            "'%s' is %u bytes and '%s' is %u bytes.",
+            concrete_from->GetFullName().c_str(), concrete_from->byte_size(),
+            concrete_to->GetFullName().c_str(), concrete_to->byte_size()));
   }
 
   // Get the pointed-to or referenced types.
@@ -313,7 +315,7 @@ ErrOrValue StaticCastPointerOrRef(const fxl::RefPtr<EvalContext>& eval_context,
   const Type* refed_to_abstract = modified_to->modified().Get()->AsType();
   if (!refed_from_abstract || !refed_to_abstract) {
     // Error decoding (not void* because that was already checked above).
-    return MakeCastError(concrete_from, concrete_to);
+    return cb(MakeCastError(concrete_from, concrete_to));
   }
 
   // Strip qualifiers to handle things like "pointer to const int".
@@ -322,7 +324,7 @@ ErrOrValue StaticCastPointerOrRef(const fxl::RefPtr<EvalContext>& eval_context,
 
   if (refed_from->GetFullName() == refed_to->GetFullName()) {
     // Source and dest are the same type.
-    return CastIntToInt(source, concrete_from, dest_type, dest_source);
+    return cb(CastIntToInt(source, concrete_from, dest_type, dest_source));
   }
 
   if (auto found_offset = GetDerivedClassOffset(refed_to.get(), refed_from.get())) {
@@ -333,7 +335,7 @@ ErrOrValue StaticCastPointerOrRef(const fxl::RefPtr<EvalContext>& eval_context,
     uint64_t ptr_value = source.GetAs<uint64_t>();
     ptr_value += *found_offset;
 
-    return ExprValue(ptr_value, dest_type, dest_source);
+    return cb(ExprValue(ptr_value, dest_type, dest_source));
   }
 
   if (cast_pointer == kAllowBaseToDerived) {
@@ -342,38 +344,101 @@ ErrOrValue StaticCastPointerOrRef(const fxl::RefPtr<EvalContext>& eval_context,
     if (auto found_offset = GetDerivedClassOffset(refed_from.get(), refed_to.get())) {
       uint64_t ptr_value = source.GetAs<uint64_t>();
       ptr_value -= *found_offset;
-      return ExprValue(ptr_value, dest_type, dest_source);
+      return cb(ExprValue(ptr_value, dest_type, dest_source));
     }
   }
 
-  return Err("Can't convert '%s' to unrelated type '%s'.", concrete_from->GetFullName().c_str(),
-             concrete_to->GetFullName().c_str());
+  cb(Err("Can't convert '%s' to unrelated type '%s'.", concrete_from->GetFullName().c_str(),
+         concrete_to->GetFullName().c_str()));
 }
 
-ErrOrValue ImplicitCast(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& source,
-                        const fxl::RefPtr<Type>& dest_type, const ExprValueSource& dest_source) {
-  // There are several fundamental types of things that can be casted:
-  //  - Aggregate types: Can only convert if they're the same.
-  //  - Integers and integer-like things: This includes pointers.
-  //  - Floating-point numbers.
-  //  - Booleans.
+// Some types of casts requires that references be followed (e.g. int& -> long), while others
+// require that they not be followed (e.g. BaseClass& -> DerivedClass&). This function
+// determines if the source should have references followed before executing the cast.
+bool CastShouldFollowReferences(const fxl::RefPtr<EvalContext>& eval_context, CastType cast_type,
+                                const ExprValue& source, const fxl::RefPtr<Type>& dest_type) {
+  // Implicit casts never follow references. If you have two references:
+  //   A& a;
+  //   B& b;
+  // and do:
+  //   a = b;
+  // This ends up being an implicit cast, but should assign the values, not convert references. This
+  // is different than an explicit cast:
+  //   (B&)a;
+  // Which converts the reference itself.
+  if (cast_type == CastType::kImplicit)
+    return true;
 
+  // Casting a reference to a reference needs to keep the reference information. Casting a reference
+  // to anything else means the reference should be stripped.
+  fxl::RefPtr<Type> concrete_from = eval_context->GetConcreteType(source.type());
+  fxl::RefPtr<Type> concrete_to = eval_context->GetConcreteType(dest_type.get());
+
+  // Count rvalue references as references. This isn't always strictly valid since you can't static
+  // cast a Base&& to a Derived&&, but from a debugger perspective there's no reason not to allow
+  // this.
+  if (DwarfTagIsEitherReference(concrete_from->tag()) &&
+      DwarfTagIsEitherReference(concrete_to->tag()))
+    return false;  // Keep reference on source for casting.
+
+  return true;  // Follow reference.
+}
+
+// Handles the synchronous "number" variants of an implicit cast.
+//
+// The dest_type is the original type that the output will be, which might be non-concrete (const,
+// etc.). The concrete_to/from must be the concrete versions that we'll work off of.
+ErrOrValue NumericImplicitCast(const ExprValue& source, const fxl::RefPtr<Type>& dest_type,
+                               const Type* concrete_to, const Type* concrete_from,
+                               const ExprValueSource& dest_source) {
+  // Handles identical type conversions. This includes all aggregate types.
+  if (TypesAreBinaryCoercable(concrete_from, concrete_to))
+    return ExprValue(dest_type, source.data(), dest_source);
+
+  // Conversions to bool. Conversions from bool will follow the standard "number to X" path where we
+  // assume the bool is like a number.
+  if (IsBooleanBaseType(concrete_to) && IsNumberLike(concrete_from))
+    return CastNumberToBool(source, concrete_from, dest_type, dest_source);
+
+  // Conversions between different types of ints, including pointers (truncate or extend). This lets
+  // us evaluate things like "ptr = 0x2a3512635" without elaborate casts. Pointer-to-pointer
+  // conversions need to check for derived classes so can't be handled by this function.
+  if (IsIntegerLike(concrete_from) && IsIntegerLike(concrete_to) &&
+      !(concrete_from->tag() == DwarfTag::kPointerType &&
+        concrete_to->tag() == DwarfTag::kPointerType))
+    return CastIntToInt(source, concrete_from, dest_type, dest_source);
+
+  // Conversions between different types of floats.
+  if (IsFloatingPointBaseType(concrete_from) && IsFloatingPointBaseType(concrete_to))
+    return CastFloatToFloat(source, dest_type, dest_source);
+
+  // Conversions between ints and floats.
+  if (IsIntegerLike(concrete_to) && IsFloatingPointBaseType(concrete_from))
+    return CastFloatToInt(source, dest_type, concrete_to, dest_source);
+  if (IsFloatingPointBaseType(concrete_to) && IsIntegerLike(concrete_from))
+    return CastIntToFloat(source, IsSignedBaseType(concrete_from), dest_type, dest_source);
+
+  return Err("Can't cast from '%s' to '%s'.", source.type()->GetFullName().c_str(),
+             dest_type->GetFullName().c_str());
+}
+
+// Attempts an implicit cast, handling numbers (synchonous) and derived types (possibly asynchronous
+// for virtual inheritance).
+void ImplicitCast(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& source,
+                  const fxl::RefPtr<Type>& dest_type, const ExprValueSource& dest_source,
+                  EvalCallback cb) {
   // Prevent crashes if we get bad types with no size.
   if (source.data().size() == 0 || dest_type->byte_size() == 0)
-    return Err("Type has 0 size.");
+    return cb(Err("Type has 0 size."));
 
   // Get the types without "const", etc. modifiers.
   fxl::RefPtr<Type> concrete_from = eval_context->GetConcreteType(source.type());
   fxl::RefPtr<Type> concrete_to = eval_context->GetConcreteType(dest_type.get());
 
-  // Handles identical type conversions. This includes all aggregate types.
-  if (TypesAreBinaryCoercable(concrete_from.get(), concrete_to.get()))
-    return ExprValue(dest_type, source.data(), dest_source);
-
-  // Conversions to bool. Conversions from bool will follow the standard "number to X" path where we
-  // assume the bool is like a number.
-  if (IsBooleanBaseType(concrete_to.get()) && IsNumberLike(concrete_from.get()))
-    return CastNumberToBool(source, concrete_from.get(), dest_type, dest_source);
+  ErrOrValue result =
+      NumericImplicitCast(source, dest_type, concrete_to.get(), concrete_from.get(), dest_source);
+  if (result.ok())
+    return cb(result);
 
   // Pointer-to-pointer conversions. Allow anything that can be static_cast-ed which is permissive
   // but a little more strict than in other conversions: if you have two unrelated pointers,
@@ -386,24 +451,9 @@ ErrOrValue ImplicitCast(const fxl::RefPtr<EvalContext>& eval_context, const Expr
     // conversion feature of this function is used for static casting where static_cast<A&>(b)
     // refers to the reference address and not the referenced object.
     return StaticCastPointerOrRef(eval_context, source, dest_type, concrete_from.get(),
-                                  concrete_to.get(), dest_source, kDisallowBaseToDerived);
+                                  concrete_to.get(), dest_source, kDisallowBaseToDerived,
+                                  std::move(cb));
   }
-
-  // Conversions between different types of ints, including pointers (truncate or extend). This lets
-  // us evaluate things like "ptr = 0x2a3512635" without elaborate casts. Pointer-to-pointer
-  // conversions were handled above.
-  if (IsIntegerLike(concrete_from.get()) && IsIntegerLike(concrete_to.get()))
-    return CastIntToInt(source, concrete_from.get(), dest_type, dest_source);
-
-  // Conversions between different types of floats.
-  if (IsFloatingPointBaseType(concrete_from.get()) && IsFloatingPointBaseType(concrete_to.get()))
-    return CastFloatToFloat(source, dest_type, dest_source);
-
-  // Conversions between ints and floats.
-  if (IsIntegerLike(concrete_to.get()) && IsFloatingPointBaseType(concrete_from.get()))
-    return CastFloatToInt(source, dest_type, concrete_to.get(), dest_source);
-  if (IsFloatingPointBaseType(concrete_to.get()) && IsIntegerLike(concrete_from.get()))
-    return CastIntToFloat(source, IsSignedBaseType(concrete_from.get()), dest_type, dest_source);
 
   // Conversions to base classes (on objects, not on pointers or references). e.g. "foo = bar" where
   // foo's type is a base class of bar's.
@@ -411,11 +461,12 @@ ErrOrValue ImplicitCast(const fxl::RefPtr<EvalContext>& eval_context, const Expr
     // Ignore the dest_source. ResolveInherited is extracting data from inside the source object
     // which has a well-defined source location (unlike for all other casts that change the data so
     // there isn't so clear a source).
-    return ResolveInherited(eval_context, source, dest_type, *found_offset);
+    // TODO(brettw) use the asynchronous version instead.
+    return cb(ResolveInherited(eval_context, source, dest_type, *found_offset));
   }
 
-  return Err("Can't cast from '%s' to '%s'.", source.type()->GetFullName().c_str(),
-             dest_type->GetFullName().c_str());
+  cb(Err("Can't cast from '%s' to '%s'.", source.type()->GetFullName().c_str(),
+         dest_type->GetFullName().c_str()));
 }
 
 ErrOrValue ReinterpretCast(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& source,
@@ -445,21 +496,69 @@ ErrOrValue ReinterpretCast(const fxl::RefPtr<EvalContext>& eval_context, const E
   return ExprValue(dest_type, std::move(new_data), dest_source);
 }
 
-ErrOrValue StaticCast(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& source,
-                      const fxl::RefPtr<Type>& dest_type, const ExprValueSource& dest_source) {
+void StaticCast(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& source,
+                const fxl::RefPtr<Type>& dest_type, const ExprValueSource& dest_source,
+                EvalCallback cb) {
   // Our implicit cast is permissive enough to handle most cases including all number conversions,
   // and casts to base types.
-  if (ErrOrValue result = ImplicitCast(eval_context, source, dest_type, dest_source))
-    return result;
+  ImplicitCast(eval_context, source, dest_type, dest_source,
+               [eval_context, source, dest_type, dest_source,
+                cb = std::move(cb)](ErrOrValue result) mutable {
+                 if (result.ok())
+                   return cb(result);
 
-  // Get the types without "const", etc. modifiers.
-  fxl::RefPtr<Type> concrete_from = eval_context->GetConcreteType(source.type());
-  fxl::RefPtr<Type> concrete_to = eval_context->GetConcreteType(dest_type.get());
+                 // On failure, fall back on extra things allowed by static_cast.
 
-  // Static casts explicitly allow conversion of pointers to a derived class my modifying the
-  // address being pointed to.
-  return StaticCastPointerOrRef(eval_context, source, dest_type, concrete_from.get(),
-                                concrete_to.get(), dest_source, kAllowBaseToDerived);
+                 // Get the types without "const", etc. modifiers.
+                 fxl::RefPtr<Type> concrete_from = eval_context->GetConcreteType(source.type());
+                 fxl::RefPtr<Type> concrete_to = eval_context->GetConcreteType(dest_type.get());
+
+                 // Static casts explicitly allow conversion of pointers to a derived class my
+                 // modifying the address being pointed to.
+                 StaticCastPointerOrRef(eval_context, source, dest_type, concrete_from.get(),
+                                        concrete_to.get(), dest_source, kAllowBaseToDerived,
+                                        std::move(cb));
+               });
+}
+
+// Implements the cast once references have been followed.
+void DoCastExprValue(const fxl::RefPtr<EvalContext>& eval_context, CastType cast_type,
+                     const ExprValue& source, const fxl::RefPtr<Type>& dest_type,
+                     const ExprValueSource& dest_source, EvalCallback cb) {
+  switch (cast_type) {
+    case CastType::kImplicit:
+      ImplicitCast(eval_context, source, dest_type, dest_source, std::move(cb));
+      break;
+    case CastType::kRust:  // TODO(sadmac): This is almost correct. Make sure it's exactly correct.
+    case CastType::kC: {
+      // A C-style cast can do the following things.
+      //  - const_cast
+      //  - static_cast
+      //  - static_cast followed by a const_cast
+      //  - reinterpret_cast
+      //  - reinterpret_cast followed by a const_cast
+      //
+      // Since the debugger ignores const in debugging, this ends up being a static cast falling
+      // back to a reinterpret cast.
+      StaticCast(eval_context, source, dest_type, dest_source,
+                 [eval_context, source, dest_type, dest_source,
+                  cb = std::move(cb)](ErrOrValue result) mutable {
+                   if (result.ok()) {
+                     cb(result);
+                   } else {
+                     // StaticCast couldn't handle. Fall back on ReinterpretCast.
+                     cb(ReinterpretCast(eval_context, source, dest_type, dest_source));
+                   }
+                 });
+      break;
+    }
+    case CastType::kReinterpret:
+      cb(ReinterpretCast(eval_context, source, dest_type, dest_source));
+      break;
+    case CastType::kStatic:
+      StaticCast(eval_context, source, dest_type, dest_source, std::move(cb));
+      break;
+  }
 }
 
 }  // namespace
@@ -480,63 +579,40 @@ const char* CastTypeToString(CastType type) {
   return "<invalid>";
 }
 
-ErrOrValue CastExprValue(const fxl::RefPtr<EvalContext>& eval_context, CastType cast_type,
-                         const ExprValue& source, const fxl::RefPtr<Type>& dest_type,
-                         const ExprValueSource& dest_source) {
-  switch (cast_type) {
-    case CastType::kImplicit:
-      return ImplicitCast(eval_context, source, dest_type, dest_source);
-    case CastType::kRust:  // TODO(sadmac): This is almost correct. Make sure it's exactly correct.
-    case CastType::kC: {
-      // A C-style cast can do the following things.
-      //  - const_cast
-      //  - static_cast
-      //  - static_cast followed by a const_cast
-      //  - reinterpret_cast
-      //  - reinterpret_cast followed by a const_cast
-      //
-      // Since the debugger ignores const in debugging, this ends up being a static cast falling
-      // back to a reinterpret cast.
-      if (auto result = StaticCast(eval_context, source, dest_type, dest_source); result.ok())
-        return result;
-      return ReinterpretCast(eval_context, source, dest_type, dest_source);
-    }
-    case CastType::kReinterpret:
-      return ReinterpretCast(eval_context, source, dest_type, dest_source);
-    case CastType::kStatic:
-      return StaticCast(eval_context, source, dest_type, dest_source);
+void CastExprValue(const fxl::RefPtr<EvalContext>& eval_context, CastType cast_type,
+                   const ExprValue& source, const fxl::RefPtr<Type>& dest_type,
+                   const ExprValueSource& dest_source, EvalCallback cb) {
+  if (CastShouldFollowReferences(eval_context, cast_type, source, dest_type)) {
+    // Need to asynchronously follow the reference before doing the cast.
+    EnsureResolveReference(eval_context, source,
+                           [eval_context, cast_type, dest_type, cb = std::move(cb),
+                            dest_source](ErrOrValue result) mutable {
+                             if (result.has_error()) {
+                               cb(result);
+                             } else {
+                               DoCastExprValue(eval_context, cast_type, result.value(), dest_type,
+                                               dest_source, std::move(cb));
+                             }
+                           });
+  } else {
+    // Non-reference value, can cast right away.
+    DoCastExprValue(eval_context, cast_type, source, dest_type, dest_source, std::move(cb));
   }
-  FXL_NOTREACHED();
-  return Err("Internal error.");
 }
 
-bool CastShouldFollowReferences(const fxl::RefPtr<EvalContext>& eval_context, CastType cast_type,
-                                const ExprValue& source, const fxl::RefPtr<Type>& dest_type) {
-  // Implicit casts never follow references. If you have two references:
-  //   A& a;
-  //   B& b;
-  // and do:
-  //   a = b;
-  // This ends up being an implicit cast, but should assign the values, not convert references. This
-  // is different than an explicit cast:
-  //   (B&)a;
-  // Which converts the reference itself.
-  if (cast_type == CastType::kImplicit)
-    return true;
+ErrOrValue CastNumericExprValue(const fxl::RefPtr<EvalContext>& eval_context,
+                                const ExprValue& source, const fxl::RefPtr<Type>& dest_type,
+                                const ExprValueSource& dest_source) {
+  // Prevent crashes if we get bad types with no size.
+  if (source.data().size() == 0 || dest_type->byte_size() == 0)
+    return Err("Type has 0 size.");
 
-  // Casting a reference to a reference needs to keep the reference information. Casting a reference
-  // to anything else means the reference should be stripped.
+  // Get the types without "const", etc. modifiers.
   fxl::RefPtr<Type> concrete_from = eval_context->GetConcreteType(source.type());
   fxl::RefPtr<Type> concrete_to = eval_context->GetConcreteType(dest_type.get());
 
-  // Count rvalue references as references. This isn't always strictly valid since you can't static
-  // cast a Base&& to a Derived&&, but from a debugger perspective there's no reason not to allow
-  // this.
-  if (DwarfTagIsEitherReference(concrete_from->tag()) &&
-      DwarfTagIsEitherReference(concrete_to->tag()))
-    return false;  // Keep reference on source for casting.
-
-  return true;  // Follow reference.
+  return NumericImplicitCast(source, dest_type, concrete_to.get(), concrete_from.get(),
+                             dest_source);
 }
 
 }  // namespace zxdb

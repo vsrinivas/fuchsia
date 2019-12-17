@@ -156,25 +156,12 @@ void BinaryOpExprNode::Print(std::ostream& out, int indent) const {
 }
 
 void CastExprNode::Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const {
-  // Callback that does the cast given the right type of value.
-  auto exec_cast = [context, cast_type = cast_type_, to_type = to_type_->type(),
-                    cb = std::move(cb)](ErrOrValue value) mutable {
+  from_->Eval(context, [context, cast_type = cast_type_, to_type = to_type_->type(),
+                        cb = std::move(cb)](ErrOrValue value) mutable {
     if (value.has_error())
       cb(value);
     else
-      cb(CastExprValue(context, cast_type, value.value(), to_type));
-  };
-
-  from_->Eval(context, [context, cast_type = cast_type_, to_type = to_type_->type(),
-                        exec_cast = std::move(exec_cast)](ErrOrValue value) mutable {
-    // This lambda optionally follows the reference on the value according to the requirements of
-    // the cast.
-    if (value.has_error() ||
-        !CastShouldFollowReferences(context, cast_type, value.value(), to_type)) {
-      exec_cast(value);  // Also handles the error cases.
-    } else {
-      EnsureResolveReference(context, value.take_value(), std::move(exec_cast));
-    }
+      CastExprValue(context, cast_type, value.value(), to_type, ExprValueSource(), std::move(cb));
   });
 }
 

@@ -5,6 +5,7 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_EXPR_CAST_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_CAST_H_
 
+#include "src/developer/debug/zxdb/expr/eval_callback.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
@@ -59,24 +60,17 @@ const char* CastTypeToString(CastType);
 
 // Casts to a given type using a specific set of casting rules.
 //
-// This function is synchronous so can not follow references to evaluate the referenced data for
-// casting. This means that the source data must already be in the correct form.
-//
-// Some types of casts requires that references be followed (e.g. int& -> long), while others
-// require that they not be followed (e.g. BaseClass& -> DerivedClass&). Calling code should use
-// CastShouldFollowReferences to determine if the source should have references followed
-// (ExprNode::EvalFollowReferences) or not (ExprNode::Eval) before calling this function.
-//
 // The dest_source is an optional specification of what "source location" the returned value should
-// have.
-ErrOrValue CastExprValue(const fxl::RefPtr<EvalContext>& eval_context, CastType cast_type,
-                         const ExprValue& source, const fxl::RefPtr<Type>& dest_type,
-                         const ExprValueSource& dest_source = ExprValueSource());
+// have. For the default behavior, use an empty ExprValueSource().
+void CastExprValue(const fxl::RefPtr<EvalContext>& eval_context, CastType cast_type,
+                   const ExprValue& source, const fxl::RefPtr<Type>& dest_type,
+                   const ExprValueSource& dest_source, EvalCallback cb);
 
-// See comment for CastExprValue. This determines whether the source should have references expanded
-// to the referenced data before executing the given cast.
-bool CastShouldFollowReferences(const fxl::RefPtr<EvalContext>& eval_context, CastType cast_type,
-                                const ExprValue& source, const fxl::RefPtr<Type>& dest_type);
+// A numeric cast handles implicit casts of numeric types. This subset of casting can be synchronous
+// because it does not need to follow references or virtual inheritance.
+ErrOrValue CastNumericExprValue(const fxl::RefPtr<EvalContext>& eval_context,
+                                const ExprValue& source, const fxl::RefPtr<Type>& dest_type,
+                                const ExprValueSource& dest_source = ExprValueSource());
 
 }  // namespace zxdb
 

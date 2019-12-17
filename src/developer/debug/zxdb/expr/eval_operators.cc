@@ -186,16 +186,17 @@ void DoAssignment(const fxl::RefPtr<EvalContext>& context, const ExprValue& left
 
   // The coerced value will be the result. It should have the "source" of the left-hand-side since
   // the location being assigned to doesn't change.
-  ErrOrValue coerced =
-      CastExprValue(context, CastType::kImplicit, right_value, left_value.type_ref());
-  if (coerced.has_error())
-    return cb(std::move(coerced));
+  CastExprValue(context, CastType::kImplicit, right_value, left_value.type_ref(), ExprValueSource(),
+                [context, dest, cb = std::move(cb)](ErrOrValue coerced) mutable {
+                  if (coerced.has_error())
+                    return cb(coerced);
 
-  if (dest.type() == ExprValueSource::Type::kRegister) {
-    DoRegisterAssignment(context, dest, coerced.value(), std::move(cb));
-  } else {
-    DoMemoryAssignment(context, dest, coerced.value(), std::move(cb));
-  }
+                  if (dest.type() == ExprValueSource::Type::kRegister) {
+                    DoRegisterAssignment(context, dest, coerced.value(), std::move(cb));
+                  } else {
+                    DoMemoryAssignment(context, dest, coerced.value(), std::move(cb));
+                  }
+                });
 }
 
 // This is used as the return type for comparison operations.
@@ -372,8 +373,7 @@ Err OpValueToDouble(const fxl::RefPtr<EvalContext>& context, const OpValue& in, 
 
   // Needs casting to a float.
   auto double_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 8, "double");
-  ErrOrValue casted =
-      CastExprValue(context, CastType::kImplicit, *in.value, std::move(double_type));
+  ErrOrValue casted = CastNumericExprValue(context, *in.value, std::move(double_type));
   if (casted.has_error())
     return casted.err();
 
@@ -553,13 +553,11 @@ ErrOrValue DoLogicalBinaryOp(const fxl::RefPtr<EvalContext>& context, const OpVa
                              const ExprToken& op, const OpValue& right_value) {
   // In general the left will have already been converted to a bool and checks to implement
   // short-ciruiting for these operators. But reevaluate anyway which is useful for tests.
-  ErrOrValue left_as_bool =
-      CastExprValue(context, CastType::kImplicit, *left_value.value, MakeBoolType());
+  ErrOrValue left_as_bool = CastNumericExprValue(context, *left_value.value, MakeBoolType());
   if (left_as_bool.has_error())
     return left_as_bool;
 
-  ErrOrValue right_as_bool =
-      CastExprValue(context, CastType::kImplicit, *right_value.value, MakeBoolType());
+  ErrOrValue right_as_bool = CastNumericExprValue(context, *right_value.value, MakeBoolType());
   if (right_as_bool.has_error())
     return right_as_bool;
 
@@ -756,8 +754,7 @@ void EvalBinaryOperator(const fxl::RefPtr<EvalContext>& context, const fxl::RefP
 
     if (op.type() == ExprTokenType::kLogicalOr || op.type() == ExprTokenType::kDoubleAnd) {
       // Short-circuit for || and &&.
-      ErrOrValue left_as_bool =
-          CastExprValue(context, CastType::kImplicit, left_value.value(), MakeBoolType());
+      ErrOrValue left_as_bool = CastNumericExprValue(context, left_value.value(), MakeBoolType());
       if (left_as_bool.has_error())
         return cb(left_as_bool.err());
 
