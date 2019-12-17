@@ -35,6 +35,7 @@ source_set("callback") {
     ":crossplatform",
     "//src/ledger/lib/logging",
     "//src/ledger/lib/memory",
+    "//zircon/public/lib/async",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
