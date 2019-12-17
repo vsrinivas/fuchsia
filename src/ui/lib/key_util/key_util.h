@@ -22,6 +22,10 @@ std::optional<fuchsia::ui::input2::KeyEvent> into_key_event(
 // The HID usage must be from page 0x7 (Keyboard/Keypad).
 std::optional<fuchsia::ui::input2::Key> hid_key_to_fuchsia_key(hid::Usage usage);
 
+// Function to convert Fuchsia Key to a HID Usage.
+// The HID usage will be from page 0x7 (Keyboard/Keypad).
+std::optional<uint32_t> fuchsia_key_to_hid_key(fuchsia::ui::input2::Key);
+
 }  // namespace key_util
 
 #endif  // SRC_UI_LIB_KEY_UTIL_KEY_UTIL_H_

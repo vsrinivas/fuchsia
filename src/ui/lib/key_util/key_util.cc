@@ -191,4 +191,13 @@ std::optional<fuchsia::ui::input2::Key> hid_key_to_fuchsia_key(hid::Usage usage)
   return {};
 }
 
+std::optional<uint32_t> fuchsia_key_to_hid_key(fuchsia::ui::input2::Key key) {
+  for (const auto& mapping : key_map) {
+    if (std::get<1>(mapping) == key) {
+      return std::get<0>(mapping);
+    }
+  }
+  return {};
+}
+
 }  // namespace key_util

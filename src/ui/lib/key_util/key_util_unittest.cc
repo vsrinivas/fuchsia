@@ -35,5 +35,12 @@ TEST(InputUtil, IntoKeyEventUnknown) {
   EXPECT_FALSE(key);
 }
 
+TEST(InputUtil, FuchsiaKeyToHidKey) {
+  std::optional<uint32_t> key =
+      key_util::fuchsia_key_to_hid_key(fuchsia::ui::input2::Key::LEFT_SHIFT);
+  ASSERT_TRUE(key);
+  ASSERT_EQ(*key, HID_USAGE_KEY_LEFT_SHIFT);
+}
+
 }  // namespace
 }  // namespace root_presenter
