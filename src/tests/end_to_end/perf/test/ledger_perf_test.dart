@@ -13,8 +13,9 @@ void main() {
   // This list should be kept in sync with the list in
   // peridot/tests/benchmarks/benchmarks.cc until that list is removed
   // (TODO(fxb/23091)).
+  // TODO(fxb/42576): Disabled add_new_page_after_clear due to flakiness.
   const ledgerTests = [
-    'add_new_page_after_clear.tspec',
+    // 'add_new_page_after_clear.tspec',
     'add_new_page_precached.tspec',
     'add_new_page.tspec',
     'get_same_page.tspec',
