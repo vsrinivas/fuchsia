@@ -36,7 +36,7 @@ async fn run_echo_server(
 // [END run_echo_server]
 
 enum IncomingService {
-    // Host a legacy service (protocol).
+    // Host a service protocol.
     Echo(EchoRequestStream),
     // Host a unified service.
     Svc(EchoServiceRequest),

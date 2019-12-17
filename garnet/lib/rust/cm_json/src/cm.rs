@@ -146,7 +146,7 @@ pub struct Runner {
 pub enum Use {
     /// Used service capability.
     Service(UseService),
-    /// Used legacy service capability.
+    /// Used service protocol capability.
     ServiceProtocol(UseServiceProtocol),
     /// Used directory capability.
     Directory(UseDirectory),
@@ -169,7 +169,7 @@ pub struct UseService {
     pub target_path: Path,
 }
 
-/// Used legacy service capability. See [`UseServiceProtocolDecl`].
+/// Used service protocol capability. See [`UseServiceProtocolDecl`].
 ///
 /// [`UseServiceProtocolDecl`]: ../../fidl_fuchsia_sys2/struct.UseServiceProtocolDecl.html
 #[derive(Serialize, Deserialize, Debug)]
@@ -252,7 +252,7 @@ pub struct ExposeService {
     pub target: ExposeTarget,
 }
 
-/// Exposed legacy service capability. See [`ExposeServiceProtocolDecl`].
+/// Exposed service protocol capability. See [`ExposeServiceProtocolDecl`].
 ///
 /// [`ExposeServiceProtocolDecl`]: ../../fidl_fuchsia_sys2/struct.ExposeServiceProtocolDecl.html
 #[derive(Serialize, Deserialize, Debug)]
@@ -315,7 +315,7 @@ pub struct OfferService {
     pub target_path: Path,
 }
 
-/// Offered legacy service capability. See [`OfferServiceProtocolDecl`].
+/// Offered service protocol capability. See [`OfferServiceProtocolDecl`].
 ///
 /// [`OfferServiceProtocolDecl`]: ../../fidl_fuchsia_sys2/struct.OfferServiceProtocolDecl.html
 #[derive(Serialize, Deserialize, Debug)]
