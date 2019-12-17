@@ -13,77 +13,73 @@
 
 namespace fidl_codec {
 
-Enum::Enum(Library* enclosing_library, const rapidjson::Value& value)
-    : enclosing_library_(enclosing_library), value_(value) {}
+EnumOrBits::EnumOrBits(const rapidjson::Value& value) : value_(value) {}
 
-Enum::~Enum() = default;
+EnumOrBits::~EnumOrBits() = default;
 
-void Enum::DecodeTypes() {
+void EnumOrBits::DecodeTypes(bool is_scalar, const std::string& supertype_name,
+                             Library* enclosing_library) {
   if (decoded_) {
     return;
   }
   decoded_ = true;
-  name_ = enclosing_library_->ExtractString(value_, "enum", "<unknown>", "name");
-  type_ = enclosing_library_->ExtractScalarType(value_, "enum", name_, "type", 0);
+  name_ = enclosing_library->ExtractString(value_, supertype_name, "<unknown>", "name");
+  if (is_scalar) {
+    type_ = enclosing_library->ExtractScalarType(value_, supertype_name, name_, "type", 0);
+  } else {
+    type_ = enclosing_library->ExtractType(value_, supertype_name, name_, "type", 0);
+  }
 
   if (!value_.HasMember("members")) {
-    enclosing_library_->FieldNotFound("enum", name_, "members");
+    enclosing_library->FieldNotFound(supertype_name, name_, "members");
+  } else {
+    std::vector<EnumOrBitsMember> ret;
+
+    if (value_.HasMember("members")) {
+      for (auto& member : value_["members"].GetArray()) {
+        if (member.HasMember("value") && member["value"].HasMember("literal")) {
+          if (!member.HasMember("name")) {
+            continue;
+          }
+
+          EnumOrBitsMember e_member(member["name"].GetString(),
+                                    member["value"]["literal"]["value"].GetString());
+          ret.emplace_back(std::move(e_member));
+        }
+      }
+    }
+
+    members_ = ret;
   }
 
   size_ = type_->InlineSize(nullptr);
 }
 
+Enum::~Enum() = default;
+
 std::string Enum::GetNameFromBytes(const uint8_t* bytes) const {
-  if (value_.HasMember("members")) {
-    for (auto& member : value_["members"].GetArray()) {
-      if (member.HasMember("value") && member["value"].HasMember("literal") &&
-          (type_->ValueEquals(bytes, size_, member["value"]["literal"]))) {
-        if (!member.HasMember("name")) {
-          return "<unknown>";
-        }
-        return member["name"].GetString();
-      }
+  for (auto& member : members()) {
+    if (type()->ValueEquals(bytes, size(), member.value_str())) {
+      return member.name();
     }
   }
   return "<unknown>";
 }
 
-Bits::Bits(Library* enclosing_library, const rapidjson::Value& value)
-    : enclosing_library_(enclosing_library), value_(value) {}
-
 Bits::~Bits() = default;
-
-void Bits::DecodeTypes() {
-  if (decoded_) {
-    return;
-  }
-  decoded_ = true;
-  name_ = enclosing_library_->ExtractString(value_, "bits", "<unknown>", "name");
-  type_ = enclosing_library_->ExtractType(value_, "bits", name_, "type", 0);
-
-  if (!value_.HasMember("members")) {
-    enclosing_library_->FieldNotFound("bits", name_, "members");
-  }
-
-  size_ = type_->InlineSize(nullptr);
-}
 
 std::string Bits::GetNameFromBytes(const uint8_t* bytes) const {
   std::string returned_value;
-  if (value_.HasMember("members")) {
-    for (auto& member : value_["members"].GetArray()) {
-      if (member.HasMember("value") && member["value"].HasMember("literal") &&
-          (type_->ValueHas(bytes, member["value"]["literal"]))) {
-        if (!returned_value.empty()) {
-          returned_value += "|";
-        }
-        if (!member.HasMember("name")) {
-          returned_value += "<unknown>";
-        }
-        returned_value += member["name"].GetString();
+  for (auto& member : members()) {
+    if (type()->ValueHas(bytes, member.value_str())) {
+      if (!returned_value.empty()) {
+        returned_value += "|";
       }
+
+      returned_value += member.name();
     }
   }
+
   if (returned_value.empty()) {
     return "<none>";
   }
@@ -294,6 +290,16 @@ void Struct::DecodeTypes(std::string_view container_name, const char* size_name,
   }
 }
 
+void Struct::VisitAsType(TypeVisitor* visitor) const {
+  StructType type(*this, false);
+  type.Visit(visitor);
+}
+
+std::string Struct::ToString(bool expand) const {
+  StructType type(*this, false);
+  return type.ToString(expand);
+}
+
 TableMember::TableMember(Library* enclosing_library, const rapidjson::Value& value)
     : reserved_(enclosing_library->ExtractBool(value, "table member", "<unknown>", "reserved")),
       name_(reserved_
@@ -404,7 +410,7 @@ void Library::DecodeTypes() {
   } else {
     for (auto& enu : backing_document_["enum_declarations"].GetArray()) {
       enums_.emplace(std::piecewise_construct, std::forward_as_tuple(enu["name"].GetString()),
-                     std::forward_as_tuple(new Enum(this, enu)));
+                     std::forward_as_tuple(new Enum(enu)));
     }
   }
 
@@ -413,7 +419,7 @@ void Library::DecodeTypes() {
   } else {
     for (auto& bits : backing_document_["bits_declarations"].GetArray()) {
       bits_.emplace(std::piecewise_construct, std::forward_as_tuple(bits["name"].GetString()),
-                    std::forward_as_tuple(new Bits(this, bits)));
+                    std::forward_as_tuple(new Bits(bits)));
     }
   }
 
@@ -460,10 +466,10 @@ bool Library::DecodeAll() {
     tmp.second->DecodeStructTypes();
   }
   for (const auto& tmp : enums_) {
-    tmp.second->DecodeTypes();
+    tmp.second->DecodeTypes(this);
   }
   for (const auto& tmp : bits_) {
-    tmp.second->DecodeTypes();
+    tmp.second->DecodeTypes(this);
   }
   for (const auto& tmp : tables_) {
     tmp.second->DecodeTypes();
@@ -493,12 +499,12 @@ std::unique_ptr<Type> Library::TypeFromIdentifier(bool is_nullable, std::string&
   }
   auto enu = enums_.find(identifier);
   if (enu != enums_.end()) {
-    enu->second->DecodeTypes();
+    enu->second->DecodeTypes(this);
     return std::make_unique<EnumType>(std::ref(*enu->second));
   }
   auto bits = bits_.find(identifier);
   if (bits != bits_.end()) {
-    bits->second->DecodeTypes();
+    bits->second->DecodeTypes(this);
     return std::make_unique<BitsType>(std::ref(*bits->second));
   }
   auto tab = tables_.find(identifier);

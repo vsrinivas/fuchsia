@@ -61,20 +61,61 @@ class Object;
 class Struct;
 class Table;
 class Type;
+class TypeVisitor;
 class Union;
 class UnionValue;
 class XUnion;
 class XUnionValue;
 
-class Enum {
+class EnumOrBitsMember {
+  friend class Enum;
+  friend class Bits;
+
+ public:
+  EnumOrBitsMember(const std::string_view& name, const std::string& value_str)
+      : name_(name), value_str_(value_str) {}
+
+  const std::string& name() const { return name_; }
+  const std::string& value_str() const { return value_str_; }
+
+ private:
+  std::string name_;
+  std::string value_str_;
+};
+
+class EnumOrBits {
  public:
   friend class Library;
 
-  ~Enum();
+  ~EnumOrBits();
 
   const std::string& name() const { return name_; }
   uint64_t size() const { return size_; }
   const Type* type() const { return type_.get(); }
+
+  // Get a list of Enum members.
+  const std::vector<EnumOrBitsMember>& members() const { return members_; }
+
+ protected:
+  EnumOrBits(const rapidjson::Value& value);
+
+  // Decode all the values from the JSON definition.
+  void DecodeTypes(bool is_scalar, const std::string& supertype_name, Library* enclosing_library);
+
+ private:
+  const rapidjson::Value& value_;
+  bool decoded_ = false;
+  std::string name_;
+  uint64_t size_;
+  std::unique_ptr<Type> type_;
+  std::vector<EnumOrBitsMember> members_;
+};
+
+class Enum : public EnumOrBits {
+ public:
+  friend class Library;
+
+  ~Enum();
 
   // Gets the name of the enum member corresponding to the value pointed to by
   // |bytes| of length |length|.  For example, if we had the following
@@ -88,43 +129,27 @@ class Enum {
   std::string GetNameFromBytes(const uint8_t* bytes) const;
 
  private:
-  Enum(Library* enclosing_library, const rapidjson::Value& value);
+  Enum(const rapidjson::Value& value) : EnumOrBits(value) {}
 
-  // Decode all the values from the JSON definition.
-  void DecodeTypes();
-
-  Library* enclosing_library_;
-  const rapidjson::Value& value_;
-  bool decoded_ = false;
-  std::string name_;
-  uint64_t size_;
-  std::unique_ptr<Type> type_;
+  void DecodeTypes(Library* enclosing_library) {
+    return EnumOrBits::DecodeTypes(true, "enum", enclosing_library);
+  }
 };
 
-class Bits {
+class Bits : public EnumOrBits {
  public:
   friend class Library;
 
   ~Bits();
 
-  const std::string& name() const { return name_; }
-  uint64_t size() const { return size_; }
-  const Type* type() const { return type_.get(); }
-
   std::string GetNameFromBytes(const uint8_t* bytes) const;
 
  private:
-  Bits(Library* enclosing_library, const rapidjson::Value& value);
+  Bits(const rapidjson::Value& value) : EnumOrBits(value) {}
 
-  // Decode all the values from the JSON definition.
-  void DecodeTypes();
-
-  Library* enclosing_library_;
-  const rapidjson::Value& value_;
-  bool decoded_ = false;
-  std::string name_;
-  uint64_t size_;
-  std::unique_ptr<Type> type_;
+  void DecodeTypes(Library* enclosing_library) {
+    return EnumOrBits::DecodeTypes(false, "bits", enclosing_library);
+  }
 };
 
 // TODO: Consider whether this is duplicative of Struct / Table member.
@@ -231,6 +256,12 @@ class Struct {
   std::unique_ptr<Object> DecodeObject(MessageDecoder* decoder, const Type* type, uint64_t offset,
                                        bool nullable) const;
 
+  // Wrap this Struct in a non-nullable type and use the given visitor on it.
+  void VisitAsType(TypeVisitor* visitor) const;
+
+  // Get a string representation for this struct.
+  std::string ToString(bool expand = false) const;
+
  private:
   Struct(Library* enclosing_library, const rapidjson::Value& value);
 
@@ -264,6 +295,7 @@ class TableMember {
   TableMember(Library* enclosing_library, const rapidjson::Value& value);
   ~TableMember();
 
+  bool reserved() const { return reserved_; }
   const std::string_view name() const { return name_; }
   Ordinal32 ordinal() const { return ordinal_; }
   uint64_t size() const { return size_; }

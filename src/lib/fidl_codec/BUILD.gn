@@ -19,6 +19,8 @@ static_library("fidl_codec") {
     "library_loader.h",
     "memory_helpers.h",
     "message_decoder.h",
+    "type_visitor.h",
+    "visitor.h",
     "wire_object.h",
     "wire_parser.h",
     "wire_types.h",
