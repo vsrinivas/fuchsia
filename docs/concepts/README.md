@@ -87,6 +87,7 @@ also provides core drivers and Fuchsia's libc implementation.
 ## USB
 
  - [USB Request Life cycle][request-life-cycle]
+ - [USB mass storage driver](/docs/concepts/usb/usb-mass-storage.md)
  - [Testing][usb-testing]
  - [Getting descriptors and endpoints][descriptors]
 
