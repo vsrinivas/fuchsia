@@ -51,6 +51,8 @@ class AmlPdmDevice {
   */
   void Sync();
 
+  zx_status_t SetRate(uint32_t frames_per_second);
+
   /*
       shuts down toddr, stops writing data to ring buffer
   */
@@ -76,7 +78,7 @@ class AmlPdmDevice {
 
   ~AmlPdmDevice() = default;
 
-  void ConfigFilters();
+  void ConfigFilters(uint32_t frames_per_second);
 
   /* Get the register block offset for our ddr block */
   static zx_off_t GetToddrBase(aml_toddr_t ch) {

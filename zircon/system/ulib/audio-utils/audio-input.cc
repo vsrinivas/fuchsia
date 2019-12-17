@@ -61,7 +61,7 @@ zx_status_t AudioInput::Record(AudioSink& sink, float duration_seconds) {
   uint32_t ring_bytes = static_cast<uint32_t>(ring_bytes_64);
   uint32_t ring_frames = ring_bytes / frame_sz_;
 
-  res = GetBuffer(ring_frames, 2u);
+  res = GetBuffer(ring_frames, 8u);
   if (res != ZX_OK) {
     printf("Failed to establish ring buffer (%u frames, res %d)\n", ring_frames, res);
     return res;

@@ -75,7 +75,8 @@ std::unique_ptr<AmlPdmDevice> AmlPdmDevice::Create(ddk::MmioBuffer pdm_mmio,
   }
 
   pdm->InitRegs();
-  pdm->ConfigFilters();
+  constexpr uint32_t default_frames_per_second = 48000;
+  pdm->ConfigFilters(default_frames_per_second);
 
   return pdm;
 }
@@ -106,7 +107,6 @@ void AmlPdmDevice::InitRegs() {
   // Enable the audio domain clocks used by this instance.
   AudioClkEna(EE_AUDIO_CLK_GATE_PDM | (EE_AUDIO_CLK_GATE_TODDRA << toddr_ch_) |
               EE_AUDIO_CLK_GATE_ARB);
-
   // It is now safe to write to pdm registers
 
   // Ensure system is in idle state in case we are re-initing hardware
@@ -135,7 +135,9 @@ void AmlPdmDevice::InitRegs() {
     Relies heavily on magic values from Amlogic.  @hollande following up to get
     more information on operation as datasheet seems inconsistent with configuration.
 */
-void AmlPdmDevice::ConfigFilters() {
+void AmlPdmDevice::ConfigFilters(uint32_t frames_per_second) {
+  ZX_ASSERT(frames_per_second == 96000 || frames_per_second == 48000);
+
   pdm_mmio_.Write32((1 << 31) |         // Enable
                         (0x15 << 24) |  // Final gain shift parameter)
                         (0x80 << 16) |  // Final gain multiplier
@@ -152,10 +154,12 @@ void AmlPdmDevice::ConfigFilters() {
                         (0x02 << 12) |         // Filter 2 downsample rate
                         (kLpf2osr64Len << 0),  // Number of taps in filter
                     PDM_F2_CTRL);
-  pdm_mmio_.Write32((0x01 << 31) |          // Enable filter
-                        (0x01 << 16) |      // Round mode (this doesn't jibe w/ datasheet)
-                        (0x02 << 12) |      // Filter 3 downsample rate
-                        (kLpf3m1Len << 0),  // Number of taps in filter
+
+  uint32_t last_filter_downsample_rate = (frames_per_second == 96000) ? 1 : 2;
+  pdm_mmio_.Write32((0x01 << 31) |      // Enable filter
+                        (0x01 << 16) |  // Round mode (this doesn't jibe w/ datasheet)
+                        (last_filter_downsample_rate << 12) |  // Filter 3 downsample rate
+                        (kLpf3m1Len << 0),                     // Number of taps in filter
                     PDM_F3_CTRL);
   pdm_mmio_.Write32((0x01 << 31) |      // Enable filter
                         (0x07 << 16) |  // Shift steps
@@ -180,6 +184,14 @@ void AmlPdmDevice::ConfigFilters() {
 
   // set coefficient index pointer back to 0
   pdm_mmio_.Write32(0x0000, PDM_COEFF_ADDR);
+}
+
+zx_status_t AmlPdmDevice::SetRate(uint32_t frames_per_second) {
+  if (frames_per_second != 48000 && frames_per_second != 96000) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  ConfigFilters(frames_per_second);
+  return ZX_OK;
 }
 
 uint32_t AmlPdmDevice::GetRingPosition() {

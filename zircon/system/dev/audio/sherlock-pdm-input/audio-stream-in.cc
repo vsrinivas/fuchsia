@@ -19,9 +19,11 @@ namespace sherlock {
 
 // Expects 2 mics.
 constexpr size_t kNumberOfChannels = 2;
+constexpr size_t kMinSampleRate = 48000;
+constexpr size_t kMaxSampleRate = 96000;
 // Calculate ring buffer size for 1 second of 16-bit, 48kHz.
 constexpr size_t kRingBufferSize =
-    fbl::round_up<size_t, size_t>(48000 * 2 * kNumberOfChannels, ZX_PAGE_SIZE);
+    fbl::round_up<size_t, size_t>(kMaxSampleRate * 2 * kNumberOfChannels, ZX_PAGE_SIZE);
 
 SherlockAudioStreamIn::SherlockAudioStreamIn(zx_device_t* parent)
     : SimpleAudioStream(parent, true /* is input */) {}
@@ -113,8 +115,11 @@ zx_status_t SherlockAudioStreamIn::ChangeFormat(const audio_proto::StreamSetFmtR
   fifo_depth_ = pdm_->fifo_depth();
   external_delay_nsec_ = 0;
 
-  // At this time only one format is supported, and hardware is initialized
-  //  during driver binding, so nothing to do at this time.
+  auto status = pdm_->SetRate(req.frames_per_second);
+  if (status != ZX_OK) {
+    return status;
+  }
+
   return ZX_OK;
 }
 
@@ -185,8 +190,8 @@ zx_status_t SherlockAudioStreamIn::AddFormats() {
   range.min_channels = kNumberOfChannels;
   range.max_channels = kNumberOfChannels;
   range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
-  range.min_frames_per_second = 48000;
-  range.max_frames_per_second = 48000;
+  range.min_frames_per_second = kMinSampleRate;
+  range.max_frames_per_second = kMaxSampleRate;
   range.flags = ASF_RANGE_FLAG_FPS_48000_FAMILY;
 
   supported_formats_.push_back(range);
