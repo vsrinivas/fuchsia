@@ -395,6 +395,10 @@ zx_status_t VmAspace::ReserveSpace(const char* name, size_t size, vaddr_t vaddr)
     arch_mmu_flags = ARCH_MMU_FLAG_CACHED | ARCH_MMU_FLAG_PERM_READ;
   }
 
+  if ((arch_mmu_flags & ARCH_MMU_FLAG_CACHE_MASK) != 0) {
+    vmo->SetMappingCachePolicy(arch_mmu_flags & ARCH_MMU_FLAG_CACHE_MASK);
+  }
+
   // map it, creating a new region
   void* ptr = reinterpret_cast<void*>(vaddr);
   return MapObjectInternal(ktl::move(vmo), name, 0, size, &ptr, 0, VMM_FLAG_VALLOC_SPECIFIC,
