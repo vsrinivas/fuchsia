@@ -18,6 +18,7 @@ group("tests") {
     "iquery:tests",
     "lib:tests",
     "streams:tests",
+    "tool:host_tests",
 
     # "transit_bench",
   ]

@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/diag_tool_bin_test"
+    }
+}
