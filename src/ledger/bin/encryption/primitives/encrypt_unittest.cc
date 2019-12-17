@@ -44,7 +44,7 @@ TEST_P(EncryptTest, Correctness) {
   }
 }
 
-INSTANTIATE_TEST_SUITE_P(, EncryptTest, ::testing::Values(0, 64, 127, 128, 129, 192, 256, 12345));
+INSTANTIATE_TEST_SUITE_P(ValueRange, EncryptTest, ::testing::Values(0, 64, 127, 128, 129, 192, 256, 12345));
 
 }  // namespace
 }  // namespace encryption
