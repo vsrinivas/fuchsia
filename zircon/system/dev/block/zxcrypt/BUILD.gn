@@ -11,10 +11,7 @@ zx_driver("zxcrypt") {
     "worker.cc",
   ]
 
-  configs += [
-    "$zx/public/gn/config:integer-paranoia",
-    "$zx_build/public/gn/config:static-libc++",
-  ]
+  configs += [ "$zx/public/gn/config:integer-paranoia" ]
 
   # Until library loading is fully async, dynamically linking libraries can
   # deadlock block device drviers. All dependencies for zxcrypt should be

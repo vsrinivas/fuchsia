@@ -732,7 +732,8 @@ template("library") {
               {
                 label = get_label_info(":$target_name", "label_with_toolchain")
                 name = "lib.$_library_name"
-                if (toolchain.tags + [ "instrumented" ] - [ "instrumented" ] != toolchain.tags) {
+                if (toolchain.tags + [ "instrumented" ] - [ "instrumented" ] !=
+                    toolchain.tags) {
                   name += toolchain.variant_suffix
                 }
                 toolchain = toolchain_label
@@ -1990,6 +1991,13 @@ template("test_driver") {
 }
 
 ###
+### Unification kludges.
+###
+
+# Make wrapper templates used for build unification universally available.
+import("//public/gn/unification/wrappers.gni")
+
+###
 ### set_defaults()
 ###
 
@@ -2012,17 +2020,22 @@ _compile_target_types = [
   "source_set",
   "static_library",
   "test",
-  "zx_executable",
-  "zx_host_tool",
-  "zx_library",
-  "zx_test",
 ]
+_unification_wrapper_types = [
+  "executable",
+  "host_tool",
+  "library",
+  "test",
+]
+
 if (toolchain.environment == "user") {
   _compile_target_types += [
     "driver",
     "test_driver",
-    "zx_driver",
-    "zx_test_driver",
+  ]
+  _unification_wrapper_types += [
+    "driver",
+    "test_driver",
   ]
 }
 
@@ -2037,21 +2050,42 @@ if (toolchain.environment == "user") {
 # are explicitly doing `= []` to remove all the toolchain defaults; they
 # can use `-=` to remove specific members from the default set.
 foreach(target_type, _compile_target_types) {
-  set_defaults(target_type) {
-    configs = []
-    foreach(config, toolchain.configs) {
-      # Either it's an absolute label string or it's a scope with filters
-      # and mutators.  See environment().
-      if (config == "$config") {
-        configs += [ config ]
-      } else if (!defined(config.types) || config.types + [ target_type ] -
-                                           [ target_type ] != config.types) {
-        configs += config.add
-        configs -= config.remove
+  foreach(unification_hack,
+          [
+            false,
+            true,
+          ]) {
+    if (unification_hack) {
+      # On the second run, apply to the unification wrapper template whose
+      # name is the target type with the "zx_" prefix.
+      if (_unification_wrapper_types + [ target_type ] - [ target_type ] ==
+          _unification_wrapper_types) {
+        # Not in the list.  Skip this iteration.
+        unification_hack = ""
+      } else {
+        # Also apply set_defaults() to the wrapper template, but use the
+        # real target_type for `types` list matching.
+        unification_hack = "zx_$target_type"
+      }
+    } else {
+      unification_hack = target_type
+    }
+    if (unification_hack != "") {
+      set_defaults(unification_hack) {
+        configs = []
+        foreach(config, toolchain.configs) {
+          # Either it's an absolute label string or it's a scope with filters
+          # and mutators.  See environment().
+          if (config == "$config") {
+            configs += [ config ]
+          } else if (!defined(config.types) ||
+                     config.types + [ target_type ] - [ target_type ] !=
+                     config.types) {
+            configs += config.add
+            configs -= config.remove
+          }
+        }
       }
     }
   }
 }
-
-# Make wrapper templates used for build unification universally available.
-import("//public/gn/unification/wrappers.gni")
