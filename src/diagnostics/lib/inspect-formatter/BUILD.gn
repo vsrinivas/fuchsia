@@ -15,6 +15,7 @@ rustc_library("inspect-formatter") {
     "//third_party/rust_crates:base64",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:maplit",
+    "//third_party/rust_crates:paste",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
   ]

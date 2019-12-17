@@ -35,9 +35,16 @@ pub struct HierarchyData {
     pub fields: Vec<String>,
 }
 
-/// Implementors of this trait will provide different ways of formatting an
+/// Implementers of this trait will provide different ways of formatting an
 /// inspect hierarchy.
 pub trait HierarchyFormatter {
     fn format(hierarchy: HierarchyData) -> Result<String, Error>;
     fn format_multiple(hierarchies: Vec<HierarchyData>) -> Result<String, Error>;
+}
+
+/// Implementers of this trait will be able to convert an `Object` type data format that
+/// is encoding a diagnostics data hierarchy into a NodeHierarchy.
+pub trait HierarchyDeserializer {
+    type Object;
+    fn deserialize(data_format: Self::Object) -> Result<NodeHierarchy, Error>;
 }
