@@ -24,7 +24,7 @@ use {
         protection::Protection,
         rsn::get_rsna,
         scan::{DiscoveryScan, JoinScan, ScanScheduler},
-        state::{ConnectCommand, State},
+        state::{ClientState, ConnectCommand},
         wpa::get_legacy_wpa_association,
     },
     crate::{
@@ -94,7 +94,7 @@ pub type ScanTxnId = u64;
 
 pub struct ClientSme {
     cfg: ClientConfig,
-    state: Option<State>,
+    state: Option<ClientState>,
     scan_sched: ScanScheduler<Responder<BssDiscoveryResult>, ConnectConfig>,
     context: Context,
 }
@@ -199,7 +199,7 @@ impl ClientSme {
         (
             ClientSme {
                 cfg,
-                state: Some(State::Idle { cfg }),
+                state: Some(ClientState::new(cfg)),
                 scan_sched: ScanScheduler::new(Arc::clone(&device_info)),
                 context: Context {
                     mlme_sink: MlmeSink::new(mlme_sink),
