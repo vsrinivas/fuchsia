@@ -55,7 +55,7 @@ class MmioPcieAddressProvider : public PcieAddressProvider {
   zx_status_t AddEcamRegion(const PciEcamRegion& ecam);
 
  private:
-  mutable fbl::Mutex ecam_region_lock_;
+  mutable DECLARE_MUTEX(PcieAddressProvider) ecam_region_lock_;
   fbl::WAVLTree<uint8_t, ktl::unique_ptr<MappedEcamRegion>> ecam_regions_;
 };
 

@@ -16,7 +16,6 @@
 #include <fbl/macros.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <kernel/auto_lock.h>
 #include <kernel/mutex.h>
 #include <region-alloc/region-alloc.h>
 
@@ -144,7 +143,7 @@ class PcieBusDriver : public fbl::RefCounted<PcieBusDriver> {
   DISALLOW_COPY_ASSIGN_AND_MOVE(PcieBusDriver);
 
   static fbl::RefPtr<PcieBusDriver> GetDriver() {
-    fbl::AutoLock lock(&driver_lock_);
+    Guard<Mutex> guard{PcieBusDriverLock::Get()};
     return driver_;
   }
 
@@ -154,7 +153,7 @@ class PcieBusDriver : public fbl::RefCounted<PcieBusDriver> {
 
   // Debug/ASSERT routine, used by devices and bridges to assert that the
   // rescan lock is currently being held.
-  bool RescanLockIsHeld() const { return bus_rescan_lock_.IsHeld(); }
+  bool RescanLockIsHeld() const { return bus_rescan_lock_.lock().IsHeld(); }
 
  private:
   friend class PcieDebugConsole;
@@ -195,9 +194,9 @@ class PcieBusDriver : public fbl::RefCounted<PcieBusDriver> {
   static void RunQuirks(const fbl::RefPtr<PcieDevice>& device);
 
   State state_ = State::NOT_STARTED;
-  fbl::Mutex bus_topology_lock_;
-  fbl::Mutex bus_rescan_lock_;
-  mutable fbl::Mutex start_lock_;
+  DECLARE_MUTEX(PcieBusDriver) bus_topology_lock_;
+  DECLARE_MUTEX(PcieBusDriver) bus_rescan_lock_;
+  mutable DECLARE_MUTEX(PcieBusDriver) start_lock_;
   RootCollection roots_;
   fbl::SinglyLinkedList<fbl::RefPtr<PciConfig>> configs_;
 
@@ -209,12 +208,12 @@ class PcieBusDriver : public fbl::RefCounted<PcieBusDriver> {
 
   ktl::unique_ptr<PcieAddressProvider> addr_provider_;
 
-  fbl::Mutex legacy_irq_list_lock_;
+  DECLARE_MUTEX(PcieBusDriver) legacy_irq_list_lock_;
   fbl::SinglyLinkedList<fbl::RefPtr<SharedLegacyIrqHandler>> legacy_irq_list_;
   PciePlatformInterface& platform_;
 
   static fbl::RefPtr<PcieBusDriver> driver_;
-  static fbl::Mutex driver_lock_;
+  DECLARE_SINGLETON_MUTEX(PcieBusDriverLock);
 };
 
 #endif  // ZIRCON_KERNEL_DEV_PCIE_INCLUDE_DEV_PCIE_BUS_DRIVER_H_

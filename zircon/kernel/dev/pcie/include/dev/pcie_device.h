@@ -319,7 +319,7 @@ class PcieDevice {
 
   // TODO(johngro) : make these protected.  They are currently only visible
   // because of debug code.
-  fbl::Mutex* dev_lock() { return &dev_lock_; }
+  Lock<Mutex>* dev_lock() { return &dev_lock_; }
 
   // Dump some information about the device
   virtual void Dump() const;
@@ -358,22 +358,23 @@ class PcieDevice {
   PcieBusDriver& bus_drv_;          // Reference to our bus driver state.
   const PciConfig* cfg_ = nullptr;  // Pointer to the memory mapped ECAM (kernel vaddr)
   paddr_t cfg_phys_ = 0;            // The physical address of the device's ECAM
-  SpinLock cmd_reg_lock_;           // Protection for access to the command register.
-  const bool is_bridge_;            // True if this device is also a bridge
-  const uint bus_id_;               // The bus ID this bridge/device exists on
-  const uint dev_id_;               // The device ID of this bridge/device
-  const uint func_id_;              // The function ID of this bridge/device
-  uint16_t vendor_id_;              // The device's vendor ID, as read from config
-  uint16_t device_id_;              // The device's device ID, as read from config
-  uint8_t class_id_;                // The device's class ID, as read from config.
-  uint8_t subclass_;                // The device's subclass, as read from config.
-  uint8_t prog_if_;                 // The device's programming interface (from cfg)
-  uint8_t rev_id_;                  // The device's revision ID (from cfg)
+  mutable DECLARE_SPINLOCK(PcieDevice)
+      cmd_reg_lock_;      // Protection for access to the command register.
+  const bool is_bridge_;  // True if this device is also a bridge
+  const uint bus_id_;     // The bus ID this bridge/device exists on
+  const uint dev_id_;     // The device ID of this bridge/device
+  const uint func_id_;    // The function ID of this bridge/device
+  uint16_t vendor_id_;    // The device's vendor ID, as read from config
+  uint16_t device_id_;    // The device's device ID, as read from config
+  uint8_t class_id_;      // The device's class ID, as read from config.
+  uint8_t subclass_;      // The device's subclass, as read from config.
+  uint8_t prog_if_;       // The device's programming interface (from cfg)
+  uint8_t rev_id_;        // The device's revision ID (from cfg)
 
   fbl::RefPtr<PcieUpstreamNode> upstream_;  // The upstream node in the device graph.
 
   /* State related to lifetime management */
-  mutable fbl::Mutex dev_lock_;
+  mutable DECLARE_MUTEX(PcieDevice) dev_lock_;
   bool plugged_in_ = false;
   bool disabled_ = false;
   bool quirks_done_ = false;

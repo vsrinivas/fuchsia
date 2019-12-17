@@ -8,7 +8,6 @@
 
 #include <dev/address_provider/address_provider.h>
 #include <dev/pci_common.h>
-#include <fbl/auto_lock.h>
 #include <kernel/range_check.h>
 #include <ktl/move.h>
 
@@ -23,7 +22,7 @@ zx_status_t MmioPcieAddressProvider::Translate(uint8_t bus_id, uint8_t device_id
                                                uint8_t function_id, vaddr_t* virt, paddr_t* phys) {
   // Find the region which would contain this bus_id, if any.
   // add does not overlap with any already defined regions.
-  fbl::AutoLock ecam_region_lock(&ecam_region_lock_);
+  Guard<Mutex> guard{&ecam_region_lock_};
   auto iter = ecam_regions_.upper_bound(static_cast<uint8_t>(bus_id));
   --iter;
 
@@ -62,7 +61,7 @@ zx_status_t MmioPcieAddressProvider::AddEcamRegion(const PciEcamRegion& ecam) {
 
   // Grab the ECAM lock and make certain that the region we have been asked to
   // add does not overlap with any already defined regions.
-  fbl::AutoLock ecam_region_lock(&ecam_region_lock_);
+  Guard<Mutex> guard{&ecam_region_lock_};
   auto iter = ecam_regions_.upper_bound(ecam.bus_start);
   --iter;
 

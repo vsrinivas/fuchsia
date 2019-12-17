@@ -23,14 +23,11 @@
 #include <dev/pcie_device.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_lock.h>
 #include <kernel/spinlock.h>
 #include <ktl/limits.h>
 #include <lk/init.h>
 #include <vm/arch_vm_aspace.h>
 #include <vm/vm.h>
-
-using fbl::AutoLock;
 
 #define LOCAL_TRACE 0
 
@@ -101,7 +98,7 @@ fbl::RefPtr<PcieDevice> PcieDevice::Create(PcieUpstreamNode& upstream, uint dev_
 }
 
 zx_status_t PcieDevice::Init(PcieUpstreamNode& upstream) {
-  AutoLock dev_lock(&dev_lock_);
+  Guard<Mutex> guard{&dev_lock_};
 
   zx_status_t res = InitLocked(upstream);
   if (res == ZX_OK) {
@@ -116,7 +113,7 @@ zx_status_t PcieDevice::Init(PcieUpstreamNode& upstream) {
 
 zx_status_t PcieDevice::InitLocked(PcieUpstreamNode& upstream) {
   zx_status_t res;
-  DEBUG_ASSERT(dev_lock_.IsHeld());
+  DEBUG_ASSERT(dev_lock_.lock().IsHeld());
   DEBUG_ASSERT(cfg_ == nullptr);
 
   cfg_ = bus_drv_.GetConfig(bus_id_, dev_id_, func_id_, &cfg_phys_);
@@ -161,7 +158,7 @@ void PcieDevice::Unplug() {
    * operations on it.  We need to be inside the dev lock to do this.  Note:
    * it is assumed that we will not disappear during any of this function,
    * because our caller is holding a reference to us. */
-  AutoLock dev_lock(&dev_lock_);
+  Guard<Mutex> guard{&dev_lock_};
 
   if (plugged_in_) {
     /* Remove all access this device has to the PCI bus */
@@ -195,7 +192,7 @@ zx_status_t PcieDevice::DoFunctionLevelReset() {
   // reset timeouts run.  This way, a spontaneous unplug event can occur and
   // not block the whole world because the device unplugged was in the process
   // of a FLR.
-  AutoLock dev_lock(&dev_lock_);
+  Guard<Mutex> guard{&dev_lock_};
 
   // Make certain to check to see if the device is still plugged in.
   if (!plugged_in_)
@@ -258,7 +255,7 @@ zx_status_t PcieDevice::DoFunctionLevelReset() {
   //    initiated.  Also back up the BARs in the process.
   {
     DEBUG_ASSERT(irq_.legacy.shared_handler != nullptr);
-    AutoSpinLock cmd_reg_lock(&cmd_reg_lock_);
+    Guard<SpinLock, IrqSave> guard{&cmd_reg_lock_};
 
     cmd_backup = cfg_->Read(PciConfig::kCommand);
     cfg_->Write(PciConfig::kCommand, PCIE_CFG_COMMAND_INT_DISABLE);
@@ -285,7 +282,7 @@ zx_status_t PcieDevice::DoFunctionLevelReset() {
         bus_id_, dev_id_, func_id_);
 
     // Restore the command register
-    AutoSpinLock cmd_reg_lock(&cmd_reg_lock_);
+    Guard<SpinLock, IrqSave> guard{&cmd_reg_lock_};
     cfg_->Write(PciConfig::kCommand, cmd_backup);
 
     return ret;
@@ -315,7 +312,7 @@ zx_status_t PcieDevice::DoFunctionLevelReset() {
 
   if (ret == ZX_OK) {
     // 6) Software reconfigures the function and enables it for normal operation
-    AutoSpinLock cmd_reg_lock(&cmd_reg_lock_);
+    Guard<SpinLock, IrqSave> guard{&cmd_reg_lock_};
 
     for (uint i = 0; i < bar_count_; ++i)
       cfg_->Write(PciConfig::kBAR(i), bar_backup[i]);
@@ -335,7 +332,7 @@ zx_status_t PcieDevice::DoFunctionLevelReset() {
 }
 
 zx_status_t PcieDevice::ModifyCmd(uint16_t clr_bits, uint16_t set_bits) {
-  AutoLock dev_lock(&dev_lock_);
+  Guard<Mutex> guard{&dev_lock_};
 
   /* In order to keep internal bookkeeping coherent, and interactions between
    * MSI/MSI-X and Legacy IRQ mode safe, API users may not directly manipulate
@@ -353,10 +350,10 @@ zx_status_t PcieDevice::ModifyCmd(uint16_t clr_bits, uint16_t set_bits) {
 }
 
 void PcieDevice::ModifyCmdLocked(uint16_t clr_bits, uint16_t set_bits) {
-  DEBUG_ASSERT(dev_lock_.IsHeld());
+  DEBUG_ASSERT(dev_lock_.lock().IsHeld());
 
   {
-    AutoSpinLock cmd_reg_lock(&cmd_reg_lock_);
+    Guard<SpinLock, IrqSave> guard{&cmd_reg_lock_};
     cfg_->Write(PciConfig::kCommand,
                 static_cast<uint16_t>((cfg_->Read(PciConfig::kCommand) & ~clr_bits) | set_bits));
   }
@@ -364,7 +361,7 @@ void PcieDevice::ModifyCmdLocked(uint16_t clr_bits, uint16_t set_bits) {
 
 zx_status_t PcieDevice::ProbeBarsLocked() {
   DEBUG_ASSERT(cfg_);
-  DEBUG_ASSERT(dev_lock_.IsHeld());
+  DEBUG_ASSERT(dev_lock_.lock().IsHeld());
 
   static_assert(PCIE_MAX_BAR_REGS >= PCIE_BAR_REGS_PER_DEVICE, "");
   static_assert(PCIE_MAX_BAR_REGS >= PCIE_BAR_REGS_PER_BRIDGE, "");
@@ -491,12 +488,12 @@ zx_status_t PcieDevice::ProbeBarLocked(uint bar_id) {
 }
 
 zx_status_t PcieDevice::AllocateBars() {
-  AutoLock dev_lock(&dev_lock_);
+  Guard<Mutex> guard{&dev_lock_};
   return AllocateBarsLocked();
 }
 
 zx_status_t PcieDevice::AllocateBarsLocked() {
-  DEBUG_ASSERT(dev_lock_.IsHeld());
+  DEBUG_ASSERT(dev_lock_.lock().IsHeld());
   DEBUG_ASSERT(plugged_in_);
 
   // Have we become unplugged?
@@ -517,7 +514,7 @@ zx_status_t PcieDevice::AllocateBarsLocked() {
 }
 
 zx_status_t PcieDevice::AllocateBarLocked(pcie_bar_info_t& info) {
-  DEBUG_ASSERT(dev_lock_.IsHeld());
+  DEBUG_ASSERT(dev_lock_.lock().IsHeld());
   DEBUG_ASSERT(plugged_in_);
 
   // Do not attempt to remap if we are rescanning the bus and this BAR is
@@ -635,8 +632,8 @@ zx_status_t PcieDevice::AllocateBarLocked(pcie_bar_info_t& info) {
 }
 
 void PcieDevice::Disable() {
-  DEBUG_ASSERT(!dev_lock_.IsHeld());
-  AutoLock dev_lock(&dev_lock_);
+  DEBUG_ASSERT(!dev_lock_.lock().IsHeld());
+  Guard<Mutex> guard{&dev_lock_};
   DisableLocked();
 }
 
@@ -644,7 +641,7 @@ void PcieDevice::DisableLocked() {
   // Disable a device because we cannot allocate space for all of its BARs (or
   // forwarding windows, in the case of a bridge).  Flag the device as
   // disabled from here on out.
-  DEBUG_ASSERT(dev_lock_.IsHeld());
+  DEBUG_ASSERT(dev_lock_.lock().IsHeld());
   TRACEF("WARNING - Disabling device %02x:%02x.%01x due to unsatisfiable configuration\n", bus_id_,
          dev_id_, func_id_);
 

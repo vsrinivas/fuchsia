@@ -116,7 +116,7 @@ typedef pcie_irq_handler_retval_t (*pcie_irq_handler_fn_t)(const PcieDevice& dev
  * Structure used internally to hold the state of a registered handler.
  */
 struct pcie_irq_handler_state_t {
-  SpinLock lock;
+  DECLARE_SPINLOCK(pcie_irq_handler_state_t) lock;
   pcie_irq_handler_fn_t handler = nullptr;
   void* ctx = nullptr;
   PcieDevice* dev = nullptr;
@@ -155,7 +155,7 @@ class SharedLegacyIrqHandler
   void Handler();
 
   struct list_node device_handler_list_;
-  SpinLock device_handler_list_lock_;
+  mutable DECLARE_SPINLOCK(SharedLegacyIrqHandler) device_handler_list_lock_;
   const uint irq_id_;
 };
 

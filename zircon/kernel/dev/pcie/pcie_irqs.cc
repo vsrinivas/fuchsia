@@ -22,12 +22,9 @@
 #include <dev/pcie_device.h>
 #include <dev/pcie_root.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_lock.h>
 #include <kernel/spinlock.h>
 #include <ktl/move.h>
 #include <vm/vm.h>
-
-using fbl::AutoLock;
 
 #define LOCAL_TRACE 0
 
@@ -118,7 +115,7 @@ void SharedLegacyIrqHandler::Handler() {
    * chance to handle any interrupts which may be pending in their device.
    * Keep track of whether or not any device has requested a re-schedule event
    * at the end of this IRQ. */
-  AutoSpinLockNoIrqSave list_lock(&device_handler_list_lock_);
+  Guard<SpinLock, NoIrqSave> guard{&device_handler_list_lock_};
 
   if (list_is_empty(&device_handler_list_)) {
     TRACEF(
@@ -136,7 +133,7 @@ void SharedLegacyIrqHandler::Handler() {
     auto cfg = dev->config();
 
     {
-      AutoSpinLockNoIrqSave cmd_reg_lock(&dev->cmd_reg_lock_);
+      Guard<SpinLock, NoIrqSave> guard{&dev->cmd_reg_lock_};
       command = cfg->Read(PciConfig::kCommand);
       status = cfg->Read(PciConfig::kStatus);
     }
@@ -147,7 +144,7 @@ void SharedLegacyIrqHandler::Handler() {
 
       if (hstate) {
         pcie_irq_handler_retval_t irq_ret = PCIE_IRQRET_MASK;
-        AutoSpinLockNoIrqSave device_handler_lock(&hstate->lock);
+        Guard<SpinLock, NoIrqSave> guard{&hstate->lock};
 
         if (hstate->handler) {
           if (!hstate->masked) {
@@ -164,7 +161,7 @@ void SharedLegacyIrqHandler::Handler() {
         if (irq_ret & PCIE_IRQRET_MASK) {
           hstate->masked = true;
           {
-            AutoSpinLockNoIrqSave cmd_reg_lock(&dev->cmd_reg_lock_);
+            Guard<SpinLock, NoIrqSave> guard{&dev->cmd_reg_lock_};
             command = cfg->Read(PciConfig::kCommand);
             cfg->Write(PciConfig::kCommand, command | PCIE_CFG_COMMAND_INT_DISABLE);
           }
@@ -176,7 +173,7 @@ void SharedLegacyIrqHandler::Handler() {
             irq_id_, dev->bus_id_, dev->dev_id_, dev->func_id_);
 
         {
-          AutoSpinLockNoIrqSave cmd_reg_lock(&dev->cmd_reg_lock_);
+          Guard<SpinLock, NoIrqSave> guard{&dev->cmd_reg_lock_};
           command = cfg->Read(PciConfig::kCommand);
           cfg->Write(PciConfig::kCommand, command | PCIE_CFG_COMMAND_INT_DISABLE);
         }
@@ -193,7 +190,7 @@ void SharedLegacyIrqHandler::AddDevice(PcieDevice& dev) {
    * device level.  Then add this dev to the handler's list.  If this was the
    * first device added to the handler list, unmask the handler IRQ at the top
    * level. */
-  AutoSpinLock lock(&device_handler_list_lock_);
+  Guard<SpinLock, IrqSave> guard{&device_handler_list_lock_};
 
   dev.cfg_->Write(PciConfig::kCommand,
                   dev.cfg_->Read(PciConfig::kCommand) | PCIE_CFG_COMMAND_INT_DISABLE);
@@ -213,7 +210,7 @@ void SharedLegacyIrqHandler::RemoveDevice(PcieDevice& dev) {
   /* Make absolutely sure we have been masked at the PCIe config level, then
    * remove the device from the shared handler list.  If this was the last
    * device on the list, mask the top level IRQ */
-  AutoSpinLock lock(&device_handler_list_lock_);
+  Guard<SpinLock, IrqSave> guard{&device_handler_list_lock_};
 
   dev.cfg_->Write(PciConfig::kCommand,
                   dev.cfg_->Read(PciConfig::kCommand) | PCIE_CFG_COMMAND_INT_DISABLE);
@@ -232,7 +229,7 @@ zx_status_t PcieDevice::MaskUnmaskLegacyIrq(bool mask) {
   pcie_irq_handler_state_t& hstate = irq_.handlers[0];
 
   {
-    AutoSpinLock lock(&hstate.lock);
+    Guard<SpinLock, IrqSave> guard{&hstate.lock};
 
     if (mask) {
       ModifyCmdLocked(0, PCIE_CFG_COMMAND_INT_DISABLE);
@@ -287,7 +284,7 @@ bool PcieDevice::MaskUnmaskMsiIrqLocked(uint irq_id, bool mask) {
   DEBUG_ASSERT(irq_.handlers);
 
   pcie_irq_handler_state_t& hstate = irq_.handlers[irq_id];
-  DEBUG_ASSERT(hstate.lock.IsHeld());
+  DEBUG_ASSERT(hstate.lock.lock().IsHeld());
 
   /* Internal code should not be calling this function if they want to mask
    * the interrupt, but it is not possible to do so. */
@@ -332,7 +329,7 @@ zx_status_t PcieDevice::MaskUnmaskMsiIrq(uint irq_id, bool mask) {
   DEBUG_ASSERT(irq_.handlers);
 
   {
-    AutoSpinLock handler_lock(&irq_.handlers[irq_id].lock);
+    Guard<SpinLock, IrqSave> guard{&irq_.handlers[irq_id].lock};
     MaskUnmaskMsiIrqLocked(irq_id, mask);
   }
 
@@ -508,7 +505,7 @@ bailout:
 void PcieDevice::MsiIrqHandler(pcie_irq_handler_state_t& hstate) {
   DEBUG_ASSERT(irq_.msi);
   /* No need to save IRQ state; we are in an IRQ handler at the moment. */
-  AutoSpinLockNoIrqSave handler_lock(&hstate.lock);
+  Guard<SpinLock, NoIrqSave> guard{&hstate.lock};
 
   /* Mask our IRQ if we can. */
   bool was_masked;
@@ -550,7 +547,7 @@ interrupt_eoi PcieDevice::MsiIrqHandlerThunk(void* arg) {
 zx_status_t PcieDevice::QueryIrqModeCapabilitiesLocked(pcie_irq_mode_t mode,
                                                        pcie_irq_mode_caps_t* out_caps) const {
   DEBUG_ASSERT(plugged_in_);
-  DEBUG_ASSERT(dev_lock_.IsHeld());
+  DEBUG_ASSERT(dev_lock_.lock().IsHeld());
   DEBUG_ASSERT(out_caps);
 
   memset(out_caps, 0, sizeof(*out_caps));
@@ -611,7 +608,7 @@ zx_status_t PcieDevice::QueryIrqModeCapabilitiesLocked(pcie_irq_mode_t mode,
 
 zx_status_t PcieDevice::GetIrqModeLocked(pcie_irq_mode_info_t* out_info) const {
   DEBUG_ASSERT(plugged_in_);
-  DEBUG_ASSERT(dev_lock_.IsHeld());
+  DEBUG_ASSERT(dev_lock_.lock().IsHeld());
   DEBUG_ASSERT(out_info);
 
   out_info->mode = irq_.mode;
@@ -623,7 +620,7 @@ zx_status_t PcieDevice::GetIrqModeLocked(pcie_irq_mode_info_t* out_info) const {
 
 zx_status_t PcieDevice::SetIrqModeLocked(pcie_irq_mode_t mode, uint requested_irqs) {
   DEBUG_ASSERT(plugged_in_);
-  DEBUG_ASSERT(dev_lock_.IsHeld());
+  DEBUG_ASSERT(dev_lock_.lock().IsHeld());
 
   // Ensure the mode selection is valid
   if (mode >= PCIE_IRQ_MODE_COUNT) {
@@ -679,7 +676,7 @@ zx_status_t PcieDevice::SetIrqModeLocked(pcie_irq_mode_t mode, uint requested_ir
 zx_status_t PcieDevice::RegisterIrqHandlerLocked(uint irq_id, pcie_irq_handler_fn_t handler,
                                                  void* ctx) {
   DEBUG_ASSERT(plugged_in_);
-  DEBUG_ASSERT(dev_lock_.IsHeld());
+  DEBUG_ASSERT(dev_lock_.lock().IsHeld());
 
   /* Cannot register a handler if we are currently disabled_ */
   if (irq_.mode == PCIE_IRQ_MODE_DISABLED) {
@@ -711,7 +708,7 @@ zx_status_t PcieDevice::RegisterIrqHandlerLocked(uint irq_id, pcie_irq_handler_f
   DEBUG_ASSERT(irq_.registered_handler_count <= irq_.handler_count);
 
   {
-    AutoSpinLock handler_lock(&hstate.lock);
+    Guard<SpinLock, IrqSave> guard{&hstate.lock};
     hstate.handler = handler;
     hstate.ctx = handler ? ctx : nullptr;
   }
@@ -721,7 +718,7 @@ zx_status_t PcieDevice::RegisterIrqHandlerLocked(uint irq_id, pcie_irq_handler_f
 
 zx_status_t PcieDevice::MaskUnmaskIrqLocked(uint irq_id, bool mask) {
   DEBUG_ASSERT(plugged_in_);
-  DEBUG_ASSERT(dev_lock_.IsHeld());
+  DEBUG_ASSERT(dev_lock_.lock().IsHeld());
 
   /* Cannot manipulate mask status while in the DISABLED state */
   if (irq_.mode == PCIE_IRQ_MODE_DISABLED) {
@@ -771,8 +768,7 @@ zx_status_t PcieDevice::QueryIrqModeCapabilities(pcie_irq_mode_t mode,
     return ZX_ERR_INVALID_ARGS;
   }
 
-  AutoLock dev_lock(&dev_lock_);
-
+  Guard<Mutex> guard{&dev_lock_};
   return (plugged_in_ && !disabled_) ? QueryIrqModeCapabilitiesLocked(mode, out_caps)
                                      : ZX_ERR_BAD_STATE;
 }
@@ -782,13 +778,12 @@ zx_status_t PcieDevice::GetIrqMode(pcie_irq_mode_info_t* out_info) const {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  AutoLock dev_lock(&dev_lock_);
-
+  Guard<Mutex> guard{&dev_lock_};
   return (plugged_in_ && !disabled_) ? GetIrqModeLocked(out_info) : ZX_ERR_BAD_STATE;
 }
 
 zx_status_t PcieDevice::SetIrqMode(pcie_irq_mode_t mode, uint requested_irqs) {
-  AutoLock dev_lock(&dev_lock_);
+  Guard<Mutex> guard{&dev_lock_};
 
   return ((mode == PCIE_IRQ_MODE_DISABLED) || (plugged_in_ && !disabled_))
              ? SetIrqModeLocked(mode, requested_irqs)
@@ -796,15 +791,13 @@ zx_status_t PcieDevice::SetIrqMode(pcie_irq_mode_t mode, uint requested_irqs) {
 }
 
 zx_status_t PcieDevice::RegisterIrqHandler(uint irq_id, pcie_irq_handler_fn_t handler, void* ctx) {
-  AutoLock dev_lock(&dev_lock_);
-
+  Guard<Mutex> guard{&dev_lock_};
   return (plugged_in_ && !disabled_) ? RegisterIrqHandlerLocked(irq_id, handler, ctx)
                                      : ZX_ERR_BAD_STATE;
 }
 
 zx_status_t PcieDevice::MaskUnmaskIrq(uint irq_id, bool mask) {
-  AutoLock dev_lock(&dev_lock_);
-
+  Guard<Mutex> guard{&dev_lock_};
   return (mask || (plugged_in_ && !disabled_)) ? MaskUnmaskIrqLocked(irq_id, mask)
                                                : ZX_ERR_BAD_STATE;
 }
@@ -821,7 +814,7 @@ zx_status_t PcieDevice::MaskUnmaskIrq(uint irq_id, bool mask) {
 // architectures use the _PRT tables in ACPI to perform the remapping.
 //
 zx_status_t PcieDevice::MapPinToIrqLocked(fbl::RefPtr<PcieUpstreamNode>&& upstream) {
-  DEBUG_ASSERT(dev_lock_.IsHeld());
+  DEBUG_ASSERT(dev_lock_.lock().IsHeld());
 
   if (!legacy_irq_pin() || (legacy_irq_pin() > PCIE_MAX_LEGACY_IRQ_PINS)) {
     return ZX_ERR_BAD_STATE;
@@ -917,7 +910,7 @@ zx_status_t PcieDevice::MapPinToIrqLocked(fbl::RefPtr<PcieUpstreamNode>&& upstre
 }
 
 zx_status_t PcieDevice::InitLegacyIrqStateLocked(PcieUpstreamNode& upstream) {
-  DEBUG_ASSERT(dev_lock_.IsHeld());
+  DEBUG_ASSERT(dev_lock_.lock().IsHeld());
   DEBUG_ASSERT(cfg_);
   DEBUG_ASSERT(irq_.legacy.shared_handler == nullptr);
 
@@ -953,14 +946,14 @@ zx_status_t PcieDevice::InitLegacyIrqStateLocked(PcieUpstreamNode& upstream) {
 
 void PcieBusDriver::ShutdownIrqs() {
   /* Shut off all of our legacy IRQs and free all of our bookkeeping */
-  AutoLock lock(&legacy_irq_list_lock_);
+  Guard<Mutex> guard{&legacy_irq_list_lock_};
   legacy_irq_list_.clear();
 }
 
 fbl::RefPtr<SharedLegacyIrqHandler> PcieBusDriver::FindLegacyIrqHandler(uint irq_id) {
   /* Search to see if we have already created a shared handler for this system
    * level IRQ id already */
-  AutoLock lock(&legacy_irq_list_lock_);
+  Guard<Mutex> guard{&legacy_irq_list_lock_};
 
   auto iter = legacy_irq_list_.begin();
   while (iter != legacy_irq_list_.end()) {

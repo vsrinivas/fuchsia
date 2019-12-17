@@ -15,14 +15,11 @@
 #include <dev/pcie_root.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <ktl/limits.h>
 #include <ktl/move.h>
 #include <lk/init.h>
 #include <vm/vm_aspace.h>
-
-using fbl::AutoLock;
 
 /* TODO(johngro) : figure this out someday.
  *
@@ -44,7 +41,6 @@ constexpr size_t PcieBusDriver::REGION_BOOKKEEPING_SLAB_SIZE;
 constexpr size_t PcieBusDriver::REGION_BOOKKEEPING_MAX_MEM;
 
 fbl::RefPtr<PcieBusDriver> PcieBusDriver::driver_;
-fbl::Mutex PcieBusDriver::driver_lock_;
 
 PcieBusDriver::PcieBusDriver(PciePlatformInterface& platform) : platform_(platform) {}
 PcieBusDriver::~PcieBusDriver() {
@@ -88,7 +84,7 @@ zx_status_t PcieBusDriver::AddRoot(fbl::RefPtr<PcieRoot>&& root) {
 
   // Attempt to add it to the collection of roots.
   {
-    AutoLock bus_topology_lock(&bus_topology_lock_);
+    Guard<Mutex> guard{&bus_topology_lock_};
     if (!roots_.insert_or_find(ktl::move(root))) {
       TRACEF("Failed to add PCIe root for bus %u, root already exists!\n", root->managed_bus_id());
       return ZX_ERR_ALREADY_EXISTS;
@@ -120,7 +116,7 @@ zx_status_t PcieBusDriver::RescanDevices() {
     return ZX_ERR_BAD_STATE;
   }
 
-  AutoLock lock(&bus_rescan_lock_);
+  Guard<Mutex> guard{&bus_rescan_lock_};
 
   // Scan each root looking for for devices and other bridges.
   ForeachRoot(
@@ -142,7 +138,7 @@ zx_status_t PcieBusDriver::RescanDevices() {
 }
 
 bool PcieBusDriver::IsNotStarted(bool allow_quirks_phase) const {
-  AutoLock start_lock(&start_lock_);
+  Guard<Mutex> guard{&start_lock_};
 
   if ((state_ != State::NOT_STARTED) &&
       (!allow_quirks_phase || (state_ != State::STARTING_RUNNING_QUIRKS)))
@@ -152,7 +148,7 @@ bool PcieBusDriver::IsNotStarted(bool allow_quirks_phase) const {
 }
 
 bool PcieBusDriver::AdvanceState(State expected, State next) {
-  AutoLock start_lock(&start_lock_);
+  Guard<Mutex> guard{&start_lock_};
 
   if (state_ != expected) {
     TRACEF(
@@ -171,7 +167,7 @@ zx_status_t PcieBusDriver::StartBusDriver() {
     return ZX_ERR_BAD_STATE;
 
   {
-    AutoLock lock(&bus_rescan_lock_);
+    Guard<Mutex> guard{&bus_rescan_lock_};
 
     // Scan each root looking for for devices and other bridges.
     ForeachRoot(
@@ -241,7 +237,7 @@ fbl::RefPtr<PcieDevice> PcieBusDriver::GetNthDevice(uint32_t index) {
 }
 
 void PcieBusDriver::LinkDeviceToUpstream(PcieDevice& dev, PcieUpstreamNode& upstream) {
-  AutoLock lock(&bus_topology_lock_);
+  Guard<Mutex> guard{&bus_topology_lock_};
 
   // Have the device hold a reference to its upstream bridge.
   DEBUG_ASSERT(dev.upstream_ == nullptr);
@@ -255,7 +251,7 @@ void PcieBusDriver::LinkDeviceToUpstream(PcieDevice& dev, PcieUpstreamNode& upst
 }
 
 void PcieBusDriver::UnlinkDeviceFromUpstream(PcieDevice& dev) {
-  AutoLock lock(&bus_topology_lock_);
+  Guard<Mutex> guard{&bus_topology_lock_};
 
   if (dev.upstream_ != nullptr) {
     uint ndx = (dev.dev_id() * PCIE_MAX_FUNCTIONS_PER_DEVICE) + dev.func_id();
@@ -271,14 +267,14 @@ void PcieBusDriver::UnlinkDeviceFromUpstream(PcieDevice& dev) {
 }
 
 fbl::RefPtr<PcieUpstreamNode> PcieBusDriver::GetUpstream(PcieDevice& dev) {
-  AutoLock lock(&bus_topology_lock_);
+  Guard<Mutex> guard{&bus_topology_lock_};
   auto ret = dev.upstream_;
   return ret;
 }
 
 fbl::RefPtr<PcieDevice> PcieBusDriver::GetDownstream(PcieUpstreamNode& upstream, uint ndx) {
   DEBUG_ASSERT(ndx <= fbl::count_of(upstream.downstream_));
-  AutoLock lock(&bus_topology_lock_);
+  Guard<Mutex> guard{&bus_topology_lock_};
   auto ret = upstream.downstream_[ndx];
   return ret;
 }
@@ -320,19 +316,19 @@ void PcieBusDriver::ForeachRoot(ForeachRootCallback cbk, void* ctx) {
   // when it comes to advancing the iterator as the root we are holding the
   // reference to could (in theory) be removed from the collection during the
   // callback..
-  bus_topology_lock_.Acquire();
+  Guard<Mutex> guard{&bus_topology_lock_};
 
   auto iter = roots_.begin();
+  bool keep_going = true;
   while (iter.IsValid()) {
     // Grab our ref.
     auto root_ref = iter.CopyPointer();
 
     // Perform our callback.
-    bus_topology_lock_.Release();
-    bool keep_going = cbk(root_ref, ctx);
-    bus_topology_lock_.Acquire();
-    if (!keep_going)
+    guard.CallUnlocked([&keep_going, &cbk, &root_ref, &ctx] { keep_going = cbk(root_ref, ctx); });
+    if (!keep_going) {
       break;
+    }
 
     // If the root is still in the collection, simply advance the iterator.
     // Otherwise, find the root (if any) with the next higher managed bus
@@ -343,8 +339,6 @@ void PcieBusDriver::ForeachRoot(ForeachRootCallback cbk, void* ctx) {
       iter = roots_.upper_bound(root_ref->GetKey());
     }
   }
-
-  bus_topology_lock_.Release();
 }
 
 void PcieBusDriver::ForeachDevice(ForeachDeviceCallback cbk, void* ctx) {
@@ -466,7 +460,7 @@ zx_status_t PcieBusDriver::AddSubtractBusRegion(uint64_t base, uint64_t size, Pc
 }
 
 zx_status_t PcieBusDriver::InitializeDriver(PciePlatformInterface& platform) {
-  AutoLock lock(&driver_lock_);
+  Guard<Mutex> guard{PcieBusDriverLock::Get()};
 
   if (driver_ != nullptr) {
     TRACEF("Failed to initialize PCIe bus driver; driver already initialized\n");
@@ -491,7 +485,7 @@ void PcieBusDriver::ShutdownDriver() {
   fbl::RefPtr<PcieBusDriver> driver;
 
   {
-    AutoLock lock(&driver_lock_);
+    Guard<Mutex> guard{PcieBusDriverLock::Get()};
     driver = ktl::move(driver_);
   }
 
@@ -565,7 +559,7 @@ void PcieBusDriver::RunQuirks(const fbl::RefPtr<PcieDevice>& dev) {
 // bus devices initialized by the bios that we need to retain in zedboot/crash
 // situations.
 void PcieBusDriver::DisableBus() {
-  fbl::AutoLock lock(&driver_lock_);
+  Guard<Mutex> guard{PcieBusDriverLock::Get()};
   ForeachDevice(
       [](const fbl::RefPtr<PcieDevice>& dev, void* ctx, uint level) -> bool {
         if (!dev->is_bridge() && !(dev->vendor_id() == 0x8086 && dev->device_id() == 0x9d66)) {
