@@ -147,6 +147,30 @@ impl SavedNetworksManager {
         network_configs.push(network_config);
         Ok(())
     }
+
+    /// Update a saved network that after connecting to it. If a network with these identifiers
+    /// has not been connected to before, this will not save it and return an error.
+    /// TODO(nmccracken) add security type once we make use of security type when connecting
+    /// (do by completion of 35912)
+    pub fn record_connect_success(
+        &self,
+        id: NetworkIdentifier,
+        credential: &fidl_policy::Credential,
+    ) {
+        if let Some(networks) = self.saved_networks.lock().get_mut(&id) {
+            for network in networks {
+                if &network.credential == credential {
+                    network.has_ever_connected = true;
+                }
+            }
+        }
+        // Will not reach here if we find the saved network with matching SSID and credential.
+        info!(
+            "Failed finding network ({},{:?}) to record success.",
+            String::from_utf8_lossy(&id.0),
+            id.1
+        );
+    }
 }
 
 /// If the list of configs is at capacity for the number of saved configs per SSID,
@@ -306,6 +330,30 @@ mod tests {
             MAX_CONFIGS_PER_SSID,
             saved_networks.lookup((b"foo".to_vec(), fidl_policy::SecurityType::Wpa2)).len()
         );
+    }
+
+    #[test]
+    fn connect_network() {
+        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
+        let saved_networks = create_saved_networks(temp_dir.path());
+        const WPA2: fidl_policy::SecurityType = fidl_policy::SecurityType::Wpa2;
+
+        let mut config = network_config(b"bar", b"password");
+        // if connect and network hasn't been saved, should give an error and not save network
+        saved_networks.record_connect_success((b"foo".to_vec(), WPA2), &config.credential);
+        assert!(saved_networks.lookup((b"bar".to_vec(), WPA2)).is_empty());
+        assert_eq!(0, saved_networks.known_network_count());
+
+        // save a network and record connect success
+        saved_networks
+            .store(b"bar".to_vec(), credential_from_bytes(b"password".to_vec()))
+            .expect("Failed save network");
+        let credential = fidl_policy::Credential::Password(b"password".to_vec());
+        saved_networks.record_connect_success((b"bar".to_vec(), WPA2), &credential);
+
+        // check that the saved network config has been updated
+        config.has_ever_connected = true;
+        assert_eq!(vec![config], saved_networks.lookup((b"bar".to_vec(), WPA2)));
     }
 
     #[test]

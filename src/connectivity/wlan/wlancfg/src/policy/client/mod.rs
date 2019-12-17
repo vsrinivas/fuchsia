@@ -89,9 +89,13 @@ impl From<fidl::Error> for RequestError {
 
 #[derive(Debug)]
 enum InternalMsg {
-    /// Sent when a new connection request was issued. Holds the NetworkIdentifier and the
-    /// Transaction which will the connection result will be reported through.
-    NewPendingConnectRequest(fidl_policy::NetworkIdentifier, fidl_sme::ConnectTransactionProxy),
+    /// Sent when a new connection request was issued. Holds the NetworkIdentifier, credential
+    /// used to connect, and Transaction which the connection result will be reported through.
+    NewPendingConnectRequest(
+        fidl_policy::NetworkIdentifier,
+        fidl_policy::Credential,
+        fidl_sme::ConnectTransactionProxy,
+    ),
 }
 type InternalMsgSink = mpsc::UnboundedSender<InternalMsg>;
 
@@ -157,15 +161,15 @@ async fn serve_provider_requests(
             },
             // Progress internal messages.
             msg = internal_messages_stream.select_next_some() => match msg {
-                InternalMsg::NewPendingConnectRequest(id, txn) => {
+                InternalMsg::NewPendingConnectRequest(id, cred, txn) => {
                     let connect_result_fut = txn.take_event_stream().into_future()
-                        .map(|(first, _next)| (id, first));
+                        .map(|(first, _next)| (id, cred, first));
                     pending_con_reqs.push(connect_result_fut);
                 }
             },
             // Pending connect request finished.
-            resp = pending_con_reqs.select_next_some() => if let (id, Some(Ok(txn))) = resp {
-                handle_sme_connect_response(update_sender.clone(), id, txn).await;
+            resp = pending_con_reqs.select_next_some() => if let (id, cred, Some(Ok(txn))) = resp {
+                handle_sme_connect_response(update_sender.clone(), id, cred, txn, Arc::clone(&saved_networks)).await;
             }
         }
     }
@@ -219,11 +223,11 @@ async fn handle_client_requests(
                 )
                 .await
                 {
-                    Ok(txn) => {
+                    Ok((cred, txn)) => {
                         responder.send(fidl_common::RequestStatus::Acknowledged)?;
                         // TODO(hahnr): Send connecting update.
                         let _ignored = internal_msg_sink
-                            .unbounded_send(InternalMsg::NewPendingConnectRequest(id, txn));
+                            .unbounded_send(InternalMsg::NewPendingConnectRequest(id, cred, txn));
                     }
                     Err(error) => {
                         error!("error while connection attempt: {}", error.cause);
@@ -240,12 +244,15 @@ async fn handle_client_requests(
 async fn handle_sme_connect_response(
     update_sender: listener::MessageSender,
     id: fidl_policy::NetworkIdentifier,
+    credential: fidl_policy::Credential,
     txn_event: fidl_sme::ConnectTransactionEvent,
+    saved_networks: SavedNetworksPtr,
 ) {
     match txn_event {
         fidl_sme::ConnectTransactionEvent::OnFinished { code } => match code {
             fidl_sme::ConnectResultCode::Success => {
                 info!("connection request successful to: {:?}", id);
+                saved_networks.record_connect_success((id.ssid.clone(), id.type_), &credential);
                 let update = fidl_policy::ClientStateSummary {
                     state: None,
                     networks: Some(vec![fidl_policy::NetworkState {
@@ -273,7 +280,7 @@ async fn handle_client_request_connect(
     client: ClientPtr,
     saved_networks: SavedNetworksPtr,
     network: &fidl_policy::NetworkIdentifier,
-) -> Result<fidl_sme::ConnectTransactionProxy, RequestError> {
+) -> Result<(fidl_policy::Credential, fidl_sme::ConnectTransactionProxy), RequestError> {
     let network_config =
         saved_networks.lookup((network.ssid.clone(), network.type_)).pop().ok_or_else(|| {
             RequestError::new().with_cause(format_err!(
@@ -308,7 +315,7 @@ async fn handle_client_request_connect(
     let (local, remote) = fidl::endpoints::create_proxy()?;
     client_sme.connect(&mut request, Some(remote))?;
 
-    Ok(local)
+    Ok((network_config.credential, local))
 }
 
 // convert from policy fidl Credential to sme fidl Credential
@@ -358,7 +365,10 @@ fn reject_provider_request(req: fidl_policy::ClientProviderRequest) -> Result<()
 mod tests {
     use {
         super::*,
-        crate::config_manager::{credential_from_bytes, SavedNetworksManager},
+        crate::{
+            config_manager::{credential_from_bytes, SavedNetworksManager},
+            network_config::{NetworkConfig, NetworkIdentifier},
+        },
         fidl::{
             endpoints::{create_proxy, create_request_stream},
             Error,
@@ -422,7 +432,8 @@ mod tests {
 
         let (client, _sme_stream) = create_client();
         let (update_sender, _listener_updates) = mpsc::unbounded();
-        let serve_fut = serve_provider_requests(client, update_sender, saved_networks, requests);
+        let serve_fut =
+            serve_provider_requests(client, update_sender, Arc::clone(&saved_networks), requests);
         pin_mut!(serve_fut);
 
         // No request has been sent yet. Future should be idle.
@@ -445,6 +456,12 @@ mod tests {
             exec.run_until_stalled(&mut connect_fut),
             Poll::Ready(Ok(fidl_common::RequestStatus::RejectedNotSupported))
         );
+
+        // unknown network should not have been saved by saved networks manager
+        // since we did not successfully connect
+        assert!(saved_networks
+            .lookup((b"foobar-unknown".to_vec(), fidl_policy::SecurityType::None))
+            .is_empty());
     }
 
     #[test]
@@ -459,7 +476,8 @@ mod tests {
 
         let (client, mut sme_stream) = create_client();
         let (update_sender, _listener_updates) = mpsc::unbounded();
-        let serve_fut = serve_provider_requests(client, update_sender, saved_networks, requests);
+        let serve_fut =
+            serve_provider_requests(client, update_sender, Arc::clone(&saved_networks), requests);
         pin_mut!(serve_fut);
 
         // No request has been sent yet. Future should be idle.
@@ -506,7 +524,8 @@ mod tests {
 
         let (update_sender, _listener_updates) = mpsc::unbounded();
         let (client, mut sme_stream) = create_client();
-        let serve_fut = serve_provider_requests(client, update_sender, saved_networks, requests);
+        let serve_fut =
+            serve_provider_requests(client, update_sender, Arc::clone(&saved_networks), requests);
         pin_mut!(serve_fut);
 
         // No request has been sent yet. Future should be idle.
@@ -554,7 +573,8 @@ mod tests {
 
         let (update_sender, _listener_updates) = mpsc::unbounded();
         let (client, mut sme_stream) = create_client();
-        let serve_fut = serve_provider_requests(client, update_sender, saved_networks, requests);
+        let serve_fut =
+            serve_provider_requests(client, update_sender, Arc::clone(&saved_networks), requests);
         pin_mut!(serve_fut);
 
         // No request has been sent yet. Future should be idle.
@@ -602,7 +622,8 @@ mod tests {
 
         let (client, mut sme_stream) = create_client();
         let (update_sender, mut listener_updates) = mpsc::unbounded();
-        let serve_fut = serve_provider_requests(client, update_sender, saved_networks, requests);
+        let serve_fut =
+            serve_provider_requests(client, update_sender, Arc::clone(&saved_networks), requests);
         pin_mut!(serve_fut);
 
         // No request has been sent yet. Future should be idle.
@@ -657,6 +678,16 @@ mod tests {
             }]),
         };
         assert_eq!(summary, expected_summary);
+
+        // saved network config should reflect that it has connected successfully
+        let cfg = get_config(
+            Arc::clone(&saved_networks),
+            (b"foobar".to_vec(), fidl_policy::SecurityType::None),
+            fidl_policy::Credential::None(fidl_policy::Empty),
+        );
+        assert_variant!(cfg, Some(cfg) => {
+            assert!(cfg.has_ever_connected)
+        });
     }
 
     #[test]
@@ -671,7 +702,8 @@ mod tests {
 
         let (client, mut sme_stream) = create_client();
         let (update_sender, mut listener_updates) = mpsc::unbounded();
-        let serve_fut = serve_provider_requests(client, update_sender, saved_networks, requests);
+        let serve_fut =
+            serve_provider_requests(client, update_sender, Arc::clone(&saved_networks), requests);
         pin_mut!(serve_fut);
 
         // No request has been sent yet. Future should be idle.
@@ -711,6 +743,16 @@ mod tests {
 
         // Verify status was not updated.
         assert_variant!(exec.run_until_stalled(&mut listener_updates.next()), Poll::Pending);
+
+        // Verify network config reflects that we still have not connected successfully
+        let cfg = get_config(
+            saved_networks,
+            (b"foobar".to_vec(), fidl_policy::SecurityType::None),
+            fidl_policy::Credential::None(fidl_policy::Empty),
+        );
+        assert_variant!(cfg, Some(cfg) => {
+            assert_eq!(false, cfg.has_ever_connected);
+        });
     }
 
     #[test]
@@ -922,6 +964,58 @@ mod tests {
         assert_variant!(
             exec.run_until_stalled(&mut connect_fut),
             Poll::Ready(Ok(fidl_common::RequestStatus::RejectedNotSupported))
+        );
+    }
+
+    // Gets a saved network config with a particular SSID, security type, and credential.
+    // If there are more than one configs saved for the same SSID, security type, and credential,
+    // the function will panic.
+    fn get_config(
+        saved_networks: Arc<SavedNetworksManager>,
+        id: NetworkIdentifier,
+        cred: fidl_policy::Credential,
+    ) -> Option<NetworkConfig> {
+        let mut cfgs = saved_networks
+            .lookup(id)
+            .into_iter()
+            .filter(|cfg| cfg.credential == cred)
+            .collect::<Vec<_>>();
+        // there should not be multiple configs with the same SSID, security type, and credential.
+        assert!(cfgs.len() <= 1);
+        cfgs.pop()
+    }
+
+    #[test]
+    fn get_correct_config() {
+        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
+        let saved_networks = Arc::new(create_network_store(temp_dir.path()));
+        let cfg = NetworkConfig::new(
+            (b"foo".to_vec(), fidl_policy::SecurityType::Wpa2),
+            fidl_policy::Credential::Password(b"password".to_vec()),
+            false,
+            false,
+        )
+        .expect("Failed to create network config");
+
+        saved_networks
+            .store(b"foo".to_vec(), fidl_policy::Credential::Password(b"password".to_vec()))
+            .expect("Failed to store network config");
+
+        assert_eq!(
+            Some(cfg),
+            get_config(
+                Arc::clone(&saved_networks),
+                (b"foo".to_vec(), fidl_policy::SecurityType::Wpa2),
+                fidl_policy::Credential::Password(b"password".to_vec())
+            )
+        );
+        assert_eq!(
+            None,
+            get_config(
+                Arc::clone(&saved_networks),
+                (b"foo".to_vec(), fidl_policy::SecurityType::Wpa2),
+                fidl_policy::Credential::Password(b"not-saved".to_vec())
+            )
         );
     }
 }

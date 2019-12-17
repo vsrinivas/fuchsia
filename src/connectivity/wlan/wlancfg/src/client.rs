@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        config_manager::{credential_from_bytes, SavedNetworksManager},
+        config_manager::{credential_from_bytes, derive_security_type, SavedNetworksManager},
         known_ess_store::{KnownEss, KnownEssStore},
         network_config::clone_credential,
         policy::client::sme_credential_from_policy,
@@ -68,14 +68,14 @@ pub fn new_client(
     iface_id: u16,
     sme: fidl_sme::ClientSmeProxy,
     ess_store: Arc<KnownEssStore>,
-    network_store: Arc<SavedNetworksManager>,
+    saved_networks: Arc<SavedNetworksManager>,
 ) -> (Client, impl Future<Output = ()>) {
     let (req_sender, req_receiver) = mpsc::unbounded();
     let sme_event_stream = sme.take_event_stream();
     let services = Services {
         sme,
         ess_store: Arc::clone(&ess_store),
-        saved_networks: Arc::clone(&network_store),
+        saved_networks: Arc::clone(&saved_networks),
     };
     let fut = serve(iface_id, services, sme_event_stream, req_receiver);
     let client = Client { req_sender };
@@ -179,7 +179,13 @@ async fn attempt_auto_connect(services: &Services) -> Result<Option<Vec<u8>>, fa
         .collect::<HashMap<_, _>>();
 
     for (ssid, credential) in network_by_ssid {
-        if connect_to_known_network(&services.sme, ssid.clone(), credential).await? {
+        if connect_to_known_network(&services.sme, ssid.clone(), clone_credential(&credential))
+            .await?
+        {
+            services.saved_networks.record_connect_success(
+                (ssid.clone(), derive_security_type(&credential)),
+                &credential,
+            );
             return Ok(Some(ssid));
         }
     }
@@ -241,7 +247,12 @@ async fn manual_connect_state(
                             |e| eprintln!("wlancfg: Failed to store network password: {}", e));
                     services.saved_networks.store(req.ssid.clone(), clone_credential(&credential))
                          .unwrap_or_else(
-                            |e| eprintln!("wlancfg: Failed tp stpre network config: {}", e));
+                            |e| eprintln!("wlancfg: Failed to store network config: {}", e));
+                    services.saved_networks
+                        .record_connect_success(
+                            (req.ssid.clone(), derive_security_type(&credential)),
+                            &credential_from_bytes(req.password)
+                        );
                     connected_state(services, next_req).into_state()
                 },
                 other => {
@@ -530,6 +541,56 @@ mod tests {
         // no pending timers
         expect_status_req_to_sme(&mut exec, &mut next_sme_req);
         assert_eq!(None, exec.wake_next_timer());
+
+        let config = saved_networks
+            .lookup((b"bar".to_vec(), fidl_policy::SecurityType::Wpa2))
+            .pop()
+            .expect("Failed to get network config");
+        assert!(config.has_ever_connected);
+    }
+
+    #[test]
+    fn failed_auto_connect_to_known_ess() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
+        let ess_store = create_ess_store(temp_dir.path());
+        let saved_networks = create_saved_networks(temp_dir.path());
+        // save the network to trigger a scan
+        saved_networks
+            .store(b"bar".to_vec(), credential_from_bytes(b"qwertyuio".to_vec()))
+            .expect("failed to store a network password");
+
+        let (_client, fut, sme_server) =
+            create_client(Arc::clone(&ess_store), Arc::clone(&saved_networks));
+        let mut next_sme_req = sme_server.into_future();
+        pin_mut!(fut);
+
+        // Expect the state machine to initiate the scan
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
+        send_scan_results(&mut exec, &mut next_sme_req, &mut vec![bss_info(&b"bar"[..])]);
+
+        // Let the state machine process the results
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
+
+        // Expect a "connect" request to the SME and reply to it with failure
+        exchange_connect_with_sme(
+            &mut exec,
+            &mut next_sme_req,
+            b"bar",
+            b"qwertyuio",
+            fidl_sme::ConnectResultCode::Failed,
+        );
+        // Auto connect failed so we should remain in the 'auto connect' state and sleep
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
+        assert!(poll_sme_req(&mut exec, &mut next_sme_req).is_pending());
+        assert!(exec.wake_next_timer().is_some());
+
+        // After failed auto connect, the network should not have been marked connected
+        let config = saved_networks
+            .lookup((b"bar".to_vec(), fidl_policy::SecurityType::Wpa2))
+            .pop()
+            .expect("Failed to get network config");
+        assert_eq!(false, config.has_ever_connected);
     }
 
     #[test]
@@ -651,6 +712,13 @@ mod tests {
         // no pending timers
         expect_status_req_to_sme(&mut exec, &mut next_sme_req);
         assert_eq!(None, exec.wake_next_timer());
+
+        // Since we connected to foo, the saved network configuration should reflect this
+        let config = saved_networks
+            .lookup((b"foo".to_vec(), fidl_policy::SecurityType::Wpa2))
+            .pop()
+            .expect("failed to get network config");
+        assert!(config.has_ever_connected);
     }
 
     #[test]
@@ -699,7 +767,7 @@ mod tests {
         let cfg = NetworkConfig::new(
             (manual_connect_ssid.to_vec(), manual_connect_security),
             fidl_policy::Credential::Password(manual_connect_password.to_vec()),
-            false,
+            true,
             false,
         )
         .expect("Failed to create expected network config");
@@ -762,6 +830,17 @@ mod tests {
 
         // Expect no pending timers
         assert_eq!(None, exec.wake_next_timer());
+
+        // Since we successfully connected to bar but not to foo, bar should have been saved and
+        // foo should not have been saved
+        let bar_config = saved_networks
+            .lookup((b"bar".to_vec(), fidl_policy::SecurityType::Wpa2))
+            .pop()
+            .expect("failed to get network config");
+        assert!(bar_config.has_ever_connected);
+        assert!(saved_networks
+            .lookup((b"foo".to_vec(), fidl_policy::SecurityType::Wpa2))
+            .is_empty());
     }
 
     #[test]
@@ -824,6 +903,18 @@ mod tests {
 
         // Expect no pending timers
         assert_eq!(None, exec.wake_next_timer());
+
+        // Check that saved network configs for both networks have been created
+        let foo_config = saved_networks
+            .lookup((b"foo".to_vec(), fidl_policy::SecurityType::Wpa2))
+            .pop()
+            .expect("failed to get config for foo");
+        let bar_config = saved_networks
+            .lookup((b"bar".to_vec(), fidl_policy::SecurityType::Wpa2))
+            .pop()
+            .expect("failed to get config for bar");
+        assert!(foo_config.has_ever_connected);
+        assert!(bar_config.has_ever_connected);
     }
 
     #[test]
@@ -1223,12 +1314,12 @@ mod tests {
 
     fn create_client(
         ess_store: Arc<KnownEssStore>,
-        network_store: Arc<SavedNetworksManager>,
+        saved_networks: Arc<SavedNetworksManager>,
     ) -> (Client, impl Future<Output = ()>, ClientSmeRequestStream) {
         let (proxy, server) =
             create_proxy::<fidl_sme::ClientSmeMarker>().expect("failed to create an sme channel");
         let (client, fut) =
-            new_client(0, proxy, Arc::clone(&ess_store), Arc::clone(&network_store));
+            new_client(0, proxy, Arc::clone(&ess_store), Arc::clone(&saved_networks));
         let server = server.into_stream().expect("failed to create a request stream");
         (client, fut, server)
     }
