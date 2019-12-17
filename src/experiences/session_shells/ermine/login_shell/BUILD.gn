@@ -39,7 +39,6 @@ flutter_app("userpicker_base_shell") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.deprecatedtimezone",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.netstack",

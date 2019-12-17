@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:async';
 import 'package:flutter/material.dart';
 
-import 'package:fidl_fuchsia_deprecatedtimezone/fidl_async.dart';
+import 'package:fidl_fuchsia_intl/fidl_async.dart';
+import 'package:fidl_fuchsia_settings/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_remotewidgets/fidl_async.dart';
-import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_services/services.dart' show StartupContext;
 import 'package:internationalization/strings.dart';
 import 'package:quickui/quickui.dart';
@@ -22,30 +21,18 @@ class TimeZone extends UiSpec {
 
   _TimeZoneModel model;
 
-  TimeZone({TimezoneProxy timezone, TimezoneWatcherBinding binding}) {
+  TimeZone({IntlProxy intlSettingsService}) {
     model = _TimeZoneModel(
-      timezone: timezone,
-      binding: binding,
+      intlSettingsService: intlSettingsService,
       onChange: _onChange,
     );
   }
 
   factory TimeZone.fromStartupContext(StartupContext startupContext) {
-    // Connect to timeservice and update the system time.
-    final timeService = TimeServiceProxy();
-    startupContext.incoming.connectToService(timeService);
-    timeService.update(3 /* num_retries */).then((success) {
-      if (!success) {
-        log.warning('Failed to update system time from the network.');
-      }
-      timeService.ctrl.close();
-    });
+    final intlSettingsService = IntlProxy();
+    startupContext.incoming.connectToService(intlSettingsService);
 
-    // Connect to timezone service.
-    final timezoneService = TimezoneProxy();
-    startupContext.incoming.connectToService(timezoneService);
-
-    final timezone = TimeZone(timezone: timezoneService);
+    final timezone = TimeZone(intlSettingsService: intlSettingsService);
     return timezone;
   }
 
@@ -63,7 +50,7 @@ class TimeZone extends UiSpec {
         spec = _specForTimeZone(model, changeAction);
       } else {
         final index = value.text.action ^ QuickAction.submit.$value;
-        model.timezoneId = _kTimeZones[index].zoneId;
+        model.timeZoneId = _kTimeZones[index].zoneId;
         spec = _specForTimeZone(model);
       }
     }
@@ -79,7 +66,7 @@ class TimeZone extends UiSpec {
       return Spec(title: _title, groups: [
         Group(title: _title, values: [
           Value.withText(TextValue(
-            text: model.timezoneId,
+            text: model.timeZoneId,
             action: changeAction,
           )),
         ]),
@@ -110,42 +97,42 @@ class TimeZone extends UiSpec {
 }
 
 class _TimeZoneModel {
-  final TimezoneProxy timezone;
-  final TimezoneWatcherBinding _binding;
+  IntlProxy intlSettingsService;
   final VoidCallback onChange;
 
-  String _timezoneId;
+  IntlSettings _intlSettings;
 
-  _TimeZoneModel({this.timezone, TimezoneWatcherBinding binding, this.onChange})
-      : _binding = binding ?? TimezoneWatcherBinding() {
+  _TimeZoneModel({this.intlSettingsService, this.onChange}) {
     // Get current timezone and watch it for changes.
-    timezone
-      ..getTimezoneId().then((tz) {
-        _timezoneId = tz;
-        onChange();
-      })
-      ..watch(_binding.wrap(_TimezoneWatcherImpl(this)));
+    intlSettingsService.watch().then(_onIntlSettingsChange);
+  }
+
+  Future<void> _onIntlSettingsChange(IntlSettings intlSettings) async {
+    bool timeZoneChanged = (_intlSettings == null) ||
+        (_intlSettings.timeZoneId.id != intlSettings.timeZoneId.id);
+    _intlSettings = intlSettings;
+    if (timeZoneChanged) {
+      onChange();
+    }
+    // Use the FIDL "hanging get" pattern to request the next update.
+    if (intlSettingsService != null) {
+      await intlSettingsService.watch().then(_onIntlSettingsChange);
+    }
   }
 
   void dispose() {
-    timezone.ctrl.close();
-    _binding.close();
+    intlSettingsService.ctrl.close();
+    intlSettingsService = null;
   }
 
-  String get timezoneId => _timezoneId;
-  set timezoneId(String value) {
-    _timezoneId = value;
-    timezone.setTimezone(value);
-  }
-}
-
-class _TimezoneWatcherImpl extends TimezoneWatcher {
-  final _TimeZoneModel model;
-  _TimezoneWatcherImpl(this.model);
-  @override
-  Future<void> onTimezoneOffsetChange(String timezoneId) async {
-    model._timezoneId = timezoneId;
-    model.onChange();
+  String get timeZoneId =>
+      _intlSettings == null ? null : _intlSettings.timeZoneId.id;
+  set timeZoneId(String value) {
+    final IntlSettings newIntlSettings = IntlSettings(
+        locales: _intlSettings.locales,
+        temperatureUnit: _intlSettings.temperatureUnit,
+        timeZoneId: TimeZoneId(id: value));
+    intlSettingsService.set(newIntlSettings);
   }
 }
 

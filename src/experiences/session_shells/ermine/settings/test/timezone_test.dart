@@ -2,45 +2,61 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:fidl_fuchsia_deprecatedtimezone/fidl_async.dart';
-import 'package:fidl_fuchsia_ui_remotewidgets/fidl_async.dart';
+import 'package:fidl/fidl.dart';
+import 'package:fidl_fuchsia_intl/fidl_async.dart';
+import 'package:fidl_fuchsia_settings/fidl_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:settings/settings.dart';
 
 void main() {
+  MockIntlProxy intlSettingsProxy;
+  MockIntlProxyController intlSettingsProxyController;
+
+  setUp(() async {
+    intlSettingsProxy = MockIntlProxy();
+    intlSettingsProxyController = MockIntlProxyController();
+    when(intlSettingsProxy.ctrl).thenReturn(intlSettingsProxyController);
+  });
+
   test('Timezone', () async {
-    final timezoneProxy = MockTimezoneProxy();
-    final binding = MockBinding();
+    when(intlSettingsProxy.watch())
+        .thenAnswer((_) => Future<IntlSettings>.value(IntlSettings(
+              timeZoneId: TimeZoneId(id: 'Foo'),
+            )));
 
-    when(timezoneProxy.getTimezoneId())
-        .thenAnswer((_) => Future<String>.value('Foo'));
-
-    TimeZone timezone = TimeZone(timezone: timezoneProxy, binding: binding);
-    final spec = await timezone.getSpec();
+    TimeZone timeZone = TimeZone(intlSettingsService: intlSettingsProxy);
+    final spec = await timeZone.getSpec();
     expect(spec.groups.first.values.first.text.text == 'Foo', true);
+
+    timeZone.dispose();
   });
 
   test('Change Timezone', () async {
-    final timezoneProxy = MockTimezoneProxy();
-    final binding = MockBinding();
+    var response = 'tz1';
 
-    when(timezoneProxy.getTimezoneId())
-        .thenAnswer((_) => Future<String>.value('Foo'));
+    when(intlSettingsProxy.watch()).thenAnswer((_) {
+      return Future<IntlSettings>.value(IntlSettings(
+        timeZoneId: TimeZoneId(id: response),
+      ));
+    });
 
-    TimeZone timezone = TimeZone(timezone: timezoneProxy, binding: binding);
-    await timezone.getSpec();
+    TimeZone timeZone = TimeZone(intlSettingsService: intlSettingsProxy);
+    final specA = await timeZone.getSpec();
+    expect(specA.groups.first.values.first.text.text, 'tz1');
 
-    final spec = await timezone.getSpec(Value.withText(TextValue(
-      text: 'US/Eastern',
-      action: QuickAction.submit.$value,
-    )));
+    response = 'tz2';
+    // Wait one event cycle for the change.
+    await timeZone.getSpec();
+    final specB = await timeZone.getSpec();
+    expect(specB.groups.first.values.first.text.text, 'tz2');
 
-    expect(spec.groups.first.values.first.text.text == 'US/Eastern', true);
+    timeZone.dispose();
   });
 }
 
 // Mock classes.
-class MockTimezoneProxy extends Mock implements TimezoneProxy {}
+class MockIntlProxy extends Mock implements IntlProxy {}
 
-class MockBinding extends Mock implements TimezoneWatcherBinding {}
+class MockIntlProxyController extends Mock
+    implements AsyncProxyController<Intl> {}
