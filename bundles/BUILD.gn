@@ -14,6 +14,7 @@ group("tools") {
     "//src/developer/exception_broker/limbo_client",
     "//src/developer/feedback/bugreport",
     "//src/developer/kcounter_inspect",
+    "//src/diagnostics/triage:install($host_toolchain)",
     "//src/lib/icu:tools",
     "//src/media/bundles:tools",
     "//src/sys/component_manager_for_test",

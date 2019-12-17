@@ -1,0 +1,25 @@
+{
+    "metrics": {
+        "total": {"Selector": "global_data:root.stats:total_bytes"},
+        "used": {"Selector": "global_data:root.stats:used_bytes"},
+        "ratio": {"Eval": "used / (total + 0.0)"},
+        "disk98": {"Eval": "ratio > 0.98"}
+    },
+
+    "actions": {
+        "disk_full": {"trigger": "disk98", "print": "Disk is >98% full"}
+    },
+
+    "tests": {
+        "is_full": {"yes": ["disk_full"], "no": [],
+            "inspect": [
+                {"path": "global_data",
+                 "contents": {"root": {"stats": {"total_bytes": 100, "used_bytes": 99}}}}
+        ]},
+        "not_full": {"yes": [], "no": ["disk_full"],
+            "inspect": [
+                {"path": "global_data",
+                 "contents": {"root": {"stats": {"total_bytes": 100, "used_bytes": 98}}}}
+        ]}
+    }
+}

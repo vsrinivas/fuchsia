@@ -1,0 +1,22 @@
+[
+    {
+        "path": "/hub/c/feedback_agent.cmx/1641492/out/inspect/root.inspect",
+        "contents": {
+            "root": {
+                "current_num_connections": 1,
+                "total_num_connections": 1
+            }
+        }
+    },
+    {
+        "path": "/hub/c/archivist.cmx/13141/out/global_data/storage_stats.inspect",
+        "contents": {
+            "root": {
+                 "stats": {
+                    "total_bytes": 120057757696,
+                    "used_bytes": 704512
+                }
+            }
+        }
+    }
+]

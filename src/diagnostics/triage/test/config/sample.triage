@@ -1,0 +1,24 @@
+{
+    "metrics": {
+        "c1": {"Eval": "other::m == 1"},
+        "c2": {"Eval": "other::m > 1"},
+        "total": {"Selector": "global_data:root.stats:total_bytes"},
+        "used": {"Selector": "global_data:root.stats:used_bytes"},
+        "ratio": {"Eval": "used / (total + 0.0)"},
+        "small": {"Eval": "ratio > 0.001"},
+        "tiny": {"Eval": "ratio > 0.00000001"}
+    },
+
+    "actions": {
+        "act2": {"trigger": "c2", "print": "yes on A!"},
+        "some_disk": {"trigger": "tiny", "print": "Used some of disk"},
+        "more_disk": {"trigger": "small", "print": "Used more of the disk"}
+    },
+
+    "tests": {
+        "trial1": {"yes": ["some_disk", "more_disk"], "no": [],
+            "inspect": [
+                {"path": "global_data",
+                 "contents": {"root": {"stats": {"total_bytes": 10, "used_bytes": 9}}}}]}
+    }
+}

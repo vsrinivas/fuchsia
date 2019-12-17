@@ -1,0 +1,65 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/host.gni")
+import("//build/package.gni")
+import("//build/package/component.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+
+rustc_binary("triage_bin") {
+  name = "triage"
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "//garnet/lib/rust/cm_json",
+
+    # "//garnet/public/rust/fuchsia-syslog",
+    # "//src/lib/argh",
+    "//third_party/rust_crates:clap",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:nom",
+    "//third_party/rust_crates:regex",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_derive",
+    "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:structopt",
+    "//third_party/rust_crates:tempfile",
+    "//third_party/rust_crates:valico",
+  ]
+}
+
+install_host_tools("install") {
+  deps = [
+    ":triage_bin",
+  ]
+
+  outputs = [
+    "triage",
+  ]
+}
+
+test_package("triage_tests") {
+  deps = [
+    ":triage_bin_test",
+  ]
+
+  tests = [
+    {
+      name = "triage_bin_test"
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":triage_tests",
+  ]
+}

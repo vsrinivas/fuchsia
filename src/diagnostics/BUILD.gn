@@ -19,6 +19,7 @@ group("tests") {
     "lib:tests",
     "streams:tests",
     "tool:host_tests",
+    "triage:tests",
 
     # "transit_bench",
   ]

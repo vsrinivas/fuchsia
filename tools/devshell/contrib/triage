@@ -1,0 +1,100 @@
+#!/bin/bash
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### generate a report of error conditions
+
+## usage: fx triage [--config <config-file>]
+##                  [--inspect <path-to-inspect.json>]
+##
+## Processes "fx bugreport" output looking for problems specified in a config
+## file. If no bugreport output is specified (no '--inspect') it runs a new
+## "fx bugreport" and uses its "inspect.json" file.
+##
+##    --config <config-file-or-dir>      Path to config file or dir
+##    --inspect <path-to-inspect.json>   Path to inspect.json
+##    --test                             Run self-tests (only)
+##
+## 0 or more --config paths may be given. Path is relative to CWD, or absolute.
+##   If path is a directory, path/*.triage will be loaded.
+##   If 0 paths are given, config defaults to
+##   /src/diagnostics/config/triage/*.triage.
+##
+## 0 or 1 --inspect paths may be given. Path is relative to CWD, or absolute.
+##   If no path is given, `fx bugreport` will be run using a temp directory.
+
+set -e
+trap 'echo Failed: ${BASH_COMMAND}' ERR
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"\
+/../lib/image_build_vars.sh
+
+# Defaults.
+config_paths=( )
+inspect=""
+testit=""
+
+# Flag parsing.
+while [[ "$1" =~ ^- ]]; do
+  case "$1" in
+    -h|--help)
+      fx-command-help
+      exit 0
+      ;;
+    --config)
+      shift
+      config_paths+=( "$1" )
+      ;;
+    --inspect)
+      shift
+      inspect="$1"
+      ;;
+    --test)
+      testit="yes"
+      ;;
+    *)
+      echo Bad option "$1"
+      echo
+      fx-command-help
+      exit 1
+  esac
+  shift
+done
+
+triage_exe="${HOST_OUT_DIR}/../host-tools/triage"
+
+if [[ -n "$testit" ]]; then
+  "${HOST_OUT_DIR}/../host-tools/triage_test" --target "${triage_exe}" \
+    --root "${FUCHSIA_DIR}"
+  exit
+fi
+
+if (( !"${#config_paths[@]}" )); then
+  config_paths=( "${FUCHSIA_DIR}/src/diagnostics/config/triage/" )
+fi
+
+config_files=( )
+for config_path in "${config_paths[@]}"; do
+  if [[ -d "${config_path}" ]] ; then
+    config_files+=( "${config_path}"/*.triage )
+  else
+    config_files+=( "${config_path}" )
+  fi
+done
+
+config_file_args=( )
+for config_file in "${config_files[@]}"; do
+  config_file_args+=("--config" "${config_file}")
+done
+
+# Post-flag processing.
+if [ -z "${inspect}" ]; then
+  temp_dir=$(mktemp -d)
+  trap 'rm -rf "${temp_dir}"' EXIT
+  fx-command-run bugreport --output-directory "${temp_dir}" > /dev/null
+  unzip "${temp_dir}/bugreport.zip" -d "${temp_dir}" > /dev/null
+  inspect="${temp_dir}/inspect.json"
+fi
+
+$triage_exe --inspect "${inspect}" "${config_file_args[@]}"

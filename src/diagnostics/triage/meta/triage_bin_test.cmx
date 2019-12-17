@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "test/triage_bin_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Launcher",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}
