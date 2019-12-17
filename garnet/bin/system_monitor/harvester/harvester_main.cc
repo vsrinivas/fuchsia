@@ -27,9 +27,9 @@ int main(int argc, char** argv) {
   // The wip number is incremented arbitrarily.
   // TODO(fxb/44) replace wip number with real version number.
   constexpr char VERSION_OUTPUT[] =
-      "System Monitor Harvester 20201119\n"
-      "+ app.startup\n"
-      "+ memory_digest\n";
+      "System Monitor Harvester 20191211\n"
+      "- memory_digest\n"
+      "+ separate cpu and memory gather\n";
 
   // Command line options.
   constexpr char COMMAND_LOCAL[] = "local";
@@ -92,17 +92,20 @@ int main(int argc, char** argv) {
   //       It's just a matter of what we choose to run on them.
   // Create a separate loop for quick calls (don't run long running functions on
   // this loop).
-  async::Loop fast_calls_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  // The loop that runs quick calls is in a separate thread.
-  fast_calls_loop.StartThread("fast-calls-thread");
   // The "slow" loop is used for potentially long running calls.
   async::Loop slow_calls_loop(&kAsyncLoopConfigAttachToCurrentThread);
-  harvester::Harvester harvester(root_resource, fast_calls_loop.dispatcher(),
-                                 slow_calls_loop.dispatcher(),
-                                 std::move(dockyard_proxy));
+  async::Loop fast_calls_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  // The loop that runs quick calls is in a separate thread.
+  zx_status_t status = fast_calls_loop.StartThread("fast-calls-thread");
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "fast_calls_loop.StartThread failed " << status;
+    exit(EXIT_CODE_GENERAL_ERROR);
+  }
+  FXL_LOG(INFO) << "main thread " << pthread_self();
+  harvester::Harvester harvester(root_resource, std::move(dockyard_proxy));
   harvester.GatherDeviceProperties();
-  harvester.GatherFastData();
-  harvester.GatherSlowData();
+  harvester.GatherFastData(fast_calls_loop.dispatcher());
+  harvester.GatherSlowData(slow_calls_loop.dispatcher());
   // The slow_calls_thread that runs heavier calls takes over this thread.
   slow_calls_loop.Run();
   fast_calls_loop.Quit();

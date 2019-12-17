@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "gather_processes_and_memory.h"
+
 #include <zircon/process.h>
 
 #include "dockyard_proxy_fake.h"
-#include "gather_tasks.h"
 #include "gtest/gtest.h"
 #include "root_resource.h"
 
-class GatherTasksCpuTest : public ::testing::Test {
+class GatherProcessesAndMemoryTest : public ::testing::Test {
  public:
   void SetUp() override {
     // Determine our KOID.
@@ -32,11 +33,11 @@ class GatherTasksCpuTest : public ::testing::Test {
   std::string self_koid_;
 };
 
-TEST_F(GatherTasksCpuTest, Inspectable) {
+TEST_F(GatherProcessesAndMemoryTest, MemoryStats) {
   zx_handle_t root_resource;
   ASSERT_EQ(harvester::GetRootResource(&root_resource), ZX_OK);
   harvester::DockyardProxyFake dockyard_proxy;
-  harvester::GatherTasks gatherer(root_resource, &dockyard_proxy);
+  harvester::GatherProcessesAndMemory gatherer(root_resource, &dockyard_proxy);
   gatherer.Gather();
 
   std::string test_string;
@@ -45,4 +46,9 @@ TEST_F(GatherTasksCpuTest, Inspectable) {
   // changes this may need to be updated. The intent is to test for a process
   // that is running.
   EXPECT_EQ("system_monitor_harvester_test.c", test_string);
+
+  dockyard::SampleValue test_value;
+  EXPECT_TRUE(dockyard_proxy.CheckValueSent(
+      KoidPath("memory_scaled_shared_bytes"), &test_value));
+  EXPECT_GT(test_value, 0U);
 }

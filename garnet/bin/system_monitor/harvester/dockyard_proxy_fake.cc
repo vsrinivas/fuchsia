@@ -52,6 +52,29 @@ DockyardProxyStatus DockyardProxyFake::SendStringSampleList(
   return DockyardProxyStatus::OK;
 }
 
+DockyardProxyStatus DockyardProxyFake::SendSamples(
+    const SampleList& int_samples, const StringSampleList& string_samples) {
+  // Either list may be empty, but not both (there's no use in calling this with
+  // empty lists, no work will be done).
+  EXPECT_FALSE(int_samples.empty() && string_samples.empty());
+
+  for (const auto& sample : int_samples) {
+#ifdef VERBOSE_OUTPUT
+    std::cout << "Sending " << sample.first << " " << sample.second
+              << std::endl;
+#endif  // VERBOSE_OUTPUT
+    sent_values_.emplace(sample.first, sample.second);
+  }
+  for (const auto& sample : string_samples) {
+#ifdef VERBOSE_OUTPUT
+    std::cout << "Sending " << sample.first << " " << sample.second
+              << std::endl;
+#endif  // VERBOSE_OUTPUT
+    sent_strings_.emplace(sample.first, sample.second);
+  }
+  return DockyardProxyStatus::OK;
+}
+
 bool DockyardProxyFake::CheckJsonSent(const std::string& dockyard_path,
                                       std::string* json) const {
   const auto& iter = sent_json_.find(dockyard_path);

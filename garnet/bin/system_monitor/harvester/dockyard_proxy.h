@@ -54,6 +54,10 @@ class DockyardProxy {
 
   virtual DockyardProxyStatus SendStringSampleList(
       const StringSampleList& list) = 0;
+
+  virtual DockyardProxyStatus SendSamples(
+      const SampleList& int_samples,
+      const StringSampleList& string_samples) = 0;
 };
 
 }  // namespace harvester

@@ -6,8 +6,21 @@
 #define GARNET_BIN_SYSTEM_MONITOR_HARVESTER_GATHER_TASKS_H_
 
 #include "gather_category.h"
+#include "task_tree.h"
 
 namespace harvester {
+
+class SampleBundle;
+
+void AddTaskBasics(SampleBundle* samples,
+                   const std::vector<TaskTree::Task>& tasks,
+                   dockyard::KoidType type);
+
+void AddProcessStats(SampleBundle* samples,
+                     const std::vector<TaskTree::Task>& tasks);
+
+void AddThreadStats(SampleBundle* samples,
+                    const std::vector<TaskTree::Task>& tasks);
 
 // Gather Samples for jobs, processes, and threads.
 class GatherTasks : public GatherCategory {

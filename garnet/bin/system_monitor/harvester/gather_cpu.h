@@ -9,6 +9,9 @@
 
 namespace harvester {
 
+class SampleBundle;
+void AddGlobalCpuSamples(SampleBundle* samples, zx_handle_t root_resource);
+
 class GatherCpu : public GatherCategory {
  public:
   GatherCpu(zx_handle_t root_resource, harvester::DockyardProxy* dockyard_proxy)

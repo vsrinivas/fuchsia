@@ -37,4 +37,11 @@ DockyardProxyStatus DockyardProxyLocal::SendStringSampleList(
   return DockyardProxyStatus::OK;
 }
 
+DockyardProxyStatus DockyardProxyLocal::SendSamples(
+    const SampleList& /*int_samples*/,
+    const StringSampleList& /*string_samples*/) {
+  FXL_LOG(INFO) << "DockyardProxyLocal::SendSamples";
+  return DockyardProxyStatus::OK;
+}
+
 }  // namespace harvester

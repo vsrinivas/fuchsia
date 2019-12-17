@@ -16,20 +16,17 @@
 #include "gather_introspection.h"
 #include "gather_memory.h"
 #include "gather_memory_digest.h"
+#include "gather_processes_and_memory.h"
 #include "gather_tasks.h"
-#include "gather_tasks_cpu.h"
+#include "gather_threads_and_cpu.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/inspect_deprecated/query/discover.h"
 
 namespace harvester {
 
 Harvester::Harvester(zx_handle_t root_resource,
-                     async_dispatcher_t* fast_dispatcher,
-                     async_dispatcher_t* slow_dispatcher,
                      std::unique_ptr<DockyardProxy> dockyard_proxy)
     : root_resource_(root_resource),
-      fast_dispatcher_(fast_dispatcher),
-      slow_dispatcher_(slow_dispatcher),
       dockyard_proxy_(std::move(dockyard_proxy)) {}
 
 void Harvester::GatherDeviceProperties() {
@@ -45,26 +42,25 @@ void Harvester::GatherDeviceProperties() {
   gather_tasks_.GatherDeviceProperties();
 }
 
-void Harvester::GatherFastData() {
+void Harvester::GatherFastData(async_dispatcher_t* dispatcher) {
   FXL_VLOG(1) << "Harvester::GatherFastData";
-  zx::time now = async::Now(fast_dispatcher_);
-
-  gather_cpu_.PostUpdate(fast_dispatcher_, now, zx::msec(100));
+  zx::time now = async::Now(dispatcher);
+  gather_threads_and_cpu_.PostUpdate(dispatcher, now, zx::msec(100));
 }
 
-void Harvester::GatherSlowData() {
+void Harvester::GatherSlowData(async_dispatcher_t* dispatcher) {
   FXL_VLOG(1) << "Harvester::GatherSlowData";
-  zx::time now = async::Now(slow_dispatcher_);
+  zx::time now = async::Now(dispatcher);
 
   // TODO(fxb/40872): re-enable once we need this data.
-  // gather_inspectable_.PostUpdate(slow_dispatcher_, now, zx::sec(3));
-  // gather_introspection_.PostUpdate(slow_dispatcher_, now, zx::sec(10));
-  gather_memory_.PostUpdate(slow_dispatcher_, now, zx::msec(100));
-  // Temporarily turn of digest and memory summary gathering (until after
-  // dog food release).
-  // gather_memory_digest_.PostUpdate(slow_dispatcher_, now, zx::msec(500));
-  gather_tasks_.PostUpdate(slow_dispatcher_, now, zx::sec(2));
-  gather_tasks_cpu_.PostUpdate(slow_dispatcher_, now, zx::msec(100));
+  // gather_inspectable_.PostUpdate(dispatcher, now, zx::sec(3));
+  // gather_introspection_.PostUpdate(dispatcher, now, zx::sec(10));
+
+  // Temporarily turn off digest and memory summary gathering (until after
+  // dog food).
+  // gather_memory_digest_.PostUpdate(dispatcher, now, zx::msec(500));
+
+  gather_processes_and_memory_.PostUpdate(dispatcher, now, zx::sec(2));
 }
 
 }  // namespace harvester

@@ -12,6 +12,7 @@
 
 #include "dockyard_proxy.h"
 #include "garnet/lib/system_monitor/proto/dockyard.grpc.pb.h"
+#include "sample_bundle.h"
 #include "src/lib/fxl/logging.h"
 
 namespace harvester {
@@ -140,6 +141,43 @@ DockyardProxyStatus DockyardProxyGrpc::SendStringSampleList(
   SampleListById by_id;
   auto ids_iter = dockyard_ids.begin();
   for (size_t i = 0; i < list.size(); ++i) {
+    dockyard::DockyardId path_id = *ids_iter++;
+    dockyard::DockyardId value_id = *ids_iter++;
+    by_id.emplace_back(path_id, value_id);
+  }
+  return ToDockyardProxyStatus(SendSampleListById(nanoseconds, by_id));
+}
+
+DockyardProxyStatus DockyardProxyGrpc::SendSamples(
+    const SampleList& int_samples, const StringSampleList& string_samples) {
+  // TODO(fxb/35): system_clock might be at usec resolution. Consider
+  // using high_resolution_clock.
+  auto now = std::chrono::system_clock::now();
+  uint64_t nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                             now.time_since_epoch())
+                             .count();
+
+  std::vector<const std::string*> dockyard_strings;
+  for (const auto& element : int_samples) {
+    dockyard_strings.emplace_back(&element.first);
+  }
+  for (const auto& element : string_samples) {
+    // Both the key (first) and value (second) are strings. Get IDs for each.
+    dockyard_strings.emplace_back(&element.first);
+    dockyard_strings.emplace_back(&element.second);
+  }
+
+  // Get an ID for each string (path or otherwise). The ID will then be used to
+  // in place of the strings.
+  std::vector<dockyard::DockyardId> dockyard_ids;
+  GetDockyardIdsForPaths(&dockyard_ids, dockyard_strings);
+  SampleListById by_id;
+  auto ids_iter = dockyard_ids.begin();
+  for (const auto& sample : int_samples) {
+    dockyard::DockyardId path_id = *ids_iter++;
+    by_id.emplace_back(path_id, sample.second);
+  }
+  for (size_t i = 0; i < string_samples.size(); ++i) {
     dockyard::DockyardId path_id = *ids_iter++;
     dockyard::DockyardId value_id = *ids_iter++;
     by_id.emplace_back(path_id, value_id);

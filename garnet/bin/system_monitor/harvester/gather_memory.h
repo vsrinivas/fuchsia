@@ -9,6 +9,10 @@
 
 namespace harvester {
 
+class SampleBundle;
+
+void AddGlobalMemorySamples(SampleBundle* samples, zx_handle_t root_resource);
+
 // Gather high level memory information from the kernel.
 class GatherMemory : public GatherCategory {
  public:

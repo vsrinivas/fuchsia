@@ -35,54 +35,44 @@ class SystemMonitorHarvesterTest : public ::testing::Test {
 
     EXPECT_EQ(harvester::GetRootResource(&root_resource), ZX_OK);
     test_harvester = std::make_unique<harvester::Harvester>(
-        root_resource, &fast_dispatcher, &slow_dispatcher,
-        std::move(dockyard_proxy));
+        root_resource, std::move(dockyard_proxy));
   }
 
-  async_dispatcher_t* GetHarvesterFastDispatcher() {
-    return test_harvester->fast_dispatcher_;
-  }
-  async_dispatcher_t* GetHarvesterSlowDispatcher() {
-    return test_harvester->slow_dispatcher_;
-  }
-  zx_handle_t GetHarvesterRootResource() {
+  zx_handle_t GetHarvesterRootResource() const {
     return test_harvester->root_resource_;
   }
-  zx::duration GetGatherCpuPeriod() {
-    return test_harvester->gather_cpu_.update_period_;
+  zx::duration GetGatherThreadsAndCpuPeriod() const {
+    return test_harvester->gather_threads_and_cpu_.update_period_;
   }
-  zx::duration GetGatherInspectablePeriod() {
+  zx::duration GetGatherInspectablePeriod() const {
     return test_harvester->gather_inspectable_.update_period_;
   }
-  zx::duration GetGatherIntrospectionPeriod() {
+  zx::duration GetGatherIntrospectionPeriod() const {
     return test_harvester->gather_introspection_.update_period_;
   }
-  zx::duration GetGatherMemoryPeriod() {
+  zx::duration GetGatherMemoryPeriod() const {
     return test_harvester->gather_memory_.update_period_;
   }
-  zx::duration GetGatherTasksPeriod() {
-    return test_harvester->gather_tasks_.update_period_;
+  zx::duration GetGatherProcessesAndMemoryPeriod() const {
+    return test_harvester->gather_processes_and_memory_.update_period_;
   }
 
   std::unique_ptr<harvester::Harvester> test_harvester;
-  AsyncDispatcherFake fast_dispatcher;
-  AsyncDispatcherFake slow_dispatcher;
   async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
   zx_handle_t root_resource;
 };
 
 TEST_F(SystemMonitorHarvesterTest, CreateHarvester) {
+  AsyncDispatcherFake fast_dispatcher;
+  AsyncDispatcherFake slow_dispatcher;
   EXPECT_EQ(root_resource, GetHarvesterRootResource());
-  EXPECT_EQ(&fast_dispatcher, GetHarvesterFastDispatcher());
-  EXPECT_EQ(&slow_dispatcher, GetHarvesterSlowDispatcher());
 
-  test_harvester->GatherFastData();
-  EXPECT_EQ(zx::msec(100), GetGatherCpuPeriod());
+  test_harvester->GatherFastData(&fast_dispatcher);
+  EXPECT_EQ(zx::msec(100), GetGatherThreadsAndCpuPeriod());
 
-  test_harvester->GatherSlowData();
+  test_harvester->GatherSlowData(&slow_dispatcher);
   // TODO(fxb/40872): re-enable once we need this data.
   // EXPECT_EQ(zx::sec(3), GetGatherInspectablePeriod());
   // EXPECT_EQ(zx::sec(10), GetGatherIntrospectionPeriod());
-  EXPECT_EQ(zx::msec(100), GetGatherMemoryPeriod());
-  EXPECT_EQ(zx::sec(2), GetGatherTasksPeriod());
+  EXPECT_EQ(zx::sec(2), GetGatherProcessesAndMemoryPeriod());
 }

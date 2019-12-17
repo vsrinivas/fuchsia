@@ -12,8 +12,9 @@
 #include "gather_introspection.h"
 #include "gather_memory.h"
 #include "gather_memory_digest.h"
+#include "gather_processes_and_memory.h"
 #include "gather_tasks.h"
-#include "gather_tasks_cpu.h"
+#include "gather_threads_and_cpu.h"
 
 class SystemMonitorHarvesterTest;
 
@@ -23,21 +24,18 @@ namespace harvester {
 // different types of Dockyard Samples as directed by the Harvester.
 class Harvester {
  public:
-  Harvester(zx_handle_t root_resource, async_dispatcher_t* fast_dispatcher,
-            async_dispatcher_t* slow_dispatcher,
+  Harvester(zx_handle_t root_resource,
             std::unique_ptr<DockyardProxy> dockyard_proxy);
 
   // Gather one-time data that doesn't vary over time. E.g. total RAM.
   void GatherDeviceProperties();
 
   // Gather a snapshot of data that may vary over time. E.g. used RAM.
-  void GatherFastData();
-  void GatherSlowData();
+  void GatherFastData(async_dispatcher_t* dispatcher);
+  void GatherSlowData(async_dispatcher_t* dispatcher);
 
  private:
   zx_handle_t root_resource_;
-  async_dispatcher_t* fast_dispatcher_;
-  async_dispatcher_t* slow_dispatcher_;
   std::unique_ptr<harvester::DockyardProxy> dockyard_proxy_;
 
   GatherCpu gather_cpu_{root_resource_, dockyard_proxy_.get()};
@@ -48,7 +46,10 @@ class Harvester {
   GatherMemoryDigest gather_memory_digest_{root_resource_,
                                            dockyard_proxy_.get()};
   GatherTasks gather_tasks_{root_resource_, dockyard_proxy_.get()};
-  GatherTasksCpu gather_tasks_cpu_{root_resource_, dockyard_proxy_.get()};
+  GatherThreadsAndCpu gather_threads_and_cpu_{root_resource_,
+                                              dockyard_proxy_.get()};
+  GatherProcessesAndMemory gather_processes_and_memory_{root_resource_,
+                                                        dockyard_proxy_.get()};
 
   friend class ::SystemMonitorHarvesterTest;
 };

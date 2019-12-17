@@ -49,6 +49,11 @@ class DockyardProxyGrpc : public DockyardProxy {
   DockyardProxyStatus SendStringSampleList(
       const StringSampleList& list) override;
 
+  // |DockyardProxy|.
+  DockyardProxyStatus SendSamples(
+      const SampleList& int_samples,
+      const StringSampleList& string_samples) override;
+
  private:
   // A local stub for the remote Dockyard instance.
   std::unique_ptr<dockyard_proto::Dockyard::Stub> stub_;

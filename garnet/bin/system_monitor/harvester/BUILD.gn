@@ -33,14 +33,20 @@ source_set("lib") {
     "gather_memory.h",
     "gather_memory_digest.cc",
     "gather_memory_digest.h",
+    "gather_processes_and_memory.cc",
+    "gather_processes_and_memory.h",
     "gather_tasks.cc",
     "gather_tasks.h",
-    "gather_tasks_cpu.cc",
-    "gather_tasks_cpu.h",
+    "gather_threads_and_cpu.cc",
+    "gather_threads_and_cpu.h",
     "harvester.cc",
     "harvester.h",
     "root_resource.cc",
     "root_resource.h",
+    "sample_bundle.cc",
+    "sample_bundle.h",
+    "task_tree.cc",
+    "task_tree.h",
   ]
 
   public_deps = [
@@ -106,11 +112,14 @@ executable("system_monitor_harvester_test") {
     "gather_introspection_test.cc",
     "gather_memory_digest_test.cc",
     "gather_memory_test.cc",
-    "gather_tasks_cpu_test.cc",
+    "gather_processes_and_memory_test.cc",
+    "gather_threads_and_cpu_test.cc",
     "gather_tasks_test.cc",
     "harvester_fake.h",
     "harvester_test.cc",
     "root_resource_test.cc",
+    "sample_bundle_test.cc",
+    "task_tree_test.cc",
   ]
 
   deps = [

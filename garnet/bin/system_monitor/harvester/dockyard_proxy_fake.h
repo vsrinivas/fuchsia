@@ -35,6 +35,11 @@ class DockyardProxyFake : public DockyardProxy {
   DockyardProxyStatus SendStringSampleList(
       const StringSampleList& list) override;
 
+  // |DockyardProxy|.
+  DockyardProxyStatus SendSamples(
+      const SampleList& int_samples,
+      const StringSampleList& string_samples) override;
+
   // Get the value (or string) for a given dockyard path. Used for testing.
   // Returns true if the value was sent at all; false if it wasn't sent.
   bool CheckJsonSent(const std::string& dockyard_path, std::string* json) const;
@@ -44,6 +49,10 @@ class DockyardProxyFake : public DockyardProxy {
                        std::string* string) const;
   bool CheckStringPrefixSent(const std::string& dockyard_path_prefix,
                              std::string* string) const;
+
+  size_t ValuesSentCount() { return sent_values_.size(); }
+  size_t StringsSentCount() { return sent_strings_.size(); }
+  size_t JsonSentCount() { return sent_json_.size(); }
 
  private:
   std::map<std::string, dockyard::SampleValue> sent_values_;

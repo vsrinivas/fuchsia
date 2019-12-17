@@ -7,32 +7,14 @@
 #include <zircon/status.h>
 
 #include "harvester.h"
+#include "sample_bundle.h"
 #include "src/lib/fxl/logging.h"
 
 namespace harvester {
 
-void GatherMemory::GatherDeviceProperties() {
-  const std::string DEVICE_TOTAL = "memory:device_total_bytes";
+void AddGlobalMemorySamples(SampleBundle* samples, zx_handle_t root_resource) {
   zx_info_kmem_stats_t stats;
-  zx_status_t err = zx_object_get_info(RootResource(), ZX_INFO_KMEM_STATS,
-                                       &stats, sizeof(stats),
-                                       /*actual=*/nullptr, /*avail=*/nullptr);
-  if (err != ZX_OK) {
-    FXL_LOG(ERROR) << ZxErrorString("ZX_INFO_KMEM_STATS", err);
-    return;
-  }
-  SampleList list;
-  list.emplace_back(DEVICE_TOTAL, stats.total_bytes);
-  DockyardProxyStatus status = Dockyard().SendSampleList(list);
-  if (status != DockyardProxyStatus::OK) {
-    FXL_LOG(ERROR) << DockyardErrorString("SendSampleList", status)
-                   << " The total memory value will be missing";
-  }
-}
-
-void GatherMemory::Gather() {
-  zx_info_kmem_stats_t stats;
-  zx_status_t err = zx_object_get_info(RootResource(), ZX_INFO_KMEM_STATS,
+  zx_status_t err = zx_object_get_info(root_resource, ZX_INFO_KMEM_STATS,
                                        &stats, sizeof(stats),
                                        /*actual=*/nullptr, /*avail=*/nullptr);
   if (err != ZX_OK) {
@@ -56,25 +38,43 @@ void GatherMemory::Gather() {
   const std::string IPC = "memory:ipc_bytes";
   const std::string OTHER = "memory:device_other_bytes";
 
-  SampleList list;
   // Memory for the entire machine.
   // Note: stats.total_bytes is recorded by InitialData().
-  list.push_back(std::make_pair(DEVICE_FREE, stats.free_bytes));
+  samples->AddIntSample(DEVICE_FREE, stats.free_bytes);
   // Memory in the kernel.
-  list.push_back(std::make_pair(KERNEL_TOTAL, stats.total_heap_bytes));
-  list.push_back(std::make_pair(KERNEL_FREE, stats.free_heap_bytes));
-  list.push_back(std::make_pair(KERNEL_OTHER, stats.wired_bytes));
+  samples->AddIntSample(KERNEL_TOTAL, stats.total_heap_bytes);
+  samples->AddIntSample(KERNEL_FREE, stats.free_heap_bytes);
+  samples->AddIntSample(KERNEL_OTHER, stats.wired_bytes);
   // Categorized memory.
-  list.push_back(std::make_pair(MMU_OVERHEAD, stats.mmu_overhead_bytes));
-  list.push_back(std::make_pair(VMO, stats.vmo_bytes));
-  list.push_back(std::make_pair(IPC, stats.ipc_bytes));
-  list.push_back(std::make_pair(OTHER, stats.other_bytes));
+  samples->AddIntSample(MMU_OVERHEAD, stats.mmu_overhead_bytes);
+  samples->AddIntSample(VMO, stats.vmo_bytes);
+  samples->AddIntSample(IPC, stats.ipc_bytes);
+  samples->AddIntSample(OTHER, stats.other_bytes);
+}
 
+void GatherMemory::GatherDeviceProperties() {
+  const std::string DEVICE_TOTAL = "memory:device_total_bytes";
+  zx_info_kmem_stats_t stats;
+  zx_status_t err = zx_object_get_info(RootResource(), ZX_INFO_KMEM_STATS,
+                                       &stats, sizeof(stats),
+                                       /*actual=*/nullptr, /*avail=*/nullptr);
+  if (err != ZX_OK) {
+    FXL_LOG(ERROR) << ZxErrorString("ZX_INFO_KMEM_STATS", err);
+    return;
+  }
+  SampleList list;
+  list.emplace_back(DEVICE_TOTAL, stats.total_bytes);
   DockyardProxyStatus status = Dockyard().SendSampleList(list);
   if (status != DockyardProxyStatus::OK) {
     FXL_LOG(ERROR) << DockyardErrorString("SendSampleList", status)
-                   << " Overall memory samples will be missing";
+                   << " The total memory value will be missing";
   }
+}
+
+void GatherMemory::Gather() {
+  SampleBundle samples;
+  AddGlobalMemorySamples(&samples, RootResource());
+  samples.Upload(DockyardPtr());
 }
 
 }  // namespace harvester
