@@ -57,7 +57,7 @@ fuzzer("encoding_buffer_fuzzer") {
   deps = [
     ":encoding",
     ":testing_fidl",
-    "//sdk/fidl/fuchsia.ledger.cloud",
+    "//src/ledger/fidl:fuchsia.ledger.cloud",
     "//src/ledger/lib/convert",
   ]
 }

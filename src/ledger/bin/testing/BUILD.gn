@@ -52,7 +52,6 @@ source_set("lib") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.ledger",
-    "//sdk/fidl/fuchsia.ledger.cloud",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/ledger/bin/app:flags",
@@ -62,6 +61,7 @@ source_set("lib") {
     "//src/ledger/bin/fidl/include",
     "//src/ledger/bin/public",
     "//src/ledger/bin/storage/public:public",
+    "//src/ledger/fidl:fuchsia.ledger.cloud",
     "//src/ledger/lib/convert",
     "//src/ledger/lib/loop_fixture",
     "//src/ledger/lib/rng:testing",
@@ -130,13 +130,13 @@ source_set("get_ledger") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.ledger",
-    "//sdk/fidl/fuchsia.ledger.cloud",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/ledger/bin/app:flags",
     "//src/ledger/bin/fidl/include",
     "//src/ledger/bin/platform",
     "//src/ledger/bin/public",
+    "//src/ledger/fidl:fuchsia.ledger.cloud",
     "//src/ledger/lib/convert",
     "//src/ledger/lib/vmo",
     "//third_party/abseil-cpp",

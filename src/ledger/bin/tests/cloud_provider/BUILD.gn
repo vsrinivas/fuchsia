@@ -24,10 +24,10 @@ executable("cloud_provider") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.ledger.cloud",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/ledger/bin/testing:gtest_main",
+    "//src/ledger/fidl:fuchsia.ledger.cloud",
     "//src/ledger/lib/encoding",
     "//src/ledger/lib/loop_fixture",
     "//third_party/abseil-cpp",

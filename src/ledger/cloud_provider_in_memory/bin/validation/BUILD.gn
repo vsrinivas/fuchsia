@@ -13,8 +13,8 @@ executable("validation") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.ledger.cloud",
     "//src/ledger/bin/tests/cloud_provider/launcher",
+    "//src/ledger/fidl:fuchsia.ledger.cloud",
     "//src/ledger/lib/convert",
     "//third_party/abseil-cpp",
     "//zircon/public/lib/async-cpp",

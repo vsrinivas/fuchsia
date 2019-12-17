@@ -45,7 +45,6 @@ source_set("sessionmgr_lib") {
     "//peridot/lib/scoped_tmpfs",
     "//sdk/fidl/fuchsia.app.discover",
     "//sdk/fidl/fuchsia.ledger",
-    "//sdk/fidl/fuchsia.ledger.cloud",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.modular.internal",

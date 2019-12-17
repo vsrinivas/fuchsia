@@ -21,13 +21,13 @@ source_set("testing") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.ledger.cloud",
     "//src/ledger/bin/cloud_sync/public",
     "//src/ledger/bin/encryption/fake",
     "//src/ledger/bin/fidl/include",
     "//src/ledger/bin/storage/fake:lib",
     "//src/ledger/bin/storage/public",
     "//src/ledger/bin/storage/testing",
+    "//src/ledger/fidl:fuchsia.ledger.cloud",
   ]
 
   deps = [

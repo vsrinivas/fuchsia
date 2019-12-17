@@ -23,7 +23,7 @@ source_set("public") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.ledger.cloud",
+    "//src/ledger/fidl:fuchsia.ledger.cloud",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]

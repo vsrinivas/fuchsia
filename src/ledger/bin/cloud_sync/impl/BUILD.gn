@@ -35,13 +35,13 @@ source_set("impl") {
 
   public_deps = [
     ":entry_payload",
-    "//sdk/fidl/fuchsia.ledger.cloud",
     "//src/ledger/bin/cloud_sync/public",
     "//src/ledger/bin/encryption/impl",
     "//src/ledger/bin/encryption/public",
     "//src/ledger/bin/environment",
     "//src/ledger/bin/fidl/include",
     "//src/ledger/bin/storage/public",
+    "//src/ledger/fidl:fuchsia.ledger.cloud",
     "//src/ledger/lib/backoff",
     "//src/ledger/lib/coroutine",
     "//src/ledger/lib/logging",
