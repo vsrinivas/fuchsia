@@ -8,6 +8,7 @@ source_set("zircon") {
     "internal.c",
     "take_startup_handle.c",
     "thrd_get_zx_handle.c",
+    "utc.c",
   ]
   deps = [
     "$zx/system/ulib/runtime",

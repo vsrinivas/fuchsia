@@ -145,6 +145,13 @@ struct zx_proc_args {
 // Used by devmgr and devhosts
 #define PA_RESOURCE 0x3Fu
 
+// --- Clock handles ---
+//
+// A clock which provides access to UTC.  Used by runtimes which are expected to
+// provide access to UTC via their standard libraries.
+//
+#define PA_CLOCK_UTC 0x40
+
 // --- Various ---
 
 // Handle types for one-off use and prototyping

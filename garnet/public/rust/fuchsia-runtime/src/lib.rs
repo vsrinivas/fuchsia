@@ -134,6 +134,12 @@ pub enum HandleType {
     /// Equivalent to PA_RESOURCE.
     Resource = 0x3F,
 
+    /// A Handle to a clock object representing UTC.  Used by runtimes to gain
+    /// access to UTC time.
+    ///
+    /// Equivalent to PA_CLOCK_UTC,
+    ClockUtc = 0x40,
+
     /// A handle type with user-defined meaning.
     ///
     /// Equivalent to PA_USER0.

@@ -4,6 +4,7 @@
 #include <string.h>
 #include <zircon/sanitizer.h>
 #include <zircon/syscalls.h>
+#include <zircon/utc.h>
 
 #include <runtime/thread.h>
 
@@ -20,6 +21,7 @@ struct start_params {
   zx_handle_t* handles;
   uint32_t* handle_info;
   uint32_t nbytes, nhandles;
+  zx_handle_t utc_reference;
 };
 
 // This gets called via inline assembly below, after switching onto
@@ -30,6 +32,23 @@ static void start_main(const struct start_params* p) {
   uint32_t argc = p->procargs->args_num;
   uint32_t envc = p->procargs->environ_num;
   uint32_t namec = p->procargs->names_num;
+
+  // Now that it is safe to call safe-stack enabled functions, go ahead and install the UTC
+  // reference clock, if one was provided to us.
+  if (p->utc_reference != ZX_HANDLE_INVALID) {
+    zx_handle_t old_clock = ZX_HANDLE_INVALID;
+    _zx_utc_reference_swap(p->utc_reference, &old_clock);
+
+    // Success or fail, libc has consumed our clock handle.  It no longer
+    // belongs to us, so don't keep track of it.
+    ((struct start_params*)p)->utc_reference = ZX_HANDLE_INVALID;
+
+    // If there had been a clock previously, we now own it, but have no use for
+    // it.  Simply close it.
+    if (old_clock != ZX_HANDLE_INVALID) {
+      _zx_handle_close(old_clock);
+    }
+  }
 
   // Use a single contiguous buffer for argv and envp, with two
   // extra words of terminator on the end.  In traditional Unix
@@ -128,8 +147,10 @@ NO_ASAN __NO_SAFESTACK _Noreturn void __libc_start_main(zx_handle_t bootstrap,
                               &p.handle_info);
   }
   zx_handle_t main_thread_handle = ZX_HANDLE_INVALID;
+  p.utc_reference = ZX_HANDLE_INVALID;
   processargs_extract_handles(p.nhandles, handles, p.handle_info, &__zircon_process_self,
-                              &__zircon_job_default, &__zircon_vmar_root_self, &main_thread_handle);
+                              &__zircon_job_default, &__zircon_vmar_root_self, &main_thread_handle,
+                              &p.utc_reference);
 
   atomic_store(&libc.thread_count, 1);
 

@@ -123,13 +123,16 @@ zx_test("debugdata") {
   ]
 }
 
-zx_test("clock-gettime") {
+zx_test("posix-clocks") {
   test_group = "c"
   sources = [
-    "clock-gettime.cc",
+    "posix-clocks.cc",
   ]
   deps = [
+    "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
   ]
 }
@@ -137,9 +140,9 @@ zx_test("clock-gettime") {
 group("test") {
   testonly = true
   deps = [
-    ":clock-gettime",
     ":debugdata",
     ":noop-tests.instrumented",
+    ":posix-clocks",
   ]
   foreach(case, default_stack_size_cases) {
     deps += [ ":default-stack-size-${case.name}" ]

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_PROCESSARGS_PROCESSARGS_H_
+#define LIB_PROCESSARGS_PROCESSARGS_H_
 
 #include <stdalign.h>
 #include <zircon/compiler.h>
@@ -34,7 +35,8 @@ zx_status_t processargs_read(zx_handle_t bootstrap, void* buffer, uint32_t nbyte
 // handle_info)
 void processargs_extract_handles(uint32_t nhandles, zx_handle_t handles[], uint32_t handle_info[],
                                  zx_handle_t* process_self, zx_handle_t* job_default,
-                                 zx_handle_t* vmar_root_self, zx_handle_t* thread_self);
+                                 zx_handle_t* vmar_root_self, zx_handle_t* thread_self,
+                                 zx_handle_t* utc_reference);
 
 // This assumes processargs_read has already succeeded on the same
 // buffer.  It unpacks the argument and environment strings into arrays
@@ -47,3 +49,5 @@ zx_status_t processargs_strings(void* msg, uint32_t bytes, char* argv[], char* e
                                 char* names[]);
 
 __END_CDECLS
+
+#endif  // LIB_PROCESSARGS_PROCESSARGS_H_

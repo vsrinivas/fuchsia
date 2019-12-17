@@ -302,6 +302,7 @@ if (current_cpu != "") {
       "trace",
       "usb",
       "usb-virtual-bus:test",
+      "utc-procargs",
       "util",
       "vdso",
       "vdso-base",

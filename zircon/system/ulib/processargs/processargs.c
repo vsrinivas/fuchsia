@@ -57,7 +57,8 @@ zx_status_t processargs_read(zx_handle_t bootstrap, void* buffer, uint32_t nbyte
 
 void processargs_extract_handles(uint32_t nhandles, zx_handle_t handles[], uint32_t handle_info[],
                                  zx_handle_t* process_self, zx_handle_t* job_default,
-                                 zx_handle_t* vmar_root_self, zx_handle_t* thread_self) {
+                                 zx_handle_t* vmar_root_self, zx_handle_t* thread_self,
+                                 zx_handle_t* utc_reference) {
   // Find the handles we're interested in among what we were given.
   for (uint32_t i = 0; i < nhandles; ++i) {
     switch (PA_HND_TYPE(handle_info[i])) {
@@ -96,6 +97,17 @@ void processargs_extract_handles(uint32_t nhandles, zx_handle_t handles[], uint3
 
       case PA_THREAD_SELF:
         *thread_self = handles[i];
+        handles[i] = ZX_HANDLE_INVALID;
+        handle_info[i] = 0;
+        break;
+
+      case PA_CLOCK_UTC:
+        // Do not leak handles if our launcher was foolish enough to pass us
+        // multiple UTC references.
+        if (*utc_reference != ZX_HANDLE_INVALID) {
+          _zx_handle_close(*utc_reference);
+        }
+        *utc_reference = handles[i];
         handles[i] = ZX_HANDLE_INVALID;
         handle_info[i] = 0;
         break;
