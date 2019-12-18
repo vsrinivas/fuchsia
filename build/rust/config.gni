@@ -79,19 +79,18 @@ if (is_mac) {
 
 assert(current_os == "mac" || current_os == "linux" || current_os == "fuchsia",
        "current_os was neither mac, linux, nor fuchsia")
+assert(current_cpu == "x64" || current_cpu == "arm64")
 if (current_os == "mac") {
-  target = "x86_64-apple-darwin"
-  assert(current_cpu == "x64")
+  _suffix = "apple-darwin"
 } else if (current_os == "linux") {
-  assert(current_cpu == "x64")
-  target = "x86_64-unknown-linux-gnu"
+  _suffix = "unknown-linux-gnu"
 } else if (current_os == "fuchsia") {
-  assert(current_cpu == "x64" || current_cpu == "arm64")
-  if (current_cpu == "x64") {
-    target = "x86_64-$rust_toolchain_triple_suffix"
-  } else if (current_cpu == "arm64") {
-    target = "aarch64-$rust_toolchain_triple_suffix"
-  }
+  _suffix = rust_toolchain_triple_suffix
+}
+if (current_cpu == "x64") {
+  target = "x86_64-${_suffix}"
+} else if (current_cpu == "arm64") {
+  target = "aarch64-${_suffix}"
 }
 
 _host_os_cpu = "${host_os}-${host_cpu}"

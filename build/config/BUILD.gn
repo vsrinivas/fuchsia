@@ -2,7 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/clang/clang.gni")
 import("//build/config/compiler.gni")
+import("//build/rust/config.gni")
 import("//build/toolchain/goma.gni")
 
 declare_args() {
@@ -36,7 +38,7 @@ config("compiler") {
   cflags_objcc = [ "-fvisibility-inlines-hidden" ]
   ldflags = []
   defines = []
-  configs = []
+  configs = [ ":toolchain_version_stamp" ]
 
   if (current_os == "fuchsia") {
     configs += [ "//build/config/fuchsia:compiler" ]
@@ -65,6 +67,29 @@ config("compiler") {
 
   asmflags += cflags
   asmflags += cflags_c
+}
+
+# We want to force a recompile and relink of the world whenever our toolchain
+# changes since artifacts from an older version of the toolchain may or may not
+# be compatible with newer ones.
+#
+# To achieve this, we insert an unused flag in the compile line.
+config("toolchain_version_stamp") {
+  if (clang_prefix == default_clang_prefix) {
+    clang_version = read_file(
+            "//prebuilt/third_party/clang/${host_platform}/.versions/clang.cipd_version",
+            "json")
+    defines = [ "TOOLCHAIN_VERSION=${clang_version.instance_id}" ]
+  }
+  if (rustc_prefix == default_rustc_prefix) {
+    rustc_version = read_file(
+            "//prebuilt/third_party/rust/${host_platform}/.versions/rust.cipd_version",
+            "json")
+    rustflags = [
+      "--cfg",
+      "__rust_toolchain=\"${rustc_version.instance_id}\"",
+    ]
+  }
 }
 
 config("relative_paths") {

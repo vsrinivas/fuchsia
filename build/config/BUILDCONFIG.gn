@@ -234,7 +234,10 @@ set_defaults("static_library") {
 set_defaults("shared_library") {
   configs = default_shared_library_configs
 }
-set_defaults("proc_macro") {
+set_defaults("rust_library") {
+  configs = default_common_binary_configs
+}
+set_defaults("rust_proc_macro") {
   configs = default_shared_library_configs
 }
 set_defaults("loadable_module") {
