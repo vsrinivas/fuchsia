@@ -71,7 +71,7 @@ declaration-list = ( declaration , ";" )* ;
 compound-identifier = IDENTIFIER ( "." , IDENTIFIER )* ;
 
 declaration = bits-declaration | const-declaration | enum-declaration | protocol-declaration
-            | struct-declaration | table-declaration | union-declaration | xunion-declaration
+            | struct-declaration | table-declaration | union-declaration
             | type-alias-declaration | service-declaration ;
 
 const-declaration = ( attribute-list ) , "const" , type-constructor , IDENTIFIER , "=" , constant ;
@@ -102,23 +102,17 @@ parameter = type-constructor , IDENTIFIER ;
 
 protocol-compose = "compose" , compound-identifier ;
 
-struct-declaration = ( attribute-list ) , "struct" , IDENTIFIER , "{" , ( struct-field , ";" )* , "}" ;
+struct-declaration = ( attribute-list ) , "struct" , IDENTIFIER , "{" , ( member-field , ";" )* , "}" ;
 
-struct-field = ( attribute-list ) , type-constructor , IDENTIFIER , ( "=" , constant ) ;
+union-declaration = ( attribute-list ) , ( "strict" ) , "union" , IDENTIFIER , "{" , ( ordinal-member-field , ";" )+ , "}" ;
 
-union-declaration = ( attribute-list ) , "union" , IDENTIFIER , "{" , ( union-field , ";" )+ , "}" ;
+table-declaration = ( attribute-list ) , ( "strict" ) , "table" , IDENTIFIER , "{" , ( ordinal-member-field , ";" )* , "}" ;
 
-xunion-declaration = ( attribute-list ) , ( "strict" ) , "xunion" , IDENTIFIER , "{" , ( union-field , ";" )* , "}" ;
+member-field = ( attribute-list ) , type-constructor , IDENTIFIER , ( "=" , constant ) ;
 
-union-field = ( attribute-list ) , type-constructor , IDENTIFIER ;
+ordinal-member-field = ( attribute-list ) , ordinal , ":" , ordinal-member-field-body ; [NOTE 5]
 
-table-declaration = ( attribute-list ) , ( "strict" ) , "table" , IDENTIFIER , "{" , ( table-field , ";" )* , "}" ;
-
-table-field = ( attribute-list ) , table-field-ordinal , table-field-declaration ; [NOTE 5]
-
-table-field-ordinal = ordinal , ":" ;
-
-table-field-declaration = struct-field | "reserved" ;
+ordinal-member-field-body = member-field | "reserved";
 
 type-alias-declaration = ( attribute-list ) , "using" , IDENTIFIER ,  "=" , type-constructor ;
 
