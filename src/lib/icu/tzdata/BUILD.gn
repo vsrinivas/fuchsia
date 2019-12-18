@@ -61,8 +61,8 @@ icu_tzdata_config_data("icu_tzdata_for_tz_util_test") {
 # in out-of-tree, in Chromium.  The test must have this package available when
 # running in a Fuchsia environment, as it will attempt to load the appropriate
 # library.
-icu_tzdata_config_data("icu_tzdata_for_chromium_base_icu_fuchsia_unittests") {
-  for_pkg = "base_icu_fuchsia_unittests"
+icu_tzdata_config_data("icu_tzdata_for_chromium_base_unittests") {
+  for_pkg = "base_unittests"
   data_version = "44"
 }
 
@@ -87,7 +87,7 @@ _default_icu_tzdata("flutter_jit_runner") {
 
 group("config") {
   public_deps = [
-    ":icu_tzdata_for_chromium_base_icu_fuchsia_unittests",
+    ":icu_tzdata_for_chromium_base_unittests",
     ":icu_tzdata_for_dart_aot_product_runner",
     ":icu_tzdata_for_dart_aot_runner",
     ":icu_tzdata_for_dart_aot_runner",
