@@ -212,6 +212,11 @@ void ImagePipe2::AddImage(uint32_t image_id, uint32_t buffer_collection_id,
       return;
     }
     FXL_DCHECK(info.buffer_collection_info.buffer_count > 0);
+    for (uint32_t i = 0; i < info.buffer_collection_info.buffer_count; ++i) {
+      const char* kVmoName = "ImagePipe2Surface";
+      info.buffer_collection_info.buffers[i].vmo.set_property(ZX_PROP_NAME, kVmoName,
+                                                              strlen(kVmoName));
+    }
   }
 
   // Check given |buffer_collection_index| against actually allocated number of buffers.
