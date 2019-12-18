@@ -6,6 +6,7 @@ assert(toolchain.environment == "efi")
 
 source_set("lib") {
   sources = [
+    "cmdline.c",
     "console-printf.c",
     "ctype.c",
     "efi/guids.c",
@@ -15,6 +16,7 @@ source_set("lib") {
     "stdlib.c",
     "string.c",
     "strings.c",
+    "utf_conversion.c",
     "xefi.c",
   ]
   deps = [

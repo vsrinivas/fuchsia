@@ -7,6 +7,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <utf_conversion.h>
+#include <xefi.h>
 
 #include "osboot.h"
 
@@ -139,6 +141,67 @@ restart:
     size_t klen = ptr - key;
     entry_add(key, klen, NULL, 0);
   }
+}
+
+// Get any load options from the image and append them to the boot arguments.
+void cmdline_append_load_options(void) {
+  size_t args_len = 0;
+
+  efi_status status;
+  size_t options_len;
+  void* options;
+  char16_t* wptr;
+  uint8_t* args;
+  uint8_t* ptr;
+
+  status = xefi_get_load_options(&options_len, &options);
+
+  if (status != EFI_SUCCESS) {
+    printf("xefi_get_load_options failed: %zu\n", status);
+    return;
+  }
+
+  args_len = options_len / sizeof(char16_t) + 1;
+  status = gBS->AllocatePool(EfiLoaderData, args_len, (void**)&args);
+  if (status != EFI_SUCCESS) {
+    printf("allocating arg memory failed: %zu\n", status);
+    goto alloc_fail;
+  }
+
+  wptr = options;
+  ptr = args;
+  zx_status_t result;
+  size_t converted_args_len = args_len;
+
+  result = utf16_to_utf8(options, options_len, args, &converted_args_len);
+  if (result != ZX_OK) {
+    printf("Could not convert options from UTF16->UTF8: %d\n", result);
+    goto fail;
+  }
+
+  if (converted_args_len > args_len) {
+    converted_args_len = args_len;
+  }
+  args[converted_args_len] = '\0';
+
+  // Skip first argument which is the filename.
+  ptr = args;
+  while (*ptr && *ptr != ' ') {
+    ptr++;
+    converted_args_len--;
+  }
+  while (*ptr && *ptr == ' ') {
+    ptr++;
+    converted_args_len--;
+  }
+
+  cmdline_append((char*)ptr, converted_args_len);
+
+fail:
+  gBS->FreePool(args);
+
+alloc_fail:
+  gBS->FreePool(options);
 }
 
 const char* cmdline_get(const char* key, const char* _default) {
