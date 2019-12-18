@@ -168,6 +168,7 @@ sdk_molecule("core_tools") {
     "//garnet/go/src/fidl:fidlgen_sdk",
     "//garnet/go/src/pm:pm_bin_sdk",
     "//tools/net/dev_finder:dev_finder_sdk",
+    "//tools/net/dev_finder:device-finder_sdk",
     "//zircon/public/tool/bootserver:bootserver_sdk",
     "//zircon/public/tool/fidl-format:fidl-format_sdk",
     "//zircon/public/tool/fidlc:fidlc_sdk",

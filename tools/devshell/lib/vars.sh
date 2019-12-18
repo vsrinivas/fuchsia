@@ -181,26 +181,29 @@ function get-device-name {
 }
 
 function get-fuchsia-device-addr {
-  fx-command-run netaddr "$(get-device-name)" --fuchsia "$@"
-}
-
-# if $1 is "-d" or "--device" return
-#   - the netaddr if $2 looks like foo-bar-baz-flarg
-#     OR
-#   - $2 if it doesn't
-# else return ""
-function get-device-addr {
-  device=""
-  if [[ "$1" == "-d" || "$1" == "--device" ]]; then
-    shift
-    if [[ "$1" == *"-"* ]]; then
-      device="$(fx-command-run netaddr "$1" --fuchsia)"
-    else
-      device="$1"
-    fi
-    shift
+  fx-config-read
+  local -r device="$(get-device-name)"
+  local -r finder="${FUCHSIA_BUILD_DIR}/host-tools/device-finder"
+  if [[ ! -f "${finder}" ]]; then
+    fx-error "Device finder binary not found."
+    fx-error "Run \"fx build\" to build host tools."
+    exit 1
   fi
-  echo "${device}"
+  case "$device" in
+    "")
+        local -r output="$("${finder}" list --netboot --ipv4=false --mdns=false "$@")" || exit $?
+        if [[ "$(echo "${output}" | wc -l)" -gt "1" ]]; then
+          fx-error "Multiple devices found."
+          fx-error "Please specify one of the following (check network if this fails):"
+          local -r devices="$("${finder}" list --netboot --ipv4=false --mdns=false --full)" || exit $?
+          while IFS="" read -r line; do
+            fx-error "\t${line}"
+          done < <(printf '%s\n' "${devices}")
+          exit 1
+        fi
+        echo "${output}" ;;
+     *) "${finder}" resolve --netboot --ipv4=false --mdns=false "$@" "$device" ;;
+  esac
 }
 
 function fx-find-command {

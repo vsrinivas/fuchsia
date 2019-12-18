@@ -14,6 +14,7 @@ group("tools") {
     "//tools/fidlcat:fidlcat_host",
     "//tools/make-efi:host",
     "//tools/make-fuchsia-vol:host",
+    "//tools/net/dev_finder:host",
   ]
 }
 

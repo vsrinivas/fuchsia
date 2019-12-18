@@ -26,9 +26,30 @@ go_binary("dev_finder") {
   sdk_category = "partner"
 }
 
+# TODO(awdavies): Get rid of the underscore-named binary. This will involve:
+# -- A duplicate binary.
+# -- Renaming all code that references dev_finder to device-finder.
+# -- Removing "dev_finder"
+go_binary("device-finder") {
+  gopackage = "go.fuchsia.dev/fuchsia/tools/net/dev_finder"
+  deps = [
+    ":main",
+  ]
+  sdk_category = "partner"
+}
+
 go_test("dev_finder_tests") {
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/net/dev_finder" ]
   deps = [
     ":main",
+  ]
+}
+
+install_host_tools("host") {
+  deps = [
+    ":device-finder",
+  ]
+  outputs = [
+    "device-finder",
   ]
 }
