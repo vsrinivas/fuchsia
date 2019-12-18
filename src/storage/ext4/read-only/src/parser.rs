@@ -168,7 +168,7 @@ impl<T: 'static + Reader> Parser<T> {
         extent: &Extent,
         mut allowance: usize,
     ) -> Result<Vec<u8>, ParsingError> {
-        let block_number = (extent.e_start_hi.get() as u64) << 32 | extent.e_start_lo.get() as u64;
+        let block_number = extent.target_block_num();
         let block_count = extent.e_len.get();
         let block_size = self.block_size()?;
         let mut read_len;
@@ -214,8 +214,7 @@ impl<T: 'static + Reader> Parser<T> {
                 )?;
 
                 let mut index = 0usize;
-                let start_index =
-                    (e.e_start_hi.get() as usize) << 32 | e.e_start_lo.get() as usize * block_size;
+                let start_index = e.target_block_num() as usize * block_size;
 
                 // The `e2d_reclen` of the last entry will be large enough be approximately the
                 // end of the block.

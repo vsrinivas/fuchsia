@@ -95,7 +95,7 @@ pub struct Extent {
     pub e_len: LEU16,
     /// High 16 bits of physical block.
     pub e_start_hi: LEU16,
-    /// Low 16 bits of physical block.
+    /// Low 32 bits of physical block.
     pub e_start_lo: LEU32,
 }
 // Make sure our struct's size matches the Ext4 spec.
@@ -721,12 +721,26 @@ impl DirEntry2 {
     }
 }
 
+impl Extent {
+    /// Block number that this Extent points to.
+    pub fn target_block_num(&self) -> u64 {
+        (self.e_start_hi.get() as u64) << 32 | self.e_start_lo.get() as u64
+    }
+}
+
+impl ExtentIndex {
+    /// Block number that this ExtentIndex points to.
+    pub fn target_block_num(&self) -> u64 {
+        (self.ei_leaf_hi.get() as u64) << 32 | self.ei_leaf_lo.get() as u64
+    }
+}
+
 #[cfg(test)]
 mod test {
     use {
         super::{
-            FeatureIncompat, ParseToStruct, ParsingError, SuperBlock, FIRST_BG_PADDING, LEU16,
-            LEU32, LEU64, REQUIRED_FEATURE_INCOMPAT, SB_MAGIC,
+            Extent, ExtentIndex, FeatureIncompat, ParseToStruct, ParsingError, SuperBlock,
+            FIRST_BG_PADDING, LEU16, LEU32, LEU64, REQUIRED_FEATURE_INCOMPAT, SB_MAGIC,
         },
         crate::readers::VecReader,
         std::{fs, sync::Arc},
@@ -913,5 +927,29 @@ mod test {
                 )
             ),
         }
+    }
+
+    /// Covers Extent::target_block_num.
+    #[test]
+    fn extent_target_block_num() {
+        let e = Extent {
+            e_blk: LEU32::new(0),
+            e_len: LEU16::new(0),
+            e_start_hi: LEU16::new(0x4444),
+            e_start_lo: LEU32::new(0x6666_8888),
+        };
+        assert_eq!(e.target_block_num(), 0x4444_6666_8888);
+    }
+
+    /// Covers ExtentIndex::target_block_num.
+    #[test]
+    fn extent_index_target_block_num() {
+        let e = ExtentIndex {
+            ei_blk: LEU32::new(0),
+            ei_leaf_lo: LEU32::new(0x6666_8888),
+            ei_leaf_hi: LEU16::new(0x4444),
+            ei_unused: LEU16::new(0),
+        };
+        assert_eq!(e.target_block_num(), 0x4444_6666_8888);
     }
 }
