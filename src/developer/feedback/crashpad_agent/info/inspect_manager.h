@@ -40,10 +40,10 @@ class InspectManager {
   // or another).
   bool AddReport(const std::string& program_name, const std::string& local_report_id);
 
-  // Increments the number of upload attempts for an existing report.
+  // Sets the number of upload attempts for an existing report.
   //
   // Returns false if there are no reports with |local_report_id| as ID.
-  bool IncrementUploadAttempt(const std::string& local_report_id);
+  bool SetUploadAttempt(const std::string& local_report_id, uint64_t upload_attempt);
 
   // Marks an existing report as uploaded, storing its server report ID.
   //

@@ -118,8 +118,9 @@ void Database::IncrementUploadAttempt(const crashpad::UUID& local_report_id) {
     return;
   }
 
-  ++(additional_data_.at(local_report_id).upload_attempts);
-  info_.IncrementUploadAttempt(local_report_id.ToString());
+  additional_data_.at(local_report_id).upload_attempts += 1;
+  info_.RecordUploadAttemptNumber(local_report_id.ToString(),
+                                  additional_data_.at(local_report_id).upload_attempts);
 }
 
 bool Database::MarkAsUploaded(std::unique_ptr<UploadReport> upload_report,
@@ -131,7 +132,8 @@ bool Database::MarkAsUploaded(std::unique_ptr<UploadReport> upload_report,
 
   const UUID local_report_id = upload_report->GetUUID();
 
-  info_.MarkReportAsUploaded(local_report_id.ToString(), server_report_id);
+  info_.MarkReportAsUploaded(local_report_id.ToString(), server_report_id,
+                             additional_data_.at(local_report_id).upload_attempts);
 
   // We need to clean up before finalizing the report in the crashpad database as the operation may
   // fail.
@@ -150,13 +152,20 @@ bool Database::MarkAsUploaded(std::unique_ptr<UploadReport> upload_report,
 }
 
 bool Database::Archive(const crashpad::UUID& local_report_id) {
+  if (!Contains(local_report_id)) {
+    FX_LOGS(INFO) << fxl::StringPrintf("Unable to archive local crash report ID %s",
+                                       local_report_id.ToString().c_str());
+    return false;
+  }
+
   FX_LOGS(INFO) << fxl::StringPrintf("Archiving local crash report, ID %s, under %s",
                                      local_report_id.ToString().c_str(), kCrashpadDatabasePath);
+  info_.MarkReportAsArchived(local_report_id.ToString(),
+                             additional_data_.at(local_report_id).upload_attempts);
+
   // We need to clean up before finalizing the report in the crashpad database as the operation may
   // fail.
   CleanUp(local_report_id);
-
-  info_.MarkReportAsArchived(local_report_id.ToString());
 
   if (const auto status =
           database_->SkipReportUpload(local_report_id, CrashSkippedReason::kUploadFailed);
@@ -207,7 +216,8 @@ size_t Database::GarbageCollect() {
     }
 
     for (const auto& uuid : clean_up) {
-      info_.MarkReportAsGarbageCollected(uuid.ToString());
+      info_.MarkReportAsGarbageCollected(uuid.ToString(),
+                                         additional_data_.at(uuid).upload_attempts);
       CleanUp(uuid);
     }
   }

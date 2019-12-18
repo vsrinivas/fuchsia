@@ -60,7 +60,7 @@ bool InspectManager::AddReport(const std::string& program_name,
   return true;
 }
 
-bool InspectManager::IncrementUploadAttempt(const std::string& local_report_id) {
+bool InspectManager::SetUploadAttempt(const std::string& local_report_id, uint64_t upload_attempt) {
   if (!Contains(local_report_id)) {
     FX_LOGS(ERROR) << "Failed to find local crash report, ID " << local_report_id;
     return false;
@@ -71,7 +71,7 @@ bool InspectManager::IncrementUploadAttempt(const std::string& local_report_id) 
   if (!report.upload_attempts_) {
     report.upload_attempts_ = node_manager_.Get(report.Path()).CreateUint("upload_attempts", 1u);
   } else {
-    report.upload_attempts_.Add(1u);
+    report.upload_attempts_.Set(upload_attempt);
   }
 
   return true;

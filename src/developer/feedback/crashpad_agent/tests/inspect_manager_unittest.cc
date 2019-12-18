@@ -164,10 +164,10 @@ TEST_F(InspectManagerTest, Fail_AddReport_DuplicateReport) {
                         PropertyList(ElementsAre(StringIs("creation_time", kTime2Str))))))))))))));
 }
 
-TEST_F(InspectManagerTest, Succeed_IncrementUploadAttempt) {
+TEST_F(InspectManagerTest, Succeed_SetUploadAttempt) {
   clock_->Set(kTime2);
   EXPECT_TRUE(inspect_manager_->AddReport("program", "local_report_id"));
-  EXPECT_TRUE(inspect_manager_->IncrementUploadAttempt("local_report_id"));
+  EXPECT_TRUE(inspect_manager_->SetUploadAttempt("local_report_id", 1u));
   EXPECT_THAT(InspectTree(),
               ChildrenMatch(Contains(AllOf(
                   NodeMatches(NameMatches("reports")),
@@ -184,7 +184,7 @@ TEST_F(InspectManagerTest, Succeed_MarkReportAsUploaded) {
   clock_->Set(kTime2);
   EXPECT_TRUE(inspect_manager_->AddReport("program", "local_report_id"));
   clock_->Set(kTime3);
-  EXPECT_TRUE(inspect_manager_->IncrementUploadAttempt("local_report_id"));
+  EXPECT_TRUE(inspect_manager_->SetUploadAttempt("local_report_id", 1u));
   EXPECT_TRUE(inspect_manager_->MarkReportAsUploaded("local_report_id", "server_report_id"));
   EXPECT_THAT(InspectTree(),
               ChildrenMatch(Contains(AllOf(
@@ -238,8 +238,8 @@ TEST_F(InspectManagerTest, Succeed_MarkReportAsGarbageCollected) {
                                                   }))))))))))))));
 }
 
-TEST_F(InspectManagerTest, Fail_IncrementUploadAttempt_UnknownReport) {
-  EXPECT_FALSE(inspect_manager_->IncrementUploadAttempt("unknown_report"));
+TEST_F(InspectManagerTest, Fail_SetUploadAttempt_UnknownReport) {
+  EXPECT_FALSE(inspect_manager_->SetUploadAttempt("unknown_report", 1u));
   EXPECT_THAT(InspectTree(), ChildrenMatch(Contains(AllOf(NodeMatches(NameMatches("reports")),
                                                           ChildrenMatch(IsEmpty())))));
 }

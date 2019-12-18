@@ -48,6 +48,7 @@ namespace feedback {
 namespace {
 
 using cobalt_registry::kCrashMetricId;
+using cobalt_registry::kCrashUploadAttemptsMetricId;
 using fuchsia::feedback::Annotation;
 using fuchsia::feedback::Attachment;
 using fuchsia::feedback::CrashReport;
@@ -62,13 +63,17 @@ using inspect::testing::NodeMatches;
 using inspect::testing::PropertyList;
 using inspect::testing::StringIs;
 using inspect::testing::UintIs;
+using testing::ByRef;
 using testing::Contains;
 using testing::ElementsAre;
+using testing::Eq;
 using testing::IsEmpty;
 using testing::Not;
+using testing::UnorderedElementsAre;
 using testing::UnorderedElementsAreArray;
 
 using CrashState = cobalt_registry::CrashMetricDimensionState;
+using UploadAttemptState = cobalt_registry::CrashUploadAttemptsMetricDimensionState;
 
 constexpr bool kUploadSuccessful = true;
 constexpr bool kUploadFailed = false;
@@ -254,11 +259,7 @@ class CrashpadAgentTest : public UnitTestFixture {
     }
   }
 
-  void CheckLastCobaltCrashState(const CrashState crash_state) {
-    RunLoopUntilIdle();
-    EXPECT_EQ(cobalt_logger_factory_->LastEvent(),
-              CobaltEvent(CobaltEvent::Type::Occurrence, kCrashMetricId, crash_state));
-  }
+  const std::vector<CobaltEvent>& AllCobaltEvents() { return cobalt_logger_factory_->Events(); }
 
   // Checks that the crash server is still expecting at least one more request.
   //
@@ -755,14 +756,31 @@ TEST_F(CrashpadAgentTest, Check_CobaltAfterSuccessfulUpload) {
   SetUpAgentDefaultConfig({kUploadSuccessful});
   SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
   EXPECT_TRUE(FileOneCrashReport().is_ok());
-  CheckLastCobaltCrashState(CrashState::Uploaded);
+
+  CobaltEvent event_1(CobaltEvent::Type::Occurrence, kCrashMetricId, CrashState::Filed);
+  CobaltEvent event_2(CobaltEvent::Type::Occurrence, kCrashMetricId, CrashState::Uploaded);
+  CobaltEvent event_3(CobaltEvent::Type::Count, kCrashUploadAttemptsMetricId,
+                      UploadAttemptState::UploadAttempt, 1u);
+  CobaltEvent event_4(CobaltEvent::Type::Count, kCrashUploadAttemptsMetricId,
+                      UploadAttemptState::Uploaded, 1u);
+
+  EXPECT_THAT(AllCobaltEvents(), UnorderedElementsAreArray({
+                                     Eq(ByRef(event_1)),
+                                     Eq(ByRef(event_2)),
+                                     Eq(ByRef(event_3)),
+                                     Eq(ByRef(event_4)),
+                                 }));
 }
 
 TEST_F(CrashpadAgentTest, Check_CobaltAfterInvalidInputCrashReport) {
   SetUpAgentDefaultConfig();
   SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
   EXPECT_TRUE(FileOneEmptyCrashReport().is_error());
-  CheckLastCobaltCrashState(CrashState::Dropped);
+
+  CobaltEvent event_1(CobaltEvent::Type::Occurrence, kCrashMetricId, CrashState::Dropped);
+  EXPECT_THAT(AllCobaltEvents(), UnorderedElementsAreArray({
+                                     Eq(ByRef(event_1)),
+                                 }));
 }
 
 TEST_F(CrashpadAgentTest, Check_InitialInspectTree) {
