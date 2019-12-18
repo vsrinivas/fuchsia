@@ -1642,6 +1642,77 @@ TEST(NetStreamTest, Shutdown) {
   EXPECT_EQ(close(inbound), 0) << strerror(errno);
 }
 
+TEST(NetStreamTest, ResetOnFullReceiveBufferShutdown) {
+  fbl::unique_fd client, server;
+  {
+    fbl::unique_fd listener;
+    ASSERT_TRUE(listener = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
+
+    struct sockaddr_in addr = {};
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    ASSERT_EQ(bind(listener.get(), (const struct sockaddr*)&addr, sizeof(addr)), 0)
+        << strerror(errno);
+
+    socklen_t addrlen = sizeof(addr);
+    ASSERT_EQ(getsockname(listener.get(), (struct sockaddr*)&addr, &addrlen), 0) << strerror(errno);
+    ASSERT_EQ(addrlen, sizeof(addr));
+
+    ASSERT_EQ(listen(listener.get(), 1), 0) << strerror(errno);
+
+    ASSERT_TRUE(client = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
+    ASSERT_EQ(connect(client.get(), (const struct sockaddr*)&addr, sizeof(addr)), 0)
+        << strerror(errno);
+
+    ASSERT_TRUE(server = fbl::unique_fd(accept(listener.get(), nullptr, nullptr)))
+        << strerror(errno);
+    // We're done with the listener.
+    ASSERT_EQ(close(listener.release()), 0) << strerror(errno);
+  }
+
+  // Fill the send buffer of the server socket to trigger write to wait.
+  fill_stream_send_buf(server.get(), client.get());
+
+  // Setting SO_LINGER to 0 and `close`ing the server socket should
+  // immediately send a TCP Reset.
+  struct linger so_linger;
+  so_linger.l_onoff = 1;
+  so_linger.l_linger = 0;
+  socklen_t optlen = sizeof(so_linger);
+
+  // TODO(rheacock): revisit this when the below issue is fixed:
+  // https://github.com/google/gvisor/issues/1400
+#if defined(__linux__)
+  // Set SO_LINGER is supported in Linux so we do not expect to receive an error.
+  EXPECT_EQ(setsockopt(server.get(), SOL_SOCKET, SO_LINGER, &so_linger, optlen), 0)
+      << strerror(errno);
+#else
+  EXPECT_EQ(setsockopt(server.get(), SOL_SOCKET, SO_LINGER, &so_linger, optlen), -1)
+      << strerror(errno);
+  EXPECT_EQ(errno, ENOPROTOOPT) << strerror(errno);
+#endif
+
+  // Close the server to trigger a TCP Reset now that linger is 0.
+  EXPECT_EQ(close(server.get()), 0);
+
+  // Shutdown the client side to unblock the client receive loop.
+#if defined(__linux__)
+  // For Linux, the server side close will put the client end into a not
+  // connected state, so the shutdown call will cause an ENOTCONN.
+  EXPECT_EQ(shutdown(client.get(), SHUT_RD), -1) << strerror(errno);
+  EXPECT_EQ(errno, ENOTCONN) << strerror(errno);
+#else
+  // Fuchsia `zxwait`s on the client handle before the server close affects
+  // the read loop, so the `shutdown` should not return an error and the loop
+  // will be unblocked.
+  EXPECT_EQ(shutdown(client.get(), SHUT_RD), 0) << strerror(errno);
+#endif
+
+  // Create another socket to ensure that the networking stack hasn't panicked.
+  fbl::unique_fd test_sock;
+  ASSERT_TRUE(test_sock = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
+}
+
 enum sendMethod {
   WRITE,
   WRITEV,
