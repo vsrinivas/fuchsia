@@ -27,9 +27,9 @@ struct ThreadContext {
   zx::channel exception_channel;
 
   // NOTE: Not all events are used by all tests.
-  zx::event loop_threads_ready[kLoopThreadCount]; // Set then all the looping threads are ready.
-  zx::event crash_thread_ready;                   // Set when the crash thread is about to crash.
-  zx::event test_done;                            // Set when test is done.
+  zx::event loop_threads_ready[kLoopThreadCount];  // Set then all the looping threads are ready.
+  zx::event crash_thread_ready;                    // Set when the crash thread is about to crash.
+  zx::event test_done;                             // Set when test is done.
 };
 
 struct LoopThreadContext {
@@ -99,6 +99,34 @@ int LoopThread(void* user) {
   return 0;
 }
 
+// Define the crashing function in assembly so it can use specialized CFI
+// that constitutes a regression test for unwinder bugs.
+extern "C" void CrashingFunction();
+__asm__(
+    ".globl CrashingFunction\n"
+    ".type CrashingFunction, %function\n"
+    "CrashingFunction:\n"
+    ".cfi_startproc\n"
+    "nop\n"
+#if defined(__aarch64__)
+    ".cfi_return_column 29\n"
+    // This has the effect of the default same_value rule, but via
+    // a val_expression rule to test the unwinder's val_expression support.
+    // DW_CFA_val_expression, regno 29, BLOCK(DW_OP_breg29 0)
+    ".cfi_escape 0x16, 29, 2, 0x8d, 0\n"
+    "brk 0\n"
+#elif defined(__x86_64__)
+    ".cfi_return_column 16\n"
+    // DW_CFA_val_expression, regno 16, BLOCK(DW_OP_breg16 0)
+    ".cfi_escape 0x16, 29, 2, 0x80, 0\n"
+    "int3\n"
+#else
+#error Not supported on this platform.
+#endif
+    "ret\n"
+    ".cfi_endproc\n"
+    ".size CrashingFunction, . - CrashingFunction");
+
 int CrashThreadFunction(void* user) {
   ThreadContext* context = reinterpret_cast<ThreadContext*>(user);
 
@@ -117,13 +145,7 @@ int CrashThreadFunction(void* user) {
     return 1;
   }
 
-#if defined(__aarch64__)
-  __asm__ volatile("brk 0");
-#elif defined(__x86_64__)
-  __asm__ volatile("int3");
-#else
-#error Not supported on this platform.
-#endif
+  CrashingFunction();
 
   return 0;
 }

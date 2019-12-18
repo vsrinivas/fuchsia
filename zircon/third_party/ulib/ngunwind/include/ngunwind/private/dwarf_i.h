@@ -44,10 +44,6 @@ dwarf_get (struct dwarf_cursor *c, dwarf_loc_t loc, unw_word_t *val)
      happen?  */
   assert (!DWARF_IS_FP_LOC (loc));
 
-#if UNW_TARGET_ARM || UNW_TARGET_AARCH64
-  assert (DWARF_IS_REG_LOC (loc) || DWARF_IS_MEM_LOC (loc));
-#endif
-
   if (DWARF_IS_REG_LOC (loc))
     return (*c->as->acc.access_reg) (c->as, (unw_regnum_t) DWARF_GET_LOC (loc), val,
                                      0, c->as_arg);
