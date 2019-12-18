@@ -31,9 +31,6 @@ use {
 enum PtyIncomingMessages {
     /// Message sent when a byte comes in from the Pty.
     ByteReceived(u8),
-
-    /// Message sent when all the bytes in a read loop have been processed.
-    DidProcessBytes,
 }
 
 /// Messages which can be used to interact with the Pty.
@@ -47,7 +44,6 @@ enum PtyOutgoingMessages {
 
 pub struct TerminalViewAssistant {
     last_known_size: Size,
-    output_buffer: Vec<u8>,
     parser: Processor,
     pty: Option<PtyWrapper>,
     terminal_scene: TerminalScene,
@@ -62,8 +58,10 @@ impl TerminalViewAssistant {
         let term = Term::new(
             &Config::default(),
             SizeInfo {
-                width: 0.0,
-                height: 0.0,
+                // set the initial size/width to be that of the cell size which prevents
+                // the term from panicing if a byte is received before a resize event.
+                width: cell_size.width,
+                height: cell_size.height,
                 cell_width: cell_size.width,
                 cell_height: cell_size.height,
                 padding_x: 0.0,
@@ -73,7 +71,6 @@ impl TerminalViewAssistant {
 
         TerminalViewAssistant {
             last_known_size: Size::zero(),
-            output_buffer: Vec::new(),
             parser,
             pty: None,
             term,
@@ -171,8 +168,6 @@ impl TerminalViewAssistant {
                                 for byte in &read_buf[0..bytes_read] {
                                     app.queue_message(view_key, make_message(PtyIncomingMessages::ByteReceived(*byte)));
                                 }
-                                // trigger a call to update
-                                app.queue_message(view_key, make_message(PtyIncomingMessages::DidProcessBytes));
                             });
                         }
                     },
@@ -255,17 +250,11 @@ impl ViewAssistant for TerminalViewAssistant {
     fn handle_message(&mut self, message: Message) {
         if let Some(pty_message) = message.downcast_ref::<PtyIncomingMessages>() {
             match pty_message {
-                PtyIncomingMessages::ByteReceived(value) => {
-                    self.output_buffer.push(*value);
-                }
-                PtyIncomingMessages::DidProcessBytes => {
-                    if !self.output_buffer.is_empty() {
-                        if let Some(pty) = &mut self.pty {
-                            for byte in &self.output_buffer {
-                                self.parser.advance(&mut self.term, *byte, &mut pty.fd);
-                            }
-                            self.output_buffer.clear();
-                        }
+                PtyIncomingMessages::ByteReceived(byte) => {
+                    if let Some(pty) = &mut self.pty {
+                        self.parser.advance(&mut self.term, *byte, &mut pty.fd);
+                    } else {
+                        self.parser.advance(&mut self.term, *byte, &mut ::std::io::sink());
                     }
                 }
             }
@@ -421,10 +410,19 @@ mod tests {
     }
 
     #[test]
-    fn output_buffer_extended_when_bytes_received() {
+    fn bytes_received_is_processed_by_term() {
         let mut view = TerminalViewAssistant::new();
-        view.handle_message(make_message(PtyIncomingMessages::ByteReceived(1)));
-        assert_eq!(view.output_buffer.len(), 1);
+
+        // make sure we have a big enough size that a single character does not wrap
+        let large_size = Size::new(1000.0, 1000.0);
+        let _ = view.resize_if_needed(&large_size, &large_size);
+
+        let col_pos_before = view.term.cursor().point.col;
+
+        view.handle_message(make_message(PtyIncomingMessages::ByteReceived(b'A')));
+
+        let col_pos_after = view.term.cursor().point.col;
+        assert_eq!(col_pos_before + 1, col_pos_after);
     }
 
     fn make_keyboard_event(code_point: u32) -> KeyboardEvent {
