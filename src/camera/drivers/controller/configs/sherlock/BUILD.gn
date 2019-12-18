@@ -10,7 +10,7 @@ source_set("controller-configs") {
   sources = [
     "sherlock-configs.cc",
   ]
-  deps = [
+  public_deps = [
     "//sdk/banjo/ddk.protocol.ge2d",
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",

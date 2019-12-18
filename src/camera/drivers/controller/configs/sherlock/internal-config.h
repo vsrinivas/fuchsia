@@ -10,7 +10,6 @@
 
 #include <vector>
 
-#include <ddktl/protocol/gdc.h>
 #include <ddktl/protocol/ge2d.h>
 
 namespace camera {
