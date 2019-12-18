@@ -499,9 +499,9 @@ static bool TestGetLastScheduledCpu() {
   ASSERT_TRUE(starter.StartThread(thread_body, &state));
 
   // Wait for worker to start.
-  ASSERT_EQ(zx_object_wait_one(state.started, ZX_USER_SIGNAL_0,
-                               ZX_TIME_INFINITE, /*pending=*/nullptr),
-            ZX_OK);
+  ASSERT_EQ(
+      zx_object_wait_one(state.started, ZX_USER_SIGNAL_0, ZX_TIME_INFINITE, /*pending=*/nullptr),
+      ZX_OK);
 
   // Ensure the last-reported thread looks reasonable.
   ASSERT_EQ(
@@ -1343,7 +1343,6 @@ static bool TestWritingSingleStepState() {
   END_TEST;
 }
 
-
 static bool TestWritingFpRegisterState() {
   BEGIN_TEST;
 
@@ -1624,18 +1623,8 @@ static bool TestWriteReadDebugRegisterState() {
   //                to ensure that it's keeping the state correctly. This is what is done in the
   //                x86 portion of this test.
 
-  zx_thread_state_debug_regs_t regs = {};
-  regs.hw_bps_count = actual_regs.hw_bps_count;
-
-  // We use the address of a function we know is in userspace.
-  uint64_t base = reinterpret_cast<uint64_t>(TestWriteReadDebugRegisterState);
-
-  // install the registers. We only test two breakpoints because those are the only ones we know
-  // for sure will be there.
-  regs.hw_bps[0].dbgbvr = 0x0;  // 0 is valid.
-  regs.hw_bps[0].dbgbcr = 0x0;
-  regs.hw_bps[1].dbgbvr = base;
-  regs.hw_bps[1].dbgbcr = 0x0;
+  zx_thread_state_debug_regs_t regs, expected;
+  debug_regs_fill_test_values(&regs, &expected);
 
   ASSERT_EQ(
       zx_thread_write_state(setup.thread_handle(), ZX_THREAD_STATE_DEBUG_REGS, &regs, sizeof(regs)),
@@ -1644,9 +1633,7 @@ static bool TestWriteReadDebugRegisterState() {
       zx_thread_read_state(setup.thread_handle(), ZX_THREAD_STATE_DEBUG_REGS, &regs, sizeof(regs)),
       ZX_OK);
 
-  ASSERT_EQ(regs.hw_bps[0].dbgbvr, 0x0);
-  ASSERT_EQ(regs.hw_bps[1].dbgbvr, base);
-
+  ASSERT_TRUE(debug_regs_expect_eq(__FILE__, __LINE__, regs, expected));
 #endif
   END_TEST;
 }
@@ -1851,7 +1838,7 @@ RUN_TEST(TestNoncanonicalRipAddress)
 RUN_TEST(TestWritingArmFlagsRegister)
 
 // Test disabled, see ZX-2508.
-// RUN_TEST(TestWriteReadDebugRegisterState);
+RUN_TEST(TestWriteReadDebugRegisterState);
 // RUN_TEST(TestDebugRegistersValidation);
 
 RUN_TEST(TestX86AcFlagUserCopy)

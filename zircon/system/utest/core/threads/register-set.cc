@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "register-set.h"
+
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
-#include <unittest/unittest.h>
+#include <zircon/hw/debug/arm64.h>
 
-#include "register-set.h"
+#include <unittest/unittest.h>
 
 namespace {
 
@@ -104,11 +106,11 @@ void vector_regs_fill_test_values(zx_thread_state_vector_regs* regs) {
 
 void debug_regs_fill_test_values(zx_thread_state_debug_regs_t* to_write,
                                  zx_thread_state_debug_regs_t* expected) {
+  uint64_t base = reinterpret_cast<uint64_t>(debug_regs_fill_test_values);
 #if defined(__x86_64__)
   // The kernel will validate that the addresses set into the debug registers are valid userspace
   // one. We use values relative to this function, as it is guaranteed to be in the userspace
   // range.
-  uint64_t base = reinterpret_cast<uint64_t>(debug_regs_fill_test_values);
   to_write->dr[0] = base;
   to_write->dr[1] = base + 0x4000;
   to_write->dr[2] = base + 0x8000;
@@ -124,7 +126,19 @@ void debug_regs_fill_test_values(zx_thread_state_debug_regs_t* to_write,
   expected->dr7 = 0x733;       // Activate all breakpoints.
 
 #elif defined(__aarch64__)
-  // TODO(donoso): Support arm64 debug registers.
+  *to_write = {};
+
+  // We only set two because we know that arm64 ensures that.
+  ARM64_DBGBCR_E_SET(&to_write->hw_bps[0].dbgbcr, 1);
+  to_write->hw_bps[0].dbgbvr = base;
+  ARM64_DBGBCR_E_SET(&to_write->hw_bps[1].dbgbcr, 1);
+  to_write->hw_bps[0].dbgbvr = base + 0x4000;
+
+  *expected = *to_write;
+  ARM64_DBGBCR_PMC_SET(&expected->hw_bps[0].dbgbcr, 0b10);
+  ARM64_DBGBCR_BAS_SET(&expected->hw_bps[0].dbgbcr, 0xf);
+  ARM64_DBGBCR_PMC_SET(&expected->hw_bps[1].dbgbcr, 0b10);
+  ARM64_DBGBCR_BAS_SET(&expected->hw_bps[1].dbgbcr, 0xf);
 #else
 #error Unsupported architecture
 #endif
@@ -221,9 +235,9 @@ bool vector_regs_expect_eq(const zx_thread_state_vector_regs_t& regs1,
 
 bool debug_regs_expect_eq(const char* file, int line, const zx_thread_state_debug_regs_t& regs1,
                           const zx_thread_state_debug_regs_t& regs2) {
+  BEGIN_HELPER;
 #if defined(__x86_64__)
   char buf[1024];
-  BEGIN_HELPER;
   snprintf(buf, sizeof(buf), "%s:%d: %s", file, line, "Reg DR0");
   EXPECT_EQ(regs1.dr[0], regs2.dr[0], buf);
   snprintf(buf, sizeof(buf), "%s:%d: %s", file, line, "Reg DR1");
@@ -236,15 +250,15 @@ bool debug_regs_expect_eq(const char* file, int line, const zx_thread_state_debu
   EXPECT_EQ(regs1.dr6, regs2.dr6, buf);
   snprintf(buf, sizeof(buf), "%s:%d: %s", file, line, "Reg DR7");
   EXPECT_EQ(regs1.dr7, regs2.dr7, buf);
-  END_HELPER;
 #elif defined(__aarch64__)
-  // TODO(donosoc): Write the debug register support.
-  (void)regs1;
-  (void)regs2;
-  return true;
+  for (uint32_t i = 0; i < 16; i++) {
+    EXPECT_EQ(regs1.hw_bps[i].dbgbcr, regs2.hw_bps[i].dbgbcr);
+    EXPECT_EQ(regs1.hw_bps[i].dbgbvr, regs2.hw_bps[i].dbgbvr);
+  }
 #else
 #error Unsupported architecture
 #endif
+  END_HELPER;
 }
 
 // Spin Functions --------------------------------------------------------------------------------
