@@ -1,0 +1,51 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+executable("bin") {
+  output_name = "simple_gtest_adapter_example"
+  testonly = true
+  sources = [
+    "simple_gtest_adapter_example.cc",
+  ]
+
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+package("simple_gtest_adapter_example") {
+  testonly = true
+  deps = [
+    ":bin",
+    "//src/sys/test_adapters/gtest",
+  ]
+
+  binaries = [
+    {
+      name = "gtest_adapter"
+    },
+  ]
+
+  tests = [
+    {
+      name = "simple_gtest_adapter_example"
+    },
+  ]
+
+  meta = [
+    {
+      path = "meta/simple_gtest_adapter_example.cml"
+      dest = "simple_gtest_adapter_example.cm"
+    },
+  ]
+}
+
+group("simple-example") {
+  testonly = true
+  deps = [
+    ":simple_gtest_adapter_example",
+  ]
+}

@@ -1,14 +1,13 @@
 {
     "program": {
-        "binary": "bin/component_manager_for_test_bin"
+        "binary": "test/gtest_adapter_integration_test"
     },
     "sandbox": {
         "features": [
-            "deprecated-ambient-replace-as-executable",
             "isolated-temp"
         ],
         "services": [
-            "fuchsia.sys.Loader",
+            "fuchsia.sys.Launcher",
             "fuchsia.process.Launcher",
             "fuchsia.logger.LogSink"
         ]

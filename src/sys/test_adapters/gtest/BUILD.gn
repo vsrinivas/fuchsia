@@ -43,7 +43,7 @@ test_package("gtest_adapter_tests") {
       name = "gtest_adapter"
     },
     {
-      name = "simple_tests"
+      name = "sample_tests"
     },
     {
       name = "no_tests"
@@ -69,5 +69,6 @@ group("tests") {
   testonly = true
   public_deps = [
     ":gtest_adapter_tests",
+    "tests",
   ]
 }

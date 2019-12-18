@@ -2,10 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("simple_tests") {
+executable("sample_tests") {
   testonly = true
   sources = [
-    "simple_tests.cc",
+    "sample_tests.cc",
   ]
 
   deps = [
@@ -30,6 +30,6 @@ group("test_data") {
   testonly = true
   public_deps = [
     ":no_tests",
-    ":simple_tests",
+    ":sample_tests",
   ]
 }

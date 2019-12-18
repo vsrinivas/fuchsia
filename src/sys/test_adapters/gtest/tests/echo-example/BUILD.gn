@@ -1,0 +1,76 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+executable("echo_gtest_client") {
+  testonly = true
+  sources = [
+    "echo_test.cc",
+  ]
+
+  deps = [
+    "//examples/components/routing/fidl:echo",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+  ]
+}
+
+package("gtest_adapter_echo_example") {
+  testonly = true
+  deps = [
+    ":echo_gtest_client",
+    "//examples/components/routing/echo_server",
+    "//examples/tests/rust:echo_test_realm",
+    "//src/sys/test_adapters/gtest",
+  ]
+
+  binaries = [
+    {
+      name = "gtest_adapter"
+    },
+    {
+      name = "echo_server"
+    },
+    {
+      # This should idealy go in tests, but due to limitation of CQ/CI bots we need to
+      # put dummy echo_test_realm bin in tests so that this test can run on bot. Due to this hack
+      # echo_gtest_client.cml will pass /pkg/bin/echo_gtest_client to adapter instead of
+      # /pkg/test/echo_gtest_client
+      name = "echo_gtest_client"
+    },
+  ]
+
+  tests = [
+    {
+      name = "echo_test_realm"
+    },
+  ]
+
+  meta = [
+    {
+      path = "meta/echo_test_realm.cml"
+      dest = "echo_test_realm.cm"
+    },
+    {
+      path = "meta/echo_gtest_client.cml"
+      dest = "echo_gtest_client.cm"
+    },
+    {
+      path = rebase_path("//examples/components/routing/meta/echo_server.cml")
+      dest = "echo_server.cm"
+    },
+  ]
+}
+
+group("echo-example") {
+  testonly = true
+  deps = [
+    ":gtest_adapter_echo_example",
+  ]
+}

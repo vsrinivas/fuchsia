@@ -47,8 +47,19 @@ async fn run_test_suite(
                     .send(&mut tests.into_iter().map(|name| ftest::Case { name: Some(name) }))
                     .context("Cannot send fidl response")?;
             }
-            ftest::SuiteRequest::Run { tests: _, options: _, run_listener: _, .. } => {
-                return Err(format_err!("We don't support running tests yet!!!."));
+            ftest::SuiteRequest::Run { tests, options: _, run_listener, .. } => {
+                let mut test_names = Vec::with_capacity(tests.len());
+                for i in tests {
+                    let case = i.case.ok_or(format_err!("Case in invocation cannot be null"))?;
+                    let name = case.name.ok_or(format_err!("Name in case cannot be null"))?;
+                    test_names.push(name);
+                }
+                adapter
+                    .run_tests(
+                        test_names,
+                        run_listener.into_proxy().context("Can't convert listener into proxy")?,
+                    )
+                    .await?;
             }
         }
     }
