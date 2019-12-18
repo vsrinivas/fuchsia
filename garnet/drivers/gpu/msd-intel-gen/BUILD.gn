@@ -80,7 +80,7 @@ source_set("msd_intel_test_entry") {
   libs = [ "zircon" ]
   deps += [
     "tests/unit_tests:hardware_tests",
-    "//garnet/lib/magma/src/sys_driver:pci_driver_gtest",
+    "//garnet/lib/magma/src/magma_util/platform/zircon:pci_driver_gtest",
     "//garnet/lib/magma/tests/unit_tests:magma_platform_hardware_tests",
     "//garnet/lib/magma/tests/unit_tests:msd_abi_conformance_tests",
   ]

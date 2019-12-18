@@ -6,6 +6,7 @@ import("//build/config.gni")
 import("//build/cpp/extract_imported_symbols.gni")
 import("//build/cpp/verify_imported_symbols.gni")
 import("//build/testing/environments.gni")
+import("//garnet/lib/magma/src/magma_util/platform/zircon/driver_entry.gni")
 
 declare_args() {
   magma_build_root = "//garnet/lib/magma"
@@ -75,66 +76,6 @@ if (build_libvulkan_arm_mali != [] || have_prebuilt_libvulkan_arm ||
 }
 
 magma_libvulkan_hardware_envs += magma_libvulkan_arm_hardware_envs
-
-template("magma_pci_entry") {
-  source_set(target_name) {
-    assert(defined(invoker.pci_vendor_id), "pci_vendor_id not defined")
-    if (!defined(invoker.test_entry)) {
-      test_entry = false
-    } else {
-      testonly = true
-    }
-
-    forward_variables_from(invoker, "*")
-
-    sources = [
-      "//garnet/lib/magma/src/sys_driver/pci_entry.cc",
-    ]
-    defines = [ "MAGMA_PCI_VENDOR_ID=" + pci_vendor_id ]
-
-    if (!defined(invoker.deps)) {
-      deps = []
-    }
-
-    deps += [ "//zircon/public/lib/ddk" ]
-
-    if (!test_entry) {
-      deps += [ "//garnet/lib/magma/src/sys_driver:entry" ]
-    } else {
-      deps += [ "//garnet/lib/magma/src/sys_driver:test_entry_pci" ]
-    }
-  }
-}
-
-template("magma_pdev_entry") {
-  source_set(target_name) {
-    assert(defined(invoker.pdev_device_id), "pdev_device_id not defined")
-    if (!defined(invoker.test_entry)) {
-      test_entry = false
-    } else {
-      testonly = true
-    }
-
-    forward_variables_from(invoker, "*")
-
-    sources = [
-      "//garnet/lib/magma/src/sys_driver/pdev_entry.cc",
-    ]
-    defines = [ "MAGMA_PDEV_DEVICE_ID=" + pdev_device_id ]
-
-    if (!defined(invoker.deps)) {
-      deps = []
-    }
-
-    deps += [ "//zircon/public/lib/ddk" ]
-
-    if (!test_entry) {
-      deps += [ "//garnet/lib/magma/src/sys_driver:entry" ]
-    } else {
-      deps += [ "//garnet/lib/magma/src/sys_driver:test_entry_pdev" ]
-    }
-  }
-}
 
 template("magma_vulkan_icd") {
   assert(defined(invoker.output_name), "output_name must be provided")

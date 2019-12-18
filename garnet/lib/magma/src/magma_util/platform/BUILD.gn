@@ -110,6 +110,23 @@ source_set("bus_mapper") {
   }
 }
 
+group("entry") {
+  if (is_fuchsia) {
+    deps = [
+      "zircon:entry",
+    ]
+  }
+}
+
+group("entry_test") {
+  testonly = true
+  if (is_fuchsia) {
+    deps = [
+      "zircon:entry_test",
+    ]
+  }
+}
+
 source_set("handle_header") {
   public_configs = [ ":platform_include_config" ]
 

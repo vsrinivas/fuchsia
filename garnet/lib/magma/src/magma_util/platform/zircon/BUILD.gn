@@ -61,6 +61,35 @@ source_set("bus_mapper") {
   ]
 }
 
+entry_deps = [
+  "..:logger",
+  "..:trace",
+  "..:trace_provider",
+  "..:trace_provider_with_fdio",
+  "//garnet/lib/magma/src/magma_util",
+  "//garnet/lib/magma/src/sys_driver",
+  "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
+  "//src/devices/host:driver",
+  "//zircon/public/lib/ddk",
+  "//zircon/public/lib/zx",
+  "//zircon/system/banjo/ddk.protocol.platform.device",
+]
+
+source_set("entry") {
+  sources = [
+    "zircon_entry.cc",
+  ]
+  deps = entry_deps
+}
+
+source_set("entry_test") {
+  sources = [
+    "zircon_entry.cc",
+  ]
+  defines = [ "MAGMA_TEST_DRIVER=1" ]
+  deps = entry_deps
+}
+
 source_set("interrupt") {
   sources = [
     "zircon_platform_interrupt.h",
@@ -386,5 +415,33 @@ source_set("random") {
   ]
   sources = [
     "zircon_platform_random.cc",
+  ]
+}
+
+source_set("pci_driver_gtest") {
+  testonly = true
+
+  sources = [
+    "pci_driver_test_gtest.cc",
+  ]
+
+  deps = [
+    "$magma_build_root/src/magma_util/platform:device",
+    "$magma_build_root/tests/helper:platform_device_helper",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+source_set("pdev_driver_gtest") {
+  testonly = true
+
+  sources = [
+    "pdev_driver_test_gtest.cc",
+  ]
+
+  deps = [
+    "$magma_build_root/tests/helper:platform_device_helper",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/ddk",
   ]
 }

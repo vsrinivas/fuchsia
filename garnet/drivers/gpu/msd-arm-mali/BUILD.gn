@@ -29,6 +29,8 @@ driver_module("msd_arm_test") {
     "src",
     "tests:gtest",
     "//garnet/lib/magma/src/magma_util/platform:logger_for_system_drivers",
+    "//garnet/lib/magma/tests/unit_tests:magma_platform_hardware_tests",
+    "//garnet/lib/magma/tests/unit_tests:msd_abi_conformance_tests",
   ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]

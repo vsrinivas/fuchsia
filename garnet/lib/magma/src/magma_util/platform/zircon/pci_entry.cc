@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/types.h>
+
 #include <ddk/binding.h>
 #include <ddk/driver.h>
-#include <zircon/types.h>
 
 extern struct zx_driver_ops msd_driver_ops;
 
