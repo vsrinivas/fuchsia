@@ -69,12 +69,10 @@ namespace minfs {
 // Validate that |vmo| is large enough to access block |blk|,
 // relative to the start of the vmo.
 inline void ValidateVmoSize(zx_handle_t vmo, blk_t blk) {
-#ifdef MINFS_PARANOID_MODE
   uint64_t size;
   size_t min = (blk + 1) * kMinfsBlockSize;
   ZX_ASSERT(zx_vmo_get_size(vmo, &size) == ZX_OK);
   ZX_ASSERT_MSG(size >= min, "VMO size %" PRIu64 " too small for access at block %u\n", size, blk);
-#endif  // MINFS_PARANOID_MODE
 }
 #endif  // __Fuchsia__
 

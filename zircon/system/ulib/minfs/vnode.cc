@@ -129,6 +129,7 @@ zx_status_t VnodeMinfs::LoadIndirectBlocks(blk_t* iarray, uint32_t count, uint32
   fs::ReadTxn read_transaction(fs_->bc_.get());
 
   for (uint32_t i = 0; i < count; i++) {
+    ValidateVmoSize(vmo_indirect_->vmo().get(), offset + i);
     blk_t ibno;
     if ((ibno = iarray[i]) != 0) {
       fs_->ValidateBno(ibno);
