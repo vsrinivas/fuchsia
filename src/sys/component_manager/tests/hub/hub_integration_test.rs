@@ -304,13 +304,16 @@ async fn used_service_test() -> Result<(), Error> {
     )
     .await?;
 
-    // Verify that the hub shows only HubReport service in use
+    // Verify that the hub shows the HubReport service and Breakpoint service in use
     test_runner
-        .verify_directory_listing_locally("/hub/exec/used/svc", vec![hub_report_service_name])
+        .verify_directory_listing_locally(
+            "/hub/exec/used/svc",
+            vec![breakpoints_service_name, hub_report_service_name],
+        )
         .await
         .send()?;
 
-    // Verify that the hub now shows the Breakpoint and Echo capability as in use
+    // Verify that the hub now shows the Echo capability as in use
     test_runner
         .verify_directory_listing_locally(
             "/hub/exec/used/svc",
