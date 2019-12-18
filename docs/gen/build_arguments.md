@@ -463,7 +463,7 @@ Clang crash reports directory path. Use empty path to disable altogether.
 
 **Current value (from the default):** `"//root_build_dir/clang-crashreports"`
 
-From //build/config/BUILD.gn:10
+From //build/config/BUILD.gn:12
 
 ### crashpad_dependencies
 
@@ -615,7 +615,7 @@ From //third_party/dart/runtime/runtime_args.gni:28
 
 **Current value (from the default):** `"kernel"`
 
-From //third_party/dart/utils/application_snapshot.gni:14
+From //third_party/dart/utils/application_snapshot.gni:15
 
 ### dart_space_dart
 Whether experimental space dart mode is enabled for Dart applications.
@@ -726,7 +726,7 @@ remove this option when the issues are addressed.
 
 **Current value (from the default):** `true`
 
-From //build/config/BUILD.gn:20
+From //build/config/BUILD.gn:22
 
 ### enable_gfx_subsystem
 
@@ -822,7 +822,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:555
+From //build/config/BUILDCONFIG.gn:558
 
 ### fastboot_product
 
@@ -1248,7 +1248,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:468
+From //build/config/BUILDCONFIG.gn:471
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -1562,7 +1562,7 @@ From //garnet/lib/magma/gnbuild/magma.gni:26
 
 ### prebuilt_libvulkan_goldfish_path
 
-**Current value (from the default):** `"//prebuilt/third_party/libvulkan_goldfish/arm64"`
+**Current value (from the default):** `"//prebuilt/third_party/libvulkan_goldfish/arm64/libvulkan_goldfish.so"`
 
 From //garnet/lib/goldfish-vulkan/gnbuild/BUILD.gn:10
 
@@ -1756,7 +1756,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:760
+From //build/config/BUILDCONFIG.gn:763
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -1765,7 +1765,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:765
+From //build/config/BUILDCONFIG.gn:768
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -1789,7 +1789,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:601
+From //build/config/BUILDCONFIG.gn:604
 
 ### signed_image
 
@@ -2004,7 +2004,7 @@ From //build/config/BUILDCONFIG.gn:100
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:575
+From //build/config/BUILDCONFIG.gn:578
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -2290,7 +2290,7 @@ From //BUILD.gn:84
 
 **Current value (from the default):** `true`
 
-From //build/config/fuchsia/BUILD.gn:226
+From //build/config/fuchsia/BUILD.gn:210
 
 ### zircon_b_partition
 
