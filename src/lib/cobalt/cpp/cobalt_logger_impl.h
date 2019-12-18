@@ -298,7 +298,6 @@ class BaseCobaltLoggerImpl : public CobaltLogger {
 
   backoff::ExponentialBackoff backoff_;
   async_dispatcher_t* const dispatcher_;
-  fuchsia::cobalt::LoggerFactoryPtr logger_factory_;
   fuchsia::cobalt::LoggerPtr logger_;
 
   // This object is in one of two modes depending on which constructor was used.

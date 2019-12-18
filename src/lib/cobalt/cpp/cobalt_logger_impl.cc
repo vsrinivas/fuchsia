@@ -125,13 +125,13 @@ ProjectProfile BaseCobaltLoggerImpl::CloneProjectProfile() {
 }
 
 void BaseCobaltLoggerImpl::ConnectToCobaltApplication() {
-  logger_factory_ = ConnectToLoggerFactory();
-  if (!logger_factory_) {
+  auto logger_factory = ConnectToLoggerFactory();
+  if (!logger_factory) {
     return;
   }
 
   if (project_name_.empty() && project_id_ == 0) {
-    logger_factory_->CreateLogger(
+    logger_factory->CreateLogger(
         CloneProjectProfile(), logger_.NewRequest(), [this](Status status) {
           if (status == Status::OK) {
             if (logger_) {
@@ -143,10 +143,9 @@ void BaseCobaltLoggerImpl::ConnectToCobaltApplication() {
           } else {
             FX_LOGST(ERROR, "cobalt_lib") << "CreateLogger() failed.";
           }
-          logger_factory_.Unbind();
         });
   } else if (project_name_.empty()) {
-    logger_factory_->CreateLoggerFromProjectId(
+    logger_factory->CreateLoggerFromProjectId(
         project_id_, logger_.NewRequest(), [this](Status status) {
           if (status == Status::OK) {
             if (logger_) {
@@ -158,10 +157,9 @@ void BaseCobaltLoggerImpl::ConnectToCobaltApplication() {
           } else {
             FX_LOGST(ERROR, "cobalt_lib") << "CreateLoggerFromProjectId() failed";
           }
-          logger_factory_.Unbind();
         });
   } else {
-    logger_factory_->CreateLoggerFromProjectName(
+    logger_factory->CreateLoggerFromProjectName(
         project_name_, release_stage_, logger_.NewRequest(), [this](Status status) {
           if (status == Status::OK) {
             if (logger_) {
@@ -173,7 +171,6 @@ void BaseCobaltLoggerImpl::ConnectToCobaltApplication() {
           } else {
             FX_LOGST(ERROR, "cobalt_lib") << "CreateLoggerFromProjectName() failed";
           }
-          logger_factory_.Unbind();
         });
   }
 }
