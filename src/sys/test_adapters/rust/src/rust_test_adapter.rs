@@ -259,7 +259,7 @@ impl RustTestAdapter {
             }
         }
 
-        Err(format_err!("Failed to run test: {}", json))
+        Err(format_err!("Received unknown repsonse from Rust test runner: {}", json))
     }
 
     fn _check_process_return_code(process: &zx::Process) -> Result<(), Error> {

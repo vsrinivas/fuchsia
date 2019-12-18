@@ -1,15 +1,21 @@
 {
-    program: {
-        binary: "test/session_manager_integration_tests",
-        args: [
-            "-s",
-            "fuchsia-pkg://fuchsia.com/graphical_session#meta/graphical_session.cm",
+    "program": {
+        "binary": "bin/rust_test_adapter",
+        "args": [
+            "/pkg/test/session_manager_integration_tests",
         ],
     },
     use: [
         {
-            service_protocol: "/svc/fuchsia.sys2.Realm",
-            from: "framework",
+            "service_protocol": "/svc/fuchsia.sys2.Realm",
+            "from": "framework",
+        },
+        // The last "use" statements are needed for the RustTestAdapter trampoline
+        {
+            "service_protocol": "/svc/fuchsia.process.Launcher"
+        },
+        {
+            "service_protocol": "/svc/fuchsia.logger.LogSink"
         },
     ],
     expose: [
