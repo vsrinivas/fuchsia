@@ -138,6 +138,9 @@ const char* const kQuietHelp = R"(  --quiet=<number or log level>
 const char* const kLogFileHelp = R"(  --log-file=<pathspec>
       The name of a file to which the log should be written.)";
 
+const char* const kCompareHelp = R"(  --compare=<path>
+      Compare output with the one stored in the given file)";
+
 const char* const kHelpHelp = R"(  --help
   -h
       Prints all command-line switches.)";
@@ -203,6 +206,7 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
   parser.AddSwitch("pretty-print", 0, kPrettyPrintHelp, &CommandLineOptions::pretty_print);
   parser.AddSwitch("with-process-info", 0, kWithProcessInfoHelp,
                    &CommandLineOptions::with_process_info);
+  parser.AddSwitch("compare", 'c', kCompareHelp, &CommandLineOptions::compare_file);
   parser.AddSwitch("stack", 0, kStackHelp, &CommandLineOptions::stack_level);
   parser.AddSwitch("colors", 0, kColorsHelp, &CommandLineOptions::colors);
   parser.AddSwitch("columns", 0, kColumnsHelp, &CommandLineOptions::columns);
@@ -258,7 +262,8 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
 
   if (options->pretty_print) {
     display_options->needs_colors =
-        (options->colors == "always") || ((options->colors == "auto") && (ioctl_result != -1));
+        ((options->colors == "always") || ((options->colors == "auto") && (ioctl_result != -1))) &&
+        !(options->compare_file.has_value());
   }
 
   return "";

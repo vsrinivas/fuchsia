@@ -7,6 +7,7 @@ import("//build/fidl/fidl.gni")
 if (current_toolchain == host_toolchain) {
   static_library("host_lib") {
     public = [
+      "comparator.h",
       "decoder.h",
       "exception_decoder.h",
       "inference.h",
@@ -17,6 +18,7 @@ if (current_toolchain == host_toolchain) {
     ]
 
     sources = [
+      "comparator.cc",
       "decoder.cc",
       "exception_decoder.cc",
       "inference.cc",
@@ -44,26 +46,14 @@ if (current_toolchain == host_toolchain) {
   }
 }
 
-source_set("tests") {
+source_set("host_tests") {
   testonly = true
   sources = [
-    "library_loader_test.cc",
-    "message_decoder_test.cc",
-    "wire_parser_test.cc",
+    "comparator_test.cc",
   ]
 
   deps = [
-    ":fidl",
-    ":json_for_test",
-    ":lib",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/lib/fidl/cpp:test_support",
-    "//sdk/lib/fidl/cpp/test",
-    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//third_party/rapidjson",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
   ]
 }
 

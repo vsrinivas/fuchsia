@@ -51,6 +51,7 @@ if (current_toolchain == host_toolchain) {
       ":lib",
       "//src/lib/fxl/test:gtest_main",
       "//tools/fidlcat/interception_tests:host_tests",
+      "//tools/fidlcat/lib:host_tests",
     ]
   }
 

@@ -32,6 +32,7 @@ struct CommandLineOptions {
   std::optional<std::string> verbose;
   std::optional<std::string> quiet;
   std::optional<std::string> log_file;
+  std::optional<std::string> compare_file;
 };
 
 // Parses the given |argc| and |argv| into the well-defined |options|.  If there
