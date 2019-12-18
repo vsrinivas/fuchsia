@@ -166,27 +166,27 @@ class TestH264 {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
 
-      video->video_decoder_->SetFrameReadyNotifier(
-          [&frames_to_return, &frame_count, &wait_valid, &return_frames_immediately, &video]
-              (std::shared_ptr<VideoFrame> frame) {
-            ++frame_count;
-            EXPECT_EQ(320u, frame->display_width);
-            EXPECT_EQ(180u, frame->display_height);
-            DLOG("Got frame %d coded_width: %d coded_height: %d\n", frame_count, frame->coded_width,
-                 frame->coded_height);
-            constexpr uint32_t kFirstVideoFrameCount = 26;
-            if (frame_count == kFirstVideoFrameCount)
-              wait_valid.set_value();
-            if (return_frames_immediately) {
-              DLOG("Before ReturnFrame()\n");
-              // video->video_decoder_lock_ already held here
-              ReturnFrame(video.get(), frame);
-            } else {
-              DLOG("Before push_back()\n");
-              frames_to_return.push_back(frame);
-            }
-            DLOG("Done with frame.\n");
-          });
+      video->video_decoder_->SetFrameReadyNotifier([&frames_to_return, &frame_count, &wait_valid,
+                                                    &return_frames_immediately,
+                                                    &video](std::shared_ptr<VideoFrame> frame) {
+        ++frame_count;
+        EXPECT_EQ(320u, frame->display_width);
+        EXPECT_EQ(180u, frame->display_height);
+        DLOG("Got frame %d coded_width: %d coded_height: %d\n", frame_count, frame->coded_width,
+             frame->coded_height);
+        constexpr uint32_t kFirstVideoFrameCount = 26;
+        if (frame_count == kFirstVideoFrameCount)
+          wait_valid.set_value();
+        if (return_frames_immediately) {
+          DLOG("Before ReturnFrame()\n");
+          // video->video_decoder_lock_ already held here
+          ReturnFrame(video.get(), frame);
+        } else {
+          DLOG("Before push_back()\n");
+          frames_to_return.push_back(frame);
+        }
+        DLOG("Done with frame.\n");
+      });
     }
 
     std::atomic<bool> stop_parsing(false);
@@ -217,7 +217,7 @@ class TestH264 {
       }
       frames_to_return.clear();
     }
-      DLOG("Done returning frames.\n");
+    DLOG("Done returning frames.\n");
     EXPECT_EQ(std::future_status::ready, wait_valid.get_future().wait_for(std::chrono::seconds(1)));
 
     stop_parsing = true;
@@ -315,6 +315,64 @@ class TestH264 {
     video.reset();
   }
 
+  static void DecodeMalformed(uint64_t location, uint8_t value) {
+    auto video = std::make_unique<AmlogicVideo>();
+    ASSERT_TRUE(video);
+    TestFrameAllocator frame_allocator(video.get());
+
+    auto bear_h264 = TestSupport::LoadFirmwareFile("video_test_data/bear.h264");
+    ASSERT_NE(nullptr, bear_h264);
+    zx_status_t status = video->InitRegisters(TestSupport::parent_device());
+    EXPECT_EQ(ZX_OK, status);
+    EXPECT_EQ(ZX_OK, video->InitDecoder());
+
+    std::promise<void> first_wait_valid;
+    {
+      std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
+      video->SetDefaultInstance(std::make_unique<H264Decoder>(video.get(), /*is_secure=*/false),
+                                /*hevc=*/false);
+      frame_allocator.set_decoder(video->video_decoder_);
+      video->video_decoder()->SetErrorHandler([&first_wait_valid]() {
+        DECODE_ERROR("Got error");
+        first_wait_valid.set_value();
+      });
+    }
+    status = video->InitializeStreamBuffer(/*use_parser=*/true, PAGE_SIZE,
+                                           /*is_secure=*/false);
+    EXPECT_EQ(ZX_OK, status);
+    uint32_t frame_count = 0;
+
+    {
+      std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
+      EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
+      video->video_decoder_->SetFrameReadyNotifier(
+          [&video, &frame_count](std::shared_ptr<VideoFrame> frame) {
+            ++frame_count;
+            DLOG("Got frame %d coded_width: %d coded_height: %d\n", frame_count, frame->coded_width,
+                 frame->coded_height);
+            ReturnFrame(video.get(), frame);
+          });
+    }
+
+    std::vector<uint8_t> video_data(bear_h264->ptr, bear_h264->ptr + bear_h264->size);
+    video_data[location] = value;
+
+    EXPECT_EQ(ZX_OK, video->InitializeEsParser());
+    EXPECT_EQ(ZX_OK, video->parser()->ParseVideo(video_data.data(), video_data.size()));
+
+    EXPECT_EQ(std::future_status::ready,
+              first_wait_valid.get_future().wait_for(std::chrono::seconds(1)));
+    // The decoder should now be hung without having gotten through all the input so we should
+    // cancel parsing before teardown.
+    video->parser()->CancelParsing();
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    // No frames should be returned because the error happened too early.
+    EXPECT_EQ(0u, frame_count);
+
+    video.reset();
+  }
+
  private:
   // This is called from the interrupt handler, which already holds the lock.
   static void ReturnFrame(AmlogicVideo* video, std::shared_ptr<VideoFrame> frame) {
@@ -332,3 +390,8 @@ TEST(H264, DelayedReturn) { TestH264::DelayedReturn(); }
 TEST(H264, DecodeNalUnits) { TestH264::DecodeNalUnits(true); }
 
 TEST(H264, DecodeNalUnitsNoParser) { TestH264::DecodeNalUnits(false); }
+
+TEST(H264, DecodeMalformedHang) {
+  // Parameters found through fuzzing.
+  TestH264::DecodeMalformed(638, 44);
+}

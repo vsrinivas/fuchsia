@@ -817,6 +817,10 @@ void H264Decoder::HandleInterrupt() {
     case kCommandFatalError: {
       auto error_count = AvScratchD::Get().ReadFrom(owner_->dosbus()).reg_value();
       DECODE_ERROR("Decoder fatal error %d\n", error_count);
+      owner_->core()->StopDecoding();
+      // We need to reset the hardware here or for some malformed hardware streams (e.g.
+      // bear_h264[638] = 44) the CPU will hang when trying to isolate VDEC1 power on shutdown.
+      ResetHardware();
       OnFatalError();
       // Don't write to AvScratch0, so the decoder won't continue.
       break;
