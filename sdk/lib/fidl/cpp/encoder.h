@@ -22,14 +22,8 @@ class Encoder final {
  public:
   enum NoHeader { NO_HEADER };
 
-  // As part of the union to xunion migration, we will encode unions
-  // as xunion bytes rather than union bytes when a flag is set.
-  // The second argument allows that behavior to be overridden locally for this encoder.
-  explicit Encoder(uint64_t ordinal,
-                   bool should_encode_union_as_xunion = fidl_global_get_should_write_union_as_xunion());
-  explicit Encoder(NoHeader marker,
-                   bool should_encode_union_as_xunion = fidl_global_get_should_write_union_as_xunion())
-      : should_encode_union_as_xunion_(should_encode_union_as_xunion) {}
+  explicit Encoder(uint64_t ordinal);
+  explicit Encoder(NoHeader marker) {}
 
   ~Encoder();
 
@@ -54,14 +48,9 @@ class Encoder final {
 
   std::vector<uint8_t> TakeBytes() { return std::move(bytes_); }
 
-  // As part of the union to xunion migration, we will encode unions
-  // as xunion bytes rather than union bytes when a flag is set.
-  bool ShouldEncodeUnionAsXUnion() const { return should_encode_union_as_xunion_; }
-
  private:
   void EncodeMessageHeader(uint64_t ordinal);
 
-  const bool should_encode_union_as_xunion_;
   std::vector<uint8_t> bytes_;
   std::vector<zx_handle_t> handles_;
 };

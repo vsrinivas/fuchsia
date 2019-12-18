@@ -16,7 +16,6 @@ class {{ .Name }};
 class {{ .Name }} final {
  public:
  static const fidl_type_t* FidlType;
- static const fidl_type_t* FidlTypeV1;
 
   {{ .Name }}();
   ~{{ .Name }}();
@@ -53,10 +52,6 @@ class {{ .Name }} final {
 
     */ -}}
 
-  enum class InternalTag : fidl_xunion_tag_t {
-    kEmpty_internalUseOnly = kFidlXUnionEmptyTag,
-  };
-
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   {{ if .IsFlexible -}}
     kUnknown = 0,
@@ -75,7 +70,9 @@ class {{ .Name }} final {
   static void Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t offset);
   zx_status_t Clone({{ .Name }}* result) const;
 
-  bool has_invalid_tag() const { return Which() == Tag::Invalid; }
+  bool has_invalid_tag() const {
+    return tag_ == Invalid;
+  }
 
   {{- range .Members }}
 
@@ -90,7 +87,10 @@ class {{ .Name }} final {
   {{range .DocComments}}
   //{{ . }}
   {{- end}}
-  const {{ .Type.Identifier }}& {{ .Name }}() const { return {{ .StorageName }}; }
+  const {{ .Type.Identifier }}& {{ .Name }}() const {
+    ZX_ASSERT(is_{{ .Name }}());
+    return {{ .StorageName }};
+  }
   {{ $.Name }}& set_{{ .Name }}({{ .Type.Identifier }} value);
   {{- end }}
 
@@ -167,7 +167,7 @@ class {{ .Name }} final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
   union {
   {{- range .Members }}
     {{ .Type.Identifier }} {{ .StorageName }};
@@ -187,10 +187,8 @@ using {{ .Name }}Ptr = ::std::unique_ptr<{{ .Name }}>;
 {{- end }}
 
 {{- define "XUnionDefinition" }}
-extern "C" const fidl_type_t {{ .TableType }};
-const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
 extern "C" const fidl_type_t {{ .V1TableType }};
-const fidl_type_t* {{ .Name }}::FidlTypeV1 = &{{ .V1TableType }};
+const fidl_type_t* {{ .Name }}::FidlType = &{{ .V1TableType }};
 
 {{ .Name }}::{{ .Name }}() {}
 
@@ -208,7 +206,7 @@ const fidl_type_t* {{ .Name }}::FidlTypeV1 = &{{ .V1TableType }};
       {{ .StorageName }} = std::move(other.{{ .StorageName }});
       break;
   {{- end }}
-    case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly):
+    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
       break;
   {{- if .IsFlexible }}
     default:
@@ -232,7 +230,7 @@ const fidl_type_t* {{ .Name }}::FidlTypeV1 = &{{ .V1TableType }};
         {{ .StorageName }} = std::move(other.{{ .StorageName }});
         break;
     {{- end }}
-      case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly):
+      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
     {{- if .IsFlexible }}
       default:
@@ -293,7 +291,7 @@ void {{ .Name }}::Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t of
   fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
-    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly));
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(Tag::Invalid));
     return;
   }
 
@@ -357,7 +355,7 @@ void {{ .Name }}::Destroy() {
       break;
   {{- end }}
   {{ if .IsFlexible }}
-    case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly):
+    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
       break;
     default:
       unknown_data_.~vector();
@@ -367,7 +365,7 @@ void {{ .Name }}::Destroy() {
       break;
   {{ end }}
   }
-  tag_ = static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly);
+  tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
 }
 
 void {{ .Name }}::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -375,14 +373,12 @@ void {{ .Name }}::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly):
+      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
       {{- range .Members }}
-      {{- if .Type.Dtor }}
       case Tag::{{ .TagName }}:
         new (&{{ .StorageName }}) {{ .Type.Identifier }}();
         break;
-      {{- end }}
       {{- end }}
       default:
       {{- if .IsFlexible }}
@@ -397,12 +393,14 @@ void {{ .Name }}::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
 
 {{- define "XUnionTraits" }}
 template <>
+struct IsFidlXUnion<{{ .Namespace }}::{{ .Name }}> : public std::true_type {};
+
+template <>
 struct CodingTraits<{{ .Namespace }}::{{ .Name }}>
-    : public EncodableCodingTraits<{{ .Namespace }}::{{ .Name }}, {{ .InlineSizeOld }}, {{ .InlineSizeV1NoEE }}> {};
+    : public EncodableCodingTraits<{{ .Namespace }}::{{ .Name }}, {{ .InlineSizeV1NoEE }}> {};
 
 template <>
 struct CodingTraits<std::unique_ptr<{{ .Namespace }}::{{ .Name }}>> {
-  static constexpr size_t inline_size_old = {{ .InlineSizeOld }};
   static constexpr size_t inline_size_v1_no_ee = {{ .InlineSizeV1NoEE }};
 
   static void Encode(Encoder* encoder, std::unique_ptr<{{ .Namespace }}::{{ .Name }}>* value, size_t offset) {
@@ -442,7 +440,7 @@ struct Equality<{{ .Namespace }}::{{ .Name }}> {
 
     {{ with $xunion := . -}}
     switch (_lhs.Ordinal()) {
-      case static_cast<fidl_xunion_tag_t>({{ $xunion.Namespace }}::{{ $xunion.Name }}::InternalTag::kEmpty_internalUseOnly):
+      case static_cast<fidl_xunion_tag_t>({{ $xunion.Namespace }}::{{ $xunion.Name }}::Tag::Invalid):
         return true;
     {{- range .Members }}
       case {{ $xunion.Namespace }}::{{ $xunion.Name }}::Tag::{{ .TagName }}:

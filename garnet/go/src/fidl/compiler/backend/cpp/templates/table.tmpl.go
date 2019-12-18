@@ -16,7 +16,6 @@ class {{ .Name }};
 class {{ .Name }} final {
  public:
   static const fidl_type_t* FidlType;
-  static const fidl_type_t* FidlTypeV1;
   // Returns whether no field is set.
   bool IsEmpty() const;
   {{- range .Members }}
@@ -102,10 +101,8 @@ using {{ .Name }}Ptr = ::std::unique_ptr<{{ .Name }}>;
 {{- end }}
 
 {{- define "TableDefinition" }}
-extern "C" const fidl_type_t {{ .TableType }};
-const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
 extern "C" const fidl_type_t {{ .V1TableType }};
-const fidl_type_t* {{ .Name }}::FidlTypeV1 = &{{ .V1TableType }};
+const fidl_type_t* {{ .Name }}::FidlType = &{{ .V1TableType }};
 
 {{ .Name }}::{{ .Name }}(){{- if len .Members }} : {{- end -}}
 {{- range $index, $element := .Members -}}
@@ -238,7 +235,7 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
 {{- define "TableTraits" }}
 template <>
 struct CodingTraits<{{ .Namespace }}::{{ .Name }}>
-    : public EncodableCodingTraits<{{ .Namespace }}::{{ .Name }}, {{ .InlineSizeOld }}, {{ .InlineSizeV1NoEE }}> {};
+    : public EncodableCodingTraits<{{ .Namespace }}::{{ .Name }}, {{ .InlineSizeV1NoEE }}> {};
 
 inline zx_status_t Clone(const {{ .Namespace }}::{{ .Name }}& _value,
                          {{ .Namespace }}::{{ .Name }}* result) {

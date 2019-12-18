@@ -13,7 +13,6 @@ class Handles;
 class Handles final {
  public:
   static const fidl_type_t* FidlType;
-  static const fidl_type_t* FidlTypeV1;
   
   ::zx::handle plain_handle{};
   
@@ -86,7 +85,7 @@ namespace fidl {
 
 template <>
 struct CodingTraits<::test::name::Handles>
-    : public EncodableCodingTraits<::test::name::Handles, 104, 104> {};
+    : public EncodableCodingTraits<::test::name::Handles, 104> {};
 
 inline zx_status_t Clone(const ::test::name::Handles& value,
                          ::test::name::Handles* result) {

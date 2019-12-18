@@ -6,67 +6,36 @@
 namespace test {
 namespace name {
 
-extern "C" const fidl_type_t test_name_HandlesTable;
-const fidl_type_t* Handles::FidlType = &test_name_HandlesTable;
 extern "C" const fidl_type_t v1_test_name_HandlesTable;
-const fidl_type_t* Handles::FidlTypeV1 = &v1_test_name_HandlesTable;
+const fidl_type_t* Handles::FidlType = &v1_test_name_HandlesTable;
 
 void Handles::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  if (_encoder->ShouldEncodeUnionAsXUnion()) {
-    ::fidl::Encode(_encoder, &plain_handle, _offset + 0);
-    ::fidl::Encode(_encoder, &bti_handle, _offset + 4);
-    ::fidl::Encode(_encoder, &channel_handle, _offset + 8);
-    ::fidl::Encode(_encoder, &debuglog_handle, _offset + 12);
-    ::fidl::Encode(_encoder, &event_handle, _offset + 16);
-    ::fidl::Encode(_encoder, &eventpair_handle, _offset + 20);
-    ::fidl::Encode(_encoder, &exception_handle, _offset + 24);
-    ::fidl::Encode(_encoder, &fifo_handle, _offset + 28);
-    ::fidl::Encode(_encoder, &guest_handle, _offset + 32);
-    ::fidl::Encode(_encoder, &interrupt_handle, _offset + 36);
-    ::fidl::Encode(_encoder, &iommu_handle, _offset + 40);
-    ::fidl::Encode(_encoder, &job_handle, _offset + 44);
-    ::fidl::Encode(_encoder, &pager_handle, _offset + 48);
-    ::fidl::Encode(_encoder, &pcidevice_handle, _offset + 52);
-    ::fidl::Encode(_encoder, &pmt_handle, _offset + 56);
-    ::fidl::Encode(_encoder, &port_handle, _offset + 60);
-    ::fidl::Encode(_encoder, &process_handle, _offset + 64);
-    ::fidl::Encode(_encoder, &profile_handle, _offset + 68);
-    ::fidl::Encode(_encoder, &resource_handle, _offset + 72);
-    ::fidl::Encode(_encoder, &socket_handle, _offset + 76);
-    ::fidl::Encode(_encoder, &suspendtoken_handle, _offset + 80);
-    ::fidl::Encode(_encoder, &thread_handle, _offset + 84);
-    ::fidl::Encode(_encoder, &timer_handle, _offset + 88);
-    ::fidl::Encode(_encoder, &vcpu_handle, _offset + 92);
-    ::fidl::Encode(_encoder, &vmar_handle, _offset + 96);
-    ::fidl::Encode(_encoder, &vmo_handle, _offset + 100);
-  } else {
-    ::fidl::Encode(_encoder, &plain_handle, _offset + 0);
-    ::fidl::Encode(_encoder, &bti_handle, _offset + 4);
-    ::fidl::Encode(_encoder, &channel_handle, _offset + 8);
-    ::fidl::Encode(_encoder, &debuglog_handle, _offset + 12);
-    ::fidl::Encode(_encoder, &event_handle, _offset + 16);
-    ::fidl::Encode(_encoder, &eventpair_handle, _offset + 20);
-    ::fidl::Encode(_encoder, &exception_handle, _offset + 24);
-    ::fidl::Encode(_encoder, &fifo_handle, _offset + 28);
-    ::fidl::Encode(_encoder, &guest_handle, _offset + 32);
-    ::fidl::Encode(_encoder, &interrupt_handle, _offset + 36);
-    ::fidl::Encode(_encoder, &iommu_handle, _offset + 40);
-    ::fidl::Encode(_encoder, &job_handle, _offset + 44);
-    ::fidl::Encode(_encoder, &pager_handle, _offset + 48);
-    ::fidl::Encode(_encoder, &pcidevice_handle, _offset + 52);
-    ::fidl::Encode(_encoder, &pmt_handle, _offset + 56);
-    ::fidl::Encode(_encoder, &port_handle, _offset + 60);
-    ::fidl::Encode(_encoder, &process_handle, _offset + 64);
-    ::fidl::Encode(_encoder, &profile_handle, _offset + 68);
-    ::fidl::Encode(_encoder, &resource_handle, _offset + 72);
-    ::fidl::Encode(_encoder, &socket_handle, _offset + 76);
-    ::fidl::Encode(_encoder, &suspendtoken_handle, _offset + 80);
-    ::fidl::Encode(_encoder, &thread_handle, _offset + 84);
-    ::fidl::Encode(_encoder, &timer_handle, _offset + 88);
-    ::fidl::Encode(_encoder, &vcpu_handle, _offset + 92);
-    ::fidl::Encode(_encoder, &vmar_handle, _offset + 96);
-    ::fidl::Encode(_encoder, &vmo_handle, _offset + 100);
-  }
+  ::fidl::Encode(_encoder, &plain_handle, _offset + 0);
+  ::fidl::Encode(_encoder, &bti_handle, _offset + 4);
+  ::fidl::Encode(_encoder, &channel_handle, _offset + 8);
+  ::fidl::Encode(_encoder, &debuglog_handle, _offset + 12);
+  ::fidl::Encode(_encoder, &event_handle, _offset + 16);
+  ::fidl::Encode(_encoder, &eventpair_handle, _offset + 20);
+  ::fidl::Encode(_encoder, &exception_handle, _offset + 24);
+  ::fidl::Encode(_encoder, &fifo_handle, _offset + 28);
+  ::fidl::Encode(_encoder, &guest_handle, _offset + 32);
+  ::fidl::Encode(_encoder, &interrupt_handle, _offset + 36);
+  ::fidl::Encode(_encoder, &iommu_handle, _offset + 40);
+  ::fidl::Encode(_encoder, &job_handle, _offset + 44);
+  ::fidl::Encode(_encoder, &pager_handle, _offset + 48);
+  ::fidl::Encode(_encoder, &pcidevice_handle, _offset + 52);
+  ::fidl::Encode(_encoder, &pmt_handle, _offset + 56);
+  ::fidl::Encode(_encoder, &port_handle, _offset + 60);
+  ::fidl::Encode(_encoder, &process_handle, _offset + 64);
+  ::fidl::Encode(_encoder, &profile_handle, _offset + 68);
+  ::fidl::Encode(_encoder, &resource_handle, _offset + 72);
+  ::fidl::Encode(_encoder, &socket_handle, _offset + 76);
+  ::fidl::Encode(_encoder, &suspendtoken_handle, _offset + 80);
+  ::fidl::Encode(_encoder, &thread_handle, _offset + 84);
+  ::fidl::Encode(_encoder, &timer_handle, _offset + 88);
+  ::fidl::Encode(_encoder, &vcpu_handle, _offset + 92);
+  ::fidl::Encode(_encoder, &vmar_handle, _offset + 96);
+  ::fidl::Encode(_encoder, &vmo_handle, _offset + 100);
 }
 
 void Handles::Decode(::fidl::Decoder* _decoder, Handles* value, size_t _offset) {

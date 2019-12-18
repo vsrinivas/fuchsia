@@ -221,7 +221,6 @@ Some example tests you can run:
 
 ```sh
 fx run-host-tests fidlgen_cpp_test
-fx run-host-tests fidlgen_cpp_ir_test
 fx run-host-tests fidlgen_golang_ir_test
 ```
 
@@ -393,7 +392,6 @@ fx build host-tools/gidl
 |--------------------------|-----------------------------------------------------|-------------------------------------------------------------------------|
 | gidl parser              | fx run-host-tests gidl_parser_test                  | tools/fidl/gidl/parser                                                  |
 | fidlgen hlcpp            | fx run-host-tests fidlgen_cpp_test                  | garnet/go/src/fidl/compiler/backend/cpp                                 |
-| fidlgen hlcpp ir         | fx run-host-tests fidlgen_cpp_ir_test               | garnet/go/src/fidl/compiler/backend/cpp/ir                              |
 | fidlgen llcpp            | fx run-host-tests fidlgen_llcpp_test                | garnet/go/src/fidl/compiler/llcpp_backend                               |
 | fidlgen overnet          | fx run-host-tests fidlgen_cpp_overnet_internal_test | garnet/go/src/fidl/compiler/backend/cpp_overnet_internal                |
 | fidlgen golang           | fx run-host-tests fidlgen_golang_test               | garnet/go/src/fidl/compiler/backend/golang                              |

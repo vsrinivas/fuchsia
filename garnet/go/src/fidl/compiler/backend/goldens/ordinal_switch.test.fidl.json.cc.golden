@@ -9,13 +9,13 @@ namespace name {
 #ifdef __Fuchsia__
 namespace {
 
-extern "C" const fidl_type_t test_name_SwitchingOrdinalsOrdinalFiveRequestTable;
+extern "C" const fidl_type_t v1_test_name_SwitchingOrdinalsOrdinalFiveRequestTable;
 
-extern "C" const fidl_type_t test_name_SwitchingOrdinalsOnlyGeneratedOrdinalRequestTable;
+extern "C" const fidl_type_t v1_test_name_SwitchingOrdinalsOnlyGeneratedOrdinalRequestTable;
 
-extern "C" const fidl_type_t test_name_SwitchingOrdinalsEventOrdinalFifteenEventTable;
+extern "C" const fidl_type_t v1_test_name_SwitchingOrdinalsEventOrdinalFifteenEventTable;
 
-extern "C" const fidl_type_t test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEventTable;
+extern "C" const fidl_type_t v1_test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEventTable;
 
 }  // namespace
 
@@ -26,11 +26,11 @@ const fidl_type_t* SwitchingOrdinals_RequestDecoder::GetType(uint64_t ordinal, b
     case internal::kSwitchingOrdinals_OrdinalFive_Ordinal:
     case internal::kSwitchingOrdinals_OrdinalFive_GenOrdinal:
       *out_needs_response = false;
-      return &test_name_SwitchingOrdinalsOrdinalFiveRequestTable;
+      return &v1_test_name_SwitchingOrdinalsOrdinalFiveRequestTable;
     case internal::kSwitchingOrdinals_OnlyGeneratedOrdinal_Ordinal:
     case internal::kSwitchingOrdinals_OnlyGeneratedOrdinal_GenOrdinal:
       *out_needs_response = false;
-      return &test_name_SwitchingOrdinalsOnlyGeneratedOrdinalRequestTable;
+      return &v1_test_name_SwitchingOrdinalsOnlyGeneratedOrdinalRequestTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -41,10 +41,10 @@ const fidl_type_t* SwitchingOrdinals_ResponseDecoder::GetType(uint64_t ordinal) 
   switch (ordinal) {
     case internal::kSwitchingOrdinals_EventOrdinalFifteen_Ordinal:
     case internal::kSwitchingOrdinals_EventOrdinalFifteen_GenOrdinal:
-      return &test_name_SwitchingOrdinalsEventOrdinalFifteenEventTable;
+      return &v1_test_name_SwitchingOrdinalsEventOrdinalFifteenEventTable;
     case internal::kSwitchingOrdinals_EventOnlyGeneratedOrdinal_Ordinal:
     case internal::kSwitchingOrdinals_EventOnlyGeneratedOrdinal_GenOrdinal:
-      return &test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEventTable;
+      return &v1_test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEventTable;
     default:
       return nullptr;
   }
@@ -72,9 +72,9 @@ zx_status_t SwitchingOrdinals_Proxy::Dispatch_(::fidl::Message message) {
         break;
       }
       const char* error_msg = nullptr;
-      status = message.Decode(&test_name_SwitchingOrdinalsEventOrdinalFifteenEventTable, &error_msg);
+      status = message.Decode(&v1_test_name_SwitchingOrdinalsEventOrdinalFifteenEventTable, &error_msg);
       if (status != ZX_OK) {
-        FIDL_REPORT_DECODING_ERROR(message, &test_name_SwitchingOrdinalsEventOrdinalFifteenEventTable, error_msg);
+        FIDL_REPORT_DECODING_ERROR(message, &v1_test_name_SwitchingOrdinalsEventOrdinalFifteenEventTable, error_msg);
         break;
       }
       EventOrdinalFifteen();
@@ -88,9 +88,9 @@ zx_status_t SwitchingOrdinals_Proxy::Dispatch_(::fidl::Message message) {
         break;
       }
       const char* error_msg = nullptr;
-      status = message.Decode(&test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEventTable, &error_msg);
+      status = message.Decode(&v1_test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEventTable, &error_msg);
       if (status != ZX_OK) {
-        FIDL_REPORT_DECODING_ERROR(message, &test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEventTable, error_msg);
+        FIDL_REPORT_DECODING_ERROR(message, &v1_test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEventTable, error_msg);
         break;
       }
       EventOnlyGeneratedOrdinal();
@@ -107,11 +107,11 @@ zx_status_t SwitchingOrdinals_Proxy::Dispatch_(::fidl::Message message) {
 
 void SwitchingOrdinals_Proxy::OrdinalFive() {
   ::fidl::Encoder _encoder(internal::kSwitchingOrdinals_OrdinalFive_GenOrdinal);
-  controller_->Send(&test_name_SwitchingOrdinalsOrdinalFiveRequestTable, SwitchingOrdinals_RequestEncoder::OrdinalFive(&_encoder), nullptr);
+  controller_->Send(&v1_test_name_SwitchingOrdinalsOrdinalFiveRequestTable, SwitchingOrdinals_RequestEncoder::OrdinalFive(&_encoder), nullptr);
 }
 void SwitchingOrdinals_Proxy::OnlyGeneratedOrdinal() {
   ::fidl::Encoder _encoder(internal::kSwitchingOrdinals_OnlyGeneratedOrdinal_GenOrdinal);
-  controller_->Send(&test_name_SwitchingOrdinalsOnlyGeneratedOrdinalRequestTable, SwitchingOrdinals_RequestEncoder::OnlyGeneratedOrdinal(&_encoder), nullptr);
+  controller_->Send(&v1_test_name_SwitchingOrdinalsOnlyGeneratedOrdinalRequestTable, SwitchingOrdinals_RequestEncoder::OnlyGeneratedOrdinal(&_encoder), nullptr);
 }
 
 SwitchingOrdinals_Stub::SwitchingOrdinals_Stub(SwitchingOrdinals_clazz* impl) : impl_(impl) {
@@ -169,11 +169,11 @@ zx_status_t SwitchingOrdinals_Stub::Dispatch_(
 }
 void SwitchingOrdinals_Stub::EventOrdinalFifteen() {
   ::fidl::Encoder _encoder(internal::kSwitchingOrdinals_EventOrdinalFifteen_GenOrdinal);
-  sender_()->Send(&test_name_SwitchingOrdinalsEventOrdinalFifteenEventTable, SwitchingOrdinals_ResponseEncoder::EventOrdinalFifteen(&_encoder));
+  sender_()->Send(&v1_test_name_SwitchingOrdinalsEventOrdinalFifteenEventTable, SwitchingOrdinals_ResponseEncoder::EventOrdinalFifteen(&_encoder));
 }
 void SwitchingOrdinals_Stub::EventOnlyGeneratedOrdinal() {
   ::fidl::Encoder _encoder(internal::kSwitchingOrdinals_EventOnlyGeneratedOrdinal_GenOrdinal);
-  sender_()->Send(&test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEventTable, SwitchingOrdinals_ResponseEncoder::EventOnlyGeneratedOrdinal(&_encoder));
+  sender_()->Send(&v1_test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEventTable, SwitchingOrdinals_ResponseEncoder::EventOnlyGeneratedOrdinal(&_encoder));
 }
 
 SwitchingOrdinals_SyncProxy::SwitchingOrdinals_SyncProxy(::zx::channel channel)
@@ -183,12 +183,12 @@ SwitchingOrdinals_SyncProxy::~SwitchingOrdinals_SyncProxy() = default;
 
 zx_status_t SwitchingOrdinals_SyncProxy::OrdinalFive() {
   ::fidl::Encoder _encoder(internal::kSwitchingOrdinals_OrdinalFive_GenOrdinal);
-  return proxy_.Send(&test_name_SwitchingOrdinalsOrdinalFiveRequestTable, SwitchingOrdinals_RequestEncoder::OrdinalFive(&_encoder));
+  return proxy_.Send(&v1_test_name_SwitchingOrdinalsOrdinalFiveRequestTable, SwitchingOrdinals_RequestEncoder::OrdinalFive(&_encoder));
 }
 
 zx_status_t SwitchingOrdinals_SyncProxy::OnlyGeneratedOrdinal() {
   ::fidl::Encoder _encoder(internal::kSwitchingOrdinals_OnlyGeneratedOrdinal_GenOrdinal);
-  return proxy_.Send(&test_name_SwitchingOrdinalsOnlyGeneratedOrdinalRequestTable, SwitchingOrdinals_RequestEncoder::OnlyGeneratedOrdinal(&_encoder));
+  return proxy_.Send(&v1_test_name_SwitchingOrdinalsOnlyGeneratedOrdinalRequestTable, SwitchingOrdinals_RequestEncoder::OnlyGeneratedOrdinal(&_encoder));
 }
 
 #endif // __Fuchsia__

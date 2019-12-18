@@ -68,39 +68,21 @@ class Parent {
 class Parent_RequestEncoder {
  public:
   static ::fidl::Message GetChild(::fidl::Encoder* _encoder) {
-    if (_encoder->ShouldEncodeUnionAsXUnion()) {
-      _encoder->Alloc(16 - sizeof(fidl_message_header_t));
-    } else {
-      _encoder->Alloc(16 - sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
     return _encoder->GetMessage();
   }
   static ::fidl::Message GetChildRequest(::fidl::Encoder* _encoder) {
-    if (_encoder->ShouldEncodeUnionAsXUnion()) {
-      _encoder->Alloc(16 - sizeof(fidl_message_header_t));
-    } else {
-      _encoder->Alloc(16 - sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
     return _encoder->GetMessage();
   }
   static ::fidl::Message TakeChild(::fidl::Encoder* _encoder, ::fidl::InterfaceHandle<class Child>* c) {
-    if (_encoder->ShouldEncodeUnionAsXUnion()) {
-      _encoder->Alloc(24 - sizeof(fidl_message_header_t));
-      ::fidl::Encode(_encoder, c, 16);
-    } else {
-      _encoder->Alloc(24 - sizeof(fidl_message_header_t));
-      ::fidl::Encode(_encoder, c, 16);
-    }
+    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, c, 16);
     return _encoder->GetMessage();
   }
   static ::fidl::Message TakeChildRequest(::fidl::Encoder* _encoder, ::fidl::InterfaceRequest<Child>* r) {
-    if (_encoder->ShouldEncodeUnionAsXUnion()) {
-      _encoder->Alloc(24 - sizeof(fidl_message_header_t));
-      ::fidl::Encode(_encoder, r, 16);
-    } else {
-      _encoder->Alloc(24 - sizeof(fidl_message_header_t));
-      ::fidl::Encode(_encoder, r, 16);
-    }
+    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, r, 16);
     return _encoder->GetMessage();
   }
 };
@@ -166,23 +148,13 @@ class Parent_RequestDecoder {
 class Parent_ResponseEncoder {
  public:
   static ::fidl::Message GetChild(::fidl::Encoder* _encoder, ::fidl::InterfaceHandle<class Child>* c) {
-    if (_encoder->ShouldEncodeUnionAsXUnion()) {
-      _encoder->Alloc(24 - sizeof(fidl_message_header_t));
-      ::fidl::Encode(_encoder, c, 16);
-    } else {
-      _encoder->Alloc(24 - sizeof(fidl_message_header_t));
-      ::fidl::Encode(_encoder, c, 16);
-    }
+    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, c, 16);
     return _encoder->GetMessage();
   }
   static ::fidl::Message GetChildRequest(::fidl::Encoder* _encoder, ::fidl::InterfaceRequest<Child>* r) {
-    if (_encoder->ShouldEncodeUnionAsXUnion()) {
-      _encoder->Alloc(24 - sizeof(fidl_message_header_t));
-      ::fidl::Encode(_encoder, r, 16);
-    } else {
-      _encoder->Alloc(24 - sizeof(fidl_message_header_t));
-      ::fidl::Encode(_encoder, r, 16);
-    }
+    _encoder->Alloc(24 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, r, 16);
     return _encoder->GetMessage();
   }
 };

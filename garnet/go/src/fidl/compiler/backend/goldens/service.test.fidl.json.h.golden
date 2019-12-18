@@ -63,11 +63,7 @@ class SecondProtocol {
 class SecondProtocol_RequestEncoder {
  public:
   static ::fidl::Message MethodOnSecond(::fidl::Encoder* _encoder) {
-    if (_encoder->ShouldEncodeUnionAsXUnion()) {
-      _encoder->Alloc(16 - sizeof(fidl_message_header_t));
-    } else {
-      _encoder->Alloc(16 - sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
     return _encoder->GetMessage();
   }
 };
@@ -204,11 +200,7 @@ class FirstProtocol {
 class FirstProtocol_RequestEncoder {
  public:
   static ::fidl::Message MethodOnFirst(::fidl::Encoder* _encoder) {
-    if (_encoder->ShouldEncodeUnionAsXUnion()) {
-      _encoder->Alloc(16 - sizeof(fidl_message_header_t));
-    } else {
-      _encoder->Alloc(16 - sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
     return _encoder->GetMessage();
   }
 };

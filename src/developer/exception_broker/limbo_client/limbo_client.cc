@@ -78,8 +78,9 @@ zx_status_t LimboClient::AppendFilters(const std::vector<std::string>& filters) 
   if (zx_status_t status = connection_->AppendFilters(filters, &result); status != ZX_OK)
     return status;
 
-  if (result.err())
+  if (result.Which() == ProcessLimbo_AppendFilters_Result::Tag::kErr)
     return result.err();
+
   return ZX_OK;
 }
 

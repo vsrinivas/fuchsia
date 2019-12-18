@@ -1,7 +1,6 @@
 {
     "program": {
         "args": [
-            "cpp",
             "cpp_write_xunion",
             "go",
             "go_write_xunion",

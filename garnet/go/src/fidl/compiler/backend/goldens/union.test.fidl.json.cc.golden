@@ -6,295 +6,383 @@
 namespace test {
 namespace name {
 
-Union::Union() : value_() {}
+extern "C" const fidl_type_t v1_test_name_UnionTable;
+const fidl_type_t* Union::FidlType = &v1_test_name_UnionTable;
+
+Union::Union() {}
 
 Union::~Union() {
+  Destroy();
 }
 
-Union::Union(Union&& other) : value_(std::move(other.value_)) {
+Union::Union(Union&& other) : tag_(other.tag_) {
+  switch (tag_) {
+    case Tag::kPrimitive:
+      Primitive_ = std::move(other.Primitive_);
+      break;
+    case Tag::kStringNeedsConstructor:
+      new (&StringNeedsConstructor_) ::std::string();
+      StringNeedsConstructor_ = std::move(other.StringNeedsConstructor_);
+      break;
+    case Tag::kVectorStringAlsoNeedsConstructor:
+      new (&VectorStringAlsoNeedsConstructor_) ::std::vector<::std::string>();
+      VectorStringAlsoNeedsConstructor_ = std::move(other.VectorStringAlsoNeedsConstructor_);
+      break;
+    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      break;
+  }
 }
 
 Union& Union::operator=(Union&& other) {
   if (this != &other) {
-    value_ = std::move(other.value_);
+    Destroy();
+    tag_ = other.tag_;
+    switch (tag_) {
+      case Tag::kPrimitive:
+        Primitive_ = std::move(other.Primitive_);
+        break;
+      case Tag::kStringNeedsConstructor:
+        new (&StringNeedsConstructor_) ::std::string();
+        StringNeedsConstructor_ = std::move(other.StringNeedsConstructor_);
+        break;
+      case Tag::kVectorStringAlsoNeedsConstructor:
+        new (&VectorStringAlsoNeedsConstructor_) ::std::vector<::std::string>();
+        VectorStringAlsoNeedsConstructor_ = std::move(other.VectorStringAlsoNeedsConstructor_);
+        break;
+      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+        break;
+    }
   }
   return *this;
 }
 
-void Union::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  if (_encoder->ShouldEncodeUnionAsXUnion()) {
-    EncodeAsXUnionBytes(_encoder, _offset);
-    return;
-  }
-
-  fidl_union_tag_t _tag = static_cast<fidl_union_tag_t>(Which());
-  ::fidl::Encode(_encoder, &_tag, _offset);
-  switch (_tag) {
-   case 0:
-    ::fidl::Encode(_encoder, &Primitive(), _offset + 8);
-    break;
-   case 1:
-    ::fidl::Encode(_encoder, &StringNeedsConstructor(), _offset + 8);
-    break;
-   case 2:
-    ::fidl::Encode(_encoder, &VectorStringAlsoNeedsConstructor(), _offset + 8);
-    break;
-   default:
-    break;
-  }
+Union Union::WithPrimitive(int32_t&& val) {
+  Union result;
+  result.set_Primitive(std::move(val));
+  return result;
+}
+Union Union::WithStringNeedsConstructor(::std::string&& val) {
+  Union result;
+  result.set_StringNeedsConstructor(std::move(val));
+  return result;
+}
+Union Union::WithVectorStringAlsoNeedsConstructor(::std::vector<::std::string>&& val) {
+  Union result;
+  result.set_VectorStringAlsoNeedsConstructor(std::move(val));
+  return result;
 }
 
-void Union::EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_t _offset) {
-  const size_t length_before = _encoder->CurrentLength();
-  const size_t handles_before = _encoder->CurrentHandleCount();
+
+void Union::Encode(::fidl::Encoder* encoder, size_t offset) {
+  const size_t length_before = encoder->CurrentLength();
+  const size_t handles_before = encoder->CurrentHandleCount();
 
   size_t envelope_offset = 0;
 
-  switch (Which()) {
+  switch (tag_) {
     case Tag::kPrimitive: {
-      envelope_offset = _encoder->Alloc(::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(_encoder));
-      ::fidl::Encode(_encoder, &Primitive(), envelope_offset);
+      envelope_offset = encoder->Alloc(::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(encoder));
+      ::fidl::Encode(encoder, &Primitive_, envelope_offset);
       break;
     }
     case Tag::kStringNeedsConstructor: {
-      envelope_offset = _encoder->Alloc(::fidl::EncodingInlineSize<::std::string, ::fidl::Encoder>(_encoder));
-      ::fidl::Encode(_encoder, &StringNeedsConstructor(), envelope_offset);
+      envelope_offset = encoder->Alloc(::fidl::EncodingInlineSize<::std::string, ::fidl::Encoder>(encoder));
+      ::fidl::Encode(encoder, &StringNeedsConstructor_, envelope_offset);
       break;
     }
     case Tag::kVectorStringAlsoNeedsConstructor: {
-      envelope_offset = _encoder->Alloc(::fidl::EncodingInlineSize<::std::vector<::std::string>, ::fidl::Encoder>(_encoder));
-      ::fidl::Encode(_encoder, &VectorStringAlsoNeedsConstructor(), envelope_offset);
+      envelope_offset = encoder->Alloc(::fidl::EncodingInlineSize<::std::vector<::std::string>, ::fidl::Encoder>(encoder));
+      ::fidl::Encode(encoder, &VectorStringAlsoNeedsConstructor_, envelope_offset);
       break;
     }
     default:
        break;
   }
 
-  fidl_xunion_t* xunion = _encoder->GetPtr<fidl_xunion_t>(_offset);
+  fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
   assert(xunion->envelope.presence == FIDL_ALLOC_ABSENT);
 
   if (envelope_offset) {
-    xunion->tag = WhichXUnionTag();
-    xunion->envelope.num_bytes = _encoder->CurrentLength() - length_before;
-    xunion->envelope.num_handles = _encoder->CurrentHandleCount() - handles_before;
+    xunion->tag = tag_;
+    xunion->envelope.num_bytes = encoder->CurrentLength() - length_before;
+    xunion->envelope.num_handles = encoder->CurrentHandleCount() - handles_before;
     xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }
 
-void Union::Decode(::fidl::Decoder* _decoder, Union* _value, size_t _offset) {
-  fidl_union_tag_t _tag;
-  ::fidl::Decode(_decoder, &_tag, _offset);
-  switch (_tag) {
-   case 0:
-    {
-      int32_t _member{};
-      ::fidl::Decode(_decoder, &_member, _offset + 8);
-      _value->set_Primitive(std::move(_member));
-      break;
-    }
-   case 1:
-    {
-      ::std::string _member{};
-      ::fidl::Decode(_decoder, &_member, _offset + 8);
-      _value->set_StringNeedsConstructor(std::move(_member));
-      break;
-    }
-   case 2:
-    {
-      ::std::vector<::std::string> _member{};
-      ::fidl::Decode(_decoder, &_member, _offset + 8);
-      _value->set_VectorStringAlsoNeedsConstructor(std::move(_member));
-      break;
-    }
-   default:
-    _value->value_.emplace<0>();
-  }
-}
+void Union::Decode(::fidl::Decoder* decoder, Union* value, size_t offset) {
+  fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
 
-zx_status_t Union::Clone(Union* _result) const {
-  zx_status_t _status = ZX_OK;
-  switch (Which()) {
+  if (!xunion->envelope.data) {
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(Tag::Invalid));
+    return;
+  }
+
+  value->EnsureStorageInitialized(xunion->tag);
+
+
+  const size_t envelope_offset = decoder->GetOffset(xunion->envelope.data);
+
+  switch (value->tag_) {
     case Tag::kPrimitive:
-      {
-        int32_t _member{};
-        _status = ::fidl::Clone(Primitive(), &_member);
-        if (_status == ZX_OK) {
-          _result->set_Primitive(std::move(_member));
-        }
-      }
+      ::fidl::Decode(decoder, &value->Primitive_, envelope_offset);
       break;
     case Tag::kStringNeedsConstructor:
-      {
-        ::std::string _member{};
-        _status = ::fidl::Clone(StringNeedsConstructor(), &_member);
-        if (_status == ZX_OK) {
-          _result->set_StringNeedsConstructor(std::move(_member));
-        }
-      }
+      new (&value->StringNeedsConstructor_) ::std::string();
+      ::fidl::Decode(decoder, &value->StringNeedsConstructor_, envelope_offset);
       break;
     case Tag::kVectorStringAlsoNeedsConstructor:
-      {
-        ::std::vector<::std::string> _member{};
-        _status = ::fidl::Clone(VectorStringAlsoNeedsConstructor(), &_member);
-        if (_status == ZX_OK) {
-          _result->set_VectorStringAlsoNeedsConstructor(std::move(_member));
-        }
-      }
-      break;
-    case Tag::Invalid:
-      _result->value_.emplace<0>();
+      new (&value->VectorStringAlsoNeedsConstructor_) ::std::vector<::std::string>();
+      ::fidl::Decode(decoder, &value->VectorStringAlsoNeedsConstructor_, envelope_offset);
       break;
   }
-  return _status;
+
 }
 
-void Union::set_Primitive(int32_t value) {
-  value_.emplace<static_cast<size_t>(Tag::kPrimitive) + 1>(std::move(value));
+zx_status_t Union::Clone(Union* result) const {
+  result->Destroy();
+  result->tag_ = tag_;
+  switch (tag_) {
+    case Tag::kPrimitive:
+      return ::fidl::Clone(Primitive_, &result->Primitive_);
+    case Tag::kStringNeedsConstructor:
+      new (&result->StringNeedsConstructor_) ::std::string();
+      return ::fidl::Clone(StringNeedsConstructor_, &result->StringNeedsConstructor_);
+    case Tag::kVectorStringAlsoNeedsConstructor:
+      new (&result->VectorStringAlsoNeedsConstructor_) ::std::vector<::std::string>();
+      return ::fidl::Clone(VectorStringAlsoNeedsConstructor_, &result->VectorStringAlsoNeedsConstructor_);
+    default:
+      return ZX_OK;
+  }
 }
 
-void Union::set_StringNeedsConstructor(::std::string value) {
-  value_.emplace<static_cast<size_t>(Tag::kStringNeedsConstructor) + 1>(std::move(value));
+Union& Union::set_Primitive(int32_t value) {
+  EnsureStorageInitialized(Tag::kPrimitive);
+  Primitive_ = std::move(value);
+  return *this;
 }
 
-void Union::set_VectorStringAlsoNeedsConstructor(::std::vector<::std::string> value) {
-  value_.emplace<static_cast<size_t>(Tag::kVectorStringAlsoNeedsConstructor) + 1>(std::move(value));
+Union& Union::set_StringNeedsConstructor(::std::string value) {
+  EnsureStorageInitialized(Tag::kStringNeedsConstructor);
+  StringNeedsConstructor_ = std::move(value);
+  return *this;
 }
-ReverseOrdinalUnion::ReverseOrdinalUnion() : value_() {}
+
+Union& Union::set_VectorStringAlsoNeedsConstructor(::std::vector<::std::string> value) {
+  EnsureStorageInitialized(Tag::kVectorStringAlsoNeedsConstructor);
+  VectorStringAlsoNeedsConstructor_ = std::move(value);
+  return *this;
+}
+
+void Union::Destroy() {
+  switch (tag_) {
+    case Tag::kPrimitive:
+      break;
+    case Tag::kStringNeedsConstructor:
+      StringNeedsConstructor_.~basic_string();
+      break;
+    case Tag::kVectorStringAlsoNeedsConstructor:
+      VectorStringAlsoNeedsConstructor_.~vector();
+      break;
+  
+    default:
+      break;
+  
+  }
+  tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+}
+
+void Union::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
+  if (tag_ != tag) {
+    Destroy();
+    tag_ = tag;
+    switch (tag_) {
+      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+        break;
+      case Tag::kPrimitive:
+        new (&Primitive_) int32_t();
+        break;
+      case Tag::kStringNeedsConstructor:
+        new (&StringNeedsConstructor_) ::std::string();
+        break;
+      case Tag::kVectorStringAlsoNeedsConstructor:
+        new (&VectorStringAlsoNeedsConstructor_) ::std::vector<::std::string>();
+        break;
+      default:
+        break;
+    }
+  }
+}
+extern "C" const fidl_type_t v1_test_name_ReverseOrdinalUnionTable;
+const fidl_type_t* ReverseOrdinalUnion::FidlType = &v1_test_name_ReverseOrdinalUnionTable;
+
+ReverseOrdinalUnion::ReverseOrdinalUnion() {}
 
 ReverseOrdinalUnion::~ReverseOrdinalUnion() {
+  Destroy();
 }
 
-ReverseOrdinalUnion::ReverseOrdinalUnion(ReverseOrdinalUnion&& other) : value_(std::move(other.value_)) {
+ReverseOrdinalUnion::ReverseOrdinalUnion(ReverseOrdinalUnion&& other) : tag_(other.tag_) {
+  switch (tag_) {
+    case Tag::kFirst:
+      first_ = std::move(other.first_);
+      break;
+    case Tag::kSecond:
+      second_ = std::move(other.second_);
+      break;
+    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      break;
+  }
 }
 
 ReverseOrdinalUnion& ReverseOrdinalUnion::operator=(ReverseOrdinalUnion&& other) {
   if (this != &other) {
-    value_ = std::move(other.value_);
+    Destroy();
+    tag_ = other.tag_;
+    switch (tag_) {
+      case Tag::kFirst:
+        first_ = std::move(other.first_);
+        break;
+      case Tag::kSecond:
+        second_ = std::move(other.second_);
+        break;
+      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+        break;
+    }
   }
   return *this;
 }
 
-void ReverseOrdinalUnion::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  if (_encoder->ShouldEncodeUnionAsXUnion()) {
-    EncodeAsXUnionBytes(_encoder, _offset);
-    return;
-  }
-
-  fidl_union_tag_t _tag = static_cast<fidl_union_tag_t>(Which());
-  ::fidl::Encode(_encoder, &_tag, _offset);
-  switch (_tag) {
-   case 0:
-    ::fidl::Encode(_encoder, &first(), _offset + 4);
-    break;
-   case 1:
-    ::fidl::Encode(_encoder, &second(), _offset + 4);
-    break;
-   default:
-    break;
-  }
+ReverseOrdinalUnion ReverseOrdinalUnion::WithFirst(uint32_t&& val) {
+  ReverseOrdinalUnion result;
+  result.set_first(std::move(val));
+  return result;
+}
+ReverseOrdinalUnion ReverseOrdinalUnion::WithSecond(uint32_t&& val) {
+  ReverseOrdinalUnion result;
+  result.set_second(std::move(val));
+  return result;
 }
 
-void ReverseOrdinalUnion::EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_t _offset) {
-  const size_t length_before = _encoder->CurrentLength();
-  const size_t handles_before = _encoder->CurrentHandleCount();
+
+void ReverseOrdinalUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
+  const size_t length_before = encoder->CurrentLength();
+  const size_t handles_before = encoder->CurrentHandleCount();
 
   size_t envelope_offset = 0;
 
-  switch (Which()) {
+  switch (tag_) {
     case Tag::kFirst: {
-      envelope_offset = _encoder->Alloc(::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(_encoder));
-      ::fidl::Encode(_encoder, &first(), envelope_offset);
+      envelope_offset = encoder->Alloc(::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(encoder));
+      ::fidl::Encode(encoder, &first_, envelope_offset);
       break;
     }
     case Tag::kSecond: {
-      envelope_offset = _encoder->Alloc(::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(_encoder));
-      ::fidl::Encode(_encoder, &second(), envelope_offset);
+      envelope_offset = encoder->Alloc(::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(encoder));
+      ::fidl::Encode(encoder, &second_, envelope_offset);
       break;
     }
     default:
        break;
   }
 
-  fidl_xunion_t* xunion = _encoder->GetPtr<fidl_xunion_t>(_offset);
+  fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
   assert(xunion->envelope.presence == FIDL_ALLOC_ABSENT);
 
   if (envelope_offset) {
-    xunion->tag = WhichXUnionTag();
-    xunion->envelope.num_bytes = _encoder->CurrentLength() - length_before;
-    xunion->envelope.num_handles = _encoder->CurrentHandleCount() - handles_before;
+    xunion->tag = tag_;
+    xunion->envelope.num_bytes = encoder->CurrentLength() - length_before;
+    xunion->envelope.num_handles = encoder->CurrentHandleCount() - handles_before;
     xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }
 
-void ReverseOrdinalUnion::Decode(::fidl::Decoder* _decoder, ReverseOrdinalUnion* _value, size_t _offset) {
-  fidl_union_tag_t _tag;
-  ::fidl::Decode(_decoder, &_tag, _offset);
-  switch (_tag) {
-   case 0:
-    {
-      uint32_t _member{};
-      ::fidl::Decode(_decoder, &_member, _offset + 4);
-      _value->set_first(std::move(_member));
-      break;
-    }
-   case 1:
-    {
-      uint32_t _member{};
-      ::fidl::Decode(_decoder, &_member, _offset + 4);
-      _value->set_second(std::move(_member));
-      break;
-    }
-   default:
-    _value->value_.emplace<0>();
-  }
-}
+void ReverseOrdinalUnion::Decode(::fidl::Decoder* decoder, ReverseOrdinalUnion* value, size_t offset) {
+  fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
 
-zx_status_t ReverseOrdinalUnion::Clone(ReverseOrdinalUnion* _result) const {
-  zx_status_t _status = ZX_OK;
-  switch (Which()) {
+  if (!xunion->envelope.data) {
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(Tag::Invalid));
+    return;
+  }
+
+  value->EnsureStorageInitialized(xunion->tag);
+
+
+  const size_t envelope_offset = decoder->GetOffset(xunion->envelope.data);
+
+  switch (value->tag_) {
     case Tag::kFirst:
-      {
-        uint32_t _member{};
-        _status = ::fidl::Clone(first(), &_member);
-        if (_status == ZX_OK) {
-          _result->set_first(std::move(_member));
-        }
-      }
+      ::fidl::Decode(decoder, &value->first_, envelope_offset);
       break;
     case Tag::kSecond:
-      {
-        uint32_t _member{};
-        _status = ::fidl::Clone(second(), &_member);
-        if (_status == ZX_OK) {
-          _result->set_second(std::move(_member));
-        }
-      }
-      break;
-    case Tag::Invalid:
-      _result->value_.emplace<0>();
+      ::fidl::Decode(decoder, &value->second_, envelope_offset);
       break;
   }
-  return _status;
+
 }
 
-void ReverseOrdinalUnion::set_first(uint32_t value) {
-  value_.emplace<static_cast<size_t>(Tag::kFirst) + 1>(std::move(value));
+zx_status_t ReverseOrdinalUnion::Clone(ReverseOrdinalUnion* result) const {
+  result->Destroy();
+  result->tag_ = tag_;
+  switch (tag_) {
+    case Tag::kFirst:
+      return ::fidl::Clone(first_, &result->first_);
+    case Tag::kSecond:
+      return ::fidl::Clone(second_, &result->second_);
+    default:
+      return ZX_OK;
+  }
 }
 
-void ReverseOrdinalUnion::set_second(uint32_t value) {
-  value_.emplace<static_cast<size_t>(Tag::kSecond) + 1>(std::move(value));
+ReverseOrdinalUnion& ReverseOrdinalUnion::set_first(uint32_t value) {
+  EnsureStorageInitialized(Tag::kFirst);
+  first_ = std::move(value);
+  return *this;
 }
-extern "C" const fidl_type_t test_name_NullableUnionStructTable;
-const fidl_type_t* NullableUnionStruct::FidlType = &test_name_NullableUnionStructTable;
+
+ReverseOrdinalUnion& ReverseOrdinalUnion::set_second(uint32_t value) {
+  EnsureStorageInitialized(Tag::kSecond);
+  second_ = std::move(value);
+  return *this;
+}
+
+void ReverseOrdinalUnion::Destroy() {
+  switch (tag_) {
+    case Tag::kFirst:
+      break;
+    case Tag::kSecond:
+      break;
+  
+    default:
+      break;
+  
+  }
+  tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+}
+
+void ReverseOrdinalUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
+  if (tag_ != tag) {
+    Destroy();
+    tag_ = tag;
+    switch (tag_) {
+      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+        break;
+      case Tag::kFirst:
+        new (&first_) uint32_t();
+        break;
+      case Tag::kSecond:
+        new (&second_) uint32_t();
+        break;
+      default:
+        break;
+    }
+  }
+}
 extern "C" const fidl_type_t v1_test_name_NullableUnionStructTable;
-const fidl_type_t* NullableUnionStruct::FidlTypeV1 = &v1_test_name_NullableUnionStructTable;
+const fidl_type_t* NullableUnionStruct::FidlType = &v1_test_name_NullableUnionStructTable;
 
 void NullableUnionStruct::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  if (_encoder->ShouldEncodeUnionAsXUnion()) {
-    ::fidl::Encode(_encoder, &the_union, _offset + 0);
-  } else {
-    ::fidl::Encode(_encoder, &the_union, _offset + 0);
-  }
+  ::fidl::Encode(_encoder, &the_union, _offset + 0);
 }
 
 void NullableUnionStruct::Decode(::fidl::Decoder* _decoder, NullableUnionStruct* value, size_t _offset) {
@@ -307,227 +395,308 @@ zx_status_t NullableUnionStruct::Clone(NullableUnionStruct* _result) const {
     return _status;
   return ZX_OK;
 }
-FieldCollision::FieldCollision() : value_() {}
+extern "C" const fidl_type_t v1_test_name_FieldCollisionTable;
+const fidl_type_t* FieldCollision::FidlType = &v1_test_name_FieldCollisionTable;
+
+FieldCollision::FieldCollision() {}
 
 FieldCollision::~FieldCollision() {
+  Destroy();
 }
 
-FieldCollision::FieldCollision(FieldCollision&& other) : value_(std::move(other.value_)) {
+FieldCollision::FieldCollision(FieldCollision&& other) : tag_(other.tag_) {
+  switch (tag_) {
+    case Tag::kFieldCollisionTag:
+      field_collision_tag_ = std::move(other.field_collision_tag_);
+      break;
+    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      break;
+  }
 }
 
 FieldCollision& FieldCollision::operator=(FieldCollision&& other) {
   if (this != &other) {
-    value_ = std::move(other.value_);
+    Destroy();
+    tag_ = other.tag_;
+    switch (tag_) {
+      case Tag::kFieldCollisionTag:
+        field_collision_tag_ = std::move(other.field_collision_tag_);
+        break;
+      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+        break;
+    }
   }
   return *this;
 }
 
-void FieldCollision::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  if (_encoder->ShouldEncodeUnionAsXUnion()) {
-    EncodeAsXUnionBytes(_encoder, _offset);
-    return;
-  }
-
-  fidl_union_tag_t _tag = static_cast<fidl_union_tag_t>(Which());
-  ::fidl::Encode(_encoder, &_tag, _offset);
-  switch (_tag) {
-   case 0:
-    ::fidl::Encode(_encoder, &field_collision_tag(), _offset + 4);
-    break;
-   default:
-    break;
-  }
+FieldCollision FieldCollision::WithFieldCollisionTag(int32_t&& val) {
+  FieldCollision result;
+  result.set_field_collision_tag(std::move(val));
+  return result;
 }
 
-void FieldCollision::EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_t _offset) {
-  const size_t length_before = _encoder->CurrentLength();
-  const size_t handles_before = _encoder->CurrentHandleCount();
+
+void FieldCollision::Encode(::fidl::Encoder* encoder, size_t offset) {
+  const size_t length_before = encoder->CurrentLength();
+  const size_t handles_before = encoder->CurrentHandleCount();
 
   size_t envelope_offset = 0;
 
-  switch (Which()) {
+  switch (tag_) {
     case Tag::kFieldCollisionTag: {
-      envelope_offset = _encoder->Alloc(::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(_encoder));
-      ::fidl::Encode(_encoder, &field_collision_tag(), envelope_offset);
+      envelope_offset = encoder->Alloc(::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(encoder));
+      ::fidl::Encode(encoder, &field_collision_tag_, envelope_offset);
       break;
     }
     default:
        break;
   }
 
-  fidl_xunion_t* xunion = _encoder->GetPtr<fidl_xunion_t>(_offset);
+  fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
   assert(xunion->envelope.presence == FIDL_ALLOC_ABSENT);
 
   if (envelope_offset) {
-    xunion->tag = WhichXUnionTag();
-    xunion->envelope.num_bytes = _encoder->CurrentLength() - length_before;
-    xunion->envelope.num_handles = _encoder->CurrentHandleCount() - handles_before;
+    xunion->tag = tag_;
+    xunion->envelope.num_bytes = encoder->CurrentLength() - length_before;
+    xunion->envelope.num_handles = encoder->CurrentHandleCount() - handles_before;
     xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }
 
-void FieldCollision::Decode(::fidl::Decoder* _decoder, FieldCollision* _value, size_t _offset) {
-  fidl_union_tag_t _tag;
-  ::fidl::Decode(_decoder, &_tag, _offset);
-  switch (_tag) {
-   case 0:
-    {
-      int32_t _member{};
-      ::fidl::Decode(_decoder, &_member, _offset + 4);
-      _value->set_field_collision_tag(std::move(_member));
-      break;
-    }
-   default:
-    _value->value_.emplace<0>();
-  }
-}
+void FieldCollision::Decode(::fidl::Decoder* decoder, FieldCollision* value, size_t offset) {
+  fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
 
-zx_status_t FieldCollision::Clone(FieldCollision* _result) const {
-  zx_status_t _status = ZX_OK;
-  switch (Which()) {
+  if (!xunion->envelope.data) {
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(Tag::Invalid));
+    return;
+  }
+
+  value->EnsureStorageInitialized(xunion->tag);
+
+
+  const size_t envelope_offset = decoder->GetOffset(xunion->envelope.data);
+
+  switch (value->tag_) {
     case Tag::kFieldCollisionTag:
-      {
-        int32_t _member{};
-        _status = ::fidl::Clone(field_collision_tag(), &_member);
-        if (_status == ZX_OK) {
-          _result->set_field_collision_tag(std::move(_member));
-        }
-      }
-      break;
-    case Tag::Invalid:
-      _result->value_.emplace<0>();
+      ::fidl::Decode(decoder, &value->field_collision_tag_, envelope_offset);
       break;
   }
-  return _status;
+
 }
 
-void FieldCollision::set_field_collision_tag(int32_t value) {
-  value_.emplace<static_cast<size_t>(Tag::kFieldCollisionTag) + 1>(std::move(value));
+zx_status_t FieldCollision::Clone(FieldCollision* result) const {
+  result->Destroy();
+  result->tag_ = tag_;
+  switch (tag_) {
+    case Tag::kFieldCollisionTag:
+      return ::fidl::Clone(field_collision_tag_, &result->field_collision_tag_);
+    default:
+      return ZX_OK;
+  }
 }
-ExplicitUnion::ExplicitUnion() : value_() {}
+
+FieldCollision& FieldCollision::set_field_collision_tag(int32_t value) {
+  EnsureStorageInitialized(Tag::kFieldCollisionTag);
+  field_collision_tag_ = std::move(value);
+  return *this;
+}
+
+void FieldCollision::Destroy() {
+  switch (tag_) {
+    case Tag::kFieldCollisionTag:
+      break;
+  
+    default:
+      break;
+  
+  }
+  tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+}
+
+void FieldCollision::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
+  if (tag_ != tag) {
+    Destroy();
+    tag_ = tag;
+    switch (tag_) {
+      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+        break;
+      case Tag::kFieldCollisionTag:
+        new (&field_collision_tag_) int32_t();
+        break;
+      default:
+        break;
+    }
+  }
+}
+extern "C" const fidl_type_t v1_test_name_ExplicitUnionTable;
+const fidl_type_t* ExplicitUnion::FidlType = &v1_test_name_ExplicitUnionTable;
+
+ExplicitUnion::ExplicitUnion() {}
 
 ExplicitUnion::~ExplicitUnion() {
+  Destroy();
 }
 
-ExplicitUnion::ExplicitUnion(ExplicitUnion&& other) : value_(std::move(other.value_)) {
+ExplicitUnion::ExplicitUnion(ExplicitUnion&& other) : tag_(other.tag_) {
+  switch (tag_) {
+    case Tag::kPrimitive:
+      Primitive_ = std::move(other.Primitive_);
+      break;
+    case Tag::kStringNeedsConstructor:
+      new (&StringNeedsConstructor_) ::std::string();
+      StringNeedsConstructor_ = std::move(other.StringNeedsConstructor_);
+      break;
+    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+      break;
+  }
 }
 
 ExplicitUnion& ExplicitUnion::operator=(ExplicitUnion&& other) {
   if (this != &other) {
-    value_ = std::move(other.value_);
+    Destroy();
+    tag_ = other.tag_;
+    switch (tag_) {
+      case Tag::kPrimitive:
+        Primitive_ = std::move(other.Primitive_);
+        break;
+      case Tag::kStringNeedsConstructor:
+        new (&StringNeedsConstructor_) ::std::string();
+        StringNeedsConstructor_ = std::move(other.StringNeedsConstructor_);
+        break;
+      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+        break;
+    }
   }
   return *this;
 }
 
-void ExplicitUnion::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  if (_encoder->ShouldEncodeUnionAsXUnion()) {
-    EncodeAsXUnionBytes(_encoder, _offset);
-    return;
-  }
-
-  fidl_union_tag_t _tag = static_cast<fidl_union_tag_t>(Which());
-  ::fidl::Encode(_encoder, &_tag, _offset);
-  switch (_tag) {
-   case 0:
-    ::fidl::Encode(_encoder, &Primitive(), _offset + 8);
-    break;
-   case 1:
-    ::fidl::Encode(_encoder, &StringNeedsConstructor(), _offset + 8);
-    break;
-   default:
-    break;
-  }
+ExplicitUnion ExplicitUnion::WithPrimitive(int32_t&& val) {
+  ExplicitUnion result;
+  result.set_Primitive(std::move(val));
+  return result;
+}
+ExplicitUnion ExplicitUnion::WithStringNeedsConstructor(::std::string&& val) {
+  ExplicitUnion result;
+  result.set_StringNeedsConstructor(std::move(val));
+  return result;
 }
 
-void ExplicitUnion::EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_t _offset) {
-  const size_t length_before = _encoder->CurrentLength();
-  const size_t handles_before = _encoder->CurrentHandleCount();
+
+void ExplicitUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
+  const size_t length_before = encoder->CurrentLength();
+  const size_t handles_before = encoder->CurrentHandleCount();
 
   size_t envelope_offset = 0;
 
-  switch (Which()) {
+  switch (tag_) {
     case Tag::kPrimitive: {
-      envelope_offset = _encoder->Alloc(::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(_encoder));
-      ::fidl::Encode(_encoder, &Primitive(), envelope_offset);
+      envelope_offset = encoder->Alloc(::fidl::EncodingInlineSize<int32_t, ::fidl::Encoder>(encoder));
+      ::fidl::Encode(encoder, &Primitive_, envelope_offset);
       break;
     }
     case Tag::kStringNeedsConstructor: {
-      envelope_offset = _encoder->Alloc(::fidl::EncodingInlineSize<::std::string, ::fidl::Encoder>(_encoder));
-      ::fidl::Encode(_encoder, &StringNeedsConstructor(), envelope_offset);
+      envelope_offset = encoder->Alloc(::fidl::EncodingInlineSize<::std::string, ::fidl::Encoder>(encoder));
+      ::fidl::Encode(encoder, &StringNeedsConstructor_, envelope_offset);
       break;
     }
     default:
        break;
   }
 
-  fidl_xunion_t* xunion = _encoder->GetPtr<fidl_xunion_t>(_offset);
+  fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
   assert(xunion->envelope.presence == FIDL_ALLOC_ABSENT);
 
   if (envelope_offset) {
-    xunion->tag = WhichXUnionTag();
-    xunion->envelope.num_bytes = _encoder->CurrentLength() - length_before;
-    xunion->envelope.num_handles = _encoder->CurrentHandleCount() - handles_before;
+    xunion->tag = tag_;
+    xunion->envelope.num_bytes = encoder->CurrentLength() - length_before;
+    xunion->envelope.num_handles = encoder->CurrentHandleCount() - handles_before;
     xunion->envelope.presence = FIDL_ALLOC_PRESENT;
   }
 }
 
-void ExplicitUnion::Decode(::fidl::Decoder* _decoder, ExplicitUnion* _value, size_t _offset) {
-  fidl_union_tag_t _tag;
-  ::fidl::Decode(_decoder, &_tag, _offset);
-  switch (_tag) {
-   case 0:
-    {
-      int32_t _member{};
-      ::fidl::Decode(_decoder, &_member, _offset + 8);
-      _value->set_Primitive(std::move(_member));
-      break;
-    }
-   case 1:
-    {
-      ::std::string _member{};
-      ::fidl::Decode(_decoder, &_member, _offset + 8);
-      _value->set_StringNeedsConstructor(std::move(_member));
-      break;
-    }
-   default:
-    _value->value_.emplace<0>();
-  }
-}
+void ExplicitUnion::Decode(::fidl::Decoder* decoder, ExplicitUnion* value, size_t offset) {
+  fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
 
-zx_status_t ExplicitUnion::Clone(ExplicitUnion* _result) const {
-  zx_status_t _status = ZX_OK;
-  switch (Which()) {
+  if (!xunion->envelope.data) {
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(Tag::Invalid));
+    return;
+  }
+
+  value->EnsureStorageInitialized(xunion->tag);
+
+
+  const size_t envelope_offset = decoder->GetOffset(xunion->envelope.data);
+
+  switch (value->tag_) {
     case Tag::kPrimitive:
-      {
-        int32_t _member{};
-        _status = ::fidl::Clone(Primitive(), &_member);
-        if (_status == ZX_OK) {
-          _result->set_Primitive(std::move(_member));
-        }
-      }
+      ::fidl::Decode(decoder, &value->Primitive_, envelope_offset);
       break;
     case Tag::kStringNeedsConstructor:
-      {
-        ::std::string _member{};
-        _status = ::fidl::Clone(StringNeedsConstructor(), &_member);
-        if (_status == ZX_OK) {
-          _result->set_StringNeedsConstructor(std::move(_member));
-        }
-      }
-      break;
-    case Tag::Invalid:
-      _result->value_.emplace<0>();
+      new (&value->StringNeedsConstructor_) ::std::string();
+      ::fidl::Decode(decoder, &value->StringNeedsConstructor_, envelope_offset);
       break;
   }
-  return _status;
+
 }
 
-void ExplicitUnion::set_Primitive(int32_t value) {
-  value_.emplace<static_cast<size_t>(Tag::kPrimitive) + 1>(std::move(value));
+zx_status_t ExplicitUnion::Clone(ExplicitUnion* result) const {
+  result->Destroy();
+  result->tag_ = tag_;
+  switch (tag_) {
+    case Tag::kPrimitive:
+      return ::fidl::Clone(Primitive_, &result->Primitive_);
+    case Tag::kStringNeedsConstructor:
+      new (&result->StringNeedsConstructor_) ::std::string();
+      return ::fidl::Clone(StringNeedsConstructor_, &result->StringNeedsConstructor_);
+    default:
+      return ZX_OK;
+  }
 }
 
-void ExplicitUnion::set_StringNeedsConstructor(::std::string value) {
-  value_.emplace<static_cast<size_t>(Tag::kStringNeedsConstructor) + 1>(std::move(value));
+ExplicitUnion& ExplicitUnion::set_Primitive(int32_t value) {
+  EnsureStorageInitialized(Tag::kPrimitive);
+  Primitive_ = std::move(value);
+  return *this;
+}
+
+ExplicitUnion& ExplicitUnion::set_StringNeedsConstructor(::std::string value) {
+  EnsureStorageInitialized(Tag::kStringNeedsConstructor);
+  StringNeedsConstructor_ = std::move(value);
+  return *this;
+}
+
+void ExplicitUnion::Destroy() {
+  switch (tag_) {
+    case Tag::kPrimitive:
+      break;
+    case Tag::kStringNeedsConstructor:
+      StringNeedsConstructor_.~basic_string();
+      break;
+  
+    default:
+      break;
+  
+  }
+  tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+}
+
+void ExplicitUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
+  if (tag_ != tag) {
+    Destroy();
+    tag_ = tag;
+    switch (tag_) {
+      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+        break;
+      case Tag::kPrimitive:
+        new (&Primitive_) int32_t();
+        break;
+      case Tag::kStringNeedsConstructor:
+        new (&StringNeedsConstructor_) ::std::string();
+        break;
+      default:
+        break;
+    }
+  }
 }
 }  // namespace name
 }  // namespace test

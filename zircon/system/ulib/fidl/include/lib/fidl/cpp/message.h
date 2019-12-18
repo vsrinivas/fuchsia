@@ -71,7 +71,7 @@ class Message {
   // The ordinal in the message header.
   uint64_t ordinal() const { return header().ordinal; }
 
-  bool should_decode_union_from_xunion() const {
+  bool is_v1_message() const {
     return fidl_should_decode_union_from_xunion(GetBytesAs<fidl_message_header_t>());
   }
 

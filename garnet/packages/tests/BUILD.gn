@@ -517,7 +517,6 @@ group("fidl") {
     "//examples/fidl/echo_test/cpp",
     "//garnet/examples/fidl/echo_server_cpp:echo_server_cpp_tests",
     "//garnet/go/src/fidl:fidlgen_common_test($host_toolchain)",
-    "//garnet/go/src/fidl:fidlgen_cpp_ir_test($host_toolchain)",
     "//garnet/go/src/fidl:fidlgen_cpp_test($host_toolchain)",
     "//garnet/go/src/fidl:fidlgen_golang_ir_test($host_toolchain)",
     "//garnet/go/src/fidl:fidlgen_golang_test($host_toolchain)",

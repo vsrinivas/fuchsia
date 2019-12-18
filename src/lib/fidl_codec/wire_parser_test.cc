@@ -283,7 +283,7 @@ TEST_F(WireParserTest, ParseSingleString) {
 
 namespace {
 
-std::string Version() { return fidl_global_get_should_write_union_as_xunion() ? "v1" : "v0"; }
+std::string Version() { return "v1"; }
 
 template <class T>
 std::string ValueToJson(const std::string& key, T value) {
@@ -986,19 +986,6 @@ TEST_DECODE_WIRE(
     GetArrayNullableUnion(1234, "harpo", "chico"))
 
 TEST_F(WireParserTest, BadU8U16UnionStruct) {
-  bool save_state = fidl_global_get_should_write_union_as_xunion();
-  fidl_global_set_should_write_union_as_xunion(false);
-  TEST_DECODE_WIRE_BODY_COMMON(U8U16UnionStruct, -1, 0,
-                               "{\"s\":{\"u\":{\"variant_u8\":\"invalid\"}}}",
-                               "{\n"
-                               "  s: #gre#test.fidlcodec.examples/U8U16UnionStructType#rst# = {\n"
-                               "    u: #gre#test.fidlcodec.examples/U8U16Union#rst# = "
-                               "" + Version() +
-                                   "!{ variant_u8: #gre#uint8#rst# = #red#invalid#rst# }\n"
-                                   "  }\n"
-                                   "}",
-                               16, GetU8U16UnionStruct(12));
-  fidl_global_set_should_write_union_as_xunion(true);
   TEST_DECODE_WIRE_BODY_COMMON(U8U16UnionStruct, -1, 0, "{\"s\":{\"u\":{\"variant_u8\":null}}}",
                                "{\n"
                                "  s: #gre#test.fidlcodec.examples/U8U16UnionStructType#rst# = {\n"
@@ -1008,7 +995,6 @@ TEST_F(WireParserTest, BadU8U16UnionStruct) {
                                    "  }\n"
                                    "}",
                                24, GetU8U16UnionStruct(12));
-  fidl_global_set_should_write_union_as_xunion(save_state);
 }
 
 namespace {

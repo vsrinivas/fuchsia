@@ -136,8 +136,7 @@ struct Equality<InterfaceRequest<T>> {
 
 template <typename T>
 struct CodingTraits<InterfaceRequest<T>>
-    : public EncodableCodingTraits<InterfaceRequest<T>, sizeof(zx_handle_t), sizeof(zx_handle_t)> {
-};
+    : public EncodableCodingTraits<InterfaceRequest<T>, sizeof(zx_handle_t)> {};
 
 template <typename T>
 inline zx_status_t Clone(const InterfaceRequest<T>& value, InterfaceRequest<T>* result) {

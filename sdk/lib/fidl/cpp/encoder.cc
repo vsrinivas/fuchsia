@@ -4,8 +4,8 @@
 
 #include "lib/fidl/cpp/encoder.h"
 
-#include <lib/fidl/txn_header.h>
 #include <lib/fidl/runtime_flag.h>
+#include <lib/fidl/txn_header.h>
 #include <zircon/assert.h>
 #include <zircon/fidl.h>
 
@@ -19,10 +19,7 @@ size_t Align(size_t size) {
 
 }  // namespace
 
-Encoder::Encoder(uint64_t ordinal, bool should_encode_union_as_xunion)
-    : should_encode_union_as_xunion_(should_encode_union_as_xunion) {
-  EncodeMessageHeader(ordinal);
-}
+Encoder::Encoder(uint64_t ordinal) { EncodeMessageHeader(ordinal); }
 
 Encoder::~Encoder() = default;
 
@@ -60,9 +57,7 @@ void Encoder::EncodeMessageHeader(uint64_t ordinal) {
   size_t offset = Alloc(sizeof(fidl_message_header_t));
   fidl_message_header_t* header = GetPtr<fidl_message_header_t>(offset);
   fidl_init_txn_header(header, 0, ordinal);
-  if (should_encode_union_as_xunion_) {
-    header->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
-  }
+  header->flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace fidl

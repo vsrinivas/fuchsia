@@ -17,7 +17,6 @@ class EmptyTable;
 class SimpleTable final {
  public:
   static const fidl_type_t* FidlType;
-  static const fidl_type_t* FidlTypeV1;
   // Returns whether no field is set.
   bool IsEmpty() const;
   
@@ -129,7 +128,6 @@ using SimpleTablePtr = ::std::unique_ptr<SimpleTable>;
 class ReverseOrdinalTable final {
  public:
   static const fidl_type_t* FidlType;
-  static const fidl_type_t* FidlTypeV1;
   // Returns whether no field is set.
   bool IsEmpty() const;
   
@@ -281,7 +279,6 @@ using ReverseOrdinalTablePtr = ::std::unique_ptr<ReverseOrdinalTable>;
 class OlderSimpleTable final {
  public:
   static const fidl_type_t* FidlType;
-  static const fidl_type_t* FidlTypeV1;
   // Returns whether no field is set.
   bool IsEmpty() const;
   
@@ -353,7 +350,6 @@ using OlderSimpleTablePtr = ::std::unique_ptr<OlderSimpleTable>;
 class NewerSimpleTable final {
  public:
   static const fidl_type_t* FidlType;
-  static const fidl_type_t* FidlTypeV1;
   // Returns whether no field is set.
   bool IsEmpty() const;
   
@@ -505,7 +501,6 @@ using NewerSimpleTablePtr = ::std::unique_ptr<NewerSimpleTable>;
 class EmptyTable final {
  public:
   static const fidl_type_t* FidlType;
-  static const fidl_type_t* FidlTypeV1;
   // Returns whether no field is set.
   bool IsEmpty() const;
 
@@ -539,7 +534,7 @@ namespace fidl {
 
 template <>
 struct CodingTraits<::test::name::SimpleTable>
-    : public EncodableCodingTraits<::test::name::SimpleTable, 16, 16> {};
+    : public EncodableCodingTraits<::test::name::SimpleTable, 16> {};
 
 inline zx_status_t Clone(const ::test::name::SimpleTable& _value,
                          ::test::name::SimpleTable* result) {
@@ -573,7 +568,7 @@ struct Equality<::test::name::SimpleTable> {
 };
 template <>
 struct CodingTraits<::test::name::ReverseOrdinalTable>
-    : public EncodableCodingTraits<::test::name::ReverseOrdinalTable, 16, 16> {};
+    : public EncodableCodingTraits<::test::name::ReverseOrdinalTable, 16> {};
 
 inline zx_status_t Clone(const ::test::name::ReverseOrdinalTable& _value,
                          ::test::name::ReverseOrdinalTable* result) {
@@ -617,7 +612,7 @@ struct Equality<::test::name::ReverseOrdinalTable> {
 };
 template <>
 struct CodingTraits<::test::name::OlderSimpleTable>
-    : public EncodableCodingTraits<::test::name::OlderSimpleTable, 16, 16> {};
+    : public EncodableCodingTraits<::test::name::OlderSimpleTable, 16> {};
 
 inline zx_status_t Clone(const ::test::name::OlderSimpleTable& _value,
                          ::test::name::OlderSimpleTable* result) {
@@ -641,7 +636,7 @@ struct Equality<::test::name::OlderSimpleTable> {
 };
 template <>
 struct CodingTraits<::test::name::NewerSimpleTable>
-    : public EncodableCodingTraits<::test::name::NewerSimpleTable, 16, 16> {};
+    : public EncodableCodingTraits<::test::name::NewerSimpleTable, 16> {};
 
 inline zx_status_t Clone(const ::test::name::NewerSimpleTable& _value,
                          ::test::name::NewerSimpleTable* result) {
@@ -685,7 +680,7 @@ struct Equality<::test::name::NewerSimpleTable> {
 };
 template <>
 struct CodingTraits<::test::name::EmptyTable>
-    : public EncodableCodingTraits<::test::name::EmptyTable, 16, 16> {};
+    : public EncodableCodingTraits<::test::name::EmptyTable, 16> {};
 
 inline zx_status_t Clone(const ::test::name::EmptyTable& _value,
                          ::test::name::EmptyTable* result) {

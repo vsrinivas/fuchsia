@@ -51,19 +51,11 @@ class SwitchingOrdinals {
 class SwitchingOrdinals_RequestEncoder {
  public:
   static ::fidl::Message OrdinalFive(::fidl::Encoder* _encoder) {
-    if (_encoder->ShouldEncodeUnionAsXUnion()) {
-      _encoder->Alloc(16 - sizeof(fidl_message_header_t));
-    } else {
-      _encoder->Alloc(16 - sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
     return _encoder->GetMessage();
   }
   static ::fidl::Message OnlyGeneratedOrdinal(::fidl::Encoder* _encoder) {
-    if (_encoder->ShouldEncodeUnionAsXUnion()) {
-      _encoder->Alloc(16 - sizeof(fidl_message_header_t));
-    } else {
-      _encoder->Alloc(16 - sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
     return _encoder->GetMessage();
   }
 };
@@ -113,19 +105,11 @@ class SwitchingOrdinals_RequestDecoder {
 class SwitchingOrdinals_ResponseEncoder {
  public:
   static ::fidl::Message EventOrdinalFifteen(::fidl::Encoder* _encoder) {
-    if (_encoder->ShouldEncodeUnionAsXUnion()) {
-      _encoder->Alloc(16 - sizeof(fidl_message_header_t));
-    } else {
-      _encoder->Alloc(16 - sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
     return _encoder->GetMessage();
   }
   static ::fidl::Message EventOnlyGeneratedOrdinal(::fidl::Encoder* _encoder) {
-    if (_encoder->ShouldEncodeUnionAsXUnion()) {
-      _encoder->Alloc(16 - sizeof(fidl_message_header_t));
-    } else {
-      _encoder->Alloc(16 - sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
     return _encoder->GetMessage();
   }
 };

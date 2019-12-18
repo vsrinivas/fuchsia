@@ -9,7 +9,7 @@ namespace name {
 #ifdef __Fuchsia__
 namespace {
 
-extern "C" const fidl_type_t test_name_SecondProtocolMethodOnSecondRequestTable;
+extern "C" const fidl_type_t v1_test_name_SecondProtocolMethodOnSecondRequestTable;
 
 }  // namespace
 
@@ -20,7 +20,7 @@ const fidl_type_t* SecondProtocol_RequestDecoder::GetType(uint64_t ordinal, bool
     case internal::kSecondProtocol_MethodOnSecond_Ordinal:
     case internal::kSecondProtocol_MethodOnSecond_GenOrdinal:
       *out_needs_response = false;
-      return &test_name_SecondProtocolMethodOnSecondRequestTable;
+      return &v1_test_name_SecondProtocolMethodOnSecondRequestTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -59,7 +59,7 @@ zx_status_t SecondProtocol_Proxy::Dispatch_(::fidl::Message message) {
 
 void SecondProtocol_Proxy::MethodOnSecond() {
   ::fidl::Encoder _encoder(internal::kSecondProtocol_MethodOnSecond_GenOrdinal);
-  controller_->Send(&test_name_SecondProtocolMethodOnSecondRequestTable, SecondProtocol_RequestEncoder::MethodOnSecond(&_encoder), nullptr);
+  controller_->Send(&v1_test_name_SecondProtocolMethodOnSecondRequestTable, SecondProtocol_RequestEncoder::MethodOnSecond(&_encoder), nullptr);
 }
 
 SecondProtocol_Stub::SecondProtocol_Stub(SecondProtocol_clazz* impl) : impl_(impl) {
@@ -117,7 +117,7 @@ SecondProtocol_SyncProxy::~SecondProtocol_SyncProxy() = default;
 
 zx_status_t SecondProtocol_SyncProxy::MethodOnSecond() {
   ::fidl::Encoder _encoder(internal::kSecondProtocol_MethodOnSecond_GenOrdinal);
-  return proxy_.Send(&test_name_SecondProtocolMethodOnSecondRequestTable, SecondProtocol_RequestEncoder::MethodOnSecond(&_encoder));
+  return proxy_.Send(&v1_test_name_SecondProtocolMethodOnSecondRequestTable, SecondProtocol_RequestEncoder::MethodOnSecond(&_encoder));
 }
 
 #endif // __Fuchsia__
@@ -125,7 +125,7 @@ zx_status_t SecondProtocol_SyncProxy::MethodOnSecond() {
 #ifdef __Fuchsia__
 namespace {
 
-extern "C" const fidl_type_t test_name_FirstProtocolMethodOnFirstRequestTable;
+extern "C" const fidl_type_t v1_test_name_FirstProtocolMethodOnFirstRequestTable;
 
 }  // namespace
 
@@ -136,7 +136,7 @@ const fidl_type_t* FirstProtocol_RequestDecoder::GetType(uint64_t ordinal, bool*
     case internal::kFirstProtocol_MethodOnFirst_Ordinal:
     case internal::kFirstProtocol_MethodOnFirst_GenOrdinal:
       *out_needs_response = false;
-      return &test_name_FirstProtocolMethodOnFirstRequestTable;
+      return &v1_test_name_FirstProtocolMethodOnFirstRequestTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -175,7 +175,7 @@ zx_status_t FirstProtocol_Proxy::Dispatch_(::fidl::Message message) {
 
 void FirstProtocol_Proxy::MethodOnFirst() {
   ::fidl::Encoder _encoder(internal::kFirstProtocol_MethodOnFirst_GenOrdinal);
-  controller_->Send(&test_name_FirstProtocolMethodOnFirstRequestTable, FirstProtocol_RequestEncoder::MethodOnFirst(&_encoder), nullptr);
+  controller_->Send(&v1_test_name_FirstProtocolMethodOnFirstRequestTable, FirstProtocol_RequestEncoder::MethodOnFirst(&_encoder), nullptr);
 }
 
 FirstProtocol_Stub::FirstProtocol_Stub(FirstProtocol_clazz* impl) : impl_(impl) {
@@ -233,7 +233,7 @@ FirstProtocol_SyncProxy::~FirstProtocol_SyncProxy() = default;
 
 zx_status_t FirstProtocol_SyncProxy::MethodOnFirst() {
   ::fidl::Encoder _encoder(internal::kFirstProtocol_MethodOnFirst_GenOrdinal);
-  return proxy_.Send(&test_name_FirstProtocolMethodOnFirstRequestTable, FirstProtocol_RequestEncoder::MethodOnFirst(&_encoder));
+  return proxy_.Send(&v1_test_name_FirstProtocolMethodOnFirstRequestTable, FirstProtocol_RequestEncoder::MethodOnFirst(&_encoder));
 }
 
 #endif // __Fuchsia__

@@ -13,7 +13,6 @@ class Empty;
 class Empty final {
  public:
   static const fidl_type_t* FidlType;
-  static const fidl_type_t* FidlTypeV1;
   
   uint8_t __reserved = 0u;
 
@@ -36,7 +35,7 @@ namespace fidl {
 
 template <>
 struct CodingTraits<::test::name::Empty>
-    : public EncodableCodingTraits<::test::name::Empty, 1, 1> {};
+    : public EncodableCodingTraits<::test::name::Empty, 1> {};
 
 inline zx_status_t Clone(const ::test::name::Empty& value,
                          ::test::name::Empty* result) {

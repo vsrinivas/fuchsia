@@ -6,17 +6,11 @@
 namespace test {
 namespace name {
 
-extern "C" const fidl_type_t test_name_EmptyTable;
-const fidl_type_t* Empty::FidlType = &test_name_EmptyTable;
 extern "C" const fidl_type_t v1_test_name_EmptyTable;
-const fidl_type_t* Empty::FidlTypeV1 = &v1_test_name_EmptyTable;
+const fidl_type_t* Empty::FidlType = &v1_test_name_EmptyTable;
 
 void Empty::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  if (_encoder->ShouldEncodeUnionAsXUnion()) {
-    ::fidl::Encode(_encoder, &__reserved, _offset + 0);
-  } else {
-    ::fidl::Encode(_encoder, &__reserved, _offset + 0);
-  }
+  ::fidl::Encode(_encoder, &__reserved, _offset + 0);
 }
 
 void Empty::Decode(::fidl::Decoder* _decoder, Empty* value, size_t _offset) {

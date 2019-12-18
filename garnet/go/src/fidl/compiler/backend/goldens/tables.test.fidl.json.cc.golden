@@ -6,10 +6,8 @@
 namespace test {
 namespace name {
 
-extern "C" const fidl_type_t test_name_SimpleTableTable;
-const fidl_type_t* SimpleTable::FidlType = &test_name_SimpleTableTable;
 extern "C" const fidl_type_t v1_test_name_SimpleTableTable;
-const fidl_type_t* SimpleTable::FidlTypeV1 = &v1_test_name_SimpleTableTable;
+const fidl_type_t* SimpleTable::FidlType = &v1_test_name_SimpleTableTable;
 
 SimpleTable::SimpleTable() :
   has_x_(false),
@@ -168,10 +166,8 @@ zx_status_t SimpleTable::Clone(SimpleTable* result) const {
   }
   return ZX_OK;
 }
-extern "C" const fidl_type_t test_name_ReverseOrdinalTableTable;
-const fidl_type_t* ReverseOrdinalTable::FidlType = &test_name_ReverseOrdinalTableTable;
 extern "C" const fidl_type_t v1_test_name_ReverseOrdinalTableTable;
-const fidl_type_t* ReverseOrdinalTable::FidlTypeV1 = &v1_test_name_ReverseOrdinalTableTable;
+const fidl_type_t* ReverseOrdinalTable::FidlType = &v1_test_name_ReverseOrdinalTableTable;
 
 ReverseOrdinalTable::ReverseOrdinalTable() :
   has_z_(false),
@@ -386,10 +382,8 @@ zx_status_t ReverseOrdinalTable::Clone(ReverseOrdinalTable* result) const {
   }
   return ZX_OK;
 }
-extern "C" const fidl_type_t test_name_OlderSimpleTableTable;
-const fidl_type_t* OlderSimpleTable::FidlType = &test_name_OlderSimpleTableTable;
 extern "C" const fidl_type_t v1_test_name_OlderSimpleTableTable;
-const fidl_type_t* OlderSimpleTable::FidlTypeV1 = &v1_test_name_OlderSimpleTableTable;
+const fidl_type_t* OlderSimpleTable::FidlType = &v1_test_name_OlderSimpleTableTable;
 
 OlderSimpleTable::OlderSimpleTable() :
   has_x_(false) {
@@ -492,10 +486,8 @@ zx_status_t OlderSimpleTable::Clone(OlderSimpleTable* result) const {
   }
   return ZX_OK;
 }
-extern "C" const fidl_type_t test_name_NewerSimpleTableTable;
-const fidl_type_t* NewerSimpleTable::FidlType = &test_name_NewerSimpleTableTable;
 extern "C" const fidl_type_t v1_test_name_NewerSimpleTableTable;
-const fidl_type_t* NewerSimpleTable::FidlTypeV1 = &v1_test_name_NewerSimpleTableTable;
+const fidl_type_t* NewerSimpleTable::FidlType = &v1_test_name_NewerSimpleTableTable;
 
 NewerSimpleTable::NewerSimpleTable() :
   has_x_(false),
@@ -710,10 +702,8 @@ zx_status_t NewerSimpleTable::Clone(NewerSimpleTable* result) const {
   }
   return ZX_OK;
 }
-extern "C" const fidl_type_t test_name_EmptyTableTable;
-const fidl_type_t* EmptyTable::FidlType = &test_name_EmptyTableTable;
 extern "C" const fidl_type_t v1_test_name_EmptyTableTable;
-const fidl_type_t* EmptyTable::FidlTypeV1 = &v1_test_name_EmptyTableTable;
+const fidl_type_t* EmptyTable::FidlType = &v1_test_name_EmptyTableTable;
 
 EmptyTable::EmptyTable() {
 }

@@ -6,17 +6,11 @@
 namespace test {
 namespace name {
 
-extern "C" const fidl_type_t test_name_StructWithNullableXUnionTable;
-const fidl_type_t* StructWithNullableXUnion::FidlType = &test_name_StructWithNullableXUnionTable;
 extern "C" const fidl_type_t v1_test_name_StructWithNullableXUnionTable;
-const fidl_type_t* StructWithNullableXUnion::FidlTypeV1 = &v1_test_name_StructWithNullableXUnionTable;
+const fidl_type_t* StructWithNullableXUnion::FidlType = &v1_test_name_StructWithNullableXUnionTable;
 
 void StructWithNullableXUnion::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  if (_encoder->ShouldEncodeUnionAsXUnion()) {
-    ::fidl::Encode(_encoder, &x1, _offset + 0);
-  } else {
-    ::fidl::Encode(_encoder, &x1, _offset + 0);
-  }
+  ::fidl::Encode(_encoder, &x1, _offset + 0);
 }
 
 void StructWithNullableXUnion::Decode(::fidl::Decoder* _decoder, StructWithNullableXUnion* value, size_t _offset) {
@@ -29,10 +23,8 @@ zx_status_t StructWithNullableXUnion::Clone(StructWithNullableXUnion* _result) c
     return _status;
   return ZX_OK;
 }
-extern "C" const fidl_type_t test_name_StrictSimpleXUnionTable;
-const fidl_type_t* StrictSimpleXUnion::FidlType = &test_name_StrictSimpleXUnionTable;
 extern "C" const fidl_type_t v1_test_name_StrictSimpleXUnionTable;
-const fidl_type_t* StrictSimpleXUnion::FidlTypeV1 = &v1_test_name_StrictSimpleXUnionTable;
+const fidl_type_t* StrictSimpleXUnion::FidlType = &v1_test_name_StrictSimpleXUnionTable;
 
 StrictSimpleXUnion::StrictSimpleXUnion() {}
 
@@ -52,7 +44,7 @@ StrictSimpleXUnion::StrictSimpleXUnion(StrictSimpleXUnion&& other) : tag_(other.
       new (&s_) ::std::string();
       s_ = std::move(other.s_);
       break;
-    case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly):
+    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
       break;
   }
 }
@@ -72,7 +64,7 @@ StrictSimpleXUnion& StrictSimpleXUnion::operator=(StrictSimpleXUnion&& other) {
         new (&s_) ::std::string();
         s_ = std::move(other.s_);
         break;
-      case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly):
+      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
     }
   }
@@ -137,7 +129,7 @@ void StrictSimpleXUnion::Decode(::fidl::Decoder* decoder, StrictSimpleXUnion* va
   fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
-    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly));
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(Tag::Invalid));
     return;
   }
 
@@ -209,7 +201,7 @@ void StrictSimpleXUnion::Destroy() {
       break;
   
   }
-  tag_ = static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly);
+  tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
 }
 
 void StrictSimpleXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -217,7 +209,13 @@ void StrictSimpleXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly):
+      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+        break;
+      case Tag::kI:
+        new (&i_) int32_t();
+        break;
+      case Tag::kF:
+        new (&f_) float();
         break;
       case Tag::kS:
         new (&s_) ::std::string();
@@ -227,10 +225,8 @@ void StrictSimpleXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t test_name_StrictBoundedXUnionTable;
-const fidl_type_t* StrictBoundedXUnion::FidlType = &test_name_StrictBoundedXUnionTable;
 extern "C" const fidl_type_t v1_test_name_StrictBoundedXUnionTable;
-const fidl_type_t* StrictBoundedXUnion::FidlTypeV1 = &v1_test_name_StrictBoundedXUnionTable;
+const fidl_type_t* StrictBoundedXUnion::FidlType = &v1_test_name_StrictBoundedXUnionTable;
 
 StrictBoundedXUnion::StrictBoundedXUnion() {}
 
@@ -244,7 +240,7 @@ StrictBoundedXUnion::StrictBoundedXUnion(StrictBoundedXUnion&& other) : tag_(oth
       new (&v_) ::std::vector<uint8_t>();
       v_ = std::move(other.v_);
       break;
-    case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly):
+    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
       break;
   }
 }
@@ -258,7 +254,7 @@ StrictBoundedXUnion& StrictBoundedXUnion::operator=(StrictBoundedXUnion&& other)
         new (&v_) ::std::vector<uint8_t>();
         v_ = std::move(other.v_);
         break;
-      case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly):
+      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
     }
   }
@@ -303,7 +299,7 @@ void StrictBoundedXUnion::Decode(::fidl::Decoder* decoder, StrictBoundedXUnion* 
   fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
-    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly));
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(Tag::Invalid));
     return;
   }
 
@@ -349,7 +345,7 @@ void StrictBoundedXUnion::Destroy() {
       break;
   
   }
-  tag_ = static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly);
+  tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
 }
 
 void StrictBoundedXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -357,7 +353,7 @@ void StrictBoundedXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly):
+      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
       case Tag::kV:
         new (&v_) ::std::vector<uint8_t>();
@@ -367,10 +363,8 @@ void StrictBoundedXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t test_name_OlderSimpleUnionTable;
-const fidl_type_t* OlderSimpleUnion::FidlType = &test_name_OlderSimpleUnionTable;
 extern "C" const fidl_type_t v1_test_name_OlderSimpleUnionTable;
-const fidl_type_t* OlderSimpleUnion::FidlTypeV1 = &v1_test_name_OlderSimpleUnionTable;
+const fidl_type_t* OlderSimpleUnion::FidlType = &v1_test_name_OlderSimpleUnionTable;
 
 OlderSimpleUnion::OlderSimpleUnion() {}
 
@@ -386,7 +380,7 @@ OlderSimpleUnion::OlderSimpleUnion(OlderSimpleUnion&& other) : tag_(other.tag_) 
     case Tag::kF:
       f_ = std::move(other.f_);
       break;
-    case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly):
+    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
       break;
     default:
       new (&unknown_data_) decltype(unknown_data_);
@@ -406,7 +400,7 @@ OlderSimpleUnion& OlderSimpleUnion::operator=(OlderSimpleUnion&& other) {
       case Tag::kF:
         f_ = std::move(other.f_);
         break;
-      case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly):
+      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
       default:
         new (&unknown_data_) decltype(unknown_data_);
@@ -466,7 +460,7 @@ void OlderSimpleUnion::Decode(::fidl::Decoder* decoder, OlderSimpleUnion* value,
   fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
-    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly));
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(Tag::Invalid));
     return;
   }
 
@@ -522,14 +516,14 @@ void OlderSimpleUnion::Destroy() {
     case Tag::kF:
       break;
   
-    case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly):
+    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
       break;
     default:
       unknown_data_.~vector();
       break;
   
   }
-  tag_ = static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly);
+  tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
 }
 
 void OlderSimpleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -537,7 +531,13 @@ void OlderSimpleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly):
+      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+        break;
+      case Tag::kI:
+        new (&i_) int64_t();
+        break;
+      case Tag::kF:
+        new (&f_) float();
         break;
       default:
         new (&unknown_data_) decltype(unknown_data_);
@@ -548,11 +548,11 @@ void OlderSimpleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
 #ifdef __Fuchsia__
 namespace {
 
-extern "C" const fidl_type_t test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
-extern "C" const fidl_type_t test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
+extern "C" const fidl_type_t v1_test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
+extern "C" const fidl_type_t v1_test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
 
-extern "C" const fidl_type_t test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable;
-extern "C" const fidl_type_t test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
+extern "C" const fidl_type_t v1_test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable;
+extern "C" const fidl_type_t v1_test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
 
 }  // namespace
 
@@ -563,11 +563,11 @@ const fidl_type_t* TestProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* 
     case internal::kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal:
     case internal::kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal:
       *out_needs_response = true;
-      return &test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
+      return &v1_test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable;
     case internal::kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal:
     case internal::kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal:
       *out_needs_response = true;
-      return &test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable;
+      return &v1_test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -578,10 +578,10 @@ const fidl_type_t* TestProtocol_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case internal::kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal:
     case internal::kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal:
-      return &test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
+      return &v1_test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
     case internal::kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal:
     case internal::kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal:
-      return &test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
+      return &v1_test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
     default:
       return nullptr;
   }
@@ -622,9 +622,9 @@ class TestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_ResponseHandler 
 
   zx_status_t OnMessage(::fidl::Message message) override {
     const char* error_msg = nullptr;
-    zx_status_t status = message.Decode(&test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable, &error_msg);
+    zx_status_t status = message.Decode(&v1_test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable, &error_msg);
     if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(message, &test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable, error_msg);
+      FIDL_REPORT_DECODING_ERROR(message, &v1_test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable, error_msg);
       return status;
     }
     ::fidl::Decoder decoder(std::move(message));
@@ -643,7 +643,7 @@ class TestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_ResponseHandler 
 }  // namespace
 void TestProtocol_Proxy::StrictXUnionHenceResponseMayBeStackAllocated(StrictXUnionHenceResponseMayBeStackAllocatedCallback callback) {
   ::fidl::Encoder _encoder(internal::kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal);
-  controller_->Send(&test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable, TestProtocol_RequestEncoder::StrictXUnionHenceResponseMayBeStackAllocated(&_encoder), std::make_unique<TestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_ResponseHandler>(std::move(callback)));
+  controller_->Send(&v1_test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable, TestProtocol_RequestEncoder::StrictXUnionHenceResponseMayBeStackAllocated(&_encoder), std::make_unique<TestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_ResponseHandler>(std::move(callback)));
 }
 namespace {
 
@@ -657,9 +657,9 @@ class TestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_ResponseHandle
 
   zx_status_t OnMessage(::fidl::Message message) override {
     const char* error_msg = nullptr;
-    zx_status_t status = message.Decode(&test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable, &error_msg);
+    zx_status_t status = message.Decode(&v1_test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable, &error_msg);
     if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(message, &test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable, error_msg);
+      FIDL_REPORT_DECODING_ERROR(message, &v1_test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable, error_msg);
       return status;
     }
     ::fidl::Decoder decoder(std::move(message));
@@ -678,7 +678,7 @@ class TestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_ResponseHandle
 }  // namespace
 void TestProtocol_Proxy::FlexibleXUnionHenceResponseMustBeHeapAllocated(FlexibleXUnionHenceResponseMustBeHeapAllocatedCallback callback) {
   ::fidl::Encoder _encoder(internal::kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal);
-  controller_->Send(&test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable, TestProtocol_RequestEncoder::FlexibleXUnionHenceResponseMustBeHeapAllocated(&_encoder), std::make_unique<TestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_ResponseHandler>(std::move(callback)));
+  controller_->Send(&v1_test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable, TestProtocol_RequestEncoder::FlexibleXUnionHenceResponseMustBeHeapAllocated(&_encoder), std::make_unique<TestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_ResponseHandler>(std::move(callback)));
 }
 
 TestProtocol_Stub::TestProtocol_Stub(TestProtocol_clazz* impl) : impl_(impl) {
@@ -696,7 +696,7 @@ class TestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Responder final 
 
   void operator()(StrictBoundedXUnion xu) {
     ::fidl::Encoder _encoder(internal::kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal);
-    response_.Send(&test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable, TestProtocol_ResponseEncoder::StrictXUnionHenceResponseMayBeStackAllocated(&_encoder, &xu));
+    response_.Send(&v1_test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable, TestProtocol_ResponseEncoder::StrictXUnionHenceResponseMayBeStackAllocated(&_encoder, &xu));
   }
 
  private:
@@ -710,7 +710,7 @@ class TestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Responder fina
 
   void operator()(OlderSimpleUnion xu) {
     ::fidl::Encoder _encoder(internal::kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal);
-    response_.Send(&test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable, TestProtocol_ResponseEncoder::FlexibleXUnionHenceResponseMustBeHeapAllocated(&_encoder, &xu));
+    response_.Send(&v1_test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable, TestProtocol_ResponseEncoder::FlexibleXUnionHenceResponseMustBeHeapAllocated(&_encoder, &xu));
   }
 
  private:
@@ -772,7 +772,7 @@ zx_status_t TestProtocol_SyncProxy::StrictXUnionHenceResponseMayBeStackAllocated
   ::fidl::Encoder _encoder(internal::kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal);
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
-  zx_status_t status_ = proxy_.Call(&test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable, &test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable, TestProtocol_RequestEncoder::StrictXUnionHenceResponseMayBeStackAllocated(&_encoder), &response_);
+  zx_status_t status_ = proxy_.Call(&v1_test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable, &v1_test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable, TestProtocol_RequestEncoder::StrictXUnionHenceResponseMayBeStackAllocated(&_encoder), &response_);
   if (status_ != ZX_OK)
     return status_;
   ::fidl::Decoder decoder_(std::move(response_));
@@ -784,7 +784,7 @@ zx_status_t TestProtocol_SyncProxy::FlexibleXUnionHenceResponseMustBeHeapAllocat
   ::fidl::Encoder _encoder(internal::kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal);
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
-  zx_status_t status_ = proxy_.Call(&test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable, &test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable, TestProtocol_RequestEncoder::FlexibleXUnionHenceResponseMustBeHeapAllocated(&_encoder), &response_);
+  zx_status_t status_ = proxy_.Call(&v1_test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable, &v1_test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable, TestProtocol_RequestEncoder::FlexibleXUnionHenceResponseMustBeHeapAllocated(&_encoder), &response_);
   if (status_ != ZX_OK)
     return status_;
   ::fidl::Decoder decoder_(std::move(response_));
@@ -794,10 +794,8 @@ zx_status_t TestProtocol_SyncProxy::FlexibleXUnionHenceResponseMustBeHeapAllocat
 
 #endif // __Fuchsia__
 
-extern "C" const fidl_type_t test_name_NewerSimpleUnionTable;
-const fidl_type_t* NewerSimpleUnion::FidlType = &test_name_NewerSimpleUnionTable;
 extern "C" const fidl_type_t v1_test_name_NewerSimpleUnionTable;
-const fidl_type_t* NewerSimpleUnion::FidlTypeV1 = &v1_test_name_NewerSimpleUnionTable;
+const fidl_type_t* NewerSimpleUnion::FidlType = &v1_test_name_NewerSimpleUnionTable;
 
 NewerSimpleUnion::NewerSimpleUnion() {}
 
@@ -818,7 +816,7 @@ NewerSimpleUnion::NewerSimpleUnion(NewerSimpleUnion&& other) : tag_(other.tag_) 
       new (&v_) ::std::vector<::std::string>();
       v_ = std::move(other.v_);
       break;
-    case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly):
+    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
       break;
     default:
       new (&unknown_data_) decltype(unknown_data_);
@@ -843,7 +841,7 @@ NewerSimpleUnion& NewerSimpleUnion::operator=(NewerSimpleUnion&& other) {
         new (&v_) ::std::vector<::std::string>();
         v_ = std::move(other.v_);
         break;
-      case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly):
+      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
       default:
         new (&unknown_data_) decltype(unknown_data_);
@@ -913,7 +911,7 @@ void NewerSimpleUnion::Decode(::fidl::Decoder* decoder, NewerSimpleUnion* value,
   fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
-    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly));
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(Tag::Invalid));
     return;
   }
 
@@ -988,14 +986,14 @@ void NewerSimpleUnion::Destroy() {
       v_.~vector();
       break;
   
-    case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly):
+    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
       break;
     default:
       unknown_data_.~vector();
       break;
   
   }
-  tag_ = static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly);
+  tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
 }
 
 void NewerSimpleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -1003,7 +1001,10 @@ void NewerSimpleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly):
+      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+        break;
+      case Tag::kI:
+        new (&i_) int64_t();
         break;
       case Tag::kS:
         new (&s_) ::std::string();
@@ -1017,10 +1018,8 @@ void NewerSimpleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t test_name_ExplicitXUnionTable;
-const fidl_type_t* ExplicitXUnion::FidlType = &test_name_ExplicitXUnionTable;
 extern "C" const fidl_type_t v1_test_name_ExplicitXUnionTable;
-const fidl_type_t* ExplicitXUnion::FidlTypeV1 = &v1_test_name_ExplicitXUnionTable;
+const fidl_type_t* ExplicitXUnion::FidlType = &v1_test_name_ExplicitXUnionTable;
 
 ExplicitXUnion::ExplicitXUnion() {}
 
@@ -1036,7 +1035,7 @@ ExplicitXUnion::ExplicitXUnion(ExplicitXUnion&& other) : tag_(other.tag_) {
     case Tag::kF:
       f_ = std::move(other.f_);
       break;
-    case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly):
+    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
       break;
     default:
       new (&unknown_data_) decltype(unknown_data_);
@@ -1056,7 +1055,7 @@ ExplicitXUnion& ExplicitXUnion::operator=(ExplicitXUnion&& other) {
       case Tag::kF:
         f_ = std::move(other.f_);
         break;
-      case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly):
+      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
       default:
         new (&unknown_data_) decltype(unknown_data_);
@@ -1116,7 +1115,7 @@ void ExplicitXUnion::Decode(::fidl::Decoder* decoder, ExplicitXUnion* value, siz
   fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
-    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly));
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(Tag::Invalid));
     return;
   }
 
@@ -1172,14 +1171,14 @@ void ExplicitXUnion::Destroy() {
     case Tag::kF:
       break;
   
-    case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly):
+    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
       break;
     default:
       unknown_data_.~vector();
       break;
   
   }
-  tag_ = static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly);
+  tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
 }
 
 void ExplicitXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -1187,7 +1186,13 @@ void ExplicitXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly):
+      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
+        break;
+      case Tag::kI:
+        new (&i_) int64_t();
+        break;
+      case Tag::kF:
+        new (&f_) float();
         break;
       default:
         new (&unknown_data_) decltype(unknown_data_);
@@ -1195,17 +1200,11 @@ void ExplicitXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
-extern "C" const fidl_type_t test_name_EmptyTable;
-const fidl_type_t* Empty::FidlType = &test_name_EmptyTable;
 extern "C" const fidl_type_t v1_test_name_EmptyTable;
-const fidl_type_t* Empty::FidlTypeV1 = &v1_test_name_EmptyTable;
+const fidl_type_t* Empty::FidlType = &v1_test_name_EmptyTable;
 
 void Empty::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  if (_encoder->ShouldEncodeUnionAsXUnion()) {
-    ::fidl::Encode(_encoder, &__reserved, _offset + 0);
-  } else {
-    ::fidl::Encode(_encoder, &__reserved, _offset + 0);
-  }
+  ::fidl::Encode(_encoder, &__reserved, _offset + 0);
 }
 
 void Empty::Decode(::fidl::Decoder* _decoder, Empty* value, size_t _offset) {
@@ -1218,10 +1217,8 @@ zx_status_t Empty::Clone(Empty* _result) const {
     return _status;
   return ZX_OK;
 }
-extern "C" const fidl_type_t test_name_XUnionContainingEmptyStructTable;
-const fidl_type_t* XUnionContainingEmptyStruct::FidlType = &test_name_XUnionContainingEmptyStructTable;
 extern "C" const fidl_type_t v1_test_name_XUnionContainingEmptyStructTable;
-const fidl_type_t* XUnionContainingEmptyStruct::FidlTypeV1 = &v1_test_name_XUnionContainingEmptyStructTable;
+const fidl_type_t* XUnionContainingEmptyStruct::FidlType = &v1_test_name_XUnionContainingEmptyStructTable;
 
 XUnionContainingEmptyStruct::XUnionContainingEmptyStruct() {}
 
@@ -1235,7 +1232,7 @@ XUnionContainingEmptyStruct::XUnionContainingEmptyStruct(XUnionContainingEmptySt
       new (&empty_) class Empty();
       empty_ = std::move(other.empty_);
       break;
-    case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly):
+    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
       break;
     default:
       new (&unknown_data_) decltype(unknown_data_);
@@ -1253,7 +1250,7 @@ XUnionContainingEmptyStruct& XUnionContainingEmptyStruct::operator=(XUnionContai
         new (&empty_) class Empty();
         empty_ = std::move(other.empty_);
         break;
-      case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly):
+      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
       default:
         new (&unknown_data_) decltype(unknown_data_);
@@ -1303,7 +1300,7 @@ void XUnionContainingEmptyStruct::Decode(::fidl::Decoder* decoder, XUnionContain
   fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
-    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly));
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(Tag::Invalid));
     return;
   }
 
@@ -1349,14 +1346,14 @@ void XUnionContainingEmptyStruct::Destroy() {
       empty_.~Empty();
       break;
   
-    case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly):
+    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
       break;
     default:
       unknown_data_.~vector();
       break;
   
   }
-  tag_ = static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly);
+  tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
 }
 
 void XUnionContainingEmptyStruct::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
@@ -1364,7 +1361,7 @@ void XUnionContainingEmptyStruct::EnsureStorageInitialized(::fidl_xunion_tag_t t
     Destroy();
     tag_ = tag;
     switch (tag_) {
-      case static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly):
+      case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
       case Tag::kEmpty:
         new (&empty_) class Empty();

@@ -133,38 +133,48 @@ zx_status_t Message::Encode(const fidl_type_t* type, const char** error_msg_out)
                                    handles_.capacity(), &actual_handles, error_msg_out);
   if (status == ZX_OK)
     handles_.set_actual(actual_handles);
+
   return status;
 }
 
 zx_status_t Message::Decode(const fidl_type_t* type, const char** error_msg_out) {
-  if (should_decode_union_from_xunion()) {
-    const fidl_type_t* v1_type = get_alt_type(type);
-    allocated_buffer.resize(ZX_CHANNEL_MAX_MSG_BYTES);
-    uint32_t size;
-    zx_status_t transform_status =
-        fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD, v1_type, bytes_.data(), bytes_.actual(),
-                       allocated_buffer.data(), static_cast<uint32_t>(allocated_buffer.capacity()),
-                       &size, error_msg_out);
-    if (transform_status != ZX_OK) {
-      return transform_status;
-    }
+  auto contains_union = [](const fidl_type_t* type) {
+    if (type->type_tag != kFidlTypeStruct)
+      return false;
 
-    zx_status_t status = fidl_decode(type, allocated_buffer.data(), size, handles_.data(),
+    return type->coded_struct.contains_union;
+  };
+
+  const bool needs_transform = !is_v1_message() && contains_union(type);
+  if (!needs_transform) {
+    zx_status_t status = fidl_decode(type, bytes_.data(), bytes_.actual(), handles_.data(),
                                      handles_.actual(), error_msg_out);
-    bytes_ = BytePart(allocated_buffer.data(), size, size);
-
     ClearHandlesUnsafe();
     return status;
   }
 
-  zx_status_t status = fidl_decode(type, bytes_.data(), bytes_.actual(), handles_.data(),
+  const fidl_type_t* old_type = get_alt_type(type);
+
+  allocated_buffer.resize(ZX_CHANNEL_MAX_MSG_BYTES);
+  uint32_t size;
+  zx_status_t transform_status =
+      fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, old_type, bytes_.data(), bytes_.actual(),
+                     allocated_buffer.data(), static_cast<uint32_t>(allocated_buffer.capacity()),
+                     &size, error_msg_out);
+  if (transform_status != ZX_OK) {
+    return transform_status;
+  }
+
+  zx_status_t status = fidl_decode(type, allocated_buffer.data(), size, handles_.data(),
                                    handles_.actual(), error_msg_out);
+  bytes_ = BytePart(allocated_buffer.data(), size, size);
+
   ClearHandlesUnsafe();
   return status;
 }
 
-zx_status_t Message::Validate(const fidl_type_t* old_type, const char** error_msg_out) const {
-  const fidl_type_t* type = should_decode_union_from_xunion() ? get_alt_type(old_type) : old_type;
+zx_status_t Message::Validate(const fidl_type_t* v1_type, const char** error_msg_out) const {
+  const fidl_type_t* type = is_v1_message() ? v1_type : get_alt_type(v1_type);
   return fidl_validate(type, bytes_.data(), bytes_.actual(), handles_.actual(), error_msg_out);
 }
 
@@ -194,7 +204,7 @@ zx_status_t Message::Write(zx_handle_t channel, uint32_t flags) {
 }
 
 zx_status_t Message::WriteTransformV1(zx_handle_t channel, uint32_t flags,
-                                      const fidl_type_t* type) {
+                                      const fidl_type_t* old_type) {
   auto src_data = bytes().data();
   auto src_num_bytes = bytes().actual();
   auto callback = [&](const uint8_t* dst_bytes, uint32_t dst_num_bytes) -> zx_status_t {
@@ -203,7 +213,7 @@ zx_status_t Message::WriteTransformV1(zx_handle_t channel, uint32_t flags,
     ClearHandlesUnsafe();
     return status;
   };
-  return FidlTransformWithCallback(FIDL_TRANSFORMATION_OLD_TO_V1, type, src_data, src_num_bytes,
+  return FidlTransformWithCallback(FIDL_TRANSFORMATION_OLD_TO_V1, old_type, src_data, src_num_bytes,
                                    nullptr, callback);
 }
 

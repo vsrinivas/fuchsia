@@ -110,17 +110,10 @@ class {{ .RequestEncoderName }} {
   {{- range .Methods }}
     {{- if .HasRequest }}
   static ::fidl::Message {{ .Name }}(::fidl::Encoder* _encoder{{ template "PointerParams" .Request }}) {
-    if (_encoder->ShouldEncodeUnionAsXUnion()) {
-      _encoder->Alloc({{ .RequestSizeV1NoEE }} - sizeof(fidl_message_header_t));
-      {{- range .Request }}
-      ::fidl::Encode(_encoder, {{ .Name }}, {{ .OffsetV1 }});
-      {{- end }}
-    } else {
-      _encoder->Alloc({{ .RequestSizeOld }} - sizeof(fidl_message_header_t));
-      {{- range .Request }}
-      ::fidl::Encode(_encoder, {{ .Name }}, {{ .OffsetOld }});
-      {{- end }}
-    }
+    _encoder->Alloc({{ .RequestSizeV1NoEE }} - sizeof(fidl_message_header_t));
+    {{- range .Request }}
+    ::fidl::Encode(_encoder, {{ .Name }}, {{ .OffsetV1 }});
+    {{- end }}
     return _encoder->GetMessage();
   }
     {{- end }}
@@ -154,7 +147,7 @@ class {{ .RequestDecoderName }} {
       {
           {{- if .Request }}
             {{- range $index, $param := .Request }}
-        auto arg{{ $index }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&request_decoder, {{ .OffsetOld }});
+        auto arg{{ $index }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&request_decoder, {{ .OffsetV1 }});
             {{- end }}
           {{- end }}
         {{ .Name }}(
@@ -186,17 +179,10 @@ class {{ .ResponseEncoderName }} {
   {{- range .Methods }}
     {{- if .HasResponse }}
   static ::fidl::Message {{ .Name }}(::fidl::Encoder* _encoder{{ template "PointerParams" .Response }}) {
-    if (_encoder->ShouldEncodeUnionAsXUnion()) {
-      _encoder->Alloc({{ .ResponseSizeV1NoEE }} - sizeof(fidl_message_header_t));
-      {{- range .Response }}
-      ::fidl::Encode(_encoder, {{ .Name }}, {{ .OffsetV1 }});
-      {{- end }}
-    } else {
-      _encoder->Alloc({{ .ResponseSizeOld }} - sizeof(fidl_message_header_t));
-      {{- range .Response }}
-      ::fidl::Encode(_encoder, {{ .Name }}, {{ .OffsetOld }});
-      {{- end }}
-    }
+    _encoder->Alloc({{ .ResponseSizeV1NoEE }} - sizeof(fidl_message_header_t));
+    {{- range .Response }}
+    ::fidl::Encode(_encoder, {{ .Name }}, {{ .OffsetV1 }});
+    {{- end }}
     return _encoder->GetMessage();
   }
     {{- end }}
@@ -228,7 +214,7 @@ class {{ .ResponseDecoderName }} {
           {{- end }}
       {
             {{- range $index, $param := .Response }}
-        auto arg{{ $index }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&response_decoder, {{ .OffsetOld }});
+        auto arg{{ $index }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&response_decoder, {{ .OffsetV1 }});
             {{- end }}
         {{ .Name }}(
           {{- range $index, $param := .Response -}}
@@ -345,10 +331,10 @@ namespace {
 
 {{- range .Methods }}
 {{ if .HasRequest }}
-extern "C" const fidl_type_t {{ .RequestTypeName }};
+extern "C" const fidl_type_t {{ .V1RequestTypeName }};
 {{- end }}
 {{- if .HasResponse }}
-extern "C" const fidl_type_t {{ .ResponseTypeName }};
+extern "C" const fidl_type_t {{ .V1ResponseTypeName }};
 {{- end }}
 {{- end }}
 
@@ -372,7 +358,7 @@ const fidl_type_t* {{ .RequestDecoderName }}::GetType(uint64_t ordinal, bool* ou
         {{- else }}
       *out_needs_response = false;
         {{- end }}
-      return &{{ .RequestTypeName }};
+      return &{{ .V1RequestTypeName }};
       {{- end }}
     {{- end }}
     default:
@@ -388,7 +374,7 @@ const fidl_type_t* {{ .ResponseDecoderName }}::GetType(uint64_t ordinal) {
           {{- range .Ordinals.Reads }}
     case internal::{{ .Name }}:
           {{- end }}
-      return &{{ .ResponseTypeName }};
+      return &{{ .V1ResponseTypeName }};
       {{- end }}
     {{- end }}
     default:
@@ -422,15 +408,15 @@ zx_status_t {{ .ProxyName }}::Dispatch_(::fidl::Message message) {
         break;
       }
       const char* error_msg = nullptr;
-      status = message.Decode(&{{ .ResponseTypeName }}, &error_msg);
+      status = message.Decode(&{{ .V1ResponseTypeName }}, &error_msg);
       if (status != ZX_OK) {
-        FIDL_REPORT_DECODING_ERROR(message, &{{ .ResponseTypeName }}, error_msg);
+        FIDL_REPORT_DECODING_ERROR(message, &{{ .V1ResponseTypeName }}, error_msg);
         break;
       }
         {{- if .Response }}
       ::fidl::Decoder decoder(std::move(message));
           {{- range $index, $param := .Response }}
-      auto arg{{ $index }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&decoder, {{ .OffsetOld }});
+      auto arg{{ $index }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&decoder, {{ .OffsetV1 }});
           {{- end }}
         {{- end }}
       {{ .Name }}(
@@ -466,15 +452,15 @@ class {{ .ResponseHandlerType }} final : public ::fidl::internal::MessageHandler
 
   zx_status_t OnMessage(::fidl::Message message) override {
     const char* error_msg = nullptr;
-    zx_status_t status = message.Decode(&{{ .ResponseTypeName }}, &error_msg);
+    zx_status_t status = message.Decode(&{{ .V1ResponseTypeName }}, &error_msg);
     if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(message, &{{ .ResponseTypeName }}, error_msg);
+      FIDL_REPORT_DECODING_ERROR(message, &{{ .V1ResponseTypeName }}, error_msg);
       return status;
     }
       {{- if .Response }}
     ::fidl::Decoder decoder(std::move(message));
         {{- range $index, $param := .Response }}
-    auto arg{{ $index }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&decoder, {{ .OffsetOld }});
+    auto arg{{ $index }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&decoder, {{ .OffsetV1 }});
         {{- end }}
       {{- end }}
     callback_(
@@ -496,7 +482,7 @@ class {{ .ResponseHandlerType }} final : public ::fidl::internal::MessageHandler
 {{- end }}
 void {{ $.ProxyName }}::{{ template "RequestMethodSignature" . }} {
   ::fidl::Encoder _encoder(internal::{{ .Ordinals.Write.Name }});
-  controller_->Send(&{{ .RequestTypeName }}, {{ $.RequestEncoderName }}::{{ .Name }}(&_encoder
+  controller_->Send(&{{ .V1RequestTypeName }}, {{ $.RequestEncoderName }}::{{ .Name }}(&_encoder
   {{- range $index, $param := .Request -}}
     , &{{ $param.Name }}
   {{- end -}}
@@ -529,7 +515,7 @@ class {{ .ResponderType }} final {
 
   void operator()({{ template "Params" .Response }}) {
     ::fidl::Encoder _encoder(internal::{{ .Ordinals.Write.Name }});
-    response_.Send(&{{ .ResponseTypeName }}, {{ $.ResponseEncoderName }}::{{ .Name }}(&_encoder
+    response_.Send(&{{ .V1ResponseTypeName }}, {{ $.ResponseEncoderName }}::{{ .Name }}(&_encoder
   {{- range $index, $param := .Response -}}
     , &{{ $param.Name }}
   {{- end -}}
@@ -578,7 +564,7 @@ zx_status_t {{ .StubName }}::Dispatch_(
         {{- if .Request }}
       ::fidl::Decoder decoder(std::move(message));
           {{- range $index, $param := .Request }}
-      auto arg{{ $index }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&decoder, {{ .OffsetOld }});
+      auto arg{{ $index }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&decoder, {{ .OffsetV1 }});
           {{- end }}
         {{- end }}
       impl_->{{ .Name }}(
@@ -606,7 +592,7 @@ zx_status_t {{ .StubName }}::Dispatch_(
     {{- if .HasResponse }}
 void {{ $.StubName }}::{{ template "EventMethodSignature" . }} {
   ::fidl::Encoder _encoder(internal::{{ .Ordinals.Write.Name }});
-  sender_()->Send(&{{ .ResponseTypeName }}, {{ $.ResponseEncoderName }}::{{ .Name }}(&_encoder
+  sender_()->Send(&{{ .V1ResponseTypeName }}, {{ $.ResponseEncoderName }}::{{ .Name }}(&_encoder
   {{- range $index, $param := .Response -}}
     , &{{ $param.Name }}
   {{- end -}}
@@ -629,7 +615,7 @@ zx_status_t {{ $.SyncProxyName }}::{{ template "SyncRequestMethodSignature" . }}
     {{- if .HasResponse }}
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
-  zx_status_t status_ = proxy_.Call(&{{ .RequestTypeName }}, &{{ .ResponseTypeName }}, {{ $.RequestEncoderName }}::{{ .Name }}(&_encoder
+  zx_status_t status_ = proxy_.Call(&{{ .V1RequestTypeName }}, &{{ .V1ResponseTypeName }}, {{ $.RequestEncoderName }}::{{ .Name }}(&_encoder
   {{- range $index, $param := .Request -}}
     , &{{ $param.Name }}
   {{- end -}}
@@ -639,12 +625,12 @@ zx_status_t {{ $.SyncProxyName }}::{{ template "SyncRequestMethodSignature" . }}
       {{- if .Response }}
   ::fidl::Decoder decoder_(std::move(response_));
         {{- range $index, $param := .Response }}
-  *out_{{ .Name }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&decoder_, {{ .OffsetOld }});
+  *out_{{ .Name }} = ::fidl::DecodeAs<{{ .Type.Decl }}>(&decoder_, {{ .OffsetV1 }});
         {{- end }}
       {{- end }}
   return ZX_OK;
     {{- else }}
-  return proxy_.Send(&{{ .RequestTypeName }}, {{ $.RequestEncoderName }}::{{ .Name }}(&_encoder
+  return proxy_.Send(&{{ .V1RequestTypeName }}, {{ $.RequestEncoderName }}::{{ .Name }}(&_encoder
   {{- range $index, $param := .Request -}}
     , &{{ $param.Name }}
   {{- end -}}

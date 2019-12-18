@@ -29,7 +29,7 @@ struct MinSize<Union> {
 };
 template<>
 struct Allocate<Union> {
-  static_assert(1 > 0, "union must have at least one member");
+  static_assert(1 > 0, "xunion must have at least one member");
 
   Union operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<Union>());

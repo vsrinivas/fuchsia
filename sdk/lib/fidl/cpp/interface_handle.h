@@ -170,7 +170,7 @@ struct Equality<InterfaceHandle<T>> {
 
 template <typename T>
 struct CodingTraits<InterfaceHandle<T>>
-    : public EncodableCodingTraits<InterfaceHandle<T>, sizeof(zx_handle_t), sizeof(zx_handle_t)> {};
+    : public EncodableCodingTraits<InterfaceHandle<T>, sizeof(zx_handle_t)> {};
 
 template <typename T>
 inline zx_status_t Clone(const InterfaceHandle<T>& value, InterfaceHandle<T>* result) {

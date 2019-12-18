@@ -54,7 +54,7 @@ struct MinSize<WithErrorSyntax_ResponseAsStruct_Result> {
 };
 template<>
 struct Allocate<WithErrorSyntax_ResponseAsStruct_Result> {
-  static_assert(2 > 0, "union must have at least one member");
+  static_assert(2 > 0, "xunion must have at least one member");
 
   WithErrorSyntax_ResponseAsStruct_Result operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<WithErrorSyntax_ResponseAsStruct_Result>());
@@ -105,7 +105,7 @@ struct MinSize<WithErrorSyntax_ErrorAsPrimitive_Result> {
 };
 template<>
 struct Allocate<WithErrorSyntax_ErrorAsPrimitive_Result> {
-  static_assert(2 > 0, "union must have at least one member");
+  static_assert(2 > 0, "xunion must have at least one member");
 
   WithErrorSyntax_ErrorAsPrimitive_Result operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<WithErrorSyntax_ErrorAsPrimitive_Result>());
@@ -181,7 +181,7 @@ struct MinSize<WithErrorSyntax_ErrorAsEnum_Result> {
 };
 template<>
 struct Allocate<WithErrorSyntax_ErrorAsEnum_Result> {
-  static_assert(2 > 0, "union must have at least one member");
+  static_assert(2 > 0, "xunion must have at least one member");
 
   WithErrorSyntax_ErrorAsEnum_Result operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<WithErrorSyntax_ErrorAsEnum_Result>());

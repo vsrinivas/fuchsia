@@ -1400,7 +1400,7 @@ func Compile(r types.Root) Root {
 	// TODO(fxb/39159): Flip to treat unions as xunions. We must be fully on
 	// the v1 wire format to activate this, and both APIs must have been
 	// properly aligned.
-	treatUnionAsXUnions := false
+	treatUnionAsXUnions := true
 	return compile(r, formatNamespace, treatUnionAsXUnions)
 }
 

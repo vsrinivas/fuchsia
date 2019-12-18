@@ -37,67 +37,78 @@ class Service;
 // union comment #3
 class Union final {
  public:
+ static const fidl_type_t* FidlType;
+
   Union();
   ~Union();
 
   Union(Union&&);
   Union& operator=(Union&&);
 
-  enum class Tag : fidl_union_tag_t {
-    kField = 0,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
+  
+  static Union WithField(int32_t&&);
 
-  enum __attribute__((enum_extensibility(closed))) XUnionTag : fidl_xunion_tag_t {
+  enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
+  
     kField = 1,  // 0x1
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   static inline ::std::unique_ptr<Union> New() { return ::std::make_unique<Union>(); }
 
-  void Encode(::fidl::Encoder* _encoder, size_t _offset);
-  void EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_t _offset);
-  static void Decode(::fidl::Decoder* _decoder, Union* _value, size_t _offset);
+  void Encode(::fidl::Encoder* encoder, size_t offset);
+  static void Decode(::fidl::Decoder* decoder, Union* value, size_t offset);
   zx_status_t Clone(Union* result) const;
 
-  bool has_invalid_tag() const { return Which() == Tag::Invalid; }
+  bool has_invalid_tag() const {
+    return tag_ == Invalid;
+  }
 
-  bool is_Field() const { return Which() == Tag(0); }
+  bool is_Field() const { return tag_ == Tag::kField; }
   
   // union member comment #1
   //
   // union member comment #3
   int32_t& Field() {
-    if (!is_Field()) {
-      value_.emplace<0 + 1>();
-    }
-    return value_.template get<0 + 1>();
+    EnsureStorageInitialized(Tag::kField);
+    return Field_;
   }
   
   // union member comment #1
   //
   // union member comment #3
-  const int32_t& Field() const { return value_.template get<0 + 1>(); }
-  void set_Field(int32_t value);
+  const int32_t& Field() const {
+    ZX_ASSERT(is_Field());
+    return Field_;
+  }
+  Union& set_Field(int32_t value);
 
   Tag Which() const {
-    size_t index = value_.index();
-    if (index == 0) {
-      return Tag::Invalid;
-    } else {
-      return Tag(index - 1);
-    }
+    
+    return Tag(tag_);
+    
   }
+
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal() only when you need
+  // access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const {
+    return tag_;
+  }
+
+  const std::vector<uint8_t>* UnknownData() const {
+    return nullptr;
+  }
+
+  friend ::fidl::Equality<::test::name::Union>;
 
  private:
-  XUnionTag WhichXUnionTag() const {
-    switch (Which()) {
-    case Tag::kField: return XUnionTag::kField;
-    case Tag::Invalid: return XUnionTag(0);
-    }
-  }
+  void Destroy();
+  void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  using Variant = fit::internal::variant<fit::internal::monostate, int32_t>;
-  Variant value_;
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
+  union {
+    int32_t Field_;
+  };
 };
 
 inline zx_status_t Clone(const ::test::name::Union& value,
@@ -113,7 +124,6 @@ using UnionPtr = ::std::unique_ptr<Union>;
 class Table final {
  public:
   static const fidl_type_t* FidlType;
-  static const fidl_type_t* FidlTypeV1;
   // Returns whether no field is set.
   bool IsEmpty() const;
   
@@ -194,7 +204,6 @@ using TablePtr = ::std::unique_ptr<Table>;
 class Struct final {
  public:
   static const fidl_type_t* FidlType;
-  static const fidl_type_t* FidlTypeV1;
   
   // struct member comment #1
   //
@@ -238,11 +247,7 @@ class Interface {
 class Interface_RequestEncoder {
  public:
   static ::fidl::Message Method(::fidl::Encoder* _encoder) {
-    if (_encoder->ShouldEncodeUnionAsXUnion()) {
-      _encoder->Alloc(16 - sizeof(fidl_message_header_t));
-    } else {
-      _encoder->Alloc(16 - sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
     return _encoder->GetMessage();
   }
 };
@@ -285,11 +290,7 @@ class Interface_RequestDecoder {
 class Interface_ResponseEncoder {
  public:
   static ::fidl::Message OnEvent(::fidl::Encoder* _encoder) {
-    if (_encoder->ShouldEncodeUnionAsXUnion()) {
-      _encoder->Alloc(16 - sizeof(fidl_message_header_t));
-    } else {
-      _encoder->Alloc(16 - sizeof(fidl_message_header_t));
-    }
+    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
     return _encoder->GetMessage();
   }
 };
@@ -434,11 +435,35 @@ constexpr int32_t C = 4u;
 namespace fidl {
 
 template <>
-struct IsFidlUnion<::test::name::Union> : public std::true_type {};
+struct IsFidlXUnion<::test::name::Union> : public std::true_type {};
 
 template <>
 struct CodingTraits<::test::name::Union>
-    : public EncodableCodingTraits<::test::name::Union, 8, 24> {};
+    : public EncodableCodingTraits<::test::name::Union, 24> {};
+
+template <>
+struct CodingTraits<std::unique_ptr<::test::name::Union>> {
+  static constexpr size_t inline_size_v1_no_ee = 24;
+
+  static void Encode(Encoder* encoder, std::unique_ptr<::test::name::Union>* value, size_t offset) {
+    auto&& p_xunion = *value;
+    if (p_xunion) {
+      p_xunion->Encode(encoder, offset);
+    }
+  }
+
+  static void Decode(Decoder* decoder, std::unique_ptr<::test::name::Union>* value, size_t offset) {
+    fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
+    if (encoded->tag == 0) {
+      value->reset(nullptr);
+      return;
+    }
+
+    value->reset(new ::test::name::Union);
+
+    ::test::name::Union::Decode(decoder, value->get(), offset);
+  }
+};
 
 inline zx_status_t Clone(const ::test::name::Union& value,
                          ::test::name::Union* result) {
@@ -448,22 +473,24 @@ inline zx_status_t Clone(const ::test::name::Union& value,
 template<>
 struct Equality<::test::name::Union> {
   static inline bool Equals(const ::test::name::Union& _lhs, const ::test::name::Union& _rhs) {
-    if (_lhs.Which() != _rhs.Which()) {
+    if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
-    switch (_lhs.Which()) {
+
+    switch (_lhs.Ordinal()) {
+      case static_cast<fidl_xunion_tag_t>(::test::name::Union::Tag::Invalid):
+        return true;
       case ::test::name::Union::Tag::kField:
-	return ::fidl::Equals(_lhs.Field(), _rhs.Field());
-      case ::test::name::Union::Tag::Invalid:
-	return true;
+        return ::fidl::Equals(_lhs.Field_, _rhs.Field_);
+      
       default:
-	return false;
+        return false;
+      }
     }
-  }
 };
 template <>
 struct CodingTraits<::test::name::Table>
-    : public EncodableCodingTraits<::test::name::Table, 16, 16> {};
+    : public EncodableCodingTraits<::test::name::Table, 16> {};
 
 inline zx_status_t Clone(const ::test::name::Table& _value,
                          ::test::name::Table* result) {
@@ -487,7 +514,7 @@ struct Equality<::test::name::Table> {
 };
 template <>
 struct CodingTraits<::test::name::Struct>
-    : public EncodableCodingTraits<::test::name::Struct, 4, 4> {};
+    : public EncodableCodingTraits<::test::name::Struct, 4> {};
 
 inline zx_status_t Clone(const ::test::name::Struct& value,
                          ::test::name::Struct* result) {

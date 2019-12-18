@@ -9,15 +9,15 @@ namespace name {
 #ifdef __Fuchsia__
 namespace {
 
-extern "C" const fidl_type_t test_name_ParentGetChildRequestTable;
-extern "C" const fidl_type_t test_name_ParentGetChildResponseTable;
+extern "C" const fidl_type_t v1_test_name_ParentGetChildRequestTable;
+extern "C" const fidl_type_t v1_test_name_ParentGetChildResponseTable;
 
-extern "C" const fidl_type_t test_name_ParentGetChildRequestRequestTable;
-extern "C" const fidl_type_t test_name_ParentGetChildRequestResponseTable;
+extern "C" const fidl_type_t v1_test_name_ParentGetChildRequestRequestTable;
+extern "C" const fidl_type_t v1_test_name_ParentGetChildRequestResponseTable;
 
-extern "C" const fidl_type_t test_name_ParentTakeChildRequestTable;
+extern "C" const fidl_type_t v1_test_name_ParentTakeChildRequestTable;
 
-extern "C" const fidl_type_t test_name_ParentTakeChildRequestRequestTable;
+extern "C" const fidl_type_t v1_test_name_ParentTakeChildRequestRequestTable;
 
 }  // namespace
 
@@ -28,19 +28,19 @@ const fidl_type_t* Parent_RequestDecoder::GetType(uint64_t ordinal, bool* out_ne
     case internal::kParent_GetChild_Ordinal:
     case internal::kParent_GetChild_GenOrdinal:
       *out_needs_response = true;
-      return &test_name_ParentGetChildRequestTable;
+      return &v1_test_name_ParentGetChildRequestTable;
     case internal::kParent_GetChildRequest_Ordinal:
     case internal::kParent_GetChildRequest_GenOrdinal:
       *out_needs_response = true;
-      return &test_name_ParentGetChildRequestRequestTable;
+      return &v1_test_name_ParentGetChildRequestRequestTable;
     case internal::kParent_TakeChild_Ordinal:
     case internal::kParent_TakeChild_GenOrdinal:
       *out_needs_response = false;
-      return &test_name_ParentTakeChildRequestTable;
+      return &v1_test_name_ParentTakeChildRequestTable;
     case internal::kParent_TakeChildRequest_Ordinal:
     case internal::kParent_TakeChildRequest_GenOrdinal:
       *out_needs_response = false;
-      return &test_name_ParentTakeChildRequestRequestTable;
+      return &v1_test_name_ParentTakeChildRequestRequestTable;
     default:
       *out_needs_response = false;
       return nullptr;
@@ -51,10 +51,10 @@ const fidl_type_t* Parent_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case internal::kParent_GetChild_Ordinal:
     case internal::kParent_GetChild_GenOrdinal:
-      return &test_name_ParentGetChildResponseTable;
+      return &v1_test_name_ParentGetChildResponseTable;
     case internal::kParent_GetChildRequest_Ordinal:
     case internal::kParent_GetChildRequest_GenOrdinal:
-      return &test_name_ParentGetChildRequestResponseTable;
+      return &v1_test_name_ParentGetChildRequestResponseTable;
     default:
       return nullptr;
   }
@@ -95,9 +95,9 @@ class Parent_GetChild_ResponseHandler final : public ::fidl::internal::MessageHa
 
   zx_status_t OnMessage(::fidl::Message message) override {
     const char* error_msg = nullptr;
-    zx_status_t status = message.Decode(&test_name_ParentGetChildResponseTable, &error_msg);
+    zx_status_t status = message.Decode(&v1_test_name_ParentGetChildResponseTable, &error_msg);
     if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(message, &test_name_ParentGetChildResponseTable, error_msg);
+      FIDL_REPORT_DECODING_ERROR(message, &v1_test_name_ParentGetChildResponseTable, error_msg);
       return status;
     }
     ::fidl::Decoder decoder(std::move(message));
@@ -116,7 +116,7 @@ class Parent_GetChild_ResponseHandler final : public ::fidl::internal::MessageHa
 }  // namespace
 void Parent_Proxy::GetChild(GetChildCallback callback) {
   ::fidl::Encoder _encoder(internal::kParent_GetChild_GenOrdinal);
-  controller_->Send(&test_name_ParentGetChildRequestTable, Parent_RequestEncoder::GetChild(&_encoder), std::make_unique<Parent_GetChild_ResponseHandler>(std::move(callback)));
+  controller_->Send(&v1_test_name_ParentGetChildRequestTable, Parent_RequestEncoder::GetChild(&_encoder), std::make_unique<Parent_GetChild_ResponseHandler>(std::move(callback)));
 }
 namespace {
 
@@ -130,9 +130,9 @@ class Parent_GetChildRequest_ResponseHandler final : public ::fidl::internal::Me
 
   zx_status_t OnMessage(::fidl::Message message) override {
     const char* error_msg = nullptr;
-    zx_status_t status = message.Decode(&test_name_ParentGetChildRequestResponseTable, &error_msg);
+    zx_status_t status = message.Decode(&v1_test_name_ParentGetChildRequestResponseTable, &error_msg);
     if (status != ZX_OK) {
-      FIDL_REPORT_DECODING_ERROR(message, &test_name_ParentGetChildRequestResponseTable, error_msg);
+      FIDL_REPORT_DECODING_ERROR(message, &v1_test_name_ParentGetChildRequestResponseTable, error_msg);
       return status;
     }
     ::fidl::Decoder decoder(std::move(message));
@@ -151,15 +151,15 @@ class Parent_GetChildRequest_ResponseHandler final : public ::fidl::internal::Me
 }  // namespace
 void Parent_Proxy::GetChildRequest(GetChildRequestCallback callback) {
   ::fidl::Encoder _encoder(internal::kParent_GetChildRequest_GenOrdinal);
-  controller_->Send(&test_name_ParentGetChildRequestRequestTable, Parent_RequestEncoder::GetChildRequest(&_encoder), std::make_unique<Parent_GetChildRequest_ResponseHandler>(std::move(callback)));
+  controller_->Send(&v1_test_name_ParentGetChildRequestRequestTable, Parent_RequestEncoder::GetChildRequest(&_encoder), std::make_unique<Parent_GetChildRequest_ResponseHandler>(std::move(callback)));
 }
 void Parent_Proxy::TakeChild(::fidl::InterfaceHandle<class Child> c) {
   ::fidl::Encoder _encoder(internal::kParent_TakeChild_GenOrdinal);
-  controller_->Send(&test_name_ParentTakeChildRequestTable, Parent_RequestEncoder::TakeChild(&_encoder, &c), nullptr);
+  controller_->Send(&v1_test_name_ParentTakeChildRequestTable, Parent_RequestEncoder::TakeChild(&_encoder, &c), nullptr);
 }
 void Parent_Proxy::TakeChildRequest(::fidl::InterfaceRequest<Child> r) {
   ::fidl::Encoder _encoder(internal::kParent_TakeChildRequest_GenOrdinal);
-  controller_->Send(&test_name_ParentTakeChildRequestRequestTable, Parent_RequestEncoder::TakeChildRequest(&_encoder, &r), nullptr);
+  controller_->Send(&v1_test_name_ParentTakeChildRequestRequestTable, Parent_RequestEncoder::TakeChildRequest(&_encoder, &r), nullptr);
 }
 
 Parent_Stub::Parent_Stub(Parent_clazz* impl) : impl_(impl) {
@@ -177,7 +177,7 @@ class Parent_GetChild_Responder final {
 
   void operator()(::fidl::InterfaceHandle<class Child> c) {
     ::fidl::Encoder _encoder(internal::kParent_GetChild_GenOrdinal);
-    response_.Send(&test_name_ParentGetChildResponseTable, Parent_ResponseEncoder::GetChild(&_encoder, &c));
+    response_.Send(&v1_test_name_ParentGetChildResponseTable, Parent_ResponseEncoder::GetChild(&_encoder, &c));
   }
 
  private:
@@ -191,7 +191,7 @@ class Parent_GetChildRequest_Responder final {
 
   void operator()(::fidl::InterfaceRequest<Child> r) {
     ::fidl::Encoder _encoder(internal::kParent_GetChildRequest_GenOrdinal);
-    response_.Send(&test_name_ParentGetChildRequestResponseTable, Parent_ResponseEncoder::GetChildRequest(&_encoder, &r));
+    response_.Send(&v1_test_name_ParentGetChildRequestResponseTable, Parent_ResponseEncoder::GetChildRequest(&_encoder, &r));
   }
 
  private:
@@ -269,7 +269,7 @@ zx_status_t Parent_SyncProxy::GetChild(::fidl::InterfaceHandle<class Child>* out
   ::fidl::Encoder _encoder(internal::kParent_GetChild_GenOrdinal);
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
-  zx_status_t status_ = proxy_.Call(&test_name_ParentGetChildRequestTable, &test_name_ParentGetChildResponseTable, Parent_RequestEncoder::GetChild(&_encoder), &response_);
+  zx_status_t status_ = proxy_.Call(&v1_test_name_ParentGetChildRequestTable, &v1_test_name_ParentGetChildResponseTable, Parent_RequestEncoder::GetChild(&_encoder), &response_);
   if (status_ != ZX_OK)
     return status_;
   ::fidl::Decoder decoder_(std::move(response_));
@@ -281,7 +281,7 @@ zx_status_t Parent_SyncProxy::GetChildRequest(::fidl::InterfaceRequest<Child>* o
   ::fidl::Encoder _encoder(internal::kParent_GetChildRequest_GenOrdinal);
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
-  zx_status_t status_ = proxy_.Call(&test_name_ParentGetChildRequestRequestTable, &test_name_ParentGetChildRequestResponseTable, Parent_RequestEncoder::GetChildRequest(&_encoder), &response_);
+  zx_status_t status_ = proxy_.Call(&v1_test_name_ParentGetChildRequestRequestTable, &v1_test_name_ParentGetChildRequestResponseTable, Parent_RequestEncoder::GetChildRequest(&_encoder), &response_);
   if (status_ != ZX_OK)
     return status_;
   ::fidl::Decoder decoder_(std::move(response_));
@@ -291,12 +291,12 @@ zx_status_t Parent_SyncProxy::GetChildRequest(::fidl::InterfaceRequest<Child>* o
 
 zx_status_t Parent_SyncProxy::TakeChild(::fidl::InterfaceHandle<class Child> c) {
   ::fidl::Encoder _encoder(internal::kParent_TakeChild_GenOrdinal);
-  return proxy_.Send(&test_name_ParentTakeChildRequestTable, Parent_RequestEncoder::TakeChild(&_encoder, &c));
+  return proxy_.Send(&v1_test_name_ParentTakeChildRequestTable, Parent_RequestEncoder::TakeChild(&_encoder, &c));
 }
 
 zx_status_t Parent_SyncProxy::TakeChildRequest(::fidl::InterfaceRequest<Child> r) {
   ::fidl::Encoder _encoder(internal::kParent_TakeChildRequest_GenOrdinal);
-  return proxy_.Send(&test_name_ParentTakeChildRequestRequestTable, Parent_RequestEncoder::TakeChildRequest(&_encoder, &r));
+  return proxy_.Send(&v1_test_name_ParentTakeChildRequestRequestTable, Parent_RequestEncoder::TakeChildRequest(&_encoder, &r));
 }
 
 #endif // __Fuchsia__

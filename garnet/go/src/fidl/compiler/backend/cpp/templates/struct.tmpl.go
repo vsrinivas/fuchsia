@@ -16,7 +16,6 @@ class {{ .Name }};
 class {{ .Name }} final {
  public:
   static const fidl_type_t* FidlType;
-  static const fidl_type_t* FidlTypeV1;
 
   {{- if .IsResultValue }}
   {{ .Name }}() = default;
@@ -70,26 +69,18 @@ using {{ .Name }}Ptr = ::std::unique_ptr<{{ .Name }}>;
 {{- end }}
 
 {{- define "StructDefinition" }}
-extern "C" const fidl_type_t {{ .TableType }};
-const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
 extern "C" const fidl_type_t {{ .V1TableType }};
-const fidl_type_t* {{ .Name }}::FidlTypeV1 = &{{ .V1TableType }};
+const fidl_type_t* {{ .Name }}::FidlType = &{{ .V1TableType }};
 
 void {{ .Name }}::Encode(::fidl::Encoder* _encoder, size_t _offset) {
-  if (_encoder->ShouldEncodeUnionAsXUnion()) {
-    {{- range .Members }}
-    ::fidl::Encode(_encoder, &{{ .Name }}, _offset + {{ .OffsetV1NoEE }});
-    {{- end }}
-  } else {
-    {{- range .Members }}
-    ::fidl::Encode(_encoder, &{{ .Name }}, _offset + {{ .OffsetOld }});
-    {{- end }}
-  }
+  {{- range .Members }}
+  ::fidl::Encode(_encoder, &{{ .Name }}, _offset + {{ .OffsetV1NoEE }});
+  {{- end }}
 }
 
 void {{ .Name }}::Decode(::fidl::Decoder* _decoder, {{ .Name }}* value, size_t _offset) {
   {{- range .Members }}
-  ::fidl::Decode(_decoder, &value->{{ .Name }}, _offset + {{ .OffsetOld }});
+  ::fidl::Decode(_decoder, &value->{{ .Name }}, _offset + {{ .OffsetV1NoEE }});
   {{- end }}
 }
 
@@ -108,7 +99,7 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* _result) const {
 {{- define "StructTraits" }}
 template <>
 struct CodingTraits<{{ .Namespace }}::{{ .Name }}>
-    : public EncodableCodingTraits<{{ .Namespace }}::{{ .Name }}, {{ .InlineSizeOld }}, {{ .InlineSizeV1NoEE }}> {};
+    : public EncodableCodingTraits<{{ .Namespace }}::{{ .Name }}, {{ .InlineSizeV1NoEE }}> {};
 
 inline zx_status_t Clone(const {{ .Namespace }}::{{ .Name }}& value,
                          {{ .Namespace }}::{{ .Name }}* result) {
