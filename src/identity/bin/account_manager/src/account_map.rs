@@ -18,14 +18,17 @@ use crate::account_handler_context::AccountHandlerContext;
 use crate::inspect;
 use crate::stored_account_list::{StoredAccountList, StoredAccountMetadata};
 
+/// Type alias for the inner map type used in AccountMap.
+// TODO(dnordstrom): Replace `Option` with something more flexible, perhaps
+// a custom type which can cache data such as account lifetime, eliminating
+// the need to open a connection.
+type InnerMap<AHC> = BTreeMap<LocalAccountId, Option<Arc<AHC>>>;
+
 /// The AccountMap maintains adding and removing accounts, as well as opening
 /// connections to their respective handlers.
 pub struct AccountMap<AHC: AccountHandlerConnection> {
     /// The actual map representing the provisioned accounts on the device.
-    // TODO(dnordstrom): Replace `Option` with something more flexible, perhaps
-    // a custom type which can cache data such as account lifetime, eliminating
-    // the need to open a connection.
-    accounts: BTreeMap<LocalAccountId, Option<Arc<AHC>>>,
+    accounts: InnerMap<AHC>,
 
     /// The directory where the account list metadata resides. The metadata may
     /// be both read and written during the lifetime of the account map.
@@ -54,15 +57,24 @@ impl<AHC: AccountHandlerConnection> AccountMap<AHC> {
         context: Arc<AccountHandlerContext>,
         inspect_parent: &Node,
     ) -> Result<Self, AccountManagerError> {
-        let mut accounts = BTreeMap::new();
+        let mut accounts = InnerMap::new();
         let stored_account_list = StoredAccountList::load(&data_dir)?;
         for stored_account in stored_account_list.accounts().into_iter() {
             accounts.insert(stored_account.account_id().clone(), None);
         }
+        Ok(Self::new(accounts, data_dir, context, inspect_parent))
+    }
+
+    fn new(
+        accounts: InnerMap<AHC>,
+        data_dir: PathBuf,
+        context: Arc<AccountHandlerContext>,
+        inspect_parent: &Node,
+    ) -> Self {
         let inspect = inspect::Accounts::new(inspect_parent);
         let account_map = Self { accounts, data_dir, context, inspect };
         account_map.refresh_inspect();
-        Ok(account_map)
+        account_map
     }
 
     /// Get an account handler connection if one exists for the account, either
@@ -211,18 +223,19 @@ impl<AHC: AccountHandlerConnection> AccountMap<AHC> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::account_handler_connection::AccountHandlerConnectionImpl;
-    use fuchsia_inspect::Inspector;
+    use crate::fake_account_handler_connection::{
+        FakeAccountHandlerConnection, CORRUPT_HANDLER_ACCOUNT_ID, UNKNOWN_ERROR_ACCOUNT_ID,
+    };
+    use fuchsia_inspect::{assert_inspect_tree, Inspector};
     use lazy_static::lazy_static;
     use std::sync::Arc;
     use tempfile::TempDir;
 
-    // TODO(37433): Switch out AccountHandlerConnectionImpl for a fake and
-    // add more unit tests.
-    type TestAccountMap = AccountMap<AccountHandlerConnectionImpl>;
+    type TestAccountMap = AccountMap<FakeAccountHandlerConnection>;
 
     lazy_static! {
-        static ref TEST_ACCOUNT_ID: LocalAccountId = LocalAccountId::new(123);
+        static ref TEST_ACCOUNT_ID_1: LocalAccountId = LocalAccountId::new(123);
+        static ref TEST_ACCOUNT_ID_2: LocalAccountId = LocalAccountId::new(456);
         static ref ACCOUNT_HANDLER_CONTEXT: Arc<AccountHandlerContext> =
             Arc::new(AccountHandlerContext::new(&vec![]));
     }
@@ -239,13 +252,200 @@ mod tests {
         )?;
         assert_eq!(map.get_account_ids(), vec![]);
         assert_eq!(
-            map.get_handler(&TEST_ACCOUNT_ID).await.unwrap_err().api_error,
+            map.get_handler(&TEST_ACCOUNT_ID_1).await.unwrap_err().api_error,
             ApiError::NotFound
         );
         assert_eq!(
-            map.remove_account(&TEST_ACCOUNT_ID).await.unwrap_err().api_error,
+            map.remove_account(&TEST_ACCOUNT_ID_1).await.unwrap_err().api_error,
             ApiError::NotFound
         );
+        Ok(())
+    }
+
+    // Add some accounts to an empty AccountMap, re-initialize a new AccountMap
+    // from the same disk location, then check that persistent accounts were
+    // survived the life cycle and can be loaded. Finally remove an active
+    // account and verify that it was persisted.
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn check_persisted() -> Result<(), AccountManagerError> {
+        let data_dir = TempDir::new().unwrap();
+        let inspector = Inspector::new();
+        let mut map = TestAccountMap::load(
+            data_dir.path().into(),
+            ACCOUNT_HANDLER_CONTEXT.clone(),
+            inspector.root(),
+        )?;
+
+        // Regular persistent account
+        let conn_test = Arc::new(FakeAccountHandlerConnection::new_with_defaults(
+            Lifetime::Persistent,
+            TEST_ACCOUNT_ID_1.clone(),
+        )?);
+        map.add_account(conn_test).await?;
+
+        // An ephemeral account that will not survive a lifecycle
+        let conn_ephemeral = Arc::new(FakeAccountHandlerConnection::new_with_defaults(
+            Lifetime::Ephemeral,
+            TEST_ACCOUNT_ID_2.clone(),
+        )?);
+        map.add_account(conn_ephemeral).await?;
+
+        // All accounts should be available in this lifecycle
+        assert_eq!(
+            map.get_handler(&TEST_ACCOUNT_ID_1).await?.get_account_id(),
+            &*TEST_ACCOUNT_ID_1
+        );
+        // Bonus: we can get the same handler multiple times
+        for _ in 0..2 {
+            assert_eq!(
+                map.get_handler(&TEST_ACCOUNT_ID_2).await?.get_account_id(),
+                &*TEST_ACCOUNT_ID_2
+            );
+        }
+        assert_inspect_tree!(inspector, root: { accounts: {
+            total: 2u64,
+            active: 2u64,
+        }});
+
+        std::mem::drop(map);
+
+        // New account map loaded from the same directory.
+        let inspector = Inspector::new();
+        let mut map = TestAccountMap::load(
+            data_dir.path().into(),
+            ACCOUNT_HANDLER_CONTEXT.clone(),
+            inspector.root(),
+        )?;
+        assert_inspect_tree!(inspector, root: { accounts: {
+            total: 1u64,
+            active: 0u64,
+        }});
+
+        // The ephemeral account did not survive the life cycle
+        assert_eq!(
+            map.get_handler(&TEST_ACCOUNT_ID_2).await.unwrap_err().api_error,
+            ApiError::NotFound
+        );
+
+        // The persistent account survived the life cycle
+        assert_eq!(
+            map.get_handler(&TEST_ACCOUNT_ID_1).await?.get_account_id(),
+            &*TEST_ACCOUNT_ID_1
+        );
+        assert_inspect_tree!(inspector, root: { accounts: {
+            total: 1u64,
+            active: 1u64,
+        }});
+
+        // Remove an active account
+        map.remove_account(&TEST_ACCOUNT_ID_1).await?;
+
+        // Fails a second time
+        assert_eq!(
+            map.remove_account(&TEST_ACCOUNT_ID_1).await.unwrap_err().api_error,
+            ApiError::NotFound
+        );
+        assert_inspect_tree!(inspector, root: { accounts: {
+            total: 0u64,
+            active: 0u64,
+        }});
+
+        std::mem::drop(map);
+
+        let inspector = Inspector::new();
+        let map = TestAccountMap::load(
+            data_dir.path().into(),
+            ACCOUNT_HANDLER_CONTEXT.clone(),
+            inspector.root(),
+        )?;
+
+        // Check that the removed account was persisted correctly
+        assert_inspect_tree!(inspector, root: { accounts: {
+            total: 0u64,
+            active: 0u64,
+        }});
+
+        // Sanity check that there are no remaining accounts
+        assert_eq!(map.get_account_ids(), vec![]);
+
+        Ok(())
+    }
+
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn load_errors() -> Result<(), AccountManagerError> {
+        let data_dir = TempDir::new().unwrap();
+        let inspector = Inspector::new();
+        let mut accounts = InnerMap::new();
+        accounts.insert(CORRUPT_HANDLER_ACCOUNT_ID.clone(), None);
+        accounts.insert(UNKNOWN_ERROR_ACCOUNT_ID.clone(), None);
+        let mut map = TestAccountMap::new(
+            accounts,
+            data_dir.path().into(),
+            ACCOUNT_HANDLER_CONTEXT.clone(),
+            inspector.root(),
+        );
+        // Initial state
+        assert_inspect_tree!(inspector, root: { accounts: {
+            total: 2u64,
+            active: 0u64,
+        }});
+
+        // The corrupt account is present but the connection cannot be created
+        assert_eq!(
+            map.get_handler(&CORRUPT_HANDLER_ACCOUNT_ID).await.unwrap_err().api_error,
+            ApiError::Resource
+        );
+
+        // The account is present but returns an error when loaded. The error code
+        // on the AccountHandler init method is preserved in the error returned by
+        // AccountMap.get_handler().
+        assert_eq!(
+            map.get_handler(&UNKNOWN_ERROR_ACCOUNT_ID).await.unwrap_err().api_error,
+            ApiError::Unknown
+        );
+
+        // Check that no spurious changes were caused
+        assert_inspect_tree!(inspector, root: { accounts: {
+            total: 2u64,
+            active: 0u64,
+        }});
+
+        Ok(())
+    }
+
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn add_duplicate() -> Result<(), AccountManagerError> {
+        let data_dir = TempDir::new().unwrap();
+        let inspector = Inspector::new();
+        let mut accounts = InnerMap::new();
+        accounts.insert(TEST_ACCOUNT_ID_1.clone(), None);
+        let mut map = TestAccountMap::new(
+            accounts,
+            data_dir.path().into(),
+            ACCOUNT_HANDLER_CONTEXT.clone(),
+            inspector.root(),
+        );
+        // Initial state
+        assert_inspect_tree!(inspector, root: { accounts: {
+            total: 1u64,
+            active: 0u64,
+        }});
+        let conn_test = Arc::new(FakeAccountHandlerConnection::new_with_defaults(
+            Lifetime::Persistent,
+            TEST_ACCOUNT_ID_1.clone(),
+        )?);
+
+        // Cannot add duplicate account, even if it isn't currently loaded
+        assert_eq!(
+            map.add_account(conn_test).await.unwrap_err().api_error,
+            ApiError::FailedPrecondition
+        );
+        // Check that no spurious changes were caused
+        assert_inspect_tree!(inspector, root: { accounts: {
+            total: 1u64,
+            active: 0u64,
+        }});
+
         Ok(())
     }
 }
