@@ -13,6 +13,10 @@ import("//build/config.gni")
 # * /config/data/tzdata/icu/44/le/timezoneTypes.res
 # * /config/data/tzdata/icu/44/le/zoneinfo64.res
 #
+# For `testonly = true` targets, the rule will add a marker file:
+#
+# * /config/data/FUCHSIA_IN_TREE_TEST
+#
 # Please see `README.md` for detailed documentation.
 template("icu_tzdata_config_data") {
   _resources_label = "_${target_name}_resources"
@@ -77,6 +81,22 @@ template("icu_tzdata_config_data") {
     ]
   }
 
+  if (defined(invoker.testonly) && invoker.testonly) {
+    _test_marker_label = "_${target_name}_test_marker"
+
+    # Includes a dummy file only for test targets.
+    config_data(_test_marker_label) {
+      forward_variables_from(invoker,
+                             [
+                               "for_pkg",
+                               "testonly",
+                             ])
+      sources = [
+        "//src/lib/icu/tzdata/testing/FUCHSIA_IN_TREE_TEST",
+      ]
+    }
+  }
+
   group(target_name) {
     forward_variables_from(invoker,
                            [
@@ -87,5 +107,9 @@ template("icu_tzdata_config_data") {
       ":${_resources_label}",
       ":${_revision_label}",
     ]
+
+    if (defined(testonly) && testonly) {
+      deps += [ ":${_test_marker_label}" ]
+    }
   }
 }

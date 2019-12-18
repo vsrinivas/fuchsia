@@ -39,3 +39,17 @@ icu_tzdata_config_data("icu_tzdata_for_web_runner") {
   format = "le"
 }
 ```
+
+Additionally, `testonly` packages can be declared like so:
+
+```
+icu_tzdata_config_data("icu_tzdata_for_web_runner_test") {
+  for_pkg = "web_runner_test"
+  data_version = "44"
+  format = "le"
+  testonly = true
+}
+```
+
+This injects an additional file `/config/data/FUCHSIA_IN_TREE_TEST`.
+
