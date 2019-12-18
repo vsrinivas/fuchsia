@@ -229,6 +229,7 @@ source_set("gfx") {
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
+    "//src/lib/inspect_deprecated",
     "//src/lib/vulkan",
     "//src/ui/scenic/lib/display",
     "//src/ui/scenic/lib/gfx:validate_eventpair",
@@ -243,7 +244,6 @@ source_set("gfx") {
     ":object_linker",
     ":view_focuser_registry",
     "//sdk/lib/ui/scenic/cpp",
-    "//src/lib/inspect_deprecated",
     "//src/ui/lib/escher/util:check_vulkan_support",
     "//src/ui/scenic/lib/display",
 

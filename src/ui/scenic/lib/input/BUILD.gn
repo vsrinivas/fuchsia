@@ -4,15 +4,20 @@
 
 source_set("input") {
   sources = [
+    "helper.cc",
+    "helper.h",
+    "input_command_dispatcher.cc",
+    "input_command_dispatcher.h",
     "input_system.cc",
     "input_system.h",
+    "pointer_event_buffer.cc",
+    "pointer_event_buffer.h",
     "view_stack.cc",
     "view_stack.h",
   ]
 
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
-    "//garnet/public/lib/inspect_deprecated",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/fidl/cpp",
