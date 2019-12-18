@@ -10,12 +10,15 @@ using fuchsia.ui.gfx;
 enum Action {
     /// The default action associated with the element.
     DEFAULT = 1;
-    /// The secondary action associated with the element. This may correspond to a long press (touchscreens) or right click (mouse).
+    /// The secondary action associated with the element. This may correspond to a long press
+    /// (touchscreens) or right click (mouse).
     SECONDARY = 2;
     /// Set (input/non-accessibility) focus on this element.
     SET_FOCUS = 3;
     /// Set the element's value.
     SET_VALUE = 4;
+    /// Scroll node to make it visible.
+    SHOW_ON_SCREEN = 5;
 };
 
 /// Represents a role of an element on a UI.
