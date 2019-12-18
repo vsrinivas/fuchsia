@@ -4,12 +4,19 @@
 
 use {
     ext4_parser::{construct_fs, ConstructFsError},
+    ext4_read_only::{readers::ReaderError, structs::ParsingError},
     failure::{Error, ResultExt},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_mem::Buffer,
     fidl_fuchsia_storage_ext4server::{
-        Ext4Server_Request, Ext4Server_RequestStream, Ext4ServiceRequest, MountVmoResult, Success,
+        BadDirectory, BadEntryType, BadFile, BannedFeatureIncompat, BlockNumberOutOfBounds,
+        BlockSizeInvalid, DirEntry2NonUtf8, Ext4Server_Request, Ext4Server_RequestStream,
+        Ext4ServiceRequest, ExtentUnexpectedLength, Incompatible, InvalidBlockGroupDesc,
+        InvalidDirEntry2, InvalidExtent, InvalidExtentHeader, InvalidExtentHeaderMagic,
+        InvalidINode, InvalidInputPath, InvalidSuperBlock, InvalidSuperBlockMagic, MountVmoResult,
+        ParseError, PathNotFound, ReaderOutOfBounds, ReaderReadError, RequiredFeatureIncompat,
+        Success,
     },
     fuchsia_async::{self, EHandle, Executor},
     fuchsia_component::server::ServiceFs,
@@ -46,6 +53,86 @@ async fn run_ext4_server(
 fn construct_fs_error_to_mount_vmo_result(source: ConstructFsError) -> MountVmoResult {
     match source {
         ConstructFsError::VmoReadError(status) => MountVmoResult::VmoReadFailure(status.into_raw()),
+        ConstructFsError::ParsingError(error) => {
+            let result = match error {
+                ParsingError::InvalidSuperBlock(pos) => {
+                    ParseError::InvalidSuperBlock(InvalidSuperBlock { position: pos as u64 })
+                }
+                ParsingError::InvalidSuperBlockMagic(val) => {
+                    ParseError::InvalidSuperBlockMagic(InvalidSuperBlockMagic { value: val })
+                }
+                ParsingError::BlockNumberOutOfBounds(num) => {
+                    ParseError::BlockNumberOutOfBounds(BlockNumberOutOfBounds { block_number: num })
+                }
+                ParsingError::BlockSizeInvalid(bs) => {
+                    ParseError::BlockSizeInvalid(BlockSizeInvalid { block_size: bs })
+                }
+                ParsingError::InvalidBlockGroupDesc(pos) => {
+                    ParseError::InvalidBlockGroupDesc(InvalidBlockGroupDesc {
+                        position: pos as u64,
+                    })
+                }
+                ParsingError::InvalidInode(num) => {
+                    ParseError::InvalidInode(InvalidINode { inode_number: num })
+                }
+                ParsingError::InvalidExtentHeader => {
+                    ParseError::InvalidExtentHeader(InvalidExtentHeader {})
+                }
+                ParsingError::InvalidExtentHeaderMagic(val) => {
+                    ParseError::InvalidExtentHeaderMagic(InvalidExtentHeaderMagic { value: val })
+                }
+                ParsingError::InvalidExtent(pos) => {
+                    ParseError::InvalidExtent(InvalidExtent { position: pos as u64 })
+                }
+                ParsingError::ExtentUnexpectedLength(size, exp) => {
+                    ParseError::ExtentUnexpectedLength(ExtentUnexpectedLength {
+                        size: size as u64,
+                        expected: exp as u64,
+                    })
+                }
+                ParsingError::InvalidDirEntry2(pos) => {
+                    ParseError::InvalidDirEntry2(InvalidDirEntry2 { position: pos as u64 })
+                }
+                ParsingError::DirEntry2NonUtf8(val) => {
+                    ParseError::DirEntry2NonUtf8(DirEntry2NonUtf8 { data: val })
+                }
+                ParsingError::InvalidInputPath => {
+                    // TODO(vfcc): Get the actual path.
+                    ParseError::InvalidInputPath(InvalidInputPath { path: "".to_string() })
+                }
+                ParsingError::PathNotFound(path) => {
+                    ParseError::PathNotFound(PathNotFound { path: path })
+                }
+                ParsingError::BadEntryType(val) => {
+                    ParseError::BadEntryType(BadEntryType { value: val })
+                }
+                ParsingError::BannedFeatureIncompat(val) => {
+                    ParseError::BannedFeatureIncompat(BannedFeatureIncompat { value: val })
+                }
+                ParsingError::RequiredFeatureIncompat(val) => {
+                    ParseError::RequiredFeatureIncompat(RequiredFeatureIncompat { value: val })
+                }
+                ParsingError::Incompatible(msg) => {
+                    ParseError::Incompatible(Incompatible { msg: msg })
+                }
+                ParsingError::BadFile(path) => ParseError::BadFile(BadFile { path: path }),
+                ParsingError::BadDirectory(path) => {
+                    ParseError::BadDirectory(BadDirectory { path: path })
+                }
+                ParsingError::SourceError(source) => match source {
+                    ReaderError::Read(pos) => {
+                        ParseError::ReaderReadError(ReaderReadError { position: pos as u64 })
+                    }
+                    ReaderError::OutOfBounds(pos, size) => {
+                        ParseError::ReaderOutOfBounds(ReaderOutOfBounds {
+                            position: pos as u64,
+                            size: size as u64,
+                        })
+                    }
+                },
+            };
+            MountVmoResult::ParseError(result)
+        }
     }
 }
 

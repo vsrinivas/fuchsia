@@ -11,18 +11,150 @@ using zx;
 struct Success {
 };
 
-/// Parsing of the image failed.
-struct ParseFailure {
-    // TODO(fxb/41636): This error message will need to be refined to include
-    // details in a more structured form.  In particular, we should probably
-    // be able to replace the `details` field with a `xunion` of specific
-    // error cases.
-
-    // Byte position in filesystem image.
+struct InvalidSuperBlock {
+    /// Byte position in filesystem image.
     uint64 position;
+};
 
-    // Error message.
-    string:1024 details;
+struct InvalidSuperBlockMagic {
+    /// Magic number.
+    uint16 value;
+};
+
+struct BlockNumberOutOfBounds {
+    /// Block number.
+    uint64 block_number;
+};
+
+struct BlockSizeInvalid {
+    /// Block size.
+    uint32 block_size;
+};
+
+struct InvalidBlockGroupDesc {
+    /// Byte position in filesystem image.
+    uint64 position;
+};
+
+struct InvalidINode {
+    /// INode number.
+    uint32 inode_number;
+};
+
+struct InvalidExtentHeader {
+    // This will fill in in a followup change.
+};
+
+struct InvalidExtentHeaderMagic {
+    /// Magic number.
+    uint16 value;
+};
+
+struct InvalidExtent {
+    /// Byte position in filesystem image.
+    uint64 position;
+};
+
+struct ExtentUnexpectedLength {
+    /// Size received.
+    uint64 size;
+    /// Size expected.
+    uint64 expected;
+};
+
+struct InvalidDirEntry2 {
+    /// Byte position in filesystem image.
+    uint64 position;
+};
+
+struct DirEntry2NonUtf8 {
+    /// Data that was unable to be converted into UTF-8.
+    /// Limiting to 255 to match with the max filename length.
+    vector<uint8>:255 data;
+};
+
+struct InvalidInputPath {
+    /// Not implemented. Will be empty string.
+    string:1024 path;
+};
+
+struct PathNotFound {
+    /// Path given.
+    string:1024 path;
+};
+
+/// Directory entry has bad type value.
+struct BadEntryType {
+    /// Type value.
+    uint8 value;
+};
+
+/// Feature Incompatible flag has banned flags.
+struct BannedFeatureIncompat {
+    /// Bitwise flags that are banned.
+    uint32 value;
+};
+
+/// Feature Incompatible flag has missing flags.
+struct RequiredFeatureIncompat {
+    /// Bitwise flags that are missing.
+    uint32 value;
+};
+
+struct Incompatible {
+    /// Message stating what is wrong.
+    string:1024 msg;
+};
+
+struct BadFile {
+    /// Path of file.
+    string:1024 path;
+};
+
+struct BadDirectory {
+    /// Path of directory.
+    string:1024 path;
+};
+
+struct ReaderReadError {
+    /// Byte position in filesystem image.
+    uint64 position;
+};
+
+struct ReaderOutOfBounds {
+    /// Byte position in filesystem image.
+    uint64 position;
+    /// Size of image.
+    uint64 size;
+};
+
+/// Sub-result of an [`Ext4Server.MountVmo`] call denoting the actual error
+/// that occurred in the reader.
+xunion ParseError {
+    // Failures during the initial parsing of the image start below.
+    // See ext4_read_only::structs::ParsingError for more info.
+    1: InvalidSuperBlock invalid_super_block;
+    2: InvalidSuperBlockMagic invalid_super_block_magic;
+    3: BlockNumberOutOfBounds block_number_out_of_bounds;
+    4: BlockSizeInvalid block_size_invalid;
+    5: InvalidBlockGroupDesc invalid_block_group_desc;
+    6: InvalidINode invalid_inode;
+    7: InvalidExtentHeader invalid_extent_header;
+    8: InvalidExtentHeaderMagic invalid_extent_header_magic;
+    9: InvalidExtent invalid_extent;
+    10: ExtentUnexpectedLength extent_unexpected_length;
+    11: InvalidDirEntry2 invalid_dir_entry_2;
+    12: DirEntry2NonUtf8 dir_entry_2_non_utf8;
+    13: InvalidInputPath invalid_input_path;
+    14: PathNotFound path_not_found;
+    15: BadEntryType bad_entry_type;
+    16: Incompatible incompatible;
+    17: BadFile bad_file;
+    18: BadDirectory bad_directory;
+    19: ReaderReadError reader_read_error;
+    20: ReaderOutOfBounds reader_out_of_bounds;
+    21: RequiredFeatureIncompat required_feature_incompat;
+    22: BannedFeatureIncompat banned_feature_incompat;
 };
 
 /// Result of an [`Ext4Server.MountVmo`] call.
@@ -39,8 +171,7 @@ xunion MountVmoResult {
     /// Error reading the VMO.
     2: zx.status vmo_read_failure;
 
-    /// Failure during the initial parsing of the image.
-    3: ParseFailure parse_failure;
+    3: ParseError parse_error;
 };
 
 [Discoverable]

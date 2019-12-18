@@ -47,6 +47,8 @@ pub const ROOT_INODE_NUM: u32 = 2;
 pub const SB_MAGIC: u16 = 0xEF53;
 // Extent Header magic number.
 pub const EH_MAGIC: u16 = 0xF30A;
+// Any smaller would not even fit the first copy of the ext4 Super Block.
+pub const MIN_EXT4_SIZE: usize = FIRST_BG_PADDING + size_of::<SuperBlock>();
 
 type LEU16 = U16<LittleEndian>;
 type LEU32 = U32<LittleEndian>;
@@ -443,7 +445,7 @@ assert_eq_size!(inode_size; INode, [u8; 128]);
 #[derive(Fail, Debug, PartialEq)]
 pub enum ParsingError {
     #[fail(display = "Unable to parse Super Block at 0x{:X}", _0)]
-    ParseSuperBlock(usize),
+    InvalidSuperBlock(usize),
     #[fail(display = "Invalid Super Block magic number {} should be 0xEF53", _0)]
     InvalidSuperBlockMagic(u16),
     #[fail(display = "Block number {} out of bounds.", _0)]
@@ -452,17 +454,17 @@ pub enum ParsingError {
     BlockSizeInvalid(u32),
 
     #[fail(display = "Unable to parse Block Group Description at 0x{:X}", _0)]
-    ParseBlockGroupDesc(usize),
+    InvalidBlockGroupDesc(usize),
     #[fail(display = "Unable to parse INode {}", _0)]
-    ParseINode(u32),
+    InvalidInode(u32),
 
     // TODO(vfcc): A followup change will add the ability to include an address here.
     #[fail(display = "Unable to parse ExtentHeader from INode")]
-    ParseExtentHeader,
+    InvalidExtentHeader,
     #[fail(display = "Invalid Extent Header magic number {} should be 0xF30A", _0)]
     InvalidExtentHeaderMagic(u16),
     #[fail(display = "Unable to parse Extent at 0x{:X}", _0)]
-    ParseExtent(usize),
+    InvalidExtent(usize),
     #[fail(display = "Extent has more data {} than expected {}", _0, _1)]
     ExtentUnexpectedLength(usize, usize),
 
@@ -639,7 +641,8 @@ impl SuperBlock {
         // Assuming there is no corruption, there is no need to read any other
         // copy of the Super Block.
         let data = SuperBlock::read_from_offset(reader, FIRST_BG_PADDING)?;
-        let sb = SuperBlock::to_struct_arc(data, ParsingError::ParseSuperBlock(FIRST_BG_PADDING))?;
+        let sb =
+            SuperBlock::to_struct_arc(data, ParsingError::InvalidSuperBlock(FIRST_BG_PADDING))?;
         if sb.e2fs_magic.get() == SB_MAGIC {
             sb.feature_check()?;
             Ok(sb)
@@ -682,7 +685,7 @@ impl INode {
         let eh = ExtentHeader::to_struct_ref(
             // TODO(vfcc): Check the bounds here.
             &(self.e2di_blocks)[0..size_of::<ExtentHeader>()],
-            ParsingError::ParseExtentHeader,
+            ParsingError::InvalidExtentHeader,
         )?;
         if eh.eh_magic.get() == EH_MAGIC {
             Ok(eh)
@@ -871,7 +874,7 @@ mod test {
         let sb = SuperBlock::parse_offset(
             reader,
             FIRST_BG_PADDING,
-            ParsingError::ParseSuperBlock(FIRST_BG_PADDING),
+            ParsingError::InvalidSuperBlock(FIRST_BG_PADDING),
         )
         .expect("Parsed Super Block");
         assert_eq!(sb.e2fs_magic.get(), SB_MAGIC);

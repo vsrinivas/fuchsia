@@ -120,7 +120,7 @@ impl<T: 'static + Reader> Parser<T> {
     fn inode(&mut self, inode_number: u32) -> Result<Arc<INode>, ParsingError> {
         if inode_number < 1 {
             // INode number 0 is not allowed per ext4 spec.
-            return Err(ParsingError::ParseINode(inode_number));
+            return Err(ParsingError::InvalidInode(inode_number));
         }
         //TODO(vfcc): Check calculation bounds.
         let sb = self.super_block()?;
@@ -149,12 +149,16 @@ impl<T: 'static + Reader> Parser<T> {
         let bgd = BlockGroupDesc32::parse_offset(
             self.reader.clone(),
             bg_descriptor_offset,
-            ParsingError::ParseBlockGroupDesc(block_size),
+            ParsingError::InvalidBlockGroupDesc(block_size),
         )?;
 
         let inode_addr = (bgd.ext2bgd_i_tables.get() as usize * block_size) + inode_table_offset;
 
-        INode::parse_offset(self.reader.clone(), inode_addr, ParsingError::ParseINode(inode_number))
+        INode::parse_offset(
+            self.reader.clone(),
+            inode_addr,
+            ParsingError::InvalidInode(inode_number),
+        )
     }
 
     /// Helper function to get the root directory INode.
@@ -210,7 +214,7 @@ impl<T: 'static + Reader> Parser<T> {
                 let offset = size_of::<ExtentHeader>();
                 let e = Extent::to_struct_ref(
                     &(inode.e2di_blocks)[offset..offset * 2],
-                    ParsingError::ParseExtent(offset),
+                    ParsingError::InvalidExtent(offset),
                 )?;
 
                 let mut index = 0usize;
@@ -308,7 +312,7 @@ impl<T: 'static + Reader> Parser<T> {
                     let e = Extent::to_struct_ref(
                         // TODO(vfcc): Bounds check this and the other location.
                         &(inode.e2di_blocks)[offset..offset + size_of::<Extent>()],
-                        ParsingError::ParseExtent(offset),
+                        ParsingError::InvalidExtent(offset),
                     )?;
 
                     let mut extent_data = self.extent_data(e, size_remaining)?;

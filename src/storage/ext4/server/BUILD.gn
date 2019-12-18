@@ -19,6 +19,7 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-vfs/pseudo-fs-mt",
     "//garnet/public/rust/fuchsia-zircon",
     "//src/storage/ext4/lib:parser",
+    "//src/storage/ext4/read-only:ext4-read-only",
     "//src/storage/ext4/server/fidl:ext4_server-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",

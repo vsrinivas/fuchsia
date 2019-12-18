@@ -17,7 +17,10 @@ rustc_library("parser") {
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]
 
-  test_deps = [ "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc" ]
+  test_deps = [
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+    "//src/lib/test_util",
+  ]
 }
 
 test_package("tests") {
@@ -25,6 +28,13 @@ test_package("tests") {
 
   deps = [
     ":parser_test",
+  ]
+
+  resources = [
+    {
+      path = "nest.img"
+      dest = "nest.img"
+    },
   ]
 
   tests = [
