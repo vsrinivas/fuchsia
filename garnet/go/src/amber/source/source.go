@@ -569,6 +569,7 @@ func (f *Source) watch() {
 			for {
 				_, err := c.ReadEvent()
 				if err != nil || !f.Enabled() {
+					log.Printf("autowatch error for %q: %s", f.cfg.Config.Id, err)
 					return
 				}
 				f.Update()
