@@ -331,7 +331,7 @@ void RunCreateWriteReopenTest() {
     fd.reset();
 
     // Launch a background thread to wait for the file to become readable.
-    std::atomic_bool done;
+    std::atomic_bool done = false;
     std::thread thread(ReopenThread, path, &done);
 
     {
