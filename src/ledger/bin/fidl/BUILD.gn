@@ -4,25 +4,6 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("fidl") {
-  # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
-  excluded_checks = [
-    "string-bounds-not-specified",
-    "vector-bounds-not-specified",
-  ]
-
-  name = "fuchsia.ledger.internal"
-
-  sources = [
-    "internal.fidl",
-  ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.ledger",
-    "//src/ledger/fidl:fuchsia.ledger.cloud",
-  ]
-}
-
 source_set("syncable") {
   sources = [
     "syncable.h",
@@ -34,9 +15,10 @@ source_set("syncable") {
   ]
 
   public_deps = [
-    ":fidl",
     "//src/ledger/bin/fidl/syncable",
     "//src/ledger/bin/public",
+    "//src/ledger/fidl/fuchsia.ledger",
+    "//src/ledger/fidl/fuchsia.ledger.internal",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]

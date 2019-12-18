@@ -2,16 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [ "//src/ledger/*" ]
+import("//build/fidl/fidl.gni")
 
-source_set("include") {
+fidl("fuchsia.ledger.internal") {
+  excluded_checks = [
+    "string-bounds-not-specified",
+    "vector-bounds-not-specified",
+  ]
+
   sources = [
-    "types.h",
+    "internal.fidl",
   ]
 
   public_deps = [
     "//src/ledger/fidl/fuchsia.ledger",
     "//src/ledger/fidl/fuchsia.ledger.cloud",
-    "//src/ledger/fidl/fuchsia.ledger.internal",
   ]
 }

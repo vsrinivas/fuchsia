@@ -14,7 +14,7 @@ source_set("launcher") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
-    "//src/ledger/fidl:fuchsia.ledger.cloud",
+    "//src/ledger/fidl/fuchsia.ledger.cloud",
     "//src/ledger/lib/callback",
   ]
 

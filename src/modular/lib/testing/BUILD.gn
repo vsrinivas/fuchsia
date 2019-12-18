@@ -234,10 +234,10 @@ source_set("ledger_repository_for_testing") {
 
   deps = [
     "//peridot/lib/ledger_client:constants",
-    "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
-    "//src/ledger/bin/fidl",
+    "//src/ledger/fidl/fuchsia.ledger",
+    "//src/ledger/fidl/fuchsia.ledger.internal",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/modular/lib/common:teardown",

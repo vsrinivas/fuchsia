@@ -15,8 +15,8 @@ source_set("inspect") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.ledger",
     "//src/ledger/bin/app:constants",
+    "//src/ledger/fidl/fuchsia.ledger",
     "//src/ledger/lib/logging",
     "//third_party/abseil-cpp",
   ]

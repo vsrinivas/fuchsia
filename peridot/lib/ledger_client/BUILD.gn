@@ -25,7 +25,7 @@ source_set("operations") {
 
   public_deps = [
     ":page_client",
-    "//sdk/fidl/fuchsia.ledger",
+    "//src/ledger/fidl/fuchsia.ledger",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/modular/lib/async/cpp:operation",
@@ -47,7 +47,7 @@ source_set("page_client") {
   deps = [
     ":types",
     "//sdk/lib/fidl/cpp",
-    "//src/ledger/bin/fidl",
+    "//src/ledger/fidl/fuchsia.ledger.internal",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/modular/lib/fidl:array_to_string",
@@ -55,8 +55,8 @@ source_set("page_client") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.ledger",
-    "//src/ledger/bin/fidl",
+    "//src/ledger/fidl/fuchsia.ledger",
+    "//src/ledger/fidl/fuchsia.ledger.internal",
     "//src/modular/lib/async/cpp:operation",
   ]
 }
@@ -67,7 +67,7 @@ source_set("promise") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.ledger",
+    "//src/ledger/fidl/fuchsia.ledger",
     "//src/modular/lib/fidl:array_to_string",
   ]
 }

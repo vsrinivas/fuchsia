@@ -44,13 +44,11 @@ source_set("integration_sharded") {
 
   deps = [
     ":integration_lib",
-    "//sdk/fidl/fuchsia.ledger",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/ledger/bin/app:constants",
     "//src/ledger/bin/app:lib",
     "//src/ledger/bin/environment:test_loop_notification",
-    "//src/ledger/bin/fidl",
     "//src/ledger/bin/fidl:syncable",
     "//src/ledger/bin/p2p_provider/fake",
     "//src/ledger/bin/p2p_provider/impl",
@@ -64,6 +62,8 @@ source_set("integration_sharded") {
     "//src/ledger/bin/testing:lib",
     "//src/ledger/bin/tests/integration/sync",
     "//src/ledger/cloud_provider_in_memory/lib",
+    "//src/ledger/fidl/fuchsia.ledger",
+    "//src/ledger/fidl/fuchsia.ledger.internal",
     "//src/ledger/lib/backoff",
     "//src/ledger/lib/callback",
     "//src/ledger/lib/convert",
@@ -97,9 +97,9 @@ source_set("integration_lib") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.ledger",
-    "//src/ledger/bin/fidl",
     "//src/ledger/bin/testing:ledger_instance_factory",
+    "//src/ledger/fidl/fuchsia.ledger",
+    "//src/ledger/fidl/fuchsia.ledger.internal",
     "//third_party/abseil-cpp",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop-cpp",

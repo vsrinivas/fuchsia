@@ -120,7 +120,7 @@ source_set("ledger_story_model_storage") {
     ":story_model_storage",
     "//peridot/lib/ledger_client:page_client",
     "//peridot/lib/ledger_client:promise",
-    "//sdk/fidl/fuchsia.ledger",
+    "//src/ledger/fidl/fuchsia.ledger",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/modular/lib/fidl:array_to_string",

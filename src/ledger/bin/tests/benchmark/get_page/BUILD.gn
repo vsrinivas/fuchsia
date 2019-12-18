@@ -16,11 +16,11 @@ executable("ledger_benchmark_get_page") {
   testonly = true
 
   deps = [
-    "//sdk/fidl/fuchsia.ledger",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/ledger/bin/testing:get_ledger",
     "//src/ledger/bin/testing:lib",
+    "//src/ledger/fidl/fuchsia.ledger",
     "//src/ledger/lib/logging",
     "//src/ledger/lib/rng:testing",
     "//src/ledger/lib/vmo",

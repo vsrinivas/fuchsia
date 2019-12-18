@@ -26,7 +26,7 @@ source_set("lib") {
 
   deps = [
     "//src/ledger/bin/fidl_helpers",
-    "//src/ledger/fidl:fuchsia.ledger.cloud",
+    "//src/ledger/fidl/fuchsia.ledger.cloud",
     "//src/ledger/lib/convert",
     "//src/ledger/lib/encoding",
     "//src/ledger/lib/logging",

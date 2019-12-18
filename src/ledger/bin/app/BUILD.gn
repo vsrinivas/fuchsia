@@ -20,12 +20,12 @@ executable("app") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/ledger/bin/environment",
-    "//src/ledger/bin/fidl",
     "//src/ledger/bin/fidl:syncable",
     "//src/ledger/bin/fidl/include",
     "//src/ledger/bin/p2p_sync/impl",
     "//src/ledger/bin/storage/impl:lib",
     "//src/ledger/bin/storage/public",
+    "//src/ledger/fidl/fuchsia.ledger.internal",
     "//src/ledger/lib/logging",
     "//src/ledger/lib/vmo",
     "//third_party/abseil-cpp",
@@ -118,7 +118,6 @@ source_set("lib") {
     "//src/ledger/bin/cloud_sync/public",
     "//src/ledger/bin/encryption/primitives",
     "//src/ledger/bin/environment",
-    "//src/ledger/bin/fidl",
     "//src/ledger/bin/fidl:syncable",
     "//src/ledger/bin/fidl/include",
     "//src/ledger/bin/fidl/syncable",
@@ -134,6 +133,7 @@ source_set("lib") {
     "//src/ledger/bin/sync_coordinator/public",
     "//src/ledger/bin/synchronization:completer",
     "//src/ledger/bin/synchronization:lock",
+    "//src/ledger/fidl/fuchsia.ledger.internal",
     "//src/ledger/lib/callback",
     "//src/ledger/lib/convert",
     "//src/ledger/lib/files",
@@ -146,8 +146,8 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.ledger",
     "//sdk/lib/sys/cpp",
+    "//src/ledger/fidl/fuchsia.ledger",
     "//src/ledger/lib/logging",
     "//zircon/public/lib/trace",
   ]
@@ -162,7 +162,7 @@ source_set("constants") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.ledger",
+    "//src/ledger/fidl/fuchsia.ledger",
   ]
 
   public_deps = [

@@ -41,7 +41,7 @@ source_set("impl") {
     "//src/ledger/bin/environment",
     "//src/ledger/bin/fidl/include",
     "//src/ledger/bin/storage/public",
-    "//src/ledger/fidl:fuchsia.ledger.cloud",
+    "//src/ledger/fidl/fuchsia.ledger.cloud",
     "//src/ledger/lib/backoff",
     "//src/ledger/lib/coroutine",
     "//src/ledger/lib/logging",

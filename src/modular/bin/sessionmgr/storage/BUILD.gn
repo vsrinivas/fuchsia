@@ -88,9 +88,9 @@ source_set("session_storage_xdr") {
   deps = [
     ":annotation_xdr",
     "//peridot/lib/base64url",
-    "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.internal",
+    "//src/ledger/fidl/fuchsia.ledger",
     "//src/lib/fsl",
     "//src/modular/lib/fidl:json_xdr",
   ]
@@ -105,7 +105,7 @@ executable("session_storage_unittest") {
 
   deps = [
     ":session_storage",
-    "//sdk/fidl/fuchsia.ledger",
+    "//src/ledger/fidl/fuchsia.ledger",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/bin/sessionmgr/testing:annotations_matchers",
     "//src/modular/lib/async/cpp:future",
@@ -125,8 +125,8 @@ source_set("story_storage") {
   deps = [
     ":story_storage_xdr",
     "//peridot/lib/ledger_client:operations",
-    "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.modular",
+    "//src/ledger/fidl/fuchsia.ledger",
     "//src/modular/bin/sessionmgr/storage:constants_and_utils",
     "//src/modular/lib/async/cpp:future",
     "//src/modular/lib/fidl:clone",
@@ -162,7 +162,7 @@ executable("story_storage_unittest") {
 
   deps = [
     ":story_storage",
-    "//sdk/fidl/fuchsia.ledger",
+    "//src/ledger/fidl/fuchsia.ledger",
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/async/cpp:future",
     "//src/modular/lib/entity:entity_watcher",
