@@ -19,6 +19,7 @@ source_set("files") {
     "path.h",
     "scoped_tmp_dir.cc",
     "scoped_tmp_dir.h",
+    "unique_fd.h",
   ]
 
   public_deps = [
