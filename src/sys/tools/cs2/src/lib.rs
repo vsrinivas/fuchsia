@@ -3,19 +3,17 @@ use std::{fs, iter::Iterator, path::PathBuf};
 /// Convenience macro for reading the filenames of a directory's contents when
 /// the path is expected to exist and all its contents are expected
 /// to be readable.
-macro_rules! read_dir_names {
-    ($path:expr) => {
-        fs::read_dir($path).expect("read_dir_names: could not open directory").map(|entry| {
-            entry
-                .expect("read_dir_names: entry is unreadable")
-                .path()
-                .file_name()
-                .expect("read_dir_names: invalid path")
-                .to_os_string()
-                .into_string()
-                .expect("read_dir_names: unexpected characters")
-        })
-    };
+fn get_file_names(dir: fs::ReadDir) -> impl Iterator<Item = String> {
+    dir.map(|entry| {
+        entry
+            .expect("get_file_names: entry is unreadable")
+            .path()
+            .file_name()
+            .expect("get_file_names: invalid path")
+            .to_os_string()
+            .into_string()
+            .expect("get_file_names: unexpected characters")
+    })
 }
 
 static SPACER: &str = "  ";
@@ -26,6 +24,10 @@ pub struct Component {
     id: String,
     component_type: String,
     children: Vec<Component>,
+    in_services: Vec<String>,
+    out_services: Vec<String>,
+    exposed_services: Vec<String>,
+    used_services: Vec<String>,
 }
 
 impl Component {
@@ -39,16 +41,34 @@ impl Component {
         let component_type = fs::read_to_string(hub_path.join("component_type"))
             .expect("Could not read component_type from hub");
 
+        let exec_path = hub_path.join("exec");
+        let in_services = get_services(exec_path.join("in"));
+        let out_services = get_services(exec_path.join("out"));
+        let exposed_services = get_services(exec_path.join("exposed"));
+        let used_services = get_services(exec_path.join("used"));
+
         // Recurse on the children
-        let children_dir: Vec<String> = read_dir_names!(hub_path.join("children")).collect();
+        let child_path = hub_path.join("children");
+        let child_dir = fs::read_dir(child_path).expect("could not open children directory");
+        let child_names = get_file_names(child_dir);
         let mut children: Vec<Self> = vec![];
-        for child_name in children_dir {
+        for child_name in child_names {
             let path = hub_path.join("children").join(child_name.clone());
             let child = Self::explore(child_name, path);
             children.push(child);
         }
 
-        Self { name, url, id, component_type, children }
+        Self {
+            name,
+            url,
+            id,
+            component_type,
+            children,
+            in_services,
+            out_services,
+            exposed_services,
+            used_services,
+        }
     }
 
     pub fn generate_output(&self) -> Vec<String> {
@@ -82,6 +102,10 @@ impl Component {
         lines.push(moniker.clone());
         lines.push(format!("- URL: {}", self.url));
         lines.push(format!("- Component Type: {}", self.component_type));
+        generate_services("Exposed Services", &self.exposed_services, lines);
+        generate_services("Incoming Services", &self.in_services, lines);
+        generate_services("Outgoing Services", &self.out_services, lines);
+        generate_services("Used Services", &self.used_services, lines);
 
         // Recurse on children
         let prefix = format!("{}/", moniker);
@@ -89,5 +113,20 @@ impl Component {
             lines.push("".to_string());
             child.generate_details_recursive(&prefix, lines);
         }
+    }
+}
+
+fn get_services(path: PathBuf) -> Vec<String> {
+    if let Ok(dir) = fs::read_dir(path.join("svc")) {
+        get_file_names(dir).collect()
+    } else {
+        vec![]
+    }
+}
+
+fn generate_services(services_type: &str, services: &Vec<String>, lines: &mut Vec<String>) {
+    lines.push(format!("- {} ({})", services_type, services.len()));
+    for service in services {
+        lines.push(format!("{}- {}", SPACER, service));
     }
 }

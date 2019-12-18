@@ -1,0 +1,24 @@
+// Example realm that provisions an Echo client and service and eagerly runs the client.
+{
+    // Route Echo service from server to client.
+    "offer": [
+        {
+            "service_protocol": "/svc/fidl.examples.routing.echo.Echo",
+            "from": "#echo_server",
+            "to": [ "#echo_client" ]
+        },
+    ],
+    // Two children: a server and client. "echo_client" has "eager" startup so it
+    // will be started along with the realm.
+    "children": [
+        {
+            "name": "echo_server",
+            "url": "fuchsia-pkg://fuchsia.com/cs2_test#meta/echo_server.cm",
+        },
+        {
+            "name": "echo_client",
+            "url": "fuchsia-pkg://fuchsia.com/cs2_test#meta/echo_client.cm",
+            "startup": "eager",
+        },
+    ],
+}

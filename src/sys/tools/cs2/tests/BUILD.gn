@@ -22,8 +22,22 @@ rustc_test("cs2_test_bin") {
 test_package("cs2_test") {
   deps = [
     ":cs2_test_bin",
+    "//examples/components/routing/echo_client",
+    "//examples/components/routing/echo_server",
   ]
   meta = [
+    {
+      path = rebase_path("//examples/components/routing/meta/echo_server.cml")
+      dest = "echo_server.cm"
+    },
+    {
+      path = rebase_path("//examples/components/routing/meta/echo_client.cml")
+      dest = "echo_client.cm"
+    },
+    {
+      path = rebase_path("meta/echo_realm.cml")
+      dest = "echo_realm.cm"
+    },
     {
       path = rebase_path("meta/empty.cml")
       dest = "empty.cm"
@@ -43,6 +57,14 @@ test_package("cs2_test") {
     {
       path = rebase_path("meta/tree/baz.cml")
       dest = "baz.cm"
+    },
+  ]
+  binaries = [
+    {
+      name = "echo_client"
+    },
+    {
+      name = "echo_server"
     },
   ]
   tests = [
