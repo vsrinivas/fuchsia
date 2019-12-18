@@ -105,7 +105,7 @@ source_set("integration_lib") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/async-testing",
-    "//zircon/public/lib/trace-provider-with-fdio",
+    "//zircon/public/lib/trace-provider-so",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]
