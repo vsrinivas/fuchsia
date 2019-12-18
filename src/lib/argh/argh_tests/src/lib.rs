@@ -4,10 +4,7 @@
 
 #![cfg(test)]
 
-use {
-    argh::FromArgs,
-    std::fmt::Debug,
-};
+use {argh::FromArgs, std::fmt::Debug};
 
 #[test]
 fn basic_example() {
@@ -84,24 +81,10 @@ fn subcommand_example() {
     }
 
     let one = TopLevel::from_args(&["cmdname"], &["one", "--x", "2"]).expect("sc 1");
-    assert_eq!(
-        one,
-        TopLevel {
-            nested: MySubCommandEnum::One(SubCommandOne {
-                x: 2,
-            }),
-        },
-    );
+    assert_eq!(one, TopLevel { nested: MySubCommandEnum::One(SubCommandOne { x: 2 }) },);
 
     let two = TopLevel::from_args(&["cmdname"], &["two", "--fooey"]).expect("sc 2");
-    assert_eq!(
-        two,
-        TopLevel {
-            nested: MySubCommandEnum::Two(SubCommandTwo {
-                fooey: true,
-            }),
-        },
-    );
+    assert_eq!(two, TopLevel { nested: MySubCommandEnum::Two(SubCommandTwo { fooey: true }) },);
 }
 
 #[test]
@@ -118,7 +101,7 @@ fn multiline_doc_comment_description() {
     }
 
     assert_help_string::<Cmd>(
-r###"Usage: test_arg_0 [--s]
+        r###"Usage: test_arg_0 [--s]
 
 Short description
 
@@ -126,7 +109,8 @@ Options:
   --s               a switch with a description that is spread across a number
                     of lines of comments.
   --help            display usage information
-"###);
+"###,
+    );
 }
 
 #[test]
@@ -246,13 +230,13 @@ mod positional {
             LastRepeating { a: 5, b: vec!["foo".into(), "bar".into()] },
         );
         assert_help_string::<LastRepeating>(
-r###"Usage: test_arg_0 <a> [<b...>]
+            r###"Usage: test_arg_0 <a> [<b...>]
 
 Woot
 
 Options:
   --help            display usage information
-"###
+"###,
         );
     }
 
@@ -306,16 +290,18 @@ Options:
     #[test]
     fn required() {
         assert_output(&["5", "6"], LastRequired { a: 5, b: 6 });
-        assert_error::<LastRequired>(&[],
-r###"Required positional arguments not provided:
+        assert_error::<LastRequired>(
+            &[],
+            r###"Required positional arguments not provided:
     a
     b
-"###
+"###,
         );
-        assert_error::<LastRequired>(&["5"],
-r###"Required positional arguments not provided:
+        assert_error::<LastRequired>(
+            &["5"],
+            r###"Required positional arguments not provided:
     b
-"###
+"###,
         );
     }
 
@@ -358,7 +344,7 @@ r###"Required positional arguments not provided:
 
         assert_error::<WithSubcommand>(
             &["a", "a", "a"],
-r###"Required positional arguments not provided:
+            r###"Required positional arguments not provided:
     a
 "###,
         );
@@ -367,10 +353,7 @@ r###"Required positional arguments not provided:
             &["1", "2", "3", "a", "b", "c"],
             WithSubcommand {
                 a: "1".into(),
-                b: Subcommand {
-                    a: "b".into(),
-                    b: vec!["c".into()],
-                },
+                b: Subcommand { a: "b".into(), b: vec!["c".into()] },
                 c: vec!["2".into(), "3".into()],
             },
         );
@@ -455,8 +438,7 @@ mod fuchsia_commandline_tools_rubric {
     fn switches_cannot_run_together() {
         TwoSwitches::from_args(&["cmdname"], &["-a", "-b"])
             .expect("parsing separate should succeed");
-        TwoSwitches::from_args(&["cmdname"], &["-ab"])
-            .expect_err("parsing together should fail");
+        TwoSwitches::from_args(&["cmdname"], &["-ab"]).expect_err("parsing together should fail");
     }
 
     #[derive(FromArgs, Debug)]
@@ -563,14 +545,12 @@ mod fuchsia_commandline_tools_rubric {
     struct HelpSecondSub {}
 
     fn expect_help(args: &[&str], expected_help_string: &str) {
-        let e = HelpTopLevel::from_args(&["cmdname"], args)
-            .expect_err("should exit early");
+        let e = HelpTopLevel::from_args(&["cmdname"], args).expect_err("should exit early");
         assert_eq!(expected_help_string, e.output);
         e.status.expect("help returned an error");
     }
 
-    const MAIN_HELP_STRING: &str =
-r###"Usage: cmdname <command> [<args>]
+    const MAIN_HELP_STRING: &str = r###"Usage: cmdname <command> [<args>]
 
 A type for testing `--help`/`help`
 
@@ -581,8 +561,7 @@ Commands:
   first             First subcommmand for testing `help`.
 "###;
 
-    const FIRST_HELP_STRING: &str =
-r###"Usage: cmdname first <command> [<args>]
+    const FIRST_HELP_STRING: &str = r###"Usage: cmdname first <command> [<args>]
 
 First subcommmand for testing `help`.
 
@@ -593,8 +572,7 @@ Commands:
   second            Second subcommand for testing `help`.
 "###;
 
-    const SECOND_HELP_STRING: &str =
-r###"Usage: cmdname first second
+    const SECOND_HELP_STRING: &str = r###"Usage: cmdname first second
 
 Second subcommand for testing `help`.
 
@@ -771,7 +749,7 @@ Options:
     #[test]
     fn help_example() {
         assert_help_string::<HelpExample>(
-r###"Usage: test_arg_0 [-f] [--really-really-really-long-name-for-pat] -s <scribble> [-v] <command> [<args>]
+            r###"Usage: test_arg_0 [-f] [--really-really-really-long-name-for-pat] -s <scribble> [-v] <command> [<args>]
 
 Destroy the contents of <file>.
 
@@ -798,6 +776,7 @@ Notes:
 Error codes:
   2 The blade is too dull.
   3 Out of fuel.
-"###);
+"###,
+        );
     }
 }

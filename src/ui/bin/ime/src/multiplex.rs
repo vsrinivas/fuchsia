@@ -61,7 +61,7 @@ impl TextFieldMultiplexer {
                 }
                 Ok(())
             }
-                .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
+            .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
         );
 
         multiplexer
@@ -97,7 +97,7 @@ impl TextFieldMultiplexer {
                 }
                 Ok(())
             }
-                .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
+            .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
         );
     }
 

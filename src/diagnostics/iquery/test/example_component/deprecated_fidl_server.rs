@@ -69,7 +69,7 @@ pub fn spawn_inspect_server(mut stream: InspectRequestStream, node: NodeObject) 
             }
             Ok(())
         }
-            .unwrap_or_else(|e: Error| eprintln!("error running inspect server: {:?}", e)),
+        .unwrap_or_else(|e: Error| eprintln!("error running inspect server: {:?}", e)),
     );
 }
 

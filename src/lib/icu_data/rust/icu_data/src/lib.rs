@@ -164,8 +164,8 @@ impl Loader {
 
 #[cfg(test)]
 mod tests {
-    use rust_icu_uenum as uenum;
     use super::*;
+    use rust_icu_uenum as uenum;
 
     // [START loader_example]
     #[test]
@@ -189,14 +189,16 @@ mod tests {
     #[test]
     fn two_initializations_in_a_row() {
         {
-          let _loader = Loader::new().expect("loader is constructed with success");
-          let tz: String = uenum::open_time_zones().unwrap().take(1).map(|e| e.unwrap()).collect();
-          assert_eq!(tz, "ACT");
+            let _loader = Loader::new().expect("loader is constructed with success");
+            let tz: String =
+                uenum::open_time_zones().unwrap().take(1).map(|e| e.unwrap()).collect();
+            assert_eq!(tz, "ACT");
         }
         {
-          let _loader2 = Loader::new().expect("loader is just fine with a second initialization");
-          let tz: String = uenum::open_time_zones().unwrap().take(1).map(|e| e.unwrap()).collect();
-          assert_eq!(tz, "ACT");
+            let _loader2 = Loader::new().expect("loader is just fine with a second initialization");
+            let tz: String =
+                uenum::open_time_zones().unwrap().take(1).map(|e| e.unwrap()).collect();
+            assert_eq!(tz, "ACT");
         }
     }
     // [START loader_example]

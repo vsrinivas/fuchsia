@@ -134,7 +134,7 @@ impl PaverService for PaverServiceSupportsABR {
             }
             Ok(())
         }
-            .boxed()
+        .boxed()
     }
 }
 

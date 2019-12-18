@@ -21,7 +21,6 @@ use video_frame_hasher::*;
 
 lazy_static! {
     static ref LOGGER: () = ::fuchsia_syslog::init().expect("Initializing syslog");
-
     static ref BEAR_DIGEST: ExpectedDigest = ExpectedDigest::new(
         "bear.h264 decoded digest",
         "1dc4d1510fc4d26173480f5e689e38dca7c1fa2df1894085f1bcee9c0d19acf7",

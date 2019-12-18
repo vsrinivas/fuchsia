@@ -59,7 +59,9 @@ async fn wait_for_component(
 ) -> Result<(), Error> {
     // wait for child to exit and mimic the result code
     let result = loop {
-        let event = component_events.try_next().await
+        let event = component_events
+            .try_next()
+            .await
             .context("wait for child component to exit")?
             .ok_or_else(|| format_err!("Child didn't exit cleanly"))?;
 

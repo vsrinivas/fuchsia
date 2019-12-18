@@ -47,9 +47,7 @@ where
                 }
                 Ok(())
             }
-                .unwrap_or_else(|e: Error| {
-                    fx_log_err!("error serving fake puppet master: {:?}", e)
-                }),
+            .unwrap_or_else(|e: Error| fx_log_err!("error serving fake puppet master: {:?}", e)),
         );
     }
 }
@@ -95,9 +93,9 @@ where
                 }
                 Ok(())
             }
-                .unwrap_or_else(|e: Error| {
-                    fx_log_err!("error serving fake story puppet master: {:?}", e)
-                }),
+            .unwrap_or_else(|e: Error| {
+                fx_log_err!("error serving fake story puppet master: {:?}", e)
+            }),
         );
     }
 }

@@ -109,7 +109,7 @@ impl Installer for FuchsiaInstaller {
 
             Err(FuchsiaInstallError::Installer)
         }
-            .boxed()
+        .boxed()
     }
 }
 

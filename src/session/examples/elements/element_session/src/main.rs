@@ -42,8 +42,9 @@ async fn main() -> Result<(), Error> {
 
     fs.take_and_serve_directory_handle()?;
 
-    fs.for_each_concurrent(NUM_CONCURRENT_REQUESTS, move |service_request: ExposedServices| {
-        async move {
+    fs.for_each_concurrent(
+        NUM_CONCURRENT_REQUESTS,
+        move |service_request: ExposedServices| async move {
             match service_request {
                 ExposedServices::ElementPing(request_stream) => {
                     handle_element_ping_requests(request_stream)
@@ -56,8 +57,8 @@ async fn main() -> Result<(), Error> {
                         .expect("Failed to run element manager service.");
                 }
             }
-        }
-    })
+        },
+    )
     .await;
 
     Ok(())

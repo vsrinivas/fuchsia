@@ -215,9 +215,9 @@ async fn create_app_strategy(assistant: &AppAssistantPtr) -> Result<AppStrategyP
                 }
                 Ok(())
             }
-                .unwrap_or_else(|e: failure::Error| {
-                    println!("error {:#?}", e);
-                }),
+            .unwrap_or_else(|e: failure::Error| {
+                println!("error {:#?}", e);
+            }),
         );
 
         Ok::<AppStrategyPtr, Error>(Box::new(FrameBufferAppStrategy {

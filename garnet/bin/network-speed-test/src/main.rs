@@ -5,17 +5,17 @@
 mod opts;
 
 use {
-    failure::{Error, ResultExt, bail},
+    crate::opts::Opt,
+    failure::{bail, Error, ResultExt},
     fidl_fuchsia_net_oldhttp::{self as http, HttpServiceProxy},
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     fuchsia_syslog::{self as syslog, fx_log_info},
     fuchsia_zircon as zx,
-    futures::io::{AllowStdIo, copy},
+    futures::io::{copy, AllowStdIo},
     serde_derive::Serialize,
     std::process,
     structopt::StructOpt,
-    crate::opts::Opt,
 };
 
 fn main() -> Result<(), Error> {
@@ -49,8 +49,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
     test_results.connect_to_http_service = true;
 
     let url_request = create_url_request(opt.target_url);
-    let ind_download = exec.run_singlethreaded(
-            fetch_and_discard_url(http_svc, url_request))?;
+    let ind_download = exec.run_singlethreaded(fetch_and_discard_url(http_svc, url_request))?;
     test_results.base_data_transfer = true;
 
     // TODO (NET-1665): aggregate info from individual results (when we do multiple requests)
@@ -70,7 +69,7 @@ struct TestResults {
     total_bytes: u64,
     total_nanos: u64,
 
-    error_message: String
+    error_message: String,
 }
 
 // Object to hold results of a single download
@@ -78,7 +77,7 @@ struct TestResults {
 struct IndividualDownload {
     bytes: u64,
     nanos: u64,
-    goodput_mbps: f64
+    goodput_mbps: f64,
 }
 
 fn report_results(test_results: &TestResults) {
@@ -100,10 +99,10 @@ fn create_url_request<T: Into<String>>(url_string: T) -> http::UrlRequest {
 
 // TODO (NET-1663): move to helper method
 // TODO (NET-1664): verify checksum on data received
-async fn fetch_and_discard_url(http_service: HttpServiceProxy,
-                               mut url_request: http::UrlRequest)
-        -> Result<IndividualDownload, failure::Error> {
-
+async fn fetch_and_discard_url(
+    http_service: HttpServiceProxy,
+    mut url_request: http::UrlRequest,
+) -> Result<IndividualDownload, failure::Error> {
     // Create a UrlLoader instance
     let (s, p) = zx::Channel::create().context("failed to create zx channel")?;
     let proxy = fasync::Channel::from_channel(p).context("failed to make async channel")?;
@@ -151,4 +150,3 @@ async fn fetch_and_discard_url(http_service: HttpServiceProxy,
 
     Ok(individual_download)
 }
-

@@ -89,7 +89,7 @@ impl<T: ContextReader + ContextWriter + 'static> StoryModuleService<T> {
                 self.story_context_store.lock().withdraw_all(&self.story_id, &self.module_id);
                 Ok(())
             }
-                .unwrap_or_else(|e: Error| fx_log_err!("error serving module output {}", e)),
+            .unwrap_or_else(|e: Error| fx_log_err!("error serving module output {}", e)),
         )
     }
 

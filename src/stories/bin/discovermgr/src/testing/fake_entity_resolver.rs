@@ -63,9 +63,7 @@ impl FakeEntityResolver {
                 }
                 Ok(())
             }
-                .unwrap_or_else(|e: Error| {
-                    fx_log_err!("error serving fake entity resolver: {:?}", e)
-                }),
+            .unwrap_or_else(|e: Error| fx_log_err!("error serving fake entity resolver: {:?}", e)),
         );
     }
 }
@@ -109,7 +107,7 @@ impl FakeEntityServer {
                 }
                 Ok(())
             }
-                .unwrap_or_else(|e: Error| fx_log_err!("error serving fake entity: {:?}", e)),
+            .unwrap_or_else(|e: Error| fx_log_err!("error serving fake entity: {:?}", e)),
         );
     }
 }

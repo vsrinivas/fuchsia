@@ -41,7 +41,7 @@ use {
         marker::{PhantomData, Unpin},
         mem::replace,
         pin::Pin,
-        task::{Context, Poll}
+        task::{Context, Poll},
     },
     void::{unreachable, Void},
 };
@@ -1010,10 +1010,8 @@ mod tests {
         run_server_client(
             OPEN_RIGHT_READABLE,
             lazy(|_p, _sink| (AlphabeticalTraversal::End, Ok(())), |_name| Err(Status::NOT_FOUND)),
-            |root| {
-                async move {
-                    assert_close!(root);
-                }
+            |root| async move {
+                assert_close!(root);
             },
         );
     }
@@ -1023,22 +1021,20 @@ mod tests {
         run_server_client(
             OPEN_RIGHT_READABLE,
             lazy(|_p, _sink| (AlphabeticalTraversal::End, Ok(())), |_name| Err(Status::NOT_FOUND)),
-            |root| {
-                async move {
-                    assert_get_attr!(
-                        root,
-                        NodeAttributes {
-                            mode: MODE_TYPE_DIRECTORY | S_IRUSR,
-                            id: INO_UNKNOWN,
-                            content_size: 0,
-                            storage_size: 0,
-                            link_count: 1,
-                            creation_time: 0,
-                            modification_time: 0,
-                        }
-                    );
-                    assert_close!(root);
-                }
+            |root| async move {
+                assert_get_attr!(
+                    root,
+                    NodeAttributes {
+                        mode: MODE_TYPE_DIRECTORY | S_IRUSR,
+                        id: INO_UNKNOWN,
+                        content_size: 0,
+                        storage_size: 0,
+                        link_count: 1,
+                        creation_time: 0,
+                        modification_time: 0,
+                    }
+                );
+                assert_close!(root);
             },
         );
     }
@@ -1052,23 +1048,21 @@ mod tests {
                 |_p, _sink| (AlphabeticalTraversal::End, Ok(())),
                 |_name| Err(Status::NOT_FOUND),
             ),
-            |root| {
-                async move {
-                    assert_get_attr!(
-                        root,
-                        NodeAttributes {
-                            mode: MODE_TYPE_DIRECTORY
-                                | (S_IXOTH | S_IROTH | S_IXGRP | S_IRGRP | S_IXUSR | S_IRUSR),
-                            id: INO_UNKNOWN,
-                            content_size: 0,
-                            storage_size: 0,
-                            link_count: 1,
-                            creation_time: 0,
-                            modification_time: 0,
-                        }
-                    );
-                    assert_close!(root);
-                }
+            |root| async move {
+                assert_get_attr!(
+                    root,
+                    NodeAttributes {
+                        mode: MODE_TYPE_DIRECTORY
+                            | (S_IXOTH | S_IROTH | S_IXGRP | S_IRGRP | S_IXUSR | S_IRUSR),
+                        id: INO_UNKNOWN,
+                        content_size: 0,
+                        storage_size: 0,
+                        link_count: 1,
+                        creation_time: 0,
+                        modification_time: 0,
+                    }
+                );
+                assert_close!(root);
             },
         );
     }
@@ -1125,16 +1119,18 @@ mod tests {
                 })))
             };
 
-        run_server_client(OPEN_RIGHT_READABLE, lazy(get_entry_names, get_entry), |root| {
-            async move {
+        run_server_client(
+            OPEN_RIGHT_READABLE,
+            lazy(get_entry_names, get_entry),
+            |root| async move {
                 let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
                 open_as_file_assert_content!(&root, flags, "one", "File one content");
                 open_as_file_assert_content!(&root, flags, "two", "File two content");
                 open_as_file_assert_content!(&root, flags, "three", "File three content");
 
                 assert_close!(root);
-            }
-        });
+            },
+        );
     }
 
     #[test]
@@ -1159,8 +1155,10 @@ mod tests {
                 _ => Err(Status::NOT_FOUND),
             };
 
-        run_server_client(OPEN_RIGHT_READABLE, lazy(get_entry_names, get_entry), |root| {
-            async move {
+        run_server_client(
+            OPEN_RIGHT_READABLE,
+            lazy(get_entry_names, get_entry),
+            |root| async move {
                 let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
                 {
                     let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
@@ -1199,8 +1197,8 @@ mod tests {
                 open_as_file_assert_content!(&root, flags, "files", "Content");
 
                 assert_close!(root);
-            }
-        });
+            },
+        );
     }
 
     #[test]
@@ -1303,8 +1301,10 @@ mod tests {
             }
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, lazy(get_entry_names, get_entry), |root| {
-            async move {
+        run_server_client(
+            OPEN_RIGHT_READABLE,
+            lazy(get_entry_names, get_entry),
+            |root| async move {
                 let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
                 open_as_file_assert_content!(&root, flags, "file1", "Content: 1");
@@ -1314,8 +1314,8 @@ mod tests {
                 open_as_file_assert_content!(&root, flags, "file1", "Content: 23");
 
                 assert_close!(root);
-            }
-        });
+            },
+        );
     }
 
     #[test]
@@ -1396,17 +1396,15 @@ mod tests {
             |_name| Err(Status::NOT_FOUND),
             watcher_stream,
         );
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
-            async move {
-                let mask =
-                    WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
-                let watcher_client = assert_watch!(root, mask);
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            let mask =
+                WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+            let watcher_client = assert_watch!(root, mask);
 
-                assert_watcher_one_message_watched_events!(watcher_client, { IDLE, vec![] });
+            assert_watcher_one_message_watched_events!(watcher_client, { IDLE, vec![] });
 
-                drop(watcher_client);
-                assert_close!(root);
-            }
+            drop(watcher_client);
+            assert_close!(root);
         });
     }
 
@@ -1421,24 +1419,22 @@ mod tests {
         let root =
             lazy_with_watchers(get_entry_names, |_name| Err(Status::NOT_FOUND), watcher_stream);
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
-            async move {
-                let mask =
-                    WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
-                let watcher_client = assert_watch!(root, mask);
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            let mask =
+                WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+            let watcher_client = assert_watch!(root, mask);
 
-                assert_watcher_one_message_watched_events!(
-                    watcher_client,
-                    { EXISTING, "." },
-                    { EXISTING, "one" },
-                    { EXISTING, "three" },
-                    { EXISTING, "two" },
-                );
-                assert_watcher_one_message_watched_events!(watcher_client, { IDLE, vec![] });
+            assert_watcher_one_message_watched_events!(
+                watcher_client,
+                { EXISTING, "." },
+                { EXISTING, "one" },
+                { EXISTING, "three" },
+                { EXISTING, "two" },
+            );
+            assert_watcher_one_message_watched_events!(watcher_client, { IDLE, vec![] });
 
-                drop(watcher_client);
-                assert_close!(root);
-            }
+            drop(watcher_client);
+            assert_close!(root);
         });
     }
 
@@ -1453,36 +1449,34 @@ mod tests {
         let root =
             lazy_with_watchers(get_entry_names, |_name| Err(Status::NOT_FOUND), watcher_stream);
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
-            async move {
-                let mask =
-                    WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
-                let watcher1_client = assert_watch!(root, mask);
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            let mask =
+                WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+            let watcher1_client = assert_watch!(root, mask);
 
-                assert_watcher_one_message_watched_events!(
-                    watcher1_client,
-                    { EXISTING, "." },
-                    { EXISTING, "one" },
-                    { EXISTING, "three" },
-                    { EXISTING, "two" },
-                );
-                assert_watcher_one_message_watched_events!(watcher1_client, { IDLE, vec![] });
+            assert_watcher_one_message_watched_events!(
+                watcher1_client,
+                { EXISTING, "." },
+                { EXISTING, "one" },
+                { EXISTING, "three" },
+                { EXISTING, "two" },
+            );
+            assert_watcher_one_message_watched_events!(watcher1_client, { IDLE, vec![] });
 
-                let watcher2_client = assert_watch!(root, mask);
+            let watcher2_client = assert_watch!(root, mask);
 
-                assert_watcher_one_message_watched_events!(
-                    watcher2_client,
-                    { EXISTING, "." },
-                    { EXISTING, "one" },
-                    { EXISTING, "three" },
-                    { EXISTING, "two" },
-                );
-                assert_watcher_one_message_watched_events!(watcher2_client, { IDLE, vec![] });
+            assert_watcher_one_message_watched_events!(
+                watcher2_client,
+                { EXISTING, "." },
+                { EXISTING, "one" },
+                { EXISTING, "three" },
+                { EXISTING, "two" },
+            );
+            assert_watcher_one_message_watched_events!(watcher2_client, { IDLE, vec![] });
 
-                drop(watcher1_client);
-                drop(watcher2_client);
-                assert_close!(root);
-            }
+            drop(watcher1_client);
+            drop(watcher2_client);
+            assert_close!(root);
         });
     }
 
@@ -1497,16 +1491,14 @@ mod tests {
         let root =
             lazy_with_watchers(get_entry_names, |_name| Err(Status::NOT_FOUND), watcher_stream);
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
-            async move {
-                let mask = WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
-                let watcher_client = assert_watch!(root, mask);
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            let mask = WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+            let watcher_client = assert_watch!(root, mask);
 
-                assert_watcher_one_message_watched_events!(watcher_client, { IDLE, vec![] });
+            assert_watcher_one_message_watched_events!(watcher_client, { IDLE, vec![] });
 
-                drop(watcher_client);
-                assert_close!(root);
-            }
+            drop(watcher_client);
+            assert_close!(root);
         });
     }
 
@@ -1519,31 +1511,29 @@ mod tests {
         let root =
             lazy_with_watchers(get_entry_names, |_name| Err(Status::NOT_FOUND), watcher_stream);
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
-            async move {
-                let mask = WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
-                let watcher_client = assert_watch!(root, mask);
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            let mask = WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+            let watcher_client = assert_watch!(root, mask);
 
-                watcher_sender
-                    .send(WatcherEvent::Added(vec!["two".to_string()]))
-                    .await
-                    .expect("watcher_sender.send() failed");
+            watcher_sender
+                .send(WatcherEvent::Added(vec!["two".to_string()]))
+                .await
+                .expect("watcher_sender.send() failed");
 
-                assert_watcher_one_message_watched_events!(watcher_client, { ADDED, "two" });
+            assert_watcher_one_message_watched_events!(watcher_client, { ADDED, "two" });
 
-                watcher_sender
-                    .send(WatcherEvent::Added(vec!["three".to_string(), "four".to_string()]))
-                    .await
-                    .expect("watcher_sender.send() failed");
+            watcher_sender
+                .send(WatcherEvent::Added(vec!["three".to_string(), "four".to_string()]))
+                .await
+                .expect("watcher_sender.send() failed");
 
-                assert_watcher_one_message_watched_events!(
-                    watcher_client,
-                    { ADDED, "three" },
-                    { ADDED, "four" },
-                );
+            assert_watcher_one_message_watched_events!(
+                watcher_client,
+                { ADDED, "three" },
+                { ADDED, "four" },
+            );
 
-                assert_close!(root);
-            }
+            assert_close!(root);
         });
     }
 
@@ -1561,31 +1551,29 @@ mod tests {
         let root =
             lazy_with_watchers(get_entry_names, |_name| Err(Status::NOT_FOUND), watcher_stream);
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
-            async move {
-                let mask = WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
-                let watcher_client = assert_watch!(root, mask);
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            let mask = WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+            let watcher_client = assert_watch!(root, mask);
 
-                watcher_sender
-                    .send(WatcherEvent::Removed(vec!["two".to_string()]))
-                    .await
-                    .expect("watcher_sender.send() failed");
+            watcher_sender
+                .send(WatcherEvent::Removed(vec!["two".to_string()]))
+                .await
+                .expect("watcher_sender.send() failed");
 
-                assert_watcher_one_message_watched_events!(watcher_client, { REMOVED, "two" });
+            assert_watcher_one_message_watched_events!(watcher_client, { REMOVED, "two" });
 
-                watcher_sender
-                    .send(WatcherEvent::Removed(vec!["three".to_string(), "four".to_string()]))
-                    .await
-                    .expect("watcher_sender.send() failed");
+            watcher_sender
+                .send(WatcherEvent::Removed(vec!["three".to_string(), "four".to_string()]))
+                .await
+                .expect("watcher_sender.send() failed");
 
-                assert_watcher_one_message_watched_events!(
-                    watcher_client,
-                    { REMOVED, "three" },
-                    { REMOVED, "four" },
-                );
+            assert_watcher_one_message_watched_events!(
+                watcher_client,
+                { REMOVED, "three" },
+                { REMOVED, "four" },
+            );
 
-                assert_close!(root);
-            }
+            assert_close!(root);
         });
     }
 
@@ -1601,13 +1589,11 @@ mod tests {
         let root =
             lazy_with_watchers(get_entry_names, |_name| Err(Status::NOT_FOUND), watcher_stream);
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
-            async move {
-                let mask = WATCH_MASK_EXISTING | WATCH_MASK_IDLE;
-                assert_watch_err!(root, mask, Status::NOT_SUPPORTED);
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            let mask = WATCH_MASK_EXISTING | WATCH_MASK_IDLE;
+            assert_watch_err!(root, mask, Status::NOT_SUPPORTED);
 
-                assert_close!(root);
-            }
+            assert_close!(root);
         });
     }
 

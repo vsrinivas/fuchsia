@@ -10,8 +10,8 @@ use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, assoc_values};
 
 use fdio::fdio_sys;
-use fidl_fuchsia_io::WATCH_MASK_ALL;
 use fidl::endpoints::Proxy;
+use fidl_fuchsia_io::WATCH_MASK_ALL;
 use futures::stream::{FusedStream, Stream};
 use std::ffi::OsStr;
 use std::fs::File;

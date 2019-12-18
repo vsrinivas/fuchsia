@@ -34,9 +34,7 @@ fn service_definition_for_testing() -> ServiceDefinition {
 
 async fn add_service(profile: &ProfileHarness) -> Result<u64, failure::Error> {
     let mut service_def = service_definition_for_testing();
-    let fut = profile
-        .aux()
-        .add_service(&mut service_def, SecurityLevel::EncryptionOptional, false);
+    let fut = profile.aux().add_service(&mut service_def, SecurityLevel::EncryptionOptional, false);
     let (status, id) = fut.await?;
     if let Some(e) = status.error {
         return Err(BTError::from(*e).into());

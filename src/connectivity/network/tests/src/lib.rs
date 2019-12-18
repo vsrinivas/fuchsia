@@ -223,35 +223,33 @@ async fn add_ethernet_device() -> Result {
 
     with_netstack_and_device::<_, _, Netstack2, fidl_fuchsia_netstack::NetstackMarker>(
         name,
-        |netstack, device| {
-            async move {
-                let id = netstack
-                    .add_ethernet_device(
-                        name,
-                        &mut fidl_fuchsia_netstack::InterfaceConfig {
-                            name: name.to_string(),
-                            filepath: "/fake/filepath/for_test".to_string(),
-                            metric: 0,
-                            ip_address_config: fidl_fuchsia_netstack::IpAddressConfig::Dhcp(true),
-                        },
-                        device,
-                    )
-                    .await
-                    .context("failed to add ethernet device")?;
-                let interface = netstack
-                    .get_interfaces2()
-                    .await
-                    .context("failed to get interfaces")?
-                    .into_iter()
-                    .find(|interface| interface.id == id)
-                    .ok_or(failure::err_msg("failed to find added ethernet device"))?;
-                assert_eq!(
-                    interface.features & fidl_fuchsia_hardware_ethernet::INFO_FEATURE_LOOPBACK,
-                    0
-                );
-                assert_eq!(interface.flags & fidl_fuchsia_netstack::NET_INTERFACE_FLAG_UP, 0);
-                Ok::<(), failure::Error>(())
-            }
+        |netstack, device| async move {
+            let id = netstack
+                .add_ethernet_device(
+                    name,
+                    &mut fidl_fuchsia_netstack::InterfaceConfig {
+                        name: name.to_string(),
+                        filepath: "/fake/filepath/for_test".to_string(),
+                        metric: 0,
+                        ip_address_config: fidl_fuchsia_netstack::IpAddressConfig::Dhcp(true),
+                    },
+                    device,
+                )
+                .await
+                .context("failed to add ethernet device")?;
+            let interface = netstack
+                .get_interfaces2()
+                .await
+                .context("failed to get interfaces")?
+                .into_iter()
+                .find(|interface| interface.id == id)
+                .ok_or(failure::err_msg("failed to find added ethernet device"))?;
+            assert_eq!(
+                interface.features & fidl_fuchsia_hardware_ethernet::INFO_FEATURE_LOOPBACK,
+                0
+            );
+            assert_eq!(interface.flags & fidl_fuchsia_netstack::NET_INTERFACE_FLAG_UP, 0);
+            Ok::<(), failure::Error>(())
         },
     )
     .await
@@ -260,30 +258,28 @@ async fn add_ethernet_device() -> Result {
 async fn add_ethernet_interface<N: Netstack>(name: &'static str) -> Result {
     with_netstack_and_device::<_, _, N, fidl_fuchsia_net_stack::StackMarker>(
         name,
-        |stack, device| {
-            async move {
-                let id = exec_fidl!(
-                    stack.add_ethernet_interface(name, device),
-                    "failed to add ethernet interface"
-                )?;
-                let interface = stack
-                    .list_interfaces()
-                    .await
-                    .context("failed to list interfaces")?
-                    .into_iter()
-                    .find(|interface| interface.id == id)
-                    .ok_or(failure::err_msg("failed to find added ethernet interface"))?;
-                assert_eq!(
-                    interface.properties.features
-                        & fidl_fuchsia_hardware_ethernet::INFO_FEATURE_LOOPBACK,
-                    0
-                );
-                assert_eq!(
-                    interface.properties.physical_status,
-                    fidl_fuchsia_net_stack::PhysicalStatus::Down
-                );
-                Ok(())
-            }
+        |stack, device| async move {
+            let id = exec_fidl!(
+                stack.add_ethernet_interface(name, device),
+                "failed to add ethernet interface"
+            )?;
+            let interface = stack
+                .list_interfaces()
+                .await
+                .context("failed to list interfaces")?
+                .into_iter()
+                .find(|interface| interface.id == id)
+                .ok_or(failure::err_msg("failed to find added ethernet interface"))?;
+            assert_eq!(
+                interface.properties.features
+                    & fidl_fuchsia_hardware_ethernet::INFO_FEATURE_LOOPBACK,
+                0
+            );
+            assert_eq!(
+                interface.properties.physical_status,
+                fidl_fuchsia_net_stack::PhysicalStatus::Down
+            );
+            Ok(())
         },
     )
     .await

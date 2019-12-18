@@ -319,29 +319,27 @@ mod tests {
 
         let root = tree.build();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
-            async move {
-                assert_read_dirents_one_listing!(
-                    root, 1000,
-                    { DIRECTORY, b"." },
-                    { FILE, b"a" },
-                    { FILE, b"b" },
-                );
-                open_as_file_assert_content!(
-                    &root,
-                    OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
-                    "a",
-                    "A content"
-                );
-                open_as_file_assert_content!(
-                    &root,
-                    OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
-                    "b",
-                    "B content"
-                );
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            assert_read_dirents_one_listing!(
+                root, 1000,
+                { DIRECTORY, b"." },
+                { FILE, b"a" },
+                { FILE, b"b" },
+            );
+            open_as_file_assert_content!(
+                &root,
+                OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+                "a",
+                "A content"
+            );
+            open_as_file_assert_content!(
+                &root,
+                OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+                "b",
+                "B content"
+            );
 
-                assert_close!(root);
-            }
+            assert_close!(root);
         });
     }
 
@@ -354,42 +352,40 @@ mod tests {
 
         let root = tree.build();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
-            async move {
-                assert_read_dirents_one_listing!(
-                    root, 1000,
-                    { DIRECTORY, b"." },
-                    { FILE, b"four" },
-                    { DIRECTORY, b"one" },
-                );
-                assert_read_dirents_path_one_listing!(
-                    &root, "one", 1000,
-                    { DIRECTORY, b"." },
-                    { FILE, b"three" },
-                    { FILE, b"two" },
-                );
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            assert_read_dirents_one_listing!(
+                root, 1000,
+                { DIRECTORY, b"." },
+                { FILE, b"four" },
+                { DIRECTORY, b"one" },
+            );
+            assert_read_dirents_path_one_listing!(
+                &root, "one", 1000,
+                { DIRECTORY, b"." },
+                { FILE, b"three" },
+                { FILE, b"two" },
+            );
 
-                open_as_file_assert_content!(
-                    &root,
-                    OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
-                    "one/two",
-                    "A"
-                );
-                open_as_file_assert_content!(
-                    &root,
-                    OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
-                    "one/three",
-                    "B"
-                );
-                open_as_file_assert_content!(
-                    &root,
-                    OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
-                    "four",
-                    "C"
-                );
+            open_as_file_assert_content!(
+                &root,
+                OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+                "one/two",
+                "A"
+            );
+            open_as_file_assert_content!(
+                &root,
+                OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+                "one/three",
+                "B"
+            );
+            open_as_file_assert_content!(
+                &root,
+                OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+                "four",
+                "C"
+            );
 
-                assert_close!(root);
-            }
+            assert_close!(root);
         });
     }
 
@@ -408,47 +404,45 @@ mod tests {
 
         let root = tree.build();
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
-            async move {
-                assert_read_dirents_one_listing!(
-                    root, 1000,
-                    { DIRECTORY, b"." },
-                    { DIRECTORY, b"etc" },
-                    { FILE, b"uname" },
-                );
-                assert_read_dirents_path_one_listing!(
-                    &root, "etc", 1000,
-                    { DIRECTORY, b"." },
-                    { FILE, b"fstab" },
-                    { DIRECTORY, b"ssh" },
-                );
-                assert_read_dirents_path_one_listing!(
-                    &root, "etc/ssh", 1000,
-                    { DIRECTORY, b"." },
-                    { FILE, b"sshd_config" },
-                );
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            assert_read_dirents_one_listing!(
+                root, 1000,
+                { DIRECTORY, b"." },
+                { DIRECTORY, b"etc" },
+                { FILE, b"uname" },
+            );
+            assert_read_dirents_path_one_listing!(
+                &root, "etc", 1000,
+                { DIRECTORY, b"." },
+                { FILE, b"fstab" },
+                { DIRECTORY, b"ssh" },
+            );
+            assert_read_dirents_path_one_listing!(
+                &root, "etc/ssh", 1000,
+                { DIRECTORY, b"." },
+                { FILE, b"sshd_config" },
+            );
 
-                open_as_file_assert_content!(
-                    &root,
-                    OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
-                    "etc/fstab",
-                    "/dev/fs /"
-                );
-                open_as_file_assert_content!(
-                    &root,
-                    OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
-                    "etc/ssh/sshd_config",
-                    "# Empty"
-                );
-                open_as_file_assert_content!(
-                    &root,
-                    OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
-                    "uname",
-                    "Fuchsia"
-                );
+            open_as_file_assert_content!(
+                &root,
+                OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+                "etc/fstab",
+                "/dev/fs /"
+            );
+            open_as_file_assert_content!(
+                &root,
+                OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+                "etc/ssh/sshd_config",
+                "# Empty"
+            );
+            open_as_file_assert_content!(
+                &root,
+                OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+                "uname",
+                "Fuchsia"
+            );
 
-                assert_close!(root);
-            }
+            assert_close!(root);
         });
     }
 

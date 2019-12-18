@@ -77,7 +77,9 @@ async fn main() -> Result<(), Error> {
     fasync::spawn(fs.for_each_concurrent(None, echo_exposed_server));
 
     let mut component_stream = child_app.controller().take_event_stream();
-    match component_stream.next().await
+    match component_stream
+        .next()
+        .await
         .expect("component event stream ended before termination event")?
     {
         ComponentControllerEvent::OnDirectoryReady {} => {

@@ -129,9 +129,9 @@ impl RewriteService {
                 }
                 Ok(())
             }
-                .unwrap_or_else(|e: Error| {
-                    fx_log_err!("while serving rewrite rule edit transaction: {:?}", e)
-                }),
+            .unwrap_or_else(|e: Error| {
+                fx_log_err!("while serving rewrite rule edit transaction: {:?}", e)
+            }),
         )
     }
 
@@ -148,9 +148,9 @@ impl RewriteService {
                 }
                 Ok(())
             }
-                .unwrap_or_else(|e: fidl::Error| {
-                    fx_log_err!("while serving rewrite rule iterator: {:?}", e)
-                }),
+            .unwrap_or_else(|e: fidl::Error| {
+                fx_log_err!("while serving rewrite rule iterator: {:?}", e)
+            }),
         );
     }
 }

@@ -62,8 +62,7 @@ async fn check_path_supports_strict_rights(path: &str, rights: u32) -> bool {
     match fdio::open_fd(path, rights) {
         Ok(_) => (),
         Err(zx::Status::ACCESS_DENIED) => {
-            failed_check!(
-                "Access denied opening '{}' with rights '{}'", path, rights_str(rights));
+            failed_check!("Access denied opening '{}' with rights '{}'", path, rights_str(rights));
         }
         Err(err) => {
             failed_check!(

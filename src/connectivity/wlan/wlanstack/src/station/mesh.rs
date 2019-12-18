@@ -87,9 +87,11 @@ async fn serve_fidl_endpoint<'a>(proxy: &'a MlmeProxy, sme: &'a Mutex<Sme>, endp
             return;
         }
     };
-    let r = stream.try_for_each_concurrent(MAX_CONCURRENT_REQUESTS, move |request| {
-        handle_fidl_request(proxy, &sme, request)
-    }).await;
+    let r = stream
+        .try_for_each_concurrent(MAX_CONCURRENT_REQUESTS, move |request| {
+            handle_fidl_request(proxy, &sme, request)
+        })
+        .await;
     if let Err(e) = r {
         error!("Error serving a FIDL client of Mesh SME: {}", e);
     }

@@ -306,13 +306,11 @@ impl AccountHandler {
         let account_arc_clone = Arc::clone(&account_arc);
         account_arc
             .task_group()
-            .spawn(|cancel| {
-                async move {
-                    account_arc_clone
-                        .handle_requests_from_stream(&context, stream, cancel)
-                        .await
-                        .unwrap_or_else(|e| error!("Error handling Account channel {:?}", e));
-                }
+            .spawn(|cancel| async move {
+                account_arc_clone
+                    .handle_requests_from_stream(&context, stream, cancel)
+                    .await
+                    .unwrap_or_else(|e| error!("Error handling Account channel {:?}", e));
             })
             .await
             .map_err(|_| {
@@ -442,16 +440,14 @@ mod tests {
         request_stream_test(
             location.to_persistent_lifetime(),
             Arc::new(Inspector::new()),
-            |proxy| {
-                async move {
-                    let (_, account_server_end) = create_endpoints().unwrap();
-                    let (acp_client_end, _) = create_endpoints().unwrap();
-                    assert_eq!(
-                        proxy.get_account(acp_client_end, account_server_end).await?,
-                        Err(ApiError::NotFound)
-                    );
-                    Ok(())
-                }
+            |proxy| async move {
+                let (_, account_server_end) = create_endpoints().unwrap();
+                let (acp_client_end, _) = create_endpoints().unwrap();
+                assert_eq!(
+                    proxy.get_account(acp_client_end, account_server_end).await?,
+                    Err(ApiError::NotFound)
+                );
+                Ok(())
             },
         );
     }
@@ -462,12 +458,10 @@ mod tests {
         request_stream_test(
             location.to_persistent_lifetime(),
             Arc::new(Inspector::new()),
-            |proxy| {
-                async move {
-                    proxy.create_account(None).await??;
-                    assert_eq!(proxy.create_account(None).await?, Err(ApiError::Internal));
-                    Ok(())
-                }
+            |proxy| async move {
+                proxy.create_account(None).await??;
+                assert_eq!(proxy.create_account(None).await?, Err(ApiError::Internal));
+                Ok(())
             },
         );
     }
@@ -522,21 +516,17 @@ mod tests {
         request_stream_test(
             location.to_persistent_lifetime(),
             Arc::new(Inspector::new()),
-            |proxy| {
-                async move {
-                    proxy.create_account(None).await??;
-                    Ok(())
-                }
+            |proxy| async move {
+                proxy.create_account(None).await??;
+                Ok(())
             },
         );
         request_stream_test(
             location.to_persistent_lifetime(),
             Arc::new(Inspector::new()),
-            |proxy| {
-                async move {
-                    proxy.load_account().await??;
-                    Ok(())
-                }
+            |proxy| async move {
+                proxy.load_account().await??;
+                Ok(())
             },
         );
     }
@@ -601,20 +591,24 @@ mod tests {
     #[test]
     fn test_prepare_for_account_transfer_invalid_states() {
         // Handler in `PendingTransfer` state
-        request_stream_test(AccountLifetime::Ephemeral, Arc::new(Inspector::new()), |proxy| {
-            async move {
+        request_stream_test(
+            AccountLifetime::Ephemeral,
+            Arc::new(Inspector::new()),
+            |proxy| async move {
                 proxy.prepare_for_account_transfer().await??;
                 assert_eq!(
                     proxy.prepare_for_account_transfer().await?,
                     Err(ApiError::FailedPrecondition)
                 );
                 Ok(())
-            }
-        });
+            },
+        );
 
         // Handler in `Transferred` state
-        request_stream_test(AccountLifetime::Ephemeral, Arc::new(Inspector::new()), |proxy| {
-            async move {
+        request_stream_test(
+            AccountLifetime::Ephemeral,
+            Arc::new(Inspector::new()),
+            |proxy| async move {
                 proxy.prepare_for_account_transfer().await??;
                 proxy.perform_account_transfer(&mut vec![].into_iter()).await??;
                 assert_eq!(
@@ -622,38 +616,44 @@ mod tests {
                     Err(ApiError::FailedPrecondition)
                 );
                 Ok(())
-            }
-        });
+            },
+        );
 
         // Handler in `Initialized` state
-        request_stream_test(AccountLifetime::Ephemeral, Arc::new(Inspector::new()), |proxy| {
-            async move {
+        request_stream_test(
+            AccountLifetime::Ephemeral,
+            Arc::new(Inspector::new()),
+            |proxy| async move {
                 proxy.create_account(None).await??;
                 assert_eq!(
                     proxy.prepare_for_account_transfer().await?,
                     Err(ApiError::FailedPrecondition)
                 );
                 Ok(())
-            }
-        });
+            },
+        );
     }
 
     #[test]
     fn test_perform_account_transfer_invalid_states() {
         // Handler in `Uninitialized` state
-        request_stream_test(AccountLifetime::Ephemeral, Arc::new(Inspector::new()), |proxy| {
-            async move {
+        request_stream_test(
+            AccountLifetime::Ephemeral,
+            Arc::new(Inspector::new()),
+            |proxy| async move {
                 assert_eq!(
                     proxy.perform_account_transfer(&mut vec![].into_iter()).await?,
                     Err(ApiError::FailedPrecondition)
                 );
                 Ok(())
-            }
-        });
+            },
+        );
 
         // Handler in `Transferred` state
-        request_stream_test(AccountLifetime::Ephemeral, Arc::new(Inspector::new()), |proxy| {
-            async move {
+        request_stream_test(
+            AccountLifetime::Ephemeral,
+            Arc::new(Inspector::new()),
+            |proxy| async move {
                 proxy.prepare_for_account_transfer().await??;
                 proxy.perform_account_transfer(&mut vec![].into_iter()).await??;
                 assert_eq!(
@@ -661,26 +661,30 @@ mod tests {
                     Err(ApiError::FailedPrecondition)
                 );
                 Ok(())
-            }
-        });
+            },
+        );
 
         // Handler in `Initialized` state
-        request_stream_test(AccountLifetime::Ephemeral, Arc::new(Inspector::new()), |proxy| {
-            async move {
+        request_stream_test(
+            AccountLifetime::Ephemeral,
+            Arc::new(Inspector::new()),
+            |proxy| async move {
                 proxy.create_account(None).await??;
                 assert_eq!(
                     proxy.perform_account_transfer(&mut vec![].into_iter()).await?,
                     Err(ApiError::FailedPrecondition)
                 );
                 Ok(())
-            }
-        });
+            },
+        );
     }
 
     #[test]
     fn test_finalize_account_transfer_unimplemented() {
-        request_stream_test(AccountLifetime::Ephemeral, Arc::new(Inspector::new()), |proxy| {
-            async move {
+        request_stream_test(
+            AccountLifetime::Ephemeral,
+            Arc::new(Inspector::new()),
+            |proxy| async move {
                 proxy.prepare_for_account_transfer().await??;
                 proxy.perform_account_transfer(&mut vec![].into_iter()).await??;
                 assert_eq!(
@@ -688,18 +692,20 @@ mod tests {
                     Err(ApiError::UnsupportedOperation)
                 );
                 Ok(())
-            }
-        });
+            },
+        );
     }
 
     #[test]
     fn test_load_ephemeral_account_fails() {
-        request_stream_test(AccountLifetime::Ephemeral, Arc::new(Inspector::new()), |proxy| {
-            async move {
+        request_stream_test(
+            AccountLifetime::Ephemeral,
+            Arc::new(Inspector::new()),
+            |proxy| async move {
                 assert_eq!(proxy.load_account().await?, Err(ApiError::Internal));
                 Ok(())
-            }
-        });
+            },
+        );
     }
 
     #[test]
@@ -768,14 +774,12 @@ mod tests {
         request_stream_test(
             location.to_persistent_lifetime(),
             Arc::new(Inspector::new()),
-            |proxy| {
-                async move {
-                    assert_eq!(
-                        proxy.remove_account(FORCE_REMOVE_ON).await?,
-                        Err(ApiError::InvalidRequest)
-                    );
-                    Ok(())
-                }
+            |proxy| async move {
+                assert_eq!(
+                    proxy.remove_account(FORCE_REMOVE_ON).await?,
+                    Err(ApiError::InvalidRequest)
+                );
+                Ok(())
             },
         );
     }
@@ -820,26 +824,26 @@ mod tests {
         request_stream_test(
             location.to_persistent_lifetime(),
             Arc::new(Inspector::new()),
-            |proxy| {
-                async move {
-                    assert_eq!(proxy.load_account().await?, Err(ApiError::NotFound));
-                    Ok(())
-                }
+            |proxy| async move {
+                assert_eq!(proxy.load_account().await?, Err(ApiError::NotFound));
+                Ok(())
             },
         );
     }
 
     #[test]
     fn test_create_account_ephemeral_with_auth_mechanism() {
-        request_stream_test(AccountLifetime::Ephemeral, Arc::new(Inspector::new()), |proxy| {
-            async move {
+        request_stream_test(
+            AccountLifetime::Ephemeral,
+            Arc::new(Inspector::new()),
+            |proxy| async move {
                 assert_eq!(
                     proxy.create_account(Some(TEST_AUTH_MECHANISM_ID)).await?,
                     Err(ApiError::InvalidRequest)
                 );
                 Ok(())
-            }
-        });
+            },
+        );
     }
 
     #[test]
@@ -848,14 +852,12 @@ mod tests {
         request_stream_test(
             location.to_persistent_lifetime(),
             Arc::new(Inspector::new()),
-            |proxy| {
-                async move {
-                    assert_eq!(
-                        proxy.create_account(Some(TEST_AUTH_MECHANISM_ID)).await?,
-                        Err(ApiError::UnsupportedOperation)
-                    );
-                    Ok(())
-                }
+            |proxy| async move {
+                assert_eq!(
+                    proxy.create_account(Some(TEST_AUTH_MECHANISM_ID)).await?,
+                    Err(ApiError::UnsupportedOperation)
+                );
+                Ok(())
             },
         );
     }

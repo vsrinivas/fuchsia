@@ -95,7 +95,7 @@ impl LegacyIme {
                 }
                 Ok(())
             }
-                .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
+            .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
         );
     }
 
@@ -114,17 +114,15 @@ impl LegacyIme {
                 }
                 Ok(())
             }
-                .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e))
-                .then(|()| {
-                    async move {
-                        // this runs when IME stream closes
-                        // clone to ensure we only hold one lock at a time
-                        let ime_service = self_clone_2.0.lock().await.ime_service.clone();
-                        ime_service
-                            .update_keyboard_visibility_from_ime(&self_clone_2.0, false)
-                            .await;
-                    }
-                }),
+            .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e))
+            .then(|()| {
+                async move {
+                    // this runs when IME stream closes
+                    // clone to ensure we only hold one lock at a time
+                    let ime_service = self_clone_2.0.lock().await.ime_service.clone();
+                    ime_service.update_keyboard_visibility_from_ime(&self_clone_2.0, false).await;
+                }
+            }),
         );
     }
 

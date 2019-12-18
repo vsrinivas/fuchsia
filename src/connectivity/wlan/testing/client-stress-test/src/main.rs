@@ -72,7 +72,8 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
         connect_to_service::<DeviceServiceMarker>().context("Failed to connect to wlan_service")?;
 
     let fut = async {
-        let wlan_iface_ids = wlan_service_util::get_iface_list(&wlan_svc).await
+        let wlan_iface_ids = wlan_service_util::get_iface_list(&wlan_svc)
+            .await
             .context("Failed to query wlan_service iface list")?;
 
         if wlan_iface_ids.is_empty() {
@@ -115,8 +116,9 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                     let result = wlan_service_util::connect_to_network(
                         &wlaniface.sme_proxy,
                         opt.target_ssid.as_bytes().to_vec(),
-                        opt.target_pwd.as_bytes().to_vec()
-                    ).await;
+                        opt.target_pwd.as_bytes().to_vec(),
+                    )
+                    .await;
                     match result {
                         Ok(true) => {
                             total_connect_time_ms +=

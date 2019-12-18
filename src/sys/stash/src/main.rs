@@ -140,6 +140,6 @@ fn stash_server(
             }
             Ok(())
         }
-            .unwrap_or_else(|e: failure::Error| fx_log_err!("couldn't run stash service: {:?}", e)),
+        .unwrap_or_else(|e: failure::Error| fx_log_err!("couldn't run stash service: {:?}", e)),
     );
 }

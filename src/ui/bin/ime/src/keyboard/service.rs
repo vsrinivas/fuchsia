@@ -79,27 +79,25 @@ impl Store {
                 // Capture by reference, since `async` non-`move` closures with
                 // arguments are not currently supported
                 let event = &event;
-                move |was_handled, subscriber| {
-                    async move {
-                        let event = ui_input::KeyEvent {
-                            key: event.key,
-                            modifiers: event.modifiers,
-                            phase: event.phase,
-                            physical_key: event.physical_key,
-                            semantic_key: event.semantic_key.as_ref().map(clone_semantic_key),
-                        };
-                        let subscriber = subscriber.lock().await;
-                        let handled = subscriber
-                            .listener
-                            .on_key_event(event)
-                            .await
-                            .map_err(Into::into)
-                            .unwrap_or_else(|e: failure::Error| {
-                                fx_log_err!("key listener handle error: {:?}", e);
-                                ui_input::Status::NotHandled
-                            });
-                        (handled == ui_input::Status::Handled) || was_handled
-                    }
+                move |was_handled, subscriber| async move {
+                    let event = ui_input::KeyEvent {
+                        key: event.key,
+                        modifiers: event.modifiers,
+                        phase: event.phase,
+                        physical_key: event.physical_key,
+                        semantic_key: event.semantic_key.as_ref().map(clone_semantic_key),
+                    };
+                    let subscriber = subscriber.lock().await;
+                    let handled = subscriber
+                        .listener
+                        .on_key_event(event)
+                        .await
+                        .map_err(Into::into)
+                        .unwrap_or_else(|e: failure::Error| {
+                            fx_log_err!("key listener handle error: {:?}", e);
+                            ui_input::Status::NotHandled
+                        });
+                    (handled == ui_input::Status::Handled) || was_handled
                 }
             })
             .await;
@@ -213,7 +211,7 @@ impl Service {
                 }
                 Ok(())
             }
-                .unwrap_or_else(|e: failure::Error| fx_log_err!("couldn't run: {:?}", e)),
+            .unwrap_or_else(|e: failure::Error| fx_log_err!("couldn't run: {:?}", e)),
         );
     }
 
@@ -247,7 +245,7 @@ impl Service {
                 subscriber_ids.iter().for_each(|&i| store.remove_subscriber(i));
                 Ok(())
             }
-                .unwrap_or_else(|e: failure::Error| fx_log_err!("couldn't run: {:?}", e)),
+            .unwrap_or_else(|e: failure::Error| fx_log_err!("couldn't run: {:?}", e)),
         );
     }
 }

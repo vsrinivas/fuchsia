@@ -57,7 +57,7 @@ async fn probe_node(
             .await?;
             Ok((node_id, probe_result))
         }
-            .boxed(),
+        .boxed(),
         PROBE_TIMEOUT,
         failure::format_err!("Probe timed out"),
     )

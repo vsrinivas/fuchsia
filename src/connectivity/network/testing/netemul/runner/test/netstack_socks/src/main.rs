@@ -144,7 +144,9 @@ async fn wait_for_component(component: &ComponentControllerProxy) -> Result<(), 
     let mut component_events = component.take_event_stream();
     // wait for child to exit and mimic the result code
     let result = loop {
-        let event = component_events.try_next().await
+        let event = component_events
+            .try_next()
+            .await
             .context("wait for child component to exit")?
             .ok_or_else(|| format_err!("Child didn't exit cleanly"))?;
 
@@ -191,10 +193,9 @@ async fn prepare_env() -> Result<(), Error> {
     let bus = common::BusConnection::new("root")?;
 
     println!("Starting server...");
-    let server = spawn_env(
-        &net,
-        SpawnOptions { env_name: "server", ip: server_ip_cfg, remote: None },
-    ).await?;
+    let server =
+        spawn_env(&net, SpawnOptions { env_name: "server", ip: server_ip_cfg, remote: None })
+            .await?;
 
     let () = bus.wait_for_event(common::SERVER_READY).await?;
     println!("Server ready, starting client...");
@@ -202,7 +203,8 @@ async fn prepare_env() -> Result<(), Error> {
     let client = spawn_env(
         &net,
         SpawnOptions { env_name: "client", ip: client_ip_cfg, remote: Some(server_ip) },
-    ).await?;
+    )
+    .await?;
     let () = wait_for_component(&client.controller).await?;
     let () = wait_for_component(&server.controller).await?;
     Ok(())

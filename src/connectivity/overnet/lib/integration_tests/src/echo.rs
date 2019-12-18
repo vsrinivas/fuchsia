@@ -25,25 +25,21 @@ use {
 
 #[test]
 fn simple() -> Result<(), Error> {
-    crate::run_async_test(|spawner| {
-        async move {
-            let client = Overnet::new(spawner.clone())?;
-            let server = Overnet::new(spawner.clone())?;
-            crate::connect(&client, &server)?;
-            run_echo_test(spawner, client, server, Some("HELLO INTEGRATION TEST WORLD")).await
-        }
+    crate::run_async_test(|spawner| async move {
+        let client = Overnet::new(spawner.clone())?;
+        let server = Overnet::new(spawner.clone())?;
+        crate::connect(&client, &server)?;
+        run_echo_test(spawner, client, server, Some("HELLO INTEGRATION TEST WORLD")).await
     })
 }
 
 #[test]
 fn interspersed_log_messages() -> Result<(), Error> {
-    crate::run_async_test(|spawner| {
-        async move {
-            let client = Overnet::new(spawner.clone())?;
-            let server = Overnet::new(spawner.clone())?;
-            crate::connect_with_interspersed_log_messages(spawner.clone(), &client, &server)?;
-            run_echo_test(spawner, client, server, Some("HELLO INTEGRATION TEST WORLD")).await
-        }
+    crate::run_async_test(|spawner| async move {
+        let client = Overnet::new(spawner.clone())?;
+        let server = Overnet::new(spawner.clone())?;
+        crate::connect_with_interspersed_log_messages(spawner.clone(), &client, &server)?;
+        run_echo_test(spawner, client, server, Some("HELLO INTEGRATION TEST WORLD")).await
     })
 }
 

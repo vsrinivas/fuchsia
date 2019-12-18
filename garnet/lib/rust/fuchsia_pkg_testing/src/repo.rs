@@ -367,17 +367,15 @@ impl Repository {
             .chain(std::iter::repeat(Duration::from_millis(1000)));
 
         let port_file_dir_path = port_file_dir.path();
-        let wait_pm_up = fuchsia_backoff::retry_or_last_error(backoff, || {
-            async move {
-                match fs::read_to_string(port_file_dir_path.join("port-file")) {
-                    Ok(port) => {
-                        return Ok(port.parse::<u16>().unwrap_or_else(|e| {
-                            panic!("invalid port string {:?}: {:?}", port, e)
-                        }));
-                    }
-                    Err(e) => {
-                        return Err(e.into());
-                    }
+        let wait_pm_up = fuchsia_backoff::retry_or_last_error(backoff, || async move {
+            match fs::read_to_string(port_file_dir_path.join("port-file")) {
+                Ok(port) => {
+                    return Ok(port
+                        .parse::<u16>()
+                        .unwrap_or_else(|e| panic!("invalid port string {:?}: {:?}", port, e)));
+                }
+                Err(e) => {
+                    return Err(e.into());
                 }
             }
         })

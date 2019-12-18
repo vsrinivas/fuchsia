@@ -84,7 +84,8 @@ impl TestHarness for PeripheralHarness {
             // Create a task to process the state update watcher
             let watch_adv = watch_advertising_states(harness.clone());
             let watch_conn = watch_connections(harness.clone());
-            let run_peripheral = future::try_join(watch_adv, watch_conn).map_ok(|((), ())| ()).boxed();
+            let run_peripheral =
+                future::try_join(watch_adv, watch_conn).map_ok(|((), ())| ()).boxed();
 
             Ok((harness, host, run_peripheral))
         }

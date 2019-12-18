@@ -262,5 +262,4 @@ mod tests {
     fn value_to_friendly_name() {
         assert_eq!(AvailableTargets::value_to_friendly_name(AvailableTargets::FileTarget), "file");
     }
-
 }

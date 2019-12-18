@@ -16,9 +16,9 @@ compiled_action("gen_qmi_protocol_source") {
     "protocol/common.json",
     "protocol/ctl.json",
     "protocol/dms.json",
+    "protocol/nas.json",
     "protocol/wda.json",
     "protocol/wds.json",
-    "protocol/nas.json",
   ]
   outputs = [
     output,

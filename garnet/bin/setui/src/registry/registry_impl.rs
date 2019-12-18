@@ -64,7 +64,7 @@ impl RegistryImpl {
                     }
                     Ok(())
                 }
-                    .unwrap_or_else(|_e: failure::Error| {}),
+                .unwrap_or_else(|_e: failure::Error| {}),
             );
         }
 
@@ -79,7 +79,7 @@ impl RegistryImpl {
                     }
                     Ok(())
                 }
-                    .unwrap_or_else(|_e: failure::Error| {}),
+                .unwrap_or_else(|_e: failure::Error| {}),
             );
         }
 
@@ -166,11 +166,9 @@ impl RegistryImpl {
 
                         Ok(())
                     }
-                        .unwrap_or_else(move |e: failure::Error| {
-                            error_sender_clone
-                                .unbounded_send(SettingEvent::Response(id, Err(e)))
-                                .ok();
-                        }),
+                    .unwrap_or_else(move |e: failure::Error| {
+                        error_sender_clone.unbounded_send(SettingEvent::Response(id, Err(e))).ok();
+                    }),
                 );
 
                 command_sender.unbounded_send(Command::HandleRequest(request, responder)).ok();

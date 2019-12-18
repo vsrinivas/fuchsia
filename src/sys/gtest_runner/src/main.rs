@@ -281,7 +281,7 @@ fn main() -> Result<(), Error> {
                 run_runner_server(stream, state).await?;
                 Ok(())
             }
-                .unwrap_or_else(|e: failure::Error| fx_log_err!("runner failed: {:?}", e)),
+            .unwrap_or_else(|e: failure::Error| fx_log_err!("runner failed: {:?}", e)),
         );
     });
     fs.take_and_serve_directory_handle()?;

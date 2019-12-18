@@ -30,8 +30,9 @@ pub async fn expose_services() -> Result<(), Error> {
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(ExposedServices::Launcher);
     fs.take_and_serve_directory_handle()?;
-    fs.for_each_concurrent(NUM_CONCURRENT_REQUESTS, move |service_request: ExposedServices| {
-        async move {
+    fs.for_each_concurrent(
+        NUM_CONCURRENT_REQUESTS,
+        move |service_request: ExposedServices| async move {
             match service_request {
                 ExposedServices::Launcher(request_stream) => {
                     handle_session_manager_request_stream(request_stream)
@@ -39,8 +40,8 @@ pub async fn expose_services() -> Result<(), Error> {
                         .expect("Session launcher request stream got an error.");
                 }
             }
-        }
-    })
+        },
+    )
     .await;
 
     Ok(())

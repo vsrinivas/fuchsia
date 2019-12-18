@@ -352,8 +352,8 @@ fn main() {
                 log::warn!("Error: {}", e);
             }
         })
-            .unit_error()
-            .boxed_local()
-            .compat(),
+        .unit_error()
+        .boxed_local()
+        .compat(),
     );
 }

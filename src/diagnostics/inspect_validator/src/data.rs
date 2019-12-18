@@ -1559,8 +1559,7 @@ mod tests {
         local.apply(&create_string_property!(parent: 1, id: 2, name: "prop1", value: "foo"))?;
         remote.apply(&create_node!(parent: 0, id: 1, name: "node"))?;
         remote.apply(&create_string_property!(parent: 1, id: 2, name: "prop1", value: "bar"))?;
-        let diff_string =
-            "-- DIFF --\\n\\nSame:3 lines\\nLocal: > >  prop1: \
+        let diff_string = "-- DIFF --\\n\\nSame:3 lines\\nLocal: > >  prop1: \
              String(\\\"foo\\\")\\nOther: > >  prop1: String(\\\"bar\\\")\\nSame:3 lines\\n\\n\"";
         let full_string =
             "-- LOCAL --\\n root ->\\n\\n>  node ->\\n> >  prop1: String(\\\"foo\\\")\

@@ -2,7 +2,7 @@ use {
     crate::{
         model::testing::mocks::ManagedNamespace,
         model::testing::{routing_test_helpers::*, test_helpers::*},
-        model::{testing::mocks::FakeBinder, moniker::AbsoluteMoniker, binding::Binder},
+        model::{binding::Binder, moniker::AbsoluteMoniker, testing::mocks::FakeBinder},
         work_scheduler::{
             WorkScheduler, WORKER_CAPABILITY_PATH, WORK_SCHEDULER_CAPABILITY_PATH,
             WORK_SCHEDULER_CONTROL_CAPABILITY_PATH,

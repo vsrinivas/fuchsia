@@ -21,10 +21,7 @@ fn main() -> Result<(), failure::Error> {
 
     let metadata = std::fs::metadata(&opt.file)?;
     if !metadata.is_file() {
-        return Err(failure::format_err!(
-            "cannot serve non-file {}",
-            opt.file.display()
-        ));
+        return Err(failure::format_err!("cannot serve non-file {}", opt.file.display()));
     }
 
     let address = "[::]:80";

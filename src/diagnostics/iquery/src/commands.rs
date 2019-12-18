@@ -19,11 +19,9 @@ pub async fn find(paths: &[String], recursive: bool) -> Vec<IqueryResult> {
     locations.sort();
     let results = locations.into_iter().map(|location| IqueryResult::new(location));
     if recursive {
-        let futs = results.map(|mut result| {
-            async {
-                result.load().await?;
-                Ok(result)
-            }
+        let futs = results.map(|mut result| async {
+            result.load().await?;
+            Ok(result)
         });
         to_result(join_all(futs).await)
     } else {

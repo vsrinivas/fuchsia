@@ -91,8 +91,7 @@ async fn test_spawn_peer_manager_with_fidl_client_and_mock_profile() -> Result<(
     const REQUESTED_VOLUME: u8 = 0x40;
     const SET_VOLUME: u8 = 0x24;
     const FAKE_PEER_ID: &str = "1234";
-    const LOREM_IPSUM: &str =
-        "Lorem ipsum dolor sit amet,\
+    const LOREM_IPSUM: &str = "Lorem ipsum dolor sit amet,\
          consectetur adipiscing elit. Nunc eget elit cursus ipsum \
          fermentum viverra id vitae lorem. Cras luctus elementum \
          metus vel volutpat. Vestibulum ante ipsum primis in \

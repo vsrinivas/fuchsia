@@ -805,13 +805,11 @@ pub async fn run_archivist(
     let mut events = collector.component_events().unwrap();
 
     let collector_state = state.clone();
-    fasync::spawn(collector.start().then(|e| {
-        async move {
-            let mut state = collector_state.lock().unwrap();
-            component::health().set_unhealthy("Collection loop stopped");
-            inspect_log!(state.log_node, event: "Collection ended", result: format!("{:?}", e));
-            eprintln!("Collection ended with result {:?}", e);
-        }
+    fasync::spawn(collector.start().then(|e| async move {
+        let mut state = collector_state.lock().unwrap();
+        component::health().set_unhealthy("Collection loop stopped");
+        inspect_log!(state.log_node, event: "Collection ended", result: format!("{:?}", e));
+        eprintln!("Collection ended with result {:?}", e);
     }));
 
     collect_own_inspect(&state, self_out_dir)?;

@@ -9,12 +9,7 @@ use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_service;
 use fuchsia_zircon::{self as zx, HandleBased, Task};
 use parking_lot::Mutex;
-use std::{
-    ffi::CStr,
-    fs::File,
-    os::unix::io::AsRawFd,
-    sync::Arc,
-};
+use std::{ffi::CStr, fs::File, os::unix::io::AsRawFd, sync::Arc};
 
 /// An object used for interacting with the shell
 pub struct Pty {
@@ -38,7 +33,8 @@ impl Pty {
     /// shell will not respond to any commands.
     pub async fn spawn(&mut self, window_size: WindowSize) -> Result<(), Error> {
         let spawn_fd = self.try_clone_fd().context("unable to clone pty for shell spawn")?;
-        let process = Pty::launch_shell(&spawn_fd, &cstr!("/boot/bin/sh")).await
+        let process = Pty::launch_shell(&spawn_fd, &cstr!("/boot/bin/sh"))
+            .await
             .context("launch shell process")?;
 
         {
@@ -46,7 +42,8 @@ impl Pty {
             *option = Some(process);
         }
 
-        Pty::set_window_size(&spawn_fd, window_size).await
+        Pty::set_window_size(&spawn_fd, window_size)
+            .await
             .context("unable to set initial window size for shell")?;
 
         Ok(())
@@ -76,9 +73,10 @@ impl Pty {
 
     /// Opens the initial server side of the pty.
     fn open_server_pty() -> Result<File, Error> {
-        let server_conn = connect_to_service::<DeviceMarker>()
-            .context("could not connect to pty service")?;
-        let server_chan = server_conn.into_channel()
+        let server_conn =
+            connect_to_service::<DeviceMarker>().context("could not connect to pty service")?;
+        let server_chan = server_conn
+            .into_channel()
             .or(Err(format_err!("failed to convert pty service into channel")))?;
 
         // Convert the server into a file descriptor.  We need to do this rather than just using
@@ -113,7 +111,9 @@ impl Pty {
             .context("failed to create FIDL channel from zircon channel")?;
 
         let device_proxy = DeviceProxy::new(server_pty_fidl_channel);
-        device_proxy.open_client(0, device_channel).await
+        device_proxy
+            .open_client(0, device_channel)
+            .await
             .context("failed to attach PTY to channel")?;
 
         // convert the client side into a file descriptor. This must be called
@@ -152,8 +152,7 @@ impl Pty {
             .context("failed to create FIDL channel from zircon channel")?;
         let device_proxy = DeviceProxy::new(server_pty_fidl_channel);
 
-        device_proxy.set_window_size(&mut window_size).await
-            .context("Unable to resize window")?;
+        device_proxy.set_window_size(&mut window_size).await.context("Unable to resize window")?;
         Ok(())
     }
 }
@@ -317,5 +316,4 @@ mod tests {
         let _ = pty.spawn(window_size).await;
         pty
     }
-
 }

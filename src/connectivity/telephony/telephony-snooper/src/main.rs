@@ -155,7 +155,7 @@ async fn main() {
                 }
                 Ok(())
             }
-                .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
+            .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
         );
     });
     fs.take_and_serve_directory_handle().expect("ServiceFs failed to serve directory");

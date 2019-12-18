@@ -100,16 +100,13 @@ async fn latest_update_package(
 ) -> Result<fidl_fuchsia_io::DirectoryProxy, Error> {
     let (dir_proxy, dir_server_end) =
         fidl::endpoints::create_proxy().context(ErrorKind::CreateUpdatePackageDirectoryProxy)?;
-    let fut = package_resolver
-        .resolve(
-            &UPDATE_PACKAGE_URL,
-            &mut vec![].into_iter(),
-            &mut UpdatePolicy { fetch_if_absent: true, allow_old_versions: false },
-            dir_server_end,
-        );
-    let status = fut
-        .await
-        .context(ErrorKind::ResolveUpdatePackageFidl)?;
+    let fut = package_resolver.resolve(
+        &UPDATE_PACKAGE_URL,
+        &mut vec![].into_iter(),
+        &mut UpdatePolicy { fetch_if_absent: true, allow_old_versions: false },
+        dir_server_end,
+    );
+    let status = fut.await.context(ErrorKind::ResolveUpdatePackageFidl)?;
     zx::Status::ok(status).context(ErrorKind::ResolveUpdatePackage)?;
     Ok(dir_proxy)
 }

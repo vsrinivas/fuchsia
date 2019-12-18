@@ -59,7 +59,7 @@ fn watch_new_devices<P: AsRef<Path>, E: wlan_dev::DeviceEnv>(
             })
             .err_into())
     }
-        .try_flatten_stream())
+    .try_flatten_stream())
 }
 
 fn new_phy<E: wlan_dev::DeviceEnv>(path: &PathBuf) -> Result<NewPhyDevice, failure::Error> {
@@ -84,8 +84,7 @@ mod tests {
         super::*,
         fidl_fuchsia_wlan_common as fidl_common,
         fidl_fuchsia_wlan_device::{self as fidl_wlan_dev, SupportedPhy},
-        fidl_fuchsia_wlan_mlme as fidl_mlme,
-        fidl_fuchsia_wlan_tap as fidl_wlantap,
+        fidl_fuchsia_wlan_mlme as fidl_mlme, fidl_fuchsia_wlan_tap as fidl_wlantap,
         fuchsia_async::{self as fasync},
         fuchsia_zircon::prelude::*,
         pin_utils::pin_mut,

@@ -62,7 +62,7 @@ rustc_binary("bin") {
 group("tests") {
   testonly = true
   deps = [
+    ":bin($host_toolchain)",
     ":bin_test($host_toolchain)",
-    ":bin($host_toolchain)"
   ]
 }

@@ -108,7 +108,7 @@ async fn discover_characteristics(
             }
             Ok::<(), fidl::Error>(())
         }
-            .unwrap_or_else(|e| eprintln!("Failed to listen for RemoteService events {:?}", e)),
+        .unwrap_or_else(|e| eprintln!("Failed to listen for RemoteService events {:?}", e)),
     );
 
     Ok(chrcs)

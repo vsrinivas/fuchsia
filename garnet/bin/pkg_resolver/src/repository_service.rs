@@ -131,9 +131,9 @@ impl<A: AmberConnect> RepositoryService<A> {
                 }
                 Ok(())
             }
-                .unwrap_or_else(|e: failure::Error| {
-                    fx_log_err!("error running list protocol: {:?}", e)
-                }),
+            .unwrap_or_else(|e: failure::Error| {
+                fx_log_err!("error running list protocol: {:?}", e)
+            }),
         );
     }
 }

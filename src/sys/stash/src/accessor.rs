@@ -164,9 +164,9 @@ impl Accessor {
                 }
                 Ok(())
             }
-                .unwrap_or_else(|e: failure::Error| {
-                    fx_log_err!("error running list prefix interface: {:?}", e)
-                }),
+            .unwrap_or_else(|e: failure::Error| {
+                fx_log_err!("error running list prefix interface: {:?}", e)
+            }),
         );
     }
 
@@ -230,9 +230,9 @@ impl Accessor {
                 }
                 Ok(())
             }
-                .unwrap_or_else(|e: failure::Error| {
-                    fx_log_err!("error running get prefix interface: {:?}", e)
-                }),
+            .unwrap_or_else(|e: failure::Error| {
+                fx_log_err!("error running get prefix interface: {:?}", e)
+            }),
         );
         Ok(())
     }
@@ -466,21 +466,22 @@ mod tests {
                 .unwrap();
         }
 
-        let run_test =
-            |sm: Arc<Mutex<store::StoreManager>>, prefix: String, mut expected: Vec<String>| {
-                async move {
-                    let mut acc = Accessor::new(sm, true, false, "test_client".to_string());
-                    let (list_iterator, server_end) = create_proxy().unwrap();
-                    acc.list_prefix(prefix.to_string(), server_end).await;
+        let run_test = |sm: Arc<Mutex<store::StoreManager>>,
+                        prefix: String,
+                        mut expected: Vec<String>| {
+            async move {
+                let mut acc = Accessor::new(sm, true, false, "test_client".to_string());
+                let (list_iterator, server_end) = create_proxy().unwrap();
+                acc.list_prefix(prefix.to_string(), server_end).await;
 
-                    let actual = drain_stash_iterator(|| list_iterator.get_next()).await;
-                    let mut actual: Vec<String> = actual.iter().map(|li| li.key.clone()).collect();
+                let actual = drain_stash_iterator(|| list_iterator.get_next()).await;
+                let mut actual: Vec<String> = actual.iter().map(|li| li.key.clone()).collect();
 
-                    expected.sort_unstable();
-                    actual.sort_unstable();
-                    assert_eq!(expected, actual);
-                }
-            };
+                expected.sort_unstable();
+                actual.sort_unstable();
+                assert_eq!(expected, actual);
+            }
+        };
 
         run_test(
             sm.clone(),
@@ -530,21 +531,22 @@ mod tests {
                 .unwrap();
         }
 
-        let run_test =
-            |sm: Arc<Mutex<store::StoreManager>>, prefix: String, mut expected: Vec<String>| {
-                async move {
-                    let mut acc = Accessor::new(sm, true, false, "test_client".to_string());
-                    let (list_iterator, server_end) = create_proxy().unwrap();
-                    acc.list_prefix(prefix.to_string(), server_end).await;
+        let run_test = |sm: Arc<Mutex<store::StoreManager>>,
+                        prefix: String,
+                        mut expected: Vec<String>| {
+            async move {
+                let mut acc = Accessor::new(sm, true, false, "test_client".to_string());
+                let (list_iterator, server_end) = create_proxy().unwrap();
+                acc.list_prefix(prefix.to_string(), server_end).await;
 
-                    let actual = drain_stash_iterator(|| list_iterator.get_next()).await;
-                    let mut actual: Vec<String> = actual.iter().map(|li| li.key.clone()).collect();
+                let actual = drain_stash_iterator(|| list_iterator.get_next()).await;
+                let mut actual: Vec<String> = actual.iter().map(|li| li.key.clone()).collect();
 
-                    expected.sort_unstable();
-                    actual.sort_unstable();
-                    assert_eq!(expected, actual);
-                }
-            };
+                expected.sort_unstable();
+                actual.sort_unstable();
+                assert_eq!(expected, actual);
+            }
+        };
 
         run_test(
             sm.clone(),

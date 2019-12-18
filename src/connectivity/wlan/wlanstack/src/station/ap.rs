@@ -78,9 +78,11 @@ async fn serve_fidl_endpoint(sme: &Mutex<Sme>, endpoint: Endpoint) {
             return;
         }
     };
-    let r = stream.try_for_each_concurrent(MAX_CONCURRENT_REQUESTS, move |request| {
-        handle_fidl_request(sme, request)
-    }).await;
+    let r = stream
+        .try_for_each_concurrent(MAX_CONCURRENT_REQUESTS, move |request| {
+            handle_fidl_request(sme, request)
+        })
+        .await;
     if let Err(e) = r {
         error!("Error serving a FIDL client of AP SME: {}", e);
     }

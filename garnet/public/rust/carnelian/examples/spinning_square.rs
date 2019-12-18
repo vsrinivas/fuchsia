@@ -75,7 +75,7 @@ impl SpinningSquareAppAssistant {
                 }
                 Ok(())
             }
-                .unwrap_or_else(|e: failure::Error| eprintln!("{:?}", e)),
+            .unwrap_or_else(|e: failure::Error| eprintln!("{:?}", e)),
         );
     }
 }

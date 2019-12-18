@@ -6,7 +6,7 @@
 //!
 //! At the moment, this crate contains the declaration of various errors
 
-use {rust_icu_sys as sys, std::ffi, std::os, failure::Fail};
+use {failure::Fail, rust_icu_sys as sys, std::ffi, std::os};
 
 /// Represents a Unicode error, resulting from operations of low-level ICU libraries.
 ///
@@ -162,9 +162,7 @@ mod tests {
 
     #[test]
     fn test_error_code() {
-        let error = Error::ok_or_warning(sys::UErrorCode::U_BUFFER_OVERFLOW_ERROR)
-            .err()
-            .unwrap();
+        let error = Error::ok_or_warning(sys::UErrorCode::U_BUFFER_OVERFLOW_ERROR).err().unwrap();
         assert!(error.is_code(sys::UErrorCode::U_BUFFER_OVERFLOW_ERROR));
         assert!(!error.is_preflight_err());
         assert!(!error.is_code(sys::UErrorCode::U_ZERO_ERROR));

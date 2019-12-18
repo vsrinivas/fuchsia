@@ -252,128 +252,117 @@ mod tests {
 
         let env = fs.create_salted_nested_environment("factoryctl_env");
 
-        fasync::spawn(fs.for_each_concurrent(None, |req| {
-            async {
-                match req {
-                    IncomingServices::FactoryItems(stream) => {
-                        stream
-                            .err_into::<Error>()
-                            .try_for_each(|FactoryItemsRequest::Get { extra: _, responder }| {
+        fasync::spawn(fs.for_each_concurrent(None, |req| async {
+            match req {
+                IncomingServices::FactoryItems(stream) => {
+                    stream
+                        .err_into::<Error>()
+                        .try_for_each(
+                            |FactoryItemsRequest::Get { extra: _, responder }| async move {
+                                let vmo = zx::Vmo::create(FACTORY_ITEM_CONTENTS.len() as u64)?;
+                                vmo.write(&FACTORY_ITEM_CONTENTS, 0)?;
+                                responder.send(Some(vmo), FACTORY_ITEM_CONTENTS.len() as u32)?;
+                                Ok(())
+                            },
+                        )
+                        .await
+                        .unwrap();
+                }
+                IncomingServices::CastCredentialsFactoryStoreProvider(stream) => {
+                    stream
+                        .err_into::<Error>()
+                        .try_for_each(
+                            |CastCredentialsFactoryStoreProviderRequest::GetFactoryStore {
+                                 dir,
+                                 control_handle: _,
+                             }| {
                                 async move {
-                                    let vmo = zx::Vmo::create(FACTORY_ITEM_CONTENTS.len() as u64)?;
-                                    vmo.write(&FACTORY_ITEM_CONTENTS, 0)?;
-                                    responder
-                                        .send(Some(vmo), FACTORY_ITEM_CONTENTS.len() as u32)?;
+                                    let cast_proxy = start_test_dir(
+                                        CAST_TXT_FILE_NAME,
+                                        CAST_TXT_FILE_CONTENTS,
+                                        CAST_BIN_FILE_NAME,
+                                        CAST_BIN_FILE_CONTENTS,
+                                    )?;
+                                    cast_proxy
+                                        .clone(OPEN_RIGHT_READABLE, dir.into_channel().into())?;
                                     Ok(())
                                 }
-                            })
-                            .await
-                            .unwrap();
-                    }
-                    IncomingServices::CastCredentialsFactoryStoreProvider(stream) => {
-                        stream
-                            .err_into::<Error>()
-                            .try_for_each(
-                                |CastCredentialsFactoryStoreProviderRequest::GetFactoryStore {
-                                     dir,
-                                     control_handle: _,
-                                 }| {
-                                    async move {
-                                        let cast_proxy = start_test_dir(
-                                            CAST_TXT_FILE_NAME,
-                                            CAST_TXT_FILE_CONTENTS,
-                                            CAST_BIN_FILE_NAME,
-                                            CAST_BIN_FILE_CONTENTS,
-                                        )?;
-                                        cast_proxy.clone(
-                                            OPEN_RIGHT_READABLE,
-                                            dir.into_channel().into(),
-                                        )?;
-                                        Ok(())
-                                    }
-                                },
-                            )
-                            .await
-                            .unwrap();
-                    }
-                    IncomingServices::MiscFactoryStoreProvider(stream) => {
-                        stream
-                            .err_into::<Error>()
-                            .try_for_each(
-                                |MiscFactoryStoreProviderRequest::GetFactoryStore {
-                                     dir,
-                                     control_handle: _,
-                                 }| {
-                                    async move {
-                                        let misc_proxy = start_test_dir(
-                                            MISC_TXT_FILE_NAME,
-                                            MISC_TXT_FILE_CONTENTS,
-                                            MISC_BIN_FILE_NAME,
-                                            MISC_BIN_FILE_CONTENTS,
-                                        )?;
-                                        misc_proxy.clone(
-                                            OPEN_RIGHT_READABLE,
-                                            dir.into_channel().into(),
-                                        )?;
-                                        Ok(())
-                                    }
-                                },
-                            )
-                            .await
-                            .unwrap();
-                    }
-                    IncomingServices::PlayReadyFactoryStoreProvider(stream) => {
-                        stream
-                            .err_into::<Error>()
-                            .try_for_each(
-                                |PlayReadyFactoryStoreProviderRequest::GetFactoryStore {
-                                     dir,
-                                     control_handle: _,
-                                 }| {
-                                    async move {
-                                        let playready_proxy = start_test_dir(
-                                            PLAYREADY_TXT_FILE_NAME,
-                                            PLAYREADY_TXT_FILE_CONTENTS,
-                                            PLAYREADY_BIN_FILE_NAME,
-                                            PLAYREADY_BIN_FILE_CONTENTS,
-                                        )?;
-                                        playready_proxy.clone(
-                                            OPEN_RIGHT_READABLE,
-                                            dir.into_channel().into(),
-                                        )?;
-                                        Ok(())
-                                    }
-                                },
-                            )
-                            .await
-                            .unwrap();
-                    }
-                    IncomingServices::WidevineFactoryStoreProvider(stream) => {
-                        stream
-                            .err_into::<Error>()
-                            .try_for_each(
-                                |WidevineFactoryStoreProviderRequest::GetFactoryStore {
-                                     dir,
-                                     control_handle: _,
-                                 }| {
-                                    async move {
-                                        let widevine_proxy = start_test_dir(
-                                            WIDEVINE_TXT_FILE_NAME,
-                                            WIDEVINE_TXT_FILE_CONTENTS,
-                                            WIDEVINE_BIN_FILE_NAME,
-                                            WIDEVINE_BIN_FILE_CONTENTS,
-                                        )?;
-                                        widevine_proxy.clone(
-                                            OPEN_RIGHT_READABLE,
-                                            dir.into_channel().into(),
-                                        )?;
-                                        Ok(())
-                                    }
-                                },
-                            )
-                            .await
-                            .unwrap();
-                    }
+                            },
+                        )
+                        .await
+                        .unwrap();
+                }
+                IncomingServices::MiscFactoryStoreProvider(stream) => {
+                    stream
+                        .err_into::<Error>()
+                        .try_for_each(
+                            |MiscFactoryStoreProviderRequest::GetFactoryStore {
+                                 dir,
+                                 control_handle: _,
+                             }| {
+                                async move {
+                                    let misc_proxy = start_test_dir(
+                                        MISC_TXT_FILE_NAME,
+                                        MISC_TXT_FILE_CONTENTS,
+                                        MISC_BIN_FILE_NAME,
+                                        MISC_BIN_FILE_CONTENTS,
+                                    )?;
+                                    misc_proxy
+                                        .clone(OPEN_RIGHT_READABLE, dir.into_channel().into())?;
+                                    Ok(())
+                                }
+                            },
+                        )
+                        .await
+                        .unwrap();
+                }
+                IncomingServices::PlayReadyFactoryStoreProvider(stream) => {
+                    stream
+                        .err_into::<Error>()
+                        .try_for_each(
+                            |PlayReadyFactoryStoreProviderRequest::GetFactoryStore {
+                                 dir,
+                                 control_handle: _,
+                             }| {
+                                async move {
+                                    let playready_proxy = start_test_dir(
+                                        PLAYREADY_TXT_FILE_NAME,
+                                        PLAYREADY_TXT_FILE_CONTENTS,
+                                        PLAYREADY_BIN_FILE_NAME,
+                                        PLAYREADY_BIN_FILE_CONTENTS,
+                                    )?;
+                                    playready_proxy
+                                        .clone(OPEN_RIGHT_READABLE, dir.into_channel().into())?;
+                                    Ok(())
+                                }
+                            },
+                        )
+                        .await
+                        .unwrap();
+                }
+                IncomingServices::WidevineFactoryStoreProvider(stream) => {
+                    stream
+                        .err_into::<Error>()
+                        .try_for_each(
+                            |WidevineFactoryStoreProviderRequest::GetFactoryStore {
+                                 dir,
+                                 control_handle: _,
+                             }| {
+                                async move {
+                                    let widevine_proxy = start_test_dir(
+                                        WIDEVINE_TXT_FILE_NAME,
+                                        WIDEVINE_TXT_FILE_CONTENTS,
+                                        WIDEVINE_BIN_FILE_NAME,
+                                        WIDEVINE_BIN_FILE_CONTENTS,
+                                    )?;
+                                    widevine_proxy
+                                        .clone(OPEN_RIGHT_READABLE, dir.into_channel().into())?;
+                                    Ok(())
+                                }
+                            },
+                        )
+                        .await
+                        .unwrap();
                 }
             }
         }));

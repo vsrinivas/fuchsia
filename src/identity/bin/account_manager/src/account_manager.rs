@@ -482,11 +482,9 @@ mod tests {
         let data_dir = TempDir::new().unwrap();
         request_stream_test(
             AccountManager::new(data_dir.path().into(), &AUTH_PROVIDER_CONFIG, &inspector).unwrap(),
-            |proxy, _| {
-                async move {
-                    assert_eq!(proxy.get_account_ids().await?.len(), 0);
-                    Ok(())
-                }
+            |proxy, _| async move {
+                assert_eq!(proxy.get_account_ids().await?.len(), 0);
+                Ok(())
             },
         );
     }
@@ -496,15 +494,13 @@ mod tests {
         let data_dir = TempDir::new().unwrap();
         request_stream_test(
             create_accounts(vec![], data_dir.path(), &Inspector::new()),
-            |proxy, _test_object| {
-                async move {
-                    assert_eq!(proxy.get_account_ids().await?.len(), 0);
-                    assert_eq!(
-                        proxy.get_account_auth_states(&mut TEST_SCENARIO.clone()).await?,
-                        Err(ApiError::UnsupportedOperation)
-                    );
-                    Ok(())
-                }
+            |proxy, _test_object| async move {
+                assert_eq!(proxy.get_account_ids().await?.len(), 0);
+                assert_eq!(
+                    proxy.get_account_auth_states(&mut TEST_SCENARIO.clone()).await?,
+                    Err(ApiError::UnsupportedOperation)
+                );
+                Ok(())
             },
         );
     }
@@ -515,22 +511,20 @@ mod tests {
         let inspector = Inspector::new();
         request_stream_test(
             create_accounts(vec![], data_dir.path(), &inspector),
-            |proxy, _test_object| {
-                async move {
-                    assert_eq!(proxy.get_account_ids().await?.len(), 0);
-                    assert_inspect_tree!(inspector, root: contains {
-                        accounts: {
-                            active: 0 as u64,
-                            total: 0 as u64,
-                        },
-                        listeners: {
-                            active: 0 as u64,
-                            events: 0 as u64,
-                            total_opened: 0 as u64,
-                        },
-                    });
-                    Ok(())
-                }
+            |proxy, _test_object| async move {
+                assert_eq!(proxy.get_account_ids().await?.len(), 0);
+                assert_inspect_tree!(inspector, root: contains {
+                    accounts: {
+                        active: 0 as u64,
+                        total: 0 as u64,
+                    },
+                    listeners: {
+                        active: 0 as u64,
+                        events: 0 as u64,
+                        total_opened: 0 as u64,
+                    },
+                });
+                Ok(())
             },
         );
     }
@@ -634,15 +628,13 @@ mod tests {
         let inspector = Inspector::new();
         request_stream_test(
             create_accounts(vec![1, 2], data_dir.path(), &inspector),
-            |proxy, _| {
-                async move {
-                    let (client_end, _) = create_request_stream::<AccountListenerMarker>().unwrap();
-                    assert_eq!(
-                        proxy.register_account_listener(client_end, &mut options).await?,
-                        Err(ApiError::InvalidRequest)
-                    );
-                    Ok(())
-                }
+            |proxy, _| async move {
+                let (client_end, _) = create_request_stream::<AccountListenerMarker>().unwrap();
+                assert_eq!(
+                    proxy.register_account_listener(client_end, &mut options).await?,
+                    Err(ApiError::InvalidRequest)
+                );
+                Ok(())
             },
         );
     }
@@ -662,15 +654,13 @@ mod tests {
         let inspector = Inspector::new();
         request_stream_test(
             create_accounts(vec![1, 2], data_dir.path(), &inspector),
-            |proxy, _| {
-                async move {
-                    let (client_end, _) = create_request_stream::<AccountListenerMarker>().unwrap();
-                    assert_eq!(
-                        proxy.register_account_listener(client_end, &mut options).await?,
-                        Err(ApiError::UnsupportedOperation)
-                    );
-                    Ok(())
-                }
+            |proxy, _| async move {
+                let (client_end, _) = create_request_stream::<AccountListenerMarker>().unwrap();
+                assert_eq!(
+                    proxy.register_account_listener(client_end, &mut options).await?,
+                    Err(ApiError::UnsupportedOperation)
+                );
+                Ok(())
             },
         );
     }
@@ -691,15 +681,13 @@ mod tests {
         let inspector = Inspector::new();
         request_stream_test(
             create_accounts(vec![1, 2], data_dir.path(), &inspector),
-            |proxy, _| {
-                async move {
-                    let (client_end, _) = create_request_stream::<AccountListenerMarker>().unwrap();
-                    assert_eq!(
-                        proxy.register_account_listener(client_end, &mut options).await?,
-                        Err(ApiError::UnsupportedOperation)
-                    );
-                    Ok(())
-                }
+            |proxy, _| async move {
+                let (client_end, _) = create_request_stream::<AccountListenerMarker>().unwrap();
+                assert_eq!(
+                    proxy.register_account_listener(client_end, &mut options).await?,
+                    Err(ApiError::UnsupportedOperation)
+                );
+                Ok(())
             },
         );
     }

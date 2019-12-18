@@ -85,9 +85,9 @@ impl SuggestionsService {
                 }
                 Ok(())
             }
-                .unwrap_or_else(|e: Error| {
-                    fx_log_err!("error running suggestions iterator server: {}", e);
-                }),
+            .unwrap_or_else(|e: Error| {
+                fx_log_err!("error running suggestions iterator server: {}", e);
+            }),
         );
     }
 }
@@ -119,7 +119,7 @@ mod tests {
                 let mut service = SuggestionsService::new(context_store, suggestions_manager);
                 service.handle_client(request_stream).await
             }
-                .unwrap_or_else(|e: Error| eprintln!("error running server {}", e)),
+            .unwrap_or_else(|e: Error| eprintln!("error running server {}", e)),
         );
         Ok(client)
     }

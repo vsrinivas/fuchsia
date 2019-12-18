@@ -80,7 +80,8 @@ impl NetstackFacade {
                 match proxy.get_interface_info(id).await.context("failed to get interface info")? {
                     Ok(info) => Ok(CustomInterfaceInfo::new(&info)),
                     Err(e) => {
-                        let err_msg = format!("Unable to get interface info for id {:?}: {:?}", id, e);
+                        let err_msg =
+                            format!("Unable to get interface info for id {:?}: {:?}", id, e);
                         fx_err_and_bail!(&with_line!(tag), err_msg)
                     }
                 }

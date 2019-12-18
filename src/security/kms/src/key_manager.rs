@@ -185,13 +185,11 @@ impl KeyManager {
                 }
                 Ok(())
             }
-                .and_then(|_| {
-                    async move {
-                        Self::clean_up(key_map_ref, &key_name);
-                        Ok(())
-                    }
-                })
-                .unwrap_or_else(|e: fidl::Error| error!("Error running AsymmetricKey {:?}", e)),
+            .and_then(|_| async move {
+                Self::clean_up(key_map_ref, &key_name);
+                Ok(())
+            })
+            .unwrap_or_else(|e: fidl::Error| error!("Error running AsymmetricKey {:?}", e)),
         );
         Ok(())
     }

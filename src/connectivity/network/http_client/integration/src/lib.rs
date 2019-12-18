@@ -7,8 +7,7 @@
 use {
     failure::{Error, ResultExt},
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_net_oldhttp as oldhttp,
-    fuchsia_async as fasync,
+    fidl_fuchsia_net_oldhttp as oldhttp, fuchsia_async as fasync,
     fuchsia_component::client::{launch, launcher},
     fuchsia_component::fuchsia_single_component_package_url,
     rouille::{self, router, Request, Response},

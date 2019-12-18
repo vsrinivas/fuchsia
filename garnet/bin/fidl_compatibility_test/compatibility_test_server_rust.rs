@@ -277,13 +277,12 @@ fn run_test() -> Result<(), Error> {
     fs.dir("svc").add_fidl_service(|stream| stream);
     fs.take_and_serve_directory_handle().context("Error serving directory handle")?;
 
-    let serve_fut = fs.for_each_concurrent(None /* max concurrent connections */, |stream| {
-        async {
+    let serve_fut =
+        fs.for_each_concurrent(None /* max concurrent connections */, |stream| async {
             if let Err(e) = echo_server(stream, &launcher).await {
                 eprintln!("Closing echo server {:?}", e);
             }
-        }
-    });
+        });
 
     executor.run_singlethreaded(serve_fut);
     Ok(())

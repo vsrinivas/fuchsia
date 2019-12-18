@@ -71,8 +71,7 @@ async fn start_advertising(
         .start_advertising(params, handle)
         .map_err(|e| e.context("FIDL error sending command").into())
         .on_timeout(test_timeout().after_now(), move || Err(err_msg("timed out")));
-    fut.await
-        .map_err(|e| e.context("Could not start advertising").into())
+    fut.await.map_err(|e| e.context("Could not start advertising").into())
 }
 
 fn default_parameters() -> AdvertisingParameters {

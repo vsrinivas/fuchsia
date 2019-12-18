@@ -141,10 +141,8 @@ pub async fn readdir(dir: &DirectoryProxy) -> Result<Vec<DirEntry>, Error> {
     let mut entries = vec![];
 
     loop {
-        let (status, buf) = dir
-            .read_dirents(MAX_BUF)
-            .await
-            .map_err(|e| Error::Fidl("read_dirents", e))?;
+        let (status, buf) =
+            dir.read_dirents(MAX_BUF).await.map_err(|e| Error::Fidl("read_dirents", e))?;
         zx::Status::ok(status).map_err(Error::ReadDir)?;
 
         if buf.is_empty() {
@@ -257,8 +255,7 @@ fn remove_dir_contents(dir: DirectoryProxy) -> BoxFuture<'static, Result<(), Err
                 }
                 _ => {}
             }
-            let s =
-                dir.unlink(&dirent.name).await.map_err(|e| Error::Fidl("unlink", e))?;
+            let s = dir.unlink(&dirent.name).await.map_err(|e| Error::Fidl("unlink", e))?;
             zx::Status::ok(s).map_err(Error::Unlink)?;
         }
         Ok(())
@@ -498,8 +495,7 @@ mod tests {
             let res = remove_dir_recursive(&dir, "baddir").await;
             let res = res.expect_err("remove_dir did not fail");
             match res {
-                Error::Fidl("read_dirents", fidl_error)
-                    if fidl_error.is_closed() => {}
+                Error::Fidl("read_dirents", fidl_error) if fidl_error.is_closed() => {}
                 _ => panic!("unexpected error {:?}", res),
             }
         }

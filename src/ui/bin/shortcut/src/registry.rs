@@ -193,23 +193,21 @@ impl RegistryStore {
                 // arguments are not currently supported
                 let (key, phase, modifiers) = (event.key, event.phase, event.modifiers);
                 let matched_modifiers = self.matched_modifiers;
-                move |was_handled, registry| {
-                    async move {
-                        let event = ui_input::KeyEvent {
-                            key,
-                            phase,
-                            modifiers,
-                            semantic_key: None,
-                            physical_key: None,
-                        };
-                        let handled = handle(registry, event, matched_modifiers)
-                            .await
-                            .unwrap_or_else(|e: failure::Error| {
-                                fx_log_err!("shortcut handle error: {:?}", e);
-                                false
-                            });
-                        handled || was_handled
-                    }
+                move |was_handled, registry| async move {
+                    let event = ui_input::KeyEvent {
+                        key,
+                        phase,
+                        modifiers,
+                        semantic_key: None,
+                        physical_key: None,
+                    };
+                    let handled = handle(registry, event, matched_modifiers).await.unwrap_or_else(
+                        |e: failure::Error| {
+                            fx_log_err!("shortcut handle error: {:?}", e);
+                            false
+                        },
+                    );
+                    handled || was_handled
                 }
             })
             .await;

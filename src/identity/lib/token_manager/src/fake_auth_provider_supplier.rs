@@ -207,40 +207,32 @@ mod tests {
         // Non existing auth provider
         assert!(auth_provider_supplier.get_auth_provider("myspace").await.is_err());
 
-        auth_provider_supplier.add_auth_provider("hooli", |mut stream| {
-            async move {
-                match stream.try_next().await? {
-                    Some(AuthProviderRequest::RevokeAppOrPersistentCredential {
-                        responder,
-                        credential,
-                    }) => {
-                        assert_eq!(credential, "HOOLI_CREDENTIAL");
-                        responder.send(AuthProviderStatus::BadRequest)?;
-                    }
-                    _ => panic!("Unexpected message received"),
+        auth_provider_supplier.add_auth_provider("hooli", |mut stream| async move {
+            match stream.try_next().await? {
+                Some(AuthProviderRequest::RevokeAppOrPersistentCredential {
+                    responder,
+                    credential,
+                }) => {
+                    assert_eq!(credential, "HOOLI_CREDENTIAL");
+                    responder.send(AuthProviderStatus::BadRequest)?;
                 }
-                assert!(stream.try_next().await?.is_none());
-                Ok(())
+                _ => panic!("Unexpected message received"),
             }
+            assert!(stream.try_next().await?.is_none());
+            Ok(())
         });
 
-        auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| {
-            async move {
-                match stream.try_next().await? {
-                    Some(AuthProviderRequest::GetAppIdToken {
-                        responder,
-                        credential,
-                        audience,
-                    }) => {
-                        assert_eq!(credential, "PIED_PIPER_CREDENTIAL");
-                        assert!(audience.is_none());
-                        responder.send(AuthProviderStatus::Ok, None)?;
-                    }
-                    _ => panic!("Unexpected message received"),
+        auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| async move {
+            match stream.try_next().await? {
+                Some(AuthProviderRequest::GetAppIdToken { responder, credential, audience }) => {
+                    assert_eq!(credential, "PIED_PIPER_CREDENTIAL");
+                    assert!(audience.is_none());
+                    responder.send(AuthProviderStatus::Ok, None)?;
                 }
-                assert!(stream.try_next().await?.is_none());
-                Ok(())
+                _ => panic!("Unexpected message received"),
             }
+            assert!(stream.try_next().await?.is_none());
+            Ok(())
         });
 
         let auth_provider_supplier_clone = Arc::clone(&auth_provider_supplier);
@@ -279,68 +271,55 @@ mod tests {
     async fn multiple_protocols_test() {
         let auth_provider_supplier = FakeAuthProviderSupplier::new();
 
-        auth_provider_supplier.add_auth_provider("hooli", |mut stream| {
-            async move {
-                match stream.try_next().await? {
-                    Some(AuthProviderRequest::RevokeAppOrPersistentCredential {
-                        responder,
-                        ..
-                    }) => {
-                        responder.send(AuthProviderStatus::BadRequest)?;
-                    }
-                    _ => panic!("Unexpected message received"),
+        auth_provider_supplier.add_auth_provider("hooli", |mut stream| async move {
+            match stream.try_next().await? {
+                Some(AuthProviderRequest::RevokeAppOrPersistentCredential {
+                    responder, ..
+                }) => {
+                    responder.send(AuthProviderStatus::BadRequest)?;
                 }
-                assert!(stream.try_next().await?.is_none());
-                Ok(())
+                _ => panic!("Unexpected message received"),
             }
+            assert!(stream.try_next().await?.is_none());
+            Ok(())
         });
 
-        auth_provider_supplier.add_oauth("hooli", |mut stream| {
-            async move {
-                match stream.try_next().await? {
-                    Some(OauthRequest::CreateRefreshToken { responder, .. }) => {
-                        responder.send(&mut Err(
-                            fidl_fuchsia_identity_external::Error::InvalidRequest,
-                        ))?;
-                    }
-                    _ => panic!("Unexpected message received"),
+        auth_provider_supplier.add_oauth("hooli", |mut stream| async move {
+            match stream.try_next().await? {
+                Some(OauthRequest::CreateRefreshToken { responder, .. }) => {
+                    responder
+                        .send(&mut Err(fidl_fuchsia_identity_external::Error::InvalidRequest))?;
                 }
-                assert!(stream.try_next().await?.is_none());
-                Ok(())
+                _ => panic!("Unexpected message received"),
             }
+            assert!(stream.try_next().await?.is_none());
+            Ok(())
         });
 
-        auth_provider_supplier.add_oauth_open_id_connect("hooli", |mut stream| {
-            async move {
-                match stream.try_next().await? {
-                    Some(OauthOpenIdConnectRequest::GetIdTokenFromRefreshToken {
-                        responder,
-                        ..
-                    }) => {
-                        responder.send(&mut Err(
-                            fidl_fuchsia_identity_external::Error::InvalidRequest,
-                        ))?;
-                    }
-                    _ => panic!("Unexpected message received"),
+        auth_provider_supplier.add_oauth_open_id_connect("hooli", |mut stream| async move {
+            match stream.try_next().await? {
+                Some(OauthOpenIdConnectRequest::GetIdTokenFromRefreshToken {
+                    responder, ..
+                }) => {
+                    responder
+                        .send(&mut Err(fidl_fuchsia_identity_external::Error::InvalidRequest))?;
                 }
-                assert!(stream.try_next().await?.is_none());
-                Ok(())
+                _ => panic!("Unexpected message received"),
             }
+            assert!(stream.try_next().await?.is_none());
+            Ok(())
         });
 
-        auth_provider_supplier.add_open_id_connect("hooli", |mut stream| {
-            async move {
-                match stream.try_next().await? {
-                    Some(OpenIdConnectRequest::RevokeIdToken { responder, .. }) => {
-                        responder.send(&mut Err(
-                            fidl_fuchsia_identity_external::Error::InvalidRequest,
-                        ))?;
-                    }
-                    _ => panic!("Unexpected message received"),
+        auth_provider_supplier.add_open_id_connect("hooli", |mut stream| async move {
+            match stream.try_next().await? {
+                Some(OpenIdConnectRequest::RevokeIdToken { responder, .. }) => {
+                    responder
+                        .send(&mut Err(fidl_fuchsia_identity_external::Error::InvalidRequest))?;
                 }
-                assert!(stream.try_next().await?.is_none());
-                Ok(())
+                _ => panic!("Unexpected message received"),
             }
+            assert!(stream.try_next().await?.is_none());
+            Ok(())
         });
 
         let client_fn = async {

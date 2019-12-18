@@ -63,12 +63,10 @@ async fn main() -> Result<(), Error> {
     let child_app = AppBuilder::new(CHILD_URL).spawn(env.launcher())?;
 
     // spawn server to respond to child component requests
-    fasync::spawn(fs.for_each_concurrent(None, |req| {
-        async {
-            match req {
-                Services::Exposed(stream) => echo_exposed_server(stream).await,
-                Services::Hidden(stream) => echo_hidden_server(stream).await,
-            }
+    fasync::spawn(fs.for_each_concurrent(None, |req| async {
+        match req {
+            Services::Exposed(stream) => echo_exposed_server(stream).await,
+            Services::Hidden(stream) => echo_hidden_server(stream).await,
         }
     }));
 
@@ -82,7 +80,9 @@ async fn main() -> Result<(), Error> {
 
     // wait for middle component to exit
     let mut component_stream = child_app.controller().take_event_stream();
-    match component_stream.next().await
+    match component_stream
+        .next()
+        .await
         .expect("component event stream ended before termination event")?
     {
         ComponentControllerEvent::OnDirectoryReady {} => {

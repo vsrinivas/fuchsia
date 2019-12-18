@@ -179,13 +179,11 @@ impl Persona {
         })?;
         self.token_manager
             .task_group()
-            .spawn(|cancel| {
-                async move {
-                    token_manager_clone
-                        .handle_requests_from_stream(&token_manager_context, stream, cancel)
-                        .await
-                        .unwrap_or_else(|e| error!("Error handling TokenManager channel {:?}", e))
-                }
+            .spawn(|cancel| async move {
+                token_manager_clone
+                    .handle_requests_from_stream(&token_manager_context, stream, cancel)
+                    .await
+                    .unwrap_or_else(|e| error!("Error handling TokenManager channel {:?}", e))
             })
             .await
             .map_err(|_| ApiError::RemovalInProgress)?;
@@ -205,13 +203,11 @@ impl Persona {
         })?;
         self.key_manager
             .task_group()
-            .spawn(|cancel| {
-                async move {
-                    key_manager_clone
-                        .handle_requests_from_stream(&key_manager_context, stream, cancel)
-                        .await
-                        .unwrap_or_else(|e| error!("Error handling KeyManager channel {:?}", e))
-                }
+            .spawn(|cancel| async move {
+                key_manager_clone
+                    .handle_requests_from_stream(&key_manager_context, stream, cancel)
+                    .await
+                    .unwrap_or_else(|e| error!("Error handling KeyManager channel {:?}", e))
             })
             .await
             .map_err(|_| ApiError::RemovalInProgress)?;
@@ -298,15 +294,13 @@ mod tests {
 
             let task_group = TaskGroup::new();
             task_group
-                .spawn(|cancel| {
-                    async move {
-                        test_object
-                            .handle_requests_from_stream(&persona_context, request_stream, cancel)
-                            .await
-                            .unwrap_or_else(|err| {
-                                panic!("Fatal error handling test request: {:?}", err)
-                            });
-                    }
+                .spawn(|cancel| async move {
+                    test_object
+                        .handle_requests_from_stream(&persona_context, request_stream, cancel)
+                        .await
+                        .unwrap_or_else(|err| {
+                            panic!("Fatal error handling test request: {:?}", err)
+                        });
                 })
                 .await
                 .expect("Unable to spawn task");
@@ -335,14 +329,12 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_get_auth_state() {
         let mut test = Test::new();
-        test.run(test.create_persona(), |proxy| {
-            async move {
-                assert_eq!(
-                    proxy.get_auth_state(&mut DEFAULT_SCENARIO.clone()).await?,
-                    Err(ApiError::UnsupportedOperation)
-                );
-                Ok(())
-            }
+        test.run(test.create_persona(), |proxy| async move {
+            assert_eq!(
+                proxy.get_auth_state(&mut DEFAULT_SCENARIO.clone()).await?,
+                Err(ApiError::UnsupportedOperation)
+            );
+            Ok(())
         })
         .await;
     }

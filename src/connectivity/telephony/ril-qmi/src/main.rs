@@ -129,7 +129,8 @@ impl FrilService {
             };
             stream
                 .try_for_each(move |req| Self::handle_request(client.clone(), req))
-                .unwrap_or_else(|e| fx_log_err!("Error running {:?}", e)).await
+                .unwrap_or_else(|e| fx_log_err!("Error running {:?}", e))
+                .await
         };
         fasync::spawn(server);
     }
@@ -165,10 +166,12 @@ impl FrilService {
                 );
                 let (server_chan, client_chan) = zx::Channel::create().unwrap();
                 let server_end = ServerEnd::<NetworkConnectionMarker>::new(server_chan.into());
-                client.set_data_connection(client::Connection {
-                    pkt_handle: packet.packet_data_handle,
-                    conn: server_end,
-                }).await;
+                client
+                    .set_data_connection(client::Connection {
+                        pkt_handle: packet.packet_data_handle,
+                        conn: server_end,
+                    })
+                    .await;
                 let client_end = ClientEnd::<NetworkConnectionMarker>::new(client_chan.into());
                 responder.send(&mut Ok(client_end))?
             }

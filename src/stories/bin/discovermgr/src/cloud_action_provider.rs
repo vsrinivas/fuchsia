@@ -88,7 +88,8 @@ async fn get_actions_http(url: &str) -> Result<Vec<Action>, Error> {
     let device_name = name_provider.get_device_name().await?.map_err(zx::Status::from_raw)?;
     let http_headers = get_discover_cloud_http_headers(&device_name).await?;
     // Fetch the body and parse, returning error messages on failure
-    http_get(url, http_headers).await
+    http_get(url, http_headers)
+        .await
         .or_else(|_| {
             fx_log_err!("Unable to fetch actions from cloud - ({})", url);
             Err(failure::err_msg(format!("Unable to fetch actions from cloud ({})", url)))

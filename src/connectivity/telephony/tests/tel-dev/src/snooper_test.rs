@@ -13,21 +13,12 @@ use {
 
 // TODO(jiamingw): let `fx format-code` skip the following part
 pub const QMI_PATH: &str = "class/qmi-transport";
-pub const QMI_IMEI_REQ: &[u8; 13] = &[
-      1,  12,   0,   0,   2,   1,   0,   1,
-      0,  37,   0,   0,   0];
+pub const QMI_IMEI_REQ: &[u8; 13] = &[1, 12, 0, 0, 2, 1, 0, 1, 0, 37, 0, 0, 0];
 pub const QMI_IMEI_RESP: &[u8; 42] = &[
-      1,  41,   0, 128,   2,   1,   2,   1,
-      0,  37,   0,  29,   0,   2,   4,   0,
-      0,   0,   0,   0,  16,   1,   0,  48,
-     17,  15,   0,  51,  53,  57,  50,  54,
-     48,  48,  56,  48,  49,  54,  56,  51,
-     53,  49
+    1, 41, 0, 128, 2, 1, 2, 1, 0, 37, 0, 29, 0, 2, 4, 0, 0, 0, 0, 0, 16, 1, 0, 48, 17, 15, 0, 51,
+    53, 57, 50, 54, 48, 48, 56, 48, 49, 54, 56, 51, 53, 49,
 ];
-pub const QMI_PERIO_EVENT: &[u8; 12] = &[
-      1,  11,   0, 128,   0,   0,   2,   0,
-     39,   0,   0,   0
-];
+pub const QMI_PERIO_EVENT: &[u8; 12] = &[1, 11, 0, 128, 0, 0, 2, 0, 39, 0, 0, 0];
 pub const SNOOPER_TEST_TIMEOUT: i64 = 45_000_000_000;
 pub const SNOOPER_CONNECT_TIMEOUT: i64 = 100_000_000;
 
@@ -92,10 +83,9 @@ pub async fn validate_snoop_result<'a>(args: ValidateSnoopResultArgs<'a>) -> Res
     for mut snoop_event_stream in args.snoop_event_stream_vec {
         let timeout_err = Err(err_msg("validate_snoop_result: snoop client get msg time out"));
         let mut snoop_qmi_msg_vec = read_next_msg_from_snoop_stream(&mut snoop_event_stream)
-            .on_timeout(
-                zx::Duration::from_nanos(SNOOPER_TEST_TIMEOUT).after_now(),
-                move || timeout_err,
-            )
+            .on_timeout(zx::Duration::from_nanos(SNOOPER_TEST_TIMEOUT).after_now(), move || {
+                timeout_err
+            })
             .await?;
         component_test::qmi_vec_resize(&mut snoop_qmi_msg_vec)?;
         if !component_test::is_equal_vec(&snoop_qmi_msg_vec, &src_msg_vec[0]) {

@@ -24,7 +24,6 @@ struct InnerProfileServerFacade {
 
     /// Service IDs currently active on the Profile Server Proxy
     service_ids: Vec<u64>,
-
 }
 
 /// Perform Profile Server operations.
@@ -41,7 +40,7 @@ impl ProfileServerFacade {
             inner: RwLock::new(InnerProfileServerFacade {
                 profile_server_proxy: None,
                 service_ids: Vec::new(),
-                }),
+            }),
         }
     }
 
@@ -538,7 +537,9 @@ impl ProfileServerFacade {
 
         let (status, service_id) = match &self.inner.read().profile_server_proxy {
             Some(server) => {
-                server.add_service(&mut service_def, SecurityLevel::EncryptionOptional, false).await?
+                server
+                    .add_service(&mut service_def, SecurityLevel::EncryptionOptional, false)
+                    .await?
             }
             None => fx_err_and_bail!(&with_line!(tag), "No Server Proxy created."),
         };
@@ -562,8 +563,8 @@ impl ProfileServerFacade {
         match &self.inner.read().profile_server_proxy {
             Some(server) => {
                 let _result = server.remove_service(service_id);
-            },
-            None => fx_err_and_bail!(&with_line!(tag), "No profile proxy set")
+            }
+            None => fx_err_and_bail!(&with_line!(tag), "No profile proxy set"),
         };
         Ok(())
     }
@@ -669,8 +670,8 @@ impl ProfileServerFacade {
                 for id in &self.inner.read().service_ids {
                     let _result = server.remove_service(*id);
                 }
-            },
-            None => fx_err_and_bail!(&with_line!(tag), "No profile proxy set")
+            }
+            None => fx_err_and_bail!(&with_line!(tag), "No profile proxy set"),
         };
         self.inner.write().service_ids.clear();
         self.inner.write().profile_server_proxy = None;

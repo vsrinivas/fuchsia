@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use crate::ast::ServiceSet;
+#[cfg(test)]
+use crate::tests;
 use failure::Error;
 use std::env;
 use std::fs;
-#[cfg(test)]
-use crate::tests;
 
 mod ast;
 mod codegen;

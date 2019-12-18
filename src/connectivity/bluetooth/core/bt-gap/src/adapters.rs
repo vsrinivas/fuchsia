@@ -33,7 +33,8 @@ pub fn watch_hosts() -> impl Stream<Item = Result<AdapterEvent, Error>> {
             .await
             .expect("Cannot open vfs watcher for bt-host device path");
         watcher.try_filter_map(as_adapter_msg).err_into()
-    }.flatten_stream()
+    }
+    .flatten_stream()
 }
 
 async fn as_adapter_msg(msg: WatchMessage) -> Result<Option<AdapterEvent>, io::Error> {

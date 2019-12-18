@@ -28,9 +28,7 @@ rustc_library("pkgfs") {
 
   # FIXME(42452) this is a test-only dependency, but it must be listed here or
   # the non-test library fails to link.
-  deps += [
-    "//src/storage/ramdevice-client",
-  ]
+  deps += [ "//src/storage/ramdevice-client" ]
 
   test_deps = [
     "//garnet/lib/rust/fuchsia_pkg_testing",

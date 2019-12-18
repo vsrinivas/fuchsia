@@ -184,7 +184,7 @@ impl ImeService {
                 }
                 Ok(())
             }
-                .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
+            .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
         );
     }
 
@@ -238,7 +238,7 @@ impl ImeService {
                 }
                 Ok(())
             }
-                .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
+            .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
         );
     }
 

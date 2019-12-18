@@ -86,42 +86,38 @@ mod test {
 
     #[fasync::run_until_stalled(test)]
     async fn get_id_token_from_refresh_token_test() {
-        run_proxy_test(|proxy| {
-            async move {
-                let refresh_token_content = format!("rt_{}", generate_random_string());
-                let refresh_token = OauthRefreshToken {
-                    content: Some(refresh_token_content.clone()),
-                    account_id: Some("account_id".to_string()),
-                };
-                let request = OpenIdTokenFromOauthRefreshTokenRequest {
-                    refresh_token: Some(refresh_token),
-                    audiences: None,
-                };
-                let id_token = proxy.get_id_token_from_refresh_token(request).await?.unwrap();
-                assert!(id_token.content.unwrap().contains(&refresh_token_content));
-                assert!(id_token.expiry_time.is_some());
-                Ok(())
-            }
+        run_proxy_test(|proxy| async move {
+            let refresh_token_content = format!("rt_{}", generate_random_string());
+            let refresh_token = OauthRefreshToken {
+                content: Some(refresh_token_content.clone()),
+                account_id: Some("account_id".to_string()),
+            };
+            let request = OpenIdTokenFromOauthRefreshTokenRequest {
+                refresh_token: Some(refresh_token),
+                audiences: None,
+            };
+            let id_token = proxy.get_id_token_from_refresh_token(request).await?.unwrap();
+            assert!(id_token.content.unwrap().contains(&refresh_token_content));
+            assert!(id_token.expiry_time.is_some());
+            Ok(())
         })
         .await;
     }
 
     #[fasync::run_until_stalled(test)]
     async fn get_user_info_from_access_token_test() {
-        run_proxy_test(|proxy| {
-            async move {
-                let user_info = proxy
-                    .get_user_info_from_access_token(OpenIdUserInfoFromOauthAccessTokenRequest {
-                        access_token: None,
-                    })
-                    .await?
-                    .unwrap();
-                assert!(user_info.subject.unwrap().contains(USER_PROFILE_INFO_ID_DOMAIN));
-                assert!(user_info.name.is_some());
-                assert!(user_info.email.is_some());
-                assert!(user_info.picture.is_some());
-                Ok(())
-            }
+        run_proxy_test(|proxy| async move {
+            let user_info = proxy
+                .get_user_info_from_access_token(OpenIdUserInfoFromOauthAccessTokenRequest {
+                    access_token: None,
+                })
+                .await?
+                .unwrap();
+            assert!(user_info.subject.unwrap().contains(USER_PROFILE_INFO_ID_DOMAIN));
+            assert!(user_info.name.is_some());
+            assert!(user_info.email.is_some());
+            assert!(user_info.picture.is_some());
+            Ok(())
         })
         .await;
     }

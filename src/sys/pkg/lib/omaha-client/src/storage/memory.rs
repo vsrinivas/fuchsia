@@ -91,7 +91,11 @@ impl Storage for MemStorage {
 
     /// Set a value to be stored in the backing store.  The implementation should cache the value
     /// until the |commit()| fn is called, and then persist all cached values at that time.
-    fn set_int<'a>(&'a mut self, key: &'a str, value: i64) -> BoxFuture<'_, Result<(), Self::Error>> {
+    fn set_int<'a>(
+        &'a mut self,
+        key: &'a str,
+        value: i64,
+    ) -> BoxFuture<'_, Result<(), Self::Error>> {
         self.data.insert(key.to_string(), Value::Int(value));
         self.committed = false;
         future::ready(Ok(())).boxed()
@@ -99,7 +103,11 @@ impl Storage for MemStorage {
 
     /// Set a value to be stored in the backing store.  The implementation should cache the value
     /// until the |commit()| fn is called, and then persist all cached values at that time.
-    fn set_bool<'a>(&'a mut self, key: &'a str, value: bool) -> BoxFuture<'_, Result<(), Self::Error>> {
+    fn set_bool<'a>(
+        &'a mut self,
+        key: &'a str,
+        value: bool,
+    ) -> BoxFuture<'_, Result<(), Self::Error>> {
         self.data.insert(key.to_string(), Value::Bool(value));
         self.committed = false;
         future::ready(Ok(())).boxed()

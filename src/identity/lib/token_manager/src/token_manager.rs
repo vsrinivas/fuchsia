@@ -736,14 +736,12 @@ mod tests {
         let token_manager_clone = Arc::clone(&token_manager);
         token_manager
             .task_group()
-            .spawn(|cancel| {
-                async move {
-                    let context = create_token_manager_context();
-                    assert!(token_manager_clone
-                        .handle_requests_from_stream(&context, stream, cancel)
-                        .await
-                        .is_ok());
-                }
+            .spawn(|cancel| async move {
+                let context = create_token_manager_context();
+                assert!(token_manager_clone
+                    .handle_requests_from_stream(&context, stream, cancel)
+                    .await
+                    .is_ok());
             })
             .await
             .expect("spawning failed");
@@ -760,18 +758,14 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn authorize() {
         let auth_provider_supplier = FakeAuthProviderSupplier::new();
-        auth_provider_supplier.add_auth_provider("hooli", |mut stream| {
-            async move {
-                expect_get_cred(stream.try_next().await?.expect("End of stream"), "GAVIN")?;
-                expect_get_cred(stream.try_next().await?.expect("End of stream"), "DENPAK")?;
-                Ok(assert!(stream.try_next().await?.is_none()))
-            }
+        auth_provider_supplier.add_auth_provider("hooli", |mut stream| async move {
+            expect_get_cred(stream.try_next().await?.expect("End of stream"), "GAVIN")?;
+            expect_get_cred(stream.try_next().await?.expect("End of stream"), "DENPAK")?;
+            Ok(assert!(stream.try_next().await?.is_none()))
         });
-        auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| {
-            async move {
-                expect_get_cred(stream.try_next().await?.expect("End of stream"), "RICHARD")?;
-                Ok(assert!(stream.try_next().await?.is_none()))
-            }
+        auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| async move {
+            expect_get_cred(stream.try_next().await?.expect("End of stream"), "RICHARD")?;
+            Ok(assert!(stream.try_next().await?.is_none()))
         });
 
         let (tm_proxy, tm_stream) = create_proxy_and_stream::<TokenManagerMarker>().unwrap();
@@ -830,18 +824,14 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn list_profile_ids() {
         let auth_provider_supplier = FakeAuthProviderSupplier::new();
-        auth_provider_supplier.add_auth_provider("hooli", |mut stream| {
-            async move {
-                expect_get_cred(stream.try_next().await?.expect("End of stream"), "GAVIN")?;
-                expect_get_cred(stream.try_next().await?.expect("End of stream"), "DENPAK")?;
-                Ok(assert!(stream.try_next().await?.is_none()))
-            }
+        auth_provider_supplier.add_auth_provider("hooli", |mut stream| async move {
+            expect_get_cred(stream.try_next().await?.expect("End of stream"), "GAVIN")?;
+            expect_get_cred(stream.try_next().await?.expect("End of stream"), "DENPAK")?;
+            Ok(assert!(stream.try_next().await?.is_none()))
         });
-        auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| {
-            async move {
-                expect_get_cred(stream.try_next().await?.expect("End of stream"), "RICHARD")?;
-                Ok(assert!(stream.try_next().await?.is_none()))
-            }
+        auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| async move {
+            expect_get_cred(stream.try_next().await?.expect("End of stream"), "RICHARD")?;
+            Ok(assert!(stream.try_next().await?.is_none()))
         });
 
         let (tm_proxy, tm_stream) = create_proxy_and_stream::<TokenManagerMarker>().unwrap();
@@ -876,19 +866,17 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn get_tokens() {
         let auth_provider_supplier = FakeAuthProviderSupplier::new();
-        auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| {
-            async move {
-                expect_get_cred(stream.try_next().await?.expect("End of stream"), "RICHARD")?;
-                expect_get_access_token(
-                    stream.try_next().await?.expect("End of stream"),
-                    "RICHARD_CREDENTIAL",
-                )?;
-                expect_get_id_token(
-                    stream.try_next().await?.expect("End of stream"),
-                    "RICHARD_CREDENTIAL",
-                )?;
-                Ok(assert!(stream.try_next().await?.is_none()))
-            }
+        auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| async move {
+            expect_get_cred(stream.try_next().await?.expect("End of stream"), "RICHARD")?;
+            expect_get_access_token(
+                stream.try_next().await?.expect("End of stream"),
+                "RICHARD_CREDENTIAL",
+            )?;
+            expect_get_id_token(
+                stream.try_next().await?.expect("End of stream"),
+                "RICHARD_CREDENTIAL",
+            )?;
+            Ok(assert!(stream.try_next().await?.is_none()))
         });
 
         let (tm_proxy, tm_stream) = create_proxy_and_stream::<TokenManagerMarker>().unwrap();
@@ -936,24 +924,22 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn delete_all_tokens() {
         let auth_provider_supplier = FakeAuthProviderSupplier::new();
-        auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| {
-            async move {
-                expect_get_cred(stream.try_next().await?.expect("End of stream"), "RICHARD")?;
-                expect_get_cred(stream.try_next().await?.expect("End of stream"), "DINESH")?;
-                expect_get_access_token(
-                    stream.try_next().await?.expect("End of stream"),
-                    "RICHARD_CREDENTIAL",
-                )?;
-                expect_get_id_token(
-                    stream.try_next().await?.expect("End of stream"),
-                    "RICHARD_CREDENTIAL",
-                )?;
-                expect_revoke_cred(
-                    stream.try_next().await?.expect("End of stream"),
-                    "RICHARD_CREDENTIAL",
-                )?;
-                Ok(assert!(stream.try_next().await?.is_none()))
-            }
+        auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| async move {
+            expect_get_cred(stream.try_next().await?.expect("End of stream"), "RICHARD")?;
+            expect_get_cred(stream.try_next().await?.expect("End of stream"), "DINESH")?;
+            expect_get_access_token(
+                stream.try_next().await?.expect("End of stream"),
+                "RICHARD_CREDENTIAL",
+            )?;
+            expect_get_id_token(
+                stream.try_next().await?.expect("End of stream"),
+                "RICHARD_CREDENTIAL",
+            )?;
+            expect_revoke_cred(
+                stream.try_next().await?.expect("End of stream"),
+                "RICHARD_CREDENTIAL",
+            )?;
+            Ok(assert!(stream.try_next().await?.is_none()))
         });
 
         let (tm_proxy, tm_stream) = create_proxy_and_stream::<TokenManagerMarker>().unwrap();
@@ -1018,11 +1004,9 @@ mod tests {
 
         // Part 1: Create some state in a token manager
         let auth_provider_supplier = FakeAuthProviderSupplier::new();
-        auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| {
-            async move {
-                expect_get_cred(stream.try_next().await?.expect("End of stream"), "RICHARD")?;
-                Ok(assert!(stream.try_next().await?.is_none()))
-            }
+        auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| async move {
+            expect_get_cred(stream.try_next().await?.expect("End of stream"), "RICHARD")?;
+            Ok(assert!(stream.try_next().await?.is_none()))
         });
 
         let (tm_proxy, tm_stream) = create_proxy_and_stream::<TokenManagerMarker>().unwrap();
@@ -1047,14 +1031,12 @@ mod tests {
 
         // Part 2: Create a new token manager and check that the state survived
         let auth_provider_supplier = FakeAuthProviderSupplier::new();
-        auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| {
-            async move {
-                expect_get_access_token(
-                    stream.try_next().await?.expect("End of stream"),
-                    "RICHARD_CREDENTIAL",
-                )?;
-                Ok(assert!(stream.try_next().await?.is_none()))
-            }
+        auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| async move {
+            expect_get_access_token(
+                stream.try_next().await?.expect("End of stream"),
+                "RICHARD_CREDENTIAL",
+            )?;
+            Ok(assert!(stream.try_next().await?.is_none()))
         });
 
         let (tm_proxy, tm_stream) = create_proxy_and_stream::<TokenManagerMarker>().unwrap();
@@ -1092,26 +1074,22 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn in_memory() {
         let auth_provider_supplier = FakeAuthProviderSupplier::new();
-        auth_provider_supplier.add_auth_provider("hooli", |mut stream| {
-            async move {
-                expect_get_cred(stream.try_next().await?.expect("End of stream"), "GAVIN")?;
-                Ok(assert!(stream.try_next().await?.is_none()))
-            }
+        auth_provider_supplier.add_auth_provider("hooli", |mut stream| async move {
+            expect_get_cred(stream.try_next().await?.expect("End of stream"), "GAVIN")?;
+            Ok(assert!(stream.try_next().await?.is_none()))
         });
-        auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| {
-            async move {
-                expect_get_cred(stream.try_next().await?.expect("End of stream"), "RICHARD")?;
-                expect_get_cred(stream.try_next().await?.expect("End of stream"), "DINESH")?;
-                expect_get_access_token(
-                    stream.try_next().await?.expect("End of stream"),
-                    "RICHARD_CREDENTIAL",
-                )?;
-                expect_revoke_cred(
-                    stream.try_next().await?.expect("End of stream"),
-                    "RICHARD_CREDENTIAL",
-                )?;
-                Ok(assert!(stream.try_next().await?.is_none()))
-            }
+        auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| async move {
+            expect_get_cred(stream.try_next().await?.expect("End of stream"), "RICHARD")?;
+            expect_get_cred(stream.try_next().await?.expect("End of stream"), "DINESH")?;
+            expect_get_access_token(
+                stream.try_next().await?.expect("End of stream"),
+                "RICHARD_CREDENTIAL",
+            )?;
+            expect_revoke_cred(
+                stream.try_next().await?.expect("End of stream"),
+                "RICHARD_CREDENTIAL",
+            )?;
+            Ok(assert!(stream.try_next().await?.is_none()))
         });
 
         let (tm_proxy, tm_stream) = create_proxy_and_stream::<TokenManagerMarker>().unwrap();

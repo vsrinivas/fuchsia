@@ -101,7 +101,7 @@ impl StoryContextService {
                 }
                 Ok(())
             }
-                .unwrap_or_else(|e: Error| fx_log_err!("error serving story context {}", e)),
+            .unwrap_or_else(|e: Error| fx_log_err!("error serving story context {}", e)),
         )
     }
 }

@@ -77,7 +77,7 @@ impl Installer for FuchsiaInstaller {
                 .ok()
                 .map_err(FuchsiaInstallError::Installer)
         }
-            .boxed()
+        .boxed()
     }
 }
 
@@ -150,5 +150,4 @@ mod tests {
         };
         future::join(installer_fut, stream_fut).await;
     }
-
 }

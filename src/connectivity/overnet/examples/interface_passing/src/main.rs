@@ -93,7 +93,7 @@ fn spawn_echo_server(chan: ServerEnd<echo::EchoMarker>, quiet: bool) {
             }
             Ok(())
         }
-            .unwrap_or_else(|e: failure::Error| eprintln!("{:?}", e)),
+        .unwrap_or_else(|e: failure::Error| eprintln!("{:?}", e)),
     );
 }
 
@@ -115,7 +115,7 @@ fn spawn_example_server(chan: fidl::AsyncChannel, quiet: bool) {
             }
             Ok(())
         }
-            .unwrap_or_else(|e: failure::Error| eprintln!("{:?}", e)),
+        .unwrap_or_else(|e: failure::Error| eprintln!("{:?}", e)),
     );
 }
 

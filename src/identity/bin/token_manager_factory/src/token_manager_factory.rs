@@ -103,15 +103,13 @@ impl TokenManagerFactory {
                 let token_manager_clone = Arc::clone(&token_manager);
                 token_manager
                     .task_group()
-                    .spawn(|cancel| {
-                        async move {
-                            token_manager_clone
-                                .handle_requests_from_stream(&context, stream, cancel)
-                                .await
-                                .unwrap_or_else(|e| {
-                                    warn!("Error handling TokenManager channel {:?}", e)
-                                })
-                        }
+                    .spawn(|cancel| async move {
+                        token_manager_clone
+                            .handle_requests_from_stream(&context, stream, cancel)
+                            .await
+                            .unwrap_or_else(|e| {
+                                warn!("Error handling TokenManager channel {:?}", e)
+                            })
                     })
                     .await?;
                 Ok(())

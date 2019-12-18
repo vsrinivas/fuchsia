@@ -4,9 +4,7 @@
 
 use {
     failure::{Error, ResultExt},
-    fidl_fuchsia_net_oldhttp as http,
-    fuchsia_async as fasync,
-    fuchsia_component as component,
+    fidl_fuchsia_net_oldhttp as http, fuchsia_async as fasync, fuchsia_component as component,
     fuchsia_zircon as zx,
     futures::io::AllowStdIo,
 };
@@ -73,9 +71,7 @@ async fn http_get(url: String) -> Result<(), Error> {
     let resp = loader_proxy.start(&mut req).await?;
     if let Some(e) = resp.error {
         let code = e.code;
-        println!("Got error: {} ({})",
-                code,
-                e.description.unwrap_or("".into()));
+        println!("Got error: {} ({})", code, e.description.unwrap_or("".into()));
         return Ok(());
     }
     print_headers(&resp);

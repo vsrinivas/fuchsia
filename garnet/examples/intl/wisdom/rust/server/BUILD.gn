@@ -24,16 +24,14 @@ rustc_binary("intl_wisdom_server_rust") {
     "//src/lib/icu/rust/rust_icu_common",
     "//src/lib/icu/rust/rust_icu_sys",
     "//src/lib/icu/rust/rust_icu_ucal",
+    "//src/lib/icu/rust/rust_icu_udat",
     "//src/lib/icu/rust/rust_icu_uloc",
     "//src/lib/icu/rust/rust_icu_ustring",
-    "//src/lib/icu/rust/rust_icu_udat",
     "//src/lib/icu_data/rust/icu_data",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
   ]
-  non_rust_deps = [
-    "//third_party/icu",
-  ]
+  non_rust_deps = [ "//third_party/icu" ]
 }
 
 # This is the Fuchsia test package which ensures that the generated tests from
@@ -67,6 +65,7 @@ test_package("intl_wisdom_server_rust_tests") {
       environments = basic_envs
     },
   ]
+
   # [START icudata_resource]
   resources = [
     {
@@ -76,8 +75,10 @@ test_package("intl_wisdom_server_rust_tests") {
       dest = "icudtl.dat"
     },
   ]
+
   # [END icudata_resource]
 }
+
 # [END icudata]
 
 # This group is intentionally named the same as the directory it is in, so that
@@ -103,4 +104,3 @@ group("tests") {
     ":intl_wisdom_server_rust_tests",
   ]
 }
-

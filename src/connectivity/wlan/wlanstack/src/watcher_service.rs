@@ -201,14 +201,16 @@ async fn reap_watchers<P, I>(
     watchers: UnboundedReceiver<ReaperTask>,
 ) -> Result<Void, failure::Error> {
     const REAP_CONCURRENT_LIMIT: usize = 10000;
-    watchers.for_each_concurrent(REAP_CONCURRENT_LIMIT, move |w| {
-        // Wait for the other side to close the channel (or an error to occur)
-        // and remove the watcher from the maps
-        async move {
-            w.watcher_channel.map(|_| ()).collect::<()>().await;
-            inner.lock().watchers.remove(&w.watcher_id);
-        }
-    }).await;
+    watchers
+        .for_each_concurrent(REAP_CONCURRENT_LIMIT, move |w| {
+            // Wait for the other side to close the channel (or an error to occur)
+            // and remove the watcher from the maps
+            async move {
+                w.watcher_channel.map(|_| ()).collect::<()>().await;
+                inner.lock().watchers.remove(&w.watcher_id);
+            }
+        })
+        .await;
     Err(format_err!("stream of watcher channels has ended unexpectedly"))
 }
 

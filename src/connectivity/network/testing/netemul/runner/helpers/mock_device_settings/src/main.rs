@@ -200,7 +200,9 @@ mod test {
     #[test]
     async fn test_string_key() {
         let manager = client::connect_to_service::<DeviceSettingsManagerMarker>().unwrap();
-        let res = manager.set_string("StringKey", "HelloWorld").await
+        let res = manager
+            .set_string("StringKey", "HelloWorld")
+            .await
             .context("can't set string")
             .unwrap();
         assert_eq!(res, true);
@@ -227,16 +229,14 @@ mod test {
         let manager = client::connect_to_service::<DeviceSettingsManagerMarker>().unwrap();
         let (watcher_client_end, watcher_server_end) =
             fidl::endpoints::create_endpoints::<DeviceSettingsWatcherMarker>().unwrap();
-        let status = manager.watch("WatchKey", watcher_client_end).await
-            .context("can't set watch")
-            .unwrap();
+        let status =
+            manager.watch("WatchKey", watcher_client_end).await.context("can't set watch").unwrap();
         assert_eq!(status, Status::Ok);
 
         let res = manager.set_integer("WatchKey", 3456).await.context("can't set int").unwrap();
         assert_eq!(res, true);
 
-        let (val, status) =
-            manager.get_integer("WatchKey").await.context("can't get int").unwrap();
+        let (val, status) = manager.get_integer("WatchKey").await.context("can't get int").unwrap();
         assert_eq!(status, Status::Ok);
         assert_eq!(val, 3456);
 

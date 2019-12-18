@@ -227,7 +227,7 @@ fn inner_watch_recursive(
             }
         }
     }
-        .boxed()
+    .boxed()
 }
 
 #[cfg(test)]
@@ -416,5 +416,4 @@ mod tests {
         assert!(stream.try_next().await.is_err());
         assert_eq!(None, stream.try_next().await.expect("read sentinel"));
     }
-
 }

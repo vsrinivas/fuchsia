@@ -34,7 +34,12 @@ use {
     futures::{future::FutureObj, FutureExt},
     parking_lot::{MappedRwLockWriteGuard, RwLock, RwLockWriteGuard},
     slab::Slab,
-    std::{future::Future, pin::Pin, sync::Arc, task::{self, Poll}},
+    std::{
+        future::Future,
+        pin::Pin,
+        sync::Arc,
+        task::{self, Poll},
+    },
 };
 
 use crate::expectation::Predicate;

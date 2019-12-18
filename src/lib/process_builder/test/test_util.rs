@@ -73,6 +73,7 @@ async fn main() -> Result<(), Error> {
     const MAX_CONCURRENT: usize = 10;
     fs.for_each_concurrent(MAX_CONCURRENT, |IncomingServices::Util(stream)| {
         run_util_server(stream).unwrap_or_else(|e| println!("{:?}", e))
-    }).await;
+    })
+    .await;
     Ok(())
 }

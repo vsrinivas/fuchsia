@@ -329,7 +329,10 @@ trait Launcher {
 
 struct ProcLauncher;
 impl Launcher for ProcLauncher {
-    fn launch_process(args: &[&CStr], mut actions: Vec<SpawnAction<'_>>) -> Result<zx::Process, Error> {
+    fn launch_process(
+        args: &[&CStr],
+        mut actions: Vec<SpawnAction<'_>>,
+    ) -> Result<zx::Process, Error> {
         let options = SpawnOptions::CLONE_ALL;
 
         let process = match spawn_etc(

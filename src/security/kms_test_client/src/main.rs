@@ -13,10 +13,10 @@ use fidl_fuchsia_kms::{
 use fidl_fuchsia_mem::Buffer;
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_service;
+use fuchsia_syslog as syslog;
 use fuchsia_zircon as zx;
 use log::info;
 use serde_derive::{Deserialize, Serialize};
-use fuchsia_syslog as syslog;
 use serde_json;
 use std::fs;
 
@@ -24,7 +24,6 @@ use mundane::hash::*;
 use mundane::public::ec::ecdsa::EcdsaHash;
 use mundane::public::ec::*;
 use mundane::public::*;
-
 
 static TEST_KEY_NAME: &str = "test-key";
 static CONFIG_PATH: &str = "/config/data/crypto_provider_config.json";

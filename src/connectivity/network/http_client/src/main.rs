@@ -124,52 +124,58 @@ fn spawn_old_url_loader(server: ServerEnd<oldhttp::UrlLoaderMarker>) {
             let client = fhyper::new_client();
             let c = &client;
             let stream = server.into_stream()?;
-            stream.err_into().try_for_each_concurrent(None, |message| async move {
-                match message {
-                    oldhttp::UrlLoaderRequest::Start { request, responder } => {
-                        let mut builder = hyper::Request::builder();
-                        builder.method(request.method.as_str());
-                        builder.uri(&request.url);
-                        if let Some(headers) = request.headers {
-                            for header in &headers {
-                                builder.header(header.name.as_str(), header.value.as_str());
+            stream
+                .err_into()
+                .try_for_each_concurrent(None, |message| async move {
+                    match message {
+                        oldhttp::UrlLoaderRequest::Start { request, responder } => {
+                            let mut builder = hyper::Request::builder();
+                            builder.method(request.method.as_str());
+                            builder.uri(&request.url);
+                            if let Some(headers) = request.headers {
+                                for header in &headers {
+                                    builder.header(header.name.as_str(), header.value.as_str());
+                                }
                             }
+                            let req = builder.body(to_body(request.body).await?)?;
+                            let result = c.request(req).compat().await;
+                            responder.send(&mut match result {
+                                Ok(resp) => to_success_response(request.url, resp),
+                                Err(error) => to_error_response(error),
+                            })?;
                         }
-                        let req = builder.body(to_body(request.body).await?)?;
-                        let result = c.request(req).compat().await;
-                        responder.send(&mut match result {
-                            Ok(resp) => to_success_response(request.url, resp),
-                            Err(error) => to_error_response(error),
-                        })?;
-                    }
-                    // TODO: Implement FollowRedirect. The C++ implementation of oldhttp doesn't
-                    // follow redirects either.
-                    oldhttp::UrlLoaderRequest::FollowRedirect { responder: _ } => (),
-                    oldhttp::UrlLoaderRequest::QueryStatus { responder } => {
-                        // TODO: We should cache the error and report it here.
-                        responder.send(&mut oldhttp::UrlLoaderStatus {
-                            error: None,
-                            is_loading: false,
-                        })?;
-                    }
-                };
-                Ok(())
-            }).await
+                        // TODO: Implement FollowRedirect. The C++ implementation of oldhttp doesn't
+                        // follow redirects either.
+                        oldhttp::UrlLoaderRequest::FollowRedirect { responder: _ } => (),
+                        oldhttp::UrlLoaderRequest::QueryStatus { responder } => {
+                            // TODO: We should cache the error and report it here.
+                            responder.send(&mut oldhttp::UrlLoaderStatus {
+                                error: None,
+                                is_loading: false,
+                            })?;
+                        }
+                    };
+                    Ok(())
+                })
+                .await
         }
-            .unwrap_or_else(|e: failure::Error| eprintln!("{:?}", e)),
+        .unwrap_or_else(|e: failure::Error| eprintln!("{:?}", e)),
     );
 }
 
 fn spawn_old_server(stream: oldhttp::HttpServiceRequestStream) {
     fasync::spawn(
         async move {
-            stream.err_into().try_for_each_concurrent(None, |message| async move {
-                let oldhttp::HttpServiceRequest::CreateUrlLoader { loader, .. } = message;
-                spawn_old_url_loader(loader);
-                Ok(())
-            }).await
+            stream
+                .err_into()
+                .try_for_each_concurrent(None, |message| async move {
+                    let oldhttp::HttpServiceRequest::CreateUrlLoader { loader, .. } = message;
+                    spawn_old_url_loader(loader);
+                    Ok(())
+                })
+                .await
         }
-            .unwrap_or_else(|e: failure::Error| eprintln!("{:?}", e)),
+        .unwrap_or_else(|e: failure::Error| eprintln!("{:?}", e)),
     );
 }
 

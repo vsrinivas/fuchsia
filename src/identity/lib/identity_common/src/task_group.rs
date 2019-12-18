@@ -136,7 +136,7 @@ impl TaskGroup {
                 }
             }
         }
-            .boxed()
+        .boxed()
     }
 
     /// Create a child TaskGroup that will be automatically cancelled when the parent is cancelled.
@@ -203,10 +203,8 @@ mod test {
     async fn complete_before_cancel_test() {
         // Checks that a task completes by itself without being cancelled
         let (sender, receiver) = oneshot::channel();
-        let a_task = |_cancel| {
-            async {
-                sender.send(10).expect("sending failed");
-            }
+        let a_task = |_cancel| async {
+            sender.send(10).expect("sending failed");
         };
         let tg = TaskGroup::new();
         tg.spawn(a_task).await.expect("spawning failed");
@@ -218,11 +216,9 @@ mod test {
     async fn cancel_test() {
         // Checks that a task completes by itself without being cancelled
         let (sender, receiver) = oneshot::channel();
-        let a_task = |cancel: TaskGroupCancel| {
-            async {
-                cancel.await.expect("cancel signal not delivered properly");
-                sender.send(10).expect("sending failed");
-            }
+        let a_task = |cancel: TaskGroupCancel| async {
+            cancel.await.expect("cancel signal not delivered properly");
+            sender.send(10).expect("sending failed");
         };
         let tg = TaskGroup::new();
         tg.spawn(a_task).await.expect("spawning failed");
@@ -236,17 +232,13 @@ mod test {
         // finally cancel through the cloned task group.
         let (sender_1, receiver_1) = oneshot::channel();
         let (sender_2, receiver_2) = oneshot::channel();
-        let task_1 = |cancel: TaskGroupCancel| {
-            async {
-                cancel.await.expect("cancel signal not delivered properly");
-                sender_1.send(1).expect("sending failed");
-            }
+        let task_1 = |cancel: TaskGroupCancel| async {
+            cancel.await.expect("cancel signal not delivered properly");
+            sender_1.send(1).expect("sending failed");
         };
-        let task_2 = |cancel: TaskGroupCancel| {
-            async {
-                cancel.await.expect("cancel signal not delivered properly");
-                sender_2.send(2).expect("sending failed");
-            }
+        let task_2 = |cancel: TaskGroupCancel| async {
+            cancel.await.expect("cancel signal not delivered properly");
+            sender_2.send(2).expect("sending failed");
         };
         let tg = TaskGroup::new();
         assert!(tg.spawn(task_1).await.is_ok());
@@ -265,17 +257,13 @@ mod test {
         // Create a child task group and cancel the parent.
         let (sender_1, receiver_1) = oneshot::channel();
         let (sender_2, receiver_2) = oneshot::channel();
-        let task_1 = |cancel: TaskGroupCancel| {
-            async {
-                cancel.await.expect("cancel signal not delivered properly");
-                sender_1.send(1).expect("sending failed");
-            }
+        let task_1 = |cancel: TaskGroupCancel| async {
+            cancel.await.expect("cancel signal not delivered properly");
+            sender_1.send(1).expect("sending failed");
         };
-        let task_2 = |cancel: TaskGroupCancel| {
-            async {
-                cancel.await.expect("cancel signal not delivered properly");
-                sender_2.send(2).expect("sending failed");
-            }
+        let task_2 = |cancel: TaskGroupCancel| async {
+            cancel.await.expect("cancel signal not delivered properly");
+            sender_2.send(2).expect("sending failed");
         };
         let tg_parent = TaskGroup::new();
         assert!(tg_parent.spawn(task_1).await.is_ok());
@@ -294,17 +282,13 @@ mod test {
         let (sender_1, receiver_1) = oneshot::channel();
         let (sender_2, receiver_2) = oneshot::channel();
 
-        let task_1 = |cancel: TaskGroupCancel| {
-            async {
-                cancel.await.expect("cancel signal not delivered properly");
-                sender_1.send(1).expect("sending failed");
-            }
+        let task_1 = |cancel: TaskGroupCancel| async {
+            cancel.await.expect("cancel signal not delivered properly");
+            sender_1.send(1).expect("sending failed");
         };
-        let task_2 = |cancel: TaskGroupCancel| {
-            async {
-                cancel.await.expect("cancel signal not delivered properly");
-                sender_2.send(2).expect("sending failed");
-            }
+        let task_2 = |cancel: TaskGroupCancel| async {
+            cancel.await.expect("cancel signal not delivered properly");
+            sender_2.send(2).expect("sending failed");
         };
         let tg_parent = TaskGroup::new();
         assert!(tg_parent.spawn(task_1).await.is_ok());
@@ -315,8 +299,7 @@ mod test {
         assert!(tg_child.cancel().await.is_err());
 
         // Verify we can create another child task group.
-        let tg_child_2 =
-            tg_parent.create_child().await.expect("failed creating child task group");
+        let tg_child_2 = tg_parent.create_child().await.expect("failed creating child task group");
         assert!(tg_child.spawn(|_| future::ready(())).await.is_err());
         assert!(tg_child.create_child().await.is_err());
 
@@ -339,7 +322,7 @@ mod test {
             tg_clone.spawn(complete).await.expect("spawning failed");
             tg_clone.spawn(never_complete).await.expect("spawning failed");
         }
-            .boxed();
+        .boxed();
         let cancel_fut = &mut tg.cancel().boxed();
         assert!(executor.run_until_stalled(spawn_fut).is_ready());
         assert!(executor.run_until_stalled(cancel_fut).is_pending());

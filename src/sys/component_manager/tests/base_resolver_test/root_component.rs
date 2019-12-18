@@ -10,9 +10,7 @@ use {
     fuchsia_component::client::*,
     fuchsia_runtime,
     fuchsia_vfs_pseudo_fs_mt::{
-        directory::entry::DirectoryEntry,
-        execution_scope::ExecutionScope,
-        path::Path,
+        directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path,
         pseudo_directory,
     },
     fuchsia_zircon::{self as zx},

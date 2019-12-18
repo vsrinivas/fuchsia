@@ -66,16 +66,18 @@ async fn run_cases_serially(
     let stream_processor =
         if let Some(stream) = cases.first().as_ref().map(|case| case.stream.as_ref()) {
             stream_processor_factory
-                .connect_to_stream_processor(stream, FIRST_FORMAT_DETAILS_VERSION_ORDINAL,).await?
+                .connect_to_stream_processor(stream, FIRST_FORMAT_DETAILS_VERSION_ORDINAL)
+                .await?
         } else {
             return Err(FatalError(String::from("No test cases provided.")).into());
         };
     let mut stream_runner = StreamRunner::new(stream_processor);
 
     for case in cases {
-        let output =
-            stream_runner.run_stream(case.stream, case.stream_options.unwrap_or_default()).await
-                .context(format!("Running case {}", case.name))?;
+        let output = stream_runner
+            .run_stream(case.stream, case.stream_options.unwrap_or_default())
+            .await
+            .context(format!("Running case {}", case.name))?;
         for validator in case.validators {
             validator.validate(&output).context(format!("Validating case {}", case.name))?;
         }
@@ -103,10 +105,5 @@ pub fn with_large_stack(f: fn() -> Result<()>) -> Result<()> {
     // We need this when running the test in panic=abort mode (in unwind mode,
     // the test harness creates a thread with a 2MB stack for us).
     const STACK_SIZE: usize = 2 * 1024 * 1024;
-    std::thread::Builder::new()
-        .stack_size(STACK_SIZE)
-        .spawn(f)
-        .unwrap()
-        .join()
-        .unwrap()
+    std::thread::Builder::new().stack_size(STACK_SIZE).spawn(f).unwrap().join().unwrap()
 }

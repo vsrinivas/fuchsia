@@ -52,11 +52,10 @@ impl BusConnection {
     }
 
     pub async fn publish_code(&self, code: i32) -> Result<(), Error> {
-        let () = self.bus.ensure_publish(Event {
-            code: Some(code),
-            message: None,
-            arguments: None,
-        }).await?;
+        let () = self
+            .bus
+            .ensure_publish(Event { code: Some(code), message: None, arguments: None })
+            .await?;
         Ok(())
     }
 

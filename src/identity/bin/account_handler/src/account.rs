@@ -343,13 +343,11 @@ impl Account {
         })?;
         self.default_persona
             .task_group()
-            .spawn(|cancel| {
-                async move {
-                    persona_clone
-                        .handle_requests_from_stream(&persona_context, stream, cancel)
-                        .await
-                        .unwrap_or_else(|e| error!("Error handling Persona channel {:?}", e))
-                }
+            .spawn(|cancel| async move {
+                persona_clone
+                    .handle_requests_from_stream(&persona_context, stream, cancel)
+                    .await
+                    .unwrap_or_else(|e| error!("Error handling Persona channel {:?}", e))
             })
             .await
             .map_err(|_| ApiError::RemovalInProgress)?;
@@ -468,15 +466,13 @@ mod tests {
             let task_group = TaskGroup::new();
 
             task_group
-                .spawn(|cancel| {
-                    async move {
-                        test_object
-                            .handle_requests_from_stream(&context, request_stream, cancel)
-                            .await
-                            .unwrap_or_else(|err| {
-                                panic!("Fatal error handling test request: {:?}", err)
-                            })
-                    }
+                .spawn(|cancel| async move {
+                    test_object
+                        .handle_requests_from_stream(&context, request_stream, cancel)
+                        .await
+                        .unwrap_or_else(|err| {
+                            panic!("Fatal error handling test request: {:?}", err)
+                        })
                 })
                 .await
                 .expect("Unable to spawn task");
@@ -498,11 +494,9 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_get_account_name() {
         let mut test = Test::new();
-        test.run(test.create_persistent_account().await.unwrap(), |proxy| {
-            async move {
-                assert_eq!(proxy.get_account_name().await?, Account::DEFAULT_ACCOUNT_NAME);
-                Ok(())
-            }
+        test.run(test.create_persistent_account().await.unwrap(), |proxy| async move {
+            assert_eq!(proxy.get_account_name().await?, Account::DEFAULT_ACCOUNT_NAME);
+            Ok(())
         })
         .await;
     }
@@ -510,11 +504,9 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_get_lifetime_ephemeral() {
         let mut test = Test::new();
-        test.run(test.create_ephemeral_account().await.unwrap(), |proxy| {
-            async move {
-                assert_eq!(proxy.get_lifetime().await?, Lifetime::Ephemeral);
-                Ok(())
-            }
+        test.run(test.create_ephemeral_account().await.unwrap(), |proxy| async move {
+            assert_eq!(proxy.get_lifetime().await?, Lifetime::Ephemeral);
+            Ok(())
         })
         .await;
     }
@@ -522,11 +514,9 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_get_lifetime_persistent() {
         let mut test = Test::new();
-        test.run(test.create_persistent_account().await.unwrap(), |proxy| {
-            async move {
-                assert_eq!(proxy.get_lifetime().await?, Lifetime::Persistent);
-                Ok(())
-            }
+        test.run(test.create_persistent_account().await.unwrap(), |proxy| async move {
+            assert_eq!(proxy.get_lifetime().await?, Lifetime::Persistent);
+            Ok(())
         })
         .await;
     }
@@ -574,14 +564,12 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_get_auth_state() {
         let mut test = Test::new();
-        test.run(test.create_persistent_account().await.unwrap(), |proxy| {
-            async move {
-                assert_eq!(
-                    proxy.get_auth_state(&mut TEST_SCENARIO.clone()).await?,
-                    Err(ApiError::UnsupportedOperation)
-                );
-                Ok(())
-            }
+        test.run(test.create_persistent_account().await.unwrap(), |proxy| async move {
+            assert_eq!(
+                proxy.get_auth_state(&mut TEST_SCENARIO.clone()).await?,
+                Err(ApiError::UnsupportedOperation)
+            );
+            Ok(())
         })
         .await;
     }
@@ -620,13 +608,11 @@ mod tests {
         let account = test.create_persistent_account().await.unwrap();
         let persona_id = &account.default_persona.id().clone();
 
-        test.run(account, |proxy| {
-            async move {
-                let response = proxy.get_persona_ids().await?;
-                assert_eq!(response.len(), 1);
-                assert_eq!(&LocalPersonaId::new(response[0]), persona_id);
-                Ok(())
-            }
+        test.run(account, |proxy| async move {
+            let response = proxy.get_persona_ids().await?;
+            assert_eq!(response.len(), 1);
+            assert_eq!(&LocalPersonaId::new(response[0]), persona_id);
+            Ok(())
         })
         .await;
     }
@@ -663,15 +649,13 @@ mod tests {
     async fn test_ephemeral_account_has_ephemeral_persona() {
         let mut test = Test::new();
         let account = test.create_ephemeral_account().await.unwrap();
-        test.run(account, |account_proxy| {
-            async move {
-                let (persona_client_end, persona_server_end) = create_endpoints().unwrap();
-                assert!(account_proxy.get_default_persona(persona_server_end).await?.is_ok());
-                let persona_proxy = persona_client_end.into_proxy().unwrap();
+        test.run(account, |account_proxy| async move {
+            let (persona_client_end, persona_server_end) = create_endpoints().unwrap();
+            assert!(account_proxy.get_default_persona(persona_server_end).await?.is_ok());
+            let persona_proxy = persona_client_end.into_proxy().unwrap();
 
-                assert_eq!(persona_proxy.get_lifetime().await?, Lifetime::Ephemeral);
-                Ok(())
-            }
+            assert_eq!(persona_proxy.get_lifetime().await?, Lifetime::Ephemeral);
+            Ok(())
         })
         .await;
     }
@@ -711,16 +695,14 @@ mod tests {
         // one.
         let wrong_id = LocalPersonaId::new(13);
 
-        test.run(account, |proxy| {
-            async move {
-                let (_, persona_server_end) = create_endpoints().unwrap();
-                assert_eq!(
-                    proxy.get_persona(wrong_id.into(), persona_server_end).await?,
-                    Err(ApiError::NotFound)
-                );
+        test.run(account, |proxy| async move {
+            let (_, persona_server_end) = create_endpoints().unwrap();
+            assert_eq!(
+                proxy.get_persona(wrong_id.into(), persona_server_end).await?,
+                Err(ApiError::NotFound)
+            );
 
-                Ok(())
-            }
+            Ok(())
         })
         .await;
     }
@@ -733,14 +715,12 @@ mod tests {
             user_profile_id: "test_obfuscated_gaia_id".to_string(),
         };
 
-        test.run(test.create_persistent_account().await.unwrap(), |proxy| {
-            async move {
-                assert_eq!(
-                    proxy.set_recovery_account(&mut service_provider_account).await?,
-                    Err(ApiError::Internal)
-                );
-                Ok(())
-            }
+        test.run(test.create_persistent_account().await.unwrap(), |proxy| async move {
+            assert_eq!(
+                proxy.set_recovery_account(&mut service_provider_account).await?,
+                Err(ApiError::Internal)
+            );
+            Ok(())
         })
         .await;
     }
@@ -749,11 +729,9 @@ mod tests {
     async fn test_get_recovery_account() {
         let mut test = Test::new();
         let expectation = Err(ApiError::Internal);
-        test.run(test.create_persistent_account().await.unwrap(), |proxy| {
-            async move {
-                assert_eq!(proxy.get_recovery_account().await?, expectation);
-                Ok(())
-            }
+        test.run(test.create_persistent_account().await.unwrap(), |proxy| async move {
+            assert_eq!(proxy.get_recovery_account().await?, expectation);
+            Ok(())
         })
         .await;
     }
@@ -761,22 +739,20 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_auth_mechanisms() {
         let mut test = Test::new();
-        test.run(test.create_persistent_account().await.unwrap(), |proxy| {
-            async move {
-                assert_eq!(
-                    proxy.get_auth_mechanism_enrollments().await?,
-                    Err(ApiError::UnsupportedOperation)
-                );
-                assert_eq!(
-                    proxy.create_auth_mechanism_enrollment(TEST_AUTH_MECHANISM_ID).await?,
-                    Err(ApiError::UnsupportedOperation)
-                );
-                assert_eq!(
-                    proxy.remove_auth_mechanism_enrollment(TEST_ENROLLMENT_ID).await?,
-                    Err(ApiError::UnsupportedOperation)
-                );
-                Ok(())
-            }
+        test.run(test.create_persistent_account().await.unwrap(), |proxy| async move {
+            assert_eq!(
+                proxy.get_auth_mechanism_enrollments().await?,
+                Err(ApiError::UnsupportedOperation)
+            );
+            assert_eq!(
+                proxy.create_auth_mechanism_enrollment(TEST_AUTH_MECHANISM_ID).await?,
+                Err(ApiError::UnsupportedOperation)
+            );
+            assert_eq!(
+                proxy.remove_auth_mechanism_enrollment(TEST_ENROLLMENT_ID).await?,
+                Err(ApiError::UnsupportedOperation)
+            );
+            Ok(())
         })
         .await;
     }
@@ -784,11 +760,9 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_lock() {
         let mut test = Test::new();
-        test.run(test.create_persistent_account().await.unwrap(), |proxy| {
-            async move {
-                assert_eq!(proxy.lock().await?, Err(ApiError::UnsupportedOperation));
-                Ok(())
-            }
+        test.run(test.create_persistent_account().await.unwrap(), |proxy| async move {
+            assert_eq!(proxy.lock().await?, Err(ApiError::UnsupportedOperation));
+            Ok(())
         })
         .await;
     }

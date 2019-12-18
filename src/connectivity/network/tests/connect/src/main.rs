@@ -222,21 +222,17 @@ async fn main() -> Result<(), failure::Error> {
             )))?;
             println!("Server bound.");
             let bus = bus_subscribe(&sync_manager, SERVER_NAME)?;
-            let stream = bus.take_event_stream().try_filter_map(|event| {
-                async move {
-                    Ok(match event {
-                        fidl_fuchsia_netemul_sync::BusEvent::OnClientDetached { client } => {
-                            match client.as_str() {
-                                CLIENT_NAME => Some(()),
-                                _client => None,
-                            }
+            let stream = bus.take_event_stream().try_filter_map(|event| async move {
+                Ok(match event {
+                    fidl_fuchsia_netemul_sync::BusEvent::OnClientDetached { client } => {
+                        match client.as_str() {
+                            CLIENT_NAME => Some(()),
+                            _client => None,
                         }
-                        fidl_fuchsia_netemul_sync::BusEvent::OnBusData { data: _ }
-                        | fidl_fuchsia_netemul_sync::BusEvent::OnClientAttached { client: _ } => {
-                            None
-                        }
-                    })
-                }
+                    }
+                    fidl_fuchsia_netemul_sync::BusEvent::OnBusData { data: _ }
+                    | fidl_fuchsia_netemul_sync::BusEvent::OnClientAttached { client: _ } => None,
+                })
             });
             println!("Waiting for client to detach.");
             futures::pin_mut!(stream);

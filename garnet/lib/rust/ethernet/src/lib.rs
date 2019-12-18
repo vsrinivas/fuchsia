@@ -11,7 +11,11 @@ use fidl_fuchsia_hardware_ethernet as sys;
 use fidl_fuchsia_hardware_ethernet_ext::{EthernetInfo, EthernetStatus};
 use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, AsHandleRef};
-use futures::{ready, task::{Context, Waker}, FutureExt, Stream};
+use futures::{
+    ready,
+    task::{Context, Waker},
+    FutureExt, Stream,
+};
 
 use std::fs::File;
 use std::marker::Unpin;
@@ -283,7 +287,8 @@ impl ClientInner {
         let sys::Fifos { rx, tx, rx_depth, tx_depth } = fifos;
         let rx_fifo = fasync::Fifo::from_fifo(rx)?;
         let tx_fifo = fasync::Fifo::from_fifo(tx)?;
-        let signals = Mutex::new(fasync::OnSignals::new(&rx_fifo, zx::Signals::USER_0).extend_lifetime());
+        let signals =
+            Mutex::new(fasync::OnSignals::new(&rx_fifo, zx::Signals::USER_0).extend_lifetime());
         Ok(ClientInner {
             dev,
             pool,
@@ -305,7 +310,8 @@ impl ClientInner {
     }
 
     fn register_signals(&self) {
-        *self.signals.lock().unwrap() = fasync::OnSignals::new(&self.rx_fifo, zx::Signals::USER_0).extend_lifetime();
+        *self.signals.lock().unwrap() =
+            fasync::OnSignals::new(&self.rx_fifo, zx::Signals::USER_0).extend_lifetime();
     }
 
     /// Check for Ethernet device status changes.
@@ -338,7 +344,10 @@ impl ClientInner {
     /// Receive a tx completion entry from the Ethernet device.
     ///
     /// Returns the flags indicating success or failure.
-    fn poll_complete_tx(&self, cx: &mut Context<'_>) -> Poll<Result<EthernetQueueFlags, zx::Status>> {
+    fn poll_complete_tx(
+        &self,
+        cx: &mut Context<'_>,
+    ) -> Poll<Result<EthernetQueueFlags, zx::Status>> {
         match ready!(self.tx_fifo.try_read(cx))? {
             Some(buffer::FifoEntry { offset, flags, .. }) => {
                 self.pool.lock().unwrap().release_tx_buffer(offset as usize);

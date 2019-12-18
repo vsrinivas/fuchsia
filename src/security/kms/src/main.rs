@@ -73,6 +73,6 @@ fn spawn(mut stream: KeyManagerRequestStream, key_manager: Arc<KeyManager>) {
             }
             Ok(())
         }
-            .unwrap_or_else(|e: fidl::Error| error!("Error handling KMS request: {:?}", e)),
+        .unwrap_or_else(|e: fidl::Error| error!("Error handling KMS request: {:?}", e)),
     );
 }

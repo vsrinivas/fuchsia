@@ -14,8 +14,7 @@ lazy_static! {
     static ref REGEX_NON_IDENTIFIER: Regex = Regex::new(r"[^A-Za-z0-9]+").unwrap();
 }
 
-const PREAMBLE: &str =
-    r#"// Generated using //garnet/bin/fonts/unicode_blocks:generate_unicode_blocks. Do not edit.
+const PREAMBLE: &str = r#"// Generated using //garnet/bin/fonts/unicode_blocks:generate_unicode_blocks. Do not edit.
 
 mod blocks {
     use lazy_static::lazy_static;

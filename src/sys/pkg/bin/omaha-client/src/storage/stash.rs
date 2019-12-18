@@ -101,7 +101,7 @@ impl Storage for Stash {
             }
             None
         }
-            .boxed()
+        .boxed()
     }
 
     fn get_int<'a>(&'a self, key: &'a str) -> BoxFuture<'a, Option<i64>> {
@@ -114,7 +114,7 @@ impl Storage for Stash {
             }
             None
         }
-            .boxed()
+        .boxed()
     }
 
     fn get_bool<'a>(&'a self, key: &'a str) -> BoxFuture<'_, Option<bool>> {
@@ -127,7 +127,7 @@ impl Storage for Stash {
             }
             None
         }
-            .boxed()
+        .boxed()
     }
 
     fn set_string<'a>(&'a mut self, key: &'a str, value: &'a str) -> BoxFuture<'_, Result<()>> {

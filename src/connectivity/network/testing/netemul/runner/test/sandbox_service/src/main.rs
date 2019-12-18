@@ -170,9 +170,11 @@ mod tests {
         let net3_retrieve = get_network(&env3, "network").await;
         assert!(net3_retrieve.is_err(), "net should not exist in env3");
 
-        get_network_from_context(&netctx1, "network").await
+        get_network_from_context(&netctx1, "network")
+            .await
             .expect("Should be able to retrieve net from sandbox 1");
-        get_network_from_context(&netctx2, "network").await
+        get_network_from_context(&netctx2, "network")
+            .await
             .expect_err("Shouldn't be able retrieve net from sandbox 2");
     }
 
@@ -199,12 +201,9 @@ mod tests {
         let env2 = create_env_with_netstack(&sandbox).expect("can't create env 2");
         let env3 = create_env_with_netstack(&sandbox2).expect("can't create env 3");
 
-        let _b_e1 =
-            get_on_bus_from_env(&env1, BUS_NAME, "e1").await.expect("can get on bus as e1");
-        let _b_e2 =
-            get_on_bus_from_env(&env2, BUS_NAME, "e2").await.expect("can get on bus as e2");
-        let _b_e3 =
-            get_on_bus_from_env(&env3, BUS_NAME, "e3").await.expect("can get on bus as e3");
+        let _b_e1 = get_on_bus_from_env(&env1, BUS_NAME, "e1").await.expect("can get on bus as e1");
+        let _b_e2 = get_on_bus_from_env(&env2, BUS_NAME, "e2").await.expect("can get on bus as e2");
+        let _b_e3 = get_on_bus_from_env(&env3, BUS_NAME, "e3").await.expect("can get on bus as e3");
 
         let clients_1 =
             get_on_bus_and_list_clients(&sync1, BUS_NAME, "s1").await.expect("can get clients 1");
@@ -233,7 +232,8 @@ mod tests {
 
         let _net1 =
             create_network(&env1, "network").await.expect("failed to create network on env 1");
-        let _net2 = create_network(&env2, "network2").await
+        let _net2 = create_network(&env2, "network2")
+            .await
             .expect_err("should've failed to create network on env 2");
     }
 

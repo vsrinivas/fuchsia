@@ -59,11 +59,19 @@ pub trait Storage {
 
     /// Set a value to be stored in the backing store.  The implementation should cache the value
     /// until the |commit()| fn is called, and then persist all cached values at that time.
-    fn set_int<'a>(&'a mut self, key: &'a str, value: i64) -> BoxFuture<'_, Result<(), Self::Error>>;
+    fn set_int<'a>(
+        &'a mut self,
+        key: &'a str,
+        value: i64,
+    ) -> BoxFuture<'_, Result<(), Self::Error>>;
 
     /// Set a value to be stored in the backing store.  The implementation should cache the value
     /// until the |commit()| fn is called, and then persist all cached values at that time.
-    fn set_bool<'a>(&'a mut self, key: &'a str, value: bool) -> BoxFuture<'_, Result<(), Self::Error>>;
+    fn set_bool<'a>(
+        &'a mut self,
+        key: &'a str,
+        value: bool,
+    ) -> BoxFuture<'_, Result<(), Self::Error>>;
 
     /// Remove the value for |key| from the backing store.  The implementation should cache that
     /// the value has been removed until the |commit()| fn is called, and then persist all changes

@@ -54,10 +54,7 @@ async fn main() {
             .expect(&format!("bind_child {} failed", name))
             .expect(&format!("failed to bind to child {}", name));
         let trigger = open_trigger_svc(&dir).expect("failed to open trigger service");
-        trigger
-            .run()
-            .await
-            .expect(&format!("trigger {} failed", name));
+        trigger.run().await.expect(&format!("trigger {} failed", name));
     }
 
     // Destroy one.
@@ -146,6 +143,7 @@ fn open_trigger_svc(dir: &DirectoryProxy) -> Result<ftest::TriggerProxy, Error> 
         &PathBuf::from("svc/fidl.test.components.Trigger"),
         OPEN_RIGHT_READABLE,
         MODE_TYPE_SERVICE,
-    ).context("failed to open trigger service")?;
+    )
+    .context("failed to open trigger service")?;
     Ok(ftest::TriggerProxy::new(node_proxy.into_channel().unwrap()))
 }

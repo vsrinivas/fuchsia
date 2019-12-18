@@ -489,7 +489,7 @@ pub(crate) mod tests {
                 check_blocked.lock().await;
                 result.map_err(|e| e.into())
             }
-                .boxed()
+            .boxed()
         }
     }
 
@@ -511,7 +511,7 @@ pub(crate) mod tests {
             async move {
                 call_count.fetch_add(1, Ordering::SeqCst);
             }
-                .boxed()
+            .boxed()
         }
     }
 
@@ -533,7 +533,7 @@ pub(crate) mod tests {
             async move {
                 call_count.fetch_add(1, Ordering::SeqCst);
             }
-                .boxed()
+            .boxed()
         }
     }
 
@@ -1078,7 +1078,7 @@ pub(crate) mod tests {
                     latest_update_package: LATEST_SYSTEM_IMAGE.parse().expect("valid merkle"),
                 })
             }
-                .boxed()
+            .boxed()
         }
     }
 

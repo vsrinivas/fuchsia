@@ -212,9 +212,9 @@ fn main() -> Result<(), Error> {
                 }
                 Ok(())
             }
-                .unwrap_or_else(|e: failure::Error| {
-                    println!("error {:#?}", e);
-                }),
+            .unwrap_or_else(|e: failure::Error| {
+                println!("error {:#?}", e);
+            }),
         );
 
         // Listen for vsync messages to schedule an update of the displayed image
@@ -240,9 +240,9 @@ fn main() -> Result<(), Error> {
                 }
                 Ok(())
             }
-                .unwrap_or_else(|e: failure::Error| {
-                    println!("error {:#?}", e);
-                }),
+            .unwrap_or_else(|e: failure::Error| {
+                println!("error {:#?}", e);
+            }),
         );
         Ok::<(), Error>(())
     })?;

@@ -53,10 +53,7 @@ struct SettingsServer {
 
 impl SettingsServer {
     fn new(frontend_webpage: String) -> SettingsServer {
-        SettingsServer {
-            page: frontend_webpage,
-            current_settings: SettingsState::default(),
-        }
+        SettingsServer { page: frontend_webpage, current_settings: SettingsState::default() }
     }
 
     // TODO(NET-1430): Hook up to wlancfg FIDL endpoints.

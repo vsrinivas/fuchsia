@@ -75,10 +75,8 @@ impl RecordingVerifier {
             return Err(HttpsDateError::NoCertificatesPresented);
         };
 
-        let untrusted_der: Vec<&[u8]> = presented_certs
-            .iter()
-            .map(|certificate| certificate.0.as_slice())
-            .collect();
+        let untrusted_der: Vec<&[u8]> =
+            presented_certs.iter().map(|certificate| certificate.0.as_slice()).collect();
         let leaf = webpki::EndEntityCert::from(untrusted_der[0])
             .map_err(|_| HttpsDateError::CorruptLeafCertificate)?;
 
@@ -226,45 +224,37 @@ mod test {
     #[test]
     fn test_get_network_time() -> Result<(), Error> {
         let mut executor = Executor::new().expect("Error creating executor");
-        executor.run_singlethreaded(
-            async {
-                let date = get_network_time("google.com").await;
-                if date.is_err() {
-                    assert!(date.unwrap_err().is_network_error());
-                    return Ok(());
-                }
-                assert!(BUILD_TIME.timestamp() <= date?.timestamp());
-                Ok(())
-            },
-        )
+        executor.run_singlethreaded(async {
+            let date = get_network_time("google.com").await;
+            if date.is_err() {
+                assert!(date.unwrap_err().is_network_error());
+                return Ok(());
+            }
+            assert!(BUILD_TIME.timestamp() <= date?.timestamp());
+            Ok(())
+        })
     }
 
     #[ignore]
     #[test]
     fn test_far_future() -> Result<(), Error> {
         let mut executor = Executor::new().expect("Error creating executor");
-        executor.run_singlethreaded(
-            async {
-                let future_date = FixedOffset::east(0).ymd(5000, 1, 1).and_hms(0, 0, 0);
-                let error =
-                    get_network_time_backstop("google.com", future_date).await.unwrap_err();
-                assert!(error.is_network_error() || error == HttpsDateError::InvalidDate);
-                Ok(())
-            },
-        )
+        executor.run_singlethreaded(async {
+            let future_date = FixedOffset::east(0).ymd(5000, 1, 1).and_hms(0, 0, 0);
+            let error = get_network_time_backstop("google.com", future_date).await.unwrap_err();
+            assert!(error.is_network_error() || error == HttpsDateError::InvalidDate);
+            Ok(())
+        })
     }
 
     #[test]
     fn test_invalid_hostname() -> Result<(), Error> {
         let mut executor = Executor::new().expect("Error creating executor");
-        executor.run_singlethreaded(
-            async {
-                let future_date = FixedOffset::east(0).ymd(5000, 1, 1).and_hms(0, 0, 0);
-                let error =
-                    get_network_time_backstop("google com", future_date).await.unwrap_err();
-                assert!(error.is_network_error() || error == HttpsDateError::InvalidHostname);
-                Ok(())
-            },
-        )
+        executor.run_singlethreaded(async {
+            let future_date = FixedOffset::east(0).ymd(5000, 1, 1).and_hms(0, 0, 0);
+            let error = get_network_time_backstop("google com", future_date).await.unwrap_err();
+            assert!(error.is_network_error() || error == HttpsDateError::InvalidHostname);
+            Ok(())
+        })
     }
 }

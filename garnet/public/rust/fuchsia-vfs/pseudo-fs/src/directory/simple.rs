@@ -629,21 +629,41 @@ mod tests {
 
     #[test]
     fn empty_directory() {
-        run_server_client(OPEN_RIGHT_READABLE, empty(), |proxy| {
-            async move {
-                assert_close!(proxy);
-            }
+        run_server_client(OPEN_RIGHT_READABLE, empty(), |proxy| async move {
+            assert_close!(proxy);
         });
     }
 
     #[test]
     fn empty_directory_get_attr() {
-        run_server_client(OPEN_RIGHT_READABLE, empty(), |proxy| {
-            async move {
+        run_server_client(OPEN_RIGHT_READABLE, empty(), |proxy| async move {
+            assert_get_attr!(
+                proxy,
+                NodeAttributes {
+                    mode: MODE_TYPE_DIRECTORY | S_IRUSR,
+                    id: INO_UNKNOWN,
+                    content_size: 0,
+                    storage_size: 0,
+                    link_count: 1,
+                    creation_time: 0,
+                    modification_time: 0,
+                }
+            );
+            assert_close!(proxy);
+        });
+    }
+
+    #[test]
+    fn empty_attr_directory_get_attr() {
+        run_server_client(
+            OPEN_RIGHT_READABLE,
+            empty_attr(S_IXOTH | S_IROTH | S_IXGRP | S_IRGRP | S_IXUSR | S_IRUSR),
+            |proxy| async move {
                 assert_get_attr!(
                     proxy,
                     NodeAttributes {
-                        mode: MODE_TYPE_DIRECTORY | S_IRUSR,
+                        mode: MODE_TYPE_DIRECTORY
+                            | (S_IXOTH | S_IROTH | S_IXGRP | S_IRGRP | S_IXUSR | S_IRUSR),
                         id: INO_UNKNOWN,
                         content_size: 0,
                         storage_size: 0,
@@ -653,60 +673,30 @@ mod tests {
                     }
                 );
                 assert_close!(proxy);
-            }
-        });
-    }
-
-    #[test]
-    fn empty_attr_directory_get_attr() {
-        run_server_client(
-            OPEN_RIGHT_READABLE,
-            empty_attr(S_IXOTH | S_IROTH | S_IXGRP | S_IRGRP | S_IXUSR | S_IRUSR),
-            |proxy| {
-                async move {
-                    assert_get_attr!(
-                        proxy,
-                        NodeAttributes {
-                            mode: MODE_TYPE_DIRECTORY
-                                | (S_IXOTH | S_IROTH | S_IXGRP | S_IRGRP | S_IXUSR | S_IRUSR),
-                            id: INO_UNKNOWN,
-                            content_size: 0,
-                            storage_size: 0,
-                            link_count: 1,
-                            creation_time: 0,
-                            modification_time: 0,
-                        }
-                    );
-                    assert_close!(proxy);
-                }
             },
         );
     }
 
     #[test]
     fn empty_directory_describe() {
-        run_server_client(OPEN_RIGHT_READABLE, empty(), |proxy| {
-            async move {
-                assert_describe!(proxy, NodeInfo::Directory(DirectoryObject));
-                assert_close!(proxy);
-            }
+        run_server_client(OPEN_RIGHT_READABLE, empty(), |proxy| async move {
+            assert_describe!(proxy, NodeInfo::Directory(DirectoryObject));
+            assert_close!(proxy);
         });
     }
 
     #[test]
     fn open_empty_directory_with_describe() {
-        run_server_client_with_open_requests_channel(empty(), |mut open_sender| {
-            async move {
-                let (proxy, server_end) = create_proxy::<DirectoryMarker>()
-                    .expect("Failed to create connection endpoints");
+        run_server_client_with_open_requests_channel(empty(), |mut open_sender| async move {
+            let (proxy, server_end) =
+                create_proxy::<DirectoryMarker>().expect("Failed to create connection endpoints");
 
-                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-                open_sender.send((flags, 0, Box::new(iter::empty()), server_end)).await.unwrap();
-                assert_event!(proxy, DirectoryEvent::OnOpen_ { s, info }, {
-                    assert_eq!(s, ZX_OK);
-                    assert_eq!(info, Some(Box::new(NodeInfo::Directory(DirectoryObject))));
-                });
-            }
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+            open_sender.send((flags, 0, Box::new(iter::empty()), server_end)).await.unwrap();
+            assert_event!(proxy, DirectoryEvent::OnOpen_ { s, info }, {
+                assert_eq!(s, ZX_OK);
+                assert_eq!(info, Some(Box::new(NodeInfo::Directory(DirectoryObject))));
+            });
         });
     }
 
@@ -716,28 +706,26 @@ mod tests {
             "file" => read_only_static("Content"),
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |first_proxy| {
-            async move {
-                async fn assert_read_file(root: &DirectoryProxy) {
-                    let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-                    let file = open_get_file_proxy_assert_ok!(&root, flags, "file");
+        run_server_client(OPEN_RIGHT_READABLE, root, |first_proxy| async move {
+            async fn assert_read_file(root: &DirectoryProxy) {
+                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+                let file = open_get_file_proxy_assert_ok!(&root, flags, "file");
 
-                    assert_read!(file, "Content");
-                    assert_close!(file);
-                }
-
-                assert_read_file(&first_proxy).await;
-
-                let second_proxy = clone_get_directory_proxy_assert_ok!(
-                    &first_proxy,
-                    OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE
-                );
-
-                assert_read_file(&second_proxy).await;
-
-                assert_close!(first_proxy);
-                assert_close!(second_proxy);
+                assert_read!(file, "Content");
+                assert_close!(file);
             }
+
+            assert_read_file(&first_proxy).await;
+
+            let second_proxy = clone_get_directory_proxy_assert_ok!(
+                &first_proxy,
+                OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE
+            );
+
+            assert_read_file(&second_proxy).await;
+
+            assert_close!(first_proxy);
+            assert_close!(second_proxy);
         });
     }
 
@@ -749,28 +737,26 @@ mod tests {
             "file" => read_only_static("Content"),
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |first_proxy| {
-            async move {
-                async fn assert_read_file(root: &DirectoryProxy) {
-                    let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-                    let file = open_get_file_proxy_assert_ok!(&root, flags, "file");
+        run_server_client(OPEN_RIGHT_READABLE, root, |first_proxy| async move {
+            async fn assert_read_file(root: &DirectoryProxy) {
+                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+                let file = open_get_file_proxy_assert_ok!(&root, flags, "file");
 
-                    assert_read!(file, "Content");
-                    assert_close!(file);
-                }
-
-                assert_read_file(&first_proxy).await;
-
-                let second_proxy = clone_get_directory_proxy_assert_ok!(
-                    &first_proxy,
-                    CLONE_FLAG_SAME_RIGHTS | OPEN_FLAG_DESCRIBE
-                );
-
-                assert_read_file(&second_proxy).await;
-
-                assert_close!(first_proxy);
-                assert_close!(second_proxy);
+                assert_read!(file, "Content");
+                assert_close!(file);
             }
+
+            assert_read_file(&first_proxy).await;
+
+            let second_proxy = clone_get_directory_proxy_assert_ok!(
+                &first_proxy,
+                CLONE_FLAG_SAME_RIGHTS | OPEN_FLAG_DESCRIBE
+            );
+
+            assert_read_file(&second_proxy).await;
+
+            assert_close!(first_proxy);
+            assert_close!(second_proxy);
         });
     }
 
@@ -780,26 +766,24 @@ mod tests {
             "file" => read_only_static("Content"),
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
-            async move {
-                async fn assert_read_file(root: &DirectoryProxy) {
-                    let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-                    let file = open_get_file_proxy_assert_ok!(&root, flags, "file");
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            async fn assert_read_file(root: &DirectoryProxy) {
+                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+                let file = open_get_file_proxy_assert_ok!(&root, flags, "file");
 
-                    assert_read!(file, "Content");
-                    assert_close!(file);
-                }
-
-                assert_read_file(&root).await;
-
-                clone_as_directory_assert_err!(
-                    &root,
-                    OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE,
-                    Status::ACCESS_DENIED
-                );
-
-                assert_close!(root);
+                assert_read!(file, "Content");
+                assert_close!(file);
             }
+
+            assert_read_file(&root).await;
+
+            clone_as_directory_assert_err!(
+                &root,
+                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE,
+                Status::ACCESS_DENIED
+            );
+
+            assert_close!(root);
         });
     }
 
@@ -811,22 +795,20 @@ mod tests {
             "file" => read_only_static("Content"),
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |proxy| {
-            async move {
-                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-                let file = open_get_file_proxy_assert_ok!(&proxy, flags, "file");
+        run_server_client(OPEN_RIGHT_READABLE, root, |proxy| async move {
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+            let file = open_get_file_proxy_assert_ok!(&proxy, flags, "file");
 
-                assert_read!(file, "Content");
-                assert_close!(file);
+            assert_read!(file, "Content");
+            assert_close!(file);
 
-                clone_as_directory_assert_err!(
-                    &proxy,
-                    CLONE_FLAG_SAME_RIGHTS | OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
-                    Status::INVALID_ARGS
-                );
+            clone_as_directory_assert_err!(
+                &proxy,
+                CLONE_FLAG_SAME_RIGHTS | OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+                Status::INVALID_ARGS
+            );
 
-                assert_close!(proxy);
-            }
+            assert_close!(proxy);
         });
     }
 
@@ -836,16 +818,14 @@ mod tests {
             "file" => read_only_static("Content"),
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
-            async move {
-                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-                let file = open_get_file_proxy_assert_ok!(&root, flags, "file");
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+            let file = open_get_file_proxy_assert_ok!(&root, flags, "file");
 
-                assert_read!(file, "Content");
-                assert_close!(file);
+            assert_read!(file, "Content");
+            assert_close!(file);
 
-                assert_close!(root);
-            }
+            assert_close!(root);
         });
     }
 
@@ -855,13 +835,11 @@ mod tests {
             "file" => read_only_static("Content"),
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
-            async move {
-                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-                open_as_file_assert_err!(&root, flags, "file2", Status::NOT_FOUND);
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+            open_as_file_assert_err!(&root, flags, "file2", Status::NOT_FOUND);
 
-                assert_close!(root);
-            }
+            assert_close!(root);
         });
     }
 
@@ -877,33 +855,31 @@ mod tests {
             "uname" => read_only_static("Fuchsia"),
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
-            async move {
-                async fn open_read_close<'a>(
-                    from_dir: &'a DirectoryProxy,
-                    path: &'a str,
-                    expected_content: &'a str,
-                ) {
-                    let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-                    let file = open_get_file_proxy_assert_ok!(&from_dir, flags, path);
-                    assert_read!(file, expected_content);
-                    assert_close!(file);
-                }
-
-                open_read_close(&root, "etc/fstab", "/dev/fs /").await;
-
-                {
-                    let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-                    let ssh_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc/ssh");
-
-                    open_read_close(&ssh_dir, "sshd_config", "# Empty").await;
-                }
-
-                open_read_close(&root, "etc/ssh/sshd_config", "# Empty").await;
-                open_read_close(&root, "uname", "Fuchsia").await;
-
-                assert_close!(root);
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            async fn open_read_close<'a>(
+                from_dir: &'a DirectoryProxy,
+                path: &'a str,
+                expected_content: &'a str,
+            ) {
+                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+                let file = open_get_file_proxy_assert_ok!(&from_dir, flags, path);
+                assert_read!(file, expected_content);
+                assert_close!(file);
             }
+
+            open_read_close(&root, "etc/fstab", "/dev/fs /").await;
+
+            {
+                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+                let ssh_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc/ssh");
+
+                open_read_close(&ssh_dir, "sshd_config", "# Empty").await;
+            }
+
+            open_read_close(&root, "etc/ssh/sshd_config", "# Empty").await;
+            open_read_close(&root, "uname", "Fuchsia").await;
+
+            assert_close!(root);
         });
     }
 
@@ -926,53 +902,51 @@ mod tests {
             }
         };
 
-        run_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |root| {
-            async move {
-                async fn open_read_write_close<'a>(
-                    from_dir: &'a DirectoryProxy,
-                    path: &'a str,
-                    expected_content: &'a str,
-                    new_content: &'a str,
-                    write_count: &'a AtomicUsize,
-                    expected_count: usize,
-                ) {
-                    let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
-                    let file = open_get_file_proxy_assert_ok!(&from_dir, flags, path);
-                    assert_read!(file, expected_content);
-                    assert_seek!(file, 0, Start);
-                    assert_write!(file, new_content);
-                    assert_close!(file);
+        run_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |root| async move {
+            async fn open_read_write_close<'a>(
+                from_dir: &'a DirectoryProxy,
+                path: &'a str,
+                expected_content: &'a str,
+                new_content: &'a str,
+                write_count: &'a AtomicUsize,
+                expected_count: usize,
+            ) {
+                let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
+                let file = open_get_file_proxy_assert_ok!(&from_dir, flags, path);
+                assert_read!(file, expected_content);
+                assert_seek!(file, 0, Start);
+                assert_write!(file, new_content);
+                assert_close!(file);
 
-                    assert_eq!(write_count.load(Ordering::Relaxed), expected_count);
-                }
+                assert_eq!(write_count.load(Ordering::Relaxed), expected_count);
+            }
 
-                {
-                    let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
-                    let ssh_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc/ssh");
-
-                    open_read_write_close(
-                        &ssh_dir,
-                        "sshd_config",
-                        "# Empty",
-                        "Port 22",
-                        write_count,
-                        1,
-                    )
-                    .await;
-                }
+            {
+                let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
+                let ssh_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc/ssh");
 
                 open_read_write_close(
-                    &root,
-                    "etc/ssh/sshd_config",
+                    &ssh_dir,
+                    "sshd_config",
                     "# Empty",
-                    "Port 23",
+                    "Port 22",
                     write_count,
-                    2,
+                    1,
                 )
                 .await;
-
-                assert_close!(root);
             }
+
+            open_read_write_close(
+                &root,
+                "etc/ssh/sshd_config",
+                "# Empty",
+                "Port 23",
+                write_count,
+                2,
+            )
+            .await;
+
+            assert_close!(root);
         });
     }
 
@@ -992,27 +966,25 @@ mod tests {
             }
         };
 
-        run_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |root| {
-            async move {
-                async fn open_write_close<'a>(
-                    from_dir: &'a DirectoryProxy,
-                    new_content: &'a str,
-                    write_count: &'a AtomicUsize,
-                    expected_count: usize,
-                ) {
-                    let flags = OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
-                    let file = open_get_file_proxy_assert_ok!(&from_dir, flags, "dev/output");
-                    assert_write!(file, new_content);
-                    assert_close!(file);
+        run_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |root| async move {
+            async fn open_write_close<'a>(
+                from_dir: &'a DirectoryProxy,
+                new_content: &'a str,
+                write_count: &'a AtomicUsize,
+                expected_count: usize,
+            ) {
+                let flags = OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
+                let file = open_get_file_proxy_assert_ok!(&from_dir, flags, "dev/output");
+                assert_write!(file, new_content);
+                assert_close!(file);
 
-                    assert_eq!(write_count.load(Ordering::Relaxed), expected_count);
-                }
-
-                open_write_close(&root, "Message 1", write_count, 1).await;
-                open_write_close(&root, "Message 2", write_count, 2).await;
-
-                assert_close!(root);
+                assert_eq!(write_count.load(Ordering::Relaxed), expected_count);
             }
+
+            open_write_close(&root, "Message 1", write_count, 1).await;
+            open_write_close(&root, "Message 2", write_count, 2).await;
+
+            assert_close!(root);
         });
     }
 
@@ -1025,16 +997,14 @@ mod tests {
             "file2" => read_only_static("Content 2"),
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
-            async move {
-                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-                open_as_file_assert_err!(&root, flags, "non-existing", Status::NOT_FOUND);
-                open_as_file_assert_err!(&root, flags, "dir/file10", Status::NOT_FOUND);
-                open_as_file_assert_err!(&root, flags, "dir/dir/file10", Status::NOT_FOUND);
-                open_as_file_assert_err!(&root, flags, "dir/dir/file1", Status::NOT_FOUND);
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+            open_as_file_assert_err!(&root, flags, "non-existing", Status::NOT_FOUND);
+            open_as_file_assert_err!(&root, flags, "dir/file10", Status::NOT_FOUND);
+            open_as_file_assert_err!(&root, flags, "dir/dir/file10", Status::NOT_FOUND);
+            open_as_file_assert_err!(&root, flags, "dir/dir/file1", Status::NOT_FOUND);
 
-                assert_close!(root);
-            }
+            assert_close!(root);
         });
     }
 
@@ -1044,13 +1014,11 @@ mod tests {
             "file_foo" => read_only_static("Content"),
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
-            async move {
-                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-                open_as_file_assert_err!(&root, flags, "", Status::BAD_PATH);
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+            open_as_file_assert_err!(&root, flags, "", Status::BAD_PATH);
 
-                assert_close!(root);
-            }
+            assert_close!(root);
         });
     }
 
@@ -1063,14 +1031,12 @@ mod tests {
             "file2" => read_only_static("Content 2"),
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
-            async move {
-                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-                open_as_file_assert_err!(&root, flags, "file2/file1", Status::NOT_DIR);
-                open_as_file_assert_err!(&root, flags, "dir/file1/file3", Status::NOT_DIR);
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+            open_as_file_assert_err!(&root, flags, "file2/file1", Status::NOT_DIR);
+            open_as_file_assert_err!(&root, flags, "dir/file1/file3", Status::NOT_DIR);
 
-                assert_close!(root);
-            }
+            assert_close!(root);
         });
     }
 
@@ -1083,27 +1049,25 @@ mod tests {
             "file2" => read_only_static("Content 2"),
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
-            async move {
-                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-                let mode = MODE_TYPE_DIRECTORY;
-                {
-                    let proxy = open_get_proxy::<FileMarker>(&root, flags, mode, "file2");
-                    assert_event!(proxy, FileEvent::OnOpen_ { s, info }, {
-                        assert_eq!(Status::from_raw(s), Status::NOT_DIR);
-                        assert_eq!(info, None);
-                    });
-                }
-                {
-                    let proxy = open_get_proxy::<FileMarker>(&root, flags, mode, "dir/file1");
-                    assert_event!(proxy, FileEvent::OnOpen_ { s, info }, {
-                        assert_eq!(Status::from_raw(s), Status::NOT_DIR);
-                        assert_eq!(info, None);
-                    });
-                }
-
-                assert_close!(root);
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+            let mode = MODE_TYPE_DIRECTORY;
+            {
+                let proxy = open_get_proxy::<FileMarker>(&root, flags, mode, "file2");
+                assert_event!(proxy, FileEvent::OnOpen_ { s, info }, {
+                    assert_eq!(Status::from_raw(s), Status::NOT_DIR);
+                    assert_eq!(info, None);
+                });
             }
+            {
+                let proxy = open_get_proxy::<FileMarker>(&root, flags, mode, "dir/file1");
+                assert_event!(proxy, FileEvent::OnOpen_ { s, info }, {
+                    assert_eq!(Status::from_raw(s), Status::NOT_DIR);
+                    assert_eq!(info, None);
+                });
+            }
+
+            assert_close!(root);
         });
     }
 
@@ -1115,27 +1079,25 @@ mod tests {
             },
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
-            async move {
-                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-                let mode = MODE_TYPE_FILE;
-                {
-                    let proxy = open_get_proxy::<DirectoryMarker>(&root, flags, mode, "dir");
-                    assert_event!(proxy, DirectoryEvent::OnOpen_ { s, info }, {
-                        assert_eq!(Status::from_raw(s), Status::NOT_FILE);
-                        assert_eq!(info, None);
-                    });
-                }
-                {
-                    let proxy = open_get_proxy::<DirectoryMarker>(&root, flags, mode, "dir/dir2");
-                    assert_event!(proxy, DirectoryEvent::OnOpen_ { s, info }, {
-                        assert_eq!(Status::from_raw(s), Status::NOT_FILE);
-                        assert_eq!(info, None);
-                    });
-                }
-
-                assert_close!(root);
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+            let mode = MODE_TYPE_FILE;
+            {
+                let proxy = open_get_proxy::<DirectoryMarker>(&root, flags, mode, "dir");
+                assert_event!(proxy, DirectoryEvent::OnOpen_ { s, info }, {
+                    assert_eq!(Status::from_raw(s), Status::NOT_FILE);
+                    assert_eq!(info, None);
+                });
             }
+            {
+                let proxy = open_get_proxy::<DirectoryMarker>(&root, flags, mode, "dir/dir2");
+                assert_event!(proxy, DirectoryEvent::OnOpen_ { s, info }, {
+                    assert_eq!(Status::from_raw(s), Status::NOT_FILE);
+                    assert_eq!(info, None);
+                });
+            }
+
+            assert_close!(root);
         });
     }
 
@@ -1146,25 +1108,23 @@ mod tests {
             "dir" => pseudo_directory! {},
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
-            async move {
-                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
-                open_as_file_assert_err!(&root, flags, "file/", Status::NOT_DIR);
+            open_as_file_assert_err!(&root, flags, "file/", Status::NOT_DIR);
 
-                {
-                    let file = open_get_file_proxy_assert_ok!(&root, flags, "file");
-                    assert_read!(file, "Content");
-                    assert_close!(file);
-                }
-
-                {
-                    let sub_dir = open_get_directory_proxy_assert_ok!(&root, flags, "dir/");
-                    assert_close!(sub_dir);
-                }
-
-                assert_close!(root);
+            {
+                let file = open_get_file_proxy_assert_ok!(&root, flags, "file");
+                assert_read!(file, "Content");
+                assert_close!(file);
             }
+
+            {
+                let sub_dir = open_get_directory_proxy_assert_ok!(&root, flags, "dir/");
+                assert_close!(sub_dir);
+            }
+
+            assert_close!(root);
         });
     }
 
@@ -1177,15 +1137,13 @@ mod tests {
             },
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
-            async move {
-                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-                open_as_directory_assert_err!(&root, flags, "dir/../dir2", Status::INVALID_ARGS);
-                open_as_directory_assert_err!(&root, flags, "dir/./dir2", Status::INVALID_ARGS);
-                open_as_directory_assert_err!(&root, flags, "./dir", Status::INVALID_ARGS);
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+            open_as_directory_assert_err!(&root, flags, "dir/../dir2", Status::INVALID_ARGS);
+            open_as_directory_assert_err!(&root, flags, "dir/./dir2", Status::INVALID_ARGS);
+            open_as_directory_assert_err!(&root, flags, "./dir", Status::INVALID_ARGS);
 
-                assert_close!(root);
-            }
+            assert_close!(root);
         });
     }
 
@@ -1197,18 +1155,16 @@ mod tests {
             },
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
-            async move {
-                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-                open_as_directory_assert_err!(&root, flags, "dir/../dir2", Status::INVALID_ARGS);
-                open_as_directory_assert_err!(&root, flags, "dir/./dir2", Status::INVALID_ARGS);
-                open_as_directory_assert_err!(&root, flags, "dir//dir2", Status::INVALID_ARGS);
-                open_as_directory_assert_err!(&root, flags, "dir/dir2//", Status::INVALID_ARGS);
-                open_as_directory_assert_err!(&root, flags, "//dir/dir2", Status::INVALID_ARGS);
-                open_as_directory_assert_err!(&root, flags, "./dir", Status::INVALID_ARGS);
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+            open_as_directory_assert_err!(&root, flags, "dir/../dir2", Status::INVALID_ARGS);
+            open_as_directory_assert_err!(&root, flags, "dir/./dir2", Status::INVALID_ARGS);
+            open_as_directory_assert_err!(&root, flags, "dir//dir2", Status::INVALID_ARGS);
+            open_as_directory_assert_err!(&root, flags, "dir/dir2//", Status::INVALID_ARGS);
+            open_as_directory_assert_err!(&root, flags, "//dir/dir2", Status::INVALID_ARGS);
+            open_as_directory_assert_err!(&root, flags, "./dir", Status::INVALID_ARGS);
 
-                assert_close!(root);
-            }
+            assert_close!(root);
         });
     }
 
@@ -1220,17 +1176,15 @@ mod tests {
             },
         };
 
-        run_server_client(0, root, |root| {
-            async move {
-                open_as_file_assert_err!(
-                    &root,
-                    OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
-                    "dir/file",
-                    Status::ACCESS_DENIED
-                );
+        run_server_client(0, root, |root| async move {
+            open_as_file_assert_err!(
+                &root,
+                OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
+                "dir/file",
+                Status::ACCESS_DENIED
+            );
 
-                assert_close!(root);
-            }
+            assert_close!(root);
         });
     }
 
@@ -1244,17 +1198,15 @@ mod tests {
             },
         };
 
-        run_server_client(0, root, |root| {
-            async move {
-                open_as_file_assert_err!(
-                    &root,
-                    OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE,
-                    "dir/file",
-                    Status::ACCESS_DENIED
-                );
+        run_server_client(0, root, |root| async move {
+            open_as_file_assert_err!(
+                &root,
+                OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE,
+                "dir/file",
+                Status::ACCESS_DENIED
+            );
 
-                assert_close!(root);
-            }
+            assert_close!(root);
         });
     }
 
@@ -1274,35 +1226,33 @@ mod tests {
             },
         };
 
-        run_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |root| {
-            async move {
-                let nested = open_get_directory_proxy_assert_ok!(
-                    &root,
-                    OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX | OPEN_FLAG_DESCRIBE,
-                    "nested"
-                );
+        run_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |root| async move {
+            let nested = open_get_directory_proxy_assert_ok!(
+                &root,
+                OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX | OPEN_FLAG_DESCRIBE,
+                "nested"
+            );
 
-                clone_get_directory_proxy_assert_ok!(
-                    &nested,
-                    OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE
-                );
+            clone_get_directory_proxy_assert_ok!(
+                &nested,
+                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE
+            );
 
-                {
-                    let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
-                    let file = open_get_file_proxy_assert_ok!(&nested, flags, "file");
+            {
+                let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
+                let file = open_get_file_proxy_assert_ok!(&nested, flags, "file");
 
-                    assert_read!(file, "Content");
-                    assert_seek!(file, 0, Start);
-                    assert_write!(file, "New content");
+                assert_read!(file, "Content");
+                assert_seek!(file, 0, Start);
+                assert_write!(file, "New content");
 
-                    assert_close!(file);
-                }
-
-                assert_close!(nested);
-                assert_close!(root);
-
-                assert_eq!(write_count.load(Ordering::Relaxed), 1);
+                assert_close!(file);
             }
+
+            assert_close!(nested);
+            assert_close!(root);
+
+            assert_eq!(write_count.load(Ordering::Relaxed), 1);
         });
     }
 
@@ -1319,36 +1269,34 @@ mod tests {
             },
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
-            async move {
-                let nested = open_get_directory_proxy_assert_ok!(
-                    &root,
-                    OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX | OPEN_FLAG_DESCRIBE,
-                    "nested"
-                );
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            let nested = open_get_directory_proxy_assert_ok!(
+                &root,
+                OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX | OPEN_FLAG_DESCRIBE,
+                "nested"
+            );
 
-                clone_as_directory_assert_err!(
-                    &nested,
-                    OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE,
-                    Status::ACCESS_DENIED
-                );
+            clone_as_directory_assert_err!(
+                &nested,
+                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE,
+                Status::ACCESS_DENIED
+            );
 
-                {
-                    let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
-                    open_as_file_assert_err!(&nested, flags, "file", Status::ACCESS_DENIED);
-                }
-
-                {
-                    let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-                    let file = open_get_file_proxy_assert_ok!(&nested, flags, "file");
-
-                    assert_read!(file, "Content");
-                    assert_close!(file);
-                }
-
-                assert_close!(nested);
-                assert_close!(root);
+            {
+                let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
+                open_as_file_assert_err!(&nested, flags, "file", Status::ACCESS_DENIED);
             }
+
+            {
+                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+                let file = open_get_file_proxy_assert_ok!(&nested, flags, "file");
+
+                assert_read!(file, "Content");
+                assert_close!(file);
+            }
+
+            assert_close!(nested);
+            assert_close!(root);
         });
     }
 
@@ -1368,49 +1316,47 @@ mod tests {
             "uname" => read_only_static("Fuchsia"),
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
-            async move {
-                {
-                    let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
-                    expected
-                        .add(DIRENT_TYPE_DIRECTORY, b".")
-                        .add(DIRENT_TYPE_DIRECTORY, b"etc")
-                        .add(DIRENT_TYPE_FILE, b"files")
-                        .add(DIRENT_TYPE_FILE, b"more")
-                        .add(DIRENT_TYPE_FILE, b"uname");
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            {
+                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                expected
+                    .add(DIRENT_TYPE_DIRECTORY, b".")
+                    .add(DIRENT_TYPE_DIRECTORY, b"etc")
+                    .add(DIRENT_TYPE_FILE, b"files")
+                    .add(DIRENT_TYPE_FILE, b"more")
+                    .add(DIRENT_TYPE_FILE, b"uname");
 
-                    assert_read_dirents!(root, 1000, expected.into_vec());
-                }
-
-                {
-                    let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-                    let etc_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc");
-
-                    let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
-                    expected
-                        .add(DIRENT_TYPE_DIRECTORY, b".")
-                        .add(DIRENT_TYPE_FILE, b"fstab")
-                        .add(DIRENT_TYPE_FILE, b"passwd")
-                        .add(DIRENT_TYPE_FILE, b"shells")
-                        .add(DIRENT_TYPE_DIRECTORY, b"ssh");
-
-                    assert_read_dirents!(etc_dir, 1000, expected.into_vec());
-                    assert_close!(etc_dir);
-                }
-
-                {
-                    let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-                    let ssh_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc/ssh");
-
-                    let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
-                    expected.add(DIRENT_TYPE_DIRECTORY, b".").add(DIRENT_TYPE_FILE, b"sshd_config");
-
-                    assert_read_dirents!(ssh_dir, 1000, expected.into_vec());
-                    assert_close!(ssh_dir);
-                }
-
-                assert_close!(root);
+                assert_read_dirents!(root, 1000, expected.into_vec());
             }
+
+            {
+                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+                let etc_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc");
+
+                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                expected
+                    .add(DIRENT_TYPE_DIRECTORY, b".")
+                    .add(DIRENT_TYPE_FILE, b"fstab")
+                    .add(DIRENT_TYPE_FILE, b"passwd")
+                    .add(DIRENT_TYPE_FILE, b"shells")
+                    .add(DIRENT_TYPE_DIRECTORY, b"ssh");
+
+                assert_read_dirents!(etc_dir, 1000, expected.into_vec());
+                assert_close!(etc_dir);
+            }
+
+            {
+                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+                let ssh_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc/ssh");
+
+                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                expected.add(DIRENT_TYPE_DIRECTORY, b".").add(DIRENT_TYPE_FILE, b"sshd_config");
+
+                assert_read_dirents!(ssh_dir, 1000, expected.into_vec());
+                assert_close!(ssh_dir);
+            }
+
+            assert_close!(root);
         });
     }
 
@@ -1528,8 +1474,10 @@ mod tests {
             "file" => read_only_static("Content"),
         };
 
-        run_server_client(OPEN_FLAG_NODE_REFERENCE | OPEN_RIGHT_READABLE, root, |root| {
-            async move {
+        run_server_client(
+            OPEN_FLAG_NODE_REFERENCE | OPEN_RIGHT_READABLE,
+            root,
+            |root| async move {
                 open_as_file_assert_err!(
                     &root,
                     OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
@@ -1544,8 +1492,8 @@ mod tests {
                 );
 
                 assert_close!(root);
-            }
-        });
+            },
+        );
     }
 
     #[test]
@@ -1554,8 +1502,10 @@ mod tests {
             "file" => read_only_static("Content"),
         };
 
-        run_server_client(OPEN_RIGHT_WRITABLE | OPEN_FLAG_NODE_REFERENCE, root, |root| {
-            async move {
+        run_server_client(
+            OPEN_RIGHT_WRITABLE | OPEN_FLAG_NODE_REFERENCE,
+            root,
+            |root| async move {
                 open_as_file_assert_err!(
                     &root,
                     OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE,
@@ -1570,8 +1520,8 @@ mod tests {
                 );
 
                 assert_close!(root);
-            }
-        });
+            },
+        );
     }
 
     #[test]
@@ -1586,62 +1536,58 @@ mod tests {
             "files" => read_only_static("Content"),
         };
 
-        run_server_client(OPEN_FLAG_NODE_REFERENCE, root, |root| {
-            async move {
-                {
-                    let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
-                    expected
-                        .add(DIRENT_TYPE_DIRECTORY, b".")
-                        .add(DIRENT_TYPE_DIRECTORY, b"etc")
-                        .add(DIRENT_TYPE_FILE, b"files");
+        run_server_client(OPEN_FLAG_NODE_REFERENCE, root, |root| async move {
+            {
+                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                expected
+                    .add(DIRENT_TYPE_DIRECTORY, b".")
+                    .add(DIRENT_TYPE_DIRECTORY, b"etc")
+                    .add(DIRENT_TYPE_FILE, b"files");
 
-                    assert_read_dirents!(root, 1000, expected.into_vec());
-                }
-
-                {
-                    let flags = OPEN_FLAG_DESCRIBE;
-                    let etc_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc");
-
-                    let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
-                    expected
-                        .add(DIRENT_TYPE_DIRECTORY, b".")
-                        .add(DIRENT_TYPE_FILE, b"fstab")
-                        .add(DIRENT_TYPE_DIRECTORY, b"ssh");
-
-                    assert_read_dirents!(etc_dir, 1000, expected.into_vec());
-                    assert_close!(etc_dir);
-                }
-
-                {
-                    let flags = OPEN_FLAG_DESCRIBE;
-                    let ssh_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc/ssh");
-
-                    let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
-                    expected.add(DIRENT_TYPE_DIRECTORY, b".").add(DIRENT_TYPE_FILE, b"sshd_config");
-
-                    assert_read_dirents!(ssh_dir, 1000, expected.into_vec());
-                    assert_close!(ssh_dir);
-                }
-
-                assert_close!(root);
+                assert_read_dirents!(root, 1000, expected.into_vec());
             }
+
+            {
+                let flags = OPEN_FLAG_DESCRIBE;
+                let etc_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc");
+
+                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                expected
+                    .add(DIRENT_TYPE_DIRECTORY, b".")
+                    .add(DIRENT_TYPE_FILE, b"fstab")
+                    .add(DIRENT_TYPE_DIRECTORY, b"ssh");
+
+                assert_read_dirents!(etc_dir, 1000, expected.into_vec());
+                assert_close!(etc_dir);
+            }
+
+            {
+                let flags = OPEN_FLAG_DESCRIBE;
+                let ssh_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc/ssh");
+
+                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                expected.add(DIRENT_TYPE_DIRECTORY, b".").add(DIRENT_TYPE_FILE, b"sshd_config");
+
+                assert_read_dirents!(ssh_dir, 1000, expected.into_vec());
+                assert_close!(ssh_dir);
+            }
+
+            assert_close!(root);
         });
     }
 
     #[test]
     fn watch_empty() {
-        run_server_client(OPEN_RIGHT_READABLE, empty(), |root| {
-            async move {
-                let mask =
-                    WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
-                let watcher_client = assert_watch!(root, mask);
+        run_server_client(OPEN_RIGHT_READABLE, empty(), |root| async move {
+            let mask =
+                WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+            let watcher_client = assert_watch!(root, mask);
 
-                assert_watcher_one_message_watched_events!(watcher_client, { EXISTING, "." });
-                assert_watcher_one_message_watched_events!(watcher_client, { IDLE, vec![] });
+            assert_watcher_one_message_watched_events!(watcher_client, { EXISTING, "." });
+            assert_watcher_one_message_watched_events!(watcher_client, { IDLE, vec![] });
 
-                drop(watcher_client);
-                assert_close!(root);
-            }
+            drop(watcher_client);
+            assert_close!(root);
         });
     }
 
@@ -1657,23 +1603,21 @@ mod tests {
             "files" => read_only_static("Content"),
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
-            async move {
-                let mask =
-                    WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
-                let watcher_client = assert_watch!(root, mask);
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            let mask =
+                WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+            let watcher_client = assert_watch!(root, mask);
 
-                assert_watcher_one_message_watched_events!(
-                    watcher_client,
-                    { EXISTING, "." },
-                    { EXISTING, "etc" },
-                    { EXISTING, "files" },
-                );
-                assert_watcher_one_message_watched_events!(watcher_client, { IDLE, vec![] });
+            assert_watcher_one_message_watched_events!(
+                watcher_client,
+                { EXISTING, "." },
+                { EXISTING, "etc" },
+                { EXISTING, "files" },
+            );
+            assert_watcher_one_message_watched_events!(watcher_client, { IDLE, vec![] });
 
-                drop(watcher_client);
-                assert_close!(root);
-            }
+            drop(watcher_client);
+            assert_close!(root);
         });
     }
 
@@ -1689,34 +1633,32 @@ mod tests {
             "files" => read_only_static("Content"),
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
-            async move {
-                let mask =
-                    WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
-                let watcher1_client = assert_watch!(root, mask);
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            let mask =
+                WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+            let watcher1_client = assert_watch!(root, mask);
 
-                assert_watcher_one_message_watched_events!(
-                    watcher1_client,
-                    { EXISTING, "." },
-                    { EXISTING, "etc" },
-                    { EXISTING, "files" },
-                );
-                assert_watcher_one_message_watched_events!(watcher1_client, { IDLE, vec![] });
+            assert_watcher_one_message_watched_events!(
+                watcher1_client,
+                { EXISTING, "." },
+                { EXISTING, "etc" },
+                { EXISTING, "files" },
+            );
+            assert_watcher_one_message_watched_events!(watcher1_client, { IDLE, vec![] });
 
-                let watcher2_client = assert_watch!(root, mask);
+            let watcher2_client = assert_watch!(root, mask);
 
-                assert_watcher_one_message_watched_events!(
-                    watcher2_client,
-                    { EXISTING, "." },
-                    { EXISTING, "etc" },
-                    { EXISTING, "files" },
-                );
-                assert_watcher_one_message_watched_events!(watcher2_client, { IDLE, vec![] });
+            assert_watcher_one_message_watched_events!(
+                watcher2_client,
+                { EXISTING, "." },
+                { EXISTING, "etc" },
+                { EXISTING, "files" },
+            );
+            assert_watcher_one_message_watched_events!(watcher2_client, { IDLE, vec![] });
 
-                drop(watcher1_client);
-                drop(watcher2_client);
-                assert_close!(root);
-            }
+            drop(watcher1_client);
+            drop(watcher2_client);
+            assert_close!(root);
         });
     }
 
@@ -1732,16 +1674,14 @@ mod tests {
             "files" => read_only_static("Content"),
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
-            async move {
-                let mask = WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
-                let watcher_client = assert_watch!(root, mask);
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            let mask = WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+            let watcher_client = assert_watch!(root, mask);
 
-                assert_watcher_one_message_watched_events!(watcher_client, { IDLE, vec![] });
+            assert_watcher_one_message_watched_events!(watcher_client, { IDLE, vec![] });
 
-                drop(watcher_client);
-                assert_close!(root);
-            }
+            drop(watcher_client);
+            assert_close!(root);
         });
     }
 }

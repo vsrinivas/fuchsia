@@ -66,15 +66,13 @@ async fn main() -> Result<(), Error> {
     fs.take_and_serve_directory_handle()?;
     let server_dispatcher = RefCell::new(CannedDispatcher {});
     let admin_fut = fs
-        .then(|incoming_service| {
-            async {
-                match incoming_service {
-                    IncomingService::Server(stream) => {
-                        run_server(stream, &server_dispatcher)
-                            .inspect_err(|e| log::info!("{:?}", e))
-                            .await?;
-                        Ok(())
-                    }
+        .then(|incoming_service| async {
+            match incoming_service {
+                IncomingService::Server(stream) => {
+                    run_server(stream, &server_dispatcher)
+                        .inspect_err(|e| log::info!("{:?}", e))
+                        .await?;
+                    Ok(())
                 }
             }
         })
@@ -189,47 +187,31 @@ async fn run_server<S: ServerDispatcher>(
     server: &RefCell<S>,
 ) -> Result<(), fidl::Error> {
     stream
-        .try_for_each(|request| {
-            async {
-                match request {
-                    fidl_fuchsia_net_dhcp::Server_Request::GetOption { code: c, responder: r } => r
-                        .send(
-                            &mut server.borrow().dispatch_get_option(c).map_err(|e| e.into_raw()),
-                        ),
-                    fidl_fuchsia_net_dhcp::Server_Request::GetParameter {
-                        name: n,
-                        responder: r,
-                    } => r.send(
-                        &mut server.borrow().dispatch_get_parameter(n).map_err(|e| e.into_raw()),
+        .try_for_each(|request| async {
+            match request {
+                fidl_fuchsia_net_dhcp::Server_Request::GetOption { code: c, responder: r } => {
+                    r.send(&mut server.borrow().dispatch_get_option(c).map_err(|e| e.into_raw()))
+                }
+                fidl_fuchsia_net_dhcp::Server_Request::GetParameter { name: n, responder: r } => {
+                    r.send(&mut server.borrow().dispatch_get_parameter(n).map_err(|e| e.into_raw()))
+                }
+                fidl_fuchsia_net_dhcp::Server_Request::SetOption { value: v, responder: r } => r
+                    .send(
+                        &mut server.borrow_mut().dispatch_set_option(v).map_err(|e| e.into_raw()),
                     ),
-                    fidl_fuchsia_net_dhcp::Server_Request::SetOption { value: v, responder: r } => {
-                        r.send(
-                            &mut server
-                                .borrow_mut()
-                                .dispatch_set_option(v)
-                                .map_err(|e| e.into_raw()),
-                        )
-                    }
-                    fidl_fuchsia_net_dhcp::Server_Request::SetParameter {
-                        value: v,
-                        responder: r,
-                    } => r.send(
+                fidl_fuchsia_net_dhcp::Server_Request::SetParameter { value: v, responder: r } => r
+                    .send(
                         &mut server
                             .borrow_mut()
                             .dispatch_set_parameter(v)
                             .map_err(|e| e.into_raw()),
                     ),
-                    fidl_fuchsia_net_dhcp::Server_Request::ListOptions { responder: r } => r.send(
-                        &mut server.borrow().dispatch_list_options().map_err(|e| e.into_raw()),
-                    ),
-                    fidl_fuchsia_net_dhcp::Server_Request::ListParameters { responder: r } => r
-                        .send(
-                            &mut server
-                                .borrow()
-                                .dispatch_list_parameters()
-                                .map_err(|e| e.into_raw()),
-                        ),
+                fidl_fuchsia_net_dhcp::Server_Request::ListOptions { responder: r } => {
+                    r.send(&mut server.borrow().dispatch_list_options().map_err(|e| e.into_raw()))
                 }
+                fidl_fuchsia_net_dhcp::Server_Request::ListParameters { responder: r } => r.send(
+                    &mut server.borrow().dispatch_list_parameters().map_err(|e| e.into_raw()),
+                ),
             }
         })
         .await

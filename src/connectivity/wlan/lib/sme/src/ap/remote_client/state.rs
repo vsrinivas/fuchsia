@@ -178,29 +178,26 @@ impl Authenticated {
                 // mismatch the AP rates at this point: the client should have already determined
                 // the appropriate rates via the beacon or probe response frames. However, just to
                 // be safe, we intersect these rates here.
-                intersect::intersect_rates(
-                    intersect::ApRates(ap_rates),
-                    client_rates.into(),
-                )
-                .map_err(|error| AssociationError {
-                    error: format_err!(
-                        "could not intersect rates ({:?} + {:?}): {:?}",
-                        ap_rates,
-                        client_rates,
-                        error
-                    ),
-                    result_code: match error {
-                        intersect::IntersectRatesError::BasicRatesMismatch => {
-                            fidl_mlme::AssociateResultCodes::RefusedBasicRatesMismatch
-                        }
-                        intersect::IntersectRatesError::NoApRatesSupported => {
-                            fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch
-                        }
-                    },
-                    reason_code: fidl_mlme::ReasonCode::ReasonInvalidElement,
-                })?
-                .as_bytes()
-                .to_vec()
+                intersect::intersect_rates(intersect::ApRates(ap_rates), client_rates.into())
+                    .map_err(|error| AssociationError {
+                        error: format_err!(
+                            "could not intersect rates ({:?} + {:?}): {:?}",
+                            ap_rates,
+                            client_rates,
+                            error
+                        ),
+                        result_code: match error {
+                            intersect::IntersectRatesError::BasicRatesMismatch => {
+                                fidl_mlme::AssociateResultCodes::RefusedBasicRatesMismatch
+                            }
+                            intersect::IntersectRatesError::NoApRatesSupported => {
+                                fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch
+                            }
+                        },
+                        reason_code: fidl_mlme::ReasonCode::ReasonInvalidElement,
+                    })?
+                    .as_bytes()
+                    .to_vec()
             } else {
                 // If we are using a FullMAC driver, don't do the intersection and just pass the
                 // client rates back: they won't be used meaningfully anyway.

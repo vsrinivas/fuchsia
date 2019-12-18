@@ -68,7 +68,7 @@ pub fn start(lib_proxy: DirectoryProxy, chan: zx::Channel) {
             }
             Ok(())
         }
-            .unwrap_or_else(|e: Error| warn!("couldn't run library loader service: {}", e)),
+        .unwrap_or_else(|e: Error| warn!("couldn't run library loader service: {}", e)),
     );
 }
 

@@ -243,9 +243,7 @@ pub(crate) mod tests {
                 }
                 Ok(())
             }
-                .unwrap_or_else(|e: failure::Error| {
-                    info!("error running validate interface: {:?}", e)
-                }),
+            .unwrap_or_else(|e: failure::Error| info!("error running validate interface: {:?}", e)),
         );
     }
 }

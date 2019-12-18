@@ -165,113 +165,97 @@ mod test {
 
     #[test]
     fn test_watch_or_create_key_singleton() {
-        run_key_manager_test(|km_proxy| {
-            async move {
-                assert_eq!(
-                    km_proxy
-                        .watch_or_create_key_singleton(KeySingletonProperties {
-                            name: None,
-                            uid: None,
-                            metadata: None,
-                            key_length: None
-                        })
-                        .await?,
-                    Err(ApiError::UnsupportedOperation)
-                );
-                Ok(())
-            }
+        run_key_manager_test(|km_proxy| async move {
+            assert_eq!(
+                km_proxy
+                    .watch_or_create_key_singleton(KeySingletonProperties {
+                        name: None,
+                        uid: None,
+                        metadata: None,
+                        key_length: None
+                    })
+                    .await?,
+                Err(ApiError::UnsupportedOperation)
+            );
+            Ok(())
         });
     }
 
     #[test]
     fn test_watch_key_singleton() {
-        run_key_manager_test(|km_proxy| {
-            async move {
-                assert_eq!(
-                    km_proxy.watch_key_singleton(TEST_KEY_SINGLETON_NAME).await?,
-                    Err(ApiError::UnsupportedOperation)
-                );
-                Ok(())
-            }
+        run_key_manager_test(|km_proxy| async move {
+            assert_eq!(
+                km_proxy.watch_key_singleton(TEST_KEY_SINGLETON_NAME).await?,
+                Err(ApiError::UnsupportedOperation)
+            );
+            Ok(())
         });
     }
 
     #[test]
     fn test_delete_key_singleton() {
-        run_key_manager_test(|km_proxy| {
-            async move {
-                assert_eq!(
-                    km_proxy.delete_key_singleton(TEST_KEY_SINGLETON_NAME).await?,
-                    Err(ApiError::UnsupportedOperation)
-                );
-                Ok(())
-            }
+        run_key_manager_test(|km_proxy| async move {
+            assert_eq!(
+                km_proxy.delete_key_singleton(TEST_KEY_SINGLETON_NAME).await?,
+                Err(ApiError::UnsupportedOperation)
+            );
+            Ok(())
         });
     }
 
     #[test]
     fn test_get_or_create_key_set() {
-        run_key_manager_test(|km_proxy| {
-            async move {
-                let key_set_properties = KeySetProperties {
-                    name: None,
-                    uid: None,
-                    metadata: None,
-                    key_length: None,
-                    max_keys: None,
-                    automatic_rotation: None,
-                    manual_rotation: None,
-                };
-                let (_key_set_proxy, key_set_server) = create_proxy::<KeySetMarker>()?;
-                assert_eq!(
-                    km_proxy
-                        .get_or_create_key_set(key_set_properties, None, key_set_server)
-                        .await?,
-                    Err(ApiError::UnsupportedOperation)
-                );
-                Ok(())
-            }
+        run_key_manager_test(|km_proxy| async move {
+            let key_set_properties = KeySetProperties {
+                name: None,
+                uid: None,
+                metadata: None,
+                key_length: None,
+                max_keys: None,
+                automatic_rotation: None,
+                manual_rotation: None,
+            };
+            let (_key_set_proxy, key_set_server) = create_proxy::<KeySetMarker>()?;
+            assert_eq!(
+                km_proxy.get_or_create_key_set(key_set_properties, None, key_set_server).await?,
+                Err(ApiError::UnsupportedOperation)
+            );
+            Ok(())
         });
     }
 
     #[test]
     fn test_get_key_set() {
-        run_key_manager_test(|km_proxy| {
-            async move {
-                let (_key_set_proxy, key_set_server) = create_proxy::<KeySetMarker>()?;
-                assert_eq!(
-                    km_proxy.get_key_set(TEST_KEY_SET_NAME, key_set_server).await?,
-                    Err(ApiError::UnsupportedOperation)
-                );
-                Ok(())
-            }
+        run_key_manager_test(|km_proxy| async move {
+            let (_key_set_proxy, key_set_server) = create_proxy::<KeySetMarker>()?;
+            assert_eq!(
+                km_proxy.get_key_set(TEST_KEY_SET_NAME, key_set_server).await?,
+                Err(ApiError::UnsupportedOperation)
+            );
+            Ok(())
         });
     }
 
     #[test]
     fn test_freeze_key_set() {
-        run_key_manager_test(|km_proxy| {
-            async move {
-                assert_eq!(
-                    km_proxy.freeze_key_set(TEST_KEY_SET_NAME).await?,
-                    Err(ApiError::UnsupportedOperation)
-                );
+        run_key_manager_test(|km_proxy| async move {
+            assert_eq!(
+                km_proxy.freeze_key_set(TEST_KEY_SET_NAME).await?,
+                Err(ApiError::UnsupportedOperation)
+            );
 
-                Ok(())
-            }
+            Ok(())
         });
     }
 
     #[test]
     fn test_delete_key_set() {
-        run_key_manager_test(|km_proxy| {
-            async move {
-                assert_eq!(
-                    km_proxy.delete_key_set(TEST_KEY_SET_NAME).await?,
-                    Err(ApiError::UnsupportedOperation)
-                );
-                Ok(())
-            }
+        run_key_manager_test(|km_proxy| async move {
+            assert_eq!(
+                km_proxy.delete_key_set(TEST_KEY_SET_NAME).await?,
+                Err(ApiError::UnsupportedOperation)
+            );
+            Ok(())
         });
     }
 }

@@ -4,9 +4,9 @@ use fidl_fuchsia_data as fd;
 use fidl_fuchsia_io2 as fio2;
 use fidl_fuchsia_sys2::{
     ChildDecl, ChildRef, CollectionDecl, CollectionRef, ComponentDecl, Durability, ExposeDecl,
-    ExposeDirectoryDecl, ExposeServiceProtocolDecl, ExposeServiceDecl, FrameworkRef, OfferDecl,
-    OfferServiceProtocolDecl, OfferServiceDecl, RealmRef, Ref, SelfRef, StartupMode, UseDecl,
-    UseServiceProtocolDecl, UseServiceDecl,
+    ExposeDirectoryDecl, ExposeServiceDecl, ExposeServiceProtocolDecl, FrameworkRef, OfferDecl,
+    OfferServiceDecl, OfferServiceProtocolDecl, RealmRef, Ref, SelfRef, StartupMode, UseDecl,
+    UseServiceDecl, UseServiceProtocolDecl,
 };
 use std::fs::File;
 use std::io::Read;

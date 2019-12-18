@@ -439,5 +439,4 @@ mod tests {
             args::target_operations_validator(AvailableTargets::FileTarget, &vec!["open"]).is_err()
         );
     }
-
 }

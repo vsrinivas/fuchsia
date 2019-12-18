@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![recursion_limit="512"]
+#![recursion_limit = "512"]
 
 mod addr;
 mod port;
@@ -57,22 +57,16 @@ mod tests {
         // those callbacks over the below oneshot channel that we can then receive after
         // Vsock::new completes.
         let (tx, rx) = channel::oneshot::channel();
-        fasync::spawn(
-            async move {
-                let (cb, responder) =
-                    unwrap_msg!(DeviceRequest::Start{cb, responder} from driver_server);
-                let driver_callbacks = cb.into_proxy().unwrap();
-                responder.send(zx::Status::OK.into_raw()).unwrap();
-                let _ = tx.send((driver_server, driver_callbacks));
-            },
-        );
+        fasync::spawn(async move {
+            let (cb, responder) =
+                unwrap_msg!(DeviceRequest::Start{cb, responder} from driver_server);
+            let driver_callbacks = cb.into_proxy().unwrap();
+            responder.send(zx::Status::OK.into_raw()).unwrap();
+            let _ = tx.send((driver_server, driver_callbacks));
+        });
 
         let (service, event_loop) = Vsock::new(driver_client.into_proxy()?).await?;
-        fasync::spawn(
-            event_loop
-                .map_err(|x| panic!("Event loop stopped {}", x))
-                .map(|_| ()),
-        );
+        fasync::spawn(event_loop.map_err(|x| panic!("Event loop stopped {}", x)).map(|_| ()));
         let (driver_server, driver_callbacks) = rx.await?;
         let driver = MockDriver::new(driver_server, driver_callbacks);
         Ok((driver, service))
@@ -82,10 +76,7 @@ mod tests {
         let (client_socket, server_socket) = zx::Socket::create(zx::SocketOpts::STREAM)?;
         let (client_end, server_end) = endpoints::create_endpoints::<ConnectionMarker>()?;
         let client_end = client_end.into_proxy()?;
-        let con = ConnectionTransport {
-            data: server_socket,
-            con: server_end,
-        };
+        let con = ConnectionTransport { data: server_socket, con: server_end };
         Ok((client_socket, client_end, con))
     }
 
@@ -118,10 +109,7 @@ mod tests {
 
         // Listen on a reasonable value.
         let (acceptor_remote, acceptor_client) = endpoints::create_endpoints::<AcceptorMarker>()?;
-        assert_eq!(
-            app_client.listen(8000, acceptor_remote).await?,
-            zx::sys::ZX_OK
-        );
+        assert_eq!(app_client.listen(8000, acceptor_remote).await?, zx::sys::ZX_OK);
         let mut acceptor_client = acceptor_client.into_stream()?;
 
         // Validate that we cannot listen twice
@@ -135,9 +123,7 @@ mod tests {
         }
 
         // Create a connection from the driver
-        driver
-            .callbacks
-            .request(&mut *addr::Vsock::new(8000, 80, 4))?;
+        driver.callbacks.request(&mut *addr::Vsock::new(8000, 80, 4))?;
         let (_data_socket, _client_end, mut con) = make_con()?;
 
         let (_, responder) =
@@ -195,10 +181,7 @@ mod tests {
 
         // Start a listener
         let (acceptor_remote, acceptor_client) = endpoints::create_endpoints::<AcceptorMarker>()?;
-        assert_eq!(
-            app_client.listen(9000, acceptor_remote).await?,
-            zx::sys::ZX_OK
-        );
+        assert_eq!(app_client.listen(9000, acceptor_remote).await?, zx::sys::ZX_OK);
         let mut acceptor_client = acceptor_client.into_stream()?;
 
         // Perform a transport reset
@@ -212,9 +195,7 @@ mod tests {
             .contains(zx::Signals::CHANNEL_PEER_CLOSED));
 
         // Listener should still be active and receive a connection
-        driver
-            .callbacks
-            .request(&mut *addr::Vsock::new(9000, 80, 4))?;
+        driver.callbacks.request(&mut *addr::Vsock::new(9000, 80, 4))?;
         let (_data_socket, _client_end, _con) = make_con()?;
 
         let (_addr, responder) =

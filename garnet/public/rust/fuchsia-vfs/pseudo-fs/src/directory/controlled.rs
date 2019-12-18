@@ -22,7 +22,13 @@ use {
         sink::SinkExt,
         stream::{FusedStream, StreamExt},
     },
-    std::{fmt, future::Future, marker::Unpin, pin::Pin, task::{Context, Poll}},
+    std::{
+        fmt,
+        future::Future,
+        marker::Unpin,
+        pin::Pin,
+        task::{Context, Poll},
+    },
     void::{unreachable, Void},
 };
 
@@ -316,9 +322,8 @@ impl<'entries> Controller<'entries> {
     pub fn remove_entry_res<Name>(
         &self,
         name: Name,
-    ) -> impl Future<
-        Output = Result<Option<Box<dyn DirectoryEntry + 'entries>>, RemoveEntryResError>,
-    > + 'entries
+    ) -> impl Future<Output = Result<Option<Box<dyn DirectoryEntry + 'entries>>, RemoveEntryResError>>
+           + 'entries
     where
         Name: Into<String>,
     {
@@ -541,45 +546,39 @@ mod tests {
     #[test]
     fn empty_directory() {
         let (_, root) = controlled(simple::empty());
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
-            async move {
-                assert_close!(root);
-            }
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            assert_close!(root);
         });
     }
 
     #[test]
     fn simple_open() {
         let (controller, root) = controlled(simple::empty());
-        run_server_client(OPEN_RIGHT_READABLE, root, |_root| {
-            async move {
-                let (proxy, server_end) = create_proxy::<DirectoryMarker>()
-                    .expect("Failed to create connection endpoints");
+        run_server_client(OPEN_RIGHT_READABLE, root, |_root| async move {
+            let (proxy, server_end) =
+                create_proxy::<DirectoryMarker>().expect("Failed to create connection endpoints");
 
-                controller
-                    .open(OPEN_RIGHT_READABLE, 0, vec![], ServerEnd::new(server_end.into_channel()))
-                    .await
-                    .unwrap();
-                assert_describe!(proxy, NodeInfo::Directory(DirectoryObject));
-                assert_close!(proxy);
-            }
+            controller
+                .open(OPEN_RIGHT_READABLE, 0, vec![], ServerEnd::new(server_end.into_channel()))
+                .await
+                .unwrap();
+            assert_describe!(proxy, NodeInfo::Directory(DirectoryObject));
+            assert_close!(proxy);
         });
     }
 
     #[test]
     fn simple_add_file() {
         let (controller, root) = controlled(simple::empty());
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
-            async move {
-                {
-                    let file = read_only_static("Content");
-                    controller.add_entry("file", file).await.unwrap();
-                }
-
-                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-                open_as_file_assert_content!(&root, flags, "file", "Content");
-                assert_close!(root);
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            {
+                let file = read_only_static("Content");
+                controller.add_entry("file", file).await.unwrap();
             }
+
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+            open_as_file_assert_content!(&root, flags, "file", "Content");
+            assert_close!(root);
         });
     }
 
@@ -590,20 +589,18 @@ mod tests {
             "etc" => controlled_pseudo_directory!(controller -> {}),
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
-            async move {
-                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
-                open_as_file_assert_err!(&root, flags, "etc/fstab", Status::NOT_FOUND);
+            open_as_file_assert_err!(&root, flags, "etc/fstab", Status::NOT_FOUND);
 
-                {
-                    let fstab = read_only_static("/dev/fs /");
-                    controller.add_entry("fstab", fstab).await.unwrap();
-                }
-
-                open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
-                assert_close!(root);
+            {
+                let fstab = read_only_static("/dev/fs /");
+                controller.add_entry("fstab", fstab).await.unwrap();
             }
+
+            open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
+            assert_close!(root);
         });
     }
 
@@ -619,27 +616,25 @@ mod tests {
             },
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
-            async move {
-                let (proxy, server_end) = create_proxy::<DirectoryMarker>()
-                    .expect("Failed to create connection endpoints");
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            let (proxy, server_end) =
+                create_proxy::<DirectoryMarker>().expect("Failed to create connection endpoints");
 
-                controller
-                    .open(
-                        OPEN_RIGHT_READABLE,
-                        0,
-                        vec![],
-                        ServerEnd::<NodeMarker>::new(server_end.into_channel()),
-                    )
-                    .await
-                    .unwrap();
+            controller
+                .open(
+                    OPEN_RIGHT_READABLE,
+                    0,
+                    vec![],
+                    ServerEnd::<NodeMarker>::new(server_end.into_channel()),
+                )
+                .await
+                .unwrap();
 
-                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-                open_as_file_assert_content!(&proxy, flags, "ssh/sshd_config", "# Empty");
-                assert_close!(proxy);
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+            open_as_file_assert_content!(&proxy, flags, "ssh/sshd_config", "# Empty");
+            assert_close!(proxy);
 
-                assert_close!(root);
-            }
+            assert_close!(root);
         });
     }
 
@@ -655,27 +650,25 @@ mod tests {
             },
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
-            async move {
-                let (proxy, server_end) = create_proxy::<DirectoryMarker>()
-                    .expect("Failed to create connection endpoints");
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            let (proxy, server_end) =
+                create_proxy::<DirectoryMarker>().expect("Failed to create connection endpoints");
 
-                controller
-                    .open(
-                        OPEN_RIGHT_READABLE,
-                        0,
-                        vec_string!["ssh"],
-                        ServerEnd::<NodeMarker>::new(server_end.into_channel()),
-                    )
-                    .await
-                    .unwrap();
+            controller
+                .open(
+                    OPEN_RIGHT_READABLE,
+                    0,
+                    vec_string!["ssh"],
+                    ServerEnd::<NodeMarker>::new(server_end.into_channel()),
+                )
+                .await
+                .unwrap();
 
-                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-                open_as_file_assert_content!(&proxy, flags, "sshd_config", "# Empty");
-                assert_close!(proxy);
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+            open_as_file_assert_content!(&proxy, flags, "sshd_config", "# Empty");
+            assert_close!(proxy);
 
-                assert_close!(root);
-            }
+            assert_close!(root);
         });
     }
 
@@ -691,26 +684,24 @@ mod tests {
             },
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
-            async move {
-                let (proxy, server_end) =
-                    create_proxy::<FileMarker>().expect("Failed to create connection endpoints");
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            let (proxy, server_end) =
+                create_proxy::<FileMarker>().expect("Failed to create connection endpoints");
 
-                controller
-                    .open(
-                        OPEN_RIGHT_READABLE,
-                        0,
-                        vec_string!["ssh", "sshd_config"],
-                        ServerEnd::<NodeMarker>::new(server_end.into_channel()),
-                    )
-                    .await
-                    .unwrap();
+            controller
+                .open(
+                    OPEN_RIGHT_READABLE,
+                    0,
+                    vec_string!["ssh", "sshd_config"],
+                    ServerEnd::<NodeMarker>::new(server_end.into_channel()),
+                )
+                .await
+                .unwrap();
 
-                assert_read!(&proxy, "# Empty");
-                assert_close!(proxy);
+            assert_read!(&proxy, "# Empty");
+            assert_close!(proxy);
 
-                assert_close!(root);
-            }
+            assert_close!(root);
         });
     }
 
@@ -727,23 +718,21 @@ mod tests {
             },
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
-            async move {
-                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
-                open_as_file_assert_err!(&root, flags, "etc/fstab", Status::NOT_FOUND);
-                open_as_file_assert_content!(&root, flags, "etc/passwd", "[redacted]");
+            open_as_file_assert_err!(&root, flags, "etc/fstab", Status::NOT_FOUND);
+            open_as_file_assert_content!(&root, flags, "etc/passwd", "[redacted]");
 
-                {
-                    let fstab = read_only_static("/dev/fs /");
-                    controller.add_entry("fstab", fstab).await.unwrap();
-                }
-
-                open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
-                open_as_file_assert_content!(&root, flags, "etc/passwd", "[redacted]");
-
-                assert_close!(root);
+            {
+                let fstab = read_only_static("/dev/fs /");
+                controller.add_entry("fstab", fstab).await.unwrap();
             }
+
+            open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
+            open_as_file_assert_content!(&root, flags, "etc/passwd", "[redacted]");
+
+            assert_close!(root);
         });
     }
 
@@ -758,27 +747,25 @@ mod tests {
             },
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
-            async move {
-                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
-                open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
-                open_as_file_assert_content!(&root, flags, "etc/passwd", "[redacted]");
+            open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
+            open_as_file_assert_content!(&root, flags, "etc/passwd", "[redacted]");
 
-                let o_passwd = controller.remove_entry_res("passwd").await.unwrap();
-                match o_passwd {
-                    None => panic!("remove_entry_res() did not find 'passwd'"),
-                    Some(passwd) => {
-                        let entry_info = passwd.entry_info();
-                        assert_eq!(entry_info, EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE));
-                    }
+            let o_passwd = controller.remove_entry_res("passwd").await.unwrap();
+            match o_passwd {
+                None => panic!("remove_entry_res() did not find 'passwd'"),
+                Some(passwd) => {
+                    let entry_info = passwd.entry_info();
+                    assert_eq!(entry_info, EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE));
                 }
-
-                open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
-                open_as_file_assert_err!(&root, flags, "etc/passwd", Status::NOT_FOUND);
-
-                assert_close!(root);
             }
+
+            open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
+            open_as_file_assert_err!(&root, flags, "etc/passwd", Status::NOT_FOUND);
+
+            assert_close!(root);
         });
     }
 
@@ -792,26 +779,24 @@ mod tests {
             },
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
-            async move {
-                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
-                open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
-                open_as_file_assert_err!(&root, flags, "etc/passwd", Status::NOT_FOUND);
+            open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
+            open_as_file_assert_err!(&root, flags, "etc/passwd", Status::NOT_FOUND);
 
-                let fstab = controller
-                    .remove_entry_res("fstab")
-                    .await
-                    .unwrap()
-                    .expect("remove_entry_res() did not find 'fstab'");
+            let fstab = controller
+                .remove_entry_res("fstab")
+                .await
+                .unwrap()
+                .expect("remove_entry_res() did not find 'fstab'");
 
-                controller.add_boxed_entry("passwd", fstab).await.unwrap();
+            controller.add_boxed_entry("passwd", fstab).await.unwrap();
 
-                open_as_file_assert_err!(&root, flags, "etc/fstab", Status::NOT_FOUND);
-                open_as_file_assert_content!(&root, flags, "etc/passwd", "/dev/fs /");
+            open_as_file_assert_err!(&root, flags, "etc/fstab", Status::NOT_FOUND);
+            open_as_file_assert_content!(&root, flags, "etc/passwd", "/dev/fs /");
 
-                assert_close!(root);
-            }
+            assert_close!(root);
         });
     }
 
@@ -828,39 +813,37 @@ mod tests {
             },
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
-            async move {
-                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
-                open_as_file_assert_err!(&root, flags, "etc/fstab", Status::NOT_FOUND);
-                open_as_file_assert_content!(&root, flags, "etc/passwd", "[redacted]");
+            open_as_file_assert_err!(&root, flags, "etc/fstab", Status::NOT_FOUND);
+            open_as_file_assert_content!(&root, flags, "etc/passwd", "[redacted]");
 
-                let etc = open_get_directory_proxy_assert_ok!(&root, flags, "etc");
+            let etc = open_get_directory_proxy_assert_ok!(&root, flags, "etc");
 
-                let watch_mask =
-                    WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
-                let watcher = assert_watch!(etc, watch_mask);
+            let watch_mask =
+                WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+            let watcher = assert_watch!(etc, watch_mask);
 
-                assert_watcher_one_message_watched_events!(
-                    watcher,
-                    { EXISTING, "." },
-                    { EXISTING, "passwd" },
-                    { EXISTING, "ssh" },
-                );
-                assert_watcher_one_message_watched_events!(watcher, { IDLE, vec![] });
+            assert_watcher_one_message_watched_events!(
+                watcher,
+                { EXISTING, "." },
+                { EXISTING, "passwd" },
+                { EXISTING, "ssh" },
+            );
+            assert_watcher_one_message_watched_events!(watcher, { IDLE, vec![] });
 
-                {
-                    let fstab = read_only_static("/dev/fs /");
-                    controller.add_entry("fstab", fstab).await.unwrap();
-                }
-
-                assert_watcher_one_message_watched_events!(watcher, { ADDED, "fstab" });
-
-                open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
-                open_as_file_assert_content!(&root, flags, "etc/passwd", "[redacted]");
-
-                assert_close!(root);
+            {
+                let fstab = read_only_static("/dev/fs /");
+                controller.add_entry("fstab", fstab).await.unwrap();
             }
+
+            assert_watcher_one_message_watched_events!(watcher, { ADDED, "fstab" });
+
+            open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
+            open_as_file_assert_content!(&root, flags, "etc/passwd", "[redacted]");
+
+            assert_close!(root);
         });
     }
 
@@ -875,43 +858,41 @@ mod tests {
             },
         };
 
-        run_server_client(OPEN_RIGHT_READABLE, root, |root| {
-            async move {
-                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+        run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
-                open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
-                open_as_file_assert_content!(&root, flags, "etc/passwd", "[redacted]");
+            open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
+            open_as_file_assert_content!(&root, flags, "etc/passwd", "[redacted]");
 
-                let etc = open_get_directory_proxy_assert_ok!(&root, flags, "etc");
+            let etc = open_get_directory_proxy_assert_ok!(&root, flags, "etc");
 
-                let watch_mask =
-                    WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
-                let watcher = assert_watch!(etc, watch_mask);
+            let watch_mask =
+                WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+            let watcher = assert_watch!(etc, watch_mask);
 
-                assert_watcher_one_message_watched_events!(
-                    watcher,
-                    { EXISTING, "." },
-                    { EXISTING, "fstab" },
-                    { EXISTING, "passwd" },
-                );
-                assert_watcher_one_message_watched_events!(watcher, { IDLE, vec![] });
+            assert_watcher_one_message_watched_events!(
+                watcher,
+                { EXISTING, "." },
+                { EXISTING, "fstab" },
+                { EXISTING, "passwd" },
+            );
+            assert_watcher_one_message_watched_events!(watcher, { IDLE, vec![] });
 
-                let o_passwd = controller.remove_entry_res("passwd").await.unwrap();
-                match o_passwd {
-                    None => panic!("remove_entry_res() did not find 'passwd'"),
-                    Some(passwd) => {
-                        let entry_info = passwd.entry_info();
-                        assert_eq!(entry_info, EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE));
-                    }
+            let o_passwd = controller.remove_entry_res("passwd").await.unwrap();
+            match o_passwd {
+                None => panic!("remove_entry_res() did not find 'passwd'"),
+                Some(passwd) => {
+                    let entry_info = passwd.entry_info();
+                    assert_eq!(entry_info, EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_FILE));
                 }
-
-                assert_watcher_one_message_watched_events!(watcher, { REMOVED, "passwd" });
-
-                open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
-                open_as_file_assert_err!(&root, flags, "etc/passwd", Status::NOT_FOUND);
-
-                assert_close!(root);
             }
+
+            assert_watcher_one_message_watched_events!(watcher, { REMOVED, "passwd" });
+
+            open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
+            open_as_file_assert_err!(&root, flags, "etc/passwd", Status::NOT_FOUND);
+
+            assert_close!(root);
         });
     }
 }

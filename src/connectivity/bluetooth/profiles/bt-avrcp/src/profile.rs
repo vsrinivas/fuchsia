@@ -212,7 +212,7 @@ impl ProfileService for ProfileServiceImpl {
                 None => Err(format_err!("No socket returned from profile service {}", peer_id)),
             }
         }
-            .boxed()
+        .boxed()
     }
 
     fn take_event_stream(&self) -> BoxStream<Result<AvrcpProfileEvent, Error>> {

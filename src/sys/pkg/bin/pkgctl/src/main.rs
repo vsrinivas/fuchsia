@@ -158,11 +158,9 @@ fn main() -> Result<(), failure::Error> {
                         }
                     }
                     RuleSubCommand::Clear(RuleClearCommand {}) => {
-                        do_transaction(engine, |transaction| {
-                            async move {
-                                transaction.reset_all()?;
-                                Ok(transaction)
-                            }
+                        do_transaction(engine, |transaction| async move {
+                            transaction.reset_all()?;
+                            Ok(transaction)
                         })
                         .await?;
                     }

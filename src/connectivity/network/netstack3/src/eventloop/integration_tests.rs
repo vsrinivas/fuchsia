@@ -278,12 +278,12 @@ impl TestSetup {
             })
             .unzip();
         // let all stacks run concurrently:
-        let stacks_fut =
-            futures::stream::iter(stacks).for_each_concurrent(None, |(mut rcv, stack)| {
-                async move {
-                    stack.event_loop.run_until(rcv.next()).await.expect("Stack loop run error");
-                }
-            });
+        let stacks_fut = futures::stream::iter(stacks).for_each_concurrent(
+            None,
+            |(mut rcv, stack)| async move {
+                stack.event_loop.run_until(rcv.next()).await.expect("Stack loop run error");
+            },
+        );
         pin_mut!(stacks_fut);
 
         // run both futures, but the receiver must end first:

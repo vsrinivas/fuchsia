@@ -98,12 +98,17 @@ impl AvrcpClientController {
             }
             ControllerRequest::GetMediaAttributes { responder } => {
                 responder.send(
-                    &mut self.controller.get_media_attributes().await.map_err(ControllerError::from),
+                    &mut self
+                        .controller
+                        .get_media_attributes()
+                        .await
+                        .map_err(ControllerError::from),
                 )?;
             }
             ControllerRequest::GetPlayStatus { responder } => {
-                responder
-                    .send(&mut self.controller.get_play_status().await.map_err(ControllerError::from))?;
+                responder.send(
+                    &mut self.controller.get_play_status().await.map_err(ControllerError::from),
+                )?;
             }
             ControllerRequest::InformBatteryStatus { battery_status: _, responder } => {
                 responder.send(&mut Err(ControllerError::CommandNotImplemented))?;
@@ -250,7 +255,9 @@ impl TestAvrcpClientController {
                         }
                         responder.send(&mut Ok(r_events))?;
                     }
-                    Err(peer_error) => responder.send(&mut Err(ControllerError::from(peer_error)))?,
+                    Err(peer_error) => {
+                        responder.send(&mut Err(ControllerError::from(peer_error)))?
+                    }
                 }
             }
             ControllerExtRequest::Connect { control_handle: _ } => {

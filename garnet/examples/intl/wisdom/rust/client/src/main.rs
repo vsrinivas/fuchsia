@@ -12,13 +12,9 @@
 
 use {
     failure::{Error, ResultExt},
-    fidl_fuchsia_examples_intl_wisdom as fwisdom,
-    fuchsia_async as fasync,
+    fidl_fuchsia_examples_intl_wisdom as fwisdom, fuchsia_async as fasync,
     fuchsia_component::client::{launch, launcher},
-    icu_data,
-    rust_icu_sys as usys,
-    rust_icu_udat as udat,
-    rust_icu_uloc as uloc,
+    icu_data, rust_icu_sys as usys, rust_icu_udat as udat, rust_icu_uloc as uloc,
     rust_icu_ustring as ustring,
     std::convert::TryFrom,
     structopt::StructOpt,

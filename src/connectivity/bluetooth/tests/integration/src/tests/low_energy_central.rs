@@ -69,8 +69,7 @@ async fn start_scan(central: &CentralHarness) -> Result<(), Error> {
         .start_scan(None)
         .map_err(|e| e.context("FIDL error sending command").into())
         .on_timeout(scan_timeout().after_now(), move || Err(err_msg("Timed out")));
-    let status = fut.await
-        .context("Could not initialize scan")?;
+    let status = fut.await.context("Could not initialize scan")?;
     if let Some(e) = status.error {
         return Err(BTError::from(*e).into());
     }

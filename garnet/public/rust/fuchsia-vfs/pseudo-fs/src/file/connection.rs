@@ -25,7 +25,13 @@ use {
     },
     pin_utils::{unsafe_pinned, unsafe_unpinned},
     static_assertions::assert_eq_size,
-    std::{future::Future, io::Write, iter, mem, pin::Pin, task::{Context, Poll}},
+    std::{
+        future::Future,
+        io::Write,
+        iter, mem,
+        pin::Pin,
+        task::{Context, Poll},
+    },
 };
 
 /// Return type for [`handle_request`] functions.
