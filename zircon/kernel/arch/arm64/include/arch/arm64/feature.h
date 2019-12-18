@@ -15,7 +15,24 @@
 
 __BEGIN_CDECLS
 
+enum arm64_microarch {
+  UNKNOWN,
+
+  ARM_CORTEX_A53,
+  ARM_CORTEX_A35,
+  ARM_CORTEX_A55,
+  ARM_CORTEX_A57,
+  ARM_CORTEX_A72,
+  ARM_CORTEX_A73,
+  ARM_CORTEX_A75,
+
+  CAVIUM_CN88XX,
+  CAVIUM_CN99XX,
+};
+
 extern uint32_t arm64_features;
+
+enum arm64_microarch midr_to_microarch(uint32_t midr);
 
 static inline bool arm64_feature_test(uint32_t feature) { return arm64_features & feature; }
 

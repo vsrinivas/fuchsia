@@ -104,55 +104,83 @@ void arm64_dump_cache_info(uint32_t cpu) {
   }
 }
 
-static void midr_to_core(uint32_t midr, char* str, size_t len) {
-  __UNUSED uint32_t implementer = BITS_SHIFT(midr, 31, 24);
-  __UNUSED uint32_t variant = BITS_SHIFT(midr, 23, 20);
-  __UNUSED uint32_t architecture = BITS_SHIFT(midr, 19, 16);
-  __UNUSED uint32_t partnum = BITS_SHIFT(midr, 15, 4);
-  __UNUSED uint32_t revision = BITS_SHIFT(midr, 3, 0);
+enum arm64_microarch midr_to_microarch(uint32_t midr) {
+  uint32_t implementer = BITS_SHIFT(midr, 31, 24);
+  uint32_t partnum = BITS_SHIFT(midr, 15, 4);
 
-  const char* partnum_str = "unknown";
   if (implementer == 'A') {
     // ARM cores
     switch (partnum) {
       case 0xd03:
-        partnum_str = "ARM Cortex-a53";
-        break;
+        return ARM_CORTEX_A53;
       case 0xd04:
-        partnum_str = "ARM Cortex-a35";
-        break;
+        return ARM_CORTEX_A35;
       case 0xd05:
-        partnum_str = "ARM Cortex-a55";
-        break;
+        return ARM_CORTEX_A55;
       case 0xd07:
-        partnum_str = "ARM Cortex-a57";
-        break;
+        return ARM_CORTEX_A57;
       case 0xd08:
-        partnum_str = "ARM Cortex-a72";
-        break;
+        return ARM_CORTEX_A72;
       case 0xd09:
-        partnum_str = "ARM Cortex-a73";
-        break;
+        return ARM_CORTEX_A73;
       case 0xd0a:
-        partnum_str = "ARM Cortex-a75";
-        break;
+        return ARM_CORTEX_A75;
       default:
-        goto unknown;
+        return UNKNOWN;
     }
   } else if (implementer == 'C') {
     // Cavium
     switch (partnum) {
       case 0xa1:
-        partnum_str = "Cavium CN88XX";
-        break;
+        return CAVIUM_CN88XX;
       case 0xaf:
-        partnum_str = "Cavium CN99XX";
-        break;
+        return CAVIUM_CN99XX;
       default:
-        goto unknown;
+        return UNKNOWN;
     }
   } else {
-  unknown:
+    return UNKNOWN;
+  }
+}
+
+static void midr_to_core_string(uint32_t midr, char* str, size_t len) {
+  auto microarch = midr_to_microarch(midr);
+  uint32_t implementer = BITS_SHIFT(midr, 31, 24);
+  uint32_t variant = BITS_SHIFT(midr, 23, 20);
+  __UNUSED uint32_t architecture = BITS_SHIFT(midr, 19, 16);
+  uint32_t partnum = BITS_SHIFT(midr, 15, 4);
+  uint32_t revision = BITS_SHIFT(midr, 3, 0);
+
+  const char* partnum_str = "unknown";
+  switch (microarch) {
+  case ARM_CORTEX_A53:
+    partnum_str = "ARM Cortex-a53";
+    break;
+  case ARM_CORTEX_A35:
+    partnum_str = "ARM Cortex-a35";
+    break;
+  case ARM_CORTEX_A55:
+    partnum_str = "ARM Cortex-a55";
+    break;
+  case ARM_CORTEX_A57:
+    partnum_str = "ARM Cortex-a57";
+    break;
+  case ARM_CORTEX_A72:
+    partnum_str = "ARM Cortex-a72";
+    break;
+  case ARM_CORTEX_A73:
+    partnum_str = "ARM Cortex-a73";
+    break;
+  case ARM_CORTEX_A75:
+    partnum_str = "ARM Cortex-a75";
+    break;
+  case CAVIUM_CN88XX:
+    partnum_str = "Cavium CN88XX";
+    break;
+  case CAVIUM_CN99XX:
+    partnum_str = "Cavium CN99XX";
+    break;
+  default:
     snprintf(str, len, "Unknown implementer %c partnum 0x%x r%up%u", (char)implementer, partnum,
              variant, revision);
     return;
@@ -164,7 +192,7 @@ static void midr_to_core(uint32_t midr, char* str, size_t len) {
 static void print_cpu_info() {
   uint32_t midr = (uint32_t)__arm_rsr64("midr_el1");
   char cpu_name[128];
-  midr_to_core(midr, cpu_name, sizeof(cpu_name));
+  midr_to_core_string(midr, cpu_name, sizeof(cpu_name));
 
   uint64_t mpidr = __arm_rsr64("mpidr_el1");
 

@@ -11,6 +11,7 @@
 #include <zircon/compiler.h>
 
 #include <arch/arm64.h>
+#include <arch/arm64/feature.h>
 #include <kernel/align.h>
 #include <kernel/cpu.h>
 
@@ -45,6 +46,9 @@ struct arm64_percpu {
 
   // Number of spinlocks currently held.
   uint32_t num_spinlocks;
+
+  // Microarchitecture of this cpu (ex: Cortex-A53)
+  arm64_microarch microarch;
 } __CPU_ALIGN;
 
 void arch_init_cpu_map(uint cluster_count, const uint* cluster_cpus);
