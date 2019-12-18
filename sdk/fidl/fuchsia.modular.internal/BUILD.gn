@@ -15,7 +15,6 @@ fidl("fuchsia.modular.internal") {
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.auth",
-    "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.ui.policy",

@@ -4,7 +4,6 @@
 
 library fuchsia.modular.internal;
 
-using fuchsia.ledger;
 using fuchsia.modular;
 
 /// Metadata and summary information about a single story.  Does not contain the
@@ -20,5 +19,5 @@ table StoryData {
     3: fuchsia.modular.StoryOptions story_options;
 
     /// Page id on the user's ledger which stores story information.
-    4: fuchsia.ledger.PageId story_page_id;
+    4: string story_page_id;
 };

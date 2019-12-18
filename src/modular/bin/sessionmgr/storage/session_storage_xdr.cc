@@ -18,131 +18,56 @@ namespace modular {
 
 namespace {
 
-fuchsia::ledger::PageId PageIdFromBase64(const std::string& base64) {
-  // Both base64 libraries available to us require that we allocate an output
-  // buffer large enough to decode any base64 string of the input length, which
-  // for us it does not know contains padding since our target size is 16, so we
-  // have to allocate an intermediate buffer. Hex would not require this but
-  // results in a slightly larger transport size.
-
+std::string BytesFromBase64(const std::string& base64) {
   std::string decoded;
-  fuchsia::ledger::PageId page_id;
 
-  if (base64url::Base64UrlDecode(base64, &decoded)) {
-    size_t size;
-    if (decoded.length() != page_id.id.size()) {
-      FXL_LOG(ERROR) << "Unexpected page ID length for " << base64 << " (decodes to "
-                     << decoded.length() << " bytes; " << page_id.id.size() << " expected)";
-      size = std::min(decoded.length(), page_id.id.size());
-      memset(page_id.id.data(), 0, page_id.id.size());
-    } else {
-      size = page_id.id.size();
-    }
-
-    memcpy(page_id.id.data(), decoded.data(), size);
-  } else {
-    FXL_LOG(ERROR) << "Unable to decode page ID from Base64: " << base64;
+  if (!base64url::Base64UrlDecode(base64, &decoded)) {
+    FXL_LOG(ERROR) << "Unable to decode from Base64";
+    return "";
   }
 
-  return page_id;
+  return decoded;
 }
 
-std::string PageIdToBase64(const fuchsia::ledger::PageId& page_id) {
-  return base64url::Base64UrlEncode(
-      {reinterpret_cast<const char*>(page_id.id.data()), page_id.id.size()});
+std::string BytesToBase64(const std::string& bytes) {
+  return base64url::Base64UrlEncode({reinterpret_cast<const char*>(bytes.data()), bytes.size()});
+}
+
+void XdrBase64Encoding(XdrContext* const xdr, std::string* value) {
+  static constexpr char kBytesTag[] = "bytes";
+  switch (xdr->op()) {
+    case XdrOp::FROM_JSON: {
+      std::string base64;
+      xdr->Field(kBytesTag, &base64);
+      *value = BytesFromBase64(base64);
+      break;
+    }
+    case XdrOp::TO_JSON: {
+      std::string base64 = BytesToBase64(*value);
+      xdr->Field(kBytesTag, &base64);
+      break;
+    }
+  }
 }
 
 // Serialization and deserialization of fuchsia::modular::internal::StoryData
-// and fuchsia::modular::StoryInfo to and from JSON. We have different versions
-// for backwards compatibilty.
+// and fuchsia::modular::StoryInfo to and from JSON.
 
-void XdrStoryInfo2_v0(XdrContext* const xdr, fuchsia::modular::StoryInfo2* const data) {
+void XdrStoryInfo2(XdrContext* const xdr, fuchsia::modular::StoryInfo2* const data) {
   xdr->Field("id", data->mutable_id());
   xdr->Field("last_focus_time", data->mutable_last_focus_time());
   xdr->Field("annotations", data->mutable_annotations(), XdrAnnotation);
 }
 
-// Version 0: Before FIDL2 conversion. ExtraInfo fields are stored as "key"
-// and "value", page ids are stored as vector.
-void XdrStoryData_v0(XdrContext* const xdr, fuchsia::modular::internal::StoryData* const data) {
-  FXL_CHECK(xdr->op() == XdrOp::FROM_JSON) << "A back version is never used for writing.";
-  data->set_story_page_id(fuchsia::ledger::PageId());
-
-  xdr->Field("story_info", data->mutable_story_info(), XdrStoryInfo2_v0);
-  xdr->Field("story_page_id", &data->mutable_story_page_id()->id);
-}
-
-// Version 1: During FIDL2 conversion. ExtraInfo fields are stored as "key"
-// and "value", page ids are stored as base64 string.
-void XdrStoryData_v1(XdrContext* const xdr, fuchsia::modular::internal::StoryData* const data) {
-  static constexpr char kStoryPageId[] = "story_page_id";
-  xdr->Field("story_info", data->mutable_story_info(), XdrStoryInfo2_v0);
-  switch (xdr->op()) {
-    case XdrOp::FROM_JSON: {
-      std::string page_id;
-      xdr->Field(kStoryPageId, &page_id);
-      if (page_id.empty()) {
-      } else {
-        data->set_story_page_id(fuchsia::ledger::PageId());
-        data->set_story_page_id(PageIdFromBase64(page_id));
-      }
-      break;
-    }
-    case XdrOp::TO_JSON: {
-      std::string page_id;
-      if (data->has_story_page_id()) {
-        page_id = PageIdToBase64(data->story_page_id());
-      }
-      xdr->Field(kStoryPageId, &page_id);
-      break;
-    }
-  }
-}
-
-// Version 2: After FIDL2 conversion was complete. ExtraInfo fields are stored
-// as @k and @v, page ids are stored as array wrapped in a struct.
-void XdrPageId_v2(XdrContext* const xdr, fuchsia::ledger::PageId* const data) {
-  xdr->Field("id", &data->id);
-}
-
-void XdrStoryData_v2(XdrContext* const xdr, fuchsia::modular::internal::StoryData* const data) {
-  xdr->Field("story_info", data->mutable_story_info(), XdrStoryInfo2_v0);
-  xdr->Field("story_page_id", data->mutable_story_page_id(), XdrPageId_v2);
-}
-
-// Version 3: ExtraInfo fields are stored as @k and @v, page ids are stored as
-// array, and we set an explicit @version field.
-void XdrStoryData_v3(XdrContext* const xdr, fuchsia::modular::internal::StoryData* const data) {
-  if (!xdr->Version(3)) {
-    return;
-  }
-  // NOTE(mesch): We reuse subsidiary filters of previous versions as long as we
-  // can. Only when they change too we create new versions of them.
-  xdr->Field("story_info", data->mutable_story_info(), XdrStoryInfo2_v0);
-  xdr->Field("story_page_id", data->mutable_story_page_id(), XdrPageId_v2);
-}
-
-// Version 4: Includes is_kind_of_proto_story field.
-void XdrStoryData_v4(XdrContext* const xdr, fuchsia::modular::internal::StoryData* const data) {
-  if (!xdr->Version(4)) {
-    return;
-  }
-  // NOTE(mesch): We reuse subsidiary filters of previous versions as long as we
-  // can. Only when they change too we create new versions of them.
-  xdr->Field("story_info", data->mutable_story_info(), XdrStoryInfo2_v0);
-  xdr->Field("story_page_id", data->mutable_story_page_id(), XdrPageId_v2);
-}
-
-// Version 5: Includes story_name field.
 void XdrStoryData_v5(XdrContext* const xdr, fuchsia::modular::internal::StoryData* const data) {
   if (!xdr->Version(5)) {
     return;
   }
   // NOTE(mesch): We reuse subsidiary filters of previous versions as long as we
   // can. Only when they change too we create new versions of them.
-  xdr->Field("story_info", data->mutable_story_info(), XdrStoryInfo2_v0);
+  xdr->Field("story_info", data->mutable_story_info(), XdrStoryInfo2);
   xdr->Field("story_name", data->mutable_story_name());
-  xdr->Field("story_page_id", data->mutable_story_page_id(), XdrPageId_v2);
+  xdr->Field("story_page_id", data->mutable_story_page_id(), XdrBase64Encoding);
 }
 
 }  // namespace
@@ -150,11 +75,6 @@ void XdrStoryData_v5(XdrContext* const xdr, fuchsia::modular::internal::StoryDat
 // clang-format off
 XdrFilterType<fuchsia::modular::internal::StoryData> XdrStoryData[] = {
     XdrStoryData_v5,
-    XdrStoryData_v4,
-    XdrStoryData_v3,
-    XdrStoryData_v2,
-    XdrStoryData_v1,
-    XdrStoryData_v0,
     nullptr,
 };
 // clang-format on

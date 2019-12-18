@@ -85,7 +85,7 @@ TEST_F(SessionStorageTest, Create_VerifyData) {
                 annotations::AnnotationEq(ByRef(annotation)));
 
     ASSERT_TRUE(data->has_story_page_id());
-    EXPECT_TRUE(fidl::Equals(page_id, data->story_page_id()));
+    EXPECT_TRUE(fidl::Equals(to_string(page_id.id), data->story_page_id()));
 
     done = true;
 

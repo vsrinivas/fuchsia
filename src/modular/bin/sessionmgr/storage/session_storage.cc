@@ -41,6 +41,14 @@ std::string StoryNameFromStoryDataKey(fidl::StringPtr key) {
   return key->substr(sizeof(kStoryDataKeyPrefix) - 1);
 }
 
+fuchsia::ledger::PageId ToPageId(const std::string& value) {
+  fuchsia::ledger::PageId page_id;
+  FXL_DCHECK(value.size() == page_id.id.size())
+      << "value is of size: " << value.size() << ", expected size: " << page_id.id.size();
+  memcpy(&page_id.id[0], value.data(), std::min(page_id.id.size(), value.size()));
+  return page_id;
+}
+
 std::unique_ptr<OperationBase> MakeGetStoryDataCall(
     fuchsia::ledger::Page* const page, fidl::StringPtr story_name,
     fit::function<void(fuchsia::modular::internal::StoryDataPtr)> result_call) {
@@ -78,7 +86,7 @@ class CreateStoryCall : public LedgerOperation<fidl::StringPtr, fuchsia::ledger:
         MakeGetStoryDataCall(session_page_, story_name_, [this, flow](auto story_data) {
           if (story_data) {
             // A story with the same name already exists, don't create it again.
-            story_page_id_ = story_data->story_page_id();
+            story_page_id_ = ToPageId(story_data->story_page_id());
             return;
           }
 
@@ -102,7 +110,7 @@ class CreateStoryCall : public LedgerOperation<fidl::StringPtr, fuchsia::ledger:
 
     story_data_ = fuchsia::modular::internal::StoryData::New();
     story_data_->set_story_name(story_name_.value_or(""));
-    story_data_->set_story_page_id(std::move(story_page_id_));
+    story_data_->set_story_page_id(to_string(story_page_id_.id));
     story_data_->mutable_story_info()->set_id(story_name_.value_or(""));
     story_data_->mutable_story_info()->set_last_focus_time(0);
     if (!annotations_.empty()) {
@@ -166,7 +174,7 @@ class DeleteStoryCall : public Operation<> {
   void Cont(FlowToken flow) {
     // Get the story page so we can remove its contents.
     ledger_->GetPage(
-        std::make_unique<fuchsia::ledger::PageId>(*std::move(story_data_.mutable_story_page_id())),
+        std::make_unique<fuchsia::ledger::PageId>(ToPageId(story_data_.story_page_id())),
         story_page_.NewRequest());
     story_page_->Clear();
     // Remove the story data in the session page.
@@ -317,7 +325,7 @@ FuturePtr<std::unique_ptr<StoryStorage>> SessionStorage::GetStoryStorage(
       [this, returned_future, story_name](fuchsia::modular::internal::StoryDataPtr story_data) {
         if (story_data) {
           auto story_storage =
-              std::make_unique<StoryStorage>(ledger_client_, story_data->story_page_id());
+              std::make_unique<StoryStorage>(ledger_client_, ToPageId(story_data->story_page_id()));
           returned_future->Complete(std::move(story_storage));
         } else {
           returned_future->Complete(nullptr);

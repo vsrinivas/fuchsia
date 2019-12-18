@@ -88,6 +88,7 @@ source_set("session_storage_xdr") {
   deps = [
     ":annotation_xdr",
     "//peridot/lib/base64url",
+    "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.internal",
     "//src/lib/fsl",
