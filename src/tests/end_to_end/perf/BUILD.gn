@@ -78,10 +78,8 @@ group("package_deps") {
 group("test") {
   testonly = true
 
-  deps = [
-    ":ledger_perf_test($host_toolchain)",
-    ":microbenchmarks_test($host_toolchain)",
-    ":rust_inspect_benchmarks_test($host_toolchain)",
-    ":tspec_example_test($host_toolchain)",
-  ]
+  deps = []
+  foreach(target_name, test_list) {
+    deps += [ ":$target_name($host_toolchain)" ]
+  }
 }
