@@ -138,10 +138,10 @@ static void ConvertPhyDriverFeaturesInfo(::std::vector<wlan_common::DriverFeatur
     DriverFeatures->push_back(wlan_common::DriverFeature::SYNTH);
   }
   if (driver_features_mask & WLAN_INFO_DRIVER_FEATURE_TX_STATUS_REPORT) {
-    DriverFeatures->push_back(wlan_common::DriverFeature::RATE_SELECTION);
-  }
-  if (driver_features_mask & WLAN_INFO_DRIVER_FEATURE_TX_STATUS_REPORT) {
     DriverFeatures->push_back(wlan_common::DriverFeature::TX_STATUS_REPORT);
+  }
+  if (driver_features_mask & WLAN_INFO_DRIVER_FEATURE_PROBE_RESP_OFFLOAD) {
+    DriverFeatures->push_back(wlan_common::DriverFeature::PROBE_RESP_OFFLOAD);
   }
   if (driver_features_mask & WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL) {
     DriverFeatures->push_back(wlan_common::DriverFeature::TEMP_DIRECT_SME_CHANNEL);

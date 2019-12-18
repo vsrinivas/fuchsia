@@ -60,6 +60,9 @@ enum WlanInfoDriverFeature {
     /// channel is safe to transmit before doing so).
     dfs = 0x00000010;
 
+    /// Driver responds to probe requests in hardware.
+    probe_resp_offload = 0x00000020;
+
     /// Temporary feature flag for incrementally transitioning drivers to use SME
     /// channel on iface creation.
     temp_direct_sme_channel = 0x40000000;

@@ -61,6 +61,8 @@ uint32_t ConvertDriverFeatures(const ::std::vector<wlan_common::DriverFeature>& 
         break;
       case wlan_common::DriverFeature::DFS:
         ret |= WLAN_INFO_DRIVER_FEATURE_DFS;
+      case wlan_common::DriverFeature::PROBE_RESP_OFFLOAD:
+        ret |= WLAN_INFO_DRIVER_FEATURE_PROBE_RESP_OFFLOAD;
       case wlan_common::DriverFeature::TEMP_DIRECT_SME_CHANNEL:
         ret |= WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL;
         break;

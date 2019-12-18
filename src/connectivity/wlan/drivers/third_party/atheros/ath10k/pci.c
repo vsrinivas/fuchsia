@@ -3134,6 +3134,7 @@ void ath10k_pci_fill_wlan_info(struct ath10k* ar, wlan_info_t* ifc_info) {
   // driver_features
   ifc_info->driver_features = WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD |
                               WLAN_INFO_DRIVER_FEATURE_RATE_SELECTION |
+                              WLAN_INFO_DRIVER_FEATURE_PROBE_RESP_OFFLOAD |
                               WLAN_INFO_DRIVER_FEATURE_TEMP_DIRECT_SME_CHANNEL;
 
   // caps

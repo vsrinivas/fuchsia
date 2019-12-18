@@ -548,6 +548,9 @@ void Device::QueryDeviceInfo(QueryDeviceInfoCallback cb) {
   if (query_info_.driver_features & WLAN_INFO_DRIVER_FEATURE_DFS) {
     fidl_resp.driver_features.push_back(wlan_common::DriverFeature::DFS);
   }
+  if (query_info_.driver_features & WLAN_INFO_DRIVER_FEATURE_PROBE_RESP_OFFLOAD) {
+    fidl_resp.driver_features.push_back(wlan_common::DriverFeature::PROBE_RESP_OFFLOAD);
+  }
 
   cb(std::move(fidl_resp));
 }

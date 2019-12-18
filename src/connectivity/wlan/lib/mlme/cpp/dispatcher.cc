@@ -301,6 +301,9 @@ zx_status_t Dispatcher::HandleQueryDeviceInfo(zx_txid_t txid) {
   if (info.driver_features & WLAN_INFO_DRIVER_FEATURE_DFS) {
     resp.driver_features.push_back(wlan_common::DriverFeature::DFS);
   }
+  if (info.driver_features & WLAN_INFO_DRIVER_FEATURE_PROBE_RESP_OFFLOAD) {
+    resp.driver_features.push_back(wlan_common::DriverFeature::PROBE_RESP_OFFLOAD);
+  }
   // TODO(41640): Remove this flag once FullMAC drivers no longer needs SME.
   // This flag tells SME that SoftMAC drivers need SME to derive association capabilities.
   resp.driver_features.push_back(wlan_common::DriverFeature::TEMP_SOFTMAC);
