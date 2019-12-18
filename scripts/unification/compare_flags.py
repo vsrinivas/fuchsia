@@ -21,15 +21,43 @@ FUCHSIA_ROOT = os.path.dirname(  # $root
     os.path.dirname(             # scripts
     SCRIPT_DIR))                 # unification
 
-GN_TARGET = '//src/lib/fxl:fxl_logging(//build/toolchain/fuchsia:arm64-shared)'
-ZN_TARGET = '//system/ulib/fdio:fdio.shared(//public/gn/toolchain:user-arm64-clang.shlib)'
+
+class Type(object):
+    LIB = 'lib'
+    DRIVER = 'driver'
+    @classmethod
+    def all(cls): return [cls.LIB, cls.DRIVER]
+
+
+class Build(object):
+    ZN = 'zn'
+    GN = 'gn'
+
+
+TARGETS = {
+    Type.LIB: {
+        Build.ZN: '//system/ulib/fdio:fdio.shared(//public/gn/toolchain:user-arm64-clang.shlib)',
+        Build.GN: '//src/lib/fxl:fxl_logging(//build/toolchain/fuchsia:arm64-shared)',
+    },
+    Type.DRIVER: {
+        Build.ZN: '//system/ulib/ddktl:ddktl-test.binary._build(//public/gn/toolchain:user-x64-clang.shlib)',
+        Build.GN: '//src/media/audio/drivers/virtual_audio:virtual_audio_driver(//build/toolchain/fuchsia:x64-shared)'
+    }
+}
+
+
+DIMENSIONS = [
+    'cflags',
+    'cflags_c',
+    'cflags_cc',
+]
 
 
 def diff_lists(gn_object, zn_object, dimension):
     print('--------------------------')
     print('Parameter [' + dimension + ']')
-    gn_set = set(gn_object[dimension])
-    zn_set = set(zn_object[dimension])
+    gn_set = set(gn_object[dimension]) if dimension in gn_object else set()
+    zn_set = set(zn_object[dimension]) if dimension in zn_object else set()
     gn_only = gn_set - zn_set
     zn_only = zn_set - gn_set
     if not gn_only and not zn_only:
@@ -51,6 +79,10 @@ def main():
     parser.add_argument('--build-dir',
                         help='Path to the GN build dir',
                         required=True)
+    parser.add_argument('--type',
+                        help='Type of target',
+                        choices=Type.all(),
+                        default=Type.LIB)
     args = parser.parse_args()
 
     source_dir = FUCHSIA_ROOT
@@ -69,23 +101,24 @@ def main():
 
     base_command = [gn_binary, 'desc', '--format=json']
 
-    print('Getting GN data... [' + GN_TARGET + ']')
-    gn_command = base_command + [gn_build_dir, GN_TARGET]
+    gn_target = TARGETS[args.type][Build.GN]
+    print('Getting GN data... [' + gn_target + ']')
+    gn_command = base_command + [gn_build_dir, gn_target]
     result = subprocess.check_output(gn_command, cwd=source_dir)
     gn_data = json.loads(result)
 
-    print('Getting ZN data... [' + ZN_TARGET + ']')
+    zn_target = TARGETS[args.type][Build.ZN]
+    print('Getting ZN data... [' + zn_target + ']')
     zircon_dir = os.path.join(source_dir, 'zircon')
-    zn_command = base_command + ['--root=' + zircon_dir, zn_build_dir, ZN_TARGET]
+    zn_command = base_command + ['--root=' + zircon_dir, zn_build_dir, zn_target]
     result = subprocess.check_output(zn_command, cwd=source_dir)
     zn_data = json.loads(result)
 
     gn_object = gn_data.items()[0][1];
     zn_object = zn_data.items()[0][1];
 
-    diff_lists(gn_object, zn_object, 'cflags');
-    diff_lists(gn_object, zn_object, 'cflags_c');
-    diff_lists(gn_object, zn_object, 'cflags_cc');
+    for dimension in DIMENSIONS:
+        diff_lists(gn_object, zn_object, dimension);
 
     return 0
 
