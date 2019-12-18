@@ -247,6 +247,9 @@ extern "C" int32_t client_sta_handle_data_frame(wlan_client_sta_t *sta, wlan_cli
                                                 wlan_span_t data_frame, bool has_padding,
                                                 bool controlled_port_open);
 
+extern "C" int32_t client_sta_handle_eth_frame(wlan_client_sta_t *sta, wlan_client_mlme_t *mlme,
+                                               wlan_span_t frame);
+
 extern "C" wlan_client_sta_t *client_sta_new(const uint8_t (*bssid)[6],
                                              const uint8_t (*iface_mac)[6], bool is_rsn);
 

@@ -11,9 +11,10 @@ use {
     crate::{
         auth,
         client::{Client, Context, TimedEvent},
+        error::Error,
         timer::*,
     },
-    fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     log::{error, info, warn},
     wlan_common::{
         mac::{self, MacAddr},
@@ -371,6 +372,42 @@ impl Associated {
             .unwrap_or(fidl_mlme::ReasonCode::UnspecifiedReason);
         sta.send_disassoc_ind(ctx, reason_code);
     }
+
+    fn on_eth_frame<B: ByteSlice>(
+        &self,
+        sta: &mut Client,
+        ctx: &mut Context,
+        frame: B,
+    ) -> Result<(), Error> {
+        let mac::EthernetFrame { hdr, body } = match mac::EthernetFrame::parse(frame) {
+            Some(eth_frame) => eth_frame,
+            None => {
+                return Err(Error::Status(
+                    format!("Ethernet frame too short"),
+                    zx::Status::IO_DATA_INTEGRITY,
+                ));
+            }
+        };
+
+        if !self.controlled_port.is_opened() {
+            return Err(Error::Status(
+                format!("Ethernet dropped. RSN not established"),
+                zx::Status::BAD_STATE,
+            ));
+        }
+
+        // TODO(eyw): Replaced it with finalize_association in the next patch .
+        const TEMPORARY_NO_QOS: bool = false;
+        sta.send_data_frame(
+            ctx,
+            hdr.sa,
+            hdr.da,
+            sta.is_rsn,
+            TEMPORARY_NO_QOS,
+            hdr.ether_type.to_native(),
+            &body,
+        )
+    }
 }
 
 statemachine!(
@@ -582,6 +619,27 @@ impl States {
                 }
             }
             _ => self,
+        }
+    }
+
+    pub fn on_eth_frame<B: ByteSlice>(
+        self,
+        sta: &mut Client,
+        ctx: &mut Context,
+        frame: B,
+    ) -> (Self, Result<(), Error>) {
+        match self {
+            States::Associated(state) => {
+                let result = state.on_eth_frame(sta, ctx, frame);
+                (state.into(), result)
+            }
+            _ => (
+                self,
+                Err(Error::Status(
+                    format!("Not associated, ethernet dropped"),
+                    zx::Status::BAD_STATE,
+                )),
+            ),
         }
     }
 
@@ -1766,5 +1824,103 @@ mod tests {
             }
             _ => panic!("error parsing data frame"),
         }
+    }
+
+    #[test]
+    fn assoc_send_eth_frame_becomes_data_frame() {
+        let mut m = MockObjects::new();
+        let mut ctx = m.make_ctx();
+        let mut sta = make_client_station();
+        let state = States::from(statemachine::testing::new_state(Associated {
+            aid: 0,
+            controlled_port: ControlledPort::Open,
+        }));
+
+        let eth_frame = [
+            1, 2, 3, 4, 5, 6, // dst_addr
+            11, 12, 13, 14, 15, 16, // src_addr
+            0x0d, 0x05, // ether_type
+            21, 22, 23, 24, 25, 26, 27, 28, // payload
+            29, // more payload
+        ];
+
+        let (state, result) = state.on_eth_frame(&mut sta, &mut ctx, &eth_frame[..]);
+        assert_variant!(state, States::Associated(_), "should stay in associated state");
+        assert_eq!(result.expect("all good"), ());
+
+        assert_eq!(m.fake_device.wlan_queue.len(), 1);
+        let (data_frame, _tx_flags) = m.fake_device.wlan_queue.remove(0);
+        assert_eq!(
+            &data_frame[..],
+            &[
+                // Data header
+                0b00001000, 0b00000001, // Frame Control
+                0, 0, // Duration
+                6, 6, 6, 6, 6, 6, // addr1
+                11, 12, 13, 14, 15, 16, // addr2 (from src_addr above)
+                1, 2, 3, 4, 5, 6, // addr3 (from dst_addr above)
+                0x10, 0, // Sequence Control
+                // LLC header
+                0xAA, 0xAA, 0x03, // DSAP, SSAP, Control, OUI
+                0, 0, 0, // OUI
+                0x0d, 0x05, // Protocol ID (from ether_type above)
+                21, 22, 23, 24, 25, 26, 27, 28, // Payload
+                29, // More payload
+            ][..]
+        )
+    }
+
+    #[test]
+    fn assoc_eth_frame_too_short_dropped() {
+        let mut m = MockObjects::new();
+        let mut ctx = m.make_ctx();
+        let mut sta = make_client_station();
+        let state = States::from(statemachine::testing::new_state(Associated {
+            aid: 0,
+            controlled_port: ControlledPort::Closed,
+        }));
+
+        let eth_frame = &[100; 13]; // Needs at least 14 bytes for header.
+
+        let (state, result) = state.on_eth_frame(&mut sta, &mut ctx, &eth_frame[..]);
+        assert_variant!(state, States::Associated(_), "Should stay in joined");
+        let status = assert_variant !(result.unwrap_err(), Error::Status(_str, status) => status,
+                                      "should be error");
+        assert_eq!(status, zx::Status::IO_DATA_INTEGRITY);
+    }
+
+    #[test]
+    fn assoc_controlled_port_closed_eth_frame_dropped() {
+        let mut m = MockObjects::new();
+        let mut ctx = m.make_ctx();
+        let mut sta = make_client_station();
+        let state = States::from(statemachine::testing::new_state(Associated {
+            aid: 0,
+            controlled_port: ControlledPort::Closed,
+        }));
+
+        let eth_frame = &[100; 14]; // long enough for ethernet header.
+
+        let (state, result) = state.on_eth_frame(&mut sta, &mut ctx, &eth_frame[..]);
+        assert_variant!(state, States::Associated(_), "Should stay in joined");
+        let status = assert_variant !(result.unwrap_err(), Error::Status(_str, status) => status,
+                                      "should be error");
+        assert_eq!(status, zx::Status::BAD_STATE);
+    }
+
+    #[test]
+    fn not_assoc_eth_frame_dropped() {
+        let mut m = MockObjects::new();
+        let mut ctx = m.make_ctx();
+        let mut sta = make_client_station();
+        let state = States::from(statemachine::testing::new_state(Joined));
+
+        let eth_frame = &[100; 14]; // long enough for ethernet header.
+
+        let (state, result) = state.on_eth_frame(&mut sta, &mut ctx, &eth_frame[..]);
+        assert_variant!(state, States::Joined(_), "Should stay in joined");
+        let status = assert_variant !(result.unwrap_err(), Error::Status(_str, status) => status,
+                                      "should be error");
+        assert_eq!(status, zx::Status::BAD_STATE);
     }
 }

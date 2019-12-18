@@ -504,6 +504,12 @@ impl Client {
             .map_err(|error| Error::Status(format!("error sending power management frame"), error))
     }
 
+    pub fn on_eth_frame<B: ByteSlice>(&mut self, ctx: &mut Context, frame: B) -> Result<(), Error> {
+        let (state, result) = self.state.take().unwrap().on_eth_frame(self, ctx, frame);
+        self.state = Some(state);
+        result
+    }
+
     /// Sends an MLME-AUTHENTICATE.confirm message to the SME with authentication type
     /// `Open System` as only open authentication is supported.
     fn send_authenticate_conf(

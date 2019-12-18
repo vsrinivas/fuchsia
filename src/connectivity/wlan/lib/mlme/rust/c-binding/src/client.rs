@@ -130,12 +130,9 @@ pub extern "C" fn client_sta_handle_data_frame(
     has_padding: bool,
     controlled_port_open: bool,
 ) -> i32 {
-    // Safe here because |data_frame_slice| does not outlive |data_frame|.
-    let data_frame_slice: &[u8] = data_frame.into();
-
     // TODO(42080): Do not parse here. Instead, parse in associated state only.
-    match mac::MacFrame::parse(&data_frame_slice[..], has_padding) {
-        Some(mac::MacFrame::Data { fixed_fields, addr4, qos_ctrl, body, .. }) => {
+    match mac::MacFrame::parse(data_frame.into(), has_padding) {
+        Some(mac::MacFrame::<&[u8]>::Data { fixed_fields, addr4, qos_ctrl, body, .. }) => {
             sta.handle_data_frame(
                 mlme.ctx(),
                 &fixed_fields,
@@ -164,6 +161,15 @@ pub unsafe extern "C" fn client_sta_send_data_frame(
 ) -> i32 {
     sta.send_data_frame(mlme.ctx(), *src, *dest, is_protected, is_qos, ether_type, payload.into())
         .into_raw_zx_status()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn client_sta_handle_eth_frame(
+    sta: &mut Client,
+    mlme: &mut ClientMlme,
+    frame: CSpan<'_>,
+) -> i32 {
+    sta.on_eth_frame::<&[u8]>(mlme.ctx(), frame.into()).into_raw_zx_status()
 }
 
 #[no_mangle]

@@ -4,7 +4,7 @@
 
 use {
     crate::{big_endian::BigEndianU16, mac::MacAddr},
-    zerocopy::{AsBytes, FromBytes, Unaligned},
+    zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned},
 };
 
 // RFC 704, Appendix B.2
@@ -23,9 +23,21 @@ pub struct EthernetIIHdr {
     pub ether_type: BigEndianU16,
 }
 
+pub struct EthernetFrame<B: ByteSlice> {
+    pub hdr: LayoutVerified<B, EthernetIIHdr>,
+    pub body: B,
+}
+
+impl<B: ByteSlice> EthernetFrame<B> {
+    pub fn parse(bytes: B) -> Option<Self> {
+        let (hdr, body) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
+        Some(Self { hdr, body })
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::mac::*};
+    use super::*;
 
     #[test]
     fn eth_hdr_big_endian() {
