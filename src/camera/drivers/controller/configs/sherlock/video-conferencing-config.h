@@ -90,6 +90,7 @@ __UNUSED static std::vector<fuchsia::sysmem::ImageFormat_2> VideoImageFormats() 
   };
 }
 
+#if 0
 static fuchsia::camera2::hal::StreamConfig VideoConfig() {
   StreamConstraints stream(fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
   stream.AddImageFormat(kVideoWidth, kVideoHeight, kFramePixelFormat);
@@ -101,6 +102,7 @@ static fuchsia::camera2::hal::StreamConfig VideoConfig() {
   stream.set_buffer_count_for_camping(kVideoMinBufferForCamping);
   return stream.ConvertToStreamConfig();
 };
+#endif
 
 /*****************************
  *  EXTERNAL CONFIGURATIONS  *
@@ -110,7 +112,10 @@ static fuchsia::camera2::hal::StreamConfig VideoConfig() {
 fuchsia::camera2::hal::Config VideoConferencingConfig() {
   fuchsia::camera2::hal::Config config;
   config.stream_configs.push_back(MLVideoFRConfig());
+  // TODO(braval) : Enable this only when we support Video Conferencing stream.
+#if 0
   config.stream_configs.push_back(VideoConfig());
+#endif
   return config;
 }
 
