@@ -9,10 +9,10 @@
 #include <vector>
 
 #include "leveldb/env.h"
-#include "src/ledger/bin/platform/detached_path.h"
 #include "src/ledger/bin/platform/ledger_memory_estimator.h"
-#include "src/ledger/bin/platform/scoped_tmp_dir.h"
 #include "src/ledger/bin/platform/scoped_tmp_location.h"
+#include "src/ledger/lib/files/detached_path.h"
+#include "src/ledger/lib/files/scoped_tmp_dir.h"
 
 namespace ledger {
 

@@ -16,10 +16,10 @@
 
 #include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/fidl/include/types.h"
-#include "src/ledger/bin/platform/detached_path.h"
 #include "src/ledger/bin/platform/fd.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/files/detached_path.h"
 #include "src/ledger/lib/files/unique_fd.h"
 #include "src/ledger/lib/logging/logging.h"
 

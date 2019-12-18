@@ -8,12 +8,12 @@
 #include <stdlib.h>
 
 #include "src/ledger/bin/app/flags.h"
-#include "src/ledger/bin/platform/detached_path.h"
 #include "src/ledger/bin/platform/ledger_memory_estimator.h"
 #include "src/ledger/bin/platform/platform.h"
 #include "src/ledger/bin/platform/scoped_tmp_location.h"
 #include "src/ledger/bin/testing/get_ledger.h"
 #include "src/ledger/bin/testing/run_with_tracing.h"
+#include "src/ledger/lib/files/detached_path.h"
 #include "src/ledger/lib/logging/logging.h"
 
 // A test application meant to be executed as a benchmark. It will complete

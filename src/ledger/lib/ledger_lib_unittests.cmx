@@ -3,6 +3,9 @@
         "binary": "test/ledger_lib_unittests"
     },
     "sandbox": {
+        "features": [
+            "isolated-temp"
+        ],
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher"

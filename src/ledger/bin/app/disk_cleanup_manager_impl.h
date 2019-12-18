@@ -9,9 +9,9 @@
 #include "src/ledger/bin/app/page_eviction_manager_impl.h"
 #include "src/ledger/bin/app/page_usage_listener.h"
 #include "src/ledger/bin/environment/environment.h"
-#include "src/ledger/bin/platform/detached_path.h"
 #include "src/ledger/bin/storage/public/db_factory.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
+#include "src/ledger/lib/files/detached_path.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {

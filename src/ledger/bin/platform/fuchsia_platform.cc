@@ -7,13 +7,13 @@
 
 #include <stdio.h>
 
-#include "src/ledger/bin/platform/fuchsia_scoped_tmp_dir.h"
 #include "src/ledger/bin/platform/fuchsia_scoped_tmp_location.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/files/directory.h"
 #include "src/ledger/lib/files/file.h"
+#include "src/ledger/lib/files/path.h"
+#include "src/ledger/lib/files/scoped_tmp_dir.h"
 #include "src/ledger/lib/logging/logging.h"
-#include "src/lib/files/directory.h"
-#include "src/lib/files/path.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 #include "util/env_fuchsia.h"
 
@@ -59,16 +59,16 @@ bool FuchsiaFileSystem::GetFileSize(DetachedPath path, uint64_t* size) {
 }
 
 bool FuchsiaFileSystem::CreateDirectory(DetachedPath path) {
-  return files::CreateDirectoryAt(path.root_fd(), path.path());
+  return CreateDirectoryAt(path.root_fd(), path.path());
 }
 
 bool FuchsiaFileSystem::IsDirectory(DetachedPath path) {
-  return files::IsDirectoryAt(path.root_fd(), path.path());
+  return IsDirectoryAt(path.root_fd(), path.path());
 }
 
 bool FuchsiaFileSystem::GetDirectoryContents(DetachedPath path,
                                              std::vector<std::string>* dir_contents) {
-  if (!files::ReadDirContentsAt(path.root_fd(), path.path(), dir_contents)) {
+  if (!ReadDirContentsAt(path.root_fd(), path.path(), dir_contents)) {
     return false;
   }
   // Remove the current directory string from the result.
@@ -79,7 +79,7 @@ bool FuchsiaFileSystem::GetDirectoryContents(DetachedPath path,
 }
 
 std::unique_ptr<ScopedTmpDir> FuchsiaFileSystem::CreateScopedTmpDir(DetachedPath parent_path) {
-  return std::make_unique<FuchsiaScopedTmpDir>(parent_path);
+  return std::make_unique<ScopedTmpDir>(parent_path);
 }
 
 std::unique_ptr<ScopedTmpLocation> FuchsiaFileSystem::CreateScopedTmpLocation() {
@@ -87,11 +87,11 @@ std::unique_ptr<ScopedTmpLocation> FuchsiaFileSystem::CreateScopedTmpLocation() 
 }
 
 bool FuchsiaFileSystem::DeletePath(DetachedPath path) {
-  return files::DeletePathAt(path.root_fd(), path.path(), /*recursive*/ false);
+  return DeletePathAt(path.root_fd(), path.path(), /*recursive*/ false);
 }
 
 bool FuchsiaFileSystem::DeletePathRecursively(DetachedPath path) {
-  return files::DeletePathAt(path.root_fd(), path.path(), /*recursive*/ true);
+  return DeletePathAt(path.root_fd(), path.path(), /*recursive*/ true);
 }
 
 bool FuchsiaFileSystem::Rename(DetachedPath origin, DetachedPath destination) {

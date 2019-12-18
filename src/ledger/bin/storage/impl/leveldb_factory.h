@@ -12,9 +12,9 @@
 #include <memory>
 
 #include "src/ledger/bin/environment/environment.h"
-#include "src/ledger/bin/platform/detached_path.h"
 #include "src/ledger/bin/storage/impl/leveldb.h"
 #include "src/ledger/bin/storage/public/db_factory.h"
+#include "src/ledger/lib/files/detached_path.h"
 
 namespace storage {
 

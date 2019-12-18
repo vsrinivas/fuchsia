@@ -6,8 +6,8 @@
 
 #include <memory>
 
-#include "src/ledger/bin/platform/detached_path.h"
 #include "src/ledger/bin/storage/public/db_unittest.h"
+#include "src/ledger/lib/files/detached_path.h"
 
 namespace storage {
 namespace {

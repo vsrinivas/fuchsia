@@ -147,6 +147,7 @@ source_set("lib") {
     "//src/ledger/bin/storage/public",
     "//src/ledger/bin/synchronization:lock",
     "//src/ledger/lib/callback",
+    "//src/ledger/lib/files",
     "//src/ledger/lib/logging",
     "//src/ledger/lib/rng",
     "//third_party/abseil-cpp",

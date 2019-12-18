@@ -27,6 +27,7 @@ executable("ledger_lib_unittests") {
     "//src/ledger/lib/coroutine:unittests",
     "//src/ledger/lib/coroutine/context:unittests",
     "//src/ledger/lib/encoding:unittests",
+    "//src/ledger/lib/files:unittests",
     "//src/ledger/lib/logging:unittests",
     "//src/ledger/lib/loop_fixture:unittests",
     "//src/ledger/lib/rng:unittests",

@@ -136,6 +136,7 @@ source_set("lib") {
     "//src/ledger/bin/synchronization:lock",
     "//src/ledger/lib/callback",
     "//src/ledger/lib/convert",
+    "//src/ledger/lib/files",
     "//src/ledger/lib/logging",
     "//src/ledger/lib/rng",
     "//src/ledger/lib/socket",

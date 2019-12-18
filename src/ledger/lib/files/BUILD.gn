@@ -6,15 +6,45 @@ visibility = [ "//src/ledger/*" ]
 
 source_set("files") {
   sources = [
+    "detached_path.cc",
+    "detached_path.h",
+    "directory.cc",
+    "directory.h",
     "eintr_wrapper.h",
     "file.cc",
     "file.h",
     "file_descriptor.cc",
     "file_descriptor.h",
+    "path.cc",
+    "path.h",
+    "scoped_tmp_dir.cc",
+    "scoped_tmp_dir.h",
   ]
 
   public_deps = [
     "//src/ledger/lib/logging",
+    "//zircon/public/lib/fit",
+  ]
+
+  configs += [ "//src/ledger:ledger_config" ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "detached_path_unittest.cc",
+    "directory_unittest.cc",
+    "file_descriptor_unittest.cc",
+    "file_unittest.cc",
+    "path_unittest.cc",
+    "scoped_tmp_dir_unittest.cc",
+  ]
+
+  deps = [
+    ":files",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]

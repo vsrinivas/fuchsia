@@ -14,11 +14,11 @@
 #include <string>
 #include <vector>
 
-#include "src/ledger/bin/platform/scoped_tmp_dir.h"
 #include "src/ledger/bin/storage/impl/page_storage_impl.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/lib/callback/scoped_callback.h"
 #include "src/ledger/lib/callback/trace_callback.h"
+#include "src/ledger/lib/files/scoped_tmp_dir.h"
 #include "src/ledger/lib/logging/logging.h"
 #include "third_party/abseil-cpp/absl/strings/escaping.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"

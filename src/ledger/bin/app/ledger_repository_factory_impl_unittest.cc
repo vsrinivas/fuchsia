@@ -9,13 +9,13 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/ledger/bin/app/constants.h"
-#include "src/ledger/bin/platform/detached_path.h"
 #include "src/ledger/bin/platform/fd.h"
 #include "src/ledger/bin/platform/scoped_tmp_location.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/callback/capture.h"
 #include "src/ledger/lib/callback/set_when_called.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/files/detached_path.h"
 #include "src/ledger/lib/files/unique_fd.h"
 
 namespace ledger {

@@ -26,12 +26,12 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/fidl/syncable.h"
 #include "src/ledger/bin/p2p_sync/public/user_communicator.h"
-#include "src/ledger/bin/platform/detached_path.h"
 #include "src/ledger/bin/storage/public/db_factory.h"
 #include "src/ledger/bin/sync_coordinator/public/user_sync.h"
 #include "src/ledger/lib/callback/auto_cleanable.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
+#include "src/ledger/lib/files/detached_path.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {

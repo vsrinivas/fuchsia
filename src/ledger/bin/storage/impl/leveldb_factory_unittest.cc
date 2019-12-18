@@ -10,11 +10,11 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "src/ledger/bin/platform/detached_path.h"
 #include "src/ledger/bin/platform/scoped_tmp_location.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/callback/capture.h"
 #include "src/ledger/lib/callback/set_when_called.h"
+#include "src/ledger/lib/files/detached_path.h"
 #include "third_party/abseil-cpp/absl/strings/str_cat.h"
 
 namespace storage {

@@ -6,13 +6,10 @@ visibility = [ "//src/ledger/*" ]
 
 source_set("platform") {
   sources = [
-    "detached_path.cc",
-    "detached_path.h",
     "fd.cc",
     "fd.h",
     "ledger_memory_estimator.h",
     "platform.h",
-    "scoped_tmp_dir.h",
     "scoped_tmp_location.h",
   ]
 
@@ -32,7 +29,6 @@ source_set("implementation") {
     "fuchsia_ledger_memory_estimator.h",
     "fuchsia_platform.cc",
     "fuchsia_platform.h",
-    "fuchsia_scoped_tmp_dir.h",
     "fuchsia_scoped_tmp_location.cc",
     "fuchsia_scoped_tmp_location.h",
   ]
@@ -55,7 +51,6 @@ source_set("unittests") {
   testonly = true
 
   sources = [
-    "detached_path_unittest.cc",
     "platform_unittest.cc",
   ]
 

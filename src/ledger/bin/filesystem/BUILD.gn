@@ -12,6 +12,7 @@ source_set("filesystem") {
 
   public_deps = [
     "//src/ledger/bin/platform",
+    "//src/ledger/lib/files",
     "//third_party/abseil-cpp",
     "//zircon/public/lib/fit",
   ]
@@ -32,6 +33,7 @@ source_set("unittests") {
     ":filesystem",
     "//src/ledger/bin/platform:implementation",
     "//src/ledger/lib/convert",
+    "//src/ledger/lib/files",
     "//third_party/abseil-cpp",
     "//third_party/googletest:gtest",
   ]

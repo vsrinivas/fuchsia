@@ -1,9 +1,9 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LEDGER_BIN_PLATFORM_DETACHED_PATH_H_
-#define SRC_LEDGER_BIN_PLATFORM_DETACHED_PATH_H_
+#ifndef SRC_LEDGER_LIB_FILES_DETACHED_PATH_H_
+#define SRC_LEDGER_LIB_FILES_DETACHED_PATH_H_
 
 #include <fcntl.h>
 
@@ -50,4 +50,4 @@ class DetachedPath {
 
 }  // namespace ledger
 
-#endif  // SRC_LEDGER_BIN_PLATFORM_DETACHED_PATH_H_
+#endif  // SRC_LEDGER_LIB_FILES_DETACHED_PATH_H_

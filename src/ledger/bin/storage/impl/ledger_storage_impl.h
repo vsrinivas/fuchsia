@@ -13,11 +13,11 @@
 #include "src/ledger/bin/clocks/public/device_id_manager.h"
 #include "src/ledger/bin/encryption/public/encryption_service.h"
 #include "src/ledger/bin/environment/environment.h"
-#include "src/ledger/bin/platform/detached_path.h"
 #include "src/ledger/bin/storage/public/db.h"
 #include "src/ledger/bin/storage/public/db_factory.h"
 #include "src/ledger/bin/storage/public/ledger_storage.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
+#include "src/ledger/lib/files/detached_path.h"
 #include "src/ledger/lib/memory/weak_ptr.h"
 
 namespace storage {

@@ -98,6 +98,7 @@ TEST(PlatformTest, CreateScopedTmpDir) {
 
   std::unique_ptr<ScopedTmpDir> tmp_dir1 = platform->file_system()->CreateScopedTmpDir(parent_path);
   std::unique_ptr<ScopedTmpDir> tmp_dir2 = platform->file_system()->CreateScopedTmpDir(parent_path);
+  ASSERT_TRUE(platform->file_system()->IsDirectory(tmp_dir1->path()));
 
   // The created ScopedTmpDir should be under |parent_path|.
   ASSERT_NE(tmp_dir1, nullptr);

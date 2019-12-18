@@ -135,6 +135,7 @@ source_set("get_ledger") {
     "//src/ledger/bin/public",
     "//src/ledger/fidl:fuchsia.ledger.cloud",
     "//src/ledger/lib/convert",
+    "//src/ledger/lib/files",
     "//src/ledger/lib/vmo",
     "//third_party/abseil-cpp",
     "//zircon/public/lib/fit",
