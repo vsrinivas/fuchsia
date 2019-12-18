@@ -47,6 +47,7 @@ class SherlockAudioStreamIn : public SimpleAudioStream {
   void ProcessRingNotification() TA_REQ(domain_token());
 
   uint32_t us_per_notification_ = 0;
+  uint32_t frames_per_second_ = 0;
   async::TaskClosureMethod<SherlockAudioStreamIn, &SherlockAudioStreamIn::ProcessRingNotification>
       notify_timer_ TA_GUARDED(domain_token()){this};
   std::optional<ddk::PDev> pdev_ TA_GUARDED(domain_token());

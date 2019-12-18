@@ -43,7 +43,7 @@ class AstroAudioStreamIn : public SimpleAudioStream {
   void ProcessRingNotification() __TA_REQUIRES(domain_token());
 
   uint32_t us_per_notification_ = 0;
-
+  uint32_t frames_per_second_ = 0;
   async::TaskClosureMethod<AstroAudioStreamIn, &AstroAudioStreamIn::ProcessRingNotification>
       notify_timer_ __TA_GUARDED(domain_token()){this};
 

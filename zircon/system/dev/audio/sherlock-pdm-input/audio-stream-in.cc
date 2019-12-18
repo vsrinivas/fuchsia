@@ -26,7 +26,9 @@ constexpr size_t kRingBufferSize =
     fbl::round_up<size_t, size_t>(kMaxSampleRate * 2 * kNumberOfChannels, ZX_PAGE_SIZE);
 
 SherlockAudioStreamIn::SherlockAudioStreamIn(zx_device_t* parent)
-    : SimpleAudioStream(parent, true /* is input */) {}
+    : SimpleAudioStream(parent, true /* is input */) {
+  frames_per_second_ = kMinSampleRate;
+}
 
 zx_status_t SherlockAudioStreamIn::Create(void* ctx, zx_device_t* parent) {
   auto stream = audio::SimpleAudioStream::Create<SherlockAudioStreamIn>(parent);
@@ -119,6 +121,7 @@ zx_status_t SherlockAudioStreamIn::ChangeFormat(const audio_proto::StreamSetFmtR
   if (status != ZX_OK) {
     return status;
   }
+  frames_per_second_ = req.frames_per_second;
 
   return ZX_OK;
 }
@@ -148,8 +151,9 @@ zx_status_t SherlockAudioStreamIn::Start(uint64_t* out_start_time) {
 
   uint32_t notifs = LoadNotificationsPerRing();
   if (notifs) {
-    us_per_notification_ = static_cast<uint32_t>(1000 * pinned_ring_buffer_.region(0).size /
-                                                 (frame_size_ * 48 * notifs));
+    us_per_notification_ =
+        static_cast<uint32_t>(1000 * pinned_ring_buffer_.region(0).size /
+                              (frame_size_ * frames_per_second_ / 1000 * notifs));
     notify_timer_.PostDelayed(dispatcher(), zx::usec(us_per_notification_));
   } else {
     us_per_notification_ = 0;
