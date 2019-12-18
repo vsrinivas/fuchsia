@@ -3,40 +3,43 @@
 // found in the LICENSE file.
 
 use {
-    crate::conversion_utils::to_range,
     crate::input_device,
     crate::input_device::InputDeviceBinding,
     async_trait::async_trait,
     failure::{self, format_err, Error},
     fidl_fuchsia_input_report as fidl,
-    fidl_fuchsia_input_report::{InputDeviceProxy, InputReport, TouchDescriptor},
+    fidl_fuchsia_input_report::{InputDeviceProxy, InputReport},
     fuchsia_async as fasync,
     futures::channel::mpsc::{Receiver, Sender},
     futures::StreamExt,
-    std::ops::Range,
 };
+
+#[derive(Copy, Clone)]
+pub struct TouchInputMessage {}
+
+#[derive(Copy, Clone)]
+pub struct TouchDescriptor {}
 
 /// A [`TouchBinding`] represents a connection to a touch input device.
 ///
 /// The [`TouchBinding`] parses and exposes touch descriptor properties (e.g., the range of
 /// possible x values for touch contacts) for the device it is associated with.
 /// It also parses [`InputReport`]s from the device, and sends them to clients
-/// via [`TouchBinding::input_report_stream()`].
+/// via [`TouchBinding::input_message_stream()`].
 ///
 /// # Example
 /// ```
 /// let mut touch_device: TouchBinding = input_device::InputDeviceBinding::new().await?;
 ///
-/// while let Some(report) = touch_device.input_report_stream().next().await {}
+/// while let Some(report) = touch_device.input_message_stream().next().await {}
 /// ```
 pub struct TouchBinding {
     /// The channel to stream InputReports to
-    report_sender: Sender<InputReport>,
+    message_sender: Sender<input_device::InputMessage>,
 
-    report_receiver: Receiver<InputReport>,
+    message_receiver: Receiver<input_device::InputMessage>,
 
-    /// The descriptors for each touch contact.
-    _contacts: Vec<ContactDescriptor>,
+    descriptor: TouchDescriptor,
 }
 
 /// A [`ContactDescriptor`] describes the possible values touch contact properties can take on.
@@ -52,31 +55,45 @@ pub struct TouchBinding {
 /// // Use the scaling factor to scale the contact report's x position.
 /// let hit_location = scaling_factor * contact_report.position_x;
 /// ```
+#[derive(Copy, Clone)]
 pub struct ContactDescriptor {
     /// The range of possible x values for this touch contact.
-    _x_range: Range<i64>,
+    _x_range: fidl::Range,
 
     /// The range of possible y values for this touch contact.
-    _y_range: Range<i64>,
+    _y_range: fidl::Range,
 
     /// The range of possible pressure values for this touch contact.
-    _pressure_range: Option<Range<i64>>,
+    _pressure_range: Option<fidl::Range>,
 
     /// The range of possible widths for this touch contact.
-    _width_range: Option<Range<i64>>,
+    _width_range: Option<fidl::Range>,
 
     /// The range of possible heights for this touch contact.
-    _height_range: Option<Range<i64>>,
+    _height_range: Option<fidl::Range>,
 }
 
 #[async_trait]
 impl input_device::InputDeviceBinding for TouchBinding {
-    fn input_report_sender(&self) -> Sender<InputReport> {
-        self.report_sender.clone()
+    fn input_message_sender(&self) -> Sender<input_device::InputMessage> {
+        self.message_sender.clone()
     }
 
-    fn input_report_stream(&mut self) -> &mut Receiver<fidl_fuchsia_input_report::InputReport> {
-        return &mut self.report_receiver;
+    fn input_message_stream(&mut self) -> &mut Receiver<input_device::InputMessage> {
+        return &mut self.message_receiver;
+    }
+
+    fn get_descriptor(&self) -> input_device::InputDescriptor {
+        input_device::InputDescriptor::Touch(self.descriptor)
+    }
+
+    fn process_reports(
+        report: InputReport,
+        _previous_report: Option<InputReport>,
+        _device_descriptor: &mut input_device::InputDescriptor,
+        _input_message_sender: &mut Sender<input_device::InputMessage>,
+    ) -> Option<InputReport> {
+        Some(report)
     }
 
     async fn any_input_device() -> Result<InputDeviceProxy, Error> {
@@ -90,16 +107,24 @@ impl input_device::InputDeviceBinding for TouchBinding {
 
     async fn bind_device(device: &InputDeviceProxy) -> Result<Self, Error> {
         match device.get_descriptor().await?.touch {
-            Some(TouchDescriptor { contacts: Some(contacts), max_contacts: _, touch_type: _ }) => {
-                let (report_sender, report_receiver) = futures::channel::mpsc::channel(1);
+            Some(fidl_fuchsia_input_report::TouchDescriptor {
+                contacts: Some(_contacts),
+                max_contacts: _,
+                touch_type: _,
+            }) => {
+                let (message_sender, message_receiver) =
+                    futures::channel::mpsc::channel(input_device::INPUT_MESSAGE_BUFFER_SIZE);
+
                 Ok(TouchBinding {
-                    report_sender: report_sender,
-                    report_receiver: report_receiver,
-                    _contacts: contacts
-                        .iter()
-                        .map(TouchBinding::parse_contact_descriptor)
-                        .filter_map(Result::ok)
-                        .collect(),
+                    message_sender,
+                    message_receiver,
+                    descriptor: TouchDescriptor {
+                        // _contacts: contacts
+                        //     .iter()
+                        //     .map(TouchBinding::parse_contact_descriptor)
+                        //     .filter_map(Result::ok)
+                        //     .collect(),
+                    },
                 })
             }
             descriptor => Err(format_err!("Touch Descriptor failed to parse: \n {:?}", descriptor)),
@@ -115,6 +140,7 @@ impl TouchBinding {
     ///
     /// # Errors
     /// If the contact descripto fails to parse because required fields aren't present.
+    #[allow(dead_code)]
     fn parse_contact_descriptor(
         contact_descriptor: &fidl::ContactDescriptor,
     ) -> Result<ContactDescriptor, Error> {
@@ -126,11 +152,11 @@ impl TouchBinding {
                 contact_width: width_axis,
                 contact_height: height_axis,
             } => Ok(ContactDescriptor {
-                _x_range: to_range(*x_axis),
-                _y_range: to_range(*y_axis),
-                _pressure_range: pressure_axis.map(to_range),
-                _width_range: width_axis.map(to_range),
-                _height_range: height_axis.map(to_range),
+                _x_range: x_axis.range,
+                _y_range: y_axis.range,
+                _pressure_range: Some(pressure_axis.unwrap().range), // Unwrap may be unsafe here
+                _width_range: Some(width_axis.unwrap().range),       // Unwrap may be unsafe here
+                _height_range: Some(height_axis.unwrap().range),     // Unwrap may be unsafe here
             }),
             descriptor => {
                 Err(format_err!("Touch Contact Descriptor failed to parse: \n {:?}", descriptor))
@@ -156,22 +182,23 @@ async fn all_touch_bindings() -> Result<Vec<TouchBinding>, Error> {
     Ok(device_bindings)
 }
 
-/// Returns a stream of InputReports from all touch devices.
+/// Returns a stream of InputMessages from all touch devices.
 ///
 /// # Errors
 /// If there was an error binding to any touch device.
-pub async fn all_touch_reports() -> Result<Receiver<InputReport>, Error> {
+pub async fn all_touch_messages() -> Result<Receiver<input_device::InputMessage>, Error> {
     let bindings = all_touch_bindings().await?;
-    let (report_sender, report_receiver) = futures::channel::mpsc::channel(1);
+    let (message_sender, message_receiver) =
+        futures::channel::mpsc::channel(input_device::INPUT_MESSAGE_BUFFER_SIZE);
 
     for mut touch in bindings {
-        let mut sender = report_sender.clone();
+        let mut sender = message_sender.clone();
         fasync::spawn(async move {
-            while let Some(report) = touch.input_report_stream().next().await {
+            while let Some(report) = touch.input_message_stream().next().await {
                 let _ = sender.try_send(report);
             }
         });
     }
 
-    Ok(report_receiver)
+    Ok(message_receiver)
 }
