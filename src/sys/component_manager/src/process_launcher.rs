@@ -39,11 +39,11 @@ lazy_static! {
 /// is what actually gets returned through the protocol.
 #[derive(Fail, Debug)]
 enum LauncherError {
-    #[fail(display = "{}", _0)]
+    #[fail(display = "Invalid arg: {}", _0)]
     InvalidArg(&'static str),
-    #[fail(display = "{}", _0)]
+    #[fail(display = "Failed to build new process: {}", _0)]
     BuilderError(#[cause] ProcessBuilderError),
-    #[fail(display = "{}", _0)]
+    #[fail(display = "Invalid handle info: {}", _0)]
     HandleInfoError(#[cause] HandleInfoError),
 }
 
@@ -114,7 +114,7 @@ impl ProcessLauncher {
                         }
                         Err(err) => {
                             warn!(
-                                "Failed to launch process '{}' in job {}: {:?}",
+                                "Failed to launch process '{}' in job {}: {}",
                                 name,
                                 koid_to_string(job_koid),
                                 err
@@ -146,7 +146,7 @@ impl ProcessLauncher {
                         }
                         Err(err) => {
                             warn!(
-                                "Failed to create process '{}' in job {}: {:?}",
+                                "Failed to create process '{}' in job {}: {}",
                                 name,
                                 koid_to_string(job_koid),
                                 err
