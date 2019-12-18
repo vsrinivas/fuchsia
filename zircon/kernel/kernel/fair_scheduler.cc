@@ -1085,6 +1085,10 @@ void sched_change_priority(thread_t* thread, int priority) {
   }
 }
 
-void sched_change_deadline(thread_t* thread, const zx_sched_deadline_params_t& params) {}
+// Remap any attempt to set a deadline profile to just setting a very high
+// priority.  See comments in legacy_scheduler.cc for details.
+void sched_change_deadline(thread_t* t, const zx_sched_deadline_params_t&) {
+  sched_change_priority(t, 30);
+}
 
 void sched_preempt_timer_tick(zx_time_t now) { Scheduler::TimerTick(SchedTime{now}); }

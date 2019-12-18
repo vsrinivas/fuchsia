@@ -783,8 +783,19 @@ void sched_change_priority(thread_t* t, int pri) {
   }
 }
 
-// non-functional deadline API.
-void sched_change_deadline(thread_t*, const zx_sched_deadline_params_t&) {}
+// Deadline profiles do not exist in the legacy scheduler.  During the
+// transition to the new combination fair/deadline scheduler, if we attempt to
+// assign a deadline profile to a thread, simply simulate the effect by
+// assigning a high priority to the thread instead.  Before the deadline
+// scheduler was introduced, P24 was the priority which was assigned to Very
+// Important Threads.  We use a value of 30 instead, however, because with the
+// introduction of deadline scheduling the timing for real-time tasks was
+// cranked down even tighter than before.  We need to have a very high weight in
+// order to even have a chance of meeting the expectations of a thread which is
+// attempting to apply a deadline profile.
+void sched_change_deadline(thread_t* t, const zx_sched_deadline_params_t&) {
+  sched_change_priority(t, 30);
+}
 
 // preemption timer that is set whenever a thread is scheduled
 void sched_preempt_timer_tick(zx_time_t now) {
