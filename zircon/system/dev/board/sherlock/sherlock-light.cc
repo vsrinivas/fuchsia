@@ -154,13 +154,12 @@ zx_status_t Sherlock::LightInit() {
     return dev;
   }();
 
-  // Enable the Amber LED so it will be controlled by the mute switch.
-  // TODO (rdzhuang): change 0 to 3 to set to PWM when PWM is enabled from driver.
-  status = gpio_impl_.SetAltFunction(GPIO_AMBER_LED, 0);  // Set as GPIO.
+  // Enable the Amber LED so it will be controlled by PWM.
+  status = gpio_impl_.SetAltFunction(GPIO_AMBER_LED, 3);  // Set as GPIO.
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Configure mute LED GPIO failed %d\n", __func__, status);
   }
-  status = gpio_impl_.ConfigOut(GPIO_AMBER_LED, 1);  // Turn on (not configured as PWM).
+  status = gpio_impl_.ConfigOut(GPIO_AMBER_LED, 1);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Configure mute LED GPIO on failed %d\n", __func__, status);
   }
