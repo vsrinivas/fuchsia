@@ -23,6 +23,10 @@ SessionHandler::SessionHandler(CommandDispatcherContext dispatcher_context,
                                          std::move(session_context), std::move(event_reporter),
                                          std::move(error_reporter), std::move(inspect_object))) {}
 
+void SessionHandler::SetDebugName(const std::string& debug_name) {
+  session_->SetDebugName(debug_name);
+}
+
 void SessionHandler::Present(uint64_t presentation_time, std::vector<zx::event> acquire_fences,
                              std::vector<zx::event> release_fences,
                              fuchsia::ui::scenic::Session::PresentCallback callback) {

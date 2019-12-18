@@ -36,6 +36,9 @@ class DummyCommandDispatcher : public CommandDispatcher {
   ~DummyCommandDispatcher() override;
 
   // |CommandDispatcher|
+  void SetDebugName(const std::string& debug_name) override {}
+
+  // |CommandDispatcher|
   void DispatchCommand(const fuchsia::ui::scenic::Command command) override;
 };
 

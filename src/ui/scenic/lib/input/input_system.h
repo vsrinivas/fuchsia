@@ -117,6 +117,9 @@ class InputCommandDispatcher : public CommandDispatcher {
   ~InputCommandDispatcher() override = default;
 
   // |CommandDispatcher|
+  void SetDebugName(const std::string& debug_name) override {}
+
+  // |CommandDispatcher|
   void DispatchCommand(const fuchsia::ui::scenic::Command command) override;
 
   const InputSystem* input_system() { return input_system_; }

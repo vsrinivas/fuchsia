@@ -51,6 +51,8 @@ class CommandDispatcher {
   explicit CommandDispatcher(CommandDispatcherContext context);
   virtual ~CommandDispatcher();
 
+  virtual void SetDebugName(const std::string& debug_name) = 0;
+
   virtual void DispatchCommand(fuchsia::ui::scenic::Command command) = 0;
 
   CommandDispatcherContext* command_dispatcher_context() { return &context_; }
@@ -75,8 +77,6 @@ class TempSessionDelegate : public CommandDispatcher {
   virtual void Present2(zx_time_t requested_presentation_time,
                         std::vector<zx::event> acquire_fences,
                         std::vector<zx::event> release_fences) = 0;
-
-  virtual void SetDebugName(const std::string& debug_name) = 0;
 
   virtual void GetFuturePresentationInfos(
       zx::duration requested_prediction_span,

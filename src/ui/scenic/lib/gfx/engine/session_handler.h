@@ -38,6 +38,9 @@ class SessionHandler : public TempSessionDelegate {
 
   scenic_impl::gfx::Session* session() const { return session_.get(); }
 
+  // |CommandDispatcher|
+  void SetDebugName(const std::string& debug_name) override;
+
   // Called to initiate a session crash when an update fails.
   // Requests the destruction of client fidl session, which
   // then triggers the actual destruction of the SessionHandler
@@ -52,9 +55,6 @@ class SessionHandler : public TempSessionDelegate {
   // |fuchsia::ui::scenic::Session / scenic::TempSessionDelegate|
   void Present2(zx_time_t requested_presentation_time, std::vector<zx::event> acquire_fences,
                 std::vector<zx::event> release_fences) override;
-
-  // |fuchsia::ui::scenic::Session / scenic::TempSessionDelegate|
-  void SetDebugName(const std::string& debug_name) override { session_->SetDebugName(debug_name); }
 
   // |scenic::TempSessionDelegate|
   void GetFuturePresentationInfos(
