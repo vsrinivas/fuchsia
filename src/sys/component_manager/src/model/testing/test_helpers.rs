@@ -30,7 +30,7 @@ use {
     fuchsia_vfs_pseudo_fs_mt::directory::entry::DirectoryEntry,
     fuchsia_zircon::{self as zx, AsHandleRef, Koid},
     futures::TryStreamExt,
-    std::collections::{HashMap, HashSet},
+    std::collections::HashSet,
     std::default::Default,
     std::path::Path,
     std::sync::Arc,
@@ -255,6 +255,12 @@ impl ComponentDeclBuilder {
         self
     }
 
+    /// Add a custom use decl.
+    pub fn use_(mut self, use_: cm_rust::UseDecl) -> Self {
+        self.result.uses.push(use_);
+        self
+    }
+
     /// Generate the final ComponentDecl.
     pub fn build(self) -> ComponentDecl {
         self.result
@@ -414,7 +420,9 @@ impl ActionsTest {
             root_component_url: format!("test:///{}", root_component),
             root_resolver_registry: resolver,
             elf_runner: runner.clone(),
-            builtin_runners: HashMap::new(),
+            builtin_runners: vec![(TEST_RUNNER_NAME.into(), runner.clone() as _)]
+                .into_iter()
+                .collect(),
         }));
         // TODO(fsamuel): Don't install the Hub's hooks because the Hub expects components
         // to start and stop in a certain lifecycle ordering. In particular, some unit

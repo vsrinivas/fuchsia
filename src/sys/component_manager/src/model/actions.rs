@@ -254,9 +254,8 @@ pub mod tests {
             testing::{test_helpers::*, test_hook::*},
         },
         cm_rust::{
-            CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, ExposeDecl,
-            ExposeServiceProtocolDecl, ExposeSource, ExposeTarget, OfferDecl,
-            OfferServiceProtocolDecl, OfferServiceSource, OfferTarget, UseDecl,
+            CapabilityPath, ExposeDecl, ExposeServiceProtocolDecl, ExposeSource, ExposeTarget,
+            OfferDecl, OfferServiceProtocolDecl, OfferServiceSource, OfferTarget, UseDecl,
             UseServiceProtocolDecl, UseSource,
         },
         fidl_fuchsia_sys2 as fsys,
@@ -330,16 +329,12 @@ pub mod tests {
         let components = vec![
             (
                 "root",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "a".to_string(),
-                        url: "test:///a".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_lazy_child("a")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
-            ("a", ComponentDecl { ..default_component_decl() }),
+            ("a", component_decl_with_test_runner()),
         ];
         let test = ActionsTest::new("root", components, None).await;
         // Bind to the component, causing it to start. This should cause the realm to have an
@@ -374,33 +369,22 @@ pub mod tests {
         let components = vec![
             (
                 "root",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "container".to_string(),
-                        url: "test:///container".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_lazy_child("container")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "container",
-                ComponentDecl {
-                    collections: vec![CollectionDecl {
-                        name: "coll".to_string(),
-                        durability: fsys::Durability::Transient,
-                    }],
-                    children: vec![ChildDecl {
-                        name: "c".to_string(),
-                        url: "test:///c".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_collection("coll", fsys::Durability::Transient)
+                    .add_lazy_child("c")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
-            ("a", default_component_decl()),
-            ("b", default_component_decl()),
-            ("c", default_component_decl()),
+            ("a", component_decl_with_test_runner()),
+            ("b", component_decl_with_test_runner()),
+            ("c", component_decl_with_test_runner()),
         ];
         let test = ActionsTest::new("root", components, Some(vec!["container:0"].into())).await;
 
@@ -479,27 +463,19 @@ pub mod tests {
         let components = vec![
             (
                 "root",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "a".to_string(),
-                        url: "test:///a".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_lazy_child("a")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "a",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "b".to_string(),
-                        url: "test:///b".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_lazy_child("b")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
-            ("b", ComponentDecl { ..default_component_decl() }),
+            ("b", component_decl_with_test_runner()),
         ];
         let test = ActionsTest::new("root", components, None).await;
         let realm_a = test.look_up(vec!["a:0"].into()).await;
@@ -540,38 +516,26 @@ pub mod tests {
         let components = vec![
             (
                 "root",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "a".to_string(),
-                        url: "test:///a".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_lazy_child("a")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "a",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "b".to_string(),
-                        url: "test:///b".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_lazy_child("b")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "b",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "c".to_string(),
-                        url: "test:///c".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_lazy_child("c")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
-            ("c", ComponentDecl { ..default_component_decl() }),
+            ("c", component_decl_with_test_runner()),
         ];
         let test = ActionsTest::new("root", components, None).await;
         let realm_a = test.look_up(vec!["a:0"].into()).await;
@@ -619,46 +583,28 @@ pub mod tests {
         let components = vec![
             (
                 "root",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "a".to_string(),
-                        url: "test:///a".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_lazy_child("a")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "a",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "b".to_string(),
-                        url: "test:///b".to_string(),
-                        startup: fsys::StartupMode::Eager,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_eager_child("b")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "b",
-                ComponentDecl {
-                    children: vec![
-                        ChildDecl {
-                            name: "c".to_string(),
-                            url: "test:///c".to_string(),
-                            startup: fsys::StartupMode::Eager,
-                        },
-                        ChildDecl {
-                            name: "d".to_string(),
-                            url: "test:///d".to_string(),
-                            startup: fsys::StartupMode::Eager,
-                        },
-                    ],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_eager_child("c")
+                    .add_eager_child("d")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
-            ("c", ComponentDecl { ..default_component_decl() }),
-            ("d", ComponentDecl { ..default_component_decl() }),
+            ("c", component_decl_with_test_runner()),
+            ("d", component_decl_with_test_runner()),
         ];
         let test = ActionsTest::new("root", components, None).await;
         let realm_a = test.look_up(vec!["a:0"].into()).await;
@@ -726,96 +672,72 @@ pub mod tests {
         let components = vec![
             (
                 "root",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "a".to_string(),
-                        url: "test:///a".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_lazy_child("a")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "a",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "b".to_string(),
-                        url: "test:///b".to_string(),
-                        startup: fsys::StartupMode::Eager,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_eager_child("b")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "b",
-                ComponentDecl {
-                    children: vec![
-                        ChildDecl {
-                            name: "c".to_string(),
-                            url: "test:///c".to_string(),
-                            startup: fsys::StartupMode::Eager,
-                        },
-                        ChildDecl {
-                            name: "d".to_string(),
-                            url: "test:///d".to_string(),
-                            startup: fsys::StartupMode::Eager,
-                        },
-                        ChildDecl {
-                            name: "e".to_string(),
-                            url: "test:///d".to_string(),
-                            startup: fsys::StartupMode::Eager,
-                        },
-                    ],
-                    offers: vec![
-                        OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
-                            source: OfferServiceSource::Child("d".to_string()),
-                            source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
-                            target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
-                            target: OfferTarget::Child("c".to_string()),
-                        }),
-                        OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
-                            source: OfferServiceSource::Child("d".to_string()),
-                            source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
-                            target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
-                            target: OfferTarget::Child("e".to_string()),
-                        }),
-                    ],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_eager_child("c")
+                    .add_eager_child("d")
+                    .add_eager_child("e")
+                    .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                        source: OfferServiceSource::Child("d".to_string()),
+                        source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                        target: OfferTarget::Child("c".to_string()),
+                    }))
+                    .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                        source: OfferServiceSource::Child("d".to_string()),
+                        source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                        target: OfferTarget::Child("e".to_string()),
+                    }))
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "c",
-                ComponentDecl {
-                    uses: vec![UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                ComponentDeclBuilder::new()
+                    .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
-                    })],
-                    ..default_component_decl()
-                },
+                    }))
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "d",
-                ComponentDecl {
-                    exposes: vec![ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
+                ComponentDeclBuilder::new()
+                    .expose(ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
                         source: ExposeSource::Self_,
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target: ExposeTarget::Realm,
-                    })],
-                    ..default_component_decl()
-                },
+                    }))
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "e",
-                ComponentDecl {
-                    uses: vec![UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                ComponentDeclBuilder::new()
+                    .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
-                    })],
-                    ..default_component_decl()
-                },
+                    }))
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
         ];
         let test = ActionsTest::new("root", components, None).await;
@@ -898,124 +820,96 @@ pub mod tests {
         let components = vec![
             (
                 "root",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "a".to_string(),
-                        url: "test:///a".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_lazy_child("a")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "a",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "b".to_string(),
-                        url: "test:///b".to_string(),
-                        startup: fsys::StartupMode::Eager,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_eager_child("b")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "b",
-                ComponentDecl {
-                    children: vec![
-                        ChildDecl {
-                            name: "c".to_string(),
-                            url: "test:///c".to_string(),
-                            startup: fsys::StartupMode::Eager,
-                        },
-                        ChildDecl {
-                            name: "d".to_string(),
-                            url: "test:///d".to_string(),
-                            startup: fsys::StartupMode::Eager,
-                        },
-                        ChildDecl {
-                            name: "e".to_string(),
-                            url: "test:///e".to_string(),
-                            startup: fsys::StartupMode::Eager,
-                        },
-                        ChildDecl {
-                            name: "f".to_string(),
-                            url: "test:///f".to_string(),
-                            startup: fsys::StartupMode::Eager,
-                        },
-                    ],
-                    offers: vec![
-                        OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
-                            source: OfferServiceSource::Child("d".to_string()),
-                            source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
-                            target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
-                            target: OfferTarget::Child("c".to_string()),
-                        }),
-                        OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
-                            source: OfferServiceSource::Child("d".to_string()),
-                            source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
-                            target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
-                            target: OfferTarget::Child("e".to_string()),
-                        }),
-                        OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
-                            source: OfferServiceSource::Child("e".to_string()),
-                            source_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
-                            target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
-                            target: OfferTarget::Child("f".to_string()),
-                        }),
-                    ],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_eager_child("c")
+                    .add_eager_child("d")
+                    .add_eager_child("e")
+                    .add_eager_child("f")
+                    .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                        source: OfferServiceSource::Child("d".to_string()),
+                        source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                        target: OfferTarget::Child("c".to_string()),
+                    }))
+                    .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                        source: OfferServiceSource::Child("d".to_string()),
+                        source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                        target: OfferTarget::Child("e".to_string()),
+                    }))
+                    .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                        source: OfferServiceSource::Child("e".to_string()),
+                        source_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
+                        target: OfferTarget::Child("f".to_string()),
+                    }))
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "c",
-                ComponentDecl {
-                    uses: vec![UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                ComponentDeclBuilder::new()
+                    .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
-                    })],
-                    ..default_component_decl()
-                },
+                    }))
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "d",
-                ComponentDecl {
-                    exposes: vec![ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
+                ComponentDeclBuilder::new()
+                    .expose(ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
                         source: ExposeSource::Self_,
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target: ExposeTarget::Realm,
-                    })],
-                    ..default_component_decl()
-                },
+                    }))
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "e",
-                ComponentDecl {
-                    uses: vec![UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                ComponentDeclBuilder::new()
+                    .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
-                    })],
-                    exposes: vec![ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
+                    }))
+                    .expose(ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
                         source: ExposeSource::Self_,
                         source_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
                         target: ExposeTarget::Realm,
-                    })],
-                    ..default_component_decl()
-                },
+                    }))
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "f",
-                ComponentDecl {
-                    uses: vec![UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                ComponentDeclBuilder::new()
+                    .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
-                    })],
-                    ..default_component_decl()
-                },
+                    }))
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
         ];
         let moniker_a: AbsoluteMoniker = vec!["a:0"].into();
@@ -1127,137 +1021,107 @@ pub mod tests {
         let components = vec![
             (
                 "root",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "a".to_string(),
-                        url: "test:///a".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_lazy_child("a")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "a",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "b".to_string(),
-                        url: "test:///b".to_string(),
-                        startup: fsys::StartupMode::Eager,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_eager_child("b")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "b",
-                ComponentDecl {
-                    children: vec![
-                        ChildDecl {
-                            name: "c".to_string(),
-                            url: "test:///c".to_string(),
-                            startup: fsys::StartupMode::Eager,
-                        },
-                        ChildDecl {
-                            name: "d".to_string(),
-                            url: "test:///d".to_string(),
-                            startup: fsys::StartupMode::Eager,
-                        },
-                        ChildDecl {
-                            name: "e".to_string(),
-                            url: "test:///e".to_string(),
-                            startup: fsys::StartupMode::Eager,
-                        },
-                        ChildDecl {
-                            name: "f".to_string(),
-                            url: "test:///f".to_string(),
-                            startup: fsys::StartupMode::Eager,
-                        },
-                    ],
-                    offers: vec![
-                        OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
-                            source: OfferServiceSource::Child("d".to_string()),
-                            source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
-                            target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
-                            target: OfferTarget::Child("c".to_string()),
-                        }),
-                        OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
-                            source: OfferServiceSource::Child("d".to_string()),
-                            source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
-                            target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
-                            target: OfferTarget::Child("e".to_string()),
-                        }),
-                        OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
-                            source: OfferServiceSource::Child("d".to_string()),
-                            source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
-                            target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
-                            target: OfferTarget::Child("f".to_string()),
-                        }),
-                        OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
-                            source: OfferServiceSource::Child("e".to_string()),
-                            source_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
-                            target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
-                            target: OfferTarget::Child("f".to_string()),
-                        }),
-                    ],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_eager_child("c")
+                    .add_eager_child("d")
+                    .add_eager_child("e")
+                    .add_eager_child("f")
+                    .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                        source: OfferServiceSource::Child("d".to_string()),
+                        source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                        target: OfferTarget::Child("c".to_string()),
+                    }))
+                    .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                        source: OfferServiceSource::Child("d".to_string()),
+                        source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                        target: OfferTarget::Child("e".to_string()),
+                    }))
+                    .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                        source: OfferServiceSource::Child("d".to_string()),
+                        source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                        target: OfferTarget::Child("f".to_string()),
+                    }))
+                    .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                        source: OfferServiceSource::Child("e".to_string()),
+                        source_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
+                        target: OfferTarget::Child("f".to_string()),
+                    }))
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "c",
-                ComponentDecl {
-                    uses: vec![UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                ComponentDeclBuilder::new()
+                    .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
-                    })],
-                    ..default_component_decl()
-                },
+                    }))
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "d",
-                ComponentDecl {
-                    exposes: vec![ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
+                ComponentDeclBuilder::new()
+                    .expose(ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
                         source: ExposeSource::Self_,
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target: ExposeTarget::Realm,
-                    })],
-                    ..default_component_decl()
-                },
+                    }))
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "e",
-                ComponentDecl {
-                    uses: vec![UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                ComponentDeclBuilder::new()
+                    .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
-                    })],
-                    exposes: vec![ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
+                    }))
+                    .expose(ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
                         source: ExposeSource::Self_,
                         source_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
                         target: ExposeTarget::Realm,
-                    })],
-                    ..default_component_decl()
-                },
+                    }))
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "f",
-                ComponentDecl {
-                    uses: vec![
-                        UseDecl::ServiceProtocol(UseServiceProtocolDecl {
-                            source: UseSource::Realm,
-                            source_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
-                            target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
-                        }),
-                        UseDecl::ServiceProtocol(UseServiceProtocolDecl {
-                            source: UseSource::Realm,
-                            source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
-                            target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
-                        }),
-                    ],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                        source: UseSource::Realm,
+                        source_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
+                    }))
+                    .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                        source: UseSource::Realm,
+                        source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                    }))
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
         ];
         let moniker_a: AbsoluteMoniker = vec!["a:0"].into();
@@ -1362,72 +1226,54 @@ pub mod tests {
         let components = vec![
             (
                 "root",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "a".to_string(),
-                        url: "test:///a".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_lazy_child("a")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "a",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "b".to_string(),
-                        url: "test:///b".to_string(),
-                        startup: fsys::StartupMode::Eager,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_eager_child("b")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "b",
-                ComponentDecl {
-                    children: vec![
-                        ChildDecl {
-                            name: "c".to_string(),
-                            url: "test:///c".to_string(),
-                            startup: fsys::StartupMode::Eager,
-                        },
-                        ChildDecl {
-                            name: "d".to_string(),
-                            url: "test:///d".to_string(),
-                            startup: fsys::StartupMode::Eager,
-                        },
-                    ],
-                    offers: vec![OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+                ComponentDeclBuilder::new()
+                    .add_eager_child("c")
+                    .add_eager_child("d")
+                    .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                         source: OfferServiceSource::Child("c".to_string()),
                         source_path: CapabilityPath::try_from("/svc/serviceC").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceC").unwrap(),
                         target: OfferTarget::Child("d".to_string()),
-                    })],
-                    ..default_component_decl()
-                },
+                    }))
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "c",
-                ComponentDecl {
-                    exposes: vec![ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
+                ComponentDeclBuilder::new()
+                    .expose(ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
                         source: ExposeSource::Self_,
                         source_path: CapabilityPath::try_from("/svc/serviceC").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceC").unwrap(),
                         target: ExposeTarget::Realm,
-                    })],
-                    ..default_component_decl()
-                },
+                    }))
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "d",
-                ComponentDecl {
-                    uses: vec![UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                ComponentDeclBuilder::new()
+                    .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                         source: UseSource::Realm,
                         source_path: CapabilityPath::try_from("/svc/serviceC").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceC").unwrap(),
-                    })],
-                    ..default_component_decl()
-                },
+                    }))
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
         ];
         let test = ActionsTest::new("root", components, None).await;
@@ -1489,36 +1335,24 @@ pub mod tests {
         let components = vec![
             (
                 "root",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "a".to_string(),
-                        url: "test:///a".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_lazy_child("a")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "a",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "b".to_string(),
-                        url: "test:///b".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_lazy_child("b")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "b",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "b".to_string(),
-                        url: "test:///b".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_lazy_child("b")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
         ];
         let test = ActionsTest::new("root", components, None).await;
@@ -1628,46 +1462,28 @@ pub mod tests {
         let components = vec![
             (
                 "root",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "a".to_string(),
-                        url: "test:///a".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_lazy_child("a")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "a",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "b".to_string(),
-                        url: "test:///b".to_string(),
-                        startup: fsys::StartupMode::Eager,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_eager_child("b")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "b",
-                ComponentDecl {
-                    children: vec![
-                        ChildDecl {
-                            name: "c".to_string(),
-                            url: "test:///c".to_string(),
-                            startup: fsys::StartupMode::Eager,
-                        },
-                        ChildDecl {
-                            name: "d".to_string(),
-                            url: "test:///d".to_string(),
-                            startup: fsys::StartupMode::Eager,
-                        },
-                    ],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_eager_child("c")
+                    .add_eager_child("d")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
-            ("c", ComponentDecl { ..default_component_decl() }),
-            ("d", ComponentDecl { ..default_component_decl() }),
+            ("c", component_decl_with_test_runner()),
+            ("d", component_decl_with_test_runner()),
         ];
         let error_hook = StopErrorHook::new(vec!["a:0", "b:0"].into());
         let test = ActionsTest::new_with_hooks("root", components, None, error_hook.hooks()).await;
@@ -1760,16 +1576,12 @@ pub mod tests {
         let components = vec![
             (
                 "root",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "a".to_string(),
-                        url: "test:///a".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_lazy_child("a")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
-            ("a", ComponentDecl { ..default_component_decl() }),
+            ("a", component_decl_with_test_runner()),
         ];
         let test = ActionsTest::new("root", components, None).await;
         // Bind to the component, causing it to start. This should cause the realm to have an
@@ -1818,27 +1630,20 @@ pub mod tests {
         let components = vec![
             (
                 "root",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "container".to_string(),
-                        url: "test:///container".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_lazy_child("container")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "container",
-                ComponentDecl {
-                    collections: vec![CollectionDecl {
-                        name: "coll".to_string(),
-                        durability: fsys::Durability::Transient,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_collection("coll", fsys::Durability::Transient)
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
-            ("a", default_component_decl()),
-            ("b", default_component_decl()),
+            ("a", component_decl_with_test_runner()),
+            ("b", component_decl_with_test_runner()),
         ];
         let test = ActionsTest::new("root", components, Some(vec!["container:0"].into())).await;
 
@@ -1878,27 +1683,19 @@ pub mod tests {
         let components = vec![
             (
                 "root",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "a".to_string(),
-                        url: "test:///a".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_lazy_child("a")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "a",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "b".to_string(),
-                        url: "test:///b".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_lazy_child("b")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
-            ("b", ComponentDecl { ..default_component_decl() }),
+            ("b", component_decl_with_test_runner()),
         ];
         let test = ActionsTest::new("root", components, None).await;
         let realm_root = test.look_up(vec![].into()).await;
@@ -1946,38 +1743,26 @@ pub mod tests {
         let components = vec![
             (
                 "root",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "a".to_string(),
-                        url: "test:///a".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_lazy_child("a")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "a",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "b".to_string(),
-                        url: "test:///b".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_lazy_child("b")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "b",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "c".to_string(),
-                        url: "test:///c".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_lazy_child("c")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
-            ("c", ComponentDecl { ..default_component_decl() }),
+            ("c", component_decl_with_test_runner()),
         ];
         let test = ActionsTest::new("root", components, None).await;
         let realm_root = test.look_up(vec![].into()).await;
@@ -2033,54 +1818,30 @@ pub mod tests {
         let components = vec![
             (
                 "root",
-                ComponentDecl {
-                    children: vec![
-                        ChildDecl {
-                            name: "a".to_string(),
-                            url: "test:///a".to_string(),
-                            startup: fsys::StartupMode::Lazy,
-                        },
-                        ChildDecl {
-                            name: "x".to_string(),
-                            url: "test:///x".to_string(),
-                            startup: fsys::StartupMode::Lazy,
-                        },
-                    ],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_lazy_child("a")
+                    .add_lazy_child("x")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "a",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "b".to_string(),
-                        url: "test:///b".to_string(),
-                        startup: fsys::StartupMode::Eager,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_eager_child("b")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "b",
-                ComponentDecl {
-                    children: vec![
-                        ChildDecl {
-                            name: "c".to_string(),
-                            url: "test:///c".to_string(),
-                            startup: fsys::StartupMode::Eager,
-                        },
-                        ChildDecl {
-                            name: "d".to_string(),
-                            url: "test:///d".to_string(),
-                            startup: fsys::StartupMode::Eager,
-                        },
-                    ],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_eager_child("c")
+                    .add_eager_child("d")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
-            ("c", ComponentDecl { ..default_component_decl() }),
-            ("d", ComponentDecl { ..default_component_decl() }),
-            ("x", ComponentDecl { ..default_component_decl() }),
+            ("c", component_decl_with_test_runner()),
+            ("d", component_decl_with_test_runner()),
+            ("x", component_decl_with_test_runner()),
         ];
         let test = ActionsTest::new("root", components, None).await;
         let realm_root = test.look_up(vec![].into()).await;
@@ -2182,36 +1943,24 @@ pub mod tests {
         let components = vec![
             (
                 "root",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "a".to_string(),
-                        url: "test:///a".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_lazy_child("a")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "a",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "b".to_string(),
-                        url: "test:///b".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_lazy_child("b")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "b",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "b".to_string(),
-                        url: "test:///b".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_lazy_child("b")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
         ];
         let test = ActionsTest::new("root", components, None).await;
@@ -2328,46 +2077,28 @@ pub mod tests {
         let components = vec![
             (
                 "root",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "a".to_string(),
-                        url: "test:///a".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_lazy_child("a")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "a",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "b".to_string(),
-                        url: "test:///b".to_string(),
-                        startup: fsys::StartupMode::Eager,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_eager_child("b")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "b",
-                ComponentDecl {
-                    children: vec![
-                        ChildDecl {
-                            name: "c".to_string(),
-                            url: "test:///c".to_string(),
-                            startup: fsys::StartupMode::Eager,
-                        },
-                        ChildDecl {
-                            name: "d".to_string(),
-                            url: "test:///d".to_string(),
-                            startup: fsys::StartupMode::Eager,
-                        },
-                    ],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_eager_child("c")
+                    .add_eager_child("d")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
-            ("c", ComponentDecl { ..default_component_decl() }),
-            ("d", ComponentDecl { ..default_component_decl() }),
+            ("c", component_decl_with_test_runner()),
+            ("d", component_decl_with_test_runner()),
         ];
         // The destroy hook is invoked just after the component instance is removed from the
         // list of children. Therefore, to cause destruction of `a` to fail, fail removal of
