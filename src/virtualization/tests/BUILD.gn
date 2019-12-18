@@ -233,7 +233,7 @@ romfs_image("extras") {
 
   deps = [
     ":icd_manifest",
-    "//garnet/lib/magma/tests/integration:magma_abi_conformance_tests(${linux_exe_toolchain})",
+    "//garnet/lib/magma/tests/integration:virtmagma_abi_conformance_tests(${linux_exe_toolchain})",
     "//garnet/lib/magma/tests_linux/unit_tests:virtmagma_unit_tests_linux(${linux_exe_toolchain})",
     "//garnet/lib/magma/tests_linux/unit_tests:virtmagma_vulkan_unit_tests(${linux_exe_toolchain})",
     "//src/lib/vulkan(${linux_lib_toolchain})",
@@ -244,7 +244,7 @@ romfs_image("extras") {
     "${linux_lib_path}/libvulkan.so",  # Vulkan Loader
     "${linux_exe_path}/virtmagma_unit_tests_linux",
     "${linux_exe_path}/virtmagma_vulkan_unit_tests",
-    "${linux_exe_path}/magma_abi_conformance_tests",
+    "${linux_exe_path}/virtmagma_abi_conformance_tests",
   ]
 
   if (current_cpu == "x64") {

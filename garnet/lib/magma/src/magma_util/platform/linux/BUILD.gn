@@ -100,6 +100,32 @@ source_set("device_client") {
   sources = [
     "linux_platform_device_client.cc",
   ]
+
+  deps = [
+    ":connection_client",
+    ":entry_header",
+    "..:connection_header",
+  ]
+}
+
+source_set("entry_header") {
+  sources = [
+    "linux_entry.h",
+  ]
+}
+
+source_set("entry") {
+  sources = [
+    "linux_entry.cc",
+  ]
+
+  deps = [
+    ":connection",
+    ":entry_header",
+    "..:logger",
+    "//garnet/lib/magma/src/magma_util",
+    "//garnet/lib/magma/src/sys_driver",
+  ]
 }
 
 source_set("handle") {

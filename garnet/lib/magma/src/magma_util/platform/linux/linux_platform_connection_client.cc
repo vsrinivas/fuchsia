@@ -47,35 +47,51 @@ magma_status_t LinuxPlatformConnectionClient::ReleaseObject(uint64_t object_id,
 void LinuxPlatformConnectionClient::CreateContext(uint32_t* context_id_out) {
   auto context_id = next_context_id_++;
   *context_id_out = context_id;
-  delegate_->CreateContext(context_id);
+  if (!delegate_->CreateContext(context_id)) {
+    error_ = MAGMA_STATUS_INTERNAL_ERROR;
+  }
 }
 
 void LinuxPlatformConnectionClient::DestroyContext(uint32_t context_id) {
-  delegate_->DestroyContext(context_id);
+  if (!delegate_->DestroyContext(context_id)) {
+    error_ = MAGMA_STATUS_INTERNAL_ERROR;
+  }
+}
+
+void LinuxPlatformConnectionClient::SetError(magma_status_t error) {
+  if (error_ == MAGMA_STATUS_OK) {
+    error_ = DRET_MSG(error, "ZirconPlatformConnection encountered dispatcher error");
+  }
 }
 
 magma_status_t LinuxPlatformConnectionClient::GetError() {
-  // Good enough.
-  return MAGMA_STATUS_OK;
+  magma_status_t error = error_;
+  error_ = MAGMA_STATUS_OK;
+  return error;
 }
 
 magma_status_t LinuxPlatformConnectionClient::MapBufferGpu(uint64_t buffer_id, uint64_t gpu_va,
                                                            uint64_t page_offset,
                                                            uint64_t page_count, uint64_t flags) {
-  return delegate_->MapBufferGpu(buffer_id, gpu_va, page_offset, page_count, flags)
-             ? MAGMA_STATUS_OK
-             : MAGMA_STATUS_INTERNAL_ERROR;
+  if (!delegate_->MapBufferGpu(buffer_id, gpu_va, page_offset, page_count, flags)) {
+    SetError(MAGMA_STATUS_INVALID_ARGS);
+  }
+  return MAGMA_STATUS_OK;
 }
 
 magma_status_t LinuxPlatformConnectionClient::UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va) {
-  return delegate_->UnmapBufferGpu(buffer_id, gpu_va) ? MAGMA_STATUS_OK
-                                                      : MAGMA_STATUS_INTERNAL_ERROR;
+  if (!delegate_->UnmapBufferGpu(buffer_id, gpu_va)) {
+    SetError(MAGMA_STATUS_INVALID_ARGS);
+  }
+  return MAGMA_STATUS_OK;
 }
 
 magma_status_t LinuxPlatformConnectionClient::CommitBuffer(uint64_t buffer_id, uint64_t page_offset,
                                                            uint64_t page_count) {
-  return delegate_->CommitBuffer(buffer_id, page_offset, page_count) ? MAGMA_STATUS_OK
-                                                                     : MAGMA_STATUS_INTERNAL_ERROR;
+  if (!delegate_->CommitBuffer(buffer_id, page_offset, page_count)) {
+    SetError(MAGMA_STATUS_INVALID_ARGS);
+  }
+  return MAGMA_STATUS_OK;
 }
 
 magma_status_t LinuxPlatformConnectionClient::ReadNotificationChannel(void* buffer,
@@ -114,13 +130,15 @@ void LinuxPlatformConnectionClient::ExecuteCommandBufferWithResources(
       context_id, std::move(command_buffer_ptr), std::move(resource_array),
       std::move(semaphore_array));
 
-  if (!status.ok())
+  if (!status.ok()) {
     DMESSAGE("ExecuteCommandBufferWithResources failed: %d", status.get());
+    SetError(status.get());
+  }
 }
 
 void LinuxPlatformConnectionClient::ExecuteImmediateCommands(
     uint32_t context_id, uint64_t command_count, magma_inline_command_buffer* command_buffers) {
-  // Not implemented.
+  DMESSAGE("ExecuteImmediateCommands not implemented");
 }
 
 std::unique_ptr<PlatformConnectionClient> PlatformConnectionClient::Create(

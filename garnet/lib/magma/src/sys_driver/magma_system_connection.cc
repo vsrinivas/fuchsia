@@ -162,7 +162,7 @@ bool MagmaSystemConnection::CommitBuffer(uint64_t id, uint64_t page_offset, uint
   if (page_count + page_offset < page_count) {
     return DRETF(false, "Offset overflows");
   }
-  if (page_count + page_offset > iter->second.buffer->size() / PAGE_SIZE) {
+  if (page_count + page_offset > iter->second.buffer->size() / magma::page_size()) {
     return DRETF(false, "Page offset too large for buffer");
   }
   if (msd_connection_commit_buffer(msd_connection(), iter->second.buffer->msd_buf(), page_offset,

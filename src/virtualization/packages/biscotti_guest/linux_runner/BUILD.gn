@@ -107,7 +107,7 @@ romfs_image("extras") {
     testonly = true
 
     deps += [
-      "//garnet/lib/magma/tests/integration:magma_abi_conformance_tests(${linux_exe_toolchain})",
+      "//garnet/lib/magma/tests/integration:virtmagma_abi_conformance_tests(${linux_exe_toolchain})",
       "//garnet/lib/magma/tests_linux/unit_tests:virtmagma_unit_tests_linux(${linux_exe_toolchain})",
       "//garnet/lib/magma/tests_linux/unit_tests:virtmagma_vulkan_unit_tests(${linux_exe_toolchain})",
     ]
@@ -115,7 +115,7 @@ romfs_image("extras") {
     inputs += [
       "${linux_exe_path}/virtmagma_unit_tests_linux",
       "${linux_exe_path}/virtmagma_vulkan_unit_tests",
-      "${linux_exe_path}/magma_abi_conformance_tests",
+      "${linux_exe_path}/virtmagma_abi_conformance_tests",
     ]
   }
 

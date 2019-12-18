@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "magma_common_defs.h"
 #include "magma_util/macros.h"
 #include "platform_connection.h"
 #include "platform_connection_client.h"
@@ -50,8 +51,11 @@ class LinuxPlatformConnectionClient : public PlatformConnectionClient {
                                 magma_inline_command_buffer* command_buffers) override;
 
  private:
+  void SetError(magma_status_t error);
+
   PlatformConnection::Delegate* delegate_;
   uint32_t next_context_id_ = 0;
+  magma_status_t error_ = MAGMA_STATUS_OK;
 };
 
 }  // namespace magma

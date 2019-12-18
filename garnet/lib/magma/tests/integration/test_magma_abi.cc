@@ -21,22 +21,34 @@
 #include "gtest/gtest.h"
 #include "magma.h"
 #include "magma_common_defs.h"
-#include "magma_util/dlog.h"
-#include "magma_util/macros.h"
 
 extern "C" {
 #include "test_magma_abi.h"
 }
 
+namespace {
+
+inline uint64_t page_size() { return sysconf(_SC_PAGESIZE); }
+
+inline int64_t ms_to_signed_ns(uint64_t ms) {
+  if (ms > INT64_MAX / 1000000)
+    return INT64_MAX;
+  return static_cast<int64_t>(ms) * 1000000;
+}
+}  // namespace
+
 class TestConnection {
  public:
   static constexpr const char* kDeviceNameFuchsia = "/dev/class/gpu/000";
+  static constexpr const char* kDeviceNameLinux = "/dev/dri/renderD128";
   static constexpr const char* kDeviceNameVirt = "/dev/magma0";
 
-#if defined(__Fuchsia__)
+#if defined(VIRTMAGMA)
+  static const char* device_name() { return kDeviceNameVirt; }
+#elif defined(__Fuchsia__)
   static const char* device_name() { return kDeviceNameFuchsia; }
 #elif defined(__linux__)
-  static const char* device_name() { return kDeviceNameVirt; }
+  static const char* device_name() { return kDeviceNameLinux; }
 #else
 #error Unimplemented
 #endif
@@ -47,27 +59,32 @@ class TestConnection {
 #if defined(__Fuchsia__)
     zx::channel server_end, client_end;
     zx::channel::create(0, &server_end, &client_end);
-    EXPECT_EQ(ZX_OK, fdio_service_connect(device_name(), server_end.release()));
-
-    EXPECT_EQ(MAGMA_STATUS_OK, magma_device_import(client_end.release(), &device_));
+    zx_status_t status = fdio_service_connect(device_name(), server_end.release());
+    EXPECT_EQ(status, ZX_OK);
+    if (status == ZX_OK) {
+      EXPECT_EQ(MAGMA_STATUS_OK, magma_device_import(client_end.release(), &device_));
+    }
 #elif defined(__linux__)
-    int fd = open(device_name(), O_RDONLY);
-    DASSERT(fd >= 0);
-    EXPECT_EQ(MAGMA_STATUS_OK, magma_device_import(fd, &device_));
+    int fd = open(device_name(), O_RDWR);
+    EXPECT_TRUE(fd >= 0);
+    if (fd >= 0) {
+      EXPECT_EQ(MAGMA_STATUS_OK, magma_device_import(fd, &device_));
+    }
 #else
 #error Unimplemented
 #endif
-    magma_create_connection2(device_, &connection_);
+    if (device_) {
+      magma_create_connection2(device_, &connection_);
+    }
   }
 
   ~TestConnection() {
     if (connection_)
       magma_release_connection(connection_);
-
-    if (fd_ >= 0)
-      close(fd_);
     if (device_)
       magma_device_release(device_);
+    if (fd_ >= 0)
+      close(fd_);
   }
 
   int fd() { return fd_; }
@@ -126,7 +143,7 @@ class TestConnection {
   void Buffer() {
     ASSERT_NE(connection_, nullptr);
 
-    uint64_t size = magma::page_size();
+    uint64_t size = page_size();
     uint64_t actual_size;
     uint64_t id;
 
@@ -140,15 +157,14 @@ class TestConnection {
   void BufferMap() {
     ASSERT_NE(connection_, nullptr);
 
-    uint64_t size = magma::page_size();
+    uint64_t size = page_size();
     uint64_t actual_size;
     uint64_t id;
 
     ASSERT_EQ(MAGMA_STATUS_OK, magma_create_buffer(connection_, size, &actual_size, &id));
     EXPECT_NE(id, 0u);
 
-    magma_map_buffer_gpu(connection_, id, 1024, 0, size / magma::page_size(),
-                         MAGMA_GPU_MAP_FLAG_READ);
+    magma_map_buffer_gpu(connection_, id, 1024, 0, size / page_size(), MAGMA_GPU_MAP_FLAG_READ);
     magma_unmap_buffer_gpu(connection_, id, 2048);
     EXPECT_NE(MAGMA_STATUS_OK, magma_get_error(connection_));
     EXPECT_EQ(MAGMA_STATUS_MEMORY_ERROR, magma_commit_buffer(connection_, id, 100, 100));
@@ -160,7 +176,7 @@ class TestConnection {
   void BufferExport(uint32_t* handle_out, uint64_t* id_out) {
     ASSERT_NE(connection_, nullptr);
 
-    uint64_t size = magma::page_size();
+    uint64_t size = page_size();
     magma_buffer_t buffer;
 
     ASSERT_EQ(MAGMA_STATUS_OK, magma_create_buffer(connection_, size, &size, &buffer));
@@ -212,7 +228,7 @@ class TestConnection {
 
     auto thread = std::thread([semaphore, wait_all = true] {
       ASSERT_EQ(MAGMA_STATUS_OK, magma_wait_semaphores(semaphore.data(), semaphore.size(),
-                                                       magma::ms_to_signed_ns(5000), wait_all));
+                                                       ms_to_signed_ns(5000), wait_all));
       for (uint32_t i = 0; i < semaphore.size(); i++) {
         magma_reset_semaphore(semaphore[i]);
       }
@@ -228,7 +244,7 @@ class TestConnection {
 
     thread = std::thread([semaphore, wait_all = false] {
       ASSERT_EQ(MAGMA_STATUS_OK, magma_wait_semaphores(semaphore.data(), semaphore.size(),
-                                                       magma::ms_to_signed_ns(5000), wait_all));
+                                                       ms_to_signed_ns(5000), wait_all));
       for (uint32_t i = 0; i < semaphore.size(); i++) {
         magma_reset_semaphore(semaphore[i]);
       }
@@ -474,7 +490,7 @@ class TestConnection {
  private:
   int fd_ = -1;
   magma_device_t device_ = 0;
-  magma_connection_t connection_;
+  magma_connection_t connection_ = 0;
 };
 
 class TestConnectionWithContext : public TestConnection {

@@ -42,7 +42,7 @@ bool test_magma_abi_from_c(const char* device_name) {
   if (status != MAGMA_STATUS_OK)
     return DRETF(false, "magma_device_import return %d", status);
 #else
-  int fd = open(device_name, O_RDONLY);
+  int fd = open(device_name, O_RDWR);
   if (fd < 0)
     return DRETF(false, "open returned %d", fd);
 

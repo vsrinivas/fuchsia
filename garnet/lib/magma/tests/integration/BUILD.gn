@@ -22,21 +22,33 @@ executable("magma_abi_conformance_tests") {
 
   deps = [
     "$magma_build_root/include:magma_abi",
-    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/libmagma",
     "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gtest",
   ]
 
   if (is_fuchsia) {
     deps += [
-      "$magma_build_root/src/libmagma",
       "//garnet/lib/magma/src/magma_util/platform:logger",
       "//garnet/lib/magma/src/magma_util/platform:trace_provider",
       "//zircon/public/lib/fdio",
       "//zircon/system/fidl/fuchsia-sysmem",
     ]
   }
-  if (is_linux) {
-    deps += [ "$magma_build_root/src/libmagma_linux" ]
-  }
+}
+
+executable("virtmagma_abi_conformance_tests") {
+  testonly = true
+
+  defines = [ "VIRTMAGMA=1" ]
+
+  sources = [
+    "test_magma_abi.cc",
+    "test_magma_abi_c.c",
+  ]
+
+  deps = [
+    "$magma_build_root/include:magma_abi",
+    "$magma_build_root/src/libmagma_linux",
+    "//src/lib/fxl/test:gtest_main",
+  ]
 }
