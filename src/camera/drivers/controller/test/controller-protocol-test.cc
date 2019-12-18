@@ -46,8 +46,8 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     gdc_ = fake_gdc_.client();
     controller_protocol_device_ = std::make_unique<ControllerImpl>(
         fake_ddk::kFakeParent, isp_, gdc_, std::move(sysmem_allocator1_));
-    pipeline_manager_ = std::make_unique<PipelineManager>(fake_ddk::kFakeParent, isp_, gdc_,
-                                                          std::move(sysmem_allocator2_));
+    pipeline_manager_ = std::make_unique<PipelineManager>(fake_ddk::kFakeParent, &dispatcher_, isp_,
+                                                          gdc_, std::move(sysmem_allocator2_));
   }
 
   void TearDown() override {
@@ -156,8 +156,8 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
   }
 
   // This helper API does the basic validation of an Output Node.
-  fit::result<camera::ProcessNode*, zx_status_t> GetGraphNode(StreamCreationData* info,
-                                                              ProcessNode* input_node) {
+  fit::result<camera::OutputNode*, zx_status_t> GetGraphNode(StreamCreationData* info,
+                                                             ProcessNode* input_node) {
     auto graph_result = pipeline_manager_->CreateGraph(info, info->node, input_node);
     EXPECT_TRUE(graph_result.is_ok());
 
@@ -184,6 +184,38 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
   void TestDebugStreamConfigNode() {
     EXPECT_NE(nullptr, GetStreamConfigNode(kDebugConfig, kStreamTypeFR));
     EXPECT_EQ(nullptr, GetStreamConfigNode(kDebugConfig, kStreamTypeDS));
+  }
+
+  void TestOutputNode() {
+    auto stream_type = kStreamTypeFR;
+    auto stream_config_node = GetStreamConfigNode(kDebugConfig, stream_type);
+    ASSERT_NE(nullptr, stream_config_node);
+    StreamCreationData info;
+    fuchsia::camera2::hal::StreamConfig stream_config;
+    stream_config.properties.set_stream_type(stream_type);
+    info.stream_config = &stream_config;
+    info.node = *stream_config_node;
+
+    // Testing successful creation of |OutputNode|.
+    auto input_result = GetInputNode(stream_type, &info);
+    auto output_result =
+        OutputNode::CreateOutputNode(&dispatcher_, &info, input_result.value().get(), info.node);
+    EXPECT_TRUE(output_result.is_ok());
+    ASSERT_NE(nullptr, output_result.value());
+    EXPECT_NE(nullptr, output_result.value()->client_stream());
+    EXPECT_EQ(NodeType::kOutputStream, output_result.value()->type());
+
+    // Passing invalid arguments.
+    output_result =
+        OutputNode::CreateOutputNode(nullptr, &info, input_result.value().get(), info.node);
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, output_result.error());
+
+    output_result =
+        OutputNode::CreateOutputNode(&dispatcher_, nullptr, input_result.value().get(), info.node);
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, output_result.error());
+
+    output_result = OutputNode::CreateOutputNode(&dispatcher_, &info, nullptr, info.node);
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, output_result.error());
   }
 
   void TestConfigureDebugConfig() {
@@ -597,6 +629,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
   FakeIsp fake_isp_;
   FakeGdc fake_gdc_;
   async::Loop loop_;
+  async_dispatcher_t dispatcher_;
   std::unique_ptr<ControllerImpl> controller_protocol_device_;
   fuchsia::camera2::hal::ControllerSyncPtr camera_client_;
   std::unique_ptr<sys::ComponentContext> context_;
@@ -642,6 +675,8 @@ TEST_F(ControllerProtocolTest, TestConfigure_MonitorConfig_MultiStreamFR) {
 }
 
 TEST_F(ControllerProtocolTest, TestInUseBufferCounts) { TestInUseBufferCounts(); }
+
+TEST_F(ControllerProtocolTest, TestOutputNode) { TestOutputNode(); }
 
 TEST_F(ControllerProtocolTest, LoadGdcConfig) {
 #ifdef INTERNAL_ACCESS

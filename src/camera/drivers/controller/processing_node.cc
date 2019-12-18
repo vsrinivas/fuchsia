@@ -14,14 +14,6 @@
 namespace camera {
 
 void ProcessNode::OnReadyToProcess(uint32_t buffer_index) {
-  // If it's the output stream node, we have to notify the client about
-  // the frame being available
-  if (type_ == NodeType::kOutputStream) {
-    ZX_ASSERT(client_stream_ != nullptr);
-    client_stream_->FrameReady(buffer_index);
-    return;
-  }
-
   if (type_ == NodeType::kGdc) {
     ZX_ASSERT(ZX_OK == gdc_.ProcessFrame(hw_accelerator_task_index_, buffer_index));
   }
@@ -29,9 +21,6 @@ void ProcessNode::OnReadyToProcess(uint32_t buffer_index) {
 }
 
 void ProcessNode::OnFrameAvailable(const frame_available_info_t* info) {
-  // This API is not in use for |kOutputStream|
-  ZX_ASSERT(type_ != NodeType::kOutputStream);
-
   // Free up parent's frame
   if (type_ != kInputStream) {
     parent_node_->OnReleaseFrame(info->metadata.input_buffer_index);
@@ -56,13 +45,11 @@ void ProcessNode::OnFrameAvailable(const frame_available_info_t* info) {
 }
 
 void ProcessNode::OnReleaseFrame(uint32_t buffer_index) {
-  if (type_ != NodeType::kOutputStream) {
-    fbl::AutoLock al(&in_use_buffer_lock_);
-    ZX_ASSERT(buffer_index < in_use_buffer_count_.size());
-    in_use_buffer_count_[buffer_index]--;
-    if (in_use_buffer_count_[buffer_index] != 0) {
-      return;
-    }
+  fbl::AutoLock al(&in_use_buffer_lock_);
+  ZX_ASSERT(buffer_index < in_use_buffer_count_.size());
+  in_use_buffer_count_[buffer_index]--;
+  if (in_use_buffer_count_[buffer_index] != 0) {
+    return;
   }
 
   // First release this nodes Frames (GDC, GE2D)
@@ -78,10 +65,6 @@ void ProcessNode::OnReleaseFrame(uint32_t buffer_index) {
     case NodeType::kInputStream: {
       isp_stream_protocol_->ReleaseFrame(buffer_index);
       return;
-    }
-    case NodeType::kOutputStream: {
-      parent_node_->OnReleaseFrame(buffer_index);
-      break;
     }
     default: {
       ZX_ASSERT_MSG(false, "Unknown NodeType\n");

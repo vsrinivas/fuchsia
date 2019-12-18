@@ -96,6 +96,7 @@ executable("controller-allocator-test") {
   testonly = true
   sources = [
     "../memory_allocation.cc",
+    "../output_node.cc",
     "../pipeline_gdc.cc",
     "../pipeline_manager.cc",
     "../processing_node.cc",

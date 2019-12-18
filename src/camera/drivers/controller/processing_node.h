@@ -50,9 +50,9 @@ class ProcessNode {
     configured_streams_.push_back(current_stream_type);
   }
 
-  explicit ProcessNode(NodeType type, ProcessNode* parent_node,
-                       fuchsia::camera2::CameraStreamType current_stream_type,
-                       std::vector<fuchsia::camera2::CameraStreamType> supported_streams)
+  ProcessNode(NodeType type, ProcessNode* parent_node,
+              fuchsia::camera2::CameraStreamType current_stream_type,
+              std::vector<fuchsia::camera2::CameraStreamType> supported_streams)
       : type_(type),
         parent_node_(parent_node),
         enabled_(false),
@@ -81,45 +81,38 @@ class ProcessNode {
     configured_streams_.push_back(current_stream_type);
   }
 
-  ~ProcessNode() {
+  virtual ~ProcessNode() {
     // We need to ensure that the child nodes
     // are destructed before parent node.
     OnShutdown();
     child_nodes_info_.clear();
   }
 
-  // Called when input is ready for this processing node.
-  // For node type |kOutputStream| we will be just calling the registered
-  // callbacks.
-  void OnReadyToProcess(uint32_t buffer_index);
+  // Notifies that a frame is ready for processing at this node.
+  virtual void OnReadyToProcess(uint32_t buffer_index);
 
-  // Callback function when frame is done processing for this node by the HW.
-  // Here we would scan the |nodes_| and call each nodes |OnReadyToProcess()|
-  void OnFrameAvailable(const frame_available_info_t* info);
+  // Notifies that a frame is done processing by this node.
+  virtual void OnFrameAvailable(const frame_available_info_t* info);
 
-  // Called by child nodes when the frame is released.
-  // Here we would first free up the frame with the HW and then
-  // call parents OnReleaseFrame()
-  void OnReleaseFrame(uint32_t buffer_index);
+  // Notifies that a frame is released.
+  virtual void OnReleaseFrame(uint32_t buffer_index);
 
-  // Called by client
-  void OnStartStreaming();
-  void OnStopStreaming();
+  // Notifies that the client has requested to start streaming.
+  virtual void OnStartStreaming();
+  // Notifies that the client has requested to stop streaming.
+  virtual void OnStopStreaming();
 
-  // This API gets called when a client disconnects the stream.
-  void OnShutdown();
+  // Shut down routine.
+  virtual void OnShutdown();
 
   // Helper APIs
   void set_isp_stream_protocol(std::unique_ptr<camera::IspStreamProtocol> isp_stream_protocol) {
     isp_stream_protocol_ = std::move(isp_stream_protocol);
   }
-  void set_client_stream(std::unique_ptr<StreamImpl> client_stream) {
-    client_stream_ = std::move(client_stream);
-  }
+
   void set_task_index(uint32_t task_index) { hw_accelerator_task_index_ = task_index; }
   void set_enabled(bool enabled) { enabled_ = enabled; }
 
-  std::unique_ptr<camera::StreamImpl>& client_stream() { return client_stream_; }
   std::unique_ptr<camera::IspStreamProtocol>& isp_stream_protocol() { return isp_stream_protocol_; }
   NodeType type() { return type_; }
 
@@ -162,11 +155,12 @@ class ProcessNode {
   // Curent state of the node
   bool enabled() { return enabled_; }
 
- private:
+ protected:
   // Invoked by GDC, GE2D, or the ISP when a new frame is available.
   static void OnFrameAvailable(void* ctx, const frame_available_info_t* info) {
     static_cast<ProcessNode*>(ctx)->OnFrameAvailable(info);
   }
+
   // Invoked by GDC or GE2D on a Resolution change completion.
   // TODO: Implement this (Bug: 41730 @braval).
   static void OnResChange(void* ctx, const frame_available_info_t* info) {}
@@ -186,8 +180,6 @@ class ProcessNode {
   // Ouput Image formats
   // These are needed when we initialize HW accelerators.
   std::vector<fuchsia::sysmem::ImageFormat_2> output_image_formats_;
-  // Valid for output node
-  std::unique_ptr<StreamImpl> client_stream_;
   // Valid for input node
   std::unique_ptr<IspStreamProtocol> isp_stream_protocol_;
   // GDC/GE2D/ISP Frame callback

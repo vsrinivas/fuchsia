@@ -52,7 +52,8 @@ fit::result<gdc_config_info, zx_status_t> PipelineManager::LoadGdcConfiguration(
 }
 
 fit::result<ProcessNode*, zx_status_t> PipelineManager::CreateGdcNode(
-    StreamCreationData* info, ProcessNode* parent_node, const InternalConfigNode& internal_gdc_node) {
+    StreamCreationData* info, ProcessNode* parent_node,
+    const InternalConfigNode& internal_gdc_node) {
   auto& input_buffers_hlcpp = parent_node->output_buffer_collection();
   auto result = GetBuffers(internal_gdc_node, info, parent_node);
   if (result.is_error()) {

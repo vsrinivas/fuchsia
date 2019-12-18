@@ -12,6 +12,7 @@
 
 #include "configs/sherlock/internal-config.h"
 #include "fbl/macros.h"
+#include "output_node.h"
 #include "processing_node.h"
 #include "src/camera/lib/format_conversion/buffer_collection_helper.h"
 #include "src/camera/lib/format_conversion/format_conversion.h"
@@ -57,18 +58,19 @@ class PipelineManager {
   // 4. Creates the ProcessNode for the input node
   fit::result<std::unique_ptr<ProcessNode>, zx_status_t> CreateInputNode(StreamCreationData* info);
 
-  fit::result<ProcessNode*, zx_status_t> CreateOutputNode(
-      StreamCreationData* info, ProcessNode* parent_node,
-      const InternalConfigNode& internal_output_node);
-
   fit::result<ProcessNode*, zx_status_t> CreateGdcNode(StreamCreationData* info,
                                                        ProcessNode* parent_node,
                                                        const InternalConfigNode& internal_gdc_node);
 
-  // Create the stream pipeline graph
-  fit::result<ProcessNode*, zx_status_t> CreateGraph(StreamCreationData* info,
-                                                     const InternalConfigNode& internal_node,
-                                                     ProcessNode* parent_node);
+  // Creates the stream pipeline graph and appends it to the input node (|parent_node|).
+  // Args:
+  // |internal_node| : Internal node of the node where this new graph needs to append.
+  // |parent_node| : Pointer to the node to which  we need to append this new graph.
+  // Returns:
+  // |OutputNode*| : Pointer to the ouput node.
+  fit::result<OutputNode*, zx_status_t> CreateGraph(StreamCreationData* info,
+                                                    const InternalConfigNode& internal_node,
+                                                    ProcessNode* parent_node);
 
   zx_status_t AppendToExistingGraph(StreamCreationData* info, ProcessNode* graph_node,
                                     fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream);
@@ -85,7 +87,8 @@ class PipelineManager {
   //                         buffer collection of that node. This is needed for streams
   //                         which have one parent.
   fit::result<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t> GetBuffers(
-      const InternalConfigNode& producer, StreamCreationData* info, ProcessNode* producer_graph_node);
+      const InternalConfigNode& producer, StreamCreationData* info,
+      ProcessNode* producer_graph_node);
 
   fit::result<gdc_config_info, zx_status_t> LoadGdcConfiguration(
       const camera::GdcConfig& config_type);
