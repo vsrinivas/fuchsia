@@ -92,18 +92,22 @@ impl Node for SystemPowerStateHandler {
 pub mod tests {
     use super::*;
     use futures::TryStreamExt;
+    use std::cell::Cell;
 
-    fn setup_fake_service() -> fdevmgr::AdministratorProxy {
+    fn setup_fake_service(
+        mut shutdown_function: impl FnMut() + 'static,
+    ) -> fdevmgr::AdministratorProxy {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<fdevmgr::AdministratorMarker>().unwrap();
 
-        fasync::spawn(async move {
+        fasync::spawn_local(async move {
             while let Ok(req) = stream.try_next().await {
                 match req {
                     Some(fdevmgr::AdministratorRequest::Suspend {
                         flags: fdevmgr::SUSPEND_FLAG_POWEROFF,
                         responder,
                     }) => {
+                        shutdown_function();
                         let _ = responder.send(zx::Status::OK.into_raw());
                     }
                     _ => assert!(false),
@@ -114,18 +118,27 @@ pub mod tests {
         proxy
     }
 
-    pub fn setup_test_node() -> Rc<SystemPowerStateHandler> {
-        SystemPowerStateHandler::new_with_proxy(setup_fake_service())
+    /// Creates a test SystemPowerStateHandler, for which the supplied `shutdown_function` will
+    /// be called by the underlying FIDL endpoint when SystemShutdown is requested.
+    pub fn setup_test_node(
+        shutdown_function: impl FnMut() + 'static,
+    ) -> Rc<SystemPowerStateHandler> {
+        SystemPowerStateHandler::new_with_proxy(setup_fake_service(shutdown_function))
     }
 
     /// Tests that the node can handle the 'SystemShutdown' message as expected. The test node uses
     /// a fake device manager service here, so a system shutdown will not actually happen.
     #[fasync::run_singlethreaded(test)]
     async fn test_system_shutdown() {
-        let node = setup_test_node();
+        let shutdown_applied = Rc::new(Cell::new(false));
+        let shutdown_applied_2 = shutdown_applied.clone();
+        let node = setup_test_node(move || {
+            shutdown_applied_2.set(true);
+        });
         match node.handle_message(&Message::SystemShutdown(String::new())).await.unwrap() {
             MessageReturn::SystemShutdown => {}
             _ => assert!(false),
         }
+        assert!(shutdown_applied.get());
     }
 }

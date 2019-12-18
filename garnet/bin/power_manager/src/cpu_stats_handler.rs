@@ -182,20 +182,21 @@ impl Node for CpuStatsHandler {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
     use futures::TryStreamExt;
 
     const TEST_NUM_CORES: u32 = 4;
 
-    /// Generate some fake CPU stats to be used in the test configuration
-    fn gen_cpu_stats() -> fstats::CpuStats {
+    /// Generates CpuStats for an input vector of idle times, using the length of the idle times
+    /// vector to determine the number of CPUs.
+    fn idle_times_to_cpu_stats(idle_times: &Vec<Nanoseconds>) -> fstats::CpuStats {
         let mut per_cpu_stats = Vec::new();
-        for i in 0..TEST_NUM_CORES {
-            let cpu_stats = fstats::PerCpuStats {
-                cpu_number: Some(i),
+        for (i, idle_time) in idle_times.iter().enumerate() {
+            per_cpu_stats.push(fstats::PerCpuStats {
+                cpu_number: Some(i as u32),
                 flags: None,
-                idle_time: Some(0),
+                idle_time: Some(idle_time.0),
                 reschedules: None,
                 context_switches: None,
                 irq_preempts: None,
@@ -208,25 +209,27 @@ mod tests {
                 syscalls: None,
                 reschedule_ipis: None,
                 generic_ipis: None,
-            };
-            per_cpu_stats.push(cpu_stats);
+            });
         }
 
         fstats::CpuStats {
-            actual_num_cpus: TEST_NUM_CORES as u64,
+            actual_num_cpus: idle_times.len() as u64,
             per_cpu_stats: Some(per_cpu_stats),
         }
     }
 
-    fn setup_fake_service() -> fstats::StatsProxy {
+    fn setup_fake_service(
+        mut get_idle_times: impl FnMut() -> Vec<Nanoseconds> + 'static,
+    ) -> fstats::StatsProxy {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<fstats::StatsMarker>().unwrap();
 
-        fasync::spawn(async move {
+        fasync::spawn_local(async move {
             while let Ok(req) = stream.try_next().await {
                 match req {
                     Some(fstats::StatsRequest::GetCpuStats { responder }) => {
-                        let _ = responder.send(&mut gen_cpu_stats());
+                        let mut cpu_stats = idle_times_to_cpu_stats(&get_idle_times());
+                        let _ = responder.send(&mut cpu_stats);
                     }
                     _ => assert!(false),
                 }
@@ -236,8 +239,18 @@ mod tests {
         proxy
     }
 
-    fn setup_test_node() -> Rc<CpuStatsHandler> {
-        CpuStatsHandler::new_with_proxy(setup_fake_service())
+    /// Creates a test CpuStatsHandler node, with the provided closure giving per-CPU idle times
+    /// that will be reported in CpuStats. The number of CPUs is implied by the length of the
+    /// closure's returned Vec.
+    pub fn setup_test_node(
+        get_idle_times: impl FnMut() -> Vec<Nanoseconds> + 'static,
+    ) -> Rc<CpuStatsHandler> {
+        CpuStatsHandler::new_with_proxy(setup_fake_service(get_idle_times))
+    }
+
+    /// Creates a test CpuStatsHandler that reports zero idle times, with `TEST_NUM_CORES` CPUs.
+    pub fn setup_simple_test_node() -> Rc<CpuStatsHandler> {
+        setup_test_node(|| vec![Nanoseconds(0); TEST_NUM_CORES as usize])
     }
 
     /// This test creates a CpuStatsHandler node and sends it the 'GetNumCpus' message. The
@@ -245,7 +258,7 @@ mod tests {
     /// are reported (in the test configuration, it should report `TEST_NUM_CORES`).
     #[fasync::run_singlethreaded(test)]
     async fn test_get_num_cpus() {
-        let node = setup_test_node();
+        let node = setup_simple_test_node();
         let num_cpus = node.handle_message(&Message::GetNumCpus).await.unwrap();
         if let MessageReturn::GetNumCpus(n) = num_cpus {
             assert_eq!(n, TEST_NUM_CORES);
@@ -261,7 +274,7 @@ mod tests {
     ///        the test configuration
     #[fasync::run_singlethreaded(test)]
     async fn test_handle_get_cpu_load() {
-        let node = setup_test_node();
+        let node = setup_simple_test_node();
 
         if let MessageReturn::GetTotalCpuLoad(load) =
             node.handle_message(&Message::GetTotalCpuLoad).await.unwrap()
@@ -311,7 +324,7 @@ mod tests {
     /// Tests that an unsupported message is handled gracefully and an error is returned
     #[fasync::run_singlethreaded(test)]
     async fn test_unsupported_msg() {
-        let node = setup_test_node();
+        let node = setup_simple_test_node();
         let result = node.handle_message(&Message::ReadTemperature).await;
         assert!(result.is_err());
     }

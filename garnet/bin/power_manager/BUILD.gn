@@ -28,6 +28,8 @@ rustc_binary("bin") {
     "//zircon/system/fidl/fuchsia-kernel:fuchsia-kernel-rustc",
     "//zircon/system/fidl/fuchsia-sysinfo:fuchsia-sysinfo-rustc",
   ]
+
+  test_deps = [ "//garnet/bin/power_manager/rkf45:lib" ]
 }
 
 package("power_manager") {

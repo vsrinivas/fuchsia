@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::node::Node;
-use crate::types::{Celsius, Seconds, Watts};
+use crate::types::{Celsius, Farads, Hertz, Seconds, Volts, Watts};
 use failure::{format_err, Error};
 use fuchsia_syslog::fx_log_info;
 use std::rc::Rc;
@@ -46,9 +46,21 @@ impl PowerManager {
         self.nodes.push(cpu_temperature.clone());
 
         let cpu_stats_node = cpu_stats_handler::CpuStatsHandler::new()?;
-        self.nodes.push(cpu_stats_node);
+        self.nodes.push(cpu_stats_node.clone());
 
-        let cpu_control_node = cpu_control_handler::CpuControlHandler::new();
+        let cpu_control_params = cpu_control_handler::CpuControlParams {
+            // TODO(claridge): Available P-states should be queried from the CPU driver once it is
+            // available.
+            p_states: vec![cpu_control_handler::PState {
+                frequency: Hertz(2.0e9),
+                voltage: Volts(1.0),
+            }],
+            // TODO(claridge): This is a dummy value for now. Should the CPU driver provide it
+            // in addition to the P-states?
+            capacitance: Farads(100.0e-12),
+        };
+        let cpu_control_node =
+            cpu_control_handler::CpuControlHandler::new(cpu_control_params, cpu_stats_node)?;
         self.nodes.push(cpu_control_node.clone());
 
         let sys_pwr_handler = system_power_handler::SystemPowerStateHandler::new()?;
@@ -61,7 +73,7 @@ impl PowerManager {
 
             // TODO(fxb/41452): these are just placeholder ThermalPolicyParams. The real params
             // should be populated here once they have been properly determined.
-            thermal_params: thermal_policy::ThermalPolicyParams {
+            policy_params: thermal_policy::ThermalPolicyParams {
                 controller_params: thermal_policy::ThermalControllerParams {
                     sample_interval: Seconds(1.0),
                     filter_time_constant: Seconds(10.0),
