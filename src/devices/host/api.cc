@@ -206,6 +206,12 @@ __EXPORT zx_status_t device_get_profile(zx_device_t* dev, uint32_t priority, con
   return devhost_get_scheduler_profile(priority, name, out_profile);
 }
 
+__EXPORT zx_status_t device_get_deadline_profile(zx_device_t* device, uint64_t capacity,
+                                                 uint64_t deadline, uint64_t period,
+                                                 const char* name, zx_handle_t* out_profile) {
+  return devhost_get_scheduler_deadline_profile(capacity, deadline, period, name, out_profile);
+}
+
 __EXPORT const char* device_get_name(zx_device_t* dev) { return dev->name; }
 
 __EXPORT zx_device_t* device_get_parent(zx_device_t* dev) {

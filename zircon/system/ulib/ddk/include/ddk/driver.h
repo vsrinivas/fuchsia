@@ -244,6 +244,12 @@ void device_unbind_reply(zx_device_t* device);
 zx_status_t device_get_profile(zx_device_t* device, uint32_t priority, const char* name,
                                zx_handle_t* out_profile);
 
+// Retrieves a deadline profile handle into |out_profile| from the scheduler for
+// the given deadline parameters.  See |device_get_profile|
+zx_status_t device_get_deadline_profile(zx_device_t* device, uint64_t capacity, uint64_t deadline,
+                                        uint64_t period, const char* name,
+                                        zx_handle_t* out_profile);
+
 // A description of a part of a device component.  It provides a bind program
 // that will match a device on the path from the root of the device tree to the
 // target device.

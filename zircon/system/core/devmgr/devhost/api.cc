@@ -27,6 +27,12 @@ __EXPORT zx_status_t device_get_profile(zx_device_t* dev, uint32_t priority, con
   __builtin_abort();
 }
 
+__EXPORT zx_status_t device_get_deadline_profile(zx_device_t* device, uint64_t capacity,
+                                                 uint64_t deadline, uint64_t period,
+                                                 const char* name, zx_handle_t* out_profile) {
+  __builtin_abort();
+}
+
 __EXPORT const char* device_get_name(zx_device_t* dev) { __builtin_abort(); }
 
 __EXPORT zx_device_t* device_get_parent(zx_device_t* dev) { __builtin_abort(); }

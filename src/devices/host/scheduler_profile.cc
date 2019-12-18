@@ -10,6 +10,7 @@
 #include <lib/zx/profile.h>
 #include <stdio.h>
 #include <string.h>
+#include <zircon/types.h>
 
 namespace devmgr {
 
@@ -36,6 +37,22 @@ zx_status_t devhost_get_scheduler_profile(uint32_t priority, const char* name,
   zx_status_t fidl_status = ZX_ERR_INTERNAL;
   zx_status_t status = fuchsia_scheduler_ProfileProviderGetProfile(
       scheduler_profile_provider, priority, name, strlen(name), &fidl_status, profile);
+  if (status != ZX_OK) {
+    return status;
+  }
+  if (fidl_status != ZX_OK) {
+    return fidl_status;
+  }
+  return ZX_OK;
+}
+
+zx_status_t devhost_get_scheduler_deadline_profile(uint64_t capacity, uint64_t deadline,
+                                                   uint64_t period, const char* name,
+                                                   zx_handle_t* profile) {
+  zx_status_t fidl_status = ZX_ERR_INTERNAL;
+  zx_status_t status = fuchsia_scheduler_ProfileProviderGetDeadlineProfile(
+      scheduler_profile_provider, capacity, deadline, period, name, strlen(name), &fidl_status,
+      profile);
   if (status != ZX_OK) {
     return status;
   }
