@@ -19,8 +19,7 @@ use crate::bluetooth::gatt_client_facade::GattClientFacade;
 use crate::bluetooth::gatt_server_facade::GattServerFacade;
 use crate::bluetooth::profile_server_facade::ProfileServerFacade;
 use crate::bluetooth::types::{
-    BleAdvertiseResponse, BleConnectPeripheralResponse, BluetoothMethod,
-    GattcDiscoverCharacteristicResponse,
+    BleAdvertiseResponse, BleConnectPeripheralResponse, GattcDiscoverCharacteristicResponse,
 };
 
 use crate::common_utils::common::{
@@ -133,13 +132,13 @@ async fn ble_advertise_method_to_fidl(
     // return a unique ID for each instance. For now we return this dummy ID for the
     // singleton advertisement.
     let id = to_value(BleAdvertiseResponse::new(Some("singleton-instance".to_string())))?;
-    match BluetoothMethod::from_str(&method_name) {
-        BluetoothMethod::BleAdvertise => {
+    match method_name.as_ref() {
+        "BleAdvertise" => {
             let params = ble_advertise_args_to_fidl(args)?;
             facade.start_adv(params).await?;
             Ok(id)
         }
-        BluetoothMethod::BleStopAdvertise => {
+        "BleStopAdvertise" => {
             facade.stop_adv();
             Ok(id)
         }
@@ -172,8 +171,8 @@ async fn ble_method_to_fidl(
     args: Value,
     facade: &RwLock<BluetoothFacade>,
 ) -> Result<Value, Error> {
-    match BluetoothMethod::from_str(&method_name) {
-        BluetoothMethod::BlePublishService => {
+    match method_name.as_ref() {
+        "BlePublishService" => {
             let (service_info, local_service_id) = ble_publish_service_to_fidl(args)?;
             publish_service_async(&facade, service_info, local_service_id).await
         }
@@ -204,59 +203,59 @@ async fn bt_control_method_to_fidl(
     args: Value,
     facade: &BluetoothControlFacade,
 ) -> Result<Value, Error> {
-    match BluetoothMethod::from_str(&method_name) {
-        BluetoothMethod::BluetoothAcceptPairing => {
+    match method_name.as_ref() {
+        "BluetoothAcceptPairing" => {
             let result = facade.accept_pairing().await?;
             Ok(to_value(result)?)
         }
-        BluetoothMethod::BluetoothInitControl => {
+        "BluetoothInitControl" => {
             let result = facade.init_control_interface_proxy().await?;
             Ok(to_value(result)?)
         }
-        BluetoothMethod::BluetoothGetKnownRemoteDevices => {
+        "BluetoothGetKnownRemoteDevices" => {
             let result = facade.get_known_remote_devices().await?;
             Ok(to_value(result)?)
         }
-        BluetoothMethod::BluetoothSetDiscoverable => {
+        "BluetoothSetDiscoverable" => {
             let discoverable = parse_arg!(args, as_bool, "discoverable")?;
             let result = facade.set_discoverable(discoverable).await?;
             Ok(to_value(result)?)
         }
-        BluetoothMethod::BluetoothSetName => {
+        "BluetoothSetName" => {
             let name = parse_arg!(args, as_str, "name")?;
             let result = facade.set_name(name.to_string()).await?;
             Ok(to_value(result)?)
         }
-        BluetoothMethod::BluetoothForgetDevice => {
+        "BluetoothForgetDevice" => {
             let identifier = parse_arg!(args, as_str, "identifier")?;
             let result = facade.forget(identifier.to_string()).await?;
             Ok(to_value(result)?)
         }
-        BluetoothMethod::BluetoothConnectDevice => {
+        "BluetoothConnectDevice" => {
             let identifier = parse_arg!(args, as_str, "identifier")?;
             let result = facade.connect(identifier.to_string()).await?;
             Ok(to_value(result)?)
         }
-        BluetoothMethod::BluetoothDisconnectDevice => {
+        "BluetoothDisconnectDevice" => {
             let identifier = parse_arg!(args, as_str, "identifier")?;
             let result = facade.disconnect(identifier.to_string()).await?;
             Ok(to_value(result)?)
         }
-        BluetoothMethod::BluetoothRequestDiscovery => {
+        "BluetoothRequestDiscovery" => {
             let discovery = parse_arg!(args, as_bool, "discovery")?;
             let result = facade.request_discovery(discovery).await?;
             Ok(to_value(result)?)
         }
-        BluetoothMethod::BluetoothInputPairingPin => {
+        "BluetoothInputPairingPin" => {
             let pin = parse_arg!(args, as_str, "pin")?;
             let result = facade.input_pairing_pin(pin.to_string()).await?;
             Ok(to_value(result)?)
         }
-        BluetoothMethod::BluetoothGetPairingPin => {
+        "BluetoothGetPairingPin" => {
             let result = facade.get_pairing_pin().await?;
             Ok(to_value(result)?)
         }
-        BluetoothMethod::BluetoothGetActiveAdapterAddress => {
+        "BluetoothGetActiveAdapterAddress" => {
             let result = facade.get_active_adapter_address().await?;
             Ok(to_value(result)?)
         }
@@ -290,59 +289,57 @@ async fn gatt_client_method_to_fidl(
     args: Value,
     facade: &GattClientFacade,
 ) -> Result<Value, Error> {
-    match BluetoothMethod::from_str(&method_name) {
-        BluetoothMethod::BleStartScan => {
+    match method_name.as_ref() {
+        "BleStartScan" => {
             let filter = ble_scan_to_fidl(args)?;
             start_scan_async(&facade, filter).await
         }
-        BluetoothMethod::BleStopScan => stop_scan_async(&facade).await,
-        BluetoothMethod::BleGetDiscoveredDevices => le_get_discovered_devices_async(&facade).await,
-        BluetoothMethod::BleConnectPeripheral => {
+        "BleStopScan" => stop_scan_async(&facade).await,
+        "BleGetDiscoveredDevices" => le_get_discovered_devices_async(&facade).await,
+        "BleConnectPeripheral" => {
             let id = parse_identifier(args)?;
             connect_peripheral_async(&facade, id).await
         }
-        BluetoothMethod::BleDisconnectPeripheral => {
+        "BleDisconnectPeripheral" => {
             let id = parse_identifier(args)?;
             disconnect_peripheral_async(&facade, id).await
         }
-        BluetoothMethod::GattcConnectToService => {
+        "GattcConnectToService" => {
             let periph_id = parse_identifier(args.clone())?;
             let service_id = parse_service_identifier(args)?;
             gattc_connect_to_service_async(&facade, periph_id, service_id).await
         }
-        BluetoothMethod::GattcDiscoverCharacteristics => {
-            gattc_discover_characteristics_async(&facade).await
-        }
-        BluetoothMethod::GattcWriteCharacteristicById => {
+        "GattcDiscoverCharacteristics" => gattc_discover_characteristics_async(&facade).await,
+        "GattcWriteCharacteristicById" => {
             let id = parse_u64_identifier(args.clone())?;
             let value = parse_write_value(args)?;
             gattc_write_char_by_id_async(&facade, id, value).await
         }
-        BluetoothMethod::GattcWriteLongCharacteristicById => {
+        "GattcWriteLongCharacteristicById" => {
             let id = parse_u64_identifier(args.clone())?;
             let offset_as_u64 = parse_offset(args.clone())?;
             let offset = offset_as_u64 as u16;
             let value = parse_write_value(args)?;
             gattc_write_long_char_by_id_async(&facade, id, offset, value).await
         }
-        BluetoothMethod::GattcWriteCharacteristicByIdWithoutResponse => {
+        "GattcWriteCharacteristicByIdWithoutResponse" => {
             let id = parse_u64_identifier(args.clone())?;
             let value = parse_write_value(args)?;
             gattc_write_char_by_id_without_response_async(&facade, id, value).await
         }
-        BluetoothMethod::GattcEnableNotifyCharacteristic => {
+        "GattcEnableNotifyCharacteristic" => {
             let id = parse_u64_identifier(args.clone())?;
             gattc_toggle_notify_characteristic_async(&facade, id, true).await
         }
-        BluetoothMethod::GattcDisableNotifyCharacteristic => {
+        "GattcDisableNotifyCharacteristic" => {
             let id = parse_u64_identifier(args.clone())?;
             gattc_toggle_notify_characteristic_async(&facade, id, false).await
         }
-        BluetoothMethod::GattcReadCharacteristicById => {
+        "GattcReadCharacteristicById" => {
             let id = parse_u64_identifier(args.clone())?;
             gattc_read_char_by_id_async(&facade, id).await
         }
-        BluetoothMethod::GattcReadLongCharacteristicById => {
+        "GattcReadLongCharacteristicById" => {
             let id = parse_u64_identifier(args.clone())?;
             let offset_as_u64 = parse_offset(args.clone())?;
             let offset = offset_as_u64 as u16;
@@ -350,7 +347,7 @@ async fn gatt_client_method_to_fidl(
             let max_bytes = max_bytes_as_u64 as u16;
             gattc_read_long_char_by_id_async(&facade, id, offset, max_bytes).await
         }
-        BluetoothMethod::GattcReadLongDescriptorById => {
+        "GattcReadLongDescriptorById" => {
             let id = parse_u64_identifier(args.clone())?;
             let offset_as_u64 = parse_offset(args.clone())?;
             let offset = offset_as_u64 as u16;
@@ -358,23 +355,23 @@ async fn gatt_client_method_to_fidl(
             let max_bytes = max_bytes_as_u64 as u16;
             gattc_read_long_desc_by_id_async(&facade, id, offset, max_bytes).await
         }
-        BluetoothMethod::GattcWriteDescriptorById => {
+        "GattcWriteDescriptorById" => {
             let id = parse_u64_identifier(args.clone())?;
             let value = parse_write_value(args)?;
             gattc_write_desc_by_id_async(&facade, id, value).await
         }
-        BluetoothMethod::GattcWriteLongDescriptorById => {
+        "GattcWriteLongDescriptorById" => {
             let id = parse_u64_identifier(args.clone())?;
             let offset_as_u64 = parse_offset(args.clone())?;
             let offset = offset_as_u64 as u16;
             let value = parse_write_value(args)?;
             gattc_write_long_desc_by_id_async(&facade, id, offset, value).await
         }
-        BluetoothMethod::GattcReadDescriptorById => {
+        "GattcReadDescriptorById" => {
             let id = parse_u64_identifier(args.clone())?;
             gattc_read_desc_by_id_async(&facade, id.clone()).await
         }
-        BluetoothMethod::GattcListServices => {
+        "GattcListServices" => {
             let id = parse_identifier(args)?;
             list_services_async(&facade, id).await
         }
@@ -405,12 +402,12 @@ async fn gatt_server_method_to_fidl(
     args: Value,
     facade: &GattServerFacade,
 ) -> Result<Value, Error> {
-    match BluetoothMethod::from_str(&method_name) {
-        BluetoothMethod::GattServerPublishServer => {
+    match method_name.as_ref() {
+        "GattServerPublishServer" => {
             let result = facade.publish_server(args).await?;
             Ok(to_value(result)?)
         }
-        BluetoothMethod::GattServerCloseServer => {
+        "GattServerCloseServer" => {
             let result = facade.close_server().await;
             Ok(to_value(result)?)
         }
@@ -433,24 +430,24 @@ async fn profile_server_method_to_fidl(
     args: Value,
     facade: &ProfileServerFacade,
 ) -> Result<Value, Error> {
-    match BluetoothMethod::from_str(&method_name) {
-        BluetoothMethod::ProfileServerInit => {
+    match method_name.as_ref() {
+        "ProfileServerInit" => {
             let result = facade.init_profile_server_proxy().await?;
             Ok(to_value(result)?)
         }
-        BluetoothMethod::ProfileServerAddSearch => {
+        "ProfileServerAddSearch" => {
             let result = facade.add_search(args).await?;
             Ok(to_value(result)?)
         }
-        BluetoothMethod::ProfileServerAddService => {
+        "ProfileServerAddService" => {
             let result = facade.add_service(args).await?;
             Ok(to_value(result)?)
         }
-        BluetoothMethod::ProfileServerCleanup => {
+        "ProfileServerCleanup" => {
             let result = facade.cleanup().await?;
             Ok(to_value(result)?)
         }
-        BluetoothMethod::ProfileServerRemoveService => {
+        "ProfileServerRemoveService" => {
             let service_id = parse_u64_identifier(args)?;
             let result = facade.remove_service(service_id).await?;
             Ok(to_value(result)?)
