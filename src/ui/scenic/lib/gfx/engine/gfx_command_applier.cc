@@ -1341,7 +1341,8 @@ ResourcePtr GfxCommandApplier::CreateBuffer(Session* session, ResourceId id, Mem
 
 ResourcePtr GfxCommandApplier::CreateScene(Session* session, ResourceId id,
                                            fuchsia::ui::gfx::SceneArgs args) {
-  return fxl::MakeRefCounted<Scene>(session, session->id(), id);
+  return fxl::MakeRefCounted<Scene>(session, session->id(), id, session->view_tree_updater(),
+                                    session->event_reporter()->GetWeakPtr());
 }
 
 ResourcePtr GfxCommandApplier::CreateCamera(Session* session, ResourceId id,
@@ -1396,7 +1397,8 @@ ResourcePtr GfxCommandApplier::CreateView(Session* session, ResourceId id,
   std::string debug_name = args.debug_name ? *args.debug_name : std::string();
   auto view = fxl::MakeRefCounted<View>(session, id, std::move(control_ref), std::move(view_ref),
                                         std::move(debug_name), session->shared_error_reporter(),
-                                        session->event_reporter());
+                                        session->view_tree_updater(),
+                                        session->event_reporter()->GetWeakPtr());
   ViewLinker* view_linker = session->session_context().view_linker;
   ViewLinker::ImportLink link =
       view_linker->CreateImport(view.get(), std::move(args.token.value), session->error_reporter());
@@ -1419,7 +1421,8 @@ ResourcePtr GfxCommandApplier::CreateView(Session* session, ResourceId id,
   std::string debug_name = args.debug_name ? *args.debug_name : std::string();
   auto view = fxl::MakeRefCounted<View>(
       session, id, std::move(args.control_ref), std::move(args.view_ref), std::move(debug_name),
-      session->shared_error_reporter(), session->event_reporter());
+      session->shared_error_reporter(), session->view_tree_updater(),
+      session->event_reporter()->GetWeakPtr());
   ViewLinker* view_linker = session->session_context().view_linker;
   ViewLinker::ImportLink link =
       view_linker->CreateImport(view.get(), std::move(args.token.value), session->error_reporter());
@@ -1436,8 +1439,8 @@ ResourcePtr GfxCommandApplier::CreateViewHolder(Session* session, ResourceId id,
                                                 fuchsia::ui::gfx::ViewHolderArgs args) {
   // Create a ViewHolder and Link, then connect and return if the Link is valid.
   std::string debug_name = args.debug_name ? *args.debug_name : std::string();
-  auto view_holder =
-      fxl::MakeRefCounted<ViewHolder>(session, session->id(), id, std::move(debug_name));
+  auto view_holder = fxl::MakeRefCounted<ViewHolder>(
+      session, session->id(), id, std::move(debug_name), session->view_tree_updater());
   ViewLinker* view_linker = session->session_context().view_linker;
   ViewLinker::ExportLink link = view_linker->CreateExport(
       view_holder.get(), std::move(args.token.value), session->error_reporter());

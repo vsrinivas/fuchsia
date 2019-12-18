@@ -4,9 +4,9 @@
 
 #include "src/ui/scenic/lib/gfx/resources/dump_visitor.h"
 
-#include <gtest/gtest.h>
-
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
+
+#include <gtest/gtest.h>
 
 #include "src/ui/scenic/lib/gfx/resources/host_image.h"
 #include "src/ui/scenic/lib/gfx/resources/image_pipe.h"
@@ -76,12 +76,12 @@ TEST_F(DumpVisitorTest, ViewAndViewHolderDebugNames) {
   scenic::ViewRefPair view_ref_pair = scenic::ViewRefPair::New();
 
   ViewPtr view = fxl::MakeRefCounted<View>(
-      session(), next_id++, std::move(view_ref_pair.control_ref),
-      std::move(view_ref_pair.view_ref), "test_debug_name1", session()->shared_error_reporter(),
-      session()->event_reporter());
+      session(), next_id++, std::move(view_ref_pair.control_ref), std::move(view_ref_pair.view_ref),
+      "test_debug_name1", session()->shared_error_reporter(), session()->view_tree_updater(),
+      session()->event_reporter()->GetWeakPtr());
 
-  ViewHolderPtr view_holder =
-      fxl::MakeRefCounted<ViewHolder>(session(), session()->id(), next_id++, "test_debug_name2");
+  ViewHolderPtr view_holder = fxl::MakeRefCounted<ViewHolder>(
+      session(), session()->id(), next_id++, "test_debug_name2", session()->view_tree_updater());
 
   std::ostringstream ostream;
   std::unordered_set<GlobalId, GlobalId::Hash> visited;

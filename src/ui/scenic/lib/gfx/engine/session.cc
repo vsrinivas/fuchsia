@@ -11,6 +11,7 @@
 #include <memory>
 #include <utility>
 
+#include <fbl/auto_call.h>
 #include <trace/event.h>
 
 #include "src/ui/lib/escher/hmd/pose_buffer.h"
@@ -61,6 +62,7 @@ Session::Session(SessionId id, SessionContext session_context,
                                               : escher::VulkanDeviceQueues::Caps(),
            session_context_.escher_resource_recycler, session_context_.escher_image_factory}),
       resources_(error_reporter_),
+      view_tree_updater_(id),
       image_pipe_updater_(std::make_shared<ImagePipeUpdater>(id, session_context_.frame_scheduler)),
       inspect_node_(std::move(inspect_node)),
       weak_factory_(this) {
@@ -189,8 +191,11 @@ Session::ApplyUpdateResult Session::ApplyScheduledUpdates(CommandContext* comman
   ApplyUpdateResult update_results{
       .success = false, .all_fences_ready = true, .needs_render = false};
 
-  // Ensure updates happen on all exit paths; work happens in the destructor.
-  ViewTreeUpdateFinalizer view_tree_update_finalizer(this, command_context->scene_graph());
+  // RAII object to ensure UpdateViewHolderConnections and StageViewTreeUpdates, on all exit paths.
+  fbl::AutoCall cleanup([this, command_context] {
+    view_tree_updater_.UpdateViewHolderConnections();
+    view_tree_updater_.StageViewTreeUpdates(command_context->scene_graph());
+  });
 
   while (!scheduled_updates_.empty() &&
          scheduled_updates_.front().presentation_time <= target_presentation_time) {
@@ -285,99 +290,6 @@ bool Session::SetRootView(fxl::WeakPtr<View> view) {
 
   root_view_ = view;
   return true;
-}
-
-ViewTreeUpdates& Session::view_tree_updates() { return view_tree_updates_; }
-
-void Session::TrackViewHolder(fxl::WeakPtr<ViewHolder> view_holder) {
-  FXL_DCHECK(view_holder) << "precondition";  // Called in ViewHolder constructor.
-
-  const zx_koid_t koid = view_holder->view_holder_koid();
-  view_tree_updates_.push_back(ViewTreeNewAttachNode{.koid = koid});
-  auto [iter, inserted] =
-      tracked_view_holders_.insert({koid, ViewHolderStatus{.view_holder = std::move(view_holder)}});
-  FXL_DCHECK(inserted);
-}
-
-void Session::UntrackViewHolder(zx_koid_t koid) {
-  // Disconnection in view tree handled by DeleteNode operation.
-  view_tree_updates_.push_back(ViewTreeDeleteNode{.koid = koid});
-  auto erased_count = tracked_view_holders_.erase(koid);
-  FXL_DCHECK(erased_count == 1);
-}
-
-void Session::UpdateViewHolderConnections() {
-  for (auto& kv : tracked_view_holders_) {
-    const zx_koid_t koid = kv.first;
-    ViewHolderStatus& status = kv.second;
-    const std::optional<bool> prev_connected = status.connected_to_session_root;
-
-    // Each ViewHolder may have an independent intra-Session "root" that connects it upwards.
-    // E.g., it's legal to have multiple Scene roots connecting to independent compositors.
-    zx_koid_t root = ZX_KOID_INVALID;
-    // Determine whether each ViewHolder is connected to some root.
-    bool now_connected = false;
-    FXL_DCHECK(status.view_holder) << "invariant";
-    Node* curr = status.view_holder ? status.view_holder->parent() : nullptr;
-    while (curr) {
-      if (curr->session_id() != id()) {
-        break;  // Exited session boundary, quit upwards search.
-      }
-      if (curr->IsKindOf<ViewNode>() && curr->As<ViewNode>()->GetView()) {
-        root = curr->As<ViewNode>()->GetView()->view_ref_koid();
-        FXL_DCHECK(root != ZX_KOID_INVALID) << "invariant";
-        // TODO(SCN-1249): Enable following check when one-view-per-session is enforced.
-        // FXL_DCHECK(root_view_ && root_view_->view_ref_koid() == root)
-        //    << "invariant: session's root-view-discovered and root-view-purported must match.";
-        now_connected = true;
-        break;
-      }
-      if (curr->IsKindOf<Scene>()) {
-        root = curr->As<Scene>()->view_ref_koid();
-        FXL_DCHECK(root != ZX_KOID_INVALID) << "invariant";
-        now_connected = true;
-        break;
-      }
-      curr = curr->parent();
-    }
-
-    // <prev>   <now>   <action>
-    // none     true    record connect, report connect (case 1)
-    // none     false   record disconnect (case 2)
-    // true     true    (nop)
-    // true     false   record disconnect, report disconnect (case 3)
-    // false    true    record connect, report connect (case 1)
-    // false    false   (nop)
-    if ((!prev_connected.has_value() && now_connected) ||
-        (prev_connected.has_value() && !prev_connected.value() && now_connected)) {
-      // Case 1
-      status.connected_to_session_root = std::make_optional<bool>(true);
-      view_tree_updates_.push_back(ViewTreeConnectToParent{.child = koid, .parent = root});
-    } else if (!prev_connected.has_value() && !now_connected) {
-      // Case 2
-      status.connected_to_session_root = std::make_optional<bool>(false);
-    } else if (prev_connected.has_value() && prev_connected.value() && !now_connected) {
-      // Case 3
-      status.connected_to_session_root = std::make_optional<bool>(false);
-      view_tree_updates_.push_back(ViewTreeDisconnectFromParent{.koid = koid});
-    }
-  }
-}
-
-Session::ViewTreeUpdateFinalizer::ViewTreeUpdateFinalizer(Session* session, SceneGraph* scene_graph)
-    : session_(session), scene_graph_(scene_graph) {
-  FXL_DCHECK(session_);
-  FXL_DCHECK(scene_graph_);
-}
-
-Session::ViewTreeUpdateFinalizer::~ViewTreeUpdateFinalizer() {
-  session_->UpdateViewHolderConnections();
-  session_->StageViewTreeUpdates(scene_graph_);
-}
-
-void Session::StageViewTreeUpdates(SceneGraph* scene_graph) {
-  scene_graph->StageViewTreeUpdates(std::move(view_tree_updates_));
-  view_tree_updates_.clear();
 }
 
 bool Session::ApplyUpdate(CommandContext* command_context,

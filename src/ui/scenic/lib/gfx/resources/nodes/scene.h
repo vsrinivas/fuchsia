@@ -8,6 +8,7 @@
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
+#include "src/ui/scenic/lib/gfx/engine/view_tree_updater.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/node.h"
 #include "src/ui/scenic/lib/gfx/util/validate_eventpair.h"
 
@@ -29,7 +30,8 @@ class Scene final : public Node {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  Scene(Session* session, SessionId session_id, ResourceId node_id);
+  Scene(Session* session, SessionId session_id, ResourceId node_id,
+        fxl::WeakPtr<ViewTreeUpdater> view_tree_updater, EventReporterWeakPtr event_reporter);
   ~Scene() override;
 
   bool AddLight(const LightPtr& light, ErrorReporter* error_reporter);
@@ -71,7 +73,7 @@ class Scene final : public Node {
   fuchsia::ui::views::ViewRef view_ref_;
   zx_koid_t view_ref_koid_ = ZX_KOID_INVALID;
 
-  Session* gfx_session_ = nullptr;
+  fxl::WeakPtr<ViewTreeUpdater> view_tree_updater_;
 
   fxl::WeakPtrFactory<Scene> weak_factory_;  // must be last
 

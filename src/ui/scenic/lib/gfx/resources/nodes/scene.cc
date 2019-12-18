@@ -19,11 +19,11 @@ namespace gfx {
 
 const ResourceTypeInfo Scene::kTypeInfo = {ResourceType::kNode | ResourceType::kScene, "Scene"};
 
-Scene::Scene(Session* session, SessionId session_id, ResourceId node_id)
+Scene::Scene(Session* session, SessionId session_id, ResourceId node_id,
+             fxl::WeakPtr<ViewTreeUpdater> view_tree_updater, EventReporterWeakPtr event_reporter)
     : Node(session, session_id, node_id, Scene::kTypeInfo),
-      gfx_session_(session),
+      view_tree_updater_(view_tree_updater),
       weak_factory_(this) {
-  FXL_DCHECK(gfx_session_);
   scene_ = this;
 
   {
@@ -46,8 +46,6 @@ Scene::Scene(Session* session, SessionId session_id, ResourceId node_id)
     fidl::Clone(view_ref_, &clone);
     TRACE_DURATION_END("gfx", "ResourceCtorViewRefClone");
 
-    EventReporterWeakPtr reporter = gfx_session_->event_reporter()->GetWeakPtr();
-
     // Scene may *always* receive focus when connected to a compositor. If it is not actually
     // connected to a compositor, the request-focus policy will ensure it is never sent focus.
     fit::function<bool()> may_receive_focus = [] { return true; };
@@ -56,12 +54,14 @@ Scene::Scene(Session* session, SessionId session_id, ResourceId node_id)
     };
 
     FXL_DCHECK(session_id != 0u) << "GFX-side invariant for ViewTree";
-    gfx_session_->view_tree_updates().push_back(
-        ViewTreeNewRefNode{.view_ref = std::move(clone),
-                           .event_reporter = std::move(reporter),
-                           .may_receive_focus = std::move(may_receive_focus),
-                           .global_transform = std::move(global_transform),
-                           .session_id = session_id});
+    if (view_tree_updater_) {
+      view_tree_updater_->AddUpdate(
+          ViewTreeNewRefNode{.view_ref = std::move(clone),
+                             .event_reporter = std::move(event_reporter),
+                             .may_receive_focus = std::move(may_receive_focus),
+                             .global_transform = std::move(global_transform),
+                             .session_id = session_id});
+    }
   }
   // NOTE: Whether or not this Scene is connected to the Compositor CANNOT be determined here (and
   // hence we can't push ViewTreeMakeRoot(koid)). Instead, the session updater must determine which
@@ -69,7 +69,9 @@ Scene::Scene(Session* session, SessionId session_id, ResourceId node_id)
 }
 
 Scene::~Scene() {
-  gfx_session_->view_tree_updates().push_back(ViewTreeDeleteNode({.koid = view_ref_koid_}));
+  if (view_tree_updater_) {
+    view_tree_updater_->AddUpdate(ViewTreeDeleteNode({.koid = view_ref_koid_}));
+  }
 }
 
 void Scene::OnSceneChanged() {

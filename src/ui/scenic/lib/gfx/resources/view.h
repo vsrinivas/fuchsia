@@ -16,6 +16,7 @@
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/scenic/lib/gfx/engine/object_linker.h"
+#include "src/ui/scenic/lib/gfx/engine/view_tree_updater.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/view_node.h"
 #include "src/ui/scenic/lib/gfx/resources/resource.h"
 #include "src/ui/scenic/lib/gfx/resources/resource_type_info.h"
@@ -55,7 +56,8 @@ class View final : public Resource {
   // must be maintained.  However, it would be better to pass strong pointers.
   View(Session* session, ResourceId id, fuchsia::ui::views::ViewRefControl control_ref,
        fuchsia::ui::views::ViewRef view_ref, std::string debug_name,
-       std::shared_ptr<ErrorReporter> error_reporter, EventReporter* event_reporter);
+       std::shared_ptr<ErrorReporter> error_reporter,
+       fxl::WeakPtr<ViewTreeUpdater> view_tree_updater, EventReporterWeakPtr event_reporter);
 
   ~View() override;
 
@@ -131,11 +133,10 @@ class View final : public Resource {
   // view/view holders.
   bool should_render_bounding_box_ = false;
 
-  // TODO(SCN-1504): better for these to not be raw pointers.
   const std::shared_ptr<ErrorReporter> error_reporter_;
-  EventReporter* const event_reporter_;
+  const EventReporterWeakPtr event_reporter_;
 
-  Session* gfx_session_ = nullptr;
+  fxl::WeakPtr<ViewTreeUpdater> view_tree_updater_;
 
   std::string debug_name_;
 

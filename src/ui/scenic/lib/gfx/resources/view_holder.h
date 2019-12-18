@@ -15,6 +15,7 @@
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/scenic/lib/gfx/engine/object_linker.h"
+#include "src/ui/scenic/lib/gfx/engine/view_tree_updater.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/node.h"
 #include "src/ui/scenic/lib/gfx/resources/resource.h"
 #include "src/ui/scenic/lib/gfx/resources/resource_type_info.h"
@@ -35,7 +36,8 @@ class ViewHolder final : public Node {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  ViewHolder(Session* session, SessionId session_id, ResourceId node_id, std::string debug_name);
+  ViewHolder(Session* session, SessionId session_id, ResourceId node_id, std::string debug_name,
+             fxl::WeakPtr<ViewTreeUpdater> view_tree_updater);
   ~ViewHolder() override;
 
   fxl::WeakPtr<ViewHolder> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
@@ -108,8 +110,9 @@ class ViewHolder final : public Node {
   // in |LinkDisconnected|. The waiter must be destroyed before the event.
   async::Wait render_waiter_;
 
-  Session* gfx_session_ = nullptr;
   std::string debug_name_;
+
+  fxl::WeakPtr<ViewTreeUpdater> view_tree_updater_;
 
   fxl::WeakPtrFactory<ViewHolder> weak_factory_;  // must be last
 };

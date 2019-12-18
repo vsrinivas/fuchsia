@@ -269,10 +269,11 @@ struct ViewTreeDisconnectFromParent {
   zx_koid_t koid = ZX_KOID_INVALID;
 };
 
-// Handy alias; suitable for client usage.
-using ViewTreeUpdates = std::vector<
+// Handy aliases; suitable for client usage.
+using ViewTreeUpdate =
     std::variant<ViewTreeNewRefNode, ViewTreeNewAttachNode, ViewTreeDeleteNode,
-                 ViewTreeMakeGlobalRoot, ViewTreeConnectToParent, ViewTreeDisconnectFromParent>>;
+                 ViewTreeMakeGlobalRoot, ViewTreeConnectToParent, ViewTreeDisconnectFromParent>;
+using ViewTreeUpdates = std::vector<ViewTreeUpdate>;
 
 // Handy ViewRef-specific utility.
 zx_koid_t ExtractKoid(const fuchsia::ui::views::ViewRef& view_ref);

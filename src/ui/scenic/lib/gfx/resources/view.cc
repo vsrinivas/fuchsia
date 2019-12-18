@@ -22,18 +22,18 @@ const ResourceTypeInfo View::kTypeInfo = {ResourceType::kView, "View"};
 
 View::View(Session* session, ResourceId id, fuchsia::ui::views::ViewRefControl control_ref,
            fuchsia::ui::views::ViewRef view_ref, std::string debug_name,
-           std::shared_ptr<ErrorReporter> error_reporter, EventReporter* event_reporter)
+           std::shared_ptr<ErrorReporter> error_reporter,
+           fxl::WeakPtr<ViewTreeUpdater> view_tree_updater, EventReporterWeakPtr event_reporter)
     : Resource(session, session->id(), id, View::kTypeInfo),
       control_ref_(std::move(control_ref)),
       view_ref_(std::move(view_ref)),
       view_ref_koid_(fsl::GetKoid(view_ref_.reference.get())),
       error_reporter_(std::move(error_reporter)),
       event_reporter_(event_reporter),
-      gfx_session_(session),
+      view_tree_updater_(view_tree_updater),
       debug_name_(debug_name),
       weak_factory_(this) {
   FXL_DCHECK(error_reporter_);
-  FXL_DCHECK(event_reporter_);
   FXL_DCHECK(view_ref_koid_ != ZX_KOID_INVALID);
 
   node_ = fxl::AdoptRef<ViewNode>(new ViewNode(session, session->id(), weak_factory_.GetWeakPtr()));
@@ -63,19 +63,23 @@ View::View(Session* session, ResourceId id, fuchsia::ui::views::ViewRefControl c
     };
 
     FXL_DCHECK(session->id() != 0u) << "GFX-side invariant for ViewTree";
-    gfx_session_->view_tree_updates().push_back(
-        ViewTreeNewRefNode{.view_ref = std::move(clone),
-                           .event_reporter = std::move(reporter),
-                           .may_receive_focus = std::move(may_receive_focus),
-                           .global_transform = std::move(global_transform),
-                           .session_id = session->id()});
+    if (view_tree_updater_) {
+      view_tree_updater_->AddUpdate(
+          ViewTreeNewRefNode{.view_ref = std::move(clone),
+                             .event_reporter = std::move(reporter),
+                             .may_receive_focus = std::move(may_receive_focus),
+                             .global_transform = std::move(global_transform),
+                             .session_id = session->id()});
+    }
   }
 
   FXL_DCHECK(validate_viewref(control_ref_, view_ref_));
 }
 
 View::~View() {
-  gfx_session_->view_tree_updates().push_back(ViewTreeDeleteNode({.koid = view_ref_koid_}));
+  if (view_tree_updater_) {
+    view_tree_updater_->AddUpdate(ViewTreeDeleteNode({.koid = view_ref_koid_}));
+  }
 
   // Explicitly detach the phantom node to ensure it is cleaned up.
   node_->Detach(error_reporter_.get());
@@ -118,8 +122,10 @@ void View::LinkResolved(ViewHolder* view_holder) {
 
   SendViewHolderConnectedEvent();
 
-  gfx_session_->view_tree_updates().push_back(
-      ViewTreeConnectToParent{.child = view_ref_koid_, .parent = view_holder_->view_holder_koid()});
+  if (view_tree_updater_) {
+    view_tree_updater_->AddUpdate(ViewTreeConnectToParent{
+        .child = view_ref_koid_, .parent = view_holder_->view_holder_koid()});
+  }
 }
 
 void View::LinkInvalidated(bool on_link_destruction) {
@@ -140,19 +146,25 @@ void View::LinkInvalidated(bool on_link_destruction) {
 
   SendViewHolderDisconnectedEvent();
 
-  gfx_session_->view_tree_updates().push_back(ViewTreeDisconnectFromParent{.koid = view_ref_koid_});
+  if (view_tree_updater_) {
+    view_tree_updater_->AddUpdate(ViewTreeDisconnectFromParent{.koid = view_ref_koid_});
+  }
 }
 
 void View::SendViewHolderConnectedEvent() {
-  fuchsia::ui::gfx::Event event;
-  event.set_view_holder_connected({.view_id = id()});
-  event_reporter_->EnqueueEvent(std::move(event));
+  if (event_reporter_) {
+    fuchsia::ui::gfx::Event event;
+    event.set_view_holder_connected({.view_id = id()});
+    event_reporter_->EnqueueEvent(std::move(event));
+  }
 }
 
 void View::SendViewHolderDisconnectedEvent() {
-  fuchsia::ui::gfx::Event event;
-  event.set_view_holder_disconnected({.view_id = id()});
-  event_reporter_->EnqueueEvent(std::move(event));
+  if (event_reporter_) {
+    fuchsia::ui::gfx::Event event;
+    event.set_view_holder_disconnected({.view_id = id()});
+    event_reporter_->EnqueueEvent(std::move(event));
+  }
 }
 
 }  // namespace gfx

@@ -19,17 +19,17 @@ const ResourceTypeInfo ViewHolder::kTypeInfo = {ResourceType::kNode | ResourceTy
                                                 "ViewHolder"};
 
 ViewHolder::ViewHolder(Session* session, SessionId session_id, ResourceId node_id,
-                       std::string debug_name)
+                       std::string debug_name, fxl::WeakPtr<ViewTreeUpdater> view_tree_updater)
     : Node(session, session_id, node_id, ViewHolder::kTypeInfo),
-      gfx_session_(session),
       debug_name_(debug_name),
+      view_tree_updater_(view_tree_updater),
       weak_factory_(this) {}
 
 ViewHolder::~ViewHolder() {
   // Don't check if the link is valid since it may have been invalidated by the Import closing.
   // The view_holder_koid_ is the original value that was tracked anyway.
-  if (link_) {
-    gfx_session_->UntrackViewHolder(view_holder_koid_);
+  if (link_ && view_tree_updater_) {
+    view_tree_updater_->UntrackViewHolder(view_holder_koid_);
   }
 }
 
@@ -40,7 +40,9 @@ void ViewHolder::Connect(ViewLinker::ExportLink link) {
 
   link_ = std::move(link);
   view_holder_koid_ = link_->endpoint_id();
-  gfx_session_->TrackViewHolder(GetWeakPtr());
+  if (view_tree_updater_) {
+    view_tree_updater_->TrackViewHolder(GetWeakPtr());
+  }
   link_->Initialize(fit::bind_member(this, &ViewHolder::LinkResolved),
                     fit::bind_member(this, &ViewHolder::LinkInvalidated));
 }

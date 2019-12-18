@@ -102,6 +102,8 @@ source_set("gfx") {
     "engine/session_manager.h",
     "engine/view_tree.cc",
     "engine/view_tree.h",
+    "engine/view_tree_updater.cc",
+    "engine/view_tree_updater.h",
     "gfx_system.cc",
     "gfx_system.h",
     "resources/buffer.cc",
