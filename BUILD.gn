@@ -337,6 +337,30 @@ build_api_module("tests") {
   ]
 }
 
+# test_durations.json contains historical test durations and timeout data to be
+# used for scheduling tests.
+#
+# It contains a list of JSON objects with the following fields:
+#
+#   test_name
+#     Required: The name of the test. For Fuchsia tests, this will correspond to
+#     the test package URL; for host-side tests, the installation path.
+#     Type: string
+#
+#   median_duration_millis
+#     Required: The median historical duration for this test over some period of
+#     time, in milliseconds.
+#     Type: int
+#
+#   timeout_millis
+#     Required: The timeout to set for this test.
+#     Type: int
+#
+build_api_module("test_durations") {
+  testonly = true
+  contents = read_file("//integration/infra/test_durations.json", "json")
+}
+
 # See //zircon:tool_paths for a description and schema definition.
 #
 build_api_module("tool_paths") {
