@@ -128,30 +128,37 @@ pub struct Port {
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub enum InterfaceAddressSource {
-    Unknown,
-    Static,
-    Dhcp,
+pub enum InterfaceAddress {
+    Unknown(LifIpAddr),
+    Static(LifIpAddr),
+    Dhcp(LifIpAddr),
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct InterfaceAddress {
-    address: LifIpAddr,
-    source: InterfaceAddressSource,
+pub enum InterfaceState {
+    Unknown,
+    Up,
+    Down,
 }
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Interface {
     pub id: PortId,
     pub name: String,
-    pub addr: Option<InterfaceAddress>,
+    pub ipv4_addr: Option<InterfaceAddress>,
+    pub ipv6_addr: Vec<LifIpAddr>,
     pub enabled: bool,
+    pub state: InterfaceState,
     pub dhcp_client_enabled: bool,
 }
 
 impl Interface {
     pub fn get_address(&self) -> Option<LifIpAddr> {
-        self.addr.as_ref().map(|a| a.address)
+        self.ipv4_addr.as_ref().map(|a| match a {
+            InterfaceAddress::Unknown(a) => a.clone(),
+            InterfaceAddress::Static(a) => a.clone(),
+            InterfaceAddress::Dhcp(a) => a.clone(),
+        })
     }
 }
 
@@ -165,13 +172,13 @@ impl From<&InterfaceInfo> for Interface {
         Interface {
             id: iface.id.into(),
             name: iface.properties.topopath.clone(),
-            addr: iface
+            ipv4_addr: iface
                 .properties
                 .addresses
                 .iter()
                 .find(|&addr| match addr {
                     // Only return interfaces with an IPv4 address
-                    // TODO(dpradilla) support IPv6 and interfaces with multiple IPs? (is there
+                    // TODO(dpradilla) support interfaces with multiple IPs? (is there
                     // a use case given this context?)
                     stack::InterfaceAddress {
                         ip_address: net::IpAddress::Ipv4(net::Ipv4Address { addr }),
@@ -179,13 +186,28 @@ impl From<&InterfaceInfo> for Interface {
                     } => address_is_valid_unicast(&IpAddr::from(*addr)),
                     _ => false,
                 })
-                .map(|addr| InterfaceAddress {
-                    address: addr.into(),
-                    source: InterfaceAddressSource::Unknown,
-                }),
+                .map(|addr| InterfaceAddress::Unknown(addr.into())),
+            ipv6_addr: iface
+                .properties
+                .addresses
+                .iter()
+                .filter_map(|addr| match addr {
+                    // Only return Ipv6 addresses
+                    stack::InterfaceAddress {
+                        ip_address: net::IpAddress::Ipv6(net::Ipv6Address { addr }),
+                        ..
+                    } => Some(LifIpAddr { address: addr.clone().into(), prefix: 128 }),
+                    _ => None,
+                })
+                .collect(),
+
             enabled: match iface.properties.administrative_status {
                 stack::AdministrativeStatus::Enabled => true,
                 stack::AdministrativeStatus::Disabled => false,
+            },
+            state: match iface.properties.physical_status {
+                stack::PhysicalStatus::Up => InterfaceState::Up,
+                stack::PhysicalStatus::Down => InterfaceState::Down,
             },
             dhcp_client_enabled: false,
         }
@@ -210,15 +232,16 @@ impl From<netstack::NetInterface> for Interface {
         Interface {
             id: PortId(iface.id.into()),
             name: iface.name,
-            addr: addr.map(|a| InterfaceAddress {
-                address: a,
-                source: if dhcp {
-                    InterfaceAddressSource::Dhcp
+            ipv4_addr: addr.map(|a| {
+                if dhcp {
+                    InterfaceAddress::Dhcp(a)
                 } else {
-                    InterfaceAddressSource::Static
-                },
+                    InterfaceAddress::Static(a)
+                }
             }),
+            ipv6_addr: Vec::new(),
             enabled: (iface.flags & netstack::NET_INTERFACE_FLAG_UP) != 0,
+            state: InterfaceState::Unknown,
             dhcp_client_enabled: dhcp,
         }
     }
@@ -280,7 +303,7 @@ impl NetCfg {
             .map_err(|_| error::Hal::OperationFailed)?
             .iter()
             .map(|i| i.into())
-            .filter(|i: &Interface| i.addr.is_some())
+            .filter(|i: &Interface| i.ipv4_addr.is_some())
             .collect();
         Ok(ifs)
     }
@@ -541,14 +564,12 @@ mod tests {
                 topopath: "test/interface/info".to_string(),
                 addresses: addrs,
                 administrative_status: stack::AdministrativeStatus::Enabled,
-
-                // Unused fields
                 name: "ethtest".to_string(),
                 filepath: "/some/file".to_string(),
                 mac: None,
                 mtu: 0,
                 features: 0,
-                physical_status: stack::PhysicalStatus::Down,
+                physical_status: stack::PhysicalStatus::Up,
             },
         }
     }
@@ -557,9 +578,10 @@ mod tests {
         Interface {
             id: 42.into(),
             name: "test/interface/info".to_string(),
-            addr: addr
-                .map(|a| InterfaceAddress { address: a, source: InterfaceAddressSource::Unknown }),
+            ipv4_addr: addr.map(|a| InterfaceAddress::Unknown(a)),
+            ipv6_addr: Vec::new(),
             enabled: true,
+            state: InterfaceState::Up,
             dhcp_client_enabled: false,
         }
     }
@@ -695,11 +717,13 @@ mod tests {
             Interface {
                 id: PortId(5),
                 name: "test_if".to_string(),
-                addr: Some(InterfaceAddress {
-                    address: LifIpAddr { address: IpAddr::from([1, 2, 3, 4]), prefix: 24 },
-                    source: InterfaceAddressSource::Dhcp
-                }),
+                ipv4_addr: Some(InterfaceAddress::Dhcp(LifIpAddr {
+                    address: IpAddr::from([1, 2, 3, 4]),
+                    prefix: 24
+                }),),
+                ipv6_addr: Vec::new(),
                 enabled: true,
+                state: InterfaceState::Unknown,
                 dhcp_client_enabled: true,
             }
         )

@@ -392,8 +392,10 @@ mod tests {
     fn test_port_type() {
         assert_eq!(
             port_type(&hal::Interface {
-                addr: None,
+                ipv4_addr: None,
                 enabled: true,
+                ipv6_addr: Vec::new(),
+                state: hal::InterfaceState::Unknown,
                 name: "loopback".to_string(),
                 id: hal::PortId::from(1),
                 dhcp_client_enabled: false,
@@ -402,9 +404,11 @@ mod tests {
         );
         assert_eq!(
             port_type(&hal::Interface {
-                addr: None,
+                ipv4_addr: None,
                 enabled: true,
                 name: "ethernet/eth0".to_string(),
+                ipv6_addr: Vec::new(),
+                state: hal::InterfaceState::Unknown,
                 id: hal::PortId::from(1),
                 dhcp_client_enabled: false,
             }),
@@ -412,7 +416,9 @@ mod tests {
         );
         assert_eq!(
             port_type(&hal::Interface {
-                addr: None,
+                ipv4_addr: None,
+                ipv6_addr: Vec::new(),
+                state: hal::InterfaceState::Unknown,
                 enabled: true,
                 name: "ethernet/wlan".to_string(),
                 id: hal::PortId::from(1),
@@ -422,7 +428,9 @@ mod tests {
         );
         assert_eq!(
             port_type(&hal::Interface {
-                addr: None,
+                ipv4_addr: None,
+                ipv6_addr: Vec::new(),
+                state: hal::InterfaceState::Unknown,
                 enabled: true,
                 name: "br0".to_string(),
                 id: hal::PortId::from(1),
@@ -632,7 +640,9 @@ mod tests {
             &hal::Interface {
                 id: hal::PortId::from(1),
                 name: "ifname".to_string(),
-                addr: None,
+                ipv4_addr: None,
+                ipv6_addr: Vec::new(),
+                state: hal::InterfaceState::Unknown,
                 enabled: false,
                 dhcp_client_enabled: false,
             },
@@ -653,7 +663,9 @@ mod tests {
             &hal::Interface {
                 id: hal::PortId::from(1),
                 name: "ethernet/eth0".to_string(),
-                addr: None,
+                ipv4_addr: None,
+                ipv6_addr: Vec::new(),
+                state: hal::InterfaceState::Unknown,
                 enabled: false,
                 dhcp_client_enabled: false,
             },
@@ -685,7 +697,9 @@ mod tests {
             &hal::Interface {
                 id: hal::PortId::from(1),
                 name: "ethernet/eth0".to_string(),
-                addr: None,
+                ipv4_addr: None,
+                ipv6_addr: Vec::new(),
+                state: hal::InterfaceState::Unknown,
                 enabled: false,
                 dhcp_client_enabled: false,
             },
@@ -722,7 +736,9 @@ mod tests {
             &hal::Interface {
                 id: hal::PortId::from(1),
                 name: "ethernet/eth0".to_string(),
-                addr: None,
+                ipv4_addr: None,
+                ipv6_addr: Vec::new(),
+                state: hal::InterfaceState::Unknown,
                 enabled: false,
                 dhcp_client_enabled: false,
             },
@@ -759,7 +775,9 @@ mod tests {
             &hal::Interface {
                 id: hal::PortId::from(1),
                 name: "ethernet/eth0".to_string(),
-                addr: None,
+                ipv4_addr: None,
+                ipv6_addr: Vec::new(),
+                state: hal::InterfaceState::Unknown,
                 enabled: false,
                 dhcp_client_enabled: false,
             },
@@ -804,7 +822,9 @@ mod tests {
             &hal::Interface {
                 id: hal::PortId::from(1),
                 name: "ethernet/eth0".to_string(),
-                addr: None,
+                ipv4_addr: None,
+                ipv6_addr: Vec::new(),
+                state: hal::InterfaceState::Unknown,
                 enabled: false,
                 dhcp_client_enabled: false,
             },
@@ -849,7 +869,9 @@ mod tests {
             &hal::Interface {
                 id: hal::PortId::from(1),
                 name: "ethernet/eth0".to_string(),
-                addr: None,
+                ipv4_addr: None,
+                ipv6_addr: Vec::new(),
+                state: hal::InterfaceState::Unknown,
                 enabled: false,
                 dhcp_client_enabled: false,
             },
@@ -891,7 +913,9 @@ mod tests {
             &hal::Interface {
                 id: hal::PortId::from(1),
                 name: "ethernet/eth0".to_string(),
-                addr: None,
+                ipv4_addr: None,
+                ipv6_addr: Vec::new(),
+                state: hal::InterfaceState::Unknown,
                 enabled: false,
                 dhcp_client_enabled: false,
             },
