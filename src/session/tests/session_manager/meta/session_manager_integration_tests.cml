@@ -1,24 +1,27 @@
 {
-    "program": {
-        "binary": "test/session_manager_integration_tests",
-        "args": [ "-s", "fuchsia-pkg://fuchsia.com/graphical_session#meta/graphical_session.cm" ],
+    program: {
+        binary: "test/session_manager_integration_tests",
+        args: [
+            "-s",
+            "fuchsia-pkg://fuchsia.com/graphical_session#meta/graphical_session.cm",
+        ],
     },
-    "use": [
+    use: [
         {
-            "service_protocol": "/svc/fuchsia.sys2.Realm",
-            "from": "framework",
-        }
-    ],
-    "expose": [
-        {
-            "service_protocol": "/svc/fuchsia.test.Suite",
-            "from": "self",
+            service_protocol: "/svc/fuchsia.sys2.Realm",
+            from: "framework",
         },
     ],
-    "collections": [
+    expose: [
         {
-            "name": "session",
-            "durability": "transient",
+            service_protocol: "/svc/fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+    collections: [
+        {
+            name: "session",
+            durability: "transient",
         },
     ],
 }

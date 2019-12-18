@@ -1,45 +1,49 @@
 {
-    "program": {
-        "binary": "bin/element_session"
+    program: {
+        binary: "bin/element_session",
     },
-    "children": [
+    children: [
         {
-            "name": "element_proposer",
-            "url": "fuchsia-pkg://fuchsia.com/element_proposer#meta/element_proposer.cm",
-            "startup": "eager",
-        }
-    ],
-    "collections": [
-        {
-            "name": "elements",
-            "durability": "transient",
+            name: "element_proposer",
+            url: "fuchsia-pkg://fuchsia.com/element_proposer#meta/element_proposer.cm",
+            startup: "eager",
         },
     ],
-    "expose": [
+    collections: [
         {
-            "service_protocol": [
+            name: "elements",
+            durability: "transient",
+        },
+    ],
+    expose: [
+        {
+            service_protocol: [
                 "/svc/fuchsia.session.ElementManager",
                 "/svc/fuchsia.session.examples.ElementPing",
             ],
-            "from": "self",
+            from: "self",
         },
     ],
-    "use": [
+    use: [
         {
-            "service_protocol": "/svc/fuchsia.sys2.Realm",
-            "from": "framework",
+            service_protocol: "/svc/fuchsia.sys2.Realm",
+            from: "framework",
         },
     ],
-    "offer": [
+    offer: [
         {
-            "service_protocol": "/svc/fuchsia.session.examples.ElementPing",
-            "from": "self",
-            "to": [ "#elements" ],
+            service_protocol: "/svc/fuchsia.session.examples.ElementPing",
+            from: "self",
+            to: [
+                "#elements",
+            ],
         },
         {
-            "service_protocol": "/svc/fuchsia.session.ElementManager",
-            "from": "self",
-            "to": [ "#element_proposer" ],
+            service_protocol: "/svc/fuchsia.session.ElementManager",
+            from: "self",
+            to: [
+                "#element_proposer",
+            ],
         },
     ],
 }

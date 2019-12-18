@@ -1,11 +1,11 @@
 {
-    "program": {
-        "binary": "bin/session_control",
+    program: {
+        binary: "bin/session_control",
     },
-    "use": [
+    use: [
         {
-            "service_protocol": "/svc/fuchsia.session.Launcher",
-            "from": "realm",
-        }
-    ]
+            service_protocol: "/svc/fuchsia.session.Launcher",
+            from: "realm",
+        },
+    ],
 }

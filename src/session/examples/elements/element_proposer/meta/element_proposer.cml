@@ -1,10 +1,10 @@
 {
-    "program": {
-        "binary": "bin/element_proposer"
+    program: {
+        binary: "bin/element_proposer",
     },
-    "use": [
+    use: [
         {
-            "service_protocol": "/svc/fuchsia.session.ElementManager"
+            service_protocol: "/svc/fuchsia.session.ElementManager",
         },
-    ]
+    ],
 }

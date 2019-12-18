@@ -1,16 +1,19 @@
 {
-    "program": {
-        "binary": "bin/input_session"
+    program: {
+        binary: "bin/input_session",
     },
-    "use": [
+    use: [
         {
-            "directory": "/dev/class/input-report",
-            "from": "realm",
-            "rights": [ "r*",]
+            directory: "/dev/class/input-report",
+            from: "realm",
+            rights: [
+                "r*",
+            ],
         },
         {
-            "service_protocol": "/svc/fuchsia.logger.LogSink",
-            "from": "realm",
+
+            service_protocol: "/svc/fuchsia.logger.LogSink",
+            from: "realm",
         },
-    ]
+    ],
 }

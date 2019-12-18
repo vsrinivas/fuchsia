@@ -1,10 +1,10 @@
 {
-    "program": {
-        "binary": "bin/simple_element"
+    program: {
+        binary: "bin/simple_element",
     },
-    "use": [
+    use: [
         {
-            "service_protocol": "/svc/fuchsia.session.examples.ElementPing",
+            service_protocol: "/svc/fuchsia.session.examples.ElementPing",
         },
     ],
 }
