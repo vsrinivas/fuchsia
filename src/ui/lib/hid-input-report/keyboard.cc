@@ -95,15 +95,27 @@ ParseResult Keyboard::ParseReport(const uint8_t* data, size_t len, Report* repor
       continue;
     }
 
+    // Get the HID key.
+    uint32_t hid_key;
     if (field.flags & hid::FieldTypeFlags::kArray) {
       if (val_out == HID_USAGE_KEY_ERROR_ROLLOVER) {
         return kParseBadReport;
       }
-      keyboard_report.pressed_keys[key_index++] = val_out;
+      hid_key = val_out;
     } else {
-      keyboard_report.pressed_keys[key_index++] = field.attr.usage.usage;
+      hid_key = field.attr.usage.usage;
+    }
+
+    // Convert to fuchsia key.
+    std::optional<fuchsia::ui::input2::Key> fuchsia_key =
+        key_util::hid_key_to_fuchsia_key(hid::USAGE(hid::usage::Page::kKeyboardKeypad, hid_key));
+    if (fuchsia_key) {
+      // Cast the key enum from HLCPP to LLCPP. We are guaranteed that this will be equivalent.
+      keyboard_report.pressed_keys[key_index++] =
+          static_cast<llcpp::fuchsia::ui::input2::Key>(*fuchsia_key);
     }
   }
+
   keyboard_report.num_pressed_keys = key_index;
 
   // Now that we can't fail, set the real report.

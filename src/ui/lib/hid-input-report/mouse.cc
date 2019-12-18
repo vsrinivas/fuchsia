@@ -18,7 +18,7 @@ namespace hid_input_report {
 ParseResult Mouse::ParseReportDescriptor(const hid::ReportDescriptor& hid_report_descriptor) {
   hid::Attributes movement_x = {};
   hid::Attributes movement_y = {};
-  hid::Attributes buttons[kMouseMaxButtons];
+  hid::Attributes buttons[::llcpp::fuchsia::input::report::MOUSE_MAX_NUM_BUTTONS];
   uint8_t num_buttons = 0;
 
   MouseDescriptor mouse_descriptor = {};
@@ -35,7 +35,7 @@ ParseResult Mouse::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
       movement_y = field.attr;
       mouse_descriptor.movement_y = LlcppAxisFromAttribute(movement_y);
     } else if (field.attr.usage.page == hid::usage::Page::kButton) {
-      if (num_buttons == kMouseMaxButtons) {
+      if (num_buttons == ::llcpp::fuchsia::input::report::MOUSE_MAX_NUM_BUTTONS) {
         return kParseTooManyItems;
       }
       buttons[num_buttons++] = field.attr;
@@ -76,14 +76,12 @@ ParseResult Mouse::ParseReport(const uint8_t* data, size_t len, Report* report) 
     double value_out;
     if (hid::ExtractAsUnitType(data, len, movement_x_, &value_out)) {
       mouse_report.movement_x = static_cast<int64_t>(value_out);
-      mouse_report.has_movement_x = true;
     }
   }
   if (descriptor_.movement_y) {
     double value_out;
     if (hid::ExtractAsUnitType(data, len, movement_y_, &value_out)) {
       mouse_report.movement_y = static_cast<int64_t>(value_out);
-      mouse_report.has_movement_y = true;
     }
   }
   for (size_t i = 0; i < num_buttons_; i++) {

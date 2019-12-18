@@ -19,10 +19,6 @@
 
 namespace hid_input_report {
 
-// This is just a hardcoded value so we don't have to make memory allocations.
-// Feel free to increase this number in the future.
-constexpr size_t kMouseMaxButtons = 32;
-
 struct MouseDescriptor {
   std::optional<::llcpp::fuchsia::input::report::Axis> movement_x = {};
   std::optional<::llcpp::fuchsia::input::report::Axis> movement_y = {};
@@ -34,23 +30,13 @@ struct MouseDescriptor {
 };
 
 struct MouseReport {
-  bool has_movement_x = false;
-  int64_t movement_x = 0;
-
-  bool has_movement_y = false;
-  int64_t movement_y = 0;
-
-  bool has_scroll_v = false;
-  int64_t scroll_v = 0;
-
-  bool has_scroll_h = false;
-  int64_t scroll_h = 0;
-
+  std::optional<int64_t> movement_x;
+  std::optional<int64_t> movement_y;
+  std::optional<int64_t> scroll_v;
+  std::optional<int64_t> scroll_h;
   uint8_t num_buttons_pressed;
-  uint8_t buttons_pressed[kMouseMaxButtons];
+  std::array<uint8_t, ::llcpp::fuchsia::input::report::MOUSE_MAX_NUM_BUTTONS> buttons_pressed;
 };
-
-const uint32_t kSensorMaxValues = 64;
 
 // |SensorDescriptor| describes the capabilities of a sensor device.
 struct SensorDescriptor {
@@ -64,11 +50,9 @@ struct SensorDescriptor {
 // The values array will always be the same size as the descriptor values, and they
 // will always be in the same order.
 struct SensorReport {
-  int64_t values[kSensorMaxValues];
+  std::array<int64_t, ::llcpp::fuchsia::input::report::SENSOR_MAX_VALUES> values;
   size_t num_values;
 };
-
-const uint32_t kTouchMaxContacts = 10;
 
 struct ContactDescriptor {
   std::optional<::llcpp::fuchsia::input::report::Axis> contact_id;
@@ -86,7 +70,7 @@ struct TouchDescriptor {
 
   uint32_t max_contacts;
   /// This describes each of the contact capabilities.
-  std::array<ContactDescriptor, kTouchMaxContacts> contacts;
+  std::array<ContactDescriptor, ::llcpp::fuchsia::input::report::TOUCH_MAX_CONTACTS> contacts;
   size_t num_contacts;
 };
 
@@ -94,35 +78,19 @@ struct TouchDescriptor {
 struct ContactReport {
   /// Identifier for the contact.
   /// Note: |contact_id| might not be sequential and will range from 0 to |max_contact_id|.
-  uint32_t contact_id;
-  bool has_contact_id;
-
-  bool is_pressed;
-  bool has_is_pressed;
-
-  /// A contact's position on the x axis.
-  int64_t position_x;
-  bool has_position_x;
-  /// A contact's position on the y axis.
-  int64_t position_y;
-  bool has_position_y;
-
-  /// Pressure of the contact.
-  int64_t pressure;
-  bool has_pressure;
-
-  /// Width of the area of contact.
-  int64_t contact_width;
-  bool has_contact_width;
-  /// Height of the area of contact.
-  int64_t contact_height;
-  bool has_contact_height;
+  std::optional<uint32_t> contact_id;
+  std::optional<bool> is_pressed;
+  std::optional<int64_t> position_x;
+  std::optional<int64_t> position_y;
+  std::optional<int64_t> pressure;
+  std::optional<int64_t> contact_width;
+  std::optional<int64_t> contact_height;
 };
 
 /// |TouchReport| describes the current contacts recorded by the touchscreen.
 struct TouchReport {
   /// The contacts currently being reported by the device.
-  std::array<ContactReport, kTouchMaxContacts> contacts;
+  std::array<ContactReport, ::llcpp::fuchsia::input::report::TOUCH_MAX_CONTACTS> contacts;
   size_t num_contacts;
 };
 
@@ -134,8 +102,9 @@ struct KeyboardDescriptor {
 };
 
 struct KeyboardReport {
-  // The list of keys currently pressed. These keys are expressed in HID key usages.
-  std::array<uint32_t, ::llcpp::fuchsia::input::report::KEYBOARD_MAX_PRESSED_KEYS> pressed_keys;
+  std::array<::llcpp::fuchsia::ui::input2::Key,
+             ::llcpp::fuchsia::input::report::KEYBOARD_MAX_NUM_KEYS>
+      pressed_keys;
   size_t num_pressed_keys;
 };
 

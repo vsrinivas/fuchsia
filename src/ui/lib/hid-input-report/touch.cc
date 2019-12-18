@@ -16,7 +16,7 @@
 namespace hid_input_report {
 
 ParseResult Touch::ParseReportDescriptor(const hid::ReportDescriptor& hid_report_descriptor) {
-  ContactConfig contacts[kTouchMaxContacts];
+  ContactConfig contacts[::llcpp::fuchsia::input::report::TOUCH_MAX_CONTACTS];
   size_t num_contacts = 0;
   TouchDescriptor descriptor = {};
 
@@ -60,7 +60,7 @@ ParseResult Touch::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
     if (num_contacts < 1) {
       return ParseResult::kParseNoCollection;
     }
-    if (num_contacts > kTouchMaxContacts) {
+    if (num_contacts > ::llcpp::fuchsia::input::report::TOUCH_MAX_CONTACTS) {
       return kParseTooManyItems;
     }
     ContactConfig* contact = &contacts[num_contacts - 1];
@@ -139,8 +139,7 @@ ParseResult Touch::ParseReport(const uint8_t* data, size_t len, Report* report) 
     if (descriptor_.contacts[i].is_pressed) {
       if (hid::ExtractAsUnitType(data, len, contacts_[i].tip_switch, &value_out)) {
         contact.is_pressed = static_cast<bool>(value_out);
-        contact.has_is_pressed = true;
-        if (!contact.is_pressed) {
+        if (!*contact.is_pressed) {
           continue;
         }
       }
@@ -150,38 +149,34 @@ ParseResult Touch::ParseReport(const uint8_t* data, size_t len, Report* report) 
       // Some touchscreens we support mistakenly set the logical range to 0-1 for the
       // tip switch and then never reset the range for the contact id. For this reason,
       // we have to do an "unconverted" extraction.
-      if (hid::ExtractUint(data, len, contacts_[i].contact_id, &contact.contact_id)) {
-        contact.has_contact_id = true;
+      uint32_t contact_id;
+      if (hid::ExtractUint(data, len, contacts_[i].contact_id, &contact_id)) {
+        contact.contact_id = contact_id;
       }
     }
     if (descriptor_.contacts[i].position_x) {
       if (hid::ExtractAsUnitType(data, len, contacts_[i].position_x, &value_out)) {
         contact.position_x = static_cast<int64_t>(value_out);
-        contact.has_position_x = true;
       }
     }
     if (descriptor_.contacts[i].position_y) {
       if (hid::ExtractAsUnitType(data, len, contacts_[i].position_y, &value_out)) {
         contact.position_y = static_cast<int64_t>(value_out);
-        contact.has_position_y = true;
       }
     }
     if (descriptor_.contacts[i].pressure) {
       if (hid::ExtractAsUnitType(data, len, contacts_[i].pressure, &value_out)) {
         contact.pressure = static_cast<int64_t>(value_out);
-        contact.has_pressure = true;
       }
     }
     if (descriptor_.contacts[i].contact_width) {
       if (hid::ExtractAsUnitType(data, len, contacts_[i].contact_width, &value_out)) {
         contact.contact_width = static_cast<int64_t>(value_out);
-        contact.has_contact_width = true;
       }
     }
     if (descriptor_.contacts[i].contact_height) {
       if (hid::ExtractAsUnitType(data, len, contacts_[i].contact_height, &value_out)) {
         contact.contact_height = static_cast<int64_t>(value_out);
-        contact.has_contact_height = true;
       }
     }
   }

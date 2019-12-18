@@ -83,12 +83,12 @@ TEST(TouchscreenTest, ParadiseV1) {
   // The expected values below have been manually converted from logical to physical units based
   // on the report descriptor.
 
-  EXPECT_EQ(1U, touch_report->contacts[0].has_contact_id);
-  EXPECT_EQ(1U, touch_report->contacts[0].contact_id);
+  EXPECT_TRUE(touch_report->contacts[0].contact_id);
+  EXPECT_EQ(1U, *touch_report->contacts[0].contact_id);
 
-  EXPECT_TRUE(touch_report->contacts[0].has_position_x);
-  EXPECT_EQ(2500, touch_report->contacts[0].position_x);
+  EXPECT_TRUE(touch_report->contacts[0].position_x);
+  EXPECT_EQ(2500, *touch_report->contacts[0].position_x);
 
-  EXPECT_TRUE(touch_report->contacts[0].has_position_y);
-  EXPECT_EQ(5000, touch_report->contacts[0].position_y);
+  EXPECT_TRUE(touch_report->contacts[0].position_y);
+  EXPECT_EQ(5000, *touch_report->contacts[0].position_y);
 }

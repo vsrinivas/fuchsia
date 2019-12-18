@@ -36,14 +36,14 @@ void SetMouseDescriptor(const MouseDescriptor& hid_mouse_desc, FidlMouseDescript
 void SetMouseReport(const MouseReport& hid_mouse_report, FidlMouseReport* report) {
   report->data = hid_mouse_report;
 
-  if (hid_mouse_report.has_movement_x) {
-    report->builder.set_movement_x(&report->data.movement_x);
+  if (report->data.movement_x) {
+    report->builder.set_movement_x(&report->data.movement_x.value());
   }
-  if (hid_mouse_report.has_movement_y) {
-    report->builder.set_movement_y(&report->data.movement_y);
+  if (report->data.movement_y) {
+    report->builder.set_movement_y(&report->data.movement_y.value());
   }
-  report->buttons_view =
-      fidl::VectorView<uint8_t>(report->data.buttons_pressed, report->data.num_buttons_pressed);
+  report->buttons_view = fidl::VectorView<uint8_t>(report->data.buttons_pressed.data(),
+                                                   report->data.num_buttons_pressed);
 
   report->builder.set_pressed_buttons(&report->buttons_view);
 
@@ -62,7 +62,8 @@ void SetSensorDescriptor(const SensorDescriptor& hid_sensor_desc,
 void SetSensorReport(const SensorReport& hid_sensor_report, FidlSensorReport* report) {
   report->data = hid_sensor_report;
 
-  report->values_view = fidl::VectorView<int64_t>(report->data.values, report->data.num_values);
+  report->values_view =
+      fidl::VectorView<int64_t>(report->data.values.data(), report->data.num_values);
   report->builder.set_values(&report->values_view);
 
   report->report = report->builder.view();
@@ -108,23 +109,23 @@ void SetTouchReport(const TouchReport& hid_touch_report, FidlTouchReport* report
     llcpp_report::ContactReport::Builder& contact_builder = report->contacts[i].builder;
     ContactReport& contact = report->data.contacts[i];
 
-    if (contact.has_contact_id) {
-      contact_builder.set_contact_id(&contact.contact_id);
+    if (contact.contact_id) {
+      contact_builder.set_contact_id(&contact.contact_id.value());
     }
-    if (contact.has_position_x) {
-      contact_builder.set_position_x(&contact.position_x);
+    if (contact.position_x) {
+      contact_builder.set_position_x(&contact.position_x.value());
     }
-    if (contact.has_position_y) {
-      contact_builder.set_position_y(&contact.position_y);
+    if (contact.position_y) {
+      contact_builder.set_position_y(&contact.position_y.value());
     }
-    if (contact.has_pressure) {
-      contact_builder.set_pressure(&contact.pressure);
+    if (contact.pressure) {
+      contact_builder.set_pressure(&contact.pressure.value());
     }
-    if (contact.has_contact_width) {
-      contact_builder.set_contact_width(&contact.contact_width);
+    if (contact.contact_width) {
+      contact_builder.set_contact_width(&contact.contact_width.value());
     }
-    if (contact.has_contact_height) {
-      contact_builder.set_contact_height(&contact.contact_height);
+    if (contact.contact_height) {
+      contact_builder.set_contact_height(&contact.contact_height.value());
     }
     report->contacts_built[i] = contact_builder.view();
   }
@@ -146,18 +147,9 @@ void SetKeyboardDescriptor(const KeyboardDescriptor& hid_keyboard_desc,
 }
 
 void SetKeyboardReport(const KeyboardReport& hid_keyboard_report, FidlKeyboardReport* report) {
-  size_t fidl_key_index = 0;
-  for (size_t i = 0; i < hid_keyboard_report.num_pressed_keys; i++) {
-    std::optional<fuchsia::ui::input2::Key> key = key_util::hid_key_to_fuchsia_key(
-        hid::USAGE(hid::usage::Page::kKeyboardKeypad, hid_keyboard_report.pressed_keys[i]));
-    if (key) {
-      // Cast the key enum from HLCPP to LLCPP. We are guaranteed that this will be equivalent.
-      report->pressed_keys_data[fidl_key_index++] =
-          static_cast<llcpp::fuchsia::ui::input2::Key>(*key);
-    }
-  }
+  report->data = hid_keyboard_report;
   report->pressed_keys_view = fidl::VectorView<llcpp::fuchsia::ui::input2::Key>(
-      report->pressed_keys_data.data(), fidl_key_index);
+      report->data.pressed_keys.data(), report->data.num_pressed_keys);
   report->builder.set_pressed_keys(&report->pressed_keys_view);
   report->report = report->builder.view();
 }

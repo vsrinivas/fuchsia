@@ -53,10 +53,10 @@ TEST(MouseTest, BootMouse) {
   hid_input_report::MouseReport* mouse_report =
       std::get_if<hid_input_report::MouseReport>(&report.report);
   ASSERT_NOT_NULL(mouse_report);
-  EXPECT_TRUE(mouse_report->has_movement_x);
+  EXPECT_TRUE(mouse_report->movement_x);
   EXPECT_EQ(kXTestVal, mouse_report->movement_x);
 
-  EXPECT_TRUE(mouse_report->has_movement_y);
+  EXPECT_TRUE(mouse_report->movement_x);
   EXPECT_EQ(kYTestVal, mouse_report->movement_y);
 
   EXPECT_EQ(kNumButtons, mouse_report->num_buttons_pressed);

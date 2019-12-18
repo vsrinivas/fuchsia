@@ -117,10 +117,7 @@ struct FidlKeyboardReport {
       ::llcpp::fuchsia::input::report::KeyboardReport::Build();
   fidl::VectorView<::llcpp::fuchsia::ui::input2::Key> pressed_keys_view;
 
-  // Holds the actual data that the builders/views point to.
-  std::array<::llcpp::fuchsia::ui::input2::Key,
-             ::llcpp::fuchsia::input::report::KEYBOARD_MAX_PRESSED_KEYS>
-      pressed_keys_data;
+  KeyboardReport data;
 };
 
 struct FidlReport {

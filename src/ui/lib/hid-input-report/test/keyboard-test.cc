@@ -88,11 +88,11 @@ TEST(KeyboardTest, BootKeyboard) {
       std::get_if<hid_input_report::KeyboardReport>(&report.report);
   ASSERT_NOT_NULL(keyboard_report);
   ASSERT_EQ(keyboard_report->num_pressed_keys, 5U);
-  EXPECT_EQ(keyboard_report->pressed_keys[0], HID_USAGE_KEY_LEFT_SHIFT);
-  EXPECT_EQ(keyboard_report->pressed_keys[1], HID_USAGE_KEY_RIGHT_GUI);
-  EXPECT_EQ(keyboard_report->pressed_keys[2], HID_USAGE_KEY_A);
-  EXPECT_EQ(keyboard_report->pressed_keys[3], HID_USAGE_KEY_NON_US_BACKSLASH);
-  EXPECT_EQ(keyboard_report->pressed_keys[4], HID_USAGE_KEY_UP);
+  EXPECT_EQ(keyboard_report->pressed_keys[0], llcpp::fuchsia::ui::input2::Key::LEFT_SHIFT);
+  EXPECT_EQ(keyboard_report->pressed_keys[1], llcpp::fuchsia::ui::input2::Key::RIGHT_META);
+  EXPECT_EQ(keyboard_report->pressed_keys[2], llcpp::fuchsia::ui::input2::Key::A);
+  EXPECT_EQ(keyboard_report->pressed_keys[3], llcpp::fuchsia::ui::input2::Key::NON_US_BACKSLASH);
+  EXPECT_EQ(keyboard_report->pressed_keys[4], llcpp::fuchsia::ui::input2::Key::UP);
 }
 
 // This test double checks that we don't double count keys that are included twice.

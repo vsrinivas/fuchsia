@@ -153,10 +153,7 @@ class PrintInputReport : public ::testing::Test {
 
 TEST_F(PrintInputReport, PrintMouseReport) {
   hid_input_report::MouseReport mouse = {};
-  mouse.has_movement_x = true;
   mouse.movement_x = 100;
-
-  mouse.has_movement_y = true;
   mouse.movement_y = 200;
 
   mouse.num_buttons_pressed = 3;
@@ -336,21 +333,11 @@ TEST_F(PrintInputReport, PrintTouchReport) {
 
   touch_report.num_contacts = 1;
 
-  touch_report.contacts[0].has_contact_id = true;
   touch_report.contacts[0].contact_id = 10;
-  touch_report.contacts[0].has_position_x = true;
   touch_report.contacts[0].position_x = 123;
-
-  touch_report.contacts[0].has_position_y = true;
   touch_report.contacts[0].position_y = 234;
-
-  touch_report.contacts[0].has_pressure = true;
   touch_report.contacts[0].pressure = 345;
-
-  touch_report.contacts[0].has_contact_width = true;
   touch_report.contacts[0].contact_width = 678;
-
-  touch_report.contacts[0].has_contact_height = true;
   touch_report.contacts[0].contact_height = 789;
 
   hid_input_report::Report report;
@@ -400,9 +387,9 @@ TEST_F(PrintInputReport, PrintKeyboardReport) {
   hid_input_report::KeyboardReport keyboard_report = {};
 
   keyboard_report.num_pressed_keys = 3;
-  keyboard_report.pressed_keys[0] = HID_USAGE_KEY_A;
-  keyboard_report.pressed_keys[1] = HID_USAGE_KEY_UP;
-  keyboard_report.pressed_keys[2] = HID_USAGE_KEY_LEFT_SHIFT;
+  keyboard_report.pressed_keys[0] = llcpp::fuchsia::ui::input2::Key::A;
+  keyboard_report.pressed_keys[1] = llcpp::fuchsia::ui::input2::Key::UP;
+  keyboard_report.pressed_keys[2] = llcpp::fuchsia::ui::input2::Key::LEFT_SHIFT;
 
   hid_input_report::Report report;
   report.report = keyboard_report;
