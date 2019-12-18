@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/bt-avrcp-target-unittests"
+    }
+}

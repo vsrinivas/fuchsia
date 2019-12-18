@@ -1,0 +1,64 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_binary("bin") {
+  name = "bt_avrcp_target"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
+    "//sdk/fidl/fuchsia.bluetooth.avrcp:fuchsia.bluetooth.avrcp-rustc",
+    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
+    "//sdk/fidl/fuchsia.media.sessions2:fuchsia.media.sessions2-rustc",
+    "//src/connectivity/bluetooth/lib/bt-avctp",
+    "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
+    "//src/lib/fidl_table_validation",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:parking_lot",
+  ]
+}
+
+package("bt-avrcp-target") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "bt_avrcp_target"
+
+  meta = [
+    {
+      path = rebase_path("meta/bt-avrcp-target.cmx")
+      dest = "bt-avrcp-target.cmx"
+    },
+  ]
+}
+
+test_package("tests") {
+  package_name = "bt-avrcp-target-tests"
+
+  deps = [
+    ":bin_test",
+  ]
+
+  tests = [
+    {
+      name = "bt_avrcp_target_bin_test"
+      dest = "bt-avrcp-target-unittests"
+      environments = basic_envs
+    },
+  ]
+}

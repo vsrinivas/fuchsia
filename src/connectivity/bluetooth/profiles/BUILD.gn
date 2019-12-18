@@ -11,6 +11,8 @@ group("profiles") {
     "bt-a2dp-source:bt-a2dp-source-tests",
     "bt-avrcp",
     "bt-avrcp:tests",
+    "bt-avrcp-target",
+    "bt-avrcp-target:tests",
     "bt-hog",
   ]
 }

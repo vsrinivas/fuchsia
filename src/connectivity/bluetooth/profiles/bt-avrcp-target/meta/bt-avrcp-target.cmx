@@ -1,0 +1,12 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.bluetooth.avrcp.PeerManager",
+            "fuchsia.logger.LogSink",
+            "fuchsia.media.sessions2.Discovery"
+        ]
+    }
+}
