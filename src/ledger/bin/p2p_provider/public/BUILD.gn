@@ -7,6 +7,7 @@ visibility = [ "//src/ledger/*" ]
 source_set("public") {
   sources = [
     "p2p_provider.h",
+    "p2p_provider_factory.h",
     "types.cc",
     "types.h",
     "user_id_provider.h",

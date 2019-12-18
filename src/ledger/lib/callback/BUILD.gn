@@ -28,6 +28,7 @@ source_set("callback") {
     "scoped_callback.h",
     "scoped_task_runner.cc",
     "scoped_task_runner.h",
+    "trace_callback.h",
     "waiter.h",
   ]
 
