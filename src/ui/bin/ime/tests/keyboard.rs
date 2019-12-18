@@ -23,13 +23,12 @@ use std::sync::{Arc, Once};
 static START: Once = Once::new();
 const DEFAULT_GOLDEN_PATH: &'static str = "/pkg/data/goldens/en-us.json";
 
-fn event_to_semantic_key(event: ui_input2::KeyEvent) -> ui_input2::SemanticKey {
-    match &event.semantic_key {
-        Some(ui_input2::SemanticKey::Symbol(symbol)) => {
+fn clone_semantic_key(semantic_key: &ui_input2::SemanticKey) -> ui_input2::SemanticKey {
+    match semantic_key {
+        ui_input2::SemanticKey::Symbol(symbol) => {
             ui_input2::SemanticKey::Symbol(symbol.to_string())
         }
-        Some(ui_input2::SemanticKey::Action(action)) => ui_input2::SemanticKey::Action(*action),
-        None => panic!("Semantic key empty {:?}", event),
+        ui_input2::SemanticKey::Action(action) => ui_input2::SemanticKey::Action(*action),
         _ => panic!("UnknownVariant"),
     }
 }
@@ -212,6 +211,56 @@ impl KeyboardService {
     }
 }
 
+/// Generates test cases with variations for left and right modifiers (e.g. Shift, Alt, etc)
+fn test_case_to_variations(test: TestCase) -> Vec<TestCase> {
+    let TestCase { key, modifiers: test_modifiers, semantic_key } = test;
+    let test_modifiers = match test_modifiers {
+        Some(m) => m,
+        None => return vec![TestCase { key, modifiers: test_modifiers, semantic_key }],
+    };
+    let modifier_variations = [
+        (
+            ui_input2::Modifiers::Shift,
+            [ui_input2::Modifiers::LeftShift, ui_input2::Modifiers::RightShift],
+        ),
+        (
+            ui_input2::Modifiers::Alt,
+            [ui_input2::Modifiers::LeftAlt, ui_input2::Modifiers::RightAlt],
+        ),
+        (
+            ui_input2::Modifiers::Control,
+            [ui_input2::Modifiers::LeftControl, ui_input2::Modifiers::RightControl],
+        ),
+        (
+            ui_input2::Modifiers::Meta,
+            [ui_input2::Modifiers::LeftMeta, ui_input2::Modifiers::RightMeta],
+        ),
+    ];
+    let test_variations = modifier_variations
+        .iter()
+        .flat_map(|(modifiers, variants)| {
+            if test_modifiers.contains(*modifiers) {
+                variants
+                    .iter()
+                    .map(|modifier_variant| TestCase {
+                        key,
+                        modifiers: Some(test_modifiers | *modifier_variant),
+                        semantic_key: clone_semantic_key(&semantic_key),
+                    })
+                    .collect()
+            } else {
+                vec![]
+            }
+        })
+        .collect::<Vec<TestCase>>();
+
+    if test_variations.is_empty() {
+        vec![TestCase { key, modifiers: Some(test_modifiers), semantic_key }]
+    } else {
+        test_variations
+    }
+}
+
 #[fasync::run_singlethreaded(test)]
 async fn test_goldens() -> Result<(), Error> {
     let data = fs::read_to_string(DEFAULT_GOLDEN_PATH)?;
@@ -219,15 +268,22 @@ async fn test_goldens() -> Result<(), Error> {
 
     let service = Arc::new(Mutex::new(KeyboardService::new().await?));
 
-    futures::stream::iter(goldens.test_cases.into_iter())
+    let with_variations = goldens.test_cases.into_iter().flat_map(test_case_to_variations);
+
+    futures::stream::iter(with_variations.into_iter())
         .then(|TestCase { key, modifiers, semantic_key }| {
             let service = service.clone();
             async move {
                 let mut service = service.lock().await;
                 let event = service.press_key(key, modifiers).await;
+                let pressed_semantic_key = clone_semantic_key(
+                    &event
+                        .semantic_key
+                        .unwrap_or_else(|| panic!("no semantic_key for {:?}", (key, modifiers))),
+                );
                 assert_eq!(
                     semantic_key,
-                    event_to_semantic_key(event),
+                    pressed_semantic_key,
                     "Pressed key {:?} expected semantic key {:?}",
                     (key, modifiers),
                     semantic_key

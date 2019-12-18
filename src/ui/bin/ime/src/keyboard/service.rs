@@ -141,7 +141,23 @@ impl Service {
             None => return event,
             Some(key) => key,
         };
-        let event_modifiers = event.modifiers.unwrap_or(ui_input::Modifiers::empty());
+        let mut event_modifiers = event.modifiers.unwrap_or(ui_input::Modifiers::empty());
+        if event_modifiers.contains(ui_input::Modifiers::Shift) {
+            event_modifiers.remove(ui_input::Modifiers::LeftShift);
+            event_modifiers.remove(ui_input::Modifiers::RightShift);
+        }
+        if event_modifiers.contains(ui_input::Modifiers::Control) {
+            event_modifiers.remove(ui_input::Modifiers::LeftControl);
+            event_modifiers.remove(ui_input::Modifiers::RightControl);
+        }
+        if event_modifiers.contains(ui_input::Modifiers::Alt) {
+            event_modifiers.remove(ui_input::Modifiers::LeftAlt);
+            event_modifiers.remove(ui_input::Modifiers::RightAlt);
+        }
+        if event_modifiers.contains(ui_input::Modifiers::Meta) {
+            event_modifiers.remove(ui_input::Modifiers::LeftMeta);
+            event_modifiers.remove(ui_input::Modifiers::RightMeta);
+        }
         // TODO: apply key_map for physical key mapping
         if let Some(semantic_key_maps) = &layout.semantic_key_map {
             event.semantic_key = semantic_key_maps.iter().find_map(
