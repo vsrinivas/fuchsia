@@ -24,8 +24,8 @@ pub trait Connection: Sized + Debug {
     /// Returns the report descriptor for this device.
     async fn report_descriptor(&self) -> Result<Bytes, Error>;
 
-    /// Returns the maximum size of packets this device can read.
-    async fn max_packet_size(&self) -> Result<u16, Error>;
+    /// Returns the maximum length of packets this device can read.
+    async fn max_packet_length(&self) -> Result<u16, Error>;
 }
 
 /// An implementation of a `Connection` over the FIDL `fuchsia.hardware.input.Device` protocol.
@@ -61,10 +61,10 @@ pub mod fidl {
     impl Connection for FidlConnection {
         async fn read_packet(&self) -> Result<Packet, Error> {
             // TODO(jsankey): Currently this requests reports that have already been received and
-            // returns ZX_ERR_SHOULD_WAIT if none are available. Once this simple case is working
-            // reliably, expand the implementation to use GetReportsEvent to await for signalling
-            // on an event when a message arrives, potentially changing the method signature to
-            // accept a timeout.
+            // returns an error from the ZX_ERR_SHOULD_WAIT response if none are available. Once
+            // this simple case is working reliably, expand the implementation to use
+            // GetReportsEvent to await for signalling on an event when a message arrives,
+            // potentially changing the method signature to accept a timeout.
             let (status, data) = self
                 .proxy
                 .get_reports()
@@ -98,7 +98,7 @@ pub mod fidl {
                 .map_err(|err| format_err!("FIDL error: {:?}", err))
         }
 
-        async fn max_packet_size(&self) -> Result<u16, Error> {
+        async fn max_packet_length(&self) -> Result<u16, Error> {
             self.proxy
                 .get_max_input_report_size()
                 .await
@@ -114,7 +114,7 @@ pub mod fidl {
         use fuchsia_async as fasync;
         use futures::TryStreamExt;
 
-        const TEST_REPORT_SIZE: u16 = 99;
+        const TEST_REPORT_LENGTH: u16 = 99;
         const TEST_REPORT_DESCRIPTOR: [u8; 8] = [0x06, 0xd0, 0xf1, 0x09, 0x01, 0xa1, 0x01, 0x09];
         const TEST_PACKET: [u8; 9] = [0xfe, 0xef, 0xbc, 0xcb, 0x86, 0x00, 0x02, 0x88, 0x99];
 
@@ -192,15 +192,15 @@ pub mod fidl {
         }
 
         #[fasync::run_until_stalled(test)]
-        async fn test_max_packet_size() -> Result<(), Error> {
+        async fn test_max_packet_length() -> Result<(), Error> {
             let proxy = valid_mock_device_proxy(|req| match req {
                 DeviceRequest::GetMaxInputReportSize { responder } => {
-                    responder.send(TEST_REPORT_SIZE).expect("failed to send response");
+                    responder.send(TEST_REPORT_LENGTH).expect("failed to send response");
                 }
                 _ => panic!("got unexpected device request."),
             });
             let connection = FidlConnection::new(proxy);
-            assert_eq!(connection.max_packet_size().await?, TEST_REPORT_SIZE);
+            assert_eq!(connection.max_packet_length().await?, TEST_REPORT_LENGTH);
             Ok(())
         }
 
@@ -208,10 +208,10 @@ pub mod fidl {
         async fn test_fidl_error() -> Result<(), Error> {
             let connection = FidlConnection::new(invalid_mock_device_proxy());
             connection.report_descriptor().await.expect_err("Should have failed to get descriptor");
-            connection.max_packet_size().await.expect_err("Should have failed to get packet size");
+            connection.max_packet_length().await.expect_err("Should have failed to get packet len");
             Ok(())
         }
-  }
+    }
 }
 
 /// A fake implementation of a `Connection` to simplify unit testing.
@@ -224,9 +224,10 @@ pub mod fake {
     use failure::{format_err, Error};
     use fuchsia_async::futures::lock::Mutex;
     use std::collections::VecDeque;
+    use std::thread;
 
-    /// A fixed packet size used by all devices.
-    const REPORT_SIZE: u16 = 64;
+    /// A fixed packet length used by all fake devices.
+    pub const REPORT_LENGTH: u16 = 64;
 
     /// A single operation for a fake connection
     #[derive(Debug)]
@@ -341,7 +342,9 @@ pub mod fake {
 
     impl Drop for FakeConnection {
         fn drop(&mut self) {
-            self.expect_complete();
+            if !thread::panicking() {
+                self.expect_complete();
+            }
         }
     }
 
@@ -394,9 +397,9 @@ pub mod fake {
             }
         }
 
-        async fn max_packet_size(&self) -> Result<u16, Error> {
+        async fn max_packet_length(&self) -> Result<u16, Error> {
             match self.mode {
-                Mode::Valid { .. } => Ok(REPORT_SIZE),
+                Mode::Valid { .. } => Ok(REPORT_LENGTH),
                 Mode::Invalid => Err(format_err!("Method called on set-to-fail fake connection")),
             }
         }
@@ -425,7 +428,7 @@ pub mod fake {
         async fn test_static_properties() -> Result<(), Error> {
             let connection = FakeConnection::new(&TEST_REPORT_DESCRIPTOR);
             assert_eq!(connection.report_descriptor().await?, &TEST_REPORT_DESCRIPTOR[..]);
-            assert_eq!(connection.max_packet_size().await?, REPORT_SIZE);
+            assert_eq!(connection.max_packet_length().await?, REPORT_LENGTH);
             Ok(())
         }
 
@@ -499,7 +502,7 @@ pub mod fake {
             connection.report_descriptor().await.expect("Should have initially suceeded");
             connection.fail();
             connection.report_descriptor().await.expect_err("Should have failed to get descriptor");
-            connection.max_packet_size().await.expect_err("Should have failed to get packet size");
+            connection.max_packet_length().await.expect_err("Should have failed to get packet len");
             connection.read_packet().await.expect_err("Should have failed to read packet");
             connection
                 .write_packet(TEST_PACKET_1.clone())

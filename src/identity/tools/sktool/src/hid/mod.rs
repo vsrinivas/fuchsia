@@ -6,5 +6,7 @@ mod connection;
 mod device;
 mod message;
 
+use rand::rngs::OsRng;
+
 /// A CTAP device backed by a connection over FIDL to a HID device.
-pub type HidCtapDevice = device::Device<connection::FidlConnection>;
+pub type HidCtapDevice = device::Device<connection::FidlConnection, OsRng>;

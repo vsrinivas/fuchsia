@@ -4,28 +4,28 @@
 
 use bytes::{buf::Iter, Buf, BufMut, Bytes, BytesMut, IntoBuf};
 use failure::{format_err, Error};
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 use std::fmt;
 use std::io::Cursor;
 
 // TODO(jsankey): Add structs for a message (i.e. a collection of packets) and a message builder.
 
 /// The header length for an initialization packet: 4 byte channel ID, 1 byte command, 2 byte len.
-const INIT_HEADER_LENGTH: usize = 7;
+const INIT_HEADER_LENGTH: u16 = 7;
 /// The minimum length of the payload in an initialization packet.
-const INIT_MIN_PAYLOAD_LENGTH: usize = 0;
+const INIT_MIN_PAYLOAD_LENGTH: u16 = 0;
 /// The length of the header for a continuation packet: 4 byte channel ID, 1 byte sequence.
-const CONT_HEADER_LENGTH: usize = 5;
+const CONT_HEADER_LENGTH: u16 = 5;
 /// The minimum length of the payload in a continuation packet.
-const CONT_MIN_PAYLOAD_LENGTH: usize = 1;
+const CONT_MIN_PAYLOAD_LENGTH: u16 = 1;
 /// The maximum theoretical HID packet size, as documented in `fuchsia.hardware.input`. Note that
 /// actual max packet size varies between CTAP devices and is usually much smaller, i.e. 64 bytes.
-const MAX_PACKET_LENGTH: usize = 8192;
+const MAX_PACKET_LENGTH: u16 = 8192;
 
 /// CTAPHID commands as defined in https://fidoalliance.org/specs/fido-v2.0-ps-20190130/
 /// Note that the logical rather than numeric ordering here matches that in the specification.
 #[repr(u8)]
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Command {
     Msg = 0x03,
     Cbor = 0x10,
@@ -90,12 +90,30 @@ impl Packet {
         payload: T,
     ) -> Result<Self, Error> {
         let payload_bytes = payload.into();
-        if payload_bytes.len() > MAX_PACKET_LENGTH - INIT_HEADER_LENGTH {
+        if payload_bytes.len() > (MAX_PACKET_LENGTH - INIT_HEADER_LENGTH) as usize {
             return Err(format_err!("Initialization packet payload exceeded max length"));
-        } else if payload_bytes.len() > message_length as usize {
-            return Err(format_err!("Initialization packet data larger than message length"));
         }
         Ok(Self::Initialization { channel, command, message_length, payload: payload_bytes })
+    }
+
+    /// Creates a new initialization packet using data padded out to the supplied packet length.
+    /// This will require a copy, hence the payload is supplied by reference.
+    pub fn padded_initialization(
+        channel: u32,
+        command: Command,
+        payload: &[u8],
+        packet_length: u16,
+    ) -> Result<Self, Error> {
+        let payload_length: u16 = payload.len().try_into()?;
+        if packet_length < INIT_HEADER_LENGTH + payload_length {
+            return Err(format_err!("Padded initialization packet length shorter than content"));
+        }
+        Self::initialization(
+            channel,
+            command,
+            payload_length,
+            pad(payload, packet_length - INIT_HEADER_LENGTH - payload_length)?,
+        )
     }
 
     /// Creates a new continuation packet.
@@ -105,7 +123,7 @@ impl Packet {
         payload: T,
     ) -> Result<Self, Error> {
         let payload_bytes = payload.into();
-        if payload_bytes.len() > MAX_PACKET_LENGTH - CONT_HEADER_LENGTH {
+        if payload_bytes.len() > (MAX_PACKET_LENGTH - CONT_HEADER_LENGTH) as usize {
             return Err(format_err!("Continuation packet payload exceeded max length"));
         } else if payload_bytes.len() == 0 {
             return Err(format_err!("Continuation packet did not contain any data"));
@@ -122,7 +140,7 @@ impl Packet {
         let len = data.len();
         if (len > 4) && (data[4] & 0x80 != 0) {
             // Initialization packet.
-            if len < INIT_HEADER_LENGTH + INIT_MIN_PAYLOAD_LENGTH {
+            if len < (INIT_HEADER_LENGTH + INIT_MIN_PAYLOAD_LENGTH) as usize {
                 return Err(format_err!("Data too short for initialization packet"));
             };
             let mut buf = data.into_buf();
@@ -134,7 +152,7 @@ impl Packet {
             )
         } else {
             // Continuation packet.
-            if len < CONT_HEADER_LENGTH + CONT_MIN_PAYLOAD_LENGTH {
+            if len < (CONT_HEADER_LENGTH + CONT_MIN_PAYLOAD_LENGTH) as usize {
                 return Err(format_err!("Data too short for continuation packet"));
             }
             let mut buf = data.into_buf();
@@ -143,6 +161,32 @@ impl Packet {
                 /*sequence*/ buf.get_u8(),
                 /*payload*/ buf.bytes(),
             )
+        }
+    }
+
+    /// Returns the channel of this packet.
+    pub fn channel(&self) -> u32 {
+        match self {
+            Packet::Initialization { channel, .. } => *channel,
+            Packet::Continuation { channel, .. } => *channel,
+        }
+    }
+
+    /// Returns the command of this packet, or an error if called on a continuation packet.
+    pub fn command(&self) -> Result<Command, Error> {
+        match self {
+            Packet::Initialization { command, .. } => Ok(*command),
+            Packet::Continuation { .. } => {
+                Err(format_err!("Cannot get command for continuation packet"))
+            }
+        }
+    }
+
+    /// Returns the payload of this packet.
+    pub fn payload(&self) -> &Bytes {
+        match self {
+            Packet::Initialization { payload, .. } => &payload,
+            Packet::Continuation { payload, .. } => &payload,
         }
     }
 }
@@ -173,7 +217,7 @@ impl Into<Bytes> for Packet {
     fn into(self) -> Bytes {
         match self {
             Packet::Initialization { channel, command, message_length, payload } => {
-                let mut data = BytesMut::with_capacity(INIT_HEADER_LENGTH + payload.len());
+                let mut data = BytesMut::with_capacity(INIT_HEADER_LENGTH as usize + payload.len());
                 data.put_u32_be(channel);
                 // Setting the MSB on a command byte identifies an init packet.
                 data.put_u8(0x80 | command as u8);
@@ -182,7 +226,7 @@ impl Into<Bytes> for Packet {
                 Bytes::from(data)
             }
             Packet::Continuation { channel, sequence, payload } => {
-                let mut data = BytesMut::with_capacity(CONT_HEADER_LENGTH + payload.len());
+                let mut data = BytesMut::with_capacity(CONT_HEADER_LENGTH as usize + payload.len());
                 data.put_u32_be(channel);
                 data.put_u8(sequence);
                 data.put(payload);
@@ -210,6 +254,23 @@ impl TryFrom<Vec<u8>> for Packet {
     fn try_from(value: Vec<u8>) -> Result<Self, Error> {
         Packet::new(value)
     }
+}
+
+/// Convenience method to create a new `Bytes` with the supplied input padded with zeros.
+fn pad(data: &[u8], length: u16) -> Result<Bytes, Error> {
+    // The fact that FIDL bindings require mutable data when sending a packet means we need to
+    // define packets as the full length instead of only defining a packet as the meaningful
+    // payload and iterating over additional fixed zero bytes to form the full length.
+    //
+    // Defining padded packets requires a copy operatation (unlike the other zero-copy
+    // initializers) and so we define padding methods that use byte array references.
+    if data.len() > length as usize {
+        return Err(format_err!("Data to pad exceeded requested length"));
+    }
+    let mut bytes = Bytes::with_capacity(length as usize);
+    bytes.extend(data);
+    bytes.extend(&vec![0; length as usize]);
+    Ok(bytes)
 }
 
 #[cfg(test)]
@@ -263,6 +324,7 @@ mod tests {
     fn test_non_empty_initialization_packet() -> Result<(), Error> {
         // Wink = 0x08
         // Message len = 1122 hex = 4386 dec
+        // Note that in real life packets are padded.
         do_conversion_test(
             Packet::initialization(
                 TEST_CHANNEL,
@@ -272,6 +334,22 @@ mod tests {
             )?,
             "InitPacket/Wink ch=89abcdef msg_len=4386 payload=[44, 55, 66, 77]",
             "[89, ab, cd, ef, 88, 11, 22, 44, 55, 66, 77]",
+        )
+    }
+
+    #[test]
+    fn test_padded_initialization_packet() -> Result<(), Error> {
+        // Wink = 0x08
+        // Note that in real life packets are larger than the 16 bytes here.
+        do_conversion_test(
+            Packet::padded_initialization(
+                TEST_CHANNEL,
+                Command::Wink,
+                &vec![0x44, 0x55, 0x66, 0x77],
+                16,
+            )?,
+            "InitPacket/Wink ch=89abcdef msg_len=4 payload=[44, 55, 66, 77, 00, 00, 00, 00, 00]",
+            "[89, ab, cd, ef, 88, 00, 04, 44, 55, 66, 77, 00, 00, 00, 00, 00]",
         )
     }
 
@@ -289,8 +367,6 @@ mod tests {
     fn test_invalid_initialization_packet() -> Result<(), Error> {
         // Payload longer than the max packet size should fail.
         assert!(Packet::initialization(TEST_CHANNEL, TEST_COMMAND, 20000, vec![0; 10000]).is_err());
-        // Message length smaller than the payload of its first packet should fail.
-        assert!(Packet::initialization(TEST_CHANNEL, TEST_COMMAND, 28, vec![0; 30]).is_err());
         Ok(())
     }
 
