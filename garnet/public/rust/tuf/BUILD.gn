@@ -23,6 +23,7 @@ rustc_library("tuf") {
     "//third_party/rust_crates:itoa",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:percent-encoding",
     "//third_party/rust_crates:ring",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_derive",
