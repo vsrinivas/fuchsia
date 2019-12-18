@@ -676,6 +676,24 @@ zx_status_t sys_object_get_property(zx_handle_t handle_value, uint32_t property,
       uintptr_t value = process->aspace()->vdso_base_address();
       return _value.reinterpret<uintptr_t>().copy_to_user(value);
     }
+    case ZX_PROP_PROCESS_HW_TRACE_CONTEXT_ID: {
+      if (!DebuggingSyscallsEnabled()) {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+#if ARCH_X86
+      if (size < sizeof(uintptr_t)) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+      }
+      auto process = DownCastDispatcher<ProcessDispatcher>(&dispatcher);
+      if (!process) {
+        return ZX_ERR_WRONG_TYPE;
+      }
+      uintptr_t value = process->aspace()->arch_aspace().pt_phys();
+      return _value.reinterpret<uintptr_t>().copy_to_user(value);
+#else
+      return ZX_ERR_NOT_SUPPORTED;
+#endif
+    }
     case ZX_PROP_SOCKET_RX_THRESHOLD: {
       if (size < sizeof(size_t))
         return ZX_ERR_BUFFER_TOO_SMALL;

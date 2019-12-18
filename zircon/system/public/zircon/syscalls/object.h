@@ -520,6 +520,12 @@ typedef struct zx_info_resource {
 // See third_party/ulib/musl/ldso/dynlink.c.
 #define ZX_PROP_PROCESS_BREAK_ON_LOAD ((uint32_t) 7u)
 
+// The process's context id as recorded by h/w instruction tracing, a uintptr_t.
+// On X86 this is the cr3 value.
+// TODO(dje): Wasn't sure whether the gaps in property numbers are unusable
+// due to being old dleeted values. For now I just picked something.
+#define ZX_PROP_PROCESS_HW_TRACE_CONTEXT_ID ((uint32_t) 8u)
+
 // Argument is a size_t.
 #define ZX_PROP_SOCKET_RX_THRESHOLD         12u
 #define ZX_PROP_SOCKET_TX_THRESHOLD         13u

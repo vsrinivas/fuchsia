@@ -9,6 +9,7 @@ source_set("process") {
   ]
   deps = [
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fit",
     "$zx/system/ulib/mini-process",
     "$zx/system/ulib/test-exceptions",
     "$zx/system/ulib/zircon",

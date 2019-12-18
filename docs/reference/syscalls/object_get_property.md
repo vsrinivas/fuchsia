@@ -119,6 +119,23 @@ Allowed operations: **get**
 
 The base address of the vDSO mapping, or zero.
 
+### ZX_PROP_PROCESS_HW_TRACE_CONTEXT_ID
+
+*handle* type: **Process**
+
+*value* type: `uintptr_t`
+
+Allowed operations: **get**
+
+The context ID distinguishes different processes in hardware instruction tracing.
+On Intel X86-64 this is the value of register CR3.
+
+To obtain `ZX_PROP_PROCESS_HW_TRACE_CONTEXT_ID`, you must specify
+`kernel.enable-debugging-syscalls=true` on the kernel command line. Otherwise,
+the function returns **ZX_ERR_NOT_SUPPORTED**.
+
+Currently only defined for X86.
+
 ### ZX_PROP_SOCKET_RX_THRESHOLD
 
 *handle* type: **Socket**

@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fit/function.h>
 #include <lib/test-exceptions/exception-catcher.h>
+#include <lib/zx/event.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <threads.h>
@@ -838,6 +840,93 @@ TEST(ProcessTest, ForbidDestroyRootVmar) {
   zx_info_maps_t map;
   size_t actual, avail;
   ASSERT_OK(process.get_info(ZX_INFO_PROCESS_MAPS, &map, sizeof(map), &actual, &avail));
+}
+
+TEST(ProcessTest, ProcessHwTraceContextIdProperty) {
+  // Handle whether or not the needed syscall is enabled.
+  // It is only enabled with the "kernel.enable-debugging-syscalls=true"
+  // kernel command line argument. Unsupported architectures act as-if the
+  // syscall is disabled.
+  bool debugging_syscalls_enabled = false;
+
+#ifdef __x86_64__
+  {
+    zx_status_t status;
+    char too_small;
+    status = zx_object_get_property(zx_process_self(), ZX_PROP_PROCESS_HW_TRACE_CONTEXT_ID,
+                                    &too_small, sizeof(too_small));
+    if (status != ZX_ERR_NOT_SUPPORTED) {
+      EXPECT_EQ(status, ZX_ERR_BUFFER_TOO_SMALL, "unexpected status: %d", status);
+      // If we didn't get ZX_ERR_NOT_SUPPORTED, then the needed support is present and enabled.
+      debugging_syscalls_enabled = true;
+    }
+  }
+#endif
+
+  auto supported_read_prop_test = [](const char* test_name) {
+    zx_status_t status;
+    uintptr_t prop_aspace = 0;
+    status = zx_object_get_property(zx_process_self(), ZX_PROP_PROCESS_HW_TRACE_CONTEXT_ID,
+                                    &prop_aspace, sizeof(prop_aspace));
+    EXPECT_EQ(status, ZX_OK, "%s: zx_object_get_property failed: %d", test_name, status);
+    // We can't verify the value, but we can at least check it's reasonable.
+    EXPECT_NE(prop_aspace, 0, "%s", test_name);
+    EXPECT_EQ(prop_aspace & (PAGE_SIZE - 1), 0, "%s", test_name);
+  };
+  auto unsupported_read_prop_test = [](const char* test_name) {
+    zx_status_t status;
+    uintptr_t prop_aspace;
+    status = zx_object_get_property(zx_process_self(), ZX_PROP_PROCESS_HW_TRACE_CONTEXT_ID,
+                                    &prop_aspace, sizeof(prop_aspace));
+    EXPECT_EQ(status, ZX_ERR_NOT_SUPPORTED, "%s: unexpected status: %d", test_name, status);
+  };
+
+  fit::function<void(const char*)> read_prop_test;
+  printf("Note: debugging syscalls are %s\n",
+         debugging_syscalls_enabled ? "enabled" : "disabled");
+  if (debugging_syscalls_enabled) {
+    read_prop_test = std::move(supported_read_prop_test);
+  } else {
+    read_prop_test = std::move(unsupported_read_prop_test);
+  }
+
+  // Verify obtaining the context ID works through the stages of process
+  // creation/death.
+  static const char name[] = "context-id-test";
+  {
+    zx::process proc;
+    zx::vmar vmar;
+
+    ASSERT_OK(zx::process::create(*zx::job::default_job(), name, sizeof(name) - 1, 0,
+                                  &proc, &vmar));
+    read_prop_test("process created");
+
+    zx::thread thread;
+    ASSERT_OK(zx::thread::create(proc, name, sizeof(name) - 1, 0u, &thread));
+    zx::event event;
+    ASSERT_OK(zx::event::create(0u, &event));
+    zx::channel cmd_channel;
+    ASSERT_OK(start_mini_process_etc(proc.get(), thread.get(), vmar.get(), event.get(), true,
+                                     cmd_channel.reset_and_get_address()));
+    ASSERT_OK(mini_process_cmd(cmd_channel.get(), MINIP_CMD_ECHO_MSG, nullptr));
+    read_prop_test("process live");
+
+    ASSERT_EQ(mini_process_cmd(cmd_channel.get(), MINIP_CMD_EXIT_NORMAL, nullptr),
+              ZX_ERR_PEER_CLOSED);
+    zx_signals_t signals;
+    ASSERT_OK(proc.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), &signals));
+    ASSERT_EQ(signals, ZX_TASK_TERMINATED);
+    read_prop_test("process dead");
+  }
+
+  // The property is read-only.
+  {
+    uintptr_t prop_to_set = 0;
+    zx_status_t status = zx_object_set_property(zx_process_self(),
+                                                ZX_PROP_PROCESS_HW_TRACE_CONTEXT_ID,
+                                                &prop_to_set, sizeof(prop_to_set));
+    EXPECT_EQ(status, ZX_ERR_INVALID_ARGS, "unexpected status: %d", status);
+  }
 }
 
 }  // namespace
