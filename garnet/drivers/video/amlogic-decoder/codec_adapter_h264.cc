@@ -361,6 +361,13 @@ void CodecAdapterH264::CoreCodecStopStream() {
 }
 
 void CodecAdapterH264::CoreCodecAddBuffer(CodecPort port, const CodecBuffer* buffer) {
+  if (port == kInputPort) {
+    const char* kInputBufferName = "H264InputBuffer";
+    buffer->vmo().set_property(ZX_PROP_NAME, kInputBufferName, strlen(kInputBufferName));
+  } else if (port == kOutputPort) {
+    const char* kOutputBufferName = "H264OutputBuffer";
+    buffer->vmo().set_property(ZX_PROP_NAME, kOutputBufferName, strlen(kOutputBufferName));
+  }
   if (port != kOutputPort) {
     return;
   }

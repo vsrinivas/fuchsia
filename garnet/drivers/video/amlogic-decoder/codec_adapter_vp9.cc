@@ -148,7 +148,6 @@ fuchsia::sysmem::BufferCollectionConstraints
 CodecAdapterVp9::CoreCodecGetBufferCollectionConstraints(
     CodecPort port, const fuchsia::media::StreamBufferConstraints& stream_buffer_constraints,
     const fuchsia::media::StreamBufferPartialSettings& partial_settings) {
-
   fuchsia::sysmem::BufferCollectionConstraints result;
 
   // For now, we didn't report support for single_buffer_mode, and CodecImpl
@@ -527,6 +526,13 @@ void CodecAdapterVp9::CoreCodecStopStream() {
 }
 
 void CodecAdapterVp9::CoreCodecAddBuffer(CodecPort port, const CodecBuffer* buffer) {
+  if (port == kInputPort) {
+    const char* kInputBufferName = "VP9InputBuffer";
+    buffer->vmo().set_property(ZX_PROP_NAME, kInputBufferName, strlen(kInputBufferName));
+  } else if (port == kOutputPort) {
+    const char* kOutputBufferName = "VP9OutputBuffer";
+    buffer->vmo().set_property(ZX_PROP_NAME, kOutputBufferName, strlen(kOutputBufferName));
+  }
   if (port != kOutputPort) {
     return;
   }
@@ -1002,12 +1008,9 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
   }
 }
 
-bool CodecAdapterVp9::IsCurrentOutputBufferCollectionUsable(uint32_t min_frame_count,
-                                                            uint32_t max_frame_count,
-                                                            uint32_t coded_width,
-                                                            uint32_t coded_height, uint32_t stride,
-                                                            uint32_t display_width,
-                                                            uint32_t display_height) {
+bool CodecAdapterVp9::IsCurrentOutputBufferCollectionUsable(
+    uint32_t min_frame_count, uint32_t max_frame_count, uint32_t coded_width, uint32_t coded_height,
+    uint32_t stride, uint32_t display_width, uint32_t display_height) {
   // We don't ask codec_impl about this, because as far as codec_impl is
   // concerned, the output buffer collection might not be used for video
   // frames.  We could have common code for video decoders but for now we just
@@ -1079,9 +1082,9 @@ bool CodecAdapterVp9::IsCurrentOutputBufferCollectionUsable(uint32_t min_frame_c
 }
 
 zx_status_t CodecAdapterVp9::InitializeFramesHandler(::zx::bti bti, uint32_t min_frame_count,
-                                                     uint32_t max_frame_count,
-                                                     uint32_t coded_width, uint32_t coded_height,
-                                                     uint32_t stride, uint32_t display_width,
+                                                     uint32_t max_frame_count, uint32_t coded_width,
+                                                     uint32_t coded_height, uint32_t stride,
+                                                     uint32_t display_width,
                                                      uint32_t display_height, bool has_sar,
                                                      uint32_t sar_width, uint32_t sar_height) {
   // First handle the special case of EndOfStream marker showing up at the
