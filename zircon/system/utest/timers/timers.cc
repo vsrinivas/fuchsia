@@ -7,8 +7,8 @@
 #include <lib/zx/timer.h>
 #include <stdio.h>
 #include <threads.h>
-
 #include <unistd.h>
+
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -214,19 +214,13 @@ void CheckCoalescing(uint32_t mode) {
 }
 
 // Test is disabled, see |CheckCoalescing|.
-//
-// TODO(ZX-4592): Use DISABLED_ prefix when it's available.
-//
-// TEST(TimersTest, CoalesceTestEarly) {
-//   ASSERT_NO_FAILURES(CheckCoalescing(ZX_TIMER_SLACK_EARLY));
-// }
+TEST(TimersTest, DISABLED_CoalesceTestEarly) {
+  ASSERT_NO_FAILURES(CheckCoalescing(ZX_TIMER_SLACK_EARLY));
+}
 
 // Test is disabled, see |CheckCoalescing|.
-//
-// TODO(ZX-4592): Use DISABLED_ prefix when it's available.
-//
-// TEST(TimersTest, CoalesceTestLate) {
-//   ASSERT_NO_FAILURES(CheckCoalescing(ZX_TIMER_SLACK_LATE));
-// }
+TEST(TimersTest, DISABLED_CoalesceTestLate) {
+  ASSERT_NO_FAILURES(CheckCoalescing(ZX_TIMER_SLACK_LATE));
+}
 
 }  // anonymous namespace
