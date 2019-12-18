@@ -370,20 +370,22 @@ mod tests {
                 model::ModelParams,
                 moniker::AbsoluteMoniker,
                 resolver::ResolverRegistry,
-                testing::{mocks::*, routing_test_helpers::*, test_helpers::*, test_hook::*},
+                testing::{
+                    mocks::*, routing_test_helpers::*, test_helpers, test_helpers::*, test_hook::*,
+                },
             },
             startup,
         },
         cm_rust::{
-            self, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, ExposeDecl,
-            ExposeServiceProtocolDecl, ExposeSource, ExposeTarget, NativeIntoFidl,
+            self, CapabilityPath, ChildDecl, ExposeDecl, ExposeServiceProtocolDecl, ExposeSource,
+            ExposeTarget, NativeIntoFidl,
         },
         fidl::endpoints,
         fidl_fidl_examples_echo as echo,
         fidl_fuchsia_io::MODE_TYPE_SERVICE,
         fuchsia_async as fasync,
         io_util::OPEN_RIGHT_READABLE,
-        std::collections::{HashMap, HashSet},
+        std::collections::HashSet,
         std::convert::TryFrom,
         std::path::PathBuf,
     };
@@ -416,8 +418,10 @@ mod tests {
             let model = Arc::new(Model::new(ModelParams {
                 root_component_url: "test:///root".to_string(),
                 root_resolver_registry: resolver,
-                elf_runner: mock_runner,
-                builtin_runners: HashMap::new(),
+                elf_runner: mock_runner.clone(),
+                builtin_runners: vec![(test_helpers::TEST_RUNNER_NAME.into(), mock_runner as _)]
+                    .into_iter()
+                    .collect(),
             }));
             let builtin_environment = Arc::new(
                 BuiltinEnvironment::new(&startup_args, &model, config)
@@ -453,24 +457,17 @@ mod tests {
         let mock_runner = Arc::new(MockRunner::new());
         mock_resolver.add_component(
             "root",
-            ComponentDecl {
-                children: vec![ChildDecl {
-                    name: "system".to_string(),
-                    url: "test:///system".to_string(),
-                    startup: fsys::StartupMode::Lazy,
-                }],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .add_lazy_child("system")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         );
         mock_resolver.add_component(
             "system",
-            ComponentDecl {
-                collections: vec![CollectionDecl {
-                    name: "coll".to_string(),
-                    durability: fsys::Durability::Transient,
-                }],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .add_collection("coll", fsys::Durability::Transient)
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         );
         let hook = TestHook::new();
         let test = RealmCapabilityTest::new(
@@ -504,30 +501,18 @@ mod tests {
         let mut mock_resolver = MockResolver::new();
         mock_resolver.add_component(
             "root",
-            ComponentDecl {
-                children: vec![ChildDecl {
-                    name: "system".to_string(),
-                    url: "test:///system".to_string(),
-                    startup: fsys::StartupMode::Lazy,
-                }],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .add_lazy_child("system")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         );
         mock_resolver.add_component(
             "system",
-            ComponentDecl {
-                collections: vec![
-                    CollectionDecl {
-                        name: "coll".to_string(),
-                        durability: fsys::Durability::Transient,
-                    },
-                    CollectionDecl {
-                        name: "pcoll".to_string(),
-                        durability: fsys::Durability::Persistent,
-                    },
-                ],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .add_collection("coll", fsys::Durability::Transient)
+                .add_collection("pcoll", fsys::Durability::Persistent)
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         );
         let hook = TestHook::new();
         let test = RealmCapabilityTest::new(
@@ -616,27 +601,20 @@ mod tests {
         let mut mock_resolver = MockResolver::new();
         mock_resolver.add_component(
             "root",
-            ComponentDecl {
-                children: vec![ChildDecl {
-                    name: "system".to_string(),
-                    url: "test:///system".to_string(),
-                    startup: fsys::StartupMode::Lazy,
-                }],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .add_lazy_child("system")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         );
         mock_resolver.add_component(
             "system",
-            ComponentDecl {
-                collections: vec![CollectionDecl {
-                    name: "coll".to_string(),
-                    durability: fsys::Durability::Transient,
-                }],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .add_collection("coll", fsys::Durability::Transient)
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         );
-        mock_resolver.add_component("a", default_component_decl());
-        mock_resolver.add_component("b", default_component_decl());
+        mock_resolver.add_component("a", component_decl_with_test_runner());
+        mock_resolver.add_component("b", component_decl_with_test_runner());
 
         let hook = Arc::new(TestHook::new());
 
@@ -733,24 +711,17 @@ mod tests {
         let mut mock_resolver = MockResolver::new();
         mock_resolver.add_component(
             "root",
-            ComponentDecl {
-                children: vec![ChildDecl {
-                    name: "system".to_string(),
-                    url: "test:///system".to_string(),
-                    startup: fsys::StartupMode::Lazy,
-                }],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .add_lazy_child("system")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         );
         mock_resolver.add_component(
             "system",
-            ComponentDecl {
-                collections: vec![CollectionDecl {
-                    name: "coll".to_string(),
-                    durability: fsys::Durability::Transient,
-                }],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .add_collection("coll", fsys::Durability::Transient)
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         );
         let hook = TestHook::new();
         let test = RealmCapabilityTest::new(
@@ -799,33 +770,25 @@ mod tests {
         let mut mock_resolver = MockResolver::new();
         mock_resolver.add_component(
             "root",
-            ComponentDecl {
-                children: vec![ChildDecl {
-                    name: "system".to_string(),
-                    url: "test:///system".to_string(),
-                    startup: fsys::StartupMode::Lazy,
-                }],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .add_lazy_child("system")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         );
         mock_resolver.add_component(
             "system",
-            ComponentDecl {
-                exposes: vec![ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
+            ComponentDeclBuilder::new()
+                .expose(ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
                     source: ExposeSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     target: ExposeTarget::Realm,
-                })],
-                children: vec![ChildDecl {
-                    name: "eager".to_string(),
-                    url: "test:///eager".to_string(),
-                    startup: fsys::StartupMode::Eager,
-                }],
-                ..default_component_decl()
-            },
+                }))
+                .add_eager_child("eager")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         );
-        mock_resolver.add_component("eager", ComponentDecl { ..default_component_decl() });
+        mock_resolver.add_component("eager", component_decl_with_test_runner());
         let mock_runner = Arc::new(MockRunner::new());
         let mut out_dir = OutDir::new();
         out_dir.add_echo_service(CapabilityPath::try_from("/svc/foo").unwrap());
@@ -872,25 +835,21 @@ mod tests {
         let mut mock_resolver = MockResolver::new();
         mock_resolver.add_component(
             "root",
-            ComponentDecl {
-                collections: vec![CollectionDecl {
-                    name: "coll".to_string(),
-                    durability: fsys::Durability::Transient,
-                }],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .add_collection("coll", fsys::Durability::Transient)
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         );
         mock_resolver.add_component(
             "system",
-            ComponentDecl {
-                exposes: vec![ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
+            ComponentDeclBuilder::new()
+                .expose(ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
                     source: ExposeSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     target: ExposeTarget::Realm,
-                })],
-                ..default_component_decl()
-            },
+                }))
+                .build(),
         );
         let mock_runner = Arc::new(MockRunner::new());
         let mut out_dir = OutDir::new();
@@ -939,29 +898,15 @@ mod tests {
         let mut mock_resolver = MockResolver::new();
         mock_resolver.add_component(
             "root",
-            ComponentDecl {
-                children: vec![
-                    ChildDecl {
-                        name: "system".to_string(),
-                        url: "test:///system".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    },
-                    ChildDecl {
-                        name: "unresolvable".to_string(),
-                        url: "test:///unresolvable".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    },
-                    ChildDecl {
-                        name: "unrunnable".to_string(),
-                        url: "test:///unrunnable".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    },
-                ],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .add_lazy_child("system")
+                .add_lazy_child("unresolvable")
+                .add_lazy_child("unrunnable")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         );
-        mock_resolver.add_component("system", ComponentDecl { ..default_component_decl() });
-        mock_resolver.add_component("unrunnable", ComponentDecl { ..default_component_decl() });
+        mock_resolver.add_component("system", component_decl_with_test_runner());
+        mock_resolver.add_component("unrunnable", component_decl_with_test_runner());
         let mock_runner = Arc::new(MockRunner::new());
         mock_runner.cause_failure("unrunnable");
         let hook = TestHook::new();
@@ -1024,26 +969,14 @@ mod tests {
         let mut mock_resolver = MockResolver::new();
         mock_resolver.add_component(
             "root",
-            ComponentDecl {
-                children: vec![ChildDecl {
-                    name: "static".to_string(),
-                    url: "test:///static".to_string(),
-                    startup: fsys::StartupMode::Lazy,
-                }],
-                collections: vec![
-                    CollectionDecl {
-                        name: "coll".to_string(),
-                        durability: fsys::Durability::Transient,
-                    },
-                    CollectionDecl {
-                        name: "coll2".to_string(),
-                        durability: fsys::Durability::Transient,
-                    },
-                ],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .add_lazy_child("static")
+                .add_collection("coll", fsys::Durability::Transient)
+                .add_collection("coll2", fsys::Durability::Transient)
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         );
-        mock_resolver.add_component("static", default_component_decl());
+        mock_resolver.add_component("static", component_decl_with_test_runner());
         let mock_runner = Arc::new(MockRunner::new());
         let hook = TestHook::new();
         let test =
@@ -1100,13 +1033,10 @@ mod tests {
         let mut mock_resolver = MockResolver::new();
         mock_resolver.add_component(
             "root",
-            ComponentDecl {
-                collections: vec![CollectionDecl {
-                    name: "coll".to_string(),
-                    durability: fsys::Durability::Transient,
-                }],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .add_collection("coll", fsys::Durability::Transient)
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         );
         let mock_runner = Arc::new(MockRunner::new());
         let hook = TestHook::new();

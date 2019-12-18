@@ -19,7 +19,7 @@ use {
         },
         startup::Arguments,
     },
-    cm_rust::{ChildDecl, ComponentDecl, NativeIntoFidl},
+    cm_rust::{ChildDecl, CollectionDecl, ComponentDecl, NativeIntoFidl},
     fidl::endpoints::{self, ServerEnd},
     fidl_fidl_examples_echo as echo, fidl_fuchsia_data as fdata,
     fidl_fuchsia_io::{
@@ -202,6 +202,14 @@ impl ComponentDeclBuilder {
         self
     }
 
+    /// Add a child element with the given name and durability.
+    pub fn add_collection(mut self, name: &str, durability: fsys::Durability) -> Self {
+        self.result
+            .collections
+            .push(CollectionDecl { name: name.to_string(), durability: durability });
+        self
+    }
+
     /// Add a lazily instantiated child with a default test URL derived from the name.
     pub fn add_lazy_child(self, name: &str) -> Self {
         self.add_custom_child(name, &format!("test:///{}", name), fsys::StartupMode::Lazy)
@@ -220,33 +228,30 @@ impl ComponentDeclBuilder {
         self
     }
 
-    /// Return a mutable reference to the declaration being built.
-    pub fn decl(&mut self) -> &mut ComponentDecl {
-        &mut self.result
-    }
-
     /// Route the named runner cap to every currently declared child.
     pub fn offer_runner_to_children(mut self, name: &str) -> Self {
         // For each child, offer the runner cap from our realm to the child.
         for child in self.result.children.iter() {
-            self.result.offers.push(cm_rust::OfferDecl::Runner(cm_rust::OfferRunnerDecl {
-                source: cm_rust::OfferRunnerSource::Realm,
-                source_name: name.into(),
-                target: cm_rust::OfferTarget::Child(child.name.to_string()),
-                target_name: name.into(),
-            }));
+            self.result.offers.push(offer_runner_cap_to_child(name, &child.name));
         }
 
         // Similarly, for each collection, offer the runner cap.
         for collection in self.result.collections.iter() {
-            self.result.offers.push(cm_rust::OfferDecl::Runner(cm_rust::OfferRunnerDecl {
-                source: cm_rust::OfferRunnerSource::Realm,
-                source_name: name.into(),
-                target: cm_rust::OfferTarget::Collection(collection.name.to_string()),
-                target_name: name.into(),
-            }));
+            self.result.offers.push(offer_runner_cap_to_collection(name, &collection.name));
         }
 
+        self
+    }
+
+    /// Add a custom offer.
+    pub fn offer(mut self, offer: cm_rust::OfferDecl) -> Self {
+        self.result.offers.push(offer);
+        self
+    }
+
+    /// Add a custom expose.
+    pub fn expose(mut self, expose: cm_rust::ExposeDecl) -> Self {
+        self.result.exposes.push(expose);
         self
     }
 
@@ -254,6 +259,28 @@ impl ComponentDeclBuilder {
     pub fn build(self) -> ComponentDecl {
         self.result
     }
+}
+
+/// Create a fsys::OfferRunnerDecl offering the given cap from the Realm
+/// to the given child component.
+pub fn offer_runner_cap_to_child(runner_cap: &str, child: &str) -> cm_rust::OfferDecl {
+    cm_rust::OfferDecl::Runner(cm_rust::OfferRunnerDecl {
+        source: cm_rust::OfferRunnerSource::Realm,
+        source_name: runner_cap.into(),
+        target: cm_rust::OfferTarget::Child(child.to_string()),
+        target_name: runner_cap.into(),
+    })
+}
+
+/// Create a fsys::OfferRunnerDecl offering the given cap from the Realm
+/// to the given child collection.
+pub fn offer_runner_cap_to_collection(runner_cap: &str, child: &str) -> cm_rust::OfferDecl {
+    cm_rust::OfferDecl::Runner(cm_rust::OfferRunnerDecl {
+        source: cm_rust::OfferRunnerSource::Realm,
+        source_name: runner_cap.into(),
+        target: cm_rust::OfferTarget::Collection(child.to_string()),
+        target_name: runner_cap.into(),
+    })
 }
 
 pub async fn dir_contains<'a>(
