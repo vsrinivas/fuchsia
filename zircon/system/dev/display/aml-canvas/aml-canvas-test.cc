@@ -49,18 +49,11 @@ class AmlCanvasTest : public zxtest::Test {
 
     zx::bti bti;
     EXPECT_OK(fake_bti_create(bti.reset_and_get_address()));
-    fake_bti_ = zx::bti(bti.get());
 
     fbl::AllocChecker ac;
     canvas_ = fbl::make_unique_checked<AmlCanvas>(&ac, fake_ddk::kFakeParent, std::move(mmio),
                                                   std::move(bti));
     EXPECT_TRUE(ac.check());
-  }
-
-  ~AmlCanvasTest() {
-    if (fake_bti_.is_valid()) {
-      fake_bti_destroy(fake_bti_.get());
-    }
   }
 
   void TestLifecycle() {
@@ -163,7 +156,6 @@ class AmlCanvasTest : public zxtest::Test {
   std::vector<uint8_t> canvas_indices_;
   ddk_mock::MockMmioReg mock_reg_array_[kMmioRegCount];
   ddk_mock::MockMmioRegRegion mock_regs_;
-  zx::bti fake_bti_;
   std::unique_ptr<AmlCanvas> canvas_;
 };
 

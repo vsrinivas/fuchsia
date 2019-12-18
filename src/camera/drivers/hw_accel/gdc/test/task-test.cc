@@ -197,9 +197,6 @@ class TaskTest : public zxtest::Test {
   }
 
   void TearDown() override {
-    if (bti_handle_ != ZX_HANDLE_INVALID) {
-      fake_bti_destroy(bti_handle_.get());
-    }
     zx_handle_close(config_info_.config_vmo);
 
     camera::DestroyContiguousBufferCollection(input_buffer_collection_);
@@ -616,7 +613,6 @@ TEST(TaskTest, NonContigVmoTest) {
   EXPECT_OK(camera::DestroyContiguousBufferCollection(input_buffer_collection));
   EXPECT_OK(camera::DestroyContiguousBufferCollection(output_buffer_collection));
   zx_handle_close(info.config_vmo);
-  fake_bti_destroy(bti_handle.get());
 }
 
 TEST(TaskTest, InvalidConfigVmoTest) {
@@ -656,7 +652,6 @@ TEST(TaskTest, InvalidConfigVmoTest) {
   // Cleanup
   EXPECT_OK(camera::DestroyContiguousBufferCollection(input_buffer_collection));
   EXPECT_OK(camera::DestroyContiguousBufferCollection(output_buffer_collection));
-  fake_bti_destroy(bti_handle.get());
 }
 
 TEST(TaskTest, InvalidBufferCollectionTest) {
@@ -683,7 +678,6 @@ TEST(TaskTest, InvalidBufferCollectionTest) {
   zx_status_t status = task->Init(nullptr, nullptr, nullptr, image_format_table, 1, 0, &info, 1,
                                   &frame_callback, &res_callback, bti_handle);
   EXPECT_NE(ZX_OK, status);
-  fake_bti_destroy(bti_handle.get());
 }
 
 }  // namespace
