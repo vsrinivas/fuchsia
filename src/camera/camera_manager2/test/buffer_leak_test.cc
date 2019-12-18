@@ -205,7 +205,11 @@ class BufferLeakTest : public gtest::TestLoopFixture {
   fuchsia::sysmem::AllocatorPtr allocator_;
 };
 
-TEST_F(BufferLeakTest, RepeatConnections) {
+// TODO(fxb/42607): During the execution of this test, netstack occasionally
+// fails when attempting to allocate buffers, causing it to fall over and crash.
+// This causes the device to fall into a bad state in test harnesses, so further
+// investigation needs to be done to allow this test to coexist with netstack.
+TEST_F(BufferLeakTest, DISABLED_RepeatConnections) {
   // Repeatedly connect to streams until the total memory allocated is at least twice the size of
   // all physical memory.
   uint64_t allocation_sum = 0;
