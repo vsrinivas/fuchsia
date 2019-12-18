@@ -26,6 +26,8 @@ class Type(object):
     EXECUTABLE = 'zx_executable'
     TEST = 'zx_test'
     TEST_DRIVER = 'zx_test_driver'
+    @classmethod
+    def all(cls): return [cls.DRIVER, cls.EXECUTABLE, cls.TEST, cls.TEST_DRIVER]
 
 
 BINARY_TYPES = {
@@ -133,7 +135,7 @@ def transform_build_file(build):
             sys.stdout.write('  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]\n')
             sys.stdout.write('  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]\n')
 
-        if starting_type in [Type.EXECUTABLE, Type.TEST]:
+        if starting_type in Type.all():
             sys.stdout.write('  configs += [ "//build/unification/config:zircon-migrated" ]\n')
 
 
