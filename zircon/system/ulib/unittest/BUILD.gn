@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 zx_library("unittest") {
-  sdk = "source"
+  sdk = "shared"
   sdk_headers = [ "unittest/unittest.h" ]
   testonly = true
   host = true
