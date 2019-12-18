@@ -19,6 +19,8 @@
 #include <task-utils/get.h>
 #include <task-utils/walker.h>
 
+#define JOB_STACK_SIZE 128
+
 void print_header(int id_w, const ps_options_t* options, FILE* out) {
   if (options->also_show_threads) {
     fprintf(out, "%*s %7s %7s %7s %7s %s\n", -id_w, "TASK", "PSS", "PRIVATE", "SHARED", "STATE",
@@ -100,17 +102,23 @@ task_entry_t* add_entry(task_table_t* table, const task_entry_t* entry) {
   return table->entries + table->num_entries++;
 }
 
-// The array of tasks built by the callbacks.
-static task_table_t tasks = {};
+// Data object passed through callbacks.
+typedef struct context {
+  const ps_options_t* options;
 
-// The current stack of ancestor jobs, indexed by depth.
-// process_callback may touch any entry whose depth is less that its own.
-#define JOB_STACK_SIZE 128
-static task_entry_t* job_stack[JOB_STACK_SIZE];
+  // Seen tasks.
+  task_table_t tasks;
+
+  // The current stack of ancestor jobs, indexed by depth.
+  // process_callback may touch any entry whose depth is less that its own.
+  size_t job_stack[JOB_STACK_SIZE];
+} context_t;
 
 // Adds a job's information to |tasks|.
 static zx_status_t job_callback(void* ctx, int depth, zx_handle_t job, zx_koid_t koid,
                                 zx_koid_t parent_koid) {
+  context_t* context = ctx;
+
   task_entry_t e = {.type = 'j', .depth = depth};
   zx_status_t status = zx_object_get_property(job, ZX_PROP_NAME, e.name, sizeof(e.name));
   if (status != ZX_OK) {
@@ -131,15 +139,19 @@ static zx_status_t job_callback(void* ctx, int depth, zx_handle_t job, zx_koid_t
   snprintf(e.koid_str, sizeof(e.koid_str), "%" PRIu64, koid);
   snprintf(e.parent_koid_str, sizeof(e.koid_str), "%" PRIu64, parent_koid);
 
-  // Put our entry pointer on the job stack so our descendants can find us.
+  // Put our entry index on the job stack so our descendants can find us.
   assert(depth < JOB_STACK_SIZE);
-  job_stack[depth] = add_entry(&tasks, &e);
+  task_entry_t* new_entry = add_entry(&context->tasks, &e);
+  task_entry_t* base = context->tasks.entries;
+  context->job_stack[depth] = new_entry - base;
   return ZX_OK;
 }
 
 // Adds a process's information to |tasks|.
 static zx_status_t process_callback(void* ctx, int depth, zx_handle_t process, zx_koid_t koid,
                                     zx_koid_t parent_koid) {
+  context_t* context = ctx;
+
   task_entry_t e = {.type = 'p', .depth = depth};
   zx_status_t status = zx_object_get_property(process, ZX_PROP_NAME, e.name, sizeof(e.name));
   if (status != ZX_OK) {
@@ -161,20 +173,20 @@ static zx_status_t process_callback(void* ctx, int depth, zx_handle_t process, z
     assert(depth > 0);
     assert(depth < JOB_STACK_SIZE);
     for (int i = 0; i < depth; i++) {
-      task_entry_t* job = job_stack[i];
+      task_entry_t* job = &context->tasks.entries[context->job_stack[i]];
       job->pss_bytes += e.pss_bytes;
       job->private_bytes += e.private_bytes;
       // shared_bytes doesn't mean much as a sum, so leave it at zero.
     }
   }
 
-  if (((ps_options_t*)ctx)->only_show_jobs) {
+  if (context->options->only_show_jobs) {
     return ZX_OK;
   }
 
   snprintf(e.koid_str, sizeof(e.koid_str), "%" PRIu64, koid);
   snprintf(e.parent_koid_str, sizeof(e.koid_str), "%" PRIu64, parent_koid);
-  add_entry(&tasks, &e);
+  add_entry(&context->tasks, &e);
 
   return ZX_OK;
 }
@@ -206,7 +218,9 @@ static const char* state_string(const zx_info_thread_t* info) {
 // Adds a thread's information to |tasks|.
 static zx_status_t thread_callback(void* ctx, int depth, zx_handle_t thread, zx_koid_t koid,
                                    zx_koid_t parent_koid) {
-  if (!((ps_options_t*)ctx)->also_show_threads) {
+  context_t* context = ctx;
+
+  if (!context->options->also_show_threads) {
     // TODO(cpu): Should update ancestor process with number of threads.
     return ZX_OK;
   }
@@ -225,27 +239,32 @@ static zx_status_t thread_callback(void* ctx, int depth, zx_handle_t thread, zx_
   snprintf(e.koid_str, sizeof(e.koid_str), "%" PRIu64, koid);
   snprintf(e.parent_koid_str, sizeof(e.koid_str), "%" PRIu64, parent_koid);
   snprintf(e.state_str, sizeof(e.state_str), "%s", state_string(&info));
-  add_entry(&tasks, &e);
+  add_entry(&context->tasks, &e);
   return ZX_OK;
 }
 
-zx_status_t show_all_jobs(ps_options_t* options) {
-  zx_status_t status = walk_root_job_tree(job_callback, process_callback, thread_callback, options);
-  if (status != ZX_OK) {
-    return status;
-  }
-  print_table(&tasks, options, stdout);
-  free(tasks.entries);
-  return ZX_OK;
-}
+zx_status_t show_all_jobs(const ps_options_t* options) {
+  context_t context = {.options = options};
 
-zx_status_t show_job_tree(zx_handle_t target_job, ps_options_t* options) {
   zx_status_t status =
-      walk_job_tree(target_job, job_callback, process_callback, thread_callback, &options);
+      walk_root_job_tree(job_callback, process_callback, thread_callback, &context);
   if (status != ZX_OK) {
     return status;
   }
-  print_table(&tasks, options, stdout);
-  free(tasks.entries);
+  print_table(&context.tasks, options, stdout);
+  free(context.tasks.entries);
+  return ZX_OK;
+}
+
+zx_status_t show_job_tree(zx_handle_t target_job, const ps_options_t* options) {
+  context_t context = {.options = options};
+
+  zx_status_t status =
+      walk_job_tree(target_job, job_callback, process_callback, thread_callback, &context);
+  if (status != ZX_OK) {
+    return status;
+  }
+  print_table(&context.tasks, options, stdout);
+  free(context.tasks.entries);
   return ZX_OK;
 }

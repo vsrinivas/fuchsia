@@ -63,3 +63,18 @@ TEST(PrintTable, FullKoid) {
                    "TASK                 PSS PRIVATE  SHARED   STATE NAME\n"),
             0);
 }
+
+TEST(PsUtils, PrintAll) {
+  ps_options_t options = {.also_show_threads = false, .only_show_jobs = false, .format_unit = 0};
+  ASSERT_OK(show_all_jobs(&options));
+}
+
+TEST(PsUtils, PrintAllThreads) {
+  ps_options_t options = {.also_show_threads = true, .only_show_jobs = false, .format_unit = 0};
+  ASSERT_OK(show_all_jobs(&options));
+}
+
+TEST(PsUtils, PrintAllJobs) {
+  ps_options_t options = {.also_show_threads = false, .only_show_jobs = true, .format_unit = 0};
+  ASSERT_OK(show_all_jobs(&options));
+}

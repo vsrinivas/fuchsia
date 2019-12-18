@@ -46,9 +46,9 @@ void print_table(task_table_t* table, const ps_options_t* options, FILE* out);
 void print_header(int id_w, const ps_options_t* options, FILE* out);
 
 // Print to stdout all jobs in the system.
-zx_status_t show_all_jobs(ps_options_t* options);
+zx_status_t show_all_jobs(const ps_options_t* options);
 
 // Print to stdout all jobs/processes/threads under the given job.
-zx_status_t show_job_tree(zx_handle_t target_job, ps_options_t* options);
+zx_status_t show_job_tree(zx_handle_t target_job, const ps_options_t* options);
 
 #endif  // ZIRCON_SYSTEM_UAPP_PSUTILS_PS_INTERNAL_H_
