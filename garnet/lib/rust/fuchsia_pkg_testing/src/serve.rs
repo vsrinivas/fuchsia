@@ -6,6 +6,7 @@
 
 use {
     crate::repo::{get, Repository},
+    chrono::Utc,
     failure::Error,
     fidl_fuchsia_pkg_ext::RepositoryConfig,
     fuchsia_async::{self as fasync, net::TcpListener, EHandle},
@@ -74,11 +75,21 @@ impl ServedRepositoryBuilder {
             let uri_path_override_handlers = Arc::clone(&uri_path_override_handlers);
 
             service_fn(move |req| {
+                let path = root.clone();
                 ServedRepository::handle_tuf_repo_request(
                     root.clone(),
                     Arc::clone(&uri_path_override_handlers),
                     req,
                 )
+                .map(move |x| -> Result<Response<Body>, hyper::Error> {
+                    println!(
+                        "{} [http repo] path: {:?},  response: {}",
+                        Utc::now().format("%T.%6f"),
+                        path,
+                        x.status()
+                    );
+                    Ok(x)
+                })
                 .boxed()
                 .compat()
             })
@@ -136,21 +147,21 @@ impl ServedRepository {
         repo: PathBuf,
         uri_path_override_handlers: Arc<Vec<Arc<dyn UriPathHandler>>>,
         req: Request<Body>,
-    ) -> Result<Response<Body>, hyper::Error> {
+    ) -> Response<Body> {
         let fail =
             |status: StatusCode| Response::builder().status(status).body(Body::empty()).unwrap();
 
         if *req.method() != Method::GET {
-            return Ok(fail(StatusCode::NOT_FOUND));
+            return fail(StatusCode::NOT_FOUND);
         } else if req.uri().query().is_some() {
-            return Ok(fail(StatusCode::BAD_REQUEST));
+            return fail(StatusCode::BAD_REQUEST);
         }
 
         let uri_path = Path::new(req.uri().path());
 
         // don't let queries escape the repo root.
         if uri_path.components().any(|component| component == std::path::Component::ParentDir) {
-            return Ok(fail(StatusCode::NOT_FOUND));
+            return fail(StatusCode::NOT_FOUND);
         }
 
         let fs_path = repo.join(uri_path.strip_prefix("/").unwrap_or(uri_path));
@@ -158,11 +169,11 @@ impl ServedRepository {
         let data = match std::fs::read(fs_path) {
             Ok(data) => data,
             Err(ref err) if err.kind() == std::io::ErrorKind::NotFound => {
-                return Ok(fail(StatusCode::NOT_FOUND));
+                return fail(StatusCode::NOT_FOUND);
             }
             Err(err) => {
                 eprintln!("error reading repo file: {}", err);
-                return Ok(fail(StatusCode::INTERNAL_SERVER_ERROR));
+                return fail(StatusCode::INTERNAL_SERVER_ERROR);
             }
         };
 
@@ -176,7 +187,7 @@ impl ServedRepository {
             response = handler.handle(uri_path, response).await
         }
 
-        Ok(response)
+        return response;
     }
 }
 
@@ -209,7 +220,11 @@ pub mod handler {
     pub struct StaticResponseCode(StatusCode);
 
     impl UriPathHandler for StaticResponseCode {
-        fn handle(&self, _uri_path: &Path, _response: Response<Body>) -> BoxFuture<'_, Response<Body>> {
+        fn handle(
+            &self,
+            _uri_path: &Path,
+            _response: Response<Body>,
+        ) -> BoxFuture<'_, Response<Body>> {
             ready(Response::builder().status(self.0).body(Body::empty()).unwrap()).boxed()
         }
     }
@@ -248,7 +263,11 @@ pub mod handler {
     }
 
     impl<H: UriPathHandler> UriPathHandler for Toggleable<H> {
-        fn handle(&self, uri_path: &Path, response: Response<Body>) -> BoxFuture<'_, Response<Body>> {
+        fn handle(
+            &self,
+            uri_path: &Path,
+            response: Response<Body>,
+        ) -> BoxFuture<'_, Response<Body>> {
             if self.enabled.load(Ordering::SeqCst) {
                 self.handler.handle(uri_path, response)
             } else {
@@ -271,7 +290,11 @@ pub mod handler {
     }
 
     impl<H: UriPathHandler> UriPathHandler for ForRequestCount<H> {
-        fn handle(&self, uri_path: &Path, response: Response<Body>) -> BoxFuture<'_, Response<Body>> {
+        fn handle(
+            &self,
+            uri_path: &Path,
+            response: Response<Body>,
+        ) -> BoxFuture<'_, Response<Body>> {
             let mut remaining = self.remaining.lock();
             if *remaining > 0 {
                 *remaining -= 1;
@@ -297,7 +320,11 @@ pub mod handler {
     }
 
     impl<H: UriPathHandler> UriPathHandler for ForPath<H> {
-        fn handle(&self, uri_path: &Path, response: Response<Body>) -> BoxFuture<'_, Response<Body>> {
+        fn handle(
+            &self,
+            uri_path: &Path,
+            response: Response<Body>,
+        ) -> BoxFuture<'_, Response<Body>> {
             if self.path == uri_path {
                 self.handler.handle(uri_path, response)
             } else {
@@ -321,7 +348,11 @@ pub mod handler {
     }
 
     impl<H: UriPathHandler> UriPathHandler for ForPathPrefix<H> {
-        fn handle(&self, uri_path: &Path, response: Response<Body>) -> BoxFuture<'_, Response<Body>> {
+        fn handle(
+            &self,
+            uri_path: &Path,
+            response: Response<Body>,
+        ) -> BoxFuture<'_, Response<Body>> {
             if uri_path.starts_with(&self.prefix) {
                 self.handler.handle(uri_path, response)
             } else {
@@ -345,7 +376,11 @@ pub mod handler {
     }
 
     impl<H: UriPathHandler> UriPathHandler for OncePerPath<H> {
-        fn handle(&self, uri_path: &Path, response: Response<Body>) -> BoxFuture<'_, Response<Body>> {
+        fn handle(
+            &self,
+            uri_path: &Path,
+            response: Response<Body>,
+        ) -> BoxFuture<'_, Response<Body>> {
             if self.failed_paths.lock().insert(uri_path.to_owned()) {
                 self.handler.handle(uri_path, response)
             } else {

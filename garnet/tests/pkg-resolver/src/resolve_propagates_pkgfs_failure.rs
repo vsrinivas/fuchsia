@@ -156,7 +156,6 @@ async fn handle_file_stream_fail_write(
         handle_file_req_fail_write(call_count.clone(), req.expect("file request unpack")).await;
     }
 }
-
 async fn handle_file_stream_success(
     _call_count: Arc<AtomicU64>,
     mut stream: FileRequestStream,
@@ -284,10 +283,12 @@ impl PkgFsDirectoryBuilder {
     }
 }
 
-async fn make_pkg_for_mock_pkgfs_tests() -> Result<(Package, String, String), Error> {
-    let pkg = make_rolldice_pkg_with_extra_blobs(1).await;
+async fn make_pkg_for_mock_pkgfs_tests(
+    package_name: &str,
+) -> Result<(Package, String, String), Error> {
+    let pkg = make_pkg_with_extra_blobs(package_name, 1).await;
     let pkg_merkle = pkg.meta_far_merkle_root().to_string();
-    let blob_merkle = MerkleTree::from_reader(extra_blob_contents(0).as_slice())
+    let blob_merkle = MerkleTree::from_reader(extra_blob_contents(package_name, 0).as_slice())
         .expect("merkle slice")
         .root()
         .to_string();
@@ -295,6 +296,7 @@ async fn make_pkg_for_mock_pkgfs_tests() -> Result<(Package, String, String), Er
 }
 
 async fn make_mock_pkgfs_with_failing_install_pkg<StreamHandler, F>(
+    package_name: &str,
     file_request_stream_handler: StreamHandler,
 ) -> Result<(MockPkgFs, Package, Arc<AtomicU64>), Error>
 where
@@ -305,13 +307,14 @@ where
         + Clone
         + 'static,
 {
-    let (pkg, pkg_merkle, _) = make_pkg_for_mock_pkgfs_tests().await?;
+    let (pkg, pkg_merkle, _) = make_pkg_for_mock_pkgfs_tests(package_name).await?;
     let (failing_file, call_count) = FakeFile::new_and_call_count(file_request_stream_handler);
     let d = PkgFsDirectoryBuilder::new().install_pkg(pkg_merkle, failing_file).build();
     Ok((MockPkgFs::new(d), pkg, call_count))
 }
 
 async fn make_mock_pkgfs_with_failing_install_blob<StreamHandler, F>(
+    package_name: &str,
     file_request_stream_handler: StreamHandler,
 ) -> Result<(MockPkgFs, Package, Arc<AtomicU64>), Error>
 where
@@ -322,7 +325,7 @@ where
         + Clone
         + 'static,
 {
-    let (pkg, pkg_merkle, blob_merkle) = make_pkg_for_mock_pkgfs_tests().await?;
+    let (pkg, pkg_merkle, blob_merkle) = make_pkg_for_mock_pkgfs_tests(package_name).await?;
     let (success_file, _) = FakeFile::new_and_call_count(handle_file_stream_success);
     let (failing_file, call_count) = FakeFile::new_and_call_count(file_request_stream_handler);
     let d = PkgFsDirectoryBuilder::new()
@@ -346,7 +349,7 @@ async fn assert_resolve_package_with_failing_pkgfs_fails(
     let repo_config = served_repository.make_repo_config(repo_url);
     env.proxies.repo_manager.add(repo_config.into()).await?;
 
-    let res = env.resolve_package("fuchsia-pkg://test/rolldice").await;
+    let res = env.resolve_package(format!("fuchsia-pkg://test/{}", pkg.name()).as_str()).await;
 
     assert_matches!(res, Err(Status::IO));
     assert_eq!(failing_file_call_count.load(std::sync::atomic::Ordering::SeqCst), 1);
@@ -356,48 +359,66 @@ async fn assert_resolve_package_with_failing_pkgfs_fails(
 
 #[fasync::run_singlethreaded(test)]
 async fn fails_on_open_far_in_install_pkg() -> Result<(), Error> {
-    let (pkgfs, pkg, failing_file_call_count) =
-        make_mock_pkgfs_with_failing_install_pkg(handle_file_stream_fail_on_open).await?;
+    let (pkgfs, pkg, failing_file_call_count) = make_mock_pkgfs_with_failing_install_pkg(
+        "fails_on_open_far_in_install_pkg",
+        handle_file_stream_fail_on_open,
+    )
+    .await?;
 
     assert_resolve_package_with_failing_pkgfs_fails(pkgfs, pkg, failing_file_call_count).await
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn fails_truncate_far_in_install_pkg() -> Result<(), Error> {
-    let (pkgfs, pkg, failing_file_call_count) =
-        make_mock_pkgfs_with_failing_install_pkg(handle_file_stream_fail_truncate).await?;
+    let (pkgfs, pkg, failing_file_call_count) = make_mock_pkgfs_with_failing_install_pkg(
+        "fails_truncate_far_in_install_pkg",
+        handle_file_stream_fail_truncate,
+    )
+    .await?;
 
     assert_resolve_package_with_failing_pkgfs_fails(pkgfs, pkg, failing_file_call_count).await
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn fails_write_far_in_install_pkg() -> Result<(), Error> {
-    let (pkgfs, pkg, failing_file_call_count) =
-        make_mock_pkgfs_with_failing_install_pkg(handle_file_stream_fail_write).await?;
+    let (pkgfs, pkg, failing_file_call_count) = make_mock_pkgfs_with_failing_install_pkg(
+        "fails_write_far_in_install_pkg",
+        handle_file_stream_fail_write,
+    )
+    .await?;
 
     assert_resolve_package_with_failing_pkgfs_fails(pkgfs, pkg, failing_file_call_count).await
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn fails_on_open_blob_in_install_blob() -> Result<(), Error> {
-    let (pkgfs, pkg, failing_file_call_count) =
-        make_mock_pkgfs_with_failing_install_blob(handle_file_stream_fail_on_open).await?;
+    let (pkgfs, pkg, failing_file_call_count) = make_mock_pkgfs_with_failing_install_blob(
+        "fails_on_open_blob_in_install_blob",
+        handle_file_stream_fail_on_open,
+    )
+    .await?;
 
     assert_resolve_package_with_failing_pkgfs_fails(pkgfs, pkg, failing_file_call_count).await
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn fails_truncate_blob_in_install_blob() -> Result<(), Error> {
-    let (pkgfs, pkg, failing_file_call_count) =
-        make_mock_pkgfs_with_failing_install_blob(handle_file_stream_fail_truncate).await?;
+    let (pkgfs, pkg, failing_file_call_count) = make_mock_pkgfs_with_failing_install_blob(
+        "fails_truncate_blob_in_install_blob",
+        handle_file_stream_fail_truncate,
+    )
+    .await?;
 
     assert_resolve_package_with_failing_pkgfs_fails(pkgfs, pkg, failing_file_call_count).await
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn fails_write_blob_in_install_blob() -> Result<(), Error> {
-    let (pkgfs, pkg, failing_file_call_count) =
-        make_mock_pkgfs_with_failing_install_blob(handle_file_stream_fail_write).await?;
+    let (pkgfs, pkg, failing_file_call_count) = make_mock_pkgfs_with_failing_install_blob(
+        "fails_write_blob_in_install_blob",
+        handle_file_stream_fail_write,
+    )
+    .await?;
 
     assert_resolve_package_with_failing_pkgfs_fails(pkgfs, pkg, failing_file_call_count).await
 }

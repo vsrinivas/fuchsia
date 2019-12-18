@@ -332,19 +332,28 @@ impl<P: PkgFs> TestEnv<P> {
 }
 
 const EMPTY_REPO_PATH: &str = "/pkg/empty-repo";
-const ROLLDICE_BIN: &'static [u8] = b"#!/boot/bin/sh\necho 4\n";
-const ROLLDICE_CMX: &'static [u8] = br#"{"program":{"binary":"bin/rolldice"}}"#;
 
-fn extra_blob_contents(i: u32) -> Vec<u8> {
-    format!("contents of file {}", i).as_bytes().to_owned()
+// The following functions generate unique test package dummy content. Callers are recommended
+// to pass in the name of the test case.
+fn test_package_bin(s: &str) -> Vec<u8> {
+    return format!("!/boot/bin/sh\n{}", s).as_bytes().to_owned();
 }
 
-async fn make_rolldice_pkg_with_extra_blobs(n: u32) -> Package {
-    let mut pkg = PackageBuilder::new("rolldice")
-        .add_resource_at("bin/rolldice", ROLLDICE_BIN)
-        .add_resource_at("meta/rolldice.cmx", ROLLDICE_CMX);
+fn test_package_cmx(s: &str) -> Vec<u8> {
+    return format!("\"{{\"program\":{{\"binary\":\"bin/{}\"}}", s).as_bytes().to_owned();
+}
+
+fn extra_blob_contents(s: &str, i: u32) -> Vec<u8> {
+    format!("contents of file {}-{}", s, i).as_bytes().to_owned()
+}
+
+async fn make_pkg_with_extra_blobs(s: &str, n: u32) -> Package {
+    let mut pkg = PackageBuilder::new(s)
+        .add_resource_at(format!("bin/{}", s), &test_package_bin(s)[..])
+        .add_resource_at(format!("meta/{}.cmx", s), &test_package_cmx(s)[..]);
     for i in 0..n {
-        pkg = pkg.add_resource_at(format!("data/file{}", i), extra_blob_contents(i).as_slice());
+        pkg =
+            pkg.add_resource_at(format!("data/{}-{}", s, i), extra_blob_contents(s, i).as_slice());
     }
     pkg.build().await.unwrap()
 }

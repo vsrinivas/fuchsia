@@ -102,9 +102,10 @@ impl TestEnv<PkgfsRamdisk> {
 async fn package_resolution() {
     let env = TestEnv::new();
 
-    let pkg = PackageBuilder::new("rolldice")
-        .add_resource_at("bin/rolldice", ROLLDICE_BIN)
-        .add_resource_at("meta/rolldice.cmx", ROLLDICE_CMX)
+    let s = "package_resolution";
+    let pkg = PackageBuilder::new(s)
+        .add_resource_at(format!("bin/{}", s), &test_package_bin(s)[..])
+        .add_resource_at(format!("meta/{}.cmx", s), &test_package_cmx(s)[..])
         .add_resource_at("data/duplicate_a", "same contents".as_bytes())
         .add_resource_at("data/duplicate_b", "same contents".as_bytes())
         .build()
@@ -123,7 +124,7 @@ async fn package_resolution() {
     env.proxies.repo_manager.add(repo_config.into()).await.unwrap();
 
     let package = env
-        .resolve_package("fuchsia-pkg://test/rolldice")
+        .resolve_package(format!("fuchsia-pkg://test/{}", s).as_str())
         .await
         .expect("package to resolve without error");
 
@@ -139,7 +140,8 @@ async fn package_resolution() {
 #[fasync::run_singlethreaded(test)]
 async fn separate_blobs_url() {
     let env = TestEnv::new();
-    let pkg = make_rolldice_pkg_with_extra_blobs(3).await;
+    let pkg_name = "separate_blobs_url";
+    let pkg = make_pkg_with_extra_blobs(pkg_name, 3).await;
     let repo = RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
         .add_package(&pkg)
         .build()
@@ -168,7 +170,7 @@ async fn separate_blobs_url() {
 
     // Verify package installation from the split repo succeeds.
     let package = env
-        .resolve_package("fuchsia-pkg://test/rolldice")
+        .resolve_package(format!("fuchsia-pkg://test/{}", pkg_name).as_str())
         .await
         .expect("package to resolve without error");
     pkg.verify_contents(&package).await.unwrap();
@@ -230,9 +232,10 @@ async fn meta_far_and_empty_blob() {
 
 #[fasync::run_singlethreaded(test)]
 async fn large_blobs() {
+    let s = "large_blobs";
     verify_resolve(
-        PackageBuilder::new("numbers")
-            .add_resource_at("bin/numbers", ROLLDICE_BIN)
+        PackageBuilder::new(s)
+            .add_resource_at("bin/numbers", &test_package_bin(s)[..])
             .add_resource_at("data/ones", io::repeat(1).take(1 * 1024 * 1024))
             .add_resource_at("data/twos", io::repeat(2).take(2 * 1024 * 1024))
             .add_resource_at("data/threes", io::repeat(3).take(3 * 1024 * 1024))
@@ -356,7 +359,7 @@ async fn error_codes() {
 
 #[fasync::run_singlethreaded(test)]
 async fn many_blobs() {
-    verify_resolve(make_rolldice_pkg_with_extra_blobs(200).await).await
+    verify_resolve(make_pkg_with_extra_blobs("many_blobs", 200).await).await
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -566,41 +569,51 @@ async fn use_cached_package() {
 
 #[fasync::run_singlethreaded(test)]
 async fn meta_far_installed_blobs_not_installed() {
-    verify_resolve_with_altered_env(make_rolldice_pkg_with_extra_blobs(3).await, |env, pkg| {
-        env.add_file_to_pkgfs_at_path(
-            pkg.meta_far().unwrap(),
-            format!("install/pkg/{}", pkg.meta_far_merkle_root().to_string()),
-        )
-    })
+    verify_resolve_with_altered_env(
+        make_pkg_with_extra_blobs("meta_far_installed_blobs_not_installed", 3).await,
+        |env, pkg| {
+            env.add_file_to_pkgfs_at_path(
+                pkg.meta_far().unwrap(),
+                format!("install/pkg/{}", pkg.meta_far_merkle_root().to_string()),
+            )
+        },
+    )
     .await
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn meta_far_partially_installed() {
-    verify_resolve_with_altered_env(make_rolldice_pkg_with_extra_blobs(3).await, |env, pkg| {
-        env.partially_add_file_to_pkgfs_at_path(
-            pkg.meta_far().unwrap(),
-            format!("install/pkg/{}", pkg.meta_far_merkle_root().to_string()),
-        )
-    })
+    verify_resolve_with_altered_env(
+        make_pkg_with_extra_blobs("meta_far_partially_installed", 3).await,
+        |env, pkg| {
+            env.partially_add_file_to_pkgfs_at_path(
+                pkg.meta_far().unwrap(),
+                format!("install/pkg/{}", pkg.meta_far_merkle_root().to_string()),
+            )
+        },
+    )
     .await
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn meta_far_already_in_blobfs() {
-    verify_resolve_with_altered_env(make_rolldice_pkg_with_extra_blobs(3).await, |env, pkg| {
-        env.add_file_with_merkle_to_blobfs(pkg.meta_far().unwrap(), pkg.meta_far_merkle_root())
-    })
+    verify_resolve_with_altered_env(
+        make_pkg_with_extra_blobs("meta_far_already_in_blobfs", 3).await,
+        |env, pkg| {
+            env.add_file_with_merkle_to_blobfs(pkg.meta_far().unwrap(), pkg.meta_far_merkle_root())
+        },
+    )
     .await
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn all_blobs_already_in_blobfs() {
-    verify_resolve_with_altered_env(make_rolldice_pkg_with_extra_blobs(3).await, |env, pkg| {
+    let s = "all_blobs_already_in_blobfs";
+    verify_resolve_with_altered_env(make_pkg_with_extra_blobs(s, 3).await, |env, pkg| {
         env.add_file_with_merkle_to_blobfs(pkg.meta_far().unwrap(), pkg.meta_far_merkle_root());
-        env.add_slice_to_blobfs(ROLLDICE_BIN);
+        env.add_slice_to_blobfs(&test_package_bin(s)[..]);
         for i in 0..3 {
-            env.add_slice_to_blobfs(extra_blob_contents(i).as_slice());
+            env.add_slice_to_blobfs(extra_blob_contents(s, i).as_slice());
         }
     })
     .await
@@ -608,28 +621,33 @@ async fn all_blobs_already_in_blobfs() {
 
 #[fasync::run_singlethreaded(test)]
 async fn meta_far_installed_one_blob_in_blobfs() {
-    verify_resolve_with_altered_env(make_rolldice_pkg_with_extra_blobs(3).await, |env, pkg| {
+    let s = "meta_far_installed_one_blob_in_blobfs";
+    verify_resolve_with_altered_env(make_pkg_with_extra_blobs(s, 3).await, |env, pkg| {
         env.add_file_to_pkgfs_at_path(
             pkg.meta_far().unwrap(),
             format!("install/pkg/{}", pkg.meta_far_merkle_root().to_string()),
         );
-        env.add_slice_to_blobfs(ROLLDICE_BIN);
+        env.add_slice_to_blobfs(&test_package_bin(s)[..]);
     })
     .await
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn meta_far_installed_one_blob_partially_installed() {
-    verify_resolve_with_altered_env(make_rolldice_pkg_with_extra_blobs(3).await, |env, pkg| {
+    let s = "meta_far_installed_one_blob_partially_installed";
+    verify_resolve_with_altered_env(make_pkg_with_extra_blobs(s, 3).await, |env, pkg| {
         env.add_file_to_pkgfs_at_path(
             pkg.meta_far().unwrap(),
             format!("install/pkg/{}", pkg.meta_far_merkle_root().to_string()),
         );
         env.partially_add_slice_to_pkgfs_at_path(
-            ROLLDICE_BIN,
+            &test_package_bin(s)[..],
             format!(
                 "install/blob/{}",
-                MerkleTree::from_reader(ROLLDICE_BIN).expect("merkle slice").root().to_string()
+                MerkleTree::from_reader(&test_package_bin(s)[..])
+                    .expect("merkle slice")
+                    .root()
+                    .to_string()
             ),
         );
     })

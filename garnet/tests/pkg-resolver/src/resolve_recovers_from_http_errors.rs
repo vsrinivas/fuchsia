@@ -55,7 +55,7 @@ async fn verify_resolve_fails_then_succeeds<H: UriPathHandler>(
 
 #[fasync::run_singlethreaded(test)]
 async fn second_resolve_succeeds_when_far_404() {
-    let pkg = make_rolldice_pkg_with_extra_blobs(1).await;
+    let pkg = make_pkg_with_extra_blobs("second_resolve_succeeds_when_far_404", 1).await;
     let path_to_override = format!("/blobs/{}", pkg.meta_far_merkle_root());
 
     verify_resolve_fails_then_succeeds(
@@ -68,10 +68,14 @@ async fn second_resolve_succeeds_when_far_404() {
 
 #[fasync::run_singlethreaded(test)]
 async fn second_resolve_succeeds_when_blob_404() {
-    let pkg = make_rolldice_pkg_with_extra_blobs(1).await;
+    let pkg = make_pkg_with_extra_blobs("second_resolve_succeeds_when_blob_404", 1).await;
     let path_to_override = format!(
         "/blobs/{}",
-        MerkleTree::from_reader(extra_blob_contents(0).as_slice()).expect("merkle slice").root()
+        MerkleTree::from_reader(
+            extra_blob_contents("second_resolve_succeeds_when_blob_404", 0).as_slice()
+        )
+        .expect("merkle slice")
+        .root()
     );
 
     verify_resolve_fails_then_succeeds(
@@ -235,7 +239,7 @@ impl UriPathHandler for OneByteFlippedUriPathHandler {
 
 #[fasync::run_singlethreaded(test)]
 async fn second_resolve_succeeds_when_far_corrupted() {
-    let pkg = make_rolldice_pkg_with_extra_blobs(1).await;
+    let pkg = make_pkg_with_extra_blobs("second_resolve_succeeds_when_far_corrupted", 1).await;
     let path_to_override = format!("/blobs/{}", pkg.meta_far_merkle_root());
 
     verify_resolve_fails_then_succeeds(
@@ -248,8 +252,8 @@ async fn second_resolve_succeeds_when_far_corrupted() {
 
 #[fasync::run_singlethreaded(test)]
 async fn second_resolve_succeeds_when_blob_corrupted() {
-    let pkg = make_rolldice_pkg_with_extra_blobs(1).await;
-    let blob = extra_blob_contents(0);
+    let pkg = make_pkg_with_extra_blobs("second_resolve_succeeds_when_blob_corrupted", 1).await;
+    let blob = extra_blob_contents("second_resolve_succeeds_when_blob_corrupted", 0);
     let path_to_override = format!(
         "/blobs/{}",
         MerkleTree::from_reader(blob.as_slice()).expect("merkle slice").root()

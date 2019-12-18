@@ -30,6 +30,7 @@ rustc_library("fuchsia_pkg_testing") {
     "//src/sys/lib/fuchsia_backoff",
     "//src/sys/lib/fuchsia_url",
     "//third_party/rust_crates:bytes",
+    "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:hex",
@@ -45,9 +46,7 @@ rustc_library("fuchsia_pkg_testing") {
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 
-  test_deps = [
-    "//third_party/rust_crates:matches",
-  ]
+  test_deps = [ "//third_party/rust_crates:matches" ]
 }
 
 rustc_test("pkgfs_test") {
