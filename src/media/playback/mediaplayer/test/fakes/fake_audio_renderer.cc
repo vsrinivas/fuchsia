@@ -48,6 +48,8 @@ void FakeAudioRenderer::SetReferenceClock(zx::handle ref_clock) { FX_NOTIMPLEMEN
 
 void FakeAudioRenderer::SendPacket(fuchsia::media::StreamPacket packet,
                                    SendPacketCallback callback) {
+  packets_received_++;
+
   if (dump_packets_) {
     std::cerr << "{ " << packet.pts << ", " << packet.payload_size << ", 0x" << std::hex
               << std::setw(16) << std::setfill('0')

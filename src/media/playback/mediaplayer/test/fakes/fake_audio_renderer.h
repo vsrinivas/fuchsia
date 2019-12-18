@@ -64,6 +64,8 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer,
     return true;
   }
 
+  uint64_t received() { return packets_received_; }
+
   // Sets a flag indicating whether this fake renderer should retain packets
   // (true) or retire them in a timeline manner (false).
   void SetRetainPackets(bool retain_packets) { retain_packets_ = retain_packets; }
@@ -146,6 +148,7 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer,
   media::TimelineFunction timeline_function_;
 
   bool dump_packets_ = false;
+  uint64_t packets_received_;
   std::vector<PacketInfo> expected_packets_info_;
   std::vector<PacketInfo>::iterator expected_packets_info_iter_;
 

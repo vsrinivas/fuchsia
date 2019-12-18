@@ -431,7 +431,10 @@ TEST_F(AudioConsumerTests, CheckPtsRate) {
   RunLoopUntil([&sent_packet]() { return sent_packet; });
 
   EXPECT_TRUE(sent_packet);
+
+  RunLoopUntil([this]() { return fake_audio_.renderer().received() > 0; });
   EXPECT_TRUE(fake_audio_.renderer().expected());
+
   EXPECT_FALSE(sink_connection_closed);
 }
 
