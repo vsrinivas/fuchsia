@@ -5,8 +5,10 @@
 use {
     breakpoint_system_client::*,
     failure::{self, Error},
-    fidl_fidl_examples_routing_echo as fecho, fidl_fuchsia_test_breakpoints as fbreak,
-    fidl_fuchsia_test_hub as fhub, fuchsia_async as fasync,
+    fidl_fidl_examples_routing_echo as fecho,
+    fidl_fuchsia_io::{OPEN_FLAG_DIRECTORY, OPEN_FLAG_POSIX},
+    fidl_fuchsia_test_breakpoints as fbreak, fidl_fuchsia_test_hub as fhub,
+    fuchsia_async as fasync,
     hub_report_capability::*,
     io_util::*,
     std::path::PathBuf,
@@ -107,8 +109,11 @@ impl TestRunner {
     ) {
         let full_path = self.external_hub_v2_path.join(relative_path);
         let full_path = full_path.to_str().expect("invalid chars");
-        let dir_proxy = open_directory_in_namespace(full_path, OPEN_RIGHT_READABLE)
-            .expect("Could not open directory externally");
+        let dir_proxy = open_directory_in_namespace(
+            full_path,
+            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX,
+        )
+        .expect("Could not open directory externally");
 
         let actual_listing = list_directory(&dir_proxy).await.expect(&format!(
             "failed to verify that {} contains {:?}",
@@ -211,10 +216,19 @@ async fn advanced_routing() -> Result<(), Error> {
         .verify_file_content_externally("children/reporter/exec/runtime/args/1", "rule!")
         .await;
 
+    let expose_dir = "children/echo_server/exec/expose";
     let expose_svc_dir = "children/echo_server/exec/expose/svc";
 
     // Verify that the Echo service is exposed by echo_server
+    test_runner.verify_directory_listing_externally(expose_dir, vec!["hub", "svc"]).await;
     test_runner.verify_directory_listing_externally(expose_svc_dir, vec![echo_service_name]).await;
+
+    let out_dir = "children/echo_server/exec/out";
+    let out_svc_dir = "children/echo_server/exec/out/svc";
+
+    // Verify that the Echo service is available in the out dir.
+    test_runner.verify_directory_listing_externally(out_dir, vec!["svc"]).await;
+    test_runner.verify_directory_listing_externally(out_svc_dir, vec![echo_service_name]).await;
 
     // Verify that reporter is given the HubReport and Echo services
     let in_dir = "children/reporter/exec/in";

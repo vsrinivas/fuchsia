@@ -6,10 +6,8 @@ use {
     fidl_fuchsia_io::{DirectoryProxy, NodeMarker, DIRENT_TYPE_SERVICE, INO_UNKNOWN},
     fuchsia_vfs_pseudo_fs_mt as fvfs,
     fuchsia_vfs_pseudo_fs_mt::{
-        directory::entry::DirectoryEntry,
-        directory::entry::EntryInfo,
-        execution_scope::ExecutionScope,
-        path::Path,
+        directory::entry::DirectoryEntry, directory::entry::EntryInfo,
+        execution_scope::ExecutionScope, path::Path,
     },
     parking_lot::Mutex,
     std::sync::Arc,
@@ -62,7 +60,12 @@ impl DirectoryBroker {
                     // want to change that.
                     let _ = dir.open(flags, mode, &relative_path, server_end);
                 } else {
-                    let _ = dir.clone(flags, server_end);
+                    // TODO(fsamuel): For some reason, DirectoryProxy receives an
+                    // empty string as a relative path. That is unsupported by open.
+                    // Why does it receive an empty string? Shouldn't it be "."?
+                    // Or should directories support empty strings as relative paths?
+                    // For now, change the empty string to ".", but investigate further.
+                    let _ = dir.open(flags, mode, ".", server_end);
                 }
             },
         ))
@@ -84,10 +87,7 @@ impl DirectoryEntry for DirectoryBroker {
 
     fn entry_info(&self) -> fvfs::directory::entry::EntryInfo {
         let this = self.inner.lock();
-        fvfs::directory::entry::EntryInfo::new(
-            this.entry_info.inode(),
-            this.entry_info.type_(),
-        )
+        fvfs::directory::entry::EntryInfo::new(this.entry_info.inode(), this.entry_info.type_())
     }
 
     fn can_hardlink(&self) -> bool {
