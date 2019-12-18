@@ -78,9 +78,8 @@ fit::promise<std::vector<Annotation>> ProductInfoProvider::GetAnnotations() {
 
   return ExtendArgsLifetimeBeyondPromise(std::move(product_info),
                                          /*args=*/std::move(product_info_ptr))
-      .and_then([annotations_to_get = annotations_to_get_,
-                 product_info_ptr = std::move(product_info_ptr)](
-                    const std::map<std::string, std::string>& product_info) {
+      .and_then([annotations_to_get =
+                     annotations_to_get_](const std::map<std::string, std::string>& product_info) {
         std::vector<Annotation> annotations;
 
         for (const auto& key : annotations_to_get) {
