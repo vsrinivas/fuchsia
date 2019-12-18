@@ -86,6 +86,7 @@ variant("ubsan") {
   common_flags = [ "-fsanitize=undefined" ]
   if (toolchain_variant.name == "asan-ubsan") {
     ldflags = [ "-Wl,-dynamic-linker,asan-ubsan/ld.so.1" ]
+    rustflags = [ "-Clink-arg=-dynamic-linker=asan-ubsan/ld.so.1" ]
   }
 
   if (ubsan_default_options != "") {
