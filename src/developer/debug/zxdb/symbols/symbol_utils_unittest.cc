@@ -5,11 +5,13 @@
 #include "src/developer/debug/zxdb/symbols/symbol_utils.h"
 
 #include "gtest/gtest.h"
+#include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/namespace.h"
 #include "src/developer/debug/zxdb/symbols/symbol_test_parent_setter.h"
+#include "src/developer/debug/zxdb/symbols/type_test_support.h"
 #include "src/developer/debug/zxdb/symbols/variable.h"
 
 namespace zxdb {
@@ -80,6 +82,31 @@ TEST(SymbolUtils, SymbolScopeFunctions) {
   var->set_assigned_name("var");
   EXPECT_EQ("::ns::Function", GetSymbolScopePrefix(var.get()).GetFullName());
   EXPECT_EQ("ns::Function::var", var->GetFullName());
+}
+
+TEST(SymbolUtils, AddCVQualifiersToMatch) {
+  auto int32_type = MakeInt32Type();
+  auto int64_type = MakeInt64Type();
+
+  // Null reference keeps the same thing.
+  auto result = AddCVQualifiersToMatch(nullptr, int32_type);
+  EXPECT_EQ(result.get(), int32_type.get());
+
+  // Non-C-V reference type does nothing.
+  result = AddCVQualifiersToMatch(int64_type.get(), int32_type);
+  EXPECT_EQ(result.get(), int32_type.get());
+  EXPECT_EQ("int32_t", result->GetFullName());
+
+  // Copy a const qualifier.
+  auto const_int64_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kConstType, int64_type);
+  result = AddCVQualifiersToMatch(const_int64_type.get(), int32_type);
+  EXPECT_EQ("const int32_t", result->GetFullName());
+
+  // Copy a volatile + const qualifier.
+  auto volatile_const_int64_type =
+      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kVolatileType, const_int64_type);
+  result = AddCVQualifiersToMatch(volatile_const_int64_type.get(), int32_type);
+  EXPECT_EQ("volatile int32_t const", result->GetFullName());
 }
 
 }  // namespace zxdb

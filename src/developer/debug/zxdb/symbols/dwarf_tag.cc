@@ -28,6 +28,11 @@ bool DwarfTagIsTypeModifier(DwarfTag tag) {
          tag == DwarfTag::kVolatileType || tag == DwarfTag::kImportedDeclaration;
 }
 
+bool DwarfTagIsCVQualifier(DwarfTag tag) {
+  return tag == DwarfTag::kConstType || tag == DwarfTag::kVolatileType ||
+         tag == DwarfTag::kRestrictType;
+}
+
 bool DwarfTagIsEitherReference(DwarfTag tag) {
   return tag == DwarfTag::kReferenceType || tag == DwarfTag::kRvalueReferenceType;
 }

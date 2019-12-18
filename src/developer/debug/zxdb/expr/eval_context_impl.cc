@@ -234,8 +234,14 @@ fxl::RefPtr<Type> EvalContextImpl::ResolveForwardDefinition(const Type* type) co
     // Some things like modified types don't have real identifier names.
     return RefPtrTo(type);
   }
-  ParsedIdentifier parsed_ident = ToParsedIdentifier(ident);
 
+  fxl::RefPtr<Type> result = ResolveForwardDefinition(ToParsedIdentifier(ident));
+  if (result)
+    return result;
+  return RefPtrTo(type);  // Return the same input on failure.
+}
+
+fxl::RefPtr<Type> EvalContextImpl::ResolveForwardDefinition(ParsedIdentifier type_name) const {
   // Search for the first match of a type definition. Note that "find_types" is not desirable here
   // since we only want to resolve real definitions. Normally the index contains only definitions
   // but if a module contains only declarations that module's index will list the symbol as a
@@ -246,17 +252,17 @@ fxl::RefPtr<Type> EvalContextImpl::ResolveForwardDefinition(const Type* type) co
 
   // The type names will always be fully qualified. Mark the identifier as
   // such and only search the global context by clearing the code location.
-  parsed_ident.set_qualification(IdentifierQualification::kGlobal);
+  type_name.set_qualification(IdentifierQualification::kGlobal);
   auto context = GetFindNameContext();
   context.block = nullptr;
 
-  if (FoundName result = FindName(context, opts, parsed_ident)) {
+  if (FoundName result = FindName(context, opts, type_name)) {
     FXL_DCHECK(result.type());
     return result.type();
   }
 
   // Nothing found in the index.
-  return RefPtrTo(type);
+  return nullptr;
 }
 
 fxl::RefPtr<Type> EvalContextImpl::GetConcreteType(const Type* type) const {

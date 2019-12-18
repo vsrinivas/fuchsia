@@ -9,6 +9,8 @@
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/compile_unit.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
+#include "src/developer/debug/zxdb/symbols/dwarf_tag.h"
+#include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/namespace.h"
 #include "src/developer/debug/zxdb/symbols/type.h"
 #include "src/lib/fxl/logging.h"
@@ -57,6 +59,20 @@ fxl::RefPtr<Collection> MakeRustTuple(const std::string& name,
 fxl::RefPtr<Type> MakeStringLiteralType(size_t length) {
   auto char_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSignedChar, 1, "char");
   return fxl::MakeRefCounted<ArrayType>(std::move(char_type), length);
+}
+
+fxl::RefPtr<Type> AddCVQualifiersToMatch(const Type* reference, fxl::RefPtr<Type> modified) {
+  const Type* source = reference;
+  while (source) {
+    const ModifiedType* mod_source = source->AsModifiedType();
+    if (!mod_source || !DwarfTagIsCVQualifier(mod_source->tag()))
+      break;
+
+    modified = fxl::MakeRefCounted<ModifiedType>(mod_source->tag(), std::move(modified));
+    source = mod_source->modified().Get()->AsType();
+  }
+
+  return modified;
 }
 
 }  // namespace zxdb

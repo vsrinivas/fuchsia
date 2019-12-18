@@ -62,6 +62,7 @@ class EvalContextImpl : public EvalContext {
   void GetNamedValue(const ParsedIdentifier& name, EvalCallback cb) const override;
   void GetVariableValue(fxl::RefPtr<Value> variable, EvalCallback cb) const override;
   fxl::RefPtr<Type> ResolveForwardDefinition(const Type* type) const override;
+  fxl::RefPtr<Type> ResolveForwardDefinition(ParsedIdentifier type_name) const override;
   fxl::RefPtr<Type> GetConcreteType(const Type* type) const override;
   fxl::RefPtr<SymbolDataProvider> GetDataProvider() override;
   NameLookupCallback GetSymbolNameLookupCallback() override;

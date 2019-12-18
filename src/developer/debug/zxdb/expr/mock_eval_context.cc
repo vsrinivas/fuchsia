@@ -54,6 +54,13 @@ fxl::RefPtr<Type> MockEvalContext::ResolveForwardDefinition(const Type* type) co
   return found->second;
 }
 
+fxl::RefPtr<Type> MockEvalContext::ResolveForwardDefinition(ParsedIdentifier type_name) const {
+  auto found = types_.find(type_name.GetFullName());
+  if (found == types_.end())  // Not found, return the input.
+    return nullptr;
+  return found->second;
+}
+
 fxl::RefPtr<Type> MockEvalContext::GetConcreteType(const Type* type) const {
   if (!type)
     return nullptr;

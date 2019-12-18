@@ -15,15 +15,8 @@ namespace {
 // Returns true if this tag is a modified type that is transparent with respect to the data stored
 // in it.
 bool IsTransparentTag(DwarfTag tag) {
-  return tag == DwarfTag::kConstType || tag == DwarfTag::kVolatileType ||
-         tag == DwarfTag::kTypedef || tag == DwarfTag::kRestrictType ||
+  return DwarfTagIsCVQualifier(tag) || tag == DwarfTag::kTypedef ||
          tag == DwarfTag::kImportedDeclaration;
-}
-
-// Returns true if this modified holds some kind of pointer to the modified type.
-bool IsPointerTag(DwarfTag tag) {
-  return tag == DwarfTag::kPointerType || tag == DwarfTag::kReferenceType ||
-         tag == DwarfTag::kRvalueReferenceType;
 }
 
 }  // namespace
@@ -34,7 +27,7 @@ ModifiedType::ModifiedType(DwarfTag kind, LazySymbol modified) : Type(kind), mod
     const Type* mod_type = modified_.Get()->AsType();
     if (mod_type)
       set_byte_size(mod_type->byte_size());
-  } else if (IsPointerTag(kind)) {
+  } else if (DwarfTagIsPointerOrReference(kind)) {
     set_byte_size(kTargetPointerSize);
   }
 }
@@ -44,10 +37,8 @@ ModifiedType::~ModifiedType() = default;
 const ModifiedType* ModifiedType::AsModifiedType() const { return this; }
 
 const Type* ModifiedType::StripCV() const {
-  if (tag() == DwarfTag::kConstType || tag() == DwarfTag::kVolatileType ||
-      tag() == DwarfTag::kRestrictType) {
-    const Type* mod = modified_.Get()->AsType();
-    if (mod)  // Apply recursively.
+  if (DwarfTagIsCVQualifier(tag())) {
+    if (const Type* mod = modified_.Get()->AsType())  // Apply recursively.
       return mod->StripCV();
   }
   return this;

@@ -75,8 +75,10 @@ class EvalContext : public fxl::RefCountedThreadSafe<EvalContext> {
   //
   // Since the lookup is by type name, it may fail. It could also refer to a different type, but if
   // the user has more than one type with the same name bad things will happen anyway. On failure,
-  // the input type will be returned.
+  // the Type* version will return the input type, and the ParsedIdentifier version will return
+  // null.
   virtual fxl::RefPtr<Type> ResolveForwardDefinition(const Type* type) const = 0;
+  virtual fxl::RefPtr<Type> ResolveForwardDefinition(ParsedIdentifier type_name) const = 0;
 
   // Strips C-V qualifications and resolves forward declarations.
   //

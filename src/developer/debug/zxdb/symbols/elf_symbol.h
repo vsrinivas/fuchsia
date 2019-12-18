@@ -28,7 +28,7 @@ class ElfSymbol : public Symbol {
 
   // Symbol public overrides:
   const ElfSymbol* AsElfSymbol() const override { return this; }
-  const std::string& GetAssignedName() const override { return record_.linkage_name; }
+  const std::string& GetAssignedName() const override { return record_.unmangled_name; }
   fxl::WeakPtr<ModuleSymbols> GetModuleSymbols() const override { return module_; }
 
  private:

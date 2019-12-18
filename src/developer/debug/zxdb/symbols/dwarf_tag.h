@@ -189,8 +189,12 @@ enum class DwarfTag : int {
 // Returns true if the tag defines a type.
 bool DwarfTagIsType(DwarfTag tag);
 
-// Returns true if the tag is one of the type modified variants (pointers, references, etc.).
+// Returns true if the tag is one of the type modified variants (pointers, references, typedefs,
+// const, volatile, etc.). See also "...Qualifier() variant below.
 bool DwarfTagIsTypeModifier(DwarfTag tag);
+
+// Returns true for C-V qualifiers. Also includes "restrict" for C99.
+bool DwarfTagIsCVQualifier(DwarfTag tag);
 
 // Returns true if the dwarf tag is a reference or rvalue reference.
 bool DwarfTagIsEitherReference(DwarfTag tag);

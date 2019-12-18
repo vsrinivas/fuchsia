@@ -28,6 +28,10 @@ fxl::RefPtr<Collection> MakeRustTuple(const std::string& name,
 // "[char; 3]" to be printed as ['a', 'b', 'c'] instead of a string.
 fxl::RefPtr<Type> MakeStringLiteralType(size_t length);
 
+// Matches C-V qualifiers (+restrict) present on the reference type and adds them to the modified
+// type.
+fxl::RefPtr<Type> AddCVQualifiersToMatch(const Type* reference, fxl::RefPtr<Type> modified);
+
 }  // namespace zxdb
 
 #endif  // SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_SYMBOL_UTILS_H_
