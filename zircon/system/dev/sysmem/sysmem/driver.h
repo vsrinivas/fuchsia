@@ -5,10 +5,14 @@
 #ifndef ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_DRIVER_H_
 #define ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_DRIVER_H_
 
+namespace sysmem_driver {
+
 // Placeholder Driver ctx structure.  Not used for anything yet.
 class Driver {
  public:
  private:
 };
+
+}  // namespace sysmem_driver
 
 #endif  // ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_DRIVER_H_

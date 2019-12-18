@@ -13,6 +13,8 @@
 
 #include "allocator.h"
 
+namespace sysmem_driver {
+
 class ContiguousPooledMemoryAllocator : public MemoryAllocator {
  public:
   ContiguousPooledMemoryAllocator(Owner* parent_device, const char* allocation_name, uint64_t size,
@@ -58,5 +60,7 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   bool is_cpu_accessible_{};
   bool is_ready_{};
 };
+
+}  // namespace sysmem_driver
 
 #endif  // ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_CONTIGUOUS_POOLED_MEMORY_ALLOCATOR_H_

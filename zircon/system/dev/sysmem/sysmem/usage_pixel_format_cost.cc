@@ -13,6 +13,8 @@
 
 #include <ddk/platform-defs.h>
 
+namespace sysmem_driver {
+
 namespace {
 
 // The local Platform definition is different than the PID(s) in platform-defs.h
@@ -571,3 +573,5 @@ int32_t UsagePixelFormatCost::Compare(uint32_t pdev_device_info_vid, uint32_t pd
     return 0;
   }
 }
+
+}  // namespace sysmem_driver

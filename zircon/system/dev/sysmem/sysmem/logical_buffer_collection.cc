@@ -18,6 +18,8 @@
 #include "koid_util.h"
 #include "usage_pixel_format_cost.h"
 
+namespace sysmem_driver {
+
 namespace {
 
 // Sysmem is creating the VMOs, so sysmem can have all the rights and just not
@@ -1795,3 +1797,5 @@ void LogicalBufferCollection::TrackedParentVmo::OnZeroChildren(async_dispatcher_
   local_do_delete(this);
   ZX_DEBUG_ASSERT(!local_do_delete);
 }
+
+}  // namespace sysmem_driver

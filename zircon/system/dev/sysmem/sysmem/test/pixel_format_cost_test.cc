@@ -7,7 +7,9 @@
 
 #include "usage_pixel_format_cost.h"
 
+namespace sysmem_driver {
 namespace {
+
 TEST(PixelFormatCost, Afbc) {
   fuchsia_sysmem_BufferCollectionConstraints constraints = {};
   constraints.image_format_constraints_count = 2;
@@ -63,3 +65,4 @@ TEST(PixelFormatCost, IntelTiling) {
 }
 
 }  // namespace
+}  // namespace sysmem_driver

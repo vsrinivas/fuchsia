@@ -24,6 +24,7 @@
 #include "driver.h"
 #include "macros.h"
 
+namespace sysmem_driver {
 zx_status_t sysmem_init(void** out_driver_ctx) {
   DRIVER_TRACE("sysmem_init() - async_get_default_dispatcher(): %p",
                async_get_default_dispatcher());
@@ -67,8 +68,10 @@ zx_driver_ops_t sysmem_driver_ops = [] {
   return tmp;
 }();
 
+}  // namespace sysmem_driver
+
 // clang-format off
-ZIRCON_DRIVER_BEGIN(sysmem, sysmem_driver_ops, "zircon", "0.1", 4)
+ZIRCON_DRIVER_BEGIN(sysmem, sysmem_driver::sysmem_driver_ops, "zircon", "0.1", 4)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),

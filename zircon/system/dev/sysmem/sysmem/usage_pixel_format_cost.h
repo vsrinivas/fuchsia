@@ -9,6 +9,8 @@
 
 #include <cstdint>
 
+namespace sysmem_driver {
+
 // This class effectively breaks ties in a platform-specific way among the list
 // of PixelFormat(s) that a set of participants are all able to support.
 //
@@ -41,5 +43,7 @@ class UsagePixelFormatCost {
  private:
   // For now the implementation is via a static table.
 };
+
+}  // namespace sysmem_driver
 
 #endif  // ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_USAGE_PIXEL_FORMAT_COST_H_

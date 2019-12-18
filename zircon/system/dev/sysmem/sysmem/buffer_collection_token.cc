@@ -6,6 +6,8 @@
 
 #include <lib/fidl-utils/bind.h>
 
+namespace sysmem_driver {
+
 namespace {
 
 constexpr uint32_t kConcurrencyCap = 64;
@@ -114,3 +116,5 @@ BufferCollectionToken::BufferCollectionToken(Device* parent_device,
   ZX_DEBUG_ASSERT(parent_device_);
   ZX_DEBUG_ASSERT(parent_);
 }
+
+}  // namespace sysmem_driver

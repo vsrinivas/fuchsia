@@ -26,6 +26,8 @@
 
 #include "memory_allocator.h"
 
+namespace sysmem_driver {
+
 class Driver;
 class BufferCollectionToken;
 
@@ -71,6 +73,9 @@ class Device final : public MemoryAllocator::Owner {
   // Get allocator for |settings|. Returns NULL if allocator is not
   // registered for settings.
   MemoryAllocator* GetAllocator(const fuchsia_sysmem_BufferMemorySettings* settings);
+
+  const sysmem_protocol_t* proto() const { return &in_proc_sysmem_protocol_; }
+  const zx_device_t* device() const { return device_; }
 
  private:
   void Post(fit::closure to_run);
@@ -124,5 +129,7 @@ class Device final : public MemoryAllocator::Owner {
   async_dispatcher_t* dispatcher_ = nullptr;
   ClosureQueue closure_queue_;
 };
+
+}  // namespace sysmem_driver
 
 #endif  // ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_DEVICE_H_

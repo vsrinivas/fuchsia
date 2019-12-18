@@ -12,6 +12,7 @@
 #include <ddk/platform-defs.h>
 #include <zxtest/zxtest.h>
 
+namespace sysmem_driver {
 namespace {
 
 class FakeOwner : public MemoryAllocator::Owner {
@@ -130,3 +131,4 @@ TEST_F(ContiguousPooledSystem, SetReady) {
 }
 
 }  // namespace
+}  // namespace sysmem_driver

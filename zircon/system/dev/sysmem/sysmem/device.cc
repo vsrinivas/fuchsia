@@ -25,6 +25,9 @@
 #include "contiguous_pooled_memory_allocator.h"
 #include "macros.h"
 
+using sysmem_driver::MemoryAllocator;
+
+namespace sysmem_driver {
 namespace {
 
 class SystemRamMemoryAllocator : public MemoryAllocator {
@@ -614,3 +617,5 @@ zx_handle_t Device::SecureMemConnection::channel() {
   ZX_DEBUG_ASSERT(connection_);
   return connection_.get();
 }
+
+}  // namespace sysmem_driver

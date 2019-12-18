@@ -5,7 +5,6 @@
 source_set("common_srcs") {
   sources = [
     "allocator.cc",
-    "binding.cc",
     "buffer_collection.cc",
     "buffer_collection_token.cc",
     "contiguous_pooled_memory_allocator.cc",
@@ -17,7 +16,7 @@ source_set("common_srcs") {
     "memory_allocator.cc",
     "usage_pixel_format_cost.cc",
   ]
-  deps = [
+  public_deps = [
     "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/banjo/ddk.protocol.sysmem",
@@ -42,6 +41,9 @@ source_set("common_srcs") {
 }
 
 zx_driver("sysmem") {
+  sources = [
+    "binding.cc",
+  ]
   deps = [
     ":common_srcs",
   ]

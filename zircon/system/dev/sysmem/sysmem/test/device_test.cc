@@ -8,6 +8,7 @@
 
 #include <zxtest/zxtest.h>
 
+namespace sysmem_driver {
 namespace {
 
 TEST(Device, OverrideCommandLine) {
@@ -34,3 +35,4 @@ TEST(Device, OverrideCommandLine) {
 }
 
 }  // namespace
+}  // namespace sysmem_driver

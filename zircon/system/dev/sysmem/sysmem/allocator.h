@@ -11,6 +11,8 @@
 #include "lib/fidl-async-2/simple_binding.h"
 #include "logging.h"
 
+namespace sysmem_driver {
+
 // An instance of this class serves an Allocator connection.  The lifetime of
 // the instance is 1:1 with the Allocator channel.
 //
@@ -36,5 +38,7 @@ class Allocator : public FidlServer<Allocator,
 
   Device* parent_device_ = nullptr;
 };
+
+}  // namespace sysmem_driver
 
 #endif  // ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_ALLOCATOR_H_

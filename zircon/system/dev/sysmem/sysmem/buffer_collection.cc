@@ -10,6 +10,8 @@
 #include "fuchsia/sysmem/c/fidl.h"
 #include "logical_buffer_collection.h"
 
+namespace sysmem_driver {
+
 namespace {
 
 namespace {
@@ -450,3 +452,5 @@ BufferCollection::BufferCollectionInfo BufferCollection::BufferCollectionInfoClo
 
   return clone;
 }
+
+}  // namespace sysmem_driver

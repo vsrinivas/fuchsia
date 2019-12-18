@@ -6,6 +6,8 @@
 
 #include <zircon/assert.h>
 
+namespace sysmem_driver {
+
 MemoryAllocator::~MemoryAllocator() {
   for (auto& it : destroy_callbacks_) {
     it.second();
@@ -26,3 +28,5 @@ void MemoryAllocator::RemoveDestroyCallback(intptr_t key) {
   // create.  Erase if present.
   destroy_callbacks_.erase(key);
 }
+
+}  // namespace sysmem_driver

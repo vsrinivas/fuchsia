@@ -6,6 +6,8 @@
 
 #include "macros.h"
 
+namespace sysmem_driver {
+
 ContiguousPooledMemoryAllocator::ContiguousPooledMemoryAllocator(Owner* parent_device,
                                                                  const char* allocation_name,
                                                                  uint64_t size,
@@ -203,3 +205,5 @@ void ContiguousPooledMemoryAllocator::DumpPoolStats() {
       allocation_name_, unused_size, max_free_size, region_allocator_.AllocatedRegionCount(),
       region_allocator_.AvailableRegionCount());
 }
+
+}  // namespace sysmem_driver

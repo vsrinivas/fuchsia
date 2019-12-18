@@ -11,6 +11,8 @@
 
 #include <map>
 
+namespace sysmem_driver {
+
 class MemoryAllocator {
  public:
   // Some sub-classes take this interface as a constructor param, which
@@ -66,5 +68,7 @@ class MemoryAllocator {
  public:
   std::map<intptr_t, fit::callback<void()>> destroy_callbacks_;
 };
+
+}  // namespace sysmem_driver
 
 #endif  // ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_MEMORY_ALLOCATOR_H_

@@ -13,6 +13,8 @@
 
 #include "logical_buffer_collection.h"
 
+namespace sysmem_driver {
+
 namespace {
 
 constexpr uint32_t kConcurrencyCap = 64;
@@ -113,3 +115,5 @@ zx_status_t Allocator::BindSharedCollection(zx_handle_t token_param,
                                                 std::move(buffer_collection_request));
   return ZX_OK;
 }
+
+}  // namespace sysmem_driver

@@ -11,6 +11,8 @@
 
 #include <ddk/debug.h>
 
+namespace sysmem_driver {
+
 void vLog(bool is_error, const char* prefix1, const char* prefix2, const char* format,
           va_list args) {
   // Let's not have a buffer on the stack, not because it couldn't be done
@@ -36,3 +38,5 @@ void vLog(bool is_error, const char* prefix1, const char* prefix2, const char* f
     zxlogf(TRACE, "[%s %s] %s\n", prefix1, prefix2, buffer.get());
   }
 }
+
+}  // namespace sysmem_driver

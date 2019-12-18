@@ -16,6 +16,8 @@
 
 #include "logging.h"
 
+namespace sysmem_driver {
+
 class LogicalBufferCollection;
 class BufferCollection
     : public FidlServer<BufferCollection,
@@ -117,5 +119,7 @@ class BufferCollection
 
   bool is_done_ = false;
 };
+
+}  // namespace sysmem_driver
 
 #endif  // ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_BUFFER_COLLECTION_H_

@@ -19,6 +19,8 @@
 
 #include "device.h"
 
+namespace sysmem_driver {
+
 class BufferCollectionToken;
 class BufferCollection;
 class MemoryAllocator;
@@ -205,5 +207,7 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   using ParentVmoMap = std::map<zx_handle_t, std::unique_ptr<TrackedParentVmo>>;
   ParentVmoMap parent_vmos_;
 };
+
+}  // namespace sysmem_driver
 
 #endif  // ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_LOGICAL_BUFFER_COLLECTION_H_

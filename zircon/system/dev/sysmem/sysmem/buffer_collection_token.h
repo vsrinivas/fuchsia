@@ -12,6 +12,8 @@
 #include "logging.h"
 #include "logical_buffer_collection.h"
 
+namespace sysmem_driver {
+
 class BufferCollectionToken
     : public FidlServer<
           BufferCollectionToken,
@@ -69,4 +71,7 @@ class BufferCollectionToken
   // buffers too soon before all tokens are gone).
   zx::channel buffer_collection_request_;
 };
+
+}  // namespace sysmem_driver
+
 #endif  // ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_BUFFER_COLLECTION_TOKEN_H_

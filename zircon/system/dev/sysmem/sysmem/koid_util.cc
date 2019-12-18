@@ -7,6 +7,8 @@
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 
+namespace sysmem_driver {
+
 zx_status_t get_channel_koids(const zx::channel& this_end, zx_koid_t* this_end_koid,
                               zx_koid_t* that_end_koid) {
   ZX_DEBUG_ASSERT(this_end_koid);
@@ -30,3 +32,5 @@ zx_status_t get_channel_koids(const zx::channel& this_end, zx_koid_t* this_end_k
   *that_end_koid = token_info.related_koid;
   return ZX_OK;
 }
+
+}  // namespace sysmem_driver
