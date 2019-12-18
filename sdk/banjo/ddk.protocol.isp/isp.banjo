@@ -51,19 +51,4 @@ protocol Isp {
                        zircon.device.camera.FrameRate rate, StreamType type,
                        ddk.protocol.camerahwaccel.HwAccelFrameCallback frame_callback)
                             -> (zx.status s, OutputStream st);
-
-    // The driver returns the Stream protocol for this particular stream.
-    // |buffer_collection| : Hold the format and pool of VMOs that the ISP will
-    //                       produce
-    // |image_format| : The format of the image data in the output stream
-    // |rate| : The desired frame rate for the stream
-    // |type| : The type of stream to produce
-    // |stream| : The protocol which calls a function when the ISP is done
-    //            writing to a buffer.
-    // @Returns: |status| : indicates if the stream was created.
-    // @Returns: |st| : Protocol over which the flow of frames is controlled.
-    CreateOutputStream2(zircon.device.sysmem.BufferCollectionInfo_2 buffer_collection,
-                        zircon.device.sysmem.ImageFormat_2 image_format,
-                        zircon.device.camera.FrameRate rate, StreamType type,
-                        OutputStreamCallback stream) -> (zx.status s, OutputStream st);
 };
