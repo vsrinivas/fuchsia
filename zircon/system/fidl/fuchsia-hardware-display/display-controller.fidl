@@ -68,12 +68,6 @@ struct Info {
     string:identifierMaxLen monitor_serial;
 };
 
-struct ImagePlane {
-    // Offset from the beginning of the mapped region.
-    uint32 byte_offset;
-    uint32 bytes_per_row;
-};
-
 // An ImageConfig accompanies image data and defines how to interpret that data.
 struct ImageConfig {
     // The width and height of the image in pixels.
@@ -88,8 +82,6 @@ struct ImageConfig {
     // agree on the meaning of the value through some mechanism outside the scope
     // of this API.
     uint32 type = typeSimple;
-
-    array<ImagePlane>:4 planes;
 };
 const uint32 typeSimple = 0;
 // Intentionally left some gap between Simple and Capture types.

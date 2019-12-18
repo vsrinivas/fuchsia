@@ -27,6 +27,7 @@ namespace fuchsia {
 namespace hardware {
 namespace display {
 
+struct ImageConfig;
 enum class VirtconMode : uint8_t {
   INACTIVE = 0u,
   FALLBACK = 1u,
@@ -48,8 +49,6 @@ enum class Transform : uint8_t {
 
 class Provider;
 struct Mode;
-struct ImagePlane;
-struct ImageConfig;
 struct Frame;
 struct CursorInfo;
 struct Info;
@@ -93,6 +92,29 @@ enum class AlphaMode : uint8_t {
 class Controller;
 
 constexpr uint32_t typeSimple = 0u;
+
+extern "C" const fidl_type_t fuchsia_hardware_display_ImageConfigTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ImageConfigTable;
+
+struct ImageConfig {
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ImageConfigTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ImageConfigTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
+
+  uint32_t width = {};
+
+  uint32_t height = {};
+
+  uint32_t pixel_format = {};
+
+  uint32_t type = {};
+};
 
 constexpr uint32_t typeCapture = 10u;
 
@@ -496,50 +518,6 @@ struct Mode {
   uint32_t refresh_rate_e2 = {};
 
   uint32_t flags = {};
-};
-
-extern "C" const fidl_type_t fuchsia_hardware_display_ImagePlaneTable;
-extern "C" const fidl_type_t v1_fuchsia_hardware_display_ImagePlaneTable;
-
-struct ImagePlane {
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ImagePlaneTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ImagePlaneTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
-
-  uint32_t byte_offset = {};
-
-  uint32_t bytes_per_row = {};
-};
-
-extern "C" const fidl_type_t fuchsia_hardware_display_ImageConfigTable;
-extern "C" const fidl_type_t v1_fuchsia_hardware_display_ImageConfigTable;
-
-struct ImageConfig {
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ImageConfigTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ImageConfigTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 48;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 48;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
-
-  uint32_t width = {};
-
-  uint32_t height = {};
-
-  uint32_t pixel_format = {};
-
-  uint32_t type = {};
-
-  ::fidl::Array<::llcpp::fuchsia::hardware::display::ImagePlane, 4> planes = {};
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_display_FrameTable;
@@ -1329,9 +1307,9 @@ class Controller final {
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerImportVmoImageRequestTable;
     static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerImportVmoImageRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
-    static constexpr uint32_t PrimarySize = 72;
+    static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 72;
+    static constexpr uint32_t AltPrimarySize = 40;
     static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
@@ -1368,9 +1346,9 @@ class Controller final {
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerImportImageRequestTable;
     static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerImportImageRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 80;
+    static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 80;
+    static constexpr uint32_t AltPrimarySize = 48;
     static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
@@ -1540,9 +1518,9 @@ class Controller final {
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerSetLayerPrimaryConfigRequestTable;
     static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerSetLayerPrimaryConfigRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 72;
+    static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 72;
+    static constexpr uint32_t AltPrimarySize = 40;
     static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
@@ -1600,9 +1578,9 @@ class Controller final {
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerSetLayerCursorConfigRequestTable;
     static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerSetLayerCursorConfigRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 72;
+    static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 72;
+    static constexpr uint32_t AltPrimarySize = 40;
     static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
@@ -1863,9 +1841,9 @@ class Controller final {
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerSetBufferCollectionConstraintsRequestTable;
     static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerSetBufferCollectionConstraintsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 72;
+    static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 72;
+    static constexpr uint32_t AltPrimarySize = 40;
     static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
@@ -1941,9 +1919,9 @@ class Controller final {
     static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerImportImageForCaptureRequestTable;
     static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerImportImageForCaptureRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 80;
+    static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 80;
+    static constexpr uint32_t AltPrimarySize = 48;
     static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
@@ -2872,13 +2850,13 @@ class Controller final {
 
     ::zx::channel* mutable_channel() { return &channel_; }
 
-    // Allocates 104 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ImportVmoImage ImportVmoImage(::llcpp::fuchsia::hardware::display::ImageConfig image_config, ::zx::vmo vmo, int32_t offset);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::ImportVmoImage ImportVmoImage(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, ::zx::vmo vmo, int32_t offset, ::fidl::BytePart _response_buffer);
 
-    // Allocates 112 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 80 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ImportImage ImportImage(::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -2960,7 +2938,7 @@ class Controller final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::SetDisplayLayers SetDisplayLayers(::fidl::BytePart _request_buffer, uint64_t display_id, ::fidl::VectorView<uint64_t> layer_ids);
 
-    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::SetLayerPrimaryConfig SetLayerPrimaryConfig(uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -2978,7 +2956,7 @@ class Controller final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::SetLayerPrimaryAlpha SetLayerPrimaryAlpha(::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::AlphaMode mode, float val);
 
-    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::SetLayerCursorConfig SetLayerCursorConfig(uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -3036,7 +3014,7 @@ class Controller final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::ReleaseBufferCollection ReleaseBufferCollection(::fidl::BytePart _request_buffer, uint64_t collection_id);
 
-    // Allocates 96 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::SetBufferCollectionConstraints SetBufferCollectionConstraints(uint64_t collection_id, ::llcpp::fuchsia::hardware::display::ImageConfig config);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -3062,7 +3040,7 @@ class Controller final {
     // image_id must be used by the client to start capture and/or release
     // resources allocated for capture.
     // Returns ZX_ERR_NOT_SUPPORTED if controller does not support capture
-    // Allocates 112 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 80 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ImportImageForCapture ImportImageForCapture(::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index);
 
     // Imports a buffer collection backed VMO into the display controller. The VMO
@@ -3114,13 +3092,13 @@ class Controller final {
     Call() = delete;
    public:
 
-    // Allocates 104 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ImportVmoImage ImportVmoImage(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, ::zx::vmo vmo, int32_t offset);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::ImportVmoImage ImportVmoImage(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, ::zx::vmo vmo, int32_t offset, ::fidl::BytePart _response_buffer);
 
-    // Allocates 112 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 80 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ImportImage ImportImage(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -3202,7 +3180,7 @@ class Controller final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::SetDisplayLayers SetDisplayLayers(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t display_id, ::fidl::VectorView<uint64_t> layer_ids);
 
-    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::SetLayerPrimaryConfig SetLayerPrimaryConfig(::zx::unowned_channel _client_end, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -3220,7 +3198,7 @@ class Controller final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::SetLayerPrimaryAlpha SetLayerPrimaryAlpha(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::AlphaMode mode, float val);
 
-    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::SetLayerCursorConfig SetLayerCursorConfig(::zx::unowned_channel _client_end, uint64_t layer_id, ::llcpp::fuchsia::hardware::display::ImageConfig image_config);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -3278,7 +3256,7 @@ class Controller final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::ReleaseBufferCollection ReleaseBufferCollection(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t collection_id);
 
-    // Allocates 96 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::SetBufferCollectionConstraints SetBufferCollectionConstraints(::zx::unowned_channel _client_end, uint64_t collection_id, ::llcpp::fuchsia::hardware::display::ImageConfig config);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -3304,7 +3282,7 @@ class Controller final {
     // image_id must be used by the client to start capture and/or release
     // resources allocated for capture.
     // Returns ZX_ERR_NOT_SUPPORTED if controller does not support capture
-    // Allocates 112 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 80 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ImportImageForCapture ImportImageForCapture(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index);
 
     // Imports a buffer collection backed VMO into the display controller. The VMO
@@ -3792,6 +3770,15 @@ class Controller final {
 namespace fidl {
 
 template <>
+struct IsFidlType<::llcpp::fuchsia::hardware::display::ImageConfig> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::hardware::display::ImageConfig>);
+static_assert(offsetof(::llcpp::fuchsia::hardware::display::ImageConfig, width) == 0);
+static_assert(offsetof(::llcpp::fuchsia::hardware::display::ImageConfig, height) == 4);
+static_assert(offsetof(::llcpp::fuchsia::hardware::display::ImageConfig, pixel_format) == 8);
+static_assert(offsetof(::llcpp::fuchsia::hardware::display::ImageConfig, type) == 12);
+static_assert(sizeof(::llcpp::fuchsia::hardware::display::ImageConfig) == ::llcpp::fuchsia::hardware::display::ImageConfig::PrimarySize);
+
+template <>
 struct IsFidlType<::llcpp::fuchsia::hardware::display::Provider::OpenVirtconControllerRequest> : public std::true_type {};
 template <>
 struct IsFidlMessage<::llcpp::fuchsia::hardware::display::Provider::OpenVirtconControllerRequest> : public std::true_type {};
@@ -3833,23 +3820,6 @@ static_assert(offsetof(::llcpp::fuchsia::hardware::display::Mode, vertical_resol
 static_assert(offsetof(::llcpp::fuchsia::hardware::display::Mode, refresh_rate_e2) == 8);
 static_assert(offsetof(::llcpp::fuchsia::hardware::display::Mode, flags) == 12);
 static_assert(sizeof(::llcpp::fuchsia::hardware::display::Mode) == ::llcpp::fuchsia::hardware::display::Mode::PrimarySize);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::hardware::display::ImagePlane> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fuchsia::hardware::display::ImagePlane>);
-static_assert(offsetof(::llcpp::fuchsia::hardware::display::ImagePlane, byte_offset) == 0);
-static_assert(offsetof(::llcpp::fuchsia::hardware::display::ImagePlane, bytes_per_row) == 4);
-static_assert(sizeof(::llcpp::fuchsia::hardware::display::ImagePlane) == ::llcpp::fuchsia::hardware::display::ImagePlane::PrimarySize);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::hardware::display::ImageConfig> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fuchsia::hardware::display::ImageConfig>);
-static_assert(offsetof(::llcpp::fuchsia::hardware::display::ImageConfig, width) == 0);
-static_assert(offsetof(::llcpp::fuchsia::hardware::display::ImageConfig, height) == 4);
-static_assert(offsetof(::llcpp::fuchsia::hardware::display::ImageConfig, pixel_format) == 8);
-static_assert(offsetof(::llcpp::fuchsia::hardware::display::ImageConfig, type) == 12);
-static_assert(offsetof(::llcpp::fuchsia::hardware::display::ImageConfig, planes) == 16);
-static_assert(sizeof(::llcpp::fuchsia::hardware::display::ImageConfig) == ::llcpp::fuchsia::hardware::display::ImageConfig::PrimarySize);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::hardware::display::Frame> : public std::true_type {};
@@ -3944,8 +3914,8 @@ struct IsFidlMessage<::llcpp::fuchsia::hardware::display::Controller::ImportVmoI
 static_assert(sizeof(::llcpp::fuchsia::hardware::display::Controller::ImportVmoImageRequest)
     == ::llcpp::fuchsia::hardware::display::Controller::ImportVmoImageRequest::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::hardware::display::Controller::ImportVmoImageRequest, image_config) == 16);
-static_assert(offsetof(::llcpp::fuchsia::hardware::display::Controller::ImportVmoImageRequest, vmo) == 64);
-static_assert(offsetof(::llcpp::fuchsia::hardware::display::Controller::ImportVmoImageRequest, offset) == 68);
+static_assert(offsetof(::llcpp::fuchsia::hardware::display::Controller::ImportVmoImageRequest, vmo) == 32);
+static_assert(offsetof(::llcpp::fuchsia::hardware::display::Controller::ImportVmoImageRequest, offset) == 36);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::hardware::display::Controller::ImportVmoImageResponse> : public std::true_type {};
@@ -3963,8 +3933,8 @@ struct IsFidlMessage<::llcpp::fuchsia::hardware::display::Controller::ImportImag
 static_assert(sizeof(::llcpp::fuchsia::hardware::display::Controller::ImportImageRequest)
     == ::llcpp::fuchsia::hardware::display::Controller::ImportImageRequest::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::hardware::display::Controller::ImportImageRequest, image_config) == 16);
-static_assert(offsetof(::llcpp::fuchsia::hardware::display::Controller::ImportImageRequest, collection_id) == 64);
-static_assert(offsetof(::llcpp::fuchsia::hardware::display::Controller::ImportImageRequest, index) == 72);
+static_assert(offsetof(::llcpp::fuchsia::hardware::display::Controller::ImportImageRequest, collection_id) == 32);
+static_assert(offsetof(::llcpp::fuchsia::hardware::display::Controller::ImportImageRequest, index) == 40);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::hardware::display::Controller::ImportImageResponse> : public std::true_type {};
@@ -4234,8 +4204,8 @@ struct IsFidlMessage<::llcpp::fuchsia::hardware::display::Controller::ImportImag
 static_assert(sizeof(::llcpp::fuchsia::hardware::display::Controller::ImportImageForCaptureRequest)
     == ::llcpp::fuchsia::hardware::display::Controller::ImportImageForCaptureRequest::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::hardware::display::Controller::ImportImageForCaptureRequest, image_config) == 16);
-static_assert(offsetof(::llcpp::fuchsia::hardware::display::Controller::ImportImageForCaptureRequest, collection_id) == 64);
-static_assert(offsetof(::llcpp::fuchsia::hardware::display::Controller::ImportImageForCaptureRequest, index) == 72);
+static_assert(offsetof(::llcpp::fuchsia::hardware::display::Controller::ImportImageForCaptureRequest, collection_id) == 32);
+static_assert(offsetof(::llcpp::fuchsia::hardware::display::Controller::ImportImageForCaptureRequest, index) == 40);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::hardware::display::Controller::ImportImageForCaptureResponse> : public std::true_type {};

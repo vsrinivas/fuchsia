@@ -312,13 +312,6 @@ void Image::GetConfig(fhd::ImageConfig* config_out) {
   } else {
     config_out->type = 2;  // IMAGE_TYPE_Y_LEGACY
   }
-  config_out->planes = {};
-  config_out->planes[0].byte_offset = 0;
-  config_out->planes[0].bytes_per_row = stride_ * ZX_PIXEL_FORMAT_BYTES(format_);
-  if (config_out->pixel_format == ZX_PIXEL_FORMAT_NV12) {
-    config_out->planes[1].byte_offset = stride_ * height_;
-    config_out->planes[1].bytes_per_row = stride_ * ZX_PIXEL_FORMAT_BYTES(format_);
-  }
 }
 
 bool Image::Import(fhd::Controller::SyncClient* dc, image_import_t* info_out) {

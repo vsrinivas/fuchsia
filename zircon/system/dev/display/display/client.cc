@@ -130,8 +130,6 @@ static void populate_image(const fuchsia_hardware_display_ImageConfig& image, im
   static_assert(offsetof(image_t, pixel_format) ==
                     offsetof(fuchsia_hardware_display_ImageConfig, pixel_format),
                 "Struct mismatch");
-  static_assert(sizeof(image_plane_t) == sizeof(fuchsia_hardware_display_ImagePlane),
-                "Struct mismatch");
   static_assert(offsetof(image_t, type) == offsetof(fuchsia_hardware_display_ImageConfig, type),
                 "Struct mismatch");
   memcpy(image_out, &image, sizeof(fuchsia_hardware_display_ImageConfig));
@@ -264,10 +262,6 @@ void Client::HandleImportVmoImage(
   dc_image.width = req->image_config.width;
   dc_image.pixel_format = req->image_config.pixel_format;
   dc_image.type = req->image_config.type;
-  for (uint32_t i = 0; i < fbl::count_of(dc_image.planes); i++) {
-    dc_image.planes[i].byte_offset = req->image_config.planes[i].byte_offset;
-    dc_image.planes[i].bytes_per_row = req->image_config.planes[i].bytes_per_row;
-  }
 
   zx::vmo dup_vmo;
   resp->res = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
@@ -515,10 +509,6 @@ void Client::HandleSetBufferCollectionConstraints(
   dc_image.width = req->config.width;
   dc_image.pixel_format = req->config.pixel_format;
   dc_image.type = req->config.type;
-  for (uint32_t i = 0; i < fbl::count_of(dc_image.planes); i++) {
-    dc_image.planes[i].byte_offset = req->config.planes[i].byte_offset;
-    dc_image.planes[i].bytes_per_row = req->config.planes[i].bytes_per_row;
-  }
 
   resp->res = controller_->dc()->SetBufferCollectionConstraints(&dc_image, it->second.driver.get());
 

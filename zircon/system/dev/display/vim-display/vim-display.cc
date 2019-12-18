@@ -68,12 +68,6 @@ void populate_added_display_args(vim2_display_t* display, added_display_args_t* 
   args->cursor_info_count = 0;
 }
 
-static uint32_t compute_linear_stride(void* ctx, uint32_t width, zx_pixel_format_t format) {
-  // The vim2 display controller needs buffers with a stride that is an even
-  // multiple of 32.
-  return ROUNDUP(width, 32 / ZX_PIXEL_FORMAT_BYTES(format));
-}
-
 static void vim_set_display_controller_interface(
     void* ctx, const display_controller_interface_protocol_t* intf) {
   vim2_display_t* display = static_cast<vim2_display_t*>(ctx);
@@ -315,14 +309,9 @@ static uint32_t vim_check_configuration(void* ctx, const display_config_t** disp
         .width = width,
         .height = height,
     };
-    uint32_t bytes_per_row =
-        compute_linear_stride(display, layer->image.width, layer->image.pixel_format) *
-        ZX_PIXEL_FORMAT_BYTES(layer->image.pixel_format);
     success = display_configs[0]->layer_list[0]->type == LAYER_TYPE_PRIMARY &&
               layer->transform_mode == FRAME_TRANSFORM_IDENTITY && layer->image.width == width &&
-              layer->image.height == height && layer->image.planes[0].byte_offset == 0 &&
-              (layer->image.planes[0].bytes_per_row == bytes_per_row ||
-               layer->image.planes[0].bytes_per_row == 0) &&
+              layer->image.height == height &&
               memcmp(&layer->dest_frame, &frame, sizeof(frame_t)) == 0 &&
               memcmp(&layer->src_frame, &frame, sizeof(frame_t)) == 0 &&
               display_configs[0]->cc_flags == 0 && layer->alpha_mode == ALPHA_DISABLE;

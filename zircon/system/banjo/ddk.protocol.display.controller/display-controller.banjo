@@ -26,12 +26,6 @@ enum ImageType : uint32 {
     CAPTURE = 10;
 };
 
-/// A structure containing information about each plane of an image.
-struct ImagePlane {
-    uint32 byte_offset;
-    uint32 bytes_per_row;
-};
-
 /// A structure containing information about an image.
 struct Image {
     /// The width and height of the image in pixels.
@@ -45,8 +39,6 @@ struct Image {
     /// IMAGE_FORMAT_SIMPLE, it is up to the driver and buffer producer to agree on the meaning
     /// of the value through some mechanism outside the scope of this API.
     uint32 type;
-
-    array<ImagePlane>:4 planes;
 
     /// A driver-defined handle to the image. Each handle must be unique.
     uint64 @handle;

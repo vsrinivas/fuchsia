@@ -9,7 +9,7 @@ use fidl::{
     endpoints::{create_endpoints, ClientEnd},
 };
 use fidl_fuchsia_hardware_display::{
-    ControllerEvent, ControllerMarker, ControllerProxy, ImageConfig, ImagePlane,
+    ControllerEvent, ControllerMarker, ControllerProxy, ImageConfig,
     ProviderSynchronousProxy,
 };
 use fuchsia_async::{self as fasync, DurationExt, OnSignals, TimeoutExt};
@@ -293,12 +293,6 @@ impl Frame {
             height: config.height,
             pixel_format: config.format.into(),
             type_: image_type,
-            planes: [
-                ImagePlane { byte_offset: 0, bytes_per_row: 0 },
-                ImagePlane { byte_offset: 0, bytes_per_row: 0 },
-                ImagePlane { byte_offset: 0, bytes_per_row: 0 },
-                ImagePlane { byte_offset: 0, bytes_per_row: 0 },
-            ],
         }
     }
 
