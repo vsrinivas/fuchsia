@@ -57,7 +57,7 @@ class Ratio {
   //
   // So, there is something wrong with GCC when building this library with -O0
   // (see the referenced bug).  It does not seem to be respecting the
-  // -fvisiability-hidden or -fvisability-inlines-hidden flags which are being
+  // -fvisibility-hidden or -fvisibility-inlines-hidden flags which are being
   // passed to it.
   //
   // As a result, when this library is used by a DSO, the symbols become

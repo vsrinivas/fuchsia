@@ -18,6 +18,7 @@ group("ulib") {
     "$zx/system/dev/lib",
     "$zx/third_party/ulib",
     "abs_clock",
+    "affine",
     "async",
     "async:async-cpp",
     "async:async-default",
