@@ -22,12 +22,10 @@ use specialize_ip_macro::{specialize_ip, specialize_ip_address};
 
 use crate::context::{FrameContext, InstantContext, StateContext};
 use crate::device::arp::{
-    self, ArpContext, ArpFrameMetadata, ArpHardwareType, ArpState, ArpTimerId,
+    self, ArpContext, ArpDeviceIdContext, ArpFrameMetadata, ArpHardwareType, ArpState, ArpTimerId,
 };
 use crate::device::link::LinkDevice;
 use crate::device::ndp::{self, NdpContext, NdpHandler, NdpState, NdpTimerId};
-#[cfg(test)]
-use crate::device::EthernetDeviceId;
 use crate::device::{
     AddressConfigurationType, AddressEntry, AddressError, AddressState, BufferIpDeviceContext,
     DeviceIdContext, FrameDestination, IpDeviceContext, IpLinkDeviceState, RecvIpFrameMeta,
@@ -35,9 +33,9 @@ use crate::device::{
 };
 use crate::wire::arp::peek_arp_types;
 use crate::wire::ethernet::{EthernetFrame, EthernetFrameBuilder};
-use crate::Instant;
 #[cfg(test)]
-use crate::{Context, EventDispatcher};
+use crate::Context;
+use crate::Instant;
 
 const ETHERNET_MAX_PENDING_FRAMES: usize = 10;
 
@@ -285,7 +283,7 @@ pub(super) fn handle_timer<C: EthernetIpDeviceContext>(
     id: EthernetTimerId<C::DeviceId>,
 ) {
     match id {
-        EthernetTimerId::Arp(id) => arp::handle_timer::<EthernetLinkDevice, _, _>(ctx, id),
+        EthernetTimerId::Arp(id) => arp::handle_timer(ctx, id.into()),
         EthernetTimerId::Ndp(id) => <C as NdpHandler<EthernetLinkDevice>>::handle_timer(ctx, id),
     }
 }
@@ -374,7 +372,8 @@ pub(super) fn send_ip_frame<
             }
             #[ipv6addr]
             {
-                ctx.lookup(device_id, local_addr).ok_or(IpAddr::V6(local_addr))
+                <C as NdpHandler<_>>::lookup(ctx, device_id, local_addr)
+                    .ok_or(IpAddr::V6(local_addr))
             }
         }
     };
@@ -451,7 +450,7 @@ pub(super) fn receive_frame<B: BufferMut, C: BufferEthernetIpDeviceContext<B>>(
             };
             match types {
                 (ArpHardwareType::Ethernet, EtherType::Ipv4) => {
-                    crate::device::arp::receive_arp_packet(ctx, device_id, buffer)
+                    arp::receive_arp_packet(ctx, device_id, buffer)
                 }
                 types => debug!("got ARP packet for unsupported types: {:?}", types),
             }
@@ -1061,13 +1060,13 @@ pub(super) fn set_routing_enabled_inner<C: EthernetIpDeviceContext, I: Ip>(
 // TODO(rheacock): remove `cfg(test)` when this is used. Will probably be
 // called by a pub fn in the device mod.
 #[cfg(test)]
-pub(crate) fn insert_static_arp_table_entry<D: EventDispatcher>(
-    ctx: &mut Context<D>,
-    device_id: EthernetDeviceId,
+pub(super) fn insert_static_arp_table_entry<C: EthernetIpDeviceContext>(
+    ctx: &mut C,
+    device_id: C::DeviceId,
     addr: Ipv4Addr,
     mac: Mac,
 ) {
-    crate::device::arp::insert_static(ctx, device_id, addr, mac);
+    arp::insert_static_neighbor(ctx, device_id, addr, mac)
 }
 
 /// Insert an entry into this device's NDP table.
@@ -1091,7 +1090,7 @@ pub(super) fn insert_ndp_table_entry<C: EthernetIpDeviceContext>(
 /// After this function is called, the ethernet device should not be used and
 /// nothing else should be done with the state.
 pub(super) fn deinitialize<C: EthernetIpDeviceContext>(ctx: &mut C, device_id: C::DeviceId) {
-    crate::device::arp::deinitialize(ctx, device_id);
+    arp::deinitialize(ctx, device_id);
     <C as NdpHandler<_>>::deinitialize(ctx, device_id);
 }
 
@@ -1136,26 +1135,43 @@ impl<
     }
 }
 
+impl<C: EthernetIpDeviceContext> ArpDeviceIdContext<EthernetLinkDevice> for C {
+    type DeviceId = <C as DeviceIdContext<EthernetLinkDevice>>::DeviceId;
+}
+
 impl<C: EthernetIpDeviceContext> ArpContext<EthernetLinkDevice, Ipv4Addr> for C {
-    type DeviceId = C::DeviceId;
-
-    fn get_protocol_addr(&self, device_id: C::DeviceId) -> Option<Ipv4Addr> {
-        get_ip_addr_subnet::<_, Ipv4Addr>(self, device_id).map(|a| a.addr().get())
+    fn get_protocol_addr(
+        &self,
+        device_id: <C as ArpDeviceIdContext<EthernetLinkDevice>>::DeviceId,
+    ) -> Option<Ipv4Addr> {
+        get_ip_addr_subnet::<_, Ipv4Addr>(self, device_id.into()).map(|a| a.addr().get())
     }
-
-    fn get_hardware_addr(&self, device_id: C::DeviceId) -> Mac {
-        self.get_state_with(device_id).link().mac
+    fn get_hardware_addr(
+        &self,
+        device_id: <C as ArpDeviceIdContext<EthernetLinkDevice>>::DeviceId,
+    ) -> Mac {
+        self.get_state_with(device_id.into()).link().mac
     }
-
-    fn address_resolved(&mut self, device_id: C::DeviceId, proto_addr: Ipv4Addr, hw_addr: Mac) {
-        mac_resolved(self, device_id, IpAddr::V4(proto_addr), hw_addr);
+    fn address_resolved(
+        &mut self,
+        device_id: <C as ArpDeviceIdContext<EthernetLinkDevice>>::DeviceId,
+        proto_addr: Ipv4Addr,
+        hw_addr: Mac,
+    ) {
+        mac_resolved(self, device_id.into(), IpAddr::V4(proto_addr), hw_addr);
     }
-
-    fn address_resolution_failed(&mut self, device_id: C::DeviceId, proto_addr: Ipv4Addr) {
-        mac_resolution_failed(self, device_id, IpAddr::V4(proto_addr));
+    fn address_resolution_failed(
+        &mut self,
+        device_id: <C as ArpDeviceIdContext<EthernetLinkDevice>>::DeviceId,
+        proto_addr: Ipv4Addr,
+    ) {
+        mac_resolution_failed(self, device_id.into(), IpAddr::V4(proto_addr));
     }
-
-    fn address_resolution_expired(&mut self, _device_id: Self::DeviceId, _proto_addr: Ipv4Addr) {
+    fn address_resolution_expired(
+        &mut self,
+        _device_id: <C as ArpDeviceIdContext<EthernetLinkDevice>>::DeviceId,
+        _proto_addr: Ipv4Addr,
+    ) {
         log_unimplemented!((), "ArpContext::address_resolution_expired");
     }
 }

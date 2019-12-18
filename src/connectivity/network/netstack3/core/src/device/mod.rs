@@ -1389,6 +1389,26 @@ pub(crate) fn is_router_device<D: EventDispatcher, I: Ip>(
         && crate::device::is_routing_enabled::<_, I>(ctx, device))
 }
 
+/// Insert a static entry into this device's ARP table.
+///
+/// This will cause any conflicting dynamic entry to be removed, and
+/// any future conflicting gratuitous ARPs to be ignored.
+// TODO(rheacock): remove `cfg(test)` when this is used. Will probably be
+// called by a pub fn in the device mod.
+#[cfg(test)]
+pub(super) fn insert_static_arp_table_entry<D: EventDispatcher>(
+    ctx: &mut Context<D>,
+    device: DeviceId,
+    addr: Ipv4Addr,
+    mac: Mac,
+) {
+    match device.protocol {
+        DeviceProtocol::Ethernet => {
+            self::ethernet::insert_static_arp_table_entry(ctx, device.id.into(), addr, mac)
+        }
+    }
+}
+
 /// Insert an entry into this device's NDP table.
 ///
 /// This method only gets called when testing to force set a neighbor's

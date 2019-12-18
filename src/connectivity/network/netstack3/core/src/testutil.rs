@@ -760,12 +760,7 @@ impl DummyEventDispatcherBuilder {
         }
         for (idx, ip, mac) in arp_table_entries {
             let device = *idx_to_device_id.get(&idx).unwrap();
-            crate::device::ethernet::insert_static_arp_table_entry(
-                &mut ctx,
-                device.id().into(),
-                ip,
-                mac,
-            );
+            crate::device::insert_static_arp_table_entry(&mut ctx, device, ip, mac);
         }
         for (idx, ip, mac) in ndp_table_entries {
             let device = *idx_to_device_id.get(&idx).unwrap();
