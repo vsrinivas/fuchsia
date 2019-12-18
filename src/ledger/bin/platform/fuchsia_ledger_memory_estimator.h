@@ -20,13 +20,6 @@ class FuchsiaLedgerMemoryEstimator : public LedgerMemoryEstimator {
   // LedgerMemoryEstimator:
   bool GetLedgerMemoryUsage(uint64_t* memory) override;
   bool GetCurrentProcessMemoryUsage(uint64_t* memory) override;
-
- private:
-  // Initializes the |FuchsiaLedgerMemoryEstimator|. It must be called on the first call to
-  // |GetLedgerMemoryUsage|. Ledger must already be running before |Init()| is called.
-  bool Init();
-
-  zx::process ledger_task_;
 };
 
 }  // namespace ledger

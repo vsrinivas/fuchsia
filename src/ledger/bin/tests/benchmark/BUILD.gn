@@ -187,11 +187,6 @@ package("ledger_benchmarks") {
     },
 
     {
-      path = rebase_path("put/put_memory.tspec")
-      dest = "put_memory.tspec"
-    },
-
-    {
       path = rebase_path("put/put_as_reference.tspec")
       dest = "put_as_reference.tspec"
     },
@@ -239,11 +234,6 @@ package("ledger_benchmarks") {
     {
       path = rebase_path("stories_simulation/stories_wait_cached.tspec")
       dest = "stories_wait_cached.tspec"
-    },
-
-    {
-      path = rebase_path("stories_simulation/stories_memory.tspec")
-      dest = "stories_memory.tspec"
     },
   ]
 }

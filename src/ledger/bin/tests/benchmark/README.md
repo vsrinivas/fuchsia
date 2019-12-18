@@ -97,8 +97,6 @@ page.
     * `put_as_reference.tspec`: entries are put as references (CreateReference +
       PutReference)
     * `transaction.tspec`: changes are made in a transaction
-    * `put_memory.tspec`: how much memory is Ledger using after every insertion
-      in the basic case?
 * __Update entry__: How long does it take to update an existing value in Ledger
   (make several Put operations with the same key, but different values)?
     * `update_entry.tspec`: basic case
@@ -126,8 +124,6 @@ page.
     pages active, before clearing their contents.
     * `stories_wait_cached.tspec`: same as in the base case, but wait for a
     precached Ledger Page before creating a new Story.
-    * `stories_memory.tspec`: how much memory is Ledger using after every story
-    creation in the basic case?
 * __Disk space__: How much disk space does ledger use to store pages, objects
   and commits?
     * `disk_space_empty_ledger.tspec`: empty ledger (with no pages)

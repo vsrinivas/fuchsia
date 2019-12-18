@@ -1,7 +1,0 @@
-{
-  "test_name": "ledger-memory-usage-test",
-  "app": "fuchsia-pkg://fuchsia.com/ledger_tests#meta/memory_usage_test_benchmark.cmx",
-  "environment": {
-     "name": "environment_name"
-  }
-}

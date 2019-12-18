@@ -41,7 +41,6 @@ source_set("implementation") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/memfs",
-    "//zircon/public/lib/task-utils",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]

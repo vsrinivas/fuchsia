@@ -197,21 +197,6 @@ source_set("unittests") {
   configs += [ "//src/ledger:ledger_config" ]
 }
 
-executable("memory_usage_test_benchmark") {
-  testonly = true
-
-  sources = [
-    "memory_usage_test_benchmark.cc",
-  ]
-
-  deps = [
-    ":get_ledger",
-    ":lib",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
-  ]
-}
-
 source_set("run_all_unittests") {
   testonly = true
 

@@ -69,7 +69,6 @@ package("ledger_tests") {
 
   deps = [
     "//src/ledger/bin:ledger_unittests",
-    "//src/ledger/bin/testing:memory_usage_test_benchmark",
     "//src/ledger/bin/testing:run_all_unittests_test",
     "//src/ledger/bin/tests/cloud_provider",
     "//src/ledger/bin/tests/e2e_local",
@@ -120,11 +119,6 @@ package("ledger_tests") {
       path = rebase_path(
               "//src/ledger/bin/tests/cloud_provider/cloud_provider_validation_tests.cmx")
       dest = "cloud_provider_validation_tests.cmx"
-    },
-    {
-      path = rebase_path(
-              "//src/ledger/bin/testing/memory_usage_test_benchmark.cmx")
-      dest = "memory_usage_test_benchmark.cmx"
     },
     {
       path = rebase_path("//src/ledger/bin/testing/run_all_unittests_test.cmx")
@@ -179,20 +173,6 @@ package("ledger_tests") {
       # package directory.
       disabled = true
       environments = basic_envs
-    },
-  ]
-
-  binaries = [
-    {
-      name = "memory_usage_test_benchmark"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path(
-              "//src/ledger/bin/testing/memory_usage_test_benchmark.tspec")
-      dest = "memory_usage_test_benchmark.tspec"
     },
   ]
 }

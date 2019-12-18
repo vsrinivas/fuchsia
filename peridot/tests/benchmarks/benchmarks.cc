@@ -100,11 +100,9 @@ void AddPerfTests(benchmarking::BenchmarksRunner* benchmarks_runner, bool perfco
   benchmarks_runner->AddTspecBenchmark("ledger.disk_space_updates", "/pkgfs/packages/ledger_benchmarks/0/data/disk_space_updates.tspec");
   benchmarks_runner->AddTspecBenchmark("ledger.disk_space_one_commit_per_entry", "/pkgfs/packages/ledger_benchmarks/0/data/disk_space_one_commit_per_entry.tspec");
   benchmarks_runner->AddTspecBenchmark("ledger.disk_space_cleared_page", "/pkgfs/packages/ledger_benchmarks/0/data/disk_space_cleared_page.tspec");
-  benchmarks_runner->AddTspecBenchmark("ledger.put_memory", "/pkgfs/packages/ledger_benchmarks/0/data/put_memory.tspec");
   benchmarks_runner->AddTspecBenchmark("ledger.stories_single_active", "/pkgfs/packages/ledger_benchmarks/0/data/stories_single_active.tspec");
   benchmarks_runner->AddTspecBenchmark("ledger.stories_many_active", "/pkgfs/packages/ledger_benchmarks/0/data/stories_many_active.tspec");
   benchmarks_runner->AddTspecBenchmark("ledger.stories_wait_cached", "/pkgfs/packages/ledger_benchmarks/0/data/stories_wait_cached.tspec");
-  benchmarks_runner->AddTspecBenchmark("ledger.stories_memory", "/pkgfs/packages/ledger_benchmarks/0/data/stories_memory.tspec");
   // clang-format on
 
   // TODO(PT-181, PT-182): The following input latency and graphics benchmarks

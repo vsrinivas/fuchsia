@@ -40,11 +40,9 @@ void main() {
     'disk_space_updates.tspec',
     'disk_space_one_commit_per_entry.tspec',
     'disk_space_cleared_page.tspec',
-    'put_memory.tspec',
     'stories_single_active.tspec',
     'stories_many_active.tspec',
     'stories_wait_cached.tspec',
-    'stories_memory.tspec',
   ];
   for (final specFile in ledgerTests) {
     addTspecTest('/pkgfs/packages/ledger_benchmarks/0/data/$specFile');

@@ -34,7 +34,6 @@ source_set("cpp") {
     "//src/ledger/bin/fidl_helpers:message_relay",
     "//src/ledger/bin/testing/ledger_test_instance_provider:ledger_test_instance_provider_bin",
     "//src/ledger/bin/testing:get_ledger",
-    "//src/ledger/bin/testing:memory_usage_test_benchmark",
     "//src/ledger/bin/tests/e2e_local",
     "//src/lib/component/cpp:cpp",
     "//src/media/codec/factory",
