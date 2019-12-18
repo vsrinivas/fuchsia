@@ -130,10 +130,14 @@ List<TestCaseResults> drmFpsMetricsProcessor(
     final p90 = computePercentile(drmFpsValues, 90);
 
     return [
-      TestCaseResults('drm_fps', Unit.framesPerSecond, drmFpsValues),
-      TestCaseResults('drm_fps_p10', Unit.framesPerSecond, [p10]),
-      TestCaseResults('drm_fps_p50', Unit.framesPerSecond, [p50]),
-      TestCaseResults('drm_fps_p90', Unit.framesPerSecond, [p90]),
+      TestCaseResults(
+          '${flutterAppName}_drm_fps', Unit.framesPerSecond, drmFpsValues),
+      TestCaseResults(
+          '${flutterAppName}_drm_fps_p10', Unit.framesPerSecond, [p10]),
+      TestCaseResults(
+          '${flutterAppName}_drm_fps_p50', Unit.framesPerSecond, [p50]),
+      TestCaseResults(
+          '${flutterAppName}_drm_fps_p90', Unit.framesPerSecond, [p90]),
     ];
   }
 
