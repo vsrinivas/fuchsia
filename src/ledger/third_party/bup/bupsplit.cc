@@ -35,7 +35,7 @@
 
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
-namespace bup {
+namespace bupsplit {
 
 namespace {
 
@@ -116,4 +116,4 @@ void RollSumSplit::ComputeDigest() {
   }
 }
 
-}  // namespace bup
+}  // namespace bupsplit

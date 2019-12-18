@@ -265,8 +265,8 @@ class SplitContext {
   }
 
   static size_t GetLevel(size_t bits) {
-    LEDGER_DCHECK(bits >= bup::kBlobBits);
-    return (bits - bup::kBlobBits) / kBitsPerLevel;
+    LEDGER_DCHECK(bits >= bupsplit::kBlobBits);
+    return (bits - bupsplit::kBlobBits) / kBitsPerLevel;
   }
 
   std::unique_ptr<DataSource::DataChunk> BuildNextChunk(size_t index) {
@@ -316,7 +316,7 @@ class SplitContext {
   fit::function<void(IterationStatus, std::unique_ptr<Piece>)> callback_;
   // The object encoded by DataSource.
   ObjectType object_type_;
-  bup::RollSumSplit roll_sum_split_;
+  bupsplit::RollSumSplit roll_sum_split_;
   // The list of chunks from the initial source that are not yet entirely
   // consumed.
   std::vector<std::unique_ptr<DataSource::DataChunk>> current_chunks_;

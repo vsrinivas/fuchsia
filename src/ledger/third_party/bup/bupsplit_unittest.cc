@@ -11,7 +11,7 @@
 #include "gtest/gtest.h"
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
-namespace bup {
+namespace bupsplit {
 namespace {
 
 class RollSumSplitTest : public ::testing::Test {
@@ -151,4 +151,4 @@ TEST_F(RollSumSplitTest, ZeroesPermutation) {
 }
 
 }  // namespace
-}  // namespace bup
+}  // namespace bupsplit

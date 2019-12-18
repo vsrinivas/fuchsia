@@ -35,7 +35,7 @@
 
 #include "third_party/abseil-cpp/absl/strings/string_view.h"
 
-namespace bup {
+namespace bupsplit {
 
 constexpr uint8_t kBlobBits = 13;
 constexpr uint16_t kBlobSize = 1 << kBlobBits;
@@ -101,6 +101,6 @@ class RollSumSplit {
   size_t window_index_;
 };
 
-}  // namespace bup
+}  // namespace bupsplit
 
 #endif  // SRC_LEDGER_THIRD_PARTY_BUP_BUPSPLIT_H_
