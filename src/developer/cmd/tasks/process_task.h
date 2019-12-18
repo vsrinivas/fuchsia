@@ -22,6 +22,8 @@ class ProcessTask : public Task {
   // |Task| implementation:
   zx_status_t Execute(Command command, CompletionCallback callback) override;
 
+  std::string SearchPath(const std::string& name);
+
  private:
   void OnProcessTerminated(zx_status_t status);
 

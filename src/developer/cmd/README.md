@@ -88,7 +88,7 @@ running an executable with the given arguments.
 
 `cmd` finds executables by resolving the command name (the first token in the
 command sequence) against the value of the `PATH` environment variable, split
-on `;` (U+3B).
+on `:` (U+3A).
 
 ### Execution
 

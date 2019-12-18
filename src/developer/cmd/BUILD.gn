@@ -45,6 +45,7 @@ source_set("lib") {
     "//src/lib/line_input",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fit",
+    "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
   ]
 }
@@ -72,6 +73,7 @@ executable("cmd_unittests") {
     "executor_unittest.cc",
     "tasks/cd_task_unittest.cc",
     "tasks/getenv_task_unittest.cc",
+    "tasks/process_task_unittest.cc",
     "tasks/quit_task_unittest.cc",
     "tasks/setenv_task_unittest.cc",
     "tasks/unsetenv_task_unittest.cc",
@@ -105,6 +107,13 @@ package("cmd") {
 test_package("cmd_tests") {
   deps = [
     ":cmd_unittests",
+    "testing:trivial_success",
+  ]
+
+  binaries = [
+    {
+      name = "trivial_success"
+    },
   ]
 
   tests = [
