@@ -16,6 +16,7 @@
 #include <hid/usages.h>
 
 #include "src/ui/lib/hid-input-report/device.h"
+#include "src/ui/lib/key_util/key_util.h"
 
 namespace hid_input_report {
 
@@ -50,8 +51,14 @@ ParseResult Keyboard::ParseReportDescriptor(const hid::ReportDescriptor& hid_rep
 
   // No error, write to class members.
   size_t i = 0;
+  // Convert each of the HID keys to fuchsia keys.
   for (uint32_t key : key_values) {
-    descriptor_.keys[i++] = key;
+    std::optional<fuchsia::ui::input2::Key> fuchsia_key =
+        key_util::hid_key_to_fuchsia_key(hid::USAGE(hid::usage::Page::kKeyboardKeypad, key));
+    if (fuchsia_key) {
+      // Cast the key enum from HLCPP to LLCPP. We are guaranteed that this will be equivalent.
+      descriptor_.keys[i++] = static_cast<llcpp::fuchsia::ui::input2::Key>(*fuchsia_key);
+    }
   }
   descriptor_.num_keys = i;
 

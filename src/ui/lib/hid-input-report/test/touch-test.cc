@@ -49,16 +49,16 @@ TEST(TouchscreenTest, ParadiseV1) {
   ASSERT_NOT_NULL(touch_descriptor);
 
   EXPECT_EQ(5UL, touch_descriptor->num_contacts);
-  EXPECT_TRUE(touch_descriptor->contacts[0].contact_id.enabled);
-  EXPECT_TRUE(touch_descriptor->contacts[0].is_pressed.enabled);
+  EXPECT_TRUE(touch_descriptor->contacts[0].contact_id);
+  EXPECT_TRUE(touch_descriptor->contacts[0].is_pressed);
 
-  EXPECT_TRUE(touch_descriptor->contacts[0].position_x.enabled);
-  EXPECT_EQ(0, touch_descriptor->contacts[0].position_x.range.min);
-  EXPECT_EQ(259200, touch_descriptor->contacts[0].position_x.range.max);
+  EXPECT_TRUE(touch_descriptor->contacts[0].position_x);
+  EXPECT_EQ(0, touch_descriptor->contacts[0].position_x->range.min);
+  EXPECT_EQ(259200, touch_descriptor->contacts[0].position_x->range.max);
 
-  EXPECT_TRUE(touch_descriptor->contacts[0].position_y.enabled);
-  EXPECT_EQ(0, touch_descriptor->contacts[0].position_y.range.min);
-  EXPECT_EQ(172800, touch_descriptor->contacts[0].position_y.range.max);
+  EXPECT_TRUE(touch_descriptor->contacts[0].position_y);
+  EXPECT_EQ(0, touch_descriptor->contacts[0].position_y->range.min);
+  EXPECT_EQ(172800, touch_descriptor->contacts[0].position_y->range.max);
 
   // Now use the parsed descriptor to interpret a touchpad report.
   paradise_touch_t touch_v1_report = {};

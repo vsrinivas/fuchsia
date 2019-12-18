@@ -183,20 +183,21 @@ TEST_F(PrintInputReport, PrintMouseReport) {
 
 TEST_F(PrintInputReport, PrintMouseDescriptor) {
   hid_input_report::MouseDescriptor mouse = {};
-  mouse.movement_x.enabled = true;
-  mouse.movement_x.unit = hid::unit::UnitType::Distance;
-  mouse.movement_x.range.min = -100;
-  mouse.movement_x.range.max = -100;
+  llcpp_report::Axis axis;
+  axis.unit = llcpp_report::Unit::DISTANCE;
+  axis.range.min = -100;
+  axis.range.max = -100;
+  mouse.movement_x = axis;
 
-  mouse.movement_y.enabled = true;
-  mouse.movement_y.unit = hid::unit::UnitType::None;
-  mouse.movement_y.range.min = -200;
-  mouse.movement_y.range.max = -200;
+  axis.unit = llcpp_report::Unit::NONE;
+  axis.range.min = -200;
+  axis.range.max = -200;
+  mouse.movement_y = axis;
 
   mouse.num_buttons = 3;
-  mouse.button_ids[0] = 1;
-  mouse.button_ids[1] = 10;
-  mouse.button_ids[2] = 5;
+  mouse.buttons[0] = 1;
+  mouse.buttons[1] = 10;
+  mouse.buttons[2] = 5;
 
   hid_input_report::ReportDescriptor descriptor;
   descriptor.descriptor = mouse;
@@ -223,18 +224,18 @@ TEST_F(PrintInputReport, PrintMouseDescriptor) {
 }
 
 TEST_F(PrintInputReport, PrintSensorDescriptor) {
-  hid_input_report::SensorDescriptor sensor_desc = {};
-  sensor_desc.values[0].axis.enabled = true;
-  sensor_desc.values[0].axis.unit = hid::unit::UnitType::LinearVelocity;
-  sensor_desc.values[0].axis.range.min = 0;
-  sensor_desc.values[0].axis.range.max = 1000;
-  sensor_desc.values[0].type = hid::usage::Sensor::kAccelerationAxisX;
+  llcpp_report::Axis axis;
+  axis.unit = llcpp_report::Unit::LINEAR_VELOCITY;
+  axis.range.min = 0;
+  axis.range.max = 1000;
 
-  sensor_desc.values[1].axis.enabled = true;
-  sensor_desc.values[1].axis.unit = hid::unit::UnitType::Light;
-  sensor_desc.values[1].axis.range.min = 0;
-  sensor_desc.values[1].axis.range.max = 1000;
-  sensor_desc.values[1].type = hid::usage::Sensor::kLightIlluminance;
+  hid_input_report::SensorDescriptor sensor_desc = {};
+  sensor_desc.values[0].axis = axis;
+  sensor_desc.values[0].type = llcpp_report::SensorType::ACCELEROMETER_X;
+
+  axis.unit = llcpp_report::Unit::LUMINOUS_FLUX;
+  sensor_desc.values[1].axis = axis;
+  sensor_desc.values[1].type = llcpp_report::SensorType::LIGHT_ILLUMINANCE;
   sensor_desc.num_values = 2;
 
   hid_input_report::ReportDescriptor desc;
@@ -287,17 +288,18 @@ TEST_F(PrintInputReport, PrintTouchDescriptor) {
 
   touch_desc.max_contacts = 100;
 
-  touch_desc.contacts[0].position_x.enabled = true;
-  touch_desc.contacts[0].position_x.range.min = 0;
-  touch_desc.contacts[0].position_x.range.max = 300;
+  llcpp_report::Axis axis;
+  axis.unit = llcpp_report::Unit::NONE;
+  axis.range.min = 0;
+  axis.range.max = 300;
 
-  touch_desc.contacts[0].position_y.enabled = true;
-  touch_desc.contacts[0].position_y.range.min = 0;
-  touch_desc.contacts[0].position_y.range.max = 500;
+  touch_desc.contacts[0].position_x = axis;
 
-  touch_desc.contacts[0].pressure.enabled = true;
-  touch_desc.contacts[0].pressure.range.min = 0;
-  touch_desc.contacts[0].pressure.range.max = 100;
+  axis.range.max = 500;
+  touch_desc.contacts[0].position_y = axis;
+
+  axis.range.max = 100;
+  touch_desc.contacts[0].pressure = axis;
 
   touch_desc.num_contacts = 1;
 
@@ -374,9 +376,9 @@ TEST_F(PrintInputReport, PrintKeyboardDescriptor) {
   hid_input_report::KeyboardDescriptor keyboard_desc = {};
 
   keyboard_desc.num_keys = 3;
-  keyboard_desc.keys[0] = HID_USAGE_KEY_A;
-  keyboard_desc.keys[1] = HID_USAGE_KEY_UP;
-  keyboard_desc.keys[2] = HID_USAGE_KEY_LEFT_SHIFT;
+  keyboard_desc.keys[0] = llcpp::fuchsia::ui::input2::Key::A;
+  keyboard_desc.keys[1] = llcpp::fuchsia::ui::input2::Key::UP;
+  keyboard_desc.keys[2] = llcpp::fuchsia::ui::input2::Key::LEFT_SHIFT;
 
   hid_input_report::ReportDescriptor desc;
   desc.descriptor = keyboard_desc;

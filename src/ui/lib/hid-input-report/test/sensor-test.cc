@@ -39,17 +39,21 @@ TEST(SensorTest, AmbientLight) {
   // Check the descriptor.
   ASSERT_EQ(4, sensor_descriptor->num_values);
 
-  ASSERT_EQ(sensor_descriptor->values[0].type, hid::usage::Sensor::kLightIlluminance);
-  ASSERT_EQ(sensor_descriptor->values[0].axis.unit, hid::unit::UnitType::Lux);
+  ASSERT_EQ(sensor_descriptor->values[0].type,
+            ::llcpp::fuchsia::input::report::SensorType::LIGHT_ILLUMINANCE);
+  ASSERT_EQ(sensor_descriptor->values[0].axis.unit, ::llcpp::fuchsia::input::report::Unit::LUX);
 
-  ASSERT_EQ(sensor_descriptor->values[1].type, hid::usage::Sensor::kLightRedLight);
-  ASSERT_EQ(sensor_descriptor->values[1].axis.unit, hid::unit::UnitType::Lux);
+  ASSERT_EQ(sensor_descriptor->values[1].type,
+            ::llcpp::fuchsia::input::report::SensorType::LIGHT_RED);
+  ASSERT_EQ(sensor_descriptor->values[1].axis.unit, ::llcpp::fuchsia::input::report::Unit::LUX);
 
-  ASSERT_EQ(sensor_descriptor->values[2].type, hid::usage::Sensor::kLightBlueLight);
-  ASSERT_EQ(sensor_descriptor->values[2].axis.unit, hid::unit::UnitType::Lux);
+  ASSERT_EQ(sensor_descriptor->values[2].type,
+            ::llcpp::fuchsia::input::report::SensorType::LIGHT_BLUE);
+  ASSERT_EQ(sensor_descriptor->values[2].axis.unit, ::llcpp::fuchsia::input::report::Unit::LUX);
 
-  ASSERT_EQ(sensor_descriptor->values[3].type, hid::usage::Sensor::kLightGreenLight);
-  ASSERT_EQ(sensor_descriptor->values[3].axis.unit, hid::unit::UnitType::Lux);
+  ASSERT_EQ(sensor_descriptor->values[3].type,
+            ::llcpp::fuchsia::input::report::SensorType::LIGHT_GREEN);
+  ASSERT_EQ(sensor_descriptor->values[3].axis.unit, ::llcpp::fuchsia::input::report::Unit::LUX);
 
   // Create the report.
   ambient_light_input_rpt_t report_data = {};

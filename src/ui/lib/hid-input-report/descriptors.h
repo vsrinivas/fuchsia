@@ -9,6 +9,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <optional>
 #include <variant>
 
 #include <hid-parser/units.h>
@@ -23,13 +24,13 @@ namespace hid_input_report {
 constexpr size_t kMouseMaxButtons = 32;
 
 struct MouseDescriptor {
-  Axis movement_x = {};
-  Axis movement_y = {};
-  Axis scroll_v = {};
-  Axis scroll_h = {};
+  std::optional<::llcpp::fuchsia::input::report::Axis> movement_x = {};
+  std::optional<::llcpp::fuchsia::input::report::Axis> movement_y = {};
+  std::optional<::llcpp::fuchsia::input::report::Axis> scroll_v = {};
+  std::optional<::llcpp::fuchsia::input::report::Axis> scroll_h = {};
 
   uint8_t num_buttons = 0;
-  uint8_t button_ids[kMouseMaxButtons];
+  std::array<uint8_t, ::llcpp::fuchsia::input::report::MOUSE_MAX_NUM_BUTTONS> buttons;
 };
 
 struct MouseReport {
@@ -49,18 +50,13 @@ struct MouseReport {
   uint8_t buttons_pressed[kMouseMaxButtons];
 };
 
-// A |SensorAxis| has both a normal |Axis| and also the |SensorType|.
-struct SensorAxis {
-  Axis axis;
-  // The hid usage type for the sensor.
-  hid::usage::Sensor type;
-};
-
 const uint32_t kSensorMaxValues = 64;
 
 // |SensorDescriptor| describes the capabilities of a sensor device.
 struct SensorDescriptor {
-  SensorAxis values[kSensorMaxValues] = {};
+  std::array<::llcpp::fuchsia::input::report::SensorAxis,
+             ::llcpp::fuchsia::input::report::SENSOR_MAX_VALUES>
+      values;
   size_t num_values;
 };
 
@@ -75,21 +71,13 @@ struct SensorReport {
 const uint32_t kTouchMaxContacts = 10;
 
 struct ContactDescriptor {
-  Axis contact_id;
-  Axis is_pressed;
-
-  /// Describes the reporting of the x-axis.
-  Axis position_x;
-  /// Describes the reporting of the y-axis.
-  Axis position_y;
-
-  /// Pressure of the contact.
-  Axis pressure;
-
-  /// Width of the area of contact.
-  Axis contact_width;
-  /// Height of the area of contact.
-  Axis contact_height;
+  std::optional<::llcpp::fuchsia::input::report::Axis> contact_id;
+  std::optional<::llcpp::fuchsia::input::report::Axis> is_pressed;
+  std::optional<::llcpp::fuchsia::input::report::Axis> position_x;
+  std::optional<::llcpp::fuchsia::input::report::Axis> position_y;
+  std::optional<::llcpp::fuchsia::input::report::Axis> pressure;
+  std::optional<::llcpp::fuchsia::input::report::Axis> contact_width;
+  std::optional<::llcpp::fuchsia::input::report::Axis> contact_height;
 };
 
 struct TouchDescriptor {
@@ -139,8 +127,9 @@ struct TouchReport {
 };
 
 struct KeyboardDescriptor {
-  // The list of keys that a keyboard contains. These keys are expressed in HID key usages.
-  std::array<uint32_t, ::llcpp::fuchsia::input::report::KEYBOARD_MAX_NUM_KEYS> keys;
+  std::array<::llcpp::fuchsia::ui::input2::Key,
+             ::llcpp::fuchsia::input::report::KEYBOARD_MAX_NUM_KEYS>
+      keys;
   size_t num_keys = 0;
 };
 

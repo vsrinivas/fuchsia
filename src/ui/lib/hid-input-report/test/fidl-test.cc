@@ -15,27 +15,25 @@
 
 namespace llcpp_report = ::llcpp::fuchsia::input::report;
 
-void TestAxis(hid_input_report::Axis hid_axis, llcpp_report::Axis fidl_axis) {
-  ASSERT_EQ(hid_axis.range.min, fidl_axis.range.min);
-  ASSERT_EQ(hid_axis.range.max, fidl_axis.range.max);
+void TestAxis(llcpp_report::Axis a, llcpp_report::Axis b) {
+  ASSERT_EQ(a.range.min, b.range.min);
+  ASSERT_EQ(a.range.max, b.range.max);
+  ASSERT_EQ(a.unit, b.unit);
 }
 
 TEST(FidlTest, MouseDescriptor) {
+  llcpp_report::Axis axis;
+  axis.unit = llcpp_report::Unit::DISTANCE;
+  axis.range.min = -126;
+  axis.range.max = 126;
+
   hid_input_report::MouseDescriptor mouse_desc = {};
-  mouse_desc.movement_x.enabled = true;
-  mouse_desc.movement_x.unit = hid::unit::UnitType::Distance;
-  mouse_desc.movement_x.range.min = -126;
-  mouse_desc.movement_x.range.max = 126;
-
-  mouse_desc.movement_y.enabled = true;
-  mouse_desc.movement_y.unit = hid::unit::UnitType::Distance;
-  mouse_desc.movement_y.range.min = -126;
-  mouse_desc.movement_y.range.max = 126;
-
+  mouse_desc.movement_x = axis;
+  mouse_desc.movement_y = axis;
   mouse_desc.num_buttons = 3;
-  mouse_desc.button_ids[0] = 1;
-  mouse_desc.button_ids[1] = 10;
-  mouse_desc.button_ids[2] = 5;
+  mouse_desc.buttons[0] = 1;
+  mouse_desc.buttons[1] = 10;
+  mouse_desc.buttons[2] = 5;
 
   hid_input_report::ReportDescriptor desc;
   desc.descriptor = mouse_desc;
@@ -48,16 +46,16 @@ TEST(FidlTest, MouseDescriptor) {
   auto& fidl_mouse = fidl.mouse();
 
   ASSERT_TRUE(fidl_mouse.has_movement_x());
-  TestAxis(mouse_desc.movement_x, fidl_mouse.movement_x());
+  TestAxis(*mouse_desc.movement_x, fidl_mouse.movement_x());
 
   ASSERT_TRUE(fidl_mouse.has_movement_y());
-  TestAxis(mouse_desc.movement_y, fidl_mouse.movement_y());
+  TestAxis(*mouse_desc.movement_y, fidl_mouse.movement_y());
 
   ASSERT_TRUE(fidl_mouse.has_buttons());
   ::fidl::VectorView<uint8_t>& buttons = fidl_mouse.buttons();
   ASSERT_EQ(mouse_desc.num_buttons, buttons.count());
   for (size_t i = 0; i < mouse_desc.num_buttons; i++) {
-    ASSERT_EQ(mouse_desc.button_ids[i], buttons[i]);
+    ASSERT_EQ(mouse_desc.buttons[i], buttons[i]);
   }
 }
 
@@ -99,18 +97,19 @@ TEST(FidlTest, MouseReport) {
 }
 
 TEST(FidlTest, SensorDescriptor) {
-  hid_input_report::SensorDescriptor sensor_desc = {};
-  sensor_desc.values[0].axis.enabled = true;
-  sensor_desc.values[0].axis.unit = hid::unit::UnitType::LinearVelocity;
-  sensor_desc.values[0].axis.range.min = 0;
-  sensor_desc.values[0].axis.range.max = 1000;
-  sensor_desc.values[0].type = hid::usage::Sensor::kAccelerationAxisX;
+  llcpp_report::Axis axis;
+  axis.unit = llcpp_report::Unit::LINEAR_VELOCITY;
+  axis.range.min = -126;
+  axis.range.max = 126;
 
-  sensor_desc.values[1].axis.enabled = true;
-  sensor_desc.values[1].axis.unit = hid::unit::UnitType::Light;
-  sensor_desc.values[1].axis.range.min = 0;
-  sensor_desc.values[1].axis.range.max = 1000;
-  sensor_desc.values[1].type = hid::usage::Sensor::kLightIlluminance;
+  hid_input_report::SensorDescriptor sensor_desc = {};
+  sensor_desc.values[0].axis = axis;
+  sensor_desc.values[0].type = llcpp_report::SensorType::ACCELEROMETER_X;
+
+  axis.unit = llcpp_report::Unit::LUX;
+  sensor_desc.values[1].axis = axis;
+  sensor_desc.values[1].type = llcpp_report::SensorType::LIGHT_ILLUMINANCE;
+
   sensor_desc.num_values = 2;
 
   hid_input_report::ReportDescriptor desc;
@@ -164,17 +163,18 @@ TEST(FidlTest, TouchDescriptor) {
 
   touch_desc.max_contacts = 100;
 
-  touch_desc.contacts[0].position_x.enabled = true;
-  touch_desc.contacts[0].position_x.range.min = 0;
-  touch_desc.contacts[0].position_x.range.max = 0xabcdef;
+  llcpp_report::Axis axis;
+  axis.unit = llcpp_report::Unit::DISTANCE;
+  axis.range.min = 0;
+  axis.range.max = 0xabcdef;
 
-  touch_desc.contacts[0].position_y.enabled = true;
-  touch_desc.contacts[0].position_y.range.min = 0;
-  touch_desc.contacts[0].position_y.range.max = 0xabcdef;
+  touch_desc.contacts[0].position_x = axis;
+  touch_desc.contacts[0].position_y = axis;
 
-  touch_desc.contacts[0].pressure.enabled = true;
-  touch_desc.contacts[0].pressure.range.min = 0;
-  touch_desc.contacts[0].pressure.range.max = 100;
+  axis.unit = llcpp_report::Unit::PRESSURE;
+  axis.range.min = 0;
+  axis.range.max = 100;
+  touch_desc.contacts[0].pressure = axis;
 
   touch_desc.num_contacts = 1;
 
@@ -195,9 +195,9 @@ TEST(FidlTest, TouchDescriptor) {
 
   ASSERT_EQ(1, fidl_touch.contacts().count());
 
-  TestAxis(touch_desc.contacts[0].position_x, fidl_touch.contacts()[0].position_x());
-  TestAxis(touch_desc.contacts[0].position_y, fidl_touch.contacts()[0].position_y());
-  TestAxis(touch_desc.contacts[0].pressure, fidl_touch.contacts()[0].pressure());
+  TestAxis(*touch_desc.contacts[0].position_x, fidl_touch.contacts()[0].position_x());
+  TestAxis(*touch_desc.contacts[0].position_y, fidl_touch.contacts()[0].position_y());
+  TestAxis(*touch_desc.contacts[0].pressure, fidl_touch.contacts()[0].pressure());
 }
 
 TEST(FidlTest, TouchReport) {
@@ -242,9 +242,9 @@ TEST(FidlTest, TouchReport) {
 TEST(FidlTest, KeyboardDescriptor) {
   hid_input_report::KeyboardDescriptor keyboard_descriptor = {};
   keyboard_descriptor.num_keys = 3;
-  keyboard_descriptor.keys[0] = HID_USAGE_KEY_A;
-  keyboard_descriptor.keys[1] = HID_USAGE_KEY_END;
-  keyboard_descriptor.keys[2] = HID_USAGE_KEY_LEFT_SHIFT;
+  keyboard_descriptor.keys[0] = llcpp::fuchsia::ui::input2::Key::A;
+  keyboard_descriptor.keys[1] = llcpp::fuchsia::ui::input2::Key::END;
+  keyboard_descriptor.keys[2] = llcpp::fuchsia::ui::input2::Key::LEFT_SHIFT;
 
   hid_input_report::ReportDescriptor descriptor;
   descriptor.descriptor = keyboard_descriptor;

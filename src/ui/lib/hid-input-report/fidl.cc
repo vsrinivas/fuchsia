@@ -10,117 +10,24 @@
 
 #include <hid-parser/usages.h>
 
+#include "src/ui/lib/hid-input-report/axis.h"
 #include "src/ui/lib/key_util/key_util.h"
+
 namespace hid_input_report {
 
 namespace llcpp_report = ::llcpp::fuchsia::input::report;
 
-namespace {
-
-llcpp_report::Unit HidUnitToLlcppUnit(hid::unit::UnitType unit) {
-  switch (unit) {
-    case hid::unit::UnitType::None:
-      return llcpp_report::Unit::NONE;
-    case hid::unit::UnitType::Other:
-      return llcpp_report::Unit::OTHER;
-    case hid::unit::UnitType::Distance:
-      return llcpp_report::Unit::DISTANCE;
-    case hid::unit::UnitType::Weight:
-      return llcpp_report::Unit::WEIGHT;
-    case hid::unit::UnitType::Rotation:
-      return llcpp_report::Unit::ROTATION;
-    case hid::unit::UnitType::AngularVelocity:
-      return llcpp_report::Unit::ANGULAR_VELOCITY;
-    case hid::unit::UnitType::LinearVelocity:
-      return llcpp_report::Unit::LINEAR_VELOCITY;
-    case hid::unit::UnitType::Acceleration:
-      return llcpp_report::Unit::ACCELERATION;
-    case hid::unit::UnitType::MagneticFlux:
-      return llcpp_report::Unit::MAGNETIC_FLUX;
-    case hid::unit::UnitType::Light:
-      return llcpp_report::Unit::LUMINOUS_FLUX;
-    case hid::unit::UnitType::Pressure:
-      return llcpp_report::Unit::PRESSURE;
-    case hid::unit::UnitType::Lux:
-      return llcpp_report::Unit::LUX;
-    default:
-      return llcpp_report::Unit::OTHER;
-  }
-}
-
-zx_status_t HidSensorUsageToLlcppSensorType(hid::usage::Sensor usage,
-                                            llcpp_report::SensorType* type) {
-  switch (usage) {
-    case hid::usage::Sensor::kAccelerationAxisX:
-      *type = llcpp_report::SensorType::ACCELEROMETER_X;
-      break;
-    case hid::usage::Sensor::kAccelerationAxisY:
-      *type = llcpp_report::SensorType::ACCELEROMETER_Y;
-      break;
-    case hid::usage::Sensor::kAccelerationAxisZ:
-      *type = llcpp_report::SensorType::ACCELEROMETER_Z;
-      break;
-    case hid::usage::Sensor::kMagneticFluxAxisX:
-      *type = llcpp_report::SensorType::MAGNETOMETER_X;
-      break;
-    case hid::usage::Sensor::kMagneticFluxAxisY:
-      *type = llcpp_report::SensorType::MAGNETOMETER_Y;
-      break;
-    case hid::usage::Sensor::kMagneticFluxAxisZ:
-      *type = llcpp_report::SensorType::MAGNETOMETER_Z;
-      break;
-    case hid::usage::Sensor::kAngularVelocityX:
-      *type = llcpp_report::SensorType::GYROSCOPE_X;
-      break;
-    case hid::usage::Sensor::kAngularVelocityY:
-      *type = llcpp_report::SensorType::GYROSCOPE_Y;
-      break;
-    case hid::usage::Sensor::kAngularVelocityZ:
-      *type = llcpp_report::SensorType::GYROSCOPE_Z;
-      break;
-    case hid::usage::Sensor::kLightIlluminance:
-      *type = llcpp_report::SensorType::LIGHT_ILLUMINANCE;
-      break;
-    case hid::usage::Sensor::kLightRedLight:
-      *type = llcpp_report::SensorType::LIGHT_RED;
-      break;
-    case hid::usage::Sensor::kLightBlueLight:
-      *type = llcpp_report::SensorType::LIGHT_BLUE;
-      break;
-    case hid::usage::Sensor::kLightGreenLight:
-      *type = llcpp_report::SensorType::LIGHT_GREEN;
-      break;
-    default:
-      return ZX_ERR_NOT_SUPPORTED;
-  }
-  return ZX_OK;
-}
-
-llcpp_report::Axis HidAxisToLlcppAxis(Axis axis) {
-  llcpp_report::Axis new_axis = {};
-  new_axis.range.min = axis.range.min;
-  new_axis.range.max = axis.range.max;
-  new_axis.unit = HidUnitToLlcppUnit(axis.unit);
-  return new_axis;
-}
-
-}  // namespace
-
 void SetMouseDescriptor(const MouseDescriptor& hid_mouse_desc, FidlMouseDescriptor* descriptor) {
-  if (hid_mouse_desc.movement_x.enabled) {
-    descriptor->movement_x = HidAxisToLlcppAxis(hid_mouse_desc.movement_x);
-    descriptor->builder.set_movement_x(&descriptor->movement_x);
+  descriptor->data = hid_mouse_desc;
+  if (descriptor->data.movement_x) {
+    descriptor->builder.set_movement_x(&descriptor->data.movement_x.value());
   }
-  if (hid_mouse_desc.movement_y.enabled) {
-    descriptor->movement_y = HidAxisToLlcppAxis(hid_mouse_desc.movement_y);
-    descriptor->builder.set_movement_y(&descriptor->movement_y);
+  if (descriptor->data.movement_y) {
+    descriptor->builder.set_movement_y(&descriptor->data.movement_y.value());
   }
 
-  for (size_t i = 0; i < hid_mouse_desc.num_buttons; i++) {
-    descriptor->buttons[i] = hid_mouse_desc.button_ids[i];
-  }
   descriptor->buttons_view =
-      fidl::VectorView<uint8_t>(descriptor->buttons, hid_mouse_desc.num_buttons);
+      fidl::VectorView<uint8_t>(descriptor->data.buttons.data(), descriptor->data.num_buttons);
   descriptor->builder.set_buttons(&descriptor->buttons_view);
 
   descriptor->descriptor = descriptor->builder.view();
@@ -145,21 +52,10 @@ void SetMouseReport(const MouseReport& hid_mouse_report, FidlMouseReport* report
 
 void SetSensorDescriptor(const SensorDescriptor& hid_sensor_desc,
                          FidlSensorDescriptor* descriptor) {
-  size_t fidl_value_index = 0;
-  for (size_t i = 0; i < hid_sensor_desc.num_values; i++) {
-    zx_status_t status = HidSensorUsageToLlcppSensorType(
-        hid_sensor_desc.values[i].type, &descriptor->values[fidl_value_index].type);
-    if (status != ZX_OK) {
-      continue;
-    }
-    descriptor->values[fidl_value_index].axis = HidAxisToLlcppAxis(hid_sensor_desc.values[i].axis);
-    fidl_value_index++;
-  }
-
-  descriptor->values_view =
-      fidl::VectorView<llcpp_report::SensorAxis>(descriptor->values.data(), fidl_value_index);
+  descriptor->data = hid_sensor_desc;
+  descriptor->values_view = fidl::VectorView<llcpp_report::SensorAxis>(
+      descriptor->data.values.data(), descriptor->data.num_values);
   descriptor->builder.set_values(&descriptor->values_view);
-
   descriptor->descriptor = descriptor->builder.view();
 }
 
@@ -173,40 +69,34 @@ void SetSensorReport(const SensorReport& hid_sensor_report, FidlSensorReport* re
 }
 
 void SetTouchDescriptor(const TouchDescriptor& hid_touch_desc, FidlTouchDescriptor* descriptor) {
-  for (size_t i = 0; i < hid_touch_desc.num_contacts; i++) {
-    FidlContactDescriptor& contact = descriptor->contacts[i];
-
-    if (hid_touch_desc.contacts[i].position_x.enabled) {
-      contact.position_x = HidAxisToLlcppAxis(hid_touch_desc.contacts[i].position_x);
-      contact.builder.set_position_x(&contact.position_x);
+  descriptor->data = hid_touch_desc;
+  for (size_t i = 0; i < descriptor->data.num_contacts; i++) {
+    llcpp_report::ContactDescriptor::Builder& contact_builder =
+        descriptor->contacts_builder[i].builder;
+    if (descriptor->data.contacts[i].position_x) {
+      contact_builder.set_position_x(&descriptor->data.contacts[i].position_x.value());
     }
-    if (hid_touch_desc.contacts[i].position_y.enabled) {
-      contact.position_y = HidAxisToLlcppAxis(hid_touch_desc.contacts[i].position_y);
-      contact.builder.set_position_y(&contact.position_y);
+    if (descriptor->data.contacts[i].position_y) {
+      contact_builder.set_position_y(&descriptor->data.contacts[i].position_y.value());
     }
-    if (hid_touch_desc.contacts[i].pressure.enabled) {
-      contact.pressure = HidAxisToLlcppAxis(hid_touch_desc.contacts[i].pressure);
-      contact.builder.set_pressure(&contact.pressure);
+    if (descriptor->data.contacts[i].pressure) {
+      contact_builder.set_pressure(&descriptor->data.contacts[i].pressure.value());
     }
-    if (hid_touch_desc.contacts[i].contact_width.enabled) {
-      contact.contact_width = HidAxisToLlcppAxis(hid_touch_desc.contacts[i].contact_width);
-      contact.builder.set_contact_width(&contact.contact_width);
+    if (descriptor->data.contacts[i].contact_width) {
+      contact_builder.set_contact_width(&descriptor->data.contacts[i].contact_width.value());
     }
-    if (hid_touch_desc.contacts[i].contact_height.enabled) {
-      contact.contact_height = HidAxisToLlcppAxis(hid_touch_desc.contacts[i].contact_height);
-      contact.builder.set_contact_height(&contact.contact_height);
+    if (descriptor->data.contacts[i].contact_height) {
+      contact_builder.set_contact_height(&descriptor->data.contacts[i].contact_height.value());
     }
-    descriptor->contacts_built[i] = contact.builder.view();
+    descriptor->contacts_built[i] = contact_builder.view();
   }
+
   descriptor->contacts_view = fidl::VectorView<llcpp_report::ContactDescriptor>(
-      descriptor->contacts_built.data(), hid_touch_desc.num_contacts);
+      descriptor->contacts_built.data(), descriptor->data.num_contacts);
+
   descriptor->builder.set_contacts(&descriptor->contacts_view);
-
-  descriptor->max_contacts = hid_touch_desc.max_contacts;
-  descriptor->builder.set_max_contacts(&descriptor->max_contacts);
-
-  descriptor->touch_type = hid_touch_desc.touch_type;
-  descriptor->builder.set_touch_type(&descriptor->touch_type);
+  descriptor->builder.set_max_contacts(&descriptor->data.max_contacts);
+  descriptor->builder.set_touch_type(&descriptor->data.touch_type);
 
   descriptor->descriptor = descriptor->builder.view();
 }
@@ -248,17 +138,9 @@ void SetTouchReport(const TouchReport& hid_touch_report, FidlTouchReport* report
 
 void SetKeyboardDescriptor(const KeyboardDescriptor& hid_keyboard_desc,
                            FidlKeyboardDescriptor* descriptor) {
-  size_t fidl_key_index = 0;
-  for (size_t i = 0; i < hid_keyboard_desc.num_keys; i++) {
-    std::optional<fuchsia::ui::input2::Key> key = key_util::hid_key_to_fuchsia_key(
-        hid::USAGE(hid::usage::Page::kKeyboardKeypad, hid_keyboard_desc.keys[i]));
-    if (key) {
-      // Cast the key enum from HLCPP to LLCPP. We are guaranteed that this will be equivalent.
-      descriptor->keys_data[fidl_key_index++] = static_cast<llcpp::fuchsia::ui::input2::Key>(*key);
-    }
-  }
+  descriptor->data = hid_keyboard_desc;
   descriptor->keys_view = fidl::VectorView<llcpp::fuchsia::ui::input2::Key>(
-      descriptor->keys_data.data(), fidl_key_index);
+      descriptor->data.keys.data(), descriptor->data.num_keys);
   descriptor->builder.set_keys(&descriptor->keys_view);
   descriptor->descriptor = descriptor->builder.view();
 }

@@ -17,28 +17,6 @@
 
 namespace hid_input_report {
 
-namespace {
-constexpr hid::usage::Sensor supported_usages[] = {
-    hid::usage::Sensor::kAccelerationAxisX, hid::usage::Sensor::kAccelerationAxisY,
-    hid::usage::Sensor::kAccelerationAxisZ, hid::usage::Sensor::kMagneticFluxAxisX,
-    hid::usage::Sensor::kMagneticFluxAxisY, hid::usage::Sensor::kMagneticFluxAxisZ,
-    hid::usage::Sensor::kAngularVelocityX,  hid::usage::Sensor::kAngularVelocityY,
-    hid::usage::Sensor::kAngularVelocityZ,  hid::usage::Sensor::kLightIlluminance,
-    hid::usage::Sensor::kLightRedLight,     hid::usage::Sensor::kLightBlueLight,
-    hid::usage::Sensor::kLightGreenLight,
-};
-
-bool is_supported_usage(hid::usage::Sensor usage) {
-  for (size_t i = 0; i < countof(supported_usages); i++) {
-    if (usage == supported_usages[i]) {
-      return true;
-    }
-  }
-  return false;
-}
-
-}  // namespace
-
 ParseResult Sensor::ParseReportDescriptor(const hid::ReportDescriptor& hid_report_descriptor) {
   hid::Attributes values[kSensorMaxValues] = {};
   size_t num_values = 0;
@@ -52,7 +30,10 @@ ParseResult Sensor::ParseReportDescriptor(const hid::ReportDescriptor& hid_repor
       continue;
     }
 
-    if (!is_supported_usage(static_cast<hid::usage::Sensor>(field.attr.usage.usage))) {
+    llcpp::fuchsia::input::report::SensorType type;
+    zx_status_t status = HidSensorUsageToLlcppSensorType(
+        static_cast<hid::usage::Sensor>(field.attr.usage.usage), &type);
+    if (status != ZX_OK) {
       continue;
     }
 
@@ -61,8 +42,8 @@ ParseResult Sensor::ParseReportDescriptor(const hid::ReportDescriptor& hid_repor
     }
     values[num_values] = field.attr;
 
-    descriptor.values[num_values].type = static_cast<hid::usage::Sensor>(field.attr.usage.usage);
-    SetAxisFromAttribute(values[num_values], &descriptor.values[num_values].axis);
+    descriptor.values[num_values].type = type;
+    descriptor.values[num_values].axis = LlcppAxisFromAttribute(values[num_values]);
     num_values++;
   }
 

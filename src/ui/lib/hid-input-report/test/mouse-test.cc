@@ -31,8 +31,8 @@ TEST(MouseTest, BootMouse) {
       std::get_if<hid_input_report::MouseDescriptor>(&report_descriptor.descriptor);
   ASSERT_NOT_NULL(mouse_descriptor);
 
-  EXPECT_TRUE(mouse_descriptor->movement_x.enabled);
-  EXPECT_TRUE(mouse_descriptor->movement_y.enabled);
+  EXPECT_TRUE(mouse_descriptor->movement_x);
+  EXPECT_TRUE(mouse_descriptor->movement_y);
   constexpr uint8_t kNumButtons = 3;
   EXPECT_EQ(kNumButtons, mouse_descriptor->num_buttons);
 

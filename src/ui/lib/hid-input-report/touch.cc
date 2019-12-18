@@ -64,43 +64,42 @@ ParseResult Touch::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
       return kParseTooManyItems;
     }
     ContactConfig* contact = &contacts[num_contacts - 1];
+    ContactDescriptor* contact_descriptor = &descriptor.contacts[num_contacts - 1];
 
     if (field.attr.usage ==
         hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kContactID)) {
       contact->contact_id = field.attr;
-      SetAxisFromAttribute(contact->contact_id, &descriptor.contacts[num_contacts - 1].contact_id);
+      contact_descriptor->contact_id = LlcppAxisFromAttribute(contact->contact_id);
     }
     if (field.attr.usage ==
         hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kTipSwitch)) {
       contact->tip_switch = field.attr;
-      SetAxisFromAttribute(contact->tip_switch, &descriptor.contacts[num_contacts - 1].is_pressed);
+      contact_descriptor->is_pressed = LlcppAxisFromAttribute(contact->tip_switch);
     }
     if (field.attr.usage ==
         hid::USAGE(hid::usage::Page::kGenericDesktop, hid::usage::GenericDesktop::kX)) {
       contact->position_x = field.attr;
-      SetAxisFromAttribute(contact->position_x, &descriptor.contacts[num_contacts - 1].position_x);
+      contact_descriptor->position_x = LlcppAxisFromAttribute(contact->position_x);
     }
     if (field.attr.usage ==
         hid::USAGE(hid::usage::Page::kGenericDesktop, hid::usage::GenericDesktop::kY)) {
       contact->position_y = field.attr;
-      SetAxisFromAttribute(contact->position_y, &descriptor.contacts[num_contacts - 1].position_y);
+      contact_descriptor->position_y = LlcppAxisFromAttribute(contact->position_y);
     }
     if (field.attr.usage ==
         hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kTipPressure)) {
       contact->pressure = field.attr;
-      SetAxisFromAttribute(contact->pressure, &descriptor.contacts[num_contacts - 1].pressure);
+      contact_descriptor->pressure = LlcppAxisFromAttribute(contact->pressure);
     }
     if (field.attr.usage ==
         hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kWidth)) {
       contact->contact_width = field.attr;
-      SetAxisFromAttribute(contact->contact_width,
-                           &descriptor.contacts[num_contacts - 1].contact_width);
+      contact_descriptor->contact_width = LlcppAxisFromAttribute(contact->contact_width);
     }
     if (field.attr.usage ==
         hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kHeight)) {
       contact->contact_height = field.attr;
-      SetAxisFromAttribute(contact->contact_height,
-                           &descriptor.contacts[num_contacts - 1].contact_height);
+      contact_descriptor->contact_height = LlcppAxisFromAttribute(contact->contact_height);
     }
   }
 
@@ -137,7 +136,7 @@ ParseResult Touch::ParseReport(const uint8_t* data, size_t len, Report* report) 
   size_t contact_num = 0;
   for (size_t i = 0; i < descriptor_.num_contacts; i++) {
     ContactReport& contact = touch_report.contacts[contact_num];
-    if (descriptor_.contacts[i].is_pressed.enabled) {
+    if (descriptor_.contacts[i].is_pressed) {
       if (hid::ExtractAsUnitType(data, len, contacts_[i].tip_switch, &value_out)) {
         contact.is_pressed = static_cast<bool>(value_out);
         contact.has_is_pressed = true;
@@ -147,7 +146,7 @@ ParseResult Touch::ParseReport(const uint8_t* data, size_t len, Report* report) 
       }
     }
     contact_num++;
-    if (descriptor_.contacts[i].contact_id.enabled) {
+    if (descriptor_.contacts[i].contact_id) {
       // Some touchscreens we support mistakenly set the logical range to 0-1 for the
       // tip switch and then never reset the range for the contact id. For this reason,
       // we have to do an "unconverted" extraction.
@@ -155,31 +154,31 @@ ParseResult Touch::ParseReport(const uint8_t* data, size_t len, Report* report) 
         contact.has_contact_id = true;
       }
     }
-    if (descriptor_.contacts[i].position_x.enabled) {
+    if (descriptor_.contacts[i].position_x) {
       if (hid::ExtractAsUnitType(data, len, contacts_[i].position_x, &value_out)) {
         contact.position_x = static_cast<int64_t>(value_out);
         contact.has_position_x = true;
       }
     }
-    if (descriptor_.contacts[i].position_y.enabled) {
+    if (descriptor_.contacts[i].position_y) {
       if (hid::ExtractAsUnitType(data, len, contacts_[i].position_y, &value_out)) {
         contact.position_y = static_cast<int64_t>(value_out);
         contact.has_position_y = true;
       }
     }
-    if (descriptor_.contacts[i].pressure.enabled) {
+    if (descriptor_.contacts[i].pressure) {
       if (hid::ExtractAsUnitType(data, len, contacts_[i].pressure, &value_out)) {
         contact.pressure = static_cast<int64_t>(value_out);
         contact.has_pressure = true;
       }
     }
-    if (descriptor_.contacts[i].contact_width.enabled) {
+    if (descriptor_.contacts[i].contact_width) {
       if (hid::ExtractAsUnitType(data, len, contacts_[i].contact_width, &value_out)) {
         contact.contact_width = static_cast<int64_t>(value_out);
         contact.has_contact_width = true;
       }
     }
-    if (descriptor_.contacts[i].contact_height.enabled) {
+    if (descriptor_.contacts[i].contact_height) {
       if (hid::ExtractAsUnitType(data, len, contacts_[i].contact_height, &value_out)) {
         contact.contact_height = static_cast<int64_t>(value_out);
         contact.has_contact_height = true;

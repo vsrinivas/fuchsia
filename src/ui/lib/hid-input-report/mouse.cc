@@ -29,19 +29,17 @@ ParseResult Mouse::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
     if (field.attr.usage ==
         hid::USAGE(hid::usage::Page::kGenericDesktop, hid::usage::GenericDesktop::kX)) {
       movement_x = field.attr;
-      SetAxisFromAttribute(movement_x, &mouse_descriptor.movement_x);
-
+      mouse_descriptor.movement_x = LlcppAxisFromAttribute(movement_x);
     } else if (field.attr.usage ==
                hid::USAGE(hid::usage::Page::kGenericDesktop, hid::usage::GenericDesktop::kY)) {
       movement_y = field.attr;
-      SetAxisFromAttribute(movement_y, &mouse_descriptor.movement_y);
+      mouse_descriptor.movement_y = LlcppAxisFromAttribute(movement_y);
     } else if (field.attr.usage.page == hid::usage::Page::kButton) {
       if (num_buttons == kMouseMaxButtons) {
         return kParseTooManyItems;
       }
       buttons[num_buttons++] = field.attr;
-      mouse_descriptor.button_ids[num_buttons] = static_cast<uint8_t>(field.attr.usage.usage);
-      mouse_descriptor.num_buttons++;
+      mouse_descriptor.buttons[num_buttons] = static_cast<uint8_t>(field.attr.usage.usage);
     }
   }
 
@@ -74,14 +72,14 @@ ParseResult Mouse::ParseReport(const uint8_t* data, size_t len, Report* report) 
     return kParseReportSizeMismatch;
   }
 
-  if (descriptor_.movement_x.enabled) {
+  if (descriptor_.movement_x) {
     double value_out;
     if (hid::ExtractAsUnitType(data, len, movement_x_, &value_out)) {
       mouse_report.movement_x = static_cast<int64_t>(value_out);
       mouse_report.has_movement_x = true;
     }
   }
-  if (descriptor_.movement_y.enabled) {
+  if (descriptor_.movement_y) {
     double value_out;
     if (hid::ExtractAsUnitType(data, len, movement_y_, &value_out)) {
       mouse_report.movement_y = static_cast<int64_t>(value_out);

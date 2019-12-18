@@ -5,23 +5,20 @@
 #ifndef SRC_UI_LIB_HID_INPUT_REPORT_AXIS_H_
 #define SRC_UI_LIB_HID_INPUT_REPORT_AXIS_H_
 
+#include <fuchsia/input/report/llcpp/fidl.h>
+
 #include <hid-parser/parser.h>
 #include <hid-parser/units.h>
+#include <hid-parser/usages.h>
 
 namespace hid_input_report {
 
-struct Range {
-  int64_t min;
-  int64_t max;
-};
+::llcpp::fuchsia::input::report::Unit HidUnitToLlcppUnit(hid::unit::UnitType unit);
 
-struct Axis {
-  bool enabled = false;
-  hid::unit::UnitType unit = hid::unit::UnitType::None;
-  Range range = {};
-};
+zx_status_t HidSensorUsageToLlcppSensorType(hid::usage::Sensor usage,
+                                            ::llcpp::fuchsia::input::report::SensorType* type);
 
-void SetAxisFromAttribute(const hid::Attributes& attrs, Axis* axis);
+::llcpp::fuchsia::input::report::Axis LlcppAxisFromAttribute(const hid::Attributes& attrs);
 
 }  // namespace hid_input_report
 
