@@ -172,7 +172,7 @@ Board files can set this to true if they have a package with a mali libvulkan VC
 
 **Current value (from the default):** `false`
 
-From //garnet/lib/magma/gnbuild/magma.gni:46
+From //garnet/lib/magma/gnbuild/magma.gni:47
 
 ### board_kernel_cmdline_args
 List of kernel command line this board to bake into the boot image that are
@@ -319,7 +319,7 @@ Targets that will be built as mali vulkan ICDS.
 
 **Current value (from the default):** `[]`
 
-From //garnet/lib/magma/gnbuild/magma.gni:34
+From //garnet/lib/magma/gnbuild/magma.gni:35
 
 ### build_libvulkan_goldfish
 This is a list of targets that will be built as goldfish vulkan ICDs.
@@ -333,21 +333,21 @@ Targets that will be built as IMG vulkan ICDS.
 
 **Current value (from the default):** `[]`
 
-From //garnet/lib/magma/gnbuild/magma.gni:43
+From //garnet/lib/magma/gnbuild/magma.gni:44
 
 ### build_libvulkan_qcom_adreno
 Targets that will be built as qualcomm vulkan ICDS.
 
 **Current value (from the default):** `[]`
 
-From //garnet/lib/magma/gnbuild/magma.gni:40
+From //garnet/lib/magma/gnbuild/magma.gni:41
 
 ### build_libvulkan_vsl_gc
 Targets that will be built as verisilicon vulkan ICDS.
 
 **Current value (from the default):** `[]`
 
-From //garnet/lib/magma/gnbuild/magma.gni:37
+From //garnet/lib/magma/gnbuild/magma.gni:38
 
 ### build_sdk_archives
 Whether to build SDK tarballs.
@@ -557,7 +557,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/7c0727822d94f777618abc4cfd0658a41788d78f/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/23596143461546ab186287caf1d5fb1f2140d94d/runtime/dart/dart_component.gni#19)
 
 ### dart_enable_wasm
 Whether dart:wasm should be enabled.
@@ -572,7 +572,7 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/7c0727822d94f777618abc4cfd0658a41788d78f/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/23596143461546ab186287caf1d5fb1f2140d94d/runtime/dart/config.gni#10)
 
 ### dart_lib_export_symbols
 Whether libdart should export the symbols of the Dart API.
@@ -622,7 +622,7 @@ Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/7c0727822d94f777618abc4cfd0658a41788d78f/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/23596143461546ab186287caf1d5fb1f2140d94d/runtime/dart/dart_component.gni#35)
 
 ### dart_target_arch
 Explicitly set the target architecture to use a simulator.
@@ -791,7 +791,7 @@ From //third_party/dart/runtime/runtime_args.gni:88
 
 **Current value (from the default):** `"//third_party/expat"`
 
-From //garnet/lib/magma/gnbuild/magma.gni:12
+From //garnet/lib/magma/gnbuild/magma.gni:13
 
 ### experimental_wlan_client_mlme
 Selects the SoftMAC client implementation to use. Choices:
@@ -843,20 +843,20 @@ From //build/fidl/wireformat.gni:9
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/7c0727822d94f777618abc4cfd0658a41788d78f/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/23596143461546ab186287caf1d5fb1f2140d94d/runtime/dart/dart_component.gni#12)
 
 ### flutter_profile
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/7c0727822d94f777618abc4cfd0658a41788d78f/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/23596143461546ab186287caf1d5fb1f2140d94d/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/7c0727822d94f777618abc4cfd0658a41788d78f/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/23596143461546ab186287caf1d5fb1f2140d94d/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
@@ -949,7 +949,7 @@ From //build/images/fvm.gni:32
 
 **Current value (from the default):** `"//third_party/glm"`
 
-From //garnet/lib/magma/gnbuild/magma.gni:14
+From //garnet/lib/magma/gnbuild/magma.gni:15
 
 ### go_vet_enabled
   go_vet_enabled
@@ -1324,7 +1324,7 @@ From //garnet/bin/log_listener/BUILD.gn:15
 
 **Current value (from the default):** `"//garnet/lib/magma"`
 
-From //garnet/lib/magma/gnbuild/magma.gni:11
+From //garnet/lib/magma/gnbuild/magma.gni:12
 
 ### magma_enable_developer_build
 Enable this to have the msd include a suite of tests and invoke them
@@ -1332,20 +1332,20 @@ automatically when the driver starts.
 
 **Current value (from the default):** `false`
 
-From //garnet/lib/magma/gnbuild/magma.gni:24
+From //garnet/lib/magma/gnbuild/magma.gni:25
 
 ### magma_enable_tracing
 Enable this to include fuchsia tracing capability
 
 **Current value (from the default):** `true`
 
-From //garnet/lib/magma/gnbuild/magma.gni:20
+From //garnet/lib/magma/gnbuild/magma.gni:21
 
 ### magma_python_path
 
 **Current value (from the default):** `"/b/s/w/ir/k/third_party/mako"`
 
-From //garnet/lib/magma/gnbuild/magma.gni:17
+From //garnet/lib/magma/gnbuild/magma.gni:18
 
 ### max_blob_contents_size
 Maximum allowable contents for the /blob in a release mode build.
@@ -1511,7 +1511,7 @@ From //garnet/drivers/gpu/msd-arm-mali/src/BUILD.gn:23
 
 **Current value (from the default):** `"//garnet/drivers/gpu/msd-intel-gen"`
 
-From //garnet/lib/magma/gnbuild/magma.gni:13
+From //garnet/lib/magma/gnbuild/magma.gni:14
 
 ### netcfg_autostart
 
@@ -1558,7 +1558,7 @@ From //build/dart/dart.gni:9
 
 **Current value (from the default):** `""`
 
-From //garnet/lib/magma/gnbuild/magma.gni:26
+From //garnet/lib/magma/gnbuild/magma.gni:27
 
 ### prebuilt_libvulkan_goldfish_path
 
@@ -1571,7 +1571,7 @@ The path to a prebuilt libvulkan.so for an IMG GPU.
 
 **Current value (from the default):** `""`
 
-From //garnet/lib/magma/gnbuild/magma.gni:29
+From //garnet/lib/magma/gnbuild/magma.gni:30
 
 ### prototype_account_transfer
 Whether or not prototype account transfer is enabled.
@@ -2302,7 +2302,7 @@ From //build/images/BUILD.gn:43
 
 **Current value (from the default):** `"//zircon"`
 
-From //garnet/lib/magma/gnbuild/magma.gni:15
+From //garnet/lib/magma/gnbuild/magma.gni:16
 
 ### zircon_compdb_filter
 Compilation database filter. Gets passed to --export-compile-commands=<filter>.
