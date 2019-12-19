@@ -39,3 +39,25 @@ impl EventWorker {
         );
     }
 }
+
+/// `TimerWorker` waits for timer events and sends them on the indicated
+/// `event_chan`.
+pub struct TimerWorker;
+
+impl TimerWorker {
+    pub fn spawn(
+        self,
+        mut timer: fasync::Interval,
+        event_chan: mpsc::UnboundedSender<Event>,
+        id: u64,
+    ) {
+        debug!("spawn periodic timer");
+        fasync::spawn_local(async move {
+            while let Some(()) = (timer.next()).await {
+                event_chan.unbounded_send(Event::TimerEvent(id)).unwrap_or_else(
+                    |err: mpsc::TrySendError<Event>| error!("Sending event error {:?}", err),
+                );
+            }
+        });
+    }
+}

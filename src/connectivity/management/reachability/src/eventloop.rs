@@ -7,11 +7,14 @@
 //! This event loop receives events from netstack. Thsose events are used by the reachability
 //! monitor to infer the connectivity state.
 
-use crate::worker::EventWorker;
-use failure::Error;
-use futures::channel::mpsc;
-use futures::prelude::*;
-use reachability_core::Monitor;
+use {
+    crate::worker::{EventWorker, TimerWorker},
+    failure::Error,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
+    futures::channel::mpsc,
+    futures::prelude::*,
+    reachability_core::{Monitor, Timer},
+};
 
 /// The events that can trigger an action in the event loop.
 #[derive(Debug)]
@@ -20,12 +23,26 @@ pub enum Event {
     StackEvent(fidl_fuchsia_net_stack::StackEvent),
     /// An event coming from fuchsia.netstack.
     NetstackEvent(fidl_fuchsia_netstack::NetstackEvent),
+    /// A timer firing.
+    TimerEvent(u64),
 }
 
 /// The event loop.
 pub struct EventLoop {
     event_recv: mpsc::UnboundedReceiver<Event>,
     monitor: Monitor,
+}
+
+struct EventTimer {
+    event_send: mpsc::UnboundedSender<Event>,
+}
+
+impl Timer for EventTimer {
+    fn periodic(&self, duration: zx::Duration, id: u64) -> i64 {
+        let timer_worker = TimerWorker;
+        timer_worker.spawn(fasync::Interval::new(duration), self.event_send.clone(), id);
+        0
+    }
 }
 
 impl EventLoop {
@@ -36,6 +53,8 @@ impl EventLoop {
         let streams = monitor.take_event_streams();
         let event_worker = EventWorker;
         event_worker.spawn(streams, event_send.clone());
+        let timer = EventTimer { event_send: event_send.clone() };
+        monitor.set_timer(Box::new(timer));
         EventLoop { event_recv, monitor }
     }
 
@@ -46,9 +65,19 @@ impl EventLoop {
             match e {
                 Event::StackEvent(event) => self.handle_stack_event(event).await,
                 Event::NetstackEvent(event) => self.handle_netstack_event(event).await,
+                Event::TimerEvent(id) => {
+                    self.handle_timer_firing(id).await;
+                }
             }
         }
         Ok(())
+    }
+
+    async fn handle_timer_firing(&mut self, id: u64) {
+        self.monitor
+            .timer_event(id)
+            .await
+            .unwrap_or_else(|err| error!("error updating state: {:?}", err));
     }
 
     async fn handle_stack_event(&mut self, event: fidl_fuchsia_net_stack::StackEvent) {

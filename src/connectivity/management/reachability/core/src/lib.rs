@@ -9,13 +9,15 @@ extern crate log;
 use failure::Error;
 use fidl_fuchsia_net_stack as stack;
 use fidl_fuchsia_netstack as netstack;
+use fuchsia_zircon as zx;
 use network_manager_core::error;
 use network_manager_core::hal;
-use network_manager_core::lifmgr::{subnet_mask_to_prefix_length, to_ip_addr, LifIpAddr};
+use network_manager_core::lifmgr::LifIpAddr;
 pub use ping::{IcmpPinger, Pinger};
 use std::collections::HashMap;
 
 const INTERNET_CONNECTIVITY_CHECK_ADDRESS: &str = "8.8.8.8";
+const PROBE_PERIOD_IN_SEC: i64 = 60;
 
 /// `Stats` keeps the monitoring service statistic counters.
 #[derive(Debug, Default, Clone, Copy)]
@@ -90,26 +92,32 @@ pub struct ReachabilityInfo {
 type Id = hal::PortId;
 type StateInfo = HashMap<Id, ReachabilityInfo>;
 
+/// Trait to set a periodic timer that calls `Monitor::timer_event`
+/// every `duration`.
+pub trait Timer {
+    fn periodic(&self, duration: zx::Duration, id: u64) -> i64;
+}
+
 /// `Monitor` monitors the reachability state.
 pub struct Monitor {
     hal: hal::NetCfg,
     state_info: StateInfo,
     stats: Stats,
     pinger: Box<dyn Pinger>,
-}
-
-#[derive(Debug)]
-enum Event {
-    None,
-    Stack(fidl_fuchsia_net_stack::InterfaceStatusChange),
-    NetStack(fidl_fuchsia_netstack::NetInterface),
+    timer: Option<Box<dyn Timer>>,
 }
 
 impl Monitor {
     /// Create the monitoring service.
     pub fn new(pinger: Box<dyn Pinger>) -> Result<Self, Error> {
         let hal = hal::NetCfg::new()?;
-        Ok(Monitor { hal, state_info: HashMap::new(), stats: Default::default(), pinger })
+        Ok(Monitor {
+            hal,
+            state_info: HashMap::new(),
+            stats: Default::default(),
+            pinger,
+            timer: None,
+        })
     }
 
     /// `stats` returns monitoring service statistic counters.
@@ -139,21 +147,35 @@ impl Monitor {
         self.hal.take_event_streams()
     }
 
-    /// `update_states` processes an event and updates the reachability state accordingly.
-    async fn update_state(&mut self, event: Event, interface_info: &hal::Interface) {
+    /// Sets the timer to use for periodic events.
+    pub fn set_timer(&mut self, timer: Box<dyn Timer>) {
+        self.timer = Some(timer);
+    }
+
+    /// `update_state` processes an event and updates the reachability state accordingly.
+    async fn update_state(&mut self, interface_info: &hal::Interface) {
         let port_type = port_type(interface_info);
         if port_type == PortType::Loopback {
             return;
         }
 
-        debug!("update_state ->  event: {:?}, interface_info: {:?}", event, interface_info);
+        debug!("update_state ->  interface_info: {:?}", interface_info);
         let routes = self.hal.routes().await;
-        if let Some(new_info) = compute_state(&event, interface_info, routes, &*self.pinger).await {
+        if let Some(new_info) = compute_state(interface_info, routes, &*self.pinger).await {
             if let Some(info) = self.state_info.get(&interface_info.id) {
                 if info == &new_info {
                     // State has not changed, nothing to do.
                     debug!("update_state ->  no change");
                     return;
+                }
+            } else {
+                debug!("update_state ->  new interface");
+                if let Some(timer) = &self.timer {
+                    debug!("update_state ->  setting timer");
+                    timer.periodic(
+                        zx::Duration::from_seconds(PROBE_PERIOD_IN_SEC),
+                        interface_info.id.to_u64(),
+                    );
                 }
             }
 
@@ -162,6 +184,15 @@ impl Monitor {
             debug!("update_state ->  new state {:?}", new_info);
             self.state_info.insert(interface_info.id, new_info);
         };
+    }
+
+    pub async fn timer_event(&mut self, id: u64) -> error::Result<()> {
+        if let Some(info) = self.hal.get_interface(id).await {
+            debug!("timer_event {} info {:?}", id, info);
+            self.update_state(&info).await;
+        }
+        self.dump_state();
+        Ok(())
     }
 
     /// Processes an event coming from fuchsia.net.stack containing updates to
@@ -174,7 +205,7 @@ impl Monitor {
                 // This event is not really hooked up (stack does not generate them), code here
                 // just for completeness and to be ready then it gets hooked up.
                 if let Some(current_info) = self.hal.get_interface(info.id).await {
-                    self.update_state(Event::Stack(info), &current_info).await;
+                    self.update_state(&current_info).await;
                 }
                 Ok(())
             }
@@ -193,7 +224,7 @@ impl Monitor {
                 // change.
                 for i in interfaces {
                     if let Some(current_info) = self.hal.get_interface(u64::from(i.id)).await {
-                        self.update_state(Event::NetStack(i), &current_info).await;
+                        self.update_state(&current_info).await;
                     }
                 }
             }
@@ -205,7 +236,7 @@ impl Monitor {
     /// `populate_state` queries the networks stack to determine current state.
     pub async fn populate_state(&mut self) -> error::Result<()> {
         for info in self.hal.interfaces().await?.iter() {
-            self.update_state(Event::None, info).await;
+            self.update_state(info).await;
         }
         self.dump_state();
         Ok(())
@@ -215,7 +246,6 @@ impl Monitor {
 /// `compute_state` processes an event and computes the reachability based on the event and
 /// system observations.
 async fn compute_state(
-    event: &Event,
     interface_info: &hal::Interface,
     routes: Option<Vec<hal::Route>>,
     pinger: &dyn Pinger,
@@ -225,27 +255,23 @@ async fn compute_state(
         return None;
     }
 
-    let i = match event {
-        Event::NetStack(i) => i,
-        _ => {
-            info!("unsupported event type {:?}", event);
-            return None;
-        }
-    };
-
-    let ipv4_address = ipv4_to_cidr(i.addr, i.netmask);
+    let ipv4_address = interface_info.get_address();
 
     let mut new_info = ReachabilityInfo {
         port_type,
         v4: NetworkInfo {
             is_default: false,
-            is_l3: (i.flags & netstack::NET_INTERFACE_FLAG_DHCP) != 0 || ipv4_address.is_some(),
+            is_l3: interface_info.dhcp_client_enabled || ipv4_address.is_some(),
             state: State::Down,
         },
-        v6: NetworkInfo { is_default: false, is_l3: !i.ipv6addrs.is_empty(), state: State::Down },
+        v6: NetworkInfo {
+            is_default: false,
+            is_l3: !interface_info.ipv6_addr.is_empty(),
+            state: State::Down,
+        },
     };
 
-    let is_up = (i.flags & netstack::NET_INTERFACE_FLAG_UP) != 0;
+    let is_up = interface_info.state != hal::InterfaceState::Down;
     if !is_up {
         return Some(new_info);
     }
@@ -269,18 +295,6 @@ async fn compute_state(
     // TODO(dpradilla): Add support for IPV6
 
     Some(new_info)
-}
-
-fn ipv4_to_cidr(
-    addr: fidl_fuchsia_net::IpAddress,
-    netmask: fidl_fuchsia_net::IpAddress,
-) -> Option<LifIpAddr> {
-    let ipv4_address = to_ip_addr(addr);
-    if to_ip_addr(addr).is_unspecified() {
-        None
-    } else {
-        Some(LifIpAddr { address: ipv4_address, prefix: subnet_mask_to_prefix_length(netmask) })
-    }
 }
 
 // `local_routes` traverses `route_table` to find routes that use a gateway local to `address`
@@ -375,7 +389,7 @@ async fn network_layer_state(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fidl_fuchsia_net_ext::IpAddress;
+    use fuchsia_async as fasync;
     use ping::IcmpPinger;
 
     #[test]
@@ -393,9 +407,9 @@ mod tests {
         assert_eq!(
             port_type(&hal::Interface {
                 ipv4_addr: None,
-                enabled: true,
                 ipv6_addr: Vec::new(),
                 state: hal::InterfaceState::Unknown,
+                enabled: true,
                 name: "loopback".to_string(),
                 id: hal::PortId::from(1),
                 dhcp_client_enabled: false,
@@ -405,10 +419,10 @@ mod tests {
         assert_eq!(
             port_type(&hal::Interface {
                 ipv4_addr: None,
-                enabled: true,
-                name: "ethernet/eth0".to_string(),
                 ipv6_addr: Vec::new(),
-                state: hal::InterfaceState::Unknown,
+                enabled: true,
+                state: hal::InterfaceState::Up,
+                name: "ethernet/eth0".to_string(),
                 id: hal::PortId::from(1),
                 dhcp_client_enabled: false,
             }),
@@ -418,7 +432,7 @@ mod tests {
             port_type(&hal::Interface {
                 ipv4_addr: None,
                 ipv6_addr: Vec::new(),
-                state: hal::InterfaceState::Unknown,
+                state: hal::InterfaceState::Up,
                 enabled: true,
                 name: "ethernet/wlan".to_string(),
                 id: hal::PortId::from(1),
@@ -430,7 +444,7 @@ mod tests {
             port_type(&hal::Interface {
                 ipv4_addr: None,
                 ipv6_addr: Vec::new(),
-                state: hal::InterfaceState::Unknown,
+                state: hal::InterfaceState::Up,
                 enabled: true,
                 name: "br0".to_string(),
                 id: hal::PortId::from(1),
@@ -516,7 +530,7 @@ mod tests {
         }
     }
 
-    #[fuchsia_async::run_until_stalled(test)]
+    #[fasync::run_until_stalled(test)]
     async fn test_network_layer_state() {
         let address = Some(LifIpAddr { address: "1.2.3.4".parse().unwrap(), prefix: 24 });
         let route_table = &vec![
@@ -633,16 +647,15 @@ mod tests {
         );
     }
 
-    #[fuchsia_async::run_until_stalled(test)]
+    #[fasync::run_until_stalled(test)]
     async fn test_compute_state() {
         let got = compute_state(
-            &Event::None,
             &hal::Interface {
                 id: hal::PortId::from(1),
                 name: "ifname".to_string(),
                 ipv4_addr: None,
                 ipv6_addr: Vec::new(),
-                state: hal::InterfaceState::Unknown,
+                state: hal::InterfaceState::Down,
                 enabled: false,
                 dhcp_client_enabled: false,
             },
@@ -656,50 +669,26 @@ mod tests {
             },
         )
         .await;
-        assert_eq!(got, None, "not and ethernet interface");
-
-        let got = compute_state(
-            &Event::None,
-            &hal::Interface {
-                id: hal::PortId::from(1),
-                name: "ethernet/eth0".to_string(),
-                ipv4_addr: None,
-                ipv6_addr: Vec::new(),
-                state: hal::InterfaceState::Unknown,
-                enabled: false,
-                dhcp_client_enabled: false,
-            },
-            None,
-            &FakePing {
-                gateway_url: "1.2.3.1",
-                gateway_response: true,
-                internet_url: "8.8.8.8",
-                internet_response: false,
-                default_response: false,
-            },
-        )
-        .await;
-        assert_eq!(got, None, "ethernet interface, but not a valid event");
-
-        let got = compute_state(
-            &Event::NetStack(fidl_fuchsia_netstack::NetInterface {
-                id: 1,
-                flags: 0,
-                features: 0,
-                configuration: 0,
-                name: "eth0".to_string(),
-                addr: IpAddress("1.2.3.4".parse().unwrap()).into(),
-                netmask: IpAddress("255.255.255.0".parse().unwrap()).into(),
-                broadaddr: IpAddress("1.2.3.255".parse().unwrap()).into(),
-                ipv6addrs: vec![],
-                hwaddr: vec![0, 0, 0, 0, 0, 0],
+        assert_eq!(
+            got,
+            Some(ReachabilityInfo {
+                port_type: PortType::SVI,
+                v4: NetworkInfo { is_default: false, is_l3: false, state: State::Down },
+                v6: NetworkInfo { is_default: false, is_l3: false, state: State::Down }
             }),
+            "not an ethernet interface"
+        );
+
+        let got = compute_state(
             &hal::Interface {
                 id: hal::PortId::from(1),
                 name: "ethernet/eth0".to_string(),
-                ipv4_addr: None,
+                ipv4_addr: Some(hal::InterfaceAddress::Unknown(LifIpAddr {
+                    address: "1.2.3.4".parse().unwrap(),
+                    prefix: 24,
+                })),
                 ipv6_addr: Vec::new(),
-                state: hal::InterfaceState::Unknown,
+                state: hal::InterfaceState::Down,
                 enabled: false,
                 dhcp_client_enabled: false,
             },
@@ -721,25 +710,16 @@ mod tests {
         assert_eq!(got, want, "ethernet interface, ipv4 configured, interface down");
 
         let got = compute_state(
-            &Event::NetStack(fidl_fuchsia_netstack::NetInterface {
-                id: 1,
-                flags: netstack::NET_INTERFACE_FLAG_UP,
-                features: 0,
-                configuration: 0,
-                name: "eth0".to_string(),
-                addr: IpAddress("1.2.3.4".parse().unwrap()).into(),
-                netmask: IpAddress("255.255.255.0".parse().unwrap()).into(),
-                broadaddr: IpAddress("1.2.3.255".parse().unwrap()).into(),
-                ipv6addrs: vec![],
-                hwaddr: vec![0, 0, 0, 0, 0, 0],
-            }),
             &hal::Interface {
                 id: hal::PortId::from(1),
                 name: "ethernet/eth0".to_string(),
-                ipv4_addr: None,
+                ipv4_addr: Some(hal::InterfaceAddress::Unknown(LifIpAddr {
+                    address: "1.2.3.4".parse().unwrap(),
+                    prefix: 24,
+                })),
                 ipv6_addr: Vec::new(),
                 state: hal::InterfaceState::Unknown,
-                enabled: false,
+                enabled: true,
                 dhcp_client_enabled: false,
             },
             None,
@@ -760,25 +740,16 @@ mod tests {
         assert_eq!(got, want, "ethernet interface, ipv4 configured, interface up");
 
         let got = compute_state(
-            &Event::NetStack(fidl_fuchsia_netstack::NetInterface {
-                id: 1,
-                flags: netstack::NET_INTERFACE_FLAG_UP,
-                features: 0,
-                configuration: 0,
-                name: "eth0".to_string(),
-                addr: IpAddress("1.2.3.4".parse().unwrap()).into(),
-                netmask: IpAddress("255.255.255.0".parse().unwrap()).into(),
-                broadaddr: IpAddress("1.2.3.255".parse().unwrap()).into(),
-                ipv6addrs: vec![],
-                hwaddr: vec![0, 0, 0, 0, 0, 0],
-            }),
             &hal::Interface {
                 id: hal::PortId::from(1),
                 name: "ethernet/eth0".to_string(),
-                ipv4_addr: None,
+                ipv4_addr: Some(hal::InterfaceAddress::Unknown(LifIpAddr {
+                    address: "1.2.3.4".parse().unwrap(),
+                    prefix: 24,
+                })),
                 ipv6_addr: Vec::new(),
                 state: hal::InterfaceState::Unknown,
-                enabled: false,
+                enabled: true,
                 dhcp_client_enabled: false,
             },
             Some(vec![hal::Route {
@@ -807,25 +778,16 @@ mod tests {
         );
 
         let got = compute_state(
-            &Event::NetStack(fidl_fuchsia_netstack::NetInterface {
-                id: 1,
-                flags: netstack::NET_INTERFACE_FLAG_UP,
-                features: 0,
-                configuration: 0,
-                name: "eth0".to_string(),
-                addr: IpAddress("1.2.3.4".parse().unwrap()).into(),
-                netmask: IpAddress("255.255.255.0".parse().unwrap()).into(),
-                broadaddr: IpAddress("1.2.3.255".parse().unwrap()).into(),
-                ipv6addrs: vec![],
-                hwaddr: vec![0, 0, 0, 0, 0, 0],
-            }),
             &hal::Interface {
                 id: hal::PortId::from(1),
                 name: "ethernet/eth0".to_string(),
-                ipv4_addr: None,
+                ipv4_addr: Some(hal::InterfaceAddress::Unknown(LifIpAddr {
+                    address: "1.2.3.4".parse().unwrap(),
+                    prefix: 24,
+                })),
                 ipv6_addr: Vec::new(),
                 state: hal::InterfaceState::Unknown,
-                enabled: false,
+                enabled: true,
                 dhcp_client_enabled: false,
             },
             Some(vec![hal::Route {
@@ -854,25 +816,16 @@ mod tests {
         );
 
         let got = compute_state(
-            &Event::NetStack(fidl_fuchsia_netstack::NetInterface {
-                id: 1,
-                flags: netstack::NET_INTERFACE_FLAG_UP,
-                features: 0,
-                configuration: 0,
-                name: "eth0".to_string(),
-                addr: IpAddress("1.2.3.4".parse().unwrap()).into(),
-                netmask: IpAddress("255.255.255.0".parse().unwrap()).into(),
-                broadaddr: IpAddress("1.2.3.255".parse().unwrap()).into(),
-                ipv6addrs: vec![],
-                hwaddr: vec![0, 0, 0, 0, 0, 0],
-            }),
             &hal::Interface {
                 id: hal::PortId::from(1),
                 name: "ethernet/eth0".to_string(),
-                ipv4_addr: None,
+                ipv4_addr: Some(hal::InterfaceAddress::Unknown(LifIpAddr {
+                    address: "1.2.3.4".parse().unwrap(),
+                    prefix: 24,
+                })),
                 ipv6_addr: Vec::new(),
                 state: hal::InterfaceState::Unknown,
-                enabled: false,
+                enabled: true,
                 dhcp_client_enabled: false,
             },
             Some(vec![hal::Route {
@@ -898,25 +851,16 @@ mod tests {
         assert_eq!(got, want, "ethernet interface, ipv4 configured, interface up, with internet");
 
         let got = compute_state(
-            &Event::NetStack(fidl_fuchsia_netstack::NetInterface {
-                id: 1,
-                flags: netstack::NET_INTERFACE_FLAG_UP,
-                features: 0,
-                configuration: 0,
-                name: "eth0".to_string(),
-                addr: IpAddress("1.2.3.4".parse().unwrap()).into(),
-                netmask: IpAddress("255.255.255.0".parse().unwrap()).into(),
-                broadaddr: IpAddress("1.2.3.255".parse().unwrap()).into(),
-                ipv6addrs: vec![],
-                hwaddr: vec![0, 0, 0, 0, 0, 0],
-            }),
             &hal::Interface {
                 id: hal::PortId::from(1),
                 name: "ethernet/eth0".to_string(),
-                ipv4_addr: None,
+                ipv4_addr: Some(hal::InterfaceAddress::Unknown(LifIpAddr {
+                    address: "1.2.3.4".parse().unwrap(),
+                    prefix: 24,
+                })),
                 ipv6_addr: Vec::new(),
                 state: hal::InterfaceState::Unknown,
-                enabled: false,
+                enabled: true,
                 dhcp_client_enabled: false,
             },
             Some(vec![hal::Route {
