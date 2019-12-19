@@ -270,7 +270,7 @@ func Main() {
 		syslog.Warnf("could not initialize cobalt client: %s", err)
 	} else {
 		go func() {
-			if err := runCobaltClient(context.Background(), cobaltLogger, &ns.stats, socketNotifications); err != nil {
+			if err := runCobaltClient(context.Background(), cobaltLogger, &ns.stats, ns.mu.stack, socketNotifications); err != nil {
 				syslog.Errorf("cobalt client exited unexpectedly: %s", err)
 			}
 		}()

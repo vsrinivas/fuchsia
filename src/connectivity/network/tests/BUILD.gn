@@ -59,6 +59,7 @@ rustc_test("netstack_cobalt_integration_test") {
     "//src/connectivity/network/netstack:networking_metrics_rustlib",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:itertools",
     "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
   ]
 }

@@ -5,10 +5,10 @@
 use failure::ResultExt;
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn socket_counts() -> Result<(), failure::Error> {
-    // NB: netstack aggregates observations and logs them to cobalt once per minute.
-    // We wait for calls to LogCobaltEvents to be made, so this test takes about 180 seconds to
-    // run. If you're modifying this test and have the ability to change the netstack
+async fn cobalt_metrics() -> Result<(), failure::Error> {
+    // NB: netstack aggregates observations and logs them to cobalt once per minute.  We wait for
+    // calls to LogCobaltEvents to be made, so this test takes about 180 seconds to run at the time
+    // of writing. If you're modifying this test and have the ability to change the netstack
     // implementation, reducing that log period will improve the cycle time of this test.
 
     let logger_querier = fuchsia_component::client::connect_to_service::<
@@ -18,9 +18,7 @@ async fn socket_counts() -> Result<(), failure::Error> {
     let address = "127.0.0.1:8080";
 
     // NB: Creating a socket here also causes netstack to be launched.
-    let s1 = std::net::TcpListener::bind(&address)
-        .context("failed to bind to localhost")
-        .map_err(|e| failure::format_err!("failed calling bind: {:?}", e))?;
+    let s1 = std::net::TcpListener::bind(&address).context("failed to bind to localhost")?;
 
     let (events, _more) = logger_querier
         .watch_logs(
@@ -29,6 +27,7 @@ async fn socket_counts() -> Result<(), failure::Error> {
         )
         .await
         .context("failed to call query_logger")?
+        // fidl_fuchsia_cobalt::QueryError doesn't implement failure::Fail.
         .map_err(|e| failure::format_err!("queryerror: {:?}", e))?;
 
     let socket_count_max_events =
@@ -46,7 +45,7 @@ async fn socket_counts() -> Result<(), failure::Error> {
     assert_eq!(sockets_destroyed_events[0].count, 0);
 
     let s2 = std::net::TcpStream::connect(&address)?;
-    let s3 = s1.accept()?;
+    let (s3, _sockaddr) = s1.accept()?;
 
     let (events, _more) = logger_querier
         .watch_logs(
@@ -58,16 +57,101 @@ async fn socket_counts() -> Result<(), failure::Error> {
         .map_err(|e| failure::format_err!("queryerror: {:?}", e))?;
 
     assert_eq!(
-        3,
+        // We think this i64 suffix is necessary because rustc assigns this constant a type before unifying
+        // it with the type of the events_with_id expression below; this may be fixed when
+        // https://github.com/rust-lang/rust/issues/57009 is fixed and should be reevaluated then.
+        3i64,
         events_with_id(&events, networking_metrics::SOCKET_COUNT_MAX_METRIC_ID)
             .iter()
-            .fold(0, |max, ev| std::cmp::max(max, ev.count)),
-        "events: {:?}",
-        events
+            .map(|ev| ev.count)
+            .max()
+            .expect("expect at least one socket count max event"),
+        "events:\n{}\n",
+        display_events(&events),
     );
 
     std::mem::drop(s1);
     std::mem::drop(s2);
+
+    let (events, _more) = logger_querier
+        .watch_logs(
+            networking_metrics::PROJECT_ID,
+            fidl_fuchsia_cobalt_test::LogMethod::LogCobaltEvents,
+        )
+        .await
+        .context("failed to call query_logger")?
+        .map_err(|e| failure::format_err!("queryerror: {:?}", e))?;
+
+    assert_eq!(
+        // https://github.com/rust-lang/rust/issues/57009
+        2i64,
+        events_with_id(&events, networking_metrics::SOCKETS_DESTROYED_METRIC_ID)
+            .iter()
+            .map(|ev| ev.count)
+            .sum()
+    );
+
+    // TODO(43242): This is currently FIN-ACK, ACK but should be FIN-ACK, FIN-ACK.
+    const EXPECTED_PACKET_COUNT: i64 = 2;
+
+    // TODO(42092): make these sent/received expected values the same.
+    // TCP payload size (12) + TCP headers (20)
+    const EXPECTED_SENT_PACKET_SIZE: i64 = 32;
+    // TCP payload size (12) + TCP headers (20) + IP minimum size (20)
+    const EXPECTED_RECEIVED_PACKET_SIZE: i64 = 52;
+
+    assert_eq!(
+        EXPECTED_PACKET_COUNT,
+        events_with_id(&events, networking_metrics::PACKETS_SENT_METRIC_ID)
+            .iter()
+            .map(|ev| ev.count)
+            .max()
+            .expect("expected at least one event with PACKETS_SENT_METRIC_ID"),
+        "packets sent. events:\n{}\n",
+        display_events(&events),
+    );
+    assert_eq!(
+        EXPECTED_PACKET_COUNT,
+        events_with_id(&events, networking_metrics::PACKETS_RECEIVED_METRIC_ID)
+            .iter()
+            .map(|ev| ev.count)
+            .max()
+            .expect("expected at least one event with PACKETS_RECEIVED_METRIC_ID"),
+        "packets received. events:\n{}\n",
+        display_events(&events),
+    );
+    assert_eq!(
+        EXPECTED_PACKET_COUNT * EXPECTED_SENT_PACKET_SIZE,
+        events_with_id(&events, networking_metrics::BYTES_SENT_METRIC_ID)
+            .iter()
+            .map(|ev| ev.count)
+            .max()
+            .expect("expected at least one event with BYTES_SENT_METRIC_ID"),
+        "bytes sent. events:\n{}\n",
+        display_events(&events),
+    );
+    assert_eq!(
+        EXPECTED_PACKET_COUNT * EXPECTED_RECEIVED_PACKET_SIZE,
+        events_with_id(&events, networking_metrics::BYTES_RECEIVED_METRIC_ID)
+            .iter()
+            .map(|ev| ev.count)
+            .max()
+            .expect("expected at least one event with BYTES_RECEIVED_METRIC_ID"),
+        "bytes received. events:\n{}\n",
+        display_events(&events),
+    );
+
+    assert_eq!(
+        // https://github.com/rust-lang/rust/issues/57009
+        2i64,
+        events_with_id(&events, networking_metrics::SOCKETS_DESTROYED_METRIC_ID)
+            .iter()
+            .map(|ev| ev.count)
+            .sum(),
+        "sockets destroyed. events:\n{}\n",
+        display_events(&events),
+    );
+
     std::mem::drop(s3);
 
     let (events, _more) = logger_querier
@@ -78,14 +162,37 @@ async fn socket_counts() -> Result<(), failure::Error> {
         .await
         .context("failed to call query_logger")?
         .map_err(|e| failure::format_err!("queryerror: {:?}", e))?;
+
     assert_eq!(
-        3,
+        // https://github.com/rust-lang/rust/issues/57009
+        1i64,
+        events_with_id(&events, networking_metrics::SOCKET_COUNT_MAX_METRIC_ID)
+            .iter()
+            .map(|ev| ev.count)
+            .sum(),
+        "socket count max. events:\n{}\n",
+        display_events(&events),
+    );
+
+    assert_eq!(
+        // https://github.com/rust-lang/rust/issues/57009
+        1i64,
         events_with_id(&events, networking_metrics::SOCKETS_DESTROYED_METRIC_ID)
             .iter()
             .map(|ev| ev.count)
-            .fold(0, |acc, c| acc + c)
+            .sum(),
+        "sockets destroyed. events:\n{}\n",
+        display_events(&events)
     );
+
     Ok(())
+}
+
+fn display_events<'a, I>(events: I) -> String
+where
+    I: IntoIterator<Item = &'a fidl_fuchsia_cobalt::CobaltEvent>,
+{
+    itertools::join(events.into_iter().map(|ev| format!("{:?}", ev)), "\n")
 }
 
 // Returns the internal CountEvents of `events` that have the given `id`.

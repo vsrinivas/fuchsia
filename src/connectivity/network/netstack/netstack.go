@@ -81,19 +81,25 @@ type stats struct {
 	SocketsDestroyed *tcpip.StatCounter
 }
 
-func runCobaltClient(ctx context.Context, cobaltLogger *cobalt.LoggerInterface, stats *stats, notify <-chan struct{}) error {
+// Map from Cobalt metric ID to metric value.
+type nicStats map[uint32]uint64
+
+func runCobaltClient(ctx context.Context, cobaltLogger *cobalt.LoggerInterface, stats *stats, stk *stack.Stack, notify <-chan struct{}) error {
 	// Metric            | Sampling Interval | Aggregation Strategy
 	// SocketCountMax    | socket creation   | max
 	// SocketsCreated    | 1 minute          | delta
 	// SocketsDestroyed  | 1 minute          | delta
+	// PacketsSent       | 1 minute          | delta
+	// PacketsReceived   | 1 minute          | delta
+	// BytesSent         | 1 minute          | delta
+	// BytesReceived     | 1 minute          | delta
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
 
-	lastCreated := uint64(0)
-	lastDestroyed := uint64(0)
-	socketCountMax := uint64(0)
+	var socketCountMax, lastCreated, lastDestroyed uint64
 	previousTime := time.Now()
 
+	lastNICStats := make(map[tcpip.NICID]nicStats)
 	return schedule.OncePerTick(ctx, notify, ticker.C, func() {
 		if sockets := stats.SocketCount.Value(); sockets > socketCountMax {
 			socketCountMax = sockets
@@ -107,23 +113,68 @@ func runCobaltClient(ctx context.Context, cobaltLogger *cobalt.LoggerInterface, 
 		events := []cobalt.CobaltEvent{
 			{
 				MetricId: networking_metrics.SocketCountMaxMetricId,
-				Payload:  cobalt.EventPayloadWithEventCount(cobalt.CountEvent{PeriodDurationMicros: period, Count: int64(socketCountMax)}),
+				Payload:  eventCount(period, socketCountMax),
 			},
 			{
 				MetricId: networking_metrics.SocketsCreatedMetricId,
-				Payload:  cobalt.EventPayloadWithEventCount(cobalt.CountEvent{PeriodDurationMicros: period, Count: int64(created - lastCreated)}),
+				Payload:  eventCount(period, created-lastCreated),
 			},
 			{
 				MetricId: networking_metrics.SocketsDestroyedMetricId,
-				Payload:  cobalt.EventPayloadWithEventCount(cobalt.CountEvent{PeriodDurationMicros: period, Count: int64(destroyed - lastDestroyed)}),
+				Payload:  eventCount(period, destroyed-lastDestroyed),
 			},
 		}
 
+		nicInfos := stk.NICInfo()
+		for nicid, info := range nicInfos {
+			packetsSent, packetsReceived := info.Stats.Tx.Packets.Value(), info.Stats.Rx.Packets.Value()
+			bytesSent, bytesReceived := info.Stats.Tx.Bytes.Value(), info.Stats.Rx.Bytes.Value()
+
+			lastStats, ok := lastNICStats[nicid]
+			if !ok {
+				lastStats = make(nicStats)
+				lastNICStats[nicid] = lastStats
+			}
+			deltaPacketsSent := packetsSent - lastStats[networking_metrics.PacketsSentMetricId]
+			deltaPacketsReceived := packetsReceived - lastStats[networking_metrics.PacketsReceivedMetricId]
+			deltaBytesSent := bytesSent - lastStats[networking_metrics.BytesSentMetricId]
+			deltaBytesReceived := bytesReceived - lastStats[networking_metrics.BytesReceivedMetricId]
+
+			lastStats[networking_metrics.PacketsSentMetricId] = packetsSent
+			lastStats[networking_metrics.PacketsReceivedMetricId] = packetsReceived
+			lastStats[networking_metrics.BytesSentMetricId] = bytesSent
+			lastStats[networking_metrics.BytesReceivedMetricId] = bytesReceived
+
+			// TODO(43237): log the NIC features (eth, WLAN, bridge) associated with each datapoint
+			events = append(
+				events,
+				cobalt.CobaltEvent{
+					MetricId: networking_metrics.PacketsSentMetricId,
+					Payload:  eventCount(period, deltaPacketsSent),
+				},
+				cobalt.CobaltEvent{
+					MetricId: networking_metrics.PacketsReceivedMetricId,
+					Payload:  eventCount(period, deltaPacketsReceived),
+				},
+				cobalt.CobaltEvent{
+					MetricId: networking_metrics.BytesSentMetricId,
+					Payload:  eventCount(period, deltaBytesSent),
+				},
+				cobalt.CobaltEvent{
+					MetricId: networking_metrics.BytesReceivedMetricId,
+					Payload:  eventCount(period, deltaBytesReceived),
+				},
+			)
+		}
 		cobaltLogger.LogCobaltEvents(events)
 		socketCountMax = stats.SocketCount.Value()
 		lastCreated = created
 		lastDestroyed = destroyed
 	})
+}
+
+func eventCount(period int64, count uint64) cobalt.EventPayload {
+	return cobalt.EventPayloadWithEventCount(cobalt.CountEvent{PeriodDurationMicros: period, Count: int64(count)})
 }
 
 // A Netstack tracks all of the running state of the network stack.
