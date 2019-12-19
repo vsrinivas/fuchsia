@@ -105,7 +105,7 @@ void main() {
               ? const Offstage()
               : ScopedModel<NetstackModel>(
                   model: netstackModel,
-                  child: Overlay(initialEntries: overlays),
+                  child: Overlay(key: Key('main'), initialEntries: overlays),
                 ),
     ),
   );

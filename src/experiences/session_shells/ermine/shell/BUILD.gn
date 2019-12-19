@@ -23,6 +23,8 @@ flutter_app("ermine_app") {
   fuchsia_package_name = "ermine"
   package_name = "ermine"
 
+  flutter_driver_extendable = true
+
   meta = [
     {
       path = rebase_path("meta/ermine.cmx")

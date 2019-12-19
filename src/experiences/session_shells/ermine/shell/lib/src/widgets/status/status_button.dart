@@ -10,7 +10,7 @@ class StatusButton extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
 
-  const StatusButton(this.label, this.onTap);
+  const StatusButton(this.label, this.onTap, [Key key]) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

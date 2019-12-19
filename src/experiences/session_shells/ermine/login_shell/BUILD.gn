@@ -7,6 +7,8 @@ import("//topaz/runtime/flutter_runner/flutter_app.gni")
 flutter_app("userpicker_base_shell") {
   main_dart = "lib/main.dart"
 
+  flutter_driver_extendable = true
+
   meta = [
     {
       path = rebase_path("meta/userpicker_base_shell.cmx")

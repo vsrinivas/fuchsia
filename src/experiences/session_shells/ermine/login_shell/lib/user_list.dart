@@ -57,12 +57,14 @@ class UserList extends StatelessWidget {
   }
 
   Widget _buildIconButton({
+    Key key,
     VoidCallback onTap,
     bool isSmall,
     IconData icon,
   }) {
     double size = isSmall ? _kUserAvatarSizeSmall : _kUserAvatarSizeLarge;
     return _buildUserActionButton(
+      key: key,
       onTap: () => onTap?.call(),
       width: size,
       isSmall: isSmall,
@@ -77,6 +79,7 @@ class UserList extends StatelessWidget {
   }
 
   Widget _buildUserActionButton({
+    Key key,
     Widget child,
     VoidCallback onTap,
     bool isSmall,
@@ -86,6 +89,7 @@ class UserList extends StatelessWidget {
     return GestureDetector(
       onTap: isDisabled ? null : () => onTap?.call(),
       child: Container(
+        key: key,
         height: isSmall ? _kUserAvatarSizeSmall : _kUserAvatarSizeLarge,
         width: width ?? (isSmall ? _kButtonWidthSmall : _kButtonWidthLarge),
         alignment: FractionalOffset.center,
@@ -194,6 +198,7 @@ class UserList extends StatelessWidget {
           isSmall: isSmall,
         ),
         _buildUserActionButton(
+          key: Key('Guest'),
           child: Text(
             'GUEST',
             style: TextStyle(
@@ -306,6 +311,7 @@ class UserList extends StatelessWidget {
             Align(
               alignment: FractionalOffset.bottomCenter,
               child: _buildIconButton(
+                key: Key('plus'),
                 onTap: model.showUserActions,
                 isSmall: isSmall,
                 icon: Icons.add,
@@ -317,18 +323,18 @@ class UserList extends StatelessWidget {
         children.addAll(
           model.accounts.map(
             (Account account) => Align(
-                  alignment: FractionalOffset.bottomCenter,
-                  child: _buildUserEntry(
-                    account: account,
-                    onTap: () {
-                      model
-                        ..login(account.id)
-                        ..hideUserActions();
-                    },
-                    isSmall: isSmall,
-                    model: model,
-                  ),
-                ),
+              alignment: FractionalOffset.bottomCenter,
+              child: _buildUserEntry(
+                account: account,
+                onTap: () {
+                  model
+                    ..login(account.id)
+                    ..hideUserActions();
+                },
+                isSmall: isSmall,
+                model: model,
+              ),
+            ),
           ),
         );
 
