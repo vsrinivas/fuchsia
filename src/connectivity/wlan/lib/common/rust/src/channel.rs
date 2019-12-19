@@ -326,7 +326,7 @@ pub fn derive_channel(
         None => dsss_channel.unwrap_or(rx_primary_channel),
     };
 
-    let ht_op_cbw = ht_op.map(|ht_op| ht_op.ht_op_info_head.sta_chan_width());
+    let ht_op_cbw = ht_op.map(|ht_op| { ht_op.ht_op_info_head }.sta_chan_width());
     let vht_cbw_and_segs =
         vht_op.map(|vht_op| (vht_op.vht_cbw, vht_op.center_freq_seg0, vht_op.center_freq_seg1));
 
@@ -344,7 +344,7 @@ pub fn derive_channel(
         // - VHT op has deprecated parameters sets, or
         // - VHT CBW field is set to 0
         // Safe to unwrap `ht_op` because `ht_op_cbw` is only Some(_) if `ht_op` has a value.
-        (Some(Scw::ANY), _) => match ht_op.unwrap().ht_op_info_head.secondary_chan_offset() {
+        (Some(Scw::ANY), _) => match { ht_op.unwrap().ht_op_info_head }.secondary_chan_offset() {
             ie::SecChanOffset::SECONDARY_ABOVE => (fidl_common::Cbw::Cbw40, 0),
             ie::SecChanOffset::SECONDARY_BELOW => (fidl_common::Cbw::Cbw40Below, 0),
             ie::SecChanOffset::SECONDARY_NONE | _ => (fidl_common::Cbw::Cbw20, 0),

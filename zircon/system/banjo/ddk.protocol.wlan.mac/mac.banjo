@@ -304,4 +304,3 @@ protocol Wlanmac {
     /// call wlanmac_ifc->hw_scan_complete()
     StartHwScan(WlanHwScanConfig scan_config) -> (zx.status st);
 };
-

@@ -509,8 +509,7 @@ mod test_utils {
 mod tests {
     use {
         super::*, banjo_ddk_hw_wlan_ieee80211::*, banjo_ddk_hw_wlan_wlaninfo::*,
-        banjo_ddk_protocol_wlan_mac::WlanHwScanType, banjo_wlan_protocol_info::*,
-        wlan_common::assert_variant,
+        banjo_ddk_protocol_wlan_mac::WlanHwScanType, wlan_common::assert_variant,
     };
 
     fn make_auth_confirm_msg() -> fidl_mlme::AuthenticateConfirm {

@@ -399,9 +399,9 @@ mod tests {
         let ht_op_info_head = ht_op.ht_op_info_head;
         assert_eq!(ht_op_info_head.secondary_chan_offset(), SecChanOffset::SECONDARY_BELOW);
         assert_eq!(ht_op_info_head.sta_chan_width(), StaChanWidth::ANY);
+        assert_eq!(ht_op_info_head.ht_protection(), HtProtection::TWENTY_MHZ);
 
         let ht_op_info_tail = ht_op.ht_op_info_tail;
-        assert_eq!(ht_op_info_tail.ht_protection(), HtProtection::TWENTY_MHZ);
         assert_eq!(ht_op_info_tail.pco_phase(), PcoPhase::FORTY_MHZ);
 
         let basic_mcs_set = ht_op.basic_ht_mcs_set;

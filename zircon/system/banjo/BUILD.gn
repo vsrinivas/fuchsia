@@ -81,7 +81,6 @@ group("banjo") {
     "ddk.protocol.wlan.info",
     "ddk.protocol.wlan.mac",
     "ddk.protocol.wlanif",
-    "wlan.protocol.info",
     "zircon.device.audio",
     "zircon.device.block",
     "zircon.device.camera",

@@ -12,7 +12,6 @@
 #include <list>
 
 #include <wlan/protocol/ieee80211.h>
-#include <wlan/protocol/info.h>
 
 #include "netinet/if_ether.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"

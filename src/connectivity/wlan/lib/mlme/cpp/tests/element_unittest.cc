@@ -154,9 +154,9 @@ TEST(HtOperation, DdkConversion) {
       .primary_chan = 123,
       .head = 0x01020304,
       .tail = 0x05,
-      .basic_mcs_set.rx_mcs_head = 0x00000001000000ff,
-      .basic_mcs_set.rx_mcs_tail = 0x01000000,
-      .basic_mcs_set.tx_mcs = 0x00000000,
+      .rx_mcs_head = 0x00000001000000ff,
+      .rx_mcs_tail = 0x01000000,
+      .tx_mcs = 0x00000000,
   };
 
   auto ieee = HtOperation::FromDdk(ddk);
@@ -171,9 +171,9 @@ TEST(HtOperation, DdkConversion) {
   EXPECT_EQ(ddk.primary_chan, ddk2.primary_chan);
   EXPECT_EQ(ddk.head, ddk2.head);
   EXPECT_EQ(ddk.tail, ddk2.tail);
-  EXPECT_EQ(ddk.basic_mcs_set.rx_mcs_head, ddk2.basic_mcs_set.rx_mcs_head);
-  EXPECT_EQ(ddk.basic_mcs_set.rx_mcs_tail, ddk2.basic_mcs_set.rx_mcs_tail);
-  EXPECT_EQ(ddk.basic_mcs_set.tx_mcs, ddk2.basic_mcs_set.tx_mcs);
+  EXPECT_EQ(ddk.rx_mcs_head, ddk2.rx_mcs_head);
+  EXPECT_EQ(ddk.rx_mcs_tail, ddk2.rx_mcs_tail);
+  EXPECT_EQ(ddk.tx_mcs, ddk2.tx_mcs);
 }
 
 TEST(VhtCapabilities, DdkConversion) {

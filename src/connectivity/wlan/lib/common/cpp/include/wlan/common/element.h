@@ -853,9 +853,9 @@ struct HtOperation {
     dst.primary_chan = ddk.primary_chan;
     dst.head.set_val(ddk.head);
     dst.tail.set_val(ddk.tail);
-    dst.basic_mcs_set.rx_mcs_head.set_val(ddk.basic_mcs_set.rx_mcs_head);
-    dst.basic_mcs_set.rx_mcs_tail.set_val(ddk.basic_mcs_set.rx_mcs_tail);
-    dst.basic_mcs_set.tx_mcs.set_val(ddk.basic_mcs_set.tx_mcs);
+    dst.basic_mcs_set.rx_mcs_head.set_val(ddk.rx_mcs_head);
+    dst.basic_mcs_set.rx_mcs_tail.set_val(ddk.rx_mcs_tail);
+    dst.basic_mcs_set.tx_mcs.set_val(ddk.tx_mcs);
     return dst;
   }
 
@@ -864,9 +864,9 @@ struct HtOperation {
     ddk.primary_chan = primary_chan;
     ddk.head = head.val();
     ddk.tail = tail.val();
-    ddk.basic_mcs_set.rx_mcs_head = basic_mcs_set.rx_mcs_head.val();
-    ddk.basic_mcs_set.rx_mcs_tail = basic_mcs_set.rx_mcs_tail.val();
-    ddk.basic_mcs_set.tx_mcs = basic_mcs_set.tx_mcs.val();
+    ddk.rx_mcs_head = basic_mcs_set.rx_mcs_head.val();
+    ddk.rx_mcs_tail = basic_mcs_set.rx_mcs_tail.val();
+    ddk.tx_mcs = basic_mcs_set.tx_mcs.val();
     return ddk;
   }
 

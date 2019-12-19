@@ -10,7 +10,5 @@ banjo_library("ddk.protocol.wlan.info") {
   ]
   public_deps = [
     "$zx/system/banjo/ddk.hw.wlan.ieee80211",
-    "$zx/system/banjo/wlan.protocol.info",
   ]
 }
-

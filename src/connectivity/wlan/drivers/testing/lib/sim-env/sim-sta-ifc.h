@@ -9,7 +9,6 @@
 
 #include <ddk/protocol/wlan/info.h>
 #include <wlan/common/macaddr.h>
-#include <wlan/protocol/info.h>
 
 namespace wlan::simulation {
 

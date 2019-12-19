@@ -18,7 +18,6 @@
 
 #include <ddk/driver.h>
 #include <ddktl/protocol/ethernet.h>
-#include <wlan/protocol/info.h>
 #include <ddktl/protocol/wlan/mac.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>

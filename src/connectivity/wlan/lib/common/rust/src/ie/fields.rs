@@ -7,8 +7,8 @@ use {
         buffer_reader::BufferReader, mac::MacAddr, mac::ReasonCode, organization::Oui,
         unaligned_view::UnalignedView,
     },
-    banjo_ddk_hw_wlan_ieee80211 as banjo_80211, banjo_wlan_protocol_info as banjo_wlan,
-    std::{convert::TryInto, mem::size_of},
+    banjo_ddk_hw_wlan_ieee80211 as banjo_80211, banjo_ddk_protocol_wlan_info as banjo_wlan_info,
+    std::mem::size_of,
     wlan_bitfield::bitfield,
     zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned},
 };
@@ -410,32 +410,49 @@ pub struct AselCapability(pub u8);
 pub struct HtOperation {
     pub primary_chan: u8, // Primary 20 MHz channel.
     // HT Operation Information is 40-bit field so it has to be split
-    pub ht_op_info_head: HtOpInfoHead,     // u8
-    pub ht_op_info_tail: HtOpInfoTail,     // u32
+    pub ht_op_info_head: HtOpInfoHead,     // u32
+    pub ht_op_info_tail: HtOpInfoTail,     // u8
     pub basic_ht_mcs_set: SupportedMcsSet, // u128
 }
 
-impl From<HtOperation> for banjo_wlan::WlanHtOp {
+impl From<HtOperation> for banjo_wlan_info::WlanHtOp {
     fn from(op: HtOperation) -> Self {
-        let mut info = [0; 5];
-        info[0] = op.ht_op_info_head.raw();
-        info[1..].clone_from_slice(*&{ op.ht_op_info_tail }.as_bytes());
-        // Safe to unwrap because DDK definition and bitfield definition both follow wire format
-        let supported_mcs_set = *&{ op.basic_ht_mcs_set }.as_bytes().try_into().unwrap();
-        Self { primary_chan: op.primary_chan, info, supported_mcs_set }
+        let mcs = banjo_80211::Ieee80211HtCapabilitiesSupportedMcsSet::from(op.basic_ht_mcs_set);
+        Self {
+            primary_chan: op.primary_chan,
+            head: *&{ op.ht_op_info_head }.raw(),
+            tail: *&{ op.ht_op_info_tail }.raw(),
+            rx_mcs_head: unsafe { mcs.fields.rx_mcs_head },
+            rx_mcs_tail: unsafe { mcs.fields.rx_mcs_tail },
+            tx_mcs: unsafe { mcs.fields.tx_mcs },
+        }
     }
 }
 
+// TODO(43257): Move bits 8-32 into tail.
 // IEEE Std 802.11-2016, Figure 9-339
 #[bitfield(
     0..=1 secondary_chan_offset as SecChanOffset(u8),
     2..=2 sta_chan_width as StaChanWidth(u8),
     3     rifs_mode_permitted,
     4..=7 _,    // reserved. Note: used by 802.11n-D1.10 (before 802.11n-2009)
+
+    8..=9   ht_protection as HtProtection(u8),
+    10      nongreenfield_present,
+    11      _,                                  // reserved. Note: used in 802.11n-D1.10
+                                                // (before 802.11n-2009).
+    12      obss_non_ht_stas_present,
+    // IEEE 802.11-2016 Figure 9-339 has an inconsistency so this is Fuchsia interpretation:
+    // The channel number for the second segment in a 80+80 Mhz channel
+    13..=20 center_freq_seg2,                   // For VHT only. See Table 9-250
+    21..=23 _,                                  // reserved
+    24..=29 _,                                  // reserved
+    30      dual_beacon,                        // whether an STBC beacon is transmitted by the AP
+    31      dual_cts_protection,                // whether CTS protection is required
 )]
 #[repr(C)]
 #[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Clone, Copy)]
-pub struct HtOpInfoHead(pub u8);
+pub struct HtOpInfoHead(pub u32);
 
 #[derive(Debug, PartialOrd, PartialEq, Eq, Clone, Copy)]
 pub struct SecChanOffset(pub u8);
@@ -453,31 +470,19 @@ impl StaChanWidth {
     pub_const!(ANY, 1); // Any in the Supported Channel Width set
 }
 
+// TODO(43257): Move bits 8-32 from head into here.
 // IEEE Std 802.11-2016, Figure 9-339, continued
 #[bitfield(
-    // bit offset in this struct starts from bit 8 in the IEEE HtOperationInformation field.
-    0..=1   ht_protection as HtProtection(u8),
-    2       nongreenfield_present,
-    3       _,                                  // reserved. Note: used in 802.11n-D1.10
-                                                // (before 802.11n-2009).
-    4       obss_non_ht_stas_present,
-    // IEEE 802.11-2016 Figure 9-339 has an inconsistency so this is Fuchsia interpretation:
-    // The channel number for the second segment in a 80+80 Mhz channel
-    5..=12  center_freq_seg2,                   // For VHT only. See Table 9-250
-    13..=15 _,                                  // reserved
-
-    16..=21 _,                                  // reserved
-    22      dual_beacon,                        // whether an STBC beacon is transmitted by the AP
-    23      dual_cts_protection,                // whether CTS protection is required
-    24      stbc_beacon,                        // 0 indicates primary beacon, 1 STBC beacon
-    25      lsig_txop_protection,               // only true if all HT STAs in the BSS support this
-    26      pco_active,
-    27..=27 pco_phase as PcoPhase(u8),
-    28..=31 _,                                  // reserved
+    // bit offset in this struct starts from bit 32 in the IEEE HtOperationInformation field.
+    0     stbc_beacon,                        // 0 indicates primary beacon, 1 STBC beacon
+    1     lsig_txop_protection,               // only true if all HT STAs in the BSS support this
+    2     pco_active,
+    3..=3 pco_phase as PcoPhase(u8),
+    4..=7 _,                                  // reserved
 )]
 #[repr(C)]
 #[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Clone, Copy)]
-pub struct HtOpInfoTail(pub u32);
+pub struct HtOpInfoTail(pub u8);
 
 #[derive(Debug, PartialOrd, PartialEq, Eq, Clone, Copy)]
 pub struct HtProtection(pub u8);
@@ -934,7 +939,7 @@ pub struct VhtOperation {
     pub basic_mcs_nss: VhtMcsNssMap, // u16
 }
 
-impl From<VhtOperation> for banjo_wlan::WlanVhtOp {
+impl From<VhtOperation> for banjo_wlan_info::WlanVhtOp {
     fn from(op: VhtOperation) -> Self {
         Self {
             // vht_cbw is a NewType for u8 instead of a bitfield, thus does not have raw() defined.
@@ -1141,14 +1146,14 @@ mod tests {
     #[test]
     fn ddk_conversion_ht_operation() {
         let ht_op = crate::ie::fake_ies::fake_ht_operation();
-        let ddk: banjo_wlan::WlanHtOp = ht_op.into();
+        let ddk: banjo_wlan_info::WlanHtOp = ht_op.into();
         assert_eq!(ht_op.as_bytes(), unsafe { as_bytes(&ddk) });
     }
 
     #[test]
     fn ddk_conversion_vht_operation() {
         let vht_op = crate::ie::fake_ies::fake_vht_operation();
-        let ddk: banjo_wlan::WlanVhtOp = vht_op.into();
+        let ddk: banjo_wlan_info::WlanVhtOp = vht_op.into();
         assert_eq!(vht_op.as_bytes(), unsafe { as_bytes(&ddk) });
     }
 }

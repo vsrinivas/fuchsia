@@ -43,7 +43,6 @@
 #include <ddk/driver.h>
 #include <ddk/hw/wlan/wlaninfo.h>
 #include <ddk/protocol/wlan/info.h>
-#include <wlan/protocol/info.h>
 
 #include "garnet/lib/wlan/protocol/include/wlan/protocol/mac.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/acpi.h"

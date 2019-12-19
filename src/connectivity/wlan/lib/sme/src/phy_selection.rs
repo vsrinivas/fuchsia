@@ -48,7 +48,8 @@ fn convert_vht_segments_to_cbw(seg0: u8, seg1: u8) -> fidl_common::Cbw {
 fn derive_cbw_ht(client_ht_cap: &HtCapabilities, bss_ht_op: &HtOperation) -> fidl_common::Cbw {
     let client_ht_cap_info = client_ht_cap.ht_cap_info;
     let client_cbw = convert_chanwidth_to_cbw(client_ht_cap_info.chan_width_set());
-    let ap_cbw = convert_secchan_offset_to_cbw(bss_ht_op.ht_op_info_head.secondary_chan_offset());
+    let ap_cbw =
+        convert_secchan_offset_to_cbw({ bss_ht_op.ht_op_info_head }.secondary_chan_offset());
     std::cmp::min(client_cbw, ap_cbw)
 }
 

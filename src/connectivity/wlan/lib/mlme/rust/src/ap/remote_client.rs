@@ -10,7 +10,6 @@ use {
     },
     banjo_ddk_hw_wlan_ieee80211::*,
     banjo_ddk_protocol_wlan_info::*,
-    banjo_wlan_protocol_info::*,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     wlan_common::{
         appendable::Appendable,

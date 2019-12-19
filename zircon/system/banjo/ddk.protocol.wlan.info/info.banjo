@@ -5,7 +5,6 @@
 library ddk.protocol.wlan.info;
 
 using ddk.hw.wlan.ieee80211;
-using wlan.protocol.info;
 using zx;
 
 // LINT.IfChange
@@ -23,6 +22,48 @@ const uint32 WLAN_MAX_SSID_LEN = 32;
 struct WlanSsid {
     uint8 len;
     array<uint8>:WLAN_MAX_SSID_LEN ssid;
+};
+
+// IEEE Std 802.11-2016, 9.4.2.57
+[Packed]
+struct WlanHtOp {
+    uint8 primary_chan;
+
+    /// First 8 bits of HT Operation:
+    /// - Secondary Channel Offset: 2 bits
+    /// - STA Channel Width: 1 bit
+    /// - RIFS Mode: 1 bit
+    /// - Reserved: 4 bits
+    /// - HT Protection: 2 bits
+    /// - Nongreenfield HT STAs Present: 1 bit
+    /// - Reserved: 1 bit
+    /// - OBSS Non-HT STAs Present: 1 bit
+    /// - Channel Center Frequency Segment 2: 8 bits (spec says "11 bits": that can't be correct)
+    /// - Reserved: 3 bits (spec says "2 bits": can't be correct either)
+    /// - Reserved: 6 bits
+    /// - Dual Beacon: 1 bit
+    /// - Dual CTS Protection: 1 bit
+    uint32 head;
+
+    /// Next 8 bits of HT Operation:
+    /// - STBC Beacon: 1 bit
+    /// - L-SIG TXOP Protection Full Support: 1 bit
+    /// - PCO Active: 1 bit
+    /// - PCO Phase: 1 bit
+    /// - Reserved: 4 bits
+    uint8 tail;
+
+    uint64 rx_mcs_head;
+    uint32 rx_mcs_tail;
+    uint32 tx_mcs;
+};
+
+[Packed]
+struct WlanVhtOp {
+    uint8 vht_cbw;
+    uint8 center_freq_seg0;
+    uint8 center_freq_seg1;
+    uint16 basic_mcs;
 };
 
 /// Channel Bandwidth. See IEEE 802.11-2016 21.2.4 Table 21-2
@@ -148,11 +189,11 @@ struct WlanAssocCtx {
     bool has_ht_cap;
     ddk.hw.wlan.ieee80211.Ieee80211HtCapabilities ht_cap;
     bool has_ht_op;
-    wlan.protocol.info.WlanHtOp ht_op;
+    WlanHtOp ht_op;
 
     /// IEEE Std 802.11-2016, 9.4.2.158, 159
     bool has_vht_cap;
     ddk.hw.wlan.ieee80211.Ieee80211VhtCapabilities vht_cap;
     bool has_vht_op;
-    wlan.protocol.info.WlanVhtOp vht_op;
+    WlanVhtOp vht_op;
 };
