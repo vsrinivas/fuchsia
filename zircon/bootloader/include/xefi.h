@@ -37,6 +37,8 @@ void* xefi_load_file(const char16_t* filename, size_t* size_out, size_t front_by
 efi_status xefi_find_pci_mmio(efi_boot_services* bs, uint8_t cls, uint8_t sub, uint8_t ifc,
                               uint64_t* mmio);
 
+efi_status xefi_get_load_options(size_t* load_options_size, void** load_options);
+
 // GUIDs
 extern efi_guid SimpleFileSystemProtocol;
 extern efi_guid FileInfoGUID;

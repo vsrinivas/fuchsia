@@ -11,6 +11,7 @@
 #include <efi/protocol/device-path.h>
 #include <efi/protocol/disk-io.h>
 #include <efi/protocol/loaded-image.h>
+#include <efi/protocol/simple-file-system.h>
 
 #include "osboot.h"
 
@@ -93,6 +94,8 @@ static void disk_close(disk_t* disk) {
   disk->bs->CloseProtocol(disk->h, &DiskIoProtocol, disk->img, NULL);
 }
 
+// Find the disk device that was used to load the boot loader.
+// Returns 0 on success and fills in the disk pointer, -1 otherwise.
 static int disk_find_boot(efi_handle img, efi_system_table* sys, bool verbose, disk_t* disk) {
   bool found = false;
   efi_boot_services* bs = sys->BootServices;
@@ -193,6 +196,8 @@ fail_open_devpath:
   return found ? 0 : -1;
 }
 
+// Given a disk structure, find the kernel on that disk by reading the partition table
+// and looking for the partition with the supplied guid_name.
 static int disk_find_kernel(disk_t* disk, bool verbose, const uint8_t* guid_value,
                             const char* guid_name) {
   gpt_header_t gpt;
