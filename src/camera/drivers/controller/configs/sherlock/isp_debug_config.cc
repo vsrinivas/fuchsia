@@ -2,17 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CAMERA_DRIVERS_CONTROLLER_CONFIGS_SHERLOCK_ISP_DEBUG_CONFIG_H_
-#define SRC_CAMERA_DRIVERS_CONTROLLER_CONFIGS_SHERLOCK_ISP_DEBUG_CONFIG_H_
-
-#include <fuchsia/camera2/hal/cpp/fidl.h>
-#include <fuchsia/sysmem/cpp/fidl.h>
-
-#include <vector>
-
-#include "common-util.h"
-#include "src/camera/drivers/controller/configs/sherlock/internal-config.h"
-#include "src/camera/lib/stream_utils/stream_constraints.h"
+#include "src/camera/drivers/controller/configs/sherlock/isp_debug_config.h"
 
 // This file contains static information for the ISP Debug Configuration
 // There are three streams in one configuration
@@ -29,8 +19,6 @@ constexpr uint32_t kIspStreamHeight = 2720;
 constexpr uint32_t kIspStreamFrameRate = 30;
 constexpr fuchsia::sysmem::PixelFormatType kIspStreamPixelFormat =
     fuchsia::sysmem::PixelFormatType::NV12;
-constexpr fuchsia::sysmem::ColorSpaceType kIspStreamColorSpaceType =
-    fuchsia::sysmem::ColorSpaceType::REC601_PAL;
 
 }  // namespace
 
@@ -109,5 +97,3 @@ InternalConfigNode DebugConfigFullRes() {
 }
 
 }  // namespace camera
-
-#endif  // SRC_CAMERA_DRIVERS_CONTROLLER_CONFIGS_SHERLOCK_ISP_DEBUG_CONFIG_H_

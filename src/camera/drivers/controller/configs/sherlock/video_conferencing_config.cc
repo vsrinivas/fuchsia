@@ -2,16 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
-
-#include <fuchsia/camera2/hal/cpp/fidl.h>
-#include <fuchsia/sysmem/cpp/fidl.h>
-
-#include <vector>
-
-#include "common-util.h"
-#include "src/camera/drivers/controller/configs/sherlock/internal-config.h"
-#include "src/camera/lib/stream_utils/stream_constraints.h"
+#include "src/camera/drivers/controller/configs/sherlock/video_conferencing_config.h"
 
 // This file contains static information for the Video conferencing configuration
 // There are two streams in one configuration
@@ -22,37 +13,6 @@
 // Not adding GE2D at the moment.
 
 namespace camera {
-
-namespace {
-
-constexpr fuchsia::sysmem::PixelFormatType kFramePixelFormat =
-    fuchsia::sysmem::PixelFormatType::NV12;
-
-// Isp FR parameters
-constexpr uint32_t kIspFRWidth = 2176;
-constexpr uint32_t kIspFRHeight = 2720;
-
-// GDC parameters
-constexpr uint32_t kGdcFRWidth = 2240;
-constexpr uint32_t kGdcFRHeight = 1792;
-
-// ML Video FR Parameters
-constexpr uint32_t kMlFRMinBufferForCamping = 5;
-constexpr uint32_t kMlFRWidth = 640;
-constexpr uint32_t kMlFRHeight = 512;
-constexpr uint32_t kMlFRFrameRate = 5;
-
-// Video Conferencing FR Parameters
-constexpr uint32_t kVideoMinBufferForCamping = 5;
-constexpr uint32_t kVideoWidth = 1280;
-constexpr uint32_t kVideoHeight = 720;
-constexpr uint32_t kVideoWidth1 = 896;
-constexpr uint32_t kVideoHeight1 = 504;
-constexpr uint32_t kVideoWidth2 = 640;
-constexpr uint32_t kVideoHeight2 = 360;
-constexpr uint32_t kVideoFrameRate = 30;
-
-}  // namespace
 
 /**********************************
  *  ML Video FR paramters         *

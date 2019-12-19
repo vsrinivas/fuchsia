@@ -13,11 +13,12 @@
 #include <ddktl/protocol/gdc.h>
 #include <ddktl/protocol/isp.h>
 
-#include "configs/sherlock/internal-config.h"
-#include "isp_stream_protocol.h"
-#include "pipeline_manager.h"
-#include "processing_node.h"
-#include "stream_pipeline_info.h"
+#include "src/camera/drivers/controller/configs/sherlock/internal_config.h"
+#include "src/camera/drivers/controller/configs/sherlock/sherlock_configs.h"
+#include "src/camera/drivers/controller/isp_stream_protocol.h"
+#include "src/camera/drivers/controller/pipeline_manager.h"
+#include "src/camera/drivers/controller/processing_node.h"
+#include "src/camera/drivers/controller/stream_pipeline_info.h"
 
 namespace camera {
 
@@ -44,7 +45,10 @@ class ControllerImpl : public fuchsia::camera2::hal::Controller {
   InternalConfigNode* GetStreamConfigNode(InternalConfigInfo* internal_config,
                                           fuchsia::camera2::CameraStreamType stream_config_type);
 
-  void PopulateConfigurations() { configs_ = SherlockConfigs(); }
+  void PopulateConfigurations() {
+    configs_ = camera::SherlockExternalConfigs();
+    internal_configs_ = SherlockInternalConfigs();
+  }
 
  private:
   // Device FIDL implementation
@@ -73,8 +77,6 @@ class ControllerImpl : public fuchsia::camera2::hal::Controller {
   void DisableStreaming() override;
 
   void GetDeviceInfo(GetDeviceInfoCallback callback) override;
-
-  std::vector<fuchsia::camera2::hal::Config> SherlockConfigs();
 
   fidl::Binding<fuchsia::camera2::hal::Controller> binding_;
   std::vector<fuchsia::camera2::hal::Config> configs_;

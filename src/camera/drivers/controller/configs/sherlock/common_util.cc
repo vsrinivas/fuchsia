@@ -2,17 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CAMERA_DRIVERS_CONTROLLER_CONFIGS_SHERLOCK_COMMON_UTIL_H_
-#define SRC_CAMERA_DRIVERS_CONTROLLER_CONFIGS_SHERLOCK_COMMON_UTIL_H_
-
-#include "src/camera/lib/stream_utils/stream_constraints.h"
+#include "src/camera/drivers/controller/configs/sherlock/common_util.h"
 
 namespace camera {
-
-namespace {
-constexpr uint32_t kGdcBytesPerRowDivisor = 16;
-constexpr uint32_t kIspBytesPerRowDivisor = 128;
-}  // namespace
 
 fuchsia::camera2::StreamProperties GetStreamProperties(fuchsia::camera2::CameraStreamType type) {
   fuchsia::camera2::StreamProperties ret{};
@@ -30,5 +22,3 @@ fuchsia::sysmem::BufferCollectionConstraints InvalidConstraints() {
 }
 
 }  // namespace camera
-
-#endif  // SRC_CAMERA_DRIVERS_CONTROLLER_CONFIGS_SHERLOCK_COMMON_UTIL_H_

@@ -8,7 +8,19 @@ import("//build/package.gni")
 source_set("controller-configs") {
   visibility = [ "//src/camera/drivers/controller/*" ]
   sources = [
-    "sherlock-configs.cc",
+    "common_util.cc",
+    "isp_debug_config.cc",
+    "monitoring_config.cc",
+    "sherlock_configs.cc",
+    "video_conferencing_config.cc",
+  ]
+  public = [
+    "common_util.h",
+    "internal_config.h",
+    "isp_debug_config.h",
+    "monitoring_config.h",
+    "sherlock_configs.h",
+    "video_conferencing_config.h",
   ]
   public_deps = [
     "//sdk/banjo/ddk.protocol.ge2d",

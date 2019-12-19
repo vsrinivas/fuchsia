@@ -95,14 +95,6 @@ executable("controller-protocol-test") {
 executable("controller-allocator-test") {
   testonly = true
   sources = [
-    "../gdc_node.cc",
-    "../graph_utils.cc",
-    "../input_node.cc",
-    "../memory_allocation.cc",
-    "../output_node.cc",
-    "../pipeline_manager.cc",
-    "../processing_node.cc",
-    "../stream_protocol.cc",
     "controller-allocator-test.cc",
   ]
   deps = [
@@ -111,6 +103,8 @@ executable("controller-allocator-test") {
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",
     "//sdk/lib/sys/cpp",
+    "//src/camera/drivers/controller:controller-source",
+    "//src/camera/drivers/controller/configs/sherlock:controller-configs",
     "//src/camera/drivers/test_utils",
     "//src/camera/lib/format_conversion:format_conversion",
     "//src/camera/lib/stream_utils:stream_configs",

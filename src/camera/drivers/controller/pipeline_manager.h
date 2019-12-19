@@ -11,7 +11,7 @@
 #include <vector>
 
 #include "fbl/macros.h"
-#include "src/camera/drivers/controller/configs/sherlock/internal-config.h"
+#include "src/camera/drivers/controller/configs/sherlock/internal_config.h"
 #include "src/camera/drivers/controller/gdc_node.h"
 #include "src/camera/drivers/controller/input_node.h"
 #include "src/camera/drivers/controller/output_node.h"

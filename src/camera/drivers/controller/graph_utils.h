@@ -7,9 +7,9 @@
 
 #include <vector>
 
-#include "configs/sherlock/internal-config.h"
 #include "fbl/macros.h"
 #include "processing_node.h"
+#include "src/camera/drivers/controller/configs/sherlock/internal_config.h"
 #include "src/camera/lib/format_conversion/buffer_collection_helper.h"
 #include "src/camera/lib/format_conversion/format_conversion.h"
 #include "stream_pipeline_info.h"
