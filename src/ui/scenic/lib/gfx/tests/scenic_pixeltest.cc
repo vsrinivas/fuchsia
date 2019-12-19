@@ -1252,7 +1252,8 @@ TEST_F(ScenicPixelTest, DISABLED_ProtectedImage) {
   EXPECT_EQ(scenic::Color({255, 0, 255, 255}), screenshot.ColorAt(.25f, .25f));
 }
 
-TEST_F(ScenicPixelTest, LinearImagePipe) {
+// Flaking on bots. TODO(fxb/42892): Re-enable.
+TEST_F(ScenicPixelTest, DISABLED_LinearImagePipe) {
   auto test_session = SetUpTestSession();
   scenic::Session* const session = &test_session->session;
   const auto [display_width, display_height] = test_session->display_dimensions;
