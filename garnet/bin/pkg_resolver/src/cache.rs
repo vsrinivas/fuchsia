@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{queue, repository_manager::Stats, tuf_util::OpenedRepository},
+    crate::{queue, repository_manager::Stats, tuf_util::Repository},
     failure::Fail,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_amber::OpenedRepositoryProxy,
@@ -15,6 +15,7 @@ use {
     fuchsia_zircon::Status,
     futures::{
         compat::{Future01CompatExt, Stream01CompatExt},
+        lock::Mutex as AsyncMutex,
         prelude::*,
         stream::FuturesUnordered,
     },
@@ -160,7 +161,7 @@ pub async fn cache_package_using_amber<'a>(
 }
 
 pub async fn cache_package_using_rust_tuf<'a>(
-    repo: OpenedRepository,
+    repo: Arc<AsyncMutex<Repository>>,
     config: &'a RepositoryConfig,
     url: &'a PkgUrl,
     cache: &'a PackageCache,
@@ -356,14 +357,14 @@ impl ToResolveStatus for FetchError {
 }
 
 async fn merkle_for_url_using_rust_tuf<'a>(
-    repo: OpenedRepository,
+    repo: Arc<AsyncMutex<Repository>>,
     url: &'a PkgUrl,
 ) -> Result<(BlobId, u64), MerkleForError> {
     let target_path =
         TargetPath::new(format!("{}/{}", url.name().unwrap(), url.variant().unwrap_or("0")))
             .map_err(MerkleForError::InvalidTargetPath)?;
     let mut repo = repo.lock().await;
-    let res = repo.get_mut().get_merkle_at_path(&target_path).await;
+    let res = repo.get_merkle_at_path(&target_path).await;
     res.map(|custom| (custom.merkle(), custom.size()))
 }
 

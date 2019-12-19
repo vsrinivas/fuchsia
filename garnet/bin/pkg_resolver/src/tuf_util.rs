@@ -6,17 +6,16 @@
 #![allow(deprecated)]
 
 use {
-    crate::{cache::MerkleForError, inspect_util::OptionalTimeProperty},
-    chrono::DateTime,
+    crate::{cache::MerkleForError, clock, inspect_util},
     failure::format_err,
     fidl_fuchsia_pkg_ext::{BlobId, RepositoryConfig, RepositoryKey},
     fuchsia_hyper::HyperConnector,
     fuchsia_inspect::{self as inspect, Property},
-    fuchsia_inspect_contrib::inspectable::{Inspectable, Watch},
+    fuchsia_inspect_contrib::inspectable::InspectableDebugString,
     fuchsia_syslog::fx_log_err,
+    fuchsia_zircon as zx,
     hyper_rustls::HttpsConnector,
     serde_derive::{Deserialize, Serialize},
-    std::sync::Arc,
     tuf::{
         client::Config,
         crypto::PublicKey,
@@ -26,8 +25,6 @@ use {
         repository::{EphemeralRepository, HttpRepository, HttpRepositoryBuilder},
     },
 };
-
-pub type OpenedRepository = Arc<futures::lock::Mutex<InspectableInner>>;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CustomTargetMetadata {
@@ -44,7 +41,7 @@ impl CustomTargetMetadata {
     }
 }
 
-pub struct Inner {
+pub struct Repository {
     client: tuf::client::Client<
         Json,
         EphemeralRepository<Json>,
@@ -54,18 +51,27 @@ pub struct Inner {
 
     /// Time that this repository was last successfully updated, or None if the repository has
     /// never successfully fetched target metadata.
-    last_updated_time: Option<DateTime<chrono::offset::Utc>>,
+    last_updated_time: InspectableDebugString<Option<zx::Time>>,
 
-    /// Time that this repository was last used to lookup target metadata, or None if no targets
-    /// have been resolved throught this repository.
-    last_used_time: Option<DateTime<chrono::offset::Utc>>,
-
-    /// Count of the number of merkle roots resolved through this repository.
-    num_packages_fetched: u64,
+    inspect: RepositoryInspectState,
 }
 
-impl Inner {
-    pub async fn new(config: &RepositoryConfig) -> Result<Self, failure::Error> {
+struct RepositoryInspectState {
+    /// Time that this repository was last used to lookup target metadata, or None if no targets
+    /// have been resolved throught this repository.
+    last_used_time: inspect::StringProperty,
+
+    /// Count of the number of merkle roots resolved through this repository.
+    merkles_successfully_resolved_count: inspect_util::Counter,
+
+    _node: inspect::Node,
+}
+
+impl Repository {
+    pub async fn new(
+        config: &RepositoryConfig,
+        node: inspect::Node,
+    ) -> Result<Self, failure::Error> {
         let local = EphemeralRepository::<Json>::new();
         let remote_url = config
             .mirrors()
@@ -80,13 +86,14 @@ impl Inner {
         )
         .build();
 
-        Self::new_from_local_and_remote(local, remote, config).await
+        Self::new_from_local_and_remote(local, remote, config, node).await
     }
 
     async fn new_from_local_and_remote(
         local: EphemeralRepository<Json>,
         remote: HttpRepository<HttpsConnector<HyperConnector>, Json>,
         config: &RepositoryConfig,
+        node: inspect::Node,
     ) -> Result<Self, failure::Error> {
         let root_keys = config
             .root_keys()
@@ -106,9 +113,16 @@ impl Inner {
             )
             .await
             .map_err(|e| format_err!("Unable to create rust tuf client, received error {:?}", e))?,
-            num_packages_fetched: 0,
-            last_updated_time: None,
-            last_used_time: None,
+            last_updated_time: InspectableDebugString::new(None, &node, "last_updated_time"),
+            inspect: RepositoryInspectState {
+                last_used_time: node
+                    .create_string("last_used_time", &format!("{:?}", Option::<zx::Time>::None)),
+                merkles_successfully_resolved_count: inspect_util::Counter::new(
+                    &node,
+                    "merkles_successfully_resolved_count",
+                ),
+                _node: node,
+            },
         })
     }
 
@@ -123,7 +137,7 @@ impl Inner {
                 MerkleForError::TufError(other)
             }
         })?;
-        self.last_updated_time = Some(chrono::Utc::now());
+        self.last_updated_time.get_mut().replace(clock::now());
 
         let description =
             self.client.fetch_target_description(&target_path).await.map_err(|e| match e {
@@ -144,58 +158,10 @@ impl Inner {
             serde_json::from_value(custom).map_err(MerkleForError::SerdeError)?;
         custom.size = description.length();
 
-        self.last_used_time = Some(chrono::Utc::now());
-        self.num_packages_fetched += 1;
+        self.inspect.last_used_time.set(&format!("{:?}", Some(clock::now())));
+        self.inspect.merkles_successfully_resolved_count.increment();
 
         Ok(custom)
-    }
-
-    pub fn last_updated_time(&self) -> &Option<DateTime<chrono::offset::Utc>> {
-        &self.last_updated_time
-    }
-
-    pub fn last_used_time(&self) -> &Option<DateTime<chrono::offset::Utc>> {
-        &self.last_used_time
-    }
-
-    pub fn num_packages_fetched(&self) -> u64 {
-        self.num_packages_fetched
-    }
-}
-
-pub type InspectableInner = Inspectable<Inner, InspectableInnerWatcher>;
-
-pub struct InspectableInnerWatcher {
-    num_packages_fetched_property: inspect::UintProperty,
-    last_updated_property: OptionalTimeProperty,
-    last_used_property: OptionalTimeProperty,
-    _node: inspect::Node,
-}
-
-impl Watch<Inner> for InspectableInnerWatcher {
-    fn new(inner: &Inner, node: &inspect::Node, name: impl AsRef<str>) -> Self {
-        let rust_tuf_repo_node = node.create_child(name);
-        Self {
-            num_packages_fetched_property: rust_tuf_repo_node
-                .create_uint("num_packages_fetched", inner.num_packages_fetched()),
-            last_updated_property: OptionalTimeProperty::new(
-                &rust_tuf_repo_node,
-                "last_updated_time",
-                inner.last_updated_time(),
-            ),
-            last_used_property: OptionalTimeProperty::new(
-                &rust_tuf_repo_node,
-                "last_used_time",
-                inner.last_used_time(),
-            ),
-            _node: rust_tuf_repo_node,
-        }
-    }
-
-    fn watch(&mut self, inner: &Inner) {
-        self.num_packages_fetched_property.set(inner.num_packages_fetched());
-        self.last_updated_property.set(inner.last_updated_time());
-        self.last_used_property.set(inner.last_used_time());
     }
 }
 
@@ -210,7 +176,15 @@ mod tests {
         },
         fuchsia_url::pkg_url::RepoUrl,
         matches::assert_matches,
+        std::sync::Arc,
     };
+
+    impl Repository {
+        pub async fn new_no_inspect(config: &RepositoryConfig) -> Result<Self, failure::Error> {
+            Repository::new(config, inspect::Inspector::new().root().create_child("inner-node"))
+                .await
+        }
+    }
 
     #[fasync::run_singlethreaded(test)]
     #[ignore]
@@ -223,8 +197,7 @@ mod tests {
         let served_repository = repo.build_server().start().expect("create served repo");
         let repo_url = RepoUrl::parse("fuchsia-pkg://test").expect("created repo url");
         let repo_config = served_repository.make_repo_config(repo_url);
-        let mut repo = Inner::new(&repo_config).await.expect("created opened repo");
-        let first_updated_time = repo.last_updated_time.clone();
+        let mut repo = Repository::new_no_inspect(&repo_config).await.expect("created opened repo");
         let target_path =
             TargetPath::new("just-meta-far/0".to_string()).expect("created target path");
 
@@ -235,8 +208,6 @@ mod tests {
         // Verify what we got from tuf was correct
         assert_eq!(merkle.as_bytes(), pkg.meta_far_merkle_root().as_bytes());
         assert_eq!(size, pkg.meta_far().unwrap().metadata().unwrap().len());
-        assert_eq!(repo.num_packages_fetched, 1);
-        assert_ne!(repo.last_updated_time, first_updated_time);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -246,15 +217,12 @@ mod tests {
         let served_repository = repo.build_server().start().expect("create served repo");
         let repo_url = RepoUrl::parse("fuchsia-pkg://test").expect("created repo url");
         let repo_config = served_repository.make_repo_config(repo_url);
-        let mut repo = Inner::new(&repo_config).await.expect("created opened repo");
-        let first_updated_time = repo.last_updated_time.clone();
+        let mut repo = Repository::new_no_inspect(&repo_config).await.expect("created opened repo");
         let target_path =
             TargetPath::new("path_that_doesnt_exist/0".to_string()).expect("created target path");
 
         // We still updated, but didn't fetch any packages
         assert_matches!(repo.get_merkle_at_path(&target_path).await, Err(MerkleForError::NotFound));
-        assert_eq!(repo.num_packages_fetched, 0);
-        assert_ne!(repo.last_updated_time, first_updated_time);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -276,18 +244,15 @@ mod tests {
             .expect("create served repo");
         let repo_url = RepoUrl::parse("fuchsia-pkg://test").expect("created repo url");
         let repo_config = served_repository.make_repo_config(repo_url);
-        let mut repo = Inner::new(&repo_config).await.expect("created opened repo");
-        let first_updated_time = repo.last_updated_time.clone();
+        let mut repo = Repository::new_no_inspect(&repo_config).await.expect("created opened repo");
         let target_path =
             TargetPath::new("just-meta-far/0".to_string()).expect("created target path");
 
         // When the server is blocked, we should fail at get_merkle_at_path
-        // TODO(fxb/39651) if the Inner can't connect to the remote server AND
+        // TODO(fxb/39651) if the Repository can't connect to the remote server AND
         // we've updated our local repo recently, then it should return the merkle that is stored locally
         should_fail.set();
         assert_matches!(repo.get_merkle_at_path(&target_path).await, Err(MerkleForError::NotFound));
-        assert_eq!(repo.num_packages_fetched, 0);
-        assert_eq!(repo.last_updated_time, first_updated_time);
 
         // When the server is unblocked, we should succeed again
         should_fail.unset();
@@ -295,8 +260,6 @@ mod tests {
             repo.get_merkle_at_path(&target_path).await.expect("fetched merkle from tuf");
         assert_eq!(merkle.as_bytes(), pkg.meta_far_merkle_root().as_bytes());
         assert_eq!(size, pkg.meta_far().unwrap().metadata().unwrap().len());
-        assert_eq!(repo.num_packages_fetched, 1);
-        assert_ne!(repo.last_updated_time, first_updated_time);
     }
 }
 
@@ -308,6 +271,7 @@ mod inspectable_inner_tests {
         fuchsia_inspect::assert_inspect_tree,
         fuchsia_pkg_testing::{PackageBuilder, RepositoryBuilder},
         fuchsia_url::pkg_url::RepoUrl,
+        std::sync::Arc,
     };
 
     #[fasync::run_singlethreaded(test)]
@@ -320,23 +284,21 @@ mod inspectable_inner_tests {
         let repo_url = RepoUrl::parse("fuchsia-pkg://test").expect("created repo url");
         let repo_config = served_repository.make_repo_config(repo_url);
 
-        let inspectable = InspectableInner::new(
-            Inner::new(&repo_config).await.expect("created Inner"),
-            inspector.root(),
-            "repo-node",
-        );
+        let inner = Repository::new(&repo_config, inspector.root().create_child("repo-node"))
+            .await
+            .expect("created Repository");
         assert_inspect_tree!(
             inspector,
             root: {
                 "repo-node": {
                   last_updated_time: "None",
                   last_used_time: "None",
-                  num_packages_fetched: 0u64,
+                  merkles_successfully_resolved_count: 0u64,
                 }
             }
         );
 
-        drop(inspectable);
+        drop(inner);
         assert_inspect_tree!(
             inspector,
             root: {}
@@ -346,6 +308,7 @@ mod inspectable_inner_tests {
     #[fasync::run_singlethreaded(test)]
     #[ignore]
     async fn test_watcher() {
+        clock::mock::set(zx::Time::from_nanos(0));
         let inspector = inspect::Inspector::new();
         let pkg = PackageBuilder::new("just-meta-far").build().await.expect("created pkg");
         let repo = Arc::new(
@@ -354,27 +317,21 @@ mod inspectable_inner_tests {
         let served_repository = repo.build_server().start().expect("create served repo");
         let repo_url = RepoUrl::parse("fuchsia-pkg://test").expect("created repo url");
         let repo_config = served_repository.make_repo_config(repo_url);
-        let mut inspectable = InspectableInner::new(
-            Inner::new(&repo_config).await.expect("created Inner"),
-            inspector.root(),
-            "repo-node",
-        );
+        let mut inner = Repository::new(&repo_config, inspector.root().create_child("repo-node"))
+            .await
+            .expect("created Repository");
         let target_path = tuf::metadata::TargetPath::new("just-meta-far/0".to_string())
             .expect("created target path");
 
-        inspectable
-            .get_mut()
-            .get_merkle_at_path(&target_path)
-            .await
-            .expect("fetched merkle from tuf");
+        inner.get_merkle_at_path(&target_path).await.expect("fetched merkle from tuf");
 
         assert_inspect_tree!(
             inspector,
             root: {
                 "repo-node": {
-                  last_updated_time: format!("{:?}", inspectable.last_updated_time()),
-                  last_used_time: format!("{:?}", inspectable.last_used_time()),
-                  num_packages_fetched: 1u64,
+                    last_updated_time: "Some(Time(0))",
+                    last_used_time: "Some(Time(0))",
+                    merkles_successfully_resolved_count: 1u64,
                 }
             }
         );

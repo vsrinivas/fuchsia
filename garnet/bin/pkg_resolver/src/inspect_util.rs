@@ -93,29 +93,6 @@ impl Counter {
     }
 }
 
-pub type OptionalTimeProperty = DebugStringProperty<Option<chrono::DateTime<chrono::offset::Utc>>>;
-
-pub struct DebugStringProperty<D> {
-    prop: inspect::StringProperty,
-    _marker: std::marker::PhantomData<D>,
-}
-
-impl<D> DebugStringProperty<D>
-where
-    D: std::fmt::Debug,
-{
-    pub fn new(parent: &inspect::Node, name: &str, value: &D) -> Self {
-        Self {
-            prop: parent.create_string(name, format!("{:?}", value)),
-            _marker: std::marker::PhantomData,
-        }
-    }
-
-    pub fn set(&self, value: &D) {
-        self.prop.set(&format!("{:?}", value));
-    }
-}
-
 #[cfg(test)]
 mod test_inspectable_repository_config {
     use {

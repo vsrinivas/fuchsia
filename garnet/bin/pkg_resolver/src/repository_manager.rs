@@ -8,7 +8,7 @@ use {
         cache::{BlobFetcher, PackageCache, ToResolveStatus},
         experiment::{Experiment, Experiments},
         inspect_util::{self, InspectableRepoUrl, InspectableRepositoryConfig},
-        tuf_util::OpenedRepository,
+        tuf_util::Repository,
     },
     failure::Fail,
     fidl_fuchsia_amber::{
@@ -19,8 +19,7 @@ use {
     fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_url::pkg_url::{PkgUrl, RepoUrl},
     fuchsia_zircon::Status,
-    futures::future::LocalBoxFuture,
-    futures::prelude::*,
+    futures::{future::LocalBoxFuture, lock::Mutex as AsyncMutex, prelude::*},
     parking_lot::{Mutex, RwLock},
     std::{
         collections::{btree_set, hash_map::Entry, BTreeSet, HashMap},
@@ -39,7 +38,7 @@ pub struct RepositoryManager<A: AmberConnect> {
     dynamic_configs: HashMap<RepoUrl, InspectableRepositoryConfig>,
     amber: A,
     amber_conns: Arc<RwLock<HashMap<InspectableRepoUrl, OpenedRepositoryProxy>>>,
-    rust_tuf_conns: Arc<RwLock<HashMap<RepoUrl, OpenedRepository>>>,
+    rust_tuf_conns: Arc<RwLock<HashMap<RepoUrl, Arc<AsyncMutex<Repository>>>>>,
     inspect: RepositoryManagerInspectState,
 }
 
@@ -396,11 +395,11 @@ impl<A: AmberConnect> RepositoryManager<A> {
 }
 
 async fn connect_to_rust_tuf_client(
-    rust_tuf_conns: Arc<RwLock<HashMap<RepoUrl, OpenedRepository>>>,
+    rust_tuf_conns: Arc<RwLock<HashMap<RepoUrl, Arc<AsyncMutex<Repository>>>>>,
     config: Arc<RepositoryConfig>,
     inspect_node: Arc<inspect::Node>,
     url: &RepoUrl,
-) -> Result<OpenedRepository, Status> {
+) -> Result<Arc<AsyncMutex<Repository>>, Status> {
     // Exit early if we've already connected to this repository.
     if let Some(conn) = rust_tuf_conns.read().get(url) {
         return Ok(conn.clone());
@@ -409,14 +408,14 @@ async fn connect_to_rust_tuf_client(
     // Create the rust tuf client. In order to minimize our time with the lock held, we'll
     // create the client first, even if it proves to be redundant because we lost the race with
     // another thread.
-    let mut repo = Arc::new(futures::lock::Mutex::new(crate::tuf_util::InspectableInner::new(
-        crate::tuf_util::Inner::new(&config).await.map_err(|e| {
-            fx_log_err!("Could not create tuf_util::Inner: {:?}", e);
-            Err(Status::INTERNAL)
-        })?,
-        &inspect_node,
-        url.host(),
-    )));
+    let mut repo = Arc::new(futures::lock::Mutex::new(
+        crate::tuf_util::Repository::new(&config, inspect_node.create_child(url.host()))
+            .await
+            .map_err(|e| {
+                fx_log_err!("Could not create tuf_util::Inner: {:?}", e);
+                Err(Status::INTERNAL)
+            })?,
+    ));
 
     // It's still possible we raced with some other connection attempt
     let mut rust_tuf_conns = rust_tuf_conns.write();

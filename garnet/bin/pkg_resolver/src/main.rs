@@ -18,6 +18,7 @@ use {
 
 mod amber_connector;
 mod cache;
+mod clock;
 mod config;
 mod experiment;
 mod font_package_manager;

@@ -168,7 +168,7 @@ async fn test_resolving_package_updates_inspect_state() {
                 amber_conns: {},
                 repos: {
                   "example.com": contains {
-                    num_packages_fetched: 1u64,
+                    merkles_successfully_resolved_count: 1u64,
                     last_updated_time: OptionDebugStringProperty::Some(AnyProperty),
                     last_used_time: OptionDebugStringProperty::Some(AnyProperty),
                   },
