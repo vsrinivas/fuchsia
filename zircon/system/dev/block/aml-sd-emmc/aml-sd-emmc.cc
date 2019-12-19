@@ -978,24 +978,6 @@ zx_status_t AmlSdEmmc::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  if (component_count > COMPONENT_PWM_E) {
-    ddk::PwmProtocolClient pwm = components[COMPONENT_PWM_E];
-    if (pwm.is_valid()) {
-      if ((status = pwm.Enable()) != ZX_OK) {
-        zxlogf(ERROR, "%s: Could not enable PWM\n", __func__);
-        return status;
-      }
-      aml_pwm::mode_config two_timer = {.mode = aml_pwm::TWO_TIMER,
-                                        .two_timer = {30052, 50.0, 0x0a, 0x0a}};
-      pwm_config_t init_cfg = {false, 30053, static_cast<float>(49.931787176), &two_timer,
-                               sizeof(two_timer)};
-      if ((status = pwm.SetConfig(&init_cfg)) != ZX_OK) {
-        zxlogf(ERROR, "%s: Could not initialize PWM\n", __func__);
-        return status;
-      }
-    }
-  }
-
   ddk::PDev pdev(components[COMPONENT_PDEV]);
   if (!pdev.is_valid()) {
     zxlogf(ERROR, "AmlSdEmmc::Create: Could not get pdev: %d\n", status);

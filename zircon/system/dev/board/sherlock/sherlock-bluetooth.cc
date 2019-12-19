@@ -9,6 +9,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
+#include <ddk/metadata/init-step.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/gpioimpl.h>
 #include <ddk/protocol/platform/bus.h>
@@ -16,14 +17,10 @@
 #include <hw/reg.h>
 #include <soc/aml-t931/t931-gpio.h>
 #include <soc/aml-t931/t931-hw.h>
-#include <soc/aml-t931/t931-pwm.h>
 
 #include "sherlock.h"
 
 namespace sherlock {
-
-#define SOC_WIFI_LPO_32k768 T931_GPIOX(16)
-#define SOC_BT_REG_ON T931_GPIOX(17)
 
 constexpr pbus_mmio_t bt_uart_mmios[] = {
     {
@@ -82,8 +79,7 @@ constexpr zx_bind_inst_t root_match[] = {
     BI_MATCH(),
 };
 constexpr zx_bind_inst_t pwm_e_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PWM),
-    BI_MATCH_IF(EQ, BIND_PWM_ID, T931_PWM_E),
+    BI_MATCH_IF(EQ, BIND_INIT_STEP, BIND_INIT_STEP_PWM),
 };
 constexpr device_component_part_t pwm_e_component[] = {
     {countof(root_match), root_match},
@@ -92,25 +88,6 @@ constexpr device_component_part_t pwm_e_component[] = {
 constexpr device_component_t bt_uart_components[] = {
     {countof(pwm_e_component), pwm_e_component},
 };
-
-// Enables and configures PWM_E on the SOC_WIFI_LPO_32k768 line for the
-// Wifi/Bluetooth module
-zx_status_t Sherlock::EnableWifi32K() {
-  // Configure SOC_WIFI_LPO_32k768 pin for PWM_E
-  zx_status_t status = gpio_impl_.SetAltFunction(SOC_WIFI_LPO_32k768, 1);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  zx::bti bti;
-  status = iommu_.GetBti(BTI_BOARD, 0, &bti);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: GetBti failed: %d\n", __func__, status);
-    return status;
-  }
-
-  return ZX_OK;
-}
 
 zx_status_t Sherlock::BluetoothInit() {
   zx_status_t status;
@@ -135,19 +112,6 @@ zx_status_t Sherlock::BluetoothInit() {
   if (status != ZX_OK) {
     return status;
   }
-
-  // Configure the SOC_WIFI_LPO_32k768 PWM, which is needed for the
-  // Bluetooth module to work properly
-  status = EnableWifi32K();
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  // set GPIO to reset Bluetooth module
-  gpio_impl_.ConfigOut(SOC_BT_REG_ON, 0);
-  usleep(10 * 1000);
-  gpio_impl_.Write(SOC_BT_REG_ON, 1);
-  usleep(100 * 1000);
 
   // Bind UART for Bluetooth HCI
   status = pbus_.CompositeDeviceAdd(&bt_uart_dev, bt_uart_components, countof(bt_uart_components),
