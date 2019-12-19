@@ -139,6 +139,13 @@ zx_status_t Message::Encode(const fidl_type_t* type, const char** error_msg_out)
 
 zx_status_t Message::Decode(const fidl_type_t* type, const char** error_msg_out) {
   auto contains_union = [](const fidl_type_t* type) {
+    // We only expect struct containers to be decoded, uses with other
+    // containers (e.g. table) are specialized use cases which we need to curb
+    // and forbid.
+    // While it would be safer to err on the side of returning `true` (since it
+    // maybe contains a union), we return `false` since the transformer only
+    // works on struct containers.
+    // This means that specialized uses cases must be v1, or they will fail.
     if (type->type_tag != kFidlTypeStruct)
       return false;
 
