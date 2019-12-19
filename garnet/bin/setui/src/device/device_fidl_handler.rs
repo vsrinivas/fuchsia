@@ -2,15 +2,12 @@ use {
     crate::fidl_processor::process_stream,
     crate::switchboard::base::*,
     crate::switchboard::hanging_get_handler::Sender,
-    crate::switchboard::switchboard_impl::SwitchboardImpl,
     fidl_fuchsia_settings::{
         DeviceMarker, DeviceRequest, DeviceRequestStream, DeviceSettings, DeviceWatchResponder,
     },
     fuchsia_syslog::fx_log_err,
     futures::future::LocalBoxFuture,
     futures::FutureExt,
-    parking_lot::RwLock,
-    std::sync::Arc,
 };
 
 impl Sender<DeviceSettings> for DeviceWatchResponder {
@@ -35,7 +32,7 @@ impl From<SettingResponse> for DeviceSettings {
 }
 
 pub fn spawn_device_fidl_handler(
-    switchboard_handle: Arc<RwLock<SwitchboardImpl>>,
+    switchboard_handle: SwitchboardHandle,
     stream: DeviceRequestStream,
 ) {
     process_stream::<DeviceMarker, DeviceSettings, DeviceWatchResponder>(

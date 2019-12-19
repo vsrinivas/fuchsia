@@ -5,7 +5,7 @@
 use crate::fidl_processor::{process_stream, RequestContext};
 use crate::switchboard::base::{
     ConfigurationInterfaceFlags, SettingRequest, SettingResponse, SettingResponseResult,
-    SettingType, SetupInfo, Switchboard,
+    SettingType, SetupInfo, SwitchboardHandle,
 };
 use crate::switchboard::hanging_get_handler::Sender;
 use fidl_fuchsia_settings::{
@@ -15,9 +15,7 @@ use fidl_fuchsia_settings::{
 use fuchsia_async as fasync;
 use futures::future::LocalBoxFuture;
 use futures::FutureExt;
-use parking_lot::RwLock;
 use std::convert::TryFrom;
-use std::sync::Arc;
 
 impl Sender<SetupSettings> for SetupWatchResponder {
     fn send_response(self, data: SetupSettings) {
@@ -94,12 +92,9 @@ impl From<SetupInfo> for SetupSettings {
     }
 }
 
-fn reboot(
-    switchboard_handle: Arc<RwLock<dyn Switchboard + Send + Sync>>,
-    responder: SetupSetResponder,
-) {
+async fn reboot(switchboard_handle: SwitchboardHandle, responder: SetupSetResponder) {
     let (response_tx, response_rx) = futures::channel::oneshot::channel::<SettingResponseResult>();
-    let mut switchboard = switchboard_handle.write();
+    let mut switchboard = switchboard_handle.lock().await;
 
     if switchboard.request(SettingType::Power, SettingRequest::Reboot, response_tx).is_err() {
         // Respond immediately with an error if request was not possible.
@@ -119,7 +114,7 @@ fn reboot(
     });
 }
 
-fn set(
+async fn set(
     context: RequestContext<SetupSettings, SetupWatchResponder>,
     settings: SetupSettings,
     responder: SetupSetResponder,
@@ -128,7 +123,7 @@ fn set(
         let (response_tx, response_rx) =
             futures::channel::oneshot::channel::<SettingResponseResult>();
 
-        let mut switchboard = context.switchboard.write();
+        let mut switchboard = context.switchboard.lock().await;
 
         if switchboard.request(SettingType::Setup, request, response_tx).is_err() {
             // Respond immediately with an error if request was not possible.
@@ -141,7 +136,7 @@ fn set(
             // Return success if we get a Ok result from the
             // switchboard.
             if let Ok(Ok(_)) = response_rx.await {
-                reboot(switchboard_clone, responder);
+                reboot(switchboard_clone, responder).await;
                 return;
             }
 
@@ -150,10 +145,7 @@ fn set(
     }
 }
 
-pub fn spawn_setup_fidl_handler(
-    switchboard: Arc<RwLock<dyn Switchboard + Send + Sync>>,
-    stream: SetupRequestStream,
-) {
+pub fn spawn_setup_fidl_handler(switchboard: SwitchboardHandle, stream: SetupRequestStream) {
     process_stream::<SetupMarker, SetupSettings, SetupWatchResponder>(
         stream,
         switchboard,
@@ -167,7 +159,7 @@ pub fn spawn_setup_fidl_handler(
                     #[allow(unreachable_patterns)]
                     match req {
                         SetupRequest::Set { settings, responder } => {
-                            set(context, settings, responder);
+                            set(context, settings, responder).await;
                         }
                         SetupRequest::Watch { responder } => {
                             context.watch(responder).await;

@@ -1,7 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
 use crate::switchboard::accessibility_types::AccessibilityInfo;
 use crate::switchboard::intl_types::IntlInfo;
 use bitflags::bitflags;
@@ -9,8 +8,12 @@ use failure::Error;
 use fuchsia_syslog::fx_log_warn;
 use futures::channel::mpsc::UnboundedSender;
 use futures::channel::oneshot::Sender;
+use futures::lock::Mutex;
 use serde_derive::{Deserialize, Serialize};
 use std::collections::HashSet;
+use std::sync::Arc;
+
+pub type SwitchboardHandle = Arc<Mutex<dyn Switchboard + Send + Sync>>;
 
 pub type SettingResponseResult = Result<Option<SettingResponse>, Error>;
 pub type SettingRequestResponder = Sender<SettingResponseResult>;

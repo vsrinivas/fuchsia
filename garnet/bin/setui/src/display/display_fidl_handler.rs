@@ -3,10 +3,9 @@
 // found in the LICENSE file.
 use {
     crate::fidl_processor::FidlProcessor, crate::switchboard::base::*,
-    crate::switchboard::hanging_get_handler::Sender,
-    crate::switchboard::switchboard_impl::SwitchboardImpl, fidl::endpoints::ServiceMarker,
+    crate::switchboard::hanging_get_handler::Sender, fidl::endpoints::ServiceMarker,
     fidl_fuchsia_settings::*, fuchsia_async as fasync, futures::future::LocalBoxFuture,
-    futures::prelude::*, parking_lot::RwLock, std::sync::Arc,
+    futures::prelude::*,
 };
 
 impl Sender<DisplaySettings> for DisplayWatchResponder {
@@ -63,7 +62,7 @@ fn to_request(settings: DisplaySettings) -> Option<SettingRequest> {
 }
 
 pub fn spawn_display_fidl_handler(
-    switchboard_handle: Arc<RwLock<SwitchboardImpl>>,
+    switchboard_handle: SwitchboardHandle,
     stream: DisplayRequestStream,
 ) {
     fasync::spawn_local(async move {
@@ -80,7 +79,7 @@ pub fn spawn_display_fidl_handler(
                                 let (response_tx, _response_rx) =
                                     futures::channel::oneshot::channel::<SettingResponseResult>();
                                 let result =
-                                    context.switchboard.write().request(SettingType::Display, request, response_tx);
+                                    context.switchboard.lock().await.request(SettingType::Display, request, response_tx);
 
                                 match result {
                                     Ok(_) => responder
@@ -107,7 +106,7 @@ pub fn spawn_display_fidl_handler(
                 }
                 .boxed_local()
             }),
-        );
+        ).await;
 
         processor.register::<LightSensorData, DisplayWatchLightSensorResponder>(
             SettingType::LightSensor,
@@ -144,7 +143,7 @@ pub fn spawn_display_fidl_handler(
                 }
                 .boxed_local()
             }),
-        );
+        ).await;
         processor.process().await;
     });
 }

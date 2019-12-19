@@ -5,15 +5,12 @@ use {
     crate::fidl_processor::{process_stream, RequestContext},
     crate::switchboard::base::*,
     crate::switchboard::hanging_get_handler::Sender,
-    crate::switchboard::switchboard_impl::SwitchboardImpl,
     failure::format_err,
     fidl_fuchsia_settings::*,
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
     futures::future::LocalBoxFuture,
     futures::prelude::*,
-    parking_lot::RwLock,
-    std::sync::Arc,
 };
 
 impl Sender<SystemSettings> for SystemWatchResponder {
@@ -36,7 +33,7 @@ impl From<SettingResponse> for SystemSettings {
 }
 
 pub fn spawn_system_fidl_handler(
-    switchboard_handle: Arc<RwLock<SwitchboardImpl>>,
+    switchboard_handle: SwitchboardHandle,
     stream: SystemRequestStream,
 ) {
     process_stream::<SystemMarker, SystemSettings, SystemWatchResponder>(
@@ -126,13 +123,14 @@ fn change_login_override(
 }
 
 async fn request(
-    switchboard: Arc<RwLock<dyn Switchboard + Send + Sync>>,
+    switchboard: SwitchboardHandle,
     setting_type: SettingType,
     setting_request: SettingRequest,
     description: &str,
 ) -> SettingResponseResult {
     let (response_tx, response_rx) = futures::channel::oneshot::channel::<SettingResponseResult>();
-    let result = switchboard.clone().write().request(setting_type, setting_request, response_tx);
+    let result =
+        switchboard.clone().lock().await.request(setting_type, setting_request, response_tx);
 
     match result {
         Ok(()) => match response_rx.await {

@@ -3,10 +3,9 @@
 // found in the LICENSE file.
 use {
     crate::fidl_processor::process_stream, crate::switchboard::base::*,
-    crate::switchboard::hanging_get_handler::Sender,
-    crate::switchboard::switchboard_impl::SwitchboardImpl, fidl::endpoints::ServiceMarker,
+    crate::switchboard::hanging_get_handler::Sender, fidl::endpoints::ServiceMarker,
     fidl_fuchsia_media::AudioRenderUsage, fidl_fuchsia_settings::*, fuchsia_async as fasync,
-    futures::future::LocalBoxFuture, futures::prelude::*, parking_lot::RwLock, std::sync::Arc,
+    futures::future::LocalBoxFuture, futures::prelude::*,
 };
 
 impl Sender<AudioSettings> for AudioWatchResponder {
@@ -112,10 +111,7 @@ fn to_request(settings: AudioSettings) -> Option<SettingRequest> {
     request
 }
 
-pub fn spawn_audio_fidl_handler(
-    switchboard_handle: Arc<RwLock<SwitchboardImpl>>,
-    stream: AudioRequestStream,
-) {
+pub fn spawn_audio_fidl_handler(switchboard_handle: SwitchboardHandle, stream: AudioRequestStream) {
     process_stream::<AudioMarker, AudioSettings, AudioWatchResponder>(
         stream,
         switchboard_handle,
@@ -130,7 +126,7 @@ pub fn spawn_audio_fidl_handler(
                     match req {
                         AudioRequest::Set { settings, responder } => {
                             if let Some(request) = to_request(settings) {
-                                set_volume(context.switchboard.clone(), request, responder)
+                                set_volume(context.switchboard.clone(), request, responder).await
                             } else {
                                 responder
                                     .send(&mut Err(Error::Unsupported))
@@ -151,13 +147,13 @@ pub fn spawn_audio_fidl_handler(
     );
 }
 
-fn set_volume(
-    switchboard: Arc<RwLock<dyn Switchboard + Send + Sync>>,
+async fn set_volume(
+    switchboard: SwitchboardHandle,
     request: SettingRequest,
     responder: AudioSetResponder,
 ) {
     let (response_tx, response_rx) = futures::channel::oneshot::channel::<SettingResponseResult>();
-    if switchboard.write().request(SettingType::Audio, request, response_tx).is_ok() {
+    if switchboard.lock().await.request(SettingType::Audio, request, response_tx).is_ok() {
         fasync::spawn(async move {
             // Return success if we get a Ok result from the
             // switchboard.

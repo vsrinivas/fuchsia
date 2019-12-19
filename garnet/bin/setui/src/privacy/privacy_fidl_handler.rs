@@ -1,9 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use parking_lot::RwLock;
-use std::sync::Arc;
-
 use crate::fidl_processor::process_stream;
 
 use futures::FutureExt;
@@ -19,7 +16,7 @@ use fuchsia_async as fasync;
 
 use crate::switchboard::base::{
     FidlResponseErrorLogger, SettingRequest, SettingResponse, SettingResponseResult, SettingType,
-    Switchboard,
+    SwitchboardHandle,
 };
 
 use crate::switchboard::hanging_get_handler::Sender;
@@ -46,13 +43,17 @@ impl From<PrivacySettings> for SettingRequest {
     }
 }
 
-fn set(
-    switchboard_handle: Arc<RwLock<dyn Switchboard + Send + Sync>>,
+async fn set(
+    switchboard_handle: SwitchboardHandle,
     settings: PrivacySettings,
     responder: PrivacySetResponder,
 ) {
     let (response_tx, response_rx) = futures::channel::oneshot::channel::<SettingResponseResult>();
-    match switchboard_handle.write().request(SettingType::Privacy, settings.into(), response_tx) {
+    match switchboard_handle.lock().await.request(
+        SettingType::Privacy,
+        settings.into(),
+        response_tx,
+    ) {
         Ok(_) => {
             fasync::spawn(async move {
                 let result = match response_rx.await {
@@ -73,10 +74,7 @@ fn set(
     }
 }
 
-pub fn spawn_privacy_fidl_handler(
-    switchboard: Arc<RwLock<dyn Switchboard + Send + Sync>>,
-    stream: PrivacyRequestStream,
-) {
+pub fn spawn_privacy_fidl_handler(switchboard: SwitchboardHandle, stream: PrivacyRequestStream) {
     process_stream::<PrivacyMarker, PrivacySettings, PrivacyWatchResponder>(
         stream,
         switchboard,
@@ -86,7 +84,7 @@ pub fn spawn_privacy_fidl_handler(
                         #[allow(unreachable_patterns)]
                 match req {
                     PrivacyRequest::Set { settings, responder } => {
-                        set(context.switchboard, settings, responder);
+                        set(context.switchboard, settings, responder).await;
                     }
                     PrivacyRequest::Watch { responder } => {
                         context.watch(responder).await;

@@ -10,8 +10,6 @@ use {
     fuchsia_async as fasync,
     futures::future::LocalBoxFuture,
     futures::FutureExt,
-    parking_lot::RwLock,
-    std::sync::Arc,
 };
 
 impl Sender<DoNotDisturbSettings> for DoNotDisturbWatchResponder {
@@ -41,7 +39,7 @@ fn to_request(settings: DoNotDisturbSettings) -> Option<SettingRequest> {
 }
 
 pub fn spawn_do_not_disturb_fidl_handler(
-    switchboard_handle: Arc<RwLock<dyn Switchboard + Send + Sync>>,
+    switchboard_handle: SwitchboardHandle,
     stream: DoNotDisturbRequestStream,
 ) {
     process_stream::<DoNotDisturbMarker, DoNotDisturbSettings, DoNotDisturbWatchResponder>(stream, switchboard_handle, SettingType::DoNotDisturb, Box::new(
@@ -57,7 +55,8 @@ pub fn spawn_do_not_disturb_fidl_handler(
                                         );
                                     if context
                                         .switchboard
-                                        .write()
+                                        .lock()
+                                        .await
                                         .request(SettingType::DoNotDisturb, request, response_tx)
                                         .is_ok()
                                     {

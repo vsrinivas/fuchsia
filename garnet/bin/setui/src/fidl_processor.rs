@@ -9,12 +9,11 @@ use fuchsia_async as fasync;
 use futures::future::LocalBoxFuture;
 use futures::lock::Mutex;
 use futures::TryStreamExt;
-use parking_lot::RwLock;
 
 use crate::switchboard::base::{SettingResponse, SettingType, Switchboard};
 use crate::switchboard::hanging_get_handler::{HangingGetHandler, Sender};
 
-pub type SwitchboardHandle = Arc<RwLock<dyn Switchboard + Send + Sync>>;
+pub type SwitchboardHandle = Arc<Mutex<dyn Switchboard + Send + Sync>>;
 pub type RequestResultCreator<'a, S> = LocalBoxFuture<'a, Result<Option<Request<S>>, Error>>;
 
 type ChangeFunction<T> = Box<dyn Fn(&T, &T) -> bool + Send + Sync + 'static>;
@@ -103,14 +102,14 @@ where
     T: From<SettingResponse> + Send + Sync + 'static,
     ST: Sender<T> + Send + Sync + 'static,
 {
-    fn new(
+    async fn new(
         setting_type: SettingType,
         switchboard: SwitchboardHandle,
         callback: RequestCallback<S, T, ST>,
     ) -> Self {
         Self {
             callback: callback,
-            hanging_get_handler: HangingGetHandler::create(switchboard.clone(), setting_type),
+            hanging_get_handler: HangingGetHandler::create(switchboard.clone(), setting_type).await,
         }
     }
 }
@@ -158,7 +157,7 @@ where
         }
     }
 
-    pub fn register<V, SV>(
+    pub async fn register<V, SV>(
         &mut self,
         setting_type: SettingType,
         callback: RequestCallback<S, V, SV>,
@@ -166,11 +165,14 @@ where
         V: From<SettingResponse> + Send + Sync + 'static,
         SV: Sender<V> + Send + Sync + 'static,
     {
-        let processing_unit = Box::new(SettingProcessingUnit::<S, V, SV>::new(
-            setting_type,
-            self.switchboard_handle.clone(),
-            callback,
-        ));
+        let processing_unit = Box::new(
+            SettingProcessingUnit::<S, V, SV>::new(
+                setting_type,
+                self.switchboard_handle.clone(),
+                callback,
+            )
+            .await,
+        );
         self.processing_units.push(processing_unit);
     }
 
@@ -206,7 +208,7 @@ pub fn process_stream<S, T, ST>(
 {
     fasync::spawn_local(async move {
         let mut processor = FidlProcessor::<S>::new(stream, switchboard.clone());
-        processor.register::<T, ST>(setting_type, callback);
+        processor.register::<T, ST>(setting_type, callback).await;
         processor.process().await;
     });
 }

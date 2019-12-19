@@ -4,17 +4,15 @@
 use {
     crate::fidl_processor::process_stream,
     crate::switchboard::base::{
-        SettingRequest, SettingResponseResult, SettingType, Switchboard, SystemLoginOverrideMode,
+        SettingRequest, SettingResponseResult, SettingType, SwitchboardHandle,
+        SystemLoginOverrideMode,
     },
     crate::switchboard::hanging_get_handler::Sender,
-    crate::switchboard::switchboard_impl::SwitchboardImpl,
     fidl_fuchsia_settings::*,
     fidl_fuchsia_setui::*,
     fuchsia_async as fasync,
     futures::future::LocalBoxFuture,
     futures::FutureExt,
-    parking_lot::RwLock,
-    std::sync::Arc,
 };
 
 impl From<fidl_fuchsia_setui::LoginOverride> for SystemLoginOverrideMode {
@@ -61,10 +59,7 @@ impl Sender<SystemSettings> for SetUiServiceWatchResponder {
     }
 }
 
-pub fn spawn_setui_fidl_handler(
-    switchboard: Arc<RwLock<SwitchboardImpl>>,
-    stream: SetUiServiceRequestStream,
-) {
+pub fn spawn_setui_fidl_handler(switchboard: SwitchboardHandle, stream: SetUiServiceRequestStream) {
     process_stream::<SetUiServiceMarker, SystemSettings, SetUiServiceWatchResponder>(
     stream,
     switchboard,
@@ -85,7 +80,8 @@ pub fn spawn_setui_fidl_handler(
                         context.switchboard.clone(),
                         SystemLoginOverrideMode::from(login_override),
                         responder,
-                      );
+                      )
+                      .await;
 
                       return Ok(None);
                     }
@@ -115,14 +111,15 @@ pub fn spawn_setui_fidl_handler(
   );
 }
 
-fn set_login_override(
-    switchboard: Arc<RwLock<dyn Switchboard + Send + Sync>>,
+async fn set_login_override(
+    switchboard: SwitchboardHandle,
     mode: SystemLoginOverrideMode,
     responder: SetUiServiceMutateResponder,
 ) {
     let (response_tx, response_rx) = futures::channel::oneshot::channel::<SettingResponseResult>();
     if switchboard
-        .write()
+        .lock()
+        .await
         .request(SettingType::System, SettingRequest::SetLoginOverrideMode(mode), response_tx)
         .is_ok()
     {

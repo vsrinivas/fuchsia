@@ -4,7 +4,7 @@
 
 use {
     crate::switchboard::base::*, failure::Error, fuchsia_async as fasync, futures::lock::Mutex,
-    futures::stream::StreamExt, parking_lot::RwLock, std::marker::PhantomData, std::sync::Arc,
+    futures::stream::StreamExt, std::marker::PhantomData, std::sync::Arc,
 };
 
 type ChangeFunction<T> = Box<dyn Fn(&T, &T) -> bool + Send + Sync + 'static>;
@@ -66,7 +66,7 @@ impl<T> HangingGetController<T> {
 /// To use, one should implement a sender, as well as a way to convert SettingResponse into
 /// something that sender can use.
 pub struct HangingGetHandler<T, ST> {
-    switchboard_handle: Arc<RwLock<dyn Switchboard + Send + Sync>>,
+    switchboard_handle: SwitchboardHandle,
     _listen_session: Box<dyn ListenSession + Send + Sync>,
     hanging_get: Option<ST>,
     data_type: PhantomData<T>,
@@ -84,8 +84,8 @@ where
     T: From<SettingResponse> + Send + Sync + 'static,
     ST: Sender<T> + Send + Sync + 'static,
 {
-    pub fn create(
-        switchboard_handle: Arc<RwLock<dyn Switchboard + Send + Sync>>,
+    pub async fn create(
+        switchboard_handle: SwitchboardHandle,
         setting_type: SettingType,
     ) -> Arc<Mutex<HangingGetHandler<T, ST>>> {
         let (on_change_sender, mut on_change_receiver) =
@@ -95,7 +95,8 @@ where
             switchboard_handle: switchboard_handle.clone(),
             _listen_session: switchboard_handle
                 .clone()
-                .write()
+                .lock()
+                .await
                 .listen(setting_type, on_change_sender)
                 .expect("started listening successfully"),
             hanging_get: None,
@@ -170,7 +171,7 @@ where
         let (response_tx, response_rx) =
             futures::channel::oneshot::channel::<SettingResponseResult>();
         {
-            let mut switchboard = self.switchboard_handle.write();
+            let mut switchboard = self.switchboard_handle.lock().await;
             switchboard
                 .request(self.setting_type, SettingRequest::Get, response_tx)
                 .expect("made request");
@@ -190,6 +191,7 @@ mod tests {
     use fuchsia_async::DurationExt;
     use fuchsia_zircon as zx;
     use futures::channel::mpsc::UnboundedSender;
+    use parking_lot::RwLock;
 
     const ID1: f32 = 1.0;
     const ID2: f32 = 2.0;
@@ -278,14 +280,14 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_change_after_watch() {
         let current_id = Arc::new(RwLock::new(ID1));
-        let switchboard_handle = Arc::new(RwLock::new(TestSwitchboard {
+        let switchboard_handle = Arc::new(Mutex::new(TestSwitchboard {
             id_to_send: current_id.clone(),
             listener: None,
             setting_type: None,
         }));
 
         let hanging_get_handler: Arc<Mutex<HangingGetHandler<TestStruct, TestSender>>> =
-            HangingGetHandler::create(switchboard_handle.clone(), SettingType::Display);
+            HangingGetHandler::create(switchboard_handle.clone(), SettingType::Display).await;
 
         let (hanging_get_responder, mut hanging_get_listener) =
             futures::channel::mpsc::unbounded::<TestStruct>();
@@ -310,7 +312,7 @@ mod tests {
         }
 
         {
-            let switchboard = switchboard_handle.read();
+            let switchboard = switchboard_handle.lock().await;
             switchboard.notify_listener();
         }
 
@@ -321,14 +323,14 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_watch_after_change() {
         let current_id = Arc::new(RwLock::new(ID1));
-        let switchboard_handle = Arc::new(RwLock::new(TestSwitchboard {
+        let switchboard_handle = Arc::new(Mutex::new(TestSwitchboard {
             id_to_send: current_id.clone(),
             listener: None,
             setting_type: None,
         }));
 
         let hanging_get_handler: Arc<Mutex<HangingGetHandler<TestStruct, TestSender>>> =
-            HangingGetHandler::create(switchboard_handle.clone(), SettingType::Display);
+            HangingGetHandler::create(switchboard_handle.clone(), SettingType::Display).await;
 
         let (hanging_get_responder, mut hanging_get_listener) =
             futures::channel::mpsc::unbounded::<TestStruct>();
@@ -353,7 +355,7 @@ mod tests {
         }
 
         {
-            let switchboard = switchboard_handle.read();
+            let switchboard = switchboard_handle.lock().await;
             switchboard.notify_listener();
         }
 
@@ -364,14 +366,14 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_watch_with_change_function() {
         let current_id = Arc::new(RwLock::new(ID1));
-        let switchboard_handle = Arc::new(RwLock::new(TestSwitchboard {
+        let switchboard_handle = Arc::new(Mutex::new(TestSwitchboard {
             id_to_send: current_id.clone(),
             listener: None,
             setting_type: None,
         }));
 
         let hanging_get_handler: Arc<Mutex<HangingGetHandler<TestStruct, TestSender>>> =
-            HangingGetHandler::create(switchboard_handle.clone(), SettingType::Display);
+            HangingGetHandler::create(switchboard_handle.clone(), SettingType::Display).await;
 
         let (hanging_get_responder, mut hanging_get_listener) =
             futures::channel::mpsc::unbounded::<TestStruct>();
@@ -399,7 +401,7 @@ mod tests {
         }
 
         {
-            let switchboard = switchboard_handle.read();
+            let switchboard = switchboard_handle.lock().await;
             switchboard.notify_listener();
         }
 
@@ -418,7 +420,7 @@ mod tests {
         }
 
         {
-            let switchboard = switchboard_handle.read();
+            let switchboard = switchboard_handle.lock().await;
             switchboard.notify_listener();
         }
 
@@ -441,7 +443,7 @@ mod tests {
         }
 
         {
-            let switchboard = switchboard_handle.read();
+            let switchboard = switchboard_handle.lock().await;
             switchboard.notify_listener();
         }
 

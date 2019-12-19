@@ -1,9 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use parking_lot::RwLock;
-use std::sync::Arc;
-
 use crate::fidl_processor::process_stream;
 use futures::future::LocalBoxFuture;
 use futures::FutureExt;
@@ -20,7 +17,7 @@ use crate::switchboard::accessibility_types::{
 };
 use crate::switchboard::base::{
     FidlResponseErrorLogger, SettingRequest, SettingResponse, SettingResponseResult, SettingType,
-    Switchboard,
+    SwitchboardHandle,
 };
 use crate::switchboard::hanging_get_handler::Sender;
 
@@ -69,7 +66,7 @@ impl From<AccessibilitySettings> for SettingRequest {
 }
 
 pub fn spawn_accessibility_fidl_handler(
-    switchboard_handle: Arc<RwLock<dyn Switchboard + Send + Sync>>,
+    switchboard_handle: SwitchboardHandle,
     stream: AccessibilityRequestStream,
 ) {
     process_stream::<AccessibilityMarker, AccessibilitySettings, AccessibilityWatchResponder>(
@@ -83,7 +80,7 @@ pub fn spawn_accessibility_fidl_handler(
                     #[allow(unreachable_patterns)]
                     match req {
                         AccessibilityRequest::Set { settings, responder } => {
-                            set_accessibility(context.switchboard.clone(), settings, responder);
+                            set_accessibility(context.switchboard.clone(), settings, responder).await;
                         }
                         AccessibilityRequest::Watch { responder } => {
                             context.watch(responder).await;
@@ -103,8 +100,8 @@ pub fn spawn_accessibility_fidl_handler(
 
 /// Sends a request to set the accessibility settings through the switchboard and responds with an
 /// appropriate result to the given responder.
-fn set_accessibility(
-    switchboard_handle: Arc<RwLock<dyn Switchboard + Send + Sync>>,
+async fn set_accessibility(
+    switchboard_handle: SwitchboardHandle,
     settings: AccessibilitySettings,
     responder: AccessibilitySetResponder,
 ) {
@@ -112,7 +109,8 @@ fn set_accessibility(
 
     let (response_tx, response_rx) = futures::channel::oneshot::channel::<SettingResponseResult>();
     if switchboard_handle
-        .write()
+        .lock()
+        .await
         .request(SettingType::Accessibility, settings.into(), response_tx)
         .is_ok()
     {
