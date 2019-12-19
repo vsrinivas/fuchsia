@@ -75,12 +75,6 @@ class TempSessionDelegate : public CommandDispatcher {
                         std::vector<zx::event> acquire_fences,
                         std::vector<zx::event> release_fences) = 0;
 
-  virtual void GetFuturePresentationInfos(
-      zx::duration requested_prediction_span,
-      scheduling::FrameScheduler::GetFuturePresentationInfosCallback return_callback) = 0;
-
-  virtual void SetOnFramePresentedCallback(OnFramePresentedCallback callback) = 0;
-
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(TempSessionDelegate);
 };

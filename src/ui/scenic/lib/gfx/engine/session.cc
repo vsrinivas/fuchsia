@@ -175,14 +175,6 @@ bool Session::ScheduleUpdateCommon(zx::time requested_presentation_time,
   return true;
 }
 
-void Session::SetOnFramePresentedCallback(OnFramePresentedCallback callback) {
-  if (auto weak = GetWeakPtr(); weak) {
-    FXL_DCHECK(weak->session_context_.frame_scheduler);
-    weak->session_context_.frame_scheduler->SetOnFramePresentedCallbackForSession(
-        weak->id(), std::move(callback));
-  }
-}
-
 Session::ApplyUpdateResult Session::ApplyScheduledUpdates(CommandContext* command_context,
                                                           zx::time target_presentation_time,
                                                           zx::time latched_time) {
@@ -263,13 +255,6 @@ void Session::EnqueueEvent(::fuchsia::ui::gfx::Event event) {
 
 void Session::EnqueueEvent(::fuchsia::ui::input::InputEvent event) {
   event_reporter_->EnqueueEvent(std::move(event));
-}
-
-void Session::GetFuturePresentationInfos(
-    zx::duration requested_prediction_span,
-    scheduling::FrameScheduler::GetFuturePresentationInfosCallback callback) {
-  session_context_.frame_scheduler->GetFuturePresentationInfos(requested_prediction_span,
-                                                               std::move(callback));
 }
 
 bool Session::SetRootView(fxl::WeakPtr<View> view) {

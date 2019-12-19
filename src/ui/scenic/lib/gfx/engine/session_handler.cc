@@ -54,16 +54,6 @@ bool SessionHandler::Present2(zx_time_t requested_presentation_time,
   return true;
 }
 
-void SessionHandler::SetOnFramePresentedCallback(OnFramePresentedCallback callback) {
-  session_->SetOnFramePresentedCallback(std::move(callback));
-}
-
-void SessionHandler::GetFuturePresentationInfos(
-    zx::duration requested_prediction_span,
-    scheduling::FrameScheduler::GetFuturePresentationInfosCallback callback) {
-  session_->GetFuturePresentationInfos(requested_prediction_span, std::move(callback));
-}
-
 void SessionHandler::DispatchCommand(fuchsia::ui::scenic::Command command) {
   FXL_DCHECK(command.Which() == fuchsia::ui::scenic::Command::Tag::kGfx);
   buffered_commands_.emplace_back(std::move(command.gfx()));

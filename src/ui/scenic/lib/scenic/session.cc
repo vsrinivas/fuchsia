@@ -133,8 +133,11 @@ void Session::RequestPresentationTimes(zx_duration_t requested_prediction_span,
 
 void Session::InvokeFuturePresentationTimesCallback(zx_duration_t requested_prediction_span,
                                                     RequestPresentationTimesCallback callback) {
-  if (callback) {
-    GetTempSessionDelegate()->GetFuturePresentationInfos(
+  if (!callback)
+    return;
+
+  if (auto locked_frame_scheduler = frame_scheduler_.lock()) {
+    locked_frame_scheduler->GetFuturePresentationInfos(
         zx::duration(requested_prediction_span),
         [weak = weak_factory_.GetWeakPtr(), callback = std::move(callback)](
             std::vector<fuchsia::scenic::scheduling::PresentationInfo> presentation_infos) {

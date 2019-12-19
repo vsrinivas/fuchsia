@@ -118,21 +118,9 @@ class Session {
   ApplyUpdateResult ApplyScheduledUpdates(CommandContext* command_context,
                                           zx::time target_presentation_time, zx::time latched_time);
 
-  // Sets the |fuchsia::ui::scenic::Session::OnFramePresented| event handler. This should only be
-  // called once per session.
-  void SetOnFramePresentedCallback(OnFramePresentedCallback callback);
-
   // Convenience.  Forwards an event to the EventReporter.
   void EnqueueEvent(::fuchsia::ui::gfx::Event event);
   void EnqueueEvent(::fuchsia::ui::input::InputEvent event);
-
-  // Returns information about future presentation times, and their respective latch points.
-  //
-  // See fuchsia::ui::scenic::RequestPresentationTimes for more details.
-
-  void GetFuturePresentationInfos(
-      zx::duration requested_prediction_span,
-      scheduling::FrameScheduler::GetFuturePresentationInfosCallback callback);
 
   void SetDebugName(const std::string& debug_name) { debug_name_ = debug_name; }
 

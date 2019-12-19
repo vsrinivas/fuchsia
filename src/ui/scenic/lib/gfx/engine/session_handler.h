@@ -51,16 +51,8 @@ class SessionHandler : public TempSessionDelegate {
   bool Present2(zx_time_t requested_presentation_time, std::vector<zx::event> acquire_fences,
                 std::vector<zx::event> release_fences) override;
 
-  // |scenic::TempSessionDelegate|
-  void GetFuturePresentationInfos(
-      zx::duration requested_prediction_span,
-      scheduling::FrameScheduler::GetFuturePresentationInfosCallback callback) override;
-
   // |scenic::CommandDispatcher|
   void DispatchCommand(fuchsia::ui::scenic::Command command) override;
-
-  // |scenic::CommandDispatcher|
-  void SetOnFramePresentedCallback(OnFramePresentedCallback callback) override;
 
  private:
   std::unique_ptr<Session> session_;

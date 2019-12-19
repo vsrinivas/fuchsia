@@ -86,16 +86,14 @@ TEST_F(DelegatingFrameSchedulerIntegrationTest, SessionIntegration1) {
   EXPECT_TRUE(scheduled_update);
 }
 
-// Test that if FrameScheduler is set _after_ a call to Session::GetFuturePresentationTimes,
+// Test that if FrameScheduler is set _after_ a call to GetFuturePresentationTimes,
 // that we still get a return value callback.
-//
-// TODO(fxb/42536): Revamp this test when FrameScheduler is moved into Scenic::Session.
 TEST_F(DelegatingFrameSchedulerIntegrationTest, SessionIntegration2) {
   TestGfxSession gfx_session =
       CreateTestGfxSession(shared_event_reporter(), shared_error_reporter());
 
   bool got_return_value = false;
-  gfx_session.session->GetFuturePresentationInfos(
+  gfx_session.delegating_frame_scheduler->GetFuturePresentationInfos(
       zx::duration(5),
       /*return_callback=*/[&](auto infos) { got_return_value = true; });
 
