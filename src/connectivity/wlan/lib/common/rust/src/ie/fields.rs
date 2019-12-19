@@ -921,9 +921,9 @@ impl VhtMcsNssMap {
 #[derive(Debug, PartialOrd, PartialEq, Clone, Copy)]
 pub struct VhtMcsSet(pub u8);
 impl VhtMcsSet {
-    pub_const!(UPTO_7, 0);
-    pub_const!(UPTO_8, 1);
-    pub_const!(UPTO_9, 2);
+    pub_const!(UP_TO_7, 0);
+    pub_const!(UP_TO_8, 1);
+    pub_const!(UP_TO_9, 2);
     pub_const!(NONE, 3);
 }
 

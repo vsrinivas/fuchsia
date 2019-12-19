@@ -887,13 +887,13 @@ mod tests {
 
         let mcs_nss = vht_cap.vht_mcs_nss;
         assert_eq!(mcs_nss.rx_max_mcs().ss1(), VhtMcsSet::NONE);
-        assert_eq!(mcs_nss.rx_max_mcs().ss7(), VhtMcsSet::UPTO_9);
-        assert_eq!(mcs_nss.tx_max_mcs().ss1(), VhtMcsSet::UPTO_8);
+        assert_eq!(mcs_nss.rx_max_mcs().ss7(), VhtMcsSet::UP_TO_9);
+        assert_eq!(mcs_nss.tx_max_mcs().ss1(), VhtMcsSet::UP_TO_8);
         assert_eq!(mcs_nss.tx_max_mcs().ss7(), VhtMcsSet::NONE);
 
         assert_eq!(mcs_nss.rx_max_mcs().ss(2), Ok(VhtMcsSet::NONE));
-        assert_eq!(mcs_nss.rx_max_mcs().ss(6), Ok(VhtMcsSet::UPTO_9));
-        assert_eq!(mcs_nss.tx_max_mcs().ss(2), Ok(VhtMcsSet::UPTO_8));
+        assert_eq!(mcs_nss.rx_max_mcs().ss(6), Ok(VhtMcsSet::UP_TO_9));
+        assert_eq!(mcs_nss.tx_max_mcs().ss(2), Ok(VhtMcsSet::UP_TO_8));
         assert_eq!(mcs_nss.tx_max_mcs().ss(6), Ok(VhtMcsSet::NONE));
     }
 
