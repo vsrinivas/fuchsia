@@ -83,6 +83,306 @@ bool& ::llcpp::fuchsia::paver::ReadResult::mutable_eof() {
 namespace {
 
 [[maybe_unused]]
+constexpr uint64_t kPaver_FindDataSink_Ordinal = 0x117a856e00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kPaver_FindDataSink_GenOrdinal = 0x710a34c6f9c8a0e9lu;
+extern "C" const fidl_type_t fuchsia_paver_PaverFindDataSinkRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_PaverFindDataSinkResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_PaverFindDataSinkResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kPaver_UseBlockDevice_Ordinal = 0x17011fd000000000lu;
+[[maybe_unused]]
+constexpr uint64_t kPaver_UseBlockDevice_GenOrdinal = 0x7dbe727cfb90bed5lu;
+extern "C" const fidl_type_t fuchsia_paver_PaverUseBlockDeviceRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_PaverUseBlockDeviceResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_PaverUseBlockDeviceResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kPaver_FindBootManager_Ordinal = 0x20b1ab1800000000lu;
+[[maybe_unused]]
+constexpr uint64_t kPaver_FindBootManager_GenOrdinal = 0x5d500b0633102443lu;
+extern "C" const fidl_type_t fuchsia_paver_PaverFindBootManagerRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_PaverFindBootManagerResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_PaverFindBootManagerResponseTable;
+
+}  // namespace
+
+Paver::ResultOf::FindDataSink_Impl::FindDataSink_Impl(::zx::unowned_channel _client_end, ::zx::channel data_sink) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<FindDataSinkRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, FindDataSinkRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<FindDataSinkRequest*>(_write_bytes);
+  _request.data_sink = std::move(data_sink);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(FindDataSinkRequest));
+  ::fidl::DecodedMessage<FindDataSinkRequest> _decoded_request(std::move(_request_bytes));
+  Super::operator=(
+      Paver::InPlace::FindDataSink(std::move(_client_end), std::move(_decoded_request)));
+}
+
+Paver::ResultOf::FindDataSink Paver::SyncClient::FindDataSink(::zx::channel data_sink) {
+    return ResultOf::FindDataSink(::zx::unowned_channel(this->channel_), std::move(data_sink));
+}
+
+Paver::ResultOf::FindDataSink Paver::Call::FindDataSink(::zx::unowned_channel _client_end, ::zx::channel data_sink) {
+  return ResultOf::FindDataSink(std::move(_client_end), std::move(data_sink));
+}
+
+
+Paver::UnownedResultOf::FindDataSink_Impl::FindDataSink_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel data_sink) {
+  if (_request_buffer.capacity() < FindDataSinkRequest::PrimarySize) {
+    Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
+    Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
+    return;
+  }
+  memset(_request_buffer.data(), 0, FindDataSinkRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<FindDataSinkRequest*>(_request_buffer.data());
+  _request.data_sink = std::move(data_sink);
+  _request_buffer.set_actual(sizeof(FindDataSinkRequest));
+  ::fidl::DecodedMessage<FindDataSinkRequest> _decoded_request(std::move(_request_buffer));
+  Super::operator=(
+      Paver::InPlace::FindDataSink(std::move(_client_end), std::move(_decoded_request)));
+}
+
+Paver::UnownedResultOf::FindDataSink Paver::SyncClient::FindDataSink(::fidl::BytePart _request_buffer, ::zx::channel data_sink) {
+  return UnownedResultOf::FindDataSink(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(data_sink));
+}
+
+Paver::UnownedResultOf::FindDataSink Paver::Call::FindDataSink(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel data_sink) {
+  return UnownedResultOf::FindDataSink(std::move(_client_end), std::move(_request_buffer), std::move(data_sink));
+}
+
+::fidl::internal::StatusAndError Paver::InPlace::FindDataSink(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<FindDataSinkRequest> params) {
+  Paver::SetTransactionHeaderFor::FindDataSinkRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::internal::StatusAndError::FromFailure(
+        std::move(_encode_request_result));
+  }
+  zx_status_t _write_status =
+      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+  if (_write_status != ZX_OK) {
+    return ::fidl::internal::StatusAndError(_write_status, ::fidl::internal::kErrorWriteFailed);
+  } else {
+    return ::fidl::internal::StatusAndError(ZX_OK, nullptr);
+  }
+}
+
+
+Paver::ResultOf::UseBlockDevice_Impl::UseBlockDevice_Impl(::zx::unowned_channel _client_end, ::zx::channel block_device, ::zx::channel data_sink) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<UseBlockDeviceRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, UseBlockDeviceRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<UseBlockDeviceRequest*>(_write_bytes);
+  _request.block_device = std::move(block_device);
+  _request.data_sink = std::move(data_sink);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(UseBlockDeviceRequest));
+  ::fidl::DecodedMessage<UseBlockDeviceRequest> _decoded_request(std::move(_request_bytes));
+  Super::operator=(
+      Paver::InPlace::UseBlockDevice(std::move(_client_end), std::move(_decoded_request)));
+}
+
+Paver::ResultOf::UseBlockDevice Paver::SyncClient::UseBlockDevice(::zx::channel block_device, ::zx::channel data_sink) {
+    return ResultOf::UseBlockDevice(::zx::unowned_channel(this->channel_), std::move(block_device), std::move(data_sink));
+}
+
+Paver::ResultOf::UseBlockDevice Paver::Call::UseBlockDevice(::zx::unowned_channel _client_end, ::zx::channel block_device, ::zx::channel data_sink) {
+  return ResultOf::UseBlockDevice(std::move(_client_end), std::move(block_device), std::move(data_sink));
+}
+
+
+Paver::UnownedResultOf::UseBlockDevice_Impl::UseBlockDevice_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel block_device, ::zx::channel data_sink) {
+  if (_request_buffer.capacity() < UseBlockDeviceRequest::PrimarySize) {
+    Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
+    Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
+    return;
+  }
+  memset(_request_buffer.data(), 0, UseBlockDeviceRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<UseBlockDeviceRequest*>(_request_buffer.data());
+  _request.block_device = std::move(block_device);
+  _request.data_sink = std::move(data_sink);
+  _request_buffer.set_actual(sizeof(UseBlockDeviceRequest));
+  ::fidl::DecodedMessage<UseBlockDeviceRequest> _decoded_request(std::move(_request_buffer));
+  Super::operator=(
+      Paver::InPlace::UseBlockDevice(std::move(_client_end), std::move(_decoded_request)));
+}
+
+Paver::UnownedResultOf::UseBlockDevice Paver::SyncClient::UseBlockDevice(::fidl::BytePart _request_buffer, ::zx::channel block_device, ::zx::channel data_sink) {
+  return UnownedResultOf::UseBlockDevice(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(block_device), std::move(data_sink));
+}
+
+Paver::UnownedResultOf::UseBlockDevice Paver::Call::UseBlockDevice(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel block_device, ::zx::channel data_sink) {
+  return UnownedResultOf::UseBlockDevice(std::move(_client_end), std::move(_request_buffer), std::move(block_device), std::move(data_sink));
+}
+
+::fidl::internal::StatusAndError Paver::InPlace::UseBlockDevice(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<UseBlockDeviceRequest> params) {
+  Paver::SetTransactionHeaderFor::UseBlockDeviceRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::internal::StatusAndError::FromFailure(
+        std::move(_encode_request_result));
+  }
+  zx_status_t _write_status =
+      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+  if (_write_status != ZX_OK) {
+    return ::fidl::internal::StatusAndError(_write_status, ::fidl::internal::kErrorWriteFailed);
+  } else {
+    return ::fidl::internal::StatusAndError(ZX_OK, nullptr);
+  }
+}
+
+
+Paver::ResultOf::FindBootManager_Impl::FindBootManager_Impl(::zx::unowned_channel _client_end, ::zx::channel boot_manager, bool initialize) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<FindBootManagerRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, FindBootManagerRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<FindBootManagerRequest*>(_write_bytes);
+  _request.boot_manager = std::move(boot_manager);
+  _request.initialize = std::move(initialize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(FindBootManagerRequest));
+  ::fidl::DecodedMessage<FindBootManagerRequest> _decoded_request(std::move(_request_bytes));
+  Super::operator=(
+      Paver::InPlace::FindBootManager(std::move(_client_end), std::move(_decoded_request)));
+}
+
+Paver::ResultOf::FindBootManager Paver::SyncClient::FindBootManager(::zx::channel boot_manager, bool initialize) {
+    return ResultOf::FindBootManager(::zx::unowned_channel(this->channel_), std::move(boot_manager), std::move(initialize));
+}
+
+Paver::ResultOf::FindBootManager Paver::Call::FindBootManager(::zx::unowned_channel _client_end, ::zx::channel boot_manager, bool initialize) {
+  return ResultOf::FindBootManager(std::move(_client_end), std::move(boot_manager), std::move(initialize));
+}
+
+
+Paver::UnownedResultOf::FindBootManager_Impl::FindBootManager_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel boot_manager, bool initialize) {
+  if (_request_buffer.capacity() < FindBootManagerRequest::PrimarySize) {
+    Super::status_ = ZX_ERR_BUFFER_TOO_SMALL;
+    Super::error_ = ::fidl::internal::kErrorRequestBufferTooSmall;
+    return;
+  }
+  memset(_request_buffer.data(), 0, FindBootManagerRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<FindBootManagerRequest*>(_request_buffer.data());
+  _request.boot_manager = std::move(boot_manager);
+  _request.initialize = std::move(initialize);
+  _request_buffer.set_actual(sizeof(FindBootManagerRequest));
+  ::fidl::DecodedMessage<FindBootManagerRequest> _decoded_request(std::move(_request_buffer));
+  Super::operator=(
+      Paver::InPlace::FindBootManager(std::move(_client_end), std::move(_decoded_request)));
+}
+
+Paver::UnownedResultOf::FindBootManager Paver::SyncClient::FindBootManager(::fidl::BytePart _request_buffer, ::zx::channel boot_manager, bool initialize) {
+  return UnownedResultOf::FindBootManager(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(boot_manager), std::move(initialize));
+}
+
+Paver::UnownedResultOf::FindBootManager Paver::Call::FindBootManager(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel boot_manager, bool initialize) {
+  return UnownedResultOf::FindBootManager(std::move(_client_end), std::move(_request_buffer), std::move(boot_manager), std::move(initialize));
+}
+
+::fidl::internal::StatusAndError Paver::InPlace::FindBootManager(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<FindBootManagerRequest> params) {
+  Paver::SetTransactionHeaderFor::FindBootManagerRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::internal::StatusAndError::FromFailure(
+        std::move(_encode_request_result));
+  }
+  zx_status_t _write_status =
+      ::fidl::Write(std::move(_client_end), std::move(_encode_request_result.message));
+  if (_write_status != ZX_OK) {
+    return ::fidl::internal::StatusAndError(_write_status, ::fidl::internal::kErrorWriteFailed);
+  } else {
+    return ::fidl::internal::StatusAndError(ZX_OK, nullptr);
+  }
+}
+
+
+bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  if (msg->num_bytes < sizeof(fidl_message_header_t)) {
+    zx_handle_close_many(msg->handles, msg->num_handles);
+    txn->Close(ZX_ERR_INVALID_ARGS);
+    return true;
+  }
+  fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
+  switch (hdr->ordinal) {
+    case kPaver_FindDataSink_Ordinal:
+    case kPaver_FindDataSink_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<FindDataSinkRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->FindDataSink(std::move(message->data_sink),
+          Interface::FindDataSinkCompleter::Sync(txn));
+      return true;
+    }
+    case kPaver_UseBlockDevice_Ordinal:
+    case kPaver_UseBlockDevice_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<UseBlockDeviceRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->UseBlockDevice(std::move(message->block_device), std::move(message->data_sink),
+          Interface::UseBlockDeviceCompleter::Sync(txn));
+      return true;
+    }
+    case kPaver_FindBootManager_Ordinal:
+    case kPaver_FindBootManager_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<FindBootManagerRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->FindBootManager(std::move(message->boot_manager), std::move(message->initialize),
+          Interface::FindBootManagerCompleter::Sync(txn));
+      return true;
+    }
+    default: {
+      return false;
+    }
+  }
+}
+
+bool Paver::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  bool found = TryDispatch(impl, msg, txn);
+  if (!found) {
+    zx_handle_close_many(msg->handles, msg->num_handles);
+    txn->Close(ZX_ERR_NOT_SUPPORTED);
+  }
+  return found;
+}
+
+
+
+void Paver::SetTransactionHeaderFor::FindDataSinkRequest(const ::fidl::DecodedMessage<Paver::FindDataSinkRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_FindDataSink_GenOrdinal);
+}
+
+void Paver::SetTransactionHeaderFor::UseBlockDeviceRequest(const ::fidl::DecodedMessage<Paver::UseBlockDeviceRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_UseBlockDevice_GenOrdinal);
+}
+
+void Paver::SetTransactionHeaderFor::FindBootManagerRequest(const ::fidl::DecodedMessage<Paver::FindBootManagerRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_FindBootManager_GenOrdinal);
+}
+
+namespace {
+
+[[maybe_unused]]
 constexpr uint64_t kPayloadStream_RegisterVmo_Ordinal = 0x1044c8d900000000lu;
 [[maybe_unused]]
 constexpr uint64_t kPayloadStream_RegisterVmo_GenOrdinal = 0x388d7fe44bcb4clu;
@@ -363,18 +663,18 @@ void PayloadStream::SetTransactionHeaderFor::ReadDataResponse(const ::fidl::Deco
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kPayloadStream_ReadData_GenOrdinal);
 }
 
-::llcpp::fuchsia::paver::Paver_WipeVolume_Result::Paver_WipeVolume_Result() {
+::llcpp::fuchsia::paver::DataSink_WipeVolume_Result::DataSink_WipeVolume_Result() {
   ordinal_ = Ordinal::Invalid;
 }
 
-::llcpp::fuchsia::paver::Paver_WipeVolume_Result::~Paver_WipeVolume_Result() {
+::llcpp::fuchsia::paver::DataSink_WipeVolume_Result::~DataSink_WipeVolume_Result() {
   Destroy();
 }
 
-void ::llcpp::fuchsia::paver::Paver_WipeVolume_Result::Destroy() {
+void ::llcpp::fuchsia::paver::DataSink_WipeVolume_Result::Destroy() {
   switch (ordinal_) {
   case Ordinal::kResponse:
-    response_.~Paver_WipeVolume_Response();
+    response_.~DataSink_WipeVolume_Response();
     break;
   default:
     break;
@@ -382,7 +682,7 @@ void ::llcpp::fuchsia::paver::Paver_WipeVolume_Result::Destroy() {
   ordinal_ = Ordinal::Invalid;
 }
 
-void ::llcpp::fuchsia::paver::Paver_WipeVolume_Result::MoveImpl_(Paver_WipeVolume_Result&& other) {
+void ::llcpp::fuchsia::paver::DataSink_WipeVolume_Result::MoveImpl_(DataSink_WipeVolume_Result&& other) {
   switch (other.ordinal_) {
   case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
@@ -396,23 +696,23 @@ void ::llcpp::fuchsia::paver::Paver_WipeVolume_Result::MoveImpl_(Paver_WipeVolum
   other.Destroy();
 }
 
-void ::llcpp::fuchsia::paver::Paver_WipeVolume_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::paver::Paver_WipeVolume_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::paver::Paver_WipeVolume_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::paver::Paver_WipeVolume_Result) == ::llcpp::fuchsia::paver::Paver_WipeVolume_Result::PrimarySize);
+void ::llcpp::fuchsia::paver::DataSink_WipeVolume_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::paver::DataSink_WipeVolume_Result, response_) == 4);
+  static_assert(offsetof(::llcpp::fuchsia::paver::DataSink_WipeVolume_Result, err_) == 4);
+  static_assert(sizeof(::llcpp::fuchsia::paver::DataSink_WipeVolume_Result) == ::llcpp::fuchsia::paver::DataSink_WipeVolume_Result::PrimarySize);
 }
 
 
-::llcpp::fuchsia::paver::Paver_WipeVolume_Response& ::llcpp::fuchsia::paver::Paver_WipeVolume_Result::mutable_response() {
+::llcpp::fuchsia::paver::DataSink_WipeVolume_Response& ::llcpp::fuchsia::paver::DataSink_WipeVolume_Result::mutable_response() {
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
-    new (&response_) ::llcpp::fuchsia::paver::Paver_WipeVolume_Response;
+    new (&response_) ::llcpp::fuchsia::paver::DataSink_WipeVolume_Response;
     ordinal_ = Ordinal::kResponse;
   }
   return response_;
 }
 
-int32_t& ::llcpp::fuchsia::paver::Paver_WipeVolume_Result::mutable_err() {
+int32_t& ::llcpp::fuchsia::paver::DataSink_WipeVolume_Result::mutable_err() {
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
@@ -422,18 +722,18 @@ int32_t& ::llcpp::fuchsia::paver::Paver_WipeVolume_Result::mutable_err() {
 }
 
 
-::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result::Paver_QueryConfigurationStatus_Result() {
+::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Result::BootManager_QueryConfigurationStatus_Result() {
   ordinal_ = Ordinal::Invalid;
 }
 
-::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result::~Paver_QueryConfigurationStatus_Result() {
+::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Result::~BootManager_QueryConfigurationStatus_Result() {
   Destroy();
 }
 
-void ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result::Destroy() {
+void ::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Result::Destroy() {
   switch (ordinal_) {
   case Ordinal::kResponse:
-    response_.~Paver_QueryConfigurationStatus_Response();
+    response_.~BootManager_QueryConfigurationStatus_Response();
     break;
   default:
     break;
@@ -441,7 +741,7 @@ void ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result::Destroy() {
   ordinal_ = Ordinal::Invalid;
 }
 
-void ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result::MoveImpl_(Paver_QueryConfigurationStatus_Result&& other) {
+void ::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Result::MoveImpl_(BootManager_QueryConfigurationStatus_Result&& other) {
   switch (other.ordinal_) {
   case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
@@ -455,23 +755,23 @@ void ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result::MoveImpl_(P
   other.Destroy();
 }
 
-void ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result) == ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result::PrimarySize);
+void ::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Result, response_) == 4);
+  static_assert(offsetof(::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Result, err_) == 4);
+  static_assert(sizeof(::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Result) == ::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Result::PrimarySize);
 }
 
 
-::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response& ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result::mutable_response() {
+::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Response& ::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Result::mutable_response() {
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
-    new (&response_) ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response;
+    new (&response_) ::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Response;
     ordinal_ = Ordinal::kResponse;
   }
   return response_;
 }
 
-int32_t& ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result::mutable_err() {
+int32_t& ::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Result::mutable_err() {
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
@@ -481,18 +781,18 @@ int32_t& ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result::mutable
 }
 
 
-::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result::Paver_QueryActiveConfiguration_Result() {
+::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Result::BootManager_QueryActiveConfiguration_Result() {
   ordinal_ = Ordinal::Invalid;
 }
 
-::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result::~Paver_QueryActiveConfiguration_Result() {
+::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Result::~BootManager_QueryActiveConfiguration_Result() {
   Destroy();
 }
 
-void ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result::Destroy() {
+void ::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Result::Destroy() {
   switch (ordinal_) {
   case Ordinal::kResponse:
-    response_.~Paver_QueryActiveConfiguration_Response();
+    response_.~BootManager_QueryActiveConfiguration_Response();
     break;
   default:
     break;
@@ -500,7 +800,7 @@ void ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result::Destroy() {
   ordinal_ = Ordinal::Invalid;
 }
 
-void ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result::MoveImpl_(Paver_QueryActiveConfiguration_Result&& other) {
+void ::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Result::MoveImpl_(BootManager_QueryActiveConfiguration_Result&& other) {
   switch (other.ordinal_) {
   case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
@@ -514,82 +814,23 @@ void ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result::MoveImpl_(P
   other.Destroy();
 }
 
-void ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result) == ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result::PrimarySize);
+void ::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Result, response_) == 4);
+  static_assert(offsetof(::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Result, err_) == 4);
+  static_assert(sizeof(::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Result) == ::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Result::PrimarySize);
 }
 
 
-::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response& ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result::mutable_response() {
+::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Response& ::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Result::mutable_response() {
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
-    new (&response_) ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response;
+    new (&response_) ::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Response;
     ordinal_ = Ordinal::kResponse;
   }
   return response_;
 }
 
-int32_t& ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::paver::Paver_ReadAsset_Result::Paver_ReadAsset_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::paver::Paver_ReadAsset_Result::~Paver_ReadAsset_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::paver::Paver_ReadAsset_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~Paver_ReadAsset_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::paver::Paver_ReadAsset_Result::MoveImpl_(Paver_ReadAsset_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
-}
-
-void ::llcpp::fuchsia::paver::Paver_ReadAsset_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::paver::Paver_ReadAsset_Result, response_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::paver::Paver_ReadAsset_Result, err_) == 8);
-  static_assert(sizeof(::llcpp::fuchsia::paver::Paver_ReadAsset_Result) == ::llcpp::fuchsia::paver::Paver_ReadAsset_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::paver::Paver_ReadAsset_Response& ::llcpp::fuchsia::paver::Paver_ReadAsset_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::paver::Paver_ReadAsset_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::paver::Paver_ReadAsset_Result::mutable_err() {
+int32_t& ::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Result::mutable_err() {
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
@@ -602,168 +843,44 @@ int32_t& ::llcpp::fuchsia::paver::Paver_ReadAsset_Result::mutable_err() {
 namespace {
 
 [[maybe_unused]]
-constexpr uint64_t kPaver_InitializeAbr_Ordinal = 0x2233bf3300000000lu;
+constexpr uint64_t kBootManager_QueryActiveConfiguration_Ordinal = 0x6d16a64200000000lu;
 [[maybe_unused]]
-constexpr uint64_t kPaver_InitializeAbr_GenOrdinal = 0x715dddabfb08c8e1lu;
-extern "C" const fidl_type_t fuchsia_paver_PaverInitializeAbrRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverInitializeAbrResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverInitializeAbrResponseTable;
+constexpr uint64_t kBootManager_QueryActiveConfiguration_GenOrdinal = 0x71d52acdf59947a4lu;
+extern "C" const fidl_type_t fuchsia_paver_BootManagerQueryActiveConfigurationRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_BootManagerQueryActiveConfigurationResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_BootManagerQueryActiveConfigurationResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kPaver_QueryActiveConfiguration_Ordinal = 0x43a5e49300000000lu;
+constexpr uint64_t kBootManager_QueryConfigurationStatus_Ordinal = 0x4f9061cd00000000lu;
 [[maybe_unused]]
-constexpr uint64_t kPaver_QueryActiveConfiguration_GenOrdinal = 0x5517c7c0119ded35lu;
-extern "C" const fidl_type_t fuchsia_paver_PaverQueryActiveConfigurationRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverQueryActiveConfigurationResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverQueryActiveConfigurationResponseTable;
+constexpr uint64_t kBootManager_QueryConfigurationStatus_GenOrdinal = 0x40822ca9ca68b19alu;
+extern "C" const fidl_type_t fuchsia_paver_BootManagerQueryConfigurationStatusRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_BootManagerQueryConfigurationStatusResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_BootManagerQueryConfigurationStatusResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kPaver_QueryConfigurationStatus_Ordinal = 0x6659a95000000000lu;
+constexpr uint64_t kBootManager_SetConfigurationActive_Ordinal = 0x3580156000000000lu;
 [[maybe_unused]]
-constexpr uint64_t kPaver_QueryConfigurationStatus_GenOrdinal = 0x63a9170989a1efdflu;
-extern "C" const fidl_type_t fuchsia_paver_PaverQueryConfigurationStatusRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverQueryConfigurationStatusResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverQueryConfigurationStatusResponseTable;
+constexpr uint64_t kBootManager_SetConfigurationActive_GenOrdinal = 0x14c64074f81f9a7flu;
+extern "C" const fidl_type_t fuchsia_paver_BootManagerSetConfigurationActiveRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_BootManagerSetConfigurationActiveResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_BootManagerSetConfigurationActiveResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kPaver_SetConfigurationActive_Ordinal = 0x942de4b00000000lu;
+constexpr uint64_t kBootManager_SetConfigurationUnbootable_Ordinal = 0x4af237e000000000lu;
 [[maybe_unused]]
-constexpr uint64_t kPaver_SetConfigurationActive_GenOrdinal = 0x66a45688107aa07flu;
-extern "C" const fidl_type_t fuchsia_paver_PaverSetConfigurationActiveRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverSetConfigurationActiveResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverSetConfigurationActiveResponseTable;
+constexpr uint64_t kBootManager_SetConfigurationUnbootable_GenOrdinal = 0x6f8716bf306d197flu;
+extern "C" const fidl_type_t fuchsia_paver_BootManagerSetConfigurationUnbootableRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_BootManagerSetConfigurationUnbootableResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_BootManagerSetConfigurationUnbootableResponseTable;
 [[maybe_unused]]
-constexpr uint64_t kPaver_SetConfigurationUnbootable_Ordinal = 0x52cf3c8200000000lu;
+constexpr uint64_t kBootManager_SetActiveConfigurationHealthy_Ordinal = 0x2ebf3e5300000000lu;
 [[maybe_unused]]
-constexpr uint64_t kPaver_SetConfigurationUnbootable_GenOrdinal = 0x623c8fe814130d4alu;
-extern "C" const fidl_type_t fuchsia_paver_PaverSetConfigurationUnbootableRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverSetConfigurationUnbootableResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverSetConfigurationUnbootableResponseTable;
-[[maybe_unused]]
-constexpr uint64_t kPaver_SetActiveConfigurationHealthy_Ordinal = 0x14c8092400000000lu;
-[[maybe_unused]]
-constexpr uint64_t kPaver_SetActiveConfigurationHealthy_GenOrdinal = 0x6b86cae4d01d72c1lu;
-extern "C" const fidl_type_t fuchsia_paver_PaverSetActiveConfigurationHealthyRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverSetActiveConfigurationHealthyResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverSetActiveConfigurationHealthyResponseTable;
-[[maybe_unused]]
-constexpr uint64_t kPaver_ReadAsset_Ordinal = 0x4b8e09f500000000lu;
-[[maybe_unused]]
-constexpr uint64_t kPaver_ReadAsset_GenOrdinal = 0x30a69bd25198eb0lu;
-extern "C" const fidl_type_t fuchsia_paver_PaverReadAssetRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverReadAssetResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverReadAssetResponseTable;
-[[maybe_unused]]
-constexpr uint64_t kPaver_WriteAsset_Ordinal = 0x6a1ccf9c00000000lu;
-[[maybe_unused]]
-constexpr uint64_t kPaver_WriteAsset_GenOrdinal = 0x68008e0190578208lu;
-extern "C" const fidl_type_t fuchsia_paver_PaverWriteAssetRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverWriteAssetResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverWriteAssetResponseTable;
-[[maybe_unused]]
-constexpr uint64_t kPaver_WriteVolumes_Ordinal = 0x71b3cf2600000000lu;
-[[maybe_unused]]
-constexpr uint64_t kPaver_WriteVolumes_GenOrdinal = 0x1dedf69f6f1f9ba7lu;
-extern "C" const fidl_type_t fuchsia_paver_PaverWriteVolumesRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverWriteVolumesResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverWriteVolumesResponseTable;
-[[maybe_unused]]
-constexpr uint64_t kPaver_WriteBootloader_Ordinal = 0x4b6ba17600000000lu;
-[[maybe_unused]]
-constexpr uint64_t kPaver_WriteBootloader_GenOrdinal = 0x18099de6007b393lu;
-extern "C" const fidl_type_t fuchsia_paver_PaverWriteBootloaderRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverWriteBootloaderResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverWriteBootloaderResponseTable;
-[[maybe_unused]]
-constexpr uint64_t kPaver_WriteDataFile_Ordinal = 0x7b8433de00000000lu;
-[[maybe_unused]]
-constexpr uint64_t kPaver_WriteDataFile_GenOrdinal = 0x55cd644f9291ad5alu;
-extern "C" const fidl_type_t fuchsia_paver_PaverWriteDataFileRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverWriteDataFileResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverWriteDataFileResponseTable;
-[[maybe_unused]]
-constexpr uint64_t kPaver_WipeVolume_Ordinal = 0x4d18bc6b00000000lu;
-[[maybe_unused]]
-constexpr uint64_t kPaver_WipeVolume_GenOrdinal = 0x591bcb70b1ab9e73lu;
-extern "C" const fidl_type_t fuchsia_paver_PaverWipeVolumeRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverWipeVolumeResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverWipeVolumeResponseTable;
-[[maybe_unused]]
-constexpr uint64_t kPaver_InitializePartitionTables_Ordinal = 0x5b692a5000000000lu;
-[[maybe_unused]]
-constexpr uint64_t kPaver_InitializePartitionTables_GenOrdinal = 0xee77c2ceea6edddlu;
-extern "C" const fidl_type_t fuchsia_paver_PaverInitializePartitionTablesRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverInitializePartitionTablesResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverInitializePartitionTablesResponseTable;
-[[maybe_unused]]
-constexpr uint64_t kPaver_WipePartitionTables_Ordinal = 0x5930adfc00000000lu;
-[[maybe_unused]]
-constexpr uint64_t kPaver_WipePartitionTables_GenOrdinal = 0x327490536ea29d7clu;
-extern "C" const fidl_type_t fuchsia_paver_PaverWipePartitionTablesRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverWipePartitionTablesResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverWipePartitionTablesResponseTable;
+constexpr uint64_t kBootManager_SetActiveConfigurationHealthy_GenOrdinal = 0x3dbfbf3e5ed8aa3lu;
+extern "C" const fidl_type_t fuchsia_paver_BootManagerSetActiveConfigurationHealthyRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_BootManagerSetActiveConfigurationHealthyResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_BootManagerSetActiveConfigurationHealthyResponseTable;
 
 }  // namespace
 template <>
-Paver::ResultOf::InitializeAbr_Impl<Paver::InitializeAbrResponse>::InitializeAbr_Impl(::zx::unowned_channel _client_end) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<InitializeAbrRequest, ::fidl::MessageDirection::kSending>();
-  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
-  auto& _write_bytes_array = _write_bytes_inlined;
-  uint8_t* _write_bytes = _write_bytes_array.view().data();
-  memset(_write_bytes, 0, InitializeAbrRequest::PrimarySize);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(InitializeAbrRequest));
-  ::fidl::DecodedMessage<InitializeAbrRequest> _decoded_request(std::move(_request_bytes));
-  Super::SetResult(
-      Paver::InPlace::InitializeAbr(std::move(_client_end), Super::response_buffer()));
-}
-
-Paver::ResultOf::InitializeAbr Paver::SyncClient::InitializeAbr() {
-    return ResultOf::InitializeAbr(::zx::unowned_channel(this->channel_));
-}
-
-Paver::ResultOf::InitializeAbr Paver::Call::InitializeAbr(::zx::unowned_channel _client_end) {
-  return ResultOf::InitializeAbr(std::move(_client_end));
-}
-
-template <>
-Paver::UnownedResultOf::InitializeAbr_Impl<Paver::InitializeAbrResponse>::InitializeAbr_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(InitializeAbrRequest)] = {};
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
-  memset(_request_buffer.data(), 0, InitializeAbrRequest::PrimarySize);
-  _request_buffer.set_actual(sizeof(InitializeAbrRequest));
-  ::fidl::DecodedMessage<InitializeAbrRequest> _decoded_request(std::move(_request_buffer));
-  Super::SetResult(
-      Paver::InPlace::InitializeAbr(std::move(_client_end), std::move(_response_buffer)));
-}
-
-Paver::UnownedResultOf::InitializeAbr Paver::SyncClient::InitializeAbr(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::InitializeAbr(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
-}
-
-Paver::UnownedResultOf::InitializeAbr Paver::Call::InitializeAbr(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::InitializeAbr(std::move(_client_end), std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<Paver::InitializeAbrResponse> Paver::InPlace::InitializeAbr(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
-  constexpr uint32_t _write_num_bytes = sizeof(InitializeAbrRequest);
-  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
-  ::fidl::BytePart _request_buffer = _write_bytes.view();
-  _request_buffer.set_actual(_write_num_bytes);
-  ::fidl::DecodedMessage<InitializeAbrRequest> params(std::move(_request_buffer));
-  Paver::SetTransactionHeaderFor::InitializeAbrRequest(params);
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Paver::InitializeAbrResponse>::FromFailure(
-        std::move(_encode_request_result));
-  }
-  auto _call_result = ::fidl::Call<InitializeAbrRequest, InitializeAbrResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Paver::InitializeAbrResponse>::FromFailure(
-        std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
-}
-
-template <>
-Paver::ResultOf::QueryActiveConfiguration_Impl<Paver::QueryActiveConfigurationResponse>::QueryActiveConfiguration_Impl(::zx::unowned_channel _client_end) {
+BootManager::ResultOf::QueryActiveConfiguration_Impl<BootManager::QueryActiveConfigurationResponse>::QueryActiveConfiguration_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<QueryActiveConfigurationRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -772,59 +889,59 @@ Paver::ResultOf::QueryActiveConfiguration_Impl<Paver::QueryActiveConfigurationRe
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(QueryActiveConfigurationRequest));
   ::fidl::DecodedMessage<QueryActiveConfigurationRequest> _decoded_request(std::move(_request_bytes));
   Super::SetResult(
-      Paver::InPlace::QueryActiveConfiguration(std::move(_client_end), Super::response_buffer()));
+      BootManager::InPlace::QueryActiveConfiguration(std::move(_client_end), Super::response_buffer()));
 }
 
-Paver::ResultOf::QueryActiveConfiguration Paver::SyncClient::QueryActiveConfiguration() {
+BootManager::ResultOf::QueryActiveConfiguration BootManager::SyncClient::QueryActiveConfiguration() {
     return ResultOf::QueryActiveConfiguration(::zx::unowned_channel(this->channel_));
 }
 
-Paver::ResultOf::QueryActiveConfiguration Paver::Call::QueryActiveConfiguration(::zx::unowned_channel _client_end) {
+BootManager::ResultOf::QueryActiveConfiguration BootManager::Call::QueryActiveConfiguration(::zx::unowned_channel _client_end) {
   return ResultOf::QueryActiveConfiguration(std::move(_client_end));
 }
 
 template <>
-Paver::UnownedResultOf::QueryActiveConfiguration_Impl<Paver::QueryActiveConfigurationResponse>::QueryActiveConfiguration_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+BootManager::UnownedResultOf::QueryActiveConfiguration_Impl<BootManager::QueryActiveConfigurationResponse>::QueryActiveConfiguration_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(QueryActiveConfigurationRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, QueryActiveConfigurationRequest::PrimarySize);
   _request_buffer.set_actual(sizeof(QueryActiveConfigurationRequest));
   ::fidl::DecodedMessage<QueryActiveConfigurationRequest> _decoded_request(std::move(_request_buffer));
   Super::SetResult(
-      Paver::InPlace::QueryActiveConfiguration(std::move(_client_end), std::move(_response_buffer)));
+      BootManager::InPlace::QueryActiveConfiguration(std::move(_client_end), std::move(_response_buffer)));
 }
 
-Paver::UnownedResultOf::QueryActiveConfiguration Paver::SyncClient::QueryActiveConfiguration(::fidl::BytePart _response_buffer) {
+BootManager::UnownedResultOf::QueryActiveConfiguration BootManager::SyncClient::QueryActiveConfiguration(::fidl::BytePart _response_buffer) {
   return UnownedResultOf::QueryActiveConfiguration(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Paver::UnownedResultOf::QueryActiveConfiguration Paver::Call::QueryActiveConfiguration(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+BootManager::UnownedResultOf::QueryActiveConfiguration BootManager::Call::QueryActiveConfiguration(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::QueryActiveConfiguration(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Paver::QueryActiveConfigurationResponse> Paver::InPlace::QueryActiveConfiguration(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<BootManager::QueryActiveConfigurationResponse> BootManager::InPlace::QueryActiveConfiguration(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(QueryActiveConfigurationRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<QueryActiveConfigurationRequest> params(std::move(_request_buffer));
-  Paver::SetTransactionHeaderFor::QueryActiveConfigurationRequest(params);
+  BootManager::SetTransactionHeaderFor::QueryActiveConfigurationRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Paver::QueryActiveConfigurationResponse>::FromFailure(
+    return ::fidl::DecodeResult<BootManager::QueryActiveConfigurationResponse>::FromFailure(
         std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<QueryActiveConfigurationRequest, QueryActiveConfigurationResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Paver::QueryActiveConfigurationResponse>::FromFailure(
+    return ::fidl::DecodeResult<BootManager::QueryActiveConfigurationResponse>::FromFailure(
         std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
 template <>
-Paver::ResultOf::QueryConfigurationStatus_Impl<Paver::QueryConfigurationStatusResponse>::QueryConfigurationStatus_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration) {
+BootManager::ResultOf::QueryConfigurationStatus_Impl<BootManager::QueryConfigurationStatusResponse>::QueryConfigurationStatus_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<QueryConfigurationStatusRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -835,19 +952,19 @@ Paver::ResultOf::QueryConfigurationStatus_Impl<Paver::QueryConfigurationStatusRe
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(QueryConfigurationStatusRequest));
   ::fidl::DecodedMessage<QueryConfigurationStatusRequest> _decoded_request(std::move(_request_bytes));
   Super::SetResult(
-      Paver::InPlace::QueryConfigurationStatus(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
+      BootManager::InPlace::QueryConfigurationStatus(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Paver::ResultOf::QueryConfigurationStatus Paver::SyncClient::QueryConfigurationStatus(::llcpp::fuchsia::paver::Configuration configuration) {
+BootManager::ResultOf::QueryConfigurationStatus BootManager::SyncClient::QueryConfigurationStatus(::llcpp::fuchsia::paver::Configuration configuration) {
     return ResultOf::QueryConfigurationStatus(::zx::unowned_channel(this->channel_), std::move(configuration));
 }
 
-Paver::ResultOf::QueryConfigurationStatus Paver::Call::QueryConfigurationStatus(::zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration) {
+BootManager::ResultOf::QueryConfigurationStatus BootManager::Call::QueryConfigurationStatus(::zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration) {
   return ResultOf::QueryConfigurationStatus(std::move(_client_end), std::move(configuration));
 }
 
 template <>
-Paver::UnownedResultOf::QueryConfigurationStatus_Impl<Paver::QueryConfigurationStatusResponse>::QueryConfigurationStatus_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer) {
+BootManager::UnownedResultOf::QueryConfigurationStatus_Impl<BootManager::QueryConfigurationStatusResponse>::QueryConfigurationStatus_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < QueryConfigurationStatusRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<QueryConfigurationStatusResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -858,35 +975,35 @@ Paver::UnownedResultOf::QueryConfigurationStatus_Impl<Paver::QueryConfigurationS
   _request_buffer.set_actual(sizeof(QueryConfigurationStatusRequest));
   ::fidl::DecodedMessage<QueryConfigurationStatusRequest> _decoded_request(std::move(_request_buffer));
   Super::SetResult(
-      Paver::InPlace::QueryConfigurationStatus(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
+      BootManager::InPlace::QueryConfigurationStatus(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Paver::UnownedResultOf::QueryConfigurationStatus Paver::SyncClient::QueryConfigurationStatus(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer) {
+BootManager::UnownedResultOf::QueryConfigurationStatus BootManager::SyncClient::QueryConfigurationStatus(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::QueryConfigurationStatus(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(configuration), std::move(_response_buffer));
 }
 
-Paver::UnownedResultOf::QueryConfigurationStatus Paver::Call::QueryConfigurationStatus(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer) {
+BootManager::UnownedResultOf::QueryConfigurationStatus BootManager::Call::QueryConfigurationStatus(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::QueryConfigurationStatus(std::move(_client_end), std::move(_request_buffer), std::move(configuration), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Paver::QueryConfigurationStatusResponse> Paver::InPlace::QueryConfigurationStatus(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<QueryConfigurationStatusRequest> params, ::fidl::BytePart response_buffer) {
-  Paver::SetTransactionHeaderFor::QueryConfigurationStatusRequest(params);
+::fidl::DecodeResult<BootManager::QueryConfigurationStatusResponse> BootManager::InPlace::QueryConfigurationStatus(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<QueryConfigurationStatusRequest> params, ::fidl::BytePart response_buffer) {
+  BootManager::SetTransactionHeaderFor::QueryConfigurationStatusRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Paver::QueryConfigurationStatusResponse>::FromFailure(
+    return ::fidl::DecodeResult<BootManager::QueryConfigurationStatusResponse>::FromFailure(
         std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<QueryConfigurationStatusRequest, QueryConfigurationStatusResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Paver::QueryConfigurationStatusResponse>::FromFailure(
+    return ::fidl::DecodeResult<BootManager::QueryConfigurationStatusResponse>::FromFailure(
         std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
 template <>
-Paver::ResultOf::SetConfigurationActive_Impl<Paver::SetConfigurationActiveResponse>::SetConfigurationActive_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration) {
+BootManager::ResultOf::SetConfigurationActive_Impl<BootManager::SetConfigurationActiveResponse>::SetConfigurationActive_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetConfigurationActiveRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -897,19 +1014,19 @@ Paver::ResultOf::SetConfigurationActive_Impl<Paver::SetConfigurationActiveRespon
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetConfigurationActiveRequest));
   ::fidl::DecodedMessage<SetConfigurationActiveRequest> _decoded_request(std::move(_request_bytes));
   Super::SetResult(
-      Paver::InPlace::SetConfigurationActive(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
+      BootManager::InPlace::SetConfigurationActive(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Paver::ResultOf::SetConfigurationActive Paver::SyncClient::SetConfigurationActive(::llcpp::fuchsia::paver::Configuration configuration) {
+BootManager::ResultOf::SetConfigurationActive BootManager::SyncClient::SetConfigurationActive(::llcpp::fuchsia::paver::Configuration configuration) {
     return ResultOf::SetConfigurationActive(::zx::unowned_channel(this->channel_), std::move(configuration));
 }
 
-Paver::ResultOf::SetConfigurationActive Paver::Call::SetConfigurationActive(::zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration) {
+BootManager::ResultOf::SetConfigurationActive BootManager::Call::SetConfigurationActive(::zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration) {
   return ResultOf::SetConfigurationActive(std::move(_client_end), std::move(configuration));
 }
 
 template <>
-Paver::UnownedResultOf::SetConfigurationActive_Impl<Paver::SetConfigurationActiveResponse>::SetConfigurationActive_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer) {
+BootManager::UnownedResultOf::SetConfigurationActive_Impl<BootManager::SetConfigurationActiveResponse>::SetConfigurationActive_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < SetConfigurationActiveRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<SetConfigurationActiveResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -920,35 +1037,35 @@ Paver::UnownedResultOf::SetConfigurationActive_Impl<Paver::SetConfigurationActiv
   _request_buffer.set_actual(sizeof(SetConfigurationActiveRequest));
   ::fidl::DecodedMessage<SetConfigurationActiveRequest> _decoded_request(std::move(_request_buffer));
   Super::SetResult(
-      Paver::InPlace::SetConfigurationActive(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
+      BootManager::InPlace::SetConfigurationActive(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Paver::UnownedResultOf::SetConfigurationActive Paver::SyncClient::SetConfigurationActive(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer) {
+BootManager::UnownedResultOf::SetConfigurationActive BootManager::SyncClient::SetConfigurationActive(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetConfigurationActive(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(configuration), std::move(_response_buffer));
 }
 
-Paver::UnownedResultOf::SetConfigurationActive Paver::Call::SetConfigurationActive(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer) {
+BootManager::UnownedResultOf::SetConfigurationActive BootManager::Call::SetConfigurationActive(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetConfigurationActive(std::move(_client_end), std::move(_request_buffer), std::move(configuration), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Paver::SetConfigurationActiveResponse> Paver::InPlace::SetConfigurationActive(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetConfigurationActiveRequest> params, ::fidl::BytePart response_buffer) {
-  Paver::SetTransactionHeaderFor::SetConfigurationActiveRequest(params);
+::fidl::DecodeResult<BootManager::SetConfigurationActiveResponse> BootManager::InPlace::SetConfigurationActive(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetConfigurationActiveRequest> params, ::fidl::BytePart response_buffer) {
+  BootManager::SetTransactionHeaderFor::SetConfigurationActiveRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Paver::SetConfigurationActiveResponse>::FromFailure(
+    return ::fidl::DecodeResult<BootManager::SetConfigurationActiveResponse>::FromFailure(
         std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<SetConfigurationActiveRequest, SetConfigurationActiveResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Paver::SetConfigurationActiveResponse>::FromFailure(
+    return ::fidl::DecodeResult<BootManager::SetConfigurationActiveResponse>::FromFailure(
         std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
 template <>
-Paver::ResultOf::SetConfigurationUnbootable_Impl<Paver::SetConfigurationUnbootableResponse>::SetConfigurationUnbootable_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration) {
+BootManager::ResultOf::SetConfigurationUnbootable_Impl<BootManager::SetConfigurationUnbootableResponse>::SetConfigurationUnbootable_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetConfigurationUnbootableRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -959,19 +1076,19 @@ Paver::ResultOf::SetConfigurationUnbootable_Impl<Paver::SetConfigurationUnbootab
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetConfigurationUnbootableRequest));
   ::fidl::DecodedMessage<SetConfigurationUnbootableRequest> _decoded_request(std::move(_request_bytes));
   Super::SetResult(
-      Paver::InPlace::SetConfigurationUnbootable(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
+      BootManager::InPlace::SetConfigurationUnbootable(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Paver::ResultOf::SetConfigurationUnbootable Paver::SyncClient::SetConfigurationUnbootable(::llcpp::fuchsia::paver::Configuration configuration) {
+BootManager::ResultOf::SetConfigurationUnbootable BootManager::SyncClient::SetConfigurationUnbootable(::llcpp::fuchsia::paver::Configuration configuration) {
     return ResultOf::SetConfigurationUnbootable(::zx::unowned_channel(this->channel_), std::move(configuration));
 }
 
-Paver::ResultOf::SetConfigurationUnbootable Paver::Call::SetConfigurationUnbootable(::zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration) {
+BootManager::ResultOf::SetConfigurationUnbootable BootManager::Call::SetConfigurationUnbootable(::zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration) {
   return ResultOf::SetConfigurationUnbootable(std::move(_client_end), std::move(configuration));
 }
 
 template <>
-Paver::UnownedResultOf::SetConfigurationUnbootable_Impl<Paver::SetConfigurationUnbootableResponse>::SetConfigurationUnbootable_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer) {
+BootManager::UnownedResultOf::SetConfigurationUnbootable_Impl<BootManager::SetConfigurationUnbootableResponse>::SetConfigurationUnbootable_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < SetConfigurationUnbootableRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<SetConfigurationUnbootableResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -982,35 +1099,35 @@ Paver::UnownedResultOf::SetConfigurationUnbootable_Impl<Paver::SetConfigurationU
   _request_buffer.set_actual(sizeof(SetConfigurationUnbootableRequest));
   ::fidl::DecodedMessage<SetConfigurationUnbootableRequest> _decoded_request(std::move(_request_buffer));
   Super::SetResult(
-      Paver::InPlace::SetConfigurationUnbootable(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
+      BootManager::InPlace::SetConfigurationUnbootable(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Paver::UnownedResultOf::SetConfigurationUnbootable Paver::SyncClient::SetConfigurationUnbootable(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer) {
+BootManager::UnownedResultOf::SetConfigurationUnbootable BootManager::SyncClient::SetConfigurationUnbootable(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetConfigurationUnbootable(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(configuration), std::move(_response_buffer));
 }
 
-Paver::UnownedResultOf::SetConfigurationUnbootable Paver::Call::SetConfigurationUnbootable(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer) {
+BootManager::UnownedResultOf::SetConfigurationUnbootable BootManager::Call::SetConfigurationUnbootable(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetConfigurationUnbootable(std::move(_client_end), std::move(_request_buffer), std::move(configuration), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Paver::SetConfigurationUnbootableResponse> Paver::InPlace::SetConfigurationUnbootable(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetConfigurationUnbootableRequest> params, ::fidl::BytePart response_buffer) {
-  Paver::SetTransactionHeaderFor::SetConfigurationUnbootableRequest(params);
+::fidl::DecodeResult<BootManager::SetConfigurationUnbootableResponse> BootManager::InPlace::SetConfigurationUnbootable(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetConfigurationUnbootableRequest> params, ::fidl::BytePart response_buffer) {
+  BootManager::SetTransactionHeaderFor::SetConfigurationUnbootableRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Paver::SetConfigurationUnbootableResponse>::FromFailure(
+    return ::fidl::DecodeResult<BootManager::SetConfigurationUnbootableResponse>::FromFailure(
         std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<SetConfigurationUnbootableRequest, SetConfigurationUnbootableResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Paver::SetConfigurationUnbootableResponse>::FromFailure(
+    return ::fidl::DecodeResult<BootManager::SetConfigurationUnbootableResponse>::FromFailure(
         std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
 template <>
-Paver::ResultOf::SetActiveConfigurationHealthy_Impl<Paver::SetActiveConfigurationHealthyResponse>::SetActiveConfigurationHealthy_Impl(::zx::unowned_channel _client_end) {
+BootManager::ResultOf::SetActiveConfigurationHealthy_Impl<BootManager::SetActiveConfigurationHealthyResponse>::SetActiveConfigurationHealthy_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetActiveConfigurationHealthyRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1019,59 +1136,503 @@ Paver::ResultOf::SetActiveConfigurationHealthy_Impl<Paver::SetActiveConfiguratio
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetActiveConfigurationHealthyRequest));
   ::fidl::DecodedMessage<SetActiveConfigurationHealthyRequest> _decoded_request(std::move(_request_bytes));
   Super::SetResult(
-      Paver::InPlace::SetActiveConfigurationHealthy(std::move(_client_end), Super::response_buffer()));
+      BootManager::InPlace::SetActiveConfigurationHealthy(std::move(_client_end), Super::response_buffer()));
 }
 
-Paver::ResultOf::SetActiveConfigurationHealthy Paver::SyncClient::SetActiveConfigurationHealthy() {
+BootManager::ResultOf::SetActiveConfigurationHealthy BootManager::SyncClient::SetActiveConfigurationHealthy() {
     return ResultOf::SetActiveConfigurationHealthy(::zx::unowned_channel(this->channel_));
 }
 
-Paver::ResultOf::SetActiveConfigurationHealthy Paver::Call::SetActiveConfigurationHealthy(::zx::unowned_channel _client_end) {
+BootManager::ResultOf::SetActiveConfigurationHealthy BootManager::Call::SetActiveConfigurationHealthy(::zx::unowned_channel _client_end) {
   return ResultOf::SetActiveConfigurationHealthy(std::move(_client_end));
 }
 
 template <>
-Paver::UnownedResultOf::SetActiveConfigurationHealthy_Impl<Paver::SetActiveConfigurationHealthyResponse>::SetActiveConfigurationHealthy_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+BootManager::UnownedResultOf::SetActiveConfigurationHealthy_Impl<BootManager::SetActiveConfigurationHealthyResponse>::SetActiveConfigurationHealthy_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(SetActiveConfigurationHealthyRequest)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, SetActiveConfigurationHealthyRequest::PrimarySize);
   _request_buffer.set_actual(sizeof(SetActiveConfigurationHealthyRequest));
   ::fidl::DecodedMessage<SetActiveConfigurationHealthyRequest> _decoded_request(std::move(_request_buffer));
   Super::SetResult(
-      Paver::InPlace::SetActiveConfigurationHealthy(std::move(_client_end), std::move(_response_buffer)));
+      BootManager::InPlace::SetActiveConfigurationHealthy(std::move(_client_end), std::move(_response_buffer)));
 }
 
-Paver::UnownedResultOf::SetActiveConfigurationHealthy Paver::SyncClient::SetActiveConfigurationHealthy(::fidl::BytePart _response_buffer) {
+BootManager::UnownedResultOf::SetActiveConfigurationHealthy BootManager::SyncClient::SetActiveConfigurationHealthy(::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetActiveConfigurationHealthy(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Paver::UnownedResultOf::SetActiveConfigurationHealthy Paver::Call::SetActiveConfigurationHealthy(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+BootManager::UnownedResultOf::SetActiveConfigurationHealthy BootManager::Call::SetActiveConfigurationHealthy(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::SetActiveConfigurationHealthy(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Paver::SetActiveConfigurationHealthyResponse> Paver::InPlace::SetActiveConfigurationHealthy(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+::fidl::DecodeResult<BootManager::SetActiveConfigurationHealthyResponse> BootManager::InPlace::SetActiveConfigurationHealthy(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
   constexpr uint32_t _write_num_bytes = sizeof(SetActiveConfigurationHealthyRequest);
   ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
   ::fidl::BytePart _request_buffer = _write_bytes.view();
   _request_buffer.set_actual(_write_num_bytes);
   ::fidl::DecodedMessage<SetActiveConfigurationHealthyRequest> params(std::move(_request_buffer));
-  Paver::SetTransactionHeaderFor::SetActiveConfigurationHealthyRequest(params);
+  BootManager::SetTransactionHeaderFor::SetActiveConfigurationHealthyRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Paver::SetActiveConfigurationHealthyResponse>::FromFailure(
+    return ::fidl::DecodeResult<BootManager::SetActiveConfigurationHealthyResponse>::FromFailure(
         std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<SetActiveConfigurationHealthyRequest, SetActiveConfigurationHealthyResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Paver::SetActiveConfigurationHealthyResponse>::FromFailure(
+    return ::fidl::DecodeResult<BootManager::SetActiveConfigurationHealthyResponse>::FromFailure(
         std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
+
+bool BootManager::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  if (msg->num_bytes < sizeof(fidl_message_header_t)) {
+    zx_handle_close_many(msg->handles, msg->num_handles);
+    txn->Close(ZX_ERR_INVALID_ARGS);
+    return true;
+  }
+  fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
+  switch (hdr->ordinal) {
+    case kBootManager_QueryActiveConfiguration_Ordinal:
+    case kBootManager_QueryActiveConfiguration_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<QueryActiveConfigurationRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->QueryActiveConfiguration(
+          Interface::QueryActiveConfigurationCompleter::Sync(txn));
+      return true;
+    }
+    case kBootManager_QueryConfigurationStatus_Ordinal:
+    case kBootManager_QueryConfigurationStatus_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<QueryConfigurationStatusRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->QueryConfigurationStatus(std::move(message->configuration),
+          Interface::QueryConfigurationStatusCompleter::Sync(txn));
+      return true;
+    }
+    case kBootManager_SetConfigurationActive_Ordinal:
+    case kBootManager_SetConfigurationActive_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<SetConfigurationActiveRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->SetConfigurationActive(std::move(message->configuration),
+          Interface::SetConfigurationActiveCompleter::Sync(txn));
+      return true;
+    }
+    case kBootManager_SetConfigurationUnbootable_Ordinal:
+    case kBootManager_SetConfigurationUnbootable_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<SetConfigurationUnbootableRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->SetConfigurationUnbootable(std::move(message->configuration),
+          Interface::SetConfigurationUnbootableCompleter::Sync(txn));
+      return true;
+    }
+    case kBootManager_SetActiveConfigurationHealthy_Ordinal:
+    case kBootManager_SetActiveConfigurationHealthy_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<SetActiveConfigurationHealthyRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->SetActiveConfigurationHealthy(
+          Interface::SetActiveConfigurationHealthyCompleter::Sync(txn));
+      return true;
+    }
+    default: {
+      return false;
+    }
+  }
+}
+
+bool BootManager::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  bool found = TryDispatch(impl, msg, txn);
+  if (!found) {
+    zx_handle_close_many(msg->handles, msg->num_handles);
+    txn->Close(ZX_ERR_NOT_SUPPORTED);
+  }
+  return found;
+}
+
+
+void BootManager::Interface::QueryActiveConfigurationCompleterBase::Reply(::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Result result) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<QueryActiveConfigurationResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<QueryActiveConfigurationResponse*>(_write_bytes);
+  BootManager::SetTransactionHeaderFor::QueryActiveConfigurationResponse(
+      ::fidl::DecodedMessage<QueryActiveConfigurationResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              QueryActiveConfigurationResponse::PrimarySize,
+              QueryActiveConfigurationResponse::PrimarySize)));
+  _response.result = std::move(result);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(QueryActiveConfigurationResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<QueryActiveConfigurationResponse>(std::move(_response_bytes)));
+}
+void BootManager::Interface::QueryActiveConfigurationCompleterBase::ReplySuccess(::llcpp::fuchsia::paver::Configuration configuration) {
+  BootManager_QueryActiveConfiguration_Response response;
+  response.configuration = std::move(configuration);
+
+  Reply(BootManager_QueryActiveConfiguration_Result::WithResponse(&response));
+}
+void BootManager::Interface::QueryActiveConfigurationCompleterBase::ReplyError(int32_t error) {
+  Reply(BootManager_QueryActiveConfiguration_Result::WithErr(&error));
+}
+
+void BootManager::Interface::QueryActiveConfigurationCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Result result) {
+  if (_buffer.capacity() < QueryActiveConfigurationResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<QueryActiveConfigurationResponse*>(_buffer.data());
+  BootManager::SetTransactionHeaderFor::QueryActiveConfigurationResponse(
+      ::fidl::DecodedMessage<QueryActiveConfigurationResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              QueryActiveConfigurationResponse::PrimarySize,
+              QueryActiveConfigurationResponse::PrimarySize)));
+  _response.result = std::move(result);
+  _buffer.set_actual(sizeof(QueryActiveConfigurationResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<QueryActiveConfigurationResponse>(std::move(_buffer)));
+}
+void BootManager::Interface::QueryActiveConfigurationCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::Configuration configuration) {
+  BootManager_QueryActiveConfiguration_Response response;
+  response.configuration = std::move(configuration);
+
+  Reply(std::move(_buffer), BootManager_QueryActiveConfiguration_Result::WithResponse(&response));
+}
+
+void BootManager::Interface::QueryActiveConfigurationCompleterBase::Reply(::fidl::DecodedMessage<QueryActiveConfigurationResponse> params) {
+  BootManager::SetTransactionHeaderFor::QueryActiveConfigurationResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void BootManager::Interface::QueryConfigurationStatusCompleterBase::Reply(::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Result result) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<QueryConfigurationStatusResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<QueryConfigurationStatusResponse*>(_write_bytes);
+  BootManager::SetTransactionHeaderFor::QueryConfigurationStatusResponse(
+      ::fidl::DecodedMessage<QueryConfigurationStatusResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              QueryConfigurationStatusResponse::PrimarySize,
+              QueryConfigurationStatusResponse::PrimarySize)));
+  _response.result = std::move(result);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(QueryConfigurationStatusResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<QueryConfigurationStatusResponse>(std::move(_response_bytes)));
+}
+void BootManager::Interface::QueryConfigurationStatusCompleterBase::ReplySuccess(::llcpp::fuchsia::paver::ConfigurationStatus status) {
+  BootManager_QueryConfigurationStatus_Response response;
+  response.status = std::move(status);
+
+  Reply(BootManager_QueryConfigurationStatus_Result::WithResponse(&response));
+}
+void BootManager::Interface::QueryConfigurationStatusCompleterBase::ReplyError(int32_t error) {
+  Reply(BootManager_QueryConfigurationStatus_Result::WithErr(&error));
+}
+
+void BootManager::Interface::QueryConfigurationStatusCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Result result) {
+  if (_buffer.capacity() < QueryConfigurationStatusResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<QueryConfigurationStatusResponse*>(_buffer.data());
+  BootManager::SetTransactionHeaderFor::QueryConfigurationStatusResponse(
+      ::fidl::DecodedMessage<QueryConfigurationStatusResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              QueryConfigurationStatusResponse::PrimarySize,
+              QueryConfigurationStatusResponse::PrimarySize)));
+  _response.result = std::move(result);
+  _buffer.set_actual(sizeof(QueryConfigurationStatusResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<QueryConfigurationStatusResponse>(std::move(_buffer)));
+}
+void BootManager::Interface::QueryConfigurationStatusCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::ConfigurationStatus status) {
+  BootManager_QueryConfigurationStatus_Response response;
+  response.status = std::move(status);
+
+  Reply(std::move(_buffer), BootManager_QueryConfigurationStatus_Result::WithResponse(&response));
+}
+
+void BootManager::Interface::QueryConfigurationStatusCompleterBase::Reply(::fidl::DecodedMessage<QueryConfigurationStatusResponse> params) {
+  BootManager::SetTransactionHeaderFor::QueryConfigurationStatusResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void BootManager::Interface::SetConfigurationActiveCompleterBase::Reply(int32_t status) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetConfigurationActiveResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<SetConfigurationActiveResponse*>(_write_bytes);
+  BootManager::SetTransactionHeaderFor::SetConfigurationActiveResponse(
+      ::fidl::DecodedMessage<SetConfigurationActiveResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              SetConfigurationActiveResponse::PrimarySize,
+              SetConfigurationActiveResponse::PrimarySize)));
+  _response.status = std::move(status);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetConfigurationActiveResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<SetConfigurationActiveResponse>(std::move(_response_bytes)));
+}
+
+void BootManager::Interface::SetConfigurationActiveCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
+  if (_buffer.capacity() < SetConfigurationActiveResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<SetConfigurationActiveResponse*>(_buffer.data());
+  BootManager::SetTransactionHeaderFor::SetConfigurationActiveResponse(
+      ::fidl::DecodedMessage<SetConfigurationActiveResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              SetConfigurationActiveResponse::PrimarySize,
+              SetConfigurationActiveResponse::PrimarySize)));
+  _response.status = std::move(status);
+  _buffer.set_actual(sizeof(SetConfigurationActiveResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<SetConfigurationActiveResponse>(std::move(_buffer)));
+}
+
+void BootManager::Interface::SetConfigurationActiveCompleterBase::Reply(::fidl::DecodedMessage<SetConfigurationActiveResponse> params) {
+  BootManager::SetTransactionHeaderFor::SetConfigurationActiveResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void BootManager::Interface::SetConfigurationUnbootableCompleterBase::Reply(int32_t status) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetConfigurationUnbootableResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<SetConfigurationUnbootableResponse*>(_write_bytes);
+  BootManager::SetTransactionHeaderFor::SetConfigurationUnbootableResponse(
+      ::fidl::DecodedMessage<SetConfigurationUnbootableResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              SetConfigurationUnbootableResponse::PrimarySize,
+              SetConfigurationUnbootableResponse::PrimarySize)));
+  _response.status = std::move(status);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetConfigurationUnbootableResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<SetConfigurationUnbootableResponse>(std::move(_response_bytes)));
+}
+
+void BootManager::Interface::SetConfigurationUnbootableCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
+  if (_buffer.capacity() < SetConfigurationUnbootableResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<SetConfigurationUnbootableResponse*>(_buffer.data());
+  BootManager::SetTransactionHeaderFor::SetConfigurationUnbootableResponse(
+      ::fidl::DecodedMessage<SetConfigurationUnbootableResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              SetConfigurationUnbootableResponse::PrimarySize,
+              SetConfigurationUnbootableResponse::PrimarySize)));
+  _response.status = std::move(status);
+  _buffer.set_actual(sizeof(SetConfigurationUnbootableResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<SetConfigurationUnbootableResponse>(std::move(_buffer)));
+}
+
+void BootManager::Interface::SetConfigurationUnbootableCompleterBase::Reply(::fidl::DecodedMessage<SetConfigurationUnbootableResponse> params) {
+  BootManager::SetTransactionHeaderFor::SetConfigurationUnbootableResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void BootManager::Interface::SetActiveConfigurationHealthyCompleterBase::Reply(int32_t status) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetActiveConfigurationHealthyResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<SetActiveConfigurationHealthyResponse*>(_write_bytes);
+  BootManager::SetTransactionHeaderFor::SetActiveConfigurationHealthyResponse(
+      ::fidl::DecodedMessage<SetActiveConfigurationHealthyResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              SetActiveConfigurationHealthyResponse::PrimarySize,
+              SetActiveConfigurationHealthyResponse::PrimarySize)));
+  _response.status = std::move(status);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetActiveConfigurationHealthyResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<SetActiveConfigurationHealthyResponse>(std::move(_response_bytes)));
+}
+
+void BootManager::Interface::SetActiveConfigurationHealthyCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
+  if (_buffer.capacity() < SetActiveConfigurationHealthyResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<SetActiveConfigurationHealthyResponse*>(_buffer.data());
+  BootManager::SetTransactionHeaderFor::SetActiveConfigurationHealthyResponse(
+      ::fidl::DecodedMessage<SetActiveConfigurationHealthyResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              SetActiveConfigurationHealthyResponse::PrimarySize,
+              SetActiveConfigurationHealthyResponse::PrimarySize)));
+  _response.status = std::move(status);
+  _buffer.set_actual(sizeof(SetActiveConfigurationHealthyResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<SetActiveConfigurationHealthyResponse>(std::move(_buffer)));
+}
+
+void BootManager::Interface::SetActiveConfigurationHealthyCompleterBase::Reply(::fidl::DecodedMessage<SetActiveConfigurationHealthyResponse> params) {
+  BootManager::SetTransactionHeaderFor::SetActiveConfigurationHealthyResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+
+void BootManager::SetTransactionHeaderFor::QueryActiveConfigurationRequest(const ::fidl::DecodedMessage<BootManager::QueryActiveConfigurationRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBootManager_QueryActiveConfiguration_GenOrdinal);
+}
+void BootManager::SetTransactionHeaderFor::QueryActiveConfigurationResponse(const ::fidl::DecodedMessage<BootManager::QueryActiveConfigurationResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBootManager_QueryActiveConfiguration_GenOrdinal);
+}
+
+void BootManager::SetTransactionHeaderFor::QueryConfigurationStatusRequest(const ::fidl::DecodedMessage<BootManager::QueryConfigurationStatusRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBootManager_QueryConfigurationStatus_GenOrdinal);
+}
+void BootManager::SetTransactionHeaderFor::QueryConfigurationStatusResponse(const ::fidl::DecodedMessage<BootManager::QueryConfigurationStatusResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBootManager_QueryConfigurationStatus_GenOrdinal);
+}
+
+void BootManager::SetTransactionHeaderFor::SetConfigurationActiveRequest(const ::fidl::DecodedMessage<BootManager::SetConfigurationActiveRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBootManager_SetConfigurationActive_GenOrdinal);
+}
+void BootManager::SetTransactionHeaderFor::SetConfigurationActiveResponse(const ::fidl::DecodedMessage<BootManager::SetConfigurationActiveResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBootManager_SetConfigurationActive_GenOrdinal);
+}
+
+void BootManager::SetTransactionHeaderFor::SetConfigurationUnbootableRequest(const ::fidl::DecodedMessage<BootManager::SetConfigurationUnbootableRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBootManager_SetConfigurationUnbootable_GenOrdinal);
+}
+void BootManager::SetTransactionHeaderFor::SetConfigurationUnbootableResponse(const ::fidl::DecodedMessage<BootManager::SetConfigurationUnbootableResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBootManager_SetConfigurationUnbootable_GenOrdinal);
+}
+
+void BootManager::SetTransactionHeaderFor::SetActiveConfigurationHealthyRequest(const ::fidl::DecodedMessage<BootManager::SetActiveConfigurationHealthyRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBootManager_SetActiveConfigurationHealthy_GenOrdinal);
+}
+void BootManager::SetTransactionHeaderFor::SetActiveConfigurationHealthyResponse(const ::fidl::DecodedMessage<BootManager::SetActiveConfigurationHealthyResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBootManager_SetActiveConfigurationHealthy_GenOrdinal);
+}
+
+::llcpp::fuchsia::paver::DataSink_ReadAsset_Result::DataSink_ReadAsset_Result() {
+  ordinal_ = Ordinal::Invalid;
+}
+
+::llcpp::fuchsia::paver::DataSink_ReadAsset_Result::~DataSink_ReadAsset_Result() {
+  Destroy();
+}
+
+void ::llcpp::fuchsia::paver::DataSink_ReadAsset_Result::Destroy() {
+  switch (ordinal_) {
+  case Ordinal::kResponse:
+    response_.~DataSink_ReadAsset_Response();
+    break;
+  default:
+    break;
+  }
+  ordinal_ = Ordinal::Invalid;
+}
+
+void ::llcpp::fuchsia::paver::DataSink_ReadAsset_Result::MoveImpl_(DataSink_ReadAsset_Result&& other) {
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
+    mutable_response() = std::move(other.mutable_response());
+    break;
+  case Ordinal::kErr:
+    mutable_err() = std::move(other.mutable_err());
+    break;
+  default:
+    break;
+  }
+  other.Destroy();
+}
+
+void ::llcpp::fuchsia::paver::DataSink_ReadAsset_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::paver::DataSink_ReadAsset_Result, response_) == 8);
+  static_assert(offsetof(::llcpp::fuchsia::paver::DataSink_ReadAsset_Result, err_) == 8);
+  static_assert(sizeof(::llcpp::fuchsia::paver::DataSink_ReadAsset_Result) == ::llcpp::fuchsia::paver::DataSink_ReadAsset_Result::PrimarySize);
+}
+
+
+::llcpp::fuchsia::paver::DataSink_ReadAsset_Response& ::llcpp::fuchsia::paver::DataSink_ReadAsset_Result::mutable_response() {
+  if (ordinal_ != Ordinal::kResponse) {
+    Destroy();
+    new (&response_) ::llcpp::fuchsia::paver::DataSink_ReadAsset_Response;
+    ordinal_ = Ordinal::kResponse;
+  }
+  return response_;
+}
+
+int32_t& ::llcpp::fuchsia::paver::DataSink_ReadAsset_Result::mutable_err() {
+  if (ordinal_ != Ordinal::kErr) {
+    Destroy();
+    new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
+  }
+  return err_;
+}
+
+
+namespace {
+
+[[maybe_unused]]
+constexpr uint64_t kDataSink_ReadAsset_Ordinal = 0x5726c2ad00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDataSink_ReadAsset_GenOrdinal = 0x125a23e561007898lu;
+extern "C" const fidl_type_t fuchsia_paver_DataSinkReadAssetRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_DataSinkReadAssetResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkReadAssetResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kDataSink_WriteAsset_Ordinal = 0x60e03b7200000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDataSink_WriteAsset_GenOrdinal = 0x516839ce76c4d0a9lu;
+extern "C" const fidl_type_t fuchsia_paver_DataSinkWriteAssetRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_DataSinkWriteAssetResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkWriteAssetResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kDataSink_WriteVolumes_Ordinal = 0x5df348af00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDataSink_WriteVolumes_GenOrdinal = 0x5ee32c861d0259dflu;
+extern "C" const fidl_type_t fuchsia_paver_DataSinkWriteVolumesRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_DataSinkWriteVolumesResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkWriteVolumesResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kDataSink_WriteBootloader_Ordinal = 0x7d89106a00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDataSink_WriteBootloader_GenOrdinal = 0x647f7011b9521b5lu;
+extern "C" const fidl_type_t fuchsia_paver_DataSinkWriteBootloaderRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_DataSinkWriteBootloaderResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkWriteBootloaderResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kDataSink_WriteDataFile_Ordinal = 0x7c0cf22700000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDataSink_WriteDataFile_GenOrdinal = 0x6ce95417166b4f56lu;
+extern "C" const fidl_type_t fuchsia_paver_DataSinkWriteDataFileRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_DataSinkWriteDataFileResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkWriteDataFileResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kDataSink_WipeVolume_Ordinal = 0x6ab81ba00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDataSink_WipeVolume_GenOrdinal = 0x250dfc2575c27f6clu;
+extern "C" const fidl_type_t fuchsia_paver_DataSinkWipeVolumeRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_DataSinkWipeVolumeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkWipeVolumeResponseTable;
+
+}  // namespace
 template <>
-Paver::ResultOf::ReadAsset_Impl<Paver::ReadAssetResponse>::ReadAsset_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset) {
+DataSink::ResultOf::ReadAsset_Impl<DataSink::ReadAssetResponse>::ReadAsset_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReadAssetRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1083,19 +1644,19 @@ Paver::ResultOf::ReadAsset_Impl<Paver::ReadAssetResponse>::ReadAsset_Impl(::zx::
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(ReadAssetRequest));
   ::fidl::DecodedMessage<ReadAssetRequest> _decoded_request(std::move(_request_bytes));
   Super::SetResult(
-      Paver::InPlace::ReadAsset(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
+      DataSink::InPlace::ReadAsset(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Paver::ResultOf::ReadAsset Paver::SyncClient::ReadAsset(::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset) {
+DataSink::ResultOf::ReadAsset DataSink::SyncClient::ReadAsset(::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset) {
     return ResultOf::ReadAsset(::zx::unowned_channel(this->channel_), std::move(configuration), std::move(asset));
 }
 
-Paver::ResultOf::ReadAsset Paver::Call::ReadAsset(::zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset) {
+DataSink::ResultOf::ReadAsset DataSink::Call::ReadAsset(::zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset) {
   return ResultOf::ReadAsset(std::move(_client_end), std::move(configuration), std::move(asset));
 }
 
 template <>
-Paver::UnownedResultOf::ReadAsset_Impl<Paver::ReadAssetResponse>::ReadAsset_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::fidl::BytePart _response_buffer) {
+DataSink::UnownedResultOf::ReadAsset_Impl<DataSink::ReadAssetResponse>::ReadAsset_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < ReadAssetRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<ReadAssetResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -1107,35 +1668,35 @@ Paver::UnownedResultOf::ReadAsset_Impl<Paver::ReadAssetResponse>::ReadAsset_Impl
   _request_buffer.set_actual(sizeof(ReadAssetRequest));
   ::fidl::DecodedMessage<ReadAssetRequest> _decoded_request(std::move(_request_buffer));
   Super::SetResult(
-      Paver::InPlace::ReadAsset(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
+      DataSink::InPlace::ReadAsset(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Paver::UnownedResultOf::ReadAsset Paver::SyncClient::ReadAsset(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::fidl::BytePart _response_buffer) {
+DataSink::UnownedResultOf::ReadAsset DataSink::SyncClient::ReadAsset(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::ReadAsset(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(configuration), std::move(asset), std::move(_response_buffer));
 }
 
-Paver::UnownedResultOf::ReadAsset Paver::Call::ReadAsset(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::fidl::BytePart _response_buffer) {
+DataSink::UnownedResultOf::ReadAsset DataSink::Call::ReadAsset(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::ReadAsset(std::move(_client_end), std::move(_request_buffer), std::move(configuration), std::move(asset), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Paver::ReadAssetResponse> Paver::InPlace::ReadAsset(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReadAssetRequest> params, ::fidl::BytePart response_buffer) {
-  Paver::SetTransactionHeaderFor::ReadAssetRequest(params);
+::fidl::DecodeResult<DataSink::ReadAssetResponse> DataSink::InPlace::ReadAsset(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReadAssetRequest> params, ::fidl::BytePart response_buffer) {
+  DataSink::SetTransactionHeaderFor::ReadAssetRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Paver::ReadAssetResponse>::FromFailure(
+    return ::fidl::DecodeResult<DataSink::ReadAssetResponse>::FromFailure(
         std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<ReadAssetRequest, ReadAssetResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Paver::ReadAssetResponse>::FromFailure(
+    return ::fidl::DecodeResult<DataSink::ReadAssetResponse>::FromFailure(
         std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
 template <>
-Paver::ResultOf::WriteAsset_Impl<Paver::WriteAssetResponse>::WriteAsset_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload) {
+DataSink::ResultOf::WriteAsset_Impl<DataSink::WriteAssetResponse>::WriteAsset_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteAssetRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1148,19 +1709,19 @@ Paver::ResultOf::WriteAsset_Impl<Paver::WriteAssetResponse>::WriteAsset_Impl(::z
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(WriteAssetRequest));
   ::fidl::DecodedMessage<WriteAssetRequest> _decoded_request(std::move(_request_bytes));
   Super::SetResult(
-      Paver::InPlace::WriteAsset(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
+      DataSink::InPlace::WriteAsset(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Paver::ResultOf::WriteAsset Paver::SyncClient::WriteAsset(::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload) {
+DataSink::ResultOf::WriteAsset DataSink::SyncClient::WriteAsset(::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload) {
     return ResultOf::WriteAsset(::zx::unowned_channel(this->channel_), std::move(configuration), std::move(asset), std::move(payload));
 }
 
-Paver::ResultOf::WriteAsset Paver::Call::WriteAsset(::zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload) {
+DataSink::ResultOf::WriteAsset DataSink::Call::WriteAsset(::zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload) {
   return ResultOf::WriteAsset(std::move(_client_end), std::move(configuration), std::move(asset), std::move(payload));
 }
 
 template <>
-Paver::UnownedResultOf::WriteAsset_Impl<Paver::WriteAssetResponse>::WriteAsset_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer) {
+DataSink::UnownedResultOf::WriteAsset_Impl<DataSink::WriteAssetResponse>::WriteAsset_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < WriteAssetRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<WriteAssetResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -1173,35 +1734,35 @@ Paver::UnownedResultOf::WriteAsset_Impl<Paver::WriteAssetResponse>::WriteAsset_I
   _request_buffer.set_actual(sizeof(WriteAssetRequest));
   ::fidl::DecodedMessage<WriteAssetRequest> _decoded_request(std::move(_request_buffer));
   Super::SetResult(
-      Paver::InPlace::WriteAsset(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
+      DataSink::InPlace::WriteAsset(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Paver::UnownedResultOf::WriteAsset Paver::SyncClient::WriteAsset(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer) {
+DataSink::UnownedResultOf::WriteAsset DataSink::SyncClient::WriteAsset(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::WriteAsset(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(configuration), std::move(asset), std::move(payload), std::move(_response_buffer));
 }
 
-Paver::UnownedResultOf::WriteAsset Paver::Call::WriteAsset(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer) {
+DataSink::UnownedResultOf::WriteAsset DataSink::Call::WriteAsset(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::WriteAsset(std::move(_client_end), std::move(_request_buffer), std::move(configuration), std::move(asset), std::move(payload), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Paver::WriteAssetResponse> Paver::InPlace::WriteAsset(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteAssetRequest> params, ::fidl::BytePart response_buffer) {
-  Paver::SetTransactionHeaderFor::WriteAssetRequest(params);
+::fidl::DecodeResult<DataSink::WriteAssetResponse> DataSink::InPlace::WriteAsset(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteAssetRequest> params, ::fidl::BytePart response_buffer) {
+  DataSink::SetTransactionHeaderFor::WriteAssetRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Paver::WriteAssetResponse>::FromFailure(
+    return ::fidl::DecodeResult<DataSink::WriteAssetResponse>::FromFailure(
         std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<WriteAssetRequest, WriteAssetResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Paver::WriteAssetResponse>::FromFailure(
+    return ::fidl::DecodeResult<DataSink::WriteAssetResponse>::FromFailure(
         std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
 template <>
-Paver::ResultOf::WriteVolumes_Impl<Paver::WriteVolumesResponse>::WriteVolumes_Impl(::zx::unowned_channel _client_end, ::zx::channel payload) {
+DataSink::ResultOf::WriteVolumes_Impl<DataSink::WriteVolumesResponse>::WriteVolumes_Impl(::zx::unowned_channel _client_end, ::zx::channel payload) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteVolumesRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1212,19 +1773,19 @@ Paver::ResultOf::WriteVolumes_Impl<Paver::WriteVolumesResponse>::WriteVolumes_Im
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(WriteVolumesRequest));
   ::fidl::DecodedMessage<WriteVolumesRequest> _decoded_request(std::move(_request_bytes));
   Super::SetResult(
-      Paver::InPlace::WriteVolumes(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
+      DataSink::InPlace::WriteVolumes(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Paver::ResultOf::WriteVolumes Paver::SyncClient::WriteVolumes(::zx::channel payload) {
+DataSink::ResultOf::WriteVolumes DataSink::SyncClient::WriteVolumes(::zx::channel payload) {
     return ResultOf::WriteVolumes(::zx::unowned_channel(this->channel_), std::move(payload));
 }
 
-Paver::ResultOf::WriteVolumes Paver::Call::WriteVolumes(::zx::unowned_channel _client_end, ::zx::channel payload) {
+DataSink::ResultOf::WriteVolumes DataSink::Call::WriteVolumes(::zx::unowned_channel _client_end, ::zx::channel payload) {
   return ResultOf::WriteVolumes(std::move(_client_end), std::move(payload));
 }
 
 template <>
-Paver::UnownedResultOf::WriteVolumes_Impl<Paver::WriteVolumesResponse>::WriteVolumes_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel payload, ::fidl::BytePart _response_buffer) {
+DataSink::UnownedResultOf::WriteVolumes_Impl<DataSink::WriteVolumesResponse>::WriteVolumes_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel payload, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < WriteVolumesRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<WriteVolumesResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -1235,35 +1796,35 @@ Paver::UnownedResultOf::WriteVolumes_Impl<Paver::WriteVolumesResponse>::WriteVol
   _request_buffer.set_actual(sizeof(WriteVolumesRequest));
   ::fidl::DecodedMessage<WriteVolumesRequest> _decoded_request(std::move(_request_buffer));
   Super::SetResult(
-      Paver::InPlace::WriteVolumes(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
+      DataSink::InPlace::WriteVolumes(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Paver::UnownedResultOf::WriteVolumes Paver::SyncClient::WriteVolumes(::fidl::BytePart _request_buffer, ::zx::channel payload, ::fidl::BytePart _response_buffer) {
+DataSink::UnownedResultOf::WriteVolumes DataSink::SyncClient::WriteVolumes(::fidl::BytePart _request_buffer, ::zx::channel payload, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::WriteVolumes(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(payload), std::move(_response_buffer));
 }
 
-Paver::UnownedResultOf::WriteVolumes Paver::Call::WriteVolumes(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel payload, ::fidl::BytePart _response_buffer) {
+DataSink::UnownedResultOf::WriteVolumes DataSink::Call::WriteVolumes(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel payload, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::WriteVolumes(std::move(_client_end), std::move(_request_buffer), std::move(payload), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Paver::WriteVolumesResponse> Paver::InPlace::WriteVolumes(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteVolumesRequest> params, ::fidl::BytePart response_buffer) {
-  Paver::SetTransactionHeaderFor::WriteVolumesRequest(params);
+::fidl::DecodeResult<DataSink::WriteVolumesResponse> DataSink::InPlace::WriteVolumes(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteVolumesRequest> params, ::fidl::BytePart response_buffer) {
+  DataSink::SetTransactionHeaderFor::WriteVolumesRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Paver::WriteVolumesResponse>::FromFailure(
+    return ::fidl::DecodeResult<DataSink::WriteVolumesResponse>::FromFailure(
         std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<WriteVolumesRequest, WriteVolumesResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Paver::WriteVolumesResponse>::FromFailure(
+    return ::fidl::DecodeResult<DataSink::WriteVolumesResponse>::FromFailure(
         std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
 template <>
-Paver::ResultOf::WriteBootloader_Impl<Paver::WriteBootloaderResponse>::WriteBootloader_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::mem::Buffer payload) {
+DataSink::ResultOf::WriteBootloader_Impl<DataSink::WriteBootloaderResponse>::WriteBootloader_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::mem::Buffer payload) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteBootloaderRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
@@ -1274,19 +1835,19 @@ Paver::ResultOf::WriteBootloader_Impl<Paver::WriteBootloaderResponse>::WriteBoot
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(WriteBootloaderRequest));
   ::fidl::DecodedMessage<WriteBootloaderRequest> _decoded_request(std::move(_request_bytes));
   Super::SetResult(
-      Paver::InPlace::WriteBootloader(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
+      DataSink::InPlace::WriteBootloader(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Paver::ResultOf::WriteBootloader Paver::SyncClient::WriteBootloader(::llcpp::fuchsia::mem::Buffer payload) {
+DataSink::ResultOf::WriteBootloader DataSink::SyncClient::WriteBootloader(::llcpp::fuchsia::mem::Buffer payload) {
     return ResultOf::WriteBootloader(::zx::unowned_channel(this->channel_), std::move(payload));
 }
 
-Paver::ResultOf::WriteBootloader Paver::Call::WriteBootloader(::zx::unowned_channel _client_end, ::llcpp::fuchsia::mem::Buffer payload) {
+DataSink::ResultOf::WriteBootloader DataSink::Call::WriteBootloader(::zx::unowned_channel _client_end, ::llcpp::fuchsia::mem::Buffer payload) {
   return ResultOf::WriteBootloader(std::move(_client_end), std::move(payload));
 }
 
 template <>
-Paver::UnownedResultOf::WriteBootloader_Impl<Paver::WriteBootloaderResponse>::WriteBootloader_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer) {
+DataSink::UnownedResultOf::WriteBootloader_Impl<DataSink::WriteBootloaderResponse>::WriteBootloader_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < WriteBootloaderRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<WriteBootloaderResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -1297,35 +1858,35 @@ Paver::UnownedResultOf::WriteBootloader_Impl<Paver::WriteBootloaderResponse>::Wr
   _request_buffer.set_actual(sizeof(WriteBootloaderRequest));
   ::fidl::DecodedMessage<WriteBootloaderRequest> _decoded_request(std::move(_request_buffer));
   Super::SetResult(
-      Paver::InPlace::WriteBootloader(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
+      DataSink::InPlace::WriteBootloader(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Paver::UnownedResultOf::WriteBootloader Paver::SyncClient::WriteBootloader(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer) {
+DataSink::UnownedResultOf::WriteBootloader DataSink::SyncClient::WriteBootloader(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::WriteBootloader(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(payload), std::move(_response_buffer));
 }
 
-Paver::UnownedResultOf::WriteBootloader Paver::Call::WriteBootloader(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer) {
+DataSink::UnownedResultOf::WriteBootloader DataSink::Call::WriteBootloader(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::WriteBootloader(std::move(_client_end), std::move(_request_buffer), std::move(payload), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Paver::WriteBootloaderResponse> Paver::InPlace::WriteBootloader(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteBootloaderRequest> params, ::fidl::BytePart response_buffer) {
-  Paver::SetTransactionHeaderFor::WriteBootloaderRequest(params);
+::fidl::DecodeResult<DataSink::WriteBootloaderResponse> DataSink::InPlace::WriteBootloader(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteBootloaderRequest> params, ::fidl::BytePart response_buffer) {
+  DataSink::SetTransactionHeaderFor::WriteBootloaderRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Paver::WriteBootloaderResponse>::FromFailure(
+    return ::fidl::DecodeResult<DataSink::WriteBootloaderResponse>::FromFailure(
         std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<WriteBootloaderRequest, WriteBootloaderResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Paver::WriteBootloaderResponse>::FromFailure(
+    return ::fidl::DecodeResult<DataSink::WriteBootloaderResponse>::FromFailure(
         std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
 template <>
-Paver::ResultOf::WriteDataFile_Impl<Paver::WriteDataFileResponse>::WriteDataFile_Impl(::zx::unowned_channel _client_end, ::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload) {
+DataSink::ResultOf::WriteDataFile_Impl<DataSink::WriteDataFileResponse>::WriteDataFile_Impl(::zx::unowned_channel _client_end, ::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteDataFileRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -1339,19 +1900,19 @@ Paver::ResultOf::WriteDataFile_Impl<Paver::WriteDataFileResponse>::WriteDataFile
   }
   ::fidl::DecodedMessage<WriteDataFileRequest> _decoded_request = std::move(_linearize_result.message);
   Super::SetResult(
-      Paver::InPlace::WriteDataFile(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
+      DataSink::InPlace::WriteDataFile(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Paver::ResultOf::WriteDataFile Paver::SyncClient::WriteDataFile(::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload) {
+DataSink::ResultOf::WriteDataFile DataSink::SyncClient::WriteDataFile(::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload) {
     return ResultOf::WriteDataFile(::zx::unowned_channel(this->channel_), std::move(filename), std::move(payload));
 }
 
-Paver::ResultOf::WriteDataFile Paver::Call::WriteDataFile(::zx::unowned_channel _client_end, ::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload) {
+DataSink::ResultOf::WriteDataFile DataSink::Call::WriteDataFile(::zx::unowned_channel _client_end, ::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload) {
   return ResultOf::WriteDataFile(std::move(_client_end), std::move(filename), std::move(payload));
 }
 
 template <>
-Paver::UnownedResultOf::WriteDataFile_Impl<Paver::WriteDataFileResponse>::WriteDataFile_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer) {
+DataSink::UnownedResultOf::WriteDataFile_Impl<DataSink::WriteDataFileResponse>::WriteDataFile_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < WriteDataFileRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<WriteDataFileResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -1366,221 +1927,96 @@ Paver::UnownedResultOf::WriteDataFile_Impl<Paver::WriteDataFileResponse>::WriteD
   }
   ::fidl::DecodedMessage<WriteDataFileRequest> _decoded_request = std::move(_linearize_result.message);
   Super::SetResult(
-      Paver::InPlace::WriteDataFile(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
+      DataSink::InPlace::WriteDataFile(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Paver::UnownedResultOf::WriteDataFile Paver::SyncClient::WriteDataFile(::fidl::BytePart _request_buffer, ::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer) {
+DataSink::UnownedResultOf::WriteDataFile DataSink::SyncClient::WriteDataFile(::fidl::BytePart _request_buffer, ::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::WriteDataFile(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(filename), std::move(payload), std::move(_response_buffer));
 }
 
-Paver::UnownedResultOf::WriteDataFile Paver::Call::WriteDataFile(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer) {
+DataSink::UnownedResultOf::WriteDataFile DataSink::Call::WriteDataFile(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer) {
   return UnownedResultOf::WriteDataFile(std::move(_client_end), std::move(_request_buffer), std::move(filename), std::move(payload), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Paver::WriteDataFileResponse> Paver::InPlace::WriteDataFile(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteDataFileRequest> params, ::fidl::BytePart response_buffer) {
-  Paver::SetTransactionHeaderFor::WriteDataFileRequest(params);
+::fidl::DecodeResult<DataSink::WriteDataFileResponse> DataSink::InPlace::WriteDataFile(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteDataFileRequest> params, ::fidl::BytePart response_buffer) {
+  DataSink::SetTransactionHeaderFor::WriteDataFileRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Paver::WriteDataFileResponse>::FromFailure(
+    return ::fidl::DecodeResult<DataSink::WriteDataFileResponse>::FromFailure(
         std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<WriteDataFileRequest, WriteDataFileResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Paver::WriteDataFileResponse>::FromFailure(
+    return ::fidl::DecodeResult<DataSink::WriteDataFileResponse>::FromFailure(
         std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
 template <>
-Paver::ResultOf::WipeVolume_Impl<Paver::WipeVolumeResponse>::WipeVolume_Impl(::zx::unowned_channel _client_end, ::zx::channel block_device) {
+DataSink::ResultOf::WipeVolume_Impl<DataSink::WipeVolumeResponse>::WipeVolume_Impl(::zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WipeVolumeRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
   memset(_write_bytes, 0, WipeVolumeRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<WipeVolumeRequest*>(_write_bytes);
-  _request.block_device = std::move(block_device);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(WipeVolumeRequest));
   ::fidl::DecodedMessage<WipeVolumeRequest> _decoded_request(std::move(_request_bytes));
   Super::SetResult(
-      Paver::InPlace::WipeVolume(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
+      DataSink::InPlace::WipeVolume(std::move(_client_end), Super::response_buffer()));
 }
 
-Paver::ResultOf::WipeVolume Paver::SyncClient::WipeVolume(::zx::channel block_device) {
-    return ResultOf::WipeVolume(::zx::unowned_channel(this->channel_), std::move(block_device));
+DataSink::ResultOf::WipeVolume DataSink::SyncClient::WipeVolume() {
+    return ResultOf::WipeVolume(::zx::unowned_channel(this->channel_));
 }
 
-Paver::ResultOf::WipeVolume Paver::Call::WipeVolume(::zx::unowned_channel _client_end, ::zx::channel block_device) {
-  return ResultOf::WipeVolume(std::move(_client_end), std::move(block_device));
+DataSink::ResultOf::WipeVolume DataSink::Call::WipeVolume(::zx::unowned_channel _client_end) {
+  return ResultOf::WipeVolume(std::move(_client_end));
 }
 
 template <>
-Paver::UnownedResultOf::WipeVolume_Impl<Paver::WipeVolumeResponse>::WipeVolume_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel block_device, ::fidl::BytePart _response_buffer) {
-  if (_request_buffer.capacity() < WipeVolumeRequest::PrimarySize) {
-    Super::SetFailure(::fidl::DecodeResult<WipeVolumeResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
-    return;
-  }
+DataSink::UnownedResultOf::WipeVolume_Impl<DataSink::WipeVolumeResponse>::WipeVolume_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(WipeVolumeRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
   memset(_request_buffer.data(), 0, WipeVolumeRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<WipeVolumeRequest*>(_request_buffer.data());
-  _request.block_device = std::move(block_device);
   _request_buffer.set_actual(sizeof(WipeVolumeRequest));
   ::fidl::DecodedMessage<WipeVolumeRequest> _decoded_request(std::move(_request_buffer));
   Super::SetResult(
-      Paver::InPlace::WipeVolume(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
+      DataSink::InPlace::WipeVolume(std::move(_client_end), std::move(_response_buffer)));
 }
 
-Paver::UnownedResultOf::WipeVolume Paver::SyncClient::WipeVolume(::fidl::BytePart _request_buffer, ::zx::channel block_device, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::WipeVolume(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(block_device), std::move(_response_buffer));
+DataSink::UnownedResultOf::WipeVolume DataSink::SyncClient::WipeVolume(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::WipeVolume(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
 }
 
-Paver::UnownedResultOf::WipeVolume Paver::Call::WipeVolume(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel block_device, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::WipeVolume(std::move(_client_end), std::move(_request_buffer), std::move(block_device), std::move(_response_buffer));
+DataSink::UnownedResultOf::WipeVolume DataSink::Call::WipeVolume(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::WipeVolume(std::move(_client_end), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<Paver::WipeVolumeResponse> Paver::InPlace::WipeVolume(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<WipeVolumeRequest> params, ::fidl::BytePart response_buffer) {
-  Paver::SetTransactionHeaderFor::WipeVolumeRequest(params);
+::fidl::DecodeResult<DataSink::WipeVolumeResponse> DataSink::InPlace::WipeVolume(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(WipeVolumeRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<WipeVolumeRequest> params(std::move(_request_buffer));
+  DataSink::SetTransactionHeaderFor::WipeVolumeRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Paver::WipeVolumeResponse>::FromFailure(
+    return ::fidl::DecodeResult<DataSink::WipeVolumeResponse>::FromFailure(
         std::move(_encode_request_result));
   }
   auto _call_result = ::fidl::Call<WipeVolumeRequest, WipeVolumeResponse>(
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Paver::WipeVolumeResponse>::FromFailure(
-        std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
-}
-
-template <>
-Paver::ResultOf::InitializePartitionTables_Impl<Paver::InitializePartitionTablesResponse>::InitializePartitionTables_Impl(::zx::unowned_channel _client_end, ::zx::channel gpt_block_device) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<InitializePartitionTablesRequest, ::fidl::MessageDirection::kSending>();
-  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
-  auto& _write_bytes_array = _write_bytes_inlined;
-  uint8_t* _write_bytes = _write_bytes_array.view().data();
-  memset(_write_bytes, 0, InitializePartitionTablesRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<InitializePartitionTablesRequest*>(_write_bytes);
-  _request.gpt_block_device = std::move(gpt_block_device);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(InitializePartitionTablesRequest));
-  ::fidl::DecodedMessage<InitializePartitionTablesRequest> _decoded_request(std::move(_request_bytes));
-  Super::SetResult(
-      Paver::InPlace::InitializePartitionTables(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
-}
-
-Paver::ResultOf::InitializePartitionTables Paver::SyncClient::InitializePartitionTables(::zx::channel gpt_block_device) {
-    return ResultOf::InitializePartitionTables(::zx::unowned_channel(this->channel_), std::move(gpt_block_device));
-}
-
-Paver::ResultOf::InitializePartitionTables Paver::Call::InitializePartitionTables(::zx::unowned_channel _client_end, ::zx::channel gpt_block_device) {
-  return ResultOf::InitializePartitionTables(std::move(_client_end), std::move(gpt_block_device));
-}
-
-template <>
-Paver::UnownedResultOf::InitializePartitionTables_Impl<Paver::InitializePartitionTablesResponse>::InitializePartitionTables_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel gpt_block_device, ::fidl::BytePart _response_buffer) {
-  if (_request_buffer.capacity() < InitializePartitionTablesRequest::PrimarySize) {
-    Super::SetFailure(::fidl::DecodeResult<InitializePartitionTablesResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
-    return;
-  }
-  memset(_request_buffer.data(), 0, InitializePartitionTablesRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<InitializePartitionTablesRequest*>(_request_buffer.data());
-  _request.gpt_block_device = std::move(gpt_block_device);
-  _request_buffer.set_actual(sizeof(InitializePartitionTablesRequest));
-  ::fidl::DecodedMessage<InitializePartitionTablesRequest> _decoded_request(std::move(_request_buffer));
-  Super::SetResult(
-      Paver::InPlace::InitializePartitionTables(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
-}
-
-Paver::UnownedResultOf::InitializePartitionTables Paver::SyncClient::InitializePartitionTables(::fidl::BytePart _request_buffer, ::zx::channel gpt_block_device, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::InitializePartitionTables(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(gpt_block_device), std::move(_response_buffer));
-}
-
-Paver::UnownedResultOf::InitializePartitionTables Paver::Call::InitializePartitionTables(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel gpt_block_device, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::InitializePartitionTables(std::move(_client_end), std::move(_request_buffer), std::move(gpt_block_device), std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<Paver::InitializePartitionTablesResponse> Paver::InPlace::InitializePartitionTables(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<InitializePartitionTablesRequest> params, ::fidl::BytePart response_buffer) {
-  Paver::SetTransactionHeaderFor::InitializePartitionTablesRequest(params);
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Paver::InitializePartitionTablesResponse>::FromFailure(
-        std::move(_encode_request_result));
-  }
-  auto _call_result = ::fidl::Call<InitializePartitionTablesRequest, InitializePartitionTablesResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Paver::InitializePartitionTablesResponse>::FromFailure(
-        std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
-}
-
-template <>
-Paver::ResultOf::WipePartitionTables_Impl<Paver::WipePartitionTablesResponse>::WipePartitionTables_Impl(::zx::unowned_channel _client_end, ::zx::channel block_device) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WipePartitionTablesRequest, ::fidl::MessageDirection::kSending>();
-  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
-  auto& _write_bytes_array = _write_bytes_inlined;
-  uint8_t* _write_bytes = _write_bytes_array.view().data();
-  memset(_write_bytes, 0, WipePartitionTablesRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<WipePartitionTablesRequest*>(_write_bytes);
-  _request.block_device = std::move(block_device);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(WipePartitionTablesRequest));
-  ::fidl::DecodedMessage<WipePartitionTablesRequest> _decoded_request(std::move(_request_bytes));
-  Super::SetResult(
-      Paver::InPlace::WipePartitionTables(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
-}
-
-Paver::ResultOf::WipePartitionTables Paver::SyncClient::WipePartitionTables(::zx::channel block_device) {
-    return ResultOf::WipePartitionTables(::zx::unowned_channel(this->channel_), std::move(block_device));
-}
-
-Paver::ResultOf::WipePartitionTables Paver::Call::WipePartitionTables(::zx::unowned_channel _client_end, ::zx::channel block_device) {
-  return ResultOf::WipePartitionTables(std::move(_client_end), std::move(block_device));
-}
-
-template <>
-Paver::UnownedResultOf::WipePartitionTables_Impl<Paver::WipePartitionTablesResponse>::WipePartitionTables_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel block_device, ::fidl::BytePart _response_buffer) {
-  if (_request_buffer.capacity() < WipePartitionTablesRequest::PrimarySize) {
-    Super::SetFailure(::fidl::DecodeResult<WipePartitionTablesResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
-    return;
-  }
-  memset(_request_buffer.data(), 0, WipePartitionTablesRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<WipePartitionTablesRequest*>(_request_buffer.data());
-  _request.block_device = std::move(block_device);
-  _request_buffer.set_actual(sizeof(WipePartitionTablesRequest));
-  ::fidl::DecodedMessage<WipePartitionTablesRequest> _decoded_request(std::move(_request_buffer));
-  Super::SetResult(
-      Paver::InPlace::WipePartitionTables(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
-}
-
-Paver::UnownedResultOf::WipePartitionTables Paver::SyncClient::WipePartitionTables(::fidl::BytePart _request_buffer, ::zx::channel block_device, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::WipePartitionTables(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(block_device), std::move(_response_buffer));
-}
-
-Paver::UnownedResultOf::WipePartitionTables Paver::Call::WipePartitionTables(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel block_device, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::WipePartitionTables(std::move(_client_end), std::move(_request_buffer), std::move(block_device), std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<Paver::WipePartitionTablesResponse> Paver::InPlace::WipePartitionTables(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<WipePartitionTablesRequest> params, ::fidl::BytePart response_buffer) {
-  Paver::SetTransactionHeaderFor::WipePartitionTablesRequest(params);
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Paver::WipePartitionTablesResponse>::FromFailure(
-        std::move(_encode_request_result));
-  }
-  auto _call_result = ::fidl::Call<WipePartitionTablesRequest, WipePartitionTablesResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Paver::WipePartitionTablesResponse>::FromFailure(
+    return ::fidl::DecodeResult<DataSink::WipeVolumeResponse>::FromFailure(
         std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
 
-bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+bool DataSink::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
   if (msg->num_bytes < sizeof(fidl_message_header_t)) {
     zx_handle_close_many(msg->handles, msg->num_handles);
     txn->Close(ZX_ERR_INVALID_ARGS);
@@ -1593,83 +2029,8 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
     return true;
   }
   switch (hdr->ordinal) {
-    case kPaver_InitializeAbr_Ordinal:
-    case kPaver_InitializeAbr_GenOrdinal:
-    {
-      auto result = ::fidl::DecodeAs<InitializeAbrRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
-        return true;
-      }
-      impl->InitializeAbr(
-          Interface::InitializeAbrCompleter::Sync(txn));
-      return true;
-    }
-    case kPaver_QueryActiveConfiguration_Ordinal:
-    case kPaver_QueryActiveConfiguration_GenOrdinal:
-    {
-      auto result = ::fidl::DecodeAs<QueryActiveConfigurationRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
-        return true;
-      }
-      impl->QueryActiveConfiguration(
-          Interface::QueryActiveConfigurationCompleter::Sync(txn));
-      return true;
-    }
-    case kPaver_QueryConfigurationStatus_Ordinal:
-    case kPaver_QueryConfigurationStatus_GenOrdinal:
-    {
-      auto result = ::fidl::DecodeAs<QueryConfigurationStatusRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
-        return true;
-      }
-      auto message = result.message.message();
-      impl->QueryConfigurationStatus(std::move(message->configuration),
-          Interface::QueryConfigurationStatusCompleter::Sync(txn));
-      return true;
-    }
-    case kPaver_SetConfigurationActive_Ordinal:
-    case kPaver_SetConfigurationActive_GenOrdinal:
-    {
-      auto result = ::fidl::DecodeAs<SetConfigurationActiveRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
-        return true;
-      }
-      auto message = result.message.message();
-      impl->SetConfigurationActive(std::move(message->configuration),
-          Interface::SetConfigurationActiveCompleter::Sync(txn));
-      return true;
-    }
-    case kPaver_SetConfigurationUnbootable_Ordinal:
-    case kPaver_SetConfigurationUnbootable_GenOrdinal:
-    {
-      auto result = ::fidl::DecodeAs<SetConfigurationUnbootableRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
-        return true;
-      }
-      auto message = result.message.message();
-      impl->SetConfigurationUnbootable(std::move(message->configuration),
-          Interface::SetConfigurationUnbootableCompleter::Sync(txn));
-      return true;
-    }
-    case kPaver_SetActiveConfigurationHealthy_Ordinal:
-    case kPaver_SetActiveConfigurationHealthy_GenOrdinal:
-    {
-      auto result = ::fidl::DecodeAs<SetActiveConfigurationHealthyRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
-        return true;
-      }
-      impl->SetActiveConfigurationHealthy(
-          Interface::SetActiveConfigurationHealthyCompleter::Sync(txn));
-      return true;
-    }
-    case kPaver_ReadAsset_Ordinal:
-    case kPaver_ReadAsset_GenOrdinal:
+    case kDataSink_ReadAsset_Ordinal:
+    case kDataSink_ReadAsset_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<ReadAssetRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1681,8 +2042,8 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
           Interface::ReadAssetCompleter::Sync(txn));
       return true;
     }
-    case kPaver_WriteAsset_Ordinal:
-    case kPaver_WriteAsset_GenOrdinal:
+    case kDataSink_WriteAsset_Ordinal:
+    case kDataSink_WriteAsset_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<WriteAssetRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1694,8 +2055,8 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
           Interface::WriteAssetCompleter::Sync(txn));
       return true;
     }
-    case kPaver_WriteVolumes_Ordinal:
-    case kPaver_WriteVolumes_GenOrdinal:
+    case kDataSink_WriteVolumes_Ordinal:
+    case kDataSink_WriteVolumes_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<WriteVolumesRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1707,8 +2068,8 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
           Interface::WriteVolumesCompleter::Sync(txn));
       return true;
     }
-    case kPaver_WriteBootloader_Ordinal:
-    case kPaver_WriteBootloader_GenOrdinal:
+    case kDataSink_WriteBootloader_Ordinal:
+    case kDataSink_WriteBootloader_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<WriteBootloaderRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1720,8 +2081,8 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
           Interface::WriteBootloaderCompleter::Sync(txn));
       return true;
     }
-    case kPaver_WriteDataFile_Ordinal:
-    case kPaver_WriteDataFile_GenOrdinal:
+    case kDataSink_WriteDataFile_Ordinal:
+    case kDataSink_WriteDataFile_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<WriteDataFileRequest>(msg);
       if (result.status != ZX_OK) {
@@ -1733,43 +2094,16 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
           Interface::WriteDataFileCompleter::Sync(txn));
       return true;
     }
-    case kPaver_WipeVolume_Ordinal:
-    case kPaver_WipeVolume_GenOrdinal:
+    case kDataSink_WipeVolume_Ordinal:
+    case kDataSink_WipeVolume_GenOrdinal:
     {
       auto result = ::fidl::DecodeAs<WipeVolumeRequest>(msg);
       if (result.status != ZX_OK) {
         txn->Close(ZX_ERR_INVALID_ARGS);
         return true;
       }
-      auto message = result.message.message();
-      impl->WipeVolume(std::move(message->block_device),
+      impl->WipeVolume(
           Interface::WipeVolumeCompleter::Sync(txn));
-      return true;
-    }
-    case kPaver_InitializePartitionTables_Ordinal:
-    case kPaver_InitializePartitionTables_GenOrdinal:
-    {
-      auto result = ::fidl::DecodeAs<InitializePartitionTablesRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
-        return true;
-      }
-      auto message = result.message.message();
-      impl->InitializePartitionTables(std::move(message->gpt_block_device),
-          Interface::InitializePartitionTablesCompleter::Sync(txn));
-      return true;
-    }
-    case kPaver_WipePartitionTables_Ordinal:
-    case kPaver_WipePartitionTables_GenOrdinal:
-    {
-      auto result = ::fidl::DecodeAs<WipePartitionTablesRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
-        return true;
-      }
-      auto message = result.message.message();
-      impl->WipePartitionTables(std::move(message->block_device),
-          Interface::WipePartitionTablesCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -1778,7 +2112,7 @@ bool Paver::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
   }
 }
 
-bool Paver::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+bool DataSink::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
   bool found = TryDispatch(impl, msg, txn);
   if (!found) {
     zx_handle_close_many(msg->handles, msg->num_handles);
@@ -1788,257 +2122,11 @@ bool Paver::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn)
 }
 
 
-void Paver::Interface::InitializeAbrCompleterBase::Reply(int32_t status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<InitializeAbrResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<InitializeAbrResponse*>(_write_bytes);
-  Paver::SetTransactionHeaderFor::InitializeAbrResponse(
-      ::fidl::DecodedMessage<InitializeAbrResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              InitializeAbrResponse::PrimarySize,
-              InitializeAbrResponse::PrimarySize)));
-  _response.status = std::move(status);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(InitializeAbrResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<InitializeAbrResponse>(std::move(_response_bytes)));
-}
-
-void Paver::Interface::InitializeAbrCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
-  if (_buffer.capacity() < InitializeAbrResponse::PrimarySize) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  auto& _response = *reinterpret_cast<InitializeAbrResponse*>(_buffer.data());
-  Paver::SetTransactionHeaderFor::InitializeAbrResponse(
-      ::fidl::DecodedMessage<InitializeAbrResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              InitializeAbrResponse::PrimarySize,
-              InitializeAbrResponse::PrimarySize)));
-  _response.status = std::move(status);
-  _buffer.set_actual(sizeof(InitializeAbrResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<InitializeAbrResponse>(std::move(_buffer)));
-}
-
-void Paver::Interface::InitializeAbrCompleterBase::Reply(::fidl::DecodedMessage<InitializeAbrResponse> params) {
-  Paver::SetTransactionHeaderFor::InitializeAbrResponse(params);
-  CompleterBase::SendReply(std::move(params));
-}
-
-
-void Paver::Interface::QueryActiveConfigurationCompleterBase::Reply(::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result result) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<QueryActiveConfigurationResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<QueryActiveConfigurationResponse*>(_write_bytes);
-  Paver::SetTransactionHeaderFor::QueryActiveConfigurationResponse(
-      ::fidl::DecodedMessage<QueryActiveConfigurationResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              QueryActiveConfigurationResponse::PrimarySize,
-              QueryActiveConfigurationResponse::PrimarySize)));
-  _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(QueryActiveConfigurationResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<QueryActiveConfigurationResponse>(std::move(_response_bytes)));
-}
-void Paver::Interface::QueryActiveConfigurationCompleterBase::ReplySuccess(::llcpp::fuchsia::paver::Configuration configuration) {
-  Paver_QueryActiveConfiguration_Response response;
-  response.configuration = std::move(configuration);
-
-  Reply(Paver_QueryActiveConfiguration_Result::WithResponse(&response));
-}
-void Paver::Interface::QueryActiveConfigurationCompleterBase::ReplyError(int32_t error) {
-  Reply(Paver_QueryActiveConfiguration_Result::WithErr(&error));
-}
-
-void Paver::Interface::QueryActiveConfigurationCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result result) {
-  if (_buffer.capacity() < QueryActiveConfigurationResponse::PrimarySize) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  auto& _response = *reinterpret_cast<QueryActiveConfigurationResponse*>(_buffer.data());
-  Paver::SetTransactionHeaderFor::QueryActiveConfigurationResponse(
-      ::fidl::DecodedMessage<QueryActiveConfigurationResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              QueryActiveConfigurationResponse::PrimarySize,
-              QueryActiveConfigurationResponse::PrimarySize)));
-  _response.result = std::move(result);
-  _buffer.set_actual(sizeof(QueryActiveConfigurationResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<QueryActiveConfigurationResponse>(std::move(_buffer)));
-}
-void Paver::Interface::QueryActiveConfigurationCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::Configuration configuration) {
-  Paver_QueryActiveConfiguration_Response response;
-  response.configuration = std::move(configuration);
-
-  Reply(std::move(_buffer), Paver_QueryActiveConfiguration_Result::WithResponse(&response));
-}
-
-void Paver::Interface::QueryActiveConfigurationCompleterBase::Reply(::fidl::DecodedMessage<QueryActiveConfigurationResponse> params) {
-  Paver::SetTransactionHeaderFor::QueryActiveConfigurationResponse(params);
-  CompleterBase::SendReply(std::move(params));
-}
-
-
-void Paver::Interface::QueryConfigurationStatusCompleterBase::Reply(::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result result) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<QueryConfigurationStatusResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<QueryConfigurationStatusResponse*>(_write_bytes);
-  Paver::SetTransactionHeaderFor::QueryConfigurationStatusResponse(
-      ::fidl::DecodedMessage<QueryConfigurationStatusResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              QueryConfigurationStatusResponse::PrimarySize,
-              QueryConfigurationStatusResponse::PrimarySize)));
-  _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(QueryConfigurationStatusResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<QueryConfigurationStatusResponse>(std::move(_response_bytes)));
-}
-void Paver::Interface::QueryConfigurationStatusCompleterBase::ReplySuccess(::llcpp::fuchsia::paver::ConfigurationStatus status) {
-  Paver_QueryConfigurationStatus_Response response;
-  response.status = std::move(status);
-
-  Reply(Paver_QueryConfigurationStatus_Result::WithResponse(&response));
-}
-void Paver::Interface::QueryConfigurationStatusCompleterBase::ReplyError(int32_t error) {
-  Reply(Paver_QueryConfigurationStatus_Result::WithErr(&error));
-}
-
-void Paver::Interface::QueryConfigurationStatusCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result result) {
-  if (_buffer.capacity() < QueryConfigurationStatusResponse::PrimarySize) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  auto& _response = *reinterpret_cast<QueryConfigurationStatusResponse*>(_buffer.data());
-  Paver::SetTransactionHeaderFor::QueryConfigurationStatusResponse(
-      ::fidl::DecodedMessage<QueryConfigurationStatusResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              QueryConfigurationStatusResponse::PrimarySize,
-              QueryConfigurationStatusResponse::PrimarySize)));
-  _response.result = std::move(result);
-  _buffer.set_actual(sizeof(QueryConfigurationStatusResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<QueryConfigurationStatusResponse>(std::move(_buffer)));
-}
-void Paver::Interface::QueryConfigurationStatusCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::ConfigurationStatus status) {
-  Paver_QueryConfigurationStatus_Response response;
-  response.status = std::move(status);
-
-  Reply(std::move(_buffer), Paver_QueryConfigurationStatus_Result::WithResponse(&response));
-}
-
-void Paver::Interface::QueryConfigurationStatusCompleterBase::Reply(::fidl::DecodedMessage<QueryConfigurationStatusResponse> params) {
-  Paver::SetTransactionHeaderFor::QueryConfigurationStatusResponse(params);
-  CompleterBase::SendReply(std::move(params));
-}
-
-
-void Paver::Interface::SetConfigurationActiveCompleterBase::Reply(int32_t status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetConfigurationActiveResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<SetConfigurationActiveResponse*>(_write_bytes);
-  Paver::SetTransactionHeaderFor::SetConfigurationActiveResponse(
-      ::fidl::DecodedMessage<SetConfigurationActiveResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              SetConfigurationActiveResponse::PrimarySize,
-              SetConfigurationActiveResponse::PrimarySize)));
-  _response.status = std::move(status);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetConfigurationActiveResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<SetConfigurationActiveResponse>(std::move(_response_bytes)));
-}
-
-void Paver::Interface::SetConfigurationActiveCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
-  if (_buffer.capacity() < SetConfigurationActiveResponse::PrimarySize) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  auto& _response = *reinterpret_cast<SetConfigurationActiveResponse*>(_buffer.data());
-  Paver::SetTransactionHeaderFor::SetConfigurationActiveResponse(
-      ::fidl::DecodedMessage<SetConfigurationActiveResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              SetConfigurationActiveResponse::PrimarySize,
-              SetConfigurationActiveResponse::PrimarySize)));
-  _response.status = std::move(status);
-  _buffer.set_actual(sizeof(SetConfigurationActiveResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<SetConfigurationActiveResponse>(std::move(_buffer)));
-}
-
-void Paver::Interface::SetConfigurationActiveCompleterBase::Reply(::fidl::DecodedMessage<SetConfigurationActiveResponse> params) {
-  Paver::SetTransactionHeaderFor::SetConfigurationActiveResponse(params);
-  CompleterBase::SendReply(std::move(params));
-}
-
-
-void Paver::Interface::SetConfigurationUnbootableCompleterBase::Reply(int32_t status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetConfigurationUnbootableResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<SetConfigurationUnbootableResponse*>(_write_bytes);
-  Paver::SetTransactionHeaderFor::SetConfigurationUnbootableResponse(
-      ::fidl::DecodedMessage<SetConfigurationUnbootableResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              SetConfigurationUnbootableResponse::PrimarySize,
-              SetConfigurationUnbootableResponse::PrimarySize)));
-  _response.status = std::move(status);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetConfigurationUnbootableResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<SetConfigurationUnbootableResponse>(std::move(_response_bytes)));
-}
-
-void Paver::Interface::SetConfigurationUnbootableCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
-  if (_buffer.capacity() < SetConfigurationUnbootableResponse::PrimarySize) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  auto& _response = *reinterpret_cast<SetConfigurationUnbootableResponse*>(_buffer.data());
-  Paver::SetTransactionHeaderFor::SetConfigurationUnbootableResponse(
-      ::fidl::DecodedMessage<SetConfigurationUnbootableResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              SetConfigurationUnbootableResponse::PrimarySize,
-              SetConfigurationUnbootableResponse::PrimarySize)));
-  _response.status = std::move(status);
-  _buffer.set_actual(sizeof(SetConfigurationUnbootableResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<SetConfigurationUnbootableResponse>(std::move(_buffer)));
-}
-
-void Paver::Interface::SetConfigurationUnbootableCompleterBase::Reply(::fidl::DecodedMessage<SetConfigurationUnbootableResponse> params) {
-  Paver::SetTransactionHeaderFor::SetConfigurationUnbootableResponse(params);
-  CompleterBase::SendReply(std::move(params));
-}
-
-
-void Paver::Interface::SetActiveConfigurationHealthyCompleterBase::Reply(int32_t status) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetActiveConfigurationHealthyResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<SetActiveConfigurationHealthyResponse*>(_write_bytes);
-  Paver::SetTransactionHeaderFor::SetActiveConfigurationHealthyResponse(
-      ::fidl::DecodedMessage<SetActiveConfigurationHealthyResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              SetActiveConfigurationHealthyResponse::PrimarySize,
-              SetActiveConfigurationHealthyResponse::PrimarySize)));
-  _response.status = std::move(status);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetActiveConfigurationHealthyResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<SetActiveConfigurationHealthyResponse>(std::move(_response_bytes)));
-}
-
-void Paver::Interface::SetActiveConfigurationHealthyCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
-  if (_buffer.capacity() < SetActiveConfigurationHealthyResponse::PrimarySize) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  auto& _response = *reinterpret_cast<SetActiveConfigurationHealthyResponse*>(_buffer.data());
-  Paver::SetTransactionHeaderFor::SetActiveConfigurationHealthyResponse(
-      ::fidl::DecodedMessage<SetActiveConfigurationHealthyResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              SetActiveConfigurationHealthyResponse::PrimarySize,
-              SetActiveConfigurationHealthyResponse::PrimarySize)));
-  _response.status = std::move(status);
-  _buffer.set_actual(sizeof(SetActiveConfigurationHealthyResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<SetActiveConfigurationHealthyResponse>(std::move(_buffer)));
-}
-
-void Paver::Interface::SetActiveConfigurationHealthyCompleterBase::Reply(::fidl::DecodedMessage<SetActiveConfigurationHealthyResponse> params) {
-  Paver::SetTransactionHeaderFor::SetActiveConfigurationHealthyResponse(params);
-  CompleterBase::SendReply(std::move(params));
-}
-
-
-void Paver::Interface::ReadAssetCompleterBase::Reply(::llcpp::fuchsia::paver::Paver_ReadAsset_Result result) {
+void DataSink::Interface::ReadAssetCompleterBase::Reply(::llcpp::fuchsia::paver::DataSink_ReadAsset_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReadAssetResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<ReadAssetResponse*>(_write_bytes);
-  Paver::SetTransactionHeaderFor::ReadAssetResponse(
+  DataSink::SetTransactionHeaderFor::ReadAssetResponse(
       ::fidl::DecodedMessage<ReadAssetResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               ReadAssetResponse::PrimarySize,
@@ -2047,23 +2135,23 @@ void Paver::Interface::ReadAssetCompleterBase::Reply(::llcpp::fuchsia::paver::Pa
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ReadAssetResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ReadAssetResponse>(std::move(_response_bytes)));
 }
-void Paver::Interface::ReadAssetCompleterBase::ReplySuccess(::llcpp::fuchsia::mem::Buffer asset) {
-  Paver_ReadAsset_Response response;
+void DataSink::Interface::ReadAssetCompleterBase::ReplySuccess(::llcpp::fuchsia::mem::Buffer asset) {
+  DataSink_ReadAsset_Response response;
   response.asset = std::move(asset);
 
-  Reply(Paver_ReadAsset_Result::WithResponse(&response));
+  Reply(DataSink_ReadAsset_Result::WithResponse(&response));
 }
-void Paver::Interface::ReadAssetCompleterBase::ReplyError(int32_t error) {
-  Reply(Paver_ReadAsset_Result::WithErr(&error));
+void DataSink::Interface::ReadAssetCompleterBase::ReplyError(int32_t error) {
+  Reply(DataSink_ReadAsset_Result::WithErr(&error));
 }
 
-void Paver::Interface::ReadAssetCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::Paver_ReadAsset_Result result) {
+void DataSink::Interface::ReadAssetCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::DataSink_ReadAsset_Result result) {
   if (_buffer.capacity() < ReadAssetResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
   auto& _response = *reinterpret_cast<ReadAssetResponse*>(_buffer.data());
-  Paver::SetTransactionHeaderFor::ReadAssetResponse(
+  DataSink::SetTransactionHeaderFor::ReadAssetResponse(
       ::fidl::DecodedMessage<ReadAssetResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               ReadAssetResponse::PrimarySize,
@@ -2072,24 +2160,24 @@ void Paver::Interface::ReadAssetCompleterBase::Reply(::fidl::BytePart _buffer, :
   _buffer.set_actual(sizeof(ReadAssetResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<ReadAssetResponse>(std::move(_buffer)));
 }
-void Paver::Interface::ReadAssetCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::mem::Buffer asset) {
-  Paver_ReadAsset_Response response;
+void DataSink::Interface::ReadAssetCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::mem::Buffer asset) {
+  DataSink_ReadAsset_Response response;
   response.asset = std::move(asset);
 
-  Reply(std::move(_buffer), Paver_ReadAsset_Result::WithResponse(&response));
+  Reply(std::move(_buffer), DataSink_ReadAsset_Result::WithResponse(&response));
 }
 
-void Paver::Interface::ReadAssetCompleterBase::Reply(::fidl::DecodedMessage<ReadAssetResponse> params) {
-  Paver::SetTransactionHeaderFor::ReadAssetResponse(params);
+void DataSink::Interface::ReadAssetCompleterBase::Reply(::fidl::DecodedMessage<ReadAssetResponse> params) {
+  DataSink::SetTransactionHeaderFor::ReadAssetResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
 
-void Paver::Interface::WriteAssetCompleterBase::Reply(int32_t status) {
+void DataSink::Interface::WriteAssetCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteAssetResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<WriteAssetResponse*>(_write_bytes);
-  Paver::SetTransactionHeaderFor::WriteAssetResponse(
+  DataSink::SetTransactionHeaderFor::WriteAssetResponse(
       ::fidl::DecodedMessage<WriteAssetResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               WriteAssetResponse::PrimarySize,
@@ -2099,13 +2187,13 @@ void Paver::Interface::WriteAssetCompleterBase::Reply(int32_t status) {
   CompleterBase::SendReply(::fidl::DecodedMessage<WriteAssetResponse>(std::move(_response_bytes)));
 }
 
-void Paver::Interface::WriteAssetCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
+void DataSink::Interface::WriteAssetCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
   if (_buffer.capacity() < WriteAssetResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
   auto& _response = *reinterpret_cast<WriteAssetResponse*>(_buffer.data());
-  Paver::SetTransactionHeaderFor::WriteAssetResponse(
+  DataSink::SetTransactionHeaderFor::WriteAssetResponse(
       ::fidl::DecodedMessage<WriteAssetResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               WriteAssetResponse::PrimarySize,
@@ -2115,17 +2203,17 @@ void Paver::Interface::WriteAssetCompleterBase::Reply(::fidl::BytePart _buffer, 
   CompleterBase::SendReply(::fidl::DecodedMessage<WriteAssetResponse>(std::move(_buffer)));
 }
 
-void Paver::Interface::WriteAssetCompleterBase::Reply(::fidl::DecodedMessage<WriteAssetResponse> params) {
-  Paver::SetTransactionHeaderFor::WriteAssetResponse(params);
+void DataSink::Interface::WriteAssetCompleterBase::Reply(::fidl::DecodedMessage<WriteAssetResponse> params) {
+  DataSink::SetTransactionHeaderFor::WriteAssetResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
 
-void Paver::Interface::WriteVolumesCompleterBase::Reply(int32_t status) {
+void DataSink::Interface::WriteVolumesCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteVolumesResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<WriteVolumesResponse*>(_write_bytes);
-  Paver::SetTransactionHeaderFor::WriteVolumesResponse(
+  DataSink::SetTransactionHeaderFor::WriteVolumesResponse(
       ::fidl::DecodedMessage<WriteVolumesResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               WriteVolumesResponse::PrimarySize,
@@ -2135,13 +2223,13 @@ void Paver::Interface::WriteVolumesCompleterBase::Reply(int32_t status) {
   CompleterBase::SendReply(::fidl::DecodedMessage<WriteVolumesResponse>(std::move(_response_bytes)));
 }
 
-void Paver::Interface::WriteVolumesCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
+void DataSink::Interface::WriteVolumesCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
   if (_buffer.capacity() < WriteVolumesResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
   auto& _response = *reinterpret_cast<WriteVolumesResponse*>(_buffer.data());
-  Paver::SetTransactionHeaderFor::WriteVolumesResponse(
+  DataSink::SetTransactionHeaderFor::WriteVolumesResponse(
       ::fidl::DecodedMessage<WriteVolumesResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               WriteVolumesResponse::PrimarySize,
@@ -2151,17 +2239,17 @@ void Paver::Interface::WriteVolumesCompleterBase::Reply(::fidl::BytePart _buffer
   CompleterBase::SendReply(::fidl::DecodedMessage<WriteVolumesResponse>(std::move(_buffer)));
 }
 
-void Paver::Interface::WriteVolumesCompleterBase::Reply(::fidl::DecodedMessage<WriteVolumesResponse> params) {
-  Paver::SetTransactionHeaderFor::WriteVolumesResponse(params);
+void DataSink::Interface::WriteVolumesCompleterBase::Reply(::fidl::DecodedMessage<WriteVolumesResponse> params) {
+  DataSink::SetTransactionHeaderFor::WriteVolumesResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
 
-void Paver::Interface::WriteBootloaderCompleterBase::Reply(int32_t status) {
+void DataSink::Interface::WriteBootloaderCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteBootloaderResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<WriteBootloaderResponse*>(_write_bytes);
-  Paver::SetTransactionHeaderFor::WriteBootloaderResponse(
+  DataSink::SetTransactionHeaderFor::WriteBootloaderResponse(
       ::fidl::DecodedMessage<WriteBootloaderResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               WriteBootloaderResponse::PrimarySize,
@@ -2171,13 +2259,13 @@ void Paver::Interface::WriteBootloaderCompleterBase::Reply(int32_t status) {
   CompleterBase::SendReply(::fidl::DecodedMessage<WriteBootloaderResponse>(std::move(_response_bytes)));
 }
 
-void Paver::Interface::WriteBootloaderCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
+void DataSink::Interface::WriteBootloaderCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
   if (_buffer.capacity() < WriteBootloaderResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
   auto& _response = *reinterpret_cast<WriteBootloaderResponse*>(_buffer.data());
-  Paver::SetTransactionHeaderFor::WriteBootloaderResponse(
+  DataSink::SetTransactionHeaderFor::WriteBootloaderResponse(
       ::fidl::DecodedMessage<WriteBootloaderResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               WriteBootloaderResponse::PrimarySize,
@@ -2187,17 +2275,17 @@ void Paver::Interface::WriteBootloaderCompleterBase::Reply(::fidl::BytePart _buf
   CompleterBase::SendReply(::fidl::DecodedMessage<WriteBootloaderResponse>(std::move(_buffer)));
 }
 
-void Paver::Interface::WriteBootloaderCompleterBase::Reply(::fidl::DecodedMessage<WriteBootloaderResponse> params) {
-  Paver::SetTransactionHeaderFor::WriteBootloaderResponse(params);
+void DataSink::Interface::WriteBootloaderCompleterBase::Reply(::fidl::DecodedMessage<WriteBootloaderResponse> params) {
+  DataSink::SetTransactionHeaderFor::WriteBootloaderResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
 
-void Paver::Interface::WriteDataFileCompleterBase::Reply(int32_t status) {
+void DataSink::Interface::WriteDataFileCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteDataFileResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<WriteDataFileResponse*>(_write_bytes);
-  Paver::SetTransactionHeaderFor::WriteDataFileResponse(
+  DataSink::SetTransactionHeaderFor::WriteDataFileResponse(
       ::fidl::DecodedMessage<WriteDataFileResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               WriteDataFileResponse::PrimarySize,
@@ -2207,13 +2295,13 @@ void Paver::Interface::WriteDataFileCompleterBase::Reply(int32_t status) {
   CompleterBase::SendReply(::fidl::DecodedMessage<WriteDataFileResponse>(std::move(_response_bytes)));
 }
 
-void Paver::Interface::WriteDataFileCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
+void DataSink::Interface::WriteDataFileCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
   if (_buffer.capacity() < WriteDataFileResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
   auto& _response = *reinterpret_cast<WriteDataFileResponse*>(_buffer.data());
-  Paver::SetTransactionHeaderFor::WriteDataFileResponse(
+  DataSink::SetTransactionHeaderFor::WriteDataFileResponse(
       ::fidl::DecodedMessage<WriteDataFileResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               WriteDataFileResponse::PrimarySize,
@@ -2223,17 +2311,17 @@ void Paver::Interface::WriteDataFileCompleterBase::Reply(::fidl::BytePart _buffe
   CompleterBase::SendReply(::fidl::DecodedMessage<WriteDataFileResponse>(std::move(_buffer)));
 }
 
-void Paver::Interface::WriteDataFileCompleterBase::Reply(::fidl::DecodedMessage<WriteDataFileResponse> params) {
-  Paver::SetTransactionHeaderFor::WriteDataFileResponse(params);
+void DataSink::Interface::WriteDataFileCompleterBase::Reply(::fidl::DecodedMessage<WriteDataFileResponse> params) {
+  DataSink::SetTransactionHeaderFor::WriteDataFileResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
 
-void Paver::Interface::WipeVolumeCompleterBase::Reply(::llcpp::fuchsia::paver::Paver_WipeVolume_Result result) {
+void DataSink::Interface::WipeVolumeCompleterBase::Reply(::llcpp::fuchsia::paver::DataSink_WipeVolume_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WipeVolumeResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<WipeVolumeResponse*>(_write_bytes);
-  Paver::SetTransactionHeaderFor::WipeVolumeResponse(
+  DataSink::SetTransactionHeaderFor::WipeVolumeResponse(
       ::fidl::DecodedMessage<WipeVolumeResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               WipeVolumeResponse::PrimarySize,
@@ -2242,23 +2330,23 @@ void Paver::Interface::WipeVolumeCompleterBase::Reply(::llcpp::fuchsia::paver::P
   ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(WipeVolumeResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<WipeVolumeResponse>(std::move(_response_bytes)));
 }
-void Paver::Interface::WipeVolumeCompleterBase::ReplySuccess(::zx::channel volume) {
-  Paver_WipeVolume_Response response;
+void DataSink::Interface::WipeVolumeCompleterBase::ReplySuccess(::zx::channel volume) {
+  DataSink_WipeVolume_Response response;
   response.volume = std::move(volume);
 
-  Reply(Paver_WipeVolume_Result::WithResponse(&response));
+  Reply(DataSink_WipeVolume_Result::WithResponse(&response));
 }
-void Paver::Interface::WipeVolumeCompleterBase::ReplyError(int32_t error) {
-  Reply(Paver_WipeVolume_Result::WithErr(&error));
+void DataSink::Interface::WipeVolumeCompleterBase::ReplyError(int32_t error) {
+  Reply(DataSink_WipeVolume_Result::WithErr(&error));
 }
 
-void Paver::Interface::WipeVolumeCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::Paver_WipeVolume_Result result) {
+void DataSink::Interface::WipeVolumeCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::DataSink_WipeVolume_Result result) {
   if (_buffer.capacity() < WipeVolumeResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
   auto& _response = *reinterpret_cast<WipeVolumeResponse*>(_buffer.data());
-  Paver::SetTransactionHeaderFor::WipeVolumeResponse(
+  DataSink::SetTransactionHeaderFor::WipeVolumeResponse(
       ::fidl::DecodedMessage<WipeVolumeResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               WipeVolumeResponse::PrimarySize,
@@ -2267,24 +2355,1010 @@ void Paver::Interface::WipeVolumeCompleterBase::Reply(::fidl::BytePart _buffer, 
   _buffer.set_actual(sizeof(WipeVolumeResponse));
   CompleterBase::SendReply(::fidl::DecodedMessage<WipeVolumeResponse>(std::move(_buffer)));
 }
-void Paver::Interface::WipeVolumeCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::zx::channel volume) {
-  Paver_WipeVolume_Response response;
+void DataSink::Interface::WipeVolumeCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::zx::channel volume) {
+  DataSink_WipeVolume_Response response;
   response.volume = std::move(volume);
 
-  Reply(std::move(_buffer), Paver_WipeVolume_Result::WithResponse(&response));
+  Reply(std::move(_buffer), DataSink_WipeVolume_Result::WithResponse(&response));
 }
 
-void Paver::Interface::WipeVolumeCompleterBase::Reply(::fidl::DecodedMessage<WipeVolumeResponse> params) {
-  Paver::SetTransactionHeaderFor::WipeVolumeResponse(params);
+void DataSink::Interface::WipeVolumeCompleterBase::Reply(::fidl::DecodedMessage<WipeVolumeResponse> params) {
+  DataSink::SetTransactionHeaderFor::WipeVolumeResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
 
-void Paver::Interface::InitializePartitionTablesCompleterBase::Reply(int32_t status) {
+
+void DataSink::SetTransactionHeaderFor::ReadAssetRequest(const ::fidl::DecodedMessage<DataSink::ReadAssetRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDataSink_ReadAsset_GenOrdinal);
+}
+void DataSink::SetTransactionHeaderFor::ReadAssetResponse(const ::fidl::DecodedMessage<DataSink::ReadAssetResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDataSink_ReadAsset_GenOrdinal);
+}
+
+void DataSink::SetTransactionHeaderFor::WriteAssetRequest(const ::fidl::DecodedMessage<DataSink::WriteAssetRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDataSink_WriteAsset_GenOrdinal);
+}
+void DataSink::SetTransactionHeaderFor::WriteAssetResponse(const ::fidl::DecodedMessage<DataSink::WriteAssetResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDataSink_WriteAsset_GenOrdinal);
+}
+
+void DataSink::SetTransactionHeaderFor::WriteVolumesRequest(const ::fidl::DecodedMessage<DataSink::WriteVolumesRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDataSink_WriteVolumes_GenOrdinal);
+}
+void DataSink::SetTransactionHeaderFor::WriteVolumesResponse(const ::fidl::DecodedMessage<DataSink::WriteVolumesResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDataSink_WriteVolumes_GenOrdinal);
+}
+
+void DataSink::SetTransactionHeaderFor::WriteBootloaderRequest(const ::fidl::DecodedMessage<DataSink::WriteBootloaderRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDataSink_WriteBootloader_GenOrdinal);
+}
+void DataSink::SetTransactionHeaderFor::WriteBootloaderResponse(const ::fidl::DecodedMessage<DataSink::WriteBootloaderResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDataSink_WriteBootloader_GenOrdinal);
+}
+
+void DataSink::SetTransactionHeaderFor::WriteDataFileRequest(const ::fidl::DecodedMessage<DataSink::WriteDataFileRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDataSink_WriteDataFile_GenOrdinal);
+}
+void DataSink::SetTransactionHeaderFor::WriteDataFileResponse(const ::fidl::DecodedMessage<DataSink::WriteDataFileResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDataSink_WriteDataFile_GenOrdinal);
+}
+
+void DataSink::SetTransactionHeaderFor::WipeVolumeRequest(const ::fidl::DecodedMessage<DataSink::WipeVolumeRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDataSink_WipeVolume_GenOrdinal);
+}
+void DataSink::SetTransactionHeaderFor::WipeVolumeResponse(const ::fidl::DecodedMessage<DataSink::WipeVolumeResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDataSink_WipeVolume_GenOrdinal);
+}
+
+namespace {
+
+[[maybe_unused]]
+constexpr uint64_t kDynamicDataSink_ReadAsset_Ordinal = 0x5726c2ad00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDynamicDataSink_ReadAsset_GenOrdinal = 0x125a23e561007898lu;
+extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkReadAssetRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkReadAssetResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkReadAssetResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kDynamicDataSink_WriteAsset_Ordinal = 0x60e03b7200000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDynamicDataSink_WriteAsset_GenOrdinal = 0x516839ce76c4d0a9lu;
+extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWriteAssetRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWriteAssetResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWriteAssetResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kDynamicDataSink_WriteVolumes_Ordinal = 0x5df348af00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDynamicDataSink_WriteVolumes_GenOrdinal = 0x5ee32c861d0259dflu;
+extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWriteVolumesRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWriteVolumesResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWriteVolumesResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kDynamicDataSink_WriteBootloader_Ordinal = 0x7d89106a00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDynamicDataSink_WriteBootloader_GenOrdinal = 0x647f7011b9521b5lu;
+extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWriteBootloaderRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWriteBootloaderResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWriteBootloaderResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kDynamicDataSink_WriteDataFile_Ordinal = 0x7c0cf22700000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDynamicDataSink_WriteDataFile_GenOrdinal = 0x6ce95417166b4f56lu;
+extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWriteDataFileRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWriteDataFileResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWriteDataFileResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kDynamicDataSink_WipeVolume_Ordinal = 0x6ab81ba00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDynamicDataSink_WipeVolume_GenOrdinal = 0x250dfc2575c27f6clu;
+extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWipeVolumeRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWipeVolumeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWipeVolumeResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kDynamicDataSink_InitializePartitionTables_Ordinal = 0x6c2391d400000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDynamicDataSink_InitializePartitionTables_GenOrdinal = 0x4c798b3813ea9f7elu;
+extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkInitializePartitionTablesRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkInitializePartitionTablesResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkInitializePartitionTablesResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kDynamicDataSink_WipePartitionTables_Ordinal = 0x5e89186e00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDynamicDataSink_WipePartitionTables_GenOrdinal = 0x797c0ebeedaf2cclu;
+extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWipePartitionTablesRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWipePartitionTablesResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWipePartitionTablesResponseTable;
+
+}  // namespace
+template <>
+DynamicDataSink::ResultOf::ReadAsset_Impl<DynamicDataSink::ReadAssetResponse>::ReadAsset_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReadAssetRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, ReadAssetRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<ReadAssetRequest*>(_write_bytes);
+  _request.configuration = std::move(configuration);
+  _request.asset = std::move(asset);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(ReadAssetRequest));
+  ::fidl::DecodedMessage<ReadAssetRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      DynamicDataSink::InPlace::ReadAsset(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
+}
+
+DynamicDataSink::ResultOf::ReadAsset DynamicDataSink::SyncClient::ReadAsset(::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset) {
+    return ResultOf::ReadAsset(::zx::unowned_channel(this->channel_), std::move(configuration), std::move(asset));
+}
+
+DynamicDataSink::ResultOf::ReadAsset DynamicDataSink::Call::ReadAsset(::zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset) {
+  return ResultOf::ReadAsset(std::move(_client_end), std::move(configuration), std::move(asset));
+}
+
+template <>
+DynamicDataSink::UnownedResultOf::ReadAsset_Impl<DynamicDataSink::ReadAssetResponse>::ReadAsset_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < ReadAssetRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<ReadAssetResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  memset(_request_buffer.data(), 0, ReadAssetRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<ReadAssetRequest*>(_request_buffer.data());
+  _request.configuration = std::move(configuration);
+  _request.asset = std::move(asset);
+  _request_buffer.set_actual(sizeof(ReadAssetRequest));
+  ::fidl::DecodedMessage<ReadAssetRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      DynamicDataSink::InPlace::ReadAsset(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
+}
+
+DynamicDataSink::UnownedResultOf::ReadAsset DynamicDataSink::SyncClient::ReadAsset(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::ReadAsset(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(configuration), std::move(asset), std::move(_response_buffer));
+}
+
+DynamicDataSink::UnownedResultOf::ReadAsset DynamicDataSink::Call::ReadAsset(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::ReadAsset(std::move(_client_end), std::move(_request_buffer), std::move(configuration), std::move(asset), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<DynamicDataSink::ReadAssetResponse> DynamicDataSink::InPlace::ReadAsset(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReadAssetRequest> params, ::fidl::BytePart response_buffer) {
+  DynamicDataSink::SetTransactionHeaderFor::ReadAssetRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<DynamicDataSink::ReadAssetResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<ReadAssetRequest, ReadAssetResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<DynamicDataSink::ReadAssetResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+template <>
+DynamicDataSink::ResultOf::WriteAsset_Impl<DynamicDataSink::WriteAssetResponse>::WriteAsset_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteAssetRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, WriteAssetRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<WriteAssetRequest*>(_write_bytes);
+  _request.configuration = std::move(configuration);
+  _request.asset = std::move(asset);
+  _request.payload = std::move(payload);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(WriteAssetRequest));
+  ::fidl::DecodedMessage<WriteAssetRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      DynamicDataSink::InPlace::WriteAsset(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
+}
+
+DynamicDataSink::ResultOf::WriteAsset DynamicDataSink::SyncClient::WriteAsset(::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload) {
+    return ResultOf::WriteAsset(::zx::unowned_channel(this->channel_), std::move(configuration), std::move(asset), std::move(payload));
+}
+
+DynamicDataSink::ResultOf::WriteAsset DynamicDataSink::Call::WriteAsset(::zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload) {
+  return ResultOf::WriteAsset(std::move(_client_end), std::move(configuration), std::move(asset), std::move(payload));
+}
+
+template <>
+DynamicDataSink::UnownedResultOf::WriteAsset_Impl<DynamicDataSink::WriteAssetResponse>::WriteAsset_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < WriteAssetRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<WriteAssetResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  memset(_request_buffer.data(), 0, WriteAssetRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<WriteAssetRequest*>(_request_buffer.data());
+  _request.configuration = std::move(configuration);
+  _request.asset = std::move(asset);
+  _request.payload = std::move(payload);
+  _request_buffer.set_actual(sizeof(WriteAssetRequest));
+  ::fidl::DecodedMessage<WriteAssetRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      DynamicDataSink::InPlace::WriteAsset(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
+}
+
+DynamicDataSink::UnownedResultOf::WriteAsset DynamicDataSink::SyncClient::WriteAsset(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::WriteAsset(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(configuration), std::move(asset), std::move(payload), std::move(_response_buffer));
+}
+
+DynamicDataSink::UnownedResultOf::WriteAsset DynamicDataSink::Call::WriteAsset(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::WriteAsset(std::move(_client_end), std::move(_request_buffer), std::move(configuration), std::move(asset), std::move(payload), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<DynamicDataSink::WriteAssetResponse> DynamicDataSink::InPlace::WriteAsset(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteAssetRequest> params, ::fidl::BytePart response_buffer) {
+  DynamicDataSink::SetTransactionHeaderFor::WriteAssetRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<DynamicDataSink::WriteAssetResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<WriteAssetRequest, WriteAssetResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<DynamicDataSink::WriteAssetResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+template <>
+DynamicDataSink::ResultOf::WriteVolumes_Impl<DynamicDataSink::WriteVolumesResponse>::WriteVolumes_Impl(::zx::unowned_channel _client_end, ::zx::channel payload) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteVolumesRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, WriteVolumesRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<WriteVolumesRequest*>(_write_bytes);
+  _request.payload = std::move(payload);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(WriteVolumesRequest));
+  ::fidl::DecodedMessage<WriteVolumesRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      DynamicDataSink::InPlace::WriteVolumes(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
+}
+
+DynamicDataSink::ResultOf::WriteVolumes DynamicDataSink::SyncClient::WriteVolumes(::zx::channel payload) {
+    return ResultOf::WriteVolumes(::zx::unowned_channel(this->channel_), std::move(payload));
+}
+
+DynamicDataSink::ResultOf::WriteVolumes DynamicDataSink::Call::WriteVolumes(::zx::unowned_channel _client_end, ::zx::channel payload) {
+  return ResultOf::WriteVolumes(std::move(_client_end), std::move(payload));
+}
+
+template <>
+DynamicDataSink::UnownedResultOf::WriteVolumes_Impl<DynamicDataSink::WriteVolumesResponse>::WriteVolumes_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel payload, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < WriteVolumesRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<WriteVolumesResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  memset(_request_buffer.data(), 0, WriteVolumesRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<WriteVolumesRequest*>(_request_buffer.data());
+  _request.payload = std::move(payload);
+  _request_buffer.set_actual(sizeof(WriteVolumesRequest));
+  ::fidl::DecodedMessage<WriteVolumesRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      DynamicDataSink::InPlace::WriteVolumes(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
+}
+
+DynamicDataSink::UnownedResultOf::WriteVolumes DynamicDataSink::SyncClient::WriteVolumes(::fidl::BytePart _request_buffer, ::zx::channel payload, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::WriteVolumes(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(payload), std::move(_response_buffer));
+}
+
+DynamicDataSink::UnownedResultOf::WriteVolumes DynamicDataSink::Call::WriteVolumes(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel payload, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::WriteVolumes(std::move(_client_end), std::move(_request_buffer), std::move(payload), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<DynamicDataSink::WriteVolumesResponse> DynamicDataSink::InPlace::WriteVolumes(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteVolumesRequest> params, ::fidl::BytePart response_buffer) {
+  DynamicDataSink::SetTransactionHeaderFor::WriteVolumesRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<DynamicDataSink::WriteVolumesResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<WriteVolumesRequest, WriteVolumesResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<DynamicDataSink::WriteVolumesResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+template <>
+DynamicDataSink::ResultOf::WriteBootloader_Impl<DynamicDataSink::WriteBootloaderResponse>::WriteBootloader_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::mem::Buffer payload) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteBootloaderRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, WriteBootloaderRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<WriteBootloaderRequest*>(_write_bytes);
+  _request.payload = std::move(payload);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(WriteBootloaderRequest));
+  ::fidl::DecodedMessage<WriteBootloaderRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      DynamicDataSink::InPlace::WriteBootloader(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
+}
+
+DynamicDataSink::ResultOf::WriteBootloader DynamicDataSink::SyncClient::WriteBootloader(::llcpp::fuchsia::mem::Buffer payload) {
+    return ResultOf::WriteBootloader(::zx::unowned_channel(this->channel_), std::move(payload));
+}
+
+DynamicDataSink::ResultOf::WriteBootloader DynamicDataSink::Call::WriteBootloader(::zx::unowned_channel _client_end, ::llcpp::fuchsia::mem::Buffer payload) {
+  return ResultOf::WriteBootloader(std::move(_client_end), std::move(payload));
+}
+
+template <>
+DynamicDataSink::UnownedResultOf::WriteBootloader_Impl<DynamicDataSink::WriteBootloaderResponse>::WriteBootloader_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < WriteBootloaderRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<WriteBootloaderResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  memset(_request_buffer.data(), 0, WriteBootloaderRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<WriteBootloaderRequest*>(_request_buffer.data());
+  _request.payload = std::move(payload);
+  _request_buffer.set_actual(sizeof(WriteBootloaderRequest));
+  ::fidl::DecodedMessage<WriteBootloaderRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      DynamicDataSink::InPlace::WriteBootloader(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
+}
+
+DynamicDataSink::UnownedResultOf::WriteBootloader DynamicDataSink::SyncClient::WriteBootloader(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::WriteBootloader(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(payload), std::move(_response_buffer));
+}
+
+DynamicDataSink::UnownedResultOf::WriteBootloader DynamicDataSink::Call::WriteBootloader(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::WriteBootloader(std::move(_client_end), std::move(_request_buffer), std::move(payload), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<DynamicDataSink::WriteBootloaderResponse> DynamicDataSink::InPlace::WriteBootloader(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteBootloaderRequest> params, ::fidl::BytePart response_buffer) {
+  DynamicDataSink::SetTransactionHeaderFor::WriteBootloaderRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<DynamicDataSink::WriteBootloaderResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<WriteBootloaderRequest, WriteBootloaderResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<DynamicDataSink::WriteBootloaderResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+template <>
+DynamicDataSink::ResultOf::WriteDataFile_Impl<DynamicDataSink::WriteDataFileResponse>::WriteDataFile_Impl(::zx::unowned_channel _client_end, ::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteDataFileRequest, ::fidl::MessageDirection::kSending>();
+  std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
+  auto& _write_bytes_array = *_write_bytes_boxed;
+  WriteDataFileRequest _request = {};
+  _request.filename = std::move(filename);
+  _request.payload = std::move(payload);
+  auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<WriteDataFileRequest> _decoded_request = std::move(_linearize_result.message);
+  Super::SetResult(
+      DynamicDataSink::InPlace::WriteDataFile(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
+}
+
+DynamicDataSink::ResultOf::WriteDataFile DynamicDataSink::SyncClient::WriteDataFile(::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload) {
+    return ResultOf::WriteDataFile(::zx::unowned_channel(this->channel_), std::move(filename), std::move(payload));
+}
+
+DynamicDataSink::ResultOf::WriteDataFile DynamicDataSink::Call::WriteDataFile(::zx::unowned_channel _client_end, ::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload) {
+  return ResultOf::WriteDataFile(std::move(_client_end), std::move(filename), std::move(payload));
+}
+
+template <>
+DynamicDataSink::UnownedResultOf::WriteDataFile_Impl<DynamicDataSink::WriteDataFileResponse>::WriteDataFile_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < WriteDataFileRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<WriteDataFileResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  WriteDataFileRequest _request = {};
+  _request.filename = std::move(filename);
+  _request.payload = std::move(payload);
+  auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<WriteDataFileRequest> _decoded_request = std::move(_linearize_result.message);
+  Super::SetResult(
+      DynamicDataSink::InPlace::WriteDataFile(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
+}
+
+DynamicDataSink::UnownedResultOf::WriteDataFile DynamicDataSink::SyncClient::WriteDataFile(::fidl::BytePart _request_buffer, ::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::WriteDataFile(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(filename), std::move(payload), std::move(_response_buffer));
+}
+
+DynamicDataSink::UnownedResultOf::WriteDataFile DynamicDataSink::Call::WriteDataFile(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::WriteDataFile(std::move(_client_end), std::move(_request_buffer), std::move(filename), std::move(payload), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<DynamicDataSink::WriteDataFileResponse> DynamicDataSink::InPlace::WriteDataFile(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteDataFileRequest> params, ::fidl::BytePart response_buffer) {
+  DynamicDataSink::SetTransactionHeaderFor::WriteDataFileRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<DynamicDataSink::WriteDataFileResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<WriteDataFileRequest, WriteDataFileResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<DynamicDataSink::WriteDataFileResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+template <>
+DynamicDataSink::ResultOf::WipeVolume_Impl<DynamicDataSink::WipeVolumeResponse>::WipeVolume_Impl(::zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WipeVolumeRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, WipeVolumeRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(WipeVolumeRequest));
+  ::fidl::DecodedMessage<WipeVolumeRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      DynamicDataSink::InPlace::WipeVolume(std::move(_client_end), Super::response_buffer()));
+}
+
+DynamicDataSink::ResultOf::WipeVolume DynamicDataSink::SyncClient::WipeVolume() {
+    return ResultOf::WipeVolume(::zx::unowned_channel(this->channel_));
+}
+
+DynamicDataSink::ResultOf::WipeVolume DynamicDataSink::Call::WipeVolume(::zx::unowned_channel _client_end) {
+  return ResultOf::WipeVolume(std::move(_client_end));
+}
+
+template <>
+DynamicDataSink::UnownedResultOf::WipeVolume_Impl<DynamicDataSink::WipeVolumeResponse>::WipeVolume_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(WipeVolumeRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, WipeVolumeRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(WipeVolumeRequest));
+  ::fidl::DecodedMessage<WipeVolumeRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      DynamicDataSink::InPlace::WipeVolume(std::move(_client_end), std::move(_response_buffer)));
+}
+
+DynamicDataSink::UnownedResultOf::WipeVolume DynamicDataSink::SyncClient::WipeVolume(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::WipeVolume(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+DynamicDataSink::UnownedResultOf::WipeVolume DynamicDataSink::Call::WipeVolume(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::WipeVolume(std::move(_client_end), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<DynamicDataSink::WipeVolumeResponse> DynamicDataSink::InPlace::WipeVolume(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(WipeVolumeRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<WipeVolumeRequest> params(std::move(_request_buffer));
+  DynamicDataSink::SetTransactionHeaderFor::WipeVolumeRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<DynamicDataSink::WipeVolumeResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<WipeVolumeRequest, WipeVolumeResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<DynamicDataSink::WipeVolumeResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+template <>
+DynamicDataSink::ResultOf::InitializePartitionTables_Impl<DynamicDataSink::InitializePartitionTablesResponse>::InitializePartitionTables_Impl(::zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<InitializePartitionTablesRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, InitializePartitionTablesRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(InitializePartitionTablesRequest));
+  ::fidl::DecodedMessage<InitializePartitionTablesRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      DynamicDataSink::InPlace::InitializePartitionTables(std::move(_client_end), Super::response_buffer()));
+}
+
+DynamicDataSink::ResultOf::InitializePartitionTables DynamicDataSink::SyncClient::InitializePartitionTables() {
+    return ResultOf::InitializePartitionTables(::zx::unowned_channel(this->channel_));
+}
+
+DynamicDataSink::ResultOf::InitializePartitionTables DynamicDataSink::Call::InitializePartitionTables(::zx::unowned_channel _client_end) {
+  return ResultOf::InitializePartitionTables(std::move(_client_end));
+}
+
+template <>
+DynamicDataSink::UnownedResultOf::InitializePartitionTables_Impl<DynamicDataSink::InitializePartitionTablesResponse>::InitializePartitionTables_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(InitializePartitionTablesRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, InitializePartitionTablesRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(InitializePartitionTablesRequest));
+  ::fidl::DecodedMessage<InitializePartitionTablesRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      DynamicDataSink::InPlace::InitializePartitionTables(std::move(_client_end), std::move(_response_buffer)));
+}
+
+DynamicDataSink::UnownedResultOf::InitializePartitionTables DynamicDataSink::SyncClient::InitializePartitionTables(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::InitializePartitionTables(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+DynamicDataSink::UnownedResultOf::InitializePartitionTables DynamicDataSink::Call::InitializePartitionTables(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::InitializePartitionTables(std::move(_client_end), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<DynamicDataSink::InitializePartitionTablesResponse> DynamicDataSink::InPlace::InitializePartitionTables(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(InitializePartitionTablesRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<InitializePartitionTablesRequest> params(std::move(_request_buffer));
+  DynamicDataSink::SetTransactionHeaderFor::InitializePartitionTablesRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<DynamicDataSink::InitializePartitionTablesResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<InitializePartitionTablesRequest, InitializePartitionTablesResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<DynamicDataSink::InitializePartitionTablesResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+template <>
+DynamicDataSink::ResultOf::WipePartitionTables_Impl<DynamicDataSink::WipePartitionTablesResponse>::WipePartitionTables_Impl(::zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WipePartitionTablesRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, WipePartitionTablesRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(WipePartitionTablesRequest));
+  ::fidl::DecodedMessage<WipePartitionTablesRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      DynamicDataSink::InPlace::WipePartitionTables(std::move(_client_end), Super::response_buffer()));
+}
+
+DynamicDataSink::ResultOf::WipePartitionTables DynamicDataSink::SyncClient::WipePartitionTables() {
+    return ResultOf::WipePartitionTables(::zx::unowned_channel(this->channel_));
+}
+
+DynamicDataSink::ResultOf::WipePartitionTables DynamicDataSink::Call::WipePartitionTables(::zx::unowned_channel _client_end) {
+  return ResultOf::WipePartitionTables(std::move(_client_end));
+}
+
+template <>
+DynamicDataSink::UnownedResultOf::WipePartitionTables_Impl<DynamicDataSink::WipePartitionTablesResponse>::WipePartitionTables_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(WipePartitionTablesRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, WipePartitionTablesRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(WipePartitionTablesRequest));
+  ::fidl::DecodedMessage<WipePartitionTablesRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      DynamicDataSink::InPlace::WipePartitionTables(std::move(_client_end), std::move(_response_buffer)));
+}
+
+DynamicDataSink::UnownedResultOf::WipePartitionTables DynamicDataSink::SyncClient::WipePartitionTables(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::WipePartitionTables(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+DynamicDataSink::UnownedResultOf::WipePartitionTables DynamicDataSink::Call::WipePartitionTables(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::WipePartitionTables(std::move(_client_end), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<DynamicDataSink::WipePartitionTablesResponse> DynamicDataSink::InPlace::WipePartitionTables(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(WipePartitionTablesRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<WipePartitionTablesRequest> params(std::move(_request_buffer));
+  DynamicDataSink::SetTransactionHeaderFor::WipePartitionTablesRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<DynamicDataSink::WipePartitionTablesResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<WipePartitionTablesRequest, WipePartitionTablesResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<DynamicDataSink::WipePartitionTablesResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+
+bool DynamicDataSink::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  if (msg->num_bytes < sizeof(fidl_message_header_t)) {
+    zx_handle_close_many(msg->handles, msg->num_handles);
+    txn->Close(ZX_ERR_INVALID_ARGS);
+    return true;
+  }
+  fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  zx_status_t status = fidl_validate_txn_header(hdr);
+  if (status != ZX_OK) {
+    txn->Close(status);
+    return true;
+  }
+  switch (hdr->ordinal) {
+    case kDynamicDataSink_ReadAsset_Ordinal:
+    case kDynamicDataSink_ReadAsset_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<ReadAssetRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->ReadAsset(std::move(message->configuration), std::move(message->asset),
+          Interface::ReadAssetCompleter::Sync(txn));
+      return true;
+    }
+    case kDynamicDataSink_WriteAsset_Ordinal:
+    case kDynamicDataSink_WriteAsset_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<WriteAssetRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->WriteAsset(std::move(message->configuration), std::move(message->asset), std::move(message->payload),
+          Interface::WriteAssetCompleter::Sync(txn));
+      return true;
+    }
+    case kDynamicDataSink_WriteVolumes_Ordinal:
+    case kDynamicDataSink_WriteVolumes_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<WriteVolumesRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->WriteVolumes(std::move(message->payload),
+          Interface::WriteVolumesCompleter::Sync(txn));
+      return true;
+    }
+    case kDynamicDataSink_WriteBootloader_Ordinal:
+    case kDynamicDataSink_WriteBootloader_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<WriteBootloaderRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->WriteBootloader(std::move(message->payload),
+          Interface::WriteBootloaderCompleter::Sync(txn));
+      return true;
+    }
+    case kDynamicDataSink_WriteDataFile_Ordinal:
+    case kDynamicDataSink_WriteDataFile_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<WriteDataFileRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->WriteDataFile(std::move(message->filename), std::move(message->payload),
+          Interface::WriteDataFileCompleter::Sync(txn));
+      return true;
+    }
+    case kDynamicDataSink_WipeVolume_Ordinal:
+    case kDynamicDataSink_WipeVolume_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<WipeVolumeRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->WipeVolume(
+          Interface::WipeVolumeCompleter::Sync(txn));
+      return true;
+    }
+    case kDynamicDataSink_InitializePartitionTables_Ordinal:
+    case kDynamicDataSink_InitializePartitionTables_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<InitializePartitionTablesRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->InitializePartitionTables(
+          Interface::InitializePartitionTablesCompleter::Sync(txn));
+      return true;
+    }
+    case kDynamicDataSink_WipePartitionTables_Ordinal:
+    case kDynamicDataSink_WipePartitionTables_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<WipePartitionTablesRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->WipePartitionTables(
+          Interface::WipePartitionTablesCompleter::Sync(txn));
+      return true;
+    }
+    default: {
+      return false;
+    }
+  }
+}
+
+bool DynamicDataSink::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  bool found = TryDispatch(impl, msg, txn);
+  if (!found) {
+    zx_handle_close_many(msg->handles, msg->num_handles);
+    txn->Close(ZX_ERR_NOT_SUPPORTED);
+  }
+  return found;
+}
+
+
+void DynamicDataSink::Interface::ReadAssetCompleterBase::Reply(::llcpp::fuchsia::paver::DataSink_ReadAsset_Result result) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReadAssetResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<ReadAssetResponse*>(_write_bytes);
+  DynamicDataSink::SetTransactionHeaderFor::ReadAssetResponse(
+      ::fidl::DecodedMessage<ReadAssetResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              ReadAssetResponse::PrimarySize,
+              ReadAssetResponse::PrimarySize)));
+  _response.result = std::move(result);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ReadAssetResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<ReadAssetResponse>(std::move(_response_bytes)));
+}
+void DynamicDataSink::Interface::ReadAssetCompleterBase::ReplySuccess(::llcpp::fuchsia::mem::Buffer asset) {
+  DataSink_ReadAsset_Response response;
+  response.asset = std::move(asset);
+
+  Reply(DataSink_ReadAsset_Result::WithResponse(&response));
+}
+void DynamicDataSink::Interface::ReadAssetCompleterBase::ReplyError(int32_t error) {
+  Reply(DataSink_ReadAsset_Result::WithErr(&error));
+}
+
+void DynamicDataSink::Interface::ReadAssetCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::DataSink_ReadAsset_Result result) {
+  if (_buffer.capacity() < ReadAssetResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<ReadAssetResponse*>(_buffer.data());
+  DynamicDataSink::SetTransactionHeaderFor::ReadAssetResponse(
+      ::fidl::DecodedMessage<ReadAssetResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              ReadAssetResponse::PrimarySize,
+              ReadAssetResponse::PrimarySize)));
+  _response.result = std::move(result);
+  _buffer.set_actual(sizeof(ReadAssetResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<ReadAssetResponse>(std::move(_buffer)));
+}
+void DynamicDataSink::Interface::ReadAssetCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::mem::Buffer asset) {
+  DataSink_ReadAsset_Response response;
+  response.asset = std::move(asset);
+
+  Reply(std::move(_buffer), DataSink_ReadAsset_Result::WithResponse(&response));
+}
+
+void DynamicDataSink::Interface::ReadAssetCompleterBase::Reply(::fidl::DecodedMessage<ReadAssetResponse> params) {
+  DynamicDataSink::SetTransactionHeaderFor::ReadAssetResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void DynamicDataSink::Interface::WriteAssetCompleterBase::Reply(int32_t status) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteAssetResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<WriteAssetResponse*>(_write_bytes);
+  DynamicDataSink::SetTransactionHeaderFor::WriteAssetResponse(
+      ::fidl::DecodedMessage<WriteAssetResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              WriteAssetResponse::PrimarySize,
+              WriteAssetResponse::PrimarySize)));
+  _response.status = std::move(status);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(WriteAssetResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<WriteAssetResponse>(std::move(_response_bytes)));
+}
+
+void DynamicDataSink::Interface::WriteAssetCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
+  if (_buffer.capacity() < WriteAssetResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<WriteAssetResponse*>(_buffer.data());
+  DynamicDataSink::SetTransactionHeaderFor::WriteAssetResponse(
+      ::fidl::DecodedMessage<WriteAssetResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              WriteAssetResponse::PrimarySize,
+              WriteAssetResponse::PrimarySize)));
+  _response.status = std::move(status);
+  _buffer.set_actual(sizeof(WriteAssetResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<WriteAssetResponse>(std::move(_buffer)));
+}
+
+void DynamicDataSink::Interface::WriteAssetCompleterBase::Reply(::fidl::DecodedMessage<WriteAssetResponse> params) {
+  DynamicDataSink::SetTransactionHeaderFor::WriteAssetResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void DynamicDataSink::Interface::WriteVolumesCompleterBase::Reply(int32_t status) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteVolumesResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<WriteVolumesResponse*>(_write_bytes);
+  DynamicDataSink::SetTransactionHeaderFor::WriteVolumesResponse(
+      ::fidl::DecodedMessage<WriteVolumesResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              WriteVolumesResponse::PrimarySize,
+              WriteVolumesResponse::PrimarySize)));
+  _response.status = std::move(status);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(WriteVolumesResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<WriteVolumesResponse>(std::move(_response_bytes)));
+}
+
+void DynamicDataSink::Interface::WriteVolumesCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
+  if (_buffer.capacity() < WriteVolumesResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<WriteVolumesResponse*>(_buffer.data());
+  DynamicDataSink::SetTransactionHeaderFor::WriteVolumesResponse(
+      ::fidl::DecodedMessage<WriteVolumesResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              WriteVolumesResponse::PrimarySize,
+              WriteVolumesResponse::PrimarySize)));
+  _response.status = std::move(status);
+  _buffer.set_actual(sizeof(WriteVolumesResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<WriteVolumesResponse>(std::move(_buffer)));
+}
+
+void DynamicDataSink::Interface::WriteVolumesCompleterBase::Reply(::fidl::DecodedMessage<WriteVolumesResponse> params) {
+  DynamicDataSink::SetTransactionHeaderFor::WriteVolumesResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void DynamicDataSink::Interface::WriteBootloaderCompleterBase::Reply(int32_t status) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteBootloaderResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<WriteBootloaderResponse*>(_write_bytes);
+  DynamicDataSink::SetTransactionHeaderFor::WriteBootloaderResponse(
+      ::fidl::DecodedMessage<WriteBootloaderResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              WriteBootloaderResponse::PrimarySize,
+              WriteBootloaderResponse::PrimarySize)));
+  _response.status = std::move(status);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(WriteBootloaderResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<WriteBootloaderResponse>(std::move(_response_bytes)));
+}
+
+void DynamicDataSink::Interface::WriteBootloaderCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
+  if (_buffer.capacity() < WriteBootloaderResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<WriteBootloaderResponse*>(_buffer.data());
+  DynamicDataSink::SetTransactionHeaderFor::WriteBootloaderResponse(
+      ::fidl::DecodedMessage<WriteBootloaderResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              WriteBootloaderResponse::PrimarySize,
+              WriteBootloaderResponse::PrimarySize)));
+  _response.status = std::move(status);
+  _buffer.set_actual(sizeof(WriteBootloaderResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<WriteBootloaderResponse>(std::move(_buffer)));
+}
+
+void DynamicDataSink::Interface::WriteBootloaderCompleterBase::Reply(::fidl::DecodedMessage<WriteBootloaderResponse> params) {
+  DynamicDataSink::SetTransactionHeaderFor::WriteBootloaderResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void DynamicDataSink::Interface::WriteDataFileCompleterBase::Reply(int32_t status) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteDataFileResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<WriteDataFileResponse*>(_write_bytes);
+  DynamicDataSink::SetTransactionHeaderFor::WriteDataFileResponse(
+      ::fidl::DecodedMessage<WriteDataFileResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              WriteDataFileResponse::PrimarySize,
+              WriteDataFileResponse::PrimarySize)));
+  _response.status = std::move(status);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(WriteDataFileResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<WriteDataFileResponse>(std::move(_response_bytes)));
+}
+
+void DynamicDataSink::Interface::WriteDataFileCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
+  if (_buffer.capacity() < WriteDataFileResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<WriteDataFileResponse*>(_buffer.data());
+  DynamicDataSink::SetTransactionHeaderFor::WriteDataFileResponse(
+      ::fidl::DecodedMessage<WriteDataFileResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              WriteDataFileResponse::PrimarySize,
+              WriteDataFileResponse::PrimarySize)));
+  _response.status = std::move(status);
+  _buffer.set_actual(sizeof(WriteDataFileResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<WriteDataFileResponse>(std::move(_buffer)));
+}
+
+void DynamicDataSink::Interface::WriteDataFileCompleterBase::Reply(::fidl::DecodedMessage<WriteDataFileResponse> params) {
+  DynamicDataSink::SetTransactionHeaderFor::WriteDataFileResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void DynamicDataSink::Interface::WipeVolumeCompleterBase::Reply(::llcpp::fuchsia::paver::DataSink_WipeVolume_Result result) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WipeVolumeResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<WipeVolumeResponse*>(_write_bytes);
+  DynamicDataSink::SetTransactionHeaderFor::WipeVolumeResponse(
+      ::fidl::DecodedMessage<WipeVolumeResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              WipeVolumeResponse::PrimarySize,
+              WipeVolumeResponse::PrimarySize)));
+  _response.result = std::move(result);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(WipeVolumeResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<WipeVolumeResponse>(std::move(_response_bytes)));
+}
+void DynamicDataSink::Interface::WipeVolumeCompleterBase::ReplySuccess(::zx::channel volume) {
+  DataSink_WipeVolume_Response response;
+  response.volume = std::move(volume);
+
+  Reply(DataSink_WipeVolume_Result::WithResponse(&response));
+}
+void DynamicDataSink::Interface::WipeVolumeCompleterBase::ReplyError(int32_t error) {
+  Reply(DataSink_WipeVolume_Result::WithErr(&error));
+}
+
+void DynamicDataSink::Interface::WipeVolumeCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::DataSink_WipeVolume_Result result) {
+  if (_buffer.capacity() < WipeVolumeResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<WipeVolumeResponse*>(_buffer.data());
+  DynamicDataSink::SetTransactionHeaderFor::WipeVolumeResponse(
+      ::fidl::DecodedMessage<WipeVolumeResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              WipeVolumeResponse::PrimarySize,
+              WipeVolumeResponse::PrimarySize)));
+  _response.result = std::move(result);
+  _buffer.set_actual(sizeof(WipeVolumeResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<WipeVolumeResponse>(std::move(_buffer)));
+}
+void DynamicDataSink::Interface::WipeVolumeCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::zx::channel volume) {
+  DataSink_WipeVolume_Response response;
+  response.volume = std::move(volume);
+
+  Reply(std::move(_buffer), DataSink_WipeVolume_Result::WithResponse(&response));
+}
+
+void DynamicDataSink::Interface::WipeVolumeCompleterBase::Reply(::fidl::DecodedMessage<WipeVolumeResponse> params) {
+  DynamicDataSink::SetTransactionHeaderFor::WipeVolumeResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void DynamicDataSink::Interface::InitializePartitionTablesCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<InitializePartitionTablesResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<InitializePartitionTablesResponse*>(_write_bytes);
-  Paver::SetTransactionHeaderFor::InitializePartitionTablesResponse(
+  DynamicDataSink::SetTransactionHeaderFor::InitializePartitionTablesResponse(
       ::fidl::DecodedMessage<InitializePartitionTablesResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               InitializePartitionTablesResponse::PrimarySize,
@@ -2294,13 +3368,13 @@ void Paver::Interface::InitializePartitionTablesCompleterBase::Reply(int32_t sta
   CompleterBase::SendReply(::fidl::DecodedMessage<InitializePartitionTablesResponse>(std::move(_response_bytes)));
 }
 
-void Paver::Interface::InitializePartitionTablesCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
+void DynamicDataSink::Interface::InitializePartitionTablesCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
   if (_buffer.capacity() < InitializePartitionTablesResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
   auto& _response = *reinterpret_cast<InitializePartitionTablesResponse*>(_buffer.data());
-  Paver::SetTransactionHeaderFor::InitializePartitionTablesResponse(
+  DynamicDataSink::SetTransactionHeaderFor::InitializePartitionTablesResponse(
       ::fidl::DecodedMessage<InitializePartitionTablesResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               InitializePartitionTablesResponse::PrimarySize,
@@ -2310,17 +3384,17 @@ void Paver::Interface::InitializePartitionTablesCompleterBase::Reply(::fidl::Byt
   CompleterBase::SendReply(::fidl::DecodedMessage<InitializePartitionTablesResponse>(std::move(_buffer)));
 }
 
-void Paver::Interface::InitializePartitionTablesCompleterBase::Reply(::fidl::DecodedMessage<InitializePartitionTablesResponse> params) {
-  Paver::SetTransactionHeaderFor::InitializePartitionTablesResponse(params);
+void DynamicDataSink::Interface::InitializePartitionTablesCompleterBase::Reply(::fidl::DecodedMessage<InitializePartitionTablesResponse> params) {
+  DynamicDataSink::SetTransactionHeaderFor::InitializePartitionTablesResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
 
-void Paver::Interface::WipePartitionTablesCompleterBase::Reply(int32_t status) {
+void DynamicDataSink::Interface::WipePartitionTablesCompleterBase::Reply(int32_t status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WipePartitionTablesResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
   auto& _response = *reinterpret_cast<WipePartitionTablesResponse*>(_write_bytes);
-  Paver::SetTransactionHeaderFor::WipePartitionTablesResponse(
+  DynamicDataSink::SetTransactionHeaderFor::WipePartitionTablesResponse(
       ::fidl::DecodedMessage<WipePartitionTablesResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               WipePartitionTablesResponse::PrimarySize,
@@ -2330,13 +3404,13 @@ void Paver::Interface::WipePartitionTablesCompleterBase::Reply(int32_t status) {
   CompleterBase::SendReply(::fidl::DecodedMessage<WipePartitionTablesResponse>(std::move(_response_bytes)));
 }
 
-void Paver::Interface::WipePartitionTablesCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
+void DynamicDataSink::Interface::WipePartitionTablesCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
   if (_buffer.capacity() < WipePartitionTablesResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
   auto& _response = *reinterpret_cast<WipePartitionTablesResponse*>(_buffer.data());
-  Paver::SetTransactionHeaderFor::WipePartitionTablesResponse(
+  DynamicDataSink::SetTransactionHeaderFor::WipePartitionTablesResponse(
       ::fidl::DecodedMessage<WipePartitionTablesResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               WipePartitionTablesResponse::PrimarySize,
@@ -2346,109 +3420,67 @@ void Paver::Interface::WipePartitionTablesCompleterBase::Reply(::fidl::BytePart 
   CompleterBase::SendReply(::fidl::DecodedMessage<WipePartitionTablesResponse>(std::move(_buffer)));
 }
 
-void Paver::Interface::WipePartitionTablesCompleterBase::Reply(::fidl::DecodedMessage<WipePartitionTablesResponse> params) {
-  Paver::SetTransactionHeaderFor::WipePartitionTablesResponse(params);
+void DynamicDataSink::Interface::WipePartitionTablesCompleterBase::Reply(::fidl::DecodedMessage<WipePartitionTablesResponse> params) {
+  DynamicDataSink::SetTransactionHeaderFor::WipePartitionTablesResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
 
 
-void Paver::SetTransactionHeaderFor::InitializeAbrRequest(const ::fidl::DecodedMessage<Paver::InitializeAbrRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_InitializeAbr_GenOrdinal);
+void DynamicDataSink::SetTransactionHeaderFor::ReadAssetRequest(const ::fidl::DecodedMessage<DynamicDataSink::ReadAssetRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDynamicDataSink_ReadAsset_GenOrdinal);
 }
-void Paver::SetTransactionHeaderFor::InitializeAbrResponse(const ::fidl::DecodedMessage<Paver::InitializeAbrResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_InitializeAbr_GenOrdinal);
-}
-
-void Paver::SetTransactionHeaderFor::QueryActiveConfigurationRequest(const ::fidl::DecodedMessage<Paver::QueryActiveConfigurationRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_QueryActiveConfiguration_GenOrdinal);
-}
-void Paver::SetTransactionHeaderFor::QueryActiveConfigurationResponse(const ::fidl::DecodedMessage<Paver::QueryActiveConfigurationResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_QueryActiveConfiguration_GenOrdinal);
+void DynamicDataSink::SetTransactionHeaderFor::ReadAssetResponse(const ::fidl::DecodedMessage<DynamicDataSink::ReadAssetResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDynamicDataSink_ReadAsset_GenOrdinal);
 }
 
-void Paver::SetTransactionHeaderFor::QueryConfigurationStatusRequest(const ::fidl::DecodedMessage<Paver::QueryConfigurationStatusRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_QueryConfigurationStatus_GenOrdinal);
+void DynamicDataSink::SetTransactionHeaderFor::WriteAssetRequest(const ::fidl::DecodedMessage<DynamicDataSink::WriteAssetRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDynamicDataSink_WriteAsset_GenOrdinal);
 }
-void Paver::SetTransactionHeaderFor::QueryConfigurationStatusResponse(const ::fidl::DecodedMessage<Paver::QueryConfigurationStatusResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_QueryConfigurationStatus_GenOrdinal);
-}
-
-void Paver::SetTransactionHeaderFor::SetConfigurationActiveRequest(const ::fidl::DecodedMessage<Paver::SetConfigurationActiveRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_SetConfigurationActive_GenOrdinal);
-}
-void Paver::SetTransactionHeaderFor::SetConfigurationActiveResponse(const ::fidl::DecodedMessage<Paver::SetConfigurationActiveResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_SetConfigurationActive_GenOrdinal);
+void DynamicDataSink::SetTransactionHeaderFor::WriteAssetResponse(const ::fidl::DecodedMessage<DynamicDataSink::WriteAssetResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDynamicDataSink_WriteAsset_GenOrdinal);
 }
 
-void Paver::SetTransactionHeaderFor::SetConfigurationUnbootableRequest(const ::fidl::DecodedMessage<Paver::SetConfigurationUnbootableRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_SetConfigurationUnbootable_GenOrdinal);
+void DynamicDataSink::SetTransactionHeaderFor::WriteVolumesRequest(const ::fidl::DecodedMessage<DynamicDataSink::WriteVolumesRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDynamicDataSink_WriteVolumes_GenOrdinal);
 }
-void Paver::SetTransactionHeaderFor::SetConfigurationUnbootableResponse(const ::fidl::DecodedMessage<Paver::SetConfigurationUnbootableResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_SetConfigurationUnbootable_GenOrdinal);
-}
-
-void Paver::SetTransactionHeaderFor::SetActiveConfigurationHealthyRequest(const ::fidl::DecodedMessage<Paver::SetActiveConfigurationHealthyRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_SetActiveConfigurationHealthy_GenOrdinal);
-}
-void Paver::SetTransactionHeaderFor::SetActiveConfigurationHealthyResponse(const ::fidl::DecodedMessage<Paver::SetActiveConfigurationHealthyResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_SetActiveConfigurationHealthy_GenOrdinal);
+void DynamicDataSink::SetTransactionHeaderFor::WriteVolumesResponse(const ::fidl::DecodedMessage<DynamicDataSink::WriteVolumesResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDynamicDataSink_WriteVolumes_GenOrdinal);
 }
 
-void Paver::SetTransactionHeaderFor::ReadAssetRequest(const ::fidl::DecodedMessage<Paver::ReadAssetRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_ReadAsset_GenOrdinal);
+void DynamicDataSink::SetTransactionHeaderFor::WriteBootloaderRequest(const ::fidl::DecodedMessage<DynamicDataSink::WriteBootloaderRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDynamicDataSink_WriteBootloader_GenOrdinal);
 }
-void Paver::SetTransactionHeaderFor::ReadAssetResponse(const ::fidl::DecodedMessage<Paver::ReadAssetResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_ReadAsset_GenOrdinal);
-}
-
-void Paver::SetTransactionHeaderFor::WriteAssetRequest(const ::fidl::DecodedMessage<Paver::WriteAssetRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_WriteAsset_GenOrdinal);
-}
-void Paver::SetTransactionHeaderFor::WriteAssetResponse(const ::fidl::DecodedMessage<Paver::WriteAssetResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_WriteAsset_GenOrdinal);
+void DynamicDataSink::SetTransactionHeaderFor::WriteBootloaderResponse(const ::fidl::DecodedMessage<DynamicDataSink::WriteBootloaderResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDynamicDataSink_WriteBootloader_GenOrdinal);
 }
 
-void Paver::SetTransactionHeaderFor::WriteVolumesRequest(const ::fidl::DecodedMessage<Paver::WriteVolumesRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_WriteVolumes_GenOrdinal);
+void DynamicDataSink::SetTransactionHeaderFor::WriteDataFileRequest(const ::fidl::DecodedMessage<DynamicDataSink::WriteDataFileRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDynamicDataSink_WriteDataFile_GenOrdinal);
 }
-void Paver::SetTransactionHeaderFor::WriteVolumesResponse(const ::fidl::DecodedMessage<Paver::WriteVolumesResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_WriteVolumes_GenOrdinal);
-}
-
-void Paver::SetTransactionHeaderFor::WriteBootloaderRequest(const ::fidl::DecodedMessage<Paver::WriteBootloaderRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_WriteBootloader_GenOrdinal);
-}
-void Paver::SetTransactionHeaderFor::WriteBootloaderResponse(const ::fidl::DecodedMessage<Paver::WriteBootloaderResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_WriteBootloader_GenOrdinal);
+void DynamicDataSink::SetTransactionHeaderFor::WriteDataFileResponse(const ::fidl::DecodedMessage<DynamicDataSink::WriteDataFileResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDynamicDataSink_WriteDataFile_GenOrdinal);
 }
 
-void Paver::SetTransactionHeaderFor::WriteDataFileRequest(const ::fidl::DecodedMessage<Paver::WriteDataFileRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_WriteDataFile_GenOrdinal);
+void DynamicDataSink::SetTransactionHeaderFor::WipeVolumeRequest(const ::fidl::DecodedMessage<DynamicDataSink::WipeVolumeRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDynamicDataSink_WipeVolume_GenOrdinal);
 }
-void Paver::SetTransactionHeaderFor::WriteDataFileResponse(const ::fidl::DecodedMessage<Paver::WriteDataFileResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_WriteDataFile_GenOrdinal);
-}
-
-void Paver::SetTransactionHeaderFor::WipeVolumeRequest(const ::fidl::DecodedMessage<Paver::WipeVolumeRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_WipeVolume_GenOrdinal);
-}
-void Paver::SetTransactionHeaderFor::WipeVolumeResponse(const ::fidl::DecodedMessage<Paver::WipeVolumeResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_WipeVolume_GenOrdinal);
+void DynamicDataSink::SetTransactionHeaderFor::WipeVolumeResponse(const ::fidl::DecodedMessage<DynamicDataSink::WipeVolumeResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDynamicDataSink_WipeVolume_GenOrdinal);
 }
 
-void Paver::SetTransactionHeaderFor::InitializePartitionTablesRequest(const ::fidl::DecodedMessage<Paver::InitializePartitionTablesRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_InitializePartitionTables_GenOrdinal);
+void DynamicDataSink::SetTransactionHeaderFor::InitializePartitionTablesRequest(const ::fidl::DecodedMessage<DynamicDataSink::InitializePartitionTablesRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDynamicDataSink_InitializePartitionTables_GenOrdinal);
 }
-void Paver::SetTransactionHeaderFor::InitializePartitionTablesResponse(const ::fidl::DecodedMessage<Paver::InitializePartitionTablesResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_InitializePartitionTables_GenOrdinal);
+void DynamicDataSink::SetTransactionHeaderFor::InitializePartitionTablesResponse(const ::fidl::DecodedMessage<DynamicDataSink::InitializePartitionTablesResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDynamicDataSink_InitializePartitionTables_GenOrdinal);
 }
 
-void Paver::SetTransactionHeaderFor::WipePartitionTablesRequest(const ::fidl::DecodedMessage<Paver::WipePartitionTablesRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_WipePartitionTables_GenOrdinal);
+void DynamicDataSink::SetTransactionHeaderFor::WipePartitionTablesRequest(const ::fidl::DecodedMessage<DynamicDataSink::WipePartitionTablesRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDynamicDataSink_WipePartitionTables_GenOrdinal);
 }
-void Paver::SetTransactionHeaderFor::WipePartitionTablesResponse(const ::fidl::DecodedMessage<Paver::WipePartitionTablesResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_WipePartitionTables_GenOrdinal);
+void DynamicDataSink::SetTransactionHeaderFor::WipePartitionTablesResponse(const ::fidl::DecodedMessage<DynamicDataSink::WipePartitionTablesResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDynamicDataSink_WipePartitionTables_GenOrdinal);
 }
 
 }  // namespace paver

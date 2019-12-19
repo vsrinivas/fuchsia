@@ -7,6 +7,8 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <lib/fdio/directory.h>
+#include <lib/fidl-async/cpp/bind.h>
+#include <lib/fidl/epitaph.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
@@ -15,6 +17,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <zircon/device/block.h>
+#include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
@@ -22,6 +25,8 @@
 #include <utility>
 
 #include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
@@ -400,96 +405,95 @@ std::optional<Configuration> GetActiveConfiguration(const abr::Client& abr_clien
 
 }  // namespace
 
-bool Paver::InitializePartitioner(zx::channel block_device,
-                                  std::unique_ptr<DevicePartitioner>* partitioner) {
-  if (!*partitioner) {
-    // Use global devfs if one wasn't injected via set_devfs_root.
-    if (!devfs_root_) {
-      devfs_root_ = fbl::unique_fd(open("/dev", O_RDONLY));
-    }
-    if (!svc_root_) {
-      svc_root_ = OpenServiceRoot();
-    }
-
-#if defined(__x86_64__)
-    Arch arch = Arch::kX64;
-#elif defined(__aarch64__)
-    Arch arch = Arch::kArm64;
-#else
-#error "Unknown arch"
-#endif
-    *partitioner = DevicePartitioner::Create(devfs_root_.duplicate(), std::move(svc_root_), arch,
-                                             std::move(block_device));
-    if (!partitioner) {
-      ERROR("Unable to initialize a partitioner.\n");
-      return false;
-    }
-  }
-  return true;
-}
-
-void Paver::ReadAsset(Configuration configuration, Asset asset,
-                      ReadAssetCompleter::Sync completer) {
-  ::llcpp::fuchsia::paver::Paver_ReadAsset_Result result;
-  if (!InitializePartitioner(&partitioner_)) {
-    zx_status_t status = ZX_ERR_BAD_STATE;
-    result.set_err(&status);
-    completer.Reply(std::move(result));
-    return;
-  }
-  ::llcpp::fuchsia::paver::Paver_ReadAsset_Response response;
-  zx_status_t status = PartitionRead(*partitioner_, PartitionType(configuration, asset),
-                                     &response.asset.vmo, &response.asset.size);
-  if (status != ZX_OK) {
-    result.set_err(&status);
-  } else {
-    result.set_response(&response);
-  }
-  completer.Reply(std::move(result));
-}
-
-void Paver::WriteAsset(Configuration configuration, Asset asset,
-                       ::llcpp::fuchsia::mem::Buffer payload, WriteAssetCompleter::Sync completer) {
-  if (!InitializePartitioner(&partitioner_)) {
-    completer.Reply(ZX_ERR_BAD_STATE);
-    return;
-  }
-  completer.Reply(PartitionPave(*partitioner_, std::move(payload.vmo), payload.size,
-                                PartitionType(configuration, asset)));
-}
-
-void Paver::WriteVolumes(zx::channel payload_stream, WriteVolumesCompleter::Sync completer) {
-  if (!InitializePartitioner(&partitioner_)) {
-    completer.Reply(ZX_ERR_BAD_STATE);
-  }
-
-  std::unique_ptr<StreamReader> reader;
-  zx_status_t status = StreamReader::Create(std::move(payload_stream), &reader);
-  if (status != ZX_OK) {
-    ERROR("Unable to create stream.\n");
-    completer.Reply(status);
-    return;
-  }
-  completer.Reply(FvmPave(devfs_root_, *partitioner_, std::move(reader)));
-}
-
-void Paver::WriteBootloader(::llcpp::fuchsia::mem::Buffer payload,
-                            WriteBootloaderCompleter::Sync completer) {
-  if (!InitializePartitioner(&partitioner_)) {
-    completer.Reply(ZX_ERR_BAD_STATE);
-    return;
-  }
-  completer.Reply(
-      PartitionPave(*partitioner_, std::move(payload.vmo), payload.size, Partition::kBootloader));
-}
-
-void Paver::WriteDataFile(fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload,
-                          WriteDataFileCompleter::Sync completer) {
+void Paver::FindDataSink(zx::channel data_sink, FindDataSinkCompleter::Sync _completer) {
   // Use global devfs if one wasn't injected via set_devfs_root.
   if (!devfs_root_) {
     devfs_root_ = fbl::unique_fd(open("/dev", O_RDONLY));
   }
+  if (!svc_root_) {
+    svc_root_ = OpenServiceRoot();
+  }
 
+  DataSink::Bind(dispatcher_, devfs_root_.duplicate(), std::move(svc_root_), std::move(data_sink));
+}
+
+void Paver::UseBlockDevice(zx::channel block_device, zx::channel dynamic_data_sink,
+                           UseBlockDeviceCompleter::Sync _completer) {
+  // Use global devfs if one wasn't injected via set_devfs_root.
+  if (!devfs_root_) {
+    devfs_root_ = fbl::unique_fd(open("/dev", O_RDONLY));
+  }
+  if (!svc_root_) {
+    svc_root_ = OpenServiceRoot();
+  }
+
+  DynamicDataSink::Bind(dispatcher_, devfs_root_.duplicate(), std::move(svc_root_),
+                        std::move(block_device), std::move(dynamic_data_sink));
+}
+
+void Paver::FindBootManager(zx::channel boot_manager, bool initialize,
+                            FindBootManagerCompleter::Sync _completer) {
+  // Use global devfs if one wasn't injected via set_devfs_root.
+  if (!devfs_root_) {
+    devfs_root_ = fbl::unique_fd(open("/dev", O_RDONLY));
+  }
+  if (!svc_root_) {
+    svc_root_ = OpenServiceRoot();
+  }
+
+  BootManager::Bind(dispatcher_, devfs_root_.duplicate(), std::move(svc_root_),
+                    std::move(boot_manager), initialize);
+}
+
+void DataSink::ReadAsset(::llcpp::fuchsia::paver::Configuration configuration,
+                         ::llcpp::fuchsia::paver::Asset asset,
+                         ReadAssetCompleter::Sync completer) {
+  ::llcpp::fuchsia::mem::Buffer buf;
+  zx_status_t status = sink_.ReadAsset(configuration, asset, &buf);
+  if (status == ZX_OK) {
+    completer.ReplySuccess(std::move(buf));
+  } else {
+    completer.ReplyError(status);
+  }
+}
+
+void DataSink::WipeVolume(WipeVolumeCompleter::Sync completer) {
+  zx::channel out;
+  zx_status_t status = sink_.WipeVolume(&out);
+  if (status == ZX_OK) {
+    completer.ReplySuccess(std::move(out));
+  } else {
+    completer.ReplyError(status);
+  }
+}
+
+zx_status_t DataSinkImpl::ReadAsset(Configuration configuration, Asset asset,
+                                    ::llcpp::fuchsia::mem::Buffer* buf) {
+  return PartitionRead(*partitioner_, PartitionType(configuration, asset), &buf->vmo, &buf->size);
+}
+
+zx_status_t DataSinkImpl::WriteAsset(Configuration configuration, Asset asset,
+                                     ::llcpp::fuchsia::mem::Buffer payload) {
+  return PartitionPave(*partitioner_, std::move(payload.vmo), payload.size,
+                       PartitionType(configuration, asset));
+}
+
+zx_status_t DataSinkImpl::WriteVolumes(zx::channel payload_stream) {
+  std::unique_ptr<StreamReader> reader;
+  zx_status_t status = StreamReader::Create(std::move(payload_stream), &reader);
+  if (status != ZX_OK) {
+    ERROR("Unable to create stream.\n");
+    return status;
+  }
+  return FvmPave(devfs_root_, *partitioner_, std::move(reader));
+}
+
+zx_status_t DataSinkImpl::WriteBootloader(::llcpp::fuchsia::mem::Buffer payload) {
+  return PartitionPave(*partitioner_, std::move(payload.vmo), payload.size, Partition::kBootloader);
+}
+
+zx_status_t DataSinkImpl::WriteDataFile(fidl::StringView filename,
+                                        ::llcpp::fuchsia::mem::Buffer payload) {
   const char* mount_path = "/volume/data";
   const uint8_t data_guid[] = GUID_DATA_VALUE;
   char minfs_path[PATH_MAX] = {0};
@@ -500,8 +504,7 @@ void Paver::WriteDataFile(fidl::StringView filename, ::llcpp::fuchsia::mem::Buff
       open_partition_with_devfs(devfs_root_.get(), nullptr, data_guid, ZX_SEC(1), path));
   if (!part_fd) {
     ERROR("DATA partition not found in FVM\n");
-    completer.Reply(ZX_ERR_NOT_FOUND);
-    return;
+    return ZX_ERR_NOT_FOUND;
   }
 
   auto disk_format = detect_disk_format(part_fd.get());
@@ -523,8 +526,7 @@ void Paver::WriteDataFile(fidl::StringView filename, ::llcpp::fuchsia::mem::Buff
                std::move(part_fd), devfs_root_.duplicate(), static_cast<zxcrypt::key_slot_t>(slot),
                &zxc_volume)) != ZX_OK) {
         ERROR("Couldn't unlock zxcrypt volume: %s\n", zx_status_get_string(status));
-        completer.Reply(status);
-        return;
+        return status;
       }
 
       // Most of the time we'll expect the volume to actually already be
@@ -540,31 +542,27 @@ void Paver::WriteDataFile(fidl::StringView filename, ::llcpp::fuchsia::mem::Buff
       if ((status = zxc_volume->OpenManager(zx::sec(5),
                                             zxc_manager_chan.reset_and_get_address())) != ZX_OK) {
         ERROR("Couldn't open zxcrypt volume manager: %s\n", zx_status_get_string(status));
-        completer.Reply(status);
-        return;
+        return status;
       }
 
       // Unseal.
       zxcrypt::FdioVolumeManager zxc_manager(std::move(zxc_manager_chan));
       if ((status = zxc_manager.UnsealWithDeviceKey(slot)) != ZX_OK) {
         ERROR("Couldn't unseal zxcrypt volume: %s\n", zx_status_get_string(status));
-        completer.Reply(status);
-        return;
+        return status;
       }
 
       // Wait for the device to appear, and open it.
       if ((status = zxc_volume->Open(zx::sec(5), &mountpoint_dev_fd)) != ZX_OK) {
         ERROR("Couldn't open block device atop unsealed zxcrypt volume: %s\n",
               zx_status_get_string(status));
-        completer.Reply(status);
-        return;
+        return status;
       }
     } break;
 
     default:
       ERROR("unsupported disk format at %s\n", path);
-      completer.Reply(ZX_ERR_NOT_SUPPORTED);
-      return;
+      return ZX_ERR_NOT_SUPPORTED;
   }
 
   mount_options_t opts(default_mount_options);
@@ -572,8 +570,7 @@ void Paver::WriteDataFile(fidl::StringView filename, ::llcpp::fuchsia::mem::Buff
   if ((status = mount(mountpoint_dev_fd.get(), mount_path, DISK_FORMAT_MINFS, &opts,
                       launch_logs_async)) != ZX_OK) {
     ERROR("mount error: %s\n", zx_status_get_string(status));
-    completer.Reply(status);
-    return;
+    return status;
   }
 
   int filename_size = static_cast<int>(filename.size());
@@ -603,8 +600,7 @@ void Paver::WriteDataFile(fidl::StringView filename, ::llcpp::fuchsia::mem::Buff
     if (!kfd) {
       umount(mount_path);
       ERROR("open %.*s error: %s\n", filename_size, filename.data(), strerror(errno));
-      completer.Reply(ZX_ERR_IO);
-      return;
+      return ZX_ERR_IO;
     }
     VmoReader reader(std::move(payload));
     size_t actual;
@@ -612,8 +608,7 @@ void Paver::WriteDataFile(fidl::StringView filename, ::llcpp::fuchsia::mem::Buff
       if (write(kfd.get(), buf, actual) != static_cast<ssize_t>(actual)) {
         umount(mount_path);
         ERROR("write %.*s error: %s\n", filename_size, filename.data(), strerror(errno));
-        completer.Reply(ZX_ERR_IO);
-        return;
+        return ZX_ERR_IO;
       }
     }
     fsync(kfd.get());
@@ -621,29 +616,18 @@ void Paver::WriteDataFile(fidl::StringView filename, ::llcpp::fuchsia::mem::Buff
 
   if ((status = umount(mount_path)) != ZX_OK) {
     ERROR("unmount %s failed: %s\n", mount_path, zx_status_get_string(status));
-    completer.Reply(status);
-    return;
+    return status;
   }
 
   LOG("Wrote %.*s\n", filename_size, filename.data());
-  completer.Reply(ZX_OK);
+  return ZX_OK;
 }
 
-void Paver::WipeVolume(zx::channel block_device, WipeVolumeCompleter::Sync completer) {
-  partitioner_.reset();
-  abr_client_.reset();
-
-  std::unique_ptr<DevicePartitioner> partitioner;
-  if (!InitializePartitioner(std::move(block_device), &partitioner)) {
-    completer.ReplyError(ZX_ERR_BAD_STATE);
-    return;
-  }
-
+zx_status_t DataSinkImpl::WipeVolume(zx::channel* out) {
   std::unique_ptr<PartitionClient> partition;
-  zx_status_t status = GetFvmPartition(*partitioner, &partition);
+  zx_status_t status = GetFvmPartition(*partitioner_, &partition);
   if (status != ZX_OK) {
-    completer.ReplyError(status);
-    return;
+    return status;
   }
 
   // Bind the FVM driver to be in a well known state regarding races with block watcher.
@@ -656,36 +640,69 @@ void Paver::WipeVolume(zx::channel block_device, WipeVolumeCompleter::Sync compl
   // but the driver will be loaded before moving on.
   TryBindToFvmDriver(devfs_root_, partition->block_fd(), zx::sec(3));
 
-  status = partitioner->WipeFvm();
+  status = partitioner_->WipeFvm();
   if (status != ZX_OK) {
     ERROR("Failure wiping partition: %s\n", zx_status_get_string(status));
-    completer.ReplyError(status);
-    return;
+    return status;
   }
 
   zx::channel channel;
-  status = FormatFvm(devfs_root_, *partitioner, &channel);
+  status = FormatFvm(devfs_root_, *partitioner_, &channel);
   if (status != ZX_OK) {
     ERROR("Failure formatting partition: %s\n", zx_status_get_string(status));
-    completer.ReplyError(status);
-    return;
+    return status;
   }
 
-  completer.ReplySuccess(std::move(channel));
+  *out = std::move(channel);
+  return ZX_OK;
 }
 
-void Paver::InitializePartitionTables(zx::channel block_device,
-                                      InitializePartitionTablesCompleter::Sync completer) {
-  std::unique_ptr<DevicePartitioner> partitioner;
-  if (!InitializePartitioner(std::move(block_device), &partitioner)) {
-    completer.Reply(ZX_ERR_BAD_STATE);
+void DataSink::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root, zx::channel svc_root,
+                    zx::channel server) {
+#if defined(__x86_64__)
+  Arch arch = Arch::kX64;
+#elif defined(__aarch64__)
+  Arch arch = Arch::kArm64;
+#else
+#error "Unknown arch"
+#endif
+  auto partitioner = DevicePartitioner::Create(devfs_root.duplicate(), std::move(svc_root), arch);
+  if (!partitioner) {
+    ERROR("Unable to initialize a partitioner.\n");
+    fidl_epitaph_write(server.get(), ZX_ERR_BAD_STATE);
     return;
   }
+  auto data_sink = std::make_unique<DataSink>(std::move(devfs_root), std::move(partitioner));
+  fidl::Bind(dispatcher, std::move(server), std::move(data_sink));
+}
 
+void DynamicDataSink::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
+                           zx::channel svc_root, zx::channel block_device, zx::channel server) {
+#if defined(__x86_64__)
+  Arch arch = Arch::kX64;
+#elif defined(__aarch64__)
+  Arch arch = Arch::kArm64;
+#else
+#error "Unknown arch"
+#endif
+  auto partitioner = DevicePartitioner::Create(devfs_root.duplicate(), std::move(svc_root), arch,
+                                               std::move(block_device));
+  if (!partitioner) {
+    ERROR("Unable to initialize a partitioner.\n");
+    fidl_epitaph_write(server.get(), ZX_ERR_BAD_STATE);
+    return;
+  }
+  auto data_sink = std::make_unique<DynamicDataSink>(std::move(devfs_root), std::move(partitioner));
+  fidl::Bind(dispatcher, std::move(server), std::move(data_sink));
+}
+
+void DynamicDataSink::InitializePartitionTables(
+    InitializePartitionTablesCompleter::Sync completer) {
+  // TODO(surajmalhotra): Move this into gpt specific code.
   constexpr auto partition_type = Partition::kFuchsiaVolumeManager;
   zx_status_t status;
   std::unique_ptr<PartitionClient> partition;
-  if ((status = partitioner->FindPartition(partition_type, &partition)) != ZX_OK) {
+  if ((status = sink_.partitioner()->FindPartition(partition_type, &partition)) != ZX_OK) {
     if (status != ZX_ERR_NOT_FOUND) {
       ERROR("Failure looking for partition: %s\n", zx_status_get_string(status));
       completer.Reply(status);
@@ -695,103 +712,79 @@ void Paver::InitializePartitionTables(zx::channel block_device,
     LOG("Could not find \"%s\" Partition on device. Attemping to add new partition\n",
         PartitionName(partition_type));
 
-    if ((status = partitioner->AddPartition(partition_type, &partition)) != ZX_OK) {
+    if ((status = sink_.partitioner()->AddPartition(partition_type, &partition)) != ZX_OK) {
       ERROR("Failure creating partition: %s\n", zx_status_get_string(status));
       completer.Reply(status);
       return;
     }
   }
-  partitioner_ = std::move(partitioner);
   LOG("Successfully initialized gpt.\n");
   completer.Reply(ZX_OK);
 }
 
-void Paver::WipePartitionTables(zx::channel block_device,
-                                WipePartitionTablesCompleter::Sync completer) {
-  partitioner_.reset();
-  abr_client_.reset();
+void DynamicDataSink::WipePartitionTables(WipePartitionTablesCompleter::Sync completer) {
+  completer.Reply(sink_.partitioner()->WipePartitionTables());
+}
 
-  std::unique_ptr<DevicePartitioner> partitioner;
-  if (!InitializePartitioner(std::move(block_device), &partitioner)) {
-    completer.Reply(ZX_ERR_BAD_STATE);
+void DynamicDataSink::ReadAsset(::llcpp::fuchsia::paver::Configuration configuration,
+                                ::llcpp::fuchsia::paver::Asset asset,
+                                ReadAssetCompleter::Sync completer) {
+  ::llcpp::fuchsia::mem::Buffer buf;
+  auto status = sink_.ReadAsset(configuration, asset, &buf);
+  if (status == ZX_OK) {
+    completer.ReplySuccess(std::move(buf));
+  } else {
+    completer.ReplyError(status);
+  }
+}
+
+void DynamicDataSink::WipeVolume(WipeVolumeCompleter::Sync completer) {
+  zx::channel out;
+  zx_status_t status = sink_.WipeVolume(&out);
+  if (status == ZX_OK) {
+    completer.ReplySuccess(std::move(out));
+  } else {
+    completer.ReplyError(status);
+  }
+}
+
+void BootManager::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
+                       zx::channel svc_root, zx::channel server, bool initialize) {
+  std::unique_ptr<abr::Client> abr_client;
+  if (zx_status_t status =
+          abr::Client::Create(std::move(devfs_root), std::move(svc_root), &abr_client);
+      status != ZX_OK) {
+    ERROR("Failed to get ABR client: %s\n", zx_status_get_string(status));
+    fidl_epitaph_write(server.get(), status);
     return;
   }
 
-  completer.Reply(partitioner->WipePartitionTables());
-}
+  const bool valid = abr_client->IsValid();
 
-zx_status_t Paver::InitializeAbrClient() {
-  if (abr_client_) {
-    return ZX_OK;
-  }
+  if (!valid && initialize) {
+    abr::Data data = abr_client->Data();
+    memset(&data, 0, sizeof(data));
+    memcpy(data.magic, abr::kMagic, sizeof(abr::kMagic));
+    data.version_major = abr::kMajorVersion;
+    data.version_minor = abr::kMinorVersion;
 
-  if (!InitializePartitioner(&partitioner_)) {
-    return ZX_ERR_BAD_STATE;
-  }
-
-  std::unique_ptr<abr::Client> abr_client;
-  if (zx_status_t status = partitioner_->GetAbrClient(&abr_client); status != ZX_OK) {
-    ERROR("Failed to get ABR client: %s\n", zx_status_get_string(status));
-    return status;
-  }
-
-  if (!abr_client->IsValid()) {
+    if (zx_status_t status = abr_client->Persist(data); status != ZX_OK) {
+      ERROR("Unabled to persist ABR metadata %s\n", zx_status_get_string(status));
+      fidl_epitaph_write(server.get(), status);
+      return;
+    }
+    ZX_DEBUG_ASSERT(abr_client->IsValid());
+  } else if (!valid) {
     ERROR("ABR metadata is not valid!\n");
-    return ZX_ERR_NOT_SUPPORTED;
+    fidl_epitaph_write(server.get(), ZX_ERR_NOT_SUPPORTED);
+    return;
   }
-  abr_client_ = std::move(abr_client);
-  return ZX_OK;
+
+  auto boot_manager = std::make_unique<BootManager>(std::move(abr_client));
+  fidl::Bind(dispatcher, std::move(server), std::move(boot_manager));
 }
 
-void Paver::InitializeAbr(InitializeAbrCompleter::Sync completer) {
-  if (abr_client_) {
-    completer.Reply(ZX_OK);
-    return;
-  }
-
-  if (!InitializePartitioner(&partitioner_)) {
-    completer.Reply(ZX_ERR_BAD_STATE);
-    return;
-  }
-
-  std::unique_ptr<abr::Client> abr_client;
-  if (zx_status_t status = partitioner_->GetAbrClient(&abr_client); status != ZX_OK) {
-    ERROR("Failed to get ABR client: %s\n", zx_status_get_string(status));
-    completer.Reply(status);
-    return;
-  }
-
-  if (abr_client->IsValid()) {
-    abr_client_ = std::move(abr_client);
-    completer.Reply(ZX_OK);
-    return;
-  }
-
-  abr::Data data = abr_client->Data();
-  memset(&data, 0, sizeof(data));
-  memcpy(data.magic, abr::kMagic, sizeof(abr::kMagic));
-  data.version_major = abr::kMajorVersion;
-  data.version_minor = abr::kMinorVersion;
-
-  if (zx_status_t status = abr_client->Persist(data); status != ZX_OK) {
-    ERROR("Unabled to persist ABR metadata %s\n", zx_status_get_string(status));
-    completer.Reply(status);
-    return;
-  }
-
-  ZX_DEBUG_ASSERT(abr_client->IsValid());
-  abr_client_ = std::move(abr_client);
-  completer.Reply(ZX_OK);
-}
-
-void Paver::QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync completer) {
-  ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result result;
-  if (zx_status_t status = InitializeAbrClient(); status != ZX_OK) {
-    result.set_err(&status);
-    completer.Reply(std::move(result));
-    return;
-  }
-
+void BootManager::QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync completer) {
   std::optional<Configuration> config = GetActiveConfiguration(*abr_client_);
   if (!config) {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
@@ -800,14 +793,8 @@ void Paver::QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync com
   completer.ReplySuccess(config.value());
 }
 
-void Paver::QueryConfigurationStatus(Configuration configuration,
-                                     QueryConfigurationStatusCompleter::Sync completer) {
-  ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result result;
-  if (zx_status_t status = InitializeAbrClient(); status != ZX_OK) {
-    result.set_err(&status);
-    completer.Reply(std::move(result));
-    return;
-  }
+void BootManager::QueryConfigurationStatus(Configuration configuration,
+                                           QueryConfigurationStatusCompleter::Sync completer) {
   const abr::SlotData* slot;
   switch (configuration) {
     case Configuration::A:
@@ -818,31 +805,21 @@ void Paver::QueryConfigurationStatus(Configuration configuration,
       break;
     default:
       ERROR("Unexpected configuration: %d\n", static_cast<uint32_t>(configuration));
-      zx_status_t status = ZX_ERR_INVALID_ARGS;
-      result.set_err(&status);
-      completer.Reply(std::move(result));
+      completer.ReplyError(ZX_ERR_INVALID_ARGS);
       return;
   }
 
-  ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response response;
   if (!IsBootable(*slot)) {
-    response.status = ::llcpp::fuchsia::paver::ConfigurationStatus::UNBOOTABLE;
+    completer.ReplySuccess(::llcpp::fuchsia::paver::ConfigurationStatus::UNBOOTABLE);
   } else if (slot->successful_boot == 0) {
-    response.status = ::llcpp::fuchsia::paver::ConfigurationStatus::PENDING;
+    completer.ReplySuccess(::llcpp::fuchsia::paver::ConfigurationStatus::PENDING);
   } else {
-    response.status = ::llcpp::fuchsia::paver::ConfigurationStatus::HEALTHY;
+    completer.ReplySuccess(::llcpp::fuchsia::paver::ConfigurationStatus::HEALTHY);
   }
-
-  result.set_response(&response);
-  completer.Reply(std::move(result));
 }
 
-void Paver::SetConfigurationActive(Configuration configuration,
-                                   SetConfigurationActiveCompleter::Sync completer) {
-  if (zx_status_t status = InitializeAbrClient(); status != ZX_OK) {
-    completer.Reply(status);
-    return;
-  }
+void BootManager::SetConfigurationActive(Configuration configuration,
+                                         SetConfigurationActiveCompleter::Sync completer) {
   abr::Data data = abr_client_->Data();
 
   abr::SlotData *primary, *secondary;
@@ -877,12 +854,8 @@ void Paver::SetConfigurationActive(Configuration configuration,
   completer.Reply(ZX_OK);
 }
 
-void Paver::SetConfigurationUnbootable(Configuration configuration,
-                                       SetConfigurationUnbootableCompleter::Sync completer) {
-  if (zx_status_t status = InitializeAbrClient(); status != ZX_OK) {
-    completer.Reply(status);
-    return;
-  }
+void BootManager::SetConfigurationUnbootable(Configuration configuration,
+                                             SetConfigurationUnbootableCompleter::Sync completer) {
   auto data = abr_client_->Data();
 
   abr::SlotData* slot;
@@ -911,11 +884,8 @@ void Paver::SetConfigurationUnbootable(Configuration configuration,
   completer.Reply(ZX_OK);
 }
 
-void Paver::SetActiveConfigurationHealthy(SetActiveConfigurationHealthyCompleter::Sync completer) {
-  if (zx_status_t status = InitializeAbrClient(); status != ZX_OK) {
-    completer.Reply(status);
-    return;
-  }
+void BootManager::SetActiveConfigurationHealthy(
+    SetActiveConfigurationHealthyCompleter::Sync completer) {
   abr::Data data = abr_client_->Data();
 
   std::optional<Configuration> config = GetActiveConfiguration(*abr_client_);

@@ -16,7 +16,9 @@ namespace {
 zx_status_t Connect(void* ctx, async_dispatcher_t* dispatcher, const char* service_name,
                     zx_handle_t request) {
   if (!strcmp(service_name, ::llcpp::fuchsia::paver::Paver::Name)) {
-    return fidl::Bind(dispatcher, zx::channel(request), reinterpret_cast<paver::Paver*>(ctx));
+    auto* paver = reinterpret_cast<paver::Paver*>(ctx);
+    paver->set_dispatcher(dispatcher);
+    return fidl::Bind(dispatcher, zx::channel(request), paver);
   }
 
   zx_handle_close(request);

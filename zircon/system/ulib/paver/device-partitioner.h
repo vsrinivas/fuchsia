@@ -86,13 +86,6 @@ class DevicePartitioner {
 
   // Wipes partition tables.
   virtual zx_status_t WipePartitionTables() const = 0;
-
-  // Returns the currently booting slot.
-  virtual zx_status_t QueryBootConfig(Configuration* out) = 0;
-
-  // Returns ZX_ERR_NOT_SUPPORTED if abr partitioning is not supported, and other errors on other
-  // failures.
-  virtual zx_status_t GetAbrClient(std::unique_ptr<abr::Client>* client) = 0;
 };
 
 // Useful for when a GPT table is available (e.g. x86 devices). Provides common
@@ -198,12 +191,6 @@ class EfiDevicePartitioner : public DevicePartitioner {
 
   zx_status_t WipePartitionTables() const override;
 
-  zx_status_t QueryBootConfig(Configuration* out) override { return ZX_ERR_NOT_SUPPORTED; }
-
-  zx_status_t GetAbrClient(std::unique_ptr<abr::Client>* client) override {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
  private:
   EfiDevicePartitioner(std::unique_ptr<GptDevicePartitioner> gpt) : gpt_(std::move(gpt)) {}
 
@@ -230,12 +217,6 @@ class CrosDevicePartitioner : public DevicePartitioner {
   zx_status_t WipeFvm() const override;
 
   zx_status_t WipePartitionTables() const override;
-
-  zx_status_t QueryBootConfig(Configuration* out) override { return ZX_ERR_NOT_SUPPORTED; }
-
-  zx_status_t GetAbrClient(std::unique_ptr<abr::Client>* client) override {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
 
  private:
   CrosDevicePartitioner(std::unique_ptr<GptDevicePartitioner> gpt) : gpt_(std::move(gpt)) {}
@@ -265,12 +246,6 @@ class FixedDevicePartitioner : public DevicePartitioner {
   zx_status_t WipeFvm() const override;
 
   zx_status_t WipePartitionTables() const override;
-
-  zx_status_t QueryBootConfig(Configuration* out) override { return ZX_ERR_NOT_SUPPORTED; }
-
-  zx_status_t GetAbrClient(std::unique_ptr<abr::Client>* client) override {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
 
  private:
   FixedDevicePartitioner(fbl::unique_fd devfs_root) : devfs_root_(std::move(devfs_root)) {}
@@ -302,17 +277,10 @@ class SkipBlockDevicePartitioner : public DevicePartitioner {
 
   zx_status_t WipePartitionTables() const override;
 
-  zx_status_t QueryBootConfig(Configuration* out) override;
-
-  zx_status_t GetAbrClient(std::unique_ptr<abr::Client>* client) override;
-
  private:
   SkipBlockDevicePartitioner(fbl::unique_fd devfs_root, zx::channel svc_root)
       : devfs_root_(std::move(devfs_root)), svc_root_(std::move(svc_root)) {}
 
-  zx_status_t SupportsVerfiedBoot();
-
-  std::optional<Configuration> boot_config_;
   fbl::unique_fd devfs_root_;
   zx::channel svc_root_;
 };

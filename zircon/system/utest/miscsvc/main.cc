@@ -27,8 +27,11 @@ TEST(MiscSvcTest, PaverSvccEnumeratesSuccessfully) {
   ASSERT_OK(zx::channel::create(0, &local, &remote));
   ASSERT_OK(fdio_service_connect_at(svc_local.get(), Paver::Name, remote.release()));
 
+  zx::channel local2, remote2;
+  ASSERT_OK(zx::channel::create(0, &local2, &remote2));
+
   Paver::SyncClient paver(std::move(local));
-  auto result = paver.QueryActiveConfiguration();
+  auto result = paver.FindDataSink(std::move(local2));
   ASSERT_OK(result.status());
 }
 

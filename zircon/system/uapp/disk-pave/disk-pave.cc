@@ -225,8 +225,17 @@ zx_status_t RealMain(Flags flags) {
   }
   ::llcpp::fuchsia::paver::Paver::SyncClient paver_client(std::move(paver_svc));
 
+  zx::channel data_sink_remote, data_sink_svc;
+  status = zx::channel::create(0, &data_sink_remote, &data_sink_svc);
+  if (status != ZX_OK) {
+    ERROR("Unable to create channels.\n");
+    return status;
+  }
   switch (flags.cmd) {
     case Command::kFvm: {
+      paver_client.FindDataSink(std::move(data_sink_remote));
+      ::llcpp::fuchsia::paver::DataSink::SyncClient data_sink(std::move(data_sink_svc));
+
       zx::channel client, server;
       status = zx::channel::create(0, &client, &server);
       if (status) {
@@ -238,7 +247,7 @@ zx_status_t RealMain(Flags flags) {
       disk_pave::PayloadStreamer streamer(std::move(server), std::move(flags.payload_fd));
       loop.StartThread("payload-stream");
 
-      auto result = paver_client.WriteVolumes(std::move(client));
+      auto result = data_sink.WriteVolumes(std::move(client));
       return result.ok() ? result.value().status : result.status();
     }
     case Command::kWipe: {
@@ -256,7 +265,15 @@ zx_status_t RealMain(Flags flags) {
           block_device.reset();
         }
       }
-      auto result = paver_client.WipeVolume(std::move(block_device));
+      if (block_device) {
+        paver_client.UseBlockDevice(std::move(block_device), std::move(data_sink_remote));
+      } else {
+        paver_client.FindDataSink(std::move(data_sink_remote));
+      }
+
+      ::llcpp::fuchsia::paver::DataSink::SyncClient data_sink(std::move(data_sink_svc));
+
+      auto result = data_sink.WipeVolume();
       if (!result.ok()) {
         return result.status();
       }
@@ -280,8 +297,12 @@ zx_status_t RealMain(Flags flags) {
         ERROR("Unable to open block device: %s\n", flags.block_device);
         PrintUsage();
         block_device.reset();
+        return status;
       }
-      auto result = paver_client.InitializePartitionTables(std::move(block_device));
+      paver_client.UseBlockDevice(std::move(block_device), std::move(data_sink_remote));
+      ::llcpp::fuchsia::paver::DynamicDataSink::SyncClient data_sink(std::move(data_sink_svc));
+
+      auto result = data_sink.InitializePartitionTables();
       return result.ok() ? result.value().status : result.status();
     }
     case Command::kWipePartitionTables: {
@@ -302,7 +323,10 @@ zx_status_t RealMain(Flags flags) {
         PrintUsage();
         block_device.reset();
       }
-      auto result = paver_client.WipePartitionTables(std::move(block_device));
+      paver_client.UseBlockDevice(std::move(block_device), std::move(data_sink_remote));
+      ::llcpp::fuchsia::paver::DynamicDataSink::SyncClient data_sink(std::move(data_sink_svc));
+
+      auto result = data_sink.WipePartitionTables();
       return result.ok() ? result.value().status : result.status();
     }
     default:
@@ -315,6 +339,9 @@ zx_status_t RealMain(Flags flags) {
     return status;
   }
 
+  paver_client.FindDataSink(std::move(data_sink_remote));
+  ::llcpp::fuchsia::paver::DataSink::SyncClient data_sink(std::move(data_sink_svc));
+
   switch (flags.cmd) {
     case Command::kDataFile: {
       if (flags.path == nullptr) {
@@ -322,18 +349,18 @@ zx_status_t RealMain(Flags flags) {
         PrintUsage();
         return ZX_ERR_INVALID_ARGS;
       }
-      auto result = paver_client.WriteDataFile(fidl::StringView(flags.path, strlen(flags.path)),
+      auto result = data_sink.WriteDataFile(fidl::StringView(flags.path, strlen(flags.path)),
                                                std::move(payload));
       status = result.ok() ? result.value().status : result.status();
       break;
     }
     case Command::kBootloader: {
-      auto result = paver_client.WriteBootloader(std::move(payload));
+      auto result = data_sink.WriteBootloader(std::move(payload));
       status = result.ok() ? result.value().status : result.status();
       break;
     }
     case Command::kAsset: {
-      auto result = paver_client.WriteAsset(flags.configuration, flags.asset, std::move(payload));
+      auto result = data_sink.WriteAsset(flags.configuration, flags.asset, std::move(payload));
       status = result.ok() ? result.value().status : result.status();
       break;
     }

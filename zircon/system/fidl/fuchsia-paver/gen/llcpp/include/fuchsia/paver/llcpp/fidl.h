@@ -30,9 +30,10 @@ namespace paver {
 
 struct ReadInfo;
 struct ReadResult;
+class Paver;
 class PayloadStream;
-struct Paver_WipeVolume_Response;
-struct Paver_WipeVolume_Result;
+struct DataSink_WipeVolume_Response;
+struct DataSink_WipeVolume_Result;
 enum class ConfigurationStatus : uint32_t {
   HEALTHY = 1u,
   PENDING = 2u,
@@ -40,8 +41,8 @@ enum class ConfigurationStatus : uint32_t {
 };
 
 
-struct Paver_QueryConfigurationStatus_Response;
-struct Paver_QueryConfigurationStatus_Result;
+struct BootManager_QueryConfigurationStatus_Response;
+struct BootManager_QueryConfigurationStatus_Result;
 enum class Configuration : uint32_t {
   A = 1u,
   B = 2u,
@@ -49,17 +50,19 @@ enum class Configuration : uint32_t {
 };
 
 
-struct Paver_QueryActiveConfiguration_Response;
-struct Paver_QueryActiveConfiguration_Result;
+struct BootManager_QueryActiveConfiguration_Response;
+struct BootManager_QueryActiveConfiguration_Result;
+class BootManager;
 enum class Asset : uint32_t {
   KERNEL = 1u,
   VERIFIED_BOOT_METADATA = 2u,
 };
 
 
-struct Paver_ReadAsset_Response;
-struct Paver_ReadAsset_Result;
-class Paver;
+struct DataSink_ReadAsset_Response;
+struct DataSink_ReadAsset_Result;
+class DataSink;
+class DynamicDataSink;
 
 extern "C" const fidl_type_t fuchsia_paver_ReadInfoTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_ReadInfoTable;
@@ -226,6 +229,383 @@ struct ReadResult {
     int32_t err_;
     bool eof_;
     ::llcpp::fuchsia::paver::ReadInfo info_;
+  };
+};
+
+extern "C" const fidl_type_t fuchsia_paver_PaverFindDataSinkRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_PaverFindDataSinkRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_PaverFindDataSinkResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_PaverFindDataSinkResponseTable;
+extern "C" const fidl_type_t fuchsia_paver_PaverUseBlockDeviceRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_PaverUseBlockDeviceRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_PaverUseBlockDeviceResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_PaverUseBlockDeviceResponseTable;
+extern "C" const fidl_type_t fuchsia_paver_PaverFindBootManagerRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_PaverFindBootManagerRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_PaverFindBootManagerResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_PaverFindBootManagerResponseTable;
+
+class Paver final {
+  Paver() = delete;
+ public:
+  static constexpr char Name[] = "fuchsia.paver.Paver";
+
+  struct FindDataSinkRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::zx::channel data_sink;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverFindDataSinkRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_PaverFindDataSinkRequestTable;
+    static constexpr uint32_t MaxNumHandles = 1;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+  };
+
+  struct UseBlockDeviceRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::zx::channel block_device;
+    ::zx::channel data_sink;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverUseBlockDeviceRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_PaverUseBlockDeviceRequestTable;
+    static constexpr uint32_t MaxNumHandles = 2;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+  };
+
+  struct FindBootManagerRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::zx::channel boot_manager;
+    bool initialize;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverFindBootManagerRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_PaverFindBootManagerRequestTable;
+    static constexpr uint32_t MaxNumHandles = 1;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+  };
+
+
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+    ResultOf() = delete;
+   private:
+    class FindDataSink_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      FindDataSink_Impl(::zx::unowned_channel _client_end, ::zx::channel data_sink);
+      ~FindDataSink_Impl() = default;
+      FindDataSink_Impl(FindDataSink_Impl&& other) = default;
+      FindDataSink_Impl& operator=(FindDataSink_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+    };
+    class UseBlockDevice_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      UseBlockDevice_Impl(::zx::unowned_channel _client_end, ::zx::channel block_device, ::zx::channel data_sink);
+      ~UseBlockDevice_Impl() = default;
+      UseBlockDevice_Impl(UseBlockDevice_Impl&& other) = default;
+      UseBlockDevice_Impl& operator=(UseBlockDevice_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+    };
+    class FindBootManager_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      FindBootManager_Impl(::zx::unowned_channel _client_end, ::zx::channel boot_manager, bool initialize);
+      ~FindBootManager_Impl() = default;
+      FindBootManager_Impl(FindBootManager_Impl&& other) = default;
+      FindBootManager_Impl& operator=(FindBootManager_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+    };
+
+   public:
+    using FindDataSink = FindDataSink_Impl;
+    using UseBlockDevice = UseBlockDevice_Impl;
+    using FindBootManager = FindBootManager_Impl;
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+    UnownedResultOf() = delete;
+   private:
+    class FindDataSink_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      FindDataSink_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel data_sink);
+      ~FindDataSink_Impl() = default;
+      FindDataSink_Impl(FindDataSink_Impl&& other) = default;
+      FindDataSink_Impl& operator=(FindDataSink_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+    };
+    class UseBlockDevice_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      UseBlockDevice_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel block_device, ::zx::channel data_sink);
+      ~UseBlockDevice_Impl() = default;
+      UseBlockDevice_Impl(UseBlockDevice_Impl&& other) = default;
+      UseBlockDevice_Impl& operator=(UseBlockDevice_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+    };
+    class FindBootManager_Impl final : private ::fidl::internal::StatusAndError {
+      using Super = ::fidl::internal::StatusAndError;
+     public:
+      FindBootManager_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel boot_manager, bool initialize);
+      ~FindBootManager_Impl() = default;
+      FindBootManager_Impl(FindBootManager_Impl&& other) = default;
+      FindBootManager_Impl& operator=(FindBootManager_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+    };
+
+   public:
+    using FindDataSink = FindDataSink_Impl;
+    using UseBlockDevice = UseBlockDevice_Impl;
+    using FindBootManager = FindBootManager_Impl;
+  };
+
+  class SyncClient final {
+   public:
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
+    SyncClient(SyncClient&&) = default;
+    SyncClient& operator=(SyncClient&&) = default;
+
+    const ::zx::channel& channel() const { return channel_; }
+
+    ::zx::channel* mutable_channel() { return &channel_; }
+
+    // Attempts to auto-discover the data sink where assets and volumes will get paved to.
+    // On devices with GPT, the partition must have a valid FVM partition in order for
+    // auto-discovery to find it. If multiple devices are found suitable, error is returned.
+    //
+    // |data_sink| will be closed on error, with an epitaph provided on failure reason.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::FindDataSink FindDataSink(::zx::channel data_sink);
+
+    // Attempts to auto-discover the data sink where assets and volumes will get paved to.
+    // On devices with GPT, the partition must have a valid FVM partition in order for
+    // auto-discovery to find it. If multiple devices are found suitable, error is returned.
+    //
+    // |data_sink| will be closed on error, with an epitaph provided on failure reason.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::FindDataSink FindDataSink(::fidl::BytePart _request_buffer, ::zx::channel data_sink);
+
+    // Provide a block device to use as a data sink. Assets and volumes will be paved to
+    // partitions within this block device.
+    //
+    // It assumes that channel backing |block_device| also implements `fuchsia.io.Node` for now.
+    //
+    // |data_sink| will be closed on error, with an epitaph provided on failure reason.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::UseBlockDevice UseBlockDevice(::zx::channel block_device, ::zx::channel data_sink);
+
+    // Provide a block device to use as a data sink. Assets and volumes will be paved to
+    // partitions within this block device.
+    //
+    // It assumes that channel backing |block_device| also implements `fuchsia.io.Node` for now.
+    //
+    // |data_sink| will be closed on error, with an epitaph provided on failure reason.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::UseBlockDevice UseBlockDevice(::fidl::BytePart _request_buffer, ::zx::channel block_device, ::zx::channel data_sink);
+
+    // Attempts to auto-discover the boot manager.
+    //
+    // |initialize| should only be set to true to initialize ABR metadata for the first time
+    // (i.e. it should not be called every boot), or recover from corrupted ABR metadata.
+    //
+    // |boot_manager| will be closed on error, with an epitaph provided on failure reason.
+    // ZX_ERR_NOT_SUPPORTED indicates lack of support and configuration A is always booted from.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::FindBootManager FindBootManager(::zx::channel boot_manager, bool initialize);
+
+    // Attempts to auto-discover the boot manager.
+    //
+    // |initialize| should only be set to true to initialize ABR metadata for the first time
+    // (i.e. it should not be called every boot), or recover from corrupted ABR metadata.
+    //
+    // |boot_manager| will be closed on error, with an epitaph provided on failure reason.
+    // ZX_ERR_NOT_SUPPORTED indicates lack of support and configuration A is always booted from.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::FindBootManager FindBootManager(::fidl::BytePart _request_buffer, ::zx::channel boot_manager, bool initialize);
+
+   private:
+    ::zx::channel channel_;
+  };
+
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  class Call final {
+    Call() = delete;
+   public:
+
+    // Attempts to auto-discover the data sink where assets and volumes will get paved to.
+    // On devices with GPT, the partition must have a valid FVM partition in order for
+    // auto-discovery to find it. If multiple devices are found suitable, error is returned.
+    //
+    // |data_sink| will be closed on error, with an epitaph provided on failure reason.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::FindDataSink FindDataSink(::zx::unowned_channel _client_end, ::zx::channel data_sink);
+
+    // Attempts to auto-discover the data sink where assets and volumes will get paved to.
+    // On devices with GPT, the partition must have a valid FVM partition in order for
+    // auto-discovery to find it. If multiple devices are found suitable, error is returned.
+    //
+    // |data_sink| will be closed on error, with an epitaph provided on failure reason.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::FindDataSink FindDataSink(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel data_sink);
+
+    // Provide a block device to use as a data sink. Assets and volumes will be paved to
+    // partitions within this block device.
+    //
+    // It assumes that channel backing |block_device| also implements `fuchsia.io.Node` for now.
+    //
+    // |data_sink| will be closed on error, with an epitaph provided on failure reason.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::UseBlockDevice UseBlockDevice(::zx::unowned_channel _client_end, ::zx::channel block_device, ::zx::channel data_sink);
+
+    // Provide a block device to use as a data sink. Assets and volumes will be paved to
+    // partitions within this block device.
+    //
+    // It assumes that channel backing |block_device| also implements `fuchsia.io.Node` for now.
+    //
+    // |data_sink| will be closed on error, with an epitaph provided on failure reason.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::UseBlockDevice UseBlockDevice(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel block_device, ::zx::channel data_sink);
+
+    // Attempts to auto-discover the boot manager.
+    //
+    // |initialize| should only be set to true to initialize ABR metadata for the first time
+    // (i.e. it should not be called every boot), or recover from corrupted ABR metadata.
+    //
+    // |boot_manager| will be closed on error, with an epitaph provided on failure reason.
+    // ZX_ERR_NOT_SUPPORTED indicates lack of support and configuration A is always booted from.
+    // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::FindBootManager FindBootManager(::zx::unowned_channel _client_end, ::zx::channel boot_manager, bool initialize);
+
+    // Attempts to auto-discover the boot manager.
+    //
+    // |initialize| should only be set to true to initialize ABR metadata for the first time
+    // (i.e. it should not be called every boot), or recover from corrupted ABR metadata.
+    //
+    // |boot_manager| will be closed on error, with an epitaph provided on failure reason.
+    // ZX_ERR_NOT_SUPPORTED indicates lack of support and configuration A is always booted from.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::FindBootManager FindBootManager(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel boot_manager, bool initialize);
+
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+    InPlace() = delete;
+   public:
+
+    // Attempts to auto-discover the data sink where assets and volumes will get paved to.
+    // On devices with GPT, the partition must have a valid FVM partition in order for
+    // auto-discovery to find it. If multiple devices are found suitable, error is returned.
+    //
+    // |data_sink| will be closed on error, with an epitaph provided on failure reason.
+    static ::fidl::internal::StatusAndError FindDataSink(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<FindDataSinkRequest> params);
+
+    // Provide a block device to use as a data sink. Assets and volumes will be paved to
+    // partitions within this block device.
+    //
+    // It assumes that channel backing |block_device| also implements `fuchsia.io.Node` for now.
+    //
+    // |data_sink| will be closed on error, with an epitaph provided on failure reason.
+    static ::fidl::internal::StatusAndError UseBlockDevice(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<UseBlockDeviceRequest> params);
+
+    // Attempts to auto-discover the boot manager.
+    //
+    // |initialize| should only be set to true to initialize ABR metadata for the first time
+    // (i.e. it should not be called every boot), or recover from corrupted ABR metadata.
+    //
+    // |boot_manager| will be closed on error, with an epitaph provided on failure reason.
+    // ZX_ERR_NOT_SUPPORTED indicates lack of support and configuration A is always booted from.
+    static ::fidl::internal::StatusAndError FindBootManager(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<FindBootManagerRequest> params);
+
+  };
+
+  // Pure-virtual interface to be implemented by a server.
+  class Interface {
+   public:
+    Interface() = default;
+    virtual ~Interface() = default;
+    using _Outer = Paver;
+    using _Base = ::fidl::CompleterBase;
+
+    using FindDataSinkCompleter = ::fidl::Completer<>;
+
+    virtual void FindDataSink(::zx::channel data_sink, FindDataSinkCompleter::Sync _completer) = 0;
+
+    using UseBlockDeviceCompleter = ::fidl::Completer<>;
+
+    virtual void UseBlockDevice(::zx::channel block_device, ::zx::channel data_sink, UseBlockDeviceCompleter::Sync _completer) = 0;
+
+    using FindBootManagerCompleter = ::fidl::Completer<>;
+
+    virtual void FindBootManager(::zx::channel boot_manager, bool initialize, FindBootManagerCompleter::Sync _completer) = 0;
+
+  };
+
+  // Attempts to dispatch the incoming message to a handler function in the server implementation.
+  // If there is no matching handler, it returns false, leaving the message and transaction intact.
+  // In all other cases, it consumes the message and returns true.
+  // It is possible to chain multiple TryDispatch functions in this manner.
+  static bool TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Dispatches the incoming message to one of the handlers functions in the interface.
+  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
+  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
+  static bool Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
+  // to reduce template expansion.
+  // Do not call this method manually. Use |Dispatch| instead.
+  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+    return Dispatch(static_cast<Interface*>(impl), msg, txn);
+  }
+
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void FindDataSinkRequest(const ::fidl::DecodedMessage<Paver::FindDataSinkRequest>& _msg);
+    static void UseBlockDeviceRequest(const ::fidl::DecodedMessage<Paver::UseBlockDeviceRequest>& _msg);
+    static void FindBootManagerRequest(const ::fidl::DecodedMessage<Paver::FindBootManagerRequest>& _msg);
   };
 };
 
@@ -520,12 +900,12 @@ class PayloadStream final {
   };
 };
 
-extern "C" const fidl_type_t fuchsia_paver_Paver_WipeVolume_ResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_Paver_WipeVolume_ResponseTable;
+extern "C" const fidl_type_t fuchsia_paver_DataSink_WipeVolume_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DataSink_WipeVolume_ResponseTable;
 
-struct Paver_WipeVolume_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_paver_Paver_WipeVolume_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_Paver_WipeVolume_ResponseTable;
+struct DataSink_WipeVolume_Response {
+  static constexpr const fidl_type_t* Type = &fuchsia_paver_DataSink_WipeVolume_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DataSink_WipeVolume_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
@@ -537,26 +917,26 @@ struct Paver_WipeVolume_Response {
   ::zx::channel volume = {};
 };
 
-extern "C" const fidl_type_t fuchsia_paver_Paver_WipeVolume_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_Paver_WipeVolume_ResultTable;
+extern "C" const fidl_type_t fuchsia_paver_DataSink_WipeVolume_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DataSink_WipeVolume_ResultTable;
 
-struct Paver_WipeVolume_Result {
+struct DataSink_WipeVolume_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
   };
 
-  Paver_WipeVolume_Result();
-  ~Paver_WipeVolume_Result();
+  DataSink_WipeVolume_Result();
+  ~DataSink_WipeVolume_Result();
 
-  Paver_WipeVolume_Result(Paver_WipeVolume_Result&& other) {
+  DataSink_WipeVolume_Result(DataSink_WipeVolume_Result&& other) {
     ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
   }
 
-  Paver_WipeVolume_Result& operator=(Paver_WipeVolume_Result&& other) {
+  DataSink_WipeVolume_Result& operator=(DataSink_WipeVolume_Result&& other) {
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -567,32 +947,32 @@ struct Paver_WipeVolume_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
-  static Paver_WipeVolume_Result WithResponse(::llcpp::fuchsia::paver::Paver_WipeVolume_Response* val) {
-    Paver_WipeVolume_Result result;
+  static DataSink_WipeVolume_Result WithResponse(::llcpp::fuchsia::paver::DataSink_WipeVolume_Response* val) {
+    DataSink_WipeVolume_Result result;
     result.set_response(val);
     return result;
   }
 
-  ::llcpp::fuchsia::paver::Paver_WipeVolume_Response& mutable_response();
+  ::llcpp::fuchsia::paver::DataSink_WipeVolume_Response& mutable_response();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::Paver_WipeVolume_Response>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::DataSink_WipeVolume_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::Paver_WipeVolume_Response>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::DataSink_WipeVolume_Response>::value && std::is_move_assignable<T>::value>
   set_response(T* v) {
     mutable_response() = std::move(*v);
   }
 
-  ::llcpp::fuchsia::paver::Paver_WipeVolume_Response const & response() const { return response_; }
+  ::llcpp::fuchsia::paver::DataSink_WipeVolume_Response const & response() const { return response_; }
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
-  static Paver_WipeVolume_Result WithErr(int32_t* val) {
-    Paver_WipeVolume_Result result;
+  static DataSink_WipeVolume_Result WithErr(int32_t* val) {
+    DataSink_WipeVolume_Result result;
     result.set_err(val);
     return result;
   }
@@ -618,8 +998,8 @@ struct Paver_WipeVolume_Result {
     return static_cast<Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &fuchsia_paver_Paver_WipeVolume_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_Paver_WipeVolume_ResultTable;
+  static constexpr const fidl_type_t* Type = &fuchsia_paver_DataSink_WipeVolume_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DataSink_WipeVolume_ResultTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
@@ -636,21 +1016,21 @@ struct Paver_WipeVolume_Result {
   };
 
   void Destroy();
-  void MoveImpl_(Paver_WipeVolume_Result&& other);
+  void MoveImpl_(DataSink_WipeVolume_Result&& other);
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   union {
-    ::llcpp::fuchsia::paver::Paver_WipeVolume_Response response_;
+    ::llcpp::fuchsia::paver::DataSink_WipeVolume_Response response_;
     int32_t err_;
   };
 };
 
-extern "C" const fidl_type_t fuchsia_paver_Paver_QueryConfigurationStatus_ResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_Paver_QueryConfigurationStatus_ResponseTable;
+extern "C" const fidl_type_t fuchsia_paver_BootManager_QueryConfigurationStatus_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_BootManager_QueryConfigurationStatus_ResponseTable;
 
-struct Paver_QueryConfigurationStatus_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_paver_Paver_QueryConfigurationStatus_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_Paver_QueryConfigurationStatus_ResponseTable;
+struct BootManager_QueryConfigurationStatus_Response {
+  static constexpr const fidl_type_t* Type = &fuchsia_paver_BootManager_QueryConfigurationStatus_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_BootManager_QueryConfigurationStatus_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
@@ -662,26 +1042,26 @@ struct Paver_QueryConfigurationStatus_Response {
   ::llcpp::fuchsia::paver::ConfigurationStatus status = {};
 };
 
-extern "C" const fidl_type_t fuchsia_paver_Paver_QueryConfigurationStatus_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_Paver_QueryConfigurationStatus_ResultTable;
+extern "C" const fidl_type_t fuchsia_paver_BootManager_QueryConfigurationStatus_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_BootManager_QueryConfigurationStatus_ResultTable;
 
-struct Paver_QueryConfigurationStatus_Result {
+struct BootManager_QueryConfigurationStatus_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
   };
 
-  Paver_QueryConfigurationStatus_Result();
-  ~Paver_QueryConfigurationStatus_Result();
+  BootManager_QueryConfigurationStatus_Result();
+  ~BootManager_QueryConfigurationStatus_Result();
 
-  Paver_QueryConfigurationStatus_Result(Paver_QueryConfigurationStatus_Result&& other) {
+  BootManager_QueryConfigurationStatus_Result(BootManager_QueryConfigurationStatus_Result&& other) {
     ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
   }
 
-  Paver_QueryConfigurationStatus_Result& operator=(Paver_QueryConfigurationStatus_Result&& other) {
+  BootManager_QueryConfigurationStatus_Result& operator=(BootManager_QueryConfigurationStatus_Result&& other) {
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -692,32 +1072,32 @@ struct Paver_QueryConfigurationStatus_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
-  static Paver_QueryConfigurationStatus_Result WithResponse(::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response* val) {
-    Paver_QueryConfigurationStatus_Result result;
+  static BootManager_QueryConfigurationStatus_Result WithResponse(::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Response* val) {
+    BootManager_QueryConfigurationStatus_Result result;
     result.set_response(val);
     return result;
   }
 
-  ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response& mutable_response();
+  ::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Response& mutable_response();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Response>::value && std::is_move_assignable<T>::value>
   set_response(T* v) {
     mutable_response() = std::move(*v);
   }
 
-  ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response const & response() const { return response_; }
+  ::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Response const & response() const { return response_; }
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
-  static Paver_QueryConfigurationStatus_Result WithErr(int32_t* val) {
-    Paver_QueryConfigurationStatus_Result result;
+  static BootManager_QueryConfigurationStatus_Result WithErr(int32_t* val) {
+    BootManager_QueryConfigurationStatus_Result result;
     result.set_err(val);
     return result;
   }
@@ -743,8 +1123,8 @@ struct Paver_QueryConfigurationStatus_Result {
     return static_cast<Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &fuchsia_paver_Paver_QueryConfigurationStatus_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_Paver_QueryConfigurationStatus_ResultTable;
+  static constexpr const fidl_type_t* Type = &fuchsia_paver_BootManager_QueryConfigurationStatus_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_BootManager_QueryConfigurationStatus_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
@@ -761,21 +1141,21 @@ struct Paver_QueryConfigurationStatus_Result {
   };
 
   void Destroy();
-  void MoveImpl_(Paver_QueryConfigurationStatus_Result&& other);
+  void MoveImpl_(BootManager_QueryConfigurationStatus_Result&& other);
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   union {
-    ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response response_;
+    ::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Response response_;
     int32_t err_;
   };
 };
 
-extern "C" const fidl_type_t fuchsia_paver_Paver_QueryActiveConfiguration_ResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_Paver_QueryActiveConfiguration_ResponseTable;
+extern "C" const fidl_type_t fuchsia_paver_BootManager_QueryActiveConfiguration_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_BootManager_QueryActiveConfiguration_ResponseTable;
 
-struct Paver_QueryActiveConfiguration_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_paver_Paver_QueryActiveConfiguration_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_Paver_QueryActiveConfiguration_ResponseTable;
+struct BootManager_QueryActiveConfiguration_Response {
+  static constexpr const fidl_type_t* Type = &fuchsia_paver_BootManager_QueryActiveConfiguration_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_BootManager_QueryActiveConfiguration_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
@@ -787,26 +1167,26 @@ struct Paver_QueryActiveConfiguration_Response {
   ::llcpp::fuchsia::paver::Configuration configuration = {};
 };
 
-extern "C" const fidl_type_t fuchsia_paver_Paver_QueryActiveConfiguration_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_Paver_QueryActiveConfiguration_ResultTable;
+extern "C" const fidl_type_t fuchsia_paver_BootManager_QueryActiveConfiguration_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_BootManager_QueryActiveConfiguration_ResultTable;
 
-struct Paver_QueryActiveConfiguration_Result {
+struct BootManager_QueryActiveConfiguration_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
   };
 
-  Paver_QueryActiveConfiguration_Result();
-  ~Paver_QueryActiveConfiguration_Result();
+  BootManager_QueryActiveConfiguration_Result();
+  ~BootManager_QueryActiveConfiguration_Result();
 
-  Paver_QueryActiveConfiguration_Result(Paver_QueryActiveConfiguration_Result&& other) {
+  BootManager_QueryActiveConfiguration_Result(BootManager_QueryActiveConfiguration_Result&& other) {
     ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
   }
 
-  Paver_QueryActiveConfiguration_Result& operator=(Paver_QueryActiveConfiguration_Result&& other) {
+  BootManager_QueryActiveConfiguration_Result& operator=(BootManager_QueryActiveConfiguration_Result&& other) {
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -817,32 +1197,32 @@ struct Paver_QueryActiveConfiguration_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
-  static Paver_QueryActiveConfiguration_Result WithResponse(::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response* val) {
-    Paver_QueryActiveConfiguration_Result result;
+  static BootManager_QueryActiveConfiguration_Result WithResponse(::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Response* val) {
+    BootManager_QueryActiveConfiguration_Result result;
     result.set_response(val);
     return result;
   }
 
-  ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response& mutable_response();
+  ::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Response& mutable_response();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T* v) {
     mutable_response() = *v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Response>::value && std::is_move_assignable<T>::value>
   set_response(T* v) {
     mutable_response() = std::move(*v);
   }
 
-  ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response const & response() const { return response_; }
+  ::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Response const & response() const { return response_; }
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
-  static Paver_QueryActiveConfiguration_Result WithErr(int32_t* val) {
-    Paver_QueryActiveConfiguration_Result result;
+  static BootManager_QueryActiveConfiguration_Result WithErr(int32_t* val) {
+    BootManager_QueryActiveConfiguration_Result result;
     result.set_err(val);
     return result;
   }
@@ -868,8 +1248,8 @@ struct Paver_QueryActiveConfiguration_Result {
     return static_cast<Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &fuchsia_paver_Paver_QueryActiveConfiguration_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_Paver_QueryActiveConfiguration_ResultTable;
+  static constexpr const fidl_type_t* Type = &fuchsia_paver_BootManager_QueryActiveConfiguration_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_BootManager_QueryActiveConfiguration_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
@@ -886,235 +1266,48 @@ struct Paver_QueryActiveConfiguration_Result {
   };
 
   void Destroy();
-  void MoveImpl_(Paver_QueryActiveConfiguration_Result&& other);
+  void MoveImpl_(BootManager_QueryActiveConfiguration_Result&& other);
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   union {
-    ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response response_;
+    ::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Response response_;
     int32_t err_;
   };
 };
 
-extern "C" const fidl_type_t fuchsia_paver_Paver_ReadAsset_ResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_Paver_ReadAsset_ResponseTable;
+extern "C" const fidl_type_t fuchsia_paver_BootManagerQueryActiveConfigurationRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_BootManagerQueryActiveConfigurationRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_BootManagerQueryActiveConfigurationResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_BootManagerQueryActiveConfigurationResponseTable;
+extern "C" const fidl_type_t fuchsia_paver_BootManagerQueryConfigurationStatusRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_BootManagerQueryConfigurationStatusRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_BootManagerQueryConfigurationStatusResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_BootManagerQueryConfigurationStatusResponseTable;
+extern "C" const fidl_type_t fuchsia_paver_BootManagerSetConfigurationActiveRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_BootManagerSetConfigurationActiveRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_BootManagerSetConfigurationActiveResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_BootManagerSetConfigurationActiveResponseTable;
+extern "C" const fidl_type_t fuchsia_paver_BootManagerSetConfigurationUnbootableRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_BootManagerSetConfigurationUnbootableRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_BootManagerSetConfigurationUnbootableResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_BootManagerSetConfigurationUnbootableResponseTable;
+extern "C" const fidl_type_t fuchsia_paver_BootManagerSetActiveConfigurationHealthyRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_BootManagerSetActiveConfigurationHealthyRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_BootManagerSetActiveConfigurationHealthyResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_BootManagerSetActiveConfigurationHealthyResponseTable;
 
-struct Paver_ReadAsset_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_paver_Paver_ReadAsset_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_Paver_ReadAsset_ResponseTable;
-  static constexpr uint32_t MaxNumHandles = 1;
-  static constexpr uint32_t PrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
-
-  ::llcpp::fuchsia::mem::Buffer asset = {};
-};
-
-extern "C" const fidl_type_t fuchsia_paver_Paver_ReadAsset_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_Paver_ReadAsset_ResultTable;
-
-struct Paver_ReadAsset_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-  };
-
-  Paver_ReadAsset_Result();
-  ~Paver_ReadAsset_Result();
-
-  Paver_ReadAsset_Result(Paver_ReadAsset_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  Paver_ReadAsset_Result& operator=(Paver_ReadAsset_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
-
-  static Paver_ReadAsset_Result WithResponse(::llcpp::fuchsia::paver::Paver_ReadAsset_Response* val) {
-    Paver_ReadAsset_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::paver::Paver_ReadAsset_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::Paver_ReadAsset_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::Paver_ReadAsset_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::paver::Paver_ReadAsset_Response const & response() const { return response_; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static Paver_ReadAsset_Result WithErr(int32_t* val) {
-    Paver_ReadAsset_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  int32_t const & err() const { return err_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_paver_Paver_ReadAsset_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_Paver_ReadAsset_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 1;
-  static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 16;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(Paver_ReadAsset_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::paver::Paver_ReadAsset_Response response_;
-    int32_t err_;
-  };
-};
-
-extern "C" const fidl_type_t fuchsia_paver_PaverInitializeAbrRequestTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverInitializeAbrRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverInitializeAbrResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverInitializeAbrResponseTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverQueryActiveConfigurationRequestTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverQueryActiveConfigurationRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverQueryActiveConfigurationResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverQueryActiveConfigurationResponseTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverQueryConfigurationStatusRequestTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverQueryConfigurationStatusRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverQueryConfigurationStatusResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverQueryConfigurationStatusResponseTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverSetConfigurationActiveRequestTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverSetConfigurationActiveRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverSetConfigurationActiveResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverSetConfigurationActiveResponseTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverSetConfigurationUnbootableRequestTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverSetConfigurationUnbootableRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverSetConfigurationUnbootableResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverSetConfigurationUnbootableResponseTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverSetActiveConfigurationHealthyRequestTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverSetActiveConfigurationHealthyRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverSetActiveConfigurationHealthyResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverSetActiveConfigurationHealthyResponseTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverReadAssetRequestTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverReadAssetRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverReadAssetResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverReadAssetResponseTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverWriteAssetRequestTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverWriteAssetRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverWriteAssetResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverWriteAssetResponseTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverWriteVolumesRequestTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverWriteVolumesRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverWriteVolumesResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverWriteVolumesResponseTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverWriteBootloaderRequestTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverWriteBootloaderRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverWriteBootloaderResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverWriteBootloaderResponseTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverWriteDataFileRequestTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverWriteDataFileRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverWriteDataFileResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverWriteDataFileResponseTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverWipeVolumeRequestTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverWipeVolumeRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverWipeVolumeResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverWipeVolumeResponseTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverInitializePartitionTablesRequestTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverInitializePartitionTablesRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverInitializePartitionTablesResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverInitializePartitionTablesResponseTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverWipePartitionTablesRequestTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverWipePartitionTablesRequestTable;
-extern "C" const fidl_type_t fuchsia_paver_PaverWipePartitionTablesResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_PaverWipePartitionTablesResponseTable;
-
-// Protocol for managing boot partitions.
-//
-// Most of the protocol methods rely on auto-discovery of the storage device
-// which will be paved. If the device has no pre-initialized storage devices or
-// multiple, the methods will fail. For devices with dynamic partitions (i.e. GPT),
-// |InitializePartitionTables| and |WipeVolumes| can be used to control which device is
-// paved to.
-class Paver final {
-  Paver() = delete;
+// Protocol for managing boot configurations.
+class BootManager final {
+  BootManager() = delete;
  public:
-  static constexpr char Name[] = "fuchsia.paver.Paver";
-
-  struct InitializeAbrResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    int32_t status;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverInitializeAbrResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_PaverInitializeAbrResponseTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool ContainsUnion = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-  };
-  using InitializeAbrRequest = ::fidl::AnyZeroArgMessage;
 
   struct QueryActiveConfigurationResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result result;
+    ::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverQueryActiveConfigurationResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_PaverQueryActiveConfigurationResponseTable;
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_BootManagerQueryActiveConfigurationResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_BootManagerQueryActiveConfigurationResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1130,10 +1323,10 @@ class Paver final {
   struct QueryConfigurationStatusResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result result;
+    ::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverQueryConfigurationStatusResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_PaverQueryConfigurationStatusResponseTable;
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_BootManagerQueryConfigurationStatusResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_BootManagerQueryConfigurationStatusResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1149,8 +1342,8 @@ class Paver final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::paver::Configuration configuration;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverQueryConfigurationStatusRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_PaverQueryConfigurationStatusRequestTable;
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_BootManagerQueryConfigurationStatusRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_BootManagerQueryConfigurationStatusRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1168,8 +1361,8 @@ class Paver final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverSetConfigurationActiveResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_PaverSetConfigurationActiveResponseTable;
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_BootManagerSetConfigurationActiveResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_BootManagerSetConfigurationActiveResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1185,8 +1378,8 @@ class Paver final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::paver::Configuration configuration;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverSetConfigurationActiveRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_PaverSetConfigurationActiveRequestTable;
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_BootManagerSetConfigurationActiveRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_BootManagerSetConfigurationActiveRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1204,8 +1397,8 @@ class Paver final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverSetConfigurationUnbootableResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_PaverSetConfigurationUnbootableResponseTable;
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_BootManagerSetConfigurationUnbootableResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_BootManagerSetConfigurationUnbootableResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1221,8 +1414,8 @@ class Paver final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::paver::Configuration configuration;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverSetConfigurationUnbootableRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_PaverSetConfigurationUnbootableRequestTable;
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_BootManagerSetConfigurationUnbootableRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_BootManagerSetConfigurationUnbootableRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1240,8 +1433,8 @@ class Paver final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverSetActiveConfigurationHealthyResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_PaverSetActiveConfigurationHealthyResponseTable;
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_BootManagerSetActiveConfigurationHealthyResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_BootManagerSetActiveConfigurationHealthyResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1254,319 +1447,11 @@ class Paver final {
   };
   using SetActiveConfigurationHealthyRequest = ::fidl::AnyZeroArgMessage;
 
-  struct ReadAssetResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::llcpp::fuchsia::paver::Paver_ReadAsset_Result result;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverReadAssetResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_PaverReadAssetResponseTable;
-    static constexpr uint32_t MaxNumHandles = 1;
-    static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
-    static constexpr uint32_t AltMaxOutOfLine = 16;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool ContainsUnion = true;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-  };
-  struct ReadAssetRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::llcpp::fuchsia::paver::Configuration configuration;
-    ::llcpp::fuchsia::paver::Asset asset;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverReadAssetRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_PaverReadAssetRequestTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool ContainsUnion = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = ReadAssetResponse;
-  };
-
-  struct WriteAssetResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    int32_t status;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverWriteAssetResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_PaverWriteAssetResponseTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool ContainsUnion = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-  };
-  struct WriteAssetRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::llcpp::fuchsia::paver::Configuration configuration;
-    ::llcpp::fuchsia::paver::Asset asset;
-    ::llcpp::fuchsia::mem::Buffer payload;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverWriteAssetRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_PaverWriteAssetRequestTable;
-    static constexpr uint32_t MaxNumHandles = 1;
-    static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool ContainsUnion = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = WriteAssetResponse;
-  };
-
-  struct WriteVolumesResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    int32_t status;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverWriteVolumesResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_PaverWriteVolumesResponseTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool ContainsUnion = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-  };
-  struct WriteVolumesRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::zx::channel payload;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverWriteVolumesRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_PaverWriteVolumesRequestTable;
-    static constexpr uint32_t MaxNumHandles = 1;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool ContainsUnion = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = WriteVolumesResponse;
-  };
-
-  struct WriteBootloaderResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    int32_t status;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverWriteBootloaderResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_PaverWriteBootloaderResponseTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool ContainsUnion = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-  };
-  struct WriteBootloaderRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::llcpp::fuchsia::mem::Buffer payload;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverWriteBootloaderRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_PaverWriteBootloaderRequestTable;
-    static constexpr uint32_t MaxNumHandles = 1;
-    static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 32;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool ContainsUnion = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = WriteBootloaderResponse;
-  };
-
-  struct WriteDataFileResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    int32_t status;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverWriteDataFileResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_PaverWriteDataFileResponseTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool ContainsUnion = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-  };
-  struct WriteDataFileRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::fidl::StringView filename;
-    ::llcpp::fuchsia::mem::Buffer payload;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverWriteDataFileRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_PaverWriteDataFileRequestTable;
-    static constexpr uint32_t MaxNumHandles = 1;
-    static constexpr uint32_t PrimarySize = 48;
-    static constexpr uint32_t MaxOutOfLine = 4096;
-    static constexpr uint32_t AltPrimarySize = 48;
-    static constexpr uint32_t AltMaxOutOfLine = 4096;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool ContainsUnion = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = WriteDataFileResponse;
-  };
-
-  struct WipeVolumeResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::llcpp::fuchsia::paver::Paver_WipeVolume_Result result;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverWipeVolumeResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_PaverWipeVolumeResponseTable;
-    static constexpr uint32_t MaxNumHandles = 1;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
-    static constexpr uint32_t AltMaxOutOfLine = 8;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool ContainsUnion = true;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-  };
-  struct WipeVolumeRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::zx::channel block_device;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverWipeVolumeRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_PaverWipeVolumeRequestTable;
-    static constexpr uint32_t MaxNumHandles = 1;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool ContainsUnion = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = WipeVolumeResponse;
-  };
-
-  struct InitializePartitionTablesResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    int32_t status;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverInitializePartitionTablesResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_PaverInitializePartitionTablesResponseTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool ContainsUnion = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-  };
-  struct InitializePartitionTablesRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::zx::channel gpt_block_device;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverInitializePartitionTablesRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_PaverInitializePartitionTablesRequestTable;
-    static constexpr uint32_t MaxNumHandles = 1;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool ContainsUnion = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = InitializePartitionTablesResponse;
-  };
-
-  struct WipePartitionTablesResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    int32_t status;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverWipePartitionTablesResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_PaverWipePartitionTablesResponseTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool ContainsUnion = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-  };
-  struct WipePartitionTablesRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::zx::channel block_device;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverWipePartitionTablesRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_PaverWipePartitionTablesRequestTable;
-    static constexpr uint32_t MaxNumHandles = 1;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool ContainsUnion = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = WipePartitionTablesResponse;
-  };
-
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
     ResultOf() = delete;
    private:
-    template <typename ResponseType>
-    class InitializeAbr_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
-     public:
-      InitializeAbr_Impl(::zx::unowned_channel _client_end);
-      ~InitializeAbr_Impl() = default;
-      InitializeAbr_Impl(InitializeAbr_Impl&& other) = default;
-      InitializeAbr_Impl& operator=(InitializeAbr_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
     template <typename ResponseType>
     class QueryActiveConfiguration_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
@@ -1647,6 +1532,829 @@ class Paver final {
       using Super::operator->;
       using Super::operator*;
     };
+
+   public:
+    using QueryActiveConfiguration = QueryActiveConfiguration_Impl<QueryActiveConfigurationResponse>;
+    using QueryConfigurationStatus = QueryConfigurationStatus_Impl<QueryConfigurationStatusResponse>;
+    using SetConfigurationActive = SetConfigurationActive_Impl<SetConfigurationActiveResponse>;
+    using SetConfigurationUnbootable = SetConfigurationUnbootable_Impl<SetConfigurationUnbootableResponse>;
+    using SetActiveConfigurationHealthy = SetActiveConfigurationHealthy_Impl<SetActiveConfigurationHealthyResponse>;
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+    UnownedResultOf() = delete;
+   private:
+    template <typename ResponseType>
+    class QueryActiveConfiguration_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      QueryActiveConfiguration_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~QueryActiveConfiguration_Impl() = default;
+      QueryActiveConfiguration_Impl(QueryActiveConfiguration_Impl&& other) = default;
+      QueryActiveConfiguration_Impl& operator=(QueryActiveConfiguration_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class QueryConfigurationStatus_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      QueryConfigurationStatus_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer);
+      ~QueryConfigurationStatus_Impl() = default;
+      QueryConfigurationStatus_Impl(QueryConfigurationStatus_Impl&& other) = default;
+      QueryConfigurationStatus_Impl& operator=(QueryConfigurationStatus_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class SetConfigurationActive_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      SetConfigurationActive_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer);
+      ~SetConfigurationActive_Impl() = default;
+      SetConfigurationActive_Impl(SetConfigurationActive_Impl&& other) = default;
+      SetConfigurationActive_Impl& operator=(SetConfigurationActive_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class SetConfigurationUnbootable_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      SetConfigurationUnbootable_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer);
+      ~SetConfigurationUnbootable_Impl() = default;
+      SetConfigurationUnbootable_Impl(SetConfigurationUnbootable_Impl&& other) = default;
+      SetConfigurationUnbootable_Impl& operator=(SetConfigurationUnbootable_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class SetActiveConfigurationHealthy_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      SetActiveConfigurationHealthy_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~SetActiveConfigurationHealthy_Impl() = default;
+      SetActiveConfigurationHealthy_Impl(SetActiveConfigurationHealthy_Impl&& other) = default;
+      SetActiveConfigurationHealthy_Impl& operator=(SetActiveConfigurationHealthy_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+
+   public:
+    using QueryActiveConfiguration = QueryActiveConfiguration_Impl<QueryActiveConfigurationResponse>;
+    using QueryConfigurationStatus = QueryConfigurationStatus_Impl<QueryConfigurationStatusResponse>;
+    using SetConfigurationActive = SetConfigurationActive_Impl<SetConfigurationActiveResponse>;
+    using SetConfigurationUnbootable = SetConfigurationUnbootable_Impl<SetConfigurationUnbootableResponse>;
+    using SetActiveConfigurationHealthy = SetActiveConfigurationHealthy_Impl<SetActiveConfigurationHealthyResponse>;
+  };
+
+  class SyncClient final {
+   public:
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
+    SyncClient(SyncClient&&) = default;
+    SyncClient& operator=(SyncClient&&) = default;
+
+    const ::zx::channel& channel() const { return channel_; }
+
+    ::zx::channel* mutable_channel() { return &channel_; }
+
+    // Queries active configuration.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::QueryActiveConfiguration QueryActiveConfiguration();
+
+    // Queries active configuration.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::QueryActiveConfiguration QueryActiveConfiguration(::fidl::BytePart _response_buffer);
+
+    // Queries status of |configuration|.
+    //
+    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::QueryConfigurationStatus QueryConfigurationStatus(::llcpp::fuchsia::paver::Configuration configuration);
+
+    // Queries status of |configuration|.
+    //
+    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::QueryConfigurationStatus QueryConfigurationStatus(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer);
+
+    // Updates persistent metadata identifying which configuration should be selected as 'primary'
+    // for booting purposes. Should only be called after `KERNEL` as well as optional
+    // `VERIFIED_BOOT_METADATA` assets for specified `configuration` were written successfully.
+    //
+    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::SetConfigurationActive SetConfigurationActive(::llcpp::fuchsia::paver::Configuration configuration);
+
+    // Updates persistent metadata identifying which configuration should be selected as 'primary'
+    // for booting purposes. Should only be called after `KERNEL` as well as optional
+    // `VERIFIED_BOOT_METADATA` assets for specified `configuration` were written successfully.
+    //
+    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::SetConfigurationActive SetConfigurationActive(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer);
+
+    // Updates persistent metadata identifying whether |configuration| is bootable.
+    // Should only be called in the following situations:
+    // * Before `KERNEL` as well as optional `VERIFIED_BOOT_METADATA` assets for specified
+    //   |configuration| are written.
+    // * After successfully booting from a new configuration and marking it healthy. This method
+    //   would be then called on the old configuration.
+    // * After "successfully" booting from a new configuration, but encountering an unrecoverable
+    //   error during health check. This method would be then called on the new configuration.
+    //
+    // If the configuration is unbootable, no action is taken.
+    //
+    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::SetConfigurationUnbootable SetConfigurationUnbootable(::llcpp::fuchsia::paver::Configuration configuration);
+
+    // Updates persistent metadata identifying whether |configuration| is bootable.
+    // Should only be called in the following situations:
+    // * Before `KERNEL` as well as optional `VERIFIED_BOOT_METADATA` assets for specified
+    //   |configuration| are written.
+    // * After successfully booting from a new configuration and marking it healthy. This method
+    //   would be then called on the old configuration.
+    // * After "successfully" booting from a new configuration, but encountering an unrecoverable
+    //   error during health check. This method would be then called on the new configuration.
+    //
+    // If the configuration is unbootable, no action is taken.
+    //
+    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::SetConfigurationUnbootable SetConfigurationUnbootable(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer);
+
+    // Updates persistent metadata identifying that active configuration is stable. Used to signal
+    // "rollback to previous slot" logic is not needed anymore. Meant to be called in subsequent
+    // boot attempt after `SetActiveConfiguration` was called. Will return error if active
+    // configuration is currently unbootable.
+    //
+    // If the configuration is already marked healthy, no action is taken.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::SetActiveConfigurationHealthy SetActiveConfigurationHealthy();
+
+    // Updates persistent metadata identifying that active configuration is stable. Used to signal
+    // "rollback to previous slot" logic is not needed anymore. Meant to be called in subsequent
+    // boot attempt after `SetActiveConfiguration` was called. Will return error if active
+    // configuration is currently unbootable.
+    //
+    // If the configuration is already marked healthy, no action is taken.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::SetActiveConfigurationHealthy SetActiveConfigurationHealthy(::fidl::BytePart _response_buffer);
+
+   private:
+    ::zx::channel channel_;
+  };
+
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  class Call final {
+    Call() = delete;
+   public:
+
+    // Queries active configuration.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::QueryActiveConfiguration QueryActiveConfiguration(::zx::unowned_channel _client_end);
+
+    // Queries active configuration.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::QueryActiveConfiguration QueryActiveConfiguration(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
+    // Queries status of |configuration|.
+    //
+    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::QueryConfigurationStatus QueryConfigurationStatus(::zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration);
+
+    // Queries status of |configuration|.
+    //
+    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::QueryConfigurationStatus QueryConfigurationStatus(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer);
+
+    // Updates persistent metadata identifying which configuration should be selected as 'primary'
+    // for booting purposes. Should only be called after `KERNEL` as well as optional
+    // `VERIFIED_BOOT_METADATA` assets for specified `configuration` were written successfully.
+    //
+    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::SetConfigurationActive SetConfigurationActive(::zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration);
+
+    // Updates persistent metadata identifying which configuration should be selected as 'primary'
+    // for booting purposes. Should only be called after `KERNEL` as well as optional
+    // `VERIFIED_BOOT_METADATA` assets for specified `configuration` were written successfully.
+    //
+    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::SetConfigurationActive SetConfigurationActive(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer);
+
+    // Updates persistent metadata identifying whether |configuration| is bootable.
+    // Should only be called in the following situations:
+    // * Before `KERNEL` as well as optional `VERIFIED_BOOT_METADATA` assets for specified
+    //   |configuration| are written.
+    // * After successfully booting from a new configuration and marking it healthy. This method
+    //   would be then called on the old configuration.
+    // * After "successfully" booting from a new configuration, but encountering an unrecoverable
+    //   error during health check. This method would be then called on the new configuration.
+    //
+    // If the configuration is unbootable, no action is taken.
+    //
+    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::SetConfigurationUnbootable SetConfigurationUnbootable(::zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration);
+
+    // Updates persistent metadata identifying whether |configuration| is bootable.
+    // Should only be called in the following situations:
+    // * Before `KERNEL` as well as optional `VERIFIED_BOOT_METADATA` assets for specified
+    //   |configuration| are written.
+    // * After successfully booting from a new configuration and marking it healthy. This method
+    //   would be then called on the old configuration.
+    // * After "successfully" booting from a new configuration, but encountering an unrecoverable
+    //   error during health check. This method would be then called on the new configuration.
+    //
+    // If the configuration is unbootable, no action is taken.
+    //
+    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::SetConfigurationUnbootable SetConfigurationUnbootable(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer);
+
+    // Updates persistent metadata identifying that active configuration is stable. Used to signal
+    // "rollback to previous slot" logic is not needed anymore. Meant to be called in subsequent
+    // boot attempt after `SetActiveConfiguration` was called. Will return error if active
+    // configuration is currently unbootable.
+    //
+    // If the configuration is already marked healthy, no action is taken.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::SetActiveConfigurationHealthy SetActiveConfigurationHealthy(::zx::unowned_channel _client_end);
+
+    // Updates persistent metadata identifying that active configuration is stable. Used to signal
+    // "rollback to previous slot" logic is not needed anymore. Meant to be called in subsequent
+    // boot attempt after `SetActiveConfiguration` was called. Will return error if active
+    // configuration is currently unbootable.
+    //
+    // If the configuration is already marked healthy, no action is taken.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::SetActiveConfigurationHealthy SetActiveConfigurationHealthy(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+    InPlace() = delete;
+   public:
+
+    // Queries active configuration.
+    static ::fidl::DecodeResult<QueryActiveConfigurationResponse> QueryActiveConfiguration(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Queries status of |configuration|.
+    //
+    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
+    static ::fidl::DecodeResult<QueryConfigurationStatusResponse> QueryConfigurationStatus(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<QueryConfigurationStatusRequest> params, ::fidl::BytePart response_buffer);
+
+    // Updates persistent metadata identifying which configuration should be selected as 'primary'
+    // for booting purposes. Should only be called after `KERNEL` as well as optional
+    // `VERIFIED_BOOT_METADATA` assets for specified `configuration` were written successfully.
+    //
+    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
+    static ::fidl::DecodeResult<SetConfigurationActiveResponse> SetConfigurationActive(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetConfigurationActiveRequest> params, ::fidl::BytePart response_buffer);
+
+    // Updates persistent metadata identifying whether |configuration| is bootable.
+    // Should only be called in the following situations:
+    // * Before `KERNEL` as well as optional `VERIFIED_BOOT_METADATA` assets for specified
+    //   |configuration| are written.
+    // * After successfully booting from a new configuration and marking it healthy. This method
+    //   would be then called on the old configuration.
+    // * After "successfully" booting from a new configuration, but encountering an unrecoverable
+    //   error during health check. This method would be then called on the new configuration.
+    //
+    // If the configuration is unbootable, no action is taken.
+    //
+    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
+    static ::fidl::DecodeResult<SetConfigurationUnbootableResponse> SetConfigurationUnbootable(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetConfigurationUnbootableRequest> params, ::fidl::BytePart response_buffer);
+
+    // Updates persistent metadata identifying that active configuration is stable. Used to signal
+    // "rollback to previous slot" logic is not needed anymore. Meant to be called in subsequent
+    // boot attempt after `SetActiveConfiguration` was called. Will return error if active
+    // configuration is currently unbootable.
+    //
+    // If the configuration is already marked healthy, no action is taken.
+    static ::fidl::DecodeResult<SetActiveConfigurationHealthyResponse> SetActiveConfigurationHealthy(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+  };
+
+  // Pure-virtual interface to be implemented by a server.
+  class Interface {
+   public:
+    Interface() = default;
+    virtual ~Interface() = default;
+    using _Outer = BootManager;
+    using _Base = ::fidl::CompleterBase;
+
+    class QueryActiveConfigurationCompleterBase : public _Base {
+     public:
+      void Reply(::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Result result);
+      void ReplySuccess(::llcpp::fuchsia::paver::Configuration configuration);
+      void ReplyError(int32_t error);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::Configuration configuration);
+      void Reply(::fidl::DecodedMessage<QueryActiveConfigurationResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using QueryActiveConfigurationCompleter = ::fidl::Completer<QueryActiveConfigurationCompleterBase>;
+
+    virtual void QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync _completer) = 0;
+
+    class QueryConfigurationStatusCompleterBase : public _Base {
+     public:
+      void Reply(::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Result result);
+      void ReplySuccess(::llcpp::fuchsia::paver::ConfigurationStatus status);
+      void ReplyError(int32_t error);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::ConfigurationStatus status);
+      void Reply(::fidl::DecodedMessage<QueryConfigurationStatusResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using QueryConfigurationStatusCompleter = ::fidl::Completer<QueryConfigurationStatusCompleterBase>;
+
+    virtual void QueryConfigurationStatus(::llcpp::fuchsia::paver::Configuration configuration, QueryConfigurationStatusCompleter::Sync _completer) = 0;
+
+    class SetConfigurationActiveCompleterBase : public _Base {
+     public:
+      void Reply(int32_t status);
+      void Reply(::fidl::BytePart _buffer, int32_t status);
+      void Reply(::fidl::DecodedMessage<SetConfigurationActiveResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using SetConfigurationActiveCompleter = ::fidl::Completer<SetConfigurationActiveCompleterBase>;
+
+    virtual void SetConfigurationActive(::llcpp::fuchsia::paver::Configuration configuration, SetConfigurationActiveCompleter::Sync _completer) = 0;
+
+    class SetConfigurationUnbootableCompleterBase : public _Base {
+     public:
+      void Reply(int32_t status);
+      void Reply(::fidl::BytePart _buffer, int32_t status);
+      void Reply(::fidl::DecodedMessage<SetConfigurationUnbootableResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using SetConfigurationUnbootableCompleter = ::fidl::Completer<SetConfigurationUnbootableCompleterBase>;
+
+    virtual void SetConfigurationUnbootable(::llcpp::fuchsia::paver::Configuration configuration, SetConfigurationUnbootableCompleter::Sync _completer) = 0;
+
+    class SetActiveConfigurationHealthyCompleterBase : public _Base {
+     public:
+      void Reply(int32_t status);
+      void Reply(::fidl::BytePart _buffer, int32_t status);
+      void Reply(::fidl::DecodedMessage<SetActiveConfigurationHealthyResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using SetActiveConfigurationHealthyCompleter = ::fidl::Completer<SetActiveConfigurationHealthyCompleterBase>;
+
+    virtual void SetActiveConfigurationHealthy(SetActiveConfigurationHealthyCompleter::Sync _completer) = 0;
+
+  };
+
+  // Attempts to dispatch the incoming message to a handler function in the server implementation.
+  // If there is no matching handler, it returns false, leaving the message and transaction intact.
+  // In all other cases, it consumes the message and returns true.
+  // It is possible to chain multiple TryDispatch functions in this manner.
+  static bool TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Dispatches the incoming message to one of the handlers functions in the interface.
+  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
+  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
+  static bool Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
+  // to reduce template expansion.
+  // Do not call this method manually. Use |Dispatch| instead.
+  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+    return Dispatch(static_cast<Interface*>(impl), msg, txn);
+  }
+
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void QueryActiveConfigurationRequest(const ::fidl::DecodedMessage<BootManager::QueryActiveConfigurationRequest>& _msg);
+    static void QueryActiveConfigurationResponse(const ::fidl::DecodedMessage<BootManager::QueryActiveConfigurationResponse>& _msg);
+    static void QueryConfigurationStatusRequest(const ::fidl::DecodedMessage<BootManager::QueryConfigurationStatusRequest>& _msg);
+    static void QueryConfigurationStatusResponse(const ::fidl::DecodedMessage<BootManager::QueryConfigurationStatusResponse>& _msg);
+    static void SetConfigurationActiveRequest(const ::fidl::DecodedMessage<BootManager::SetConfigurationActiveRequest>& _msg);
+    static void SetConfigurationActiveResponse(const ::fidl::DecodedMessage<BootManager::SetConfigurationActiveResponse>& _msg);
+    static void SetConfigurationUnbootableRequest(const ::fidl::DecodedMessage<BootManager::SetConfigurationUnbootableRequest>& _msg);
+    static void SetConfigurationUnbootableResponse(const ::fidl::DecodedMessage<BootManager::SetConfigurationUnbootableResponse>& _msg);
+    static void SetActiveConfigurationHealthyRequest(const ::fidl::DecodedMessage<BootManager::SetActiveConfigurationHealthyRequest>& _msg);
+    static void SetActiveConfigurationHealthyResponse(const ::fidl::DecodedMessage<BootManager::SetActiveConfigurationHealthyResponse>& _msg);
+  };
+};
+
+extern "C" const fidl_type_t fuchsia_paver_DataSink_ReadAsset_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DataSink_ReadAsset_ResponseTable;
+
+struct DataSink_ReadAsset_Response {
+  static constexpr const fidl_type_t* Type = &fuchsia_paver_DataSink_ReadAsset_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DataSink_ReadAsset_ResponseTable;
+  static constexpr uint32_t MaxNumHandles = 1;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
+
+  ::llcpp::fuchsia::mem::Buffer asset = {};
+};
+
+extern "C" const fidl_type_t fuchsia_paver_DataSink_ReadAsset_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DataSink_ReadAsset_ResultTable;
+
+struct DataSink_ReadAsset_Result {
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+  };
+
+  DataSink_ReadAsset_Result();
+  ~DataSink_ReadAsset_Result();
+
+  DataSink_ReadAsset_Result(DataSink_ReadAsset_Result&& other) {
+    ordinal_ = Ordinal::Invalid;
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+  }
+
+  DataSink_ReadAsset_Result& operator=(DataSink_ReadAsset_Result&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+    return *this;
+  }
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static DataSink_ReadAsset_Result WithResponse(::llcpp::fuchsia::paver::DataSink_ReadAsset_Response* val) {
+    DataSink_ReadAsset_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  ::llcpp::fuchsia::paver::DataSink_ReadAsset_Response& mutable_response();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::DataSink_ReadAsset_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T* v) {
+    mutable_response() = *v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::DataSink_ReadAsset_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T* v) {
+    mutable_response() = std::move(*v);
+  }
+
+  ::llcpp::fuchsia::paver::DataSink_ReadAsset_Response const & response() const { return response_; }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static DataSink_ReadAsset_Result WithErr(int32_t* val) {
+    DataSink_ReadAsset_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  int32_t& mutable_err();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T* v) {
+    mutable_err() = *v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T* v) {
+    mutable_err() = std::move(*v);
+  }
+
+  int32_t const & err() const { return err_; }
+
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &fuchsia_paver_DataSink_ReadAsset_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DataSink_ReadAsset_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 1;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 16;
+
+ private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  void Destroy();
+  void MoveImpl_(DataSink_ReadAsset_Result&& other);
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  union {
+    ::llcpp::fuchsia::paver::DataSink_ReadAsset_Response response_;
+    int32_t err_;
+  };
+};
+
+extern "C" const fidl_type_t fuchsia_paver_DataSinkReadAssetRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkReadAssetRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_DataSinkReadAssetResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkReadAssetResponseTable;
+extern "C" const fidl_type_t fuchsia_paver_DataSinkWriteAssetRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkWriteAssetRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_DataSinkWriteAssetResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkWriteAssetResponseTable;
+extern "C" const fidl_type_t fuchsia_paver_DataSinkWriteVolumesRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkWriteVolumesRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_DataSinkWriteVolumesResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkWriteVolumesResponseTable;
+extern "C" const fidl_type_t fuchsia_paver_DataSinkWriteBootloaderRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkWriteBootloaderRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_DataSinkWriteBootloaderResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkWriteBootloaderResponseTable;
+extern "C" const fidl_type_t fuchsia_paver_DataSinkWriteDataFileRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkWriteDataFileRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_DataSinkWriteDataFileResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkWriteDataFileResponseTable;
+extern "C" const fidl_type_t fuchsia_paver_DataSinkWipeVolumeRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkWipeVolumeRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_DataSinkWipeVolumeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DataSinkWipeVolumeResponseTable;
+
+// Protocol for reading and writing boot partitions.
+class DataSink final {
+  DataSink() = delete;
+ public:
+
+  struct ReadAssetResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::llcpp::fuchsia::paver::DataSink_ReadAsset_Result result;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_DataSinkReadAssetResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DataSinkReadAssetResponseTable;
+    static constexpr uint32_t MaxNumHandles = 1;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 16;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = true;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  struct ReadAssetRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::llcpp::fuchsia::paver::Configuration configuration;
+    ::llcpp::fuchsia::paver::Asset asset;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_DataSinkReadAssetRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DataSinkReadAssetRequestTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = ReadAssetResponse;
+  };
+
+  struct WriteAssetResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    int32_t status;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_DataSinkWriteAssetResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DataSinkWriteAssetResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  struct WriteAssetRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::llcpp::fuchsia::paver::Configuration configuration;
+    ::llcpp::fuchsia::paver::Asset asset;
+    ::llcpp::fuchsia::mem::Buffer payload;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_DataSinkWriteAssetRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DataSinkWriteAssetRequestTable;
+    static constexpr uint32_t MaxNumHandles = 1;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = WriteAssetResponse;
+  };
+
+  struct WriteVolumesResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    int32_t status;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_DataSinkWriteVolumesResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DataSinkWriteVolumesResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  struct WriteVolumesRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::zx::channel payload;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_DataSinkWriteVolumesRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DataSinkWriteVolumesRequestTable;
+    static constexpr uint32_t MaxNumHandles = 1;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = WriteVolumesResponse;
+  };
+
+  struct WriteBootloaderResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    int32_t status;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_DataSinkWriteBootloaderResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DataSinkWriteBootloaderResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  struct WriteBootloaderRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::llcpp::fuchsia::mem::Buffer payload;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_DataSinkWriteBootloaderRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DataSinkWriteBootloaderRequestTable;
+    static constexpr uint32_t MaxNumHandles = 1;
+    static constexpr uint32_t PrimarySize = 32;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = WriteBootloaderResponse;
+  };
+
+  struct WriteDataFileResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    int32_t status;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_DataSinkWriteDataFileResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DataSinkWriteDataFileResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  struct WriteDataFileRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::fidl::StringView filename;
+    ::llcpp::fuchsia::mem::Buffer payload;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_DataSinkWriteDataFileRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DataSinkWriteDataFileRequestTable;
+    static constexpr uint32_t MaxNumHandles = 1;
+    static constexpr uint32_t PrimarySize = 48;
+    static constexpr uint32_t MaxOutOfLine = 4096;
+    static constexpr uint32_t AltPrimarySize = 48;
+    static constexpr uint32_t AltMaxOutOfLine = 4096;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = WriteDataFileResponse;
+  };
+
+  struct WipeVolumeResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::llcpp::fuchsia::paver::DataSink_WipeVolume_Result result;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_DataSinkWipeVolumeResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DataSinkWipeVolumeResponseTable;
+    static constexpr uint32_t MaxNumHandles = 1;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = true;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  using WipeVolumeRequest = ::fidl::AnyZeroArgMessage;
+
+
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+    ResultOf() = delete;
+   private:
     template <typename ResponseType>
     class ReadAsset_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
@@ -1731,7 +2439,7 @@ class Paver final {
     class WipeVolume_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      WipeVolume_Impl(::zx::unowned_channel _client_end, ::zx::channel block_device);
+      WipeVolume_Impl(::zx::unowned_channel _client_end);
       ~WipeVolume_Impl() = default;
       WipeVolume_Impl(WipeVolume_Impl&& other) = default;
       WipeVolume_Impl& operator=(WipeVolume_Impl&& other) = default;
@@ -1743,54 +2451,14 @@ class Paver final {
       using Super::operator->;
       using Super::operator*;
     };
-    template <typename ResponseType>
-    class InitializePartitionTables_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
-     public:
-      InitializePartitionTables_Impl(::zx::unowned_channel _client_end, ::zx::channel gpt_block_device);
-      ~InitializePartitionTables_Impl() = default;
-      InitializePartitionTables_Impl(InitializePartitionTables_Impl&& other) = default;
-      InitializePartitionTables_Impl& operator=(InitializePartitionTables_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
-    class WipePartitionTables_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
-     public:
-      WipePartitionTables_Impl(::zx::unowned_channel _client_end, ::zx::channel block_device);
-      ~WipePartitionTables_Impl() = default;
-      WipePartitionTables_Impl(WipePartitionTables_Impl&& other) = default;
-      WipePartitionTables_Impl& operator=(WipePartitionTables_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
 
    public:
-    using InitializeAbr = InitializeAbr_Impl<InitializeAbrResponse>;
-    using QueryActiveConfiguration = QueryActiveConfiguration_Impl<QueryActiveConfigurationResponse>;
-    using QueryConfigurationStatus = QueryConfigurationStatus_Impl<QueryConfigurationStatusResponse>;
-    using SetConfigurationActive = SetConfigurationActive_Impl<SetConfigurationActiveResponse>;
-    using SetConfigurationUnbootable = SetConfigurationUnbootable_Impl<SetConfigurationUnbootableResponse>;
-    using SetActiveConfigurationHealthy = SetActiveConfigurationHealthy_Impl<SetActiveConfigurationHealthyResponse>;
     using ReadAsset = ReadAsset_Impl<ReadAssetResponse>;
     using WriteAsset = WriteAsset_Impl<WriteAssetResponse>;
     using WriteVolumes = WriteVolumes_Impl<WriteVolumesResponse>;
     using WriteBootloader = WriteBootloader_Impl<WriteBootloaderResponse>;
     using WriteDataFile = WriteDataFile_Impl<WriteDataFileResponse>;
     using WipeVolume = WipeVolume_Impl<WipeVolumeResponse>;
-    using InitializePartitionTables = InitializePartitionTables_Impl<InitializePartitionTablesResponse>;
-    using WipePartitionTables = WipePartitionTables_Impl<WipePartitionTablesResponse>;
   };
 
   // Collection of return types of FIDL calls in this interface,
@@ -1798,102 +2466,6 @@ class Paver final {
   class UnownedResultOf final {
     UnownedResultOf() = delete;
    private:
-    template <typename ResponseType>
-    class InitializeAbr_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-     public:
-      InitializeAbr_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-      ~InitializeAbr_Impl() = default;
-      InitializeAbr_Impl(InitializeAbr_Impl&& other) = default;
-      InitializeAbr_Impl& operator=(InitializeAbr_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
-    class QueryActiveConfiguration_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-     public:
-      QueryActiveConfiguration_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-      ~QueryActiveConfiguration_Impl() = default;
-      QueryActiveConfiguration_Impl(QueryActiveConfiguration_Impl&& other) = default;
-      QueryActiveConfiguration_Impl& operator=(QueryActiveConfiguration_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
-    class QueryConfigurationStatus_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-     public:
-      QueryConfigurationStatus_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer);
-      ~QueryConfigurationStatus_Impl() = default;
-      QueryConfigurationStatus_Impl(QueryConfigurationStatus_Impl&& other) = default;
-      QueryConfigurationStatus_Impl& operator=(QueryConfigurationStatus_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
-    class SetConfigurationActive_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-     public:
-      SetConfigurationActive_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer);
-      ~SetConfigurationActive_Impl() = default;
-      SetConfigurationActive_Impl(SetConfigurationActive_Impl&& other) = default;
-      SetConfigurationActive_Impl& operator=(SetConfigurationActive_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
-    class SetConfigurationUnbootable_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-     public:
-      SetConfigurationUnbootable_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer);
-      ~SetConfigurationUnbootable_Impl() = default;
-      SetConfigurationUnbootable_Impl(SetConfigurationUnbootable_Impl&& other) = default;
-      SetConfigurationUnbootable_Impl& operator=(SetConfigurationUnbootable_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
-    class SetActiveConfigurationHealthy_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-     public:
-      SetActiveConfigurationHealthy_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-      ~SetActiveConfigurationHealthy_Impl() = default;
-      SetActiveConfigurationHealthy_Impl(SetActiveConfigurationHealthy_Impl&& other) = default;
-      SetActiveConfigurationHealthy_Impl& operator=(SetActiveConfigurationHealthy_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
     template <typename ResponseType>
     class ReadAsset_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
@@ -1978,7 +2550,7 @@ class Paver final {
     class WipeVolume_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      WipeVolume_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel block_device, ::fidl::BytePart _response_buffer);
+      WipeVolume_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~WipeVolume_Impl() = default;
       WipeVolume_Impl(WipeVolume_Impl&& other) = default;
       WipeVolume_Impl& operator=(WipeVolume_Impl&& other) = default;
@@ -1990,54 +2562,14 @@ class Paver final {
       using Super::operator->;
       using Super::operator*;
     };
-    template <typename ResponseType>
-    class InitializePartitionTables_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-     public:
-      InitializePartitionTables_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel gpt_block_device, ::fidl::BytePart _response_buffer);
-      ~InitializePartitionTables_Impl() = default;
-      InitializePartitionTables_Impl(InitializePartitionTables_Impl&& other) = default;
-      InitializePartitionTables_Impl& operator=(InitializePartitionTables_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
-    class WipePartitionTables_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-     public:
-      WipePartitionTables_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel block_device, ::fidl::BytePart _response_buffer);
-      ~WipePartitionTables_Impl() = default;
-      WipePartitionTables_Impl(WipePartitionTables_Impl&& other) = default;
-      WipePartitionTables_Impl& operator=(WipePartitionTables_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
 
    public:
-    using InitializeAbr = InitializeAbr_Impl<InitializeAbrResponse>;
-    using QueryActiveConfiguration = QueryActiveConfiguration_Impl<QueryActiveConfigurationResponse>;
-    using QueryConfigurationStatus = QueryConfigurationStatus_Impl<QueryConfigurationStatusResponse>;
-    using SetConfigurationActive = SetConfigurationActive_Impl<SetConfigurationActiveResponse>;
-    using SetConfigurationUnbootable = SetConfigurationUnbootable_Impl<SetConfigurationUnbootableResponse>;
-    using SetActiveConfigurationHealthy = SetActiveConfigurationHealthy_Impl<SetActiveConfigurationHealthyResponse>;
     using ReadAsset = ReadAsset_Impl<ReadAssetResponse>;
     using WriteAsset = WriteAsset_Impl<WriteAssetResponse>;
     using WriteVolumes = WriteVolumes_Impl<WriteVolumesResponse>;
     using WriteBootloader = WriteBootloader_Impl<WriteBootloaderResponse>;
     using WriteDataFile = WriteDataFile_Impl<WriteDataFileResponse>;
     using WipeVolume = WipeVolume_Impl<WipeVolumeResponse>;
-    using InitializePartitionTables = InitializePartitionTables_Impl<InitializePartitionTablesResponse>;
-    using WipePartitionTables = WipePartitionTables_Impl<WipePartitionTablesResponse>;
   };
 
   class SyncClient final {
@@ -2050,118 +2582,6 @@ class Paver final {
     const ::zx::channel& channel() const { return channel_; }
 
     ::zx::channel* mutable_channel() { return &channel_; }
-
-    // Initializes ABR metadata. Should only be called to initialize ABR
-    // metadata for the first time (i.e. it should not be called every boot),
-    // or recover from corrupted ABR metadata.
-    //
-    // Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported
-    // and we always boot from configuration A.
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::InitializeAbr InitializeAbr();
-
-    // Initializes ABR metadata. Should only be called to initialize ABR
-    // metadata for the first time (i.e. it should not be called every boot),
-    // or recover from corrupted ABR metadata.
-    //
-    // Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported
-    // and we always boot from configuration A.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::InitializeAbr InitializeAbr(::fidl::BytePart _response_buffer);
-
-    // Queries active configuration.
-    //
-    // Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported
-    // and we always boot from configuration A.
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::QueryActiveConfiguration QueryActiveConfiguration();
-
-    // Queries active configuration.
-    //
-    // Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported
-    // and we always boot from configuration A.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::QueryActiveConfiguration QueryActiveConfiguration(::fidl::BytePart _response_buffer);
-
-    // Queries status of |configuration|.
-    //
-    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::QueryConfigurationStatus QueryConfigurationStatus(::llcpp::fuchsia::paver::Configuration configuration);
-
-    // Queries status of |configuration|.
-    //
-    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::QueryConfigurationStatus QueryConfigurationStatus(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer);
-
-    // Updates persistent metadata identifying which configuration should be selected as 'primary'
-    // for booting purposes. Should only be called after `KERNEL` as well as optional
-    // `VERIFIED_BOOT_METADATA` assets for specified `configuration` were written successfully.
-    //
-    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::SetConfigurationActive SetConfigurationActive(::llcpp::fuchsia::paver::Configuration configuration);
-
-    // Updates persistent metadata identifying which configuration should be selected as 'primary'
-    // for booting purposes. Should only be called after `KERNEL` as well as optional
-    // `VERIFIED_BOOT_METADATA` assets for specified `configuration` were written successfully.
-    //
-    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::SetConfigurationActive SetConfigurationActive(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer);
-
-    // Updates persistent metadata identifying whether |configuration| is bootable.
-    // Should only be called in the following situations:
-    // * Before `KERNEL` as well as optional `VERIFIED_BOOT_METADATA` assets for specified
-    //   |configuration| are written.
-    // * After successfully booting from a new configuration and marking it healthy. This method
-    //   would be then called on the old configuration.
-    // * After "successfully" booting from a new configuration, but encountering an unrecoverable
-    //   error during health check. This method would be then called on the new configuration.
-    //
-    // If the configuration is unbootable, no action is taken.
-    //
-    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::SetConfigurationUnbootable SetConfigurationUnbootable(::llcpp::fuchsia::paver::Configuration configuration);
-
-    // Updates persistent metadata identifying whether |configuration| is bootable.
-    // Should only be called in the following situations:
-    // * Before `KERNEL` as well as optional `VERIFIED_BOOT_METADATA` assets for specified
-    //   |configuration| are written.
-    // * After successfully booting from a new configuration and marking it healthy. This method
-    //   would be then called on the old configuration.
-    // * After "successfully" booting from a new configuration, but encountering an unrecoverable
-    //   error during health check. This method would be then called on the new configuration.
-    //
-    // If the configuration is unbootable, no action is taken.
-    //
-    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::SetConfigurationUnbootable SetConfigurationUnbootable(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer);
-
-    // Updates persistent metadata identifying that active configuration is stable. Used to signal
-    // "rollback to previous slot" logic is not needed anymore. Meant to be called in subsequent
-    // boot attempt after `SetActiveConfiguration` was called. Will return error if active
-    // configuration is currently unbootable.
-    //
-    // If the configuration is already marked healthy, no action is taken.
-    //
-    // Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported.
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::SetActiveConfigurationHealthy SetActiveConfigurationHealthy();
-
-    // Updates persistent metadata identifying that active configuration is stable. Used to signal
-    // "rollback to previous slot" logic is not needed anymore. Meant to be called in subsequent
-    // boot attempt after `SetActiveConfiguration` was called. Will return error if active
-    // configuration is currently unbootable.
-    //
-    // If the configuration is already marked healthy, no action is taken.
-    //
-    // Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::SetActiveConfigurationHealthy SetActiveConfigurationHealthy(::fidl::BytePart _response_buffer);
 
     // Reads partition corresponding to |configuration| and |asset| into a
     // vmo and returns it.
@@ -2241,8 +2661,8 @@ class Paver final {
     // `fuchsia.io.Node` for now.
     //
     // On success, returns a channel to the initialized FVM volume.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::WipeVolume WipeVolume(::zx::channel block_device);
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::WipeVolume WipeVolume();
 
     // Wipes the FVM partition from the device. Should not be confused with factory reset, which
     // is less intrusive. The result is that the default FVM volumes are re-created, but empty.
@@ -2257,47 +2677,7 @@ class Paver final {
     //
     // On success, returns a channel to the initialized FVM volume.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::WipeVolume WipeVolume(::fidl::BytePart _request_buffer, ::zx::channel block_device, ::fidl::BytePart _response_buffer);
-
-    // Initializes GPT on given block device and then adds an FVM partition.
-    //
-    // |gpt_block_device| specifies the block device to use. It assumed that channel
-    // backing |gpt_block_device| also implements `fuchsia.io.Node` for now.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::InitializePartitionTables InitializePartitionTables(::zx::channel gpt_block_device);
-
-    // Initializes GPT on given block device and then adds an FVM partition.
-    //
-    // |gpt_block_device| specifies the block device to use. It assumed that channel
-    // backing |gpt_block_device| also implements `fuchsia.io.Node` for now.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::InitializePartitionTables InitializePartitionTables(::fidl::BytePart _request_buffer, ::zx::channel gpt_block_device, ::fidl::BytePart _response_buffer);
-
-    // Wipes all entries from the partition table of the specified block device.
-    // Currently only supported on devices with a GPT.
-    //
-    // If |block_device| is not provided, the paver will perform a search for
-    // the the FVM. If multiple block devices have valid GPT, |block_device| can be provided
-    // to specify which one to target. It assumed that channel backing
-    // |block_device| also implements `fuchsia.io.Node` for now.
-    //
-    // *WARNING*: This API may destructively remove non-fuchsia maintained partitions from
-    // the block device.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::WipePartitionTables WipePartitionTables(::zx::channel block_device);
-
-    // Wipes all entries from the partition table of the specified block device.
-    // Currently only supported on devices with a GPT.
-    //
-    // If |block_device| is not provided, the paver will perform a search for
-    // the the FVM. If multiple block devices have valid GPT, |block_device| can be provided
-    // to specify which one to target. It assumed that channel backing
-    // |block_device| also implements `fuchsia.io.Node` for now.
-    //
-    // *WARNING*: This API may destructively remove non-fuchsia maintained partitions from
-    // the block device.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::WipePartitionTables WipePartitionTables(::fidl::BytePart _request_buffer, ::zx::channel block_device, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::WipeVolume WipeVolume(::fidl::BytePart _response_buffer);
 
    private:
     ::zx::channel channel_;
@@ -2307,118 +2687,6 @@ class Paver final {
   class Call final {
     Call() = delete;
    public:
-
-    // Initializes ABR metadata. Should only be called to initialize ABR
-    // metadata for the first time (i.e. it should not be called every boot),
-    // or recover from corrupted ABR metadata.
-    //
-    // Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported
-    // and we always boot from configuration A.
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::InitializeAbr InitializeAbr(::zx::unowned_channel _client_end);
-
-    // Initializes ABR metadata. Should only be called to initialize ABR
-    // metadata for the first time (i.e. it should not be called every boot),
-    // or recover from corrupted ABR metadata.
-    //
-    // Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported
-    // and we always boot from configuration A.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::InitializeAbr InitializeAbr(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-
-    // Queries active configuration.
-    //
-    // Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported
-    // and we always boot from configuration A.
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::QueryActiveConfiguration QueryActiveConfiguration(::zx::unowned_channel _client_end);
-
-    // Queries active configuration.
-    //
-    // Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported
-    // and we always boot from configuration A.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::QueryActiveConfiguration QueryActiveConfiguration(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-
-    // Queries status of |configuration|.
-    //
-    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::QueryConfigurationStatus QueryConfigurationStatus(::zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration);
-
-    // Queries status of |configuration|.
-    //
-    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::QueryConfigurationStatus QueryConfigurationStatus(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer);
-
-    // Updates persistent metadata identifying which configuration should be selected as 'primary'
-    // for booting purposes. Should only be called after `KERNEL` as well as optional
-    // `VERIFIED_BOOT_METADATA` assets for specified `configuration` were written successfully.
-    //
-    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetConfigurationActive SetConfigurationActive(::zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration);
-
-    // Updates persistent metadata identifying which configuration should be selected as 'primary'
-    // for booting purposes. Should only be called after `KERNEL` as well as optional
-    // `VERIFIED_BOOT_METADATA` assets for specified `configuration` were written successfully.
-    //
-    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetConfigurationActive SetConfigurationActive(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer);
-
-    // Updates persistent metadata identifying whether |configuration| is bootable.
-    // Should only be called in the following situations:
-    // * Before `KERNEL` as well as optional `VERIFIED_BOOT_METADATA` assets for specified
-    //   |configuration| are written.
-    // * After successfully booting from a new configuration and marking it healthy. This method
-    //   would be then called on the old configuration.
-    // * After "successfully" booting from a new configuration, but encountering an unrecoverable
-    //   error during health check. This method would be then called on the new configuration.
-    //
-    // If the configuration is unbootable, no action is taken.
-    //
-    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetConfigurationUnbootable SetConfigurationUnbootable(::zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration);
-
-    // Updates persistent metadata identifying whether |configuration| is bootable.
-    // Should only be called in the following situations:
-    // * Before `KERNEL` as well as optional `VERIFIED_BOOT_METADATA` assets for specified
-    //   |configuration| are written.
-    // * After successfully booting from a new configuration and marking it healthy. This method
-    //   would be then called on the old configuration.
-    // * After "successfully" booting from a new configuration, but encountering an unrecoverable
-    //   error during health check. This method would be then called on the new configuration.
-    //
-    // If the configuration is unbootable, no action is taken.
-    //
-    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetConfigurationUnbootable SetConfigurationUnbootable(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::fidl::BytePart _response_buffer);
-
-    // Updates persistent metadata identifying that active configuration is stable. Used to signal
-    // "rollback to previous slot" logic is not needed anymore. Meant to be called in subsequent
-    // boot attempt after `SetActiveConfiguration` was called. Will return error if active
-    // configuration is currently unbootable.
-    //
-    // If the configuration is already marked healthy, no action is taken.
-    //
-    // Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported.
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::SetActiveConfigurationHealthy SetActiveConfigurationHealthy(::zx::unowned_channel _client_end);
-
-    // Updates persistent metadata identifying that active configuration is stable. Used to signal
-    // "rollback to previous slot" logic is not needed anymore. Meant to be called in subsequent
-    // boot attempt after `SetActiveConfiguration` was called. Will return error if active
-    // configuration is currently unbootable.
-    //
-    // If the configuration is already marked healthy, no action is taken.
-    //
-    // Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::SetActiveConfigurationHealthy SetActiveConfigurationHealthy(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Reads partition corresponding to |configuration| and |asset| into a
     // vmo and returns it.
@@ -2498,8 +2766,8 @@ class Paver final {
     // `fuchsia.io.Node` for now.
     //
     // On success, returns a channel to the initialized FVM volume.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::WipeVolume WipeVolume(::zx::unowned_channel _client_end, ::zx::channel block_device);
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::WipeVolume WipeVolume(::zx::unowned_channel _client_end);
 
     // Wipes the FVM partition from the device. Should not be confused with factory reset, which
     // is less intrusive. The result is that the default FVM volumes are re-created, but empty.
@@ -2514,47 +2782,7 @@ class Paver final {
     //
     // On success, returns a channel to the initialized FVM volume.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::WipeVolume WipeVolume(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel block_device, ::fidl::BytePart _response_buffer);
-
-    // Initializes GPT on given block device and then adds an FVM partition.
-    //
-    // |gpt_block_device| specifies the block device to use. It assumed that channel
-    // backing |gpt_block_device| also implements `fuchsia.io.Node` for now.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::InitializePartitionTables InitializePartitionTables(::zx::unowned_channel _client_end, ::zx::channel gpt_block_device);
-
-    // Initializes GPT on given block device and then adds an FVM partition.
-    //
-    // |gpt_block_device| specifies the block device to use. It assumed that channel
-    // backing |gpt_block_device| also implements `fuchsia.io.Node` for now.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::InitializePartitionTables InitializePartitionTables(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel gpt_block_device, ::fidl::BytePart _response_buffer);
-
-    // Wipes all entries from the partition table of the specified block device.
-    // Currently only supported on devices with a GPT.
-    //
-    // If |block_device| is not provided, the paver will perform a search for
-    // the the FVM. If multiple block devices have valid GPT, |block_device| can be provided
-    // to specify which one to target. It assumed that channel backing
-    // |block_device| also implements `fuchsia.io.Node` for now.
-    //
-    // *WARNING*: This API may destructively remove non-fuchsia maintained partitions from
-    // the block device.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::WipePartitionTables WipePartitionTables(::zx::unowned_channel _client_end, ::zx::channel block_device);
-
-    // Wipes all entries from the partition table of the specified block device.
-    // Currently only supported on devices with a GPT.
-    //
-    // If |block_device| is not provided, the paver will perform a search for
-    // the the FVM. If multiple block devices have valid GPT, |block_device| can be provided
-    // to specify which one to target. It assumed that channel backing
-    // |block_device| also implements `fuchsia.io.Node` for now.
-    //
-    // *WARNING*: This API may destructively remove non-fuchsia maintained partitions from
-    // the block device.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::WipePartitionTables WipePartitionTables(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel block_device, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::WipeVolume WipeVolume(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -2563,56 +2791,6 @@ class Paver final {
   class InPlace final {
     InPlace() = delete;
    public:
-
-    // Initializes ABR metadata. Should only be called to initialize ABR
-    // metadata for the first time (i.e. it should not be called every boot),
-    // or recover from corrupted ABR metadata.
-    //
-    // Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported
-    // and we always boot from configuration A.
-    static ::fidl::DecodeResult<InitializeAbrResponse> InitializeAbr(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
-    // Queries active configuration.
-    //
-    // Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported
-    // and we always boot from configuration A.
-    static ::fidl::DecodeResult<QueryActiveConfigurationResponse> QueryActiveConfiguration(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
-    // Queries status of |configuration|.
-    //
-    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
-    static ::fidl::DecodeResult<QueryConfigurationStatusResponse> QueryConfigurationStatus(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<QueryConfigurationStatusRequest> params, ::fidl::BytePart response_buffer);
-
-    // Updates persistent metadata identifying which configuration should be selected as 'primary'
-    // for booting purposes. Should only be called after `KERNEL` as well as optional
-    // `VERIFIED_BOOT_METADATA` assets for specified `configuration` were written successfully.
-    //
-    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
-    static ::fidl::DecodeResult<SetConfigurationActiveResponse> SetConfigurationActive(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetConfigurationActiveRequest> params, ::fidl::BytePart response_buffer);
-
-    // Updates persistent metadata identifying whether |configuration| is bootable.
-    // Should only be called in the following situations:
-    // * Before `KERNEL` as well as optional `VERIFIED_BOOT_METADATA` assets for specified
-    //   |configuration| are written.
-    // * After successfully booting from a new configuration and marking it healthy. This method
-    //   would be then called on the old configuration.
-    // * After "successfully" booting from a new configuration, but encountering an unrecoverable
-    //   error during health check. This method would be then called on the new configuration.
-    //
-    // If the configuration is unbootable, no action is taken.
-    //
-    // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
-    static ::fidl::DecodeResult<SetConfigurationUnbootableResponse> SetConfigurationUnbootable(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetConfigurationUnbootableRequest> params, ::fidl::BytePart response_buffer);
-
-    // Updates persistent metadata identifying that active configuration is stable. Used to signal
-    // "rollback to previous slot" logic is not needed anymore. Meant to be called in subsequent
-    // boot attempt after `SetActiveConfiguration` was called. Will return error if active
-    // configuration is currently unbootable.
-    //
-    // If the configuration is already marked healthy, no action is taken.
-    //
-    // Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported.
-    static ::fidl::DecodeResult<SetActiveConfigurationHealthyResponse> SetActiveConfigurationHealthy(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Reads partition corresponding to |configuration| and |asset| into a
     // vmo and returns it.
@@ -2654,25 +2832,7 @@ class Paver final {
     // `fuchsia.io.Node` for now.
     //
     // On success, returns a channel to the initialized FVM volume.
-    static ::fidl::DecodeResult<WipeVolumeResponse> WipeVolume(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<WipeVolumeRequest> params, ::fidl::BytePart response_buffer);
-
-    // Initializes GPT on given block device and then adds an FVM partition.
-    //
-    // |gpt_block_device| specifies the block device to use. It assumed that channel
-    // backing |gpt_block_device| also implements `fuchsia.io.Node` for now.
-    static ::fidl::DecodeResult<InitializePartitionTablesResponse> InitializePartitionTables(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<InitializePartitionTablesRequest> params, ::fidl::BytePart response_buffer);
-
-    // Wipes all entries from the partition table of the specified block device.
-    // Currently only supported on devices with a GPT.
-    //
-    // If |block_device| is not provided, the paver will perform a search for
-    // the the FVM. If multiple block devices have valid GPT, |block_device| can be provided
-    // to specify which one to target. It assumed that channel backing
-    // |block_device| also implements `fuchsia.io.Node` for now.
-    //
-    // *WARNING*: This API may destructively remove non-fuchsia maintained partitions from
-    // the block device.
-    static ::fidl::DecodeResult<WipePartitionTablesResponse> WipePartitionTables(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<WipePartitionTablesRequest> params, ::fidl::BytePart response_buffer);
+    static ::fidl::DecodeResult<WipeVolumeResponse> WipeVolume(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 
@@ -2681,105 +2841,15 @@ class Paver final {
    public:
     Interface() = default;
     virtual ~Interface() = default;
-    using _Outer = Paver;
+    using _Outer = DataSink;
     using _Base = ::fidl::CompleterBase;
-
-    class InitializeAbrCompleterBase : public _Base {
-     public:
-      void Reply(int32_t status);
-      void Reply(::fidl::BytePart _buffer, int32_t status);
-      void Reply(::fidl::DecodedMessage<InitializeAbrResponse> params);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using InitializeAbrCompleter = ::fidl::Completer<InitializeAbrCompleterBase>;
-
-    virtual void InitializeAbr(InitializeAbrCompleter::Sync _completer) = 0;
-
-    class QueryActiveConfigurationCompleterBase : public _Base {
-     public:
-      void Reply(::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result result);
-      void ReplySuccess(::llcpp::fuchsia::paver::Configuration configuration);
-      void ReplyError(int32_t error);
-      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result result);
-      void ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::Configuration configuration);
-      void Reply(::fidl::DecodedMessage<QueryActiveConfigurationResponse> params);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using QueryActiveConfigurationCompleter = ::fidl::Completer<QueryActiveConfigurationCompleterBase>;
-
-    virtual void QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync _completer) = 0;
-
-    class QueryConfigurationStatusCompleterBase : public _Base {
-     public:
-      void Reply(::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result result);
-      void ReplySuccess(::llcpp::fuchsia::paver::ConfigurationStatus status);
-      void ReplyError(int32_t error);
-      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result result);
-      void ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::ConfigurationStatus status);
-      void Reply(::fidl::DecodedMessage<QueryConfigurationStatusResponse> params);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using QueryConfigurationStatusCompleter = ::fidl::Completer<QueryConfigurationStatusCompleterBase>;
-
-    virtual void QueryConfigurationStatus(::llcpp::fuchsia::paver::Configuration configuration, QueryConfigurationStatusCompleter::Sync _completer) = 0;
-
-    class SetConfigurationActiveCompleterBase : public _Base {
-     public:
-      void Reply(int32_t status);
-      void Reply(::fidl::BytePart _buffer, int32_t status);
-      void Reply(::fidl::DecodedMessage<SetConfigurationActiveResponse> params);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using SetConfigurationActiveCompleter = ::fidl::Completer<SetConfigurationActiveCompleterBase>;
-
-    virtual void SetConfigurationActive(::llcpp::fuchsia::paver::Configuration configuration, SetConfigurationActiveCompleter::Sync _completer) = 0;
-
-    class SetConfigurationUnbootableCompleterBase : public _Base {
-     public:
-      void Reply(int32_t status);
-      void Reply(::fidl::BytePart _buffer, int32_t status);
-      void Reply(::fidl::DecodedMessage<SetConfigurationUnbootableResponse> params);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using SetConfigurationUnbootableCompleter = ::fidl::Completer<SetConfigurationUnbootableCompleterBase>;
-
-    virtual void SetConfigurationUnbootable(::llcpp::fuchsia::paver::Configuration configuration, SetConfigurationUnbootableCompleter::Sync _completer) = 0;
-
-    class SetActiveConfigurationHealthyCompleterBase : public _Base {
-     public:
-      void Reply(int32_t status);
-      void Reply(::fidl::BytePart _buffer, int32_t status);
-      void Reply(::fidl::DecodedMessage<SetActiveConfigurationHealthyResponse> params);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using SetActiveConfigurationHealthyCompleter = ::fidl::Completer<SetActiveConfigurationHealthyCompleterBase>;
-
-    virtual void SetActiveConfigurationHealthy(SetActiveConfigurationHealthyCompleter::Sync _completer) = 0;
 
     class ReadAssetCompleterBase : public _Base {
      public:
-      void Reply(::llcpp::fuchsia::paver::Paver_ReadAsset_Result result);
+      void Reply(::llcpp::fuchsia::paver::DataSink_ReadAsset_Result result);
       void ReplySuccess(::llcpp::fuchsia::mem::Buffer asset);
       void ReplyError(int32_t error);
-      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::Paver_ReadAsset_Result result);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::DataSink_ReadAsset_Result result);
       void ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::mem::Buffer asset);
       void Reply(::fidl::DecodedMessage<ReadAssetResponse> params);
 
@@ -2849,10 +2919,10 @@ class Paver final {
 
     class WipeVolumeCompleterBase : public _Base {
      public:
-      void Reply(::llcpp::fuchsia::paver::Paver_WipeVolume_Result result);
+      void Reply(::llcpp::fuchsia::paver::DataSink_WipeVolume_Result result);
       void ReplySuccess(::zx::channel volume);
       void ReplyError(int32_t error);
-      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::Paver_WipeVolume_Result result);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::DataSink_WipeVolume_Result result);
       void ReplySuccess(::fidl::BytePart _buffer, ::zx::channel volume);
       void Reply(::fidl::DecodedMessage<WipeVolumeResponse> params);
 
@@ -2862,35 +2932,7 @@ class Paver final {
 
     using WipeVolumeCompleter = ::fidl::Completer<WipeVolumeCompleterBase>;
 
-    virtual void WipeVolume(::zx::channel block_device, WipeVolumeCompleter::Sync _completer) = 0;
-
-    class InitializePartitionTablesCompleterBase : public _Base {
-     public:
-      void Reply(int32_t status);
-      void Reply(::fidl::BytePart _buffer, int32_t status);
-      void Reply(::fidl::DecodedMessage<InitializePartitionTablesResponse> params);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using InitializePartitionTablesCompleter = ::fidl::Completer<InitializePartitionTablesCompleterBase>;
-
-    virtual void InitializePartitionTables(::zx::channel gpt_block_device, InitializePartitionTablesCompleter::Sync _completer) = 0;
-
-    class WipePartitionTablesCompleterBase : public _Base {
-     public:
-      void Reply(int32_t status);
-      void Reply(::fidl::BytePart _buffer, int32_t status);
-      void Reply(::fidl::DecodedMessage<WipePartitionTablesResponse> params);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using WipePartitionTablesCompleter = ::fidl::Completer<WipePartitionTablesCompleterBase>;
-
-    virtual void WipePartitionTables(::zx::channel block_device, WipePartitionTablesCompleter::Sync _completer) = 0;
+    virtual void WipeVolume(WipeVolumeCompleter::Sync _completer) = 0;
 
   };
 
@@ -2917,34 +2959,1079 @@ class Paver final {
   class SetTransactionHeaderFor final {
     SetTransactionHeaderFor() = delete;
    public:
-    static void InitializeAbrRequest(const ::fidl::DecodedMessage<Paver::InitializeAbrRequest>& _msg);
-    static void InitializeAbrResponse(const ::fidl::DecodedMessage<Paver::InitializeAbrResponse>& _msg);
-    static void QueryActiveConfigurationRequest(const ::fidl::DecodedMessage<Paver::QueryActiveConfigurationRequest>& _msg);
-    static void QueryActiveConfigurationResponse(const ::fidl::DecodedMessage<Paver::QueryActiveConfigurationResponse>& _msg);
-    static void QueryConfigurationStatusRequest(const ::fidl::DecodedMessage<Paver::QueryConfigurationStatusRequest>& _msg);
-    static void QueryConfigurationStatusResponse(const ::fidl::DecodedMessage<Paver::QueryConfigurationStatusResponse>& _msg);
-    static void SetConfigurationActiveRequest(const ::fidl::DecodedMessage<Paver::SetConfigurationActiveRequest>& _msg);
-    static void SetConfigurationActiveResponse(const ::fidl::DecodedMessage<Paver::SetConfigurationActiveResponse>& _msg);
-    static void SetConfigurationUnbootableRequest(const ::fidl::DecodedMessage<Paver::SetConfigurationUnbootableRequest>& _msg);
-    static void SetConfigurationUnbootableResponse(const ::fidl::DecodedMessage<Paver::SetConfigurationUnbootableResponse>& _msg);
-    static void SetActiveConfigurationHealthyRequest(const ::fidl::DecodedMessage<Paver::SetActiveConfigurationHealthyRequest>& _msg);
-    static void SetActiveConfigurationHealthyResponse(const ::fidl::DecodedMessage<Paver::SetActiveConfigurationHealthyResponse>& _msg);
-    static void ReadAssetRequest(const ::fidl::DecodedMessage<Paver::ReadAssetRequest>& _msg);
-    static void ReadAssetResponse(const ::fidl::DecodedMessage<Paver::ReadAssetResponse>& _msg);
-    static void WriteAssetRequest(const ::fidl::DecodedMessage<Paver::WriteAssetRequest>& _msg);
-    static void WriteAssetResponse(const ::fidl::DecodedMessage<Paver::WriteAssetResponse>& _msg);
-    static void WriteVolumesRequest(const ::fidl::DecodedMessage<Paver::WriteVolumesRequest>& _msg);
-    static void WriteVolumesResponse(const ::fidl::DecodedMessage<Paver::WriteVolumesResponse>& _msg);
-    static void WriteBootloaderRequest(const ::fidl::DecodedMessage<Paver::WriteBootloaderRequest>& _msg);
-    static void WriteBootloaderResponse(const ::fidl::DecodedMessage<Paver::WriteBootloaderResponse>& _msg);
-    static void WriteDataFileRequest(const ::fidl::DecodedMessage<Paver::WriteDataFileRequest>& _msg);
-    static void WriteDataFileResponse(const ::fidl::DecodedMessage<Paver::WriteDataFileResponse>& _msg);
-    static void WipeVolumeRequest(const ::fidl::DecodedMessage<Paver::WipeVolumeRequest>& _msg);
-    static void WipeVolumeResponse(const ::fidl::DecodedMessage<Paver::WipeVolumeResponse>& _msg);
-    static void InitializePartitionTablesRequest(const ::fidl::DecodedMessage<Paver::InitializePartitionTablesRequest>& _msg);
-    static void InitializePartitionTablesResponse(const ::fidl::DecodedMessage<Paver::InitializePartitionTablesResponse>& _msg);
-    static void WipePartitionTablesRequest(const ::fidl::DecodedMessage<Paver::WipePartitionTablesRequest>& _msg);
-    static void WipePartitionTablesResponse(const ::fidl::DecodedMessage<Paver::WipePartitionTablesResponse>& _msg);
+    static void ReadAssetRequest(const ::fidl::DecodedMessage<DataSink::ReadAssetRequest>& _msg);
+    static void ReadAssetResponse(const ::fidl::DecodedMessage<DataSink::ReadAssetResponse>& _msg);
+    static void WriteAssetRequest(const ::fidl::DecodedMessage<DataSink::WriteAssetRequest>& _msg);
+    static void WriteAssetResponse(const ::fidl::DecodedMessage<DataSink::WriteAssetResponse>& _msg);
+    static void WriteVolumesRequest(const ::fidl::DecodedMessage<DataSink::WriteVolumesRequest>& _msg);
+    static void WriteVolumesResponse(const ::fidl::DecodedMessage<DataSink::WriteVolumesResponse>& _msg);
+    static void WriteBootloaderRequest(const ::fidl::DecodedMessage<DataSink::WriteBootloaderRequest>& _msg);
+    static void WriteBootloaderResponse(const ::fidl::DecodedMessage<DataSink::WriteBootloaderResponse>& _msg);
+    static void WriteDataFileRequest(const ::fidl::DecodedMessage<DataSink::WriteDataFileRequest>& _msg);
+    static void WriteDataFileResponse(const ::fidl::DecodedMessage<DataSink::WriteDataFileResponse>& _msg);
+    static void WipeVolumeRequest(const ::fidl::DecodedMessage<DataSink::WipeVolumeRequest>& _msg);
+    static void WipeVolumeResponse(const ::fidl::DecodedMessage<DataSink::WipeVolumeResponse>& _msg);
+  };
+};
+
+extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkReadAssetRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkReadAssetRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkReadAssetResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkReadAssetResponseTable;
+extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWriteAssetRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWriteAssetRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWriteAssetResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWriteAssetResponseTable;
+extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWriteVolumesRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWriteVolumesRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWriteVolumesResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWriteVolumesResponseTable;
+extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWriteBootloaderRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWriteBootloaderRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWriteBootloaderResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWriteBootloaderResponseTable;
+extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWriteDataFileRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWriteDataFileRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWriteDataFileResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWriteDataFileResponseTable;
+extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWipeVolumeRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWipeVolumeRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWipeVolumeResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWipeVolumeResponseTable;
+extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkInitializePartitionTablesRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkInitializePartitionTablesRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkInitializePartitionTablesResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkInitializePartitionTablesResponseTable;
+extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWipePartitionTablesRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWipePartitionTablesRequestTable;
+extern "C" const fidl_type_t fuchsia_paver_DynamicDataSinkWipePartitionTablesResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DynamicDataSinkWipePartitionTablesResponseTable;
+
+// Specialized DataSink with dynamic partition tables.
+class DynamicDataSink final {
+  DynamicDataSink() = delete;
+ public:
+
+  struct ReadAssetResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::llcpp::fuchsia::paver::DataSink_ReadAsset_Result result;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_DynamicDataSinkReadAssetResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DynamicDataSinkReadAssetResponseTable;
+    static constexpr uint32_t MaxNumHandles = 1;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 16;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = true;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  struct ReadAssetRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::llcpp::fuchsia::paver::Configuration configuration;
+    ::llcpp::fuchsia::paver::Asset asset;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_DynamicDataSinkReadAssetRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DynamicDataSinkReadAssetRequestTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = ReadAssetResponse;
+  };
+
+  struct WriteAssetResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    int32_t status;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_DynamicDataSinkWriteAssetResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DynamicDataSinkWriteAssetResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  struct WriteAssetRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::llcpp::fuchsia::paver::Configuration configuration;
+    ::llcpp::fuchsia::paver::Asset asset;
+    ::llcpp::fuchsia::mem::Buffer payload;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_DynamicDataSinkWriteAssetRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DynamicDataSinkWriteAssetRequestTable;
+    static constexpr uint32_t MaxNumHandles = 1;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = WriteAssetResponse;
+  };
+
+  struct WriteVolumesResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    int32_t status;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_DynamicDataSinkWriteVolumesResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DynamicDataSinkWriteVolumesResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  struct WriteVolumesRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::zx::channel payload;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_DynamicDataSinkWriteVolumesRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DynamicDataSinkWriteVolumesRequestTable;
+    static constexpr uint32_t MaxNumHandles = 1;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = WriteVolumesResponse;
+  };
+
+  struct WriteBootloaderResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    int32_t status;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_DynamicDataSinkWriteBootloaderResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DynamicDataSinkWriteBootloaderResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  struct WriteBootloaderRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::llcpp::fuchsia::mem::Buffer payload;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_DynamicDataSinkWriteBootloaderRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DynamicDataSinkWriteBootloaderRequestTable;
+    static constexpr uint32_t MaxNumHandles = 1;
+    static constexpr uint32_t PrimarySize = 32;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = WriteBootloaderResponse;
+  };
+
+  struct WriteDataFileResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    int32_t status;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_DynamicDataSinkWriteDataFileResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DynamicDataSinkWriteDataFileResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  struct WriteDataFileRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::fidl::StringView filename;
+    ::llcpp::fuchsia::mem::Buffer payload;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_DynamicDataSinkWriteDataFileRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DynamicDataSinkWriteDataFileRequestTable;
+    static constexpr uint32_t MaxNumHandles = 1;
+    static constexpr uint32_t PrimarySize = 48;
+    static constexpr uint32_t MaxOutOfLine = 4096;
+    static constexpr uint32_t AltPrimarySize = 48;
+    static constexpr uint32_t AltMaxOutOfLine = 4096;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = WriteDataFileResponse;
+  };
+
+  struct WipeVolumeResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::llcpp::fuchsia::paver::DataSink_WipeVolume_Result result;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_DynamicDataSinkWipeVolumeResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DynamicDataSinkWipeVolumeResponseTable;
+    static constexpr uint32_t MaxNumHandles = 1;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = true;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  using WipeVolumeRequest = ::fidl::AnyZeroArgMessage;
+
+  struct InitializePartitionTablesResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    int32_t status;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_DynamicDataSinkInitializePartitionTablesResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DynamicDataSinkInitializePartitionTablesResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  using InitializePartitionTablesRequest = ::fidl::AnyZeroArgMessage;
+
+  struct WipePartitionTablesResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    int32_t status;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_paver_DynamicDataSinkWipePartitionTablesResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DynamicDataSinkWipePartitionTablesResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  using WipePartitionTablesRequest = ::fidl::AnyZeroArgMessage;
+
+
+  // Collection of return types of FIDL calls in this interface.
+  class ResultOf final {
+    ResultOf() = delete;
+   private:
+    template <typename ResponseType>
+    class ReadAsset_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      ReadAsset_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset);
+      ~ReadAsset_Impl() = default;
+      ReadAsset_Impl(ReadAsset_Impl&& other) = default;
+      ReadAsset_Impl& operator=(ReadAsset_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class WriteAsset_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      WriteAsset_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload);
+      ~WriteAsset_Impl() = default;
+      WriteAsset_Impl(WriteAsset_Impl&& other) = default;
+      WriteAsset_Impl& operator=(WriteAsset_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class WriteVolumes_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      WriteVolumes_Impl(::zx::unowned_channel _client_end, ::zx::channel payload);
+      ~WriteVolumes_Impl() = default;
+      WriteVolumes_Impl(WriteVolumes_Impl&& other) = default;
+      WriteVolumes_Impl& operator=(WriteVolumes_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class WriteBootloader_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      WriteBootloader_Impl(::zx::unowned_channel _client_end, ::llcpp::fuchsia::mem::Buffer payload);
+      ~WriteBootloader_Impl() = default;
+      WriteBootloader_Impl(WriteBootloader_Impl&& other) = default;
+      WriteBootloader_Impl& operator=(WriteBootloader_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class WriteDataFile_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      WriteDataFile_Impl(::zx::unowned_channel _client_end, ::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload);
+      ~WriteDataFile_Impl() = default;
+      WriteDataFile_Impl(WriteDataFile_Impl&& other) = default;
+      WriteDataFile_Impl& operator=(WriteDataFile_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class WipeVolume_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      WipeVolume_Impl(::zx::unowned_channel _client_end);
+      ~WipeVolume_Impl() = default;
+      WipeVolume_Impl(WipeVolume_Impl&& other) = default;
+      WipeVolume_Impl& operator=(WipeVolume_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class InitializePartitionTables_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      InitializePartitionTables_Impl(::zx::unowned_channel _client_end);
+      ~InitializePartitionTables_Impl() = default;
+      InitializePartitionTables_Impl(InitializePartitionTables_Impl&& other) = default;
+      InitializePartitionTables_Impl& operator=(InitializePartitionTables_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class WipePartitionTables_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      WipePartitionTables_Impl(::zx::unowned_channel _client_end);
+      ~WipePartitionTables_Impl() = default;
+      WipePartitionTables_Impl(WipePartitionTables_Impl&& other) = default;
+      WipePartitionTables_Impl& operator=(WipePartitionTables_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+
+   public:
+    using ReadAsset = ReadAsset_Impl<ReadAssetResponse>;
+    using WriteAsset = WriteAsset_Impl<WriteAssetResponse>;
+    using WriteVolumes = WriteVolumes_Impl<WriteVolumesResponse>;
+    using WriteBootloader = WriteBootloader_Impl<WriteBootloaderResponse>;
+    using WriteDataFile = WriteDataFile_Impl<WriteDataFileResponse>;
+    using WipeVolume = WipeVolume_Impl<WipeVolumeResponse>;
+    using InitializePartitionTables = InitializePartitionTables_Impl<InitializePartitionTablesResponse>;
+    using WipePartitionTables = WipePartitionTables_Impl<WipePartitionTablesResponse>;
+  };
+
+  // Collection of return types of FIDL calls in this interface,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+    UnownedResultOf() = delete;
+   private:
+    template <typename ResponseType>
+    class ReadAsset_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      ReadAsset_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::fidl::BytePart _response_buffer);
+      ~ReadAsset_Impl() = default;
+      ReadAsset_Impl(ReadAsset_Impl&& other) = default;
+      ReadAsset_Impl& operator=(ReadAsset_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class WriteAsset_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      WriteAsset_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer);
+      ~WriteAsset_Impl() = default;
+      WriteAsset_Impl(WriteAsset_Impl&& other) = default;
+      WriteAsset_Impl& operator=(WriteAsset_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class WriteVolumes_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      WriteVolumes_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel payload, ::fidl::BytePart _response_buffer);
+      ~WriteVolumes_Impl() = default;
+      WriteVolumes_Impl(WriteVolumes_Impl&& other) = default;
+      WriteVolumes_Impl& operator=(WriteVolumes_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class WriteBootloader_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      WriteBootloader_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer);
+      ~WriteBootloader_Impl() = default;
+      WriteBootloader_Impl(WriteBootloader_Impl&& other) = default;
+      WriteBootloader_Impl& operator=(WriteBootloader_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class WriteDataFile_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      WriteDataFile_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer);
+      ~WriteDataFile_Impl() = default;
+      WriteDataFile_Impl(WriteDataFile_Impl&& other) = default;
+      WriteDataFile_Impl& operator=(WriteDataFile_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class WipeVolume_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      WipeVolume_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~WipeVolume_Impl() = default;
+      WipeVolume_Impl(WipeVolume_Impl&& other) = default;
+      WipeVolume_Impl& operator=(WipeVolume_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class InitializePartitionTables_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      InitializePartitionTables_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~InitializePartitionTables_Impl() = default;
+      InitializePartitionTables_Impl(InitializePartitionTables_Impl&& other) = default;
+      InitializePartitionTables_Impl& operator=(InitializePartitionTables_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class WipePartitionTables_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      WipePartitionTables_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~WipePartitionTables_Impl() = default;
+      WipePartitionTables_Impl(WipePartitionTables_Impl&& other) = default;
+      WipePartitionTables_Impl& operator=(WipePartitionTables_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+
+   public:
+    using ReadAsset = ReadAsset_Impl<ReadAssetResponse>;
+    using WriteAsset = WriteAsset_Impl<WriteAssetResponse>;
+    using WriteVolumes = WriteVolumes_Impl<WriteVolumesResponse>;
+    using WriteBootloader = WriteBootloader_Impl<WriteBootloaderResponse>;
+    using WriteDataFile = WriteDataFile_Impl<WriteDataFileResponse>;
+    using WipeVolume = WipeVolume_Impl<WipeVolumeResponse>;
+    using InitializePartitionTables = InitializePartitionTables_Impl<InitializePartitionTablesResponse>;
+    using WipePartitionTables = WipePartitionTables_Impl<WipePartitionTablesResponse>;
+  };
+
+  class SyncClient final {
+   public:
+    explicit SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+    ~SyncClient() = default;
+    SyncClient(SyncClient&&) = default;
+    SyncClient& operator=(SyncClient&&) = default;
+
+    const ::zx::channel& channel() const { return channel_; }
+
+    ::zx::channel* mutable_channel() { return &channel_; }
+
+    // Reads partition corresponding to |configuration| and |asset| into a
+    // vmo and returns it.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::ReadAsset ReadAsset(::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset);
+
+    // Reads partition corresponding to |configuration| and |asset| into a
+    // vmo and returns it.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::ReadAsset ReadAsset(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::fidl::BytePart _response_buffer);
+
+    // Writes partition corresponding to `configuration` and `asset` with data from `payload`.
+    // `payload` may need to be resized to the partition size, so the provided vmo must have
+    // been created with `ZX_VMO_RESIZABLE` or must be a child VMO that was created with
+    // `ZX_VMO_CHILD_RESIZABLE`. Will zero out rest of the partition if `payload` is smaller
+    // than the size of the partition being written.
+    //
+    //
+    // Returns `ZX_ERR_INVALID_ARGS` if `configuration` specifies active configuration.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::WriteAsset WriteAsset(::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload);
+
+    // Writes partition corresponding to `configuration` and `asset` with data from `payload`.
+    // `payload` may need to be resized to the partition size, so the provided vmo must have
+    // been created with `ZX_VMO_RESIZABLE` or must be a child VMO that was created with
+    // `ZX_VMO_CHILD_RESIZABLE`. Will zero out rest of the partition if `payload` is smaller
+    // than the size of the partition being written.
+    //
+    //
+    // Returns `ZX_ERR_INVALID_ARGS` if `configuration` specifies active configuration.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::WriteAsset WriteAsset(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer);
+
+    // Writes FVM with data from streamed via `payload`. This potentially affects all
+    // configurations.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::WriteVolumes WriteVolumes(::zx::channel payload);
+
+    // Writes FVM with data from streamed via `payload`. This potentially affects all
+    // configurations.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::WriteVolumes WriteVolumes(::fidl::BytePart _request_buffer, ::zx::channel payload, ::fidl::BytePart _response_buffer);
+
+    // Writes bootloader partition with data from `payload`.
+    //
+    // `payload` may need to be resized to the partition size, so the provided vmo must have
+    // been created with `ZX_VMO_RESIZABLE` or must be a child VMO that was created with
+    // `ZX_VMO_CHILD_RESIZABLE`.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::WriteBootloader WriteBootloader(::llcpp::fuchsia::mem::Buffer payload);
+
+    // Writes bootloader partition with data from `payload`.
+    //
+    // `payload` may need to be resized to the partition size, so the provided vmo must have
+    // been created with `ZX_VMO_RESIZABLE` or must be a child VMO that was created with
+    // `ZX_VMO_CHILD_RESIZABLE`.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::WriteBootloader WriteBootloader(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer);
+
+    // Writes /data/`filename` with data from `payload`. Overwrites file if it already exists.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
+    ResultOf::WriteDataFile WriteDataFile(::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload);
+
+    // Writes /data/`filename` with data from `payload`. Overwrites file if it already exists.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::WriteDataFile WriteDataFile(::fidl::BytePart _request_buffer, ::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer);
+
+    // Wipes the FVM partition from the device. Should not be confused with factory reset, which
+    // is less intrusive. The result is that the default FVM volumes are re-created, but empty.
+    //
+    // Notable use cases include recovering from corrupted FVM as well as setting device to a
+    // "clean" state for automation.
+    //
+    // If |block_device| is not provided, the paver will perform a search for the the FVM.
+    // If multiple block devices have valid GPT, |block_device| can be provided to specify
+    // which one to target. It assumed that channel backing |block_device| also implements
+    // `fuchsia.io.Node` for now.
+    //
+    // On success, returns a channel to the initialized FVM volume.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::WipeVolume WipeVolume();
+
+    // Wipes the FVM partition from the device. Should not be confused with factory reset, which
+    // is less intrusive. The result is that the default FVM volumes are re-created, but empty.
+    //
+    // Notable use cases include recovering from corrupted FVM as well as setting device to a
+    // "clean" state for automation.
+    //
+    // If |block_device| is not provided, the paver will perform a search for the the FVM.
+    // If multiple block devices have valid GPT, |block_device| can be provided to specify
+    // which one to target. It assumed that channel backing |block_device| also implements
+    // `fuchsia.io.Node` for now.
+    //
+    // On success, returns a channel to the initialized FVM volume.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::WipeVolume WipeVolume(::fidl::BytePart _response_buffer);
+
+    // Initializes partitions on given block device.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::InitializePartitionTables InitializePartitionTables();
+
+    // Initializes partitions on given block device.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::InitializePartitionTables InitializePartitionTables(::fidl::BytePart _response_buffer);
+
+    // Wipes all entries from the partition table of the specified block device.
+    // Currently only supported on devices with a GPT.
+    //
+    // *WARNING*: This API may destructively remove non-fuchsia maintained partitions from
+    // the block device.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::WipePartitionTables WipePartitionTables();
+
+    // Wipes all entries from the partition table of the specified block device.
+    // Currently only supported on devices with a GPT.
+    //
+    // *WARNING*: This API may destructively remove non-fuchsia maintained partitions from
+    // the block device.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::WipePartitionTables WipePartitionTables(::fidl::BytePart _response_buffer);
+
+   private:
+    ::zx::channel channel_;
+  };
+
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  class Call final {
+    Call() = delete;
+   public:
+
+    // Reads partition corresponding to |configuration| and |asset| into a
+    // vmo and returns it.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::ReadAsset ReadAsset(::zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset);
+
+    // Reads partition corresponding to |configuration| and |asset| into a
+    // vmo and returns it.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::ReadAsset ReadAsset(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::fidl::BytePart _response_buffer);
+
+    // Writes partition corresponding to `configuration` and `asset` with data from `payload`.
+    // `payload` may need to be resized to the partition size, so the provided vmo must have
+    // been created with `ZX_VMO_RESIZABLE` or must be a child VMO that was created with
+    // `ZX_VMO_CHILD_RESIZABLE`. Will zero out rest of the partition if `payload` is smaller
+    // than the size of the partition being written.
+    //
+    //
+    // Returns `ZX_ERR_INVALID_ARGS` if `configuration` specifies active configuration.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::WriteAsset WriteAsset(::zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload);
+
+    // Writes partition corresponding to `configuration` and `asset` with data from `payload`.
+    // `payload` may need to be resized to the partition size, so the provided vmo must have
+    // been created with `ZX_VMO_RESIZABLE` or must be a child VMO that was created with
+    // `ZX_VMO_CHILD_RESIZABLE`. Will zero out rest of the partition if `payload` is smaller
+    // than the size of the partition being written.
+    //
+    //
+    // Returns `ZX_ERR_INVALID_ARGS` if `configuration` specifies active configuration.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::WriteAsset WriteAsset(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer);
+
+    // Writes FVM with data from streamed via `payload`. This potentially affects all
+    // configurations.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::WriteVolumes WriteVolumes(::zx::unowned_channel _client_end, ::zx::channel payload);
+
+    // Writes FVM with data from streamed via `payload`. This potentially affects all
+    // configurations.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::WriteVolumes WriteVolumes(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel payload, ::fidl::BytePart _response_buffer);
+
+    // Writes bootloader partition with data from `payload`.
+    //
+    // `payload` may need to be resized to the partition size, so the provided vmo must have
+    // been created with `ZX_VMO_RESIZABLE` or must be a child VMO that was created with
+    // `ZX_VMO_CHILD_RESIZABLE`.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::WriteBootloader WriteBootloader(::zx::unowned_channel _client_end, ::llcpp::fuchsia::mem::Buffer payload);
+
+    // Writes bootloader partition with data from `payload`.
+    //
+    // `payload` may need to be resized to the partition size, so the provided vmo must have
+    // been created with `ZX_VMO_RESIZABLE` or must be a child VMO that was created with
+    // `ZX_VMO_CHILD_RESIZABLE`.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::WriteBootloader WriteBootloader(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer);
+
+    // Writes /data/`filename` with data from `payload`. Overwrites file if it already exists.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
+    static ResultOf::WriteDataFile WriteDataFile(::zx::unowned_channel _client_end, ::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload);
+
+    // Writes /data/`filename` with data from `payload`. Overwrites file if it already exists.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::WriteDataFile WriteDataFile(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload, ::fidl::BytePart _response_buffer);
+
+    // Wipes the FVM partition from the device. Should not be confused with factory reset, which
+    // is less intrusive. The result is that the default FVM volumes are re-created, but empty.
+    //
+    // Notable use cases include recovering from corrupted FVM as well as setting device to a
+    // "clean" state for automation.
+    //
+    // If |block_device| is not provided, the paver will perform a search for the the FVM.
+    // If multiple block devices have valid GPT, |block_device| can be provided to specify
+    // which one to target. It assumed that channel backing |block_device| also implements
+    // `fuchsia.io.Node` for now.
+    //
+    // On success, returns a channel to the initialized FVM volume.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::WipeVolume WipeVolume(::zx::unowned_channel _client_end);
+
+    // Wipes the FVM partition from the device. Should not be confused with factory reset, which
+    // is less intrusive. The result is that the default FVM volumes are re-created, but empty.
+    //
+    // Notable use cases include recovering from corrupted FVM as well as setting device to a
+    // "clean" state for automation.
+    //
+    // If |block_device| is not provided, the paver will perform a search for the the FVM.
+    // If multiple block devices have valid GPT, |block_device| can be provided to specify
+    // which one to target. It assumed that channel backing |block_device| also implements
+    // `fuchsia.io.Node` for now.
+    //
+    // On success, returns a channel to the initialized FVM volume.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::WipeVolume WipeVolume(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
+    // Initializes partitions on given block device.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::InitializePartitionTables InitializePartitionTables(::zx::unowned_channel _client_end);
+
+    // Initializes partitions on given block device.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::InitializePartitionTables InitializePartitionTables(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
+    // Wipes all entries from the partition table of the specified block device.
+    // Currently only supported on devices with a GPT.
+    //
+    // *WARNING*: This API may destructively remove non-fuchsia maintained partitions from
+    // the block device.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::WipePartitionTables WipePartitionTables(::zx::unowned_channel _client_end);
+
+    // Wipes all entries from the partition table of the specified block device.
+    // Currently only supported on devices with a GPT.
+    //
+    // *WARNING*: This API may destructively remove non-fuchsia maintained partitions from
+    // the block device.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::WipePartitionTables WipePartitionTables(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
+  };
+
+  // Messages are encoded and decoded in-place when these methods are used.
+  // Additionally, requests must be already laid-out according to the FIDL wire-format.
+  class InPlace final {
+    InPlace() = delete;
+   public:
+
+    // Reads partition corresponding to |configuration| and |asset| into a
+    // vmo and returns it.
+    static ::fidl::DecodeResult<ReadAssetResponse> ReadAsset(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReadAssetRequest> params, ::fidl::BytePart response_buffer);
+
+    // Writes partition corresponding to `configuration` and `asset` with data from `payload`.
+    // `payload` may need to be resized to the partition size, so the provided vmo must have
+    // been created with `ZX_VMO_RESIZABLE` or must be a child VMO that was created with
+    // `ZX_VMO_CHILD_RESIZABLE`. Will zero out rest of the partition if `payload` is smaller
+    // than the size of the partition being written.
+    //
+    //
+    // Returns `ZX_ERR_INVALID_ARGS` if `configuration` specifies active configuration.
+    static ::fidl::DecodeResult<WriteAssetResponse> WriteAsset(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteAssetRequest> params, ::fidl::BytePart response_buffer);
+
+    // Writes FVM with data from streamed via `payload`. This potentially affects all
+    // configurations.
+    static ::fidl::DecodeResult<WriteVolumesResponse> WriteVolumes(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteVolumesRequest> params, ::fidl::BytePart response_buffer);
+
+    // Writes bootloader partition with data from `payload`.
+    //
+    // `payload` may need to be resized to the partition size, so the provided vmo must have
+    // been created with `ZX_VMO_RESIZABLE` or must be a child VMO that was created with
+    // `ZX_VMO_CHILD_RESIZABLE`.
+    static ::fidl::DecodeResult<WriteBootloaderResponse> WriteBootloader(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteBootloaderRequest> params, ::fidl::BytePart response_buffer);
+
+    // Writes /data/`filename` with data from `payload`. Overwrites file if it already exists.
+    static ::fidl::DecodeResult<WriteDataFileResponse> WriteDataFile(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteDataFileRequest> params, ::fidl::BytePart response_buffer);
+
+    // Wipes the FVM partition from the device. Should not be confused with factory reset, which
+    // is less intrusive. The result is that the default FVM volumes are re-created, but empty.
+    //
+    // Notable use cases include recovering from corrupted FVM as well as setting device to a
+    // "clean" state for automation.
+    //
+    // If |block_device| is not provided, the paver will perform a search for the the FVM.
+    // If multiple block devices have valid GPT, |block_device| can be provided to specify
+    // which one to target. It assumed that channel backing |block_device| also implements
+    // `fuchsia.io.Node` for now.
+    //
+    // On success, returns a channel to the initialized FVM volume.
+    static ::fidl::DecodeResult<WipeVolumeResponse> WipeVolume(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Initializes partitions on given block device.
+    static ::fidl::DecodeResult<InitializePartitionTablesResponse> InitializePartitionTables(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Wipes all entries from the partition table of the specified block device.
+    // Currently only supported on devices with a GPT.
+    //
+    // *WARNING*: This API may destructively remove non-fuchsia maintained partitions from
+    // the block device.
+    static ::fidl::DecodeResult<WipePartitionTablesResponse> WipePartitionTables(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+  };
+
+  // Pure-virtual interface to be implemented by a server.
+  class Interface {
+   public:
+    Interface() = default;
+    virtual ~Interface() = default;
+    using _Outer = DynamicDataSink;
+    using _Base = ::fidl::CompleterBase;
+
+    class ReadAssetCompleterBase : public _Base {
+     public:
+      void Reply(::llcpp::fuchsia::paver::DataSink_ReadAsset_Result result);
+      void ReplySuccess(::llcpp::fuchsia::mem::Buffer asset);
+      void ReplyError(int32_t error);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::DataSink_ReadAsset_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::mem::Buffer asset);
+      void Reply(::fidl::DecodedMessage<ReadAssetResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using ReadAssetCompleter = ::fidl::Completer<ReadAssetCompleterBase>;
+
+    virtual void ReadAsset(::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ReadAssetCompleter::Sync _completer) = 0;
+
+    class WriteAssetCompleterBase : public _Base {
+     public:
+      void Reply(int32_t status);
+      void Reply(::fidl::BytePart _buffer, int32_t status);
+      void Reply(::fidl::DecodedMessage<WriteAssetResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using WriteAssetCompleter = ::fidl::Completer<WriteAssetCompleterBase>;
+
+    virtual void WriteAsset(::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload, WriteAssetCompleter::Sync _completer) = 0;
+
+    class WriteVolumesCompleterBase : public _Base {
+     public:
+      void Reply(int32_t status);
+      void Reply(::fidl::BytePart _buffer, int32_t status);
+      void Reply(::fidl::DecodedMessage<WriteVolumesResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using WriteVolumesCompleter = ::fidl::Completer<WriteVolumesCompleterBase>;
+
+    virtual void WriteVolumes(::zx::channel payload, WriteVolumesCompleter::Sync _completer) = 0;
+
+    class WriteBootloaderCompleterBase : public _Base {
+     public:
+      void Reply(int32_t status);
+      void Reply(::fidl::BytePart _buffer, int32_t status);
+      void Reply(::fidl::DecodedMessage<WriteBootloaderResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using WriteBootloaderCompleter = ::fidl::Completer<WriteBootloaderCompleterBase>;
+
+    virtual void WriteBootloader(::llcpp::fuchsia::mem::Buffer payload, WriteBootloaderCompleter::Sync _completer) = 0;
+
+    class WriteDataFileCompleterBase : public _Base {
+     public:
+      void Reply(int32_t status);
+      void Reply(::fidl::BytePart _buffer, int32_t status);
+      void Reply(::fidl::DecodedMessage<WriteDataFileResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using WriteDataFileCompleter = ::fidl::Completer<WriteDataFileCompleterBase>;
+
+    virtual void WriteDataFile(::fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload, WriteDataFileCompleter::Sync _completer) = 0;
+
+    class WipeVolumeCompleterBase : public _Base {
+     public:
+      void Reply(::llcpp::fuchsia::paver::DataSink_WipeVolume_Result result);
+      void ReplySuccess(::zx::channel volume);
+      void ReplyError(int32_t error);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::DataSink_WipeVolume_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, ::zx::channel volume);
+      void Reply(::fidl::DecodedMessage<WipeVolumeResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using WipeVolumeCompleter = ::fidl::Completer<WipeVolumeCompleterBase>;
+
+    virtual void WipeVolume(WipeVolumeCompleter::Sync _completer) = 0;
+
+    class InitializePartitionTablesCompleterBase : public _Base {
+     public:
+      void Reply(int32_t status);
+      void Reply(::fidl::BytePart _buffer, int32_t status);
+      void Reply(::fidl::DecodedMessage<InitializePartitionTablesResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using InitializePartitionTablesCompleter = ::fidl::Completer<InitializePartitionTablesCompleterBase>;
+
+    virtual void InitializePartitionTables(InitializePartitionTablesCompleter::Sync _completer) = 0;
+
+    class WipePartitionTablesCompleterBase : public _Base {
+     public:
+      void Reply(int32_t status);
+      void Reply(::fidl::BytePart _buffer, int32_t status);
+      void Reply(::fidl::DecodedMessage<WipePartitionTablesResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using WipePartitionTablesCompleter = ::fidl::Completer<WipePartitionTablesCompleterBase>;
+
+    virtual void WipePartitionTables(WipePartitionTablesCompleter::Sync _completer) = 0;
+
+  };
+
+  // Attempts to dispatch the incoming message to a handler function in the server implementation.
+  // If there is no matching handler, it returns false, leaving the message and transaction intact.
+  // In all other cases, it consumes the message and returns true.
+  // It is possible to chain multiple TryDispatch functions in this manner.
+  static bool TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Dispatches the incoming message to one of the handlers functions in the interface.
+  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
+  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
+  static bool Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
+  // to reduce template expansion.
+  // Do not call this method manually. Use |Dispatch| instead.
+  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+    return Dispatch(static_cast<Interface*>(impl), msg, txn);
+  }
+
+
+  // Helper functions to fill in the transaction header in a |DecodedMessage<TransactionalMessage>|.
+  class SetTransactionHeaderFor final {
+    SetTransactionHeaderFor() = delete;
+   public:
+    static void ReadAssetRequest(const ::fidl::DecodedMessage<DynamicDataSink::ReadAssetRequest>& _msg);
+    static void ReadAssetResponse(const ::fidl::DecodedMessage<DynamicDataSink::ReadAssetResponse>& _msg);
+    static void WriteAssetRequest(const ::fidl::DecodedMessage<DynamicDataSink::WriteAssetRequest>& _msg);
+    static void WriteAssetResponse(const ::fidl::DecodedMessage<DynamicDataSink::WriteAssetResponse>& _msg);
+    static void WriteVolumesRequest(const ::fidl::DecodedMessage<DynamicDataSink::WriteVolumesRequest>& _msg);
+    static void WriteVolumesResponse(const ::fidl::DecodedMessage<DynamicDataSink::WriteVolumesResponse>& _msg);
+    static void WriteBootloaderRequest(const ::fidl::DecodedMessage<DynamicDataSink::WriteBootloaderRequest>& _msg);
+    static void WriteBootloaderResponse(const ::fidl::DecodedMessage<DynamicDataSink::WriteBootloaderResponse>& _msg);
+    static void WriteDataFileRequest(const ::fidl::DecodedMessage<DynamicDataSink::WriteDataFileRequest>& _msg);
+    static void WriteDataFileResponse(const ::fidl::DecodedMessage<DynamicDataSink::WriteDataFileResponse>& _msg);
+    static void WipeVolumeRequest(const ::fidl::DecodedMessage<DynamicDataSink::WipeVolumeRequest>& _msg);
+    static void WipeVolumeResponse(const ::fidl::DecodedMessage<DynamicDataSink::WipeVolumeResponse>& _msg);
+    static void InitializePartitionTablesRequest(const ::fidl::DecodedMessage<DynamicDataSink::InitializePartitionTablesRequest>& _msg);
+    static void InitializePartitionTablesResponse(const ::fidl::DecodedMessage<DynamicDataSink::InitializePartitionTablesResponse>& _msg);
+    static void WipePartitionTablesRequest(const ::fidl::DecodedMessage<DynamicDataSink::WipePartitionTablesRequest>& _msg);
+    static void WipePartitionTablesResponse(const ::fidl::DecodedMessage<DynamicDataSink::WipePartitionTablesResponse>& _msg);
   };
 };
 
@@ -2964,6 +4051,32 @@ static_assert(sizeof(::llcpp::fuchsia::paver::ReadInfo) == ::llcpp::fuchsia::pav
 template <>
 struct IsFidlType<::llcpp::fuchsia::paver::ReadResult> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::paver::ReadResult>);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::paver::Paver::FindDataSinkRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::FindDataSinkRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::Paver::FindDataSinkRequest)
+    == ::llcpp::fuchsia::paver::Paver::FindDataSinkRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::Paver::FindDataSinkRequest, data_sink) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::paver::Paver::UseBlockDeviceRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::UseBlockDeviceRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::Paver::UseBlockDeviceRequest)
+    == ::llcpp::fuchsia::paver::Paver::UseBlockDeviceRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::Paver::UseBlockDeviceRequest, block_device) == 16);
+static_assert(offsetof(::llcpp::fuchsia::paver::Paver::UseBlockDeviceRequest, data_sink) == 20);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::paver::Paver::FindBootManagerRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::FindBootManagerRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::Paver::FindBootManagerRequest)
+    == ::llcpp::fuchsia::paver::Paver::FindBootManagerRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::Paver::FindBootManagerRequest, boot_manager) == 16);
+static_assert(offsetof(::llcpp::fuchsia::paver::Paver::FindBootManagerRequest, initialize) == 20);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::paver::PayloadStream::RegisterVmoRequest> : public std::true_type {};
@@ -2990,247 +4103,307 @@ static_assert(sizeof(::llcpp::fuchsia::paver::PayloadStream::ReadDataResponse)
 static_assert(offsetof(::llcpp::fuchsia::paver::PayloadStream::ReadDataResponse, result) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::paver::Paver_WipeVolume_Response> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fuchsia::paver::Paver_WipeVolume_Response>);
-static_assert(offsetof(::llcpp::fuchsia::paver::Paver_WipeVolume_Response, volume) == 0);
-static_assert(sizeof(::llcpp::fuchsia::paver::Paver_WipeVolume_Response) == ::llcpp::fuchsia::paver::Paver_WipeVolume_Response::PrimarySize);
+struct IsFidlType<::llcpp::fuchsia::paver::DataSink_WipeVolume_Response> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::paver::DataSink_WipeVolume_Response>);
+static_assert(offsetof(::llcpp::fuchsia::paver::DataSink_WipeVolume_Response, volume) == 0);
+static_assert(sizeof(::llcpp::fuchsia::paver::DataSink_WipeVolume_Response) == ::llcpp::fuchsia::paver::DataSink_WipeVolume_Response::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::paver::Paver_WipeVolume_Result> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fuchsia::paver::Paver_WipeVolume_Result>);
+struct IsFidlType<::llcpp::fuchsia::paver::DataSink_WipeVolume_Result> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::paver::DataSink_WipeVolume_Result>);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response>);
-static_assert(offsetof(::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response, status) == 0);
-static_assert(sizeof(::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response) == ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response::PrimarySize);
+struct IsFidlType<::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Response> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Response>);
+static_assert(offsetof(::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Response, status) == 0);
+static_assert(sizeof(::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Response) == ::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Response::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result>);
+struct IsFidlType<::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Result> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Result>);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response>);
-static_assert(offsetof(::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response, configuration) == 0);
-static_assert(sizeof(::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response) == ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response::PrimarySize);
+struct IsFidlType<::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Response> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Response>);
+static_assert(offsetof(::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Response, configuration) == 0);
+static_assert(sizeof(::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Response) == ::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Response::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result>);
+struct IsFidlType<::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Result> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Result>);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::paver::Paver_ReadAsset_Response> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fuchsia::paver::Paver_ReadAsset_Response>);
-static_assert(offsetof(::llcpp::fuchsia::paver::Paver_ReadAsset_Response, asset) == 0);
-static_assert(sizeof(::llcpp::fuchsia::paver::Paver_ReadAsset_Response) == ::llcpp::fuchsia::paver::Paver_ReadAsset_Response::PrimarySize);
+struct IsFidlType<::llcpp::fuchsia::paver::BootManager::QueryActiveConfigurationResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::paver::BootManager::QueryActiveConfigurationResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::BootManager::QueryActiveConfigurationResponse)
+    == ::llcpp::fuchsia::paver::BootManager::QueryActiveConfigurationResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::BootManager::QueryActiveConfigurationResponse, result) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::paver::Paver_ReadAsset_Result> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fuchsia::paver::Paver_ReadAsset_Result>);
+struct IsFidlType<::llcpp::fuchsia::paver::BootManager::QueryConfigurationStatusRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::paver::BootManager::QueryConfigurationStatusRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::BootManager::QueryConfigurationStatusRequest)
+    == ::llcpp::fuchsia::paver::BootManager::QueryConfigurationStatusRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::BootManager::QueryConfigurationStatusRequest, configuration) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::paver::Paver::InitializeAbrResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::paver::BootManager::QueryConfigurationStatusResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::InitializeAbrResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::paver::Paver::InitializeAbrResponse)
-    == ::llcpp::fuchsia::paver::Paver::InitializeAbrResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::paver::Paver::InitializeAbrResponse, status) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::paver::BootManager::QueryConfigurationStatusResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::BootManager::QueryConfigurationStatusResponse)
+    == ::llcpp::fuchsia::paver::BootManager::QueryConfigurationStatusResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::BootManager::QueryConfigurationStatusResponse, result) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::paver::Paver::QueryActiveConfigurationResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::paver::BootManager::SetConfigurationActiveRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::QueryActiveConfigurationResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::paver::Paver::QueryActiveConfigurationResponse)
-    == ::llcpp::fuchsia::paver::Paver::QueryActiveConfigurationResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::paver::Paver::QueryActiveConfigurationResponse, result) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::paver::BootManager::SetConfigurationActiveRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::BootManager::SetConfigurationActiveRequest)
+    == ::llcpp::fuchsia::paver::BootManager::SetConfigurationActiveRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::BootManager::SetConfigurationActiveRequest, configuration) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::paver::Paver::QueryConfigurationStatusRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::paver::BootManager::SetConfigurationActiveResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::QueryConfigurationStatusRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::paver::Paver::QueryConfigurationStatusRequest)
-    == ::llcpp::fuchsia::paver::Paver::QueryConfigurationStatusRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::paver::Paver::QueryConfigurationStatusRequest, configuration) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::paver::BootManager::SetConfigurationActiveResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::BootManager::SetConfigurationActiveResponse)
+    == ::llcpp::fuchsia::paver::BootManager::SetConfigurationActiveResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::BootManager::SetConfigurationActiveResponse, status) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::paver::Paver::QueryConfigurationStatusResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::paver::BootManager::SetConfigurationUnbootableRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::QueryConfigurationStatusResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::paver::Paver::QueryConfigurationStatusResponse)
-    == ::llcpp::fuchsia::paver::Paver::QueryConfigurationStatusResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::paver::Paver::QueryConfigurationStatusResponse, result) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::paver::BootManager::SetConfigurationUnbootableRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::BootManager::SetConfigurationUnbootableRequest)
+    == ::llcpp::fuchsia::paver::BootManager::SetConfigurationUnbootableRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::BootManager::SetConfigurationUnbootableRequest, configuration) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::paver::Paver::SetConfigurationActiveRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::paver::BootManager::SetConfigurationUnbootableResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::SetConfigurationActiveRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::paver::Paver::SetConfigurationActiveRequest)
-    == ::llcpp::fuchsia::paver::Paver::SetConfigurationActiveRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::paver::Paver::SetConfigurationActiveRequest, configuration) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::paver::BootManager::SetConfigurationUnbootableResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::BootManager::SetConfigurationUnbootableResponse)
+    == ::llcpp::fuchsia::paver::BootManager::SetConfigurationUnbootableResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::BootManager::SetConfigurationUnbootableResponse, status) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::paver::Paver::SetConfigurationActiveResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::paver::BootManager::SetActiveConfigurationHealthyResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::SetConfigurationActiveResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::paver::Paver::SetConfigurationActiveResponse)
-    == ::llcpp::fuchsia::paver::Paver::SetConfigurationActiveResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::paver::Paver::SetConfigurationActiveResponse, status) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::paver::BootManager::SetActiveConfigurationHealthyResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::BootManager::SetActiveConfigurationHealthyResponse)
+    == ::llcpp::fuchsia::paver::BootManager::SetActiveConfigurationHealthyResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::BootManager::SetActiveConfigurationHealthyResponse, status) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::paver::Paver::SetConfigurationUnbootableRequest> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::SetConfigurationUnbootableRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::paver::Paver::SetConfigurationUnbootableRequest)
-    == ::llcpp::fuchsia::paver::Paver::SetConfigurationUnbootableRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::paver::Paver::SetConfigurationUnbootableRequest, configuration) == 16);
+struct IsFidlType<::llcpp::fuchsia::paver::DataSink_ReadAsset_Response> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::paver::DataSink_ReadAsset_Response>);
+static_assert(offsetof(::llcpp::fuchsia::paver::DataSink_ReadAsset_Response, asset) == 0);
+static_assert(sizeof(::llcpp::fuchsia::paver::DataSink_ReadAsset_Response) == ::llcpp::fuchsia::paver::DataSink_ReadAsset_Response::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::paver::Paver::SetConfigurationUnbootableResponse> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::SetConfigurationUnbootableResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::paver::Paver::SetConfigurationUnbootableResponse)
-    == ::llcpp::fuchsia::paver::Paver::SetConfigurationUnbootableResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::paver::Paver::SetConfigurationUnbootableResponse, status) == 16);
+struct IsFidlType<::llcpp::fuchsia::paver::DataSink_ReadAsset_Result> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::paver::DataSink_ReadAsset_Result>);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::paver::Paver::SetActiveConfigurationHealthyResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::paver::DataSink::ReadAssetRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::SetActiveConfigurationHealthyResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::paver::Paver::SetActiveConfigurationHealthyResponse)
-    == ::llcpp::fuchsia::paver::Paver::SetActiveConfigurationHealthyResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::paver::Paver::SetActiveConfigurationHealthyResponse, status) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::paver::DataSink::ReadAssetRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::DataSink::ReadAssetRequest)
+    == ::llcpp::fuchsia::paver::DataSink::ReadAssetRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::DataSink::ReadAssetRequest, configuration) == 16);
+static_assert(offsetof(::llcpp::fuchsia::paver::DataSink::ReadAssetRequest, asset) == 20);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::paver::Paver::ReadAssetRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::paver::DataSink::ReadAssetResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::ReadAssetRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::paver::Paver::ReadAssetRequest)
-    == ::llcpp::fuchsia::paver::Paver::ReadAssetRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::paver::Paver::ReadAssetRequest, configuration) == 16);
-static_assert(offsetof(::llcpp::fuchsia::paver::Paver::ReadAssetRequest, asset) == 20);
+struct IsFidlMessage<::llcpp::fuchsia::paver::DataSink::ReadAssetResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::DataSink::ReadAssetResponse)
+    == ::llcpp::fuchsia::paver::DataSink::ReadAssetResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::DataSink::ReadAssetResponse, result) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::paver::Paver::ReadAssetResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::paver::DataSink::WriteAssetRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::ReadAssetResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::paver::Paver::ReadAssetResponse)
-    == ::llcpp::fuchsia::paver::Paver::ReadAssetResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::paver::Paver::ReadAssetResponse, result) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::paver::DataSink::WriteAssetRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::DataSink::WriteAssetRequest)
+    == ::llcpp::fuchsia::paver::DataSink::WriteAssetRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::DataSink::WriteAssetRequest, configuration) == 16);
+static_assert(offsetof(::llcpp::fuchsia::paver::DataSink::WriteAssetRequest, asset) == 20);
+static_assert(offsetof(::llcpp::fuchsia::paver::DataSink::WriteAssetRequest, payload) == 24);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::paver::Paver::WriteAssetRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::paver::DataSink::WriteAssetResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::WriteAssetRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::paver::Paver::WriteAssetRequest)
-    == ::llcpp::fuchsia::paver::Paver::WriteAssetRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::paver::Paver::WriteAssetRequest, configuration) == 16);
-static_assert(offsetof(::llcpp::fuchsia::paver::Paver::WriteAssetRequest, asset) == 20);
-static_assert(offsetof(::llcpp::fuchsia::paver::Paver::WriteAssetRequest, payload) == 24);
+struct IsFidlMessage<::llcpp::fuchsia::paver::DataSink::WriteAssetResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::DataSink::WriteAssetResponse)
+    == ::llcpp::fuchsia::paver::DataSink::WriteAssetResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::DataSink::WriteAssetResponse, status) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::paver::Paver::WriteAssetResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::paver::DataSink::WriteVolumesRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::WriteAssetResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::paver::Paver::WriteAssetResponse)
-    == ::llcpp::fuchsia::paver::Paver::WriteAssetResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::paver::Paver::WriteAssetResponse, status) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::paver::DataSink::WriteVolumesRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::DataSink::WriteVolumesRequest)
+    == ::llcpp::fuchsia::paver::DataSink::WriteVolumesRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::DataSink::WriteVolumesRequest, payload) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::paver::Paver::WriteVolumesRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::paver::DataSink::WriteVolumesResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::WriteVolumesRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::paver::Paver::WriteVolumesRequest)
-    == ::llcpp::fuchsia::paver::Paver::WriteVolumesRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::paver::Paver::WriteVolumesRequest, payload) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::paver::DataSink::WriteVolumesResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::DataSink::WriteVolumesResponse)
+    == ::llcpp::fuchsia::paver::DataSink::WriteVolumesResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::DataSink::WriteVolumesResponse, status) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::paver::Paver::WriteVolumesResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::paver::DataSink::WriteBootloaderRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::WriteVolumesResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::paver::Paver::WriteVolumesResponse)
-    == ::llcpp::fuchsia::paver::Paver::WriteVolumesResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::paver::Paver::WriteVolumesResponse, status) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::paver::DataSink::WriteBootloaderRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::DataSink::WriteBootloaderRequest)
+    == ::llcpp::fuchsia::paver::DataSink::WriteBootloaderRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::DataSink::WriteBootloaderRequest, payload) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::paver::Paver::WriteBootloaderRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::paver::DataSink::WriteBootloaderResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::WriteBootloaderRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::paver::Paver::WriteBootloaderRequest)
-    == ::llcpp::fuchsia::paver::Paver::WriteBootloaderRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::paver::Paver::WriteBootloaderRequest, payload) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::paver::DataSink::WriteBootloaderResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::DataSink::WriteBootloaderResponse)
+    == ::llcpp::fuchsia::paver::DataSink::WriteBootloaderResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::DataSink::WriteBootloaderResponse, status) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::paver::Paver::WriteBootloaderResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::paver::DataSink::WriteDataFileRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::WriteBootloaderResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::paver::Paver::WriteBootloaderResponse)
-    == ::llcpp::fuchsia::paver::Paver::WriteBootloaderResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::paver::Paver::WriteBootloaderResponse, status) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::paver::DataSink::WriteDataFileRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::DataSink::WriteDataFileRequest)
+    == ::llcpp::fuchsia::paver::DataSink::WriteDataFileRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::DataSink::WriteDataFileRequest, filename) == 16);
+static_assert(offsetof(::llcpp::fuchsia::paver::DataSink::WriteDataFileRequest, payload) == 32);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::paver::Paver::WriteDataFileRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::paver::DataSink::WriteDataFileResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::WriteDataFileRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::paver::Paver::WriteDataFileRequest)
-    == ::llcpp::fuchsia::paver::Paver::WriteDataFileRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::paver::Paver::WriteDataFileRequest, filename) == 16);
-static_assert(offsetof(::llcpp::fuchsia::paver::Paver::WriteDataFileRequest, payload) == 32);
+struct IsFidlMessage<::llcpp::fuchsia::paver::DataSink::WriteDataFileResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::DataSink::WriteDataFileResponse)
+    == ::llcpp::fuchsia::paver::DataSink::WriteDataFileResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::DataSink::WriteDataFileResponse, status) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::paver::Paver::WriteDataFileResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::paver::DataSink::WipeVolumeResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::WriteDataFileResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::paver::Paver::WriteDataFileResponse)
-    == ::llcpp::fuchsia::paver::Paver::WriteDataFileResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::paver::Paver::WriteDataFileResponse, status) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::paver::DataSink::WipeVolumeResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::DataSink::WipeVolumeResponse)
+    == ::llcpp::fuchsia::paver::DataSink::WipeVolumeResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::DataSink::WipeVolumeResponse, result) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::paver::Paver::WipeVolumeRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::paver::DynamicDataSink::ReadAssetRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::WipeVolumeRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::paver::Paver::WipeVolumeRequest)
-    == ::llcpp::fuchsia::paver::Paver::WipeVolumeRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::paver::Paver::WipeVolumeRequest, block_device) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::paver::DynamicDataSink::ReadAssetRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::DynamicDataSink::ReadAssetRequest)
+    == ::llcpp::fuchsia::paver::DynamicDataSink::ReadAssetRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::DynamicDataSink::ReadAssetRequest, configuration) == 16);
+static_assert(offsetof(::llcpp::fuchsia::paver::DynamicDataSink::ReadAssetRequest, asset) == 20);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::paver::Paver::WipeVolumeResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::paver::DynamicDataSink::ReadAssetResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::WipeVolumeResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::paver::Paver::WipeVolumeResponse)
-    == ::llcpp::fuchsia::paver::Paver::WipeVolumeResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::paver::Paver::WipeVolumeResponse, result) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::paver::DynamicDataSink::ReadAssetResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::DynamicDataSink::ReadAssetResponse)
+    == ::llcpp::fuchsia::paver::DynamicDataSink::ReadAssetResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::DynamicDataSink::ReadAssetResponse, result) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::paver::Paver::InitializePartitionTablesRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::paver::DynamicDataSink::WriteAssetRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::InitializePartitionTablesRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::paver::Paver::InitializePartitionTablesRequest)
-    == ::llcpp::fuchsia::paver::Paver::InitializePartitionTablesRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::paver::Paver::InitializePartitionTablesRequest, gpt_block_device) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::paver::DynamicDataSink::WriteAssetRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::DynamicDataSink::WriteAssetRequest)
+    == ::llcpp::fuchsia::paver::DynamicDataSink::WriteAssetRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::DynamicDataSink::WriteAssetRequest, configuration) == 16);
+static_assert(offsetof(::llcpp::fuchsia::paver::DynamicDataSink::WriteAssetRequest, asset) == 20);
+static_assert(offsetof(::llcpp::fuchsia::paver::DynamicDataSink::WriteAssetRequest, payload) == 24);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::paver::Paver::InitializePartitionTablesResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::paver::DynamicDataSink::WriteAssetResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::InitializePartitionTablesResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::paver::Paver::InitializePartitionTablesResponse)
-    == ::llcpp::fuchsia::paver::Paver::InitializePartitionTablesResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::paver::Paver::InitializePartitionTablesResponse, status) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::paver::DynamicDataSink::WriteAssetResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::DynamicDataSink::WriteAssetResponse)
+    == ::llcpp::fuchsia::paver::DynamicDataSink::WriteAssetResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::DynamicDataSink::WriteAssetResponse, status) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::paver::Paver::WipePartitionTablesRequest> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::paver::DynamicDataSink::WriteVolumesRequest> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::WipePartitionTablesRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::paver::Paver::WipePartitionTablesRequest)
-    == ::llcpp::fuchsia::paver::Paver::WipePartitionTablesRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::paver::Paver::WipePartitionTablesRequest, block_device) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::paver::DynamicDataSink::WriteVolumesRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::DynamicDataSink::WriteVolumesRequest)
+    == ::llcpp::fuchsia::paver::DynamicDataSink::WriteVolumesRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::DynamicDataSink::WriteVolumesRequest, payload) == 16);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::paver::Paver::WipePartitionTablesResponse> : public std::true_type {};
+struct IsFidlType<::llcpp::fuchsia::paver::DynamicDataSink::WriteVolumesResponse> : public std::true_type {};
 template <>
-struct IsFidlMessage<::llcpp::fuchsia::paver::Paver::WipePartitionTablesResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::paver::Paver::WipePartitionTablesResponse)
-    == ::llcpp::fuchsia::paver::Paver::WipePartitionTablesResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::paver::Paver::WipePartitionTablesResponse, status) == 16);
+struct IsFidlMessage<::llcpp::fuchsia::paver::DynamicDataSink::WriteVolumesResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::DynamicDataSink::WriteVolumesResponse)
+    == ::llcpp::fuchsia::paver::DynamicDataSink::WriteVolumesResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::DynamicDataSink::WriteVolumesResponse, status) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::paver::DynamicDataSink::WriteBootloaderRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::paver::DynamicDataSink::WriteBootloaderRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::DynamicDataSink::WriteBootloaderRequest)
+    == ::llcpp::fuchsia::paver::DynamicDataSink::WriteBootloaderRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::DynamicDataSink::WriteBootloaderRequest, payload) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::paver::DynamicDataSink::WriteBootloaderResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::paver::DynamicDataSink::WriteBootloaderResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::DynamicDataSink::WriteBootloaderResponse)
+    == ::llcpp::fuchsia::paver::DynamicDataSink::WriteBootloaderResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::DynamicDataSink::WriteBootloaderResponse, status) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::paver::DynamicDataSink::WriteDataFileRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::paver::DynamicDataSink::WriteDataFileRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::DynamicDataSink::WriteDataFileRequest)
+    == ::llcpp::fuchsia::paver::DynamicDataSink::WriteDataFileRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::DynamicDataSink::WriteDataFileRequest, filename) == 16);
+static_assert(offsetof(::llcpp::fuchsia::paver::DynamicDataSink::WriteDataFileRequest, payload) == 32);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::paver::DynamicDataSink::WriteDataFileResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::paver::DynamicDataSink::WriteDataFileResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::DynamicDataSink::WriteDataFileResponse)
+    == ::llcpp::fuchsia::paver::DynamicDataSink::WriteDataFileResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::DynamicDataSink::WriteDataFileResponse, status) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::paver::DynamicDataSink::WipeVolumeResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::paver::DynamicDataSink::WipeVolumeResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::DynamicDataSink::WipeVolumeResponse)
+    == ::llcpp::fuchsia::paver::DynamicDataSink::WipeVolumeResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::DynamicDataSink::WipeVolumeResponse, result) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::paver::DynamicDataSink::InitializePartitionTablesResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::paver::DynamicDataSink::InitializePartitionTablesResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::DynamicDataSink::InitializePartitionTablesResponse)
+    == ::llcpp::fuchsia::paver::DynamicDataSink::InitializePartitionTablesResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::DynamicDataSink::InitializePartitionTablesResponse, status) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::paver::DynamicDataSink::WipePartitionTablesResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::paver::DynamicDataSink::WipePartitionTablesResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::paver::DynamicDataSink::WipePartitionTablesResponse)
+    == ::llcpp::fuchsia::paver::DynamicDataSink::WipePartitionTablesResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::paver::DynamicDataSink::WipePartitionTablesResponse, status) == 16);
 
 }  // namespace fidl

@@ -5,7 +5,9 @@
 #![cfg(test)]
 use {
     failure::Error,
-    fidl_fuchsia_paver::{PaverRequest, PaverRequestStream},
+    fidl_fuchsia_paver::{
+        BootManagerRequest, BootManagerRequestStream, PaverRequest, PaverRequestStream,
+    },
     fidl_fuchsia_update::{ManagerMarker, ManagerProxy, ManagerState},
     fidl_fuchsia_update_channel::{ProviderMarker, ProviderProxy},
     fuchsia_async as fasync,
@@ -116,7 +118,26 @@ impl MockPaver {
     async fn run_service(self: Arc<Self>, mut stream: PaverRequestStream) -> Result<(), Error> {
         while let Some(req) = stream.try_next().await? {
             match req {
-                PaverRequest::SetActiveConfigurationHealthy { responder } => {
+                PaverRequest::FindBootManager { boot_manager, .. } => {
+                    let mock_paver_clone = self.clone();
+                    fasync::spawn(
+                        mock_paver_clone
+                            .run_boot_manager_service(boot_manager.into_stream()?)
+                            .unwrap_or_else(|e| panic!("error running paver service: {:?}", e)),
+                    );
+                }
+                req => println!("mock Paver ignoring request: {:?}", req),
+            }
+        }
+        Ok(())
+    }
+    async fn run_boot_manager_service(
+        self: Arc<Self>,
+        mut stream: BootManagerRequestStream,
+    ) -> Result<(), Error> {
+        while let Some(req) = stream.try_next().await? {
+            match req {
+                BootManagerRequest::SetActiveConfigurationHealthy { responder } => {
                     self.set_active_configuration_healthy_was_called_sender
                         .unbounded_send(())
                         .expect("mpsc send");

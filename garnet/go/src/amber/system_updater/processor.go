@@ -45,7 +45,7 @@ func ConnectToPackageResolver() (*pkg.PackageResolverInterface, error) {
 	return pxy, nil
 }
 
-func ConnectToPaver() (*paver.PaverInterface, error) {
+func ConnectToPaver() (*paver.DataSinkInterface, error) {
 	context := context.CreateFromStartupInfo()
 	req, pxy, err := paver.NewPaverInterfaceRequest()
 
@@ -53,9 +53,21 @@ func ConnectToPaver() (*paver.PaverInterface, error) {
 		syslog.Errorf("control interface could not be acquired: %s", err)
 		return nil, err
 	}
+	defer pxy.Close();
 
 	context.ConnectToEnvService(req)
-	return pxy, nil
+
+	req2, pxy2, err := paver.NewDataSinkInterfaceRequest()
+	if err != nil {
+		syslog.Errorf("control interface could not be acquired: %s", err)
+		return nil, err
+	}
+
+	err = pxy.FindDataSink(req2)
+	if err != nil {
+		return nil, err
+	}
+	return pxy2, nil
 }
 
 // CacheUpdatePackage caches the requested, possibly merkle-pinned, update
@@ -207,7 +219,7 @@ func ValidateImgs(imgs []string, imgsPath string) error {
 	return nil
 }
 
-func WriteImgs(svc *paver.PaverInterface, imgs []string, imgsPath string) error {
+func WriteImgs(svc *paver.DataSinkInterface, imgs []string, imgsPath string) error {
 	syslog.Infof("Writing images %+v from %q", imgs, imgsPath)
 
 	for _, img := range imgs {
@@ -218,7 +230,7 @@ func WriteImgs(svc *paver.PaverInterface, imgs []string, imgsPath string) error 
 	return nil
 }
 
-func writeAsset(svc *paver.PaverInterface, configuration paver.Configuration, asset paver.Asset, payload *mem.Buffer) error {
+func writeAsset(svc *paver.DataSinkInterface, configuration paver.Configuration, asset paver.Asset, payload *mem.Buffer) error {
 	status, err := svc.WriteAsset(configuration, asset, *payload)
 	if err != nil {
 		return err
@@ -230,7 +242,7 @@ func writeAsset(svc *paver.PaverInterface, configuration paver.Configuration, as
 	return nil
 }
 
-func writeImg(svc *paver.PaverInterface, img string, imgsPath string) error {
+func writeImg(svc *paver.DataSinkInterface, img string, imgsPath string) error {
 	imgPath := filepath.Join(imgsPath, img)
 
 	f, err := os.Open(imgPath)

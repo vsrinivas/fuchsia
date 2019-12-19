@@ -5,6 +5,7 @@
 zx_library("paver") {
   sources = [
     "abr.cc",
+    "abr-client.cc",
     "device-partitioner.cc",
     "fvm.cc",
     "partition-client.cc",

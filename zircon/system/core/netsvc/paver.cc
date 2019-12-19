@@ -154,8 +154,24 @@ int Paver::StreamBuffer() {
     in_progress_.store(false);
   });
 
+  zx::channel data_sink, remote;
+  auto status = zx::channel::create(0, &data_sink, &remote);
+  if (status != ZX_OK) {
+    fprintf(stderr, "netsvc: unable to create channel\n");
+    exit_code_.store(status);
+    return 0;
+  }
+
+  auto res = paver_svc_->FindDataSink(std::move(remote));
+  status = res.status();
+  if (status != ZX_OK) {
+    fprintf(stderr, "netsvc: unable to find data sink\n");
+    exit_code_.store(status);
+    return 0;
+  }
+
   zx::channel client, server;
-  auto status = zx::channel::create(0, &client, &server);
+  status = zx::channel::create(0, &client, &server);
   if (status != ZX_OK) {
     fprintf(stderr, "netsvc: unable to create channel\n");
     exit_code_.store(status);
@@ -167,40 +183,44 @@ int Paver::StreamBuffer() {
   loop.StartThread("payload-streamer");
 
   // Blocks untils paving is complete.
-  auto res = paver_svc_->WriteVolumes(std::move(client));
-  status = res.status() == ZX_OK ? res.value().status : res.status();
+  auto res2 = ::llcpp::fuchsia::paver::DataSink::Call::WriteVolumes(zx::unowned(data_sink),
+                                                                   std::move(client));
+  status = res2.status() == ZX_OK ? res2.value().status : res2.status();
 
   exit_code_.store(status);
   return 0;
 }
 
-zx_status_t Paver::WriteAsset(::llcpp::fuchsia::mem::Buffer buffer) {
-  bool abr_supported;
+zx_status_t Paver::WriteAsset(::llcpp::fuchsia::paver::DataSink::SyncClient data_sink,
+                              ::llcpp::fuchsia::mem::Buffer buffer) {
+  zx::channel boot_manager_chan, remote;
+  auto status = zx::channel::create(0, &boot_manager_chan, &remote);
+  if (status != ZX_OK) {
+    fprintf(stderr, "netsvc: unable to create channel\n");
+    exit_code_.store(status);
+    return 0;
+  }
+
+  auto res2 = paver_svc_->FindBootManager(std::move(remote), true);
+  status = res2.status();
+  if (status != ZX_OK) {
+    fprintf(stderr, "netsvc: unable to find boot manager\n");
+    exit_code_.store(status);
+    return 0;
+  }
+  std::optional<::llcpp::fuchsia::paver::BootManager::SyncClient> boot_manager;
+  boot_manager.emplace(std::move(boot_manager_chan));
+
   // First find out whether or not ABR is supported.
   {
-    auto result = paver_svc_->QueryActiveConfiguration();
-    auto status =
-        result.ok() ? (result->result.is_err() ? result->result.err() : ZX_OK) : result.status();
-    if (status == ZX_ERR_NOT_SUPPORTED) {
-      auto init_result = paver_svc_->InitializeAbr();
-      status = init_result.ok() ? init_result->status : init_result.status();
-      abr_supported = false;
-      if (status == ZX_OK) {
-        abr_supported = true;
-      } else if (status != ZX_ERR_NOT_SUPPORTED) {
-        fprintf(stderr, "netsvc: Unable to initialize ABR.\n");
-        return status;
-      }
-    } else if (status != ZX_OK) {
-      fprintf(stderr, "netsvc: Unable to query active configuration.\n");
-      return status;
-    } else {
-      abr_supported = true;
+    auto result = boot_manager->QueryActiveConfiguration();
+    if (result.status() != ZX_OK) {
+      boot_manager.reset();
     }
   }
   // Make sure to mark the configuration we are about to pave as no longer bootable.
-  if (abr_supported && configuration_ != ::llcpp::fuchsia::paver::Configuration::RECOVERY) {
-    auto result = paver_svc_->SetConfigurationUnbootable(configuration_);
+  if (boot_manager && configuration_ != ::llcpp::fuchsia::paver::Configuration::RECOVERY) {
+    auto result = boot_manager->SetConfigurationUnbootable(configuration_);
     auto status = result.ok() ? result->status : result.status();
     if (status != ZX_OK) {
       fprintf(stderr, "netsvc: Unable to set configuration as unbootable.\n");
@@ -208,7 +228,7 @@ zx_status_t Paver::WriteAsset(::llcpp::fuchsia::mem::Buffer buffer) {
     }
   }
   {
-    auto result = paver_svc_->WriteAsset(configuration_, asset_, std::move(buffer));
+    auto result = data_sink.WriteAsset(configuration_, asset_, std::move(buffer));
     auto status = result.ok() ? result->status : result.status();
     if (status != ZX_OK) {
       fprintf(stderr, "netsvc: Unable to write asset.\n");
@@ -217,12 +237,12 @@ zx_status_t Paver::WriteAsset(::llcpp::fuchsia::mem::Buffer buffer) {
   }
   // Set configuration A as default.
   // We assume that verified boot metadata asset will only be written after the kernel asset.
-  if (!abr_supported || configuration_ != ::llcpp::fuchsia::paver::Configuration::A ||
+  if (!boot_manager || configuration_ != ::llcpp::fuchsia::paver::Configuration::A ||
       asset_ != ::llcpp::fuchsia::paver::Asset::VERIFIED_BOOT_METADATA) {
     return ZX_OK;
   }
   {
-    auto result = paver_svc_->SetConfigurationActive(configuration_);
+    auto result = boot_manager->SetConfigurationActive(configuration_);
     auto status = result.ok() ? result->status : result.status();
     if (status != ZX_OK) {
       fprintf(stderr, "netsvc: Unable to set configuration as active.\n");
@@ -277,21 +297,38 @@ int Paver::MonitorBuffer() {
       .size = buffer_mapper_.size(),
   };
 
+  zx::channel remote, data_sink_chan;
+  status = zx::channel::create(0, &data_sink_chan, &remote);
+  if (status != ZX_OK) {
+    fprintf(stderr, "netsvc: unable to create channel\n");
+    exit_code_.store(status);
+    return 0;
+  }
+
+  auto res = paver_svc_->FindDataSink(std::move(remote));
+  status = res.status();
+  if (status != ZX_OK) {
+    fprintf(stderr, "netsvc: unable to find data sink\n");
+    exit_code_.store(status);
+    return 0;
+  }
+  ::llcpp::fuchsia::paver::DataSink::SyncClient data_sink(std::move(data_sink_chan));
+
   // Blocks untils paving is complete.
   switch (command_) {
     case Command::kDataFile: {
       auto res =
-          paver_svc_->WriteDataFile(fidl::StringView(path_, strlen(path_)), std::move(buffer));
+          data_sink.WriteDataFile(fidl::StringView(path_, strlen(path_)), std::move(buffer));
       status = res.status() == ZX_OK ? res.value().status : res.status();
       break;
     }
     case Command::kBootloader: {
-      auto res = paver_svc_->WriteBootloader(std::move(buffer));
+      auto res = data_sink.WriteBootloader(std::move(buffer));
       status = res.status() == ZX_OK ? res.value().status : res.status();
       break;
     }
     case Command::kAsset:
-      status = WriteAsset(std::move(buffer));
+      status = WriteAsset(std::move(data_sink), std::move(buffer));
       break;
     default:
       result = TFTP_ERR_INTERNAL;

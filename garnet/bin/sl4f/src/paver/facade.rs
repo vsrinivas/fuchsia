@@ -51,9 +51,16 @@ impl PaverFacade {
     pub(super) async fn query_active_configuration(
         &self,
     ) -> Result<QueryActiveConfigurationResult, Error> {
-        match self.proxy()?.query_active_configuration().await?.map_err(Status::from_raw) {
-            Ok(config) => Ok(QueryActiveConfigurationResult::Success(config.into())),
-            Err(Status::NOT_SUPPORTED) => Ok(QueryActiveConfigurationResult::NotSupported),
+        let (boot_manager, boot_manager_server_end) = fidl::endpoints::create_proxy()?;
+
+        self.proxy()?.find_boot_manager(boot_manager_server_end, false)?;
+
+        match boot_manager.query_active_configuration().await {
+            Ok(Ok(config)) => Ok(QueryActiveConfigurationResult::Success(config.into())),
+            Ok(Err(err)) => bail!("unexpected failure status: {}", err),
+            Err(fidl::Error::ClientChannelClosed(Status::NOT_SUPPORTED)) => {
+                Ok(QueryActiveConfigurationResult::NotSupported)
+            }
             Err(err) => bail!("unexpected failure status: {}", err),
         }
     }
@@ -70,14 +77,16 @@ impl PaverFacade {
         &self,
         args: QueryConfigurationStatusRequest,
     ) -> Result<QueryConfigurationStatusResult, Error> {
-        match self
-            .proxy()?
-            .query_configuration_status(args.configuration.into())
-            .await?
-            .map_err(Status::from_raw)
-        {
-            Ok(status) => Ok(QueryConfigurationStatusResult::Success(status.into())),
-            Err(Status::NOT_SUPPORTED) => Ok(QueryConfigurationStatusResult::NotSupported),
+        let (boot_manager, boot_manager_server_end) = fidl::endpoints::create_proxy()?;
+
+        self.proxy()?.find_boot_manager(boot_manager_server_end, false)?;
+
+        match boot_manager.query_configuration_status(args.configuration.into()).await {
+            Ok(Ok(status)) => Ok(QueryConfigurationStatusResult::Success(status.into())),
+            Ok(Err(err)) => bail!("unexpected failure status: {}", err),
+            Err(fidl::Error::ClientChannelClosed(Status::NOT_SUPPORTED)) => {
+                Ok(QueryConfigurationStatusResult::NotSupported)
+            }
             Err(err) => bail!("unexpected failure status: {}", err),
         }
     }
@@ -91,8 +100,11 @@ impl PaverFacade {
     ///  * connecting to the paver service fails, or
     ///  * the paver service returns an unexpected error
     pub(super) async fn read_asset(&self, args: ReadAssetRequest) -> Result<String, Error> {
-        let buffer = self
-            .proxy()?
+        let (data_sink, data_sink_server_end) = fidl::endpoints::create_proxy()?;
+
+        self.proxy()?.find_data_sink(data_sink_server_end)?;
+
+        let buffer = data_sink
             .read_asset(args.configuration.into(), args.asset.into())
             .await?
             .map_err(Status::from_raw)?;
@@ -132,7 +144,10 @@ pub(super) struct ReadAssetRequest {
 mod tests {
     use super::*;
     use crate::common_utils::test::assert_value_round_trips_as;
-    use fidl_fuchsia_paver::PaverRequest;
+    use fidl_fuchsia_paver::{
+        BootManagerRequest, BootManagerRequestStream, DataSinkRequest, DataSinkRequestStream,
+        PaverRequest,
+    };
     use futures::{future::Future, join, stream::StreamExt};
     use matches::assert_matches;
     use serde_json::json;
@@ -180,23 +195,23 @@ mod tests {
         );
     }
 
-    struct MockPaverBuilder {
-        expected: Vec<Box<dyn FnOnce(PaverRequest) + 'static>>,
+    struct MockBootManagerBuilder {
+        expected: Vec<Box<dyn FnOnce(BootManagerRequest) + Send + 'static>>,
     }
 
-    impl MockPaverBuilder {
+    impl MockBootManagerBuilder {
         fn new() -> Self {
             Self { expected: vec![] }
         }
 
-        fn push(mut self, request: impl FnOnce(PaverRequest) + 'static) -> Self {
+        fn push(mut self, request: impl FnOnce(BootManagerRequest) + Send + 'static) -> Self {
             self.expected.push(Box::new(request));
             self
         }
 
         fn expect_query_active_configuration(self, res: Result<Configuration, Status>) -> Self {
             self.push(move |req| match req {
-                PaverRequest::QueryActiveConfiguration { responder } => {
+                BootManagerRequest::QueryActiveConfiguration { responder } => {
                     responder.send(&mut res.map(Into::into).map_err(|e| e.into_raw())).unwrap()
                 }
                 req => panic!("unexpected request: {:?}", req),
@@ -209,12 +224,36 @@ mod tests {
             res: Result<ConfigurationStatus, Status>,
         ) -> Self {
             self.push(move |req| match req {
-                PaverRequest::QueryConfigurationStatus { configuration, responder } => {
+                BootManagerRequest::QueryConfigurationStatus { configuration, responder } => {
                     assert_eq!(Configuration::from(configuration), config);
                     responder.send(&mut res.map(Into::into).map_err(|e| e.into_raw())).unwrap()
                 }
                 req => panic!("unexpected request: {:?}", req),
             })
+        }
+
+        fn build(self, mut stream: BootManagerRequestStream) -> impl Future<Output = ()> {
+            async move {
+                for expected in self.expected {
+                    expected(stream.next().await.unwrap().unwrap());
+                }
+                assert_matches!(stream.next().await, None);
+            }
+        }
+    }
+
+    struct MockDataSinkBuilder {
+        expected: Vec<Box<dyn FnOnce(DataSinkRequest) + Send + 'static>>,
+    }
+
+    impl MockDataSinkBuilder {
+        fn new() -> Self {
+            Self { expected: vec![] }
+        }
+
+        fn push(mut self, request: impl FnOnce(DataSinkRequest) + Send + 'static) -> Self {
+            self.expected.push(Box::new(request));
+            self
         }
 
         fn expect_read_asset(
@@ -229,7 +268,7 @@ mod tests {
             buf.vmo.write(response, 0).unwrap();
 
             self.push(move |req| match req {
-                PaverRequest::ReadAsset { configuration, asset, responder } => {
+                DataSinkRequest::ReadAsset { configuration, asset, responder } => {
                     let request = ReadAssetRequest {
                         configuration: configuration.into(),
                         asset: asset.into(),
@@ -237,6 +276,58 @@ mod tests {
                     assert_eq!(request, expected_request);
 
                     responder.send(&mut Ok(buf)).unwrap()
+                }
+                req => panic!("unexpected request: {:?}", req),
+            })
+        }
+
+        fn build(self, mut stream: DataSinkRequestStream) -> impl Future<Output = ()> {
+            async move {
+                for expected in self.expected {
+                    expected(stream.next().await.unwrap().unwrap());
+                }
+                assert_matches!(stream.next().await, None);
+            }
+        }
+    }
+
+    struct MockPaverBuilder {
+        expected: Vec<Box<dyn FnOnce(PaverRequest) + 'static>>,
+    }
+
+    impl MockPaverBuilder {
+        fn new() -> Self {
+            Self { expected: vec![] }
+        }
+
+        fn push(mut self, request: impl FnOnce(PaverRequest) + 'static) -> Self {
+            self.expected.push(Box::new(request));
+            self
+        }
+
+        fn expect_find_boot_manager(self, mock: Option<MockBootManagerBuilder>) -> Self {
+            self.push(move |req| match req {
+                PaverRequest::FindBootManager { boot_manager, .. } => {
+                    if let Some(mock) = mock {
+                        let stream = boot_manager.into_stream().unwrap();
+                        fuchsia_async::spawn(async move {
+                            mock.build(stream).await;
+                        });
+                    } else {
+                        boot_manager.close_with_epitaph(Status::NOT_SUPPORTED).unwrap();
+                    }
+                }
+                req => panic!("unexpected request: {:?}", req),
+            })
+        }
+
+        fn expect_find_data_sink(self, mock: MockDataSinkBuilder) -> Self {
+            self.push(move |req| match req {
+                PaverRequest::FindDataSink { data_sink, .. } => {
+                    let stream = data_sink.into_stream().unwrap();
+                    fuchsia_async::spawn(async move {
+                        mock.build(stream).await;
+                    });
                 }
                 req => panic!("unexpected request: {:?}", req),
             })
@@ -259,8 +350,14 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn query_active_configuration_ok() {
         let (facade, paver) = MockPaverBuilder::new()
-            .expect_query_active_configuration(Ok(Configuration::A))
-            .expect_query_active_configuration(Ok(Configuration::B))
+            .expect_find_boot_manager(Some(
+                MockBootManagerBuilder::new()
+                    .expect_query_active_configuration(Ok(Configuration::A)),
+            ))
+            .expect_find_boot_manager(Some(
+                MockBootManagerBuilder::new()
+                    .expect_query_active_configuration(Ok(Configuration::B)),
+            ))
             .build();
 
         let test = async move {
@@ -279,9 +376,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn query_active_configuration_not_supported() {
-        let (facade, paver) = MockPaverBuilder::new()
-            .expect_query_active_configuration(Err(Status::NOT_SUPPORTED))
-            .build();
+        let (facade, paver) = MockPaverBuilder::new().expect_find_boot_manager(None).build();
 
         let test = async move {
             assert_matches!(
@@ -296,11 +391,18 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn query_configuration_status_ok() {
         let (facade, paver) = MockPaverBuilder::new()
-            .expect_query_configuration_status(Configuration::A, Ok(ConfigurationStatus::Healthy))
-            .expect_query_configuration_status(
-                Configuration::B,
-                Ok(ConfigurationStatus::Unbootable),
-            )
+            .expect_find_boot_manager(Some(
+                MockBootManagerBuilder::new().expect_query_configuration_status(
+                    Configuration::A,
+                    Ok(ConfigurationStatus::Healthy),
+                ),
+            ))
+            .expect_find_boot_manager(Some(
+                MockBootManagerBuilder::new().expect_query_configuration_status(
+                    Configuration::B,
+                    Ok(ConfigurationStatus::Unbootable),
+                ),
+            ))
             .build();
 
         let test = async move {
@@ -327,9 +429,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn query_configuration_status_not_supported() {
-        let (facade, paver) = MockPaverBuilder::new()
-            .expect_query_configuration_status(Configuration::A, Err(Status::NOT_SUPPORTED))
-            .build();
+        let (facade, paver) = MockPaverBuilder::new().expect_find_boot_manager(None).build();
 
         let test = async move {
             assert_matches!(
@@ -355,8 +455,11 @@ mod tests {
             asset: Asset::VerifiedBootMetadata,
         };
 
-        let (facade, paver) =
-            MockPaverBuilder::new().expect_read_asset(request.clone(), FILE_CONTENTS).build();
+        let (facade, paver) = MockPaverBuilder::new()
+            .expect_find_data_sink(
+                MockDataSinkBuilder::new().expect_read_asset(request.clone(), FILE_CONTENTS),
+            )
+            .build();
 
         let test = async move {
             assert_matches!(

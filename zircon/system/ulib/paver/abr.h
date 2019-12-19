@@ -70,23 +70,4 @@ struct Data {
 
 static_assert(sizeof(Data) == 32);
 
-// Interface for interacting with ABR data.
-class Client {
- public:
-  virtual ~Client() = default;
-
-  // Accessor for underlying Data structure.
-  virtual const abr::Data& Data() const = 0;
-
-  // Persists data to storage. May not do anything if data is unchanged.
-  virtual zx_status_t Persist(abr::Data data) = 0;
-
-  // Validates that the ABR metadata is valid.
-  bool IsValid() const;
-
-protected:
-  // Updates CRC stored inside of data.
-  static void UpdateCrc(abr::Data* data);
-};
-
 }  // namespace abr

@@ -23,6 +23,8 @@
 #include "lib/sync/completion.h"
 #include "zircon/time.h"
 
+#include "lib/async/dispatcher.h"
+
 namespace {
 constexpr char kFakeData[] = "lalala";
 }
@@ -61,102 +63,97 @@ enum class Command {
   kWriteBootloader,
   kWriteDataFile,
   kWipeVolume,
-  kInitializePartitionTables,
-  kWipePartitionTables,
 };
 
-class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface {
+class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface,
+                  public ::llcpp::fuchsia::paver::BootManager::Interface,
+                  public ::llcpp::fuchsia::paver::DataSink::Interface {
  public:
   zx_status_t Connect(async_dispatcher_t* dispatcher, zx::channel request) {
-    return fidl::Bind(dispatcher, std::move(request), this);
+    dispatcher_ = dispatcher;
+    return fidl::Bind<::llcpp::fuchsia::paver::Paver::Interface>(dispatcher, std::move(request),
+                                                                 this);
   }
 
-  void InitializeAbr(InitializeAbrCompleter::Sync completer) {
+  void FindDataSink(zx::channel data_sink, FindDataSinkCompleter::Sync _completer) override {
+    fidl::Bind<::llcpp::fuchsia::paver::DataSink::Interface>(dispatcher_, std::move(data_sink),
+                                                             this);
+  }
+
+  void UseBlockDevice(zx::channel _block_device, zx::channel _dynamic_data_sink,
+                      UseBlockDeviceCompleter::Sync _completer) override {}
+
+  void FindBootManager(zx::channel boot_manager, bool initialize,
+                       FindBootManagerCompleter::Sync _completer) override {
     last_command_ = Command::kInitializeAbr;
     if (abr_supported_) {
-      abr_initialized_ = true;
-      completer.Reply(abr_supported_ ? ZX_OK : ZX_ERR_NOT_SUPPORTED);
-    } else {
-      completer.Reply(ZX_ERR_NOT_SUPPORTED);
+      if (initialize) {
+        abr_initialized_ = true;
+      }
+      if (abr_initialized_) {
+        fidl::Bind<::llcpp::fuchsia::paver::BootManager::Interface>(dispatcher_,
+                                                                    std::move(boot_manager), this);
+      }
     }
   }
 
-  void QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync completer) {
+  void QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync completer) override {
     last_command_ = Command::kQueryActiveConfiguration;
-    ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result result;
-    if (abr_supported_ && abr_initialized_) {
-      ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response response;
-      response.configuration = ::llcpp::fuchsia::paver::Configuration::A;
-      result.set_response(&response);
-      completer.Reply(std::move(result));
-    } else {
-      completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
-    }
+    completer.ReplySuccess(::llcpp::fuchsia::paver::Configuration::A);
   }
 
   void QueryConfigurationStatus(::llcpp::fuchsia::paver::Configuration configuration,
-                                QueryConfigurationStatusCompleter::Sync completer) {
+                                QueryConfigurationStatusCompleter::Sync completer) override {
     last_command_ = Command::kQueryConfigurationStatus;
-    ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result result;
-    if (abr_supported_ && abr_initialized_) {
-      ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response response;
-      response.status = ::llcpp::fuchsia::paver::ConfigurationStatus::HEALTHY;
-      completer.Reply(std::move(result));
-    } else {
-      completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
-    }
+    completer.ReplySuccess(::llcpp::fuchsia::paver::ConfigurationStatus::HEALTHY);
   }
 
   void SetConfigurationActive(::llcpp::fuchsia::paver::Configuration configuration,
-                              SetConfigurationActiveCompleter::Sync completer) {
+                              SetConfigurationActiveCompleter::Sync completer) override {
     last_command_ = Command::kSetConfigurationActive;
-    zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-    if (abr_supported_ && abr_initialized_) {
-      if (configuration == ::llcpp::fuchsia::paver::Configuration::A) {
-        status = ZX_OK;
-      } else {
-        status = ZX_ERR_INVALID_ARGS;
-      }
+    zx_status_t status;
+    if (configuration == ::llcpp::fuchsia::paver::Configuration::A) {
+      status = ZX_OK;
+    } else {
+      status = ZX_ERR_INVALID_ARGS;
     }
     completer.Reply(status);
   }
 
   void SetConfigurationUnbootable(::llcpp::fuchsia::paver::Configuration configuration,
-                                   SetConfigurationUnbootableCompleter::Sync completer) {
+                                  SetConfigurationUnbootableCompleter::Sync completer) override {
     last_command_ = Command::kSetConfigurationUnbootable;
-    zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-    if (abr_supported_ && abr_initialized_) {
-      if (configuration == ::llcpp::fuchsia::paver::Configuration::RECOVERY) {
-        status = ZX_ERR_INVALID_ARGS;
-      } else {
-        status = ZX_OK;
-      }
+    zx_status_t status;
+    if (configuration == ::llcpp::fuchsia::paver::Configuration::RECOVERY) {
+      status = ZX_ERR_INVALID_ARGS;
+    } else {
+      status = ZX_OK;
     }
     completer.Reply(status);
   }
 
   void SetActiveConfigurationHealthy(
-      SetActiveConfigurationHealthyCompleter::Sync completer) {
+      SetActiveConfigurationHealthyCompleter::Sync completer) override {
     last_command_ = Command::kSetActiveConfigurationHealthy;
-    completer.Reply(abr_supported_ && abr_initialized_ ? ZX_OK : ZX_ERR_NOT_SUPPORTED);
+    completer.Reply(ZX_OK);
   }
 
   void ReadAsset(::llcpp::fuchsia::paver::Configuration configuration,
-                 ::llcpp::fuchsia::paver::Asset asset, ReadAssetCompleter::Sync completer) {
+                 ::llcpp::fuchsia::paver::Asset asset,
+                 ReadAssetCompleter::Sync completer) override {
     last_command_ = Command::kReadAsset;
-    ::llcpp::fuchsia::paver::Paver_ReadAsset_Result result;
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
   void WriteAsset(::llcpp::fuchsia::paver::Configuration configuration,
                   ::llcpp::fuchsia::paver::Asset asset, ::llcpp::fuchsia::mem::Buffer payload,
-                  WriteAssetCompleter::Sync completer) {
+                  WriteAssetCompleter::Sync completer) override {
     last_command_ = Command::kWriteAsset;
     auto status = payload.size == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
     completer.Reply(status);
   }
 
-  void WriteVolumes(zx::channel payload_stream, WriteVolumesCompleter::Sync completer) {
+  void WriteVolumes(zx::channel payload_stream, WriteVolumesCompleter::Sync completer) override {
     last_command_ = Command::kWriteVolumes;
     // Register VMO.
     zx::vmo vmo;
@@ -210,34 +207,22 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface {
   }
 
   void WriteBootloader(::llcpp::fuchsia::mem::Buffer payload,
-                       WriteBootloaderCompleter::Sync completer) {
+                       WriteBootloaderCompleter::Sync completer) override {
     last_command_ = Command::kWriteBootloader;
     auto status = payload.size == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
     completer.Reply(status);
   }
 
   void WriteDataFile(fidl::StringView filename, ::llcpp::fuchsia::mem::Buffer payload,
-                     WriteDataFileCompleter::Sync completer) {
+                     WriteDataFileCompleter::Sync completer) override {
     last_command_ = Command::kWriteDataFile;
     auto status = payload.size == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
     completer.Reply(status);
   }
 
-  void WipeVolume(zx::channel block_device, WipeVolumeCompleter::Sync completer) {
+  void WipeVolume(WipeVolumeCompleter::Sync completer) override {
     last_command_ = Command::kWipeVolume;
     completer.ReplySuccess({});
-  }
-
-  void InitializePartitionTables(zx::channel block_device,
-                                 InitializePartitionTablesCompleter::Sync completer) {
-    last_command_ = Command::kInitializePartitionTables;
-    auto status = ZX_ERR_NOT_SUPPORTED;
-    return completer.Reply(status);
-  }
-
-  void WipePartitionTables(zx::channel block_device, WipePartitionTablesCompleter::Sync completer) {
-    last_command_ = Command::kWipePartitionTables;
-    completer.Reply(ZX_OK);
   }
 
   void WaitForWritten(size_t size) {
@@ -262,6 +247,8 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface {
   size_t expected_payload_size_ = 0;
   bool abr_supported_ = false;
   bool abr_initialized_ = false;
+
+  async_dispatcher_t* dispatcher_ = nullptr;
 };
 
 class FakeSvc {
@@ -542,7 +529,7 @@ TEST_F(PaverTest, WriteZirconAWithABRSupportedTwice) {
   size_t size = sizeof(kFakeData);
   fake_svc_.fake_paver().set_abr_supported(true);
   fake_svc_.fake_paver().set_expected_payload_size(size);
-  for (int i = 0 ; i < 2; i++) {
+  for (int i = 0; i < 2; i++) {
     ASSERT_EQ(paver_.OpenWrite(NB_ZIRCONA_FILENAME, size), TFTP_NO_ERROR);
     ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
     ASSERT_EQ(size, sizeof(kFakeData));

@@ -273,13 +273,13 @@ impl MockPaverService {
         std::mem::replace(&mut *self.events.lock(), vec![])
     }
 
-    async fn run_paver_service(
+    async fn run_data_sink_service(
         self: Arc<Self>,
-        mut stream: paver::PaverRequestStream,
+        mut stream: paver::DataSinkRequestStream,
     ) -> Result<(), Error> {
         while let Some(request) = stream.try_next().await? {
             match request {
-                paver::PaverRequest::WriteAsset {
+                paver::DataSinkRequest::WriteAsset {
                     configuration,
                     asset,
                     mut payload,
@@ -291,12 +291,33 @@ impl MockPaverService {
                     self.events.lock().push(event);
                     responder.send(status.into_raw()).expect("paver response to send");
                 }
-                paver::PaverRequest::WriteBootloader { mut payload, responder } => {
+                paver::DataSinkRequest::WriteBootloader { mut payload, responder } => {
                     let payload = verify_and_read_buffer(&mut payload);
                     let event = PaverEvent::WriteBootloader(payload);
                     let status = (*self.call_hook)(&event);
                     self.events.lock().push(event);
                     responder.send(status.into_raw()).expect("paver response to send");
+                }
+                request => panic!("Unhandled method Paver::{}", request.method_name()),
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn run_paver_service(
+        self: Arc<Self>,
+        mut stream: paver::PaverRequestStream,
+    ) -> Result<(), Error> {
+        while let Some(request) = stream.try_next().await? {
+            match request {
+                paver::PaverRequest::FindDataSink { data_sink, .. } => {
+                    let paver_service_clone = self.clone();
+                    fasync::spawn(
+                        paver_service_clone
+                            .run_data_sink_service(data_sink.into_stream()?)
+                            .unwrap_or_else(|e| panic!("error running paver service: {:?}", e)),
+                    );
                 }
                 request => panic!("Unhandled method Paver::{}", request.method_name()),
             }

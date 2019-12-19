@@ -61,66 +61,37 @@ protocol PayloadStream {
     ReadData() -> (ReadResult result);
 };
 
-/// Protocol for managing boot partitions.
-///
-/// Most of the protocol methods rely on auto-discovery of the storage device
-/// which will be paved. If the device has no pre-initialized storage devices or
-/// multiple, the methods will fail. For devices with dynamic partitions (i.e. GPT),
-/// |InitializePartitionTables| and |WipeVolumes| can be used to control which device is
-/// paved to.
 [Discoverable]
 protocol Paver {
-    /// Initializes ABR metadata. Should only be called to initialize ABR
-    /// metadata for the first time (i.e. it should not be called every boot),
-    /// or recover from corrupted ABR metadata.
+    /// Attempts to auto-discover the data sink where assets and volumes will get paved to.
+    /// On devices with GPT, the partition must have a valid FVM partition in order for
+    /// auto-discovery to find it. If multiple devices are found suitable, error is returned.
     ///
-    /// Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported
-    /// and we always boot from configuration A.
-    InitializeAbr() -> (zx.status status);
+    /// |data_sink| will be closed on error, with an epitaph provided on failure reason.
+    FindDataSink(request<DataSink> data_sink);
 
-    /// Queries active configuration.
+    /// Provide a block device to use as a data sink. Assets and volumes will be paved to
+    /// partitions within this block device.
     ///
-    /// Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported
-    /// and we always boot from configuration A.
-    QueryActiveConfiguration() -> (Configuration configuration) error zx.status;
+    /// It assumes that channel backing |block_device| also implements `fuchsia.io.Node` for now.
+    ///
+    /// |data_sink| will be closed on error, with an epitaph provided on failure reason.
+    UseBlockDevice(request<fuchsia.hardware.block.Block> block_device,
+                   request<DynamicDataSink> data_sink);
 
-    /// Queries status of |configuration|.
+    /// Attempts to auto-discover the boot manager.
     ///
-    /// Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
-    QueryConfigurationStatus(Configuration configuration)
-        -> (ConfigurationStatus status) error zx.status;
+    /// |initialize| should only be set to true to initialize ABR metadata for the first time
+    /// (i.e. it should not be called every boot), or recover from corrupted ABR metadata.
+    ///
+    /// |boot_manager| will be closed on error, with an epitaph provided on failure reason.
+    /// ZX_ERR_NOT_SUPPORTED indicates lack of support and configuration A is always booted from.
+    FindBootManager(request<BootManager> boot_manager, bool initialize);
+};
 
-    /// Updates persistent metadata identifying which configuration should be selected as 'primary'
-    /// for booting purposes. Should only be called after `KERNEL` as well as optional
-    /// `VERIFIED_BOOT_METADATA` assets for specified `configuration` were written successfully.
-    ///
-    /// Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
-    SetConfigurationActive(Configuration configuration) -> (zx.status status);
-
-    /// Updates persistent metadata identifying whether |configuration| is bootable.
-    /// Should only be called in the following situations:
-    /// * Before `KERNEL` as well as optional `VERIFIED_BOOT_METADATA` assets for specified
-    ///   |configuration| are written.
-    /// * After successfully booting from a new configuration and marking it healthy. This method
-    ///   would be then called on the old configuration.
-    /// * After "successfully" booting from a new configuration, but encountering an unrecoverable
-    ///   error during health check. This method would be then called on the new configuration.
-    ///
-    /// If the configuration is unbootable, no action is taken.
-    ///
-    /// Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
-    SetConfigurationUnbootable(Configuration configuration) -> (zx.status status);
-
-    /// Updates persistent metadata identifying that active configuration is stable. Used to signal
-    /// "rollback to previous slot" logic is not needed anymore. Meant to be called in subsequent
-    /// boot attempt after `SetActiveConfiguration` was called. Will return error if active
-    /// configuration is currently unbootable.
-    ///
-    /// If the configuration is already marked healthy, no action is taken.
-    ///
-    /// Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported.
-    SetActiveConfigurationHealthy() -> (zx.status status);
-
+/// Protocol for reading and writing boot partitions.
+[FragileBase]
+protocol DataSink {
     /// Reads partition corresponding to |configuration| and |asset| into a
     /// vmo and returns it.
     ReadAsset(Configuration configuration, Asset asset)
@@ -164,25 +135,62 @@ protocol Paver {
     /// `fuchsia.io.Node` for now.
     ///
     /// On success, returns a channel to the initialized FVM volume.
-    WipeVolume(request<fuchsia.hardware.block.Block>? block_device)
-        -> (request<fuchsia.hardware.block.volume.VolumeManager> volume) error zx.status;
+    WipeVolume() -> (request<fuchsia.hardware.block.volume.VolumeManager> volume) error zx.status;
+};
 
-    /// Initializes GPT on given block device and then adds an FVM partition.
-    ///
-    /// |gpt_block_device| specifies the block device to use. It assumed that channel
-    /// backing |gpt_block_device| also implements `fuchsia.io.Node` for now.
-    InitializePartitionTables(request<fuchsia.hardware.block.Block> gpt_block_device)
-        -> (zx.status status);
+/// Specialized DataSink with dynamic partition tables.
+protocol DynamicDataSink {
+    compose DataSink;
+
+    /// Initializes partitions on given block device.
+    InitializePartitionTables() -> (zx.status status);
 
     /// Wipes all entries from the partition table of the specified block device.
     /// Currently only supported on devices with a GPT.
     ///
-    /// If |block_device| is not provided, the paver will perform a search for
-    /// the the FVM. If multiple block devices have valid GPT, |block_device| can be provided
-    /// to specify which one to target. It assumed that channel backing
-    /// |block_device| also implements `fuchsia.io.Node` for now.
-    ///
     /// *WARNING*: This API may destructively remove non-fuchsia maintained partitions from
     /// the block device.
-    WipePartitionTables(request<fuchsia.hardware.block.Block>? block_device) -> (zx.status status);
+    WipePartitionTables() -> (zx.status status);
 };
+
+/// Protocol for managing boot configurations.
+protocol BootManager {
+    /// Queries active configuration.
+    QueryActiveConfiguration() -> (Configuration configuration) error zx.status;
+
+    /// Queries status of |configuration|.
+    ///
+    /// Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
+    QueryConfigurationStatus(Configuration configuration)
+        -> (ConfigurationStatus status) error zx.status;
+
+    /// Updates persistent metadata identifying which configuration should be selected as 'primary'
+    /// for booting purposes. Should only be called after `KERNEL` as well as optional
+    /// `VERIFIED_BOOT_METADATA` assets for specified `configuration` were written successfully.
+    ///
+    /// Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
+    SetConfigurationActive(Configuration configuration) -> (zx.status status);
+
+    /// Updates persistent metadata identifying whether |configuration| is bootable.
+    /// Should only be called in the following situations:
+    /// * Before `KERNEL` as well as optional `VERIFIED_BOOT_METADATA` assets for specified
+    ///   |configuration| are written.
+    /// * After successfully booting from a new configuration and marking it healthy. This method
+    ///   would be then called on the old configuration.
+    /// * After "successfully" booting from a new configuration, but encountering an unrecoverable
+    ///   error during health check. This method would be then called on the new configuration.
+    ///
+    /// If the configuration is unbootable, no action is taken.
+    ///
+    /// Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
+    SetConfigurationUnbootable(Configuration configuration) -> (zx.status status);
+
+    /// Updates persistent metadata identifying that active configuration is stable. Used to signal
+    /// "rollback to previous slot" logic is not needed anymore. Meant to be called in subsequent
+    /// boot attempt after `SetActiveConfiguration` was called. Will return error if active
+    /// configuration is currently unbootable.
+    ///
+    /// If the configuration is already marked healthy, no action is taken.
+    SetActiveConfigurationHealthy() -> (zx.status status);
+};
+
