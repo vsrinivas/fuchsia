@@ -32,7 +32,6 @@ using ::llcpp::fuchsia::paver::Configuration;
 enum class Partition {
   kUnknown,
   kBootloader,
-  kKernelC,
   kEfi,
   kZirconA,
   kZirconB,
@@ -83,6 +82,9 @@ class DevicePartitioner {
 
   // Wipes Fuchsia Volume Manager partition.
   virtual zx_status_t WipeFvm() const = 0;
+
+  // Initializes partition tables.
+  virtual zx_status_t InitPartitionTables() const = 0;
 
   // Wipes partition tables.
   virtual zx_status_t WipePartitionTables() const = 0;
@@ -189,6 +191,8 @@ class EfiDevicePartitioner : public DevicePartitioner {
 
   zx_status_t WipeFvm() const override;
 
+  zx_status_t InitPartitionTables() const override;
+
   zx_status_t WipePartitionTables() const override;
 
  private:
@@ -215,6 +219,8 @@ class CrosDevicePartitioner : public DevicePartitioner {
   zx_status_t FinalizePartition(Partition unused) const override;
 
   zx_status_t WipeFvm() const override;
+
+  zx_status_t InitPartitionTables() const override;
 
   zx_status_t WipePartitionTables() const override;
 
@@ -245,6 +251,8 @@ class FixedDevicePartitioner : public DevicePartitioner {
 
   zx_status_t WipeFvm() const override;
 
+  zx_status_t InitPartitionTables() const override;
+
   zx_status_t WipePartitionTables() const override;
 
  private:
@@ -274,6 +282,8 @@ class SkipBlockDevicePartitioner : public DevicePartitioner {
   zx_status_t FinalizePartition(Partition unused) const override { return ZX_OK; }
 
   zx_status_t WipeFvm() const override;
+
+  zx_status_t InitPartitionTables() const override;
 
   zx_status_t WipePartitionTables() const override;
 

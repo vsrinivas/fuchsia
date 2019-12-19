@@ -698,28 +698,7 @@ void DynamicDataSink::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_
 
 void DynamicDataSink::InitializePartitionTables(
     InitializePartitionTablesCompleter::Sync completer) {
-  // TODO(surajmalhotra): Move this into gpt specific code.
-  constexpr auto partition_type = Partition::kFuchsiaVolumeManager;
-  zx_status_t status;
-  std::unique_ptr<PartitionClient> partition;
-  if ((status = sink_.partitioner()->FindPartition(partition_type, &partition)) != ZX_OK) {
-    if (status != ZX_ERR_NOT_FOUND) {
-      ERROR("Failure looking for partition: %s\n", zx_status_get_string(status));
-      completer.Reply(status);
-      return;
-    }
-
-    LOG("Could not find \"%s\" Partition on device. Attemping to add new partition\n",
-        PartitionName(partition_type));
-
-    if ((status = sink_.partitioner()->AddPartition(partition_type, &partition)) != ZX_OK) {
-      ERROR("Failure creating partition: %s\n", zx_status_get_string(status));
-      completer.Reply(status);
-      return;
-    }
-  }
-  LOG("Successfully initialized gpt.\n");
-  completer.Reply(ZX_OK);
+  completer.Reply(sink_.partitioner()->InitPartitionTables());
 }
 
 void DynamicDataSink::WipePartitionTables(WipePartitionTablesCompleter::Sync completer) {

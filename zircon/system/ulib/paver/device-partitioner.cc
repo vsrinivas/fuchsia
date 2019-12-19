@@ -21,6 +21,7 @@
 #include <libgen.h>
 #include <zircon/status.h>
 
+#include <array>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -36,6 +37,7 @@
 
 #include "lib/fidl/llcpp/string_view.h"
 #include "pave-logging.h"
+#include "zircon/hw/gpt.h"
 
 namespace paver {
 
@@ -870,6 +872,36 @@ zx_status_t EfiDevicePartitioner::FindPartition(
 
 zx_status_t EfiDevicePartitioner::WipeFvm() const { return gpt_->WipeFvm(); }
 
+zx_status_t EfiDevicePartitioner::InitPartitionTables() const {
+  constexpr std::array<Partition, 4>  partitions = {
+      Partition::kZirconA,
+      Partition::kZirconB,
+      Partition::kZirconR,
+      Partition::kFuchsiaVolumeManager
+  };
+
+  zx_status_t status;
+  for (auto partition_type : partitions) {
+    std::unique_ptr<PartitionClient> partition;
+    if ((status = FindPartition(partition_type, &partition)) != ZX_OK) {
+      if (status != ZX_ERR_NOT_FOUND) {
+        ERROR("Failure looking for partition: %s\n", zx_status_get_string(status));
+        return status;
+      }
+
+      LOG("Could not find \"%s\" Partition on device. Attemping to add new partition\n",
+          PartitionName(partition_type));
+
+      if ((status = AddPartition(partition_type, &partition)) != ZX_OK) {
+        ERROR("Failure creating partition: %s\n", zx_status_get_string(status));
+        return status;
+      }
+    }
+  }
+  LOG("Successfully initialized gpt.\n");
+  return ZX_OK;
+}
+
 zx_status_t EfiDevicePartitioner::WipePartitionTables() const {
   return gpt_->WipePartitionTables();
 }
@@ -931,6 +963,13 @@ zx_status_t CrosDevicePartitioner::AddPartition(
       name = kZirconAName;
       break;
     }
+    case Partition::kZirconB: {
+      const uint8_t zircon_b_type[GPT_GUID_LEN] = GUID_ZIRCON_B_VALUE;
+      memcpy(type, zircon_b_type, GPT_GUID_LEN);
+      minimum_size_bytes = 64LU * (1 << 20);
+      name = kZirconBName;
+      break;
+    }
     case Partition::kZirconR: {
       const uint8_t zircon_r_type[GPT_GUID_LEN] = GUID_ZIRCON_R_VALUE;
       memcpy(type, zircon_r_type, GPT_GUID_LEN);
@@ -959,6 +998,13 @@ zx_status_t CrosDevicePartitioner::FindPartition(
       const auto filter = [](const gpt_partition_t& part) {
         const uint8_t guid[GPT_GUID_LEN] = GUID_CROS_KERNEL_VALUE;
         return KernelFilterCallback(part, guid, kZirconAName);
+      };
+      return gpt_->FindPartition(filter, out_partition);
+    }
+    case Partition::kZirconB: {
+      const auto filter = [](const gpt_partition_t& part) {
+        const uint8_t guid[GPT_GUID_LEN] = GUID_CROS_KERNEL_VALUE;
+        return KernelFilterCallback(part, guid, kZirconBName);
       };
       return gpt_->FindPartition(filter, out_partition);
     }
@@ -1049,6 +1095,36 @@ zx_status_t CrosDevicePartitioner::FinalizePartition(Partition partition_type) c
 }
 
 zx_status_t CrosDevicePartitioner::WipeFvm() const { return gpt_->WipeFvm(); }
+
+zx_status_t CrosDevicePartitioner::InitPartitionTables() const {
+  constexpr std::array<Partition, 4>  partitions = {
+      Partition::kZirconA,
+      Partition::kZirconB,
+      Partition::kZirconR,
+      Partition::kFuchsiaVolumeManager
+  };
+
+  zx_status_t status;
+  for (auto partition_type : partitions) {
+    std::unique_ptr<PartitionClient> partition;
+    if ((status = FindPartition(partition_type, &partition)) != ZX_OK) {
+      if (status != ZX_ERR_NOT_FOUND) {
+        ERROR("Failure looking for partition: %s\n", zx_status_get_string(status));
+        return status;
+      }
+
+      LOG("Could not find \"%s\" Partition on device. Attemping to add new partition\n",
+          PartitionName(partition_type));
+
+      if ((status = AddPartition(partition_type, &partition)) != ZX_OK) {
+        ERROR("Failure creating partition: %s\n", zx_status_get_string(status));
+        return status;
+      }
+    }
+  }
+  LOG("Successfully initialized gpt.\n");
+  return ZX_OK;
+}
 
 zx_status_t CrosDevicePartitioner::WipePartitionTables() const {
   return gpt_->WipePartitionTables();
@@ -1144,6 +1220,8 @@ zx_status_t FixedDevicePartitioner::WipeFvm() const {
   LOG("Immediate reboot strongly recommended\n");
   return ZX_OK;
 }
+
+zx_status_t FixedDevicePartitioner::InitPartitionTables() const { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t FixedDevicePartitioner::WipePartitionTables() const { return ZX_ERR_NOT_SUPPORTED; }
 
@@ -1310,6 +1388,8 @@ zx_status_t SkipBlockDevicePartitioner::WipeFvm() const {
 
   return result2.ok() ? result2.value().status : result2.status();
 }
+
+zx_status_t SkipBlockDevicePartitioner::InitPartitionTables() const { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t SkipBlockDevicePartitioner::WipePartitionTables() const { return ZX_ERR_NOT_SUPPORTED; }
 
