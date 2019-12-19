@@ -29,6 +29,7 @@ group("tests") {
     "run_test_suite:tests",
     "test_adapters:tests",
     "test_manager:tests",
+    "test_runners:tests",
     "timekeeper:tests",
     "tools/cs2:tests",
     "tz-util:tests",

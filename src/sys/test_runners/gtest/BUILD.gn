@@ -1,0 +1,45 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("bin") {
+  testonly = true
+  name = "gtest_runner"
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "//src/sys/test_runners:lib",
+  ]
+}
+
+package("gtest_runner") {
+  testonly = true
+  deps = [
+    ":bin",
+    ":bin_test",
+  ]
+
+  binaries = [
+    {
+      name = "gtest_runner"
+    },
+  ]
+}
+
+group("gtest") {
+  testonly = true
+  deps = [
+    ":gtest_runner",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":gtest_runner",
+  ]
+}
