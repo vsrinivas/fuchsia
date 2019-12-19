@@ -20,7 +20,7 @@ namespace internal {
 namespace {
 
 internal::CobaltOptions MakeCobaltOptions(CollectorOptions options) {
-  ZX_DEBUG_ASSERT_MSG(options.project_id > 0, "Must define a project_id greater than 0.");
+  ZX_ASSERT_MSG(options.project_id > 0, "Must define a project_id greater than 0.");
   internal::CobaltOptions cobalt_options;
   cobalt_options.project_id = options.project_id;
   cobalt_options.service_connect = [](const char* service_path,
