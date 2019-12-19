@@ -1471,8 +1471,9 @@ mod tests {
     #[test]
     fn client_send_successful_associate_conf() {
         let mut m = MockObjects::new();
-        let mut ctx = m.make_ctx();
+        let mut me = m.make_mlme();
         let mut client = make_client_station();
+
         let mut ies = vec![];
         let rates = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
         let rates_writer = crate::RatesWriter::try_new(&rates[..]).expect("Valid rates");
@@ -1482,7 +1483,9 @@ mod tests {
         ie::write_ht_capabilities(&mut ies, &ie::fake_ht_capabilities()).expect("Valid HT Cap");
         ie::write_vht_capabilities(&mut ies, &ie::fake_vht_capabilities()).expect("Valid VHT Cap");
 
-        client.send_associate_conf_success(&mut ctx, 42, mac::CapabilityInfo(0x1234), &ies[..]);
+        client
+            .bind(&mut me.scanner, &mut me.chan_sched, &mut me.channel_state)
+            .send_associate_conf_success(&mut me.ctx, 42, mac::CapabilityInfo(0x1234), &ies[..]);
         let associate_conf = m
             .fake_device
             .next_mlme_msg::<fidl_mlme::AssociateConfirm>()
@@ -1507,12 +1510,14 @@ mod tests {
     #[test]
     fn client_send_failed_associate_conf() {
         let mut m = MockObjects::new();
-        let mut ctx = m.make_ctx();
+        let mut me = m.make_mlme();
         let mut client = make_client_station();
-        client.send_associate_conf_failure(
-            &mut ctx,
-            fidl_mlme::AssociateResultCodes::RefusedExternalReason,
-        );
+        client
+            .bind(&mut me.scanner, &mut me.chan_sched, &mut me.channel_state)
+            .send_associate_conf_failure(
+                &mut me.ctx,
+                fidl_mlme::AssociateResultCodes::RefusedExternalReason,
+            );
         let associate_conf = m
             .fake_device
             .next_mlme_msg::<fidl_mlme::AssociateConfirm>()
