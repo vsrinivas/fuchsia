@@ -93,7 +93,7 @@ END_FUNCTION(arch_sync_cache_range)
     subs    w7, w7, w13             // decrement set number
     b.ge    .Lloop3_\name
 
-    subs    x9, x9, x12             // decrement way number
+    subs    w9, w9, w12             // decrement way number
     b.ge    .Lloop2_\name
 .Lskip_\name:
     add     w10, w10, #2            // increment 2x cache level
