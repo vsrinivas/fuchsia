@@ -4,6 +4,8 @@
 
 // Tests Transaction behavior.
 
+#include <zircon/assert.h>
+
 #include <memory>
 
 #include <minfs/writeback.h>
@@ -241,6 +243,7 @@ TEST_F(TransactionDeathTest, AllocateBlockWithoutInitializationFails) {
   ASSERT_DEATH([&transaction]() { transaction.AllocateBlock(); });
 }
 
+#if ZX_DEBUG_ASSERT_IMPLEMENTED
 // Attempts to allocate an inode when none have been reserved.
 TEST_F(TransactionDeathTest, AllocateTooManyInodesFails) {
   std::unique_ptr<Transaction> transaction;
@@ -252,7 +255,9 @@ TEST_F(TransactionDeathTest, AllocateTooManyInodesFails) {
   // Second allocation should fail.
   ASSERT_DEATH([&transaction]() { transaction->AllocateInode(); });
 }
+#endif
 
+#if ZX_DEBUG_ASSERT_IMPLEMENTED
 // Attempts to allocate a block when none have been reserved.
 TEST_F(TransactionDeathTest, AllocateTooManyBlocksFails) {
   std::unique_ptr<Transaction> transaction;
@@ -264,6 +269,7 @@ TEST_F(TransactionDeathTest, AllocateTooManyBlocksFails) {
   // Second allocation should fail.
   ASSERT_DEATH([&transaction]() { transaction->AllocateBlock(); });
 }
+#endif
 
 // Checks that the Transaction's work is empty before any writes have been enqueued.
 TEST_F(TransactionTest, VerifyNoWorkExistsBeforeEnqueue) {
