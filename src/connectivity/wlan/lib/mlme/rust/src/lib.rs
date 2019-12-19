@@ -9,8 +9,8 @@ pub mod auth;
 pub mod buffer;
 pub mod client;
 pub mod device;
-pub mod key;
 pub mod error;
+pub mod key;
 pub mod timer;
 
 mod rates_writer;
@@ -18,5 +18,8 @@ pub use rates_writer::*;
 
 mod eth_writer;
 pub use eth_writer::*;
+
+mod ddk_converter;
+pub use ddk_converter::*;
 
 mod logger;

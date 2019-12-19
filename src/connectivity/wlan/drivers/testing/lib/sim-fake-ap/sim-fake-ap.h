@@ -86,7 +86,7 @@ class FakeAp : public StationIfc {
   void RxAssocResp(const wlan_channel_t& channel, const common::MacAddr& src,
                    const common::MacAddr& dst, uint16_t status) override {}
   void RxDisassocReq(const wlan_channel_t& channel, const common::MacAddr& src,
-                   const common::MacAddr& dst, uint16_t reason) override;
+                     const common::MacAddr& dst, uint16_t reason) override;
   void RxProbeReq(const wlan_channel_t& channel, const common::MacAddr& src) override;
   void RxProbeResp(const wlan_channel_t& channel, const common::MacAddr& src,
                    const common::MacAddr& dst, const wlan_ssid_t& ssid) override {}
