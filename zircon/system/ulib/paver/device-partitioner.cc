@@ -34,6 +34,7 @@
 #include <gpt/cros.h>
 #include <zxcrypt/volume.h>
 
+#include "lib/fidl/llcpp/string_view.h"
 #include "pave-logging.h"
 
 namespace paver {
@@ -455,11 +456,13 @@ zx_status_t GptDevicePartitioner::InitializeProvidedGptDevice(
       ERROR("Failed to sync empty GPT\n");
       return ZX_ERR_BAD_STATE;
     }
-    auto result = block::Block::Call::RebindDevice(caller.channel());
-    if (!result.ok() || result.value().status != ZX_OK) {
+    auto result = ::llcpp::fuchsia::device::Controller::Call::Rebind(
+        caller.channel(), fidl::StringView("/boot/driver/gpt.so"));
+    if (!result.ok() || result->result.is_err()) {
       ERROR("Failed to re-read GPT\n");
       return ZX_ERR_BAD_STATE;
     }
+    printf("Rebound GPT driver succesfully\n");
   }
 
   *gpt_out = WrapUnique(new GptDevicePartitioner(devfs_root.duplicate(), std::move(gpt_device),
@@ -623,15 +626,15 @@ zx_status_t GptDevicePartitioner::CreateGptPartition(const char* name, uint8_t* 
     ERROR("Failed to clear first block of new partition\n");
     return status;
   }
-  auto result = block::Block::Call::RebindDevice(Channel());
+  auto result = ::llcpp::fuchsia::device::Controller::Call::Rebind(
+      Channel(), fidl::StringView("/boot/driver/gpt.so"));
   if (!result.ok()) {
     ERROR("Failed to rebind GPT\n");
     return result.status();
   }
-  const auto& response = result.value();
-  if (response.status != ZX_OK) {
+  if (result->result.is_err()) {
     ERROR("Failed to rebind GPT\n");
-    return response.status;
+    return result->result.err();
   }
 
   return ZX_OK;
@@ -744,7 +747,8 @@ zx_status_t GptDevicePartitioner::WipePartitions(WipeCheck check_cb) const {
     gpt_->Sync();
     LOG("Immediate reboot strongly recommended\n");
   }
-  block::Block::Call::RebindDevice(Channel());
+  ::llcpp::fuchsia::device::Controller::Call::Rebind(Channel(),
+                                                     fidl::StringView("/boot/driver/gpt.so"));
   return ZX_OK;
 }
 
@@ -903,7 +907,8 @@ zx_status_t CrosDevicePartitioner::Initialize(fbl::unique_fd devfs_root, Arch ar
       ERROR("Failed to sync CrOS for Fuchsia.\n");
       return status;
     }
-    block::Block::Call::RebindDevice(gpt_partitioner->Channel());
+    llcpp::fuchsia::device::Controller::Call::Rebind(gpt_partitioner->Channel(),
+                                                     fidl::StringView("/boot/driver/gpt.so"));
   }
 
   LOG("Successfully initialized CrOS Device Partitioner\n");

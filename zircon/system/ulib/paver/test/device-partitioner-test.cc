@@ -32,6 +32,7 @@ namespace {
 using devmgr_integration_test::IsolatedDevmgr;
 using devmgr_integration_test::RecursiveWaitForFile;
 
+constexpr uint8_t kEmptyType[GPT_GUID_LEN] = GUID_EMPTY_VALUE;
 constexpr uint8_t kBootloaderType[GPT_GUID_LEN] = GUID_BOOTLOADER_VALUE;
 constexpr uint8_t kZirconAType[GPT_GUID_LEN] = GUID_ZIRCON_A_VALUE;
 constexpr uint8_t kZirconBType[GPT_GUID_LEN] = GUID_ZIRCON_B_VALUE;
@@ -133,8 +134,6 @@ constexpr fuchsia_hardware_nand_RamNandInfo kNandInfo = {
 
 }  // namespace
 
-// TODO(34771): Re-enable once bug in GPT is fixed.
-#if 0
 class EfiPartitionerTests : public zxtest::Test {
  protected:
   EfiPartitionerTests() {
@@ -332,7 +331,6 @@ TEST_F(EfiPartitionerTests, AddedPartitionRemovedAfterWipePartitions) {
   ASSERT_OK(partitioner->WipePartitionTables());
   ASSERT_NOT_OK(partitioner->FindPartition(paver::Partition::kZirconB, nullptr));
 }
-#endif
 
 class FixedDevicePartitionerTests : public zxtest::Test {
  protected:
@@ -340,7 +338,7 @@ class FixedDevicePartitionerTests : public zxtest::Test {
     devmgr_launcher::Args args;
     args.sys_device_driver = IsolatedDevmgr::kSysdevDriver;
     args.driver_search_paths.push_back("/boot/driver");
-    args.disable_block_watcher = true;
+    args.disable_block_watcher = false;
     ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr_));
 
     fbl::unique_fd fd;

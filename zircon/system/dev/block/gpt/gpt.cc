@@ -26,8 +26,13 @@
 #include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
+#include "ddk/driver.h"
+#include "zircon/errors.h"
+#include "zircon/status.h"
 
 namespace gpt {
+
+namespace {
 
 constexpr size_t kDeviceNameLength = 40;
 
@@ -64,6 +69,17 @@ void apply_guid_map(const guid_map_t* guid_map, size_t entries, const char* name
     }
   }
 }
+
+class DummyDevice;
+using DummyDeviceType = ddk::Device<DummyDevice>;
+
+class DummyDevice : public DummyDeviceType {
+ public:
+  DummyDevice(zx_device_t* parent) : DummyDeviceType(parent) {}
+  void DdkRelease() { delete this; }
+};
+
+}  // namespace
 
 void PartitionDevice::BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out) {
   memcpy(info_out, &info_, sizeof(info_));
@@ -301,12 +317,14 @@ zx_status_t PartitionTable::Bind() {
 
   zxlogf(SPEW, "gpt: found gpt header\n");
 
+  bool has_partition = false;
   unsigned int partitions;
   for (partitions = 0; partitions < gpt->EntryCount(); partitions++) {
     auto entry = gpt->GetPartition(partitions);
     if (entry == nullptr) {
       continue;
     }
+    has_partition = true;
 
     auto result = ValidateEntry(entry);
     ZX_DEBUG_ASSERT(result.is_ok());
@@ -343,6 +361,20 @@ zx_status_t PartitionTable::Bind() {
     }
     device.release();
   }
+
+  if (!has_partition) {
+    auto dummy = std::make_unique<DummyDevice>(parent_);
+    status = dummy->DdkAdd("dummy", DEVICE_ADD_INVISIBLE | DEVICE_ADD_NON_BINDABLE);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "gpt: failed to add dummy %s\n", zx_status_get_string(status));
+      return status;
+    }
+    // Dummy is managed by ddk.
+    __UNUSED auto p = dummy.release();
+    return ZX_OK;
+  }
+
+
   return ZX_OK;
 }
 

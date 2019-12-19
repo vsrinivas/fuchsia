@@ -881,8 +881,7 @@ TEST_F(PaverServiceSkipBlockTest, WipeVolumeCreatesFvm) {
   EXPECT_BYTES_EQ(kEmptyData, buffer, kBufferSize);
 }
 
-// TODO(34771): Re-enable once bug in GPT is fixed.
-#if 0
+#if defined(__x86_64__)
 class PaverServiceBlockTest : public PaverServiceTest {
  public:
   PaverServiceBlockTest() {
@@ -894,7 +893,7 @@ class PaverServiceBlockTest : public PaverServiceTest {
     devmgr_launcher::Args args;
     args.sys_device_driver = IsolatedDevmgr::kSysdevDriver;
     args.driver_search_paths.push_back("/boot/driver");
-    args.disable_block_watcher = true;
+    args.disable_block_watcher = false;
     ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr_));
 
     fbl::unique_fd fd;
@@ -903,10 +902,19 @@ class PaverServiceBlockTest : public PaverServiceTest {
     static_cast<paver::Paver*>(provider_ctx_)->set_svc_root(std::move(fake_svc_.svc_chan()));
   }
 
+  void UseBlockDevice(zx::channel block_device) {
+    zx::channel local, remote;
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+
+    auto result = client_->UseBlockDevice(std::move(block_device), std::move(remote));
+    ASSERT_OK(result.status());
+    data_sink_.emplace(std::move(local));
+  }
+
   IsolatedDevmgr devmgr_;
+  std::optional<::llcpp::fuchsia::paver::DynamicDataSink::SyncClient> data_sink_;
 };
 
-#if defined(__x86_64__)
 constexpr uint8_t kEmptyType[GPT_GUID_LEN] = GUID_EMPTY_VALUE;
 
 TEST_F(PaverServiceBlockTest, InitializePartitionTables) {
@@ -918,9 +926,11 @@ TEST_F(PaverServiceBlockTest, InitializePartitionTables) {
   zx::channel gpt_chan;
   ASSERT_OK(fdio_fd_clone(gpt_dev->fd(), gpt_chan.reset_and_get_address()));
 
-  auto result = client_->InitializePartitionTables(std::move(gpt_chan));
+  ASSERT_NO_FATAL_FAILURES(UseBlockDevice(std::move(gpt_chan)));
+
+  auto result = data_sink_->InitializePartitionTables();
   ASSERT_OK(result.status());
-  ASSERT_OK(result.value().status);
+  ASSERT_OK(result->status);
 }
 
 TEST_F(PaverServiceBlockTest, InitializePartitionTablesMultipleDevices) {
@@ -934,9 +944,11 @@ TEST_F(PaverServiceBlockTest, InitializePartitionTablesMultipleDevices) {
   zx::channel gpt_chan;
   ASSERT_OK(fdio_fd_clone(gpt_dev1->fd(), gpt_chan.reset_and_get_address()));
 
-  auto result = client_->InitializePartitionTables(std::move(gpt_chan));
+  ASSERT_NO_FATAL_FAILURES(UseBlockDevice(std::move(gpt_chan)));
+
+  auto result = data_sink_->InitializePartitionTables();
   ASSERT_OK(result.status());
-  ASSERT_OK(result.value().status);
+  ASSERT_OK(result->status);
 }
 
 TEST_F(PaverServiceBlockTest, WipePartitionTables) {
@@ -948,17 +960,16 @@ TEST_F(PaverServiceBlockTest, WipePartitionTables) {
   zx::channel gpt_chan;
   ASSERT_OK(fdio_fd_clone(gpt_dev->fd(), gpt_chan.reset_and_get_address()));
 
-  auto result = client_->InitializePartitionTables(std::move(gpt_chan));
+  ASSERT_NO_FATAL_FAILURES(UseBlockDevice(std::move(gpt_chan)));
+
+  auto result = data_sink_->InitializePartitionTables();
   ASSERT_OK(result.status());
-  ASSERT_OK(result.value().status);
+  ASSERT_OK(result->status);
 
-  ASSERT_OK(fdio_fd_clone(gpt_dev->fd(), gpt_chan.reset_and_get_address()));
-
-  auto wipe_result = client_->WipePartitionTables(std::move(gpt_chan));
+  auto wipe_result = data_sink_->WipePartitionTables();
   ASSERT_OK(wipe_result.status());
-  ASSERT_OK(wipe_result.value().status);
+  ASSERT_OK(wipe_result->status);
 }
-#endif
 #endif
 
 }  // namespace
