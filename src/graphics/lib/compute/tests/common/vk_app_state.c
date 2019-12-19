@@ -1034,18 +1034,19 @@ vk_app_state_init(vk_app_state_t * app_state, const vk_app_state_config_t * conf
   if (config->enable_debug_report)
     vk_instance_create_info_print(&instance_create_info);
 
+  string_list_free(&enabled_layers);
+  string_list_free(&enabled_extensions);
+
   instance_info_destroy(&instance_info);
 
   //
   //
   //
 
-  AppStateInternal * internal = calloc(1, sizeof(*internal));
-  app_state->internal         = internal;
+  ASSERT_MSG(sizeof(AppStateInternal) <= sizeof(app_state->internal_storage),
+             "Please increase the size of vk_app_state_t::internal_storage\n");
 
-#if VK_USE_PLATFORM_FUCHSIA
-  fuchsia_state_init(&internal->fuchsia, config->enable_tracing);
-#endif
+  AppStateInternal * internal = (AppStateInternal *)app_state->internal_storage;
 
   if (app_state->has_debug_report)
     {
@@ -1351,6 +1352,8 @@ vk_app_state_init(vk_app_state_t * app_state, const vk_app_state_config_t * conf
   if (config->enable_debug_report)
     vk_device_create_info_print(&device_info);
 
+  string_list_free(&device_extensions);
+
   //
   // create the pipeline cache
   //
@@ -1358,6 +1361,10 @@ vk_app_state_init(vk_app_state_t * app_state, const vk_app_state_config_t * conf
     {
       app_state->pc = pipeline_cache_load(PIPELINE_CACHE_FILE_PATH, app_state->d, app_state->ac);
     }
+
+#if VK_USE_PLATFORM_FUCHSIA
+  fuchsia_state_init(&internal->fuchsia, config->enable_tracing);
+#endif
 
   return true;
 }
@@ -1373,7 +1380,7 @@ vk_app_state_destroy(vk_app_state_t * app_state)
 
   vkDestroyDevice(app_state->d, app_state->ac);
 
-  AppStateInternal * internal = app_state->internal;
+  AppStateInternal * internal = (AppStateInternal *)app_state->internal_storage;
 
   if (app_state->has_debug_report && internal)
     {
@@ -1385,8 +1392,6 @@ vk_app_state_destroy(vk_app_state_t * app_state)
 #if VK_USE_PLATFORM_FUCHSIA
   fuchsia_state_destroy(&internal->fuchsia);
 #endif
-
-  free(internal);
 
   vkDestroyInstance(app_state->instance, NULL);
 
@@ -1404,11 +1409,11 @@ vk_app_state_get_queue_families(const vk_app_state_t * app_state)
     result.indices[count++] = app_state->qfi;
 
   if (app_state->compute_qfi != UINT32_MAX)
-  {
-	ASSERT(count == 0 || count == 1);
-	if (count == 0 || app_state->compute_qfi != result.indices[0])
-		result.indices[count++] = app_state->compute_qfi;
-  }
+    {
+      ASSERT(count == 0 || count == 1);
+      if (count == 0 || app_state->compute_qfi != result.indices[0])
+        result.indices[count++] = app_state->compute_qfi;
+    }
 
   result.count = count;
   return result;

@@ -59,6 +59,12 @@
 //       ...
 //       ScopedFoo foo2 = std::move(foo);   // foo automatically reset to default value.
 //
+//   * Move values into ScopedStruct<> instances with makeScopedStruct:
+//
+//       Foo foo0 = ...;
+//       ScopedStruct<Foo> scoped_foo = makeScopedStruct(std::move(foo0));
+//       // Not that this calls reset() on |foo0|.
+//
 //   * Copy operations are forbidden:
 //       ScopedFoo foo = foo2;   // Error: deleted copy-constructor!
 //
@@ -119,16 +125,25 @@ class ScopedStruct {
     TRAITS::init(&data_, std::forward<ARGS>(args)...);
   }
 
+  // Constructor that takes a T value directly and moves it.
+  ScopedStruct(T init_value) noexcept
+  {
+    TRAITS::move(&data_, &init_value);
+  }
+
+  // Static function to move a T value into a ScopedStruct instance.
+  static ScopedStruct
+  makeFrom(T && value)
+  {
+    ScopedStruct result;
+    TRAITS::move(&result.data_, &value);
+    return result;
+  }
+
   // Destructor invokes the destroy() function.
   ~ScopedStruct()
   {
     TRAITS::destroy(&data_);
-  }
-
-  // Constructor that moves an input struct instance directly.
-  explicit ScopedStruct(T && data) : data_(std::move(data))
-  {
-    data = TRAITS::kDefault;
   }
 
   // Copy operations are not allowed.
@@ -250,6 +265,20 @@ swap(ScopedStruct<T, TRAITS> & a, ScopedStruct<T, TRAITS> & b)
 {
   using std::swap;
   swap(*a, *b);
+}
+
+// Static function used to move a T instance into a ScopedStruct instance.
+// When using the default traits, template parameter type deduction can be
+// used to write:
+//
+//    Foo foo = { .. };
+//    auto scoped_foo = makeScopedStruct(std::move(foo));
+//
+template <typename T, typename TRAITS = ScopedStructDefaultTraits<T>>
+ScopedStruct<T, TRAITS>
+makeScopedStruct(T && value)
+{
+  return ScopedStruct<T, TRAITS>::makeFrom(std::move(value));
 }
 
 // Specializes struct std::hash<ScopedStruct<T>> for use in standard containers.

@@ -9,6 +9,27 @@ config("public_config") {
   include_dirs = [ graphics_compute_dir ]
 }
 
+# Spinel-related utilities library. This only depends on the Spinel API
+# headers and can be used with any backend (Spinel or Mold).
+source_set("spinel_utils") {
+  sources = [
+    "spinel_image.cc",
+    "spinel_image.h",
+    "svg_spinel_image.cc",
+    "svg_spinel_image.h",
+  ]
+  deps = [
+    "${graphics_compute_dir}/spinel/ext/svg2spinel",
+    "${graphics_compute_dir}/spinel/ext/transform_stack",
+    "${graphics_compute_dir}/tests:common",
+  ]
+  public_configs = [ ":public_config" ]
+  public_deps = [
+    "${graphics_compute_dir}/spinel:spinel_headers",
+    "${graphics_compute_dir}/svg:svg",
+  ]
+}
+
 # Spinel-related test utilities. Only depends on the Spinel API headers, and
 # and only useful for tests (testonly is set to true).
 source_set("spinel_test_utils") {
@@ -28,10 +49,15 @@ source_set("spinel_test_utils") {
 # Unit-tests for both spinel_utils and spinel_test_utils.
 graphics_compute_unittests("unittests") {
   sources = [
+    "spinel_image_unittest.cc",
     "spinel_test_utils_unittest.cc",
+    "svg_spinel_image_unittest.cc",
   ]
   deps = [
     ":spinel_test_utils",
+    ":spinel_utils",
     "${graphics_compute_dir}/tests:common",
+    "${graphics_compute_dir}/tests/common/svg",
+    "${graphics_compute_dir}/tests/mock_spinel:mock_spinel_test_utils",
   ]
 }

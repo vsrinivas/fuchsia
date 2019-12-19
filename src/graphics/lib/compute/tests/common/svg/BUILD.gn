@@ -1,0 +1,32 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("../../../gn/build_rules.gni")
+
+config("public_config") {
+  # Client should include "tests/common/svg/scoped_svg.h"
+  include_dirs = [ graphics_compute_dir ]
+}
+
+source_set("svg") {
+  public = [
+    "scoped_svg.h",
+  ]
+  sources = [
+    "scoped_svg.h",
+  ]
+  public_deps = [
+    "${graphics_compute_dir}/svg",
+  ]
+  public_configs = [ ":public_config" ]
+}
+
+graphics_compute_unittests("unittests") {
+  sources = [
+    "scoped_svg_unittest.cc",
+  ]
+  deps = [
+    ":svg",
+  ]
+}

@@ -94,6 +94,7 @@ graphics_compute_unittests_package("graphics_compute_unittests") {
     "svg:svg_unittests",
     "tests:common_unittests",
     "tests/common/spinel:unittests",
+    "tests/common/svg:unittests",
     "tests/mock_spinel:mock_spinel_unittests",
   ]
 }
