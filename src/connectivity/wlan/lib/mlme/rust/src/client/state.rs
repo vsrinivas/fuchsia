@@ -29,8 +29,6 @@ use {
 /// considered to have failed.
 // TODO(41609): Let upper layers set this value.
 const ASSOC_TIMEOUT_BCN_PERIODS: u16 = 10;
-/// AID used for reporting failed associations to SME.
-const FAILED_ASSOCIATION_AID: mac::Aid = 0;
 
 /// Processes an inbound deauthentication frame by issuing an MLME-DEAUTHENTICATE.indication
 /// to the STA's SME peer.
@@ -181,9 +179,8 @@ impl Authenticated {
             }
             Err(e) => {
                 error!("{}", e);
-                sta.send_associate_conf(
+                sta.send_associate_conf_failure(
                     ctx,
-                    FAILED_ASSOCIATION_AID,
                     fidl_mlme::AssociateResultCodes::RefusedTemporarily,
                 );
                 Err(())
@@ -214,9 +211,8 @@ impl DeauthenticationHandler for Associating {
              association failed: {:?}",
             { deauth_hdr.reason_code }
         );
-        sta.send_associate_conf(
+        sta.send_associate_conf_failure(
             ctx,
-            FAILED_ASSOCIATION_AID,
             fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
         );
     }
@@ -228,20 +224,22 @@ impl Associating {
     /// with the BSS was successful.
     /// Returns Ok(()) if the association was successful, otherwise Err(()).
     /// Note: The pending authentication timeout will be canceled in any case.
-    fn on_assoc_resp_frame(
+    fn on_assoc_resp_frame<B: ByteSlice>(
         &self,
         sta: &mut BoundClient<'_>,
         ctx: &mut Context,
         assoc_resp_hdr: &mac::AssocRespHdr,
+        elements: B,
     ) -> Result<(mac::Aid, ControlledPort), ()> {
         ctx.timer.cancel_event(self.timeout);
 
         match assoc_resp_hdr.status_code {
             mac::StatusCode::SUCCESS => {
-                sta.send_associate_conf(
+                sta.send_associate_conf_success(
                     ctx,
                     assoc_resp_hdr.aid,
-                    fidl_mlme::AssociateResultCodes::Success,
+                    assoc_resp_hdr.capabilities,
+                    elements,
                 );
                 let controlled_port =
                     if sta.sta.is_rsn { ControlledPort::Closed } else { ControlledPort::Open };
@@ -249,9 +247,8 @@ impl Associating {
             }
             status_code => {
                 error!("association with BSS failed: {:?}", status_code);
-                sta.send_associate_conf(
+                sta.send_associate_conf_failure(
                     ctx,
-                    FAILED_ASSOCIATION_AID,
                     fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
                 );
                 Err(())
@@ -273,9 +270,8 @@ impl Associating {
         ctx.timer.cancel_event(self.timeout);
 
         warn!("received unexpected disassociation frame while associating");
-        sta.send_associate_conf(
+        sta.send_associate_conf_failure(
             ctx,
-            FAILED_ASSOCIATION_AID,
             fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
         );
     }
@@ -289,11 +285,7 @@ impl Associating {
         // ensure the timeout is canceled in any case.
         ctx.timer.cancel_event(self.timeout);
 
-        sta.send_associate_conf(
-            ctx,
-            FAILED_ASSOCIATION_AID,
-            fidl_mlme::AssociateResultCodes::RefusedTemporarily,
-        );
+        sta.send_associate_conf_failure(ctx, fidl_mlme::AssociateResultCodes::RefusedTemporarily);
     }
 }
 
@@ -498,9 +490,8 @@ impl States {
             },
             _ => {
                 error!("received MLME-ASSOCIATE.request in invalid state");
-                sta.send_associate_conf(
+                sta.send_associate_conf_failure(
                     ctx,
-                    FAILED_ASSOCIATION_AID,
                     fidl_mlme::AssociateResultCodes::RefusedNotAuthenticated,
                 );
                 self
@@ -604,8 +595,8 @@ impl States {
                 _ => state.into(),
             },
             States::Associating(state) => match mgmt_body {
-                mac::MgmtBody::AssociationResp { assoc_resp_hdr, .. } => {
-                    match state.on_assoc_resp_frame(sta, ctx, &assoc_resp_hdr) {
+                mac::MgmtBody::AssociationResp { assoc_resp_hdr, elements } => {
+                    match state.on_assoc_resp_frame(sta, ctx, &assoc_resp_hdr, elements) {
                         Ok((aid, controlled_port)) => {
                             state.transition_to(Associated { aid, controlled_port }).into()
                         }
@@ -778,6 +769,17 @@ mod tests {
 
     fn make_protected_client_station() -> Client {
         Client::new(BSSID, IFACE_MAC, true)
+    }
+
+    fn empty_associate_conf() -> fidl_mlme::AssociateConfirm {
+        fidl_mlme::AssociateConfirm {
+            association_id: 0,
+            result_code: fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
+            cap_info: 0,
+            rates: vec![],
+            ht_cap: None,
+            vht_cap: None,
+        }
     }
 
     #[test]
@@ -1035,6 +1037,7 @@ mod tests {
                     capabilities: mac::CapabilityInfo(52),
                     status_code: mac::StatusCode::SUCCESS,
                 },
+                &[][..],
             )
             .expect("failed processing association response frame");
         assert_eq!(aid, 42);
@@ -1050,6 +1053,8 @@ mod tests {
             fidl_mlme::AssociateConfirm {
                 association_id: 42,
                 result_code: fidl_mlme::AssociateResultCodes::Success,
+                cap_info: 52,
+                ..empty_associate_conf()
             }
         );
     }
@@ -1073,6 +1078,7 @@ mod tests {
                     capabilities: mac::CapabilityInfo(52),
                     status_code: mac::StatusCode::SUCCESS,
                 },
+                &[][..],
             )
             .expect("failed processing association response frame");
         assert_eq!(aid, 42);
@@ -1088,6 +1094,8 @@ mod tests {
             fidl_mlme::AssociateConfirm {
                 association_id: 42,
                 result_code: fidl_mlme::AssociateResultCodes::Success,
+                cap_info: 52,
+                ..empty_associate_conf()
             }
         );
     }
@@ -1113,6 +1121,7 @@ mod tests {
                     capabilities: mac::CapabilityInfo(52),
                     status_code: mac::StatusCode::NOT_IN_SAME_BSS,
                 },
+                &[][..],
             )
             .expect_err("expected failure processing association response frame");
 
@@ -1126,6 +1135,7 @@ mod tests {
             fidl_mlme::AssociateConfirm {
                 association_id: 0,
                 result_code: fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
+                ..empty_associate_conf()
             }
         );
     }
@@ -1154,6 +1164,7 @@ mod tests {
             fidl_mlme::AssociateConfirm {
                 association_id: 0,
                 result_code: fidl_mlme::AssociateResultCodes::RefusedTemporarily,
+                ..empty_associate_conf()
             }
         );
     }
@@ -1185,6 +1196,7 @@ mod tests {
             fidl_mlme::AssociateConfirm {
                 association_id: 0,
                 result_code: fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
+                ..empty_associate_conf()
             }
         );
     }
@@ -1216,6 +1228,7 @@ mod tests {
             fidl_mlme::AssociateConfirm {
                 association_id: 0,
                 result_code: fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
+                ..empty_associate_conf()
             }
         );
     }

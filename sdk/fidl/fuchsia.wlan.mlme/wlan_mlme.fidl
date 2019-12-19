@@ -362,6 +362,11 @@ struct AssociateConfirm {
     // CapabilityInformation
     uint16 association_id;
 
+    CapabilityInfo cap_info;
+    bytes:RATES_MAX_LEN rates;
+    HtCapabilities? ht_cap;
+    VhtCapabilities? vht_cap;
+
     // etc
 };
 

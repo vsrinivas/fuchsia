@@ -30,17 +30,18 @@ use {
     log::{error, warn},
     scanner::Scanner,
     state::States,
+    std::convert::TryInto,
     wlan_common::{
         buffer_writer::BufferWriter,
         frame_len,
         ie::{
-            parse_ht_capabilities, parse_vht_capabilities, rsn::rsne, IE_PREFIX_LEN,
+            parse_ht_capabilities, parse_vht_capabilities, rsn::rsne, Id, Reader, IE_PREFIX_LEN,
             SUPPORTED_RATES_MAX_LEN,
         },
         mac::{self, Aid, Bssid, MacAddr, OptionalField, PowerState, Presence},
         sequence::SequenceManager,
     },
-    zerocopy::ByteSlice,
+    zerocopy::{AsBytes, ByteSlice},
 };
 
 pub use {cpp_proxy::CppChannelScheduler, scanner::ScanError};
@@ -620,18 +621,79 @@ impl<'a> BoundClient<'a> {
     }
 
     /// Sends an MLME-ASSOCIATE.confirm message to the SME.
-    fn send_associate_conf(
+    fn send_associate_conf_failure(
         &mut self,
         ctx: &mut Context,
-        aid: mac::Aid,
         result_code: fidl_mlme::AssociateResultCodes,
     ) {
-        let result = ctx.device.access_sme_sender(|sender| {
-            sender.send_associate_conf(&mut fidl_mlme::AssociateConfirm {
-                association_id: aid,
-                result_code,
-            })
-        });
+        // AID used for reporting failed associations to SME.
+        const FAILED_ASSOCIATION_AID: mac::Aid = 0;
+
+        let mut assoc_conf = fidl_mlme::AssociateConfirm {
+            association_id: FAILED_ASSOCIATION_AID,
+            cap_info: 0,
+            result_code,
+            rates: vec![],
+            ht_cap: None,
+            vht_cap: None,
+        };
+
+        let result =
+            ctx.device.access_sme_sender(|sender| sender.send_associate_conf(&mut assoc_conf));
+        if let Err(e) = result {
+            error!("error sending MLME-AUTHENTICATE.confirm: {}", e);
+        }
+    }
+
+    fn send_associate_conf_success<B: ByteSlice>(
+        &mut self,
+        ctx: &mut Context,
+        association_id: mac::Aid,
+        cap_info: mac::CapabilityInfo,
+        elements: B,
+    ) {
+        let mut assoc_conf = fidl_mlme::AssociateConfirm {
+            association_id,
+            cap_info: cap_info.raw(),
+            result_code: fidl_mlme::AssociateResultCodes::Success,
+            rates: vec![],
+            ht_cap: None,
+            vht_cap: None,
+        };
+
+        for (id, body) in Reader::new(elements) {
+            match id {
+                Id::SUPPORTED_RATES => {
+                    // safe to unwrap because supported rate is 1-byte long thus always aligned
+                    assoc_conf.rates.extend_from_slice(&body);
+                }
+                Id::EXT_SUPPORTED_RATES => {
+                    // safe to unwrap because supported rate is 1-byte thus always aligned
+                    assoc_conf.rates.extend_from_slice(&body);
+                }
+                Id::HT_CAPABILITIES => {
+                    if body.len() != fidl_mlme::HT_CAP_LEN as usize {
+                        error!("invalid HT Capabilities len: {}", body.len());
+                        continue;
+                    } // safe to unwrap as we just verified the size.
+                    let bytes = body.as_bytes().try_into().unwrap();
+                    assoc_conf.ht_cap = Some(Box::new(fidl_mlme::HtCapabilities { bytes }))
+                }
+                Id::VHT_CAPABILITIES => {
+                    if body.len() != fidl_mlme::VHT_CAP_LEN as usize {
+                        error!("invalid VHT Capabilities len: {}", body.len());
+                        continue;
+                    }
+                    // safe to unwrap as we just verified the size.
+                    let bytes = body.as_bytes().try_into().unwrap();
+                    assoc_conf.vht_cap = Some(Box::new(fidl_mlme::VhtCapabilities { bytes }))
+                }
+                _ => {}
+            }
+        }
+
+        let result =
+            ctx.device.access_sme_sender(|sender| sender.send_associate_conf(&mut assoc_conf));
         if let Err(e) = result {
             error!("error sending MLME-AUTHENTICATE.confirm: {}", e);
         }
@@ -718,7 +780,7 @@ mod tests {
         super::*,
         crate::{buffer::FakeBufferProvider, device::FakeDevice},
         cpp_proxy::FakeCppChannelScheduler,
-        wlan_common::test_utils::fake_frames::*,
+        wlan_common::{ie, test_utils::fake_frames::*},
     };
     const BSSID: Bssid = Bssid([6u8; 6]);
     const IFACE_MAC: MacAddr = [7u8; 6];
@@ -1403,6 +1465,68 @@ mod tests {
                 0, 0, // block ack timeout (u16) (0: disabled)
                 0b00010000, 0, // block ack starting sequence number: fragment 0, sequence 1
             ][..]
+        );
+    }
+
+    #[test]
+    fn client_send_successful_associate_conf() {
+        let mut m = MockObjects::new();
+        let mut ctx = m.make_ctx();
+        let mut client = make_client_station();
+        let mut ies = vec![];
+        let rates = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+        let rates_writer = crate::RatesWriter::try_new(&rates[..]).expect("Valid rates");
+        // It should work even if ext_supp_rates shows up before supp_rates
+        rates_writer.write_ext_supported_rates(&mut ies);
+        rates_writer.write_supported_rates(&mut ies);
+        ie::write_ht_capabilities(&mut ies, &ie::fake_ht_capabilities()).expect("Valid HT Cap");
+        ie::write_vht_capabilities(&mut ies, &ie::fake_vht_capabilities()).expect("Valid VHT Cap");
+
+        client.send_associate_conf_success(&mut ctx, 42, mac::CapabilityInfo(0x1234), &ies[..]);
+        let associate_conf = m
+            .fake_device
+            .next_mlme_msg::<fidl_mlme::AssociateConfirm>()
+            .expect("error reading Associate.confirm");
+        assert_eq!(
+            associate_conf,
+            fidl_mlme::AssociateConfirm {
+                association_id: 42,
+                cap_info: 0x1234,
+                result_code: fidl_mlme::AssociateResultCodes::Success,
+                rates: vec![9, 10, 1, 2, 3, 4, 5, 6, 7, 8],
+                ht_cap: Some(Box::new(fidl_mlme::HtCapabilities {
+                    bytes: ie::fake_ht_capabilities().as_bytes().try_into().unwrap()
+                })),
+                vht_cap: Some(Box::new(fidl_mlme::VhtCapabilities {
+                    bytes: ie::fake_vht_capabilities().as_bytes().try_into().unwrap()
+                })),
+            }
+        );
+    }
+
+    #[test]
+    fn client_send_failed_associate_conf() {
+        let mut m = MockObjects::new();
+        let mut ctx = m.make_ctx();
+        let mut client = make_client_station();
+        client.send_associate_conf_failure(
+            &mut ctx,
+            fidl_mlme::AssociateResultCodes::RefusedExternalReason,
+        );
+        let associate_conf = m
+            .fake_device
+            .next_mlme_msg::<fidl_mlme::AssociateConfirm>()
+            .expect("error reading Associate.confirm");
+        assert_eq!(
+            associate_conf,
+            fidl_mlme::AssociateConfirm {
+                association_id: 0,
+                cap_info: 0,
+                result_code: fidl_mlme::AssociateResultCodes::RefusedExternalReason,
+                rates: vec![],
+                ht_cap: None,
+                vht_cap: None,
+            }
         );
     }
 

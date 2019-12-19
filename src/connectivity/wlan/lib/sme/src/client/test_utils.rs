@@ -161,7 +161,14 @@ pub fn create_auth_conf(
 
 pub fn create_assoc_conf(result_code: fidl_mlme::AssociateResultCodes) -> fidl_mlme::MlmeEvent {
     fidl_mlme::MlmeEvent::AssociateConf {
-        resp: fidl_mlme::AssociateConfirm { result_code, association_id: 55 },
+        resp: fidl_mlme::AssociateConfirm {
+            result_code,
+            association_id: 55,
+            cap_info: 0,
+            rates: vec![],
+            ht_cap: None,
+            vht_cap: None,
+        },
     }
 }
 
