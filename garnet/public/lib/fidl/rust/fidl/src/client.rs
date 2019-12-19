@@ -131,7 +131,7 @@ impl Client {
             }
         }
 
-        EventReceiver { inner: Some(self.inner.clone()) }
+        EventReceiver { inner: self.inner.clone(), terminated: false }
     }
 
     /// Send an encodable message without expecting a response.
@@ -264,26 +264,36 @@ impl MessageInterest {
 /// A stream of events as `MessageBuf`s.
 #[derive(Debug)]
 pub struct EventReceiver {
-    inner: Option<Arc<ClientInner>>,
+    inner: Arc<ClientInner>,
+    terminated: bool,
 }
 
 impl Unpin for EventReceiver {}
 
 impl FusedStream for EventReceiver {
     fn is_terminated(&self) -> bool {
-        self.inner.is_none()
+        self.terminated
     }
 }
 
+/// This implementation holds up two invariants
+///   (1) After `None` is returned, the next poll panics
+///   (2) Until this instance is dropped, no other EventReceiver may claim the
+///       event channel by calling Client::take_event_receiver.
 impl Stream for EventReceiver {
     type Item = Result<MessageBuf, Error>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let inner = self.inner.as_ref().expect("polled EventReceiver after `None`");
-        Poll::Ready(match ready!(inner.poll_recv_event(cx)) {
+        if self.is_terminated() {
+            panic!("polled EventReceiver after `None`");
+        }
+        Poll::Ready(match ready!(self.inner.as_ref().poll_recv_event(cx)) {
             Ok(x) => Some(Ok(x)),
             Err(Error::ClientChannelClosed(_)) => {
-                self.inner = None;
+                // The channel is closed, set our internal state so that on the
+                // next poll_next() we panic and is_terminated() returns an
+                // appropriate value.
+                self.terminated = true;
                 None
             }
             Err(e) => Some(Err(e)),
@@ -293,10 +303,8 @@ impl Stream for EventReceiver {
 
 impl Drop for EventReceiver {
     fn drop(&mut self) {
-        if let Some(inner) = &self.inner {
-            inner.event_channel.lock().listener = EventListener::None;
-            inner.wake_any();
-        }
+        self.inner.event_channel.lock().listener = EventListener::None;
+        self.inner.wake_any();
     }
 }
 
@@ -865,6 +873,44 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
+    async fn event_can_be_taken_after_drop() {
+        let (client_end, _) = zx::Channel::create().unwrap();
+        let client_end = AsyncChannel::from_channel(client_end).unwrap();
+        let client = Client::new(client_end);
+        let foo = client.take_event_receiver();
+        drop(foo);
+        client.take_event_receiver();
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn receiver_termination_test() {
+        let (client_end, _) = zx::Channel::create().unwrap();
+        let client_end = AsyncChannel::from_channel(client_end).unwrap();
+        let client = Client::new(client_end);
+        let mut foo = client.take_event_receiver();
+        assert!(!foo.is_terminated(), "receiver should not report terminated before being polled");
+        let _ = foo.next().await;
+        assert!(
+            foo.is_terminated(),
+            "receiver should report terminated after seeing channel is closed"
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    #[should_panic(expected = "polled EventReceiver after `None`")]
+    async fn receiver_cant_be_polled_more_than_once_on_closed_stream() {
+        let (client_end, _) = zx::Channel::create().unwrap();
+        let client_end = AsyncChannel::from_channel(client_end).unwrap();
+        let client = Client::new(client_end);
+        let foo = client.take_event_receiver();
+        drop(foo);
+        let mut bar = client.take_event_receiver();
+        assert!(bar.next().await.is_none(), "read on closed channel should return none");
+        // this should panic
+        let _ = bar.next().await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn event_can_be_taken() {
         let (client_end, _) = zx::Channel::create().unwrap();
         let client_end = AsyncChannel::from_channel(client_end).unwrap();
@@ -903,6 +949,55 @@ mod tests {
             recv.on_timeout(300.millis().after_now(), || panic!("did not receive event in time!"));
 
         recv.await;
+    }
+
+    /// Tests that the event receiver can be taken, the stream read to the end,
+    /// the receiver dropped, and then a new receiver gotten from taking the
+    /// stream again.
+    #[fasync::run_singlethreaded(test)]
+    async fn receiver_can_be_taken_after_end_of_stream() {
+        let (client_end, server_end) = zx::Channel::create().unwrap();
+        let client_end = AsyncChannel::from_channel(client_end).unwrap();
+        let client = Client::new(client_end);
+
+        // Send the event from the server
+        let server = AsyncChannel::from_channel(server_end).unwrap();
+        let (bytes, handles) = (&mut vec![], &mut vec![]);
+        let header = TransactionHeader::new(0, 5);
+        encode_transaction(header, bytes, handles);
+        server.write(bytes, handles).expect("Server channel write failed");
+        drop(server);
+
+        // Create a block to make sure the first event receiver is dropped.
+        // Creating the block is a bit of paranoia, because awaiting the
+        // future moves the receiver anyway.
+        {
+            let recv = client
+                .take_event_receiver()
+                .into_future()
+                .then(|(x, stream)| {
+                    let x = x.expect("should contain one element");
+                    let x = x.expect("fidl error");
+                    let x: i32 = decode_transaction_body(x).expect("failed to decode event");
+                    assert_eq!(x, 55);
+                    stream.into_future()
+                })
+                .map(|(x, _stream)| assert!(x.is_none(), "should have emptied"));
+
+            // add a timeout to receiver so if test is broken it doesn't take forever
+            let recv = recv
+                .on_timeout(300.millis().after_now(), || panic!("did not receive event in time!"));
+
+            recv.await;
+        }
+
+        // if we take the event stream again, we should be able to get the next
+        // without a panic, but that should be none
+        let mut c = client.take_event_receiver();
+        assert!(
+            c.next().await.is_none(),
+            "receiver on closed channel should return none on first call"
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
