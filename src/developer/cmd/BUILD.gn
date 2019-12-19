@@ -1,0 +1,116 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+
+group("tests") {
+  testonly = true
+
+  public_deps = [
+    ":cmd_tests",
+  ]
+}
+
+source_set("lib") {
+  sources = [
+    "app.cc",
+    "app.h",
+    "command.cc",
+    "command.h",
+    "console.cc",
+    "console.h",
+    "executor.cc",
+    "executor.h",
+    "tasks/cd_task.cc",
+    "tasks/cd_task.h",
+    "tasks/getenv_task.cc",
+    "tasks/getenv_task.h",
+    "tasks/process_task.cc",
+    "tasks/process_task.h",
+    "tasks/quit_task.cc",
+    "tasks/quit_task.h",
+    "tasks/setenv_task.cc",
+    "tasks/setenv_task.h",
+    "tasks/task.cc",
+    "tasks/task.h",
+    "tasks/unsetenv_task.cc",
+    "tasks/unsetenv_task.h",
+  ]
+
+  public_deps = [
+    "//src/lib/fsl",
+    "//src/lib/line_input",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+executable("bin") {
+  output_name = "cmd"
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+executable("cmd_unittests") {
+  testonly = true
+
+  sources = [
+    "app_unittest.cc",
+    "command_unittest.cc",
+    "console_unittest.cc",
+    "executor_unittest.cc",
+    "tasks/cd_task_unittest.cc",
+    "tasks/getenv_task_unittest.cc",
+    "tasks/quit_task_unittest.cc",
+    "tasks/setenv_task_unittest.cc",
+    "tasks/unsetenv_task_unittest.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+package("cmd") {
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [
+    {
+      name = "cmd"
+      shell = true
+    },
+  ]
+}
+
+test_package("cmd_tests") {
+  deps = [
+    ":cmd_unittests",
+  ]
+
+  tests = [
+    {
+      name = "cmd_unittests"
+      environments = basic_envs
+    },
+  ]
+}

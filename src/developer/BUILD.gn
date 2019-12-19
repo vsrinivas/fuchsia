@@ -6,6 +6,7 @@ group("developer") {
   testonly = true
   deps = [
     ":tests",
+    "cmd",
     "debug",
     "feedback",
     "fuchsia-criterion",
@@ -18,6 +19,7 @@ group("tests") {
   testonly = true
 
   deps = [
+    "//src/developer/cmd:tests",
     "//src/developer/debug:tests",
     "//src/developer/development-bridge:tests",
     "//src/developer/exception_broker/tests",
