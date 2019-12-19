@@ -1,0 +1,18 @@
+{
+    "program": {
+        "args": [
+            "--sniff",
+            "--verbosity=debug"
+        ],
+        "binary": "bin/netstack"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.device.NameProvider",
+            "fuchsia.logger.LogSink",
+            "fuchsia.net.NameLookup",
+            "fuchsia.posix.socket.Provider"
+        ]
+    }
+}

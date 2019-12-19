@@ -28,6 +28,10 @@ package("netstack") {
       path = rebase_path("meta/netstack.cmx")
       dest = "netstack.cmx"
     },
+    {
+      path = rebase_path("meta/netstack_debug.cmx")
+      dest = "netstack_debug.cmx"
+    },
   ]
 }
 

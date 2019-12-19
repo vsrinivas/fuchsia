@@ -4,9 +4,9 @@
             "injected-services": {
                 "fuchsia.cobalt.LoggerFactory": "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx",
                 "fuchsia.cobalt.test.LoggerQuerier": "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx",
-                "fuchsia.net.NameLookup": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
-                "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
-                "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
+                "fuchsia.net.NameLookup": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack_debug.cmx",
+                "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack_debug.cmx",
+                "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack_debug.cmx"
             }
         }
     },
