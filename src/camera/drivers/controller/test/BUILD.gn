@@ -95,6 +95,7 @@ executable("controller-protocol-test") {
 executable("controller-allocator-test") {
   testonly = true
   sources = [
+    "../graph_utils.cc",
     "../memory_allocation.cc",
     "../output_node.cc",
     "../pipeline_gdc.cc",

@@ -20,11 +20,6 @@
 
 namespace camera {
 
-// Returns |true| if CameraStreamType |type| is present in the
-// vector |streams|.
-bool HasStreamType(const std::vector<fuchsia::camera2::CameraStreamType>& streams,
-                   fuchsia::camera2::CameraStreamType type);
-
 // |PipelineManager|
 // This class provides a way to create the stream pipeline for a particular
 // stream configuration requested.
@@ -75,27 +70,10 @@ class PipelineManager {
   zx_status_t AppendToExistingGraph(StreamCreationData* info, ProcessNode* graph_node,
                                     fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream);
 
-  // Gets the next node for the requested stream path
-  const InternalConfigNode* GetNextNodeInPipeline(StreamCreationData* info,
-                                                  const InternalConfigNode& node);
-
-  // Gets the right buffercollection for the producer-consumer combination.
-  // |producer| - Internal node for the producer.
-  // |info| - Info about the stream to be created & the client buffer collection.
-  // |producer_graph_node| - If this is nullptr, this API would allocate new buffers
-  //                         If this is a valid node, then we would use the output
-  //                         buffer collection of that node. This is needed for streams
-  //                         which have one parent.
-  fit::result<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t> GetBuffers(
-      const InternalConfigNode& producer, StreamCreationData* info,
-      ProcessNode* producer_graph_node);
-
   fit::result<gdc_config_info, zx_status_t> LoadGdcConfiguration(
       const camera::GdcConfig& config_type);
 
   void OnClientStreamDisconnect(StreamCreationData* info);
-
-  bool IsStreamAlreadyCreated(StreamCreationData* info, ProcessNode* node);
 
   fit::result<std::pair<InternalConfigNode, ProcessNode*>, zx_status_t> FindNodeToAttachNewStream(
       StreamCreationData* info, const InternalConfigNode& current_internal_node,

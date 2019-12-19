@@ -14,6 +14,7 @@
 
 #include "fake_gdc.h"
 #include "fake_isp.h"
+#include "src/camera/drivers/controller/graph_utils.h"
 #include "src/camera/drivers/controller/isp_stream_protocol.h"
 #include "src/camera/drivers/controller/pipeline_manager.h"
 
@@ -46,6 +47,8 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     gdc_ = fake_gdc_.client();
     controller_protocol_device_ = std::make_unique<ControllerImpl>(
         fake_ddk::kFakeParent, isp_, gdc_, std::move(sysmem_allocator1_));
+    controller_memory_allocator_ =
+        std::make_unique<ControllerMemoryAllocator>(std::move(sysmem_allocator3_));
     pipeline_manager_ = std::make_unique<PipelineManager>(fake_ddk::kFakeParent, &dispatcher_, isp_,
                                                           gdc_, std::move(sysmem_allocator2_));
   }
@@ -55,6 +58,8 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     context_ = nullptr;
     sysmem_allocator1_ = nullptr;
     sysmem_allocator2_ = nullptr;
+    sysmem_allocator3_ = nullptr;
+    controller_memory_allocator_ = nullptr;
     controller_protocol_device_ = nullptr;
     loop_.Shutdown();
   }
@@ -267,7 +272,8 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_TRUE(HasAllStreams(graph_result.value()->supported_streams(), {stream_type}));
 
     // Check if the stream got created.
-    EXPECT_TRUE(pipeline_manager_->IsStreamAlreadyCreated(&info, result.value().get()));
+    EXPECT_TRUE(camera::HasStreamType(result.value()->configured_streams(),
+                                      info.stream_config->properties.stream_type()));
 
     // Change the requested stream type.
     stream_config.properties.set_stream_type(kStreamTypeFR | kStreamTypeML);
@@ -281,8 +287,8 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_EQ(append_result.value().second->supported_streams().size(), 2u);
 
     // Check for a stream which is not created.
-    EXPECT_FALSE(pipeline_manager_->IsStreamAlreadyCreated(&info, result.value().get()));
-
+    EXPECT_FALSE(camera::HasStreamType(result.value()->configured_streams(),
+                                       info.stream_config->properties.stream_type()));
     // Change the requested stream type to something invalid for this configuration.
     stream_config.properties.set_stream_type(kStreamTypeML);
     info.stream_config = &stream_config;
@@ -369,7 +375,8 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
                               {kStreamTypeFR | kStreamTypeML | kStreamTypeVideo}));
 
     // Check if the stream got created.
-    EXPECT_TRUE(pipeline_manager_->IsStreamAlreadyCreated(&info, result.value().get()));
+    EXPECT_TRUE(camera::HasStreamType(result.value()->configured_streams(),
+                                      info.stream_config->properties.stream_type()));
 
     // Change the requested stream type.
     stream_config.properties.set_stream_type(kStreamTypeVideo);
@@ -383,7 +390,8 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_EQ(append_result.value().second->supported_streams().size(), 2u);
 
     // Check for a stream which is not created.
-    EXPECT_FALSE(pipeline_manager_->IsStreamAlreadyCreated(&info, result.value().get()));
+    EXPECT_FALSE(camera::HasStreamType(result.value()->configured_streams(),
+                                       info.stream_config->properties.stream_type()));
   }
 
   void TestShutdownPathAfterStreamingOn() {
@@ -425,6 +433,35 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
 
     input_vector.push_back(kStreamTypeFR);
     EXPECT_TRUE(HasStreamType(input_vector, stream_to_find));
+  }
+
+  void TestGetNextNodeInPipeline() {
+    auto stream_config_node = GetStreamConfigNode(kMonitorConfig, kStreamTypeDS | kStreamTypeML);
+    ASSERT_NE(nullptr, stream_config_node);
+
+    StreamCreationData info;
+    fuchsia::camera2::hal::StreamConfig stream_config;
+    stream_config.properties.set_stream_type(kStreamTypeDS | kStreamTypeML);
+    info.stream_config = &stream_config;
+    info.node = *stream_config_node;
+
+    // Expecting 1st node to be input node.
+    EXPECT_EQ(NodeType::kInputStream, stream_config_node->type);
+
+    // Using ML|DS stream in Monitor configuration for test here.
+    auto next_node = camera::GetNextNodeInPipeline(info.stream_config->properties.stream_type(),
+                                                   *stream_config_node);
+    ASSERT_NE(nullptr, next_node);
+
+    // Expecting 2nd node to be input node.
+    EXPECT_EQ(NodeType::kGdc, next_node->type);
+
+    next_node =
+        camera::GetNextNodeInPipeline(info.stream_config->properties.stream_type(), *next_node);
+    ASSERT_NE(nullptr, next_node);
+
+    // Expecting 3rd node to be input node.
+    EXPECT_EQ(NodeType::kOutputStream, next_node->type);
   }
 
   void TestMultipleStartStreaming() {
@@ -631,11 +668,13 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
   async::Loop loop_;
   async_dispatcher_t dispatcher_;
   std::unique_ptr<ControllerImpl> controller_protocol_device_;
+  std::unique_ptr<ControllerMemoryAllocator> controller_memory_allocator_;
   fuchsia::camera2::hal::ControllerSyncPtr camera_client_;
   std::unique_ptr<sys::ComponentContext> context_;
   std::unique_ptr<camera::PipelineManager> pipeline_manager_;
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator1_;
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator2_;
+  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator3_;
   ddk::IspProtocolClient isp_;
   ddk::GdcProtocolClient gdc_;
 };
@@ -663,6 +702,8 @@ TEST_F(ControllerProtocolTest, TestConfigureVideoConfigStream1) {
 }
 
 TEST_F(ControllerProtocolTest, TestHasStreamType) { TestHasStreamType(); }
+
+TEST_F(ControllerProtocolTest, TestNextNodeInPipeline) { TestGetNextNodeInPipeline(); }
 
 TEST_F(ControllerProtocolTest, TestMultipleStartStreaming) { TestMultipleStartStreaming(); }
 

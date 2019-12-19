@@ -7,83 +7,12 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
+#include "graph_utils.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace camera {
 
 constexpr auto TAG = "camera_controller";
-
-bool HasStreamType(const std::vector<fuchsia::camera2::CameraStreamType>& streams,
-                   fuchsia::camera2::CameraStreamType type) {
-  if (std::find(streams.begin(), streams.end(), type) == streams.end()) {
-    return false;
-  }
-  return true;
-}
-
-const InternalConfigNode* PipelineManager::GetNextNodeInPipeline(StreamCreationData* info,
-                                                                 const InternalConfigNode& node) {
-  for (const auto& child_node : node.child_nodes) {
-    for (uint32_t i = 0; i < child_node.supported_streams.size(); i++) {
-      if (child_node.supported_streams[i] == info->stream_config->properties.stream_type()) {
-        return &child_node;
-      }
-    }
-  }
-  return nullptr;
-}
-
-bool PipelineManager::IsStreamAlreadyCreated(StreamCreationData* info, ProcessNode* node) {
-  auto requested_stream_type = info->stream_config->properties.stream_type();
-  for (const auto& stream_type : node->configured_streams()) {
-    if (stream_type == requested_stream_type) {
-      return true;
-    }
-  }
-  return false;
-}
-
-// NOTE: This API currently supports only single consumer node use cases.
-fit::result<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t> PipelineManager::GetBuffers(
-    const InternalConfigNode& producer, StreamCreationData* info,
-    ProcessNode* producer_graph_node) {
-  fuchsia::sysmem::BufferCollectionInfo_2 buffers;
-  auto consumer = GetNextNodeInPipeline(info, producer);
-  if (!consumer) {
-    FX_LOGST(ERROR, TAG) << "Failed to get next node";
-    return fit::error(ZX_ERR_INTERNAL);
-  }
-
-  // If the consumer is the client, we use the client buffers
-  if (consumer->type == kOutputStream) {
-    return fit::ok(std::move(info->output_buffers));
-  }
-
-  // The controller will  need to allocate memory using sysmem.
-  // TODO(braval): Add support for the case of two consumer nodes, which will be needed for the
-  // video conferencing config.
-  if (producer_graph_node) {
-    // The controller already has allocated an output buffer for this producer,
-    // so we just need to use that buffer
-    auto status = fidl::Clone(producer_graph_node->output_buffer_collection(), &buffers);
-    if (status != ZX_OK) {
-      FX_LOGST(ERROR, TAG) << "Failed to allocate shared memory";
-      return fit::error(status);
-    }
-    return fit::ok(std::move(buffers));
-  }
-
-  std::vector<fuchsia::sysmem::BufferCollectionConstraints> constraints;
-  constraints.push_back(producer.output_constraints);
-  constraints.push_back(consumer->input_constraints);
-
-  auto status = memory_allocator_.AllocateSharedMemory(constraints, &buffers);
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failed to allocate shared memory";
-    return fit::error(status);
-  }
-  return fit::ok(std::move(buffers));
-}
 
 fit::result<std::unique_ptr<ProcessNode>, zx_status_t> PipelineManager::CreateInputNode(
     StreamCreationData* info) {
@@ -97,7 +26,7 @@ fit::result<std::unique_ptr<ProcessNode>, zx_status_t> PipelineManager::CreateIn
     return fit::error(ZX_ERR_INVALID_ARGS);
   }
 
-  auto result = GetBuffers(info->node, info, nullptr);
+  auto result = GetBuffers(memory_allocator_, info->node, info, nullptr);
   if (result.is_error()) {
     FX_PLOGST(ERROR, TAG, result.error()) << "Failed to get buffers";
     return fit::error(result.error());
@@ -143,7 +72,8 @@ fit::result<std::unique_ptr<ProcessNode>, zx_status_t> PipelineManager::CreateIn
 fit::result<OutputNode*, zx_status_t> PipelineManager::CreateGraph(
     StreamCreationData* info, const InternalConfigNode& internal_node, ProcessNode* parent_node) {
   fit::result<OutputNode*, zx_status_t> result;
-  auto next_node_internal = GetNextNodeInPipeline(info, internal_node);
+  auto next_node_internal =
+      GetNextNodeInPipeline(info->stream_config->properties.stream_type(), internal_node);
   if (!next_node_internal) {
     FX_LOGST(ERROR, TAG) << "Failed to get next node";
     return fit::error(ZX_ERR_INTERNAL);
@@ -234,7 +164,8 @@ PipelineManager::FindNodeToAttachNewStream(StreamCreationData* info,
     if (HasStreamType(child_node_info.child_node->supported_streams(), requested_stream_type)) {
       // If we find a child node which supports the requested stream type,
       // we move on to that child node.
-      auto next_internal_node = GetNextNodeInPipeline(info, current_internal_node);
+      auto next_internal_node = GetNextNodeInPipeline(info->stream_config->properties.stream_type(),
+                                                      current_internal_node);
       if (!next_internal_node) {
         FX_LOGS(ERROR) << "Failed to get next node for requested stream";
         return fit::error(ZX_ERR_INTERNAL);
@@ -262,7 +193,8 @@ zx_status_t PipelineManager::AppendToExistingGraph(
   // If the next node is an output node, we currently do not support
   // this. Currently we expect that the clients would request for streams in a fixed order.
   // TODO(42241): Remove this check when 42241 is fixed.
-  auto next_node_internal = GetNextNodeInPipeline(info, result.value().first);
+  auto next_node_internal =
+      GetNextNodeInPipeline(info->stream_config->properties.stream_type(), result.value().first);
   if (!next_node_internal) {
     FX_PLOGS(ERROR, ZX_ERR_INTERNAL) << "Failed to get next node";
     return ZX_ERR_INTERNAL;
@@ -313,7 +245,8 @@ zx_status_t PipelineManager::ConfigureStreamPipeline(
     case fuchsia::camera2::CameraStreamType::FULL_RESOLUTION: {
       if (full_resolution_stream_) {
         // If the same stream is requested again, we return failure.
-        if (IsStreamAlreadyCreated(info, full_resolution_stream_.get())) {
+        if (HasStreamType(full_resolution_stream_->configured_streams(),
+                          info->stream_config->properties.stream_type())) {
           FX_PLOGS(ERROR, ZX_ERR_ALREADY_BOUND) << "Stream already bound";
           return ZX_ERR_ALREADY_BOUND;
         }
@@ -337,7 +270,8 @@ zx_status_t PipelineManager::ConfigureStreamPipeline(
     case fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION: {
       if (downscaled_resolution_stream_) {
         // If the same stream is requested again, we return failure.
-        if (IsStreamAlreadyCreated(info, downscaled_resolution_stream_.get())) {
+        if (HasStreamType(downscaled_resolution_stream_->configured_streams(),
+                          info->stream_config->properties.stream_type())) {
           FX_PLOGST(ERROR, TAG, ZX_ERR_ALREADY_BOUND) << "Stream already bound";
           return ZX_ERR_ALREADY_BOUND;
         }
@@ -363,7 +297,7 @@ zx_status_t PipelineManager::ConfigureStreamPipeline(
     }
   }
   return ZX_OK;
-}
+}  // namespace camera
 
 void PipelineManager::OnClientStreamDisconnect(StreamCreationData* info) {
   ZX_ASSERT(info != nullptr);

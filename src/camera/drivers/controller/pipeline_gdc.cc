@@ -4,6 +4,7 @@
 
 #include <fbl/auto_call.h>
 
+#include "graph_utils.h"
 #include "pipeline_manager.h"
 #include "src/lib/syslog/cpp/logger.h"
 #include "stream_pipeline_info.h"
@@ -55,7 +56,7 @@ fit::result<ProcessNode*, zx_status_t> PipelineManager::CreateGdcNode(
     StreamCreationData* info, ProcessNode* parent_node,
     const InternalConfigNode& internal_gdc_node) {
   auto& input_buffers_hlcpp = parent_node->output_buffer_collection();
-  auto result = GetBuffers(internal_gdc_node, info, parent_node);
+  auto result = GetBuffers(memory_allocator_, internal_gdc_node, info, parent_node);
   if (result.is_error()) {
     FX_LOGST(ERROR, TAG) << "Failed to get buffers";
     return fit::error(result.error());
