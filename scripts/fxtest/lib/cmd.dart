@@ -38,7 +38,7 @@ class FuchsiaTestCommand {
   final _eventStreamController = StreamController<TestEvent>();
 
   /// Bundle of configuration options for this invocation.
-  final TestFlags testFlags;
+  final TestsConfig testsConfig;
 
   /// Absolute path of the active Fuchsia build.
   final FuchsiaLocator fuchsiaLocator;
@@ -49,10 +49,11 @@ class FuchsiaTestCommand {
   FuchsiaTestCommand({
     @required this.fuchsiaLocator,
     @required this.outputFormatter,
-    @required this.testFlags,
+    @required this.testsConfig,
   });
 
   Stream<TestEvent> get stream => _eventStreamController.stream;
+
   void emitEvent(TestEvent event) {
     _eventStreamController.sink.add(event);
   }
@@ -73,13 +74,13 @@ class FuchsiaTestCommand {
       buildDir: fuchsiaLocator.buildDir,
       eventEmitter: emitEvent,
       testDefinitions: testDefinitions,
-      testFlags: testFlags,
+      testsConfig: testsConfig,
     );
     manifestReader.reportOnTestBundles(
       userFriendlyBuildDir: fuchsiaLocator.userFriendlyBuildDir,
       eventEmitter: emitEvent,
       parsedManifest: parsedManifest,
-      testFlags: testFlags,
+      testsConfig: testsConfig,
     );
     var exitCode = 0;
 
@@ -107,9 +108,13 @@ class FuchsiaTestCommand {
       yield* testBundle.run();
 
       count += 1;
-      if (testFlags.limit > 0 && count >= testFlags.limit) {
+      if (testsConfig.flags.limit > 0 && count >= testsConfig.flags.limit) {
         break;
       }
     }
+  }
+
+  void abortTests() {
+    throw SigIntException();
   }
 }

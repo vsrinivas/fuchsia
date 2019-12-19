@@ -81,7 +81,7 @@ class TestsManifestReader {
   ParsedManifest aggregateTests({
     @required List<TestDefinition> testDefinitions,
     @required void Function(TestEvent) eventEmitter,
-    @required TestFlags testFlags,
+    @required TestsConfig testsConfig,
     @required String buildDir,
     TestRunner testRunner,
   }) {
@@ -108,8 +108,8 @@ class TestsManifestReader {
         numUnparsedTests += 1;
         String redError = '${wrapWith("Error:", [red])} '
             'Could not parse test:\n$testDefinition';
-        if (testFlags.shouldSilenceUnsupported) {
-          if (testFlags.isVerbose) {
+        if (testsConfig.flags.shouldSilenceUnsupported) {
+          if (testsConfig.flags.isVerbose) {
             eventEmitter(TestInfo(redError));
           }
           continue;
@@ -127,14 +127,14 @@ class TestsManifestReader {
       }
 
       testIsClaimed = false;
-      for (var permutatedTestFlags in testFlags.permutations) {
+      for (var permutatedTestConfig in testsConfig.permutations) {
         // If a previous TestFlag configuration claimed this test, we definitely
         // don't care whether another would, as well. We don't want to run tests
         // more than once.
         if (testIsClaimed) break;
 
         for (var checker in checkers) {
-          if (checker.canHandle(permutatedTestFlags, testDefinition)) {
+          if (checker.canHandle(permutatedTestConfig, testDefinition)) {
             // Certain test definitions result in multiple entries in `tests.json`,
             // but invoking the test runner on their shared package name already
             // captures all tests. Therefore, any such sibling entry further down
@@ -152,9 +152,9 @@ class TestsManifestReader {
             testBundles.add(
               TestBundle(
                 testDefinition,
-                extraFlags: testFlags.passThroughTokens,
-                isDryRun: testFlags.dryRun,
-                raiseOnFailure: testFlags.shouldFailFast,
+                extraFlags: testsConfig.passThroughTokens,
+                isDryRun: testsConfig.flags.dryRun,
+                raiseOnFailure: testsConfig.flags.shouldFailFast,
                 workingDirectory: buildDir,
                 testRunner: testRunner,
               ),
@@ -169,12 +169,12 @@ class TestsManifestReader {
         }
       }
 
-      if (!testIsClaimed && testFlags.shouldPrintSkipped) {
+      if (!testIsClaimed && testsConfig.flags.shouldPrintSkipped) {
         eventEmitter(TestInfo('Skipped test:\n$testDefinition'));
       }
     }
 
-    if (testFlags.shouldRandomizeTestOrder) {
+    if (testsConfig.flags.shouldRandomizeTestOrder) {
       testBundles.shuffle();
     }
 
@@ -188,7 +188,7 @@ class TestsManifestReader {
 
   void reportOnTestBundles({
     @required ParsedManifest parsedManifest,
-    @required TestFlags testFlags,
+    @required TestsConfig testsConfig,
     @required void Function(TestEvent) eventEmitter,
     @required String userFriendlyBuildDir,
   }) {
@@ -201,7 +201,7 @@ class TestsManifestReader {
           [darkGray]);
     }
 
-    if (!testFlags.isVerbose && parsedManifest.numUnparsedTests > 0) {
+    if (!testsConfig.flags.isVerbose && parsedManifest.numUnparsedTests > 0) {
       eventEmitter(TestInfo(
         'Found ${parsedManifest.numUnparsedTests.toString()} tests that '
         'could not be parsed.',
@@ -215,9 +215,9 @@ class TestsManifestReader {
       '$manifestName$duplicates',
     ));
 
-    int numTests = testFlags.limit == 0
+    int numTests = testsConfig.flags.limit == 0
         ? parsedManifest.testBundles.length
-        : testFlags.limit;
+        : testsConfig.flags.limit;
     eventEmitter(TestInfo(
       'Will run $numTests '
       '${parsedManifest.testBundles.length != 1 ? "tests" : "test"}',

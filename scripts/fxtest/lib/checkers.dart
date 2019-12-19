@@ -9,16 +9,17 @@ import 'package:path/path.dart' as p;
 /// and flavors of desired behavior.
 abstract class Checker {
   /// Provides compatibility checks for given `fx test` parameters. Returns
-  /// `true` if [testFlags] are compatible with [testDefinition]
+  /// `true` if `testsConfig` is compatible with `testDefinition`.
   ///
   /// Separates the two logical chunks of whether a single test is aligned with
   /// a user's test run parameters. Importantly, this allows us to compose
   /// Checkers out of Mixins and avoid requiring a combinatorial amount of
   /// Checker subclasses to solve the possibly combinatorial amount of
   /// situations.
-  bool canHandle(PermutatedTestFlags testFlags, TestDefinition testDefinition) {
-    return _testPassesFlags(testFlags, testDefinition) &&
-        _testPassesNameCheck(testFlags.testName, testDefinition);
+  bool canHandle(
+      PermutatedTestsConfig testsConfig, TestDefinition testDefinition) {
+    return _testPassesConfig(testsConfig, testDefinition) &&
+        _testPassesNameCheck(testsConfig.testName, testDefinition);
   }
 
   /// Compares a [TestDefinition] against the complete set of flags provided by
@@ -29,14 +30,16 @@ abstract class Checker {
   /// For example, a developer may pass `--host` to signify that they only want
   /// to run host tests, or possibly `--host -XYZ` to append the `XYZ` filter.
   /// In either case, a test either survives all flag checks or not.
-  bool _testPassesFlags(
-    PermutatedTestFlags testFlags,
+  bool _testPassesConfig(
+    PermutatedTestsConfig testsConfig,
     TestDefinition testDefinition,
   ) {
-    if (testFlags.shouldOnlyRunDeviceTests && testDefinition.os != 'fuchsia') {
+    if (testsConfig.flags.shouldOnlyRunDeviceTests &&
+        testDefinition.os != 'fuchsia') {
       return false;
     }
-    if (testFlags.shouldOnlyRunHostTests && testDefinition.os == 'fuchsia') {
+    if (testsConfig.flags.shouldOnlyRunHostTests &&
+        testDefinition.os == 'fuchsia') {
       return false;
     }
     return true;

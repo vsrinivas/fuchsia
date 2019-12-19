@@ -28,3 +28,5 @@ class UnrunnableTestException implements Exception {
   @override
   String toString() => message;
 }
+
+class SigIntException implements Exception {}

@@ -124,48 +124,48 @@ void main() {
       ),
     ];
     test('when the -h flag is passed', () {
-      TestFlags testFlags = TestFlags.host(['//host/test']);
+      TestsConfig testsConfig = TestsConfig.host(['//host/test']);
       ParsedManifest parsedManifest = tr.aggregateTests(
         testDefinitions: testDefinitions,
         buildDir: buildDir,
         eventEmitter: _ignoreEvents,
-        testFlags: testFlags,
+        testsConfig: testsConfig,
       );
       expect(parsedManifest.testBundles, hasLength(1));
       expect(parsedManifest.testBundles[0].testDefinition.name, '//host/test');
     });
 
     test('when the -d flag is passed', () {
-      TestFlags testFlags =
-          TestFlags.device(['fuchsia-pkg://fuchsia.com/fancy#test.cmx']);
+      TestsConfig testsConfig =
+          TestsConfig.device(['fuchsia-pkg://fuchsia.com/fancy#test.cmx']);
       ParsedManifest parsedManifest = tr.aggregateTests(
         testDefinitions: testDefinitions,
         buildDir: buildDir,
         eventEmitter: _ignoreEvents,
-        testFlags: testFlags,
+        testsConfig: testsConfig,
       );
       expect(parsedManifest.testBundles, hasLength(1));
       expect(parsedManifest.testBundles[0].testDefinition.name, 'device test');
     });
 
     test('when no flags are passed', () {
-      TestFlags testFlags = TestFlags.all();
+      TestsConfig testsConfig = TestsConfig.all();
       ParsedManifest parsedManifest = tr.aggregateTests(
         testDefinitions: testDefinitions,
         buildDir: buildDir,
         eventEmitter: _ignoreEvents,
-        testFlags: testFlags,
+        testsConfig: testsConfig,
       );
       expect(parsedManifest.testBundles, hasLength(2));
     });
 
     test('when packageUrl `name` is matched', () {
-      TestFlags testFlags = TestFlags.all(['fancy']);
+      TestsConfig testsConfig = TestsConfig.all(['fancy']);
       ParsedManifest parsedManifest = tr.aggregateTests(
         testDefinitions: testDefinitions,
         buildDir: buildDir,
         eventEmitter: _ignoreEvents,
-        testFlags: testFlags,
+        testsConfig: testsConfig,
       );
       expect(parsedManifest.testBundles, hasLength(1));
       expect(parsedManifest.testBundles[0].testDefinition.name, 'device test');
@@ -173,18 +173,18 @@ void main() {
 
     test('when packageUrl `name` is matched but discriminating flag prevents',
         () {
-      TestFlags testFlags = TestFlags.host(['fancy']);
+      TestsConfig testsConfig = TestsConfig.host(['fancy']);
       ParsedManifest parsedManifest = tr.aggregateTests(
         testDefinitions: testDefinitions,
         buildDir: buildDir,
         eventEmitter: _ignoreEvents,
-        testFlags: testFlags,
+        testsConfig: testsConfig,
       );
       expect(parsedManifest.testBundles, hasLength(0));
     });
 
     test('when . is passed from the build dir', () {
-      TestFlags testFlags = TestFlags.host(['.']);
+      TestsConfig testsConfig = TestsConfig.host(['.']);
       // Copy the list
       var tds = testDefinitions.sublist(0)
         ..addAll([
@@ -199,7 +199,7 @@ void main() {
         testDefinitions: tds,
         buildDir: buildDir,
         eventEmitter: _ignoreEvents,
-        testFlags: testFlags,
+        testsConfig: testsConfig,
       );
 
       expect(parsedManifest.testBundles, hasLength(1));
@@ -210,7 +210,7 @@ void main() {
     });
 
     test('when . is passed from the build dir and there\'s device tests', () {
-      TestFlags testFlags = TestFlags.all(['.']);
+      TestsConfig testsConfig = TestsConfig.all(['.']);
       // Copy the list
       var tds = testDefinitions.sublist(0)
         ..addAll([
@@ -225,7 +225,7 @@ void main() {
         testDefinitions: tds,
         buildDir: buildDir,
         eventEmitter: _ignoreEvents,
-        testFlags: testFlags,
+        testsConfig: testsConfig,
       );
 
       expect(parsedManifest.testBundles, hasLength(0));
@@ -445,7 +445,8 @@ void main() {
     ];
 
     test('when there are pass-thru commands', () async {
-      var testFlags = TestFlags(
+      var testsConfig = TestsConfig(
+        flags: Flags.defaults(),
         testNames: ['example test'],
         passThroughTokens: ['--xyz'],
       );
@@ -453,7 +454,7 @@ void main() {
         buildDir: '/custom',
         eventEmitter: _ignoreEvents,
         testDefinitions: testDefinitions,
-        testFlags: testFlags,
+        testsConfig: testsConfig,
         testRunner: FakeTestRunner.passing(),
       );
       expect(manifest.testBundles, hasLength(1));

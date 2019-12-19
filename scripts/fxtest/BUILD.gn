@@ -10,14 +10,25 @@ dart_tool("fxtest") {
   main_dart = "bin/main.dart"
 
   sources = [
+    "arg_parser.dart",
     "checkers.dart",
     "cmd.dart",
+    "command_tokens.dart",
+    "env_reader.dart",
     "exceptions.dart",
+    "execution_handle.dart",
+    "fuchsia_locator.dart",
+    "fxtest.dart",
+    "output_buffer.dart",
     "output_formatter.dart",
+    "package_url.dart",
+    "test_bundle.dart",
     "test_definition.dart",
     "test_event.dart",
-    "test_flags.dart",
+    "test_names_collector.dart",
     "test_runner.dart",
+    "tests_config.dart",
+    "tests_manifest_reader.dart",
   ]
 
   deps = [

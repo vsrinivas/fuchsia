@@ -1,3 +1,4 @@
+export 'arg_parser.dart';
 export 'checkers.dart';
 export 'cmd.dart';
 export 'command_tokens.dart';
@@ -11,7 +12,7 @@ export 'package_url.dart';
 export 'test_bundle.dart';
 export 'test_definition.dart';
 export 'test_event.dart';
-export 'test_flags.dart';
 export 'test_names_collector.dart';
 export 'test_runner.dart';
+export 'tests_config.dart';
 export 'tests_manifest_reader.dart';
