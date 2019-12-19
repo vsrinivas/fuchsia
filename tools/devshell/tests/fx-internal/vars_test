@@ -8,7 +8,7 @@ BT_FILE_DEPS=(
   "tools/devshell/lib/prebuilt.sh"
 )
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../../lib/vars.sh || exit $?
 
 # Replace fx-gen with a stub.
 unset -f fx-gen

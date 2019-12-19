@@ -1,0 +1,73 @@
+#!/bin/bash
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Test basic fx execution flows
+
+MOCKED_GN="prebuilt/third_party/gn/test/gn"
+
+BT_FILE_DEPS=(
+  "scripts/fx"
+  "tools/devshell/set"
+  "tools/devshell/lib/vars.sh"
+  "tools/devshell/tests/subcommands/data/fx_set_test/myproduct.gni"
+  "tools/devshell/tests/subcommands/data/fx_set_test/myboard.gni"
+)
+BT_MOCKED_TOOLS=(
+  "tools/devshell/lib/metrics.sh"
+  "tools/devshell/lib/prebuilt.sh"
+  "${MOCKED_GN}"
+)
+
+BT_MKDIR_DEPS=(
+  ".jiri_root"
+  "products"
+  "boards"
+)
+
+BT_SET_UP() {
+  _FUCHSIA_DIR="${BT_TEMP_DIR}"
+  _FUCHSIA_BUILD_DIR="${_FUCHSIA_DIR}/out/default"
+  fx="${_FUCHSIA_DIR}/scripts/fx"
+  BT_ASSERT_FILE_EXISTS "${fx}"
+  cp "${_FUCHSIA_DIR}/tools/devshell/tests/subcommands/data/fx_set_test/myproduct.gni" "${_FUCHSIA_DIR}/products"
+  cp "${_FUCHSIA_DIR}/tools/devshell/tests/subcommands/data/fx_set_test/myboard.gni" "${_FUCHSIA_DIR}/boards"
+
+  cat > "${_FUCHSIA_DIR}/tools/devshell/lib/metrics.sh.mock_side_effects" <<EOF
+  function track-command-execution {
+    echo ""
+  }
+  function track-command-finished {
+    echo ""
+  }
+EOF
+  cat > "${_FUCHSIA_DIR}/tools/devshell/lib/prebuilt.sh.mock_side_effects" <<EOF
+    readonly PREBUILT_GN="\${FUCHSIA_DIR}/${MOCKED_GN}"
+EOF
+  cat > "${_FUCHSIA_DIR}/${MOCKED_GN}.mock_side_effects" <<EOF
+    echo "\$@"
+EOF
+}
+
+# ensure that "fx set product.board" calls gn with the expected args
+TEST_fx-set() {
+  local output="$(${fx} set myproduct.myboard --no-goma)"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'import("//products/myproduct.gni'
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'import("//boards/myboard.gni'
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'base_package_labels+=[]'
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'cache_package_labels+=[]'
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'universe_package_labels+=[]'
+}
+
+# ensure that "fx set product.board --with ..." calls gn with the expected args
+TEST_fx-set-with() {
+  local output="$(${fx} set myproduct.myboard --no-goma --with "//bundles:tests")"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'import("//products/myproduct.gni'
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'import("//boards/myboard.gni'
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'base_package_labels+=[]'
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'cache_package_labels+=[]'
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${output}" 'universe_package_labels+=["//bundles:tests"'
+}
+
+BT_RUN_TESTS "$@"

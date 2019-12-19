@@ -246,7 +246,7 @@ readonly _BTF_END_OF_TEST_MARKER=$'\nEOT'
 
 # Default root assumes the bash_test_framework.sh script is a specific
 # directory depth below the root of the project source tree. For example,
-# under $FUCHSIA_DIR, the framework script is in "tools/devshell/test/lib".
+# under $FUCHSIA_DIR, the framework script is in "tools/devshell/tests".
 # If necessary, override this assumption in the host test script by
 # explicitly setting the variable BT_DEPS_ROOT to the root directory path.
 readonly _BTF_FRAMEWORK_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
@@ -466,7 +466,7 @@ btf::_end_of_test() {
 #   The current test error count.
 #######################################
 btf::_assert_failed() {
-  if (( ${_btf_test_pid} == ${BASHPID} )); then
+  if [[ ${_btf_test_pid} == ${BASHPID} ]]; then
     echo -n "Aborting test due to failed ASSERT"
   else
     echo -n "Exiting subshell"
@@ -650,7 +650,7 @@ BT_ASSERT_EQ() {
 #######################################
 BT_EXPECT_GOOD_STATUS() {
   local -i status="$1"; shift
-  if (( ${status} == 0 )); then
+  if [[ ${status} == 0 ]]; then
     return 0
   fi
   # return the given non-zero status (instead of 1, this time)
@@ -681,7 +681,7 @@ BT_ASSERT_GOOD_STATUS() {
 #######################################
 BT_EXPECT_BAD_STATUS() {
   local -i status="$1"; shift
-  if (( ${status} != 0 )); then
+  if [[ ${status} != 0 ]]; then
     return 0
   fi
   # return 1 (*not* the given 0 status)
@@ -1292,7 +1292,10 @@ Test options include:
         Run only the test matching the given name.
   -- args to add to BT_TEST_ARGS
 Example:
-  fx run-bash-test my_script_test --test TEST_some_function -- --test specific --options here
+  fx self-test my_script_test --test TEST_some_function -- --test specific --options here
+
+Tests found in ${_BTF_HOST_SCRIPT}:
+$(btf::_get_test_functions)
 "
         exit 0
         ;;
@@ -1335,7 +1338,7 @@ btf::_run_isolated_test() {
   BT_SET_UP \
       || btf::abort ${MAX_ERROR_STATUS} "BT_SET_UP function returned error status $?"
 
-  if (( $_BTF_SUBSHELL_TEST_NUMBER == 1 )); then
+  if [[ $_BTF_SUBSHELL_TEST_NUMBER == 1 ]]; then
     local error_message=
     error_message="$(btf::_sanity_check_mocks)" \
         || btf::abort ${MAX_ERROR_STATUS} "${error_message} (error status $?)"
@@ -1353,7 +1356,7 @@ btf::_run_isolated_test() {
     status=$?
     # The test function is not required to return an error status, but if they do,
     # it should only be because a test failed.
-    if (( $status != 0 && $_btf_test_error_count == 0 )); then
+    if [[ $status != 0 && $_btf_test_error_count == 0 ]]; then
       btf::abort ${MAX_ERROR_STATUS} \
           "Unexpected error status ${status} without incrementing _btf_test_error_count"
     fi
@@ -1374,9 +1377,9 @@ If the test calls a function that invokes 'exit', use a subshell; for example:
 EOF
 )"
   fi
-  if (( ${status} == 0 )); then
+  if [[ ${status} == 0 ]]; then
     echo "[${_ANSI_BRIGHT_GREEN}PASSED${_ANSI_CLEAR}]"
-  elif (( ${status} == ${MAX_ERROR_STATUS} )); then
+  elif [[ ${status} == ${MAX_ERROR_STATUS} ]]; then
     echo "[${_ANSI_BRIGHT_RED}ERROR${_ANSI_CLEAR}]"
   else
     echo "[${_ANSI_BRIGHT_RED}FAILED${_ANSI_CLEAR}]"
@@ -1386,6 +1389,14 @@ EOF
       || btf::abort ${MAX_ERROR_STATUS} "BT_TEAR_DOWN function returned error status $?"
 
   return ${status}
+}
+
+btf::_get_test_functions() {
+  local bash_functions_declaration_order_sedprog="
+    s/^ *\(${_BTF_FUNCTION_NAME_PREFIX}[-a-zA-Z0-9_]*\) *().*\$/\1/p;
+    s/^ *function  *\(${_BTF_FUNCTION_NAME_PREFIX}[-a-zA-Z0-9_]*\).*\$/\1/p;
+  "
+  sed -ne "${bash_functions_declaration_order_sedprog}" "${_BTF_HOST_SCRIPT}"
 }
 
 #######################################
@@ -1417,13 +1428,9 @@ btf::_run_tests_in_isolation() {
   local -r host_script_subdir="${_BTF_HOST_SCRIPT_DIR#$BT_DEPS_ROOT/}"
   local -r _BTF_FRAMEWORK_SCRIPT_SUBDIR="${_BTF_FRAMEWORK_SCRIPT_DIR#$BT_DEPS_ROOT/}"
 
-  if (( ${#BT_TEST_FUNCTIONS} == 0 )); then
-    local bash_functions_declaration_order_sedprog="
-      s/^ *\(${_BTF_FUNCTION_NAME_PREFIX}[-a-zA-Z0-9_]*\) *().*\$/\1/p;
-      s/^ *function  *\(${_BTF_FUNCTION_NAME_PREFIX}[-a-zA-Z0-9_]*\).*\$/\1/p;
-    "
+  if [[ ${#BT_TEST_FUNCTIONS} == 0 ]]; then
     BT_TEST_FUNCTIONS=(
-      $(sed -ne "${bash_functions_declaration_order_sedprog}" "${_BTF_HOST_SCRIPT}")
+      $(btf::_get_test_functions)
     )
   fi
 
@@ -1456,11 +1463,14 @@ btf::_run_tests_in_isolation() {
         "${_BTF_HOST_SCRIPT_NAME}" "${next_test}" "${BT_TEST_ARGS[@]}"
     test_error_count=$?
 
-    if (( test_error_count == ${MAX_ERROR_STATUS} )); then
+    if [[ test_error_count == ${MAX_ERROR_STATUS} ]]; then
       btf::abort ${test_error_count} "Fatal test execution error"
     fi
 
-    btf::_clean_up_temp_dir || return $?
+    # Keep temporary directory for debugging.
+    if [[ ${test_error_count} == 0 ]]; then
+      btf::_clean_up_temp_dir || return $?
+    fi
 
     if (( ${test_error_count} > 0 )); then
       : $(( test_failure_count++ ))
@@ -1473,7 +1483,7 @@ btf::_run_tests_in_isolation() {
     return 1
   fi
 
-  if (( ${test_failure_count} == 0 )); then
+  if [[ ${test_failure_count} == 0 ]]; then
     if (( ${test_counter} == 1 )); then
       btf::success "1 test passed."
     else

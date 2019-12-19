@@ -1,0 +1,82 @@
+#!/bin/bash
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Test the common fx execution flows, namely fx help and fx <subcommand>
+BT_FILE_DEPS=(
+  "scripts/fx"
+  "tools/devshell/lib/vars.sh"
+  "tools/devshell/lib/prebuilt.sh"
+)
+BT_MOCKED_TOOLS=("tools/devshell/lib/metrics.sh")
+
+BT_MKDIR_DEPS=(".jiri_root")
+
+BT_INIT_TEMP_DIR() {
+  cat > tools/devshell/lib/metrics.sh.mock_side_effects <<EOF
+  function track-command-execution {
+    echo ""
+  }
+  function track-command-finished {
+    echo ""
+  }
+EOF
+}
+
+BT_SET_UP() {
+  base_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)/../../../.."
+  fx="${base_dir}/scripts/fx"
+
+  subcommand="mysubcommand"
+  subcommand_file="${base_dir}/tools/devshell/${subcommand}"
+  category="Testing"
+  summary="Simple mock script used to test help extraction"
+  long_description_1="usage:"
+  long_description_2="  fx mysubcommand bla bla"
+  subcommand_output="howdy!"
+  cat >"${subcommand_file}" <<EOF
+#!/bin/bash
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### ${summary}
+#### CATEGORY=${category}
+
+## ${long_description_1}
+## ${long_description_2}
+
+echo "${subcommand_output}"
+EOF
+  chmod u+x "${subcommand_file}"
+  BT_ASSERT_FILE_EXISTS "${fx}"
+  BT_ASSERT_FILE_EXISTS "${subcommand_file}"
+  [[ -x "${subcommand_file}" ]]
+  BT_ASSERT_GOOD_STATUS $? "File ${subcommand_file} must be executable"
+}
+
+# test for `fx help`
+TEST_fx-help() {
+  # check the summary
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "$(${fx} help | grep "${subcommand}")" "${summary}"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "$(${fx} help | grep "${subcommand}")" "${subcommand}"
+
+  # check the description
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "$(${fx} help | grep "${subcommand}")" "${subcommand}"
+}
+
+# test for `fx help <subcommand>`
+TEST_fx-help-subcommand() {
+  # check the long description
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "$(${fx} help "${subcommand}")" "${long_description_1}"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "$(${fx} help "${subcommand}")" "${long_description_2}"
+}
+
+# executes a simple subcommand and checks its output
+TEST_fx-subcommand-run() {
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "$(${fx} "${subcommand}")" "${subcommand_output}"
+}
+
+
+BT_RUN_TESTS "$@"

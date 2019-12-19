@@ -1,0 +1,12 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+base_package_labels = []
+
+cache_package_labels = []
+
+universe_package_labels = [
+  "//garnet/tools/vboot_reference:cgpt_host",
+  "//garnet/tools/vboot_reference:futility_host",
+]

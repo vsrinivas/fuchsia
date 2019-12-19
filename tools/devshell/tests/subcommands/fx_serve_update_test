@@ -8,17 +8,15 @@ readonly SERVE_UPDATES_PORT=8083
 BT_FILE_DEPS=(
   "out/default/host_x64/pm"
   "tools/devshell/lib/vars.sh"
-  "tools/devshell/test/fx_serve_update_test_package/testpackage.cmx"
-  "tools/devshell/test/fx_serve_update_test_package/testpackage.json"
-  "tools/devshell/test/fx_serve_update_test_package/testpackage.manifest"
+  "tools/devshell/tests/subcommands/data/fx_serve_update_test/testpackage.cmx"
+  "tools/devshell/tests/subcommands/data/fx_serve_update_test/testpackage.json"
+  "tools/devshell/tests/subcommands/data/fx_serve_update_test/testpackage.manifest"
   "tools/devshell/serve-updates"
 )
 
 # Build a fake gn to satisfy vars.sh and some other commands to satisfy
 # serve-updates.
 BT_MOCKED_TOOLS=(
-  "buildtools/vars.sh"
-  "buildtools/gn"
   "tools/devshell/add-update-source"
   "tools/devshell/shell"
 )
@@ -67,7 +65,14 @@ BT_SET_UP() {
       while [[ ! -e ${REPODIR}/repository/targets.json ]]; do
         sleep 1
       done
-      nc ${nc_opts[@]} <${REPODIR}/repository/targets.json >/dev/null || exit $?
+      nc ${nc_opts[@]} 2>&1 >/dev/null <<EOHTTP
+HTTP/1.1 200 OK
+Content-Type: text/html; charset=UTF-8
+Server: netcat!
+
+\$(cat ${REPODIR}/repository/targets.json)
+EOHTTP
+[[ $? -eq 0 ]] || exit $?
 EOF
   fi
 }
@@ -90,15 +95,10 @@ TEST_fx_serve_updates() {
   # The pm tool needs to exist.
   BT_ASSERT_FILE_EXISTS "${PM}"
 
-  cd fx_serve_update_test_package
-
-  # Create a new key.
-  readonly KEYFILE="package_key_file"
-  local deprecation_message=$( "${PM}" -k "${KEYFILE}" genkey 2>&1 )
-  BT_EXPECT_EQ "${deprecation_message}" "package signing is deprecated"
+  cd data/fx_serve_update_test
 
   # Build the package from the manifest.
-  "${PM}" -o testpackage -k "${KEYFILE}" -m testpackage.manifest build
+  "${PM}" -o testpackage -m testpackage.manifest build
 
   # Archive the package to a .far.
   (cd testpackage; "${PM}" archive)

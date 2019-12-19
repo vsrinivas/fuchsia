@@ -1,0 +1,131 @@
+#!/bin/bash
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### run tests of fx and subcommands
+
+## Usage:
+##     fx self-test --all
+##         Run all tests from all test scripts.
+##
+##     fx self-test TEST_SCRIPT|TEST_DIR [TEST_SCRIPT|TEST_DIR ...]
+##         Run all tests from the specified test script(s) or in the
+##         test scripts in the specified test subdirectory(ies), recursively.
+##
+##            TEST_SCRIPT  Name of a test script file containing tests.
+##                         Test script filenames end with "_test" and are
+##                         relative to //tools/devshell/tests.
+##                         See the existing test scripts below.
+##
+##            TEST_DIR     A subdirectory of //tools/devshell/tests.
+##
+##     fx self-test TEST_SCRIPT [--test TEST_NAME] [--help]
+##         Executes a single test script.
+##            --test TEST_NAME   Only run the specified test
+##            --help             List the tests and test options  in the test script
+##
+##
+## Examples:
+##    fx self-test --all   # run all tests from all tests scripts
+##    fx self-test subcommands    # run all tests scripts in //tools/devshell/tests/subcommands
+##    fx self-test subcommands/fx_set_test   # run all tests in //tools/devshell/tests/subcommands/fx_set_test
+##    fx self-test fx-internal/fx_test   # run all tests in //tools/devshell/tests/fx-internal/fx_test
+##    fx self-test fx-internal/fx_test --test TEST_fx-subcommand-run   # run a single test from fx-internal/fx_test
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh \
+    || exit $?
+fx-config-read
+
+declare -r test_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/tests" >/dev/null 2>&1 && pwd)"
+declare -r test_framework_dir="${test_dir}/lib"
+
+usage() {
+  fx-command-help
+  echo
+  echo "Available test scripts:"
+  for script_name in $(all_tests); do
+    echo "  ${script_name}"
+  done
+}
+
+all_tests() {
+  local subdirectory
+  if [[ $# -gt 0 ]]; then
+    subdirectory="/$1"
+  fi
+  local tests=()
+  for t in $(find "${test_dir}${subdirectory}" -type f -not -path "${test_framework_dir}" -name "*_test"); do
+    if [[ ! -f "${t}" || "${t}" != *${test_dir}/* ]]; then
+      fx-error "Test file '${t}' doesn't exist, make sure test files and subdirectories don't contain spaces"
+      exit 1
+    fi
+    tests+=( "${t#${test_dir}/}" )
+  done
+  echo "${tests[@]}"
+}
+
+launch_script() {
+  local test_script_name="$1"
+  shift
+  declare -r test_script_path="${test_dir}/${test_script_name}"
+
+  if [[ ! -f "${test_script_path}" ]]; then
+    fx-error "Test script '${test_script_path}' not found. Aborting."
+    return 1
+  fi
+  # propagate certain bash flags if present
+  local shell_flags=()
+  if [[ $- == *x* ]]; then
+    shell_flags+=( -x )
+  fi
+
+  # Start a clean environment, load the bash_test_framework.sh,
+  # then start the test script.
+  local -r launch_script="$(cat << EOF
+source "${test_framework_dir}/bash_test_framework.sh" || exit \$?
+source "${test_script_path}" || exit \$?
+EOF
+)"
+
+  /usr/bin/env -i \
+      USER="${USER}" \
+      HOME="${HOME}" \
+      "${SHELL}" "${shell_flags[@]}" \
+      -c "${launch_script}" "${test_script_path}" "$@"
+}
+
+
+if [[ $# -eq 0 || "$1" == "--help" ]]; then
+  usage
+  exit 0
+fi
+
+all=0
+test_args=()
+if [[ "$1" == "--all" ]]; then
+  tests="$(all_tests)"
+else
+  tests_arr=()
+  while [[ $# -gt 0 && "$1" != "--"* ]]; do
+    if [[ "$1" == *_test ]]; then
+      tests_arr+=( "$1" )
+    elif [[ -d "${test_dir}/$1" ]]; then
+      tests_arr+=( $(all_tests "$1") )
+    else
+      fx-error "Invalid option $1"
+      usage
+      exit 1
+    fi
+    shift
+  done
+  tests="${tests_arr[@]}"
+  if [[ $# -gt 0 && "$1" == "--"* ]]; then
+    test_args+=( "$@" )
+  fi
+fi
+
+for script_name in ${tests}; do
+  echo "Running test script ${script_name}"
+  launch_script "${script_name}" "${test_args[@]}"
+done

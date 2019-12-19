@@ -1,0 +1,73 @@
+#!/bin/bash
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Test the helper functions defined in //tools/devshell/README.md#helper-functions
+
+BT_FILE_DEPS=(
+  "tools/devshell/lib/vars.sh"
+  "tools/devshell/lib/prebuilt.sh"
+)
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../../lib/vars.sh || exit $?
+unset -f fx-gen
+
+# Replace fx-gen with a stub.
+fx-gen() {
+  return 0
+}
+
+TEST_clean_local_environment() {
+  # This variable should be empty.
+  BT_EXPECT_EMPTY "${devshell_lib_dir}"
+}
+
+TEST_fx-config-read() {
+  BT_ASSERT_FUNCTION_EXISTS fx-config-read
+  BT_ASSERT_FUNCTION_EXISTS fx-build-dir-write
+
+  local -r BUILD_DIR_REL="out/x64test"
+  local -r HOST_OUT_REL="host_x64"
+
+  local -r EXPECT_BUILD_DIR="${FUCHSIA_DIR}/${BUILD_DIR_REL}"
+  local -r EXPECT_HOST_OUT="${EXPECT_BUILD_DIR}/${HOST_OUT_REL}"
+
+  # fx-build-config-load expects a {build}/fx.config
+  mkdir -p "${EXPECT_BUILD_DIR}"
+  {
+    echo "FUCHSIA_BUILD_DIR='${EXPECT_BUILD_DIR}'"
+    echo "HOST_OUT_DIR='${HOST_OUT_REL}'"
+  } > "${EXPECT_BUILD_DIR}/fx.config"
+
+
+  BT_EXPECT "( fx-build-dir-write "${BUILD_DIR_REL}" )"
+
+  unset FUCHSIA_BUILD_DIR
+  unset HOST_OUT_DIR
+
+  fx-config-read
+
+  BT_EXPECT_EQ "${FUCHSIA_BUILD_DIR}" "${EXPECT_BUILD_DIR}"
+  BT_EXPECT_EQ "${HOST_OUT_DIR}" "${EXPECT_HOST_OUT}"
+}
+
+TEST_fx-warn() {
+  BT_ASSERT_FUNCTION_EXISTS fx-warn
+
+  # Capture stderr.
+  local result
+  result=$( fx-warn some warning 2>&1 )
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${result}" "some warning"
+}
+
+TEST_fx-error() {
+  BT_ASSERT_FUNCTION_EXISTS fx-error
+
+  # Capture stderr.
+  local result
+  result=$( fx-error some error 2>&1 )
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${result}" "some error"
+}
+
+BT_RUN_TESTS "$@"

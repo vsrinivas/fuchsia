@@ -130,11 +130,42 @@ long-form help (defined by `##` lines). Many commands implement `-h` and
 
 ## Testing
 
-Whenever possible, subcommands should have corresponding unit tests in
-//scripts/tests/. There are helper functions in //scripts/tests/lib/common.sh.
+### Testing shell subcommands
 
-End-to-end manual testing should be documented in separate files in this
-directory, and listed below.
+Subcommands that are shell scripts should be tested using the Bash test
+framework in `//tools/devshell/tests/lib/bash_test_framework.sh`, which provides
+facilities for mocking components and encapsulating the execution context in a
+temporary directory without any impact on the working tree.
 
-- [End-to-end testing of Metrics collection](metrics_testing.md)
+Each test suite with one or more tests is a Bash script which name ends with
+`_test` in a subdirectory of `//tools/devshell/tests`.
+
+**To run** shell tests, execute `fx self-test <tests_script>`.
+To find out what test scripts are available, run `fx self-test` without
+arguments and they will be listed at the bottom. To run all the tests from
+all the test scripts, use `--all`. Other sample invocations are described below:
+
+```
+fx self-test --all   # run all tests from all tests scripts
+fx self-test subcommands    # run all tests scripts in //tools/devshell/tests/subcommands
+fx self-test subcommands/fx_set_test   # run all tests in //tools/devshell/tests/subcommands/fx_set_test
+fx self-test fx-internal/fx_test   # run all tests in //tools/devshell/tests/fx-internal/fx_test
+fx self-test fx-internal/fx_test --test TEST_fx-subcommand-run   # run a single test from fx-internal/fx_test
+```
+
+**To implement** new shell test scripts, create a new file `*_test` in a
+subdirectory of `//tools/devshell/tests` using the Bash test framework
+documented in `//tools/devshell/tests/lib/bash_test_framework.sh`.
+
+There are many examples in [`//tools/devshell/tests`](tests/). The test
+framework is documented in the [framework script](tests/lib/bash_test_framework.sh).
+
+
+### Testing non-shell subcommands
+
+Subcommands that are primarily non-shell, for example Rust or Dart, should
+have regular tests integrated with the Fuchsia build.
+
+For example, the `fx test` subcommand is written in Dart and has tests
+defined in its [BUILD.gn](/scripts/fxtest/BUILD.gn) file.
 

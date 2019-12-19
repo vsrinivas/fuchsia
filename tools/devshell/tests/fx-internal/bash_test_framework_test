@@ -4,7 +4,7 @@
 # found in the LICENSE file.
 
 BT_MOCKED_TOOLS=(
-  tools/devshell/test/a_tool
+  tools/devshell/tests/fx-internal/a_tool
 )
 
 a_function() {
@@ -187,9 +187,9 @@ TEST_eq_output() {
     BT_ASSERT_EQ $? ${expect} "Expected ${expect} errors from subshell, but actual error count was $?"
   )  # <-- This LINENO matches $LINENO value of the first line in command substitution
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "$stdout" \
-    "tools/devshell/test/bash_test_framework_test:$((LINENO+2)): (BT_EXPECT_EQ) 'not' != 'same'"
+    "tools/devshell/tests/fx-internal/bash_test_framework_test:$((LINENO+2)): (BT_EXPECT_EQ) 'not' != 'same'"
   BT_EXPECT_STRING_CONTAINS_SUBSTRING "$stdout" \
-    "tools/devshell/test/bash_test_framework_test:$((LINENO+2)): (BT_ASSERT_EQ) 'not' != 'same'"
+    "tools/devshell/tests/fx-internal/bash_test_framework_test:$((LINENO+2)): (BT_ASSERT_EQ) 'not' != 'same'"
 }
 
 TEST_success() {
