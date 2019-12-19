@@ -7,7 +7,7 @@ use {
     log::error,
     wlan_mlme::{
         buffer::BufferProvider,
-        client::{Client, ClientConfig, ClientMlme, CppChannelScheduler},
+        client::{temporary_c_binding::*, Client, ClientConfig, ClientMlme, CppChannelScheduler},
         common::{
             mac::{self, Bssid, PowerState},
             sequence::SequenceManager,
@@ -87,7 +87,7 @@ pub extern "C" fn client_mlme_handle_mlme_msg(mlme: &mut ClientMlme, bytes: CSpa
 
 #[no_mangle]
 pub extern "C" fn client_sta_send_open_auth_frame(sta: &mut Client, mlme: &mut ClientMlme) -> i32 {
-    sta.send_open_auth_frame(mlme.ctx()).into_raw_zx_status()
+    c_send_open_auth_frame(sta, mlme).into_raw_zx_status()
 }
 
 #[no_mangle]
@@ -96,7 +96,7 @@ pub extern "C" fn client_sta_send_deauth_frame(
     mlme: &mut ClientMlme,
     reason_code: u16,
 ) -> i32 {
-    sta.send_deauth_frame(mlme.ctx(), mac::ReasonCode(reason_code)).into_raw_zx_status()
+    c_send_deauth_frame(sta, mlme, mac::ReasonCode(reason_code)).into_raw_zx_status()
 }
 
 #[no_mangle]
@@ -110,8 +110,9 @@ pub extern "C" fn client_sta_send_assoc_req_frame(
     ht_cap: CSpan<'_>,
     vht_cap: CSpan<'_>,
 ) -> i32 {
-    sta.send_assoc_req_frame(
-        mlme.ctx(),
+    c_send_assoc_req_frame(
+        sta,
+        mlme,
         cap_info,
         ssid.into(),
         rates.into(),
@@ -133,8 +134,9 @@ pub extern "C" fn client_sta_handle_data_frame(
     // TODO(42080): Do not parse here. Instead, parse in associated state only.
     match mac::MacFrame::parse(data_frame.into(), has_padding) {
         Some(mac::MacFrame::<&[u8]>::Data { fixed_fields, addr4, qos_ctrl, body, .. }) => {
-            sta.handle_data_frame(
-                mlme.ctx(),
+            c_handle_data_frame(
+                sta,
+                mlme,
                 &fixed_fields,
                 addr4.map(|x| *x),
                 qos_ctrl.map(|x| x.get()),
@@ -159,7 +161,7 @@ pub unsafe extern "C" fn client_sta_send_data_frame(
     ether_type: u16,
     payload: CSpan<'_>,
 ) -> i32 {
-    sta.send_data_frame(mlme.ctx(), *src, *dest, is_protected, is_qos, ether_type, payload.into())
+    c_send_data_frame(sta, mlme, *src, *dest, is_protected, is_qos, ether_type, payload.into())
         .into_raw_zx_status()
 }
 
@@ -169,7 +171,7 @@ pub unsafe extern "C" fn client_sta_handle_eth_frame(
     mlme: &mut ClientMlme,
     frame: CSpan<'_>,
 ) -> i32 {
-    sta.on_eth_frame::<&[u8]>(mlme.ctx(), frame.into()).into_raw_zx_status()
+    c_on_eth_frame(sta, mlme, frame.into()).into_raw_zx_status()
 }
 
 #[no_mangle]
@@ -181,7 +183,7 @@ pub unsafe extern "C" fn client_sta_send_eapol_frame(
     is_protected: bool,
     payload: CSpan<'_>,
 ) {
-    sta.send_eapol_frame(mlme.ctx(), *src, *dest, is_protected, payload.into())
+    c_send_eapol_frame(sta, mlme, *src, *dest, is_protected, payload.into())
 }
 
 #[no_mangle]
@@ -190,7 +192,7 @@ pub unsafe extern "C" fn client_sta_send_ps_poll_frame(
     mlme: &mut ClientMlme,
     aid: u16,
 ) -> i32 {
-    sta.send_ps_poll_frame(mlme.ctx(), aid).into_raw_zx_status()
+    c_send_ps_poll_frame(sta, mlme, aid).into_raw_zx_status()
 }
 
 #[no_mangle]
@@ -199,5 +201,5 @@ pub unsafe extern "C" fn client_sta_send_power_state_frame(
     mlme: &mut ClientMlme,
     state: PowerState,
 ) -> i32 {
-    sta.send_power_state_frame(mlme.ctx(), state).into_raw_zx_status()
+    c_send_power_state_frame(sta, mlme, state).into_raw_zx_status()
 }

@@ -5,17 +5,14 @@
 use {
     banjo_ddk_protocol_wlan_mac as banjo_wlan_mac,
     failure::{bail, format_err, Error},
-    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_mlme as fidl_mlme,
-    fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_mlme as fidl_mlme,
     std::convert::TryInto,
     wlan_common::{
-        buffer_reader::BufferReader,
         channel::derive_channel,
         ie,
         mac::{Bssid, CapabilityInfo},
         TimeUnit,
     },
-    zerocopy::AsBytes,
 };
 
 /// Given information from beacon or probe response, convert to BssDescription.
@@ -27,7 +24,6 @@ pub fn construct_bss_description(
     ies: &[u8],
     rx_info: banjo_wlan_mac::WlanRxInfo,
 ) -> Result<fidl_mlme::BssDescription, Error> {
-    use wlan_common::ie;
     let mut ssid = None;
     let mut rates = None;
     let mut dsss_chan = None;
@@ -44,7 +40,6 @@ pub fn construct_bss_description(
     let mut parsed_vht_op = None;
 
     for (id, body) in ie::Reader::new(ies) {
-        let mut reader = BufferReader::new(body);
         match id {
             ie::Id::SSID => ssid = Some(ie::parse_ssid(body)?.to_vec()),
             ie::Id::SUPPORTED_RATES | ie::Id::EXT_SUPPORTED_RATES => {
@@ -61,7 +56,7 @@ pub fn construct_bss_description(
                 rsne = Some(rsne_bytes);
             }
             ie::Id::VENDOR_SPECIFIC => {
-                let mut vendor_ies = vendor_ies.get_or_insert_with(|| vec![]);
+                let vendor_ies = vendor_ies.get_or_insert_with(|| vec![]);
                 vendor_ies.push(id.0);
                 vendor_ies.push(body.len() as u8);
                 vendor_ies.extend_from_slice(body);
@@ -147,7 +142,10 @@ fn get_bss_type(capability_info: CapabilityInfo) -> fidl_mlme::BssTypes {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, banjo_ddk_protocol_wlan_info as banjo_wlan_info};
+    use {
+        super::*, banjo_ddk_protocol_wlan_info as banjo_wlan_info,
+        fidl_fuchsia_wlan_common as fidl_common,
+    };
 
     const BSSID: Bssid = Bssid([0x33; 6]);
     const TIMESTAMP: u64 = 364983910445;

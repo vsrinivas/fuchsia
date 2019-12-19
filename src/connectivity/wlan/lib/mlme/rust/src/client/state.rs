@@ -10,7 +10,7 @@
 use {
     crate::{
         auth,
-        client::{Client, Context, TimedEvent},
+        client::{BoundClient, Context, TimedEvent},
         error::Error,
         timer::*,
     },
@@ -36,7 +36,12 @@ const FAILED_ASSOCIATION_AID: mac::Aid = 0;
 /// to the STA's SME peer.
 trait DeauthenticationHandler {
     /// Sends an MLME-DEAUTHENTICATE.indication message to MLME's SME peer.
-    fn on_deauth_frame(&self, sta: &mut Client, ctx: &mut Context, deauth_hdr: &mac::DeauthHdr) {
+    fn on_deauth_frame(
+        &self,
+        sta: &mut BoundClient<'_>,
+        ctx: &mut Context,
+        deauth_hdr: &mac::DeauthHdr,
+    ) {
         let reason_code = fidl_mlme::ReasonCode::from_primitive(deauth_hdr.reason_code.0)
             .unwrap_or(fidl_mlme::ReasonCode::UnspecifiedReason);
         sta.send_deauthenticate_ind(ctx, reason_code);
@@ -54,7 +59,7 @@ impl Joined {
     /// Returns Ok(timeout) if authentication request was sent successfully, Err(()) otherwise.
     fn authenticate(
         &self,
-        sta: &mut Client,
+        sta: &mut BoundClient<'_>,
         ctx: &mut Context,
         timeout_bcn_count: u8,
     ) -> Result<EventId, ()> {
@@ -90,7 +95,7 @@ impl Authenticating {
     /// Note: The pending authentication timeout will be canceled in any case.
     fn on_auth_frame(
         &self,
-        sta: &mut Client,
+        sta: &mut BoundClient<'_>,
         ctx: &mut Context,
         auth_hdr: &mac::AuthHdr,
     ) -> Result<(), ()> {
@@ -113,7 +118,7 @@ impl Authenticating {
     /// considered to be expired and invalid - the authentication failed. As a consequence,
     /// an MLME-AUTHENTICATION.confirm message is reported to MLME's SME peer indicating the
     /// timeout.
-    fn on_timeout(&self, sta: &mut Client, ctx: &mut Context) {
+    fn on_timeout(&self, sta: &mut BoundClient<'_>, ctx: &mut Context) {
         // At this point, the event should already be canceled by the state's owner. However,
         // ensure the timeout is canceled in any case.
         ctx.timer.cancel_event(self.timeout);
@@ -126,7 +131,12 @@ impl DeauthenticationHandler for Authenticating {
     /// Processes an inbound deauthentication frame.
     /// This always results in an MLME-AUTHENTICATE.confirm message to MLME's SME peer.
     /// The pending authentication timeout will be canceled in this process.
-    fn on_deauth_frame(&self, sta: &mut Client, ctx: &mut Context, deauth_hdr: &mac::DeauthHdr) {
+    fn on_deauth_frame(
+        &self,
+        sta: &mut BoundClient<'_>,
+        ctx: &mut Context,
+        deauth_hdr: &mac::DeauthHdr,
+    ) {
         ctx.timer.cancel_event(self.timeout);
 
         info!(
@@ -146,7 +156,7 @@ impl Authenticated {
     /// Initiates an association with the currently joined BSS.
     /// Returns Ok(timeout) if association request was sent successfully.
     /// Otherwise an Err(()) is returned and an ASSOCIATE.confirm message to its SME peer.
-    fn associate(&self, sta: &mut Client, ctx: &mut Context) -> Result<EventId, ()> {
+    fn associate(&self, sta: &mut BoundClient<'_>, ctx: &mut Context) -> Result<EventId, ()> {
         // TODO(eyw) Send actual IEs.
         let ssid = vec![];
         let rates = vec![1, 2, 8];
@@ -191,7 +201,12 @@ impl DeauthenticationHandler for Associating {
     /// Processes an inbound deauthentication frame.
     /// This always results in an MLME-ASSOCIATE.confirm message to MLME's SME peer.
     /// The pending association timeout will be canceled in this process.
-    fn on_deauth_frame(&self, sta: &mut Client, ctx: &mut Context, deauth_hdr: &mac::DeauthHdr) {
+    fn on_deauth_frame(
+        &self,
+        sta: &mut BoundClient<'_>,
+        ctx: &mut Context,
+        deauth_hdr: &mac::DeauthHdr,
+    ) {
         ctx.timer.cancel_event(self.timeout);
 
         info!(
@@ -215,7 +230,7 @@ impl Associating {
     /// Note: The pending authentication timeout will be canceled in any case.
     fn on_assoc_resp_frame(
         &self,
-        sta: &mut Client,
+        sta: &mut BoundClient<'_>,
         ctx: &mut Context,
         assoc_resp_hdr: &mac::AssocRespHdr,
     ) -> Result<(mac::Aid, ControlledPort), ()> {
@@ -229,7 +244,7 @@ impl Associating {
                     fidl_mlme::AssociateResultCodes::Success,
                 );
                 let controlled_port =
-                    if sta.is_rsn { ControlledPort::Closed } else { ControlledPort::Open };
+                    if sta.sta.is_rsn { ControlledPort::Closed } else { ControlledPort::Open };
                 Ok((assoc_resp_hdr.aid, controlled_port))
             }
             status_code => {
@@ -251,7 +266,7 @@ impl Associating {
     /// This always results in an MLME-ASSOCIATE.confirm message to MLME's SME peer.
     fn on_disassoc_frame(
         &self,
-        sta: &mut Client,
+        sta: &mut BoundClient<'_>,
         ctx: &mut Context,
         _disassoc_hdr: &mac::DisassocHdr,
     ) {
@@ -269,7 +284,7 @@ impl Associating {
     /// considered to be expired and invalid - the association failed. As a consequence,
     /// an MLME-ASSOCIATE.confirm message is reported to MLME's SME peer indicating the
     /// timeout.
-    fn on_timeout(&self, sta: &mut Client, ctx: &mut Context) {
+    fn on_timeout(&self, sta: &mut BoundClient<'_>, ctx: &mut Context) {
         // At this point, the event should already be canceled by the state's owner. However,
         // ensure the timeout is canceled in any case.
         ctx.timer.cancel_event(self.timeout);
@@ -311,7 +326,7 @@ impl Associated {
     // TODO(42159): Drop frames from foreign BSS.
     fn on_data_frame<B: ByteSlice>(
         &self,
-        sta: &mut Client,
+        sta: &mut BoundClient<'_>,
         ctx: &mut Context,
         fixed_data_fields: &mac::FixedDataHdrFields,
         addr4: Option<mac::Addr4>,
@@ -338,7 +353,12 @@ impl Associated {
 
     /// Process every inbound management frame before its being handed off to a more specific
     /// handler.
-    fn on_any_mgmt_frame(&self, sta: &mut Client, ctx: &mut Context, mgmt_hdr: &mac::MgmtHdr) {
+    fn on_any_mgmt_frame(
+        &self,
+        sta: &mut BoundClient<'_>,
+        ctx: &mut Context,
+        mgmt_hdr: &mac::MgmtHdr,
+    ) {
         self.request_bu_if_available(sta, ctx, mgmt_hdr.frame_ctrl, mgmt_hdr.addr1);
     }
 
@@ -346,7 +366,7 @@ impl Associated {
     /// was addressed for this STA. No-op if the controlled port is closed.
     fn request_bu_if_available(
         &self,
-        sta: &mut Client,
+        sta: &mut BoundClient<'_>,
         ctx: &mut Context,
         fc: mac::FrameControl,
         dst_addr: MacAddr,
@@ -355,7 +375,7 @@ impl Associated {
             return;
         }
         // IEEE Std. 802.11-2016, 9.2.4.1.8
-        if fc.more_data() && dst_addr == sta.iface_mac {
+        if fc.more_data() && dst_addr == sta.sta.iface_mac {
             let _ignored = sta.send_ps_poll_frame(ctx, self.aid);
         }
     }
@@ -364,7 +384,7 @@ impl Associated {
     /// This always results in an MLME-DISASSOCIATE.indication message to MLME's SME peer.
     fn on_disassoc_frame(
         &self,
-        sta: &mut Client,
+        sta: &mut BoundClient<'_>,
         ctx: &mut Context,
         disassoc_hdr: &mac::DisassocHdr,
     ) {
@@ -375,7 +395,7 @@ impl Associated {
 
     fn on_eth_frame<B: ByteSlice>(
         &self,
-        sta: &mut Client,
+        sta: &mut BoundClient<'_>,
         ctx: &mut Context,
         frame: B,
     ) -> Result<(), Error> {
@@ -402,7 +422,7 @@ impl Associated {
             ctx,
             hdr.sa,
             hdr.da,
-            sta.is_rsn,
+            sta.sta.is_rsn,
             TEMPORARY_NO_QOS,
             hdr.ether_type.to_native(),
             &body,
@@ -449,7 +469,7 @@ impl States {
     /// SAE will be supported sometime in the future.
     pub fn authenticate(
         self,
-        sta: &mut Client,
+        sta: &mut BoundClient<'_>,
         ctx: &mut Context,
         timeout_bcn_count: u8,
     ) -> States {
@@ -470,7 +490,7 @@ impl States {
 
     /// Initates an association with the joined BSS.
     // TODO(eyw): Carry MLME-ASSOCIATE.request information to construct correct association frame.
-    pub fn associate(self, sta: &mut Client, ctx: &mut Context) -> States {
+    pub fn associate(self, sta: &mut BoundClient<'_>, ctx: &mut Context) -> States {
         match self {
             States::Authenticated(state) => match state.associate(sta, ctx) {
                 Ok(timeout) => state.transition_to(Associating { timeout }).into(),
@@ -496,7 +516,7 @@ impl States {
     /// - frames' frame class is not yet permitted
     pub fn on_mac_frame<B: ByteSlice>(
         self,
-        sta: &mut Client,
+        sta: &mut BoundClient<'_>,
         ctx: &mut Context,
         bytes: B,
         body_aligned: bool,
@@ -520,7 +540,7 @@ impl States {
             mac::MacFrame::Data { fixed_fields, addr4, qos_ctrl, body, .. } => {
                 // Drop frames from foreign BSS.
                 match mac::data_bssid(&fixed_fields) {
-                    Some(bssid) if bssid == sta.bssid.0 => (),
+                    Some(bssid) if bssid == sta.sta.bssid.0 => (),
                     _ => return self,
                 };
 
@@ -547,12 +567,12 @@ impl States {
     /// Only frames from the joined BSS are processed. Frames from other STAs are dropped.
     fn on_mgmt_frame<B: ByteSlice>(
         self,
-        sta: &mut Client,
+        sta: &mut BoundClient<'_>,
         ctx: &mut Context,
         mgmt_hdr: &mac::MgmtHdr,
         body: B,
     ) -> States {
-        if mgmt_hdr.addr3 != sta.bssid.0 {
+        if mgmt_hdr.addr3 != sta.sta.bssid.0 {
             return self;
         }
 
@@ -624,7 +644,7 @@ impl States {
 
     pub fn on_eth_frame<B: ByteSlice>(
         self,
-        sta: &mut Client,
+        sta: &mut BoundClient<'_>,
         ctx: &mut Context,
         frame: B,
     ) -> (Self, Result<(), Error>) {
@@ -644,20 +664,12 @@ impl States {
     }
 
     /// Callback when a previously scheduled event fired.
-    pub fn on_timed_event(self, sta: &mut Client, ctx: &mut Context, event_id: EventId) -> States {
-        // Lookup the event matching the given id.
-        let event = match ctx.timer.triggered(&event_id) {
-            Some(event) => event,
-            None => {
-                error!(
-                    "event for given ID already consumed;\
-                     this should NOT happen - ignoring event"
-                );
-                return self;
-            }
-        };
-
-        // Process event.
+    pub fn on_timed_event(
+        self,
+        sta: &mut BoundClient<'_>,
+        ctx: &mut Context,
+        event: TimedEvent,
+    ) -> States {
         match event {
             TimedEvent::Authenticating => match self {
                 States::Authenticating(state) => {
@@ -699,7 +711,10 @@ mod tests {
         super::*,
         crate::{
             buffer::FakeBufferProvider,
-            client::{cpp_proxy::FakeCppChannelScheduler, ClientConfig},
+            client::{
+                channel_listener::ChannelListenerState, channel_scheduler::ChannelScheduler,
+                cpp_proxy::FakeCppChannelScheduler, scanner::Scanner, Client, ClientConfig,
+            },
             device::{Device, FakeDevice},
         },
         fuchsia_zircon::{self as zx, DurationNum},
@@ -719,6 +734,9 @@ mod tests {
         fake_device: FakeDevice,
         fake_scheduler: FakeScheduler,
         fake_chan_sched: FakeCppChannelScheduler,
+        scanner: Scanner,
+        chan_sched: ChannelScheduler,
+        channel_state: ChannelListenerState,
     }
 
     impl MockObjects {
@@ -727,6 +745,9 @@ mod tests {
                 fake_device: FakeDevice::new(),
                 fake_scheduler: FakeScheduler::new(),
                 fake_chan_sched: FakeCppChannelScheduler::new(),
+                scanner: Scanner::new(IFACE_MAC),
+                chan_sched: ChannelScheduler::new(),
+                channel_state: Default::default(),
             }
         }
 
@@ -764,6 +785,7 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let state = Joined;
         let timeout_id = state.authenticate(&mut sta, &mut ctx, 10).expect("failed authenticating");
 
@@ -801,6 +823,7 @@ mod tests {
         let device = m.fake_device.as_device_fail_wlan_tx();
         let mut ctx = m.make_ctx_with_device(device);
         let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
 
         let state = Joined;
         state.authenticate(&mut sta, &mut ctx, 10).expect_err("should fail authenticating");
@@ -827,6 +850,7 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let timeout =
             ctx.timer.schedule_event(zx::Time::after(1.seconds()), TimedEvent::Authenticating);
         let state = Authenticating { timeout };
@@ -866,6 +890,7 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let timeout =
             ctx.timer.schedule_event(zx::Time::after(1.seconds()), TimedEvent::Authenticating);
         let state = Authenticating { timeout };
@@ -905,6 +930,7 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let timeout =
             ctx.timer.schedule_event(zx::Time::after(1.seconds()), TimedEvent::Authenticating);
         let state = Authenticating { timeout };
@@ -933,6 +959,7 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let timeout =
             ctx.timer.schedule_event(zx::Time::after(1.seconds()), TimedEvent::Authenticating);
         let state = Authenticating { timeout };
@@ -965,6 +992,7 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let state = Authenticated;
 
         state.on_deauth_frame(
@@ -992,6 +1020,8 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+
         let timeout =
             ctx.timer.schedule_event(ctx.timer.now() + 1.seconds(), TimedEvent::Associating);
         let state = Associating { timeout };
@@ -1029,6 +1059,7 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_protected_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let timeout =
             ctx.timer.schedule_event(zx::Time::after(1.seconds()), TimedEvent::Associating);
         let state = Associating { timeout };
@@ -1066,6 +1097,8 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+
         let timeout =
             ctx.timer.schedule_event(zx::Time::after(1.seconds()), TimedEvent::Associating);
         let state = Associating { timeout };
@@ -1102,6 +1135,8 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+
         let timeout =
             ctx.timer.schedule_event(zx::Time::after(1.seconds()), TimedEvent::Associating);
         let state = Associating { timeout };
@@ -1128,6 +1163,8 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+
         let timeout =
             ctx.timer.schedule_event(zx::Time::after(1.seconds()), TimedEvent::Associating);
         let state = Associating { timeout };
@@ -1157,6 +1194,8 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+
         let timeout =
             ctx.timer.schedule_event(zx::Time::after(1.seconds()), TimedEvent::Associating);
         let state = Associating { timeout };
@@ -1186,6 +1225,7 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let state = Associated { aid: 0, controlled_port: ControlledPort::Open };
 
         state.on_deauth_frame(
@@ -1213,6 +1253,7 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let state = Associated { aid: 0, controlled_port: ControlledPort::Open };
 
         state.on_disassoc_frame(
@@ -1238,6 +1279,7 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let state = Associated { aid: 0, controlled_port: ControlledPort::Closed };
 
         let data_frame = make_data_frame_single_llc(None, None);
@@ -1253,6 +1295,7 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let state = Associated { aid: 0, controlled_port: ControlledPort::Open };
 
         let data_frame = make_data_frame_single_llc(None, None);
@@ -1275,6 +1318,7 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_protected_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let state = Associated { aid: 0, controlled_port: ControlledPort::Closed };
 
         let (src_addr, dst_addr, eapol_frame) = make_eapol_frame();
@@ -1300,6 +1344,7 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_protected_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let state = Associated { aid: 0, controlled_port: ControlledPort::Open };
 
         let (src_addr, dst_addr, eapol_frame) = make_eapol_frame();
@@ -1325,6 +1370,7 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_protected_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let state = Associated { aid: 0, controlled_port: ControlledPort::Open };
 
         let data_frame = make_data_frame_amsdu();
@@ -1356,6 +1402,7 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let state = Associated { aid: 42, controlled_port: ControlledPort::Open };
 
         let data_frame = make_data_frame_single_llc(None, None);
@@ -1380,6 +1427,7 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let state = Associated { aid: 42, controlled_port: ControlledPort::Open };
 
         state.on_any_mgmt_frame(
@@ -1415,6 +1463,7 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
 
         // Closed Controlled port
         let state = Associated { aid: 42, controlled_port: ControlledPort::Closed };
@@ -1449,6 +1498,7 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
 
         // Foreign data frame
         let state = States::from(statemachine::testing::new_state(Associated {
@@ -1485,6 +1535,7 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let mut state = States::new_initial();
         assert_variant!(state, States::Joined(_), "not in joined state");
 
@@ -1498,6 +1549,7 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let mut state = States::from(statemachine::testing::new_state(Authenticating {
             timeout: EventId::default(),
         }));
@@ -1526,6 +1578,7 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let mut state = States::from(statemachine::testing::new_state(Authenticating {
             timeout: EventId::default(),
         }));
@@ -1554,6 +1607,7 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let mut state = States::new_initial();
         assert_variant!(state, States::Joined(_), "not in joined state");
 
@@ -1562,7 +1616,9 @@ mod tests {
         let timeout_id = assert_variant!(state, States::Authenticating(ref state) => {
             state.timeout
         }, "not in auth'ing state");
-        state = state.on_timed_event(&mut sta, &mut ctx, timeout_id);
+        let event = ctx.timer.triggered(&timeout_id);
+        assert_variant!(event, Some(TimedEvent::Authenticating));
+        state = state.on_timed_event(&mut sta, &mut ctx, event.unwrap());
         assert_variant!(state, States::Joined(_), "not in joined state");
     }
 
@@ -1571,6 +1627,7 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let mut state = States::from(statemachine::testing::new_state(Authenticating {
             timeout: EventId::default(),
         }));
@@ -1597,6 +1654,7 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let mut state = States::from(statemachine::testing::new_state(Authenticated));
 
         // Deauthenticate: Authenticated > Joined
@@ -1621,6 +1679,7 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let mut state = States::from(statemachine::testing::new_state(Authenticating {
             timeout: EventId::default(),
         }));
@@ -1668,6 +1727,7 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let mut state = States::from(statemachine::testing::new_state(Associating {
             timeout: EventId::default(),
         }));
@@ -1696,6 +1756,7 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let mut state = States::from(statemachine::testing::new_state(Associating {
             timeout: EventId::default(),
         }));
@@ -1724,13 +1785,16 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let mut state = States::from(statemachine::testing::new_state(Authenticated));
 
         state = state.associate(&mut sta, &mut ctx);
         let timeout_id = assert_variant!(state, States::Associating(ref state) => {
             state.timeout.clone()
         }, "not in assoc'ing state");
-        state = state.on_timed_event(&mut sta, &mut ctx, timeout_id);
+        let event = ctx.timer.triggered(&timeout_id);
+        assert_variant!(event, Some(TimedEvent::Associating));
+        state = state.on_timed_event(&mut sta, &mut ctx, event.unwrap());
         assert_variant!(state, States::Authenticated(_), "not in authenticated state");
     }
 
@@ -1739,6 +1803,7 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let mut state = States::from(statemachine::testing::new_state(Associating {
             timeout: EventId::default(),
         }));
@@ -1765,6 +1830,7 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let mut state = States::from(statemachine::testing::new_state(Associated {
             aid: 0,
             controlled_port: ControlledPort::Open,
@@ -1792,6 +1858,7 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let mut state = States::from(statemachine::testing::new_state(Associated {
             aid: 0,
             controlled_port: ControlledPort::Open,
@@ -1831,6 +1898,7 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let state = States::from(statemachine::testing::new_state(Associated {
             aid: 0,
             controlled_port: ControlledPort::Open,
@@ -1875,6 +1943,7 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let state = States::from(statemachine::testing::new_state(Associated {
             aid: 0,
             controlled_port: ControlledPort::Closed,
@@ -1894,6 +1963,7 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let state = States::from(statemachine::testing::new_state(Associated {
             aid: 0,
             controlled_port: ControlledPort::Closed,
@@ -1913,6 +1983,7 @@ mod tests {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let state = States::from(statemachine::testing::new_state(Joined));
 
         let eth_frame = &[100; 14]; // long enough for ethernet header.

@@ -448,7 +448,7 @@ mod test_utils {
         };
 
         let ifc_info = WlanInfo {
-            mac_addr: [99; 6],
+            mac_addr: [7u8; 6],
             mac_role: WlanInfoMacRole::CLIENT,
             supported_phys: WlanInfoPhyType::OFDM | WlanInfoPhyType::HT | WlanInfoPhyType::VHT,
             driver_features: WlanInfoDriverFeature(0),
@@ -644,7 +644,7 @@ mod tests {
         let mut fake_device = FakeDevice::new();
         let dev = fake_device.as_device();
         let info = dev.wlan_info();
-        assert_eq!(info.ifc_info.mac_addr, [99; 6]);
+        assert_eq!(info.ifc_info.mac_addr, [7u8; 6]);
         assert_eq!(info.ifc_info.bands_count, 2);
     }
 

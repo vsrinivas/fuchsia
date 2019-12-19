@@ -4,7 +4,7 @@
 
 use {fuchsia_zircon as zx, std::collections::HashMap, std::ffi::c_void};
 
-#[derive(PartialEq, Eq, Hash, Debug, Copy, Clone, Default)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Copy, Clone, Default)]
 #[repr(C)]
 pub struct EventId(u64);
 
@@ -111,6 +111,16 @@ impl FakeScheduler {
         self.set_time(zx::Time::from_nanos(self.now) + duration);
     }
 
+    /// Evict and return ID and deadline of the earliest scheduled event
+    pub fn next_event(&mut self) -> Option<(EventId, i64)> {
+        let event =
+            self.deadlines.iter().min_by_key(|(_, deadline)| *deadline).map(|(id, d)| (*id, *d));
+        if let Some((id, _)) = event {
+            self.deadlines.remove(&id);
+        }
+        event
+    }
+
     pub fn as_scheduler(&mut self) -> Scheduler {
         Scheduler {
             cookie: self as *mut Self as *mut c_void,
@@ -125,11 +135,11 @@ impl FakeScheduler {
 mod tests {
     use {super::*, fuchsia_zircon::DurationNum};
 
+    #[derive(PartialEq, Eq, Debug, Hash)]
+    struct FooEvent(u8);
+
     #[test]
     fn schedule_cancel_event() {
-        #[derive(PartialEq, Eq, Debug, Hash)]
-        struct FooEvent(u8);
-
         let mut fake_scheduler = FakeScheduler::new();
         let scheduler = fake_scheduler.as_scheduler();
 
@@ -169,5 +179,22 @@ mod tests {
         assert_eq!(timer.triggered(&event_id_1), None);
         assert_eq!(timer.triggered(&event_id_2), None);
         assert_eq!(timer.triggered(&event_id_3), None);
+    }
+
+    #[test]
+    fn fake_scheduler_next_event() {
+        let mut fake_scheduler = FakeScheduler::new();
+        let scheduler = fake_scheduler.as_scheduler();
+
+        let event_id_1 = FakeScheduler::schedule(scheduler.cookie, 2i64);
+        let event_id_2 = FakeScheduler::schedule(scheduler.cookie, 4i64);
+        let event_id_3 = FakeScheduler::schedule(scheduler.cookie, 1i64);
+        let event_id_4 = FakeScheduler::schedule(scheduler.cookie, 3i64);
+
+        assert_eq!(fake_scheduler.next_event(), Some((event_id_3, 1i64)));
+        assert_eq!(fake_scheduler.next_event(), Some((event_id_1, 2i64)));
+        assert_eq!(fake_scheduler.next_event(), Some((event_id_4, 3i64)));
+        assert_eq!(fake_scheduler.next_event(), Some((event_id_2, 4i64)));
+        assert_eq!(fake_scheduler.next_event(), None);
     }
 }

@@ -96,6 +96,10 @@ zx_status_t ClientMlme::Init() {
       .set_key = [](void* device, wlan_key_config_t* key) -> zx_status_t {
         return DEVICE(device)->SetKey(key);
       },
+      .start_hw_scan = [](void* device, const wlan_hw_scan_config_t* config) -> zx_status_t {
+        return DEVICE(device)->StartHwScan(config);
+      },
+      .get_wlan_info = [](void* device) -> wlanmac_info_t { return DEVICE(device)->GetWlanInfo(); },
       .configure_bss = [](void* device, wlan_bss_config_t* cfg) -> zx_status_t {
         return DEVICE(device)->ConfigureBss(cfg);
       },
