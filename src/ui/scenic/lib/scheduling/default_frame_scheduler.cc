@@ -314,6 +314,15 @@ void DefaultFrameScheduler::GetFuturePresentationInfos(
   presentation_infos_callback(std::move(infos));
 }
 
+void DefaultFrameScheduler::SetOnUpdateFailedCallbackForSession(
+    SessionId session, OnSessionUpdateFailedCallback update_failed_callback) {
+  update_manager_.SetOnUpdateFailedCallbackForSession(session, std::move(update_failed_callback));
+}
+
+void DefaultFrameScheduler::ClearCallbacksForSession(SessionId session_id) {
+  update_manager_.ClearCallbacksForSession(session_id);
+}
+
 void DefaultFrameScheduler::SetOnFramePresentedCallbackForSession(
     SessionId session, OnFramePresentedCallback frame_presented_callback) {
   update_manager_.SetOnFramePresentedCallbackForSession(session,
@@ -394,6 +403,29 @@ void DefaultFrameScheduler::UpdateManager::AddSessionUpdater(
   session_updaters_.push_back(std::move(session_updater));
 }
 
+void DefaultFrameScheduler::UpdateManager::RemoveSession(SessionId session_id) {
+  ClearCallbacksForSession(session_id);
+  present1_callbacks_this_frame_.erase(session_id);
+  pending_present1_callbacks_.erase(session_id);
+  present2_infos_this_frame_.erase(session_id);
+  pending_present2_infos_.erase(session_id);
+
+  // Temporary priority queue to hold SessionUpdates that are still valid while all
+  // requests associated with session_id are removed.
+  // Yes, this is not the most optimal way to remove from the queue. RemoveSession should be called
+  // rarely.
+  std::priority_queue<SessionUpdate, std::vector<SessionUpdate>, std::greater<SessionUpdate>>
+      requests_with_session_id_removed;
+  while (!updatable_sessions_.empty()) {
+    auto update = updatable_sessions_.top();
+    if (update.session_id != session_id) {
+      requests_with_session_id_removed.push(update);
+    }
+    updatable_sessions_.pop();
+  }
+  updatable_sessions_ = std::move(requests_with_session_id_removed);
+}
+
 DefaultFrameScheduler::UpdateManager::ApplyUpdatesResult
 DefaultFrameScheduler::UpdateManager::ApplyUpdates(zx::time target_presentation_time,
                                                    zx::time latched_time,
@@ -427,15 +459,33 @@ DefaultFrameScheduler::UpdateManager::ApplyUpdates(zx::time target_presentation_
         update_results.needs_render = update_results.needs_render || session_results.needs_render;
         update_results.sessions_to_reschedule.insert(session_results.sessions_to_reschedule.begin(),
                                                      session_results.sessions_to_reschedule.end());
+        update_results.sessions_with_failed_updates.insert(
+            session_results.sessions_with_failed_updates.begin(),
+            session_results.sessions_with_failed_updates.end());
 
-        std::move(session_results.present1_callbacks.begin(),
-                  session_results.present1_callbacks.end(),
-                  std::back_inserter(present1_callbacks_this_frame_));
+        std::move(
+            session_results.present1_callbacks.begin(), session_results.present1_callbacks.end(),
+            std::inserter(present1_callbacks_this_frame_, present1_callbacks_this_frame_.end()));
         session_results.present1_callbacks.clear();
         std::move(session_results.present2_infos.begin(), session_results.present2_infos.end(),
-                  std::back_inserter(present2_infos_this_frame_));
+                  std::inserter(present2_infos_this_frame_, present2_infos_this_frame_.end()));
         session_results.present2_infos.clear();
       });
+
+  // Aggregate all failed session callbacks, and remove failed sessions from all present callback
+  // maps.
+  std::vector<OnSessionUpdateFailedCallback> failure_callbacks;
+  for (auto failed_session_id : update_results.sessions_with_failed_updates) {
+    auto it = update_failed_callback_map_.find(failed_session_id);
+    FXL_DCHECK(it != update_failed_callback_map_.end());
+    failure_callbacks.emplace_back(std::move(it->second));
+
+    // Remove failed sessions from future scheduled updates.
+    update_results.sessions_to_reschedule.erase(failed_session_id);
+    // Remove the callback from the global map so they are not called after this failure callback is
+    // triggered.
+    RemoveSession(failed_session_id);
+  }
 
   // Push updates that (e.g.) had unreached fences back onto the queue to be retried next frame.
   for (auto session_id : update_results.sessions_to_reschedule) {
@@ -443,6 +493,12 @@ DefaultFrameScheduler::UpdateManager::ApplyUpdates(zx::time target_presentation_
         {.session_id = session_id,
          .requested_presentation_time = target_presentation_time + vsync_interval});
   }
+
+  // Process all update failed callbacks.
+  for (auto& callback : failure_callbacks) {
+    callback();
+  }
+  failure_callbacks.clear();
 
   return ApplyUpdatesResult{.needs_render = update_results.needs_render,
                             .needs_reschedule = !updatable_sessions_.empty()};
@@ -457,16 +513,12 @@ void DefaultFrameScheduler::UpdateManager::ScheduleUpdate(zx::time presentation_
 void DefaultFrameScheduler::UpdateManager::RatchetPresentCallbacks(zx::time presentation_time,
                                                                    uint64_t frame_number) {
   std::move(present1_callbacks_this_frame_.begin(), present1_callbacks_this_frame_.end(),
-            std::back_inserter(pending_present1_callbacks_));
+            std::inserter(pending_present1_callbacks_, pending_present1_callbacks_.end()));
   present1_callbacks_this_frame_.clear();
 
-  // Populate the Present2 multimap.
-  while (!present2_infos_this_frame_.empty()) {
-    auto element = std::move(present2_infos_this_frame_.front());
-
-    pending_present2_infos_.insert(std::make_pair(element.session_id(), std::move(element)));
-    present2_infos_this_frame_.pop_front();
-  }
+  std::move(present2_infos_this_frame_.begin(), present2_infos_this_frame_.end(),
+            std::inserter(pending_present2_infos_, pending_present2_infos_.end()));
+  present2_infos_this_frame_.clear();
 
   std::for_each(session_updaters_.begin(), session_updaters_.end(),
                 [presentation_time, frame_number](fxl::WeakPtr<SessionUpdater> updater) {
@@ -479,12 +531,12 @@ void DefaultFrameScheduler::UpdateManager::RatchetPresentCallbacks(zx::time pres
 void DefaultFrameScheduler::UpdateManager::SignalPresentCallbacks(
     fuchsia::images::PresentationInfo presentation_info) {
   // Handle Present1 and |fuchsia::images::ImagePipe::PresentImage| callbacks.
-  while (!pending_present1_callbacks_.empty()) {
+  for (auto& [session_id, on_presented_callback] : pending_present1_callbacks_) {
     // TODO(SCN-1346): Make this unique per session via id().
     TRACE_FLOW_BEGIN("gfx", "present_callback", presentation_info.presentation_time);
-    pending_present1_callbacks_.front()(presentation_info);
-    pending_present1_callbacks_.pop_front();
+    on_presented_callback(presentation_info);
   }
+  pending_present1_callbacks_.clear();
 
   // Handle per-Present2() |Present2Info|s.
   // This outer loop iterates through all unique |SessionId|s that have pending Present2 updates.
@@ -515,10 +567,21 @@ void DefaultFrameScheduler::UpdateManager::SignalPresentCallbacks(
   FXL_DCHECK(pending_present2_infos_.size() == 0u);
 }
 
+void DefaultFrameScheduler::UpdateManager::SetOnUpdateFailedCallbackForSession(
+    SessionId session_id, FrameScheduler::OnSessionUpdateFailedCallback update_failed_callback) {
+  FXL_DCHECK(update_failed_callback_map_.find(session_id) == update_failed_callback_map_.end());
+  update_failed_callback_map_[session_id] = std::move(update_failed_callback);
+}
+
 void DefaultFrameScheduler::UpdateManager::SetOnFramePresentedCallbackForSession(
-    SessionId session, OnFramePresentedCallback frame_presented_callback) {
-  FXL_DCHECK(present2_callback_map_.find(session) == present2_callback_map_.end());
-  present2_callback_map_[session] = std::move(frame_presented_callback);
+    SessionId session_id, OnFramePresentedCallback frame_presented_callback) {
+  FXL_DCHECK(present2_callback_map_.find(session_id) == present2_callback_map_.end());
+  present2_callback_map_[session_id] = std::move(frame_presented_callback);
+}
+
+void DefaultFrameScheduler::UpdateManager::ClearCallbacksForSession(SessionId session_id) {
+  update_failed_callback_map_.erase(session_id);
+  present2_callback_map_.erase(session_id);
 }
 
 }  // namespace scheduling

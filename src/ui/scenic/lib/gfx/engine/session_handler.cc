@@ -27,29 +27,31 @@ void SessionHandler::SetDebugName(const std::string& debug_name) {
   session_->SetDebugName(debug_name);
 }
 
-void SessionHandler::Present(uint64_t presentation_time, std::vector<zx::event> acquire_fences,
+bool SessionHandler::Present(uint64_t presentation_time, std::vector<zx::event> acquire_fences,
                              std::vector<zx::event> release_fences,
                              fuchsia::ui::scenic::Session::PresentCallback callback) {
   if (!session_->ScheduleUpdateForPresent(zx::time(presentation_time),
                                           std::move(buffered_commands_), std::move(acquire_fences),
                                           std::move(release_fences), std::move(callback))) {
-    KillSession();
+    return false;
   } else {
     buffered_commands_.clear();
   }
+  return true;
 }
 
-void SessionHandler::Present2(zx_time_t requested_presentation_time,
+bool SessionHandler::Present2(zx_time_t requested_presentation_time,
                               std::vector<zx::event> acquire_fences,
                               std::vector<zx::event> release_fences) {
   if (!session_->ScheduleUpdateForPresent2(zx::time(requested_presentation_time),
                                            std::move(buffered_commands_), std::move(acquire_fences),
                                            std::move(release_fences),
                                            scheduling::Present2Info(session_->id()))) {
-    KillSession();
+    return false;
   } else {
     buffered_commands_.clear();
   }
+  return true;
 }
 
 void SessionHandler::SetOnFramePresentedCallback(OnFramePresentedCallback callback) {
@@ -65,12 +67,6 @@ void SessionHandler::GetFuturePresentationInfos(
 void SessionHandler::DispatchCommand(fuchsia::ui::scenic::Command command) {
   FXL_DCHECK(command.Which() == fuchsia::ui::scenic::Command::Tag::kGfx);
   buffered_commands_.emplace_back(std::move(command.gfx()));
-}
-
-void SessionHandler::KillSession() {
-  // Since this is essentially a self destruct
-  // call, it's safest not call anything after this
-  command_dispatcher_context()->KillSession();
 }
 
 }  // namespace gfx

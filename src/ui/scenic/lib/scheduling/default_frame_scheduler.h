@@ -44,11 +44,17 @@ class DefaultFrameScheduler : public FrameScheduler {
   void SetRenderContinuously(bool render_continuously) override;
 
   // |FrameScheduler|
+  void SetOnUpdateFailedCallbackForSession(
+      SessionId session, OnSessionUpdateFailedCallback update_failed_callback) override;
+
+  // |FrameScheduler|
   //
   // Tell the FrameScheduler to schedule a frame. This is also used for updates triggered by
   // something other than a Session update i.e. an ImagePipe with a new Image to present.
   void ScheduleUpdateForSession(zx::time presentation_time, SessionId session) override;
 
+  // |FrameScheduler|
+  //
   // Sets the |fuchsia::ui::scenic::Session::OnFramePresented| event handler. This should only be
   // called once per session.
   void SetOnFramePresentedCallbackForSession(
@@ -58,6 +64,8 @@ class DefaultFrameScheduler : public FrameScheduler {
   void GetFuturePresentationInfos(
       zx::duration requested_prediction_span,
       FrameScheduler::GetFuturePresentationInfosCallback presentation_infos_callback) override;
+
+  void ClearCallbacksForSession(SessionId session_id) override;
 
   constexpr static zx::duration kInitialRenderDuration = zx::msec(5);
   constexpr static zx::duration kInitialUpdateDuration = zx::msec(1);
@@ -109,13 +117,22 @@ class DefaultFrameScheduler : public FrameScheduler {
     // called and the most recent call to |RatchetPresentCallbacks()|.
     void SignalPresentCallbacks(fuchsia::images::PresentationInfo info);
 
+    // Sets a callback to handle a failed session update. This should only be
+    // called once per session.
+    void SetOnUpdateFailedCallbackForSession(
+        SessionId session, FrameScheduler::OnSessionUpdateFailedCallback update_failed_callback);
+
     // Sets the |fuchsia::ui::scenic::Session::OnFramePresented| event handler. This should only be
     // called once per session.
     void SetOnFramePresentedCallbackForSession(SessionId session,
                                                OnFramePresentedCallback frame_presented_callback);
 
+    // Clears the cached callbacks set per-session.
+    void ClearCallbacksForSession(SessionId session_id);
+
    private:
-    std::vector<fxl::WeakPtr<SessionUpdater>> session_updaters_;
+    // Remove all state associated with a given session_id.
+    void RemoveSession(SessionId session_id);
 
     // Sessions that have updates to apply, sorted by requested presentation time from earliest to
     // latest.
@@ -130,13 +147,18 @@ class DefaultFrameScheduler : public FrameScheduler {
     std::priority_queue<SessionUpdate, std::vector<SessionUpdate>, std::greater<SessionUpdate>>
         updatable_sessions_;
 
-    std::deque<OnPresentedCallback> present1_callbacks_this_frame_;
-    std::deque<OnPresentedCallback> pending_present1_callbacks_;
+    std::multimap<SessionId, OnPresentedCallback> present1_callbacks_this_frame_;
+    std::multimap<SessionId, OnPresentedCallback> pending_present1_callbacks_;
 
-    std::deque<scheduling::Present2Info> present2_infos_this_frame_;
-    std::multimap<SessionId, scheduling::Present2Info> pending_present2_infos_;
+    std::multimap<SessionId, Present2Info> present2_infos_this_frame_;
+    std::multimap<SessionId, Present2Info> pending_present2_infos_;
 
     std::map<SessionId, OnFramePresentedCallback> present2_callback_map_;
+    std::map<SessionId, FrameScheduler::OnSessionUpdateFailedCallback> update_failed_callback_map_;
+
+    // Set of SessionUpdaters to update. Stored as a WeakPtr: when the updaters become
+    // invalid, the WeakPtr is removed from this list.
+    std::vector<fxl::WeakPtr<SessionUpdater>> session_updaters_;
   };
 
  protected:

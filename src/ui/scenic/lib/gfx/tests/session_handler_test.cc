@@ -51,7 +51,7 @@ void SessionHandlerTest::InitializeSessionHandler() {
   session_manager_ = std::make_unique<SessionManagerForTest>(this->shared_event_reporter(),
                                                              this->shared_error_reporter()),
   command_dispatcher_ = session_manager_->CreateCommandDispatcher(
-      CommandDispatcherContext(scenic_.get(), scenic_session_.get()), std::move(session_context));
+      CommandDispatcherContext(scenic_session_.get()), std::move(session_context));
 }
 
 void SessionHandlerTest::InitializeEngine() {
@@ -71,8 +71,11 @@ void SessionHandlerTest::InitializeEngine() {
 
 void SessionHandlerTest::InitializeScenicSession(SessionId session_id) {
   fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener;
-  scenic_session_ = std::make_unique<scenic_impl::Session>(session_id, /*session_request=*/nullptr,
-                                                           std::move(listener));
+  scenic_session_ = std::make_unique<scenic_impl::Session>(
+      session_id, /*session_request=*/nullptr, std::move(listener), [this, session_id]() {
+        scenic_->CloseSession(session_id);
+        scenic_session_.reset();
+      });
 }
 
 escher::EscherWeakPtr SessionHandlerTest::GetEscherWeakPtr() { return escher::EscherWeakPtr(); }

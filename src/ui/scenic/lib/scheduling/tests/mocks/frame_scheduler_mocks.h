@@ -28,6 +28,10 @@ class MockFrameScheduler : public FrameScheduler {
   void SetRenderContinuously(bool render_continuously) override;
 
   // |FrameScheduler|
+  void SetOnUpdateFailedCallbackForSession(
+      SessionId session, OnSessionUpdateFailedCallback update_failed_callback) override {}
+
+  // |FrameScheduler|
   void ScheduleUpdateForSession(zx::time presentation_time, SessionId session) override;
 
   // |FrameScheduler|
@@ -38,6 +42,9 @@ class MockFrameScheduler : public FrameScheduler {
   // |FrameScheduler|
   void SetOnFramePresentedCallbackForSession(
       SessionId session, OnFramePresentedCallback frame_presented_callback) override;
+
+  // |FrameScheduler|
+  void ClearCallbacksForSession(SessionId session_id) override {}
 
   // Testing only. Used for mock method callbacks.
   using OnSetRenderContinuouslyCallback = std::function<void(bool)>;
@@ -111,7 +118,7 @@ class MockSessionUpdater : public SessionUpdater {
     bool updater_disappeared = false;
     // The PresentationInfo that was passed to the callback, valid only if |callback_invoked| is
     // true.
-    PresentationInfo presentation_info;
+    fuchsia::images::PresentationInfo presentation_info;
   };
   std::shared_ptr<const CallbackStatus> AddCallback(SessionId id, zx::time presentation_time,
                                                     zx::time acquire_fence_time);
@@ -130,6 +137,12 @@ class MockSessionUpdater : public SessionUpdater {
   // unknown session IDs); this method relaxes the restriction for those tests.
   void BeRelaxedAboutUnexpectedSessionUpdates() {
     be_relaxed_about_unexpected_session_updates_ = true;
+  }
+
+  // Treats session_id as a failed update the next time UpdateSessions is called. This does not
+  // persist for future updates.
+  void SetNextUpdateForSessionFails(SessionId session_id) {
+    sessions_to_fail_on_next_update_.insert(session_id);
   }
 
   // Simulate killing of a session.  This simply treats the session (and any associated updates) as
@@ -172,6 +185,8 @@ class MockSessionUpdater : public SessionUpdater {
 
   std::map<SessionId, std::queue<Update>> updates_;
   std::map<SessionId, std::queue<Present2Update>> present2_updates_;
+
+  std::unordered_set<SessionId> sessions_to_fail_on_next_update_;
 
   // Stores session IDs that were passed to |UpdateSessions()|, but for which no corresponding
   // updates were registered.

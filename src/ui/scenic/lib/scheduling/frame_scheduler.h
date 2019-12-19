@@ -14,14 +14,15 @@
 #include <unordered_set>
 
 #include "src/lib/fxl/memory/weak_ptr.h"
-#include "src/ui/scenic/lib/scheduling/present2_info.h"
 #include "src/ui/scenic/lib/scheduling/frame_timings.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
+#include "src/ui/scenic/lib/scheduling/present2_info.h"
 
 namespace scheduling {
 
-using PresentationInfo = fuchsia::images::PresentationInfo;
-using OnPresentedCallback = fit::function<void(PresentationInfo)>;
+// Callback used for Present1 and ImagePipe::Present
+using OnPresentedCallback = fit::function<void(fuchsia::images::PresentationInfo)>;
+// Callback used for Present2.
 using OnFramePresentedCallback =
     fit::function<void(fuchsia::scenic::scheduling::FramePresentedInfo info)>;
 
@@ -38,10 +39,12 @@ class SessionUpdater {
     std::unordered_set<SessionId> sessions_to_reschedule;
     // A list of callbacks that should be invoked once the rendered frame is presented (or if the
     // frame is dropped, once the next frame is presented).
-    std::deque<OnPresentedCallback> present1_callbacks;
+    std::deque<std::pair<SessionId, OnPresentedCallback>> present1_callbacks;
     // A list of objects containing information needed for the OnFramePresented event associated
     // with one or more Present2 calls.
-    std::deque<scheduling::Present2Info> present2_infos;
+    std::deque<std::pair<SessionId, scheduling::Present2Info>> present2_infos;
+    // SessionIds whose updates failed.
+    std::unordered_set<SessionId> sessions_with_failed_updates;
   };
 
   virtual ~SessionUpdater() = default;
@@ -102,6 +105,12 @@ class FrameScheduler {
   // regardless of whether they're explicitly requested using RequestFrame().
   virtual void SetRenderContinuously(bool render_continuously) = 0;
 
+  // Sets a callback to handle a failed session update. This should only be
+  // called once per session.
+  using OnSessionUpdateFailedCallback = std::function<void()>;
+  virtual void SetOnUpdateFailedCallbackForSession(
+      SessionId session, OnSessionUpdateFailedCallback update_failed_callback) = 0;
+
   // Tell the FrameScheduler to schedule a frame. This is also used for updates triggered by
   // something other than a Session update i.e. an ImagePipe with a new Image to present.
   virtual void ScheduleUpdateForSession(zx::time presentation_time, SessionId session) = 0;
@@ -117,6 +126,11 @@ class FrameScheduler {
   // called once per session.
   virtual void SetOnFramePresentedCallbackForSession(SessionId session,
                                                      OnFramePresentedCallback callback) = 0;
+
+  // Clears all callbacks set once per session. If additional updates are scheduled for the
+  // associated session_id, the |OnSessionUpdateFailedCallback| and |OnFramePresentedCallback|
+  // should be re-set.
+  virtual void ClearCallbacksForSession(SessionId session_id) = 0;
 };
 
 }  // namespace scheduling

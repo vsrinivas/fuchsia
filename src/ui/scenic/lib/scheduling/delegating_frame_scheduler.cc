@@ -35,6 +35,14 @@ void DelegatingFrameScheduler::SetRenderContinuously(bool render_continuously) {
   });
 }
 
+void DelegatingFrameScheduler::SetOnUpdateFailedCallbackForSession(
+    SessionId session_id, FrameScheduler::OnSessionUpdateFailedCallback update_failed_callback) {
+  CallWhenFrameSchedulerAvailable([session_id, callback = std::move(update_failed_callback)](
+                                      FrameScheduler* frame_scheduler) mutable {
+    frame_scheduler->SetOnUpdateFailedCallbackForSession(session_id, std::move(callback));
+  });
+}
+
 void DelegatingFrameScheduler::ScheduleUpdateForSession(zx::time presentation_time,
                                                         SessionId session_id) {
   CallWhenFrameSchedulerAvailable([presentation_time, session_id](FrameScheduler* frame_scheduler) {
@@ -59,6 +67,12 @@ void DelegatingFrameScheduler::SetOnFramePresentedCallbackForSession(
           frame_scheduler->SetOnFramePresentedCallbackForSession(session, std::move(callback));
         });
   }
+}
+
+void DelegatingFrameScheduler::ClearCallbacksForSession(SessionId session_id) {
+  CallWhenFrameSchedulerAvailable([session_id](FrameScheduler* frame_scheduler) {
+    frame_scheduler->ClearCallbacksForSession(session_id);
+  });
 }
 
 void DelegatingFrameScheduler::CallWhenFrameSchedulerAvailable(

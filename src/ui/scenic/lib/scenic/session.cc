@@ -12,19 +12,19 @@
 namespace scenic_impl {
 
 Session::Session(SessionId id, fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
-                 fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener)
+                 fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener,
+                 std::function<void()> destroy_session_function)
     : id_(id),
       listener_(listener.Bind()),
       reporter_(std::make_shared<EventAndErrorReporter>(this)),
       binding_(this, std::move(session_request)),
+      destroy_session_func_(std::move(destroy_session_function)),
       weak_factory_(this) {
   FXL_DCHECK(!binding_.channel() || binding_.is_bound());
 }
 
-Session::~Session() {
-  valid_ = false;
-  reporter_->Reset();
-}
+Session::~Session() { reporter_->Reset(); }
+
 void Session::set_binding_error_handler(fit::function<void(zx_status_t)> error_handler) {
   binding_.set_error_handler(std::move(error_handler));
 }
@@ -36,11 +36,23 @@ void Session::SetFrameScheduler(
 
   // Initialize OnFramePresented callback.
   // Check validity because it's not always set in tests.
-  if (frame_scheduler)
+  if (frame_scheduler) {
+    frame_scheduler->SetOnUpdateFailedCallbackForSession(id_,
+                                                         [weak = weak_factory_.GetWeakPtr()]() {
+                                                           if (weak) {
+                                                             // Called to initiate a session close
+                                                             // when an update fails. Requests the
+                                                             // destruction of client fidl session
+                                                             // from scenic, which then triggers the
+                                                             // actual destruction of this object.
+                                                             weak->destroy_session_func_();
+                                                           }
+                                                         });
+
     frame_scheduler->SetOnFramePresentedCallbackForSession(
         id_,
         [weak = weak_factory_.GetWeakPtr()](fuchsia::scenic::scheduling::FramePresentedInfo info) {
-          if (!weak->binding_.is_bound())
+          if (!weak)
             return;
           // Update and set num_presents_allowed before ultimately calling into the client provided
           // callback.
@@ -49,14 +61,12 @@ void Session::SetFrameScheduler(
           info.num_presents_allowed = weak->num_presents_allowed_;
           weak->binding_.events().OnFramePresented(std::move(info));
         });
+  }
 }
 
 void Session::Enqueue(std::vector<fuchsia::ui::scenic::Command> cmds) {
-  // TODO(SCN-1265): Come up with a better solution to avoid children
-  // calling into us during destruction.
-  if (!valid_)
-    return;
-  TRACE_DURATION("gfx", "scenic_impl::Session::Enqueue", "session_id", id(), "num_commands", cmds.size());
+  TRACE_DURATION("gfx", "scenic_impl::Session::Enqueue", "session_id", id(), "num_commands",
+                 cmds.size());
   for (auto& cmd : cmds) {
     // TODO(SCN-710): This dispatch is far from optimal in terms of performance.
     // We need to benchmark it to figure out whether it matters.
@@ -75,13 +85,12 @@ void Session::Present(uint64_t presentation_time, std::vector<zx::event> acquire
   TRACE_DURATION("gfx", "scenic_impl::Session::Present");
   TRACE_FLOW_END("gfx", "Session::Present", next_present_trace_id_);
   next_present_trace_id_++;
-  // TODO(SCN-1265): Come up with a better solution to avoid children
-  // calling into us during destruction.
-  if (!valid_)
-    return;
   // TODO(SCN-469): Move Present logic into Session.
-  GetTempSessionDelegate()->Present(presentation_time, std::move(acquire_fences),
-                                    std::move(release_fences), std::move(callback));
+  bool success = GetTempSessionDelegate()->Present(presentation_time, std::move(acquire_fences),
+                                                   std::move(release_fences), std::move(callback));
+  if (!success) {
+    destroy_session_func_();
+  }
 }
 
 void Session::Present2(fuchsia::ui::scenic::Present2Args args, Present2Callback callback) {
@@ -89,23 +98,18 @@ void Session::Present2(fuchsia::ui::scenic::Present2Args args, Present2Callback 
   TRACE_FLOW_END("gfx", "Session::Present", next_present_trace_id_);
   next_present_trace_id_++;
 
-  if (!valid_)
-    return;
-
   // Kill the Session if they have not set any of the Present2Args fields.
   if (!args.has_requested_presentation_time() || !args.has_release_fences() ||
       !args.has_acquire_fences() || !args.has_requested_prediction_span()) {
     FXL_LOG(ERROR) << "One or more fields not set in Present2Args table";
-    valid_ = false;
-    GetTempSessionDelegate()->KillSession();
+    destroy_session_func_();
     return;
   }
 
   // Kill the Session if they have no more presents left.
   if (--num_presents_allowed_ < 0) {
     FXL_LOG(ERROR) << "No presents left";
-    valid_ = false;
-    GetTempSessionDelegate()->KillSession();
+    destroy_session_func_();
     return;
   }
 
@@ -113,9 +117,12 @@ void Session::Present2(fuchsia::ui::scenic::Present2Args args, Present2Callback 
   InvokeFuturePresentationTimesCallback(args.requested_prediction_span(), std::move(callback));
 
   // Schedule the update.
-  GetTempSessionDelegate()->Present2(args.requested_presentation_time(),
-                                     std::move(*args.mutable_acquire_fences()),
-                                     std::move(*args.mutable_release_fences()));
+  bool success = GetTempSessionDelegate()->Present2(args.requested_presentation_time(),
+                                                    std::move(*args.mutable_acquire_fences()),
+                                                    std::move(*args.mutable_release_fences()));
+  if (!success) {
+    destroy_session_func_();
+  }
 }
 
 void Session::RequestPresentationTimes(zx_duration_t requested_prediction_span,
@@ -144,11 +151,6 @@ void Session::SetCommandDispatchers(
 }
 
 void Session::SetDebugName(std::string debug_name) {
-  // TODO(SCN-1265): Come up with a better solution to avoid children
-  // calling into us during destruction.
-  if (!valid_)
-    return;
-
   TRACE_DURATION("gfx", "scenic_impl::Session::SetDebugName");
   GetTempSessionDelegate()->SetDebugName(debug_name);
 }
@@ -176,7 +178,8 @@ void Session::EventAndErrorReporter::EnqueueEvent(fuchsia::ui::gfx::Event event)
   if (!session_)
     return;
 
-  TRACE_DURATION("gfx", "scenic_impl::Session::EventAndErrorReporter::EnqueueEvent", "event_type", "gfx::Event");
+  TRACE_DURATION("gfx", "scenic_impl::Session::EventAndErrorReporter::EnqueueEvent", "event_type",
+                 "gfx::Event");
   PostFlushTask();
 
   fuchsia::ui::scenic::Event scenic_event;
@@ -188,7 +191,8 @@ void Session::EventAndErrorReporter::EnqueueEvent(fuchsia::ui::scenic::Command u
   if (!session_)
     return;
 
-  TRACE_DURATION("gfx", "scenic_impl::Session::EventAndErrorReporter::EnqueueEvent", "event_type", "UnhandledCommand");
+  TRACE_DURATION("gfx", "scenic_impl::Session::EventAndErrorReporter::EnqueueEvent", "event_type",
+                 "UnhandledCommand");
   PostFlushTask();
 
   fuchsia::ui::scenic::Event scenic_event;
@@ -200,7 +204,8 @@ void Session::EventAndErrorReporter::EnqueueEvent(fuchsia::ui::input::InputEvent
   if (!session_)
     return;
 
-  TRACE_DURATION("gfx", "scenic_impl::Session::EventAndErrorReporter::EnqueueEvent", "event_type", "input::InputEvent");
+  TRACE_DURATION("gfx", "scenic_impl::Session::EventAndErrorReporter::EnqueueEvent", "event_type",
+                 "input::InputEvent");
   // Force an immediate flush, preserving event order.
   fuchsia::ui::scenic::Event scenic_event;
   scenic_event.set_input(std::move(event));

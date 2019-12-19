@@ -16,9 +16,10 @@ TEST(SessionHandlerTest,
      WhenSessionHandlerDestroyed_ShouldRemoveSessionHandlerPtrFromSessionManager) {
   SessionManager manager;
   SessionContext session_context;
-  scenic_impl::Session session(kSessionId, /*session_request=*/nullptr, /*listener=*/nullptr);
+  scenic_impl::Session session(kSessionId, /*session_request=*/nullptr, /*listener=*/nullptr,
+                               /* destroy_session_function */ [] {});
 
-  CommandDispatcherContext dispatch_context(nullptr, &session, kSessionId);
+  CommandDispatcherContext dispatch_context(&session, kSessionId);
 
   auto handler = manager.CreateCommandDispatcher(std::move(dispatch_context), session_context);
   ASSERT_NE(handler, nullptr);

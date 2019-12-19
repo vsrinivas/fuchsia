@@ -33,7 +33,8 @@ using OnFramePresentedCallback =
 class Session final : public fuchsia::ui::scenic::Session {
  public:
   Session(SessionId id, fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
-          fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener);
+          fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener,
+          std::function<void()> destroy_session_function);
   ~Session() override;
 
   void SetCommandDispatchers(
@@ -148,9 +149,6 @@ class Session final : public fuchsia::ui::scenic::Session {
   void InvokeFuturePresentationTimesCallback(zx_duration_t requested_prediction_span,
                                              RequestPresentationTimesCallback callback);
 
-  // True until we are in the process of being destroyed.
-  bool valid_ = true;
-
   const SessionId id_;
   fidl::InterfacePtr<fuchsia::ui::scenic::SessionListener> listener_;
 
@@ -172,6 +170,9 @@ class Session final : public fuchsia::ui::scenic::Session {
   std::shared_ptr<EventAndErrorReporter> reporter_;
 
   fidl::Binding<fuchsia::ui::scenic::Session> binding_;
+
+  // Function to kill this session so that it is properly cleaned up.
+  std::function<void()> destroy_session_func_;
 
   fxl::WeakPtrFactory<Session> weak_factory_;
 

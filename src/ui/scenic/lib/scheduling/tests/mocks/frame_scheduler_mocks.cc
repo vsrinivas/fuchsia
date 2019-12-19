@@ -15,8 +15,7 @@ void MockFrameScheduler::SetRenderContinuously(bool render_continuously) {
   }
 }
 
-void MockFrameScheduler::ScheduleUpdateForSession(zx::time presentation_time,
-                                                  SessionId session) {
+void MockFrameScheduler::ScheduleUpdateForSession(zx::time presentation_time, SessionId session) {
   if (schedule_update_for_session_callback_) {
     schedule_update_for_session_callback_(presentation_time, session);
   }
@@ -51,6 +50,14 @@ SessionUpdater::UpdateResults MockSessionUpdater::UpdateSessions(
       continue;
     }
 
+    if (sessions_to_fail_on_next_update_.find(session_id) !=
+        sessions_to_fail_on_next_update_.end()) {
+      results.sessions_with_failed_updates.insert(session_id);
+      // Failure is only for one update, remove from updates to fail set.
+      sessions_to_fail_on_next_update_.erase(session_id);
+      continue;
+    }
+
     // A client can only be using either Present or Present2 at one time.
     FXL_CHECK(updates_.find(session_id) == updates_.end() ||
               present2_updates_.find(session_id) == present2_updates_.end());
@@ -70,7 +77,7 @@ SessionUpdater::UpdateResults MockSessionUpdater::UpdateSessions(
           break;
         } else {
           // "Apply update" and push the Present2Info.
-          results.present2_infos.push_back(std::move(update.present2_info));
+          results.present2_infos.push_back({session_id, std::move(update.present2_info)});
 
           // Since an update was applied, the scene must be re-rendered (unless this is suppressed
           // for testing purposes).
@@ -108,11 +115,11 @@ SessionUpdater::UpdateResults MockSessionUpdater::UpdateSessions(
 
         // Wrap the test-provided callback in a closure that updates |num_callback_invocations_|.
         FXL_CHECK(update.callback);
-        results.present1_callbacks.push_back(std::move(update.callback));
+        results.present1_callbacks.push_back({session_id, std::move(update.callback)});
         FXL_CHECK(!update.callback);
 
-        // Since an update was applied, the scene must be re-rendered (unless this is suppressed for
-        // testing purposes).
+        // Since an update was applied, the scene must be re-rendered (unless this is suppressed
+        // for testing purposes).
         results.needs_render = !rendering_suppressed_;
       }
 
@@ -128,18 +135,18 @@ std::shared_ptr<const MockSessionUpdater::CallbackStatus> MockSessionUpdater::Ad
   auto status = std::make_shared<CallbackStatus>();
   status->session_id = session_id;
 
-  updates_[session_id].push(
-      {presentation_time, acquire_fence_time, status,
-       [status, weak_this{weak_factory_.GetWeakPtr()}](PresentationInfo presentation_info) {
-         if (weak_this) {
-           ++weak_this->signal_successful_present_callback_count_;
-         } else {
-           status->updater_disappeared = true;
-         }
-         EXPECT_FALSE(status->callback_invoked);
-         status->callback_invoked = true;
-         status->presentation_info = presentation_info;
-       }});
+  updates_[session_id].push({presentation_time, acquire_fence_time, status,
+                             [status, weak_this{weak_factory_.GetWeakPtr()}](
+                                 fuchsia::images::PresentationInfo presentation_info) {
+                               if (weak_this) {
+                                 ++weak_this->signal_successful_present_callback_count_;
+                               } else {
+                                 status->updater_disappeared = true;
+                               }
+                               EXPECT_FALSE(status->callback_invoked);
+                               status->callback_invoked = true;
+                               status->presentation_info = presentation_info;
+                             }});
 
   return status;
 }

@@ -248,14 +248,8 @@ scheduling::SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
     auto apply_results = session->ApplyScheduledUpdates(&(command_context_.value()),
                                                         target_presentation_time, latched_time);
 
-    // If update fails, kill the entire client session.
     if (!apply_results.success) {
-      // TODO(SCN-1485): schedule another frame because the session's contents
-      // will be removed from the scene.  We could insert |session_id| into
-      // |update_results.sessions_to_reschedule|, but it's probably cleaner to
-      // handle this uniformly with the case that the client abruptly closes
-      // the channel.
-      session_handler->KillSession();
+      update_results.sessions_with_failed_updates.insert(session_id);
     } else {
       if (!apply_results.all_fences_ready) {
         update_results.sessions_to_reschedule.insert(session_id);
@@ -267,17 +261,35 @@ scheduling::SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
         // updates, some of which had all fences ready and therefore contributed
         // callbacks.
       }
+
       //  Collect the callbacks to be passed back in the |UpdateResults|.
-      std::move(apply_results.present1_callbacks.begin(), apply_results.present1_callbacks.end(),
-                std::back_inserter(update_results.present1_callbacks));
-      apply_results.present1_callbacks.clear();
-      std::move(apply_results.image_pipe_callbacks.begin(),
-                apply_results.image_pipe_callbacks.end(),
-                std::back_inserter(update_results.present1_callbacks));
-      apply_results.image_pipe_callbacks.clear();
-      std::move(apply_results.present2_infos.begin(), apply_results.present2_infos.end(),
-                std::back_inserter(update_results.present2_infos));
-      apply_results.present2_infos.clear();
+      {
+        // Present1 callbacks.
+        auto itr = apply_results.present1_callbacks.begin();
+        while (itr != apply_results.present1_callbacks.end()) {
+          update_results.present1_callbacks.push_back({session_id, std::move(*itr)});
+          ++itr;
+        }
+        apply_results.present1_callbacks.clear();
+      }
+      {
+        // ImagePipe Present callbacks.
+        auto itr = apply_results.image_pipe_callbacks.begin();
+        while (itr != apply_results.image_pipe_callbacks.end()) {
+          update_results.present1_callbacks.push_back({session_id, std::move(*itr)});
+          ++itr;
+        }
+        apply_results.image_pipe_callbacks.clear();
+      }
+      {
+        // Present2 callbacks.
+        auto itr = apply_results.present2_infos.begin();
+        while (itr != apply_results.present2_infos.end()) {
+          update_results.present2_infos.push_back({session_id, std::move(*itr)});
+          ++itr;
+        }
+        apply_results.present2_infos.clear();
+      }
     }
 
     if (apply_results.needs_render) {

@@ -43,6 +43,13 @@ class DelegatingFrameScheduler : public FrameScheduler {
   void SetRenderContinuously(bool render_continuously) override;
 
   // |FrameScheduler|
+  // Calls SetOnUpdateFailedCallbackForSession() immediately if a FrameScheduler has been set;
+  // otherwise defers the call until one has been set.
+  void SetOnUpdateFailedCallbackForSession(
+      SessionId session,
+      FrameScheduler::OnSessionUpdateFailedCallback update_failed_callback) override;
+
+  // |FrameScheduler|
   // Calls ScheduleUpdateForSession() immediately if a FrameScheduler has been set; otherwise defers
   // the call until one has been set.
   void ScheduleUpdateForSession(zx::time presentation_time, SessionId session_id) override;
@@ -59,6 +66,11 @@ class DelegatingFrameScheduler : public FrameScheduler {
   // otherwise defers the call until one has been set.
   void SetOnFramePresentedCallbackForSession(SessionId session,
                                              OnFramePresentedCallback callback) override;
+
+  // |FrameScheduler|
+  // Calls ClearCallbacksForSession() immediately if a FrameScheduler has been set;
+  // otherwise defers the call until one has been set.
+  void ClearCallbacksForSession(SessionId session_id) override;
 
   // Sets the frame scheduler, which triggers any pending callbacks. This method cannot be called
   // twice, or called with a null ptr.

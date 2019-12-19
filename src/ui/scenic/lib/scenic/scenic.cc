@@ -45,6 +45,10 @@ void Scenic::SetFrameScheduler(const std::shared_ptr<scheduling::FrameScheduler>
 
 void Scenic::CloseSession(scheduling::SessionId session_id) {
   sessions_.erase(session_id);
+
+  if (frame_scheduler_) {
+    frame_scheduler_->ClearCallbacksForSession(session_id);
+  }
   if (view_focuser_registry_) {
     view_focuser_registry_->UnregisterViewFocuser(session_id);
   }
@@ -68,8 +72,8 @@ void Scenic::CreateSession(fidl::InterfaceRequest<fuchsia::ui::scenic::Session> 
 }
 
 void Scenic::CreateSession2(fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
-                           fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener,
-                           fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser) {
+                            fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener,
+                            fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser) {
   RunAfterInitialized([this, session_request = std::move(session_request),
                        listener = std::move(listener),
                        view_focuser = std::move(view_focuser)]() mutable {
@@ -82,14 +86,16 @@ void Scenic::CreateSessionImmediately(
     fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
     fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener,
     fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser) {
+  const SessionId session_id = next_session_id_++;
+  auto destroy_session_function = [this, session_id](auto ...) { CloseSession(session_id); };
+
   auto session = std::make_unique<scenic_impl::Session>(
-      next_session_id_++, std::move(session_request), std::move(listener));
+      session_id, std::move(session_request), std::move(listener), destroy_session_function);
+  FXL_DCHECK(session_id == session->id());
 
   session->SetFrameScheduler(frame_scheduler_);
 
-  const SessionId session_id = session->id();
-  session->set_binding_error_handler(
-      [this, session_id](zx_status_t status) { CloseSession(session_id); });
+  session->set_binding_error_handler(destroy_session_function);
 
   // Give each installed System an opportunity to install a CommandDispatcher in
   // the newly-created Session.
@@ -97,7 +103,7 @@ void Scenic::CreateSessionImmediately(
   for (size_t i = 0; i < System::TypeId::kMaxSystems; ++i) {
     if (auto& system = systems_[i]) {
       dispatchers[i] =
-          system->CreateCommandDispatcher(CommandDispatcherContext(this, session.get()));
+          system->CreateCommandDispatcher(CommandDispatcherContext(session.get(), session_id));
     }
   }
   session->SetCommandDispatchers(std::move(dispatchers));

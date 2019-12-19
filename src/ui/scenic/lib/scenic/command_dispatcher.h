@@ -22,9 +22,9 @@ using OnFramePresentedCallback =
 // without directly exposing the Session.
 class CommandDispatcherContext {
  public:
-  explicit CommandDispatcherContext(Scenic* scenic, Session* session);
+  explicit CommandDispatcherContext(Session* session);
 
-  explicit CommandDispatcherContext(Scenic* scenic, Session* session, SessionId id);
+  CommandDispatcherContext(Session* session, SessionId id);
 
   CommandDispatcherContext(CommandDispatcherContext&& context);
 
@@ -38,10 +38,7 @@ class CommandDispatcherContext {
     return session_id_;
   }
 
-  void KillSession();
-
  private:
-  Scenic* const scenic_;
   Session* const session_;
   const SessionId session_id_;
 };
@@ -70,11 +67,11 @@ class TempSessionDelegate : public CommandDispatcher {
  public:
   explicit TempSessionDelegate(CommandDispatcherContext context);
 
-  virtual void Present(uint64_t presentation_time, std::vector<zx::event> acquire_fences,
+  virtual bool Present(uint64_t presentation_time, std::vector<zx::event> acquire_fences,
                        std::vector<zx::event> release_fences,
                        fuchsia::ui::scenic::Session::PresentCallback callback) = 0;
 
-  virtual void Present2(zx_time_t requested_presentation_time,
+  virtual bool Present2(zx_time_t requested_presentation_time,
                         std::vector<zx::event> acquire_fences,
                         std::vector<zx::event> release_fences) = 0;
 
@@ -83,8 +80,6 @@ class TempSessionDelegate : public CommandDispatcher {
       scheduling::FrameScheduler::GetFuturePresentationInfosCallback return_callback) = 0;
 
   virtual void SetOnFramePresentedCallback(OnFramePresentedCallback callback) = 0;
-
-  virtual void KillSession() = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(TempSessionDelegate);
