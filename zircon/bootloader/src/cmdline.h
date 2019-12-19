@@ -22,7 +22,4 @@ uint32_t cmdline_get_uint32(const char* key, uint32_t _default);
 // obtain the entire commandline as a string
 size_t cmdline_to_string(char* ptr, size_t max);
 
-// append any load option arguments to the command line
-void cmdline_append_load_options(void);
-
 #endif  // ZIRCON_BOOTLOADER_SRC_CMDLINE_H_

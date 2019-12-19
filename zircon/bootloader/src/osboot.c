@@ -12,7 +12,6 @@
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
-#include <utf_conversion.h>
 #include <xefi.h>
 #include <zircon/boot/netboot.h>
 #include <zircon/compiler.h>
@@ -26,7 +25,7 @@
 
 #include "bootbyte.h"
 
-#define DEFAULT_TIMEOUT 10
+#define DEFAULT_TIMEOUT 3
 
 #define KBUFSIZE (32 * 1024 * 1024)
 #define RBUFSIZE (512 * 1024 * 1024)
@@ -363,9 +362,6 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
     cmdline_set("xdc.mmio", tmp);
   }
 
-  // Prepend any EFI app command line arguments
-  cmdline_append_load_options();
-
   // Load the cmdline
   size_t csz = 0;
   char* cmdline_file = xefi_load_file(L"cmdline", &csz, 0);
@@ -460,7 +456,7 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
   void* kernel_b = NULL;
   unsigned ktype_b = IMAGE_INVALID;
 
-  struct {
+  const struct {
     const char16_t* wfilename;
     const char* filename;
     uint8_t guid_value[GPT_GUID_LEN];
@@ -478,56 +474,6 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
       {NULL, NULL, GUID_ZIRCON_B_VALUE, GUID_ZIRCON_B_NAME, &kernel_b, &ksz_b, &ktype_b},
   };
   unsigned i;
-
-  // Check for command-line overrides for files
-  const char* zircon_a_filename = cmdline_get("bootloader.zircon-a", NULL);
-  if (zircon_a_filename != NULL) {
-    static uint16_t zircon_a_wfilename[128];
-    size_t wfilename_converted_size = sizeof(zircon_a_wfilename);
-    if (utf8_to_utf16((const uint8_t*)zircon_a_filename, strlen(zircon_a_filename),
-                      zircon_a_wfilename, &wfilename_converted_size) == ZX_OK) {
-      if (wfilename_converted_size >= sizeof(zircon_a_wfilename)) {
-        printf("Warning: bootloader.zircon-a string truncated\n");
-        wfilename_converted_size = sizeof(zircon_a_wfilename) - sizeof(uint16_t);
-      }
-      zircon_a_wfilename[wfilename_converted_size / sizeof(uint16_t)] = 0;
-      boot_list[0].wfilename = zircon_a_wfilename;
-      boot_list[0].filename = zircon_a_filename;
-      printf("Using zircon-a=%s\n", zircon_a_filename);
-    }
-  }
-  const char* zircon_b_filename = cmdline_get("bootloader.zircon-b", NULL);
-  if (zircon_b_filename != NULL) {
-    static uint16_t zircon_b_wfilename[128];
-    size_t wfilename_converted_size = sizeof(zircon_b_wfilename);
-    if (utf8_to_utf16((const uint8_t*)zircon_b_filename, strlen(zircon_b_filename),
-                      zircon_b_wfilename, &wfilename_converted_size) == ZX_OK) {
-      if (wfilename_converted_size >= sizeof(zircon_b_wfilename)) {
-        printf("Warning: bootloader.zircon-b string truncated\n");
-        wfilename_converted_size = sizeof(zircon_b_wfilename) - sizeof(uint16_t);
-      }
-      zircon_b_wfilename[wfilename_converted_size / sizeof(uint16_t)] = 0;
-      boot_list[1].wfilename = zircon_b_wfilename;
-      boot_list[1].filename = zircon_b_filename;
-      printf("Using zircon-b=%s\n", zircon_b_filename);
-    }
-  }
-  const char* zircon_r_filename = cmdline_get("bootloader.zircon-r", NULL);
-  if (zircon_r_filename != NULL) {
-    static uint16_t zircon_r_wfilename[128];
-    size_t wfilename_converted_size = sizeof(zircon_r_wfilename);
-    if (utf8_to_utf16((const uint8_t*)zircon_r_filename, strlen(zircon_r_filename),
-                      zircon_r_wfilename, &wfilename_converted_size) == ZX_OK) {
-      if (wfilename_converted_size >= sizeof(zircon_r_wfilename)) {
-        printf("Warning: bootloader.zircon-r string truncated\n");
-        wfilename_converted_size = sizeof(zircon_r_wfilename) - sizeof(uint16_t);
-      }
-      zircon_r_wfilename[wfilename_converted_size / sizeof(uint16_t)] = 0;
-      boot_list[2].wfilename = zircon_r_wfilename;
-      boot_list[2].filename = zircon_r_filename;
-      printf("Using zircon-r=%s\n", zircon_r_filename);
-    }
-  }
 
   // Look for ZIRCON-A/B/R partitions
   for (i = 0; i < sizeof(boot_list) / sizeof(*boot_list); i++) {
