@@ -50,6 +50,7 @@ DIMENSIONS = [
     'cflags',
     'cflags_c',
     'cflags_cc',
+    'ldflags',
 ]
 
 
@@ -78,7 +79,7 @@ def main():
             description='Compares C/C++ compilation flags between the GN and ZN builds')
     parser.add_argument('--build-dir',
                         help='Path to the GN build dir',
-                        required=True)
+                        default=os.path.join(FUCHSIA_ROOT, 'out', 'default'))
     parser.add_argument('--type',
                         help='Type of target',
                         choices=Type.all(),
