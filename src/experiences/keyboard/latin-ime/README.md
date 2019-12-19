@@ -1,1 +1,0 @@
-Latin Software IME
