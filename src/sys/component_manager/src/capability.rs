@@ -7,10 +7,10 @@ use {
         error::ModelError,
         moniker::{AbsoluteMoniker, ChildMoniker},
     },
+    async_trait::async_trait,
     cm_rust::*,
     failure::Fail,
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
-    futures::future::BoxFuture,
     std::collections::HashSet,
 };
 
@@ -156,17 +156,19 @@ impl FrameworkCapability {
 /// between the primary `CapabilityProvider and the client for the purpose of
 /// logging and testing. A `CapabilityProvider` is typically provided by a
 /// corresponding `Hook` in response to the `RouteCapability` event.
+/// A capability provider is used exactly once as a result of exactly one route.
+#[async_trait]
 pub trait CapabilityProvider: Send + Sync {
     // Called to bind a server end of a zx::Channel to the provided capability.
     // If the capability is a directory, then |flags|, |open_mode| and |relative_path|
     // will be propagated along to open the appropriate directory.
-    fn open(
-        &self,
+    async fn open(
+        self: Box<Self>,
         flags: u32,
         open_mode: u32,
         relative_path: String,
         server_end: zx::Channel,
-    ) -> BoxFuture<Result<(), ModelError>>;
+    ) -> Result<(), ModelError>;
 }
 
 /// A capability being routed from a component.

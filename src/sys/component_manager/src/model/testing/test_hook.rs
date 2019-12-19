@@ -13,6 +13,7 @@ use {
             realm::Realm,
         },
     },
+    async_trait::async_trait,
     directory_broker,
     fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fuchsia_io::DirectoryMarker,
@@ -366,9 +367,12 @@ impl HubInjectionCapabilityProvider {
     ) -> Self {
         HubInjectionCapabilityProvider { abs_moniker, relative_path, intercepted_capability }
     }
+}
 
-    pub async fn open_async(
-        &self,
+#[async_trait]
+impl CapabilityProvider for HubInjectionCapabilityProvider {
+    async fn open(
+        self: Box<Self>,
         flags: u32,
         open_mode: u32,
         relative_path: String,
@@ -400,18 +404,6 @@ impl HubInjectionCapabilityProvider {
         );
 
         Ok(())
-    }
-}
-
-impl CapabilityProvider for HubInjectionCapabilityProvider {
-    fn open(
-        &self,
-        flags: u32,
-        open_mode: u32,
-        relative_path: String,
-        server_chan: zx::Channel,
-    ) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(self.open_async(flags, open_mode, relative_path, server_chan))
     }
 }
 

@@ -13,6 +13,7 @@ use {
             testing::{routing_test_helpers::*, test_helpers::*},
         },
     },
+    async_trait::async_trait,
     cm_rust::*,
     failure::Error,
     fidl::endpoints::ServerEnd,
@@ -45,9 +46,12 @@ async fn use_framework_service() {
         pub fn new(scope_moniker: AbsoluteMoniker, host: MockRealmCapabilityHost) -> Self {
             Self { scope_moniker, host }
         }
+    }
 
-        pub async fn open_async(
-            &self,
+    #[async_trait]
+    impl CapabilityProvider for MockRealmCapabilityProvider {
+        async fn open(
+            self: Box<Self>,
             _flags: u32,
             _open_mode: u32,
             _relative_path: String,
@@ -65,18 +69,6 @@ async fn use_framework_service() {
                 }
             });
             Ok(())
-        }
-    }
-
-    impl CapabilityProvider for MockRealmCapabilityProvider {
-        fn open(
-            &self,
-            flags: u32,
-            open_mode: u32,
-            relative_path: String,
-            server_chan: zx::Channel,
-        ) -> BoxFuture<Result<(), ModelError>> {
-            Box::pin(self.open_async(flags, open_mode, relative_path, server_chan))
         }
     }
 

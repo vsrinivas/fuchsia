@@ -11,6 +11,7 @@ use {
             hooks::{Event, EventPayload, EventType, Hook},
         },
     },
+    async_trait::async_trait,
     fidl::endpoints::{create_request_stream, ClientEnd, ServerEnd},
     fidl_fuchsia_test_breakpoints as fbreak, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{future::BoxFuture, lock::Mutex, StreamExt},
@@ -93,27 +94,28 @@ impl BreakpointCapabilityProvider {
         &self,
         stream: fbreak::BreakpointSystemRequestStream,
         root_realm_created_receiver: Option<InvocationReceiver>,
-    ) -> Result<(), ModelError> {
+    ) {
         let breakpoint_registry = self.breakpoint_registry.clone();
         fasync::spawn(async move {
             serve_system(stream, breakpoint_registry, root_realm_created_receiver).await;
         });
-        Ok(())
     }
 }
 
+#[async_trait]
 impl CapabilityProvider for BreakpointCapabilityProvider {
-    fn open(
-        &self,
+    async fn open(
+        self: Box<Self>,
         _flags: u32,
         _open_mode: u32,
         _relative_path: String,
         server_chan: zx::Channel,
-    ) -> BoxFuture<Result<(), ModelError>> {
+    ) -> Result<(), ModelError> {
         let stream = ServerEnd::<fbreak::BreakpointSystemMarker>::new(server_chan)
             .into_stream()
             .expect("could not convert channel into stream");
-        Box::pin(async move { self.serve_async(stream, None) })
+        self.serve_async(stream, None);
+        Ok(())
     }
 }
 
@@ -129,21 +131,20 @@ impl ExternalCapabilityProvider {
     }
 }
 
+#[async_trait]
 impl CapabilityProvider for ExternalCapabilityProvider {
-    fn open(
-        &self,
+    async fn open(
+        self: Box<Self>,
         _flags: u32,
         _open_mode: u32,
         _relative_path: String,
         server_chan: zx::Channel,
-    ) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(async move {
-            self.proxy
-                .open(server_chan)
-                .await
-                .expect("failed to invoke CapabilityProvider::Open over FIDL");
-            Ok(())
-        })
+    ) -> Result<(), ModelError> {
+        self.proxy
+            .open(server_chan)
+            .await
+            .expect("failed to invoke CapabilityProvider::Open over FIDL");
+        Ok(())
     }
 }
 

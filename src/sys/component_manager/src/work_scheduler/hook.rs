@@ -14,6 +14,7 @@ use {
             WorkScheduler, WORK_SCHEDULER_CAPABILITY_PATH, WORK_SCHEDULER_CONTROL_CAPABILITY_PATH,
         },
     },
+    async_trait::async_trait,
     failure::{format_err, Error},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
@@ -137,11 +138,11 @@ impl WorkSchedulerControlCapabilityProvider {
     /// Service `open` invocation via an event loop that dispatches FIDL operations to
     /// `work_scheduler`.
     async fn open_async(
-        work_scheduler: Arc<WorkScheduler>,
+        self,
         mut stream: fsys::WorkSchedulerControlRequestStream,
     ) -> Result<(), Error> {
         while let Some(request) = stream.try_next().await? {
-            let work_scheduler = work_scheduler.clone();
+            let work_scheduler = self.work_scheduler.clone();
             match request {
                 fsys::WorkSchedulerControlRequest::GetBatchPeriod { responder, .. } => {
                     let mut result = work_scheduler.get_batch_period().await;
@@ -162,27 +163,26 @@ impl WorkSchedulerControlCapabilityProvider {
     }
 }
 
+#[async_trait]
 impl CapabilityProvider for WorkSchedulerControlCapabilityProvider {
     /// Spawn an event loop to service `WorkScheduler` FIDL operations.
-    fn open(
-        &self,
+    async fn open(
+        self: Box<Self>,
         _flags: u32,
         _open_mode: u32,
         _relative_path: String,
         server_end: zx::Channel,
-    ) -> BoxFuture<Result<(), ModelError>> {
+    ) -> Result<(), ModelError> {
         let server_end = ServerEnd::<fsys::WorkSchedulerControlMarker>::new(server_end);
         let stream: fsys::WorkSchedulerControlRequestStream = server_end.into_stream().unwrap();
-        let work_scheduler = self.work_scheduler.clone();
         fasync::spawn(async move {
-            let result = Self::open_async(work_scheduler, stream).await;
+            let result = self.open_async(stream).await;
             if let Err(e) = result {
                 // TODO(markdittmer): Set an epitaph to indicate this was an unexpected error.
                 warn!("WorkSchedulerCapabilityProvider.open failed: {}", e);
             }
         });
-
-        Box::pin(async { Ok(()) })
+        Ok(())
     }
 }
 
@@ -229,15 +229,16 @@ impl WorkSchedulerCapabilityProvider {
     }
 }
 
+#[async_trait]
 impl CapabilityProvider for WorkSchedulerCapabilityProvider {
     /// Spawn an event loop to service `WorkScheduler` FIDL operations.
-    fn open(
-        &self,
+    async fn open(
+        self: Box<Self>,
         _flags: u32,
         _open_mode: u32,
         _relative_path: String,
         server_end: zx::Channel,
-    ) -> BoxFuture<Result<(), ModelError>> {
+    ) -> Result<(), ModelError> {
         let server_end = ServerEnd::<fsys::WorkSchedulerMarker>::new(server_end);
         let stream: fsys::WorkSchedulerRequestStream = server_end.into_stream().unwrap();
         let work_scheduler = self.work_scheduler.clone();
@@ -249,7 +250,6 @@ impl CapabilityProvider for WorkSchedulerCapabilityProvider {
                 warn!("WorkSchedulerCapabilityProvider.open failed: {}", e);
             }
         });
-
-        Box::pin(async { Ok(()) })
+        Ok(())
     }
 }

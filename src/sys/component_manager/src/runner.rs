@@ -10,6 +10,7 @@ use {
             runner::Runner,
         },
     },
+    async_trait::async_trait,
     cm_rust::CapabilityName,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
@@ -77,9 +78,12 @@ impl RunnerCapabilityProvider {
     pub fn new(runner: Arc<dyn Runner + Sync + Send>) -> Self {
         RunnerCapabilityProvider { runner }
     }
+}
 
-    async fn open_async(
-        &self,
+#[async_trait]
+impl CapabilityProvider for RunnerCapabilityProvider {
+    async fn open(
+        self: Box<Self>,
         _flags: u32,
         _open_mode: u32,
         _relative_path: String,
@@ -102,18 +106,6 @@ impl RunnerCapabilityProvider {
             }
         });
         Ok(())
-    }
-}
-
-impl CapabilityProvider for RunnerCapabilityProvider {
-    fn open(
-        &self,
-        flags: u32,
-        open_mode: u32,
-        relative_path: String,
-        server_chan: zx::Channel,
-    ) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(self.open_async(flags, open_mode, relative_path, server_chan))
     }
 }
 
@@ -202,7 +194,8 @@ mod tests {
         // target URL.
         let mock_runner = Arc::new(MockRunner::new());
         mock_runner.add_failing_url("xxx://failing");
-        let provider = RunnerCapabilityProvider { runner: Arc::clone(&mock_runner) as Arc<_> };
+        let provider =
+            Box::new(RunnerCapabilityProvider { runner: Arc::clone(&mock_runner) as Arc<_> });
 
         // Open a connection to the provider.
         let (client, server) = fidl::endpoints::create_proxy::<fsys::ComponentRunnerMarker>()?;

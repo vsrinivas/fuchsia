@@ -13,6 +13,7 @@ use {
             realm::Realm,
         },
     },
+    async_trait::async_trait,
     cm_rust::CapabilityPath,
     failure::{Error, ResultExt},
     fidl::endpoints::ServerEnd,
@@ -104,10 +105,7 @@ impl SystemControllerCapabilityProvider {
         Self { model }
     }
 
-    async fn open_async(
-        mut stream: SystemControllerRequestStream,
-        model: Arc<Model>,
-    ) -> Result<(), Error> {
+    async fn open_async(self, mut stream: SystemControllerRequestStream) -> Result<(), Error> {
         while let Some(request) = stream.try_next().await? {
             // TODO(jmatt) There is the potential for a race here. If
             // the thing that called SystemController.Shutdown is a
@@ -124,8 +122,8 @@ impl SystemControllerCapabilityProvider {
                 // disappear.
                 SystemControllerRequest::Shutdown { responder } => {
                     Realm::register_action(
-                        model.root_realm.clone(),
-                        model.clone(),
+                        self.model.root_realm.clone(),
+                        self.model.clone(),
                         Action::Shutdown,
                     )
                     .await
@@ -149,25 +147,25 @@ impl SystemControllerCapabilityProvider {
     }
 }
 
+#[async_trait]
 impl CapabilityProvider for SystemControllerCapabilityProvider {
-    fn open(
-        &self,
+    async fn open(
+        self: Box<Self>,
         _flags: u32,
         _open_mode: u32,
         _relative_path: String,
         server_end: zx::Channel,
-    ) -> BoxFuture<Result<(), ModelError>> {
+    ) -> Result<(), ModelError> {
         let server_end = ServerEnd::<SystemControllerMarker>::new(server_end);
         let stream: SystemControllerRequestStream = server_end.into_stream().unwrap();
-        let model_copy = self.model.clone();
         fasync::spawn(async move {
-            let result = Self::open_async(stream, model_copy).await;
+            let result = self.open_async(stream).await;
             if let Err(e) = result {
                 warn!("SystemController.open failed: {}", e);
             }
         });
 
-        Box::pin(async { Ok(()) })
+        Ok(())
     }
 }
 
@@ -247,11 +245,14 @@ mod tests {
         test.model.bind(&realm_a.abs_moniker).await.expect("could not bind to a");
 
         // Wire up connections to SystemController
-        let sys_controller = SystemControllerCapabilityProvider::new(test.model.clone());
+        let sys_controller = Box::new(SystemControllerCapabilityProvider::new(test.model.clone()));
         let (client_channel, server_channel) =
             endpoints::create_endpoints::<fsys::SystemControllerMarker>()
                 .expect("failed creating channel endpoints");
-        sys_controller.open(0, 0, "".to_string(), server_channel.into_channel());
+        sys_controller
+            .open(0, 0, "".to_string(), server_channel.into_channel())
+            .await
+            .expect("failed to open capability");
         let controller_proxy =
             client_channel.into_proxy().expect("failed converting endpoint into proxy");
 

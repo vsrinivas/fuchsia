@@ -14,6 +14,7 @@ use {
             realm::Realm,
         },
     },
+    async_trait::async_trait,
     cm_fidl_validator,
     cm_rust::{CapabilityPath, FidlIntoNative},
     failure::Error,
@@ -44,9 +45,12 @@ impl RealmCapabilityProvider {
     pub fn new(scope_moniker: AbsoluteMoniker, host: RealmCapabilityHost) -> Self {
         Self { scope_moniker, host }
     }
+}
 
-    pub async fn open_async(
-        &self,
+#[async_trait]
+impl CapabilityProvider for RealmCapabilityProvider {
+    async fn open(
+        self: Box<Self>,
         _flags: u32,
         _open_mode: u32,
         _relative_path: String,
@@ -64,18 +68,6 @@ impl RealmCapabilityProvider {
             }
         });
         Ok(())
-    }
-}
-
-impl CapabilityProvider for RealmCapabilityProvider {
-    fn open(
-        &self,
-        flags: u32,
-        open_mode: u32,
-        relative_path: String,
-        server_chan: zx::Channel,
-    ) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(self.open_async(flags, open_mode, relative_path, server_chan))
     }
 }
 

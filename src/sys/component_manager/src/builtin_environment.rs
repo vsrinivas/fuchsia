@@ -159,9 +159,7 @@ impl BuiltinEnvironment {
                 // The receiver is held inside this closure as a `mut Option`. Since we only
                 // want to use this receiver once and drop it after, take the receiver.
                 let receiver = receiver.take();
-                breakpoint_capability_provider
-                    .serve_async(stream, receiver)
-                    .expect("failed to serve debug breakpoint capability");
+                breakpoint_capability_provider.serve_async(stream, receiver);
             });
         }
 

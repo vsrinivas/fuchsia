@@ -10,6 +10,7 @@ use {
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
         },
     },
+    async_trait::async_trait,
     cm_rust::CapabilityPath,
     failure::Error,
     fidl::endpoints::ServerEnd,
@@ -115,14 +116,15 @@ impl VmexCapabilityProvider {
     }
 }
 
+#[async_trait]
 impl CapabilityProvider for VmexCapabilityProvider {
-    fn open(
-        &self,
+    async fn open(
+        self: Box<Self>,
         _flags: u32,
         _open_mode: u32,
         _relative_path: String,
         server_end: zx::Channel,
-    ) -> BoxFuture<Result<(), ModelError>> {
+    ) -> Result<(), ModelError> {
         let server_end = ServerEnd::<fsec::VmexMarker>::new(server_end);
         let stream: fsec::VmexRequestStream = server_end.into_stream().unwrap();
         fasync::spawn(async move {
@@ -132,7 +134,7 @@ impl CapabilityProvider for VmexCapabilityProvider {
             }
         });
 
-        Box::pin(async { Ok(()) })
+        Ok(())
     }
 }
 

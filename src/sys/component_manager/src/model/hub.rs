@@ -15,6 +15,7 @@ use {
             routing_facade::RoutingFacade,
         },
     },
+    async_trait::async_trait,
     cm_rust::ComponentDecl,
     directory_broker,
     fidl::endpoints::ServerEnd,
@@ -50,9 +51,12 @@ impl HubCapabilityProvider {
     ) -> Self {
         HubCapabilityProvider { abs_moniker, relative_path, hub_inner }
     }
+}
 
-    async fn open_async(
-        &self,
+#[async_trait]
+impl CapabilityProvider for HubCapabilityProvider {
+    async fn open(
+        self: Box<Self>,
         flags: u32,
         open_mode: u32,
         relative_path: String,
@@ -71,18 +75,6 @@ impl HubCapabilityProvider {
             .await?;
 
         Ok(())
-    }
-}
-
-impl CapabilityProvider for HubCapabilityProvider {
-    fn open(
-        &self,
-        flags: u32,
-        open_mode: u32,
-        relative_path: String,
-        server_chan: zx::Channel,
-    ) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(self.open_async(flags, open_mode, relative_path, server_chan))
     }
 }
 

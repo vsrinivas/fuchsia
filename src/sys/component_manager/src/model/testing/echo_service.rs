@@ -4,6 +4,7 @@
 
 use {
     crate::{capability::*, model::error::ModelError, model::hooks::*},
+    async_trait::async_trait,
     cm_rust::*,
     fidl::endpoints::ServerEnd,
     fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream},
@@ -30,14 +31,15 @@ impl EchoCapabilityProvider {
     }
 }
 
+#[async_trait]
 impl CapabilityProvider for EchoCapabilityProvider {
-    fn open(
-        &self,
+    async fn open(
+        self: Box<Self>,
         _flags: u32,
         _open_mode: u32,
         _relative_path: String,
         server_end: zx::Channel,
-    ) -> BoxFuture<Result<(), ModelError>> {
+    ) -> Result<(), ModelError> {
         let server_end = ServerEnd::<EchoMarker>::new(server_end);
         let mut stream: EchoRequestStream = server_end.into_stream().unwrap();
         fasync::spawn(async move {
@@ -48,7 +50,7 @@ impl CapabilityProvider for EchoCapabilityProvider {
             }
         });
 
-        Box::pin(async { Ok(()) })
+        Ok(())
     }
 }
 
