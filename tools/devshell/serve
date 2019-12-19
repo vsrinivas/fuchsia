@@ -4,9 +4,10 @@
 # found in the LICENSE file.
 
 ### start `pave` and `serve-updates` in a single command
-## usage: fx serve [-v] [-l host[:port]]
+## usage: fx serve [-v] [-l host[:port]] [-a target]
 ##   -l host:port for "pm serve" to listen on
 ##   -v enable more verbose output (must be first argument)
+##   -a target ipv6 address for "fx pave --no-bind"
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 fx-config-read
@@ -22,6 +23,7 @@ kill_child_processes() {
 trap kill_child_processes EXIT
 
 serve_args=()
+pave_args=()
 
 fx-standard-switches "$@"
 set -- "${FX_ARGV[@]}"
@@ -35,6 +37,10 @@ while (($#)); do
       serve_args+=("$1" "$2")
       shift
       ;;
+    -a)
+      pave_args+=("--no-bind" "$1" "$2")
+      shift
+      ;;
     *)
       echo 2>&1 "Unknown argument: \"${1}\" ignored"
       ;;
@@ -42,7 +48,7 @@ while (($#)); do
   shift
 done
 
-fx-command-exec pave &
+fx-command-exec pave "${pave_args[@]}"&
 pave_pid=$!
 fx-command-exec serve-updates "${serve_args[@]}" &
 serve_pid=$!

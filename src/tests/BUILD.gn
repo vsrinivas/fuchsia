@@ -16,6 +16,7 @@ group("tests") {
     "disable_syscalls:tests",
     "limited_netsvc:tests",
     "oom:tests",
+    "pave_no_bind:tests",
     "reboot:tests",
   ]
 }

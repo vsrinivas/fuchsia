@@ -489,6 +489,29 @@ void netboot_recv(void* data, size_t len, bool is_mcast, const ip6_addr_t* daddr
       udp6_send(buf, sizeof(nbmsg) + dlen, saddr, sport, dport, false);
       break;
     }
+    case NB_GET_ADVERT: {
+      // Only respond when netbootloader is enabled, so that paving behavior is same as the
+      // broadcasted advertisement.
+      if (!netbootloader()) {
+        break;
+      }
+
+      struct {
+        nbmsg msg;
+        char data[MAX_ADVERTISE_DATA_LEN];
+      } packet_data;
+      nbmsg* msg = &packet_data.msg;
+      msg->magic = NB_MAGIC;
+      msg->cookie = 0;
+      msg->cmd = NB_ADVERTISE;
+      msg->arg = NB_VERSION_CURRENT;
+
+      snprintf(packet_data.data, MAX_ADVERTISE_DATA_LEN, "version=%s;nodename=%s",
+               BOOTLOADER_VERSION, nodename());
+      const size_t data_len = strlen(packet_data.data) + 1;
+      udp6_send(&packet_data, sizeof(nbmsg) + data_len, saddr, sport, dport, false);
+      break;
+    }
     case NB_SHELL_CMD:
       if (!is_mcast) {
         netboot_run_cmd(reinterpret_cast<char*>(msg->data));

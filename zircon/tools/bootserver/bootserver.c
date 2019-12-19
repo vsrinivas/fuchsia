@@ -14,7 +14,9 @@
 #include <inttypes.h>
 #include <libgen.h>
 #include <limits.h>
+#include <net/if.h>
 #include <netinet/in.h>
+#include <poll.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -61,6 +63,7 @@ static char filename_in_flight[PATH_MAX];
 static struct timeval start_time, end_time;
 static bool is_redirected;
 static const char spinner[] = {'|', '/', '-', '\\'};
+static bool no_bind = false;
 
 char* date_string() {
   static char date_buf[80];
@@ -256,7 +259,8 @@ void usage(void) {
       "  --tftp       use the tftp protocol (default)\n"
       "  --nocolor    disable ANSI color (false)\n"
       "  --allow-zedboot-version-mismatch warn on zedboot version mismatch rather than fail\n"
-      "  --fail-fast-if-version-mismatch  error if zedboot version does not match\n",
+      "  --fail-fast-if-version-mismatch  error if zedboot version does not match\n"
+      "  --no-bind    do not bind to bootserver port. Should be used with -a <IPV6>\n",
       appname, DEFAULT_TFTP_BLOCK_SZ, DEFAULT_US_BETWEEN_PACKETS, DEFAULT_TFTP_WIN_SZ);
   exit(1);
 }
@@ -360,6 +364,7 @@ int main(int argc, char** argv) {
   bool fail_fast = false;
   bool fail_fast_if_version_mismatch = false;
   struct in6_addr allowed_addr;
+  int32_t allowed_scope_id = -1;
   struct sockaddr_in6 addr;
   char tmp[INET6_ADDRSTRLEN];
   char cmdline[4096];
@@ -541,6 +546,18 @@ int main(int argc, char** argv) {
         fprintf(stderr, "'-a' option requires a valid ipv6 address\n");
         return -1;
       }
+
+      char* token = strchr(argv[2], '/');
+      if (token) {
+        allowed_scope_id = atoi(token + 1);
+        char temp_ifname[IF_NAMESIZE] = "";
+        if (!token[1] || if_indextoname(allowed_scope_id, temp_ifname) == NULL) {
+          fprintf(stderr, "%s: invalid interface specified\n", argv[2]);
+          return -1;
+        }
+        argv[2][token - argv[2]] = '\0';
+      }
+
       if (inet_pton(AF_INET6, argv[2], &allowed_addr) != 1) {
         fprintf(stderr, "%s: invalid ipv6 address specified\n", argv[2]);
         return -1;
@@ -571,6 +588,8 @@ int main(int argc, char** argv) {
       argv++;
     } else if (!strcmp(argv[1], "--allow-zedboot-version-mismatch")) {
       allow_zedboot_version_mismatch = true;
+    } else if (!strcmp(argv[1], "--no-bind")) {
+      no_bind = true;
     } else if (!strcmp(argv[1], "--")) {
       while (argc > 2) {
         size_t len = strlen(argv[2]);
@@ -608,26 +627,42 @@ int main(int argc, char** argv) {
     log("Board name set to [%s]", board_name);
   }
 
-  memset(&addr, 0, sizeof(addr));
-  addr.sin6_family = AF_INET6;
-  addr.sin6_port = htons(NB_ADVERT_PORT);
-
   s = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
-  if (!IN6_IS_ADDR_UNSPECIFIED(&allowed_addr) || nodename) {
-    setsockopt(s, SOL_SOCKET, SO_REUSEPORT, &(int){1}, sizeof 1);
-  }
   if (s < 0) {
     log("cannot create socket %d", s);
     return -1;
   }
-  if (bind(s, (void*)&addr, sizeof(addr)) < 0) {
-    log("cannot bind to %s %d: %s\nthere may be another bootserver running\n", sockaddr_str(&addr),
-        errno, strerror(errno));
-    close(s);
-    return -1;
+
+  if (!IN6_IS_ADDR_UNSPECIFIED(&allowed_addr) || nodename) {
+    setsockopt(s, SOL_SOCKET, SO_REUSEPORT, &(int){1}, sizeof 1);
   }
 
-  log("listening on %s", sockaddr_str(&addr));
+  memset(&addr, 0, sizeof(addr));
+  addr.sin6_family = AF_INET6;
+  if (no_bind) {
+    if (IN6_IS_ADDR_UNSPECIFIED(&allowed_addr)) {
+      log("need to specify ipv6 address using -a for --no-bind");
+      return -1;
+    }
+    if (allowed_scope_id == -1) {
+      log("need to specify interface number in -a for --no-bind.");
+      log("Ex: -a fe80::5054:4d:fe12:3456/4 \nHint: use netls to get the address");
+      return -1;
+    }
+    memcpy(&addr.sin6_addr, &allowed_addr, sizeof(struct in6_addr));
+    addr.sin6_port = htons(NB_SERVER_PORT);
+    addr.sin6_scope_id = allowed_scope_id;
+    log("Sending request to %s", sockaddr_str(&addr));
+  } else {
+    addr.sin6_port = htons(NB_ADVERT_PORT);
+    if (bind(s, (void*)&addr, sizeof(addr)) < 0) {
+      log("cannot bind to %s %d: %s\nthere may be another bootserver running\n",
+          sockaddr_str(&addr), errno, strerror(errno));
+      close(s);
+      return -1;
+    }
+    log("listening on %s", sockaddr_str(&addr));
+  }
 
   for (;;) {
     struct sockaddr_in6 ra;
@@ -635,14 +670,48 @@ int main(int argc, char** argv) {
     char buf[4096];
     nbmsg* msg = (void*)buf;
     rlen = sizeof(ra);
+
+    if (no_bind) {
+      // Send request to device to get the advertisement instead of waiting for the
+      // broadcasted advertisement.
+      msg->magic = NB_MAGIC;
+      msg->cmd = NB_GET_ADVERT;
+
+      ssize_t send_result = sendto(s, buf, sizeof(nbmsg), 0, (struct sockaddr*)&addr, sizeof(addr));
+      if (send_result != sizeof(nbmsg)) {
+        if (fail_fast) {
+          close(s);
+          return -1;
+        }
+        sleep(RETRY_DELAY_SEC);
+        continue;
+      }
+
+      // Ensure that response is received.
+      struct pollfd read_fd[1];
+      read_fd[0].fd = s;
+      read_fd[0].events = POLLIN;
+      int ret = poll(read_fd, 1, 1000);
+      if (ret < 0 || !(read_fd[0].revents & POLLIN)) {
+        // No response received. Resend request after delay.
+        if (fail_fast) {
+          close(s);
+          return -1;
+        }
+        sleep(RETRY_DELAY_SEC);
+        continue;
+      }
+    }
+
     ssize_t r = recvfrom(s, buf, sizeof(buf) - 1, 0, (void*)&ra, &rlen);
     if (r < 0) {
       log("socket read error %s", strerror(errno));
       close(s);
       return -1;
     }
-    if ((size_t)r < sizeof(nbmsg))
+    if ((size_t)r < sizeof(nbmsg)) {
       continue;
+    }
     if (!IN6_IS_ADDR_LINKLOCAL(&ra.sin6_addr)) {
       log("ignoring non-link-local message");
       continue;

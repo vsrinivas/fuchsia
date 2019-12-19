@@ -1,0 +1,69 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+
+group("tests") {
+  testonly = true
+
+  deps = []
+
+  if (host_os == "linux") {
+    deps += [ ":pave_no_bind_tests($host_toolchain)" ]
+  }
+}
+
+if (is_linux) {
+  go_library("lib") {
+    testonly = true
+
+    name = "fuchsia.googlesource.com/tests/pave_no_bind"
+
+    deps = [
+      "//src/testing/qemu",
+    ]
+  }
+
+  group("main_zbi") {
+    metadata = {
+      test_runtime_deps = [ "$root_build_dir/fuchsia.zbi" ]
+    }
+  }
+
+  copy("copy_netsvc_tools") {
+    visibility = [ ":*" ]
+
+    sources = [
+      "$zircon_root_build_dir/tools/bootserver",
+    ]
+    outputs = [
+      "$root_out_dir/test_data/netsvc_tools/{{source_file_part}}",
+    ]
+  }
+
+  group("netsvc_user_tools") {
+    deps = [
+      ":copy_netsvc_tools",
+    ]
+
+    metadata = {
+      test_runtime_deps = [ "$root_out_dir/test_data/netsvc_tools/bootserver" ]
+    }
+  }
+
+  # TODO(scottmg): Colocate this test with netsvc when it moves out of //zircon.
+  go_test("pave_no_bind_tests") {
+    gopackages = [ "fuchsia.googlesource.com/tests/pave_no_bind" ]
+    deps = [
+      ":lib",
+      "//tools/net/netutil",
+      "//tools/net/tftp",
+    ]
+    non_go_deps = [
+      ":main_zbi",
+      ":netsvc_user_tools",
+    ]
+  }
+}
