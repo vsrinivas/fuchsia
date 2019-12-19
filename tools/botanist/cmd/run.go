@@ -21,10 +21,12 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/botanist/target"
 	"go.fuchsia.dev/fuchsia/tools/lib/command"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/runner"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 
 	"github.com/google/subcommands"
+	"golang.org/x/crypto/ssh"
 )
 
 const (
@@ -203,6 +205,14 @@ type logWriter struct {
 	target Target
 }
 
+func createSyslogger(ctx context.Context, nodename string, config *ssh.ClientConfig) (*botanist.Syslogger, error) {
+	client, err := sshutil.ConnectToNode(ctx, nodename, config)
+	if err != nil {
+		return nil, err
+	}
+	return botanist.NewSyslogger(client)
+}
+
 func (r *RunCommand) setupTargets(ctx context.Context, imgs []bootserver.Image, targets []Target) *targetSetup {
 	var syslogs, serialLogs []*logWriter
 	errs := make(chan error, len(targets))
@@ -210,7 +220,7 @@ func (r *RunCommand) setupTargets(ctx context.Context, imgs []bootserver.Image, 
 	var setupErr error
 
 	for i, t := range targets {
-		var syslog io.ReadWriteCloser
+		var syslog *os.File
 		var err error
 		if r.syslogFile != "" {
 			syslogFile := r.syslogFile
@@ -271,7 +281,7 @@ func (r *RunCommand) setupTargets(ctx context.Context, imgs []bootserver.Image, 
 		}
 
 		wg.Add(1)
-		go func(t Target, syslog io.Writer, zirconArgs []string) {
+		go func(t Target, syslog *os.File, zirconArgs []string) {
 			defer wg.Done()
 			if err := t.Start(ctx, imgs, zirconArgs); err != nil {
 				errs <- err
@@ -296,19 +306,26 @@ func (r *RunCommand) setupTargets(ctx context.Context, imgs []bootserver.Image, 
 					errs <- err
 					return
 				}
-				client, err := sshutil.ConnectToNode(ctx, nodename, config)
-				if err != nil {
-					errs <- err
-					return
-				}
-				syslogger, err := botanist.NewSyslogger(client)
+				syslogger, err := createSyslogger(ctx, nodename, config)
 				if err != nil {
 					errs <- err
 					return
 				}
 				go func() {
-					syslogger.Stream(ctx, syslog)
-					syslogger.Close()
+					var err error
+					for osmisc.FileIsOpen(syslog) {
+						err = syslogger.Stream(ctx, syslog)
+						syslogger.Close()
+						if err == nil {
+							break
+						}
+						logger.Debugf(ctx, "syslog interrupted: %v", err)
+						syslogger, err = createSyslogger(ctx, nodename, config)
+						if err != nil {
+							logger.Errorf(ctx, "failed to create new syslog session: %v", err)
+							break
+						}
+					}
 				}()
 			}
 		}(t, syslog, zirconArgs)

@@ -27,3 +27,8 @@ func CopyFile(src, dest string) error {
 	_, err = io.Copy(out, in)
 	return err
 }
+
+// FileIsOpen returns whether the given file is open or not.
+func FileIsOpen(f *os.File) bool {
+	return f.Fd() != ^uintptr(0)
+}
