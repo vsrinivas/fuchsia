@@ -168,6 +168,14 @@ void Bind::DeviceMakeVisible(zx_device_t* device) {
   return;
 }
 
+void Bind::DeviceSuspendComplete(zx_device_t* device, zx_status_t status, uint8_t out_state) {
+  if (device != kFakeDevice) {
+    bad_device_ = true;
+  }
+  suspend_complete_called_ = true;
+  return;
+}
+
 zx_status_t Bind::DeviceGetProtocol(const zx_device_t* device, uint32_t proto_id, void* protocol) {
   if (device != kFakeParent) {
     bad_device_ = true;
@@ -239,6 +247,13 @@ void device_unbind_reply(zx_device_t* device) {
     return;
   }
   fake_ddk::Bind::Instance()->DeviceRemove(device);
+}
+
+__EXPORT void device_suspend_reply(zx_device_t* dev, zx_status_t status, uint8_t out_state) {
+  if (!fake_ddk::Bind::Instance()) {
+    return;
+  }
+  return fake_ddk::Bind::Instance()->DeviceSuspendComplete(dev, status, out_state);
 }
 
 __EXPORT

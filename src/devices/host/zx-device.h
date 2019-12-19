@@ -68,10 +68,8 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
     return Dispatch(ops->suspend, ZX_ERR_NOT_SUPPORTED, flags);
   }
 
-  zx_status_t SuspendNewOp(uint8_t requested_state, bool enable_wake, uint8_t suspend_reason,
-                           uint8_t* out_state) {
-    return Dispatch(ops->suspend_new, ZX_ERR_NOT_SUPPORTED, requested_state, enable_wake,
-                    suspend_reason, out_state);
+  void SuspendNewOp(uint8_t requested_state, bool enable_wake, uint8_t suspend_reason) {
+    Dispatch(ops->suspend_new, requested_state, enable_wake, suspend_reason);
   }
 
   zx_status_t ResumeOp(uint32_t flags) {
@@ -151,6 +149,8 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
   fit::callback<void(zx_status_t)> removal_cb;
 
   fit::callback<void(zx_status_t)> unbind_cb;
+
+  fit::callback<void(zx_status_t, uint8_t)> suspend_cb;
 
   // most devices implement a single
   // protocol beyond the base device protocol

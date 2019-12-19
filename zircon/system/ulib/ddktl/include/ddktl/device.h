@@ -12,6 +12,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddktl/device-internal.h>
+#include <ddktl/suspend-txn.h>
 #include <ddktl/unbind-txn.h>
 
 // ddk::Device<D, ...>
@@ -55,9 +56,7 @@
 // | ddk::Messageable        | zx_status_t DdkMessage(fidl_msg_t* msg,            |
 // |                         |                        fidl_txn_t* txn)            |
 // |                         |                                                    |
-// | ddk::SuspendableNew     | zx_status_t DdkSuspendNew(uint8_t requested_state, |
-// |                         |                           bool enable_wake,        |
-// |                         |                           uint8_t* out_state)      |
+// | ddk::SuspendableNew     | void DdkSuspendNew(ddk::SuspendTxn txn)            |
 // |                         |                                                    |
 // | ddk::ResumableNew       | zx_status_t DdkResumeNew(uint8_t requested_state,  |
 // |                         |                          uint8_t* out_state)       |
@@ -96,7 +95,7 @@
 // // Define our device type using a type alias.
 // class MyDevice;
 // using DeviceType = ddk::Device<MyDevice, ddk::Openable, ddk::Closable,
-//                                          ddk::Readable, ddk::Unbindable>;
+//                                          ddk::Readable, ddk::Unbindable, ddk::SuspendableNew>;
 //
 // class MyDevice : public DeviceType {
 //   public:
@@ -114,6 +113,7 @@
 //     zx_status_t DdkClose(uint32_t flags);
 //     zx_status_t DdkRead(void* buf, size_t count, zx_off_t off, size_t* actual);
 //     void DdkUnbindNew(ddk::UnbindTxn txn);
+//     void DdkSuspendNew(ddk::SuspendTxn txn);
 //     void DdkRelease();
 // };
 //
@@ -292,10 +292,11 @@ class SuspendableNew : public base_mixin {
   }
 
  private:
-  static zx_status_t Suspend_New(void* ctx, uint8_t requested_state, bool enable_wake,
-                                 uint8_t suspend_reason, uint8_t* out_state) {
-    return static_cast<D*>(ctx)->DdkSuspendNew(requested_state, enable_wake, suspend_reason,
-                                               out_state);
+  static void Suspend_New(void* ctx, uint8_t requested_state, bool enable_wake,
+                          uint8_t suspend_reason) {
+    auto dev = static_cast<D*>(ctx);
+    SuspendTxn txn(dev->zxdev(), requested_state, enable_wake, suspend_reason);
+    static_cast<D*>(ctx)->DdkSuspendNew(std::move(txn));
   }
 };
 

@@ -309,21 +309,25 @@ void PlatformBus::DdkRelease() { delete this; }
 
 typedef struct {
   void* pbus_instance;
+  zx_device_t* sys_root;
 } sysdev_suspend_t;
 
-static zx_status_t sys_device_suspend(void* ctx, uint8_t requested_state, bool enable_wake,
-                                      uint8_t suspend_reason, uint8_t* out_state) {
+static void sys_device_suspend(void* ctx, uint8_t requested_state, bool enable_wake,
+                               uint8_t suspend_reason) {
   auto* p = reinterpret_cast<sysdev_suspend_t*>(ctx);
   auto* pbus = reinterpret_cast<class PlatformBus*>(p->pbus_instance);
 
   if (pbus != nullptr) {
     pbus_sys_suspend_t suspend_cb = pbus->suspend_cb();
     if (suspend_cb.callback != nullptr) {
-      return suspend_cb.callback(suspend_cb.ctx, requested_state, enable_wake, suspend_reason,
-                                 out_state);
+      uint8_t out_state = 0;
+      zx_status_t status = suspend_cb.callback(suspend_cb.ctx, requested_state, enable_wake,
+                                               suspend_reason, &out_state);
+      device_suspend_reply(p->sys_root, status, out_state);
+      return;
     }
   }
-  return ZX_ERR_NOT_SUPPORTED;
+  device_suspend_reply(p->sys_root, ZX_OK, 0);
 }
 
 static void sys_device_release(void* ctx) {
@@ -383,8 +387,7 @@ zx_status_t PlatformBus::Create(zx_device_t* parent, const char* name, zx::chann
   args.ctx = suspend_buf;
 
   // Create /dev/sys.
-  zx_device_t* sys_root;
-  auto status = device_add(parent, &args, &sys_root);
+  auto status = device_add(parent, &args, &suspend_buf->sys_root);
   if (status != ZX_OK) {
     return status;
   } else {
@@ -393,7 +396,7 @@ zx_status_t PlatformBus::Create(zx_device_t* parent, const char* name, zx::chann
 
   // Add child of sys for the board driver to bind to.
   std::unique_ptr<platform_bus::PlatformBus> bus(
-      new (&ac) platform_bus::PlatformBus(sys_root, std::move(items_svc)));
+      new (&ac) platform_bus::PlatformBus(suspend_buf->sys_root, std::move(items_svc)));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -409,7 +412,7 @@ zx_status_t PlatformBus::Create(zx_device_t* parent, const char* name, zx::chann
   // may create us without a root resource, and thus without the iommu
   // handle.
   if (bus->iommu_handle_.is_valid()) {
-    status = InitCpuTrace(sys_root, bus->iommu_handle_.get());
+    status = InitCpuTrace(suspend_buf->sys_root, bus->iommu_handle_.get());
     if (status != ZX_OK) {
       // This is not fatal. Error message already printed.
     }

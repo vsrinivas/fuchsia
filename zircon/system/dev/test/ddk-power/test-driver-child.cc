@@ -54,8 +54,7 @@ class TestPowerDriverChild : public DeviceType, public TestDevice::Interface {
   }
 
   void DdkRelease() { delete this; }
-  zx_status_t DdkSuspendNew(uint8_t requested_state, bool enable_wake, uint8_t suspend_reason,
-                            uint8_t* out_state);
+  void DdkSuspendNew(ddk::SuspendTxn txn);
   zx_status_t DdkSetPerformanceState(uint32_t requested_state, uint32_t* out_state);
   zx_status_t DdkResumeNew(uint8_t requested_state, uint8_t* out_state);
   zx_status_t DdkConfigureAutoSuspend(bool enable, uint8_t deepest_sleep_state);
@@ -68,12 +67,10 @@ class TestPowerDriverChild : public DeviceType, public TestDevice::Interface {
   uint8_t current_suspend_reason_ = 0;
 };
 
-zx_status_t TestPowerDriverChild::DdkSuspendNew(uint8_t requested_state, bool enable_wake,
-                                                uint8_t suspend_reason, uint8_t* out_state) {
-  current_power_state_ = requested_state;
-  *out_state = requested_state;
-  current_suspend_reason_ = suspend_reason;
-  return ZX_OK;
+void TestPowerDriverChild::DdkSuspendNew(ddk::SuspendTxn txn) {
+  current_power_state_ = txn.requested_state();
+  current_suspend_reason_ = txn.suspend_reason();
+  txn.Reply(ZX_OK, txn.requested_state());
 }
 
 zx_status_t TestPowerDriverChild::DdkSetPerformanceState(uint32_t requested_state,

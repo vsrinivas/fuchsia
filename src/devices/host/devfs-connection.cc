@@ -242,8 +242,8 @@ void DevfsConnection::GetDevicePowerCaps(GetDevicePowerCapsCompleter::Sync compl
   for (size_t i = 0; i < fuchsia_device_MAX_DEVICE_POWER_STATES; i++) {
     response.dpstates[i] = states[i];
   }
-  completer.Reply(::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Result::WithResponse(
-      &response));
+  completer.Reply(
+      ::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Result::WithResponse(&response));
 };
 
 void DevfsConnection::SetPerformanceState(uint32_t requested_state,
@@ -277,11 +277,10 @@ void DevfsConnection::UpdatePowerStateMapping(
   zx_status_t status = dev->SetSystemPowerStateMapping(states_mapping);
   if (status != ZX_OK) {
     return completer.Reply(
-        ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Result::WithErr(
-            &status));
+        ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Result::WithErr(&status));
   }
-  completer.Reply(::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Result::WithResponse(
-      &response));
+  completer.Reply(
+      ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Result::WithResponse(&response));
 }
 
 void DevfsConnection::GetPowerStateMapping(GetPowerStateMappingCompleter::Sync completer) {
@@ -293,15 +292,17 @@ void DevfsConnection::GetPowerStateMapping(GetPowerStateMappingCompleter::Sync c
   for (size_t i = 0; i < fuchsia_device_manager_MAX_SYSTEM_POWER_STATES; i++) {
     response.mapping[i] = mapping[i];
   }
-  completer.Reply(::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Result::WithResponse(
-      &response));
+  completer.Reply(
+      ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Result::WithResponse(&response));
 };
 
 void DevfsConnection::Suspend(::llcpp::fuchsia::device::DevicePowerState requested_state,
                               SuspendCompleter::Sync completer) {
-  ::llcpp::fuchsia::device::DevicePowerState out_state;
-  zx_status_t status = devhost_device_suspend_new(dev, requested_state, &out_state);
-  completer.Reply(status, out_state);
+  dev->suspend_cb = [completer = completer.ToAsync()](zx_status_t status,
+                                                      uint8_t out_state) mutable {
+    completer.Reply(status, static_cast<::llcpp::fuchsia::device::DevicePowerState>(out_state));
+  };
+  devhost_device_suspend_new(dev, requested_state);
 }
 
 void DevfsConnection::Resume(::llcpp::fuchsia::device::DevicePowerState requested_state,
@@ -309,19 +310,17 @@ void DevfsConnection::Resume(::llcpp::fuchsia::device::DevicePowerState requeste
   ::llcpp::fuchsia::device::DevicePowerState out_state;
   zx_status_t status = devhost_device_resume_new(this->dev, requested_state, &out_state);
   if (status != ZX_OK) {
-    return completer.Reply(
-        ::llcpp::fuchsia::device::Controller_Resume_Result::WithErr(&status));
+    return completer.Reply(::llcpp::fuchsia::device::Controller_Resume_Result::WithErr(&status));
   }
 
   ::llcpp::fuchsia::device::Controller_Resume_Response response;
   response.out_state = out_state;
-  completer.Reply(
-      ::llcpp::fuchsia::device::Controller_Resume_Result::WithResponse(&response));
+  completer.Reply(::llcpp::fuchsia::device::Controller_Resume_Result::WithResponse(&response));
 }
 
-void DevfsConnection::HandleRpc(fbl::RefPtr<DevfsConnection>&& conn,
-                                async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                                zx_status_t status, const zx_packet_signal_t* signal) {
+void DevfsConnection::HandleRpc(fbl::RefPtr<DevfsConnection>&& conn, async_dispatcher_t* dispatcher,
+                                async::WaitBase* wait, zx_status_t status,
+                                const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     log(ERROR, "devhost: devfs conn wait error: %d\n", status);
     return;
@@ -329,7 +328,8 @@ void DevfsConnection::HandleRpc(fbl::RefPtr<DevfsConnection>&& conn,
 
   if (signal->observed & ZX_CHANNEL_READABLE) {
     status = conn->ReadMessage([&conn](fidl_msg_t* msg, Connection* txn) {
-      return devhost_fidl_handler(msg, txn->Txn(), conn.get());
+      zx_status_t s = devhost_fidl_handler(msg, txn->Txn(), conn.get());
+      return s;
     });
     if (status == ZX_OK) {
       // Stop accepting new requests once we are unbound.
@@ -392,7 +392,6 @@ zx_status_t DevfsConnection::ReadMessage(FidlDispatchFunction dispatch) {
   if (r != ZX_OK && r != ZX_ERR_ASYNC && !this->reply_called) {
     // The transaction wasn't handed back to us, so we must manually remove reference count to
     // prevent leak.
-    log(TRACE, "devhost: Reply not called! Manually decrementing refcount.\n");
     ZX_ASSERT(Release() == false);
     dev->outstanding_transactions--;
   }

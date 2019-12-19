@@ -4,10 +4,11 @@
 
 #pragma once
 
+#include <lib/sync/completion.h>
+
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <fbl/array.h>
-#include <lib/sync/completion.h>
 
 #include "fidl-helper.h"
 
@@ -104,6 +105,9 @@ class Bind {
   // Internal fake implementation of ddk functionality.
   virtual void DeviceMakeVisible(zx_device_t* dev);
 
+  // Internal fake implementation of ddk functionaility.
+  virtual void DeviceSuspendComplete(zx_device_t* device, zx_status_t status, uint8_t out_state);
+
   // Internal fake implementation of ddk functionality.
   virtual zx_status_t DeviceGetProtocol(const zx_device_t* device, uint32_t proto_id,
                                         void* protocol);
@@ -123,6 +127,7 @@ class Bind {
   bool remove_called_ = false;
   sync_completion_t remove_called_sync_;
   bool make_visible_called_ = false;
+  bool suspend_complete_called_ = false;
 
   int add_metadata_calls_ = 0;
   size_t metadata_length_ = 0;

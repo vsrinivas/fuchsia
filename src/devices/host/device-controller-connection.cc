@@ -56,12 +56,13 @@ void DeviceControllerConnection::Init(InitCompleter::Sync completer) {
 }
 
 void DeviceControllerConnection::Suspend(uint32_t flags, SuspendCompleter::Sync completer) {
-  zx_status_t r;
-  {
-    ApiAutoLock lock;
-    r = devhost_device_system_suspend(this->dev(), flags);
-  }
-  completer.Reply(r);
+  ZX_ASSERT(this->dev()->suspend_cb == nullptr);
+  this->dev()->suspend_cb = [completer = completer.ToAsync()](zx_status_t status,
+                                                              uint8_t out_state) mutable {
+    completer.Reply(status);
+  };
+  ApiAutoLock lock;
+  devhost_device_system_suspend(this->dev(), flags);
 }
 
 void DeviceControllerConnection::Resume(uint32_t target_system_state,

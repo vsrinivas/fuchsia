@@ -233,6 +233,14 @@ void device_async_remove(zx_device_t* device);
 // This does not necessarily need to be called from within the |unbind| hook.
 void device_unbind_reply(zx_device_t* device);
 
+// This is used to signal completion of the device's |suspend_new| hook.
+// Need not necessarily need to be called from within the |suspend_new| hook.
+// |status| is the status of the suspend.
+// If |status| is success, the |out_state| is same as the requested_state that is
+// sent to the suspend_new hook. If |status| is failure, the |out_state| is the
+// state that the device can go into.
+void device_suspend_reply(zx_device_t* device, zx_status_t status, uint8_t out_state);
+
 // Retrieves a profile handle into |out_profile| from the scheduler for the
 // given |priority| and |name|. Ownership of |out_profile| is given to the
 // caller. See fuchsia.scheduler.ProfileProvider for more detail.

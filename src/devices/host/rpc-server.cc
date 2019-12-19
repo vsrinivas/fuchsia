@@ -551,9 +551,8 @@ zx_status_t devhost_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie)
   if (status != ZX_ERR_NOT_SUPPORTED) {
     return status;
   }
-
-  devmgr::Transaction transaction(txn);
   auto* conn = static_cast<DevfsConnection*>(cookie);
+  devmgr::Transaction transaction(txn);
   bool dispatched = llcpp::fuchsia::device::Controller::TryDispatch(conn, msg, &transaction);
   status = transaction.Status();
   if (dispatched) {

@@ -483,6 +483,24 @@ zx_status_t devhost_device_remove(const fbl::RefPtr<zx_device_t>& dev,
   return ZX_OK;
 }
 
+void devhost_device_suspend_reply(const fbl::RefPtr<zx_device_t>& dev, zx_status_t status,
+                                  uint8_t out_state) REQ_DM_LOCK {
+  // There are 3 references when this function gets called in repsonse to
+  // selective suspend on a device. 1. When we create a connection in ReadMessage
+  // 2. When we wrap the txn in devmgr::Transaction.
+  // 3. When we make the suspend txn asynchronous using ToAsync()
+  if (dev->outstanding_transactions > 3) {
+    ZX_PANIC("device: %p(%s): cannot reply to suspend, currently has %d outstanding transactions\n",
+             dev.get(), dev->name, dev->outstanding_transactions.load());
+  }
+
+  if (dev->suspend_cb) {
+    dev->suspend_cb(status, out_state);
+  } else {
+    ZX_PANIC("device: %p(%s): cannot reply to suspend, no callback set\n", dev.get(), dev->name);
+  }
+}
+
 void devhost_device_unbind_reply(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
   if (dev->flags & REMOVAL_BAD_FLAGS) {
     ZX_PANIC("device: %p(%s): cannot reply to unbind, bad flags: (%s)\n", dev.get(), dev->name,
@@ -652,8 +670,7 @@ zx_status_t devhost_device_get_dev_power_state_from_mapping(
   return ZX_OK;
 }
 
-zx_status_t devhost_device_system_suspend(const fbl::RefPtr<zx_device>& dev,
-                                          uint32_t flags) REQ_DM_LOCK {
+void devhost_device_system_suspend(const fbl::RefPtr<zx_device>& dev, uint32_t flags) REQ_DM_LOCK {
   if (dev->auto_suspend_configured()) {
     dev->ops->configure_auto_suspend(dev->ctx, false,
                                      fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D0);
@@ -664,14 +681,14 @@ zx_status_t devhost_device_system_suspend(const fbl::RefPtr<zx_device>& dev,
   // If new suspend hook is implemented, prefer that.
   if (dev->ops->suspend_new) {
     ::llcpp::fuchsia::device::SystemPowerStateInfo new_state_info;
-    uint8_t out_state;
     uint8_t suspend_reason = DEVICE_SUSPEND_REASON_SELECTIVE_SUSPEND;
     ApiAutoRelock relock;
     status = devhost_device_get_dev_power_state_from_mapping(dev, flags, &new_state_info,
                                                              &suspend_reason);
     if (status == ZX_OK) {
-      status = dev->ops->suspend_new(dev->ctx, static_cast<uint8_t>(new_state_info.dev_state),
-                                     new_state_info.wakeup_enable, suspend_reason, &out_state);
+      dev->ops->suspend_new(dev->ctx, static_cast<uint8_t>(new_state_info.dev_state),
+                            new_state_info.wakeup_enable, suspend_reason);
+      return;
     }
   } else if (dev->ops->suspend) {
     // Invoke suspend hook otherwise.
@@ -682,11 +699,11 @@ zx_status_t devhost_device_system_suspend(const fbl::RefPtr<zx_device>& dev,
   enum_lock_release();
 
   // default_suspend() returns ZX_ERR_NOT_SUPPORTED
-  if ((status != ZX_OK) && (status != ZX_ERR_NOT_SUPPORTED)) {
-    return status;
+  if (status == ZX_ERR_NOT_SUPPORTED) {
+    status = ZX_OK;
   }
 
-  return ZX_OK;
+  dev->suspend_cb(status, 0);
 }
 
 zx_status_t devhost_device_resume(const fbl::RefPtr<zx_device>& dev,
@@ -717,35 +734,30 @@ zx_status_t devhost_device_resume(const fbl::RefPtr<zx_device>& dev,
   return ZX_OK;
 }
 
-zx_status_t devhost_device_suspend_new(const fbl::RefPtr<zx_device>& dev,
-                                       ::llcpp::fuchsia::device::DevicePowerState requested_state,
-                                       ::llcpp::fuchsia::device::DevicePowerState* out_state) {
+void devhost_device_suspend_new(const fbl::RefPtr<zx_device>& dev,
+                                ::llcpp::fuchsia::device::DevicePowerState requested_state) {
   if (dev->auto_suspend_configured()) {
     log(INFO, "Devhost: Suspending %s failed: AutoSuspend is enabled\n", dev->name);
-    *out_state = ::llcpp::fuchsia::device::DevicePowerState::DEVICE_POWER_STATE_D0;
-    return ZX_ERR_NOT_SUPPORTED;
+    dev->suspend_cb(
+        ZX_ERR_NOT_SUPPORTED,
+        static_cast<uint8_t>(::llcpp::fuchsia::device::DevicePowerState::DEVICE_POWER_STATE_D0));
+    return;
   }
   if (!(dev->IsPowerStateSupported(requested_state))) {
-    *out_state = ::llcpp::fuchsia::device::DevicePowerState::DEVICE_POWER_STATE_D0;
-    return ZX_ERR_INVALID_ARGS;
+    dev->suspend_cb(
+        ZX_ERR_INVALID_ARGS,
+        static_cast<uint8_t>(::llcpp::fuchsia::device::DevicePowerState::DEVICE_POWER_STATE_D0));
+    return;
   }
-  zx_status_t status = ZX_OK;
 
   if (dev->ops->suspend_new) {
-    uint8_t raw_out;
-    status = dev->ops->suspend_new(dev->ctx, static_cast<uint8_t>(requested_state),
-                                   DEVICE_SUSPEND_REASON_SELECTIVE_SUSPEND,
-                                   false /* wake_configured */, &raw_out);
-    *out_state = static_cast<::llcpp::fuchsia::device::DevicePowerState>(raw_out);
-    // We expect 1 outstanding transaction (and a copy of it) for the suspend operation itself.
-    if (status == ZX_OK && dev->outstanding_transactions > 2) {
-      ZX_PANIC(
-          "device: %p(%s): cannot reply to suspend, "
-          "currently has %d outstanding transactions\n",
-          dev.get(), dev->name, dev->outstanding_transactions.load());
-    }
+    dev->ops->suspend_new(dev->ctx, static_cast<uint8_t>(requested_state),
+                          DEVICE_SUSPEND_REASON_SELECTIVE_SUSPEND, false /* wake_configured */);
+    return;
   }
-  return status;
+  dev->suspend_cb(
+      ZX_ERR_NOT_SUPPORTED,
+      static_cast<uint8_t>(::llcpp::fuchsia::device::DevicePowerState::DEVICE_POWER_STATE_D0));
 }
 
 zx_status_t devhost_device_set_performance_state(const fbl::RefPtr<zx_device>& dev,

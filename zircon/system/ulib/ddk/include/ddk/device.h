@@ -243,20 +243,17 @@ typedef struct zx_protocol_device {
   // Bus drivers and platform drivers like acpi will find this information useful to
   // issue any system calls or save the reboot reason.
   //
-  // On success, the out_state is same as the requested_state.
-  // On failure, the device is not suspended and the out_state is the sleep state
-  // that the device can go into. For ex: Devices(buses) cannot go into a deeper
-  // sleep state when its children are suspended and configured to wake up from
-  // their sleep states.
+  // The driver should put the device into the requested_state and call **device_suspend_reply()**
+  // on itself. device_suspend_reply() will take in two parameters: status of the suspend operation
+  // and an out_state. If status is success, the out_state is same as requested_state.
+  // If status is failure, out_state is the low power state the device can go into.
   //
-  // This hook assumes that the drivers are aware of their current state.
-  //
-  // This hook will only be executed on the devhost's main thread.
+  // This hook assumes that the drivers are aware of their current state. This hook will only
+  // be executed on the devhost's main thread.
   //
   // TODO(ravoorir): Remove the old suspend when all the drivers are moved to
   // new suspend and rename suspend_new to suspend.
-  zx_status_t (*suspend_new)(void* ctx, uint8_t requested_state, bool enable_wake,
-                             uint8_t suspend_reason, uint8_t* out_state);
+  void (*suspend_new)(void* ctx, uint8_t requested_state, bool enable_wake, uint8_t suspend_reason);
 
   //@ ## resume_new
   // The resume_new hook is used for resuming a device from a non-working sleep
