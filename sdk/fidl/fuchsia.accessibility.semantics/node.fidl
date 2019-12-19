@@ -56,10 +56,10 @@ table Attributes {
 enum CheckedState {
     /// Used when no data is entered or the element is not a check box.
     NONE = 1;
-    /// True
-    TRUE = 2;
-    /// False
-    FALSE = 3;
+    /// Checked
+    CHECKED = 2;
+    /// Unchecked
+    UNCHECKED = 3;
     /// Indeterminate state
     MIXED = 4;
 };
