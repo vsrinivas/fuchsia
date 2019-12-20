@@ -587,9 +587,10 @@ void Session::DispatchNotifyModules(const debug_ipc::NotifyModules& notify) {
 void Session::DispatchProcessStarting(const debug_ipc::NotifyProcessStarting& notify) {
   if (notify.type == debug_ipc::NotifyProcessStarting::Type::kLimbo) {
     SendSessionNotification(SessionObserver::NotificationType::kProcessEnteredLimbo,
-      "Process %s (%" PRIu64 ") crashed and is waiting to be attached.\n"
-      "Type \"status\" for more information.",
-      notify.name.c_str(), notify.koid);
+                            "Process %s (%" PRIu64
+                            ") crashed and is waiting to be attached.\n"
+                            "Type \"status\" for more information.",
+                            notify.name.c_str(), notify.koid);
     return;
   }
 

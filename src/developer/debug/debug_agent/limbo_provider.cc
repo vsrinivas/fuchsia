@@ -174,6 +174,7 @@ zx_status_t LimboProvider::ReleaseProcess(zx_koid_t process_koid) {
   if (result.is_err())
     return result.err();
 
+  limbo_.erase(process_koid);
   return ZX_OK;
 }
 

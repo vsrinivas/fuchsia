@@ -250,6 +250,13 @@ void DebugAgent::OnDetach(const debug_ipc::DetachRequest& request, debug_ipc::De
       break;
     }
     case debug_ipc::TaskType::kProcess: {
+      // First check if the process is waiting on limbo. If so, we release it.
+      auto limbo_it = limbo_provider_->Limbo().find(request.koid);
+      if (limbo_it != limbo_provider_->Limbo().end()) {
+        reply->status = limbo_provider_->ReleaseProcess(request.koid);
+        return;
+      }
+
       auto debug_process = GetDebuggedProcess(request.koid);
       if (debug_process && debug_process->handle().is_valid()) {
         RemoveDebuggedProcess(request.koid);

@@ -101,6 +101,7 @@ class MockLimboProvider : public LimboProvider {
   MockLimboProvider() : LimboProvider(nullptr) {}
 
   const std::map<zx_koid_t, ProcessExceptionMetadata>& Limbo() const override { return limbo_; }
+  const std::vector<zx_koid_t> release_calls() const { return release_calls_; }
 
   bool Valid() const override { return true; }
 
@@ -143,6 +144,17 @@ class MockLimboProvider : public LimboProvider {
     on_enter_limbo_(std::move(processes));
   }
 
+  zx_status_t ReleaseProcess(zx_koid_t process_koid) override {
+    release_calls_.push_back(process_koid);
+
+    auto it = limbo_.find(process_koid);
+    if (it == limbo_.end())
+      return ZX_ERR_NOT_FOUND;
+
+    limbo_.erase(it);
+    return ZX_OK;
+  }
+
  private:
   ProcessExceptionMetadata CopyMetadata(const ProcessExceptionMetadata& metadata) {
     ProcessExceptionMetadata exception = {};
@@ -166,6 +178,7 @@ class MockLimboProvider : public LimboProvider {
   }
 
   std::map<zx_koid_t, ProcessExceptionMetadata> limbo_;
+  std::vector<zx_koid_t> release_calls_;
 };
 
 std::pair<const MockProcessObject*, const MockThreadObject*> GetProcessThread(
@@ -547,6 +560,59 @@ TEST(DebugAgent, OnEnterLimbo) {
     EXPECT_EQ(process_start.koid, proc_object->koid);
     EXPECT_EQ(process_start.component_id, 0u);
     EXPECT_EQ(process_start.name, proc_object->name);
+  }
+}
+
+TEST(DebugAgent, DetachFromLimbo) {
+  auto test_context = CreateTestContext();
+  DebugAgent debug_agent(nullptr, ToSystemProviders(*test_context));
+  debug_agent.Connect(&test_context->stream_backend.stream());
+  RemoteAPI* remote_api = &debug_agent;
+
+  auto [proc_object, thread_object] =
+      GetProcessThread(*test_context->object_provider, "job11-p1", "second-thread");
+
+  // Attempting to detach to a process that doesn't exist should fail.
+  {
+    debug_ipc::DetachRequest request = {};
+    request.type = debug_ipc::TaskType::kProcess;
+    request.koid = proc_object->koid;
+
+    debug_ipc::DetachReply reply = {};
+    remote_api->OnDetach(request, &reply);
+
+    ASSERT_ZX_EQ(reply.status, ZX_ERR_NOT_FOUND);
+    ASSERT_EQ(test_context->limbo_provider->release_calls().size(), 0u);
+  }
+
+  // Adding it should now find it and remove it.
+  test_context->limbo_provider->AppendException(proc_object, thread_object,
+                                                ExceptionType::FATAL_PAGE_FAULT);
+  {
+    debug_ipc::DetachRequest request = {};
+    request.type = debug_ipc::TaskType::kProcess;
+    request.koid = proc_object->koid;
+
+    debug_ipc::DetachReply reply = {};
+    remote_api->OnDetach(request, &reply);
+
+    ASSERT_ZX_EQ(reply.status, ZX_OK);
+    ASSERT_EQ(test_context->limbo_provider->release_calls().size(), 1u);
+    EXPECT_EQ(test_context->limbo_provider->release_calls()[0], proc_object->koid);
+  }
+
+  // This should've remove it from limbo, trying it again should fail.
+  {
+    debug_ipc::DetachRequest request = {};
+    request.type = debug_ipc::TaskType::kProcess;
+    request.koid = proc_object->koid;
+
+    debug_ipc::DetachReply reply = {};
+    remote_api->OnDetach(request, &reply);
+
+    ASSERT_ZX_EQ(reply.status, ZX_ERR_NOT_FOUND);
+    ASSERT_EQ(test_context->limbo_provider->release_calls().size(), 1u);
+    EXPECT_EQ(test_context->limbo_provider->release_calls()[0], proc_object->koid);
   }
 }
 
