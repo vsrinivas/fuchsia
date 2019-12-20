@@ -31,7 +31,7 @@ VK_TEST_F(PaperShapeCacheTest, TestBoundingBox) {
 
     cache.BeginFrame(uploader.get(), frame_number);
 
-    auto& entry = cache.GetBoxMesh(nullptr, 0);
+    const auto& entry = cache.GetBoxMesh(nullptr, 0);
     EXPECT_NE(entry.mesh, MeshPtr());
     EXPECT_EQ(cache.size(), 1U);
 
@@ -65,15 +65,15 @@ VK_TEST_F(PaperShapeCacheTest, TestCaching) {
 
     cache.BeginFrame(uploader.get(), frame_number);
 
-    auto& entry0 = cache.GetRectMesh(3, 3, &planes[0], 1);
+    const auto& entry0 = cache.GetRectMesh(3, 3, &planes[0], 1);
     EXPECT_NE(entry0.mesh, MeshPtr());
     EXPECT_EQ(cache.size(), 1U);
 
-    auto& entry0a = cache.GetRectMesh(3, 3, &planes[0], 1);
+    const auto& entry0a = cache.GetRectMesh(3, 3, &planes[0], 1);
     EXPECT_EQ(entry0.mesh, entry0a.mesh);
     EXPECT_EQ(cache.size(), 1U);
 
-    auto& entry1 = cache.GetRectMesh(3, 3, &planes[1], 1);
+    const auto& entry1 = cache.GetRectMesh(3, 3, &planes[1], 1);
     EXPECT_NE(entry1.mesh, MeshPtr());
     EXPECT_NE(entry1.mesh, entry0.mesh);
 
@@ -95,10 +95,10 @@ VK_TEST_F(PaperShapeCacheTest, TestCaching) {
 
     cache.BeginFrame(uploader.get(), frame_number);
 
-    auto& entry0 = cache.GetRectMesh(3, 3, &planes[0], 1);
+    const auto& entry0 = cache.GetRectMesh(3, 3, &planes[0], 1);
     EXPECT_NE(entry0.mesh, MeshPtr());
 
-    auto& entry2 = cache.GetRectMesh(3, 3, planes, 2);
+    const auto& entry2 = cache.GetRectMesh(3, 3, planes, 2);
     EXPECT_NE(entry2.mesh, MeshPtr());
     EXPECT_NE(entry2.mesh, entry0.mesh);
 
@@ -162,6 +162,80 @@ VK_TEST_F(PaperShapeCacheTest, TestCaching) {
 
     EXPECT_EQ(cache.size(), 0U);
   }
+}
+
+// Test that generated/cached mesh has the expected number of vertices when stencil shadows are
+// are enabled.  This is necessary because be generate different geometry in this case than in other
+// shadow modes.
+VK_TEST_F(PaperShapeCacheTest, TestShadowCaching) {
+  EscherWeakPtr escher = test::GetEscher()->GetWeakPtr();
+
+  PaperRendererConfig config;
+
+  PaperShapeCache cache(escher, config);
+
+  constexpr float kRectWidth = 300.f;
+  constexpr float kRectHeight = 200.f;
+
+  // A rectangle has 6 indices and 4 vertices.
+  constexpr uint32_t kRectIndexCount = 6U;
+  constexpr uint32_t kRectVertexCount = 4U;
+
+  // When rendering a rectangle for shadow volumes, we render 6 rectangles: the original rectangle
+  // plus one for each face of the shadow frustum (4 side faces and one bottom face).
+  constexpr uint32_t kShadowRectIndexCount = kRectIndexCount * 6U;
+  // The shadow volume rect has twice as many vertices: the additional vertices form the rectangle
+  // at the bottom face of the shadow frustum.
+  constexpr uint32_t kShadowRectVertexCount = kRectVertexCount * 2U;
+
+  uint64_t frame_number = 1;
+  {
+    auto frame = escher->NewFrame("PaperShapeCache unit-test", frame_number);
+
+    auto uploader = BatchGpuUploader::New(escher);
+
+    cache.BeginFrame(uploader.get(), frame_number);
+
+    const auto& entry = cache.GetRectMesh(kRectWidth, kRectHeight, nullptr, 0);
+    EXPECT_NE(entry.mesh, MeshPtr());
+    EXPECT_EQ(cache.size(), 1U);
+
+    EXPECT_EQ(entry.num_indices, kRectIndexCount);
+    EXPECT_EQ(entry.num_shadow_volume_indices, 0U);
+    EXPECT_EQ(entry.mesh->num_vertices(), kRectVertexCount);
+
+    uploader->Submit();
+    cache.EndFrame();
+
+    frame->EndFrame(SemaphorePtr(), []() {});
+  }
+
+  config.shadow_type = PaperRendererShadowType::kShadowVolume;
+  cache.SetConfig(config);
+  frame_number = 2;
+  {
+    auto frame = escher->NewFrame("PaperShapeCache unit-test", frame_number);
+
+    auto uploader = BatchGpuUploader::New(escher);
+
+    cache.BeginFrame(uploader.get(), frame_number);
+
+    const auto& entry = cache.GetRectMesh(kRectWidth, kRectHeight, nullptr, 0);
+    EXPECT_NE(entry.mesh, MeshPtr());
+    EXPECT_EQ(cache.size(), 1U);
+
+    EXPECT_EQ(entry.num_indices, kRectIndexCount);
+    EXPECT_EQ(entry.num_shadow_volume_indices, kShadowRectIndexCount);
+    EXPECT_EQ(entry.mesh->num_vertices(), kShadowRectVertexCount);
+
+    uploader->Submit();
+    cache.EndFrame();
+
+    frame->EndFrame(SemaphorePtr(), []() {});
+  }
+
+  escher->vk_device().waitIdle();
+  ASSERT_TRUE(escher->Cleanup());
 }
 
 }  // namespace

@@ -156,11 +156,12 @@ PaperShapeCacheEntry ProcessTriangleMesh2d(IndexedTriangleMesh2d<vec2> mesh,
           MeshAttribute::kBlendWeight1,
       }};
 
+      const uint32_t shadow_volume_index_count = out_mesh.index_count();
       return PaperShapeCacheEntry{
           .mesh = IndexedTriangleMeshUpload(escher, uploader, new_mesh_spec, bounding_box,
                                             std::move(out_mesh)),
           .num_indices = original_index_count,
-          .num_shadow_volume_indices = out_mesh.index_count(),
+          .num_shadow_volume_indices = shadow_volume_index_count,
       };
     } break;
     default:
