@@ -198,21 +198,25 @@ config("release") {
 config("exceptions") {
   cflags_cc = [ "-fexceptions" ]
   cflags_objcc = cflags_cc
+  ldflags = cflags_cc
 }
 
 config("no_exceptions") {
   cflags_cc = [ "-fno-exceptions" ]
   cflags_objcc = cflags_cc
+  ldflags = cflags_cc
 }
 
 config("rtti") {
   cflags_cc = [ "-frtti" ]
   cflags_objcc = cflags_cc
+  ldflags = cflags_cc
 }
 
 config("no_rtti") {
   cflags_cc = [ "-fno-rtti" ]
   cflags_objcc = cflags_cc
+  ldflags = cflags_cc
 }
 
 config("default_include_dirs") {
