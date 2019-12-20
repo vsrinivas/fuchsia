@@ -18,7 +18,7 @@ namespace abr {
 class Client {
  public:
   // Factory create method.
-  static zx_status_t Create(fbl::unique_fd devfs_root, zx::channel svc_root,
+  static zx_status_t Create(fbl::unique_fd devfs_root, const zx::channel& svc_root,
                             std::unique_ptr<abr::Client>* out);
 
   virtual ~Client() = default;
@@ -39,8 +39,7 @@ class Client {
 
 class AstroClient {
  public:
-  static zx_status_t Create(fbl::unique_fd devfs_root, zx::channel svc_root,
-                            std::unique_ptr<abr::Client>* out);
+  static zx_status_t Create(fbl::unique_fd devfs_root, std::unique_ptr<abr::Client>* out);
 };
 
 class SherlockClient {

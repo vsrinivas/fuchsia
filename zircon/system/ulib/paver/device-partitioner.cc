@@ -390,10 +390,10 @@ std::unique_ptr<DevicePartitioner> DevicePartitioner::Create(fbl::unique_fd devf
     block_dev_dup2 = block_dev->duplicate();
   }
   std::unique_ptr<DevicePartitioner> device_partitioner;
-  if ((SherlockPartitioner::Initialize(devfs_root.duplicate(), std::move(block_dev_dup2),
+  if ((AstroPartitioner::Initialize(devfs_root.duplicate(), &device_partitioner) == ZX_OK) ||
+      (As370Partitioner::Initialize(devfs_root.duplicate(), &device_partitioner) == ZX_OK) ||
+      (SherlockPartitioner::Initialize(devfs_root.duplicate(), std::move(block_dev_dup2),
                                        &device_partitioner) == ZX_OK) ||
-      (SkipBlockDevicePartitioner::Initialize(devfs_root.duplicate(), std::move(svc_root),
-                                              &device_partitioner) == ZX_OK) ||
       (CrosDevicePartitioner::Initialize(devfs_root.duplicate(), arch, std::move(block_dev_dup),
                                          &device_partitioner) == ZX_OK) ||
       (EfiDevicePartitioner::Initialize(devfs_root.duplicate(), arch, std::move(block_dev),
@@ -1511,94 +1511,8 @@ zx_status_t SherlockPartitioner::WipePartitionTables() const { return ZX_ERR_NOT
  *                SKIP BLOCK SPECIFIC                 *
  *====================================================*/
 
-zx_status_t SkipBlockDevicePartitioner::Initialize(
-    fbl::unique_fd devfs_root, zx::channel svc_root,
-    std::unique_ptr<DevicePartitioner>* partitioner) {
-  if (!HasSkipBlockDevice(devfs_root)) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  LOG("Successfully initialized SkipBlockDevicePartitioner Device Partitioner\n");
-  *partitioner =
-      WrapUnique(new SkipBlockDevicePartitioner(std::move(devfs_root), std::move(svc_root)));
-  return ZX_OK;
-}
-
-zx_status_t SkipBlockDevicePartitioner::AddPartition(
-    Partition partition_type, std::unique_ptr<PartitionClient>* out_partition) const {
-  ERROR("Cannot add partitions to a skip-block, fixed partition device\n");
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
 zx_status_t SkipBlockDevicePartitioner::FindPartition(
-    Partition partition_type, std::unique_ptr<PartitionClient>* out_partition) const {
-  uint8_t type[GPT_GUID_LEN];
-
-  switch (partition_type) {
-    case Partition::kBootloader: {
-      const uint8_t bootloader_type[GPT_GUID_LEN] = GUID_BOOTLOADER_VALUE;
-      memcpy(type, bootloader_type, GPT_GUID_LEN);
-      break;
-    }
-    case Partition::kZirconA: {
-      const uint8_t zircon_a_type[GPT_GUID_LEN] = GUID_ZIRCON_A_VALUE;
-      memcpy(type, zircon_a_type, GPT_GUID_LEN);
-      break;
-    }
-    case Partition::kZirconB: {
-      const uint8_t zircon_b_type[GPT_GUID_LEN] = GUID_ZIRCON_B_VALUE;
-      memcpy(type, zircon_b_type, GPT_GUID_LEN);
-      break;
-    }
-    case Partition::kZirconR: {
-      const uint8_t zircon_r_type[GPT_GUID_LEN] = GUID_ZIRCON_R_VALUE;
-      memcpy(type, zircon_r_type, GPT_GUID_LEN);
-      break;
-    }
-    case Partition::kVbMetaA:
-    case Partition::kVbMetaB:
-    case Partition::kVbMetaR:
-    case Partition::kABRMeta: {
-      const auto type = [&]() {
-        switch (partition_type) {
-          case Partition::kVbMetaA:
-            return sysconfig::SyncClient::PartitionType::kVerifiedBootMetadataA;
-          case Partition::kVbMetaB:
-            return sysconfig::SyncClient::PartitionType::kVerifiedBootMetadataB;
-          case Partition::kVbMetaR:
-            return sysconfig::SyncClient::PartitionType::kVerifiedBootMetadataR;
-          case Partition::kABRMeta:
-            return sysconfig::SyncClient::PartitionType::kABRMetadata;
-          default:
-            break;
-        }
-        ZX_ASSERT(false);
-      }();
-      std::optional<sysconfig::SyncClient> client;
-      zx_status_t status = sysconfig::SyncClient::Create(devfs_root_, &client);
-      if (status != ZX_OK) {
-        return status;
-      }
-      out_partition->reset(new SysconfigPartitionClient(*std::move(client), type));
-      return ZX_OK;
-    }
-    case Partition::kFuchsiaVolumeManager: {
-      const uint8_t fvm_type[GPT_GUID_LEN] = GUID_FVM_VALUE;
-      memcpy(type, fvm_type, GPT_GUID_LEN);
-      // FVM partition is managed so it should expose a normal block device.
-      zx::channel chan;
-      zx_status_t status = OpenBlockPartition(devfs_root_, nullptr, type, ZX_SEC(5), &chan);
-      if (status != ZX_OK) {
-        return status;
-      }
-
-      out_partition->reset(new BlockPartitionClient(std::move(chan)));
-      return ZX_OK;
-    }
-    default:
-      ERROR("partition_type is invalid!\n");
-      return ZX_ERR_NOT_SUPPORTED;
-  }
-
+    const uint8_t* type, std::unique_ptr<PartitionClient>* out_partition) const {
   zx::channel chan;
   zx_status_t status = OpenSkipBlockPartition(devfs_root_, type, ZX_SEC(5), &chan);
   if (status != ZX_OK) {
@@ -1606,6 +1520,20 @@ zx_status_t SkipBlockDevicePartitioner::FindPartition(
   }
 
   out_partition->reset(new SkipBlockPartitionClient(std::move(chan)));
+  return ZX_OK;
+}
+
+zx_status_t SkipBlockDevicePartitioner::FindFvmPartition(
+    std::unique_ptr<PartitionClient>* out_partition) const {
+  const uint8_t fvm_type[GPT_GUID_LEN] = GUID_FVM_VALUE;
+  // FVM partition is managed so it should expose a normal block device.
+  zx::channel chan;
+  zx_status_t status = OpenBlockPartition(devfs_root_, nullptr, fvm_type, ZX_SEC(5), &chan);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  out_partition->reset(new BlockPartitionClient(std::move(chan)));
   return ZX_OK;
 }
 
@@ -1671,33 +1599,137 @@ zx_status_t SkipBlockDevicePartitioner::WipeFvm() const {
   return result2.ok() ? result2.value().status : result2.status();
 }
 
-zx_status_t SkipBlockDevicePartitioner::InitPartitionTables() const {
-  constexpr std::array<Partition, 4> partitions = {Partition::kZirconA, Partition::kZirconB,
-                                                   Partition::kZirconR,
-                                                   Partition::kFuchsiaVolumeManager};
-
-  zx_status_t status;
-  for (auto partition_type : partitions) {
-    std::unique_ptr<PartitionClient> partition;
-    if ((status = FindPartition(partition_type, &partition)) != ZX_OK) {
-      if (status != ZX_ERR_NOT_FOUND) {
-        ERROR("Failure looking for partition: %s\n", zx_status_get_string(status));
-        return status;
-      }
-
-      LOG("Could not find \"%s\" Partition on device. Attemping to add new partition\n",
-          PartitionName(partition_type));
-
-      if ((status = AddPartition(partition_type, &partition)) != ZX_OK) {
-        ERROR("Failure creating partition: %s\n", zx_status_get_string(status));
-        return status;
-      }
-    }
+zx_status_t AstroPartitioner::Initialize(fbl::unique_fd devfs_root,
+                                         std::unique_ptr<DevicePartitioner>* partitioner) {
+  if (IsBoard(devfs_root, "astro") != ZX_OK) {
+    return ZX_ERR_NOT_SUPPORTED;
   }
-  LOG("Successfully initialized gpt.\n");
+  LOG("Successfully initialized AstroPartitioner Device Partitioner\n");
+  std::unique_ptr<SkipBlockDevicePartitioner> skip_block(
+      new SkipBlockDevicePartitioner(std::move(devfs_root)));
+
+  *partitioner = WrapUnique(new AstroPartitioner(std::move(skip_block)));
   return ZX_OK;
 }
 
-zx_status_t SkipBlockDevicePartitioner::WipePartitionTables() const { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t AstroPartitioner::AddPartition(Partition partition_type,
+                                           std::unique_ptr<PartitionClient>* out_partition) const {
+  ERROR("Cannot add partitions to an astro.\n");
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t AstroPartitioner::FindPartition(Partition partition_type,
+                                            std::unique_ptr<PartitionClient>* out_partition) const {
+  switch (partition_type) {
+    case Partition::kBootloader: {
+      const uint8_t bootloader_type[GPT_GUID_LEN] = GUID_BOOTLOADER_VALUE;
+      return skip_block_->FindPartition(bootloader_type, out_partition);
+    }
+    case Partition::kZirconA: {
+      const uint8_t zircon_a_type[GPT_GUID_LEN] = GUID_ZIRCON_A_VALUE;
+      return skip_block_->FindPartition(zircon_a_type, out_partition);
+    }
+    case Partition::kZirconB: {
+      const uint8_t zircon_b_type[GPT_GUID_LEN] = GUID_ZIRCON_B_VALUE;
+      return skip_block_->FindPartition(zircon_b_type, out_partition);
+    }
+    case Partition::kZirconR: {
+      const uint8_t zircon_r_type[GPT_GUID_LEN] = GUID_ZIRCON_R_VALUE;
+      return skip_block_->FindPartition(zircon_r_type, out_partition);
+    }
+    case Partition::kVbMetaA:
+    case Partition::kVbMetaB:
+    case Partition::kVbMetaR:
+    case Partition::kABRMeta: {
+      const auto type = [&]() {
+        switch (partition_type) {
+          case Partition::kVbMetaA:
+            return sysconfig::SyncClient::PartitionType::kVerifiedBootMetadataA;
+          case Partition::kVbMetaB:
+            return sysconfig::SyncClient::PartitionType::kVerifiedBootMetadataB;
+          case Partition::kVbMetaR:
+            return sysconfig::SyncClient::PartitionType::kVerifiedBootMetadataR;
+          case Partition::kABRMeta:
+            return sysconfig::SyncClient::PartitionType::kABRMetadata;
+          default:
+            break;
+        }
+        ZX_ASSERT(false);
+      }();
+      std::optional<sysconfig::SyncClient> client;
+      zx_status_t status = sysconfig::SyncClient::Create(skip_block_->devfs_root(), &client);
+      if (status != ZX_OK) {
+        return status;
+      }
+      out_partition->reset(new SysconfigPartitionClient(*std::move(client), type));
+      return ZX_OK;
+    }
+    case Partition::kFuchsiaVolumeManager: {
+      return skip_block_->FindFvmPartition(out_partition);
+    }
+    default:
+      ERROR("partition_type is invalid!\n");
+      return ZX_ERR_NOT_SUPPORTED;
+  }
+}
+
+zx_status_t AstroPartitioner::WipeFvm() const { return skip_block_->WipeFvm(); }
+
+zx_status_t AstroPartitioner::InitPartitionTables() const { return ZX_ERR_NOT_SUPPORTED; }
+
+zx_status_t AstroPartitioner::WipePartitionTables() const { return ZX_ERR_NOT_SUPPORTED; }
+
+zx_status_t As370Partitioner::Initialize(fbl::unique_fd devfs_root,
+                                         std::unique_ptr<DevicePartitioner>* partitioner) {
+  if (IsBoard(devfs_root, "visalia") != ZX_OK) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  LOG("Successfully initialized As370Partitioner Device Partitioner\n");
+
+  std::unique_ptr<SkipBlockDevicePartitioner> skip_block(
+      new SkipBlockDevicePartitioner(std::move(devfs_root)));
+  *partitioner = WrapUnique(new As370Partitioner(std::move(skip_block)));
+  return ZX_OK;
+}
+
+zx_status_t As370Partitioner::AddPartition(Partition partition_type,
+                                           std::unique_ptr<PartitionClient>* out_partition) const {
+  ERROR("Cannot add partitions to an as370.\n");
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t As370Partitioner::FindPartition(Partition partition_type,
+                                            std::unique_ptr<PartitionClient>* out_partition) const {
+  switch (partition_type) {
+    case Partition::kBootloader: {
+      const uint8_t bootloader_type[GPT_GUID_LEN] = GUID_BOOTLOADER_VALUE;
+      return skip_block_->FindPartition(bootloader_type, out_partition);
+    }
+    case Partition::kZirconA: {
+      const uint8_t zircon_a_type[GPT_GUID_LEN] = GUID_ZIRCON_A_VALUE;
+      return skip_block_->FindPartition(zircon_a_type, out_partition);
+    }
+    case Partition::kZirconB: {
+      const uint8_t zircon_b_type[GPT_GUID_LEN] = GUID_ZIRCON_B_VALUE;
+      return skip_block_->FindPartition(zircon_b_type, out_partition);
+    }
+    case Partition::kZirconR: {
+      const uint8_t zircon_r_type[GPT_GUID_LEN] = GUID_ZIRCON_R_VALUE;
+      return skip_block_->FindPartition(zircon_r_type, out_partition);
+    }
+    case Partition::kFuchsiaVolumeManager: {
+      return skip_block_->FindFvmPartition(out_partition);
+    }
+    default:
+      ERROR("partition_type is invalid!\n");
+      return ZX_ERR_NOT_SUPPORTED;
+  }
+}
+
+zx_status_t As370Partitioner::WipeFvm() const { return skip_block_->WipeFvm(); }
+
+zx_status_t As370Partitioner::InitPartitionTables() const { return ZX_ERR_NOT_SUPPORTED; }
+
+zx_status_t As370Partitioner::WipePartitionTables() const { return ZX_ERR_NOT_SUPPORTED; }
 
 }  // namespace paver

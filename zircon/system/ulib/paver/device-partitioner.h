@@ -267,9 +267,26 @@ class FixedDevicePartitioner : public DevicePartitioner {
 // FixedDevicePartitioner, it will not attempt to write a partition map of any kind to the device.
 // Assumes standardized partition layout structure (e.g. ZIRCON-A, ZIRCON-B,
 // ZIRCON-R).
-class SkipBlockDevicePartitioner : public DevicePartitioner {
+class SkipBlockDevicePartitioner {
  public:
-  static zx_status_t Initialize(fbl::unique_fd devfs_root, zx::channel svc_root,
+  SkipBlockDevicePartitioner(fbl::unique_fd devfs_root) : devfs_root_(std::move(devfs_root)) {}
+
+  zx_status_t FindPartition(const uint8_t* guid,
+                            std::unique_ptr<PartitionClient>* out_partition) const;
+
+  zx_status_t FindFvmPartition(std::unique_ptr<PartitionClient>* out_partition) const;
+
+  zx_status_t WipeFvm() const;
+
+  fbl::unique_fd& devfs_root() { return devfs_root_; }
+
+ private:
+  fbl::unique_fd devfs_root_;
+};
+
+class AstroPartitioner : public DevicePartitioner {
+ public:
+  static zx_status_t Initialize(fbl::unique_fd devfs_root,
                                 std::unique_ptr<DevicePartitioner>* partitioner);
 
   bool IsFvmWithinFtl() const override { return true; }
@@ -289,11 +306,38 @@ class SkipBlockDevicePartitioner : public DevicePartitioner {
   zx_status_t WipePartitionTables() const override;
 
  private:
-  SkipBlockDevicePartitioner(fbl::unique_fd devfs_root, zx::channel svc_root)
-      : devfs_root_(std::move(devfs_root)), svc_root_(std::move(svc_root)) {}
+  AstroPartitioner(std::unique_ptr<SkipBlockDevicePartitioner> skip_block)
+      : skip_block_(std::move(skip_block)) {}
 
-  fbl::unique_fd devfs_root_;
-  zx::channel svc_root_;
+  std::unique_ptr<SkipBlockDevicePartitioner> skip_block_;
+};
+
+class As370Partitioner : public DevicePartitioner {
+ public:
+  static zx_status_t Initialize(fbl::unique_fd devfs_root,
+                                std::unique_ptr<DevicePartitioner>* partitioner);
+
+  bool IsFvmWithinFtl() const override { return true; }
+
+  zx_status_t AddPartition(Partition partition_type,
+                           std::unique_ptr<PartitionClient>* out_partition) const override;
+
+  zx_status_t FindPartition(Partition partition_type,
+                            std::unique_ptr<PartitionClient>* out_partition) const override;
+
+  zx_status_t FinalizePartition(Partition unused) const override { return ZX_OK; }
+
+  zx_status_t WipeFvm() const override;
+
+  zx_status_t InitPartitionTables() const override;
+
+  zx_status_t WipePartitionTables() const override;
+
+ private:
+  As370Partitioner(std::unique_ptr<SkipBlockDevicePartitioner> skip_block)
+      : skip_block_(std::move(skip_block)) {}
+
+  std::unique_ptr<SkipBlockDevicePartitioner> skip_block_;
 };
 
 class SherlockPartitioner : public DevicePartitioner {

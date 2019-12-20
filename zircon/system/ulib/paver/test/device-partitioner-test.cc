@@ -403,6 +403,7 @@ TEST_F(FixedDevicePartitionerTests, FinalizePartitionTest) {
   ASSERT_OK(partitioner->FinalizePartition(paver::Partition::kZirconR));
   ASSERT_OK(partitioner->FinalizePartition(paver::Partition::kVbMetaA));
   ASSERT_OK(partitioner->FinalizePartition(paver::Partition::kVbMetaB));
+  ASSERT_OK(partitioner->FinalizePartition(paver::Partition::kVbMetaR));
   ASSERT_OK(partitioner->FinalizePartition(paver::Partition::kFuchsiaVolumeManager));
 }
 
@@ -541,7 +542,7 @@ TEST_F(SherlockPartitionerTests, InitializePartitionTable) {
 
   fzl::UnownedFdioCaller caller(gpt_dev->fd());
   auto result = ::llcpp::fuchsia::device::Controller::Call::Rebind(
-         caller.channel(), fidl::StringView("/boot/driver/gpt.so"));
+      caller.channel(), fidl::StringView("/boot/driver/gpt.so"));
   ASSERT_TRUE(result.ok());
   ASSERT_FALSE(result->result.is_err());
 
@@ -636,18 +637,17 @@ TEST_F(SherlockPartitionerTests, FindBootloader) {
   ASSERT_OK(partitioner->FindPartition(paver::Partition::kBootloader, &partition));
 }
 
-TEST(SkipBlockDevicePartitionerTests, IsFvmWithinFtl) {
+TEST(AstroPartitionerTests, IsFvmWithinFtl) {
   std::unique_ptr<SkipBlockDevice> device;
   ASSERT_NO_FATAL_FAILURES(SkipBlockDevice::Create(kNandInfo, &device));
 
   std::unique_ptr<paver::DevicePartitioner> partitioner;
-  ASSERT_EQ(paver::SkipBlockDevicePartitioner::Initialize(device->devfs_root(), zx::channel(),
-                                                          &partitioner),
+  ASSERT_EQ(paver::AstroPartitioner::Initialize(device->devfs_root(), &partitioner),
             ZX_OK);
   ASSERT_TRUE(partitioner->IsFvmWithinFtl());
 }
 
-TEST(SkipBlockDevicePartitionerTests, ChooseSkipBlockPartitioner) {
+TEST(AstroPartitionerTests, ChooseAstroPartitioner) {
   std::unique_ptr<SkipBlockDevice> device;
   SkipBlockDevice::Create(kNandInfo, &device);
   auto devfs_root = device->devfs_root();
@@ -660,35 +660,32 @@ TEST(SkipBlockDevicePartitionerTests, ChooseSkipBlockPartitioner) {
   ASSERT_TRUE(partitioner->IsFvmWithinFtl());
 }
 
-TEST(SkipBlockDevicePartitionerTests, AddPartitionTest) {
+TEST(AstroPartitionerTests, AddPartitionTest) {
   std::unique_ptr<SkipBlockDevice> device;
   SkipBlockDevice::Create(kNandInfo, &device);
 
   std::unique_ptr<paver::DevicePartitioner> partitioner;
-  ASSERT_EQ(paver::SkipBlockDevicePartitioner::Initialize(device->devfs_root(), zx::channel(),
-                                                          &partitioner),
+  ASSERT_EQ(paver::AstroPartitioner::Initialize(device->devfs_root(), &partitioner),
             ZX_OK);
   ASSERT_EQ(partitioner->AddPartition(paver::Partition::kZirconB, nullptr), ZX_ERR_NOT_SUPPORTED);
 }
 
-TEST(SkipBlockDevicePartitionerTests, WipeFvmTest) {
+TEST(AstroPartitionerTests, WipeFvmTest) {
   std::unique_ptr<SkipBlockDevice> device;
   SkipBlockDevice::Create(kNandInfo, &device);
 
   std::unique_ptr<paver::DevicePartitioner> partitioner;
-  ASSERT_EQ(paver::SkipBlockDevicePartitioner::Initialize(device->devfs_root(), zx::channel(),
-                                                          &partitioner),
+  ASSERT_EQ(paver::AstroPartitioner::Initialize(device->devfs_root(), &partitioner),
             ZX_OK);
   ASSERT_OK(partitioner->WipeFvm());
 }
 
-TEST(SkipBlockDevicePartitionerTests, FinalizePartitionTest) {
+TEST(AstroPartitionerTests, FinalizePartitionTest) {
   std::unique_ptr<SkipBlockDevice> device;
   SkipBlockDevice::Create(kNandInfo, &device);
 
   std::unique_ptr<paver::DevicePartitioner> partitioner;
-  ASSERT_EQ(paver::SkipBlockDevicePartitioner::Initialize(device->devfs_root(), zx::channel(),
-                                                          &partitioner),
+  ASSERT_EQ(paver::AstroPartitioner::Initialize(device->devfs_root(), &partitioner),
             ZX_OK);
 
   ASSERT_OK(partitioner->FinalizePartition(paver::Partition::kBootloader));
@@ -697,9 +694,10 @@ TEST(SkipBlockDevicePartitionerTests, FinalizePartitionTest) {
   ASSERT_OK(partitioner->FinalizePartition(paver::Partition::kZirconR));
   ASSERT_OK(partitioner->FinalizePartition(paver::Partition::kVbMetaA));
   ASSERT_OK(partitioner->FinalizePartition(paver::Partition::kVbMetaB));
+  ASSERT_OK(partitioner->FinalizePartition(paver::Partition::kVbMetaR));
 }
 
-TEST(SkipBlockDevicePartitionerTests, FindPartitionTest) {
+TEST(AstroPartitionerTests, FindPartitionTest) {
   std::unique_ptr<SkipBlockDevice> device;
   SkipBlockDevice::Create(kNandInfo, &device);
   auto devfs_root = device->devfs_root();
@@ -707,8 +705,7 @@ TEST(SkipBlockDevicePartitionerTests, FindPartitionTest) {
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devfs_root, kFvmType, &fvm));
 
   std::unique_ptr<paver::DevicePartitioner> partitioner;
-  ASSERT_EQ(paver::SkipBlockDevicePartitioner::Initialize(std::move(devfs_root), zx::channel(),
-                                                          &partitioner),
+  ASSERT_EQ(paver::AstroPartitioner::Initialize(std::move(devfs_root), &partitioner),
             ZX_OK);
 
   std::unique_ptr<paver::PartitionClient> partition;
@@ -720,5 +717,76 @@ TEST(SkipBlockDevicePartitionerTests, FindPartitionTest) {
   ASSERT_OK(partitioner->FindPartition(paver::Partition::kVbMetaB, &partition));
   ASSERT_OK(partitioner->FindPartition(paver::Partition::kVbMetaR, &partition));
 
+  ASSERT_OK(partitioner->FindPartition(paver::Partition::kFuchsiaVolumeManager, &partition));
+}
+
+class As370PartitionerTests : public zxtest::Test {
+ protected:
+  As370PartitionerTests() {
+    IsolatedDevmgr::Args args;
+    args.driver_search_paths.push_back("/boot/driver");
+    args.disable_block_watcher = false;
+    args.board_name = "visalia";
+    ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr_));
+
+    fbl::unique_fd fd;
+    ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "misc/sysinfo", &fd));
+    ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "sys/platform", &fd));
+  }
+
+  IsolatedDevmgr devmgr_;
+};
+
+TEST_F(As370PartitionerTests, IsFvmWithinFtl) {
+  std::unique_ptr<paver::DevicePartitioner> partitioner;
+  ASSERT_EQ(paver::As370Partitioner::Initialize(devmgr_.devfs_root().duplicate(), &partitioner),
+            ZX_OK);
+  ASSERT_TRUE(partitioner->IsFvmWithinFtl());
+}
+
+TEST_F(As370PartitionerTests, ChooseAs370Partitioner) {
+  auto partitioner = paver::DevicePartitioner::Create(devmgr_.devfs_root().duplicate(),
+                                                      zx::channel(), paver::Arch::kArm64);
+  ASSERT_NE(partitioner.get(), nullptr);
+  ASSERT_TRUE(partitioner->IsFvmWithinFtl());
+}
+
+TEST_F(As370PartitionerTests, AddPartitionTest) {
+  std::unique_ptr<paver::DevicePartitioner> partitioner;
+  ASSERT_EQ(paver::As370Partitioner::Initialize(devmgr_.devfs_root().duplicate(), &partitioner),
+            ZX_OK);
+  ASSERT_EQ(partitioner->AddPartition(paver::Partition::kZirconB, nullptr), ZX_ERR_NOT_SUPPORTED);
+}
+
+TEST_F(As370PartitionerTests, WipeFvmTest) {
+  std::unique_ptr<paver::DevicePartitioner> partitioner;
+  ASSERT_EQ(paver::As370Partitioner::Initialize(devmgr_.devfs_root().duplicate(), &partitioner),
+            ZX_OK);
+  ASSERT_OK(partitioner->WipeFvm());
+}
+
+TEST_F(As370PartitionerTests, FinalizePartitionTest) {
+  std::unique_ptr<paver::DevicePartitioner> partitioner;
+  ASSERT_EQ(paver::As370Partitioner::Initialize(devmgr_.devfs_root().duplicate(), &partitioner),
+            ZX_OK);
+
+  ASSERT_OK(partitioner->FinalizePartition(paver::Partition::kBootloader));
+  ASSERT_OK(partitioner->FinalizePartition(paver::Partition::kZirconA));
+  ASSERT_OK(partitioner->FinalizePartition(paver::Partition::kZirconB));
+  ASSERT_OK(partitioner->FinalizePartition(paver::Partition::kZirconR));
+  ASSERT_OK(partitioner->FinalizePartition(paver::Partition::kVbMetaA));
+  ASSERT_OK(partitioner->FinalizePartition(paver::Partition::kVbMetaB));
+  ASSERT_OK(partitioner->FinalizePartition(paver::Partition::kVbMetaR));
+}
+
+TEST_F(As370PartitionerTests, FindPartitionTest) {
+  std::unique_ptr<BlockDevice> fvm;
+  ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kFvmType, &fvm));
+
+  std::unique_ptr<paver::DevicePartitioner> partitioner;
+  ASSERT_EQ(paver::As370Partitioner::Initialize(devmgr_.devfs_root().duplicate(), &partitioner),
+            ZX_OK);
+
+  std::unique_ptr<paver::PartitionClient> partition;
   ASSERT_OK(partitioner->FindPartition(paver::Partition::kFuchsiaVolumeManager, &partition));
 }

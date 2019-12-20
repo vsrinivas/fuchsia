@@ -168,13 +168,13 @@ zx_status_t PartitionClient::Persist(abr::Data data) {
 
 }  // namespace
 
-zx_status_t Client::Create(fbl::unique_fd devfs_root, zx::channel svc_root,
+zx_status_t Client::Create(fbl::unique_fd devfs_root, const zx::channel& svc_root,
                            std::unique_ptr<abr::Client>* out) {
   if (zx_status_t status = SupportsVerfiedBoot(svc_root); status != ZX_OK) {
     return status;
   }
 
-  if (AstroClient::Create(devfs_root.duplicate(), std::move(svc_root), out) == ZX_OK ||
+  if (AstroClient::Create(devfs_root.duplicate(), out) == ZX_OK ||
       SherlockClient::Create(std::move(devfs_root), out) == ZX_OK) {
     return ZX_OK;
   }
@@ -196,11 +196,9 @@ void Client::UpdateCrc(abr::Data* data) {
       crc32(0, reinterpret_cast<const uint8_t*>(data), sizeof(abr::Data) - sizeof(uint32_t)));
 }
 
-zx_status_t AstroClient::Create(fbl::unique_fd devfs_root, zx::channel svc_root,
-                                std::unique_ptr<abr::Client>* out) {
+zx_status_t AstroClient::Create(fbl::unique_fd devfs_root, std::unique_ptr<abr::Client>* out) {
   std::unique_ptr<paver::DevicePartitioner> partitioner;
-  zx_status_t status = paver::SkipBlockDevicePartitioner::Initialize(
-      std::move(devfs_root), std::move(svc_root), &partitioner);
+  zx_status_t status = paver::AstroPartitioner::Initialize(std::move(devfs_root), &partitioner);
   if (status != ZX_OK) {
     return ZX_OK;
   }
