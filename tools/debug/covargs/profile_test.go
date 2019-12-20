@@ -56,7 +56,7 @@ var testDumps = map[string]symbolize.DumpEntry{
 	},
 }
 
-var testSummary = map[string][]runtests.DataSink{
+var testSummary = runtests.DataSinkMap{
 	"llvm-profile": {
 		{Name: "llvm-profile.1234", File: "build/llvm-profile.4321"},
 		{Name: "llvm-profile.5678", File: "build/llvm-profile.8765"},

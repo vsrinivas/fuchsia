@@ -213,8 +213,8 @@ func runTest(ctx context.Context, test build.Test, tester Tester) (*testrunner.T
 	}
 
 	startTime := time.Now()
-
-	if err := tester(ctx, test, multistdout, multistderr); err != nil {
+	dataSinks, err := tester(ctx, test, multistdout, multistderr)
+	if err != nil {
 		result = runtests.TestFailure
 		if err == context.DeadlineExceeded {
 			log.Printf("Test killed because timeout reached (%v)", perTestTimeout)
@@ -241,5 +241,6 @@ func runTest(ctx context.Context, test build.Test, tester Tester) (*testrunner.T
 		Result:    result,
 		StartTime: startTime,
 		EndTime:   endTime,
+		DataSinks: dataSinks,
 	}, nil
 }

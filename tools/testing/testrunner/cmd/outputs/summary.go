@@ -29,6 +29,7 @@ func (o *SummaryOutput) Record(result testrunner.TestResult) {
 		OutputFile:     pathInArchive,
 		Result:         result.Result,
 		DurationMillis: result.EndTime.Sub(result.StartTime).Nanoseconds() / 1000 / 1000,
+		DataSinks:      result.DataSinks,
 	})
 }
 

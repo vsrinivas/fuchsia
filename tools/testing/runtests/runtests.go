@@ -43,6 +43,10 @@ type DataSink struct {
 	File string `json:"file"`
 }
 
+// DataSinkMap is mapping from a data sink name to a list of the corresponding
+// data sink files.
+type DataSinkMap map[string][]DataSink
+
 // TestDetails contains the details of a test run.
 type TestDetails struct {
 	// Name is the name of the test.
@@ -58,7 +62,7 @@ type TestDetails struct {
 	Result TestResult `json:"result"`
 
 	// DataSinks gives the data sinks attached to a test.
-	DataSinks map[string][]DataSink `json:"data_sinks,omitempty"`
+	DataSinks DataSinkMap `json:"data_sinks,omitempty"`
 
 	// Duration is how long the test execution took.
 	DurationMillis int64 `json:"duration_milliseconds"`

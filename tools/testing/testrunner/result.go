@@ -22,6 +22,9 @@ type TestResult struct {
 	// Result describes whether the test passed or failed.
 	Result runtests.TestResult
 
+	// DataSinks gives the data sinks attached to a test.
+	DataSinks runtests.DataSinkMap
+
 	Stdout    []byte
 	Stderr    []byte
 	StartTime time.Time

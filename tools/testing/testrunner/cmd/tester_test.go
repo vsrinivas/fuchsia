@@ -45,9 +45,13 @@ func TestTester(t *testing.T) {
 			stdout := new(bytes.Buffer)
 			stderr := new(bytes.Buffer)
 
-			if err := tester.Test(context.Background(), tt.test, stdout, stderr); err != nil {
-				t.Errorf("failed to exected test %q: %v", tt.test.Name, err)
+			dataSinks, err := tester.Test(context.Background(), tt.test, stdout, stderr)
+			if err != nil {
+				t.Errorf("failed to execute test %q: %v", tt.test.Name, err)
 				return
+			}
+			if dataSinks != nil {
+				t.Errorf("got non-nil data sinks: %v", dataSinks)
 			}
 
 			// Compare stdout
@@ -144,7 +148,7 @@ func TestSSHTester(t *testing.T) {
 			stdout := new(bytes.Buffer)
 			stderr := new(bytes.Buffer)
 			for _, test := range tt.tests {
-				if err := tester.Test(context.Background(), test, stdout, stderr); err != nil {
+				if _, err := tester.Test(context.Background(), test, stdout, stderr); err != nil {
 					t.Error(err)
 					return
 				}

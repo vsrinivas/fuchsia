@@ -82,8 +82,8 @@ func init() {
 const llvmProfileSinkType = "llvm-profile"
 
 // Output is indexed by dump name
-func readSummary(summaryFiles []string) (map[string][]runtests.DataSink, error) {
-	sinks := make(map[string][]runtests.DataSink)
+func readSummary(summaryFiles []string) (runtests.DataSinkMap, error) {
+	sinks := make(runtests.DataSinkMap)
 
 	for _, summaryFile := range summaryFiles {
 		// TODO(phosek): process these in parallel using goroutines.
@@ -139,7 +139,7 @@ func readSymbolizerOutput(outputFiles []string) (map[string]symbolize.DumpEntry,
 
 type indexedInfo struct {
 	dumps   map[string]symbolize.DumpEntry
-	summary map[string][]runtests.DataSink
+	summary runtests.DataSinkMap
 }
 
 type ProfileEntry struct {

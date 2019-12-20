@@ -19,7 +19,7 @@ type ProfileEntry struct {
 	ModuleFiles []string `json:"modules"`
 }
 
-func MergeProfiles(ctx context.Context, dumps map[string]symbolize.DumpEntry, summary map[string][]runtests.DataSink, repo symbolize.Repository) ([]ProfileEntry, error) {
+func MergeProfiles(ctx context.Context, dumps map[string]symbolize.DumpEntry, summary runtests.DataSinkMap, repo symbolize.Repository) ([]ProfileEntry, error) {
 	entries := []ProfileEntry{}
 
 	for _, sink := range summary[llvmProfileSinkType] {

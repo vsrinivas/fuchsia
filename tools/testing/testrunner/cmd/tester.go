@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"path"
 	"path/filepath"
 	"strings"
@@ -16,6 +17,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/runner"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
+	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -36,8 +38,12 @@ const (
 	componentV2Suffix = ".cm"
 )
 
-// Tester is executes a Test.
-type Tester func(context.Context, build.Test, io.Writer, io.Writer) error
+// Tester executes a Test.
+type Tester func(context.Context, build.Test, io.Writer, io.Writer) (runtests.DataSinkMap, error)
+
+// DataSinkCopier copies data sinks from a remote host after a runtests
+// invocation.
+type dataSinkCopier func(string, string) (runtests.DataSinkMap, error)
 
 // SubprocessTester executes tests in local subprocesses.
 type SubprocessTester struct {
@@ -45,11 +51,11 @@ type SubprocessTester struct {
 	env []string
 }
 
-func (t *SubprocessTester) Test(ctx context.Context, test build.Test, stdout io.Writer, stderr io.Writer) error {
+func (t *SubprocessTester) Test(ctx context.Context, test build.Test, stdout io.Writer, stderr io.Writer) (runtests.DataSinkMap, error) {
 	command := test.Command
 	if len(test.Command) == 0 {
 		if test.Path == "" {
-			return fmt.Errorf("test %q has no `command` or `path` set", test.Name)
+			return nil, fmt.Errorf("test %q has no `command` or `path` set", test.Name)
 		}
 		command = []string{test.Path}
 	}
@@ -59,15 +65,17 @@ func (t *SubprocessTester) Test(ctx context.Context, test build.Test, stdout io.
 		Env: t.env,
 	}
 
-	return runner.Run(ctx, command, stdout, stderr)
+	return nil, runner.Run(ctx, command, stdout, stderr)
 }
 
 // SSHTester executes tests over an SSH connection. It assumes the test.Command
 // contains the command line to execute on the remote machine. The caller should Close() the
 // tester when finished. Once closed, this object can no longer be used.
 type SSHTester struct {
-	client    *ssh.Client
-	newClient func(ctx context.Context) (*ssh.Client, error)
+	client          *ssh.Client
+	newClient       func(ctx context.Context) (*ssh.Client, error)
+	remoteOutputDir string
+	copier          *runtests.DataSinkCopier
 }
 
 func NewSSHTester(newClient func(context.Context) (*ssh.Client, error)) (*SSHTester, error) {
@@ -75,15 +83,24 @@ func NewSSHTester(newClient func(context.Context) (*ssh.Client, error)) (*SSHTes
 	if err != nil {
 		return nil, err
 	}
-	return &SSHTester{client: client, newClient: newClient}, nil
+	copier, err := runtests.NewDataSinkCopier(client)
+	if err != nil {
+		return nil, err
+	}
+	return &SSHTester{
+		client:          client,
+		newClient:       newClient,
+		remoteOutputDir: fuchsiaOutputDir,
+		copier:          copier,
+	}, nil
 }
 
-func (t *SSHTester) Test(ctx context.Context, test build.Test, stdout io.Writer, stderr io.Writer) error {
+func (t *SSHTester) Test(ctx context.Context, test build.Test, stdout io.Writer, stderr io.Writer) (runtests.DataSinkMap, error) {
 	if _, _, err := t.client.Conn.SendRequest(keepAliveOpenSSH, true, nil); err != nil {
 		logger.Errorf(ctx, "SSH client not responsive: %v", err)
 		client, err := t.newClient(ctx)
 		if err != nil {
-			return fmt.Errorf("failed to create new SSH client: %v", err)
+			return nil, fmt.Errorf("failed to create new SSH client: %v", err)
 		}
 		t.client.Close()
 		t.client = client
@@ -91,17 +108,33 @@ func (t *SSHTester) Test(ctx context.Context, test build.Test, stdout io.Writer,
 
 	session, err := t.client.NewSession()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer session.Close()
 
 	runner := &runner.SSHRunner{Session: session}
-	return runner.Run(ctx, test.Command, stdout, stderr)
+	if err = runner.Run(ctx, test.Command, stdout, stderr); err != nil {
+		return nil, err
+	}
+
+	if test.Command[0] == runtestsName {
+		localOutputDir, err := ioutil.TempDir("", "sinks")
+		if err != nil {
+			return nil, err
+		}
+		copier, err := runtests.NewDataSinkCopier(t.client)
+		if err != nil {
+			return nil, err
+		}
+		return copier.Copy(t.remoteOutputDir, localOutputDir)
+	}
+	return nil, nil
 }
 
-// Close stops this SSHTester.  The underlying SSH connection is terminated.  The object
-// is no longer usable after calling this method.
+// Close stops this SSHTester. The underlying SSH connection is terminated. The
+// object is no longer usable after calling this method.
 func (t *SSHTester) Close() error {
+	t.copier.Close()
 	return t.client.Close()
 }
 
@@ -113,9 +146,8 @@ func (t *SSHTester) Close() error {
 // correctly. This wrapper around SSHTester is meant to keep SSHTester free of OS-specific
 // behavior. Later we'll delete this and use SSHTester directly.
 type FuchsiaTester struct {
-	remoteOutputDir string
-	delegate        *SSHTester
-	useRuntests     bool
+	delegate    *SSHTester
+	useRuntests bool
 }
 
 // NewFuchsiaTester creates a FuchsiaTester object and starts a log_listener process on
@@ -138,16 +170,15 @@ func NewFuchsiaTester(nodename string, sshKey []byte, useRuntests bool) (*Fuchsi
 		return nil, err
 	}
 	tester := &FuchsiaTester{
-		remoteOutputDir: fuchsiaOutputDir,
-		delegate:        delegate,
-		useRuntests:     useRuntests,
+		delegate:    delegate,
+		useRuntests: useRuntests,
 	}
 	return tester, nil
 }
 
-func (t *FuchsiaTester) Test(ctx context.Context, test build.Test, stdout io.Writer, stderr io.Writer) error {
+func (t *FuchsiaTester) Test(ctx context.Context, test build.Test, stdout io.Writer, stderr io.Writer) (dataSinks runtests.DataSinkMap, err error) {
 	if len(test.Command) == 0 {
-		if !useRuntests && test.PackageURL != "" {
+		if !t.useRuntests && test.PackageURL != "" {
 			if strings.HasSuffix(test.PackageURL, componentV2Suffix) {
 				test.Command = []string{runTestSuiteName, test.PackageURL}
 			} else {
@@ -155,7 +186,7 @@ func (t *FuchsiaTester) Test(ctx context.Context, test build.Test, stdout io.Wri
 			}
 		} else {
 			name := path.Base(test.Path)
-			test.Command = []string{runtestsName, "-t", name, "-o", filepath.Join(t.remoteOutputDir, runtestsName)}
+			test.Command = []string{runtestsName, "-t", name, "-o", filepath.Join(t.delegate.remoteOutputDir, runtestsName)}
 		}
 	}
 	return t.delegate.Test(ctx, test, stdout, stderr)

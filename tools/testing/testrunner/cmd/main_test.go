@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"reflect"
 	"testing"
 	"time"
 
@@ -16,22 +17,33 @@ import (
 )
 
 func TestRunTest(t *testing.T) {
+	mockDataSinks := runtests.DataSinkMap{
+		"sink": []runtests.DataSink{
+			{
+				Name: "foo",
+				File: "/path/to/sink",
+			},
+		},
+	}
+
 	cases := []struct {
-		name         string
-		timeout      time.Duration
-		tester       Tester
-		expectResult runtests.TestResult
+		name            string
+		timeout         time.Duration
+		tester          Tester
+		expectResult    runtests.TestResult
+		expectDataSinks runtests.DataSinkMap
 	}{
 		{
 			name:    "timeout set on ctx",
 			timeout: time.Second, // Arbitrary positive timeout
-			tester: func(ctx context.Context, test build.Test, stdout, stderr io.Writer) error {
+			tester: func(ctx context.Context, test build.Test, stdout, stderr io.Writer) (runtests.DataSinkMap, error) {
 				if _, ok := ctx.Deadline(); !ok {
-					return fmt.Errorf("Expected ctx to have a deadline, but it does not")
+					return nil, fmt.Errorf("Expected ctx to have a deadline, but it does not")
 				}
-				return nil
+				return mockDataSinks, nil
 			},
-			expectResult: runtests.TestSuccess,
+			expectResult:    runtests.TestSuccess,
+			expectDataSinks: mockDataSinks,
 		},
 	}
 	for _, tt := range cases {
@@ -47,6 +59,9 @@ func TestRunTest(t *testing.T) {
 			}
 			if result.Result != tt.expectResult {
 				t.Errorf("Result = %v, want %v", result.Result, tt.expectResult)
+			}
+			if !reflect.DeepEqual(result.DataSinks, tt.expectDataSinks) {
+				t.Errorf("Result = %v, want %v", result.DataSinks, tt.expectDataSinks)
 			}
 		})
 	}
