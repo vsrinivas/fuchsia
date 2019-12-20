@@ -89,6 +89,7 @@ pub enum ClientPollError {
     NextChunk(hyper::error::Error),
 }
 
+#[cfg(test)]
 mod tests {
     use {
         super::*,

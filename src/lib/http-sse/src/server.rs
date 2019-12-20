@@ -6,10 +6,9 @@ use {
     crate::Event,
     futures::{
         channel::{mpsc, oneshot},
-        compat::Stream01CompatExt,
         future::Future,
         lock::Mutex,
-        stream::{Stream, StreamExt, TryStreamExt},
+        stream::{Stream, TryStreamExt},
         task::{Context, Poll},
     },
     hyper::{Body, Chunk, Response, StatusCode},
@@ -109,6 +108,7 @@ mod tests {
     use {
         super::*,
         fuchsia_async::{self as fasync},
+        futures::{compat::Stream01CompatExt, stream::StreamExt},
         matches::assert_matches,
     };
 
