@@ -54,6 +54,7 @@ const RegisterInfo kRegisterInfo[] = {
     {.id = RegisterID::kARMv8_x28, .name = "x28", .arch = Arch::kArm64, .canonical_id = RegisterID::kARMv8_x28, .bits = 64, .dwarf_id = 28},
     {.id = RegisterID::kARMv8_x29, .name = "x29", .arch = Arch::kArm64, .canonical_id = RegisterID::kARMv8_x29, .bits = 64, .dwarf_id = 29},
     {.id = RegisterID::kARMv8_lr,  .name = "lr",  .arch = Arch::kArm64, .canonical_id = RegisterID::kARMv8_lr,  .bits = 64, .dwarf_id = 30},
+    {.id = RegisterID::kARMv8_tpidr,  .name = "tpidr",  .arch = Arch::kArm64, .canonical_id = RegisterID::kARMv8_tpidr,  .bits = 64},
     {.id = RegisterID::kARMv8_sp,  .name = "sp",  .arch = Arch::kArm64, .canonical_id = RegisterID::kARMv8_sp,  .bits = 64, .dwarf_id = 31},
     {.id = RegisterID::kARMv8_pc,  .name = "pc",  .arch = Arch::kArm64, .canonical_id = RegisterID::kARMv8_pc,  .bits = 64},
 
@@ -199,6 +200,7 @@ const RegisterInfo kRegisterInfo[] = {
     {.id = RegisterID::kX64_rip, .name = "rip", .arch = Arch::kX64, .canonical_id = RegisterID::kX64_rip, .bits = 64},
 
     {.id = RegisterID::kX64_rflags, .name = "rflags", .arch = Arch::kX64, .canonical_id = RegisterID::kX64_rflags, .bits = 64, .dwarf_id = 49},
+    {.id = RegisterID::kX64_fsbase, .name = "fsbase", .arch = Arch::kX64, .canonical_id = RegisterID::kX64_fsbase, .bits = 64, .dwarf_id = 58},
 
     // General-purpose aliases.
 
@@ -451,6 +453,8 @@ RegisterID GetSpecialRegisterID(Arch arch, SpecialRegisterType type) {
           return RegisterID::kX64_rip;
         case SpecialRegisterType::kSP:
           return RegisterID::kX64_rsp;
+        case SpecialRegisterType::kTP:
+          return RegisterID::kX64_fsbase;
       }
       break;
 
@@ -462,6 +466,8 @@ RegisterID GetSpecialRegisterID(Arch arch, SpecialRegisterType type) {
           return RegisterID::kARMv8_pc;
         case SpecialRegisterType::kSP:
           return RegisterID::kARMv8_sp;
+        case SpecialRegisterType::kTP:
+          return RegisterID::kARMv8_tpidr;
       }
       break;
 
@@ -523,7 +529,9 @@ SpecialRegisterType GetSpecialRegisterType(RegisterID id) {
     case RegisterID::kX64_rsp:
     case RegisterID::kARMv8_sp:
       return debug_ipc::SpecialRegisterType::kSP;
-    case RegisterID::kX64_rbp:
+    case RegisterID::kX64_fsbase:
+    case RegisterID::kARMv8_tpidr:
+      return debug_ipc::SpecialRegisterType::kTP;
     default:
       return debug_ipc::SpecialRegisterType::kNone;
   }

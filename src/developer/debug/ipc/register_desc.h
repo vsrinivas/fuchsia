@@ -24,7 +24,12 @@ enum class RegisterID : uint32_t;  // Forward declaration.
 
 struct Register;
 
-enum class SpecialRegisterType { kNone, kIP, kSP };
+enum class SpecialRegisterType {
+  kNone,
+  kIP, // Instruction Pointer
+  kSP, // Stack Pointer
+  kTP  // Thread Pointer
+};
 
 struct RegisterInfo {
   RegisterID id;
