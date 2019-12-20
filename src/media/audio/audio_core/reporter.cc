@@ -54,15 +54,14 @@ void Reporter::InitCobalt() {
     return;
   }
 
-  cobalt_factory_->CreateLoggerFromProjectName(
-      "media", fuchsia::cobalt::ReleaseStage::GA, cobalt_logger_.NewRequest(),
-      [this](fuchsia::cobalt::Status status) {
-        if (status != fuchsia::cobalt::Status::OK) {
-          FX_PLOGS(ERROR, fidl::ToUnderlying(status))
-              << "audio_core could not create Cobalt logger";
-          cobalt_logger_ = nullptr;
-        }
-      });
+  cobalt_factory_->CreateLoggerFromProjectId(kProjectId, cobalt_logger_.NewRequest(),
+                                             [this](fuchsia::cobalt::Status status) {
+                                               if (status != fuchsia::cobalt::Status::OK) {
+                                                 FX_PLOGS(ERROR, fidl::ToUnderlying(status))
+                                                     << "audio_core could not create Cobalt logger";
+                                                 cobalt_logger_ = nullptr;
+                                               }
+                                             });
 }
 
 void Reporter::FailedToOpenDevice(const std::string& name, bool is_input, int err) {
