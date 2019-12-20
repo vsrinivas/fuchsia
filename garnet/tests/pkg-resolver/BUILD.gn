@@ -57,22 +57,20 @@ generate_manifest("empty-repo.manifest") {
   sources = []
   args = []
 
-  foreach(
-      path,
-      [
-        "keys/root.json",
-        "keys/snapshot.json",
-        "keys/targets.json",
-        "keys/timestamp.json",
-        "repository/1.root.json",
-        "repository/1.snapshot.json",
-        "repository/1.targets.json",
-        "repository/bf37bee3c74fac4bee9596689aa6bfc3caefaa1c8d89c9e43635d43502424518cd6b5c8b30732c5e57871bb8aa9ed706ec7ebc7b708d2ee6890c675bd4ea4fde.root.json",
-        "repository/root.json",
-        "repository/snapshot.json",
-        "repository/targets.json",
-        "repository/timestamp.json",
-      ]) {
+  foreach(path,
+          [
+            "keys/root.json",
+            "keys/snapshot.json",
+            "keys/targets.json",
+            "keys/timestamp.json",
+            "repository/1.root.json",
+            "repository/1.snapshot.json",
+            "repository/1.targets.json",
+            "repository/root.json",
+            "repository/snapshot.json",
+            "repository/targets.json",
+            "repository/timestamp.json",
+          ]) {
     source = "template/${path}"
     sources += [ source ]
     args += [ "--entry=empty-repo/${path}=" + rebase_path(source) ]
