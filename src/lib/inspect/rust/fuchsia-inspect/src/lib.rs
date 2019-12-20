@@ -198,7 +198,7 @@ impl Inspector {
             .ok_or(format_err!("Failed to duplicate VMO"))
             .and_then(|vmo| {
                 let size = vmo.get_size()?;
-                service_fs.dir("objects").add_vmo_file_at(
+                service_fs.dir(SERVICE_DIR).add_vmo_file_at(
                     "root.inspect",
                     vmo,
                     0, /* vmo offset */

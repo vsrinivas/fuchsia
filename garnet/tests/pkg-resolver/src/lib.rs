@@ -311,7 +311,7 @@ impl<P: PkgFs> TestEnv<P> {
         // as `Node`s.
         // TODO(fxb/40888)
         let pattern = format!(
-            "/hub/r/{}/*/c/pkg_resolver.cmx/*/out/objects/root.i[n]spect",
+            "/hub/r/{}/*/c/pkg_resolver.cmx/*/out/diagnostics/root.i[n]spect",
             glob::Pattern::escape(&self.nested_environment_label)
         );
         let paths = glob::glob_with(

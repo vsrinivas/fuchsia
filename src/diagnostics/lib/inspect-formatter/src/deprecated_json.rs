@@ -85,7 +85,7 @@ mod tests {
             NodeHierarchy::new("root", vec![Property::Double("double".to_string(), 2.5)], vec![]);
         let data = HierarchyData {
             hierarchy,
-            file_path: "/some/path/out/objects/root.inspect".to_string(),
+            file_path: "/some/path/out/diagnostics/root.inspect".to_string(),
             fields: vec![],
         };
         let result = DeprecatedJsonFormatter::format(data).expect("failed to format hierarchy");
@@ -95,7 +95,7 @@ mod tests {
             \"double\": 2.5
         }
     },
-    \"path\": \"/some/path/out/objects/root.inspect\"
+    \"path\": \"/some/path/out/diagnostics/root.inspect\"
 }";
         assert_eq!(result, expected);
     }
@@ -106,12 +106,12 @@ mod tests {
         let datas = vec![
             HierarchyData {
                 hierarchy: a,
-                file_path: "/some/path/out/objects/root.inspect".to_string(),
+                file_path: "/some/path/out/diagnostics/root.inspect".to_string(),
                 fields: vec![],
             },
             HierarchyData {
                 hierarchy: b,
-                file_path: "/other/path/out/objects".to_string(),
+                file_path: "/other/path/out/diagnostics".to_string(),
                 fields: vec!["root".to_string(), "x".to_string(), "y".to_string()],
             },
         ];
@@ -223,7 +223,7 @@ mod tests {
                 }
             }
         },
-        \"path\": \"/some/path/out/objects/root.inspect\"
+        \"path\": \"/some/path/out/diagnostics/root.inspect\"
     },
     {
         \"contents\": {
@@ -231,7 +231,7 @@ mod tests {
                 \"bytes\": \"b64:BfGr\"
             }
         },
-        \"path\": \"/other/path/out/objects#x/y\"
+        \"path\": \"/other/path/out/diagnostics#x/y\"
     }
 ]"
         .to_string()

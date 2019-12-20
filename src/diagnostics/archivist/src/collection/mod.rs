@@ -544,8 +544,8 @@ mod tests {
         vmo.write(b"test", 0).unwrap();
         let vmo2 = zx::Vmo::create(4096).unwrap();
         vmo2.write(b"test", 0).unwrap();
-        fs.dir("objects").add_vmo_file_at("root.inspect", vmo, 0, 4096);
-        fs.dir("objects").add_vmo_file_at("root_not_inspect", vmo2, 0, 4096);
+        fs.dir("diagnostics").add_vmo_file_at("root.inspect", vmo, 0, 4096);
+        fs.dir("diagnostics").add_vmo_file_at("root_not_inspect", vmo2, 0, 4096);
 
         // Create a connection to the ServiceFs.
         let (h0, h1) = zx::Channel::create().unwrap();
