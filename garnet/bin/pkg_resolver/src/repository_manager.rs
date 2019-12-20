@@ -8,7 +8,7 @@ use {
         cache::{BlobFetcher, PackageCache, ToResolveStatus},
         experiment::{Experiment, Experiments},
         inspect_util::{self, InspectableRepoUrl, InspectableRepositoryConfig},
-        tuf_util::Repository,
+        repository::Repository,
     },
     failure::Fail,
     fidl_fuchsia_amber::{
@@ -409,12 +409,10 @@ async fn connect_to_rust_tuf_client(
     // create the client first, even if it proves to be redundant because we lost the race with
     // another thread.
     let mut repo = Arc::new(futures::lock::Mutex::new(
-        crate::tuf_util::Repository::new(&config, inspect_node.create_child(url.host()))
-            .await
-            .map_err(|e| {
-                fx_log_err!("Could not create tuf_util::Inner: {:?}", e);
-                Err(Status::INTERNAL)
-            })?,
+        Repository::new(&config, inspect_node.create_child(url.host())).await.map_err(|e| {
+            fx_log_err!("Could not create Repository: {:?}", e);
+            Err(Status::INTERNAL)
+        })?,
     ));
 
     // It's still possible we raced with some other connection attempt

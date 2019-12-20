@@ -266,14 +266,19 @@ impl Repository {
 
     /// Generate a [`RepositoryConfig`] suitable for configuring a package resolver to use this
     /// repository when it is served at the given URL.
-    pub fn make_repo_config(&self, url: RepoUrl, mirror_url: String) -> RepositoryConfig {
+    pub fn make_repo_config(
+        &self,
+        url: RepoUrl,
+        mirror_url: String,
+        subscribe: bool,
+    ) -> RepositoryConfig {
         let mut builder = RepositoryConfigBuilder::new(url);
 
         for key in self.root_keys() {
             builder = builder.add_root_key(key);
         }
 
-        let mut mirror = MirrorConfigBuilder::new(mirror_url).subscribe(false);
+        let mut mirror = MirrorConfigBuilder::new(mirror_url).subscribe(subscribe);
         if let Some(ref key) = self.encryption_key {
             mirror = mirror.blob_key(RepositoryBlobKey::Aes(key.as_bytes().to_vec()))
         }
@@ -433,7 +438,7 @@ impl<'a> ServedRepository<'a> {
     /// Generate a [`RepositoryConfig`] suitable for configuring a package resolver to use this
     /// served repository.
     pub fn make_repo_config(&self, url: RepoUrl) -> RepositoryConfig {
-        self.repo.make_repo_config(url, self.local_url())
+        self.repo.make_repo_config(url, self.local_url(), false)
     }
 
     /// Kill the pm component and wait for it to exit.

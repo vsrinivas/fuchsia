@@ -171,11 +171,20 @@ async fn test_resolving_package_updates_inspect_state() {
                 static_configs: {},
                 amber_conns: {},
                 repos: {
-                  "example.com": contains {
-                    merkles_successfully_resolved_count: 1u64,
-                    last_updated_time: OptionDebugStringProperty::Some(AnyProperty),
-                    last_used_time: OptionDebugStringProperty::Some(AnyProperty),
-                  },
+                    "example.com": contains {
+                        merkles_successfully_resolved_count: 1u64,
+                        last_merkle_successfully_resolved_time: OptionDebugStringProperty::Some(
+                            AnyProperty
+                        ),
+                        "updating_tuf_client": {
+                            update_check_success_count: 1u64,
+                            update_check_failure_count: 0u64,
+                            last_update_successfully_checked_time: OptionDebugStringProperty::Some(
+                                AnyProperty
+                            ),
+                            updated_count: 1u64,
+                        }
+                    },
                 },
                 stats: {
                     mirrors: {

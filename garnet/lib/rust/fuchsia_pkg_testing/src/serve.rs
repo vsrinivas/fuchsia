@@ -11,12 +11,14 @@ use {
     fidl_fuchsia_pkg_ext::RepositoryConfig,
     fuchsia_async::{self as fasync, net::TcpListener, EHandle},
     fuchsia_url::pkg_url::RepoUrl,
+    fuchsia_zircon as zx,
     futures::{
         compat::Future01CompatExt,
         future::{ready, BoxFuture, RemoteHandle},
         prelude::*,
         task::SpawnExt,
     },
+    http_sse::{Event, EventSender, SseResponseCreator},
     hyper::{header, service::service_fn, Body, Method, Request, Response, Server, StatusCode},
     parking_lot::Mutex,
     std::{
@@ -70,15 +72,21 @@ impl ServedRepositoryBuilder {
         let root = self.repo.path();
         let uri_path_override_handlers = Arc::new(self.uri_path_override_handlers);
 
+        let (auto_response_creator, auto_event_sender) =
+            SseResponseCreator::with_additional_buffer_size(10);
+        let auto_response_creator = Arc::new(auto_response_creator);
+
         let service = move || {
             let root = root.clone();
             let uri_path_override_handlers = Arc::clone(&uri_path_override_handlers);
+            let auto_response_creator = Arc::clone(&auto_response_creator);
 
             service_fn(move |req| {
                 let path = root.clone();
                 ServedRepository::handle_tuf_repo_request(
                     root.clone(),
                     Arc::clone(&uri_path_override_handlers),
+                    Arc::clone(&auto_response_creator),
                     req,
                 )
                 .map(move |x| -> Result<Response<Body>, hyper::Error> {
@@ -107,7 +115,7 @@ impl ServedRepositoryBuilder {
 
         fasync::spawn(server);
 
-        Ok(ServedRepository { repo: self.repo, stop, wait_stop, addr })
+        Ok(ServedRepository { repo: self.repo, stop, wait_stop, addr, auto_event_sender })
     }
 }
 
@@ -117,6 +125,7 @@ pub struct ServedRepository {
     stop: futures::channel::oneshot::Sender<()>,
     wait_stop: RemoteHandle<()>,
     addr: SocketAddr,
+    auto_event_sender: EventSender,
 }
 
 impl ServedRepository {
@@ -134,7 +143,37 @@ impl ServedRepository {
     /// Generate a [`RepositoryConfig`] suitable for configuring a package resolver to use this
     /// served repository.
     pub fn make_repo_config(&self, url: RepoUrl) -> RepositoryConfig {
-        self.repo.make_repo_config(url, self.local_url())
+        self.repo.make_repo_config(url, self.local_url(), false)
+    }
+
+    /// Generate a [`RepositoryConfig`] suitable for configuring a package resolver to use this
+    /// served repository. Set subscribe on the mirror configs to true.
+    pub fn make_repo_config_with_subscribe(&self, url: RepoUrl) -> RepositoryConfig {
+        self.repo.make_repo_config(url, self.local_url(), true)
+    }
+
+    /// Send an SSE event to all clients subscribed to /auto.
+    pub async fn send_auto_event(&self, event: &Event) {
+        self.auto_event_sender.send(event).await
+    }
+
+    /// Waits until `send_auto_event` would attempt to send an `Event` to exactly
+    /// `n` clients. Panics if extra clients are connected.
+    pub async fn wait_for_n_connected_auto_clients(&self, n: usize) {
+        loop {
+            let connected = self.auto_event_sender.client_count().await;
+            if connected == n {
+                break;
+            } else if connected > n {
+                panic!("ServedRepository too many auto clients connected.");
+            }
+            fasync::Timer::new(fasync::Time::after(zx::Duration::from_millis(10))).await;
+        }
+    }
+
+    /// Errors all currently existing /auto `Response<Body>` streams.
+    pub async fn drop_all_auto_clients(&self) {
+        self.auto_event_sender.drop_all_clients().await
     }
 
     /// Gracefully signal the server to stop and returns a future that resolves when it terminates.
@@ -146,6 +185,7 @@ impl ServedRepository {
     async fn handle_tuf_repo_request(
         repo: PathBuf,
         uri_path_override_handlers: Arc<Vec<Arc<dyn UriPathHandler>>>,
+        auto_response_creator: Arc<SseResponseCreator>,
         req: Request<Body>,
     ) -> Response<Body> {
         let fail =
@@ -164,24 +204,28 @@ impl ServedRepository {
             return fail(StatusCode::NOT_FOUND);
         }
 
-        let fs_path = repo.join(uri_path.strip_prefix("/").unwrap_or(uri_path));
-        // FIXME synchronous IO in an async context.
-        let data = match std::fs::read(fs_path) {
-            Ok(data) => data,
-            Err(ref err) if err.kind() == std::io::ErrorKind::NotFound => {
-                return fail(StatusCode::NOT_FOUND);
-            }
-            Err(err) => {
-                eprintln!("error reading repo file: {}", err);
-                return fail(StatusCode::INTERNAL_SERVER_ERROR);
-            }
-        };
+        let mut response = if uri_path == PathBuf::from("/auto") {
+            auto_response_creator.create().await
+        } else {
+            let fs_path = repo.join(uri_path.strip_prefix("/").unwrap_or(uri_path));
+            // FIXME synchronous IO in an async context.
+            let data = match std::fs::read(fs_path) {
+                Ok(data) => data,
+                Err(ref err) if err.kind() == std::io::ErrorKind::NotFound => {
+                    return fail(StatusCode::NOT_FOUND);
+                }
+                Err(err) => {
+                    eprintln!("error reading repo file: {}", err);
+                    return fail(StatusCode::INTERNAL_SERVER_ERROR);
+                }
+            };
 
-        let mut response = Response::builder()
-            .status(StatusCode::OK)
-            .header(header::CONTENT_LENGTH, data.len())
-            .body(Body::from(data))
-            .unwrap();
+            Response::builder()
+                .status(StatusCode::OK)
+                .header(header::CONTENT_LENGTH, data.len())
+                .body(Body::from(data))
+                .unwrap()
+        };
 
         for handler in uri_path_override_handlers.iter() {
             response = handler.handle(uri_path, response).await
@@ -214,7 +258,7 @@ impl AtomicToggle {
 
 /// UriPathHandler implementations
 pub mod handler {
-    use super::*;
+    use {super::*, futures::channel::mpsc};
 
     /// Handler that always responds with the given status code
     pub struct StaticResponseCode(StatusCode);
@@ -393,6 +437,30 @@ pub mod handler {
         /// Creates handler that passes responses through the given handler once per unique path.
         pub fn new(handler: H) -> Self {
             Self { handler, failed_paths: Mutex::new(HashSet::new()) }
+        }
+    }
+
+    /// Handler that notifies a channel when it receives a request.
+    pub struct NotifyWhenRequested {
+        notify: mpsc::UnboundedSender<()>,
+    }
+
+    impl NotifyWhenRequested {
+        /// Creates a new handler and the receiver it notifies on request receipt.
+        pub fn new() -> (Self, mpsc::UnboundedReceiver<()>) {
+            let (tx, rx) = mpsc::unbounded();
+            (Self { notify: tx }, rx)
+        }
+    }
+
+    impl UriPathHandler for NotifyWhenRequested {
+        fn handle(
+            &self,
+            _uri_path: &Path,
+            response: Response<Body>,
+        ) -> BoxFuture<'_, Response<Body>> {
+            self.notify.unbounded_send(()).unwrap();
+            ready(response).boxed()
         }
     }
 }

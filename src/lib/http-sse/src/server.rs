@@ -65,6 +65,17 @@ impl EventSender {
             .collect();
         replace(DerefMut::deref_mut(&mut clients_guard), clients);
     }
+
+    /// Number of clients that `send` will attempt to communicate with.
+    pub async fn client_count(&self) -> usize {
+        self.clients.lock().await.len()
+    }
+
+    /// Drops all connected clients. Already existing `Response<Body>`s created by the
+    /// `SseResponseCreator` should return error on subsequent `poll_next`.
+    pub async fn drop_all_clients(&self) {
+        self.clients.lock().await.clear();
+    }
 }
 
 // Reimplementation of the Body created by hyper::body::Body::channel() b/c in-tree hyper uses old futures API
@@ -143,8 +154,11 @@ mod tests {
         let event0 = Event::from_type_and_data("event_type0", "data_contents0").unwrap();
         let (sse_response_creator, event_sender) =
             SseResponseCreator::with_additional_buffer_size(0);
+        assert_eq!(event_sender.client_count().await, 0);
+
         let mut body_stream0 = sse_response_creator.create().await.into_body().compat();
         let mut body_stream1 = sse_response_creator.create().await.into_body().compat();
+        assert_eq!(event_sender.client_count().await, 2);
 
         event_sender.send(&event0).await;
 
@@ -154,11 +168,28 @@ mod tests {
 
         let event1 = Event::from_type_and_data("event_type1", "data_contents1").unwrap();
         event_sender.send(&event1).await;
+        assert_eq!(event_sender.client_count().await, 1);
 
         let body_bytes0 = body_stream0.next().await;
         assert_matches!(body_bytes0, Some(Err(_)));
 
         let body_bytes1 = body_stream1.next().await;
         assert_eq!(body_bytes1.unwrap().unwrap().to_vec(), event1.to_vec());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn drop_all_clients() {
+        let (sse_response_creator, event_sender) =
+            SseResponseCreator::with_additional_buffer_size(0);
+        let mut body_stream0 = sse_response_creator.create().await.into_body().compat();
+        let mut body_stream1 = sse_response_creator.create().await.into_body().compat();
+        assert_eq!(event_sender.client_count().await, 2);
+        event_sender.send(&Event::from_type_and_data("event_type", "data_contents").unwrap()).await;
+
+        event_sender.drop_all_clients().await;
+
+        assert_eq!(event_sender.client_count().await, 0);
+        assert_matches!(body_stream0.next().await, Some(Err(_)));
+        assert_matches!(body_stream1.next().await, Some(Err(_)));
     }
 }

@@ -27,6 +27,7 @@ rustc_library("fuchsia_pkg_testing") {
     "//garnet/public/rust/fuchsia-merkle",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//src/lib/http-sse:http_sse",
     "//src/sys/lib/fuchsia_backoff",
     "//src/sys/lib/fuchsia_url",
     "//third_party/rust_crates:bytes",

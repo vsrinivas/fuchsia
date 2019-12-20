@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{queue, repository_manager::Stats, tuf_util::Repository},
+    crate::{queue, repository::Repository, repository_manager::Stats},
     failure::Fail,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_amber::OpenedRepositoryProxy,

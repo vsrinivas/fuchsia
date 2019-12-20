@@ -24,12 +24,12 @@ mod experiment;
 mod font_package_manager;
 mod inspect_util;
 mod queue;
+mod repository;
 mod repository_manager;
 mod repository_service;
 mod resolver_service;
 mod rewrite_manager;
 mod rewrite_service;
-mod tuf_util;
 
 #[cfg(test)]
 mod test_util;
