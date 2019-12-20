@@ -6,12 +6,16 @@ mod cmd;
 mod view_token_pair;
 pub use self::view_token_pair::*;
 
-use fidl_fuchsia_images::{ImageInfo, MemoryType, PixelFormat, PresentationInfo, Tiling};
+use fidl::endpoints::ServerEnd;
+use fidl_fuchsia_images::{
+    ImageInfo, ImagePipe2Marker, MemoryType, PixelFormat, PresentationInfo, Tiling,
+};
 use fidl_fuchsia_ui_gfx::{
     AmbientLightArgs, CameraArgs, CircleArgs, ColorRgb, ColorRgba, DirectionalLightArgs,
-    DisplayCompositorArgs, EntityNodeArgs, ImageArgs, LayerArgs, LayerStackArgs, MaterialArgs,
-    MemoryArgs, PointLightArgs, RectangleArgs, RendererArgs, ResourceArgs, RoundedRectangleArgs,
-    SceneArgs, ShapeNodeArgs, Value, ViewArgs, ViewHolderArgs, ViewProperties,
+    DisplayCompositorArgs, EntityNodeArgs, ImageArgs, ImagePipe2Args, LayerArgs, LayerStackArgs,
+    MaterialArgs, MemoryArgs, PointLightArgs, RectangleArgs, RendererArgs, ResourceArgs,
+    RoundedRectangleArgs, SceneArgs, ShapeNodeArgs, Value, ViewArgs, ViewHolderArgs,
+    ViewProperties,
 };
 use fidl_fuchsia_ui_scenic::{Command, SessionProxy};
 use fidl_fuchsia_ui_views::{ViewHolderToken, ViewToken};
@@ -274,6 +278,10 @@ impl Material {
 
     pub fn set_texture(&self, texture: Option<&Image>) {
         self.resource.enqueue(cmd::set_texture(self.id(), texture.map(|t| t.id()).unwrap_or(0)));
+    }
+
+    pub fn set_texture_resource(&self, texture: Option<&Resource>) {
+        self.resource.enqueue(cmd::set_texture(self.id(), texture.map(|t| t.id).unwrap_or(0)));
     }
 }
 
@@ -590,6 +598,23 @@ impl Deref for ShapeNode {
     type Target = Node;
 
     fn deref(&self) -> &Node {
+        &self.0
+    }
+}
+
+pub struct ImagePipe2(Resource);
+
+impl ImagePipe2 {
+    pub fn new(session: SessionPtr, image_pipe_request: ServerEnd<ImagePipe2Marker>) -> ImagePipe2 {
+        let args = ImagePipe2Args { image_pipe_request };
+        ImagePipe2(Resource::new(session, ResourceArgs::ImagePipe2(args)))
+    }
+}
+
+impl Deref for ImagePipe2 {
+    type Target = Resource;
+
+    fn deref(&self) -> &Resource {
         &self.0
     }
 }

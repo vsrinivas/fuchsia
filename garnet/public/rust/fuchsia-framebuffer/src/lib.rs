@@ -9,8 +9,7 @@ use fidl::{
     endpoints::{create_endpoints, ClientEnd},
 };
 use fidl_fuchsia_hardware_display::{
-    ControllerEvent, ControllerMarker, ControllerProxy, ImageConfig,
-    ProviderSynchronousProxy,
+    ControllerEvent, ControllerMarker, ControllerProxy, ImageConfig, ProviderSynchronousProxy,
 };
 use fuchsia_async::{self as fasync, DurationExt, OnSignals, TimeoutExt};
 use fuchsia_component::client::connect_to_service;
@@ -29,7 +28,7 @@ use std::{
 #[cfg(test)]
 use std::ops::Range;
 
-mod sysmem;
+pub mod sysmem;
 
 const BUFFER_COLLECTION_ID: u64 = 1;
 
@@ -133,6 +132,7 @@ pub type ImageId = u64;
 
 #[derive(Debug)]
 pub struct FrameSet {
+    image_count: usize,
     available: BTreeSet<ImageId>,
     pub prepared: Option<ImageId>,
     presented: BTreeSet<ImageId>,
@@ -140,7 +140,12 @@ pub struct FrameSet {
 
 impl FrameSet {
     pub fn new(available: BTreeSet<ImageId>) -> FrameSet {
-        FrameSet { available, prepared: None, presented: BTreeSet::new() }
+        FrameSet {
+            image_count: available.len(),
+            available,
+            prepared: None,
+            presented: BTreeSet::new(),
+        }
     }
 
     #[cfg(test)]
@@ -187,6 +192,10 @@ impl FrameSet {
 
     pub fn return_image(&mut self, image_id: ImageId) {
         self.available.insert(image_id);
+    }
+
+    pub fn no_images_in_use(&self) -> bool {
+        self.available.len() == self.image_count
     }
 }
 

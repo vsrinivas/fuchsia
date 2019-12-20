@@ -21,3 +21,7 @@ pub type IntRect = euclid::Rect<IntCoord>;
 /// A type representing the extent of an element
 /// in two-dimensionals.
 pub type IntSize = euclid::Size2D<IntCoord>;
+
+/// A type representing the extent of an element
+/// in two-dimensions.
+pub type UintSize = euclid::Size2D<u32>;

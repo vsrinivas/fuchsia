@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use carnelian::{
-    set_node_color, App, AppAssistant, Color, Coord, Size, ViewAssistant, ViewAssistantContext,
-    ViewAssistantPtr, ViewKey,
+    make_app_assistant, set_node_color, App, AppAssistant, Color, Coord, Size, ViewAssistant,
+    ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
 use failure::Error;
 use fidl_fuchsia_math::RectF;
@@ -27,6 +27,7 @@ fn inset(rect: &mut RectF, border: f32) {
     rect.height = rect.height - inset_width;
 }
 
+#[derive(Default)]
 struct EmbeddingAppAssistant;
 
 impl AppAssistant for EmbeddingAppAssistant {
@@ -172,6 +173,5 @@ impl ViewAssistant for EmbeddingViewAssistant {
 }
 
 fn main() -> Result<(), Error> {
-    let assistant = EmbeddingAppAssistant {};
-    App::run(Box::new(assistant))
+    App::run(make_app_assistant::<EmbeddingAppAssistant>())
 }

@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use carnelian::{
-    set_node_color, AnimationMode, App, AppAssistant, Color, ViewAssistant, ViewAssistantContext,
-    ViewAssistantPtr, ViewKey,
+    make_app_assistant, set_node_color, AnimationMode, App, AppAssistant, Color, ViewAssistant,
+    ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
 use chrono::prelude::*;
 use failure::Error;
@@ -14,6 +14,7 @@ use std::f32::consts::PI;
 const MIN_SEC_HAND_ANGLE_RADIANS: f32 = (PI * 2.0) / 60.0;
 const HOUR_HAND_ANGLE_RADIANS: f32 = (PI * 2.0) / 12.0;
 
+#[derive(Default)]
 struct ClockAppAssistant;
 
 impl AppAssistant for ClockAppAssistant {
@@ -175,6 +176,5 @@ impl ViewAssistant for ClockViewAssistant {
 }
 
 fn main() -> Result<(), Error> {
-    let assistant = ClockAppAssistant {};
-    App::run(Box::new(assistant))
+    App::run(make_app_assistant::<ClockAppAssistant>())
 }

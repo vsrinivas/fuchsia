@@ -4,8 +4,8 @@
 
 use {
     carnelian::{
-        AnimationMode, App, AppAssistant, FrameBufferPtr, Point, Size, ViewAssistant,
-        ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
+        make_app_assistant, AnimationMode, App, AppAssistant, FrameBufferPtr, Point, Size,
+        ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
     },
     chrono::{Local, Timelike},
     euclid::{Angle, Transform2D, Vector2D},
@@ -24,6 +24,7 @@ use crate::spinel_utils::{
 const APP_NAME: &'static [u8; 13usize] = b"clockface_rs\0";
 const BACKGROUND_COLOR: [f32; 4] = [0.922, 0.835, 0.702, 1.0];
 
+#[derive(Default)]
 struct ClockfaceAppAssistant;
 
 impl AppAssistant for ClockfaceAppAssistant {
@@ -455,6 +456,5 @@ impl<T: Context> ViewAssistant for ClockfaceViewAssistant<T> {
 }
 
 fn main() -> Result<(), Error> {
-    let assistant = ClockfaceAppAssistant {};
-    App::run(Box::new(assistant))
+    App::run(make_app_assistant::<ClockfaceAppAssistant>())
 }

@@ -3,12 +3,15 @@
 // found in the LICENSE file.
 
 use crate::FrameUsage;
-use failure::{bail, Error};
+use failure::{bail, format_err, Error, ResultExt};
+use fidl::endpoints::{create_endpoints, ClientEnd};
 use fidl_fuchsia_sysmem::{
     BufferCollectionConstraints, BufferMemoryConstraints, BufferUsage, ColorSpace, ColorSpaceType,
     FormatModifier, HeapType, ImageFormatConstraints, PixelFormat as SysmemPixelFormat,
     PixelFormatType,
 };
+use fuchsia_component::client::connect_to_service;
+use fuchsia_zircon::{self as zx, Status};
 use std::cmp;
 
 pub fn linear_image_format_constraints(
@@ -25,12 +28,12 @@ pub fn linear_image_format_constraints(
         color_spaces_count: 1,
         color_space: [ColorSpace { type_: ColorSpaceType::Srgb }; 32],
         min_coded_width: width,
-        max_coded_width: std::u32::MAX,
+        max_coded_width: width,
         min_coded_height: height,
-        max_coded_height: std::u32::MAX,
+        max_coded_height: height,
         min_bytes_per_row: width * 4,
-        max_bytes_per_row: std::u32::MAX,
-        max_coded_width_times_coded_height: std::u32::MAX,
+        max_bytes_per_row: width * 4,
+        max_coded_width_times_coded_height: width * height,
         layers: 1,
         coded_width_divisor: 1,
         coded_height_divisor: 1,
@@ -38,12 +41,12 @@ pub fn linear_image_format_constraints(
         start_offset_divisor: 1,
         display_width_divisor: 1,
         display_height_divisor: 1,
-        required_min_coded_width: 0,
-        required_max_coded_width: std::u32::MAX,
-        required_min_coded_height: 0,
-        required_max_coded_height: std::u32::MAX,
-        required_min_bytes_per_row: 0,
-        required_max_bytes_per_row: std::u32::MAX,
+        required_min_coded_width: width,
+        required_max_coded_width: width,
+        required_min_coded_height: height,
+        required_max_coded_height: height,
+        required_min_bytes_per_row: width * 4,
+        required_max_bytes_per_row: width * 4,
     }
 }
 
@@ -137,4 +140,119 @@ pub fn minimum_row_bytes(constraints: ImageFormatConstraints, width: u32) -> Res
         cmp::max(bytes_per_pixel * width, constraints.min_bytes_per_row),
         constraints.bytes_per_row_divisor,
     ))
+}
+
+pub struct BufferCollectionAllocator {
+    token: Option<fidl_fuchsia_sysmem::BufferCollectionTokenProxy>,
+    width: u32,
+    height: u32,
+    pixel_type: PixelFormatType,
+    buffer_count: usize,
+    sysmem: fidl_fuchsia_sysmem::AllocatorProxy,
+    collection_client: Option<fidl_fuchsia_sysmem::BufferCollectionProxy>,
+}
+
+impl BufferCollectionAllocator {
+    pub fn new(
+        width: u32,
+        height: u32,
+        pixel_type: PixelFormatType,
+        buffer_count: usize,
+    ) -> Result<BufferCollectionAllocator, Error> {
+        let sysmem = connect_to_service::<fidl_fuchsia_sysmem::AllocatorMarker>()?;
+
+        let (local_token, local_token_request) =
+            create_endpoints::<fidl_fuchsia_sysmem::BufferCollectionTokenMarker>()?;
+
+        sysmem.allocate_shared_collection(local_token_request)?;
+
+        Ok(BufferCollectionAllocator {
+            token: Some(local_token.into_proxy()?),
+            width,
+            height,
+            pixel_type,
+            buffer_count,
+            sysmem,
+            collection_client: None,
+        })
+    }
+
+    pub async fn allocate_buffers(
+        &mut self,
+    ) -> Result<fidl_fuchsia_sysmem::BufferCollectionInfo2, Error> {
+        let token = self.token.take().expect("token");
+        let (collection_client, collection_request) =
+            create_endpoints::<fidl_fuchsia_sysmem::BufferCollectionMarker>()?;
+        self.sysmem.bind_shared_collection(
+            ClientEnd::new(token.into_channel().unwrap().into_zx_channel()),
+            collection_request,
+        )?;
+        let collection_client = collection_client.into_proxy()?;
+        let mut buffer_collection_constraints = crate::sysmem::buffer_collection_constraints(
+            self.width,
+            self.height,
+            self.pixel_type,
+            self.buffer_count as u32,
+            FrameUsage::Cpu,
+        );
+        collection_client
+            .set_constraints(true, &mut buffer_collection_constraints)
+            .context("Sending buffer constraints to sysmem")?;
+        let (status, buffers) = collection_client.wait_for_buffers_allocated().await?;
+        self.collection_client = Some(collection_client);
+        if status != zx::sys::ZX_OK {
+            return Err(format_err!(
+                "Failed to wait for buffers {}({})",
+                Status::from_raw(status),
+                status
+            ));
+        }
+        Ok(buffers)
+    }
+
+    pub async fn duplicate_token(
+        &mut self,
+    ) -> Result<ClientEnd<fidl_fuchsia_sysmem::BufferCollectionTokenMarker>, Error> {
+        let (requested_token, requested_token_request) =
+            create_endpoints::<fidl_fuchsia_sysmem::BufferCollectionTokenMarker>()?;
+
+        self.token.as_ref().expect("token").duplicate(std::u32::MAX, requested_token_request)?;
+        self.token.as_ref().expect("token").sync().await?;
+        Ok(requested_token)
+    }
+}
+
+impl Drop for BufferCollectionAllocator {
+    fn drop(&mut self) {
+        if let Some(collection_client) = self.collection_client.as_mut() {
+            collection_client
+                .close()
+                .unwrap_or_else(|err| eprintln!("collection_client.close failed with {}", err));
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::sysmem::BufferCollectionAllocator;
+    use fuchsia_async as fasync;
+
+    const BUFFER_COUNT: usize = 3;
+
+    #[test]
+    fn test_buffer_collection_allocator() -> std::result::Result<(), failure::Error> {
+        let mut executor = fasync::Executor::new()?;
+        let mut bca = BufferCollectionAllocator::new(
+            200,
+            200,
+            fidl_fuchsia_sysmem::PixelFormatType::Bgra32,
+            BUFFER_COUNT,
+        )?;
+
+        let allocate_future = bca.allocate_buffers();
+        let buffers = executor.run_singlethreaded(allocate_future)?;
+        assert_eq!(buffers.buffer_count, BUFFER_COUNT as u32);
+
+        Ok(())
+    }
 }

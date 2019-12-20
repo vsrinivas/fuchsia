@@ -4,15 +4,23 @@
 
 use {
     crate::terminal_view::TerminalViewAssistant,
-    carnelian::{AppAssistant, ViewAssistantPtr, ViewKey, ViewMode},
+    carnelian::{AppAssistant, AppContext, ViewAssistantPtr, ViewKey, ViewMode},
     failure::Error,
 };
 
-pub struct TerminalAssistant;
+pub struct TerminalAssistant {
+    app_context: AppContext,
+}
 
 impl TerminalAssistant {
-    pub fn new() -> TerminalAssistant {
-        TerminalAssistant
+    pub fn new(app_context: &AppContext) -> TerminalAssistant {
+        TerminalAssistant { app_context: app_context.clone() }
+    }
+
+    #[cfg(test)]
+    pub fn new_for_test() -> TerminalAssistant {
+        let app_context = AppContext::new_for_testing_purposes_only();
+        Self::new(&app_context)
     }
 }
 
@@ -22,7 +30,7 @@ impl AppAssistant for TerminalAssistant {
     }
 
     fn create_view_assistant_canvas(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
-        Ok(Box::new(TerminalViewAssistant::new()))
+        Ok(Box::new(TerminalViewAssistant::new(&self.app_context)))
     }
 
     fn get_mode(&self) -> ViewMode {
@@ -37,13 +45,13 @@ mod tests {
 
     #[test]
     fn app_runs_in_canvas_mode() {
-        let app = TerminalAssistant::new();
+        let app = TerminalAssistant::new_for_test();
         assert_eq!(app.get_mode(), ViewMode::Canvas);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn creates_terminal_view() -> Result<(), Error> {
-        let mut app = TerminalAssistant::new();
+        let mut app = TerminalAssistant::new_for_test();
         app.create_view_assistant_canvas(1)?;
         Ok(())
     }

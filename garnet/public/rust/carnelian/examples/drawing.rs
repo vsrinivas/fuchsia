@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use carnelian::{
-    make_message, AnimationMode, App, AppAssistant, Canvas, Color, Coord, MappingPixelSink, Point,
-    Rect, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMessages,
-    ViewMode,
+    make_app_assistant, make_message, AnimationMode, App, AppAssistant, Canvas, Color, Coord,
+    MappingPixelSink, Point, Rect, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr,
+    ViewKey, ViewMessages, ViewMode,
 };
 use euclid::rect;
 use failure::Error;
@@ -39,6 +39,7 @@ pub fn wait_for_close() {
     });
 }
 
+#[derive(Default)]
 struct DrawingAppAssistant;
 
 impl AppAssistant for DrawingAppAssistant {
@@ -166,9 +167,9 @@ impl ViewAssistant for DrawingViewAssistant {
 
         canvas.reset_update_area();
 
-        let wait_event =
-            context.wait_event.as_ref().expect("wait event should be passed in context");
-        wait_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
+        if let Some(wait_event) = context.wait_event.as_ref() {
+            wait_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
+        }
 
         Ok(())
     }
@@ -195,6 +196,5 @@ impl ViewAssistant for DrawingViewAssistant {
 fn main() -> Result<(), Error> {
     println!("drawing: started");
     wait_for_close();
-    let assistant = DrawingAppAssistant {};
-    App::run(Box::new(assistant))
+    App::run(make_app_assistant::<DrawingAppAssistant>())
 }

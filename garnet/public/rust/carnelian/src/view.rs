@@ -3,33 +3,43 @@
 // found in the LICENSE file.
 
 use crate::{
-    app::{App, FrameBufferPtr, TestSender, ViewMode},
+    app::{FrameBufferPtr, MessageInternal, ViewMode},
     canvas::{Canvas, MappingPixelSink},
-    geometry::{IntSize, Size},
-    message::{make_message, Message},
+    geometry::{IntSize, Size, UintSize},
+    message::Message,
     scenic_utils::PresentationTime,
 };
-use failure::Error;
-use fidl_fuchsia_images as images;
+use async_trait::async_trait;
+use failure::{Error, ResultExt};
+use fidl::endpoints::create_endpoints;
+use fidl_fuchsia_images::{ImagePipe2Marker, ImagePipe2Proxy};
+use fidl_fuchsia_sysmem::ImageFormat2;
 use fidl_fuchsia_ui_gfx::{self as gfx, Metrics, ViewProperties};
 use fidl_fuchsia_ui_input::{
     FocusEvent, InputEvent, KeyboardEvent, PointerEvent, SetHardKeyboardDeliveryCmd,
 };
 use fidl_fuchsia_ui_views::ViewToken;
-use fuchsia_async::{self as fasync, Interval};
-use fuchsia_framebuffer::{FrameSet, ImageId};
-use fuchsia_scenic::{EntityNode, HostImageCycler, SessionPtr, View};
-use fuchsia_zircon::{self as zx, ClockId, Duration, Event, HandleBased, Time};
-use futures::{channel::mpsc::unbounded, StreamExt, TryFutureExt};
-use std::{cell::RefCell, collections::BTreeMap};
+use fuchsia_async::{self as fasync, Interval, OnSignals};
+use fuchsia_framebuffer::{sysmem::BufferCollectionAllocator, FrameSet, ImageId};
+use fuchsia_scenic::{EntityNode, ImagePipe2, Material, Rectangle, SessionPtr, ShapeNode, View};
+use fuchsia_zircon::{self as zx, ClockId, Duration, Event, HandleBased, Signals, Time};
+use futures::{
+    channel::mpsc::{unbounded, UnboundedSender},
+    StreamExt, TryFutureExt,
+};
+use mapped_vmo::Mapping;
+use std::{
+    cell::RefCell,
+    collections::{BTreeMap, BTreeSet},
+    iter,
+    sync::Arc,
+};
 
 /// enum that defines all messages sent with `App::send_message` that
 /// the view struct will understand and process.
 pub enum ViewMessages {
     /// Message that requests that a view redraw itself.
     Update,
-    /// Sent when a scenic present has completed
-    ScenicPresentDone,
 }
 
 /// enum that defines the animation behavior of the view
@@ -172,10 +182,15 @@ pub struct ScenicResources {
     root_node: EntityNode,
     session: SessionPtr,
     pending_present_count: usize,
+    app_sender: UnboundedSender<MessageInternal>,
 }
 
 impl ScenicResources {
-    fn new(session: &SessionPtr, view_token: ViewToken) -> ScenicResources {
+    fn new(
+        session: &SessionPtr,
+        view_token: ViewToken,
+        app_sender: UnboundedSender<MessageInternal>,
+    ) -> ScenicResources {
         let view = View::new(session.clone(), view_token, Some(String::from("Carnelian View")));
         let root_node = EntityNode::new(session.clone());
         root_node.resource().set_event_mask(gfx::METRICS_EVENT_MASK);
@@ -186,17 +201,33 @@ impl ScenicResources {
                 delivery_request: true,
             }),
         ));
-        ScenicResources { view, root_node, session: session.clone(), pending_present_count: 0 }
+        ScenicResources {
+            view,
+            root_node,
+            session: session.clone(),
+            pending_present_count: 0,
+            app_sender,
+        }
     }
 }
 
 struct ScenicCanvasResources {
-    image_cycler: HostImageCycler,
+    content_node: ShapeNode,
+    content_material: Material,
+    image_pipe: ImagePipe2,
+    image_pipe_client: ImagePipe2Proxy,
+    plumber: Option<Plumber>,
+    retiring_plumbers: Vec<Plumber>,
+    next_buffer_collection: u32,
+    next_image_id: u64,
 }
 
+impl ScenicCanvasResources {}
+
+#[async_trait(?Send)]
 trait ViewStrategy {
     fn setup(&mut self, _view_details: &ViewDetails, _view_assistant: &mut ViewAssistantPtr);
-    fn update(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr);
+    async fn update(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr);
     fn present(&mut self, view_details: &ViewDetails);
     fn present_done(
         &mut self,
@@ -217,7 +248,7 @@ trait ViewStrategy {
         _: &fidl_fuchsia_ui_input::InputEvent,
     ) -> Vec<Message>;
 
-    fn image_freed(&mut self, _image_id: u64) {}
+    fn image_freed(&mut self, _image_id: u64, _collection_id: u32) {}
 }
 
 type ViewStrategyPtr = Box<dyn ViewStrategy>;
@@ -228,15 +259,16 @@ struct ScenicViewStrategy {
 
 fn scenic_present(scenic_resources: &mut ScenicResources, key: ViewKey) {
     if scenic_resources.pending_present_count < 3 {
+        let app_sender = scenic_resources.app_sender.clone();
         fasync::spawn_local(
             scenic_resources
                 .session
                 .lock()
                 .present(0)
                 .map_ok(move |_| {
-                    App::with(|app| {
-                        app.queue_message(key, make_message(ViewMessages::ScenicPresentDone));
-                    })
+                    app_sender
+                        .unbounded_send(MessageInternal::ScenicPresentDone(key))
+                        .expect("unbounded_send");
                 })
                 .unwrap_or_else(|e| panic!("present error: {:?}", e)),
         );
@@ -250,8 +282,12 @@ fn scenic_present_done(scenic_resources: &mut ScenicResources) {
 }
 
 impl ScenicViewStrategy {
-    fn new(session: &SessionPtr, view_token: ViewToken) -> ViewStrategyPtr {
-        let scenic_resources = ScenicResources::new(session, view_token);
+    fn new(
+        session: &SessionPtr,
+        view_token: ViewToken,
+        app_sender: UnboundedSender<MessageInternal>,
+    ) -> ViewStrategyPtr {
+        let scenic_resources = ScenicResources::new(session, view_token, app_sender);
         Box::new(ScenicViewStrategy { scenic_resources })
     }
 
@@ -271,13 +307,14 @@ impl ScenicViewStrategy {
     }
 }
 
+#[async_trait(?Send)]
 impl ViewStrategy for ScenicViewStrategy {
     fn setup(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr) {
         let context = self.make_view_assistant_context(view_details);
         view_assistant.setup(&context).unwrap_or_else(|e| panic!("Setup error: {:?}", e));
     }
 
-    fn update(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr) {
+    async fn update(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr) {
         let context = self.make_view_assistant_context(view_details);
         view_assistant.update(&context).unwrap_or_else(|e| panic!("Update error: {:?}", e));
     }
@@ -310,6 +347,100 @@ impl ViewStrategy for ScenicViewStrategy {
     }
 }
 
+struct Plumber {
+    pub size: UintSize,
+    pub pixel_format: fidl_fuchsia_sysmem::PixelFormatType,
+    pub buffer_count: usize,
+    pub collection_id: u32,
+    pub first_image_id: u64,
+    pub buffer_allocator: BufferCollectionAllocator,
+    pub frame_set: FrameSet,
+    pub canvases: Canvases,
+}
+
+impl Plumber {
+    async fn new(
+        size: UintSize,
+        pixel_format: fidl_fuchsia_sysmem::PixelFormatType,
+        buffer_count: usize,
+        collection_id: u32,
+        first_image_id: u64,
+        image_pipe_client: &mut ImagePipe2Proxy,
+    ) -> Result<Plumber, Error> {
+        let mut buffer_allocator =
+            BufferCollectionAllocator::new(size.width, size.height, pixel_format, buffer_count)?;
+        let image_pipe_token = buffer_allocator.duplicate_token().await?;
+        image_pipe_client.add_buffer_collection(collection_id, image_pipe_token)?;
+        let buffers = buffer_allocator.allocate_buffers().await?;
+        let buffer_size = size.width * size.height * 4;
+        let mut canvases: Canvases = Canvases::new();
+        let mut index = 0;
+        let mut image_ids = BTreeSet::new();
+        for buffer in &buffers.buffers[0..buffers.buffer_count as usize] {
+            let image_id = index + first_image_id;
+            image_ids.insert(image_id);
+            let vmo = buffer.vmo.as_ref().expect("vmo");
+
+            let mapping = Mapping::create_from_vmo(
+                vmo,
+                buffer_size as usize,
+                zx::VmarFlags::PERM_READ
+                    | zx::VmarFlags::PERM_WRITE
+                    | zx::VmarFlags::MAP_RANGE
+                    | zx::VmarFlags::REQUIRE_NON_RESIZABLE,
+            )
+            .context("Frame::new() Mapping::create_from_vmo failed")
+            .expect("mapping");
+            let canvas = RefCell::new(Canvas::new(
+                IntSize::new(size.width as i32, size.height as i32),
+                MappingPixelSink::new(&Arc::new(mapping)),
+                size.width * 4,
+                4,
+                image_id,
+                index as u32,
+            ));
+            canvases.insert(image_id, canvas);
+            let uindex = index as u32;
+            image_pipe_client
+                .add_image(
+                    image_id as u32,
+                    collection_id,
+                    uindex,
+                    &mut make_image_format(size.width, size.height, pixel_format),
+                )
+                .expect("add_image");
+            index += 1;
+        }
+        let frame_set = FrameSet::new(image_ids);
+        Ok(Plumber {
+            size,
+            buffer_count,
+            pixel_format,
+            collection_id,
+            first_image_id,
+            buffer_allocator,
+            frame_set,
+            canvases,
+        })
+    }
+
+    pub fn enter_retirement(&mut self, image_pipe_client: &mut ImagePipe2Proxy) {
+        for image_id in self.first_image_id..self.first_image_id + self.buffer_count as u64 {
+            image_pipe_client.remove_image(image_id as u32).unwrap_or_else(|err| {
+                eprintln!("image_pipe_client.remove_image {} failed with {}", image_id, err)
+            });
+        }
+        image_pipe_client.remove_buffer_collection(self.collection_id).unwrap_or_else(|err| {
+            eprintln!(
+                "image_pipe_client.remove_buffer_collection {} failed with {}",
+                self.collection_id, err
+            )
+        });
+    }
+}
+
+const SCENIC_CANVAS_BUFFER_COUNT: usize = 3;
+
 struct ScenicCanvasViewStrategy {
     #[allow(unused)]
     scenic_resources: ScenicResources,
@@ -317,13 +448,33 @@ struct ScenicCanvasViewStrategy {
 }
 
 impl ScenicCanvasViewStrategy {
-    fn new(session: &SessionPtr, view_token: ViewToken) -> ViewStrategyPtr {
-        let scenic_resources = ScenicResources::new(session, view_token);
-        let image_cycler = HostImageCycler::new(session.clone());
-        scenic_resources.root_node.add_child(&image_cycler.node());
-        let canvas_resources = ScenicCanvasResources { image_cycler };
+    async fn new(
+        session: &SessionPtr,
+        view_token: ViewToken,
+        app_sender: UnboundedSender<MessageInternal>,
+    ) -> Result<ViewStrategyPtr, Error> {
+        let scenic_resources = ScenicResources::new(session, view_token, app_sender);
+        let (image_pipe_client, server_end) = create_endpoints::<ImagePipe2Marker>()?;
+        let image_pipe = ImagePipe2::new(session.clone(), server_end);
+        let content_material = Material::new(session.clone());
+        content_material.set_texture_resource(Some(&image_pipe));
+        let content_node = ShapeNode::new(session.clone());
+        content_node.set_material(&content_material);
+        scenic_resources.root_node.add_child(&content_node);
+        let image_pipe_client = image_pipe_client.into_proxy()?;
+        let canvas_resources = ScenicCanvasResources {
+            image_pipe_client,
+            image_pipe,
+            content_node,
+            content_material,
+            plumber: None,
+            retiring_plumbers: Vec::new(),
+            next_buffer_collection: 1,
+            next_image_id: 1,
+        };
+        session.lock().flush();
         let strat = ScenicCanvasViewStrategy { scenic_resources, canvas_resources };
-        Box::new(strat)
+        Ok(Box::new(strat))
     }
 
     fn make_view_assistant_context<'a>(
@@ -343,8 +494,59 @@ impl ScenicCanvasViewStrategy {
             wait_event: None,
         }
     }
+
+    async fn create_plumber(&mut self, size: UintSize) -> Result<(), Error> {
+        let buffer_collection_id = self.canvas_resources.next_buffer_collection;
+        self.canvas_resources.next_buffer_collection =
+            self.canvas_resources.next_buffer_collection.wrapping_add(1);
+        let next_image_id = self.canvas_resources.next_image_id;
+        self.canvas_resources.next_image_id =
+            self.canvas_resources.next_image_id.wrapping_add(SCENIC_CANVAS_BUFFER_COUNT as u64);
+        self.canvas_resources.plumber = Some(
+            Plumber::new(
+                size.to_u32(),
+                fidl_fuchsia_sysmem::PixelFormatType::Bgra32,
+                SCENIC_CANVAS_BUFFER_COUNT,
+                buffer_collection_id,
+                next_image_id,
+                &mut self.canvas_resources.image_pipe_client,
+            )
+            .await
+            .expect("Plumber::new"),
+        );
+        Ok(())
+    }
 }
 
+fn make_image_format(
+    width: u32,
+    height: u32,
+    pixel_format: fidl_fuchsia_sysmem::PixelFormatType,
+) -> ImageFormat2 {
+    ImageFormat2 {
+        bytes_per_row: width * 4,
+        coded_height: height,
+        coded_width: width,
+        color_space: fidl_fuchsia_sysmem::ColorSpace {
+            type_: fidl_fuchsia_sysmem::ColorSpaceType::Srgb,
+        },
+        display_height: height,
+        display_width: width,
+        has_pixel_aspect_ratio: false,
+        layers: 1,
+        pixel_aspect_ratio_height: 1,
+        pixel_aspect_ratio_width: 1,
+        pixel_format: fidl_fuchsia_sysmem::PixelFormat {
+            type_: pixel_format,
+            has_format_modifier: true,
+            format_modifier: fidl_fuchsia_sysmem::FormatModifier {
+                value: fidl_fuchsia_sysmem::FORMAT_MODIFIER_LINEAR,
+            },
+        },
+    }
+}
+
+#[async_trait(?Send)]
 impl ViewStrategy for ScenicCanvasViewStrategy {
     fn setup(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr) {
         let canvas_context =
@@ -352,45 +554,67 @@ impl ViewStrategy for ScenicCanvasViewStrategy {
         view_assistant.setup(&canvas_context).unwrap_or_else(|e| panic!("Setup error: {:?}", e));
     }
 
-    fn update(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr) {
+    async fn update(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr) {
         let size = view_details.physical_size.floor().to_u32();
         if size.width > 0 && size.height > 0 {
+            if self.canvas_resources.plumber.is_none() {
+                self.create_plumber(size).await.expect("create_plumber");
+            } else {
+                let current_size = self.canvas_resources.plumber.as_ref().expect("plumber").size;
+                if current_size != size {
+                    let retired_plumber = self.canvas_resources.plumber.take().expect("plumber");
+                    self.canvas_resources.retiring_plumbers.push(retired_plumber);
+                    self.create_plumber(size).await.expect("create_plumber");
+                }
+            }
+            let plumber = self.canvas_resources.plumber.as_mut().expect("plumber");
             let center_x = view_details.physical_size.width * 0.5;
             let center_y = view_details.physical_size.height * 0.5;
-            let image_cycler = &mut self.canvas_resources.image_cycler;
-            image_cycler.node().set_translation(center_x, center_y, -0.1);
-            let stride = size.width * 4;
-
-            // Create a description of this pixel buffer that
-            // Scenic can understand.
-            let info = images::ImageInfo {
-                transform: images::Transform::Normal,
-                width: size.width,
-                height: size.height,
-                stride: stride,
-                pixel_format: images::PixelFormat::Bgra8,
-                color_space: images::ColorSpace::Srgb,
-                tiling: images::Tiling::Linear,
-                alpha_format: images::AlphaFormat::Opaque,
-            };
-
-            // Grab an image buffer from the cycler
-            let guard = image_cycler.acquire(info).expect("failed to allocate buffer");
-            // Create a canvas to render into the buffer
-            let canvas = RefCell::new(Canvas::new(
-                view_details.physical_size.to_i32(),
-                MappingPixelSink::new(&guard.image().mapping()),
-                stride,
-                4,
-                0,
-                0,
-            ));
-
-            let canvas_context =
-                ScenicCanvasViewStrategy::make_view_assistant_context(view_details, Some(&canvas));
-            view_assistant
-                .update(&canvas_context)
-                .unwrap_or_else(|e| panic!("Update error: {:?}", e));
+            self.canvas_resources.content_node.set_translation(center_x, center_y, -0.1);
+            self.canvas_resources
+                .content_material
+                .set_texture_resource(Some(&self.canvas_resources.image_pipe));
+            let rectangle = Rectangle::new(
+                self.scenic_resources.session.clone(),
+                size.width as f32,
+                size.height as f32,
+            );
+            if let Some(available) = plumber.frame_set.get_available_image() {
+                let canvas = plumber.canvases.get(&available).expect("canvas");
+                self.canvas_resources.content_node.set_shape(&rectangle);
+                let canvas_context = ScenicCanvasViewStrategy::make_view_assistant_context(
+                    view_details,
+                    Some(canvas),
+                );
+                view_assistant
+                    .update(&canvas_context)
+                    .unwrap_or_else(|e| panic!("Update error: {:?}", e));
+                plumber.frame_set.mark_prepared(available);
+                let wait_event = Event::create().expect("Event.create");
+                let local_event =
+                    wait_event.duplicate_handle(zx::Rights::SAME_RIGHTS).expect("duplicate_handle");
+                let app_sender = self.scenic_resources.app_sender.clone();
+                let key = view_details.key;
+                let collection_id = plumber.collection_id;
+                fasync::spawn_local(async move {
+                    let signals = OnSignals::new(&local_event, Signals::EVENT_SIGNALED);
+                    signals.await.expect("to wait");
+                    app_sender
+                        .unbounded_send(MessageInternal::ImageFreed(key, available, collection_id))
+                        .expect("unbounded_send");
+                });
+                self.canvas_resources
+                    .image_pipe_client
+                    .present_image(
+                        canvas.borrow().id as u32,
+                        0,
+                        &mut iter::empty(),
+                        &mut iter::once(wait_event),
+                    )
+                    .await
+                    .expect("present_image");
+                plumber.frame_set.mark_presented(available);
+            }
         }
     }
 
@@ -420,6 +644,28 @@ impl ViewStrategy for ScenicCanvasViewStrategy {
 
         canvas_context.messages
     }
+
+    fn image_freed(&mut self, image_id: u64, collection_id: u32) {
+        if let Some(plumber) = self.canvas_resources.plumber.as_mut() {
+            if plumber.collection_id == collection_id {
+                plumber.frame_set.mark_done_presenting(image_id);
+                return;
+            }
+        }
+
+        for retired_plumber in &mut self.canvas_resources.retiring_plumbers {
+            if retired_plumber.collection_id == collection_id {
+                retired_plumber.frame_set.mark_done_presenting(image_id);
+                if retired_plumber.frame_set.no_images_in_use() {
+                    retired_plumber.enter_retirement(&mut self.canvas_resources.image_pipe_client);
+                }
+            }
+        }
+
+        self.canvas_resources
+            .retiring_plumbers
+            .retain(|plumber| !plumber.frame_set.no_images_in_use());
+    }
 }
 
 type Canvases = BTreeMap<ImageId, RefCell<Canvas<MappingPixelSink>>>;
@@ -436,10 +682,12 @@ struct FrameBufferViewStrategy {
 
 impl FrameBufferViewStrategy {
     fn new(
+        key: ViewKey,
         size: &IntSize,
         pixel_size: u32,
         _pixel_format: fuchsia_framebuffer::PixelFormat,
         stride: u32,
+        app_sender: UnboundedSender<MessageInternal>,
         frame_buffer: FrameBufferPtr,
         signals_wait_event: bool,
     ) -> ViewStrategyPtr {
@@ -471,9 +719,9 @@ impl FrameBufferViewStrategy {
         // image can prepared.
         fasync::spawn_local(async move {
             while let Some(image_id) = image_receiver.next().await {
-                App::with(|app| {
-                    app.image_freed(image_id);
-                })
+                app_sender
+                    .unbounded_send(MessageInternal::ImageFreed(key, image_id, 0))
+                    .expect("unbounded_send");
             }
         });
         let frame_set = FrameSet::new(image_ids);
@@ -516,6 +764,7 @@ impl FrameBufferViewStrategy {
     }
 }
 
+#[async_trait(?Send)]
 impl ViewStrategy for FrameBufferViewStrategy {
     fn setup(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr) {
         if let Some(available) = self.frame_set.get_available_image() {
@@ -527,7 +776,7 @@ impl ViewStrategy for FrameBufferViewStrategy {
         }
     }
 
-    fn update(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr) {
+    async fn update(&mut self, view_details: &ViewDetails, view_assistant: &mut ViewAssistantPtr) {
         if let Some(available) = self.frame_set.get_available_image() {
             let framebuffer_context = self.make_context(view_details, available);
             view_assistant
@@ -555,7 +804,7 @@ impl ViewStrategy for FrameBufferViewStrategy {
         panic!("Not yet implemented");
     }
 
-    fn image_freed(&mut self, image_id: u64) {
+    fn image_freed(&mut self, image_id: u64, _collection_id: u32) {
         self.frame_set.mark_done_presenting(image_id);
     }
 }
@@ -580,22 +829,22 @@ pub struct ViewController {
     logical_size: Size,
     animation_mode: AnimationMode,
     strategy: ViewStrategyPtr,
-    test_sender: Option<TestSender>,
+    app_sender: UnboundedSender<MessageInternal>,
 }
 
 impl ViewController {
-    pub(crate) fn new(
+    pub(crate) async fn new(
         key: ViewKey,
         view_token: ViewToken,
         mode: ViewMode,
         session: SessionPtr,
         mut view_assistant: ViewAssistantPtr,
-        test_sender: Option<TestSender>,
+        app_sender: UnboundedSender<MessageInternal>,
     ) -> Result<ViewController, Error> {
         let strategy = if mode == ViewMode::Canvas {
-            ScenicCanvasViewStrategy::new(&session, view_token)
+            ScenicCanvasViewStrategy::new(&session, view_token, app_sender.clone()).await?
         } else {
-            ScenicViewStrategy::new(&session, view_token)
+            ScenicViewStrategy::new(&session, view_token, app_sender.clone())
         };
 
         let initial_animation_mode = view_assistant.initial_animation_mode();
@@ -608,7 +857,7 @@ impl ViewController {
             animation_mode: initial_animation_mode,
             assistant: view_assistant,
             strategy,
-            test_sender: test_sender,
+            app_sender,
         };
 
         view_controller
@@ -619,22 +868,24 @@ impl ViewController {
     }
 
     /// new_with_frame_buffer
-    pub fn new_with_frame_buffer(
+    pub(crate) fn new_with_frame_buffer(
         key: ViewKey,
         size: IntSize,
         pixel_size: u32,
         pixel_format: fuchsia_framebuffer::PixelFormat,
         stride: u32,
         mut view_assistant: ViewAssistantPtr,
-        test_sender: Option<TestSender>,
+        app_sender: UnboundedSender<MessageInternal>,
         frame_buffer: FrameBufferPtr,
         signals_wait_event: bool,
     ) -> Result<ViewController, Error> {
         let strategy = FrameBufferViewStrategy::new(
+            key,
             &size,
             pixel_size,
             pixel_format,
             stride,
+            app_sender.clone(),
             frame_buffer,
             signals_wait_event,
         );
@@ -647,7 +898,7 @@ impl ViewController {
             animation_mode: initial_animation_mode,
             assistant: view_assistant,
             strategy,
-            test_sender: test_sender,
+            app_sender: app_sender.clone(),
         };
 
         view_controller
@@ -673,19 +924,18 @@ impl ViewController {
     }
 
     pub(crate) fn update(&mut self) {
+        self.app_sender.unbounded_send(MessageInternal::Update(self.key)).expect("unbounded_send");
+    }
+
+    pub(crate) async fn update_async(&mut self) {
         // Recompute our logical size based on the provided physical size and screen metrics.
         self.logical_size = Size::new(
             self.physical_size.width * self.metrics.width,
             self.physical_size.height * self.metrics.height,
         );
 
-        self.strategy.update(&self.make_view_details(), &mut self.assistant);
+        self.strategy.update(&self.make_view_details(), &mut self.assistant).await;
         self.present();
-        if let Some(sender) = self.test_sender.as_ref() {
-            sender
-                .unbounded_send(Ok(()))
-                .unwrap_or_else(|err| println!("sending failed {:?}", err));
-        }
     }
 
     pub(crate) fn present_done(&mut self) {
@@ -708,11 +958,10 @@ impl ViewController {
     fn setup_timer(&self, duration: Duration) {
         let key = self.key;
         let timer = Interval::new(duration);
+        let app_sender = self.app_sender.clone();
         let f = timer
             .map(move |_| {
-                App::with(|app| {
-                    app.queue_message(key, make_message(ViewMessages::Update));
-                });
+                app_sender.unbounded_send(MessageInternal::Update(key)).expect("unbounded_send");
             })
             .collect::<()>();
         fasync::spawn_local(f);
@@ -767,16 +1016,13 @@ impl ViewController {
                 ViewMessages::Update => {
                     self.update();
                 }
-                ViewMessages::ScenicPresentDone => {
-                    self.present_done();
-                }
             }
         } else {
             self.assistant.handle_message(msg);
         }
     }
 
-    pub(crate) fn image_freed(&mut self, image_id: u64) {
-        self.strategy.image_freed(image_id);
+    pub(crate) fn image_freed(&mut self, image_id: u64, collection_id: u32) {
+        self.strategy.image_freed(image_id, collection_id);
     }
 }

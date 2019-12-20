@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 use carnelian::{
-    make_message, set_node_color, App, AppAssistant, Color, Label, Message, Paint, Point, Rect,
-    Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMessages,
+    make_app_assistant, make_message, set_node_color, App, AppAssistant, Color, Label, Message,
+    Paint, Point, Rect, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
+    ViewMessages,
 };
 use failure::Error;
 use fidl_fuchsia_ui_input::{FocusEvent, PointerEvent, PointerEventPhase};
@@ -23,6 +24,7 @@ pub enum ButtonMessages {
     Pressed(Time),
 }
 
+#[derive(Default)]
 struct ButtonAppAssistant;
 
 impl AppAssistant for ButtonAppAssistant {
@@ -293,6 +295,5 @@ impl ViewAssistant for ButtonViewAssistant {
 }
 
 fn main() -> Result<(), Error> {
-    let assistant = ButtonAppAssistant {};
-    App::run(Box::new(assistant))
+    App::run(make_app_assistant::<ButtonAppAssistant>())
 }

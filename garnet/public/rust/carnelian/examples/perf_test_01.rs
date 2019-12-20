@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use carnelian::{
-    set_node_color, AnimationMode, App, AppAssistant, Color, Coord, Point, Rect, Size,
-    ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
+    make_app_assistant, set_node_color, AnimationMode, App, AppAssistant, Color, Coord, Point,
+    Rect, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
 use euclid::Vector2D;
 use failure::Error;
@@ -19,6 +19,7 @@ fn make_bounds(context: &ViewAssistantContext<'_>) -> Rect {
     Rect::new(Point::zero(), context.size)
 }
 
+#[derive(Default)]
 struct ShapeDropAppAssistant;
 
 impl AppAssistant for ShapeDropAppAssistant {
@@ -265,6 +266,5 @@ impl ViewAssistant for ShapeDropViewAssistant {
 }
 
 fn main() -> Result<(), Error> {
-    let assistant = ShapeDropAppAssistant {};
-    App::run(Box::new(assistant))
+    App::run(make_app_assistant::<ShapeDropAppAssistant>())
 }

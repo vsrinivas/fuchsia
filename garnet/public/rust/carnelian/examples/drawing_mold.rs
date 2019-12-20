@@ -6,8 +6,9 @@
 #![allow(unused_imports)]
 
 use carnelian::{
-    make_font_description, AnimationMode, App, AppAssistant, Canvas, MappingPixelSink, PixelSink,
-    Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
+    make_app_assistant, make_font_description, AnimationMode, App, AppAssistant, AppAssistantPtr,
+    AppContext, Canvas, LocalBoxFuture, MappingPixelSink, PixelSink, Point, Size, ViewAssistant,
+    ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
 };
 use failure::Error;
 use fuchsia_zircon::{ClockId, Time};
@@ -215,6 +216,7 @@ impl Contents {
     }
 }
 
+#[derive(Default)]
 struct DrawingAppAssistant;
 
 impl AppAssistant for DrawingAppAssistant {
@@ -305,6 +307,5 @@ impl ViewAssistant for DrawingViewAssistant {
 fn main() -> Result<(), Error> {
     println!("drawing: started");
     wait_for_close();
-    let assistant = DrawingAppAssistant {};
-    App::run(Box::new(assistant))
+    App::run(make_app_assistant::<DrawingAppAssistant>())
 }

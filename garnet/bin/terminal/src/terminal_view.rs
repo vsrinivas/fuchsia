@@ -7,8 +7,8 @@ use {
     crate::pty::Pty,
     crate::ui::TerminalScene,
     carnelian::{
-        make_message, AnimationMode, App, Message, Size, ViewAssistant, ViewAssistantContext,
-        ViewKey,
+        make_message, AnimationMode, AppContext, Message, Size, ViewAssistant,
+        ViewAssistantContext, ViewKey,
     },
     failure::{Error, ResultExt},
     fidl_fuchsia_hardware_pty::WindowSize,
@@ -48,11 +48,12 @@ pub struct TerminalViewAssistant {
     pty: Option<PtyWrapper>,
     terminal_scene: TerminalScene,
     term: Term,
+    app_context: AppContext,
 }
 
 impl TerminalViewAssistant {
     /// Creates a new instance of the TerminalViewAssistant.
-    pub fn new() -> TerminalViewAssistant {
+    pub fn new(app_context: &AppContext) -> TerminalViewAssistant {
         let parser = Processor::new();
         let cell_size = Size::new(12.0, 22.0);
         let term = Term::new(
@@ -75,7 +76,14 @@ impl TerminalViewAssistant {
             pty: None,
             term,
             terminal_scene: TerminalScene::default(),
+            app_context: app_context.clone(),
         }
+    }
+
+    #[cfg(test)]
+    pub fn new_for_test() -> TerminalViewAssistant {
+        let app_context = AppContext::new_for_testing_purposes_only();
+        Self::new(&app_context)
     }
 
     /// Checks if we need to perform a resize based on a new size.
@@ -134,6 +142,7 @@ impl TerminalViewAssistant {
             WindowSize { width: logical_size.width as u32, height: logical_size.height as u32 };
 
         let mut pty_receiver = pty_wrapper.take_receiver();
+        let app_context = self.app_context.clone();
 
         fasync::spawn_local(async move {
             let mut pty = pty_clone.borrow_mut();
@@ -164,11 +173,9 @@ impl TerminalViewAssistant {
                         });
 
                         if bytes_read > 0 {
-                            App::with(|app| {
-                                for byte in &read_buf[0..bytes_read] {
-                                    app.queue_message(view_key, make_message(PtyIncomingMessages::ByteReceived(*byte)));
-                                }
-                            });
+                            for byte in &read_buf[0..bytes_read] {
+                                app_context.queue_message(view_key, make_message(PtyIncomingMessages::ByteReceived(*byte)));
+                            }
                         }
                     },
                 result = pty_receiver.next().fuse() => {
@@ -294,7 +301,7 @@ mod tests {
 
     #[test]
     fn can_create_view() {
-        let _ = TerminalViewAssistant::new();
+        let _ = TerminalViewAssistant::new_for_test();
     }
 
     #[test]
@@ -333,7 +340,7 @@ mod tests {
 
     #[test]
     fn term_is_resized_when_needed() {
-        let mut view = TerminalViewAssistant::new();
+        let mut view = TerminalViewAssistant::new_for_test();
         let new_size = Size::new(100.5, 100.9);
         view.resize_if_needed(&new_size, &Size::zero()).expect("call to resize failed");
 
@@ -348,7 +355,7 @@ mod tests {
 
     #[test]
     fn last_known_size_is_floored_on_resize() {
-        let mut view = TerminalViewAssistant::new();
+        let mut view = TerminalViewAssistant::new_for_test();
         let new_size = Size::new(100.3, 100.4);
         view.resize_if_needed(&new_size, &Size::zero()).expect("call to resize failed");
 
@@ -359,7 +366,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn resize_message_queued_with_logical_size_when_resize_needed() -> Result<(), Error> {
         let mut wrapper = PtyWrapper::new()?;
-        let mut view = TerminalViewAssistant::new();
+        let mut view = TerminalViewAssistant::new_for_test();
         let mut receiver = wrapper.take_receiver();
 
         view.pty = Some(wrapper);
@@ -382,7 +389,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn handle_keyboard_event_queues_characters() -> Result<(), Error> {
         let mut wrapper = PtyWrapper::new()?;
-        let mut view = TerminalViewAssistant::new();
+        let mut view = TerminalViewAssistant::new_for_test();
         let mut receiver = wrapper.take_receiver();
 
         view.pty = Some(wrapper);
@@ -402,7 +409,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn pty_is_spawned_on_first_request() -> Result<(), Error> {
-        let mut view = TerminalViewAssistant::new();
+        let mut view = TerminalViewAssistant::new_for_test();
         view.spawn_pty_if_needed(&Size::new(100.0, 100.0), 1)?;
         assert!(view.pty.is_some());
 
@@ -411,7 +418,7 @@ mod tests {
 
     #[test]
     fn bytes_received_is_processed_by_term() {
-        let mut view = TerminalViewAssistant::new();
+        let mut view = TerminalViewAssistant::new_for_test();
 
         // make sure we have a big enough size that a single character does not wrap
         let large_size = Size::new(1000.0, 1000.0);

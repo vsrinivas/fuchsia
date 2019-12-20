@@ -4,8 +4,8 @@
 
 use {
     carnelian::{
-        AnimationMode, App, AppAssistant, FrameBufferPtr, Point, Rect, Size, ViewAssistant,
-        ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
+        make_app_assistant, AnimationMode, App, AppAssistant, FrameBufferPtr, Point, Rect, Size,
+        ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
     },
     euclid::{Angle, Transform2D, Vector2D},
     failure::Error,
@@ -198,6 +198,7 @@ impl Flower {
     }
 }
 
+#[derive(Default)]
 struct InkAppAssistant;
 
 impl AppAssistant for InkAppAssistant {
@@ -1112,6 +1113,5 @@ impl<T: Context> ViewAssistant for InkViewAssistant<T> {
 }
 
 fn main() -> Result<(), Error> {
-    let assistant = InkAppAssistant {};
-    App::run(Box::new(assistant))
+    App::run(make_app_assistant::<InkAppAssistant>())
 }

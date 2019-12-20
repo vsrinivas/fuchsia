@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use carnelian::{
-    make_message, set_node_color, AnimationMode, App, AppAssistant, Color, ViewAssistant,
-    ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMessages,
+    make_app_assistant, make_message, set_node_color, AnimationMode, App, AppAssistant, Color,
+    ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMessages,
 };
 use failure::{Error, ResultExt};
 use fidl::endpoints::{RequestStream, ServiceMarker};
@@ -19,6 +19,7 @@ use std::f32::consts::PI;
 const BACKGROUND_Z: f32 = 0.0;
 const SQUARE_Z: f32 = BACKGROUND_Z - 8.0;
 
+#[derive(Default)]
 struct SpinningSquareAppAssistant;
 
 impl AppAssistant for SpinningSquareAppAssistant {
@@ -165,6 +166,5 @@ impl ViewAssistant for SpinningSquareViewAssistant {
 }
 
 fn main() -> Result<(), Error> {
-    let assistant = SpinningSquareAppAssistant {};
-    App::run(Box::new(assistant))
+    App::run(make_app_assistant::<SpinningSquareAppAssistant>())
 }

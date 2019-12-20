@@ -9,8 +9,6 @@
 //! [modules](https://fuchsia.dev/fuchsia-src/glossary#module) in
 //! [Rust](https://www.rust-lang.org/).
 
-#![deny(missing_docs)]
-
 mod app;
 mod canvas;
 mod geometry;
@@ -20,7 +18,10 @@ mod scenic_utils;
 mod view;
 
 pub use crate::{
-    app::{App, AppAssistant, FrameBufferPtr, ViewMode},
+    app::{
+        make_app_assistant, App, AppAssistant, AppAssistantPtr, AppContext, AssistantCreator,
+        AssistantCreatorFunc, FrameBufferPtr, LocalBoxFuture, ViewMode,
+    },
     canvas::{
         measure_text, Canvas, Color, FontDescription, FontFace, MappingPixelSink, Paint, PixelSink,
     },

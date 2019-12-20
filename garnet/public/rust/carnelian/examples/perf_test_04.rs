@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use carnelian::{
-    set_node_color, AnimationMode, App, AppAssistant, Color, ViewAssistant, ViewAssistantContext,
-    ViewAssistantPtr, ViewKey,
+    make_app_assistant, set_node_color, AnimationMode, App, AppAssistant, Color, ViewAssistant,
+    ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
 use failure::Error;
 use fuchsia_scenic::{Rectangle, SessionPtr, ShapeNode};
@@ -18,6 +18,7 @@ const COLOR_CODES: &[&str] = &[
 const BAND_COUNT: usize = 64;
 const INITIAL_Z: f32 = 0.0;
 
+#[derive(Default)]
 struct RainbowAppAssistant;
 
 impl AppAssistant for RainbowAppAssistant {
@@ -85,6 +86,5 @@ impl ViewAssistant for RainbowViewAssistant {
 }
 
 fn main() -> Result<(), Error> {
-    let assistant = RainbowAppAssistant {};
-    App::run(Box::new(assistant))
+    App::run(make_app_assistant::<RainbowAppAssistant>())
 }

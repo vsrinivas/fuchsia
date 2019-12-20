@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use carnelian::{
-    set_node_color, AnimationMode, App, AppAssistant, Color, Label, Paint, Point, Rect,
-    ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
+    make_app_assistant, set_node_color, AnimationMode, App, AppAssistant, Color, Label, Paint,
+    Point, Rect, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
 use euclid::Vector2D;
 use failure::Error;
@@ -14,6 +14,7 @@ fn make_bounds(context: &ViewAssistantContext<'_>) -> Rect {
     Rect::new(Point::zero(), context.size)
 }
 
+#[derive(Default)]
 struct TextScrollAppAssistant;
 
 const BACKGROUND_Z: f32 = 0.0;
@@ -180,6 +181,5 @@ impl ViewAssistant for TextScrollViewAssistant {
 }
 
 fn main() -> Result<(), Error> {
-    let assistant = TextScrollAppAssistant {};
-    App::run(Box::new(assistant))
+    App::run(make_app_assistant::<TextScrollAppAssistant>())
 }
