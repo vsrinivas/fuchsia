@@ -139,7 +139,8 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
   switch (topic) {
     case ZX_INFO_HANDLE_VALID: {
       // This syscall + topic is excepted from the ZX_POL_BAD_HANDLE policy.
-      return up->IsHandleValidNoPolicyCheck(handle) ? ZX_OK : ZX_ERR_BAD_HANDLE;
+      fbl::RefPtr<Dispatcher> generic_dispatcher;
+      return up->GetDispatcherWithRightsNoPolicyCheck(handle, 0, &generic_dispatcher, nullptr);
     }
     case ZX_INFO_HANDLE_BASIC: {
       // TODO(ZX-458): Handle forward/backward compatibility issues

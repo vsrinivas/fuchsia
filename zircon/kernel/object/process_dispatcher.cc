@@ -793,11 +793,6 @@ bool ProcessDispatcher::IsHandleValid(zx_handle_t handle_value) {
   return (GetHandleLocked(handle_value) != nullptr);
 }
 
-bool ProcessDispatcher::IsHandleValidNoPolicyCheck(zx_handle_t handle_value) {
-  Guard<BrwLockPi, BrwLockPi::Reader> guard{&handle_table_lock_};
-  return (GetHandleLocked(handle_value, true) != nullptr);
-}
-
 void ProcessDispatcher::OnProcessStartForJobDebugger(ThreadDispatcher* t,
                                                      const arch_exception_context_t* context) {
   auto job = job_;

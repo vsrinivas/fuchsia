@@ -63,14 +63,19 @@ None.
 ## ERRORS
 
 **ZX_ERR_INVALID_ARGS**  One of the following is true:
+
 + *value_ptr* is not a valid userspace pointer
 + *value_ptr* is not aligned to a `sizeof(zx_futex_t)` boundary.
 + *new_futex_owner* is currently a member of the waiters for *value_ptr*.
 + *new_futex_owner* has not been started yet.
 
-**ZX_ERR_BAD_HANDLE**  *new_futex_owner* is not **ZX_HANDLE_INVALID**, and not a valid handle.
+**ZX_ERR_BAD_HANDLE**  *new_futex_owner* is not **ZX_HANDLE_INVALID**, and not a valid handle AND
+*current_value* matches the value at *value_ptr*
+
 **ZX_ERR_WRONG_TYPE**  *new_futex_owner* is a valid handle, but is not a handle to a thread.
+
 **ZX_ERR_BAD_STATE**  *current_value* does not match the value at *value_ptr*.
+
 **ZX_ERR_TIMED_OUT**  The thread was not woken before *deadline* passed.
 
 ## SEE ALSO

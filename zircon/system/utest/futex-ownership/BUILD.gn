@@ -5,6 +5,7 @@
 zx_test("futex-ownership") {
   test_group = "sys"
   sources = [
+    "bad-handle.cc",
     "ownership.cc",
     "utils.cc",
   ]

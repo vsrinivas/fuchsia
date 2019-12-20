@@ -97,6 +97,8 @@ class Thread {
 class ExternalThread {
  public:
   static void SetProgramName(const char* program_name) { program_name_ = program_name; }
+  static const char* ProgramName() { return program_name_; }
+
   static int DoHelperThread();
   static const char* helper_flag() { return helper_flag_; }
 

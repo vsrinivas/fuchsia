@@ -2,17 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/auto_call.h>
-#include <fbl/futex.h>
 #include <lib/zx/event.h>
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
-#include <limits>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
+
+#include <limits>
+
+#include <fbl/auto_call.h>
+#include <fbl/futex.h>
 #include <zxtest/zxtest.h>
 
+#include "bad-handle.h"
 #include "utils.h"
 
 namespace {
@@ -1073,11 +1076,9 @@ TEST(FutexOwnershipTestCase, DeadThreadsCantOwnFutexes) {
   });
 
   // Start the waiter and park it in futex1.
-  ASSERT_NO_FATAL_FAILURES(the_waiter.Start(
-      "DeadThread waiter",
-      [&futex1]() -> int {
-        return zx_futex_wait(&futex1, 0, ZX_HANDLE_INVALID, ZX_TIME_INFINITE);
-      }));
+  ASSERT_NO_FATAL_FAILURES(the_waiter.Start("DeadThread waiter", [&futex1]() -> int {
+    return zx_futex_wait(&futex1, 0, ZX_HANDLE_INVALID, ZX_TIME_INFINITE);
+  }));
 
   // Wait until our thread becomes blocked in futex1.  It is important to
   // confirm that this has happened before allowing the rest of the test to
@@ -1162,6 +1163,10 @@ int main(int argc, char** argv) {
 
   if ((argc == 2) && !strcmp(argv[1], ExternalThread::helper_flag())) {
     return ExternalThread::DoHelperThread();
+  }
+
+  if ((argc >= 2) && !strcmp(argv[1], BadHandleFlagTest())) {
+    return BadHandleTestMain(argc, argv);
   }
 
   return RUN_ALL_TESTS(argc, argv);

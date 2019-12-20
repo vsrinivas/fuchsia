@@ -41,6 +41,7 @@ owner.
 ## ERRORS
 
 **ZX_ERR_INVALID_ARGS**  One of the following is true:
+
 + *value_ptr* is not a valid userspace pointer.
 + *value_ptr* is not aligned to a `sizeof(zx_futex_t)` boundary.
 + *koid* is not a valid userspace pointer.

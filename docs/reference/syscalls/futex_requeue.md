@@ -72,14 +72,18 @@ None.
 ## ERRORS
 
 **ZX_ERR_INVALID_ARGS**  One of the following is true:
+
 + Either *value_ptr* or *requeue_ptr* is not a valid userspace pointer
 + Either *value_ptr* or *requeue_ptr* is not aligned to a `sizeof(zx_futex_t)` boundary.
 + *value_ptr* is the same futex as *requeue_ptr*
 + *new_requeue_owner* is currently a member of the waiters for either *value_ptr* or *requeue_ptr*
 + *new_requeue_owner* has not been started yet.
 
-**ZX_ERR_BAD_HANDLE**  *new_requeue_owner* is not **ZX_HANDLE_INVALID**, and not a valid handle.
+**ZX_ERR_BAD_HANDLE**  *new_requeue_owner* is not **ZX_HANDLE_INVALID**, and not a valid handle AND
+*current_value* matches the value at *value_ptr*
+
 **ZX_ERR_WRONG_TYPE**  *new_requeue_owner* is a valid handle, but is not a handle to a thread.
+
 **ZX_ERR_BAD_STATE**  *current_value* does not match the value at *value_ptr*.
 
 ## SEE ALSO

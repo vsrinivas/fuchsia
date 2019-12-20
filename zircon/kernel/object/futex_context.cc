@@ -104,49 +104,82 @@ class KTrace<true> : public KTraceBase {
   const uint64_t ts_;
 };
 
+// Utility class for resolving a handle now but deferring the evaluation of the BAD_HANDLE
+// policy until later.
+//
+// Gets a reference to the thread that the user is asserting is the new owner of
+// the futex.  The thread must belong to the same process as the caller as
+// futexes may not be owned by threads from another process.  In addition, the
+// new potential owner thread must have been started.  Threads which have not
+// started yet may not be the owner of a futex.
+class DeferredFutexOwnerValidator {
+ public:
+  // Validate the proposed new owner, if any, but do not take any immediate
+  // action, even if owner validation fails..
+  //
+  // Do this before we enter any potentially blocking locks.  Right now, this
+  // operation can block on BRW locks involved in protecting the global handle
+  // table, and the penalty for doing so can be severe due to other issues.
+  // Until these are resolved, we would rather pay the price to do validation
+  // here instead of while holding the lock.
+  //
+  // This said, we cannot bail out with an error just yet.  We need to make it
+  // into the futex's lock and perform futex state validation first.  See Bug
+  // #34382 for details.
+  //
+  // TODO(johngro) : Once handle validation becomes something which cannot
+  // block, move this validation step inside of the FutexState lock, after the
+  // futex state validation step.
+  explicit DeferredFutexOwnerValidator(zx_handle_t new_owner_handle) {
+    if (new_owner_handle == ZX_HANDLE_INVALID) {
+      status_ = ZX_OK;
+      return;
+    }
+    auto up = ProcessDispatcher::GetCurrent();
+    status_ = up->GetDispatcherWithRightsNoPolicyCheck(new_owner_handle, 0, &dispatcher_, nullptr);
+    if (status_ != ZX_OK) {
+      return;
+    }
+
+    // Make sure that the proposed owner of the futex is running in our process,
+    // and that it has been started.
+    const auto& new_owner = *dispatcher_;
+    if ((new_owner.process() != up) || !new_owner.HasStarted()) {
+      dispatcher_.reset();
+      status_ = ZX_ERR_INVALID_ARGS;
+      return;
+    }
+
+    // If the thread is already DEAD or DYING, don't bother attempting to assign
+    // it as a new owner for the futex.
+    if (new_owner.IsDyingOrDead()) {
+      dispatcher_.reset();
+    }
+    status_ = ZX_OK;
+  }
+
+  zx_status_t GetDispatcher(fbl::RefPtr<ThreadDispatcher>* thread_dispatcher) {
+    if (status_ != ZX_OK) {
+      if (status_ == ZX_ERR_BAD_HANDLE) {
+        __UNUSED auto res = ProcessDispatcher::GetCurrent()->EnforceBasicPolicy(ZX_POL_BAD_HANDLE);
+      }
+      return status_;
+    }
+    *thread_dispatcher = std::move(dispatcher_);
+    return ZX_OK;
+  }
+
+ private:
+  fbl::RefPtr<ThreadDispatcher> dispatcher_;
+  zx_status_t status_ = ZX_ERR_INTERNAL;
+};
+
 using KTracer = KTrace<kEnableFutexKTracing>;
 
 inline zx_status_t ValidateFutexPointer(user_in_ptr<const zx_futex_t> value_ptr) {
   if (!value_ptr || (reinterpret_cast<uintptr_t>(value_ptr.get()) % sizeof(zx_futex_t))) {
     return ZX_ERR_INVALID_ARGS;
   }
-  return ZX_OK;
-}
-
-// Get a reference to the thread that the user is asserting is the new owner of
-// the futex.  The thread must belong to the same process as the caller as
-// futexes may not be owned by threads from another process.  In addition, the
-// new potential owner thread must have been started.  Threads which have not
-// started yet may not be the owner of a futex.
-inline zx_status_t ValidateNewFutexOwner(zx_handle_t new_owner_handle,
-                                         fbl::RefPtr<ThreadDispatcher>* new_owner_thread_out) {
-  DEBUG_ASSERT(new_owner_thread_out != nullptr);
-  DEBUG_ASSERT(*new_owner_thread_out == nullptr);
-
-  if (new_owner_handle == ZX_HANDLE_INVALID) {
-    return ZX_OK;
-  }
-
-  auto up = ProcessDispatcher::GetCurrent();
-  zx_status_t status = up->GetDispatcherWithRights(new_owner_handle, 0, new_owner_thread_out);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  // Make sure that the proposed owner of the futex is running in our process,
-  // and that it has been started.
-  const auto& new_owner = **new_owner_thread_out;
-  if ((new_owner.process() != up) || !new_owner.HasStarted()) {
-    new_owner_thread_out->reset();
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  // If the thread is already DEAD or DYING, don't bother attempting to assign
-  // it as a new owner for the futex.
-  if (new_owner.IsDyingOrDead()) {
-    new_owner_thread_out->reset();
-  }
-
   return ZX_OK;
 }
 
@@ -266,24 +299,7 @@ zx_status_t FutexContext::FutexWait(user_in_ptr<const zx_futex_t> value_ptr,
     return result;
   }
 
-  // Validate the proposed new owner, if any, but do not take any immediate
-  // action, even if owner validation fails..
-  //
-  // Do this before we enter any potentially blocking locks.  Right now, this
-  // operation can block on BRW locks involved in protecting the global handle
-  // table, and the penalty for doing so can be severe due to other issues.
-  // Until these are resolved, we would rather pay the price to do validation
-  // here instead of while holding the lock.
-  //
-  // This said, we cannot bail out with an error just yet.  We need to make it
-  // into the futex's lock and perform futex state validation first.  See Bug
-  // #34382 for details.
-  //
-  // TODO(johngro) : Once handle validation becomes something which cannot
-  // block, move this validation step inside of the FutexState lock, after the
-  // futex state validation step.
-  fbl::RefPtr<ThreadDispatcher> futex_owner_thread;
-  zx_status_t owner_validation_result = ValidateNewFutexOwner(new_futex_owner, &futex_owner_thread);
+  DeferredFutexOwnerValidator owner_validator(new_futex_owner);
 
   auto current_thread = ThreadDispatcher::GetCurrent();
   uintptr_t futex_id = reinterpret_cast<uintptr_t>(value_ptr.get());
@@ -331,9 +347,10 @@ zx_status_t FutexContext::FutexWait(user_in_ptr<const zx_futex_t> value_ptr,
       return ZX_ERR_BAD_STATE;
     }
 
-    // Now perform validation of the proposed new owner.
-    if (owner_validation_result != ZX_OK) {
-      return owner_validation_result;
+    fbl::RefPtr<ThreadDispatcher> futex_owner_thread;
+    zx_status_t status = owner_validator.GetDispatcher(&futex_owner_thread);
+    if (status != ZX_OK) {
+      return status;
     }
 
     if (futex_owner_thread != nullptr) {
@@ -544,9 +561,7 @@ zx_status_t FutexContext::FutexRequeue(user_in_ptr<const zx_futex_t> wake_ptr, u
 
   // Validate the proposed new owner outside of any FutexState locks, but take
   // no action just yet.  See the comment in FutexWait for details.
-  fbl::RefPtr<ThreadDispatcher> requeue_owner_thread;
-  zx_status_t owner_validation_result =
-      ValidateNewFutexOwner(new_requeue_owner_handle, &requeue_owner_thread);
+  DeferredFutexOwnerValidator owner_validator(new_requeue_owner_handle);
 
   // Find the FutexState for the wake and requeue futexes.
   uintptr_t wake_id = reinterpret_cast<uintptr_t>(wake_ptr.get());
@@ -595,10 +610,12 @@ zx_status_t FutexContext::FutexRequeue(user_in_ptr<const zx_futex_t> wake_ptr, u
       return ZX_ERR_BAD_STATE;
     }
 
+    fbl::RefPtr<ThreadDispatcher> requeue_owner_thread;
+    zx_status_t status = owner_validator.GetDispatcher(&requeue_owner_thread);
     // If owner validation failed earlier, then bail out now (after we have
     // passed the state check)
-    if (owner_validation_result != ZX_OK) {
-      return owner_validation_result;
+    if (status != ZX_OK) {
+      return status;
     }
 
     // Verify that the thread we are attempting to make the requeue target's

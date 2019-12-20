@@ -127,46 +127,18 @@ class ProcessDispatcher final
     return ZX_OK;
   }
 
-  // Get the dispatcher corresponding to this handle value, after
-  // checking that this handle has the desired rights.
-  // WRONG_TYPE is returned before ACESSS_DENIED, because if the
-  // wrong handle was passed, evaluating its rights does not have
-  // much meaning and also this aids in debugging.
-  // If successful, returns the dispatcher and the rights the
-  // handle currently has.
+  template <typename T>
+  zx_status_t GetDispatcherWithRightsNoPolicyCheck(zx_handle_t handle_value,
+                                                   zx_rights_t desired_rights,
+                                                   fbl::RefPtr<T>* dispatcher,
+                                                   zx_rights_t* out_rights) {
+    return GetDispatcherWithRightsImpl(handle_value, desired_rights, dispatcher, out_rights, true);
+  }
+
   template <typename T>
   zx_status_t GetDispatcherWithRights(zx_handle_t handle_value, zx_rights_t desired_rights,
-                                      fbl::RefPtr<T>* out_dispatcher, zx_rights_t* out_rights) {
-    bool has_desired_rights;
-    zx_rights_t rights;
-    fbl::RefPtr<Dispatcher> generic_dispatcher;
-
-    {
-      // Scope utilized to reduce lock duration.
-      Guard<BrwLockPi, BrwLockPi::Reader> guard{&handle_table_lock_};
-      Handle* handle = GetHandleLocked(handle_value);
-      if (!handle)
-        return ZX_ERR_BAD_HANDLE;
-
-      has_desired_rights = handle->HasRights(desired_rights);
-      rights = handle->rights();
-      generic_dispatcher = handle->dispatcher();
-    }
-
-    fbl::RefPtr<T> dispatcher = DownCastDispatcher<T>(&generic_dispatcher);
-
-    // Wrong type takes precedence over access denied.
-    if (!dispatcher)
-      return ZX_ERR_WRONG_TYPE;
-
-    if (!has_desired_rights)
-      return ZX_ERR_ACCESS_DENIED;
-
-    *out_dispatcher = ktl::move(dispatcher);
-    if (out_rights)
-      *out_rights = rights;
-
-    return ZX_OK;
+                                      fbl::RefPtr<T>* dispatcher, zx_rights_t* out_rights) {
+    return GetDispatcherWithRightsImpl(handle_value, desired_rights, dispatcher, out_rights, false);
   }
 
   // Get the dispatcher corresponding to this handle value, after
@@ -180,7 +152,6 @@ class ProcessDispatcher final
   zx_koid_t GetKoidForHandle(zx_handle_t handle_value);
 
   bool IsHandleValid(zx_handle_t handle_value);
-  bool IsHandleValidNoPolicyCheck(zx_handle_t handle_value);
 
   // Calls the provided
   // |zx_status_t func(zx_handle_t, zx_rights_t, fbl::RefPtr<Dispatcher>)|
@@ -361,6 +332,50 @@ class ProcessDispatcher final
     ProcessDispatcher* const process_;
     ProcessDispatcher::HandleList::iterator iter_ TA_GUARDED(&handle_table_lock_);
   };
+
+  // Get the dispatcher corresponding to this handle value, after
+  // checking that this handle has the desired rights.
+  // WRONG_TYPE is returned before ACCESS_DENIED, because if the
+  // wrong handle was passed, evaluating its rights does not have
+  // much meaning and also this aids in debugging.
+  // If successful, returns the dispatcher and the rights the
+  // handle currently has.
+  // If |skip_policy| is true, ZX_POL_BAD_HANDLE will not be enforced.
+  template <typename T>
+  zx_status_t GetDispatcherWithRightsImpl(zx_handle_t handle_value, zx_rights_t desired_rights,
+                                      fbl::RefPtr<T>* out_dispatcher, zx_rights_t* out_rights,
+                                      bool skip_policy) {
+    bool has_desired_rights;
+    zx_rights_t rights;
+    fbl::RefPtr<Dispatcher> generic_dispatcher;
+
+    {
+      // Scope utilized to reduce lock duration.
+      Guard<BrwLockPi, BrwLockPi::Reader> guard{&handle_table_lock_};
+      Handle* handle = GetHandleLocked(handle_value, skip_policy);
+      if (!handle)
+        return ZX_ERR_BAD_HANDLE;
+
+      has_desired_rights = handle->HasRights(desired_rights);
+      rights = handle->rights();
+      generic_dispatcher = handle->dispatcher();
+    }
+
+    fbl::RefPtr<T> dispatcher = DownCastDispatcher<T>(&generic_dispatcher);
+
+    // Wrong type takes precedence over access denied.
+    if (!dispatcher)
+      return ZX_ERR_WRONG_TYPE;
+
+    if (!has_desired_rights)
+      return ZX_ERR_ACCESS_DENIED;
+
+    *out_dispatcher = ktl::move(dispatcher);
+    if (out_rights)
+      *out_rights = rights;
+
+    return ZX_OK;
+  }
 
   // compute the vdso code address and store in vdso_code_address_
   uintptr_t cache_vdso_code_address();
