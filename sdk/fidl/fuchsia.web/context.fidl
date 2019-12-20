@@ -173,14 +173,14 @@ protocol Context {
     /// number. Multiple calls may be queued to received the port number.
     ///
     /// If an error occured, the [`fuchsia.web.ContextError`] will be set to this value:
-    /// - `REMOTE_DEBUGGING_PORT_NOT_OPENED`: |remote_debugging_port| was not set in
+    /// - `REMOTE_DEBUGGING_PORT_NOT_OPENED`: `remote_debugging_port` was not set in
     ///   [`fuchsia.web.CreateContextParams`] or the remote debugging service failed to start.
     GetRemoteDebuggingPort() -> (uint16 port) error ContextError;
 };
 
 table CreateFrameParams {
     /// Set to true to enable remote debugging. The [`fuchsia.web.Frame`] will be closed with
-    /// `ERR_INVALID_ARGS if |remote_debugging_port| was not set in
+    /// `ERR_INVALID_ARGS` if `remote_debugging_port` was not set in
     /// [`fuchsia.web.CreateContextParams`].
     1: bool enable_remote_debugging;
 };

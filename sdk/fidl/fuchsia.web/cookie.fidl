@@ -14,7 +14,7 @@ protocol CookieManager {
     /// then all cookies for that URL are observed. If both are set then only cookies matching both
     /// fields are observed.
     ///
-    /// |changes| iterates over a stream of cookie changes. Additions or updates are expressed as
+    /// `changes` iterates over a stream of cookie changes. Additions or updates are expressed as
     /// complete cookies, while deletions are expressed as cookies with no `value` set.
     ObserveCookieChanges(
         Url? url,
@@ -25,7 +25,7 @@ protocol CookieManager {
     /// `name`. `cookies` iterates over the matching cookies, including their `value`s.
     GetCookieList(Url? url,
                   CookieName? name,
-		  request<CookiesIterator> cookies);
+                  request<CookiesIterator> cookies);
 };
 
 /// Used to iterator over a set of cookies, or a stream of changes to cookies.
