@@ -39,6 +39,7 @@ zx_test("aml-light-test") {
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fidl",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp",
     "$zx/system/ulib/mock-function",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",

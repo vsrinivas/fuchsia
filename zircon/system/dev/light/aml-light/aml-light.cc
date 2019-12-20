@@ -4,6 +4,8 @@
 
 #include "aml-light.h"
 
+#include <string.h>
+
 #include <ddk/binding.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/lights.h>
@@ -14,25 +16,55 @@
 
 namespace aml_light {
 
+namespace {
+
+constexpr uint8_t kMaxBrightness = 255;
+constexpr uint8_t kMinBrightness = 0;
+
+}  // namespace
+
 zx_status_t LightDevice::Init(bool init_on) {
   zx_status_t status = ZX_OK;
+  if (pwm_.has_value() && ((status = pwm_->Enable()) != ZX_OK)) {
+    return status;
+  }
+  return SetSimpleValue(init_on ? kMaxBrightness : kMinBrightness);
+}
+
+bool LightDevice::HasCapability(Capability capability) const {
+  switch (capability) {
+    case Capability::BRIGHTNESS:
+      return pwm_.has_value();
+    case Capability::RGB:
+    default:
+      return false;
+  }
+}
+
+zx_status_t LightDevice::SetSimpleValue(uint8_t value) {
+  zx_status_t status = ZX_OK;
   if (pwm_.has_value()) {
-    pwm_->Enable();
-    aml_pwm::mode_config regular = {init_on ? aml_pwm::ON : aml_pwm::OFF, {}};
-    const pwm_config_t init_config = {
+    aml_pwm::mode_config regular = {aml_pwm::ON, {}};
+    pwm_config_t config = {
         .polarity = false,
         .period_ns = 1250,
-        .duty_cycle = 100.0,
+        .duty_cycle = static_cast<float>(value * 100.0 / (kMaxBrightness * 1.0)),
         .mode_config_buffer = &regular,
         .mode_config_size = sizeof(regular),
     };
-    if ((status = pwm_->SetConfig(&init_config)) != ZX_OK) {
-      zxlogf(ERROR, "%s: could not intialize PWM\n", __func__);
+    if ((status = pwm_->SetConfig(&config)) != ZX_OK) {
+      zxlogf(ERROR, "%s: PWM set config failed\n", __func__);
       return status;
     }
+
   } else {
-    gpio_.ConfigOut(init_on);
+    if ((status = gpio_.Write(value)) != ZX_OK) {
+      zxlogf(ERROR, "%s: GPIO write failed\n", __func__);
+      return status;
+    }
   }
+
+  value_ = value;
   return ZX_OK;
 }
 
@@ -40,24 +72,27 @@ void AmlLight::GetName(uint32_t index, GetNameCompleter::Sync completer) {
   if (index >= lights_.size()) {
     return completer.Reply(ZX_ERR_OUT_OF_RANGE, ::fidl::StringView(nullptr, 0));
   }
-  return completer.Reply(ZX_ERR_NOT_SUPPORTED, ::fidl::StringView(nullptr, 0));
+  auto name = lights_[index].GetName();
+  return completer.Reply(ZX_OK, ::fidl::StringView(&name[0], name.size() + 1));
 }
 
-void AmlLight::GetCount(GetCountCompleter::Sync completer) { return completer.Reply(0); }
+void AmlLight::GetCount(GetCountCompleter::Sync completer) {
+  return completer.Reply(static_cast<uint32_t>(lights_.size()));
+}
 
 void AmlLight::HasCapability(uint32_t index, Capability capability,
                              HasCapabilityCompleter::Sync completer) {
   if (index >= lights_.size()) {
     return completer.Reply(ZX_ERR_OUT_OF_RANGE, false);
   }
-  return completer.Reply(ZX_ERR_NOT_SUPPORTED, false);
+  return completer.Reply(ZX_OK, lights_[index].HasCapability(capability));
 }
 
 void AmlLight::GetSimpleValue(uint32_t index, GetSimpleValueCompleter::Sync completer) {
   if (index >= lights_.size()) {
     return completer.Reply(ZX_ERR_OUT_OF_RANGE, 0);
   }
-  return completer.Reply(ZX_ERR_NOT_SUPPORTED, 0);
+  return completer.Reply(ZX_OK, lights_[index].GetSimpleValue());
 }
 
 void AmlLight::SetSimpleValue(uint32_t index, uint8_t value,
@@ -65,7 +100,7 @@ void AmlLight::SetSimpleValue(uint32_t index, uint8_t value,
   if (index >= lights_.size()) {
     return completer.Reply(ZX_ERR_OUT_OF_RANGE);
   }
-  return completer.Reply(ZX_ERR_NOT_SUPPORTED);
+  return completer.Reply(lights_[index].SetSimpleValue(value));
 }
 
 void AmlLight::GetRgbValue(uint32_t index, GetRgbValueCompleter::Sync completer) {

@@ -36,10 +36,17 @@ class LightDevice {
 
   zx_status_t Init(bool init_on);
 
+  const std::string GetName() const { return name_; }
+  bool HasCapability(Capability capability) const;
+  uint8_t GetSimpleValue() const { return value_; }
+  zx_status_t SetSimpleValue(uint8_t value);
+
  private:
   std::string name_;
   ddk::GpioProtocolClient gpio_;
   std::optional<ddk::PwmProtocolClient> pwm_;
+
+  uint8_t value_ = 0;
 };
 
 class AmlLight : public AmlLightType,
