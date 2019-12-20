@@ -3,24 +3,31 @@
 // found in the LICENSE file.
 
 use {
+    crate::rate_limiter::RateLimiterMonotonic,
     failure::{Error, ResultExt},
     fidl_fuchsia_update_channel::{ProviderRequest, ProviderRequestStream},
     fuchsia_syslog::fx_log_warn,
+    fuchsia_zircon as zx,
     futures::prelude::*,
     serde_derive::{Deserialize, Serialize},
     std::{fs::File, io, path::PathBuf},
 };
 
-#[derive(Clone)]
 pub(crate) struct ProviderHandler {
-    pub misc_info_dir: PathBuf,
+    misc_info_dir: PathBuf,
+    warn_rate_limiter: RateLimiterMonotonic,
 }
 
 impl Default for ProviderHandler {
     fn default() -> Self {
-        Self { misc_info_dir: "/misc/ota".into() }
+        Self {
+            misc_info_dir: "/misc/ota".into(),
+            warn_rate_limiter: RateLimiterMonotonic::from_delay(GET_CURRENT_WARN_DELAY),
+        }
     }
 }
+
+const GET_CURRENT_WARN_DELAY: zx::Duration = zx::Duration::from_minutes(30);
 
 impl ProviderHandler {
     pub(crate) async fn handle_request_stream(
@@ -33,7 +40,9 @@ impl ProviderHandler {
             match request {
                 ProviderRequest::GetCurrent { responder } => {
                     let channel = self.get_current().unwrap_or_else(|err| {
-                        fx_log_warn!("error getting current channel: {}", err);
+                        self.warn_rate_limiter.rate_limit(|| {
+                            fx_log_warn!("error getting current channel: {}", err);
+                        });
                         "".into()
                     });
                     responder.send(&channel).context("sending GetCurrent response")?;
@@ -78,7 +87,10 @@ mod tests {
     };
 
     fn spawn_info_handler(info_dir: &TempDir) -> ProviderProxy {
-        let info_handler = ProviderHandler { misc_info_dir: info_dir.path().into() };
+        let info_handler = ProviderHandler {
+            misc_info_dir: info_dir.path().into(),
+            warn_rate_limiter: RateLimiterMonotonic::from_delay(GET_CURRENT_WARN_DELAY),
+        };
         let (proxy, stream) =
             create_proxy_and_stream::<ProviderMarker>().expect("create_proxy_and_stream");
         fasync::spawn(async move { info_handler.handle_request_stream(stream).map(|_| ()).await });

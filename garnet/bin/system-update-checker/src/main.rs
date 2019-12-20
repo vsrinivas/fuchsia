@@ -11,6 +11,7 @@ mod errors;
 mod last_update_storage;
 mod poller;
 mod provider_handler;
+mod rate_limiter;
 mod update_manager;
 mod update_monitor;
 mod update_service;
@@ -55,6 +56,8 @@ async fn main() -> Result<(), Error> {
         fx_log_err!("while updating the target channel: {}", e);
     }
 
+    let info_handler = ProviderHandler::default();
+
     let futures = FuturesUnordered::new();
 
     let (current_channel_manager, current_channel_notifier) =
@@ -72,7 +75,6 @@ async fn main() -> Result<(), Error> {
         )
         .await,
     );
-    let info_handler = ProviderHandler::default();
 
     let mut fs = ServiceFs::new();
     let update_manager_clone = update_manager.clone();
@@ -80,7 +82,7 @@ async fn main() -> Result<(), Error> {
         .add_fidl_service(move |stream| {
             IncomingServices::Manager(stream, RealUpdateService::new(update_manager_clone.clone()))
         })
-        .add_fidl_service(move |stream| IncomingServices::Provider(stream, info_handler.clone()));
+        .add_fidl_service(|stream| IncomingServices::Provider(stream, &info_handler));
 
     inspector.serve(&mut fs)?;
 
@@ -114,12 +116,12 @@ async fn main() -> Result<(), Error> {
     Ok(())
 }
 
-enum IncomingServices {
+enum IncomingServices<'a> {
     Manager(ManagerRequestStream, RealUpdateService),
-    Provider(ProviderRequestStream, ProviderHandler),
+    Provider(ProviderRequestStream, &'a ProviderHandler),
 }
 
-async fn handle_incoming_service(incoming_service: IncomingServices) -> Result<(), Error> {
+async fn handle_incoming_service(incoming_service: IncomingServices<'_>) -> Result<(), Error> {
     match incoming_service {
         IncomingServices::Manager(request_stream, update_service) => {
             update_service.handle_request_stream(request_stream).await
