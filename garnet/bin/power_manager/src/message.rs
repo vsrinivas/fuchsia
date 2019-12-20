@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::types::{Celsius, Watts};
+use crate::types::{Celsius, ThermalLoad, Watts};
 
 /// Defines the message types and arguments to be used for inter-node communication
 #[derive(Debug)]
@@ -29,6 +29,10 @@ pub enum Message {
     /// Command a system shutdown
     /// Arg: a string specifying the reason for the shutdown, to be used for logging
     SystemShutdown(String),
+
+    /// Instruct a node to update its thermal load value
+    /// Arg: a ThermalLoad value which represents the severity of thermal load in the system
+    UpdateThermalLoad(ThermalLoad),
 }
 
 /// Defines the return values for each of the Message types from above
@@ -45,9 +49,12 @@ pub enum MessageReturn {
     /// 0.0 - [number_cpus]. The first call will return a load of 0.0.
     GetTotalCpuLoad(f32),
 
-    /// There is no arg in this MessageReturn type. It essentially only serves as an ACK.
+    /// There is no arg in this MessageReturn type. It only serves as an ACK.
     SetMaxPowerConsumption,
 
-    /// There is no arg in this MessageReturn type. It essentially only serves as an ACK.
+    /// There is no arg in this MessageReturn type. It only serves as an ACK.
     SystemShutdown,
+
+    /// There is no arg in this MessageReturn type. It only serves as an ACK.
+    UpdateThermalLoad,
 }

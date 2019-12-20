@@ -27,6 +27,7 @@ rustc_binary("bin") {
     "//zircon/system/fidl/fuchsia-hardware-thermal:fuchsia-hardware-thermal-rustc",
     "//zircon/system/fidl/fuchsia-kernel:fuchsia-kernel-rustc",
     "//zircon/system/fidl/fuchsia-sysinfo:fuchsia-sysinfo-rustc",
+    "//zircon/system/fidl/fuchsia-thermal:fuchsia-thermal-rustc",
   ]
 
   test_deps = [ "//garnet/bin/power_manager/rkf45:lib" ]

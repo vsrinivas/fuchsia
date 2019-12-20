@@ -4,7 +4,8 @@
 
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
-use crate::types::{Celsius, Nanoseconds, Seconds, Watts};
+use crate::thermal_limiter;
+use crate::types::{Celsius, Nanoseconds, Seconds, ThermalLoad, Watts};
 use async_trait::async_trait;
 use failure::{format_err, Error};
 use fuchsia_async as fasync;
@@ -46,6 +47,11 @@ pub struct ThermalConfig {
     /// node responds to the SystemShutdown message.
     pub sys_pwr_handler: Rc<dyn Node>,
 
+    /// The node which will impose thermal limits on external clients according to the thermal
+    /// load of the system. It is expected that this node responds to the UpdateThermalLoad
+    /// message.
+    pub thermal_limiter_node: Rc<dyn Node>,
+
     /// All parameter values relating to the thermal policy itself
     pub policy_params: ThermalPolicyParams,
 }
@@ -54,6 +60,10 @@ pub struct ThermalConfig {
 pub struct ThermalPolicyParams {
     /// The thermal control loop parameters
     pub controller_params: ThermalControllerParams,
+
+    /// The temperature at which to begin limiting external subsystems which are not managed by the
+    /// thermal feedback controller
+    pub thermal_limit_begin_temperature: Celsius,
 
     /// If temperature reaches or exceeds this value, the policy will command a system shutdown
     pub thermal_shutdown_temperature: Celsius,
@@ -100,6 +110,12 @@ struct ThermalState {
 
     /// A flag to know if the rest of ThermalState has not been initialized yet
     state_initialized: Cell<bool>,
+
+    /// A cached value in the range [0 - MAX_THERMAL_LOAD] which is defined as
+    /// ((temperature - range_start) / (range_end - range_start) * MAX_THERMAL_LOAD), where
+    /// range_start and range_end are the thermal_limit_begin_temperature and
+    /// thermal_shutdown_temperature, respectively.
+    thermal_load: Cell<ThermalLoad>,
 }
 
 impl ThermalPolicy {
@@ -111,6 +127,7 @@ impl ThermalPolicy {
                 prev_temperature: Cell::new(Celsius(0.0)),
                 error_integral: Cell::new(0.0),
                 state_initialized: Cell::new(false),
+                thermal_load: Cell::new(ThermalLoad(0)),
             },
         });
         node.clone().start_periodic_thermal_loop()?;
@@ -127,9 +144,10 @@ impl ThermalPolicy {
 
         fasync::spawn_local(async move {
             while let Some(()) = periodic_timer.next().await {
-                if let Err(e) = self.iterate_thermal_control().await {
-                    fx_log_err!("{}", e);
-                }
+                log_if_error(
+                    self.iterate_thermal_control().await,
+                    "Error while running thermal control iteration",
+                );
             }
         });
 
@@ -169,21 +187,33 @@ impl ThermalPolicy {
         ));
         self.state.prev_temperature.set(filtered_temperature);
 
-        // Quick check to see if the new filtered temperature is above the critical threshold. If
-        // it is, shutdown the system.
-        self.check_critical_temperature(filtered_temperature).await;
-
-        let available_power = self.calculate_available_power(filtered_temperature, time_delta);
         fx_vlog!(
             1,
-            "iteration_period={}s; raw_temperature={}C; \
-             filtered_temperature={}C; available_power={}W",
+            "iteration_period={}s; filtered_temperature={}C; raw_temperature={}C",
             time_delta.0,
-            raw_temperature.0,
             filtered_temperature.0,
-            available_power.0
+            raw_temperature.0
         );
-        self.distribute_power(available_power).await
+
+        // If the new temperature is above the critical threshold then shutdown the system
+        log_if_error(
+            self.check_critical_temperature(filtered_temperature).await,
+            "Error checking critical temperature",
+        );
+
+        // Update the ThermalLimiter node with the latest thermal load
+        log_if_error(
+            self.update_thermal_load(filtered_temperature).await,
+            "Error updating thermal load",
+        );
+
+        // Run the thermal feedback controller
+        log_if_error(
+            self.iterate_controller(filtered_temperature, time_delta).await,
+            "Error running thermal feedback controller",
+        );
+
+        Ok(())
     }
 
     /// Query the current temperature from the temperature handler node
@@ -198,28 +228,77 @@ impl ThermalPolicy {
     /// Compares the supplied temperature with the thermal config thermal shutdown temperature. If
     /// we've reached or exceeded the shutdown temperature, message the system power handler node
     /// to initiate a system shutdown.
-    async fn check_critical_temperature(&self, temperature: Celsius) {
+    async fn check_critical_temperature(&self, temperature: Celsius) -> Result<(), Error> {
+        // Temperature has exceeded the thermal shutdown temperature
         if temperature.0 >= self.config.policy_params.thermal_shutdown_temperature.0 {
-            let result = self
-                .send_message(
-                    &self.config.sys_pwr_handler,
-                    &Message::SystemShutdown(
-                        format!(
-                            "Exceeded thermal limit ({}C > {}C)",
-                            temperature.0, self.config.policy_params.thermal_shutdown_temperature.0
-                        )
-                        .to_string(),
-                    ),
-                )
-                .await;
-
-            if let Err(e) = result {
-                // TODO(pshickel): We shouldn't ever get an error here. But we should probably have
-                // some type of fallback or secondary mechanism of halting the system if it somehow
-                // does happen. This could have physical safety implications.
-                fx_log_err!("Failed to shutdown the system: {}", e);
-            }
+            // TODO(pshickel): We shouldn't ever get an error here. But we should probably have
+            // some type of fallback or secondary mechanism of halting the system if it somehow
+            // does happen. This could have physical safety implications.
+            self.send_message(
+                &self.config.sys_pwr_handler,
+                &Message::SystemShutdown(
+                    format!(
+                        "Exceeded thermal limit ({}C > {}C)",
+                        temperature.0, self.config.policy_params.thermal_shutdown_temperature.0
+                    )
+                    .to_string(),
+                ),
+            )
+            .await
+            .map_err(|e| format_err!("Failed to shutdown the system: {}", e))?;
         }
+
+        Ok(())
+    }
+
+    /// Determines the current thermal load. If there is a change from the cached thermal_load,
+    /// then the new value is sent out to the ThermalLimiter node.
+    async fn update_thermal_load(&self, temperature: Celsius) -> Result<(), Error> {
+        let thermal_load = Self::calculate_thermal_load(
+            temperature,
+            self.config.policy_params.thermal_limit_begin_temperature,
+            self.config.policy_params.thermal_shutdown_temperature,
+        );
+        if thermal_load != self.state.thermal_load.get() {
+            self.state.thermal_load.set(thermal_load);
+            self.send_message(
+                &self.config.thermal_limiter_node,
+                &Message::UpdateThermalLoad(thermal_load),
+            )
+            .await?;
+        }
+
+        Ok(())
+    }
+
+    /// Calculates the thermal load which is a value in the range [0 - MAX_THERMAL_LOAD] defined as
+    /// ((temperature - range_start) / (range_end - range_start) * MAX_THERMAL_LOAD)
+    fn calculate_thermal_load(
+        temperature: Celsius,
+        range_start: Celsius,
+        range_end: Celsius,
+    ) -> ThermalLoad {
+        if temperature.0 < range_start.0 {
+            ThermalLoad(0)
+        } else if temperature.0 > range_end.0 {
+            thermal_limiter::MAX_THERMAL_LOAD
+        } else {
+            ThermalLoad(
+                ((temperature.0 - range_start.0) / (range_end.0 - range_start.0)
+                    * thermal_limiter::MAX_THERMAL_LOAD.0 as f64) as u32,
+            )
+        }
+    }
+
+    /// Execute the thermal feedback control loop
+    async fn iterate_controller(
+        &self,
+        filtered_temperature: Celsius,
+        time_delta: Seconds,
+    ) -> Result<(), Error> {
+        let available_power = self.calculate_available_power(filtered_temperature, time_delta);
+        fx_vlog!(1, "available_power={}W", available_power.0);
+        self.distribute_power(available_power).await
     }
 
     /// A PID control algorithm that uses temperature as the measured process variable, and
@@ -265,6 +344,12 @@ fn clamp<T: std::cmp::PartialOrd>(val: T, min: T, max: T) -> T {
         max
     } else {
         val
+    }
+}
+
+fn log_if_error<T>(result: Result<T, Error>, prefix: &'static str) {
+    if let Err(e) = result {
+        fx_log_err!("{}: {}", prefix, e);
     }
 }
 
@@ -502,6 +587,43 @@ mod tests {
         assert_eq!(low_pass_filter(y_1, y_0, time_delta, time_constant), 1.0);
     }
 
+    #[test]
+    fn test_calculate_thermal_load() {
+        let thermal_limit_range_start = Celsius(85.0);
+        let thermal_limit_range_stop = Celsius(95.0);
+
+        struct TestCase {
+            temperature: Celsius,      // observed temperature
+            thermal_load: ThermalLoad, // expected thermal load
+        };
+
+        let test_cases = vec![
+            // before thermal limit range
+            TestCase { temperature: Celsius(50.0), thermal_load: ThermalLoad(0) },
+            // start of thermal limit range
+            TestCase { temperature: Celsius(85.0), thermal_load: ThermalLoad(0) },
+            // arbitrary point within thermal limit range
+            TestCase { temperature: Celsius(88.0), thermal_load: ThermalLoad(30) },
+            // arbitrary point within thermal limit range
+            TestCase { temperature: Celsius(93.0), thermal_load: ThermalLoad(80) },
+            // end of thermal limit range
+            TestCase { temperature: Celsius(95.0), thermal_load: ThermalLoad(100) },
+            // beyond thermal limit range
+            TestCase { temperature: Celsius(100.0), thermal_load: ThermalLoad(100) },
+        ];
+
+        for test_case in test_cases {
+            assert_eq!(
+                ThermalPolicy::calculate_thermal_load(
+                    test_case.temperature,
+                    thermal_limit_range_start,
+                    thermal_limit_range_stop
+                ),
+                test_case.thermal_load
+            );
+        }
+    }
+
     /// Coordinates execution of tests of ThermalPolicy.
     struct ThermalPolicyTest {
         executor: fasync::Executor,
@@ -543,7 +665,7 @@ mod tests {
             );
             let cpu_stats_node =
                 cpu_stats_handler::tests::setup_test_node(Simulator::make_idle_times_fetcher(&sim));
-            let system_power_node = system_power_handler::tests::setup_test_node(
+            let sys_pwr_handler = system_power_handler::tests::setup_test_node(
                 Simulator::make_shutdown_function(&sim),
             );
 
@@ -561,11 +683,14 @@ mod tests {
                 Simulator::make_p_state_setter(&sim),
             );
 
+            let thermal_limiter_node = thermal_limiter::tests::setup_test_node();
+
             let thermal_config = ThermalConfig {
-                temperature_node: temperature_node,
-                cpu_control_node: cpu_control_node,
-                sys_pwr_handler: system_power_node,
-                policy_params: policy_params,
+                temperature_node,
+                cpu_control_node,
+                sys_pwr_handler,
+                thermal_limiter_node,
+                policy_params,
             };
             ThermalPolicy::new(thermal_config).unwrap()
         }
@@ -628,6 +753,7 @@ mod tests {
                 proportional_gain: 0.0,
                 integral_gain: 0.2,
             },
+            thermal_limit_begin_temperature: Celsius(85.0),
             thermal_shutdown_temperature: Celsius(95.0),
         }
     }

@@ -11,7 +11,7 @@ use std::rc::Rc;
 // nodes
 use crate::{
     cpu_control_handler, cpu_stats_handler, system_power_handler, temperature_handler,
-    thermal_policy,
+    thermal_limiter, thermal_policy,
 };
 
 pub struct PowerManager {
@@ -66,10 +66,14 @@ impl PowerManager {
         let sys_pwr_handler = system_power_handler::SystemPowerStateHandler::new()?;
         self.nodes.push(sys_pwr_handler.clone());
 
+        let thermal_limiter_node = thermal_limiter::ThermalLimiter::new()?;
+        self.nodes.push(thermal_limiter_node.clone());
+
         let thermal_config = thermal_policy::ThermalConfig {
             temperature_node: cpu_temperature,
             cpu_control_node,
             sys_pwr_handler,
+            thermal_limiter_node,
 
             // TODO(fxb/41452): these are just placeholder ThermalPolicyParams. The real params
             // should be populated here once they have been properly determined.
@@ -84,6 +88,7 @@ impl PowerManager {
                     proportional_gain: 0.0,
                     integral_gain: 0.2,
                 },
+                thermal_limit_begin_temperature: Celsius(85.0),
                 thermal_shutdown_temperature: Celsius(95.0),
             },
         };

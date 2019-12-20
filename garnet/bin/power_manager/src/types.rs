@@ -38,6 +38,10 @@ define_unit!(Volts, f64);
 define_unit!(Watts, f64);
 define_unit!(Nanoseconds, i64);
 
+// An unsigned integer in the range [0 - x], where x is an upper bound defined by the
+// thermal_limiter crate.
+define_unit!(ThermalLoad, u32);
+
 // Addition and subtraction is implemented for types for which it is useful. Some, but not all,
 // other unit types could reasonably support these operations.
 macro_rules! define_arithmetic {

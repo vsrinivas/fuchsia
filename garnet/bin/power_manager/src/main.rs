@@ -13,6 +13,7 @@ mod cpu_control_handler;
 mod cpu_stats_handler;
 mod system_power_handler;
 mod temperature_handler;
+mod thermal_limiter;
 mod thermal_policy;
 
 use crate::power_manager::PowerManager;
