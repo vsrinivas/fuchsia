@@ -830,6 +830,36 @@ TEST_F(FrameSchedulerTest, FailedUpdate_ShouldNotTriggerRenderCall) {
   EXPECT_TRUE(update_failed);
 }
 
+TEST_F(FrameSchedulerTest, FailedUpdateWithRender_ShouldNotCrash) {
+  auto scheduler = CreateDefaultFrameScheduler();
+
+  constexpr SessionId kSessionId1 = 1;
+  bool update_failed1 = false;
+  scheduler->SetOnUpdateFailedCallbackForSession(
+      kSessionId1, [&update_failed1, id = kSessionId1, frame_scheduler = scheduler.get()]() {
+        update_failed1 = true;
+        // Clear callbacks set on the FrameScheduler when the update fails.
+        frame_scheduler->ClearCallbacksForSession(id);
+      });
+  mock_updater_->SetNextUpdateForSessionFails(kSessionId1);
+
+  constexpr SessionId kSessionId2 = 2;
+  bool update_failed2 = false;
+  scheduler->SetOnUpdateFailedCallbackForSession(kSessionId2,
+                                                 [&update_failed2]() { update_failed2 = true; });
+
+  ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId1, Now());
+  ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId2, Now());
+
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
+  mock_renderer_->EndFrame(/* frame number */ 0, Now());
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
+  EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
+  EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
+  EXPECT_TRUE(update_failed1);
+  EXPECT_FALSE(update_failed2);
+}
+
 TEST_F(FrameSchedulerTest, FailedPresent2Update_ShouldNotTriggerRenderCall) {
   auto scheduler = CreateDefaultFrameScheduler();
 
@@ -852,6 +882,36 @@ TEST_F(FrameSchedulerTest, FailedPresent2Update_ShouldNotTriggerRenderCall) {
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
   EXPECT_TRUE(update_failed);
+}
+
+TEST_F(FrameSchedulerTest, FailedPresent2UpdateWithRender_ShouldNotCrash) {
+  auto scheduler = CreateDefaultFrameScheduler();
+
+  constexpr SessionId kSessionId1 = 1;
+  bool update_failed1 = false;
+  scheduler->SetOnUpdateFailedCallbackForSession(
+      kSessionId1, [&update_failed1, id = kSessionId1, frame_scheduler = scheduler.get()]() {
+        update_failed1 = true;
+        // Clear callbacks set on the FrameScheduler when the update fails.
+        frame_scheduler->ClearCallbacksForSession(id);
+      });
+  mock_updater_->SetNextUpdateForSessionFails(kSessionId1);
+
+  constexpr SessionId kSessionId2 = 2;
+  bool update_failed2 = false;
+  scheduler->SetOnUpdateFailedCallbackForSession(kSessionId2,
+                                                 [&update_failed2](){ update_failed2 = true; });
+
+  SchedulePresent2Update(scheduler, mock_updater_, kSessionId1, Now());
+  SchedulePresent2Update(scheduler, mock_updater_, kSessionId2, Now());
+
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
+  mock_renderer_->EndFrame(/* frame number */ 0, Now());
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
+  EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
+  EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
+  EXPECT_TRUE(update_failed1);
+  EXPECT_FALSE(update_failed2);
 }
 
 TEST_F(FrameSchedulerTest, NoOpUpdateWithSecondPendingUpdate_ShouldBeRescheduled) {

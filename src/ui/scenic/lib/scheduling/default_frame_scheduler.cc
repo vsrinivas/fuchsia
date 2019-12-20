@@ -553,16 +553,17 @@ void DefaultFrameScheduler::UpdateManager::SignalPresentCallbacks(
     }
     pending_present2_infos_.erase(start_iter, end_iter);
 
-    FXL_DCHECK(present2_callback_map_.find(current_session) != present2_callback_map_.end());
-    // TODO(SCN-1346): Make this unique per session via id().
-    TRACE_FLOW_BEGIN("gfx", "present_callback", presentation_info.presentation_time);
+    if (present2_callback_map_.find(current_session) != present2_callback_map_.end()) {
+      // TODO(SCN-1346): Make this unique per session via id().
+      TRACE_FLOW_BEGIN("gfx", "present_callback", presentation_info.presentation_time);
 
-    fuchsia::scenic::scheduling::FramePresentedInfo frame_presented_info =
-        Present2Info::CoalescePresent2Infos(std::move(present2_infos),
-                                            zx::time(presentation_info.presentation_time));
+      fuchsia::scenic::scheduling::FramePresentedInfo frame_presented_info =
+          Present2Info::CoalescePresent2Infos(std::move(present2_infos),
+                                              zx::time(presentation_info.presentation_time));
 
-    // Invoke the Session's OnFramePresented event.
-    present2_callback_map_[current_session](std::move(frame_presented_info));
+      // Invoke the Session's OnFramePresented event.
+      present2_callback_map_[current_session](std::move(frame_presented_info));
+    }
   }
   FXL_DCHECK(pending_present2_infos_.size() == 0u);
 }
