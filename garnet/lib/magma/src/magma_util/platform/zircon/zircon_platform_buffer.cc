@@ -303,7 +303,7 @@ bool ZirconPlatformBuffer::Read(void* buffer, uint64_t offset, uint64_t length) 
 
 bool ZirconPlatformBuffer::Write(const void* buffer, uint64_t offset, uint64_t length) {
   zx_status_t status = vmo_.write(buffer, offset, length);
-  return DRETF(status == ZX_OK, "Read failed with status: %d", status);
+  return DRETF(status == ZX_OK, "Write failed with status: %d", status);
 }
 
 uint64_t PlatformBuffer::MinimumMappableAddress() {
