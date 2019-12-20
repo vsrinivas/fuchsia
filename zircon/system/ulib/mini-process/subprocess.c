@@ -223,7 +223,7 @@ void minipr_thread_loop(zx_handle_t channel, uintptr_t fnptr) {
           what &= ~MINIP_CMD_CHECK_THREAD_POINTER;
           uintptr_t value;
 #ifdef __x86_64__
-          __asm__("mov %%fs:0, %0" : "=r"(value));
+          __asm__ volatile("mov %%fs:0, %0" : "=r"(value));
 #else
           value = *(uintptr_t*)__builtin_thread_pointer();
 #endif
