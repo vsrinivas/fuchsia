@@ -2,20 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    crate::audio::{default_audio_info, StreamVolumeControl},
+    crate::audio::{default_audio_info, play_sound, StreamVolumeControl},
     crate::input::monitor_mic_mute,
     crate::registry::base::{Command, Notifier, State},
     crate::registry::device_storage::DeviceStorage,
     crate::service_context::ServiceContext,
     crate::switchboard::base::*,
-    failure::Error,
+    failure::{Error, ResultExt},
+    fidl_fuchsia_media_sounds::{PlayerMarker, PlayerProxy},
     fidl_fuchsia_ui_input::MediaButtonsEvent,
-    fuchsia_async as fasync,
+    fuchsia_async as fasync, fuchsia_component as component,
     fuchsia_syslog::fx_log_err,
     futures::lock::Mutex,
     futures::StreamExt,
     parking_lot::RwLock,
-    std::collections::HashMap,
+    std::collections::{HashMap, HashSet},
     std::sync::Arc,
 };
 
@@ -30,6 +31,9 @@ fn get_streams_array_from_map(
     }
     streams
 }
+
+const VOLUME_MAX_FILE_PATH: &str = "volume-max.wav";
+const VOLUME_CHANGED_FILE_PATH: &str = "volume-changed.wav";
 
 /// Controller that handles commands for SettingType::Audio.
 /// TODO(go/fxb/35988): Hook up the presentation service to listen for the mic mute state.
@@ -46,9 +50,9 @@ pub fn spawn_audio_controller(
         Arc::<RwLock<bool>>::new(RwLock::new(default_audio_settings.input.mic_mute));
 
     let input_service_connected = Arc::<RwLock<bool>>::new(RwLock::new(false));
-
     let audio_service_connected = Arc::<RwLock<bool>>::new(RwLock::new(false));
 
+    let mut sound_player_connection = None;
     let mut stream_volume_controls = HashMap::new();
 
     let (input_tx, mut input_rx) = futures::channel::mpsc::unbounded::<MediaButtonsEvent>();
@@ -89,6 +93,7 @@ pub fn spawn_audio_controller(
             let mut storage_lock = storage.lock().await;
             stored_value = storage_lock.get().await;
         }
+        let mut sound_player_added_files: HashSet<&str> = HashSet::new();
 
         let stored_streams = stored_value.streams.iter().cloned().collect();
         update_volume_stream(&stored_streams, &mut stream_volume_controls).await;
@@ -103,11 +108,15 @@ pub fn spawn_audio_controller(
                         *notifier_lock.write() = None;
                     }
                 },
-                Command::HandleRequest(request, responder) =>
-                {
+                Command::HandleRequest(request, responder) => {
                     #[allow(unreachable_patterns)]
                     match request {
                         SettingRequest::SetVolume(volume) => {
+                            // Connect to the SoundPlayer the first time a volume event occurs.
+                            if sound_player_connection.is_none() {
+                                sound_player_connection = connect_to_sound_player();
+                            }
+
                             if check_and_bind_volume_controls(
                                 audio_service_connected.clone(),
                                 service_context_handle.clone(),
@@ -117,6 +126,17 @@ pub fn spawn_audio_controller(
                             {
                                 continue;
                             };
+
+                            // TODO(fxb/43075): Test that the sounds are played on volume change and
+                            // not played on mute change once the earcons is moved into its own
+                            // service.
+                            play_media_volume_sound(
+                                sound_player_connection.clone(),
+                                &volume,
+                                &stream_volume_controls,
+                                &mut sound_player_added_files,
+                            )
+                            .await;
 
                             update_volume_stream(&volume, &mut stream_volume_controls).await;
                             stored_value.streams =
@@ -163,6 +183,66 @@ pub fn spawn_audio_controller(
         }
     });
     audio_handler_tx
+}
+
+// Play the earcons sound given the changed volume streams.
+async fn play_media_volume_sound(
+    sound_player_connection: Option<PlayerProxy>,
+    volume: &Vec<AudioStream>,
+    stored_streams: &HashMap<AudioStreamType, StreamVolumeControl>,
+    mut sound_player_added_files: &mut HashSet<&str>,
+) {
+    if let Some(sound_player_proxy) = sound_player_connection.clone() {
+        let media_stream = volume.iter().find(|x| x.stream_type == AudioStreamType::Media);
+        if let Some(stream) = media_stream {
+            let media_volume_stream = match stored_streams.get(&AudioStreamType::Media) {
+                Some(stream) => stream,
+                None => {
+                    fx_log_err!("Could not find media stream");
+                    return;
+                }
+            };
+            let last_media_user_volume = media_volume_stream.stored_stream.user_volume_level;
+
+            // If volume didn't change, don't play the sound.
+            if stream.user_volume_level == last_media_user_volume {
+                return;
+            };
+            let volume_level = stream.user_volume_level;
+            if volume_level >= 1.0 {
+                play_sound(
+                    &sound_player_proxy,
+                    VOLUME_MAX_FILE_PATH,
+                    0,
+                    &mut sound_player_added_files,
+                )
+                .await
+                .ok();
+            } else if volume_level > 0.0 {
+                play_sound(
+                    &sound_player_proxy,
+                    VOLUME_CHANGED_FILE_PATH,
+                    1,
+                    &mut sound_player_added_files,
+                )
+                .await
+                .ok();
+            }
+        }
+    }
+}
+
+// Establish a connection to the sound player and return the proxy representing the service.
+fn connect_to_sound_player() -> Option<PlayerProxy> {
+    match component::client::connect_to_service::<PlayerMarker>()
+        .context("Connecting to fuchsia.media.sounds.Player")
+    {
+        Ok(result) => Some(result),
+        Err(e) => {
+            fx_log_err!("[earcons] Failed to connect to fuchsia.media.sounds.Player: {}", e);
+            None
+        }
+    }
 }
 
 // Updates |stored_audio_streams| and then update volume via the AudioCore service.

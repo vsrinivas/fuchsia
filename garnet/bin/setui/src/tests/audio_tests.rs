@@ -179,15 +179,10 @@ async fn test_audio_input() {
 
     let updated_settings =
         audio_proxy.watch().await.expect("watch completed").expect("watch successful");
-    if let Some(input) = updated_settings.input {
-        if let Some(mic_mute) = input.muted {
-            assert!(mic_mute);
-        } else {
-            panic!("should have mic mute value");
-        }
-    } else {
-        panic!("should have input settings");
-    }
+
+    let input = updated_settings.input.expect("Should have input settings");
+    let mic_mute = input.muted.expect("Should have mic mute value");
+    assert!(mic_mute);
 }
 
 // Test to ensure mic input change events are received.

@@ -19,6 +19,7 @@
             "fuchsia.logger.LogSink",
             "fuchsia.media.AudioCore",
             "fuchsia.media.audio.VolumeControl",
+            "fuchsia.media.sounds.Player",
             "fuchsia.net.Connectivity",
             "fuchsia.netstack.Netstack",
             "fuchsia.stash.Store",

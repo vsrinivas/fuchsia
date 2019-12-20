@@ -36,6 +36,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//sdk/fidl/fuchsia.media.audio:fuchsia.media.audio-rustc",
+    "//sdk/fidl/fuchsia.media.sounds:fuchsia.media.sounds-rustc",
     "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
     "//sdk/fidl/fuchsia.setui:fuchsia.setui-rustc",
     "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
@@ -126,7 +127,7 @@ package("setui_service") {
     },
   ]
 
-  # Timezone resources, needed to validate input to fuchsia.settings.intl
+  # Timezone resources, needed to validate input to fuchsia.settings.intl.
   resources = [
     {
       path = rebase_path("//third_party/icu/common/icudtl.dat")
