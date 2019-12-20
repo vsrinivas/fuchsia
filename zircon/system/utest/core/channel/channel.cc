@@ -982,6 +982,22 @@ TEST(ChannelTest, CallHandleAndBytesFitsIsOk) {
       std::move(local), std::move(remote), request)));
 }
 
+// UBSan was triggering on passing nullptr to zx_channel_call which doesn't
+// accept null arguments. This is what this specific test is checking though, so
+// we can just wrap the call to zx_channel_call() in a function that disables
+// this UBSan check.
+#ifdef __clang__
+[[clang::no_sanitize("undefined")]]
+#else
+// Inline this so GCC doesn't see there is only one caller and it uses nullptr.
+[[gnu::noinline]]
+#endif
+zx_status_t local_call(const zx::channel &local, zx_channel_call_args_t &args,
+                       uint32_t* bytes, uint32_t* handles) {
+  return zx_channel_call(local.get(), 0, zx::time::infinite().get(), &args,
+                         bytes, handles);
+}
+
 TEST(ChannelTest, CallNullptrNumBytesIsInvalidArgs) {
   constexpr uint32_t kReplyDataSize = 0;
   constexpr uint32_t kReplyHandleCount = 0;
@@ -999,7 +1015,7 @@ TEST(ChannelTest, CallNullptrNumBytesIsInvalidArgs) {
     AutoJoinThread service_thread(Reply<ReplyFiller<kReplyDataSize, kReplyHandleCount>>, request, 1,
                                   std::move(remote), &error);
     uint32_t hc;
-    ASSERT_EQ(local.call(0, zx::time::infinite(), &args, nullptr, &hc), ZX_ERR_INVALID_ARGS);
+    ASSERT_EQ(local_call(local, args, nullptr, &hc), ZX_ERR_INVALID_ARGS);
   }
   reply.CloseHandles();
 
@@ -1025,7 +1041,7 @@ TEST(ChannelTest, CallNullptrNumHandlesInvalidArgs) {
     AutoJoinThread service_thread(Reply<ReplyFiller<kReplyDataSize, kReplyHandleCount>>, request, 1,
                                   std::move(remote), &error);
     uint32_t bc;
-    ASSERT_EQ(local.call(0, zx::time::infinite(), &args, &bc, nullptr), ZX_ERR_INVALID_ARGS);
+    ASSERT_EQ(local_call(local, args, &bc, nullptr), ZX_ERR_INVALID_ARGS);
   }
   reply.CloseHandles();
 
