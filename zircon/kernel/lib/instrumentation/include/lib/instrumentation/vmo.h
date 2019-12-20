@@ -28,6 +28,7 @@ class InstrumentationData {
   enum Vmo : uint32_t {
     kLlvmProfileVmo,
     kSancovVmo,
+    kSancovCountsVmo,
     kVmoCount,
   };
 

@@ -18,8 +18,13 @@ namespace {
 // TODO(mcgrathr): Move the constant into a header shared with other impls.
 constexpr uint64_t kMagic64 = 0xC0BFFFFFFFFFFF64ULL;
 
+constexpr uint64_t kCountsMagic = 0x0023766f436e6153ULL;  // "SanCov#" (LE)
+
 using Guard = ktl::atomic<uint32_t>;
 static_assert(sizeof(Guard) == sizeof(uint32_t));
+
+using Count = ktl::atomic<uint64_t>;
+static_assert(sizeof(Count) == sizeof(uint64_t));
 
 // Go back from the return address to the call site.
 // Note this must exactly match the calculation in the sancov tool.
@@ -36,13 +41,17 @@ extern "C" {
 // These are defined by the linker script.  The __sancov_guards section is
 // populated by the compiler.  The __sancov_pc_table has one element for
 // each element in __sancov_guards (statically allocated via linker script).
+// Likewise for __sancov_pc_counts.
 extern Guard __start___sancov_guards[], __stop___sancov_guards[];
 extern uintptr_t __sancov_pc_table[];
+extern Count __sancov_pc_counts[];
 
+// This is run along with static constructors, pretty early in startup.
+// It's always run on the boot CPU before secondary CPUs are started up.
 void __sanitizer_cov_trace_pc_guard_init(Guard* start, Guard* end) {
   // The compiler generates a call to this in every TU but via COMDAT so
   // there is only one.
-  ZX_ASSERT(start[1] == 0);
+  ZX_ASSERT(__sancov_pc_table[0] == 0);
 
   // It's always called with the bounds of the section, which for the
   // kernel are known statically anyway.
@@ -51,34 +60,34 @@ void __sanitizer_cov_trace_pc_guard_init(Guard* start, Guard* end) {
 
   // Index 0 is special.  The first slot is reserved for the magic number.
   __sancov_pc_table[0] = kMagic64;
-
-  // Each guard is assigned a nonzero index into the PC table.  The
-  // location that uses that guard will store its PC in this slot to
-  // indicate it was covered.
-  for (uint32_t i = 0; i < end - start; ++i) {
-    start[i].store(i + 1, ktl::memory_order_relaxed);
-  }
+  __sancov_pc_counts[0].store(kCountsMagic, ktl::memory_order_relaxed);
 }
 
-// This is called every time through a covered event.  The guard is zero
-// before the initializer above has run, so any early hits are ignored.
-// The first hit resets the guard to zero so later hits don't do anything.
-// It then stores the covered PC value (i.e. this call's return address) in
-// the slot in the table corresponding to the guard.
+// This is called every time through a covered event.
+// This might be run before __sanitizer_cov_trace_pc_guard_init has run.
 void __sanitizer_cov_trace_pc_guard(Guard* guard) {
-  if (unlikely(guard->load(ktl::memory_order_relaxed) != 0)) {
-    if (auto i = guard->exchange(0, ktl::memory_order_relaxed)) {
-      // This is now the only path that will ever use this slot in
-      // the table, so storing there doesn't need to be atomic.
-      __sancov_pc_table[i] =
-          // Take the raw return address.
-          reinterpret_cast<uintptr_t>(__builtin_return_address(0)) -
-          // Adjust it to point into the call instruction.
-          kReturnAddressBias -
-          // Adjust it from runtime to link-time addresses so no
-          // further adjustment is needed to decode the data.
-          reinterpret_cast<uintptr_t>(__code_start) + KERNEL_BASE;
-    }
+  // Compute the table index based just on the address of the guard.
+  // The __sancov_pc_table and __sancov_pc_counts arrays parallel the guards,
+  // but the first slot in each of those is reserved for the magic number.
+  size_t idx = guard - __start___sancov_guards + 1;
+
+  // Every time through, increment the counter.
+  __sancov_pc_counts[idx].fetch_add(1, ktl::memory_order_relaxed);
+
+  // Use the guard as a simple flag to indicate whether the PC has been stored.
+  if (unlikely(guard->load(ktl::memory_order_relaxed) == 0) &&
+      likely(guard->exchange(1, ktl::memory_order_relaxed) == 0)) {
+    // This is really the first time through this PC on any CPU.
+    // This is now the only path that will ever use this slot in
+    // the table, so storing there doesn't need to be atomic.
+    __sancov_pc_table[idx] =
+        // Take the raw return address.
+        reinterpret_cast<uintptr_t>(__builtin_return_address(0)) -
+        // Adjust it to point into the call instruction.
+        kReturnAddressBias -
+        // Adjust it from runtime to link-time addresses so no
+        // further adjustment is needed to decode the data.
+        reinterpret_cast<uintptr_t>(__code_start) + KERNEL_BASE;
   }
 }
 

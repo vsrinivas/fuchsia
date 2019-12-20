@@ -17,6 +17,8 @@ extern "C" const uint8_t __llvm_profile_start[], __llvm_profile_end[];
 extern "C" const uint8_t __llvm_profile_vmo_end[];
 extern "C" const uint8_t __sancov_pc_table[], __sancov_pc_table_end[];
 extern "C" const uint8_t __sancov_pc_table_vmo_end[];
+extern "C" const uint8_t __sancov_pc_counts[], __sancov_pc_counts_end[];
+extern "C" const uint8_t __sancov_pc_counts_vmo_end[];
 
 constexpr struct {
   const char* announce;
@@ -47,6 +49,13 @@ constexpr struct {
      __sancov_pc_table, __sancov_pc_table_end, __sancov_pc_table_vmo_end,
      // Units.
      sizeof(uintptr_t), "PCs"},
+    {"SanitizerCoverage Counts", "sancov-counts",
+     // This follows the sancov PCs file name just for consistency.
+     "data/zircon.elf.1.sancov-counts",
+     // Linker-generated symbols.
+     __sancov_pc_counts, __sancov_pc_counts_end, __sancov_pc_counts_vmo_end,
+     // Units.
+     sizeof(uint64_t), "counters"},
 };
 
 }  // namespace

@@ -302,7 +302,7 @@ SECTIONS
                "kcounters_arena size mismatch");
 
         /*
-         * Keep this page-aligned/rounded so it can be exported as a VMO.
+         * Keep these page-aligned/rounded so they can be exported as VMOs.
          */
         . = ALIGN(4096);
         PROVIDE_HIDDEN(__sancov_pc_table = .);
@@ -310,6 +310,11 @@ SECTIONS
         PROVIDE_HIDDEN(__sancov_pc_table_end = .);
         . = ALIGN(4096);
         PROVIDE_HIDDEN(__sancov_pc_table_vmo_end = .);
+        PROVIDE_HIDDEN(__sancov_pc_counts = .);
+        . += (__stop___sancov_guards - __start___sancov_guards) / 4 * 8;
+        PROVIDE_HIDDEN(__sancov_pc_counts_end = .);
+        . = ALIGN(4096);
+        PROVIDE_HIDDEN(__sancov_pc_counts_vmo_end = .);
 
         *(.bss*)
         *(.gnu.linkonce.b.*)
