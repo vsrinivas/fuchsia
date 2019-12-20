@@ -18,10 +18,10 @@
 
 use {
     crate::{
-        model::{binding::Binder, moniker::AbsoluteMoniker, realm::Realm},
+        model::{binding::Binder, moniker::AbsoluteMoniker},
         work_scheduler::{delegate::WorkSchedulerDelegate, dispatcher::RealDispatcher},
     },
-    cm_rust::CapabilityPath,
+    cm_rust::{CapabilityPath, ComponentDecl},
     fidl_fuchsia_sys2 as fsys,
     futures::lock::Mutex,
     lazy_static::lazy_static,
@@ -82,9 +82,13 @@ impl WorkScheduler {
     }
 
     /// `try_add_realm_as_worker()` interface method is forwarded to delegate.
-    pub async fn try_add_realm_as_worker(&self, realm: &Arc<Realm>) {
+    pub async fn try_add_realm_as_worker(
+        &self,
+        target_moniker: &AbsoluteMoniker,
+        decl: &ComponentDecl,
+    ) {
         let mut delegate = self.delegate.lock().await;
-        delegate.try_add_realm_as_worker(realm).await;
+        delegate.try_add_realm_as_worker(target_moniker, decl).await;
     }
 
     /// `verify_worker_exposed_to_framework()` interface method is forwarded to delegate.
@@ -732,8 +736,7 @@ mod connect_tests {
             capability::{CapabilitySource, FrameworkCapability},
             model::{
                 hooks::{Event, EventPayload, Hooks},
-                realm::Realm,
-                resolver::ResolverRegistry,
+                moniker::AbsoluteMoniker,
                 testing::mocks::FakeBinder,
             },
         },
@@ -764,13 +767,8 @@ mod connect_tests {
 
         let (client, server) = zx::Channel::create()?;
 
-        let realm = {
-            let resolver = ResolverRegistry::new();
-            let root_component_url = "test:///root".to_string();
-            Arc::new(Realm::new_root_realm(resolver, root_component_url))
-        };
         let event = Event::new(
-            realm.clone(),
+            AbsoluteMoniker::root(),
             EventPayload::RouteCapability {
                 source,
                 capability_provider: capability_provider.clone(),

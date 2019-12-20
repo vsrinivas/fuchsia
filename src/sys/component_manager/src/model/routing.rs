@@ -204,7 +204,7 @@ pub async fn open_capability_at_source(
     let target_realm = model.look_up_realm(&target_moniker).await?;
 
     let event = Event::new(
-        target_realm.clone(),
+        target_realm.abs_moniker.clone(),
         EventPayload::RouteCapability {
             source: source.clone(),
             capability_provider: capability_provider.clone(),

@@ -15,10 +15,7 @@ use {
         routing,
         runner::{NullRunner, RemoteRunner, Runner},
     },
-    cm_rust::{
-        self, CapabilityPath, ChildDecl, ComponentDecl, ExposeDecl, ExposeTarget, UseDecl,
-        UseStorageDecl,
-    },
+    cm_rust::{self, CapabilityPath, ChildDecl, ComponentDecl, UseDecl, UseStorageDecl},
     failure::format_err,
     fidl::endpoints::{create_endpoints, Proxy, ServerEnd},
     fidl_fuchsia_io::{self as fio, DirectoryProxy, MODE_TYPE_DIRECTORY},
@@ -98,13 +95,19 @@ impl Realm {
         let is_resolved = { realm.lock_state().await.is_some() };
         if !is_resolved {
             let component = realm.resolver_registry.resolve(&realm.component_url).await?;
+            let decl: ComponentDecl = component
+                .decl
+                .unwrap()
+                .try_into()
+                .map_err(|e| ModelError::manifest_invalid(realm.component_url.clone(), e))?;
             {
                 let mut state = realm.lock_state().await;
                 if state.is_none() {
-                    *state = Some(RealmState::new(realm, component.decl).await?);
+                    *state = Some(RealmState::new(realm, &decl).await?);
                 }
             }
-            let event = Event::new(realm.clone(), EventPayload::ResolveInstance);
+            let event =
+                Event::new(realm.abs_moniker.clone(), EventPayload::ResolveInstance { decl });
             realm.hooks.dispatch(&event).await?;
         }
         Ok(())
@@ -275,7 +278,10 @@ impl Realm {
             }
         };
         // Call hooks outside of lock
-        let event = Event::new(child_realm.clone(), EventPayload::AddDynamicChild);
+        let event = Event::new(
+            child_realm.abs_moniker.clone(),
+            EventPayload::AddDynamicChild { component_url: child_realm.component_url.clone() },
+        );
         realm.hooks.dispatch(&event).await?;
         Ok(())
     }
@@ -428,19 +434,6 @@ impl Realm {
         Ok(futures)
     }
 
-    /// Locate an exposed-to-framework service by its `target_path`.
-    pub async fn is_service_exposed_to_framework(&self, target_path: &CapabilityPath) -> bool {
-        let state = self.lock_state().await;
-        let state = state.as_ref().expect("is_service_exposed_to_framework: not resolved");
-
-        state.decl.exposes.iter().any(|expose| match expose {
-            ExposeDecl::ServiceProtocol(ls) => {
-                ls.target == ExposeTarget::Framework && ls.target_path == *target_path
-            }
-            _ => false,
-        })
-    }
-
     pub async fn open_outgoing(
         &self,
         flags: u32,
@@ -558,14 +551,7 @@ pub struct RealmState {
 }
 
 impl RealmState {
-    pub async fn new(realm: &Realm, decl: Option<fsys::ComponentDecl>) -> Result<Self, ModelError> {
-        if decl.is_none() {
-            return Err(ModelError::ComponentInvalid);
-        }
-        let decl: ComponentDecl = decl
-            .unwrap()
-            .try_into()
-            .map_err(|e| ModelError::manifest_invalid(realm.component_url.clone(), e))?;
+    pub async fn new(realm: &Realm, decl: &ComponentDecl) -> Result<Self, ModelError> {
         let mut state = Self {
             child_realms: HashMap::new(),
             live_child_realms: HashMap::new(),

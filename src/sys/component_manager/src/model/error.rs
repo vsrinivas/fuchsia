@@ -36,6 +36,8 @@ pub enum ModelError {
         #[fail(cause)]
         err: ClonableError,
     },
+    #[fail(display = "The model is not available")]
+    ModelNotAvailable,
     #[fail(display = "namespace creation failed: {}", err)]
     NamespaceCreationFailed {
         #[fail(cause)]

@@ -280,7 +280,7 @@ fn maybe_create_event_payload(event_payload: EventPayload) -> Option<fbreak::Eve
 /// and basic handler for resumption.
 fn create_invocation_fidl_object(invocation: Invocation) -> fbreak::Invocation {
     let event_type = Some(convert_std_event_type_to_fidl(invocation.event.payload.type_()));
-    let target_moniker = Some(invocation.event.target_realm.abs_moniker.to_string());
+    let target_moniker = Some(invocation.event.target_moniker.to_string());
     let event_payload = maybe_create_event_payload(invocation.event.payload.clone());
     let handler = Some(serve_handler_async(invocation));
     fbreak::Invocation { event_type, target_moniker, handler, event_payload }

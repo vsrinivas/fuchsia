@@ -88,8 +88,8 @@ impl Hook for WorkScheduler {
     fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
             match &event.payload {
-                EventPayload::ResolveInstance => {
-                    self.try_add_realm_as_worker(&event.target_realm).await;
+                EventPayload::ResolveInstance { decl } => {
+                    self.try_add_realm_as_worker(&event.target_moniker, &decl).await;
                 }
                 EventPayload::RouteCapability {
                     source: CapabilitySource::Framework { capability, scope_moniker: None },

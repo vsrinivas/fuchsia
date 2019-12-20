@@ -60,7 +60,7 @@ impl InvocationSender {
     async fn send(&self, event: Event) -> Result<oneshot::Receiver<()>, Error> {
         trace::duration!("component_manager", "breakpoints:send");
         let event_type = format!("{:?}", event.payload.type_());
-        let target_moniker = event.target_realm.abs_moniker.to_string();
+        let target_moniker = event.target_moniker.to_string();
         trace::flow_begin!(
             "component_manager",
             "event",
@@ -106,8 +106,9 @@ impl InvocationReceiver {
         loop {
             let invocation = self.receive().await;
             let actual_event_type = invocation.event.payload.type_();
-            let actual_moniker = invocation.event.target_realm.abs_moniker.clone();
-            if expected_moniker == actual_moniker && expected_event_type == actual_event_type {
+            if expected_moniker == invocation.event.target_moniker
+                && expected_event_type == actual_event_type
+            {
                 return invocation;
             }
             invocation.resume();

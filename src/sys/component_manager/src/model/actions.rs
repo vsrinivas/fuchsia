@@ -194,7 +194,7 @@ async fn do_delete_child(
 
     // The child may not exist or may already be deleted by a previous DeleteChild action.
     if let Some(child_realm) = child_realm {
-        let event = Event::new(child_realm.clone(), EventPayload::PreDestroyInstance);
+        let event = Event::new(child_realm.abs_moniker.clone(), EventPayload::PreDestroyInstance);
 
         child_realm.hooks.dispatch(&event).await?;
 
@@ -205,7 +205,7 @@ async fn do_delete_child(
             state.as_mut().expect("do_delete_child: not resolved").remove_child_realm(&moniker);
         }
 
-        let event = Event::new(child_realm.clone(), EventPayload::PostDestroyInstance);
+        let event = Event::new(child_realm.abs_moniker.clone(), EventPayload::PostDestroyInstance);
         child_realm.hooks.dispatch(&event).await?;
     }
 
@@ -1437,9 +1437,9 @@ pub mod tests {
 
             async fn on_shutdown_instance_async(
                 &self,
-                realm: Arc<Realm>,
+                target_moniker: &AbsoluteMoniker,
             ) -> Result<(), ModelError> {
-                if realm.abs_moniker == self.moniker {
+                if *target_moniker == self.moniker {
                     return Err(ModelError::unsupported("ouch"));
                 }
                 Ok(())
@@ -1450,7 +1450,7 @@ pub mod tests {
             fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
                 Box::pin(async move {
                     if let EventPayload::StopInstance = event.payload {
-                        self.on_shutdown_instance_async(event.target_realm.clone()).await?;
+                        self.on_shutdown_instance_async(&event.target_moniker).await?;
                     }
                     Ok(())
                 })
@@ -2053,8 +2053,11 @@ pub mod tests {
                 Arc::new(Self { moniker })
             }
 
-            async fn on_destroy_instance_async(&self, realm: Arc<Realm>) -> Result<(), ModelError> {
-                if realm.abs_moniker == self.moniker {
+            async fn on_destroy_instance_async(
+                &self,
+                target_moniker: &AbsoluteMoniker,
+            ) -> Result<(), ModelError> {
+                if *target_moniker == self.moniker {
                     return Err(ModelError::unsupported("ouch"));
                 }
                 Ok(())
@@ -2065,7 +2068,7 @@ pub mod tests {
             fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
                 Box::pin(async move {
                     if let EventPayload::PostDestroyInstance = event.payload {
-                        self.on_destroy_instance_async(event.target_realm.clone()).await?;
+                        self.on_destroy_instance_async(&event.target_moniker).await?;
                     }
                     Ok(())
                 })

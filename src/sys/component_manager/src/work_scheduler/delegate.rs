@@ -2,15 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::model::moniker::AbsoluteMoniker;
-use crate::model::realm::Realm;
 use {
-    crate::work_scheduler::{
-        dispatcher::Dispatcher,
-        timer::WorkSchedulerTimer,
-        work_item::WorkItem,
-        work_scheduler::{WorkScheduler, WORKER_CAPABILITY_PATH},
+    crate::{
+        model::moniker::AbsoluteMoniker,
+        work_scheduler::{
+            dispatcher::Dispatcher,
+            timer::WorkSchedulerTimer,
+            work_item::WorkItem,
+            work_scheduler::{WorkScheduler, WORKER_CAPABILITY_PATH},
+        },
     },
+    cm_rust::ComponentDecl,
     fidl_fuchsia_sys2 as fsys,
     fuchsia_async::{self as fasync, Time},
     futures::lock::Mutex,
@@ -64,9 +66,13 @@ impl WorkSchedulerDelegate {
 
     /// Adds the realm's moniker to the list of instances that exposes the Worker capability
     /// to the framework.
-    pub async fn try_add_realm_as_worker(&mut self, realm: &Arc<Realm>) {
-        if realm.is_service_exposed_to_framework(&WORKER_CAPABILITY_PATH).await {
-            self.worker_monikers.push(realm.abs_moniker.clone());
+    pub async fn try_add_realm_as_worker(
+        &mut self,
+        target_moniker: &AbsoluteMoniker,
+        decl: &ComponentDecl,
+    ) {
+        if decl.is_service_exposed_to_framework(&WORKER_CAPABILITY_PATH) {
+            self.worker_monikers.push(target_moniker.clone());
         }
     }
 

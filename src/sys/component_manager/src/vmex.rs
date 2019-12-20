@@ -142,7 +142,7 @@ impl CapabilityProvider for VmexCapabilityProvider {
 mod tests {
     use {
         super::*,
-        crate::model::{hooks::Hooks, realm::Realm, resolver::ResolverRegistry},
+        crate::model::{hooks::Hooks, moniker::AbsoluteMoniker},
         fidl::endpoints::ClientEnd,
         fuchsia_async as fasync,
         fuchsia_zircon::AsHandleRef,
@@ -227,13 +227,8 @@ mod tests {
 
         let (client, server) = zx::Channel::create()?;
 
-        let realm = {
-            let resolver = ResolverRegistry::new();
-            let root_component_url = "test:///root".to_string();
-            Arc::new(Realm::new_root_realm(resolver, root_component_url))
-        };
         let event = Event::new(
-            realm.clone(),
+            AbsoluteMoniker::root(),
             EventPayload::RouteCapability {
                 source,
                 capability_provider: capability_provider.clone(),

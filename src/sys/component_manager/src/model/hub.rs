@@ -10,6 +10,7 @@ use {
             dir_tree::{CapabilityUsageTree, DirTree},
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
+            model::Model,
             moniker::AbsoluteMoniker,
             realm::{Realm, Runtime},
             routing_facade::RoutingFacade,
@@ -109,8 +110,8 @@ pub struct Hub {
 
 impl Hub {
     /// Create a new Hub given a `component_url` and a controller to the root directory.
-    pub fn new(component_url: String) -> Result<Self, ModelError> {
-        Ok(Hub { inner: Arc::new(HubInner::new(component_url)?) })
+    pub fn new(model: Weak<Model>, component_url: String) -> Result<Self, ModelError> {
+        Ok(Hub { inner: Arc::new(HubInner::new(model, component_url)?) })
     }
 
     pub async fn open_root(&self, flags: u32, server_end: zx::Channel) -> Result<(), ModelError> {
@@ -137,13 +138,14 @@ impl Hub {
 }
 
 struct HubInner {
+    model: Weak<Model>,
     instances: Mutex<HashMap<AbsoluteMoniker, Instance>>,
     scope: ExecutionScope,
 }
 
 impl HubInner {
     /// Create a new Hub given a |component_url| and a controller to the root directory.
-    pub fn new(component_url: String) -> Result<Self, ModelError> {
+    pub fn new(model: Weak<Model>, component_url: String) -> Result<Self, ModelError> {
         let mut instances_map = HashMap::new();
         let abs_moniker = AbsoluteMoniker::root();
 
@@ -151,6 +153,7 @@ impl HubInner {
             .expect("Did not create directory.");
 
         Ok(HubInner {
+            model,
             instances: Mutex::new(instances_map),
             scope: ExecutionScope::from_executor(Box::new(EHandle::local())),
         })
@@ -282,20 +285,20 @@ impl HubInner {
     ) -> Result<(), ModelError> {
         let tree = DirTree::build_from_uses(
             routing_facade.route_use_fn_factory(),
-            &abs_moniker,
+            abs_moniker,
             component_decl,
         );
         let mut in_dir = pfs::simple();
-        tree.install(&abs_moniker, &mut in_dir)?;
+        tree.install(abs_moniker, &mut in_dir)?;
         let pkg_dir = runtime.namespace.as_ref().and_then(|n| n.package_dir.as_ref());
         if let Some(pkg_dir) = Self::clone_dir(pkg_dir) {
             in_dir.add_node(
                 "pkg",
                 directory_broker::DirectoryBroker::from_directory_proxy(pkg_dir),
-                &abs_moniker,
+                abs_moniker,
             )?;
         }
-        execution_directory.add_node("in", in_dir, &abs_moniker)?;
+        execution_directory.add_node("in", in_dir, abs_moniker)?;
         Ok(())
     }
 
@@ -308,12 +311,12 @@ impl HubInner {
         trace::duration!("component_manager", "hub:add_expose_directory");
         let tree = DirTree::build_from_exposes(
             routing_facade.route_expose_fn_factory(),
-            &abs_moniker,
+            abs_moniker,
             component_decl,
         );
         let mut expose_dir = pfs::simple();
-        tree.install(&abs_moniker, &mut expose_dir)?;
-        execution_directory.add_node("expose", expose_dir, &abs_moniker)?;
+        tree.install(abs_moniker, &mut expose_dir)?;
+        execution_directory.add_node("expose", expose_dir, abs_moniker)?;
         Ok(())
     }
 
@@ -327,7 +330,7 @@ impl HubInner {
             execution_directory.add_node(
                 "out",
                 directory_broker::DirectoryBroker::from_directory_proxy(out_dir),
-                &abs_moniker,
+                abs_moniker,
             )?;
         }
         Ok(())
@@ -343,7 +346,7 @@ impl HubInner {
             execution_directory.add_node(
                 "runtime",
                 directory_broker::DirectoryBroker::from_directory_proxy(runtime_dir),
-                &abs_moniker,
+                abs_moniker,
             )?;
         }
         Ok(())
@@ -351,22 +354,28 @@ impl HubInner {
 
     async fn on_start_instance_async<'a>(
         &'a self,
-        realm: Arc<Realm>,
+        target_moniker: &AbsoluteMoniker,
         component_decl: &'a ComponentDecl,
         live_child_realms: &'a Vec<Arc<Realm>>,
         routing_facade: RoutingFacade,
     ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:on_start_instance_async");
+        let model = self.model.upgrade().ok_or(ModelError::ModelNotAvailable)?;
+        let realm = model.look_up_realm(target_moniker).await?;
         let component_url = realm.component_url.clone();
-        let abs_moniker = realm.abs_moniker.clone();
+
         let mut instances_map = self.instances.lock().await;
 
-        Self::add_instance_to_parent_if_necessary(&abs_moniker, component_url, &mut instances_map)
-            .await?;
+        Self::add_instance_to_parent_if_necessary(
+            target_moniker,
+            component_url,
+            &mut instances_map,
+        )
+        .await?;
 
         let instance = instances_map
-            .get_mut(&abs_moniker)
-            .expect(&format!("Unable to find instance {} in map.", abs_moniker));
+            .get_mut(target_moniker)
+            .expect(&format!("Unable to find instance {} in map.", target_moniker));
 
         // If we haven't already created an execution directory, create one now.
         if instance.execution.is_none() {
@@ -390,7 +399,7 @@ impl HubInner {
                 Self::add_resolved_url_file(
                     execution_directory.clone(),
                     runtime.resolved_url.clone(),
-                    &abs_moniker,
+                    target_moniker,
                 )?;
 
                 Self::add_in_directory(
@@ -398,22 +407,22 @@ impl HubInner {
                     component_decl.clone(),
                     &runtime,
                     &routing_facade,
-                    &abs_moniker,
+                    target_moniker,
                 )?;
 
                 Self::add_expose_directory(
                     execution_directory.clone(),
                     component_decl.clone(),
                     &routing_facade,
-                    &abs_moniker,
+                    &target_moniker,
                 )?;
 
-                execution_directory.add_node("used", used, &abs_moniker)?;
-                Self::add_out_directory(execution_directory.clone(), runtime, &abs_moniker)?;
+                execution_directory.add_node("used", used, &target_moniker)?;
+                Self::add_out_directory(execution_directory.clone(), runtime, &target_moniker)?;
 
-                Self::add_runtime_directory(execution_directory.clone(), runtime, &abs_moniker)?;
+                Self::add_runtime_directory(execution_directory.clone(), runtime, &target_moniker)?;
 
-                instance.directory.add_node("exec", execution_directory, &abs_moniker)?;
+                instance.directory.add_node("exec", execution_directory, &target_moniker)?;
             }
         }
 
@@ -432,51 +441,62 @@ impl HubInner {
         Ok(())
     }
 
-    async fn on_add_dynamic_child_async(&self, realm: Arc<Realm>) -> Result<(), ModelError> {
+    async fn on_add_dynamic_child_async(
+        &self,
+        target_moniker: &AbsoluteMoniker,
+        component_url: String,
+    ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:on_add_dynamic_child_async");
         let mut instances_map = self.instances.lock().await;
         Self::add_instance_to_parent_if_necessary(
-            &realm.abs_moniker,
-            realm.component_url.clone(),
+            target_moniker,
+            component_url,
             &mut instances_map,
         )
         .await?;
         Ok(())
     }
 
-    async fn on_post_destroy_instance_async(&self, realm: Arc<Realm>) -> Result<(), ModelError> {
+    async fn on_post_destroy_instance_async(
+        &self,
+        target_moniker: &AbsoluteMoniker,
+    ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:on_post_destroy_instance_async");
         let mut instance_map = self.instances.lock().await;
 
         // TODO(xbhatnag): Investigate error handling scenarios here.
         //                 Can these errors arise from faulty components or from
         //                 a bug in ComponentManager?
-        let parent_moniker =
-            realm.abs_moniker.parent().expect("a root component cannot be dynamic");
-        let leaf = realm.abs_moniker.leaf().expect("a root component cannot be dynamic");
+        let parent_moniker = target_moniker.parent().expect("a root component cannot be dynamic");
+        let leaf = target_moniker.leaf().expect("a root component cannot be dynamic");
 
         instance_map[&parent_moniker].deleting_directory.remove_node(leaf.as_str())?;
         instance_map
-            .remove(&realm.abs_moniker)
+            .remove(&target_moniker)
             .expect("the dynamic component must exist in the instance map");
         Ok(())
     }
 
-    async fn on_stop_instance_async(&self, realm: Arc<Realm>) -> Result<(), ModelError> {
+    async fn on_stop_instance_async(
+        &self,
+        target_moniker: &AbsoluteMoniker,
+    ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:on_stop_instance_async");
         let mut instance_map = self.instances.lock().await;
-        instance_map[&realm.abs_moniker].directory.remove_node("exec")?;
-        instance_map.get_mut(&realm.abs_moniker).expect("instance must exist").execution = None;
+        instance_map[target_moniker].directory.remove_node("exec")?;
+        instance_map.get_mut(target_moniker).expect("instance must exist").execution = None;
         Ok(())
     }
 
-    async fn on_pre_destroy_instance_async(&self, realm: Arc<Realm>) -> Result<(), ModelError> {
+    async fn on_pre_destroy_instance_async(
+        &self,
+        target_moniker: &AbsoluteMoniker,
+    ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:on_pre_destroy_instance_async");
         let instance_map = self.instances.lock().await;
 
-        let parent_moniker =
-            realm.abs_moniker.parent().expect("A root component cannot be destroyed");
-        let leaf = realm.abs_moniker.leaf().expect("A root component cannot be destroyed");
+        let parent_moniker = target_moniker.parent().expect("A root component cannot be destroyed");
+        let leaf = target_moniker.leaf().expect("A root component cannot be destroyed");
 
         // In the children directory, the child's instance id is not used
         let partial_moniker = leaf.to_partial();
@@ -488,7 +508,7 @@ impl HubInner {
         instance_map[&parent_moniker].deleting_directory.add_node(
             leaf.as_str(),
             directory,
-            &realm.abs_moniker,
+            target_moniker,
         )?;
         Ok(())
     }
@@ -525,7 +545,7 @@ impl HubInner {
 
     async fn on_route_capability_async(
         self: Arc<Self>,
-        target_moniker: AbsoluteMoniker,
+        target_moniker: &AbsoluteMoniker,
         source: CapabilitySource,
         capability_provider: Arc<Mutex<Option<Box<dyn CapabilityProvider>>>>,
     ) -> Result<(), ModelError> {
@@ -534,13 +554,13 @@ impl HubInner {
 
         let mut instance_map = self.instances.lock().await;
         let execution = instance_map
-            .get_mut(&target_moniker)
+            .get_mut(target_moniker)
             .expect("A component that is requesting a capability must exist in the instance map")
             .execution
             .as_mut()
             .expect("A component that is requesting a capability must have an execution.");
 
-        execution.capability_usage_tree.mark_capability_used(&target_moniker, source).await?;
+        execution.capability_usage_tree.mark_capability_used(target_moniker, source).await?;
 
         Ok(())
     }
@@ -562,28 +582,32 @@ impl Hook for HubInner {
                     routing_facade,
                 } => {
                     self.on_start_instance_async(
-                        event.target_realm.clone(),
+                        &event.target_moniker,
                         &component_decl,
                         &live_child_realms,
                         routing_facade.clone(),
                     )
                     .await?;
                 }
-                EventPayload::AddDynamicChild => {
-                    self.on_add_dynamic_child_async(event.target_realm.clone()).await?;
+                EventPayload::AddDynamicChild { component_url } => {
+                    self.on_add_dynamic_child_async(
+                        &event.target_moniker,
+                        component_url.to_string(),
+                    )
+                    .await?;
                 }
                 EventPayload::PreDestroyInstance => {
-                    self.on_pre_destroy_instance_async(event.target_realm.clone()).await?;
+                    self.on_pre_destroy_instance_async(&event.target_moniker).await?;
                 }
                 EventPayload::StopInstance => {
-                    self.on_stop_instance_async(event.target_realm.clone()).await?;
+                    self.on_stop_instance_async(&event.target_moniker).await?;
                 }
                 EventPayload::PostDestroyInstance => {
-                    self.on_post_destroy_instance_async(event.target_realm.clone()).await?;
+                    self.on_post_destroy_instance_async(&event.target_moniker).await?;
                 }
                 EventPayload::RouteCapability { source, capability_provider } => {
                     self.on_route_capability_async(
-                        event.target_realm.abs_moniker.clone(),
+                        &event.target_moniker,
                         source.clone(),
                         capability_provider.clone(),
                     )

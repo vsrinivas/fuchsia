@@ -5,7 +5,10 @@
 use {
     crate::{
         capability::{CapabilityProvider, CapabilitySource},
-        model::{error::ModelError, realm::Realm, routing_facade::RoutingFacade},
+        model::{
+            error::ModelError, moniker::AbsoluteMoniker, realm::Realm,
+            routing_facade::RoutingFacade,
+        },
     },
     cm_rust::ComponentDecl,
     fuchsia_trace as trace,
@@ -70,10 +73,14 @@ pub struct HooksRegistration {
 #[derive(Clone)]
 pub enum EventPayload {
     // Keep the events listed below in alphabetical order!
-    AddDynamicChild,
+    AddDynamicChild {
+        component_url: String,
+    },
     PostDestroyInstance,
     PreDestroyInstance,
-    ResolveInstance,
+    ResolveInstance {
+        decl: ComponentDecl,
+    },
     RouteCapability {
         source: CapabilitySource,
         // Events are passed to hooks as immutable borrows. In order to mutate,
@@ -92,10 +99,10 @@ pub enum EventPayload {
 impl EventPayload {
     pub fn type_(&self) -> EventType {
         match self {
-            EventPayload::AddDynamicChild => EventType::AddDynamicChild,
+            EventPayload::AddDynamicChild { .. } => EventType::AddDynamicChild,
             EventPayload::PostDestroyInstance => EventType::PostDestroyInstance,
             EventPayload::PreDestroyInstance => EventType::PreDestroyInstance,
-            EventPayload::ResolveInstance => EventType::ResolveInstance,
+            EventPayload::ResolveInstance { .. } => EventType::ResolveInstance,
             EventPayload::RouteCapability { .. } => EventType::RouteCapability,
             EventPayload::StartInstance { .. } => EventType::StartInstance,
             EventPayload::StopInstance => EventType::StopInstance,
@@ -108,11 +115,13 @@ impl fmt::Debug for EventPayload {
         let mut formatter = fmt.debug_struct("EventPayload");
         formatter.field("type", &self.type_());
         match self {
-            EventPayload::AddDynamicChild
-            | EventPayload::PostDestroyInstance
+            EventPayload::PostDestroyInstance
             | EventPayload::PreDestroyInstance
-            | EventPayload::ResolveInstance
             | EventPayload::StopInstance => formatter.finish(),
+            EventPayload::AddDynamicChild { component_url } => {
+                formatter.field("component_url", component_url).finish()
+            }
+            EventPayload::ResolveInstance { decl } => formatter.field("decl", decl).finish(),
             EventPayload::RouteCapability { source: capability, .. } => {
                 formatter.field("capability", &capability).finish()
             }
@@ -128,18 +137,18 @@ pub struct Event {
     /// Each event has a unique 64-bit integer assigned to it
     pub id: u64,
 
-    /// Realm that this event applies to
-    pub target_realm: Arc<Realm>,
+    /// Moniker of realm that this event applies to
+    pub target_moniker: AbsoluteMoniker,
 
     /// Payload of the event
     pub payload: EventPayload,
 }
 
 impl Event {
-    pub fn new(target_realm: Arc<Realm>, payload: EventPayload) -> Self {
+    pub fn new(target_moniker: AbsoluteMoniker, payload: EventPayload) -> Self {
         // Generate a random 64-bit integer to identify this event
         let id = random::<u64>();
-        Self { id, target_realm, payload }
+        Self { id, target_moniker, payload }
     }
 }
 
@@ -181,7 +190,7 @@ impl Hooks {
         Box::pin(async move {
             // Trace event dispatch
             let event_type = format!("{:?}", event.payload.type_());
-            let target_moniker = event.target_realm.abs_moniker.to_string();
+            let target_moniker = event.target_moniker.to_string();
             trace::duration!(
                 "component_manager",
                 "hooks:dispatch",
@@ -250,7 +259,7 @@ impl HooksInner {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::model::resolver::ResolverRegistry, std::sync::Arc};
+    use {super::*, std::sync::Arc};
 
     #[derive(Clone)]
     struct EventLog {
@@ -301,7 +310,7 @@ mod tests {
     impl Hook for CallCounter {
         fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
             Box::pin(async move {
-                if let EventPayload::AddDynamicChild = event.payload {
+                if let EventPayload::AddDynamicChild { .. } = event.payload {
                     self.on_add_dynamic_child_async().await?;
                 }
                 Ok(())
@@ -335,12 +344,11 @@ mod tests {
             }])
             .await;
 
-        let realm = {
-            let resolver = ResolverRegistry::new();
-            let root_component_url = "test:///root".to_string();
-            Arc::new(Realm::new_root_realm(resolver, root_component_url))
-        };
-        let event = Event::new(realm.clone(), EventPayload::AddDynamicChild);
+        let root_component_url = "test:///root".to_string();
+        let event = Event::new(
+            AbsoluteMoniker::root(),
+            EventPayload::AddDynamicChild { component_url: root_component_url },
+        );
         hooks.dispatch(&event).await.expect("Unable to call hooks.");
         assert_eq!(1, call_counter.count().await);
     }
@@ -371,12 +379,11 @@ mod tests {
         assert_eq!(1, Arc::strong_count(&parent_call_counter));
         assert_eq!(1, Arc::strong_count(&child_call_counter));
 
-        let realm = {
-            let resolver = ResolverRegistry::new();
-            let root_component_url = "test:///root".to_string();
-            Arc::new(Realm::new_root_realm(resolver, root_component_url))
-        };
-        let event = Event::new(realm.clone(), EventPayload::AddDynamicChild);
+        let root_component_url = "test:///root".to_string();
+        let event = Event::new(
+            AbsoluteMoniker::root(),
+            EventPayload::AddDynamicChild { component_url: root_component_url },
+        );
         child_hooks.dispatch(&event).await.expect("Unable to call hooks.");
         // parent_call_counter gets informed of the event on child_hooks even though it has
         // been installed on parent_hooks.

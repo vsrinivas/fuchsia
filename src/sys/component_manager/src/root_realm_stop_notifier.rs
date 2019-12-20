@@ -6,7 +6,6 @@ use {
     crate::model::{
         error::ModelError,
         hooks::{Event, EventType, Hook, HooksRegistration},
-        moniker::AbsoluteMoniker,
     },
     futures::channel::*,
     futures::future::BoxFuture,
@@ -49,7 +48,7 @@ impl Hook for RootRealmStopNotifierInner {
     fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
         let inner = self.clone();
         Box::pin(async move {
-            if event.target_realm.abs_moniker == AbsoluteMoniker::root() {
+            if event.target_moniker.is_root() {
                 let tx = inner.tx.lock().await.take();
                 tx.expect("Root instance can only be stopped once.")
                     .send(())

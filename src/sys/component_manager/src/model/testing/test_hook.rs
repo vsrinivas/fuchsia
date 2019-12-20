@@ -186,43 +186,46 @@ impl TestHookInner {
 
     pub async fn on_start_instance_async<'a>(
         &'a self,
-        realm: Arc<Realm>,
+        target_moniker: &AbsoluteMoniker,
         live_child_realms: &'a Vec<Arc<Realm>>,
     ) -> Result<(), ModelError> {
-        self.create_instance_if_necessary(realm.abs_moniker.clone()).await?;
+        self.create_instance_if_necessary(target_moniker).await?;
         for child_realm in live_child_realms {
-            self.create_instance_if_necessary(child_realm.abs_moniker.clone()).await?;
+            self.create_instance_if_necessary(&child_realm.abs_moniker).await?;
         }
         let mut events = self.lifecycle_events.lock().await;
-        events.push(Lifecycle::Bind(realm.abs_moniker.clone()));
+        events.push(Lifecycle::Bind(target_moniker.clone()));
         Ok(())
     }
 
-    pub async fn on_stop_instance_async<'a>(&'a self, realm: Arc<Realm>) -> Result<(), ModelError> {
+    pub async fn on_stop_instance_async<'a>(
+        &'a self,
+        target_moniker: &AbsoluteMoniker,
+    ) -> Result<(), ModelError> {
         let mut events = self.lifecycle_events.lock().await;
-        events.push(Lifecycle::Stop(realm.abs_moniker.clone()));
+        events.push(Lifecycle::Stop(target_moniker.clone()));
         Ok(())
     }
 
     pub async fn on_destroy_instance_async<'a>(
         &'a self,
-        realm: Arc<Realm>,
+        target_moniker: &AbsoluteMoniker,
     ) -> Result<(), ModelError> {
         let mut events = self.lifecycle_events.lock().await;
-        events.push(Lifecycle::Destroy(realm.abs_moniker.clone()));
+        events.push(Lifecycle::Destroy(target_moniker.clone()));
         Ok(())
     }
 
     pub async fn create_instance_if_necessary(
         &self,
-        abs_moniker: AbsoluteMoniker,
+        abs_moniker: &AbsoluteMoniker,
     ) -> Result<(), ModelError> {
         let mut instances = self.instances.lock().await;
         if let Some(parent_moniker) = abs_moniker.parent() {
             // If the parent isn't available yet then opt_parent_instance will have a value
             // of None.
             let opt_parent_instance = instances.get(&parent_moniker).map(|x| x.clone());
-            let new_instance = match instances.get(&abs_moniker) {
+            let new_instance = match instances.get(abs_moniker) {
                 Some(old_instance) => Arc::new((old_instance.deref()).clone()),
                 None => Arc::new(ComponentInstance {
                     abs_moniker: abs_moniker.clone(),
@@ -244,7 +247,7 @@ impl TestHookInner {
         Ok(())
     }
 
-    pub async fn remove_instance(&self, abs_moniker: AbsoluteMoniker) -> Result<(), ModelError> {
+    pub async fn remove_instance(&self, abs_moniker: &AbsoluteMoniker) -> Result<(), ModelError> {
         let mut instances = self.instances.lock().await;
         if let Some(parent_moniker) = abs_moniker.parent() {
             instances.remove(&abs_moniker);
@@ -252,7 +255,7 @@ impl TestHookInner {
                 .get(&parent_moniker)
                 .expect(&format!("parent instance {} not found", parent_moniker));
             let mut children = parent_instance.children.lock().await;
-            let opt_index = children.iter().position(|c| c.abs_moniker == abs_moniker);
+            let opt_index = children.iter().position(|c| c.abs_moniker == *abs_moniker);
             if let Some(index) = opt_index {
                 children.remove(index);
             }
@@ -270,26 +273,24 @@ impl Hook for TestHookInner {
                     live_child_realms,
                     routing_facade: _,
                 } => {
-                    self.on_start_instance_async(event.target_realm.clone(), &live_child_realms)
-                        .await?;
+                    self.on_start_instance_async(&event.target_moniker, &live_child_realms).await?;
                 }
-                EventPayload::AddDynamicChild => {
-                    self.create_instance_if_necessary(event.target_realm.abs_moniker.clone())
-                        .await?;
+                EventPayload::AddDynamicChild { .. } => {
+                    self.create_instance_if_necessary(&event.target_moniker).await?;
                 }
                 EventPayload::PreDestroyInstance => {
                     // This action only applies to dynamic children
-                    if let Some(child_moniker) = event.target_realm.abs_moniker.leaf() {
+                    if let Some(child_moniker) = event.target_moniker.leaf() {
                         if child_moniker.collection().is_some() {
-                            self.remove_instance(event.target_realm.abs_moniker.clone()).await?;
+                            self.remove_instance(&event.target_moniker).await?;
                         }
                     }
                 }
                 EventPayload::StopInstance => {
-                    self.on_stop_instance_async(event.target_realm.clone()).await?;
+                    self.on_stop_instance_async(&event.target_moniker).await?;
                 }
                 EventPayload::PostDestroyInstance => {
-                    self.on_destroy_instance_async(event.target_realm.clone()).await?;
+                    self.on_destroy_instance_async(&event.target_moniker).await?;
                 }
                 _ => (),
             };
@@ -424,47 +425,47 @@ mod tests {
         // is correct.
         {
             let test_hook = TestHookInner::new();
-            assert!(test_hook.create_instance_if_necessary(a.clone()).await.is_ok());
-            assert!(test_hook.create_instance_if_necessary(ab.clone()).await.is_ok());
-            assert!(test_hook.create_instance_if_necessary(ac.clone()).await.is_ok());
-            assert!(test_hook.create_instance_if_necessary(abd.clone()).await.is_ok());
-            assert!(test_hook.create_instance_if_necessary(abe.clone()).await.is_ok());
-            assert!(test_hook.create_instance_if_necessary(acf.clone()).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(&a).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(&ab).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(&ac).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(&abd).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(&abe).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(&acf).await.is_ok());
             assert_eq!("(a(b(d,e),c(f)))", test_hook.print());
         }
 
         // Changing the order of monikers should not affect the output string.
         {
             let test_hook = TestHookInner::new();
-            assert!(test_hook.create_instance_if_necessary(a.clone()).await.is_ok());
-            assert!(test_hook.create_instance_if_necessary(ac.clone()).await.is_ok());
-            assert!(test_hook.create_instance_if_necessary(ab.clone()).await.is_ok());
-            assert!(test_hook.create_instance_if_necessary(abd.clone()).await.is_ok());
-            assert!(test_hook.create_instance_if_necessary(abe.clone()).await.is_ok());
-            assert!(test_hook.create_instance_if_necessary(acf.clone()).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(&a).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(&ac).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(&ab).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(&abd).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(&abe).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(&acf).await.is_ok());
             assert_eq!("(a(b(d,e),c(f)))", test_hook.print());
         }
 
         // Submitting children before parents should still succeed.
         {
             let test_hook = TestHookInner::new();
-            assert!(test_hook.create_instance_if_necessary(acf.clone()).await.is_ok());
-            assert!(test_hook.create_instance_if_necessary(abe.clone()).await.is_ok());
-            assert!(test_hook.create_instance_if_necessary(abd.clone()).await.is_ok());
-            assert!(test_hook.create_instance_if_necessary(ab.clone()).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(&acf).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(&abe).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(&abd).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(&ab).await.is_ok());
             // Model will call create_instance_if_necessary for ab's children again
             // after the call to bind_instance for ab.
-            assert!(test_hook.create_instance_if_necessary(abe.clone()).await.is_ok());
-            assert!(test_hook.create_instance_if_necessary(abd.clone()).await.is_ok());
-            assert!(test_hook.create_instance_if_necessary(ac.clone()).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(&abe).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(&abd).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(&ac).await.is_ok());
             // Model will call create_instance_if_necessary for ac's children again
             // after the call to bind_instance for ac.
-            assert!(test_hook.create_instance_if_necessary(acf.clone()).await.is_ok());
-            assert!(test_hook.create_instance_if_necessary(a.clone()).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(&acf).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(&a).await.is_ok());
             // Model will call create_instance_if_necessary for a's children again
             // after the call to bind_instance for a.
-            assert!(test_hook.create_instance_if_necessary(ab.clone()).await.is_ok());
-            assert!(test_hook.create_instance_if_necessary(ac.clone()).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(&ab).await.is_ok());
+            assert!(test_hook.create_instance_if_necessary(&ac).await.is_ok());
             assert_eq!("(a(b(d,e),c(f)))", test_hook.print());
         }
     }

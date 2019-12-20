@@ -15,7 +15,7 @@ use {
         routing_facade::RoutingFacade,
         runner::Runner,
     },
-    cm_rust::data,
+    cm_rust::{data, ComponentDecl},
     fidl::endpoints::{create_endpoints, Proxy, ServerEnd},
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
@@ -23,7 +23,7 @@ use {
         future::{join_all, BoxFuture},
         FutureExt,
     },
-    std::sync::Arc,
+    std::{convert::TryInto, sync::Arc},
 };
 
 impl Model {
@@ -38,7 +38,11 @@ impl Model {
         let decl = {
             let mut state = realm.lock_state().await;
             if state.is_none() {
-                *state = Some(RealmState::new(&*realm, component.decl).await?);
+                let decl: ComponentDecl =
+                    component.decl.unwrap().try_into().map_err(|e| {
+                        ModelError::manifest_invalid(realm.component_url.clone(), e)
+                    })?;
+                *state = Some(RealmState::new(&*realm, &decl).await?);
             }
             state.as_ref().unwrap().decl().clone()
         };
@@ -78,7 +82,7 @@ impl Model {
                 .collect();
             let live_child_realms = state.live_child_realms().map(|(_, r)| r.clone()).collect();
             let event = Event::new(
-                realm.clone(),
+                realm.abs_moniker.clone(),
                 EventPayload::StartInstance {
                     component_decl: state.decl().clone(),
                     live_child_realms,

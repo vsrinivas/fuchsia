@@ -349,6 +349,16 @@ impl ComponentDecl {
     pub fn find_runner_source<'a>(&'a self, runner_name: &str) -> Option<&'a RunnerDecl> {
         self.runners.iter().find(|s| &s.name == runner_name)
     }
+
+    /// Locate an exposed-to-framework service by its `target_path`.
+    pub fn is_service_exposed_to_framework(&self, target_path: &CapabilityPath) -> bool {
+        self.exposes.iter().any(|expose| match expose {
+            ExposeDecl::ServiceProtocol(ls) => {
+                ls.target == ExposeTarget::Framework && ls.target_path == *target_path
+            }
+            _ => false,
+        })
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

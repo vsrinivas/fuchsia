@@ -115,8 +115,7 @@ mod tests {
     use {
         crate::model::{
             hooks::Hooks,
-            realm::Realm,
-            resolver::ResolverRegistry,
+            moniker::AbsoluteMoniker,
             runner::RemoteRunnerError,
             testing::{mocks::MockRunner, routing_test_helpers::*, test_helpers::*},
         },
@@ -128,10 +127,6 @@ mod tests {
         futures::lock::Mutex,
         matches::assert_matches,
     };
-
-    fn create_test_realm() -> Realm {
-        Realm::new_root_realm(ResolverRegistry::new(), "test:///root".to_string())
-    }
 
     fn sample_start_info(name: &str) -> fsys::ComponentStartInfo {
         fsys::ComponentStartInfo {
@@ -157,7 +152,7 @@ mod tests {
         let provider_result = Arc::new(Mutex::new(None));
         hooks
             .dispatch(&Event::new(
-                Arc::new(create_test_realm()),
+                AbsoluteMoniker::root(),
                 EventPayload::RouteCapability {
                     source: CapabilitySource::Framework {
                         capability: FrameworkCapability::Runner("elf".into()),
