@@ -31,28 +31,14 @@ extern "C" const fidl_type_t test_name_UnionTable;
 extern "C" const fidl_type_t v1_test_name_UnionTable;
 
 struct Union {
-  enum class Tag : fidl_union_tag_t {
-    kPrimitive = 0,
-    kStringNeedsConstructor = 1,
-    kVectorStringAlsoNeedsConstructor = 2,
+  Union() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kPrimitive = 1,  // 0x1
+    kStringNeedsConstructor = 2,  // 0x2
+    kVectorStringAlsoNeedsConstructor = 3,  // 0x3
   };
 
-  Union();
-  ~Union();
-
-  Union(Union&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  Union& operator=(Union&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
 
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
@@ -64,21 +50,19 @@ struct Union {
     return result;
   }
 
-  int32_t& mutable_Primitive();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_Primitive(const T* v) {
-    mutable_Primitive() = *v;
+  void set_Primitive(int32_t* elem) {
+    ordinal_ = Ordinal::kPrimitive;
+    envelope_.data = static_cast<void*>(elem);
   }
 
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_Primitive(T* v) {
-    mutable_Primitive() = std::move(*v);
+  int32_t& mutable_Primitive() {
+    ZX_ASSERT(ordinal_ == Ordinal::kPrimitive);
+    return *static_cast<int32_t*>(envelope_.data);
   }
-
-  int32_t const & Primitive() const { return Primitive_; }
+  const int32_t& Primitive() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kPrimitive);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
 
   bool is_StringNeedsConstructor() const { return ordinal_ == Ordinal::kStringNeedsConstructor; }
 
@@ -88,21 +72,19 @@ struct Union {
     return result;
   }
 
-  ::fidl::StringView& mutable_StringNeedsConstructor();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::fidl::StringView>::value && std::is_copy_assignable<T>::value>
-  set_StringNeedsConstructor(const T* v) {
-    mutable_StringNeedsConstructor() = *v;
+  void set_StringNeedsConstructor(::fidl::StringView* elem) {
+    ordinal_ = Ordinal::kStringNeedsConstructor;
+    envelope_.data = static_cast<void*>(elem);
   }
 
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::fidl::StringView>::value && std::is_move_assignable<T>::value>
-  set_StringNeedsConstructor(T* v) {
-    mutable_StringNeedsConstructor() = std::move(*v);
+  ::fidl::StringView& mutable_StringNeedsConstructor() {
+    ZX_ASSERT(ordinal_ == Ordinal::kStringNeedsConstructor);
+    return *static_cast<::fidl::StringView*>(envelope_.data);
   }
-
-  ::fidl::StringView const & StringNeedsConstructor() const { return StringNeedsConstructor_; }
+  const ::fidl::StringView& StringNeedsConstructor() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kStringNeedsConstructor);
+    return *static_cast<::fidl::StringView*>(envelope_.data);
+  }
 
   bool is_VectorStringAlsoNeedsConstructor() const { return ordinal_ == Ordinal::kVectorStringAlsoNeedsConstructor; }
 
@@ -112,29 +94,26 @@ struct Union {
     return result;
   }
 
-  ::fidl::VectorView<::fidl::StringView>& mutable_VectorStringAlsoNeedsConstructor();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::fidl::VectorView<::fidl::StringView>>::value && std::is_copy_assignable<T>::value>
-  set_VectorStringAlsoNeedsConstructor(const T* v) {
-    mutable_VectorStringAlsoNeedsConstructor() = *v;
+  void set_VectorStringAlsoNeedsConstructor(::fidl::VectorView<::fidl::StringView>* elem) {
+    ordinal_ = Ordinal::kVectorStringAlsoNeedsConstructor;
+    envelope_.data = static_cast<void*>(elem);
   }
 
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::fidl::VectorView<::fidl::StringView>>::value && std::is_move_assignable<T>::value>
-  set_VectorStringAlsoNeedsConstructor(T* v) {
-    mutable_VectorStringAlsoNeedsConstructor() = std::move(*v);
+  ::fidl::VectorView<::fidl::StringView>& mutable_VectorStringAlsoNeedsConstructor() {
+    ZX_ASSERT(ordinal_ == Ordinal::kVectorStringAlsoNeedsConstructor);
+    return *static_cast<::fidl::VectorView<::fidl::StringView>*>(envelope_.data);
   }
-
-  ::fidl::VectorView<::fidl::StringView> const & VectorStringAlsoNeedsConstructor() const { return VectorStringAlsoNeedsConstructor_; }
-
+  const ::fidl::VectorView<::fidl::StringView>& VectorStringAlsoNeedsConstructor() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kVectorStringAlsoNeedsConstructor);
+    return *static_cast<::fidl::VectorView<::fidl::StringView>*>(envelope_.data);
+  }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &test_name_UnionTable;
-  static constexpr const fidl_type_t* AltType = &v1_test_name_UnionTable;
+  static constexpr const fidl_type_t* Type = &v1_test_name_UnionTable;
+  static constexpr const fidl_type_t* AltType = &test_name_UnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
@@ -144,49 +123,29 @@ struct Union {
   static constexpr uint32_t AltMaxOutOfLine = 4294967295;
 
  private:
-  enum class Ordinal : fidl_union_tag_t {
-    kPrimitive = 0,
-    kStringNeedsConstructor = 1,
-    kVectorStringAlsoNeedsConstructor = 2,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kPrimitive = 1,  // 0x1
+    kStringNeedsConstructor = 2,  // 0x2
+    kVectorStringAlsoNeedsConstructor = 3,  // 0x3
   };
-
-  void Destroy();
-  void MoveImpl_(Union&& other);
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
-  union {
-    int32_t Primitive_;
-    ::fidl::StringView StringNeedsConstructor_;
-    ::fidl::VectorView<::fidl::StringView> VectorStringAlsoNeedsConstructor_;
-  };
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
 };
 
 extern "C" const fidl_type_t test_name_ReverseOrdinalUnionTable;
 extern "C" const fidl_type_t v1_test_name_ReverseOrdinalUnionTable;
 
 struct ReverseOrdinalUnion {
-  enum class Tag : fidl_union_tag_t {
-    kFirst = 0,
-    kSecond = 1,
+  ReverseOrdinalUnion() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kFirst = 1,  // 0x1
+    kSecond = 2,  // 0x2
   };
 
-  ReverseOrdinalUnion();
-  ~ReverseOrdinalUnion();
-
-  ReverseOrdinalUnion(ReverseOrdinalUnion&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  ReverseOrdinalUnion& operator=(ReverseOrdinalUnion&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
 
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
@@ -198,21 +157,19 @@ struct ReverseOrdinalUnion {
     return result;
   }
 
-  uint32_t& mutable_first();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, uint32_t>::value && std::is_copy_assignable<T>::value>
-  set_first(const T* v) {
-    mutable_first() = *v;
+  void set_first(uint32_t* elem) {
+    ordinal_ = Ordinal::kFirst;
+    envelope_.data = static_cast<void*>(elem);
   }
 
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, uint32_t>::value && std::is_move_assignable<T>::value>
-  set_first(T* v) {
-    mutable_first() = std::move(*v);
+  uint32_t& mutable_first() {
+    ZX_ASSERT(ordinal_ == Ordinal::kFirst);
+    return *static_cast<uint32_t*>(envelope_.data);
   }
-
-  uint32_t const & first() const { return first_; }
+  const uint32_t& first() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kFirst);
+    return *static_cast<uint32_t*>(envelope_.data);
+  }
 
   bool is_second() const { return ordinal_ == Ordinal::kSecond; }
 
@@ -222,95 +179,56 @@ struct ReverseOrdinalUnion {
     return result;
   }
 
-  uint32_t& mutable_second();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, uint32_t>::value && std::is_copy_assignable<T>::value>
-  set_second(const T* v) {
-    mutable_second() = *v;
+  void set_second(uint32_t* elem) {
+    ordinal_ = Ordinal::kSecond;
+    envelope_.data = static_cast<void*>(elem);
   }
 
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, uint32_t>::value && std::is_move_assignable<T>::value>
-  set_second(T* v) {
-    mutable_second() = std::move(*v);
+  uint32_t& mutable_second() {
+    ZX_ASSERT(ordinal_ == Ordinal::kSecond);
+    return *static_cast<uint32_t*>(envelope_.data);
   }
-
-  uint32_t const & second() const { return second_; }
-
+  const uint32_t& second() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kSecond);
+    return *static_cast<uint32_t*>(envelope_.data);
+  }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &test_name_ReverseOrdinalUnionTable;
-  static constexpr const fidl_type_t* AltType = &v1_test_name_ReverseOrdinalUnionTable;
+  static constexpr const fidl_type_t* Type = &v1_test_name_ReverseOrdinalUnionTable;
+  static constexpr const fidl_type_t* AltType = &test_name_ReverseOrdinalUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
+  static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr uint32_t AltPrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
-  enum class Ordinal : fidl_union_tag_t {
-    kFirst = 0,
-    kSecond = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kFirst = 1,  // 0x1
+    kSecond = 2,  // 0x2
   };
-
-  void Destroy();
-  void MoveImpl_(ReverseOrdinalUnion&& other);
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
-  union {
-    uint32_t first_;
-    uint32_t second_;
-  };
-};
-
-extern "C" const fidl_type_t test_name_NullableUnionStructTable;
-extern "C" const fidl_type_t v1_test_name_NullableUnionStructTable;
-
-struct NullableUnionStruct {
-  static constexpr const fidl_type_t* Type = &test_name_NullableUnionStructTable;
-  static constexpr const fidl_type_t* AltType = &v1_test_name_NullableUnionStructTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 4294967295;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 4294967295;
-
-  ::llcpp::test::name::Union* the_union = {};
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
 };
 
 extern "C" const fidl_type_t test_name_FieldCollisionTable;
 extern "C" const fidl_type_t v1_test_name_FieldCollisionTable;
 
 struct FieldCollision {
-  enum class Tag : fidl_union_tag_t {
-    kFieldCollisionTag = 0,
+  FieldCollision() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kFieldCollisionTag = 1,  // 0x1
   };
 
-  FieldCollision();
-  ~FieldCollision();
-
-  FieldCollision(FieldCollision&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  FieldCollision& operator=(FieldCollision&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
 
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
@@ -322,77 +240,56 @@ struct FieldCollision {
     return result;
   }
 
-  int32_t& mutable_field_collision_tag();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_field_collision_tag(const T* v) {
-    mutable_field_collision_tag() = *v;
+  void set_field_collision_tag(int32_t* elem) {
+    ordinal_ = Ordinal::kFieldCollisionTag;
+    envelope_.data = static_cast<void*>(elem);
   }
 
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_field_collision_tag(T* v) {
-    mutable_field_collision_tag() = std::move(*v);
+  int32_t& mutable_field_collision_tag() {
+    ZX_ASSERT(ordinal_ == Ordinal::kFieldCollisionTag);
+    return *static_cast<int32_t*>(envelope_.data);
   }
-
-  int32_t const & field_collision_tag() const { return field_collision_tag_; }
-
+  const int32_t& field_collision_tag() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kFieldCollisionTag);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &test_name_FieldCollisionTable;
-  static constexpr const fidl_type_t* AltType = &v1_test_name_FieldCollisionTable;
+  static constexpr const fidl_type_t* Type = &v1_test_name_FieldCollisionTable;
+  static constexpr const fidl_type_t* AltType = &test_name_FieldCollisionTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
+  static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr uint32_t AltPrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
-  enum class Ordinal : fidl_union_tag_t {
-    kFieldCollisionTag = 0,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kFieldCollisionTag = 1,  // 0x1
   };
-
-  void Destroy();
-  void MoveImpl_(FieldCollision&& other);
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
-  union {
-    int32_t field_collision_tag_;
-  };
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
 };
 
 extern "C" const fidl_type_t test_name_ExplicitUnionTable;
 extern "C" const fidl_type_t v1_test_name_ExplicitUnionTable;
 
 struct ExplicitUnion {
-  enum class Tag : fidl_union_tag_t {
-    kPrimitive = 0,
-    kStringNeedsConstructor = 1,
+  ExplicitUnion() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kPrimitive = 1,  // 0x1
+    kStringNeedsConstructor = 3,  // 0x3
   };
 
-  ExplicitUnion();
-  ~ExplicitUnion();
-
-  ExplicitUnion(ExplicitUnion&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  ExplicitUnion& operator=(ExplicitUnion&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
 
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
@@ -404,21 +301,19 @@ struct ExplicitUnion {
     return result;
   }
 
-  int32_t& mutable_Primitive();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_Primitive(const T* v) {
-    mutable_Primitive() = *v;
+  void set_Primitive(int32_t* elem) {
+    ordinal_ = Ordinal::kPrimitive;
+    envelope_.data = static_cast<void*>(elem);
   }
 
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_Primitive(T* v) {
-    mutable_Primitive() = std::move(*v);
+  int32_t& mutable_Primitive() {
+    ZX_ASSERT(ordinal_ == Ordinal::kPrimitive);
+    return *static_cast<int32_t*>(envelope_.data);
   }
-
-  int32_t const & Primitive() const { return Primitive_; }
+  const int32_t& Primitive() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kPrimitive);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
 
   bool is_StringNeedsConstructor() const { return ordinal_ == Ordinal::kStringNeedsConstructor; }
 
@@ -428,29 +323,26 @@ struct ExplicitUnion {
     return result;
   }
 
-  ::fidl::StringView& mutable_StringNeedsConstructor();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::fidl::StringView>::value && std::is_copy_assignable<T>::value>
-  set_StringNeedsConstructor(const T* v) {
-    mutable_StringNeedsConstructor() = *v;
+  void set_StringNeedsConstructor(::fidl::StringView* elem) {
+    ordinal_ = Ordinal::kStringNeedsConstructor;
+    envelope_.data = static_cast<void*>(elem);
   }
 
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::fidl::StringView>::value && std::is_move_assignable<T>::value>
-  set_StringNeedsConstructor(T* v) {
-    mutable_StringNeedsConstructor() = std::move(*v);
+  ::fidl::StringView& mutable_StringNeedsConstructor() {
+    ZX_ASSERT(ordinal_ == Ordinal::kStringNeedsConstructor);
+    return *static_cast<::fidl::StringView*>(envelope_.data);
   }
-
-  ::fidl::StringView const & StringNeedsConstructor() const { return StringNeedsConstructor_; }
-
+  const ::fidl::StringView& StringNeedsConstructor() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kStringNeedsConstructor);
+    return *static_cast<::fidl::StringView*>(envelope_.data);
+  }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &test_name_ExplicitUnionTable;
-  static constexpr const fidl_type_t* AltType = &v1_test_name_ExplicitUnionTable;
+  static constexpr const fidl_type_t* Type = &v1_test_name_ExplicitUnionTable;
+  static constexpr const fidl_type_t* AltType = &test_name_ExplicitUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
@@ -460,20 +352,32 @@ struct ExplicitUnion {
   static constexpr uint32_t AltMaxOutOfLine = 4294967295;
 
  private:
-  enum class Ordinal : fidl_union_tag_t {
-    kPrimitive = 0,
-    kStringNeedsConstructor = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kPrimitive = 1,  // 0x1
+    kStringNeedsConstructor = 3,  // 0x3
   };
-
-  void Destroy();
-  void MoveImpl_(ExplicitUnion&& other);
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
-  union {
-    int32_t Primitive_;
-    ::fidl::StringView StringNeedsConstructor_;
-  };
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
+extern "C" const fidl_type_t test_name_NullableUnionStructTable;
+extern "C" const fidl_type_t v1_test_name_NullableUnionStructTable;
+
+struct NullableUnionStruct {
+  static constexpr const fidl_type_t* Type = &v1_test_name_NullableUnionStructTable;
+  static constexpr const fidl_type_t* AltType = &test_name_NullableUnionStructTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 4294967295;
+  static constexpr uint32_t AltPrimarySize = 8;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 4294967295;
+
+  ::llcpp::test::name::Union the_union = {};
 };
 
 }  // namespace name

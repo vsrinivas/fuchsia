@@ -8,64 +8,11 @@ namespace llcpp {
 namespace fuchsia {
 namespace buttons {
 
-::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Result::Buttons_RegisterNotify_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Result::~Buttons_RegisterNotify_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~Buttons_RegisterNotify_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Result::MoveImpl_(Buttons_RegisterNotify_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
-}
-
 void ::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Result) == ::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Result::PrimarySize);
+  static_assert(sizeof(Buttons_RegisterNotify_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(Buttons_RegisterNotify_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(Buttons_RegisterNotify_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
-
-
-::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Response& ::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
 
 namespace {
 
@@ -387,16 +334,21 @@ void Buttons::Interface::GetStateCompleterBase::Reply(::fidl::DecodedMessage<Get
 
 void Buttons::Interface::RegisterNotifyCompleterBase::Reply(::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RegisterNotifyResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<RegisterNotifyResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  RegisterNotifyResponse _response = {};
   Buttons::SetTransactionHeaderFor::RegisterNotifyResponse(
       ::fidl::DecodedMessage<RegisterNotifyResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               RegisterNotifyResponse::PrimarySize,
               RegisterNotifyResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(RegisterNotifyResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<RegisterNotifyResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Buttons::Interface::RegisterNotifyCompleterBase::ReplySuccess() {
   Buttons_RegisterNotify_Response response;
@@ -412,15 +364,19 @@ void Buttons::Interface::RegisterNotifyCompleterBase::Reply(::fidl::BytePart _bu
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<RegisterNotifyResponse*>(_buffer.data());
+  RegisterNotifyResponse _response = {};
   Buttons::SetTransactionHeaderFor::RegisterNotifyResponse(
       ::fidl::DecodedMessage<RegisterNotifyResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               RegisterNotifyResponse::PrimarySize,
               RegisterNotifyResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(RegisterNotifyResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<RegisterNotifyResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Buttons::Interface::RegisterNotifyCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Buttons_RegisterNotify_Response response;
@@ -474,20 +430,25 @@ zx_status_t Buttons::SendNotifyEvent(::zx::unowned_channel _chan, ::fidl::Decode
 
 void Buttons::SetTransactionHeaderFor::GetStateRequest(const ::fidl::DecodedMessage<Buttons::GetStateRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kButtons_GetState_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Buttons::SetTransactionHeaderFor::GetStateResponse(const ::fidl::DecodedMessage<Buttons::GetStateResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kButtons_GetState_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Buttons::SetTransactionHeaderFor::RegisterNotifyRequest(const ::fidl::DecodedMessage<Buttons::RegisterNotifyRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kButtons_RegisterNotify_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Buttons::SetTransactionHeaderFor::RegisterNotifyResponse(const ::fidl::DecodedMessage<Buttons::RegisterNotifyResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kButtons_RegisterNotify_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Buttons::SetTransactionHeaderFor::NotifyResponse(const ::fidl::DecodedMessage<Buttons::NotifyResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kButtons_Notify_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace buttons

@@ -76,8 +76,9 @@ bool CobaltLogger::Log(const MetricOptions& metric_info, const HistogramBucket* 
   }
   auto event = MetricIntoToCobaltEvent(metric_info);
   // Safe because is read only.
-  event.payload.mutable_int_histogram() =
+  auto int_histogram =
       fidl::VectorView<HistogramBucket>(const_cast<HistogramBucket*>(buckets), bucket_count);
+  event.payload.set_int_histogram(&int_histogram);
 
   auto log_result = llcpp::fuchsia::cobalt::Logger::Call::LogCobaltEvent(
       zx::unowned_channel(logger_), std::move(event));
@@ -92,7 +93,8 @@ bool CobaltLogger::Log(const MetricOptions& metric_info, RemoteCounter::Type cou
     return false;
   }
   auto event = MetricIntoToCobaltEvent(metric_info);
-  event.payload.mutable_event_count() = {.period_duration_micros = 0, .count = count};
+  llcpp::fuchsia::cobalt::CountEvent event_count{.period_duration_micros = 0, .count = count};
+  event.payload.set_event_count(&event_count);
 
   auto log_result = llcpp::fuchsia::cobalt::Logger::Call::LogCobaltEvent(
       zx::unowned_channel(logger_), std::move(event));

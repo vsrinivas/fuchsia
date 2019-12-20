@@ -362,27 +362,20 @@ zx_status_t fdio_create(zx_handle_t handle, fdio_t** out_io) {
 
 // Creates an |fdio_t| by waiting for a |fuchsia.io/Node.OnOpen| event on |channel|.
 zx_status_t fdio_from_on_open_event(zx::channel channel, fdio_t** out_io) {
-  fio::NodeInfo node_info;
-  zx_status_t on_open_status = ZX_OK;
-  zx_status_t status = fio::Directory::Call::HandleEvents(
+  return fio::Directory::Call::HandleEvents(
+      // the first arg to HandleEvents (the client_end channel) is not used after the callback
+      // is called, so it is safe to pass this as an unowned_channel then move the channel inside
+      // the callback
       zx::unowned_channel(channel),
       fio::Directory::EventHandlers{
           .on_open =
-              [&node_info, &on_open_status](zx_status_t status, fio::NodeInfo* info) {
-                on_open_status = status;
-                if (info) {
-                  node_info = std::move(*info);
+              [channel = std::move(channel), out_io](zx_status_t status, fio::NodeInfo info) mutable {
+                if (status != ZX_OK) {
+                  return status;
                 }
-                return ZX_OK;
+                return fdio_from_node_info(std::move(channel), info, out_io);
               },
           .unknown = [] { return ZX_ERR_IO; }});
-  if (status != ZX_OK) {
-    return status;
-  }
-  if (on_open_status != ZX_OK) {
-    return on_open_status;
-  }
-  return fdio_from_node_info(std::move(channel), std::move(node_info), out_io);
 }
 
 zx_status_t fdio_remote_clone(zx_handle_t node, fdio_t** out_io) {

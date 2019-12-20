@@ -37,8 +37,8 @@ extern "C" const fidl_type_t fuchsia_hardware_block_BlockStatsTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_block_BlockStatsTable;
 
 struct BlockStats {
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_BlockStatsTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_BlockStatsTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_BlockStatsTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_BlockStatsTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 480;
   [[maybe_unused]]
@@ -64,8 +64,8 @@ extern "C" const fidl_type_t fuchsia_hardware_block_VmoIDTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_block_VmoIDTable;
 
 struct VmoID {
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_VmoIDTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_VmoIDTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_VmoIDTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_VmoIDTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 2;
   [[maybe_unused]]
@@ -93,8 +93,8 @@ class Ftl final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_FtlFormatResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_FtlFormatResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_FtlFormatResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_FtlFormatResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -290,8 +290,8 @@ class Block final {
     int32_t status;
     ::llcpp::fuchsia::hardware::block::BlockInfo* info;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_BlockGetInfoResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_BlockGetInfoResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_BlockGetInfoResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_BlockGetInfoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 24;
@@ -310,8 +310,8 @@ class Block final {
     int32_t status;
     ::llcpp::fuchsia::hardware::block::BlockStats* stats;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_BlockGetStatsResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_BlockGetStatsResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_BlockGetStatsResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_BlockGetStatsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 480;
@@ -327,8 +327,8 @@ class Block final {
     fidl_message_header_t _hdr;
     bool clear;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_BlockGetStatsRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_BlockGetStatsRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_BlockGetStatsRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_BlockGetStatsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -347,8 +347,8 @@ class Block final {
     int32_t status;
     ::zx::fifo fifo;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_BlockGetFifoResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_BlockGetFifoResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_BlockGetFifoResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_BlockGetFifoResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -367,8 +367,8 @@ class Block final {
     int32_t status;
     ::llcpp::fuchsia::hardware::block::VmoID* vmoid;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_BlockAttachVmoResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_BlockAttachVmoResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_BlockAttachVmoResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_BlockAttachVmoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 8;
@@ -384,8 +384,8 @@ class Block final {
     fidl_message_header_t _hdr;
     ::zx::vmo vmo;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_BlockAttachVmoRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_BlockAttachVmoRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_BlockAttachVmoRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_BlockAttachVmoRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -403,8 +403,8 @@ class Block final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_BlockCloseFifoResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_BlockCloseFifoResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_BlockCloseFifoResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_BlockCloseFifoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -422,8 +422,8 @@ class Block final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_BlockRebindDeviceResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_BlockRebindDeviceResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_BlockRebindDeviceResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_BlockRebindDeviceResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -918,8 +918,8 @@ extern "C" const fidl_type_t fuchsia_hardware_block_BlockInfoTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_block_BlockInfoTable;
 
 struct BlockInfo {
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_BlockInfoTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_BlockInfoTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_BlockInfoTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_BlockInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]

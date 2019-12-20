@@ -39,8 +39,8 @@ extern "C" const fidl_type_t fuchsia_hardware_block_volume_VsliceRangeTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_block_volume_VsliceRangeTable;
 
 struct VsliceRange {
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VsliceRangeTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_volume_VsliceRangeTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_volume_VsliceRangeTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_volume_VsliceRangeTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
@@ -58,8 +58,8 @@ extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeManagerInfoTabl
 extern "C" const fidl_type_t v1_fuchsia_hardware_block_volume_VolumeManagerInfoTable;
 
 struct VolumeManagerInfo {
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VolumeManagerInfoTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_volume_VolumeManagerInfoTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_volume_VolumeManagerInfoTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_volume_VolumeManagerInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
@@ -79,8 +79,8 @@ extern "C" const fidl_type_t fuchsia_hardware_block_volume_VolumeInfoTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_block_volume_VolumeInfoTable;
 
 struct VolumeInfo {
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VolumeInfoTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_volume_VolumeInfoTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_volume_VolumeInfoTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_volume_VolumeInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   [[maybe_unused]]
@@ -169,8 +169,8 @@ class Volume final {
     int32_t status;
     ::llcpp::fuchsia::hardware::block::BlockInfo* info;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VolumeGetInfoResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_volume_VolumeGetInfoResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_volume_VolumeGetInfoResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_volume_VolumeGetInfoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 24;
@@ -189,8 +189,8 @@ class Volume final {
     int32_t status;
     ::llcpp::fuchsia::hardware::block::BlockStats* stats;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VolumeGetStatsResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_volume_VolumeGetStatsResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_volume_VolumeGetStatsResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_volume_VolumeGetStatsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 480;
@@ -206,8 +206,8 @@ class Volume final {
     fidl_message_header_t _hdr;
     bool clear;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VolumeGetStatsRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_volume_VolumeGetStatsRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_volume_VolumeGetStatsRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_volume_VolumeGetStatsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -226,8 +226,8 @@ class Volume final {
     int32_t status;
     ::zx::fifo fifo;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VolumeGetFifoResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_volume_VolumeGetFifoResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_volume_VolumeGetFifoResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_volume_VolumeGetFifoResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -246,8 +246,8 @@ class Volume final {
     int32_t status;
     ::llcpp::fuchsia::hardware::block::VmoID* vmoid;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VolumeAttachVmoResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_volume_VolumeAttachVmoResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_volume_VolumeAttachVmoResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_volume_VolumeAttachVmoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 8;
@@ -263,8 +263,8 @@ class Volume final {
     fidl_message_header_t _hdr;
     ::zx::vmo vmo;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VolumeAttachVmoRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_volume_VolumeAttachVmoRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_volume_VolumeAttachVmoRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_volume_VolumeAttachVmoRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -282,8 +282,8 @@ class Volume final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VolumeCloseFifoResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_volume_VolumeCloseFifoResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_volume_VolumeCloseFifoResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_volume_VolumeCloseFifoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -301,8 +301,8 @@ class Volume final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VolumeRebindDeviceResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_volume_VolumeRebindDeviceResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_volume_VolumeRebindDeviceResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_volume_VolumeRebindDeviceResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -321,8 +321,8 @@ class Volume final {
     int32_t status;
     ::llcpp::fuchsia::hardware::block::partition::GUID* guid;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VolumeGetTypeGuidResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_volume_VolumeGetTypeGuidResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_volume_VolumeGetTypeGuidResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_volume_VolumeGetTypeGuidResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 16;
@@ -341,8 +341,8 @@ class Volume final {
     int32_t status;
     ::llcpp::fuchsia::hardware::block::partition::GUID* guid;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VolumeGetInstanceGuidResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_volume_VolumeGetInstanceGuidResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_volume_VolumeGetInstanceGuidResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_volume_VolumeGetInstanceGuidResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 16;
@@ -361,8 +361,8 @@ class Volume final {
     int32_t status;
     ::fidl::StringView name;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VolumeGetNameResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_volume_VolumeGetNameResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_volume_VolumeGetNameResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_volume_VolumeGetNameResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 128;
@@ -381,8 +381,8 @@ class Volume final {
     int32_t status;
     ::llcpp::fuchsia::hardware::block::volume::VolumeInfo* info;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VolumeQueryResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_volume_VolumeQueryResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_volume_VolumeQueryResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_volume_VolumeQueryResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 32;
@@ -402,8 +402,8 @@ class Volume final {
     ::fidl::Array<::llcpp::fuchsia::hardware::block::volume::VsliceRange, 16> response;
     uint64_t response_count;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VolumeQuerySlicesResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_volume_VolumeQuerySlicesResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_volume_VolumeQuerySlicesResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_volume_VolumeQuerySlicesResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 288;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -419,8 +419,8 @@ class Volume final {
     fidl_message_header_t _hdr;
     ::fidl::VectorView<uint64_t> start_slices;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VolumeQuerySlicesRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_volume_VolumeQuerySlicesRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_volume_VolumeQuerySlicesRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_volume_VolumeQuerySlicesRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 128;
@@ -438,8 +438,8 @@ class Volume final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VolumeExtendResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_volume_VolumeExtendResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_volume_VolumeExtendResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_volume_VolumeExtendResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -456,8 +456,8 @@ class Volume final {
     uint64_t start_slice;
     uint64_t slice_count;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VolumeExtendRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_volume_VolumeExtendRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_volume_VolumeExtendRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_volume_VolumeExtendRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -475,8 +475,8 @@ class Volume final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VolumeShrinkResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_volume_VolumeShrinkResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_volume_VolumeShrinkResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_volume_VolumeShrinkResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -493,8 +493,8 @@ class Volume final {
     uint64_t start_slice;
     uint64_t slice_count;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VolumeShrinkRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_volume_VolumeShrinkRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_volume_VolumeShrinkRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_volume_VolumeShrinkRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -512,8 +512,8 @@ class Volume final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VolumeDestroyResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_volume_VolumeDestroyResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_volume_VolumeDestroyResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_volume_VolumeDestroyResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1532,8 +1532,8 @@ class VolumeManager final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VolumeManagerAllocatePartitionResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_volume_VolumeManagerAllocatePartitionResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_volume_VolumeManagerAllocatePartitionResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_volume_VolumeManagerAllocatePartitionResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1553,8 +1553,8 @@ class VolumeManager final {
     ::fidl::StringView name;
     uint32_t flags;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VolumeManagerAllocatePartitionRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_volume_VolumeManagerAllocatePartitionRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_volume_VolumeManagerAllocatePartitionRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_volume_VolumeManagerAllocatePartitionRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 80;
     static constexpr uint32_t MaxOutOfLine = 128;
@@ -1573,8 +1573,8 @@ class VolumeManager final {
     int32_t status;
     ::llcpp::fuchsia::hardware::block::volume::VolumeInfo* info;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VolumeManagerQueryResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_volume_VolumeManagerQueryResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_volume_VolumeManagerQueryResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_volume_VolumeManagerQueryResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 32;
@@ -1593,8 +1593,8 @@ class VolumeManager final {
     int32_t status;
     ::llcpp::fuchsia::hardware::block::volume::VolumeManagerInfo* info;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VolumeManagerGetInfoResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_volume_VolumeManagerGetInfoResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_volume_VolumeManagerGetInfoResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_volume_VolumeManagerGetInfoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 24;
@@ -1612,8 +1612,8 @@ class VolumeManager final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VolumeManagerActivateResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_volume_VolumeManagerActivateResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_volume_VolumeManagerActivateResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_volume_VolumeManagerActivateResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1630,8 +1630,8 @@ class VolumeManager final {
     ::llcpp::fuchsia::hardware::block::partition::GUID old_guid;
     ::llcpp::fuchsia::hardware::block::partition::GUID new_guid;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_volume_VolumeManagerActivateRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_volume_VolumeManagerActivateRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_volume_VolumeManagerActivateRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_volume_VolumeManagerActivateRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 0;

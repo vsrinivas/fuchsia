@@ -164,193 +164,26 @@ zx_status_t Connectivity::SendOnNetworkReachableEvent(::zx::unowned_channel _cha
 
 void Connectivity::SetTransactionHeaderFor::OnNetworkReachableResponse(const ::fidl::DecodedMessage<Connectivity::OnNetworkReachableResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kConnectivity_OnNetworkReachable_GenOrdinal);
-}
-
-::llcpp::fuchsia::net::NameLookup_LookupHostname_Result::NameLookup_LookupHostname_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::net::NameLookup_LookupHostname_Result::~NameLookup_LookupHostname_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::net::NameLookup_LookupHostname_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~NameLookup_LookupHostname_Response();
-    break;
-  case Ordinal::kErr:
-    err_.~LookupError();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::net::NameLookup_LookupHostname_Result::MoveImpl_(NameLookup_LookupHostname_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void ::llcpp::fuchsia::net::NameLookup_LookupHostname_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::net::NameLookup_LookupHostname_Result, response_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::net::NameLookup_LookupHostname_Result, err_) == 8);
-  static_assert(sizeof(::llcpp::fuchsia::net::NameLookup_LookupHostname_Result) == ::llcpp::fuchsia::net::NameLookup_LookupHostname_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::net::NameLookup_LookupHostname_Response& ::llcpp::fuchsia::net::NameLookup_LookupHostname_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::net::NameLookup_LookupHostname_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-::llcpp::fuchsia::net::LookupError& ::llcpp::fuchsia::net::NameLookup_LookupHostname_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) ::llcpp::fuchsia::net::LookupError;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::net::NameLookup_LookupIp_Result::NameLookup_LookupIp_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::net::NameLookup_LookupIp_Result::~NameLookup_LookupIp_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::net::NameLookup_LookupIp_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~NameLookup_LookupIp_Response();
-    break;
-  case Ordinal::kErr:
-    err_.~LookupError();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::net::NameLookup_LookupIp_Result::MoveImpl_(NameLookup_LookupIp_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(NameLookup_LookupHostname_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(NameLookup_LookupHostname_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(NameLookup_LookupHostname_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::net::NameLookup_LookupIp_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::net::NameLookup_LookupIp_Result, response_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::net::NameLookup_LookupIp_Result, err_) == 8);
-  static_assert(sizeof(::llcpp::fuchsia::net::NameLookup_LookupIp_Result) == ::llcpp::fuchsia::net::NameLookup_LookupIp_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::net::NameLookup_LookupIp_Response& ::llcpp::fuchsia::net::NameLookup_LookupIp_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::net::NameLookup_LookupIp_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-::llcpp::fuchsia::net::LookupError& ::llcpp::fuchsia::net::NameLookup_LookupIp_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) ::llcpp::fuchsia::net::LookupError;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::net::IpAddress::IpAddress() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::net::IpAddress::~IpAddress() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::net::IpAddress::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kIpv4:
-    ipv4_.~Ipv4Address();
-    break;
-  case Ordinal::kIpv6:
-    ipv6_.~Ipv6Address();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::net::IpAddress::MoveImpl_(IpAddress&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kIpv4:
-    mutable_ipv4() = std::move(other.mutable_ipv4());
-    break;
-  case Ordinal::kIpv6:
-    mutable_ipv6() = std::move(other.mutable_ipv6());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(NameLookup_LookupIp_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(NameLookup_LookupIp_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(NameLookup_LookupIp_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::net::IpAddress::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::net::IpAddress, ipv4_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::net::IpAddress, ipv6_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::net::IpAddress) == ::llcpp::fuchsia::net::IpAddress::PrimarySize);
+  static_assert(sizeof(IpAddress) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(IpAddress, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(IpAddress, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
-
-
-::llcpp::fuchsia::net::Ipv4Address& ::llcpp::fuchsia::net::IpAddress::mutable_ipv4() {
-  if (ordinal_ != Ordinal::kIpv4) {
-    Destroy();
-    new (&ipv4_) ::llcpp::fuchsia::net::Ipv4Address;
-    ordinal_ = Ordinal::kIpv4;
-  }
-  return ipv4_;
-}
-
-::llcpp::fuchsia::net::Ipv6Address& ::llcpp::fuchsia::net::IpAddress::mutable_ipv6() {
-  if (ordinal_ != Ordinal::kIpv6) {
-    Destroy();
-    new (&ipv6_) ::llcpp::fuchsia::net::Ipv6Address;
-    ordinal_ = Ordinal::kIpv6;
-  }
-  return ipv6_;
-}
-
 
 namespace {
 
@@ -444,12 +277,14 @@ NameLookup::ResultOf::LookupHostname_Impl<NameLookup::LookupHostnameResponse>::L
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LookupHostnameRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
-  uint8_t* _write_bytes = _write_bytes_array.view().data();
-  memset(_write_bytes, 0, LookupHostnameRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<LookupHostnameRequest*>(_write_bytes);
+  LookupHostnameRequest _request = {};
   _request.addr = std::move(addr);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(LookupHostnameRequest));
-  ::fidl::DecodedMessage<LookupHostnameRequest> _decoded_request(std::move(_request_bytes));
+  auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<LookupHostnameRequest> _decoded_request = std::move(_linearize_result.message);
   Super::SetResult(
       NameLookup::InPlace::LookupHostname(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
@@ -468,11 +303,14 @@ NameLookup::UnownedResultOf::LookupHostname_Impl<NameLookup::LookupHostnameRespo
     Super::SetFailure(::fidl::DecodeResult<LookupHostnameResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
   }
-  memset(_request_buffer.data(), 0, LookupHostnameRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<LookupHostnameRequest*>(_request_buffer.data());
+  LookupHostnameRequest _request = {};
   _request.addr = std::move(addr);
-  _request_buffer.set_actual(sizeof(LookupHostnameRequest));
-  ::fidl::DecodedMessage<LookupHostnameRequest> _decoded_request(std::move(_request_buffer));
+  auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<LookupHostnameRequest> _decoded_request = std::move(_linearize_result.message);
   Super::SetResult(
       NameLookup::InPlace::LookupHostname(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
@@ -533,10 +371,10 @@ bool NameLookup::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
     {
       constexpr uint32_t kTransformerDestSize = ::fidl::internal::ClampedMessageSize<LookupHostnameRequest, ::fidl::MessageDirection::kReceiving>();
       ::fidl::internal::ByteStorage<kTransformerDestSize> transformer_dest_storage(::fidl::internal::DelayAllocation);
-      if (fidl_should_decode_union_from_xunion(hdr)) {
+      if (!fidl_should_decode_union_from_xunion(hdr)) {
         transformer_dest_storage.Allocate();
         uint8_t* transformer_dest = transformer_dest_storage.buffer().data();
-        zx_status_t transform_status = fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD,
+        zx_status_t transform_status = fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1,
                                                       LookupHostnameRequest::AltType,
                                                       reinterpret_cast<uint8_t*>(msg->bytes),
                                                       msg->num_bytes,
@@ -701,16 +539,20 @@ void NameLookup::Interface::LookupHostnameCompleterBase::Reply(::fidl::DecodedMe
 
 void NameLookup::SetTransactionHeaderFor::LookupIpRequest(const ::fidl::DecodedMessage<NameLookup::LookupIpRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kNameLookup_LookupIp_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void NameLookup::SetTransactionHeaderFor::LookupIpResponse(const ::fidl::DecodedMessage<NameLookup::LookupIpResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kNameLookup_LookupIp_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void NameLookup::SetTransactionHeaderFor::LookupHostnameRequest(const ::fidl::DecodedMessage<NameLookup::LookupHostnameRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kNameLookup_LookupHostname_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void NameLookup::SetTransactionHeaderFor::LookupHostnameResponse(const ::fidl::DecodedMessage<NameLookup::LookupHostnameResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kNameLookup_LookupHostname_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace net

@@ -722,30 +722,38 @@ void Device::Interface::CloseSessionCompleterBase::Reply() {
 
 void Device::SetTransactionHeaderFor::GetOsInfoRequest(const ::fidl::DecodedMessage<Device::GetOsInfoRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetOsInfo_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Device::SetTransactionHeaderFor::GetOsInfoResponse(const ::fidl::DecodedMessage<Device::GetOsInfoResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetOsInfo_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Device::SetTransactionHeaderFor::OpenSessionRequest(const ::fidl::DecodedMessage<Device::OpenSessionRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_OpenSession_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Device::SetTransactionHeaderFor::OpenSessionResponse(const ::fidl::DecodedMessage<Device::OpenSessionResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_OpenSession_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Device::SetTransactionHeaderFor::InvokeCommandRequest(const ::fidl::DecodedMessage<Device::InvokeCommandRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_InvokeCommand_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Device::SetTransactionHeaderFor::InvokeCommandResponse(const ::fidl::DecodedMessage<Device::InvokeCommandResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_InvokeCommand_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Device::SetTransactionHeaderFor::CloseSessionRequest(const ::fidl::DecodedMessage<Device::CloseSessionRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_CloseSession_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Device::SetTransactionHeaderFor::CloseSessionResponse(const ::fidl::DecodedMessage<Device::CloseSessionResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_CloseSession_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace tee

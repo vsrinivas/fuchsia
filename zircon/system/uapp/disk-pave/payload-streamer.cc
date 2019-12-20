@@ -46,12 +46,12 @@ void PayloadStreamer::ReadData(ReadDataCompleter::Sync completer) {
   if (!vmo_) {
     zx_status_t status = ZX_ERR_BAD_STATE;
     result.set_err(&status);
-    completer.Reply(std::move(result));
+    completer.Reply(result);
     return;
   }
   if (eof_reached_) {
     result.set_eof(&eof_reached_);
-    completer.Reply(std::move(result));
+    completer.Reply(result);
     return;
   }
 
@@ -59,15 +59,18 @@ void PayloadStreamer::ReadData(ReadDataCompleter::Sync completer) {
   if (n == 0) {
     eof_reached_ = true;
     result.set_eof(&eof_reached_);
+    completer.Reply(result);
   } else if (n < 0) {
     zx_status_t status = ZX_ERR_IO;
     result.set_err(&status);
+    completer.Reply(result);
   } else {
-    result.mutable_info().offset = 0;
-    result.mutable_info().size = n;
+    // completer.Reply must be called from within this else block since otherwise
+    // |info| will go out of scope
+    ::llcpp::fuchsia::paver::ReadInfo info{.offset = 0, .size = static_cast<uint64_t>(n)};
+    result.set_info(&info);
+    completer.Reply(result);
   }
-
-  completer.Reply(std::move(result));
 }
 
 }  // namespace disk_pave

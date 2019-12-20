@@ -60,17 +60,6 @@ constexpr uint8_t kArbitraryConstant = 2;
 
 constexpr char kUsage[] = ("Usage:\n  fidl_compatibility_test foo_server bar_server\n");
 
-// Bindings that have been "flipped" (i.e. unions in FIDL source are generated
-// as xunions in these bindings) cannot be tested with any non-"write_xunion"/v1
-// compatibility test servers. This is because any bindings with v1 not turned
-// on will send unions as static unions on the wire, but a flipped binding will
-// only try to read this as a xunion leading to a decoding error (most likely
-// when it interprets the static union tag as a xunion ordinal).
-const std::vector<std::string> kV1OnlyBindings = {
-    "go",
-    "rust",
-};
-
 class DataGenerator {
  public:
   DataGenerator(int seed) : rand_engine_(seed) {}
@@ -1274,28 +1263,6 @@ std::string ExtractShortName(const std::string& pkg_url) {
   return match.str(2);
 }
 
-std::pair<std::string, bool> GetServerInfo(const std::string& pkg_url) {
-  auto short_name = ExtractShortName(pkg_url);
-  auto lang = short_name.substr(0, short_name.find('_'));
-  bool is_v1 = short_name.size() > 3 && short_name.substr(short_name.size() - 3) == "_v1";
-  return std::make_pair(lang, is_v1);
-}
-
-bool IsV1OnlyBinding(const std::string& lang) {
-  return std::find(kV1OnlyBindings.cbegin(), kV1OnlyBindings.cend(), lang) !=
-         kV1OnlyBindings.cend();
-}
-
-bool ShouldSkip(const std::string& proxy_url, const std::string& server_url) {
-  auto [proxy_lang, is_proxy_v1] = GetServerInfo(proxy_url);
-  auto [server_lang, is_server_v1] = GetServerInfo(server_url);
-  if (proxy_lang == server_lang) {
-    return false;
-  }
-  return (IsV1OnlyBinding(proxy_lang) && !is_server_v1) ||
-         (IsV1OnlyBinding(server_lang) && !is_proxy_v1);
-}
-
 using TestBody = std::function<void(async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
                                     const std::string& server_url, const std::string& proxy_url)>;
 using AllowServer = std::function<bool(const std::string& server_url)>;
@@ -1306,8 +1273,7 @@ void ForSomeServers(AllowServer allow, TestBody body) {
       continue;
     }
     for (auto const& server_url : servers) {
-      // TODO(fxb/42311) remove v1 only bindings and skipping logic
-      if (!allow(server_url) || ShouldSkip(proxy_url, server_url)) {
+      if (!allow(server_url)) {
         continue;
       }
       std::cerr << proxy_url << " <-> " << server_url << std::endl;

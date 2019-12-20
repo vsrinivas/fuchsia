@@ -54,13 +54,245 @@ class File;
 class Directory;
 class DirectoryAdmin;
 
+extern "C" const fidl_type_t fuchsia_io_NodeInfoTable;
+extern "C" const fidl_type_t v1_fuchsia_io_NodeInfoTable;
+
+// Describes how the connection to an should be handled, as well as
+// how to interpret the optional handle.
+//
+// Refer to `Node.Describe()` and `Node.OnOpen()` for usage.
+struct NodeInfo {
+  NodeInfo() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kService = 1,  // 0x1
+    kFile = 2,  // 0x2
+    kDirectory = 3,  // 0x3
+    kPipe = 4,  // 0x4
+    kVmofile = 5,  // 0x5
+    kDevice = 6,  // 0x6
+    kTty = 7,  // 0x7
+    kSocket = 8,  // 0x8
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_service() const { return ordinal_ == Ordinal::kService; }
+
+  static NodeInfo WithService(::llcpp::fuchsia::io::Service* val) {
+    NodeInfo result;
+    result.set_service(val);
+    return result;
+  }
+
+  void set_service(::llcpp::fuchsia::io::Service* elem) {
+    ordinal_ = Ordinal::kService;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::io::Service& mutable_service() {
+    ZX_ASSERT(ordinal_ == Ordinal::kService);
+    return *static_cast<::llcpp::fuchsia::io::Service*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::io::Service& service() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kService);
+    return *static_cast<::llcpp::fuchsia::io::Service*>(envelope_.data);
+  }
+
+  bool is_file() const { return ordinal_ == Ordinal::kFile; }
+
+  static NodeInfo WithFile(::llcpp::fuchsia::io::FileObject* val) {
+    NodeInfo result;
+    result.set_file(val);
+    return result;
+  }
+
+  void set_file(::llcpp::fuchsia::io::FileObject* elem) {
+    ordinal_ = Ordinal::kFile;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::io::FileObject& mutable_file() {
+    ZX_ASSERT(ordinal_ == Ordinal::kFile);
+    return *static_cast<::llcpp::fuchsia::io::FileObject*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::io::FileObject& file() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kFile);
+    return *static_cast<::llcpp::fuchsia::io::FileObject*>(envelope_.data);
+  }
+
+  bool is_directory() const { return ordinal_ == Ordinal::kDirectory; }
+
+  static NodeInfo WithDirectory(::llcpp::fuchsia::io::DirectoryObject* val) {
+    NodeInfo result;
+    result.set_directory(val);
+    return result;
+  }
+
+  void set_directory(::llcpp::fuchsia::io::DirectoryObject* elem) {
+    ordinal_ = Ordinal::kDirectory;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::io::DirectoryObject& mutable_directory() {
+    ZX_ASSERT(ordinal_ == Ordinal::kDirectory);
+    return *static_cast<::llcpp::fuchsia::io::DirectoryObject*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::io::DirectoryObject& directory() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kDirectory);
+    return *static_cast<::llcpp::fuchsia::io::DirectoryObject*>(envelope_.data);
+  }
+
+  bool is_pipe() const { return ordinal_ == Ordinal::kPipe; }
+
+  static NodeInfo WithPipe(::llcpp::fuchsia::io::Pipe* val) {
+    NodeInfo result;
+    result.set_pipe(val);
+    return result;
+  }
+
+  void set_pipe(::llcpp::fuchsia::io::Pipe* elem) {
+    ordinal_ = Ordinal::kPipe;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::io::Pipe& mutable_pipe() {
+    ZX_ASSERT(ordinal_ == Ordinal::kPipe);
+    return *static_cast<::llcpp::fuchsia::io::Pipe*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::io::Pipe& pipe() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kPipe);
+    return *static_cast<::llcpp::fuchsia::io::Pipe*>(envelope_.data);
+  }
+
+  bool is_vmofile() const { return ordinal_ == Ordinal::kVmofile; }
+
+  static NodeInfo WithVmofile(::llcpp::fuchsia::io::Vmofile* val) {
+    NodeInfo result;
+    result.set_vmofile(val);
+    return result;
+  }
+
+  void set_vmofile(::llcpp::fuchsia::io::Vmofile* elem) {
+    ordinal_ = Ordinal::kVmofile;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::io::Vmofile& mutable_vmofile() {
+    ZX_ASSERT(ordinal_ == Ordinal::kVmofile);
+    return *static_cast<::llcpp::fuchsia::io::Vmofile*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::io::Vmofile& vmofile() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kVmofile);
+    return *static_cast<::llcpp::fuchsia::io::Vmofile*>(envelope_.data);
+  }
+
+  bool is_device() const { return ordinal_ == Ordinal::kDevice; }
+
+  static NodeInfo WithDevice(::llcpp::fuchsia::io::Device* val) {
+    NodeInfo result;
+    result.set_device(val);
+    return result;
+  }
+
+  void set_device(::llcpp::fuchsia::io::Device* elem) {
+    ordinal_ = Ordinal::kDevice;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::io::Device& mutable_device() {
+    ZX_ASSERT(ordinal_ == Ordinal::kDevice);
+    return *static_cast<::llcpp::fuchsia::io::Device*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::io::Device& device() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kDevice);
+    return *static_cast<::llcpp::fuchsia::io::Device*>(envelope_.data);
+  }
+
+  bool is_tty() const { return ordinal_ == Ordinal::kTty; }
+
+  static NodeInfo WithTty(::llcpp::fuchsia::io::Tty* val) {
+    NodeInfo result;
+    result.set_tty(val);
+    return result;
+  }
+
+  void set_tty(::llcpp::fuchsia::io::Tty* elem) {
+    ordinal_ = Ordinal::kTty;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::io::Tty& mutable_tty() {
+    ZX_ASSERT(ordinal_ == Ordinal::kTty);
+    return *static_cast<::llcpp::fuchsia::io::Tty*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::io::Tty& tty() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kTty);
+    return *static_cast<::llcpp::fuchsia::io::Tty*>(envelope_.data);
+  }
+
+  bool is_socket() const { return ordinal_ == Ordinal::kSocket; }
+
+  static NodeInfo WithSocket(::llcpp::fuchsia::io::Socket* val) {
+    NodeInfo result;
+    result.set_socket(val);
+    return result;
+  }
+
+  void set_socket(::llcpp::fuchsia::io::Socket* elem) {
+    ordinal_ = Ordinal::kSocket;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::io::Socket& mutable_socket() {
+    ZX_ASSERT(ordinal_ == Ordinal::kSocket);
+    return *static_cast<::llcpp::fuchsia::io::Socket*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::io::Socket& socket() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kSocket);
+    return *static_cast<::llcpp::fuchsia::io::Socket*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_io_NodeInfoTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_io_NodeInfoTable;
+  static constexpr uint32_t MaxNumHandles = 1;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 24;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 24;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kService = 1,  // 0x1
+    kFile = 2,  // 0x2
+    kDirectory = 3,  // 0x3
+    kPipe = 4,  // 0x4
+    kVmofile = 5,  // 0x5
+    kDevice = 6,  // 0x6
+    kTty = 7,  // 0x7
+    kSocket = 8,  // 0x8
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
 extern "C" const fidl_type_t fuchsia_io_WatchedEventTable;
 extern "C" const fidl_type_t v1_fuchsia_io_WatchedEventTable;
 
 // WatchedEvent describes events returned from a DirectoryWatcher.
 struct WatchedEvent {
-  static constexpr const fidl_type_t* Type = &fuchsia_io_WatchedEventTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_WatchedEventTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_io_WatchedEventTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_io_WatchedEventTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
@@ -117,8 +349,8 @@ extern "C" const fidl_type_t v1_fuchsia_io_VmofileTable;
 // may represent multiple Vmofiles. To identify the logical portion of the VMO
 // that represents the single file, an offset and length parameter are also supplied.
 struct Vmofile {
-  static constexpr const fidl_type_t* Type = &fuchsia_io_VmofileTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_VmofileTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_io_VmofileTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_io_VmofileTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
@@ -161,8 +393,8 @@ extern "C" const fidl_type_t v1_fuchsia_io_TtyTable;
 
 // The object may be cast to interface 'Tty'
 struct Tty {
-  static constexpr const fidl_type_t* Type = &fuchsia_io_TtyTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_TtyTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_io_TtyTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_io_TtyTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
@@ -192,8 +424,8 @@ class DirectoryWatcher final {
     fidl_message_header_t _hdr;
     ::fidl::VectorView<uint8_t> events;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryWatcherOnEventRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryWatcherOnEventRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryWatcherOnEventRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryWatcherOnEventRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 8192;
@@ -337,8 +569,8 @@ extern "C" const fidl_type_t v1_fuchsia_io_SocketTable;
 
 // The object is accompanied by a socket.
 struct Socket {
-  static constexpr const fidl_type_t* Type = &fuchsia_io_SocketTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_SocketTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_io_SocketTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_io_SocketTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
@@ -356,8 +588,8 @@ extern "C" const fidl_type_t v1_fuchsia_io_ServiceTable;
 // The default protocol, interface information must be acquired some
 // other way.
 struct Service {
-  static constexpr const fidl_type_t* Type = &fuchsia_io_ServiceTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_ServiceTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_io_ServiceTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_io_ServiceTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -374,8 +606,8 @@ extern "C" const fidl_type_t v1_fuchsia_io_PipeTable;
 
 // The object is accompanied by a pipe.
 struct Pipe {
-  static constexpr const fidl_type_t* Type = &fuchsia_io_PipeTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_PipeTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_io_PipeTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_io_PipeTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
@@ -466,8 +698,8 @@ extern "C" const fidl_type_t v1_fuchsia_io_NodeAttributesTable;
 
 // NodeAttributes defines generic information about a filesystem node.
 struct NodeAttributes {
-  static constexpr const fidl_type_t* Type = &fuchsia_io_NodeAttributesTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_NodeAttributesTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_io_NodeAttributesTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_io_NodeAttributesTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 56;
   [[maybe_unused]]
@@ -547,8 +779,8 @@ extern "C" const fidl_type_t fuchsia_io_FilesystemInfoTable;
 extern "C" const fidl_type_t v1_fuchsia_io_FilesystemInfoTable;
 
 struct FilesystemInfo {
-  static constexpr const fidl_type_t* Type = &fuchsia_io_FilesystemInfoTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FilesystemInfoTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_io_FilesystemInfoTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_io_FilesystemInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 96;
   [[maybe_unused]]
@@ -596,8 +828,8 @@ extern "C" const fidl_type_t v1_fuchsia_io_FileObjectTable;
 
 // The object may be cast to interface 'File'.
 struct FileObject {
-  static constexpr const fidl_type_t* Type = &fuchsia_io_FileObjectTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileObjectTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_io_FileObjectTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_io_FileObjectTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
@@ -626,8 +858,8 @@ extern "C" const fidl_type_t v1_fuchsia_io_DirectoryObjectTable;
 
 // The object may be cast to interface 'Directory'.
 struct DirectoryObject {
-  static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryObjectTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryObjectTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryObjectTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryObjectTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -644,8 +876,8 @@ extern "C" const fidl_type_t v1_fuchsia_io_DeviceTable;
 
 // The object may be cast to interface 'Device'.
 struct Device {
-  static constexpr const fidl_type_t* Type = &fuchsia_io_DeviceTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DeviceTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DeviceTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_io_DeviceTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
@@ -658,280 +890,6 @@ struct Device {
   //
   // The "`DEVICE_SIGNAL_`" values may be observed on this event.
   ::zx::eventpair event = {};
-};
-
-extern "C" const fidl_type_t fuchsia_io_NodeInfoTable;
-extern "C" const fidl_type_t v1_fuchsia_io_NodeInfoTable;
-
-// Describes how the connection to an should be handled, as well as
-// how to interpret the optional handle.
-//
-// Refer to `Node.Describe()` and `Node.OnOpen()` for usage.
-struct NodeInfo {
-  enum class Tag : fidl_union_tag_t {
-    kService = 0,
-    kFile = 1,
-    kDirectory = 2,
-    kPipe = 3,
-    kVmofile = 4,
-    kDevice = 5,
-    kTty = 6,
-    kSocket = 7,
-  };
-
-  NodeInfo();
-  ~NodeInfo();
-
-  NodeInfo(NodeInfo&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  NodeInfo& operator=(NodeInfo&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_service() const { return ordinal_ == Ordinal::kService; }
-
-  static NodeInfo WithService(::llcpp::fuchsia::io::Service* val) {
-    NodeInfo result;
-    result.set_service(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::io::Service& mutable_service();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Service>::value && std::is_copy_assignable<T>::value>
-  set_service(const T* v) {
-    mutable_service() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Service>::value && std::is_move_assignable<T>::value>
-  set_service(T* v) {
-    mutable_service() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::io::Service const & service() const { return service_; }
-
-  bool is_file() const { return ordinal_ == Ordinal::kFile; }
-
-  static NodeInfo WithFile(::llcpp::fuchsia::io::FileObject* val) {
-    NodeInfo result;
-    result.set_file(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::io::FileObject& mutable_file();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::FileObject>::value && std::is_copy_assignable<T>::value>
-  set_file(const T* v) {
-    mutable_file() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::FileObject>::value && std::is_move_assignable<T>::value>
-  set_file(T* v) {
-    mutable_file() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::io::FileObject const & file() const { return file_; }
-
-  bool is_directory() const { return ordinal_ == Ordinal::kDirectory; }
-
-  static NodeInfo WithDirectory(::llcpp::fuchsia::io::DirectoryObject* val) {
-    NodeInfo result;
-    result.set_directory(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::io::DirectoryObject& mutable_directory();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::DirectoryObject>::value && std::is_copy_assignable<T>::value>
-  set_directory(const T* v) {
-    mutable_directory() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::DirectoryObject>::value && std::is_move_assignable<T>::value>
-  set_directory(T* v) {
-    mutable_directory() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::io::DirectoryObject const & directory() const { return directory_; }
-
-  bool is_pipe() const { return ordinal_ == Ordinal::kPipe; }
-
-  static NodeInfo WithPipe(::llcpp::fuchsia::io::Pipe* val) {
-    NodeInfo result;
-    result.set_pipe(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::io::Pipe& mutable_pipe();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Pipe>::value && std::is_copy_assignable<T>::value>
-  set_pipe(const T* v) {
-    mutable_pipe() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Pipe>::value && std::is_move_assignable<T>::value>
-  set_pipe(T* v) {
-    mutable_pipe() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::io::Pipe const & pipe() const { return pipe_; }
-
-  bool is_vmofile() const { return ordinal_ == Ordinal::kVmofile; }
-
-  static NodeInfo WithVmofile(::llcpp::fuchsia::io::Vmofile* val) {
-    NodeInfo result;
-    result.set_vmofile(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::io::Vmofile& mutable_vmofile();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Vmofile>::value && std::is_copy_assignable<T>::value>
-  set_vmofile(const T* v) {
-    mutable_vmofile() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Vmofile>::value && std::is_move_assignable<T>::value>
-  set_vmofile(T* v) {
-    mutable_vmofile() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::io::Vmofile const & vmofile() const { return vmofile_; }
-
-  bool is_device() const { return ordinal_ == Ordinal::kDevice; }
-
-  static NodeInfo WithDevice(::llcpp::fuchsia::io::Device* val) {
-    NodeInfo result;
-    result.set_device(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::io::Device& mutable_device();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Device>::value && std::is_copy_assignable<T>::value>
-  set_device(const T* v) {
-    mutable_device() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Device>::value && std::is_move_assignable<T>::value>
-  set_device(T* v) {
-    mutable_device() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::io::Device const & device() const { return device_; }
-
-  bool is_tty() const { return ordinal_ == Ordinal::kTty; }
-
-  static NodeInfo WithTty(::llcpp::fuchsia::io::Tty* val) {
-    NodeInfo result;
-    result.set_tty(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::io::Tty& mutable_tty();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Tty>::value && std::is_copy_assignable<T>::value>
-  set_tty(const T* v) {
-    mutable_tty() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Tty>::value && std::is_move_assignable<T>::value>
-  set_tty(T* v) {
-    mutable_tty() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::io::Tty const & tty() const { return tty_; }
-
-  bool is_socket() const { return ordinal_ == Ordinal::kSocket; }
-
-  static NodeInfo WithSocket(::llcpp::fuchsia::io::Socket* val) {
-    NodeInfo result;
-    result.set_socket(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::io::Socket& mutable_socket();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Socket>::value && std::is_copy_assignable<T>::value>
-  set_socket(const T* v) {
-    mutable_socket() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Socket>::value && std::is_move_assignable<T>::value>
-  set_socket(T* v) {
-    mutable_socket() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::io::Socket const & socket() const { return socket_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_io_NodeInfoTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_NodeInfoTable;
-  static constexpr uint32_t MaxNumHandles = 1;
-  static constexpr uint32_t PrimarySize = 32;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 24;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kService = 0,
-    kFile = 1,
-    kDirectory = 2,
-    kPipe = 3,
-    kVmofile = 4,
-    kDevice = 5,
-    kTty = 6,
-    kSocket = 7,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(NodeInfo&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::io::Service service_;
-    ::llcpp::fuchsia::io::FileObject file_;
-    ::llcpp::fuchsia::io::DirectoryObject directory_;
-    ::llcpp::fuchsia::io::Pipe pipe_;
-    ::llcpp::fuchsia::io::Vmofile vmofile_;
-    ::llcpp::fuchsia::io::Device device_;
-    ::llcpp::fuchsia::io::Tty tty_;
-    ::llcpp::fuchsia::io::Socket socket_;
-  };
 };
 
 extern "C" const fidl_type_t fuchsia_io_NodeCloneRequestTable;
@@ -982,8 +940,8 @@ class Node final {
     uint32_t flags;
     ::zx::channel object;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_NodeCloneRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_NodeCloneRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_NodeCloneRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_NodeCloneRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1000,8 +958,8 @@ class Node final {
     fidl_message_header_t _hdr;
     int32_t s;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_NodeCloseResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_NodeCloseResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_NodeCloseResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_NodeCloseResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1019,12 +977,12 @@ class Node final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::io::NodeInfo info;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_NodeDescribeResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_NodeDescribeResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_NodeDescribeResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_NodeDescribeResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
-    static constexpr uint32_t PrimarySize = 48;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 24;
+    static constexpr uint32_t AltPrimarySize = 48;
     static constexpr uint32_t AltMaxOutOfLine = 24;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -1037,14 +995,14 @@ class Node final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
-    ::llcpp::fuchsia::io::NodeInfo* info;
+    ::llcpp::fuchsia::io::NodeInfo info;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_NodeOnOpenEventTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_NodeOnOpenEventTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_NodeOnOpenEventTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_NodeOnOpenEventTable;
     static constexpr uint32_t MaxNumHandles = 1;
-    static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 32;
-    static constexpr uint32_t AltPrimarySize = 48;
+    static constexpr uint32_t PrimarySize = 48;
+    static constexpr uint32_t MaxOutOfLine = 24;
+    static constexpr uint32_t AltPrimarySize = 32;
     static constexpr uint32_t AltMaxOutOfLine = 24;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -1056,8 +1014,8 @@ class Node final {
     fidl_message_header_t _hdr;
     int32_t s;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_NodeSyncResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_NodeSyncResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_NodeSyncResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_NodeSyncResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1076,8 +1034,8 @@ class Node final {
     int32_t s;
     ::llcpp::fuchsia::io::NodeAttributes attributes;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_NodeGetAttrResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_NodeGetAttrResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_NodeGetAttrResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_NodeGetAttrResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 80;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1095,8 +1053,8 @@ class Node final {
     fidl_message_header_t _hdr;
     int32_t s;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_NodeSetAttrResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_NodeSetAttrResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_NodeSetAttrResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_NodeSetAttrResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1113,8 +1071,8 @@ class Node final {
     uint32_t flags;
     ::llcpp::fuchsia::io::NodeAttributes attributes;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_NodeSetAttrRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_NodeSetAttrRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_NodeSetAttrRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_NodeSetAttrRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 80;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1133,8 +1091,8 @@ class Node final {
     int32_t s;
     uint32_t flags;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_NodeNodeGetFlagsResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_NodeNodeGetFlagsResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_NodeNodeGetFlagsResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_NodeNodeGetFlagsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1152,8 +1110,8 @@ class Node final {
     fidl_message_header_t _hdr;
     int32_t s;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_NodeNodeSetFlagsResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_NodeNodeSetFlagsResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_NodeNodeSetFlagsResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_NodeNodeSetFlagsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1169,8 +1127,8 @@ class Node final {
     fidl_message_header_t _hdr;
     uint32_t flags;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_NodeNodeSetFlagsRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_NodeNodeSetFlagsRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_NodeNodeSetFlagsRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_NodeNodeSetFlagsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1190,7 +1148,7 @@ class Node final {
     // Indicates the success or failure of the open operation, and optionally describes the
     // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
     // (the same as would be returned by `Describe`).
-    fit::callback<zx_status_t(int32_t s, ::llcpp::fuchsia::io::NodeInfo* info)> on_open;
+    fit::callback<zx_status_t(int32_t s, ::llcpp::fuchsia::io::NodeInfo info)> on_open;
 
     // Fallback handler when an unknown ordinal is received.
     // Caller may put custom error handling logic here.
@@ -1545,7 +1503,7 @@ class Node final {
     // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
-    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Describe Describe();
 
     // Returns extra information about the type of the object.
@@ -1701,7 +1659,7 @@ class Node final {
     // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
-    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Describe Describe(::zx::unowned_channel _client_end);
 
     // Returns extra information about the type of the object.
@@ -1998,7 +1956,7 @@ class Node final {
   // Indicates the success or failure of the open operation, and optionally describes the
   // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
   // (the same as would be returned by `Describe`).
-  static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, ::llcpp::fuchsia::io::NodeInfo* info);
+  static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, ::llcpp::fuchsia::io::NodeInfo info);
 
   // An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
   //
@@ -2006,7 +1964,7 @@ class Node final {
   // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
   // (the same as would be returned by `Describe`).
   // Caller provides the backing storage for FIDL message via response buffers.
-  static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::NodeInfo* info);
+  static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::NodeInfo info);
 
   // An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
   //
@@ -2124,8 +2082,8 @@ class File final {
     uint32_t flags;
     ::zx::channel object;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_FileCloneRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileCloneRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_FileCloneRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_FileCloneRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2142,8 +2100,8 @@ class File final {
     fidl_message_header_t _hdr;
     int32_t s;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_FileCloseResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileCloseResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_FileCloseResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_FileCloseResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2161,12 +2119,12 @@ class File final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::io::NodeInfo info;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_FileDescribeResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileDescribeResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_FileDescribeResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_FileDescribeResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
-    static constexpr uint32_t PrimarySize = 48;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 24;
+    static constexpr uint32_t AltPrimarySize = 48;
     static constexpr uint32_t AltMaxOutOfLine = 24;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -2179,14 +2137,14 @@ class File final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
-    ::llcpp::fuchsia::io::NodeInfo* info;
+    ::llcpp::fuchsia::io::NodeInfo info;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_FileOnOpenEventTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileOnOpenEventTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_FileOnOpenEventTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_FileOnOpenEventTable;
     static constexpr uint32_t MaxNumHandles = 1;
-    static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 32;
-    static constexpr uint32_t AltPrimarySize = 48;
+    static constexpr uint32_t PrimarySize = 48;
+    static constexpr uint32_t MaxOutOfLine = 24;
+    static constexpr uint32_t AltPrimarySize = 32;
     static constexpr uint32_t AltMaxOutOfLine = 24;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -2198,8 +2156,8 @@ class File final {
     fidl_message_header_t _hdr;
     int32_t s;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_FileSyncResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileSyncResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_FileSyncResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_FileSyncResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2218,8 +2176,8 @@ class File final {
     int32_t s;
     ::llcpp::fuchsia::io::NodeAttributes attributes;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_FileGetAttrResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileGetAttrResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_FileGetAttrResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_FileGetAttrResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 80;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2237,8 +2195,8 @@ class File final {
     fidl_message_header_t _hdr;
     int32_t s;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_FileSetAttrResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileSetAttrResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_FileSetAttrResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_FileSetAttrResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2255,8 +2213,8 @@ class File final {
     uint32_t flags;
     ::llcpp::fuchsia::io::NodeAttributes attributes;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_FileSetAttrRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileSetAttrRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_FileSetAttrRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_FileSetAttrRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 80;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2275,8 +2233,8 @@ class File final {
     int32_t s;
     uint32_t flags;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_FileNodeGetFlagsResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileNodeGetFlagsResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_FileNodeGetFlagsResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_FileNodeGetFlagsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2294,8 +2252,8 @@ class File final {
     fidl_message_header_t _hdr;
     int32_t s;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_FileNodeSetFlagsResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileNodeSetFlagsResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_FileNodeSetFlagsResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_FileNodeSetFlagsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2311,8 +2269,8 @@ class File final {
     fidl_message_header_t _hdr;
     uint32_t flags;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_FileNodeSetFlagsRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileNodeSetFlagsRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_FileNodeSetFlagsRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_FileNodeSetFlagsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2331,8 +2289,8 @@ class File final {
     int32_t s;
     ::fidl::VectorView<uint8_t> data;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_FileReadResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileReadResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_FileReadResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_FileReadResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8192;
@@ -2348,8 +2306,8 @@ class File final {
     fidl_message_header_t _hdr;
     uint64_t count;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_FileReadRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileReadRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_FileReadRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_FileReadRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2368,8 +2326,8 @@ class File final {
     int32_t s;
     ::fidl::VectorView<uint8_t> data;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_FileReadAtResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileReadAtResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_FileReadAtResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_FileReadAtResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8192;
@@ -2386,8 +2344,8 @@ class File final {
     uint64_t count;
     uint64_t offset;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_FileReadAtRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileReadAtRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_FileReadAtRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_FileReadAtRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2406,8 +2364,8 @@ class File final {
     int32_t s;
     uint64_t actual;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_FileWriteResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileWriteResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_FileWriteResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_FileWriteResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2423,8 +2381,8 @@ class File final {
     fidl_message_header_t _hdr;
     ::fidl::VectorView<uint8_t> data;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_FileWriteRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileWriteRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_FileWriteRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_FileWriteRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 8192;
@@ -2443,8 +2401,8 @@ class File final {
     int32_t s;
     uint64_t actual;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_FileWriteAtResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileWriteAtResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_FileWriteAtResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_FileWriteAtResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2461,8 +2419,8 @@ class File final {
     ::fidl::VectorView<uint8_t> data;
     uint64_t offset;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_FileWriteAtRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileWriteAtRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_FileWriteAtRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_FileWriteAtRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8192;
@@ -2481,8 +2439,8 @@ class File final {
     int32_t s;
     uint64_t offset;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_FileSeekResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileSeekResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_FileSeekResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_FileSeekResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2499,8 +2457,8 @@ class File final {
     int64_t offset;
     ::llcpp::fuchsia::io::SeekOrigin start;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_FileSeekRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileSeekRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_FileSeekRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_FileSeekRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2518,8 +2476,8 @@ class File final {
     fidl_message_header_t _hdr;
     int32_t s;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_FileTruncateResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileTruncateResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_FileTruncateResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_FileTruncateResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2535,8 +2493,8 @@ class File final {
     fidl_message_header_t _hdr;
     uint64_t length;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_FileTruncateRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileTruncateRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_FileTruncateRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_FileTruncateRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2555,8 +2513,8 @@ class File final {
     int32_t s;
     uint32_t flags;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_FileGetFlagsResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileGetFlagsResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_FileGetFlagsResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_FileGetFlagsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2574,8 +2532,8 @@ class File final {
     fidl_message_header_t _hdr;
     int32_t s;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_FileSetFlagsResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileSetFlagsResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_FileSetFlagsResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_FileSetFlagsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2591,8 +2549,8 @@ class File final {
     fidl_message_header_t _hdr;
     uint32_t flags;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_FileSetFlagsRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileSetFlagsRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_FileSetFlagsRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_FileSetFlagsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2611,8 +2569,8 @@ class File final {
     int32_t s;
     ::llcpp::fuchsia::mem::Buffer* buffer;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_FileGetBufferResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileGetBufferResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_FileGetBufferResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_FileGetBufferResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 16;
@@ -2628,8 +2586,8 @@ class File final {
     fidl_message_header_t _hdr;
     uint32_t flags;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_FileGetBufferRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_FileGetBufferRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_FileGetBufferRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_FileGetBufferRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2649,7 +2607,7 @@ class File final {
     // Indicates the success or failure of the open operation, and optionally describes the
     // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
     // (the same as would be returned by `Describe`).
-    fit::callback<zx_status_t(int32_t s, ::llcpp::fuchsia::io::NodeInfo* info)> on_open;
+    fit::callback<zx_status_t(int32_t s, ::llcpp::fuchsia::io::NodeInfo info)> on_open;
 
     // Fallback handler when an unknown ordinal is received.
     // Caller may put custom error handling logic here.
@@ -3310,7 +3268,7 @@ class File final {
     // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
-    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Describe Describe();
 
     // Returns extra information about the type of the object.
@@ -3600,7 +3558,7 @@ class File final {
     // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
-    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Describe Describe(::zx::unowned_channel _client_end);
 
     // Returns extra information about the type of the object.
@@ -4215,7 +4173,7 @@ class File final {
   // Indicates the success or failure of the open operation, and optionally describes the
   // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
   // (the same as would be returned by `Describe`).
-  static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, ::llcpp::fuchsia::io::NodeInfo* info);
+  static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, ::llcpp::fuchsia::io::NodeInfo info);
 
   // An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
   //
@@ -4223,7 +4181,7 @@ class File final {
   // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
   // (the same as would be returned by `Describe`).
   // Caller provides the backing storage for FIDL message via response buffers.
-  static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::NodeInfo* info);
+  static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::NodeInfo info);
 
   // An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
   //
@@ -4355,8 +4313,8 @@ class Directory final {
     uint32_t flags;
     ::zx::channel object;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryCloneRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryCloneRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryCloneRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryCloneRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -4373,8 +4331,8 @@ class Directory final {
     fidl_message_header_t _hdr;
     int32_t s;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryCloseResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryCloseResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryCloseResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryCloseResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -4392,12 +4350,12 @@ class Directory final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::io::NodeInfo info;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryDescribeResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryDescribeResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryDescribeResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryDescribeResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
-    static constexpr uint32_t PrimarySize = 48;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 24;
+    static constexpr uint32_t AltPrimarySize = 48;
     static constexpr uint32_t AltMaxOutOfLine = 24;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -4410,14 +4368,14 @@ class Directory final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
-    ::llcpp::fuchsia::io::NodeInfo* info;
+    ::llcpp::fuchsia::io::NodeInfo info;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryOnOpenEventTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryOnOpenEventTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryOnOpenEventTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryOnOpenEventTable;
     static constexpr uint32_t MaxNumHandles = 1;
-    static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 32;
-    static constexpr uint32_t AltPrimarySize = 48;
+    static constexpr uint32_t PrimarySize = 48;
+    static constexpr uint32_t MaxOutOfLine = 24;
+    static constexpr uint32_t AltPrimarySize = 32;
     static constexpr uint32_t AltMaxOutOfLine = 24;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -4429,8 +4387,8 @@ class Directory final {
     fidl_message_header_t _hdr;
     int32_t s;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectorySyncResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectorySyncResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectorySyncResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectorySyncResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -4449,8 +4407,8 @@ class Directory final {
     int32_t s;
     ::llcpp::fuchsia::io::NodeAttributes attributes;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryGetAttrResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryGetAttrResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryGetAttrResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryGetAttrResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 80;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -4468,8 +4426,8 @@ class Directory final {
     fidl_message_header_t _hdr;
     int32_t s;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectorySetAttrResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectorySetAttrResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectorySetAttrResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectorySetAttrResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -4486,8 +4444,8 @@ class Directory final {
     uint32_t flags;
     ::llcpp::fuchsia::io::NodeAttributes attributes;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectorySetAttrRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectorySetAttrRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectorySetAttrRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectorySetAttrRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 80;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -4506,8 +4464,8 @@ class Directory final {
     int32_t s;
     uint32_t flags;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryNodeGetFlagsResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryNodeGetFlagsResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryNodeGetFlagsResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryNodeGetFlagsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -4525,8 +4483,8 @@ class Directory final {
     fidl_message_header_t _hdr;
     int32_t s;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryNodeSetFlagsResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryNodeSetFlagsResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryNodeSetFlagsResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryNodeSetFlagsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -4542,8 +4500,8 @@ class Directory final {
     fidl_message_header_t _hdr;
     uint32_t flags;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryNodeSetFlagsRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryNodeSetFlagsRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryNodeSetFlagsRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryNodeSetFlagsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -4564,8 +4522,8 @@ class Directory final {
     ::fidl::StringView path;
     ::zx::channel object;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryOpenRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryOpenRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryOpenRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryOpenRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 4096;
@@ -4582,8 +4540,8 @@ class Directory final {
     fidl_message_header_t _hdr;
     int32_t s;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryUnlinkResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryUnlinkResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryUnlinkResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryUnlinkResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -4599,8 +4557,8 @@ class Directory final {
     fidl_message_header_t _hdr;
     ::fidl::StringView path;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryUnlinkRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryUnlinkRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryUnlinkRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryUnlinkRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4096;
@@ -4619,8 +4577,8 @@ class Directory final {
     int32_t s;
     ::fidl::VectorView<uint8_t> dirents;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryReadDirentsResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryReadDirentsResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryReadDirentsResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryReadDirentsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8192;
@@ -4636,8 +4594,8 @@ class Directory final {
     fidl_message_header_t _hdr;
     uint64_t max_bytes;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryReadDirentsRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryReadDirentsRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryReadDirentsRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryReadDirentsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -4655,8 +4613,8 @@ class Directory final {
     fidl_message_header_t _hdr;
     int32_t s;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryRewindResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryRewindResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryRewindResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryRewindResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -4675,8 +4633,8 @@ class Directory final {
     int32_t s;
     ::zx::handle token;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryGetTokenResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryGetTokenResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryGetTokenResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryGetTokenResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -4694,8 +4652,8 @@ class Directory final {
     fidl_message_header_t _hdr;
     int32_t s;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryRenameResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryRenameResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryRenameResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryRenameResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -4713,8 +4671,8 @@ class Directory final {
     ::zx::handle dst_parent_token;
     ::fidl::StringView dst;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryRenameRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryRenameRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryRenameRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryRenameRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 56;
     static constexpr uint32_t MaxOutOfLine = 8192;
@@ -4732,8 +4690,8 @@ class Directory final {
     fidl_message_header_t _hdr;
     int32_t s;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryLinkResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryLinkResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryLinkResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryLinkResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -4751,8 +4709,8 @@ class Directory final {
     ::zx::handle dst_parent_token;
     ::fidl::StringView dst;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryLinkRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryLinkRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryLinkRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryLinkRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 56;
     static constexpr uint32_t MaxOutOfLine = 8192;
@@ -4770,8 +4728,8 @@ class Directory final {
     fidl_message_header_t _hdr;
     int32_t s;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryWatchResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryWatchResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryWatchResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryWatchResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -4789,8 +4747,8 @@ class Directory final {
     uint32_t options;
     ::zx::channel watcher;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryWatchRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryWatchRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryWatchRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryWatchRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -4810,7 +4768,7 @@ class Directory final {
     // Indicates the success or failure of the open operation, and optionally describes the
     // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
     // (the same as would be returned by `Describe`).
-    fit::callback<zx_status_t(int32_t s, ::llcpp::fuchsia::io::NodeInfo* info)> on_open;
+    fit::callback<zx_status_t(int32_t s, ::llcpp::fuchsia::io::NodeInfo info)> on_open;
 
     // Fallback handler when an unknown ordinal is received.
     // Caller may put custom error handling logic here.
@@ -5427,7 +5385,7 @@ class Directory final {
     // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
-    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Describe Describe();
 
     // Returns extra information about the type of the object.
@@ -5861,7 +5819,7 @@ class Directory final {
     // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
-    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Describe Describe(::zx::unowned_channel _client_end);
 
     // Returns extra information about the type of the object.
@@ -6669,7 +6627,7 @@ class Directory final {
   // Indicates the success or failure of the open operation, and optionally describes the
   // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
   // (the same as would be returned by `Describe`).
-  static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, ::llcpp::fuchsia::io::NodeInfo* info);
+  static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, ::llcpp::fuchsia::io::NodeInfo info);
 
   // An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
   //
@@ -6677,7 +6635,7 @@ class Directory final {
   // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
   // (the same as would be returned by `Describe`).
   // Caller provides the backing storage for FIDL message via response buffers.
-  static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::NodeInfo* info);
+  static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::NodeInfo info);
 
   // An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
   //
@@ -6831,8 +6789,8 @@ class DirectoryAdmin final {
     uint32_t flags;
     ::zx::channel object;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminCloneRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminCloneRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryAdminCloneRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryAdminCloneRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -6849,8 +6807,8 @@ class DirectoryAdmin final {
     fidl_message_header_t _hdr;
     int32_t s;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminCloseResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminCloseResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryAdminCloseResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryAdminCloseResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -6868,12 +6826,12 @@ class DirectoryAdmin final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::io::NodeInfo info;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminDescribeResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminDescribeResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryAdminDescribeResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryAdminDescribeResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
-    static constexpr uint32_t PrimarySize = 48;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 24;
+    static constexpr uint32_t AltPrimarySize = 48;
     static constexpr uint32_t AltMaxOutOfLine = 24;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -6886,14 +6844,14 @@ class DirectoryAdmin final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
-    ::llcpp::fuchsia::io::NodeInfo* info;
+    ::llcpp::fuchsia::io::NodeInfo info;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminOnOpenEventTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminOnOpenEventTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryAdminOnOpenEventTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryAdminOnOpenEventTable;
     static constexpr uint32_t MaxNumHandles = 1;
-    static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 32;
-    static constexpr uint32_t AltPrimarySize = 48;
+    static constexpr uint32_t PrimarySize = 48;
+    static constexpr uint32_t MaxOutOfLine = 24;
+    static constexpr uint32_t AltPrimarySize = 32;
     static constexpr uint32_t AltMaxOutOfLine = 24;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -6905,8 +6863,8 @@ class DirectoryAdmin final {
     fidl_message_header_t _hdr;
     int32_t s;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminSyncResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminSyncResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryAdminSyncResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryAdminSyncResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -6925,8 +6883,8 @@ class DirectoryAdmin final {
     int32_t s;
     ::llcpp::fuchsia::io::NodeAttributes attributes;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminGetAttrResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminGetAttrResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryAdminGetAttrResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryAdminGetAttrResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 80;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -6944,8 +6902,8 @@ class DirectoryAdmin final {
     fidl_message_header_t _hdr;
     int32_t s;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminSetAttrResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminSetAttrResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryAdminSetAttrResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryAdminSetAttrResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -6962,8 +6920,8 @@ class DirectoryAdmin final {
     uint32_t flags;
     ::llcpp::fuchsia::io::NodeAttributes attributes;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminSetAttrRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminSetAttrRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryAdminSetAttrRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryAdminSetAttrRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 80;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -6982,8 +6940,8 @@ class DirectoryAdmin final {
     int32_t s;
     uint32_t flags;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminNodeGetFlagsResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminNodeGetFlagsResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryAdminNodeGetFlagsResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryAdminNodeGetFlagsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -7001,8 +6959,8 @@ class DirectoryAdmin final {
     fidl_message_header_t _hdr;
     int32_t s;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminNodeSetFlagsResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminNodeSetFlagsResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryAdminNodeSetFlagsResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryAdminNodeSetFlagsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -7018,8 +6976,8 @@ class DirectoryAdmin final {
     fidl_message_header_t _hdr;
     uint32_t flags;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminNodeSetFlagsRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminNodeSetFlagsRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryAdminNodeSetFlagsRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryAdminNodeSetFlagsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -7040,8 +6998,8 @@ class DirectoryAdmin final {
     ::fidl::StringView path;
     ::zx::channel object;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminOpenRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminOpenRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryAdminOpenRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryAdminOpenRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 4096;
@@ -7058,8 +7016,8 @@ class DirectoryAdmin final {
     fidl_message_header_t _hdr;
     int32_t s;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminUnlinkResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminUnlinkResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryAdminUnlinkResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryAdminUnlinkResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -7075,8 +7033,8 @@ class DirectoryAdmin final {
     fidl_message_header_t _hdr;
     ::fidl::StringView path;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminUnlinkRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminUnlinkRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryAdminUnlinkRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryAdminUnlinkRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4096;
@@ -7095,8 +7053,8 @@ class DirectoryAdmin final {
     int32_t s;
     ::fidl::VectorView<uint8_t> dirents;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminReadDirentsResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminReadDirentsResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryAdminReadDirentsResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryAdminReadDirentsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8192;
@@ -7112,8 +7070,8 @@ class DirectoryAdmin final {
     fidl_message_header_t _hdr;
     uint64_t max_bytes;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminReadDirentsRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminReadDirentsRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryAdminReadDirentsRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryAdminReadDirentsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -7131,8 +7089,8 @@ class DirectoryAdmin final {
     fidl_message_header_t _hdr;
     int32_t s;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminRewindResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminRewindResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryAdminRewindResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryAdminRewindResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -7151,8 +7109,8 @@ class DirectoryAdmin final {
     int32_t s;
     ::zx::handle token;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminGetTokenResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminGetTokenResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryAdminGetTokenResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryAdminGetTokenResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -7170,8 +7128,8 @@ class DirectoryAdmin final {
     fidl_message_header_t _hdr;
     int32_t s;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminRenameResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminRenameResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryAdminRenameResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryAdminRenameResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -7189,8 +7147,8 @@ class DirectoryAdmin final {
     ::zx::handle dst_parent_token;
     ::fidl::StringView dst;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminRenameRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminRenameRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryAdminRenameRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryAdminRenameRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 56;
     static constexpr uint32_t MaxOutOfLine = 8192;
@@ -7208,8 +7166,8 @@ class DirectoryAdmin final {
     fidl_message_header_t _hdr;
     int32_t s;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminLinkResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminLinkResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryAdminLinkResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryAdminLinkResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -7227,8 +7185,8 @@ class DirectoryAdmin final {
     ::zx::handle dst_parent_token;
     ::fidl::StringView dst;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminLinkRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminLinkRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryAdminLinkRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryAdminLinkRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 56;
     static constexpr uint32_t MaxOutOfLine = 8192;
@@ -7246,8 +7204,8 @@ class DirectoryAdmin final {
     fidl_message_header_t _hdr;
     int32_t s;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminWatchResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminWatchResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryAdminWatchResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryAdminWatchResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -7265,8 +7223,8 @@ class DirectoryAdmin final {
     uint32_t options;
     ::zx::channel watcher;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminWatchRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminWatchRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryAdminWatchRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryAdminWatchRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -7284,8 +7242,8 @@ class DirectoryAdmin final {
     fidl_message_header_t _hdr;
     int32_t s;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminMountResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminMountResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryAdminMountResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryAdminMountResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -7301,8 +7259,8 @@ class DirectoryAdmin final {
     fidl_message_header_t _hdr;
     ::zx::channel remote;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminMountRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminMountRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryAdminMountRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryAdminMountRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -7320,8 +7278,8 @@ class DirectoryAdmin final {
     fidl_message_header_t _hdr;
     int32_t s;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminMountAndCreateResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminMountAndCreateResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryAdminMountAndCreateResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryAdminMountAndCreateResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -7339,8 +7297,8 @@ class DirectoryAdmin final {
     ::fidl::StringView name;
     uint32_t flags;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminMountAndCreateRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminMountAndCreateRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryAdminMountAndCreateRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryAdminMountAndCreateRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 256;
@@ -7358,8 +7316,8 @@ class DirectoryAdmin final {
     fidl_message_header_t _hdr;
     int32_t s;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminUnmountResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminUnmountResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryAdminUnmountResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryAdminUnmountResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -7378,8 +7336,8 @@ class DirectoryAdmin final {
     int32_t s;
     ::zx::channel remote;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminUnmountNodeResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminUnmountNodeResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryAdminUnmountNodeResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryAdminUnmountNodeResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -7398,8 +7356,8 @@ class DirectoryAdmin final {
     int32_t s;
     ::llcpp::fuchsia::io::FilesystemInfo* info;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminQueryFilesystemResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminQueryFilesystemResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryAdminQueryFilesystemResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryAdminQueryFilesystemResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 96;
@@ -7418,8 +7376,8 @@ class DirectoryAdmin final {
     int32_t s;
     ::fidl::StringView path;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_io_DirectoryAdminGetDevicePathResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_DirectoryAdminGetDevicePathResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_io_DirectoryAdminGetDevicePathResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_io_DirectoryAdminGetDevicePathResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 4096;
@@ -7439,7 +7397,7 @@ class DirectoryAdmin final {
     // Indicates the success or failure of the open operation, and optionally describes the
     // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
     // (the same as would be returned by `Describe`).
-    fit::callback<zx_status_t(int32_t s, ::llcpp::fuchsia::io::NodeInfo* info)> on_open;
+    fit::callback<zx_status_t(int32_t s, ::llcpp::fuchsia::io::NodeInfo info)> on_open;
 
     // Fallback handler when an unknown ordinal is received.
     // Caller may put custom error handling logic here.
@@ -8260,7 +8218,7 @@ class DirectoryAdmin final {
     // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
-    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Describe Describe();
 
     // Returns extra information about the type of the object.
@@ -8754,7 +8712,7 @@ class DirectoryAdmin final {
     // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
-    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Describe Describe(::zx::unowned_channel _client_end);
 
     // Returns extra information about the type of the object.
@@ -9730,7 +9688,7 @@ class DirectoryAdmin final {
   // Indicates the success or failure of the open operation, and optionally describes the
   // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
   // (the same as would be returned by `Describe`).
-  static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, ::llcpp::fuchsia::io::NodeInfo* info);
+  static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, ::llcpp::fuchsia::io::NodeInfo info);
 
   // An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
   //
@@ -9738,7 +9696,7 @@ class DirectoryAdmin final {
   // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
   // (the same as would be returned by `Describe`).
   // Caller provides the backing storage for FIDL message via response buffers.
-  static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::NodeInfo* info);
+  static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::NodeInfo info);
 
   // An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
   //

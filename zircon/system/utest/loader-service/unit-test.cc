@@ -132,7 +132,7 @@ TEST(LoaderServiceTest, Create) {
       // Send the OnOpen event on the channel
       fuchsia::io::FileObject obj;
       fuchsia::io::NodeInfo info = fuchsia::io::NodeInfo::WithFile(&obj);
-      fuchsia::io::File::SendOnOpenEvent(zx::unowned_channel{object}, ZX_OK, &info);
+      fuchsia::io::File::SendOnOpenEvent(zx::unowned_channel{object}, ZX_OK, info);
 
       // Wire object up to a new TestFile instance
       auto file = std::make_unique<TestFile>(last_get_buffer_flags_ptr_);

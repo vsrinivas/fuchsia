@@ -78,8 +78,8 @@ class Partition final {
     int32_t status;
     ::llcpp::fuchsia::hardware::block::BlockInfo* info;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_partition_PartitionGetInfoResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_partition_PartitionGetInfoResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_partition_PartitionGetInfoResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_partition_PartitionGetInfoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 24;
@@ -98,8 +98,8 @@ class Partition final {
     int32_t status;
     ::llcpp::fuchsia::hardware::block::BlockStats* stats;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_partition_PartitionGetStatsResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_partition_PartitionGetStatsResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_partition_PartitionGetStatsResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_partition_PartitionGetStatsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 480;
@@ -115,8 +115,8 @@ class Partition final {
     fidl_message_header_t _hdr;
     bool clear;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_partition_PartitionGetStatsRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_partition_PartitionGetStatsRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_partition_PartitionGetStatsRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_partition_PartitionGetStatsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -135,8 +135,8 @@ class Partition final {
     int32_t status;
     ::zx::fifo fifo;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_partition_PartitionGetFifoResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_partition_PartitionGetFifoResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_partition_PartitionGetFifoResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_partition_PartitionGetFifoResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -155,8 +155,8 @@ class Partition final {
     int32_t status;
     ::llcpp::fuchsia::hardware::block::VmoID* vmoid;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_partition_PartitionAttachVmoResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_partition_PartitionAttachVmoResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_partition_PartitionAttachVmoResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_partition_PartitionAttachVmoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 8;
@@ -172,8 +172,8 @@ class Partition final {
     fidl_message_header_t _hdr;
     ::zx::vmo vmo;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_partition_PartitionAttachVmoRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_partition_PartitionAttachVmoRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_partition_PartitionAttachVmoRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_partition_PartitionAttachVmoRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -191,8 +191,8 @@ class Partition final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_partition_PartitionCloseFifoResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_partition_PartitionCloseFifoResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_partition_PartitionCloseFifoResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_partition_PartitionCloseFifoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -210,8 +210,8 @@ class Partition final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_partition_PartitionRebindDeviceResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_partition_PartitionRebindDeviceResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_partition_PartitionRebindDeviceResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_partition_PartitionRebindDeviceResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -230,8 +230,8 @@ class Partition final {
     int32_t status;
     ::llcpp::fuchsia::hardware::block::partition::GUID* guid;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_partition_PartitionGetTypeGuidResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_partition_PartitionGetTypeGuidResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_partition_PartitionGetTypeGuidResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_partition_PartitionGetTypeGuidResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 16;
@@ -250,8 +250,8 @@ class Partition final {
     int32_t status;
     ::llcpp::fuchsia::hardware::block::partition::GUID* guid;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_partition_PartitionGetInstanceGuidResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_partition_PartitionGetInstanceGuidResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_partition_PartitionGetInstanceGuidResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_partition_PartitionGetInstanceGuidResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 16;
@@ -270,8 +270,8 @@ class Partition final {
     int32_t status;
     ::fidl::StringView name;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_partition_PartitionGetNameResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_partition_PartitionGetNameResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_partition_PartitionGetNameResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_partition_PartitionGetNameResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 128;
@@ -952,8 +952,8 @@ extern "C" const fidl_type_t fuchsia_hardware_block_partition_GUIDTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_block_partition_GUIDTable;
 
 struct GUID {
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_block_partition_GUIDTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_block_partition_GUIDTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_block_partition_GUIDTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_block_partition_GUIDTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]

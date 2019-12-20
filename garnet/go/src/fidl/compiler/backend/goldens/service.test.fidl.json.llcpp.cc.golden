@@ -106,6 +106,7 @@ bool SecondProtocol::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
 
 void SecondProtocol::SetTransactionHeaderFor::MethodOnSecondRequest(const ::fidl::DecodedMessage<SecondProtocol::MethodOnSecondRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kSecondProtocol_MethodOnSecond_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 namespace {
@@ -206,6 +207,7 @@ bool FirstProtocol::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
 
 void FirstProtocol::SetTransactionHeaderFor::MethodOnFirstRequest(const ::fidl::DecodedMessage<FirstProtocol::MethodOnFirstRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kFirstProtocol_MethodOnFirst_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace name

@@ -46,8 +46,8 @@ class DebugData final {
     ::fidl::StringView data_sink;
     ::zx::vmo data;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_debugdata_DebugDataPublishRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_debugdata_DebugDataPublishRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_debugdata_DebugDataPublishRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_debugdata_DebugDataPublishRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 1024;
@@ -64,8 +64,8 @@ class DebugData final {
     fidl_message_header_t _hdr;
     ::zx::vmo config;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_debugdata_DebugDataLoadConfigResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_debugdata_DebugDataLoadConfigResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_debugdata_DebugDataLoadConfigResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_debugdata_DebugDataLoadConfigResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -81,8 +81,8 @@ class DebugData final {
     fidl_message_header_t _hdr;
     ::fidl::StringView config_name;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_debugdata_DebugDataLoadConfigRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_debugdata_DebugDataLoadConfigRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_debugdata_DebugDataLoadConfigRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_debugdata_DebugDataLoadConfigRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 1024;

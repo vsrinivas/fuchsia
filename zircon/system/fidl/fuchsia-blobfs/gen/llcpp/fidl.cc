@@ -168,9 +168,11 @@ void CorruptBlobHandler::Interface::CorruptBlobCompleterBase::Reply(::fidl::Deco
 
 void CorruptBlobHandler::SetTransactionHeaderFor::CorruptBlobRequest(const ::fidl::DecodedMessage<CorruptBlobHandler::CorruptBlobRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kCorruptBlobHandler_CorruptBlob_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void CorruptBlobHandler::SetTransactionHeaderFor::CorruptBlobResponse(const ::fidl::DecodedMessage<CorruptBlobHandler::CorruptBlobResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kCorruptBlobHandler_CorruptBlob_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 namespace {
@@ -328,9 +330,11 @@ void BlobfsAdmin::Interface::HandleCorruptBlobsCompleterBase::Reply(::fidl::Deco
 
 void BlobfsAdmin::SetTransactionHeaderFor::HandleCorruptBlobsRequest(const ::fidl::DecodedMessage<BlobfsAdmin::HandleCorruptBlobsRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kBlobfsAdmin_HandleCorruptBlobs_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void BlobfsAdmin::SetTransactionHeaderFor::HandleCorruptBlobsResponse(const ::fidl::DecodedMessage<BlobfsAdmin::HandleCorruptBlobsResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kBlobfsAdmin_HandleCorruptBlobs_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 namespace {
@@ -490,9 +494,11 @@ void Blobfs::Interface::GetAllocatedRegionsCompleterBase::Reply(::fidl::DecodedM
 
 void Blobfs::SetTransactionHeaderFor::GetAllocatedRegionsRequest(const ::fidl::DecodedMessage<Blobfs::GetAllocatedRegionsRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kBlobfs_GetAllocatedRegions_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Blobfs::SetTransactionHeaderFor::GetAllocatedRegionsResponse(const ::fidl::DecodedMessage<Blobfs::GetAllocatedRegionsResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kBlobfs_GetAllocatedRegions_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace blobfs

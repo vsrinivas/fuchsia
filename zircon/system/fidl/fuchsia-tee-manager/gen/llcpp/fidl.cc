@@ -129,6 +129,7 @@ bool Provider::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
 
 void Provider::SetTransactionHeaderFor::RequestPersistentStorageRequest(const ::fidl::DecodedMessage<Provider::RequestPersistentStorageRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kProvider_RequestPersistentStorage_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace manager

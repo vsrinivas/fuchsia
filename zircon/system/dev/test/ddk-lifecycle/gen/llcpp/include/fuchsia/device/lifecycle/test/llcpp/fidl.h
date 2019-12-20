@@ -33,48 +33,17 @@ struct TestDevice_AddChild_Result;
 class Lifecycle;
 class TestDevice;
 
-extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDevice_SubscribeToLifecycle_ResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDevice_SubscribeToLifecycle_ResponseTable;
-
-struct TestDevice_SubscribeToLifecycle_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_device_lifecycle_test_TestDevice_SubscribeToLifecycle_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_lifecycle_test_TestDevice_SubscribeToLifecycle_ResponseTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
-
-  uint8_t __reserved = {};
-};
-
 extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDevice_SubscribeToLifecycle_ResultTable;
 extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDevice_SubscribeToLifecycle_ResultTable;
 
 struct TestDevice_SubscribeToLifecycle_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
+  TestDevice_SubscribeToLifecycle_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
   };
 
-  TestDevice_SubscribeToLifecycle_Result();
-  ~TestDevice_SubscribeToLifecycle_Result();
-
-  TestDevice_SubscribeToLifecycle_Result(TestDevice_SubscribeToLifecycle_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  TestDevice_SubscribeToLifecycle_Result& operator=(TestDevice_SubscribeToLifecycle_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
 
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
@@ -86,21 +55,19 @@ struct TestDevice_SubscribeToLifecycle_Result {
     return result;
   }
 
-  ::llcpp::fuchsia::device::lifecycle::test::TestDevice_SubscribeToLifecycle_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::lifecycle::test::TestDevice_SubscribeToLifecycle_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
+  void set_response(::llcpp::fuchsia::device::lifecycle::test::TestDevice_SubscribeToLifecycle_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
   }
 
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::lifecycle::test::TestDevice_SubscribeToLifecycle_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
+  ::llcpp::fuchsia::device::lifecycle::test::TestDevice_SubscribeToLifecycle_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::device::lifecycle::test::TestDevice_SubscribeToLifecycle_Response*>(envelope_.data);
   }
-
-  ::llcpp::fuchsia::device::lifecycle::test::TestDevice_SubscribeToLifecycle_Response const & response() const { return response_; }
+  const ::llcpp::fuchsia::device::lifecycle::test::TestDevice_SubscribeToLifecycle_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::device::lifecycle::test::TestDevice_SubscribeToLifecycle_Response*>(envelope_.data);
+  }
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
@@ -110,96 +77,57 @@ struct TestDevice_SubscribeToLifecycle_Result {
     return result;
   }
 
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
   }
 
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
   }
-
-  int32_t const & err() const { return err_; }
-
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &fuchsia_device_lifecycle_test_TestDevice_SubscribeToLifecycle_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_lifecycle_test_TestDevice_SubscribeToLifecycle_ResultTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_lifecycle_test_TestDevice_SubscribeToLifecycle_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_lifecycle_test_TestDevice_SubscribeToLifecycle_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
+  static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr uint32_t AltPrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
   };
-
-  void Destroy();
-  void MoveImpl_(TestDevice_SubscribeToLifecycle_Result&& other);
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::device::lifecycle::test::TestDevice_SubscribeToLifecycle_Response response_;
-    int32_t err_;
-  };
-};
-
-extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDevice_RemoveChild_ResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDevice_RemoveChild_ResponseTable;
-
-struct TestDevice_RemoveChild_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_device_lifecycle_test_TestDevice_RemoveChild_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_lifecycle_test_TestDevice_RemoveChild_ResponseTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
-
-  uint8_t __reserved = {};
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
 };
 
 extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDevice_RemoveChild_ResultTable;
 extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDevice_RemoveChild_ResultTable;
 
 struct TestDevice_RemoveChild_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
+  TestDevice_RemoveChild_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
   };
 
-  TestDevice_RemoveChild_Result();
-  ~TestDevice_RemoveChild_Result();
-
-  TestDevice_RemoveChild_Result(TestDevice_RemoveChild_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  TestDevice_RemoveChild_Result& operator=(TestDevice_RemoveChild_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
 
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
@@ -211,21 +139,19 @@ struct TestDevice_RemoveChild_Result {
     return result;
   }
 
-  ::llcpp::fuchsia::device::lifecycle::test::TestDevice_RemoveChild_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::lifecycle::test::TestDevice_RemoveChild_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
+  void set_response(::llcpp::fuchsia::device::lifecycle::test::TestDevice_RemoveChild_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
   }
 
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::lifecycle::test::TestDevice_RemoveChild_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
+  ::llcpp::fuchsia::device::lifecycle::test::TestDevice_RemoveChild_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::device::lifecycle::test::TestDevice_RemoveChild_Response*>(envelope_.data);
   }
-
-  ::llcpp::fuchsia::device::lifecycle::test::TestDevice_RemoveChild_Response const & response() const { return response_; }
+  const ::llcpp::fuchsia::device::lifecycle::test::TestDevice_RemoveChild_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::device::lifecycle::test::TestDevice_RemoveChild_Response*>(envelope_.data);
+  }
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
@@ -235,96 +161,57 @@ struct TestDevice_RemoveChild_Result {
     return result;
   }
 
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
   }
 
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
   }
-
-  int32_t const & err() const { return err_; }
-
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &fuchsia_device_lifecycle_test_TestDevice_RemoveChild_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_lifecycle_test_TestDevice_RemoveChild_ResultTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_lifecycle_test_TestDevice_RemoveChild_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_lifecycle_test_TestDevice_RemoveChild_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
+  static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr uint32_t AltPrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
   };
-
-  void Destroy();
-  void MoveImpl_(TestDevice_RemoveChild_Result&& other);
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::device::lifecycle::test::TestDevice_RemoveChild_Response response_;
-    int32_t err_;
-  };
-};
-
-extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDevice_AddChild_ResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDevice_AddChild_ResponseTable;
-
-struct TestDevice_AddChild_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_device_lifecycle_test_TestDevice_AddChild_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_lifecycle_test_TestDevice_AddChild_ResponseTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
-
-  uint64_t child_id = {};
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
 };
 
 extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDevice_AddChild_ResultTable;
 extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDevice_AddChild_ResultTable;
 
 struct TestDevice_AddChild_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
+  TestDevice_AddChild_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
   };
 
-  TestDevice_AddChild_Result();
-  ~TestDevice_AddChild_Result();
-
-  TestDevice_AddChild_Result(TestDevice_AddChild_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  TestDevice_AddChild_Result& operator=(TestDevice_AddChild_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
 
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
@@ -336,21 +223,19 @@ struct TestDevice_AddChild_Result {
     return result;
   }
 
-  ::llcpp::fuchsia::device::lifecycle::test::TestDevice_AddChild_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::lifecycle::test::TestDevice_AddChild_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
+  void set_response(::llcpp::fuchsia::device::lifecycle::test::TestDevice_AddChild_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
   }
 
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::lifecycle::test::TestDevice_AddChild_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
+  ::llcpp::fuchsia::device::lifecycle::test::TestDevice_AddChild_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::device::lifecycle::test::TestDevice_AddChild_Response*>(envelope_.data);
   }
-
-  ::llcpp::fuchsia::device::lifecycle::test::TestDevice_AddChild_Response const & response() const { return response_; }
+  const ::llcpp::fuchsia::device::lifecycle::test::TestDevice_AddChild_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::device::lifecycle::test::TestDevice_AddChild_Response*>(envelope_.data);
+  }
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
@@ -360,52 +245,95 @@ struct TestDevice_AddChild_Result {
     return result;
   }
 
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
   }
 
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
   }
-
-  int32_t const & err() const { return err_; }
-
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &fuchsia_device_lifecycle_test_TestDevice_AddChild_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_lifecycle_test_TestDevice_AddChild_ResultTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_lifecycle_test_TestDevice_AddChild_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_lifecycle_test_TestDevice_AddChild_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
+  static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr uint32_t AltPrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
   };
-
-  void Destroy();
-  void MoveImpl_(TestDevice_AddChild_Result&& other);
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::device::lifecycle::test::TestDevice_AddChild_Response response_;
-    int32_t err_;
-  };
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
+extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDevice_SubscribeToLifecycle_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDevice_SubscribeToLifecycle_ResponseTable;
+
+struct TestDevice_SubscribeToLifecycle_Response {
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_lifecycle_test_TestDevice_SubscribeToLifecycle_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_lifecycle_test_TestDevice_SubscribeToLifecycle_ResponseTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
+
+  uint8_t __reserved = {};
+};
+
+extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDevice_RemoveChild_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDevice_RemoveChild_ResponseTable;
+
+struct TestDevice_RemoveChild_Response {
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_lifecycle_test_TestDevice_RemoveChild_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_lifecycle_test_TestDevice_RemoveChild_ResponseTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
+
+  uint8_t __reserved = {};
+};
+
+extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDevice_AddChild_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDevice_AddChild_ResponseTable;
+
+struct TestDevice_AddChild_Response {
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_lifecycle_test_TestDevice_AddChild_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_lifecycle_test_TestDevice_AddChild_ResponseTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 8;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 8;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
+
+  uint64_t child_id = {};
 };
 
 extern "C" const fidl_type_t fuchsia_device_lifecycle_test_LifecycleOnChildPreReleaseRequestTable;
@@ -422,8 +350,8 @@ class Lifecycle final {
     fidl_message_header_t _hdr;
     uint64_t child_id;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_lifecycle_test_LifecycleOnChildPreReleaseEventTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_lifecycle_test_LifecycleOnChildPreReleaseEventTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_lifecycle_test_LifecycleOnChildPreReleaseEventTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_lifecycle_test_LifecycleOnChildPreReleaseEventTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -571,12 +499,12 @@ class TestDevice final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::device::lifecycle::test::TestDevice_AddChild_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_lifecycle_test_TestDeviceAddChildResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_lifecycle_test_TestDeviceAddChildResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_lifecycle_test_TestDeviceAddChildResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_lifecycle_test_TestDeviceAddChildResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 8;
+    static constexpr uint32_t AltPrimarySize = 32;
     static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -590,12 +518,12 @@ class TestDevice final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::device::lifecycle::test::TestDevice_RemoveChild_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_lifecycle_test_TestDeviceRemoveChildResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_lifecycle_test_TestDeviceRemoveChildResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_lifecycle_test_TestDeviceRemoveChildResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_lifecycle_test_TestDeviceRemoveChildResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 8;
+    static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -607,8 +535,8 @@ class TestDevice final {
     fidl_message_header_t _hdr;
     uint64_t child_id;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_lifecycle_test_TestDeviceRemoveChildRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_lifecycle_test_TestDeviceRemoveChildRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_lifecycle_test_TestDeviceRemoveChildRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_lifecycle_test_TestDeviceRemoveChildRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -626,12 +554,12 @@ class TestDevice final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::device::lifecycle::test::TestDevice_SubscribeToLifecycle_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_lifecycle_test_TestDeviceSubscribeToLifecycleResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_lifecycle_test_TestDeviceSubscribeToLifecycleResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_lifecycle_test_TestDeviceSubscribeToLifecycleResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_lifecycle_test_TestDeviceSubscribeToLifecycleResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 8;
+    static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -643,8 +571,8 @@ class TestDevice final {
     fidl_message_header_t _hdr;
     ::zx::channel client;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_lifecycle_test_TestDeviceSubscribeToLifecycleRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_lifecycle_test_TestDeviceSubscribeToLifecycleRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_lifecycle_test_TestDeviceSubscribeToLifecycleRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_lifecycle_test_TestDeviceSubscribeToLifecycleRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -789,7 +717,7 @@ class TestDevice final {
     ::zx::channel* mutable_channel() { return &channel_; }
 
     // Adds a child device and returns a unique |id| for the created device.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::AddChild AddChild();
 
     // Adds a child device and returns a unique |id| for the created device.
@@ -797,7 +725,7 @@ class TestDevice final {
     UnownedResultOf::AddChild AddChild(::fidl::BytePart _response_buffer);
 
     // Removes the child device of the given |id|.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::RemoveChild RemoveChild(uint64_t child_id);
 
     // Removes the child device of the given |id|.
@@ -805,7 +733,7 @@ class TestDevice final {
     UnownedResultOf::RemoveChild RemoveChild(::fidl::BytePart _request_buffer, uint64_t child_id, ::fidl::BytePart _response_buffer);
 
     // Registers the client for device lifecycle events.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::SubscribeToLifecycle SubscribeToLifecycle(::zx::channel client);
 
     // Registers the client for device lifecycle events.
@@ -822,7 +750,7 @@ class TestDevice final {
    public:
 
     // Adds a child device and returns a unique |id| for the created device.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::AddChild AddChild(::zx::unowned_channel _client_end);
 
     // Adds a child device and returns a unique |id| for the created device.
@@ -830,7 +758,7 @@ class TestDevice final {
     static UnownedResultOf::AddChild AddChild(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Removes the child device of the given |id|.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::RemoveChild RemoveChild(::zx::unowned_channel _client_end, uint64_t child_id);
 
     // Removes the child device of the given |id|.
@@ -838,7 +766,7 @@ class TestDevice final {
     static UnownedResultOf::RemoveChild RemoveChild(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t child_id, ::fidl::BytePart _response_buffer);
 
     // Registers the client for device lifecycle events.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::SubscribeToLifecycle SubscribeToLifecycle(::zx::unowned_channel _client_end, ::zx::channel client);
 
     // Registers the client for device lifecycle events.

@@ -470,7 +470,7 @@ class VnodeRepresentation {
 // Using a callback works around LLCPP ownership limitations where an extensible union
 // cannot recursively own its variant payload.
 void ConvertToIoV1NodeInfo(VnodeRepresentation representation,
-                           fit::callback<void(llcpp::fuchsia::io::NodeInfo*)> callback);
+                           fit::callback<void(llcpp::fuchsia::io::NodeInfo)> callback);
 
 #endif  // __Fuchsia__
 

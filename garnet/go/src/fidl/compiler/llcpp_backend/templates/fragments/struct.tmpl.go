@@ -17,15 +17,15 @@ extern "C" const fidl_type_t {{ .V1TableType }};
 //{{ . }}
 {{- end}}
 struct {{ .Name }} {
-  static constexpr const fidl_type_t* Type = &{{ .TableType }};
-  static constexpr const fidl_type_t* AltType = &{{ .V1TableType }};
+  static constexpr const fidl_type_t* Type = &{{ .V1TableType }};
+  static constexpr const fidl_type_t* AltType = &{{ .TableType }};
   static constexpr uint32_t MaxNumHandles = {{ .MaxHandles }};
-  static constexpr uint32_t PrimarySize = {{ .Size }};
+  static constexpr uint32_t PrimarySize = {{ .InlineSizeV1NoEE }};
   [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = {{ .MaxOutOfLine }};
-  static constexpr uint32_t AltPrimarySize = {{ .InlineSizeV1NoEE }};
+  static constexpr uint32_t MaxOutOfLine = {{ .MaxOutOfLineV1NoEE }};
+  static constexpr uint32_t AltPrimarySize = {{ .Size }};
   [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = {{ .MaxOutOfLineV1NoEE }};
+  static constexpr uint32_t AltMaxOutOfLine = {{ .MaxOutOfLine }};
 
   {{- range .Members }}
 {{ "" }}
@@ -47,7 +47,7 @@ struct IsFidlType<{{ .Namespace }}::{{ .Name }}> : public std::true_type {};
 static_assert(std::is_standard_layout_v<{{ .Namespace }}::{{ .Name }}>);
 {{- $struct := . }}
 {{- range .Members }}
-static_assert(offsetof({{ $struct.Namespace }}::{{ $struct.Name }}, {{ .Name }}) == {{ .Offset }});
+static_assert(offsetof({{ $struct.Namespace }}::{{ $struct.Name }}, {{ .Name }}) == {{ .OffsetV1NoEE }});
 {{- end }}
 static_assert(sizeof({{ .Namespace }}::{{ .Name }}) == {{ .Namespace }}::{{ .Name }}::PrimarySize);
 {{- end }}

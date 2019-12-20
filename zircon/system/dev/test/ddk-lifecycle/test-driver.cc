@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "test-driver-child.h"
+#include "zircon/errors.h"
 
 namespace {
 
@@ -77,24 +78,17 @@ void TestLifecycleDriver::DdkChildPreRelease(void* child_ctx) {
 }
 
 void TestLifecycleDriver::AddChild(AddChildCompleter::Sync completer) {
-  ::llcpp::fuchsia::device::lifecycle::test::TestDevice_AddChild_Result result;
-
   fbl::RefPtr<TestLifecycleDriverChild> child;
   zx_status_t status = TestLifecycleDriverChild::Create(zxdev(), &child);
   if (status != ZX_OK) {
-    result.set_err(&status);
+    completer.ReplyError(status);
   } else {
     children_.push_back(child);
-    ::llcpp::fuchsia::device::lifecycle::test::TestDevice_AddChild_Response response;
-    response.child_id = zxdev_to_id(child->zxdev());
-    result.set_response(&response);
+    completer.ReplySuccess(zxdev_to_id(child->zxdev()));
   }
-  completer.Reply(std::move(result));
 }
 
 void TestLifecycleDriver::RemoveChild(uint64_t id, RemoveChildCompleter::Sync completer) {
-  ::llcpp::fuchsia::device::lifecycle::test::TestDevice_RemoveChild_Result result;
-
   bool found = false;
   for (auto& child : children_) {
     if (zxdev_to_id(child->zxdev()) == id) {
@@ -105,24 +99,20 @@ void TestLifecycleDriver::RemoveChild(uint64_t id, RemoveChildCompleter::Sync co
     }
   }
   if (!found) {
-    zx_status_t status = ZX_ERR_NOT_FOUND;
-    result.set_err(&status);
+    completer.ReplyError(ZX_ERR_NOT_FOUND);
   }
-  completer.Reply(std::move(result));
+  completer.ReplySuccess();
 }
 
 void TestLifecycleDriver::SubscribeToLifecycle(zx::channel client,
                                                SubscribeToLifecycleCompleter::Sync completer) {
-  ::llcpp::fuchsia::device::lifecycle::test::TestDevice_SubscribeToLifecycle_Result result;
-
   // Currently we only care about supporting one client.
   if (client_channel_) {
-    zx_status_t status = ZX_ERR_ALREADY_BOUND;
-    result.set_err(&status);
+    completer.ReplyError(ZX_ERR_ALREADY_BOUND);
   } else {
     client_channel_ = std::move(client);
+    completer.ReplySuccess();
   }
-  completer.Reply(std::move(result));
 }
 
 zx_status_t TestLifecycleBind(void* ctx, zx_device_t* device) {

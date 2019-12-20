@@ -129,125 +129,20 @@ bool NewDeviceProxy::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
 
 void NewDeviceProxy::SetTransactionHeaderFor::GetChannelRequest(const ::fidl::DecodedMessage<NewDeviceProxy::GetChannelRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kNewDeviceProxy_GetChannel_GenOrdinal);
-}
-
-::llcpp::fuchsia::hardware::serial::NewDevice_Write_Result::NewDevice_Write_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::hardware::serial::NewDevice_Write_Result::~NewDevice_Write_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::hardware::serial::NewDevice_Write_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~NewDevice_Write_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::hardware::serial::NewDevice_Write_Result::MoveImpl_(NewDevice_Write_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void ::llcpp::fuchsia::hardware::serial::NewDevice_Write_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::hardware::serial::NewDevice_Write_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::hardware::serial::NewDevice_Write_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::hardware::serial::NewDevice_Write_Result) == ::llcpp::fuchsia::hardware::serial::NewDevice_Write_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::hardware::serial::NewDevice_Write_Response& ::llcpp::fuchsia::hardware::serial::NewDevice_Write_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::hardware::serial::NewDevice_Write_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::hardware::serial::NewDevice_Write_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::hardware::serial::NewDevice_Read_Result::NewDevice_Read_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::hardware::serial::NewDevice_Read_Result::~NewDevice_Read_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::hardware::serial::NewDevice_Read_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~NewDevice_Read_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::hardware::serial::NewDevice_Read_Result::MoveImpl_(NewDevice_Read_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(NewDevice_Write_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(NewDevice_Write_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(NewDevice_Write_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::hardware::serial::NewDevice_Read_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::hardware::serial::NewDevice_Read_Result, response_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::hardware::serial::NewDevice_Read_Result, err_) == 8);
-  static_assert(sizeof(::llcpp::fuchsia::hardware::serial::NewDevice_Read_Result) == ::llcpp::fuchsia::hardware::serial::NewDevice_Read_Result::PrimarySize);
+  static_assert(sizeof(NewDevice_Read_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(NewDevice_Read_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(NewDevice_Read_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
-
-
-::llcpp::fuchsia::hardware::serial::NewDevice_Read_Response& ::llcpp::fuchsia::hardware::serial::NewDevice_Read_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::hardware::serial::NewDevice_Read_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::hardware::serial::NewDevice_Read_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
 
 namespace {
 
@@ -520,16 +415,20 @@ void Device::Interface::SetConfigCompleterBase::Reply(::fidl::DecodedMessage<Set
 
 void Device::SetTransactionHeaderFor::GetClassRequest(const ::fidl::DecodedMessage<Device::GetClassRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetClass_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Device::SetTransactionHeaderFor::GetClassResponse(const ::fidl::DecodedMessage<Device::GetClassResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetClass_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Device::SetTransactionHeaderFor::SetConfigRequest(const ::fidl::DecodedMessage<Device::SetConfigRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_SetConfig_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Device::SetTransactionHeaderFor::SetConfigResponse(const ::fidl::DecodedMessage<Device::SetConfigResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_SetConfig_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 namespace {
@@ -1030,16 +929,21 @@ void NewDevice::Interface::ReadCompleterBase::Reply(::fidl::DecodedMessage<ReadR
 
 void NewDevice::Interface::WriteCompleterBase::Reply(::llcpp::fuchsia::hardware::serial::NewDevice_Write_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WriteResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<WriteResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  WriteResponse _response = {};
   NewDevice::SetTransactionHeaderFor::WriteResponse(
       ::fidl::DecodedMessage<WriteResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               WriteResponse::PrimarySize,
               WriteResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(WriteResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<WriteResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void NewDevice::Interface::WriteCompleterBase::ReplySuccess() {
   NewDevice_Write_Response response;
@@ -1055,15 +959,19 @@ void NewDevice::Interface::WriteCompleterBase::Reply(::fidl::BytePart _buffer, :
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<WriteResponse*>(_buffer.data());
+  WriteResponse _response = {};
   NewDevice::SetTransactionHeaderFor::WriteResponse(
       ::fidl::DecodedMessage<WriteResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               WriteResponse::PrimarySize,
               WriteResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(WriteResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<WriteResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void NewDevice::Interface::WriteCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   NewDevice_Write_Response response;
@@ -1080,30 +988,38 @@ void NewDevice::Interface::WriteCompleterBase::Reply(::fidl::DecodedMessage<Writ
 
 void NewDevice::SetTransactionHeaderFor::GetClassRequest(const ::fidl::DecodedMessage<NewDevice::GetClassRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kNewDevice_GetClass_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void NewDevice::SetTransactionHeaderFor::GetClassResponse(const ::fidl::DecodedMessage<NewDevice::GetClassResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kNewDevice_GetClass_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void NewDevice::SetTransactionHeaderFor::SetConfigRequest(const ::fidl::DecodedMessage<NewDevice::SetConfigRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kNewDevice_SetConfig_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void NewDevice::SetTransactionHeaderFor::SetConfigResponse(const ::fidl::DecodedMessage<NewDevice::SetConfigResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kNewDevice_SetConfig_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void NewDevice::SetTransactionHeaderFor::ReadRequest(const ::fidl::DecodedMessage<NewDevice::ReadRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kNewDevice_Read_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void NewDevice::SetTransactionHeaderFor::ReadResponse(const ::fidl::DecodedMessage<NewDevice::ReadResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kNewDevice_Read_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void NewDevice::SetTransactionHeaderFor::WriteRequest(const ::fidl::DecodedMessage<NewDevice::WriteRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kNewDevice_Write_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void NewDevice::SetTransactionHeaderFor::WriteResponse(const ::fidl::DecodedMessage<NewDevice::WriteResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kNewDevice_Write_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace serial

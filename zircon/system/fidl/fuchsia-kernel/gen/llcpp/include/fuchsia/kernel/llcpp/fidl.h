@@ -465,8 +465,8 @@ extern "C" const fidl_type_t fuchsia_kernel_CpuStatsTable;
 extern "C" const fidl_type_t v1_fuchsia_kernel_CpuStatsTable;
 
 struct CpuStats {
-  static constexpr const fidl_type_t* Type = &fuchsia_kernel_CpuStatsTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_kernel_CpuStatsTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_kernel_CpuStatsTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_kernel_CpuStatsTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
@@ -497,8 +497,8 @@ class MexecBroker final {
     ::zx::vmo kernel;
     ::zx::vmo bootdata;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_kernel_MexecBrokerPerformMexecRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_kernel_MexecBrokerPerformMexecRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_kernel_MexecBrokerPerformMexecRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_kernel_MexecBrokerPerformMexecRequestTable;
     static constexpr uint32_t MaxNumHandles = 2;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -667,8 +667,8 @@ class DebugBroker final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_kernel_DebugBrokerSendDebugCommandResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_kernel_DebugBrokerSendDebugCommandResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_kernel_DebugBrokerSendDebugCommandResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_kernel_DebugBrokerSendDebugCommandResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -684,8 +684,8 @@ class DebugBroker final {
     fidl_message_header_t _hdr;
     ::fidl::StringView command;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_kernel_DebugBrokerSendDebugCommandRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_kernel_DebugBrokerSendDebugCommandRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_kernel_DebugBrokerSendDebugCommandRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_kernel_DebugBrokerSendDebugCommandRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 1024;
@@ -703,8 +703,8 @@ class DebugBroker final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_kernel_DebugBrokerSetTracingEnabledResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_kernel_DebugBrokerSetTracingEnabledResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_kernel_DebugBrokerSetTracingEnabledResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_kernel_DebugBrokerSetTracingEnabledResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -720,8 +720,8 @@ class DebugBroker final {
     fidl_message_header_t _hdr;
     bool enabled;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_kernel_DebugBrokerSetTracingEnabledRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_kernel_DebugBrokerSetTracingEnabledRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_kernel_DebugBrokerSetTracingEnabledRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_kernel_DebugBrokerSetTracingEnabledRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -982,8 +982,8 @@ class Counter final {
     int32_t status;
     ::llcpp::fuchsia::mem::Buffer buffer;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_kernel_CounterGetInspectVmoResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_kernel_CounterGetInspectVmoResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_kernel_CounterGetInspectVmoResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_kernel_CounterGetInspectVmoResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1001,8 +1001,8 @@ class Counter final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_kernel_CounterUpdateInspectVmoResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_kernel_CounterUpdateInspectVmoResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_kernel_CounterUpdateInspectVmoResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_kernel_CounterUpdateInspectVmoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1276,8 +1276,8 @@ class Stats final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::kernel::MemoryStats stats;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_kernel_StatsGetMemoryStatsResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_kernel_StatsGetMemoryStatsResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_kernel_StatsGetMemoryStatsResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_kernel_StatsGetMemoryStatsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 216;
@@ -1295,8 +1295,8 @@ class Stats final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::kernel::CpuStats stats;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_kernel_StatsGetCpuStatsResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_kernel_StatsGetCpuStatsResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_kernel_StatsGetCpuStatsResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_kernel_StatsGetCpuStatsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 192512;

@@ -114,51 +114,34 @@ zx_status_t Sgm37603a::DisableBacklight() {
 void Sgm37603a::GetStateNormalized(GetStateNormalizedCompleter::Sync completer) {
   FidlBacklight::State state = {};
   auto status = GetBacklightState(&state.backlight_on, &state.brightness);
-
-  FidlBacklight::Device_GetStateNormalized_Result result;
   if (status == ZX_OK) {
-    FidlBacklight::Device_GetStateNormalized_Response response{.state = state};
-    result.set_response(&response);
+    completer.ReplySuccess(state);
   } else {
-    result.set_err(&status);
+    completer.ReplyError(status);
   }
-  completer.Reply(std::move(result));
 }
 
 void Sgm37603a::SetStateNormalized(FidlBacklight::State state,
                                    SetStateNormalizedCompleter::Sync completer) {
   auto status = SetBacklightState(state.backlight_on, state.brightness);
-
-  FidlBacklight::Device_SetStateNormalized_Result result;
   if (status == ZX_OK) {
-    FidlBacklight::Device_SetStateNormalized_Response response;
-    result.set_response(&response);
+    completer.ReplySuccess();
   } else {
-    result.set_err(&status);
+    completer.ReplyError(status);
   }
-  completer.Reply(std::move(result));
 }
 
 void Sgm37603a::GetStateAbsolute(GetStateAbsoluteCompleter::Sync completer) {
-  FidlBacklight::Device_GetStateAbsolute_Result result;
-  zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-  result.set_err(&status);
-  completer.Reply(std::move(result));
+  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
 void Sgm37603a::SetStateAbsolute(FidlBacklight::State state,
                                  SetStateAbsoluteCompleter::Sync completer) {
-  FidlBacklight::Device_SetStateAbsolute_Result result;
-  zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-  result.set_err(&status);
-  completer.Reply(std::move(result));
+  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
 void Sgm37603a::GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessCompleter::Sync completer) {
-  FidlBacklight::Device_GetMaxAbsoluteBrightness_Result result;
-  zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-  result.set_err(&status);
-  completer.Reply(std::move(result));
+  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
 zx_status_t Sgm37603a::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {

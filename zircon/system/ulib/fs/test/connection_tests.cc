@@ -187,7 +187,7 @@ TEST_F(ConnectionTest, FileGetSetFlagsDirectory) {
     zx::channel dc1, dc2;
     ASSERT_OK(zx::channel::create(0u, &dc1, &dc2));
     ASSERT_OK(fdio_open_at(client_end.get(), "dir",
-                          fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE, dc2.release()));
+                           fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE, dc2.release()));
 
     auto dir_set_result =
         fio::File::Call::SetFlags(zx::unowned_channel(dc1), fio::OPEN_FLAG_APPEND);
@@ -202,15 +202,13 @@ TEST_F(ConnectionTest, NegotiateProtocol) {
   ASSERT_OK(ConnectClient(std::move(server_end)));
 
   // Helper method to monitor the OnOpen event, used by the tests below
-  auto expect_on_open = [](zx::unowned_channel channel, fit::function<void(fio::NodeInfo*)> cb) {
+  auto expect_on_open = [](zx::unowned_channel channel, fit::function<void(fio::NodeInfo)> cb) {
     zx_status_t event_status = fio::Node::Call::HandleEvents(std::move(channel),
                                                              fio::Node::EventHandlers{
-        .on_open = [&](zx_status_t status, fio::NodeInfo* info) {
+        .on_open = [&](zx_status_t status, fio::NodeInfo info) {
           EXPECT_OK(status);
-          EXPECT_NE(info, nullptr);
-          if (info) {
-            cb(info);
-          }
+          EXPECT_FALSE(info.has_invalid_tag());
+          cb(info);
           return ZX_OK;
         },
         .unknown = []() { return ZX_ERR_INVALID_ARGS; }
@@ -228,8 +226,8 @@ TEST_F(ConnectionTest, NegotiateProtocol) {
       zx::unowned_channel(client_end),
       fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE | fio::OPEN_FLAG_DIRECTORY, kOpenMode,
       fidl::StringView("file_or_dir"), std::move(dc2)).status());
-  expect_on_open(zx::unowned_channel(dc1), [](fio::NodeInfo* info) {
-    EXPECT_TRUE(info->is_directory());
+  expect_on_open(zx::unowned_channel(dc1), [](fio::NodeInfo info) {
+    EXPECT_TRUE(info.is_directory());
   });
 
   // Connect to polymorphic node as a file, by passing |OPEN_FLAG_NOT_DIRECTORY|.
@@ -239,8 +237,8 @@ TEST_F(ConnectionTest, NegotiateProtocol) {
       zx::unowned_channel(client_end),
       fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE | fio::OPEN_FLAG_NOT_DIRECTORY, kOpenMode,
       fidl::StringView("file_or_dir"), std::move(fc2)).status());
-  expect_on_open(zx::unowned_channel(fc1), [](fio::NodeInfo* info) {
-    EXPECT_TRUE(info->is_file());
+  expect_on_open(zx::unowned_channel(fc1), [](fio::NodeInfo info) {
+    EXPECT_TRUE(info.is_file());
   });
 }
 

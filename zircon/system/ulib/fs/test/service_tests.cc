@@ -139,9 +139,9 @@ bool TestServiceNodeIsNotDirectory() {
   EXPECT_EQ(open_result.status(), ZX_OK);
   zx_status_t event_status = fio::Node::Call::HandleEvents(zx::unowned_channel(abc_client_end),
                                                            fio::Node::EventHandlers{
-      .on_open = [](zx_status_t status, fio::NodeInfo* info) {
+      .on_open = [](zx_status_t status, fio::NodeInfo info) {
         EXPECT_EQ(ZX_ERR_NOT_DIR, status);
-        EXPECT_EQ(nullptr, info);
+        EXPECT_TRUE(info.has_invalid_tag());
         return ZX_OK;
       },
       .unknown = []() { return ZX_ERR_INVALID_ARGS; }

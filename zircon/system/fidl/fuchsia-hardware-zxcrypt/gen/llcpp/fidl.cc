@@ -287,16 +287,20 @@ void DeviceManager::Interface::SealCompleterBase::Reply(::fidl::DecodedMessage<S
 
 void DeviceManager::SetTransactionHeaderFor::UnsealRequest(const ::fidl::DecodedMessage<DeviceManager::UnsealRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceManager_Unseal_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DeviceManager::SetTransactionHeaderFor::UnsealResponse(const ::fidl::DecodedMessage<DeviceManager::UnsealResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceManager_Unseal_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DeviceManager::SetTransactionHeaderFor::SealRequest(const ::fidl::DecodedMessage<DeviceManager::SealRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceManager_Seal_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DeviceManager::SetTransactionHeaderFor::SealResponse(const ::fidl::DecodedMessage<DeviceManager::SealResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceManager_Seal_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace zxcrypt

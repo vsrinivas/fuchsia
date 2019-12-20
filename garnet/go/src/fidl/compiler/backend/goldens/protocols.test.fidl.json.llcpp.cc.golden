@@ -8,123 +8,17 @@ namespace llcpp {
 namespace test {
 namespace name {
 
-::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result::WithErrorSyntax_ResponseAsStruct_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result::~WithErrorSyntax_ResponseAsStruct_Result() {
-  Destroy();
-}
-
-void ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~WithErrorSyntax_ResponseAsStruct_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result::MoveImpl_(WithErrorSyntax_ResponseAsStruct_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
-}
-
 void ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result, response_) == 8);
-  static_assert(offsetof(::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result, err_) == 8);
-  static_assert(sizeof(::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result) == ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result::PrimarySize);
-}
-
-
-::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response& ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-uint32_t& ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) uint32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::WithErrorSyntax_ErrorAsPrimitive_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::~WithErrorSyntax_ErrorAsPrimitive_Result() {
-  Destroy();
-}
-
-void ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~WithErrorSyntax_ErrorAsPrimitive_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::MoveImpl_(WithErrorSyntax_ErrorAsPrimitive_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(WithErrorSyntax_ResponseAsStruct_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(WithErrorSyntax_ResponseAsStruct_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(WithErrorSyntax_ResponseAsStruct_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result) == ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::PrimarySize);
+  static_assert(sizeof(WithErrorSyntax_ErrorAsPrimitive_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(WithErrorSyntax_ErrorAsPrimitive_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(WithErrorSyntax_ErrorAsPrimitive_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
-
-
-::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response& ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-uint32_t& ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) uint32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
 
 namespace {
 
@@ -607,24 +501,30 @@ void ChannelProtocol::Interface::MutateSocketCompleterBase::Reply(::fidl::Decode
 
 void ChannelProtocol::SetTransactionHeaderFor::MethodARequest(const ::fidl::DecodedMessage<ChannelProtocol::MethodARequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kChannelProtocol_MethodA_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void ChannelProtocol::SetTransactionHeaderFor::EventAResponse(const ::fidl::DecodedMessage<ChannelProtocol::EventAResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kChannelProtocol_EventA_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void ChannelProtocol::SetTransactionHeaderFor::MethodBRequest(const ::fidl::DecodedMessage<ChannelProtocol::MethodBRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kChannelProtocol_MethodB_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void ChannelProtocol::SetTransactionHeaderFor::MethodBResponse(const ::fidl::DecodedMessage<ChannelProtocol::MethodBResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kChannelProtocol_MethodB_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void ChannelProtocol::SetTransactionHeaderFor::MutateSocketRequest(const ::fidl::DecodedMessage<ChannelProtocol::MutateSocketRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kChannelProtocol_MutateSocket_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void ChannelProtocol::SetTransactionHeaderFor::MutateSocketResponse(const ::fidl::DecodedMessage<ChannelProtocol::MutateSocketResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kChannelProtocol_MutateSocket_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 namespace {
@@ -1411,109 +1311,65 @@ zx_status_t WithAndWithoutRequestResponse::SendOnWithResponseEvent(::zx::unowned
 
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::NoRequestNoResponseRequest(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::NoRequestNoResponseRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kWithAndWithoutRequestResponse_NoRequestNoResponse_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::NoRequestEmptyResponseRequest(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::NoRequestEmptyResponseRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kWithAndWithoutRequestResponse_NoRequestEmptyResponse_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::NoRequestEmptyResponseResponse(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::NoRequestEmptyResponseResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kWithAndWithoutRequestResponse_NoRequestEmptyResponse_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::NoRequestWithResponseRequest(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::NoRequestWithResponseRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kWithAndWithoutRequestResponse_NoRequestWithResponse_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::NoRequestWithResponseResponse(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::NoRequestWithResponseResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kWithAndWithoutRequestResponse_NoRequestWithResponse_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::WithRequestNoResponseRequest(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::WithRequestNoResponseRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kWithAndWithoutRequestResponse_WithRequestNoResponse_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::WithRequestEmptyResponseRequest(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::WithRequestEmptyResponseRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kWithAndWithoutRequestResponse_WithRequestEmptyResponse_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::WithRequestEmptyResponseResponse(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::WithRequestEmptyResponseResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kWithAndWithoutRequestResponse_WithRequestEmptyResponse_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::WithRequestWithResponseRequest(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::WithRequestWithResponseRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kWithAndWithoutRequestResponse_WithRequestWithResponse_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::WithRequestWithResponseResponse(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::WithRequestWithResponseResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kWithAndWithoutRequestResponse_WithRequestWithResponse_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::OnEmptyResponseResponse(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::OnEmptyResponseResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kWithAndWithoutRequestResponse_OnEmptyResponse_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void WithAndWithoutRequestResponse::SetTransactionHeaderFor::OnWithResponseResponse(const ::fidl::DecodedMessage<WithAndWithoutRequestResponse::OnWithResponseResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kWithAndWithoutRequestResponse_OnWithResponse_GenOrdinal);
-}
-
-::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result::WithErrorSyntax_ErrorAsEnum_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result::~WithErrorSyntax_ErrorAsEnum_Result() {
-  Destroy();
-}
-
-void ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~WithErrorSyntax_ErrorAsEnum_Response();
-    break;
-  case Ordinal::kErr:
-    err_.~ErrorEnun();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result::MoveImpl_(WithErrorSyntax_ErrorAsEnum_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result) == ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result::PrimarySize);
+  static_assert(sizeof(WithErrorSyntax_ErrorAsEnum_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(WithErrorSyntax_ErrorAsEnum_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(WithErrorSyntax_ErrorAsEnum_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
-
-
-::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response& ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-::llcpp::test::name::ErrorEnun& ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) ::llcpp::test::name::ErrorEnun;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
 
 namespace {
 
@@ -1791,16 +1647,21 @@ bool WithErrorSyntax::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transac
 
 void WithErrorSyntax::Interface::ResponseAsStructCompleterBase::Reply(::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ResponseAsStructResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<ResponseAsStructResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  ResponseAsStructResponse _response = {};
   WithErrorSyntax::SetTransactionHeaderFor::ResponseAsStructResponse(
       ::fidl::DecodedMessage<ResponseAsStructResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               ResponseAsStructResponse::PrimarySize,
               ResponseAsStructResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ResponseAsStructResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<ResponseAsStructResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplySuccess(int64_t a, int64_t b, int64_t c) {
   WithErrorSyntax_ResponseAsStruct_Response response;
@@ -1819,15 +1680,19 @@ void WithErrorSyntax::Interface::ResponseAsStructCompleterBase::Reply(::fidl::By
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<ResponseAsStructResponse*>(_buffer.data());
+  ResponseAsStructResponse _response = {};
   WithErrorSyntax::SetTransactionHeaderFor::ResponseAsStructResponse(
       ::fidl::DecodedMessage<ResponseAsStructResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               ResponseAsStructResponse::PrimarySize,
               ResponseAsStructResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(ResponseAsStructResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<ResponseAsStructResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplySuccess(::fidl::BytePart _buffer, int64_t a, int64_t b, int64_t c) {
   WithErrorSyntax_ResponseAsStruct_Response response;
@@ -1846,16 +1711,21 @@ void WithErrorSyntax::Interface::ResponseAsStructCompleterBase::Reply(::fidl::De
 
 void WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::Reply(::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ErrorAsPrimitiveResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<ErrorAsPrimitiveResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  ErrorAsPrimitiveResponse _response = {};
   WithErrorSyntax::SetTransactionHeaderFor::ErrorAsPrimitiveResponse(
       ::fidl::DecodedMessage<ErrorAsPrimitiveResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               ErrorAsPrimitiveResponse::PrimarySize,
               ErrorAsPrimitiveResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ErrorAsPrimitiveResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<ErrorAsPrimitiveResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::ReplySuccess() {
   WithErrorSyntax_ErrorAsPrimitive_Response response;
@@ -1871,15 +1741,19 @@ void WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::Reply(::fidl::By
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<ErrorAsPrimitiveResponse*>(_buffer.data());
+  ErrorAsPrimitiveResponse _response = {};
   WithErrorSyntax::SetTransactionHeaderFor::ErrorAsPrimitiveResponse(
       ::fidl::DecodedMessage<ErrorAsPrimitiveResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               ErrorAsPrimitiveResponse::PrimarySize,
               ErrorAsPrimitiveResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(ErrorAsPrimitiveResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<ErrorAsPrimitiveResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   WithErrorSyntax_ErrorAsPrimitive_Response response;
@@ -1895,16 +1769,21 @@ void WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::Reply(::fidl::De
 
 void WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::Reply(::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ErrorAsEnumResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<ErrorAsEnumResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  ErrorAsEnumResponse _response = {};
   WithErrorSyntax::SetTransactionHeaderFor::ErrorAsEnumResponse(
       ::fidl::DecodedMessage<ErrorAsEnumResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               ErrorAsEnumResponse::PrimarySize,
               ErrorAsEnumResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ErrorAsEnumResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<ErrorAsEnumResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::ReplySuccess() {
   WithErrorSyntax_ErrorAsEnum_Response response;
@@ -1920,15 +1799,19 @@ void WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::Reply(::fidl::BytePar
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<ErrorAsEnumResponse*>(_buffer.data());
+  ErrorAsEnumResponse _response = {};
   WithErrorSyntax::SetTransactionHeaderFor::ErrorAsEnumResponse(
       ::fidl::DecodedMessage<ErrorAsEnumResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               ErrorAsEnumResponse::PrimarySize,
               ErrorAsEnumResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(ErrorAsEnumResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<ErrorAsEnumResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   WithErrorSyntax_ErrorAsEnum_Response response;
@@ -1945,23 +1828,29 @@ void WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::Reply(::fidl::Decoded
 
 void WithErrorSyntax::SetTransactionHeaderFor::ResponseAsStructRequest(const ::fidl::DecodedMessage<WithErrorSyntax::ResponseAsStructRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kWithErrorSyntax_ResponseAsStruct_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void WithErrorSyntax::SetTransactionHeaderFor::ResponseAsStructResponse(const ::fidl::DecodedMessage<WithErrorSyntax::ResponseAsStructResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kWithErrorSyntax_ResponseAsStruct_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void WithErrorSyntax::SetTransactionHeaderFor::ErrorAsPrimitiveRequest(const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsPrimitiveRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kWithErrorSyntax_ErrorAsPrimitive_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void WithErrorSyntax::SetTransactionHeaderFor::ErrorAsPrimitiveResponse(const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsPrimitiveResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kWithErrorSyntax_ErrorAsPrimitive_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void WithErrorSyntax::SetTransactionHeaderFor::ErrorAsEnumRequest(const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsEnumRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kWithErrorSyntax_ErrorAsEnum_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void WithErrorSyntax::SetTransactionHeaderFor::ErrorAsEnumResponse(const ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsEnumResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kWithErrorSyntax_ErrorAsEnum_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace name

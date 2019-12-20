@@ -286,253 +286,45 @@ void Provider::Interface::OpenControllerCompleterBase::Reply(::fidl::DecodedMess
 
 void Provider::SetTransactionHeaderFor::OpenVirtconControllerRequest(const ::fidl::DecodedMessage<Provider::OpenVirtconControllerRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kProvider_OpenVirtconController_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Provider::SetTransactionHeaderFor::OpenVirtconControllerResponse(const ::fidl::DecodedMessage<Provider::OpenVirtconControllerResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kProvider_OpenVirtconController_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Provider::SetTransactionHeaderFor::OpenControllerRequest(const ::fidl::DecodedMessage<Provider::OpenControllerRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kProvider_OpenController_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Provider::SetTransactionHeaderFor::OpenControllerResponse(const ::fidl::DecodedMessage<Provider::OpenControllerResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kProvider_OpenController_GenOrdinal);
-}
-
-::llcpp::fuchsia::hardware::display::Controller_StartCapture_Result::Controller_StartCapture_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::hardware::display::Controller_StartCapture_Result::~Controller_StartCapture_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~Controller_StartCapture_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Result::MoveImpl_(Controller_StartCapture_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::hardware::display::Controller_StartCapture_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::hardware::display::Controller_StartCapture_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::hardware::display::Controller_StartCapture_Result) == ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::hardware::display::Controller_StartCapture_Response& ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Result::Controller_ReleaseCapture_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Result::~Controller_ReleaseCapture_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~Controller_ReleaseCapture_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Result::MoveImpl_(Controller_ReleaseCapture_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(Controller_StartCapture_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(Controller_StartCapture_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(Controller_StartCapture_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Result) == ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Response& ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result::Controller_IsCaptureSupported_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result::~Controller_IsCaptureSupported_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~Controller_IsCaptureSupported_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result::MoveImpl_(Controller_IsCaptureSupported_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(Controller_ReleaseCapture_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(Controller_ReleaseCapture_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(Controller_ReleaseCapture_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result) == ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Response& ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Result::Controller_ImportImageForCapture_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Result::~Controller_ImportImageForCapture_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~Controller_ImportImageForCapture_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Result::MoveImpl_(Controller_ImportImageForCapture_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(Controller_IsCaptureSupported_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(Controller_IsCaptureSupported_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(Controller_IsCaptureSupported_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Result, response_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Result, err_) == 8);
-  static_assert(sizeof(::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Result) == ::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Result::PrimarySize);
+  static_assert(sizeof(Controller_ImportImageForCapture_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(Controller_ImportImageForCapture_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(Controller_ImportImageForCapture_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
-
-
-::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Response& ::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
 
 namespace {
 
@@ -3537,16 +3329,21 @@ void Controller::Interface::GetSingleBufferFramebufferCompleterBase::Reply(::fid
 
 void Controller::Interface::IsCaptureSupportedCompleterBase::Reply(::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<IsCaptureSupportedResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<IsCaptureSupportedResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  IsCaptureSupportedResponse _response = {};
   Controller::SetTransactionHeaderFor::IsCaptureSupportedResponse(
       ::fidl::DecodedMessage<IsCaptureSupportedResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               IsCaptureSupportedResponse::PrimarySize,
               IsCaptureSupportedResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(IsCaptureSupportedResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<IsCaptureSupportedResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Controller::Interface::IsCaptureSupportedCompleterBase::ReplySuccess(bool supported) {
   Controller_IsCaptureSupported_Response response;
@@ -3563,15 +3360,19 @@ void Controller::Interface::IsCaptureSupportedCompleterBase::Reply(::fidl::ByteP
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<IsCaptureSupportedResponse*>(_buffer.data());
+  IsCaptureSupportedResponse _response = {};
   Controller::SetTransactionHeaderFor::IsCaptureSupportedResponse(
       ::fidl::DecodedMessage<IsCaptureSupportedResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               IsCaptureSupportedResponse::PrimarySize,
               IsCaptureSupportedResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(IsCaptureSupportedResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<IsCaptureSupportedResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Controller::Interface::IsCaptureSupportedCompleterBase::ReplySuccess(::fidl::BytePart _buffer, bool supported) {
   Controller_IsCaptureSupported_Response response;
@@ -3588,16 +3389,21 @@ void Controller::Interface::IsCaptureSupportedCompleterBase::Reply(::fidl::Decod
 
 void Controller::Interface::ImportImageForCaptureCompleterBase::Reply(::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ImportImageForCaptureResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<ImportImageForCaptureResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  ImportImageForCaptureResponse _response = {};
   Controller::SetTransactionHeaderFor::ImportImageForCaptureResponse(
       ::fidl::DecodedMessage<ImportImageForCaptureResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               ImportImageForCaptureResponse::PrimarySize,
               ImportImageForCaptureResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ImportImageForCaptureResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<ImportImageForCaptureResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Controller::Interface::ImportImageForCaptureCompleterBase::ReplySuccess(uint64_t image_id) {
   Controller_ImportImageForCapture_Response response;
@@ -3614,15 +3420,19 @@ void Controller::Interface::ImportImageForCaptureCompleterBase::Reply(::fidl::By
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<ImportImageForCaptureResponse*>(_buffer.data());
+  ImportImageForCaptureResponse _response = {};
   Controller::SetTransactionHeaderFor::ImportImageForCaptureResponse(
       ::fidl::DecodedMessage<ImportImageForCaptureResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               ImportImageForCaptureResponse::PrimarySize,
               ImportImageForCaptureResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(ImportImageForCaptureResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<ImportImageForCaptureResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Controller::Interface::ImportImageForCaptureCompleterBase::ReplySuccess(::fidl::BytePart _buffer, uint64_t image_id) {
   Controller_ImportImageForCapture_Response response;
@@ -3639,16 +3449,21 @@ void Controller::Interface::ImportImageForCaptureCompleterBase::Reply(::fidl::De
 
 void Controller::Interface::StartCaptureCompleterBase::Reply(::llcpp::fuchsia::hardware::display::Controller_StartCapture_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<StartCaptureResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<StartCaptureResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  StartCaptureResponse _response = {};
   Controller::SetTransactionHeaderFor::StartCaptureResponse(
       ::fidl::DecodedMessage<StartCaptureResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               StartCaptureResponse::PrimarySize,
               StartCaptureResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(StartCaptureResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<StartCaptureResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Controller::Interface::StartCaptureCompleterBase::ReplySuccess() {
   Controller_StartCapture_Response response;
@@ -3664,15 +3479,19 @@ void Controller::Interface::StartCaptureCompleterBase::Reply(::fidl::BytePart _b
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<StartCaptureResponse*>(_buffer.data());
+  StartCaptureResponse _response = {};
   Controller::SetTransactionHeaderFor::StartCaptureResponse(
       ::fidl::DecodedMessage<StartCaptureResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               StartCaptureResponse::PrimarySize,
               StartCaptureResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(StartCaptureResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<StartCaptureResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Controller::Interface::StartCaptureCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Controller_StartCapture_Response response;
@@ -3688,16 +3507,21 @@ void Controller::Interface::StartCaptureCompleterBase::Reply(::fidl::DecodedMess
 
 void Controller::Interface::ReleaseCaptureCompleterBase::Reply(::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReleaseCaptureResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<ReleaseCaptureResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  ReleaseCaptureResponse _response = {};
   Controller::SetTransactionHeaderFor::ReleaseCaptureResponse(
       ::fidl::DecodedMessage<ReleaseCaptureResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               ReleaseCaptureResponse::PrimarySize,
               ReleaseCaptureResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ReleaseCaptureResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<ReleaseCaptureResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Controller::Interface::ReleaseCaptureCompleterBase::ReplySuccess() {
   Controller_ReleaseCapture_Response response;
@@ -3713,15 +3537,19 @@ void Controller::Interface::ReleaseCaptureCompleterBase::Reply(::fidl::BytePart 
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<ReleaseCaptureResponse*>(_buffer.data());
+  ReleaseCaptureResponse _response = {};
   Controller::SetTransactionHeaderFor::ReleaseCaptureResponse(
       ::fidl::DecodedMessage<ReleaseCaptureResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               ReleaseCaptureResponse::PrimarySize,
               ReleaseCaptureResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(ReleaseCaptureResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<ReleaseCaptureResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Controller::Interface::ReleaseCaptureCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Controller_ReleaseCapture_Response response;
@@ -3738,163 +3566,206 @@ void Controller::Interface::ReleaseCaptureCompleterBase::Reply(::fidl::DecodedMe
 
 void Controller::SetTransactionHeaderFor::DisplaysChangedResponse(const ::fidl::DecodedMessage<Controller::DisplaysChangedResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_DisplaysChanged_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::ImportVmoImageRequest(const ::fidl::DecodedMessage<Controller::ImportVmoImageRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_ImportVmoImage_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Controller::SetTransactionHeaderFor::ImportVmoImageResponse(const ::fidl::DecodedMessage<Controller::ImportVmoImageResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_ImportVmoImage_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::ImportImageRequest(const ::fidl::DecodedMessage<Controller::ImportImageRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_ImportImage_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Controller::SetTransactionHeaderFor::ImportImageResponse(const ::fidl::DecodedMessage<Controller::ImportImageResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_ImportImage_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::ReleaseImageRequest(const ::fidl::DecodedMessage<Controller::ReleaseImageRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_ReleaseImage_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::ImportEventRequest(const ::fidl::DecodedMessage<Controller::ImportEventRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_ImportEvent_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::ReleaseEventRequest(const ::fidl::DecodedMessage<Controller::ReleaseEventRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_ReleaseEvent_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::CreateLayerRequest(const ::fidl::DecodedMessage<Controller::CreateLayerRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_CreateLayer_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Controller::SetTransactionHeaderFor::CreateLayerResponse(const ::fidl::DecodedMessage<Controller::CreateLayerResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_CreateLayer_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::DestroyLayerRequest(const ::fidl::DecodedMessage<Controller::DestroyLayerRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_DestroyLayer_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::SetDisplayModeRequest(const ::fidl::DecodedMessage<Controller::SetDisplayModeRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_SetDisplayMode_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::SetDisplayColorConversionRequest(const ::fidl::DecodedMessage<Controller::SetDisplayColorConversionRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_SetDisplayColorConversion_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::SetDisplayLayersRequest(const ::fidl::DecodedMessage<Controller::SetDisplayLayersRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_SetDisplayLayers_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::SetLayerPrimaryConfigRequest(const ::fidl::DecodedMessage<Controller::SetLayerPrimaryConfigRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_SetLayerPrimaryConfig_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::SetLayerPrimaryPositionRequest(const ::fidl::DecodedMessage<Controller::SetLayerPrimaryPositionRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_SetLayerPrimaryPosition_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::SetLayerPrimaryAlphaRequest(const ::fidl::DecodedMessage<Controller::SetLayerPrimaryAlphaRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_SetLayerPrimaryAlpha_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::SetLayerCursorConfigRequest(const ::fidl::DecodedMessage<Controller::SetLayerCursorConfigRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_SetLayerCursorConfig_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::SetLayerCursorPositionRequest(const ::fidl::DecodedMessage<Controller::SetLayerCursorPositionRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_SetLayerCursorPosition_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::SetLayerColorConfigRequest(const ::fidl::DecodedMessage<Controller::SetLayerColorConfigRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_SetLayerColorConfig_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::SetLayerImageRequest(const ::fidl::DecodedMessage<Controller::SetLayerImageRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_SetLayerImage_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::CheckConfigRequest(const ::fidl::DecodedMessage<Controller::CheckConfigRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_CheckConfig_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Controller::SetTransactionHeaderFor::CheckConfigResponse(const ::fidl::DecodedMessage<Controller::CheckConfigResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_CheckConfig_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::ApplyConfigRequest(const ::fidl::DecodedMessage<Controller::ApplyConfigRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_ApplyConfig_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::EnableVsyncRequest(const ::fidl::DecodedMessage<Controller::EnableVsyncRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_EnableVsync_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::VsyncResponse(const ::fidl::DecodedMessage<Controller::VsyncResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_Vsync_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::SetVirtconModeRequest(const ::fidl::DecodedMessage<Controller::SetVirtconModeRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_SetVirtconMode_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::ClientOwnershipChangeResponse(const ::fidl::DecodedMessage<Controller::ClientOwnershipChangeResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_ClientOwnershipChange_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::ImportBufferCollectionRequest(const ::fidl::DecodedMessage<Controller::ImportBufferCollectionRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_ImportBufferCollection_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Controller::SetTransactionHeaderFor::ImportBufferCollectionResponse(const ::fidl::DecodedMessage<Controller::ImportBufferCollectionResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_ImportBufferCollection_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::ReleaseBufferCollectionRequest(const ::fidl::DecodedMessage<Controller::ReleaseBufferCollectionRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_ReleaseBufferCollection_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::SetBufferCollectionConstraintsRequest(const ::fidl::DecodedMessage<Controller::SetBufferCollectionConstraintsRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_SetBufferCollectionConstraints_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Controller::SetTransactionHeaderFor::SetBufferCollectionConstraintsResponse(const ::fidl::DecodedMessage<Controller::SetBufferCollectionConstraintsResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_SetBufferCollectionConstraints_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::GetSingleBufferFramebufferRequest(const ::fidl::DecodedMessage<Controller::GetSingleBufferFramebufferRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetSingleBufferFramebuffer_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Controller::SetTransactionHeaderFor::GetSingleBufferFramebufferResponse(const ::fidl::DecodedMessage<Controller::GetSingleBufferFramebufferResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetSingleBufferFramebuffer_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::IsCaptureSupportedRequest(const ::fidl::DecodedMessage<Controller::IsCaptureSupportedRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_IsCaptureSupported_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Controller::SetTransactionHeaderFor::IsCaptureSupportedResponse(const ::fidl::DecodedMessage<Controller::IsCaptureSupportedResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_IsCaptureSupported_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::ImportImageForCaptureRequest(const ::fidl::DecodedMessage<Controller::ImportImageForCaptureRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_ImportImageForCapture_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Controller::SetTransactionHeaderFor::ImportImageForCaptureResponse(const ::fidl::DecodedMessage<Controller::ImportImageForCaptureResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_ImportImageForCapture_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::StartCaptureRequest(const ::fidl::DecodedMessage<Controller::StartCaptureRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_StartCapture_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Controller::SetTransactionHeaderFor::StartCaptureResponse(const ::fidl::DecodedMessage<Controller::StartCaptureResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_StartCapture_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::ReleaseCaptureRequest(const ::fidl::DecodedMessage<Controller::ReleaseCaptureRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_ReleaseCapture_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Controller::SetTransactionHeaderFor::ReleaseCaptureResponse(const ::fidl::DecodedMessage<Controller::ReleaseCaptureResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_ReleaseCapture_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace display

@@ -101,6 +101,174 @@ struct BufferUsage;
 struct BufferCollectionConstraints;
 class BufferCollection;
 
+extern "C" const fidl_type_t fuchsia_sysmem_SecureMem_SetPhysicalSecureHeaps_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_sysmem_SecureMem_SetPhysicalSecureHeaps_ResultTable;
+
+struct SecureMem_SetPhysicalSecureHeaps_Result {
+  SecureMem_SetPhysicalSecureHeaps_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static SecureMem_SetPhysicalSecureHeaps_Result WithResponse(::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response* val) {
+    SecureMem_SetPhysicalSecureHeaps_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static SecureMem_SetPhysicalSecureHeaps_Result WithErr(int32_t* val) {
+    SecureMem_SetPhysicalSecureHeaps_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_SecureMem_SetPhysicalSecureHeaps_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_SecureMem_SetPhysicalSecureHeaps_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
+extern "C" const fidl_type_t fuchsia_sysmem_SecureMem_GetPhysicalSecureHeaps_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_sysmem_SecureMem_GetPhysicalSecureHeaps_ResultTable;
+
+struct SecureMem_GetPhysicalSecureHeaps_Result {
+  SecureMem_GetPhysicalSecureHeaps_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static SecureMem_GetPhysicalSecureHeaps_Result WithResponse(::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response* val) {
+    SecureMem_GetPhysicalSecureHeaps_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static SecureMem_GetPhysicalSecureHeaps_Result WithErr(int32_t* val) {
+    SecureMem_GetPhysicalSecureHeaps_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_SecureMem_GetPhysicalSecureHeaps_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_SecureMem_GetPhysicalSecureHeaps_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 776;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 776;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
 constexpr uint32_t vulkanUsageTransientAttachment = 64u;
 
 constexpr uint32_t vulkanUsageTransferSrc = 1u;
@@ -147,8 +315,8 @@ extern "C" const fidl_type_t fuchsia_sysmem_VmoBufferTable;
 extern "C" const fidl_type_t v1_fuchsia_sysmem_VmoBufferTable;
 
 struct VmoBuffer {
-  static constexpr const fidl_type_t* Type = &fuchsia_sysmem_VmoBufferTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_VmoBufferTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_VmoBufferTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_VmoBufferTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
@@ -201,8 +369,8 @@ class BufferCollectionToken final {
     uint32_t rights_attenuation_mask;
     ::zx::channel token_request;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_sysmem_BufferCollectionTokenDuplicateRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_BufferCollectionTokenDuplicateRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_BufferCollectionTokenDuplicateRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_BufferCollectionTokenDuplicateRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -819,8 +987,8 @@ class Heap final {
     int32_t s;
     ::zx::vmo vmo;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_sysmem_HeapAllocateVmoResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_HeapAllocateVmoResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_HeapAllocateVmoResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_HeapAllocateVmoResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -836,8 +1004,8 @@ class Heap final {
     fidl_message_header_t _hdr;
     uint64_t size;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_sysmem_HeapAllocateVmoRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_HeapAllocateVmoRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_HeapAllocateVmoRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_HeapAllocateVmoRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -856,8 +1024,8 @@ class Heap final {
     int32_t s;
     uint64_t id;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_sysmem_HeapCreateResourceResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_HeapCreateResourceResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_HeapCreateResourceResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_HeapCreateResourceResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -873,8 +1041,8 @@ class Heap final {
     fidl_message_header_t _hdr;
     ::zx::vmo vmo;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_sysmem_HeapCreateResourceRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_HeapCreateResourceRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_HeapCreateResourceRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_HeapCreateResourceRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -893,8 +1061,8 @@ class Heap final {
     fidl_message_header_t _hdr;
     uint64_t id;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_sysmem_HeapDestroyResourceRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_HeapDestroyResourceRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_HeapDestroyResourceRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_HeapDestroyResourceRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1386,8 +1554,8 @@ class DriverConnector final {
     fidl_message_header_t _hdr;
     ::zx::channel allocator_request;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_sysmem_DriverConnectorConnectRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_DriverConnectorConnectRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_DriverConnectorConnectRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_DriverConnectorConnectRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1571,8 +1739,8 @@ class Allocator final {
     fidl_message_header_t _hdr;
     ::zx::channel collection;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_sysmem_AllocatorAllocateNonSharedCollectionRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_AllocatorAllocateNonSharedCollectionRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_AllocatorAllocateNonSharedCollectionRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_AllocatorAllocateNonSharedCollectionRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1589,8 +1757,8 @@ class Allocator final {
     fidl_message_header_t _hdr;
     ::zx::channel token_request;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_sysmem_AllocatorAllocateSharedCollectionRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_AllocatorAllocateSharedCollectionRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_AllocatorAllocateSharedCollectionRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_AllocatorAllocateSharedCollectionRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1608,8 +1776,8 @@ class Allocator final {
     ::zx::channel token;
     ::zx::channel buffer_collection_request;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_sysmem_AllocatorBindSharedCollectionRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_AllocatorBindSharedCollectionRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_AllocatorBindSharedCollectionRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_AllocatorBindSharedCollectionRequestTable;
     static constexpr uint32_t MaxNumHandles = 2;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2073,8 +2241,8 @@ extern "C" const fidl_type_t fuchsia_sysmem_SecureMem_SetPhysicalSecureHeaps_Res
 extern "C" const fidl_type_t v1_fuchsia_sysmem_SecureMem_SetPhysicalSecureHeaps_ResponseTable;
 
 struct SecureMem_SetPhysicalSecureHeaps_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_sysmem_SecureMem_SetPhysicalSecureHeaps_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_SecureMem_SetPhysicalSecureHeaps_ResponseTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_SecureMem_SetPhysicalSecureHeaps_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_SecureMem_SetPhysicalSecureHeaps_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -2086,122 +2254,14 @@ struct SecureMem_SetPhysicalSecureHeaps_Response {
   uint8_t __reserved = {};
 };
 
-extern "C" const fidl_type_t fuchsia_sysmem_SecureMem_SetPhysicalSecureHeaps_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_sysmem_SecureMem_SetPhysicalSecureHeaps_ResultTable;
-
-struct SecureMem_SetPhysicalSecureHeaps_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-  };
-
-  SecureMem_SetPhysicalSecureHeaps_Result();
-  ~SecureMem_SetPhysicalSecureHeaps_Result();
-
-  SecureMem_SetPhysicalSecureHeaps_Result(SecureMem_SetPhysicalSecureHeaps_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  SecureMem_SetPhysicalSecureHeaps_Result& operator=(SecureMem_SetPhysicalSecureHeaps_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
-
-  static SecureMem_SetPhysicalSecureHeaps_Result WithResponse(::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response* val) {
-    SecureMem_SetPhysicalSecureHeaps_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response const & response() const { return response_; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static SecureMem_SetPhysicalSecureHeaps_Result WithErr(int32_t* val) {
-    SecureMem_SetPhysicalSecureHeaps_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  int32_t const & err() const { return err_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_sysmem_SecureMem_SetPhysicalSecureHeaps_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_SecureMem_SetPhysicalSecureHeaps_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(SecureMem_SetPhysicalSecureHeaps_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response response_;
-    int32_t err_;
-  };
-};
-
 constexpr uint32_t MAX_HEAPS_COUNT = 32u;
 
 extern "C" const fidl_type_t fuchsia_sysmem_ImagePlaneTable;
 extern "C" const fidl_type_t v1_fuchsia_sysmem_ImagePlaneTable;
 
 struct ImagePlane {
-  static constexpr const fidl_type_t* Type = &fuchsia_sysmem_ImagePlaneTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_ImagePlaneTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_ImagePlaneTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_ImagePlaneTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
@@ -2222,8 +2282,8 @@ extern "C" const fidl_type_t fuchsia_sysmem_PhysicalSecureHeapTable;
 extern "C" const fidl_type_t v1_fuchsia_sysmem_PhysicalSecureHeapTable;
 
 struct PhysicalSecureHeap {
-  static constexpr const fidl_type_t* Type = &fuchsia_sysmem_PhysicalSecureHeapTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_PhysicalSecureHeapTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_PhysicalSecureHeapTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_PhysicalSecureHeapTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
@@ -2246,8 +2306,8 @@ extern "C" const fidl_type_t fuchsia_sysmem_PhysicalSecureHeapsTable;
 extern "C" const fidl_type_t v1_fuchsia_sysmem_PhysicalSecureHeapsTable;
 
 struct PhysicalSecureHeaps {
-  static constexpr const fidl_type_t* Type = &fuchsia_sysmem_PhysicalSecureHeapsTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_PhysicalSecureHeapsTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_PhysicalSecureHeapsTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_PhysicalSecureHeapsTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 776;
   [[maybe_unused]]
@@ -2267,8 +2327,8 @@ extern "C" const fidl_type_t fuchsia_sysmem_SecureMem_GetPhysicalSecureHeaps_Res
 extern "C" const fidl_type_t v1_fuchsia_sysmem_SecureMem_GetPhysicalSecureHeaps_ResponseTable;
 
 struct SecureMem_GetPhysicalSecureHeaps_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_sysmem_SecureMem_GetPhysicalSecureHeaps_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_SecureMem_GetPhysicalSecureHeaps_ResponseTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_SecureMem_GetPhysicalSecureHeaps_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_SecureMem_GetPhysicalSecureHeaps_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 776;
   [[maybe_unused]]
@@ -2278,114 +2338,6 @@ struct SecureMem_GetPhysicalSecureHeaps_Response {
   static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::llcpp::fuchsia::sysmem::PhysicalSecureHeaps heaps = {};
-};
-
-extern "C" const fidl_type_t fuchsia_sysmem_SecureMem_GetPhysicalSecureHeaps_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_sysmem_SecureMem_GetPhysicalSecureHeaps_ResultTable;
-
-struct SecureMem_GetPhysicalSecureHeaps_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-  };
-
-  SecureMem_GetPhysicalSecureHeaps_Result();
-  ~SecureMem_GetPhysicalSecureHeaps_Result();
-
-  SecureMem_GetPhysicalSecureHeaps_Result(SecureMem_GetPhysicalSecureHeaps_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  SecureMem_GetPhysicalSecureHeaps_Result& operator=(SecureMem_GetPhysicalSecureHeaps_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
-
-  static SecureMem_GetPhysicalSecureHeaps_Result WithResponse(::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response* val) {
-    SecureMem_GetPhysicalSecureHeaps_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response const & response() const { return response_; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static SecureMem_GetPhysicalSecureHeaps_Result WithErr(int32_t* val) {
-    SecureMem_GetPhysicalSecureHeaps_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  int32_t const & err() const { return err_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_sysmem_SecureMem_GetPhysicalSecureHeaps_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_SecureMem_GetPhysicalSecureHeaps_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 784;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 776;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(SecureMem_GetPhysicalSecureHeaps_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response response_;
-    int32_t err_;
-  };
 };
 
 extern "C" const fidl_type_t fuchsia_sysmem_SecureMemGetPhysicalSecureHeapsRequestTable;
@@ -2424,12 +2376,12 @@ class SecureMem final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_sysmem_SecureMemGetPhysicalSecureHeapsResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_SecureMemGetPhysicalSecureHeapsResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_SecureMemGetPhysicalSecureHeapsResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_SecureMemGetPhysicalSecureHeapsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 800;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 776;
+    static constexpr uint32_t AltPrimarySize = 800;
     static constexpr uint32_t AltMaxOutOfLine = 776;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -2443,12 +2395,12 @@ class SecureMem final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_sysmem_SecureMemSetPhysicalSecureHeapsResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_SecureMemSetPhysicalSecureHeapsResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_SecureMemSetPhysicalSecureHeapsResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_SecureMemSetPhysicalSecureHeapsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 8;
+    static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -2460,8 +2412,8 @@ class SecureMem final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::sysmem::PhysicalSecureHeaps heaps;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_sysmem_SecureMemSetPhysicalSecureHeapsRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_SecureMemSetPhysicalSecureHeapsRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_SecureMemSetPhysicalSecureHeapsRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_SecureMemSetPhysicalSecureHeapsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 792;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2653,7 +2605,7 @@ class SecureMem final {
     //    with TEE which doesn't generate zx_status_t errors).
     //  * other errors are possible, such as from communication failures or
     //    server propagation of zx_status_t failures
-    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
+    // Allocates 32 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::SetPhysicalSecureHeaps SetPhysicalSecureHeaps(::llcpp::fuchsia::sysmem::PhysicalSecureHeaps heaps);
 
     // This request from sysmem to the securemem driver lets the TEE know the
@@ -2784,7 +2736,7 @@ class SecureMem final {
     //    with TEE which doesn't generate zx_status_t errors).
     //  * other errors are possible, such as from communication failures or
     //    server propagation of zx_status_t failures
-    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
+    // Allocates 32 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::SetPhysicalSecureHeaps SetPhysicalSecureHeaps(::zx::unowned_channel _client_end, ::llcpp::fuchsia::sysmem::PhysicalSecureHeaps heaps);
 
     // This request from sysmem to the securemem driver lets the TEE know the
@@ -2971,8 +2923,8 @@ extern "C" const fidl_type_t fuchsia_sysmem_BufferMemoryConstraintsTable;
 extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferMemoryConstraintsTable;
 
 struct BufferMemoryConstraints {
-  static constexpr const fidl_type_t* Type = &fuchsia_sysmem_BufferMemoryConstraintsTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_BufferMemoryConstraintsTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_BufferMemoryConstraintsTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_BufferMemoryConstraintsTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 280;
   [[maybe_unused]]
@@ -3017,8 +2969,8 @@ extern "C" const fidl_type_t fuchsia_sysmem_FormatModifierTable;
 extern "C" const fidl_type_t v1_fuchsia_sysmem_FormatModifierTable;
 
 struct FormatModifier {
-  static constexpr const fidl_type_t* Type = &fuchsia_sysmem_FormatModifierTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_FormatModifierTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_FormatModifierTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_FormatModifierTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
@@ -3042,8 +2994,8 @@ extern "C" const fidl_type_t v1_fuchsia_sysmem_PixelFormatTable;
 // Simple formats need only a type.
 // Parametric pixel formats may require additional properties.
 struct PixelFormat {
-  static constexpr const fidl_type_t* Type = &fuchsia_sysmem_PixelFormatTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_PixelFormatTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_PixelFormatTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_PixelFormatTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
@@ -3104,8 +3056,8 @@ extern "C" const fidl_type_t v1_fuchsia_sysmem_ColorSpaceTable;
 // Simple color spaces need only a type.
 // Parametric color spaces may require additional properties.
 struct ColorSpace {
-  static constexpr const fidl_type_t* Type = &fuchsia_sysmem_ColorSpaceTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_ColorSpaceTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_ColorSpaceTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_ColorSpaceTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
@@ -3122,8 +3074,8 @@ extern "C" const fidl_type_t v1_fuchsia_sysmem_ImageSpecTable;
 
 // Describes constraints for allocating images of some desired form.
 struct ImageSpec {
-  static constexpr const fidl_type_t* Type = &fuchsia_sysmem_ImageSpecTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_ImageSpecTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_ImageSpecTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_ImageSpecTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 40;
   [[maybe_unused]]
@@ -3154,8 +3106,8 @@ extern "C" const fidl_type_t v1_fuchsia_sysmem_ImageFormat_2Table;
 
 // Describes how an image is represented.
 struct ImageFormat_2 {
-  static constexpr const fidl_type_t* Type = &fuchsia_sysmem_ImageFormat_2Table;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_ImageFormat_2Table;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_ImageFormat_2Table;
+  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_ImageFormat_2Table;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 56;
   [[maybe_unused]]
@@ -3217,8 +3169,8 @@ extern "C" const fidl_type_t v1_fuchsia_sysmem_ImageFormatConstraintsTable;
 
 // Describes constraints on layout of image data in buffers.
 struct ImageFormatConstraints {
-  static constexpr const fidl_type_t* Type = &fuchsia_sysmem_ImageFormatConstraintsTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_ImageFormatConstraintsTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_ImageFormatConstraintsTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_ImageFormatConstraintsTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 232;
   [[maybe_unused]]
@@ -3365,8 +3317,8 @@ extern "C" const fidl_type_t v1_fuchsia_sysmem_ImageFormatTable;
 
 // Describes how an image is represented.
 struct ImageFormat {
-  static constexpr const fidl_type_t* Type = &fuchsia_sysmem_ImageFormatTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_ImageFormatTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_ImageFormatTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_ImageFormatTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 72;
   [[maybe_unused]]
@@ -3400,8 +3352,8 @@ extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferFormatTable;
 // Describes how the contents of buffers are represented.
 // Buffers of each type are described by their own tables.
 struct BufferFormat {
-  static constexpr const fidl_type_t* Type = &fuchsia_sysmem_BufferFormatTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_BufferFormatTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_BufferFormatTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_BufferFormatTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 80;
   [[maybe_unused]]
@@ -3423,8 +3375,8 @@ extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferCollectionInfoTable;
 
 // Information about a buffer collection and its buffers.
 struct BufferCollectionInfo {
-  static constexpr const fidl_type_t* Type = &fuchsia_sysmem_BufferCollectionInfoTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_BufferCollectionInfoTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_BufferCollectionInfoTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_BufferCollectionInfoTable;
   static constexpr uint32_t MaxNumHandles = 64;
   static constexpr uint32_t PrimarySize = 352;
   [[maybe_unused]]
@@ -3460,8 +3412,8 @@ extern "C" const fidl_type_t fuchsia_sysmem_BufferMemorySettingsTable;
 extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferMemorySettingsTable;
 
 struct BufferMemorySettings {
-  static constexpr const fidl_type_t* Type = &fuchsia_sysmem_BufferMemorySettingsTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_BufferMemorySettingsTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_BufferMemorySettingsTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_BufferMemorySettingsTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
@@ -3491,8 +3443,8 @@ extern "C" const fidl_type_t v1_fuchsia_sysmem_SingleBufferSettingsTable;
 // from the rest of the buffers in the collection, and the single buffer's
 // settings are delivered via OnSingleBufferAllocated() using this struct:
 struct SingleBufferSettings {
-  static constexpr const fidl_type_t* Type = &fuchsia_sysmem_SingleBufferSettingsTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_SingleBufferSettingsTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_SingleBufferSettingsTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_SingleBufferSettingsTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 264;
   [[maybe_unused]]
@@ -3518,8 +3470,8 @@ extern "C" const fidl_type_t fuchsia_sysmem_SingleBufferInfoTable;
 extern "C" const fidl_type_t v1_fuchsia_sysmem_SingleBufferInfoTable;
 
 struct SingleBufferInfo {
-  static constexpr const fidl_type_t* Type = &fuchsia_sysmem_SingleBufferInfoTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_SingleBufferInfoTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_SingleBufferInfoTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_SingleBufferInfoTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 280;
   [[maybe_unused]]
@@ -3538,8 +3490,8 @@ extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferCollectionInfo_2Table;
 
 // Information about a buffer collection and its buffers.
 struct BufferCollectionInfo_2 {
-  static constexpr const fidl_type_t* Type = &fuchsia_sysmem_BufferCollectionInfo_2Table;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_BufferCollectionInfo_2Table;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_BufferCollectionInfo_2Table;
+  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_BufferCollectionInfo_2Table;
   static constexpr uint32_t MaxNumHandles = 64;
   static constexpr uint32_t PrimarySize = 1296;
   [[maybe_unused]]
@@ -3603,8 +3555,8 @@ class BufferCollectionEvents final {
     int32_t status;
     ::llcpp::fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_sysmem_BufferCollectionEventsOnBuffersAllocatedRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_BufferCollectionEventsOnBuffersAllocatedRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_BufferCollectionEventsOnBuffersAllocatedRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_BufferCollectionEventsOnBuffersAllocatedRequestTable;
     static constexpr uint32_t MaxNumHandles = 64;
     static constexpr uint32_t PrimarySize = 1320;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -3622,8 +3574,8 @@ class BufferCollectionEvents final {
     int32_t status;
     ::llcpp::fuchsia::sysmem::SingleBufferInfo buffer_info;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_sysmem_BufferCollectionEventsOnAllocateSingleBufferDoneRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_BufferCollectionEventsOnAllocateSingleBufferDoneRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_BufferCollectionEventsOnAllocateSingleBufferDoneRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_BufferCollectionEventsOnAllocateSingleBufferDoneRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 304;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -4078,8 +4030,8 @@ extern "C" const fidl_type_t fuchsia_sysmem_BufferUsageTable;
 extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferUsageTable;
 
 struct BufferUsage {
-  static constexpr const fidl_type_t* Type = &fuchsia_sysmem_BufferUsageTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_BufferUsageTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_BufferUsageTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_BufferUsageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 20;
   [[maybe_unused]]
@@ -4106,8 +4058,8 @@ extern "C" const fidl_type_t v1_fuchsia_sysmem_BufferCollectionConstraintsTable;
 // specified per-participant.  The sysmem service implements aggregation of
 // constraints from multiple participants.
 struct BufferCollectionConstraints {
-  static constexpr const fidl_type_t* Type = &fuchsia_sysmem_BufferCollectionConstraintsTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_BufferCollectionConstraintsTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_BufferCollectionConstraintsTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_BufferCollectionConstraintsTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 7760;
   [[maybe_unused]]
@@ -4292,8 +4244,8 @@ class BufferCollection final {
     fidl_message_header_t _hdr;
     ::zx::channel events;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_sysmem_BufferCollectionSetEventSinkRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_BufferCollectionSetEventSinkRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_BufferCollectionSetEventSinkRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_BufferCollectionSetEventSinkRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -4314,8 +4266,8 @@ class BufferCollection final {
     bool has_constraints;
     ::llcpp::fuchsia::sysmem::BufferCollectionConstraints constraints;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_sysmem_BufferCollectionSetConstraintsRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_BufferCollectionSetConstraintsRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_BufferCollectionSetConstraintsRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_BufferCollectionSetConstraintsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 7784;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -4333,8 +4285,8 @@ class BufferCollection final {
     int32_t status;
     ::llcpp::fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_sysmem_BufferCollectionWaitForBuffersAllocatedResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_BufferCollectionWaitForBuffersAllocatedResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_BufferCollectionWaitForBuffersAllocatedResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_BufferCollectionWaitForBuffersAllocatedResponseTable;
     static constexpr uint32_t MaxNumHandles = 64;
     static constexpr uint32_t PrimarySize = 1320;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -4352,8 +4304,8 @@ class BufferCollection final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_sysmem_BufferCollectionCheckBuffersAllocatedResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_BufferCollectionCheckBuffersAllocatedResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_BufferCollectionCheckBuffersAllocatedResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_BufferCollectionCheckBuffersAllocatedResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -4371,8 +4323,8 @@ class BufferCollection final {
     fidl_message_header_t _hdr;
     uint64_t buffer_index;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_sysmem_BufferCollectionCloseSingleBufferRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_BufferCollectionCloseSingleBufferRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_BufferCollectionCloseSingleBufferRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_BufferCollectionCloseSingleBufferRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -4389,8 +4341,8 @@ class BufferCollection final {
     fidl_message_header_t _hdr;
     uint64_t buffer_index;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_sysmem_BufferCollectionAllocateSingleBufferRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_BufferCollectionAllocateSingleBufferRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_BufferCollectionAllocateSingleBufferRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_BufferCollectionAllocateSingleBufferRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -4408,8 +4360,8 @@ class BufferCollection final {
     int32_t status;
     ::llcpp::fuchsia::sysmem::SingleBufferInfo buffer_info;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_sysmem_BufferCollectionWaitForSingleBufferAllocatedResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_BufferCollectionWaitForSingleBufferAllocatedResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_BufferCollectionWaitForSingleBufferAllocatedResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_BufferCollectionWaitForSingleBufferAllocatedResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 304;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -4425,8 +4377,8 @@ class BufferCollection final {
     fidl_message_header_t _hdr;
     uint64_t buffer_index;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_sysmem_BufferCollectionWaitForSingleBufferAllocatedRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_BufferCollectionWaitForSingleBufferAllocatedRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_BufferCollectionWaitForSingleBufferAllocatedRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_BufferCollectionWaitForSingleBufferAllocatedRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -4444,8 +4396,8 @@ class BufferCollection final {
     fidl_message_header_t _hdr;
     uint64_t buffer_index;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_sysmem_BufferCollectionCheckSingleBufferAllocatedRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysmem_BufferCollectionCheckSingleBufferAllocatedRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_sysmem_BufferCollectionCheckSingleBufferAllocatedRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_sysmem_BufferCollectionCheckSingleBufferAllocatedRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;

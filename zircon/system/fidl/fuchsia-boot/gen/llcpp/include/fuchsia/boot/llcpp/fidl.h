@@ -51,8 +51,8 @@ class WriteOnlyLog final {
     fidl_message_header_t _hdr;
     ::zx::debuglog log;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_boot_WriteOnlyLogGetResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_boot_WriteOnlyLogGetResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_boot_WriteOnlyLogGetResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_boot_WriteOnlyLogGetResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -234,8 +234,8 @@ class ReadOnlyLog final {
     fidl_message_header_t _hdr;
     ::zx::debuglog log;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_boot_ReadOnlyLogGetResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_boot_ReadOnlyLogGetResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_boot_ReadOnlyLogGetResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_boot_ReadOnlyLogGetResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -418,8 +418,8 @@ class Items final {
     ::zx::vmo payload;
     uint32_t length;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_boot_ItemsGetResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_boot_ItemsGetResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_boot_ItemsGetResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_boot_ItemsGetResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -436,8 +436,8 @@ class Items final {
     uint32_t type;
     uint32_t extra;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_boot_ItemsGetRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_boot_ItemsGetRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_boot_ItemsGetRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_boot_ItemsGetRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -640,8 +640,8 @@ class FactoryItems final {
     ::zx::vmo payload;
     uint32_t length;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_boot_FactoryItemsGetResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_boot_FactoryItemsGetResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_boot_FactoryItemsGetResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_boot_FactoryItemsGetResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -657,8 +657,8 @@ class FactoryItems final {
     fidl_message_header_t _hdr;
     uint32_t extra;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_boot_FactoryItemsGetRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_boot_FactoryItemsGetRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_boot_FactoryItemsGetRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_boot_FactoryItemsGetRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -855,8 +855,8 @@ class RootResource final {
     fidl_message_header_t _hdr;
     ::zx::resource resource;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_boot_RootResourceGetResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_boot_RootResourceGetResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_boot_RootResourceGetResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_boot_RootResourceGetResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1040,8 +1040,8 @@ class RootJob final {
     fidl_message_header_t _hdr;
     ::zx::job job;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_boot_RootJobGetResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_boot_RootJobGetResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_boot_RootJobGetResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_boot_RootJobGetResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1224,8 +1224,8 @@ class RootJobForInspect final {
     fidl_message_header_t _hdr;
     ::zx::job job;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_boot_RootJobForInspectGetResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_boot_RootJobForInspectGetResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_boot_RootJobForInspectGetResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_boot_RootJobForInspectGetResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1408,8 +1408,8 @@ class Arguments final {
     ::zx::vmo vmo;
     uint64_t size;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_boot_ArgumentsGetResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_boot_ArgumentsGetResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_boot_ArgumentsGetResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_boot_ArgumentsGetResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;

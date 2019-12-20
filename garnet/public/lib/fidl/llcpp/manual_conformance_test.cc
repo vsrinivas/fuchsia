@@ -23,15 +23,16 @@ TEST(InlineXUnionInStruct, Success) {
       0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // length of "before"
       0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // "before" is present
       0x53, 0x76, 0x31, 0x6f, 0x00, 0x00, 0x00, 0x00,  // xunion header
-      0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // num bytes; num handles
+      0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // num bytes; num handles
       0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // envelope data present
       0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // length of "after"
       0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // "after" is present
       'b',  'e',  'f',  'o',  'r',  'e',               // "before" string
       0x00, 0x00,                                      // 2 bytes of padding
-      0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // envelope content
-      0xef, 0xbe, 0xad, 0xde, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // xunion header
+      0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // num bytes; num handles
+      0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // envelope data present
+      0xef, 0xbe, 0xad, 0xde, 0x00, 0x00, 0x00, 0x00,  // envelope data
       'a',  'f',  't',  'e',  'r',                     // "after" string
       0x00, 0x00, 0x00,                                // 3 bytes of padding
   };
@@ -56,8 +57,8 @@ TEST(InlineXUnionInStruct, Success) {
     ASSERT_STREQ(encode_result.error, nullptr);
     ASSERT_EQ(encode_result.status, ZX_OK);
     EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(encode_result.message.bytes().begin(),
-                               encode_result.message.bytes().size(), &expected[0],
-                               expected.size()));
+                                                        encode_result.message.bytes().size(),
+                                                        &expected[0], expected.size()));
   }
   // decode
   {
@@ -114,8 +115,8 @@ TEST(PrimitiveInXUnionInStruct, Success) {
     ASSERT_STREQ(encode_result.error, nullptr);
     ASSERT_EQ(encode_result.status, ZX_OK);
     EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(encode_result.message.bytes().begin(),
-                               encode_result.message.bytes().size(), &expected[0],
-                               expected.size()));
+                                                        encode_result.message.bytes().size(),
+                                                        &expected[0], expected.size()));
   }
   // decode
   {
@@ -241,8 +242,8 @@ TEST(ComplexTable, SuccessEmpty) {
     ASSERT_STREQ(encode_result.error, nullptr);
     ASSERT_EQ(encode_result.status, ZX_OK);
     EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(encode_result.message.bytes().begin(),
-                               encode_result.message.bytes().size(), &expected[0],
-                               expected.size()));
+                                                        encode_result.message.bytes().size(),
+                                                        &expected[0], expected.size()));
   }
   // decode
   {
@@ -347,8 +348,8 @@ TEST(ComplexTable, Success) {
     ASSERT_STREQ(encode_result.error, nullptr);
     ASSERT_EQ(encode_result.status, ZX_OK);
     EXPECT_TRUE(llcpp_conformance_utils::ComparePayload(encode_result.message.bytes().begin(),
-                               encode_result.message.bytes().size(), &expected[0],
-                               expected.size()));
+                                                        encode_result.message.bytes().size(),
+                                                        &expected[0], expected.size()));
   }
   // decode
   {

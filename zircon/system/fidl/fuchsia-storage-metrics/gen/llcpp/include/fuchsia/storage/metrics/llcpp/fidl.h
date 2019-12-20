@@ -30,8 +30,8 @@ extern "C" const fidl_type_t fuchsia_storage_metrics_CallStatRawTable;
 extern "C" const fidl_type_t v1_fuchsia_storage_metrics_CallStatRawTable;
 
 struct CallStatRaw {
-  static constexpr const fidl_type_t* Type = &fuchsia_storage_metrics_CallStatRawTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_storage_metrics_CallStatRawTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_storage_metrics_CallStatRawTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_storage_metrics_CallStatRawTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 40;
   [[maybe_unused]]
@@ -55,8 +55,8 @@ extern "C" const fidl_type_t fuchsia_storage_metrics_CallStatTable;
 extern "C" const fidl_type_t v1_fuchsia_storage_metrics_CallStatTable;
 
 struct CallStat {
-  static constexpr const fidl_type_t* Type = &fuchsia_storage_metrics_CallStatTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_storage_metrics_CallStatTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_storage_metrics_CallStatTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_storage_metrics_CallStatTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 80;
   [[maybe_unused]]
@@ -74,8 +74,8 @@ extern "C" const fidl_type_t fuchsia_storage_metrics_FsMetricsTable;
 extern "C" const fidl_type_t v1_fuchsia_storage_metrics_FsMetricsTable;
 
 struct FsMetrics {
-  static constexpr const fidl_type_t* Type = &fuchsia_storage_metrics_FsMetricsTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_storage_metrics_FsMetricsTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_storage_metrics_FsMetricsTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_storage_metrics_FsMetricsTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 640;
   [[maybe_unused]]

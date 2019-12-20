@@ -7,6 +7,7 @@
 #include <atomic>
 #include <cstdint>
 
+// TODO(fxb/42311): remove this once everything is writing xunions
 namespace {
 
 std::atomic<bool> write_union_as_xunion{true};

@@ -535,30 +535,38 @@ void Device::Interface::GetInterruptControllerInfoCompleterBase::Reply(::fidl::D
 
 void Device::SetTransactionHeaderFor::GetHypervisorResourceRequest(const ::fidl::DecodedMessage<Device::GetHypervisorResourceRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetHypervisorResource_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Device::SetTransactionHeaderFor::GetHypervisorResourceResponse(const ::fidl::DecodedMessage<Device::GetHypervisorResourceResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetHypervisorResource_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Device::SetTransactionHeaderFor::GetBoardNameRequest(const ::fidl::DecodedMessage<Device::GetBoardNameRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetBoardName_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Device::SetTransactionHeaderFor::GetBoardNameResponse(const ::fidl::DecodedMessage<Device::GetBoardNameResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetBoardName_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Device::SetTransactionHeaderFor::GetBoardRevisionRequest(const ::fidl::DecodedMessage<Device::GetBoardRevisionRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetBoardRevision_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Device::SetTransactionHeaderFor::GetBoardRevisionResponse(const ::fidl::DecodedMessage<Device::GetBoardRevisionResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetBoardRevision_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Device::SetTransactionHeaderFor::GetInterruptControllerInfoRequest(const ::fidl::DecodedMessage<Device::GetInterruptControllerInfoRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetInterruptControllerInfo_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Device::SetTransactionHeaderFor::GetInterruptControllerInfoResponse(const ::fidl::DecodedMessage<Device::GetInterruptControllerInfoResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetInterruptControllerInfo_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace sysinfo

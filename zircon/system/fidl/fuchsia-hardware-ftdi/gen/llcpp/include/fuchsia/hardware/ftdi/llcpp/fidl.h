@@ -34,8 +34,8 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_ftdi_I2cDeviceTable;
 // on the newly created bus. The I2C bus will try and bind
 // a driver on the bus with the given VID, PID, DID.
 struct I2cDevice {
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_ftdi_I2cDeviceTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_ftdi_I2cDeviceTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_ftdi_I2cDeviceTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_ftdi_I2cDeviceTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
@@ -59,8 +59,8 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_ftdi_I2cBusLayoutTable;
 // This represents the data necessary for the FTDI device
 // to create an I2C bus.
 struct I2cBusLayout {
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_ftdi_I2cBusLayoutTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_ftdi_I2cBusLayoutTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_ftdi_I2cBusLayoutTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_ftdi_I2cBusLayoutTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 12;
   [[maybe_unused]]
@@ -94,8 +94,8 @@ class Device final {
     ::llcpp::fuchsia::hardware::ftdi::I2cBusLayout layout;
     ::llcpp::fuchsia::hardware::ftdi::I2cDevice device;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_ftdi_DeviceCreateI2CRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_ftdi_DeviceCreateI2CRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_ftdi_DeviceCreateI2CRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_ftdi_DeviceCreateI2CRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 0;

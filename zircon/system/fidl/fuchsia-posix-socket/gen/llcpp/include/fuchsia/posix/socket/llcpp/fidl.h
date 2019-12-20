@@ -45,8 +45,8 @@ class Provider final {
     int16_t code;
     ::zx::channel s;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_posix_socket_ProviderSocketResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_posix_socket_ProviderSocketResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_ProviderSocketResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_ProviderSocketResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -64,8 +64,8 @@ class Provider final {
     int16_t type;
     int16_t protocol;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_posix_socket_ProviderSocketRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_posix_socket_ProviderSocketRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_ProviderSocketRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_ProviderSocketRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -319,8 +319,8 @@ class Control final {
     uint32_t flags;
     ::zx::channel object;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_posix_socket_ControlCloneRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_posix_socket_ControlCloneRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_ControlCloneRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_ControlCloneRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -337,8 +337,8 @@ class Control final {
     fidl_message_header_t _hdr;
     int32_t s;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_posix_socket_ControlCloseResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_posix_socket_ControlCloseResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_ControlCloseResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_ControlCloseResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -356,12 +356,12 @@ class Control final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::io::NodeInfo info;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_posix_socket_ControlDescribeResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_posix_socket_ControlDescribeResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_ControlDescribeResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_ControlDescribeResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
-    static constexpr uint32_t PrimarySize = 48;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 24;
+    static constexpr uint32_t AltPrimarySize = 48;
     static constexpr uint32_t AltMaxOutOfLine = 24;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -374,14 +374,14 @@ class Control final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
     int32_t s;
-    ::llcpp::fuchsia::io::NodeInfo* info;
+    ::llcpp::fuchsia::io::NodeInfo info;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_posix_socket_ControlOnOpenEventTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_posix_socket_ControlOnOpenEventTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_ControlOnOpenEventTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_ControlOnOpenEventTable;
     static constexpr uint32_t MaxNumHandles = 1;
-    static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 32;
-    static constexpr uint32_t AltPrimarySize = 48;
+    static constexpr uint32_t PrimarySize = 48;
+    static constexpr uint32_t MaxOutOfLine = 24;
+    static constexpr uint32_t AltPrimarySize = 32;
     static constexpr uint32_t AltMaxOutOfLine = 24;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -393,8 +393,8 @@ class Control final {
     fidl_message_header_t _hdr;
     int32_t s;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_posix_socket_ControlSyncResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_posix_socket_ControlSyncResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_ControlSyncResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_ControlSyncResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -413,8 +413,8 @@ class Control final {
     int32_t s;
     ::llcpp::fuchsia::io::NodeAttributes attributes;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_posix_socket_ControlGetAttrResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_posix_socket_ControlGetAttrResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_ControlGetAttrResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_ControlGetAttrResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 80;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -432,8 +432,8 @@ class Control final {
     fidl_message_header_t _hdr;
     int32_t s;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_posix_socket_ControlSetAttrResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_posix_socket_ControlSetAttrResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_ControlSetAttrResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_ControlSetAttrResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -450,8 +450,8 @@ class Control final {
     uint32_t flags;
     ::llcpp::fuchsia::io::NodeAttributes attributes;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_posix_socket_ControlSetAttrRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_posix_socket_ControlSetAttrRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_ControlSetAttrRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_ControlSetAttrRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 80;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -470,8 +470,8 @@ class Control final {
     int32_t s;
     uint32_t flags;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_posix_socket_ControlNodeGetFlagsResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_posix_socket_ControlNodeGetFlagsResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_ControlNodeGetFlagsResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_ControlNodeGetFlagsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -489,8 +489,8 @@ class Control final {
     fidl_message_header_t _hdr;
     int32_t s;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_posix_socket_ControlNodeSetFlagsResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_posix_socket_ControlNodeSetFlagsResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_ControlNodeSetFlagsResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_ControlNodeSetFlagsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -506,8 +506,8 @@ class Control final {
     fidl_message_header_t _hdr;
     uint32_t flags;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_posix_socket_ControlNodeSetFlagsRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_posix_socket_ControlNodeSetFlagsRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_ControlNodeSetFlagsRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_ControlNodeSetFlagsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -525,8 +525,8 @@ class Control final {
     fidl_message_header_t _hdr;
     int16_t code;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_posix_socket_ControlBindResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_posix_socket_ControlBindResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_ControlBindResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_ControlBindResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -542,8 +542,8 @@ class Control final {
     fidl_message_header_t _hdr;
     ::fidl::VectorView<uint8_t> addr;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_posix_socket_ControlBindRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_posix_socket_ControlBindRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_ControlBindRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_ControlBindRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 128;
@@ -561,8 +561,8 @@ class Control final {
     fidl_message_header_t _hdr;
     int16_t code;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_posix_socket_ControlConnectResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_posix_socket_ControlConnectResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_ControlConnectResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_ControlConnectResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -578,8 +578,8 @@ class Control final {
     fidl_message_header_t _hdr;
     ::fidl::VectorView<uint8_t> addr;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_posix_socket_ControlConnectRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_posix_socket_ControlConnectRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_ControlConnectRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_ControlConnectRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 128;
@@ -597,8 +597,8 @@ class Control final {
     fidl_message_header_t _hdr;
     int16_t code;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_posix_socket_ControlListenResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_posix_socket_ControlListenResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_ControlListenResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_ControlListenResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -614,8 +614,8 @@ class Control final {
     fidl_message_header_t _hdr;
     int16_t backlog;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_posix_socket_ControlListenRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_posix_socket_ControlListenRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_ControlListenRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_ControlListenRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -634,8 +634,8 @@ class Control final {
     int16_t code;
     ::zx::channel s;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_posix_socket_ControlAcceptResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_posix_socket_ControlAcceptResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_ControlAcceptResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_ControlAcceptResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -651,8 +651,8 @@ class Control final {
     fidl_message_header_t _hdr;
     int16_t flags;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_posix_socket_ControlAcceptRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_posix_socket_ControlAcceptRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_ControlAcceptRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_ControlAcceptRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -671,8 +671,8 @@ class Control final {
     int16_t code;
     ::fidl::VectorView<uint8_t> addr;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_posix_socket_ControlGetSockNameResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_posix_socket_ControlGetSockNameResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_ControlGetSockNameResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_ControlGetSockNameResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 128;
@@ -691,8 +691,8 @@ class Control final {
     int16_t code;
     ::fidl::VectorView<uint8_t> addr;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_posix_socket_ControlGetPeerNameResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_posix_socket_ControlGetPeerNameResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_ControlGetPeerNameResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_ControlGetPeerNameResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 128;
@@ -710,8 +710,8 @@ class Control final {
     fidl_message_header_t _hdr;
     int16_t code;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_posix_socket_ControlSetSockOptResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_posix_socket_ControlSetSockOptResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_ControlSetSockOptResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_ControlSetSockOptResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -729,8 +729,8 @@ class Control final {
     int16_t optname;
     ::fidl::VectorView<uint8_t> optval;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_posix_socket_ControlSetSockOptRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_posix_socket_ControlSetSockOptRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_ControlSetSockOptRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_ControlSetSockOptRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 904;
@@ -749,8 +749,8 @@ class Control final {
     int16_t code;
     ::fidl::VectorView<uint8_t> optval;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_posix_socket_ControlGetSockOptResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_posix_socket_ControlGetSockOptResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_ControlGetSockOptResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_ControlGetSockOptResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 904;
@@ -767,8 +767,8 @@ class Control final {
     int16_t level;
     int16_t optname;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_posix_socket_ControlGetSockOptRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_posix_socket_ControlGetSockOptRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_posix_socket_ControlGetSockOptRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_posix_socket_ControlGetSockOptRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -788,7 +788,7 @@ class Control final {
     // Indicates the success or failure of the open operation, and optionally describes the
     // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
     // (the same as would be returned by `Describe`).
-    fit::callback<zx_status_t(int32_t s, ::llcpp::fuchsia::io::NodeInfo* info)> on_open;
+    fit::callback<zx_status_t(int32_t s, ::llcpp::fuchsia::io::NodeInfo info)> on_open;
 
     // Fallback handler when an unknown ordinal is received.
     // Caller may put custom error handling logic here.
@@ -1415,7 +1415,7 @@ class Control final {
     // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
-    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Describe Describe();
 
     // Returns extra information about the type of the object.
@@ -1637,7 +1637,7 @@ class Control final {
     // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
-    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Describe Describe(::zx::unowned_channel _client_end);
 
     // Returns extra information about the type of the object.
@@ -2137,7 +2137,7 @@ class Control final {
   // Indicates the success or failure of the open operation, and optionally describes the
   // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
   // (the same as would be returned by `Describe`).
-  static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, ::llcpp::fuchsia::io::NodeInfo* info);
+  static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, ::llcpp::fuchsia::io::NodeInfo info);
 
   // An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
   //
@@ -2145,7 +2145,7 @@ class Control final {
   // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
   // (the same as would be returned by `Describe`).
   // Caller provides the backing storage for FIDL message via response buffers.
-  static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::NodeInfo* info);
+  static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::NodeInfo info);
 
   // An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
   //

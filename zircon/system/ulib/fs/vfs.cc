@@ -470,10 +470,10 @@ zx_status_t Vfs::Serve(fbl::RefPtr<Vnode> vnode, zx::channel channel,
     fit::result<VnodeRepresentation, zx_status_t> result =
         internal::Describe(vnode, protocol, *options);
     if (result.is_error()) {
-      fio::Node::SendOnOpenEvent(zx::unowned_channel(channel), result.error(), nullptr);
+      fio::Node::SendOnOpenEvent(zx::unowned_channel(channel), result.error(), fio::NodeInfo());
       return result.error();
     }
-    ConvertToIoV1NodeInfo(result.take_value(), [&](fio::NodeInfo* info) {
+    ConvertToIoV1NodeInfo(result.take_value(), [&](fio::NodeInfo info) {
       fio::Node::SendOnOpenEvent(zx::unowned_channel(channel), ZX_OK, info);
     });
   }

@@ -100,8 +100,8 @@ struct Data {
   }
   Tag which() const;
 
-  static constexpr const fidl_type_t* Type = &fuchsia_mem_DataTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_mem_DataTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_mem_DataTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_mem_DataTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
@@ -127,8 +127,8 @@ extern "C" const fidl_type_t v1_fuchsia_mem_RangeTable;
 
 // A range of bytes within a VMO.
 struct Range {
-  static constexpr const fidl_type_t* Type = &fuchsia_mem_RangeTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_mem_RangeTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_mem_RangeTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_mem_RangeTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
@@ -168,8 +168,8 @@ extern "C" const fidl_type_t v1_fuchsia_mem_BufferTable;
 // data. `fuchsia.mem.Buffer` is a standard struct that aggregate the VMO
 // and its size.
 struct Buffer {
-  static constexpr const fidl_type_t* Type = &fuchsia_mem_BufferTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_mem_BufferTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_mem_BufferTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_mem_BufferTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]

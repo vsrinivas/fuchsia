@@ -412,23 +412,29 @@ void DebugDumper::Interface::DumpBindingPropertiesCompleterBase::Reply(::fidl::D
 
 void DebugDumper::SetTransactionHeaderFor::DumpTreeRequest(const ::fidl::DecodedMessage<DebugDumper::DumpTreeRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDebugDumper_DumpTree_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DebugDumper::SetTransactionHeaderFor::DumpTreeResponse(const ::fidl::DecodedMessage<DebugDumper::DumpTreeResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDebugDumper_DumpTree_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DebugDumper::SetTransactionHeaderFor::DumpDriversRequest(const ::fidl::DecodedMessage<DebugDumper::DumpDriversRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDebugDumper_DumpDrivers_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DebugDumper::SetTransactionHeaderFor::DumpDriversResponse(const ::fidl::DecodedMessage<DebugDumper::DumpDriversResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDebugDumper_DumpDrivers_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DebugDumper::SetTransactionHeaderFor::DumpBindingPropertiesRequest(const ::fidl::DecodedMessage<DebugDumper::DumpBindingPropertiesRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDebugDumper_DumpBindingProperties_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DebugDumper::SetTransactionHeaderFor::DumpBindingPropertiesResponse(const ::fidl::DecodedMessage<DebugDumper::DumpBindingPropertiesResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDebugDumper_DumpBindingProperties_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 namespace {
@@ -586,9 +592,11 @@ void Administrator::Interface::SuspendCompleterBase::Reply(::fidl::DecodedMessag
 
 void Administrator::SetTransactionHeaderFor::SuspendRequest(const ::fidl::DecodedMessage<Administrator::SuspendRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kAdministrator_Suspend_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Administrator::SetTransactionHeaderFor::SuspendResponse(const ::fidl::DecodedMessage<Administrator::SuspendResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kAdministrator_Suspend_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 namespace {
@@ -948,903 +956,112 @@ void DevhostController::Interface::CreateCompositeDeviceCompleterBase::Reply(::f
 
 void DevhostController::SetTransactionHeaderFor::CreateDeviceStubRequest(const ::fidl::DecodedMessage<DevhostController::CreateDeviceStubRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevhostController_CreateDeviceStub_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DevhostController::SetTransactionHeaderFor::CreateDeviceRequest(const ::fidl::DecodedMessage<DevhostController::CreateDeviceRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevhostController_CreateDevice_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DevhostController::SetTransactionHeaderFor::CreateCompositeDeviceRequest(const ::fidl::DecodedMessage<DevhostController::CreateCompositeDeviceRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevhostController_CreateCompositeDevice_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DevhostController::SetTransactionHeaderFor::CreateCompositeDeviceResponse(const ::fidl::DecodedMessage<DevhostController::CreateCompositeDeviceResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevhostController_CreateCompositeDevice_GenOrdinal);
-}
-
-::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result::Coordinator_AddDevice_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result::~Coordinator_AddDevice_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~Coordinator_AddDevice_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result::MoveImpl_(Coordinator_AddDevice_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result, response_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result, err_) == 8);
-  static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result) == ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Response& ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result::Coordinator_AddDeviceInvisible_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result::~Coordinator_AddDeviceInvisible_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~Coordinator_AddDeviceInvisible_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result::MoveImpl_(Coordinator_AddDeviceInvisible_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(Coordinator_AddDevice_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(Coordinator_AddDevice_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(Coordinator_AddDevice_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result, response_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result, err_) == 8);
-  static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result) == ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Response& ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::device::manager::DeviceController_Unbind_Result::DeviceController_Unbind_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::device::manager::DeviceController_Unbind_Result::~DeviceController_Unbind_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::device::manager::DeviceController_Unbind_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~DeviceController_Unbind_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::device::manager::DeviceController_Unbind_Result::MoveImpl_(DeviceController_Unbind_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(Coordinator_AddDeviceInvisible_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(Coordinator_AddDeviceInvisible_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(Coordinator_AddDeviceInvisible_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::device::manager::DeviceController_Unbind_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::device::manager::DeviceController_Unbind_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::device::manager::DeviceController_Unbind_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::device::manager::DeviceController_Unbind_Result) == ::llcpp::fuchsia::device::manager::DeviceController_Unbind_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::device::manager::DeviceController_Unbind_Response& ::llcpp::fuchsia::device::manager::DeviceController_Unbind_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::device::manager::DeviceController_Unbind_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::device::manager::DeviceController_Unbind_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Result::DeviceController_CompleteRemoval_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Result::~DeviceController_CompleteRemoval_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~DeviceController_CompleteRemoval_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Result::MoveImpl_(DeviceController_CompleteRemoval_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(DeviceController_Unbind_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(DeviceController_Unbind_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(DeviceController_Unbind_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Result) == ::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Response& ::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result::Coordinator_RunCompatibilityTests_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result::~Coordinator_RunCompatibilityTests_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~Coordinator_RunCompatibilityTests_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result::MoveImpl_(Coordinator_RunCompatibilityTests_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(DeviceController_CompleteRemoval_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(DeviceController_CompleteRemoval_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(DeviceController_CompleteRemoval_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result) == ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Response& ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result::Coordinator_PublishMetadata_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result::~Coordinator_PublishMetadata_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~Coordinator_PublishMetadata_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result::MoveImpl_(Coordinator_PublishMetadata_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(Coordinator_RunCompatibilityTests_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(Coordinator_RunCompatibilityTests_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(Coordinator_RunCompatibilityTests_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result) == ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Response& ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result::Coordinator_MakeVisible_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result::~Coordinator_MakeVisible_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~Coordinator_MakeVisible_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result::MoveImpl_(Coordinator_MakeVisible_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(Coordinator_PublishMetadata_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(Coordinator_PublishMetadata_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(Coordinator_PublishMetadata_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result) == ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Response& ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result::Coordinator_LoadFirmware_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result::~Coordinator_LoadFirmware_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~Coordinator_LoadFirmware_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result::MoveImpl_(Coordinator_LoadFirmware_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(Coordinator_MakeVisible_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(Coordinator_MakeVisible_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(Coordinator_MakeVisible_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result, response_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result, err_) == 8);
-  static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result) == ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Response& ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result::Coordinator_GetTopologicalPath_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result::~Coordinator_GetTopologicalPath_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~Coordinator_GetTopologicalPath_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result::MoveImpl_(Coordinator_GetTopologicalPath_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(Coordinator_LoadFirmware_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(Coordinator_LoadFirmware_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(Coordinator_LoadFirmware_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result, response_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result, err_) == 8);
-  static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result) == ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Response& ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result::Coordinator_GetMetadata_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result::~Coordinator_GetMetadata_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~Coordinator_GetMetadata_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result::MoveImpl_(Coordinator_GetMetadata_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(Coordinator_GetTopologicalPath_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(Coordinator_GetTopologicalPath_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(Coordinator_GetTopologicalPath_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result, response_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result, err_) == 8);
-  static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result) == ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Response& ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result::Coordinator_GetMetadataSize_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result::~Coordinator_GetMetadataSize_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~Coordinator_GetMetadataSize_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result::MoveImpl_(Coordinator_GetMetadataSize_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(Coordinator_GetMetadata_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(Coordinator_GetMetadata_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(Coordinator_GetMetadata_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result, response_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result, err_) == 8);
-  static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result) == ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Response& ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result::Coordinator_DirectoryWatch_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result::~Coordinator_DirectoryWatch_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~Coordinator_DirectoryWatch_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result::MoveImpl_(Coordinator_DirectoryWatch_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(Coordinator_GetMetadataSize_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(Coordinator_GetMetadataSize_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(Coordinator_GetMetadataSize_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result) == ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Response& ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result::Coordinator_BindDevice_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result::~Coordinator_BindDevice_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~Coordinator_BindDevice_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result::MoveImpl_(Coordinator_BindDevice_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(Coordinator_DirectoryWatch_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(Coordinator_DirectoryWatch_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(Coordinator_DirectoryWatch_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result) == ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Response& ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result::Coordinator_AddMetadata_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result::~Coordinator_AddMetadata_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~Coordinator_AddMetadata_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result::MoveImpl_(Coordinator_AddMetadata_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(Coordinator_BindDevice_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(Coordinator_BindDevice_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(Coordinator_BindDevice_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result) == ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Response& ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result::Coordinator_AddCompositeDevice_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result::~Coordinator_AddCompositeDevice_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~Coordinator_AddCompositeDevice_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result::MoveImpl_(Coordinator_AddCompositeDevice_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(Coordinator_AddMetadata_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(Coordinator_AddMetadata_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(Coordinator_AddMetadata_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result) == ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result::PrimarySize);
+  static_assert(sizeof(Coordinator_AddCompositeDevice_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(Coordinator_AddCompositeDevice_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(Coordinator_AddCompositeDevice_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
-
-
-::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Response& ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
 
 namespace {
 
@@ -2615,16 +1832,21 @@ void DeviceController::Interface::InitCompleterBase::Reply(::fidl::DecodedMessag
 
 void DeviceController::Interface::UnbindCompleterBase::Reply(::llcpp::fuchsia::device::manager::DeviceController_Unbind_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<UnbindResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<UnbindResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  UnbindResponse _response = {};
   DeviceController::SetTransactionHeaderFor::UnbindResponse(
       ::fidl::DecodedMessage<UnbindResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               UnbindResponse::PrimarySize,
               UnbindResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(UnbindResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<UnbindResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void DeviceController::Interface::UnbindCompleterBase::ReplySuccess() {
   DeviceController_Unbind_Response response;
@@ -2640,15 +1862,19 @@ void DeviceController::Interface::UnbindCompleterBase::Reply(::fidl::BytePart _b
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<UnbindResponse*>(_buffer.data());
+  UnbindResponse _response = {};
   DeviceController::SetTransactionHeaderFor::UnbindResponse(
       ::fidl::DecodedMessage<UnbindResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               UnbindResponse::PrimarySize,
               UnbindResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(UnbindResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<UnbindResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void DeviceController::Interface::UnbindCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   DeviceController_Unbind_Response response;
@@ -2664,16 +1890,21 @@ void DeviceController::Interface::UnbindCompleterBase::Reply(::fidl::DecodedMess
 
 void DeviceController::Interface::CompleteRemovalCompleterBase::Reply(::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CompleteRemovalResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<CompleteRemovalResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  CompleteRemovalResponse _response = {};
   DeviceController::SetTransactionHeaderFor::CompleteRemovalResponse(
       ::fidl::DecodedMessage<CompleteRemovalResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               CompleteRemovalResponse::PrimarySize,
               CompleteRemovalResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(CompleteRemovalResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<CompleteRemovalResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void DeviceController::Interface::CompleteRemovalCompleterBase::ReplySuccess() {
   DeviceController_CompleteRemoval_Response response;
@@ -2689,15 +1920,19 @@ void DeviceController::Interface::CompleteRemovalCompleterBase::Reply(::fidl::By
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<CompleteRemovalResponse*>(_buffer.data());
+  CompleteRemovalResponse _response = {};
   DeviceController::SetTransactionHeaderFor::CompleteRemovalResponse(
       ::fidl::DecodedMessage<CompleteRemovalResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               CompleteRemovalResponse::PrimarySize,
               CompleteRemovalResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(CompleteRemovalResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<CompleteRemovalResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void DeviceController::Interface::CompleteRemovalCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   DeviceController_CompleteRemoval_Response response;
@@ -2786,52 +2021,66 @@ void DeviceController::Interface::ResumeCompleterBase::Reply(::fidl::DecodedMess
 
 void DeviceController::SetTransactionHeaderFor::BindDriverRequest(const ::fidl::DecodedMessage<DeviceController::BindDriverRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_BindDriver_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DeviceController::SetTransactionHeaderFor::BindDriverResponse(const ::fidl::DecodedMessage<DeviceController::BindDriverResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_BindDriver_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DeviceController::SetTransactionHeaderFor::ConnectProxyRequest(const ::fidl::DecodedMessage<DeviceController::ConnectProxyRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_ConnectProxy_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DeviceController::SetTransactionHeaderFor::InitRequest(const ::fidl::DecodedMessage<DeviceController::InitRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_Init_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DeviceController::SetTransactionHeaderFor::InitResponse(const ::fidl::DecodedMessage<DeviceController::InitResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_Init_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DeviceController::SetTransactionHeaderFor::UnbindRequest(const ::fidl::DecodedMessage<DeviceController::UnbindRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_Unbind_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DeviceController::SetTransactionHeaderFor::UnbindResponse(const ::fidl::DecodedMessage<DeviceController::UnbindResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_Unbind_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DeviceController::SetTransactionHeaderFor::CompleteRemovalRequest(const ::fidl::DecodedMessage<DeviceController::CompleteRemovalRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_CompleteRemoval_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DeviceController::SetTransactionHeaderFor::CompleteRemovalResponse(const ::fidl::DecodedMessage<DeviceController::CompleteRemovalResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_CompleteRemoval_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DeviceController::SetTransactionHeaderFor::SuspendRequest(const ::fidl::DecodedMessage<DeviceController::SuspendRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_Suspend_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DeviceController::SetTransactionHeaderFor::SuspendResponse(const ::fidl::DecodedMessage<DeviceController::SuspendResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_Suspend_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DeviceController::SetTransactionHeaderFor::ResumeRequest(const ::fidl::DecodedMessage<DeviceController::ResumeRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_Resume_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DeviceController::SetTransactionHeaderFor::ResumeResponse(const ::fidl::DecodedMessage<DeviceController::ResumeResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_Resume_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DeviceController::SetTransactionHeaderFor::CompleteCompatibilityTestsRequest(const ::fidl::DecodedMessage<DeviceController::CompleteCompatibilityTestsRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_CompleteCompatibilityTests_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 namespace {
@@ -4153,16 +3402,21 @@ bool Coordinator::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction
 
 void Coordinator::Interface::AddDeviceCompleterBase::Reply(::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddDeviceResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<AddDeviceResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  AddDeviceResponse _response = {};
   Coordinator::SetTransactionHeaderFor::AddDeviceResponse(
       ::fidl::DecodedMessage<AddDeviceResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               AddDeviceResponse::PrimarySize,
               AddDeviceResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(AddDeviceResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<AddDeviceResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Coordinator::Interface::AddDeviceCompleterBase::ReplySuccess(uint64_t local_device_id) {
   Coordinator_AddDevice_Response response;
@@ -4179,15 +3433,19 @@ void Coordinator::Interface::AddDeviceCompleterBase::Reply(::fidl::BytePart _buf
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<AddDeviceResponse*>(_buffer.data());
+  AddDeviceResponse _response = {};
   Coordinator::SetTransactionHeaderFor::AddDeviceResponse(
       ::fidl::DecodedMessage<AddDeviceResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               AddDeviceResponse::PrimarySize,
               AddDeviceResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(AddDeviceResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<AddDeviceResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Coordinator::Interface::AddDeviceCompleterBase::ReplySuccess(::fidl::BytePart _buffer, uint64_t local_device_id) {
   Coordinator_AddDevice_Response response;
@@ -4204,16 +3462,21 @@ void Coordinator::Interface::AddDeviceCompleterBase::Reply(::fidl::DecodedMessag
 
 void Coordinator::Interface::AddDeviceInvisibleCompleterBase::Reply(::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddDeviceInvisibleResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<AddDeviceInvisibleResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  AddDeviceInvisibleResponse _response = {};
   Coordinator::SetTransactionHeaderFor::AddDeviceInvisibleResponse(
       ::fidl::DecodedMessage<AddDeviceInvisibleResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               AddDeviceInvisibleResponse::PrimarySize,
               AddDeviceInvisibleResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(AddDeviceInvisibleResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<AddDeviceInvisibleResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Coordinator::Interface::AddDeviceInvisibleCompleterBase::ReplySuccess(uint64_t local_device_id) {
   Coordinator_AddDeviceInvisible_Response response;
@@ -4230,15 +3493,19 @@ void Coordinator::Interface::AddDeviceInvisibleCompleterBase::Reply(::fidl::Byte
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<AddDeviceInvisibleResponse*>(_buffer.data());
+  AddDeviceInvisibleResponse _response = {};
   Coordinator::SetTransactionHeaderFor::AddDeviceInvisibleResponse(
       ::fidl::DecodedMessage<AddDeviceInvisibleResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               AddDeviceInvisibleResponse::PrimarySize,
               AddDeviceInvisibleResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(AddDeviceInvisibleResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<AddDeviceInvisibleResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Coordinator::Interface::AddDeviceInvisibleCompleterBase::ReplySuccess(::fidl::BytePart _buffer, uint64_t local_device_id) {
   Coordinator_AddDeviceInvisible_Response response;
@@ -4255,16 +3522,21 @@ void Coordinator::Interface::AddDeviceInvisibleCompleterBase::Reply(::fidl::Deco
 
 void Coordinator::Interface::MakeVisibleCompleterBase::Reply(::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<MakeVisibleResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<MakeVisibleResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  MakeVisibleResponse _response = {};
   Coordinator::SetTransactionHeaderFor::MakeVisibleResponse(
       ::fidl::DecodedMessage<MakeVisibleResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               MakeVisibleResponse::PrimarySize,
               MakeVisibleResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(MakeVisibleResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<MakeVisibleResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Coordinator::Interface::MakeVisibleCompleterBase::ReplySuccess() {
   Coordinator_MakeVisible_Response response;
@@ -4280,15 +3552,19 @@ void Coordinator::Interface::MakeVisibleCompleterBase::Reply(::fidl::BytePart _b
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<MakeVisibleResponse*>(_buffer.data());
+  MakeVisibleResponse _response = {};
   Coordinator::SetTransactionHeaderFor::MakeVisibleResponse(
       ::fidl::DecodedMessage<MakeVisibleResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               MakeVisibleResponse::PrimarySize,
               MakeVisibleResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(MakeVisibleResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<MakeVisibleResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Coordinator::Interface::MakeVisibleCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Coordinator_MakeVisible_Response response;
@@ -4304,16 +3580,21 @@ void Coordinator::Interface::MakeVisibleCompleterBase::Reply(::fidl::DecodedMess
 
 void Coordinator::Interface::BindDeviceCompleterBase::Reply(::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<BindDeviceResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<BindDeviceResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  BindDeviceResponse _response = {};
   Coordinator::SetTransactionHeaderFor::BindDeviceResponse(
       ::fidl::DecodedMessage<BindDeviceResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               BindDeviceResponse::PrimarySize,
               BindDeviceResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(BindDeviceResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<BindDeviceResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Coordinator::Interface::BindDeviceCompleterBase::ReplySuccess() {
   Coordinator_BindDevice_Response response;
@@ -4329,15 +3610,19 @@ void Coordinator::Interface::BindDeviceCompleterBase::Reply(::fidl::BytePart _bu
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<BindDeviceResponse*>(_buffer.data());
+  BindDeviceResponse _response = {};
   Coordinator::SetTransactionHeaderFor::BindDeviceResponse(
       ::fidl::DecodedMessage<BindDeviceResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               BindDeviceResponse::PrimarySize,
               BindDeviceResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(BindDeviceResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<BindDeviceResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Coordinator::Interface::BindDeviceCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Coordinator_BindDevice_Response response;
@@ -4414,16 +3699,21 @@ void Coordinator::Interface::GetTopologicalPathCompleterBase::Reply(::fidl::Deco
 
 void Coordinator::Interface::LoadFirmwareCompleterBase::Reply(::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<LoadFirmwareResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<LoadFirmwareResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  LoadFirmwareResponse _response = {};
   Coordinator::SetTransactionHeaderFor::LoadFirmwareResponse(
       ::fidl::DecodedMessage<LoadFirmwareResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               LoadFirmwareResponse::PrimarySize,
               LoadFirmwareResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(LoadFirmwareResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<LoadFirmwareResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Coordinator::Interface::LoadFirmwareCompleterBase::ReplySuccess(::zx::vmo vmo, uint64_t size) {
   Coordinator_LoadFirmware_Response response;
@@ -4441,15 +3731,19 @@ void Coordinator::Interface::LoadFirmwareCompleterBase::Reply(::fidl::BytePart _
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<LoadFirmwareResponse*>(_buffer.data());
+  LoadFirmwareResponse _response = {};
   Coordinator::SetTransactionHeaderFor::LoadFirmwareResponse(
       ::fidl::DecodedMessage<LoadFirmwareResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               LoadFirmwareResponse::PrimarySize,
               LoadFirmwareResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(LoadFirmwareResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<LoadFirmwareResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Coordinator::Interface::LoadFirmwareCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::zx::vmo vmo, uint64_t size) {
   Coordinator_LoadFirmware_Response response;
@@ -4528,16 +3822,21 @@ void Coordinator::Interface::GetMetadataCompleterBase::Reply(::fidl::DecodedMess
 
 void Coordinator::Interface::GetMetadataSizeCompleterBase::Reply(::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetMetadataSizeResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<GetMetadataSizeResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  GetMetadataSizeResponse _response = {};
   Coordinator::SetTransactionHeaderFor::GetMetadataSizeResponse(
       ::fidl::DecodedMessage<GetMetadataSizeResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               GetMetadataSizeResponse::PrimarySize,
               GetMetadataSizeResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetMetadataSizeResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<GetMetadataSizeResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Coordinator::Interface::GetMetadataSizeCompleterBase::ReplySuccess(uint64_t size) {
   Coordinator_GetMetadataSize_Response response;
@@ -4554,15 +3853,19 @@ void Coordinator::Interface::GetMetadataSizeCompleterBase::Reply(::fidl::BytePar
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<GetMetadataSizeResponse*>(_buffer.data());
+  GetMetadataSizeResponse _response = {};
   Coordinator::SetTransactionHeaderFor::GetMetadataSizeResponse(
       ::fidl::DecodedMessage<GetMetadataSizeResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               GetMetadataSizeResponse::PrimarySize,
               GetMetadataSizeResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(GetMetadataSizeResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<GetMetadataSizeResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Coordinator::Interface::GetMetadataSizeCompleterBase::ReplySuccess(::fidl::BytePart _buffer, uint64_t size) {
   Coordinator_GetMetadataSize_Response response;
@@ -4579,16 +3882,21 @@ void Coordinator::Interface::GetMetadataSizeCompleterBase::Reply(::fidl::Decoded
 
 void Coordinator::Interface::AddMetadataCompleterBase::Reply(::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddMetadataResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<AddMetadataResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  AddMetadataResponse _response = {};
   Coordinator::SetTransactionHeaderFor::AddMetadataResponse(
       ::fidl::DecodedMessage<AddMetadataResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               AddMetadataResponse::PrimarySize,
               AddMetadataResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(AddMetadataResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<AddMetadataResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Coordinator::Interface::AddMetadataCompleterBase::ReplySuccess() {
   Coordinator_AddMetadata_Response response;
@@ -4604,15 +3912,19 @@ void Coordinator::Interface::AddMetadataCompleterBase::Reply(::fidl::BytePart _b
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<AddMetadataResponse*>(_buffer.data());
+  AddMetadataResponse _response = {};
   Coordinator::SetTransactionHeaderFor::AddMetadataResponse(
       ::fidl::DecodedMessage<AddMetadataResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               AddMetadataResponse::PrimarySize,
               AddMetadataResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(AddMetadataResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<AddMetadataResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Coordinator::Interface::AddMetadataCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Coordinator_AddMetadata_Response response;
@@ -4628,16 +3940,21 @@ void Coordinator::Interface::AddMetadataCompleterBase::Reply(::fidl::DecodedMess
 
 void Coordinator::Interface::PublishMetadataCompleterBase::Reply(::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<PublishMetadataResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<PublishMetadataResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  PublishMetadataResponse _response = {};
   Coordinator::SetTransactionHeaderFor::PublishMetadataResponse(
       ::fidl::DecodedMessage<PublishMetadataResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               PublishMetadataResponse::PrimarySize,
               PublishMetadataResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(PublishMetadataResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<PublishMetadataResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Coordinator::Interface::PublishMetadataCompleterBase::ReplySuccess() {
   Coordinator_PublishMetadata_Response response;
@@ -4653,15 +3970,19 @@ void Coordinator::Interface::PublishMetadataCompleterBase::Reply(::fidl::BytePar
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<PublishMetadataResponse*>(_buffer.data());
+  PublishMetadataResponse _response = {};
   Coordinator::SetTransactionHeaderFor::PublishMetadataResponse(
       ::fidl::DecodedMessage<PublishMetadataResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               PublishMetadataResponse::PrimarySize,
               PublishMetadataResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(PublishMetadataResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<PublishMetadataResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Coordinator::Interface::PublishMetadataCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Coordinator_PublishMetadata_Response response;
@@ -4677,16 +3998,21 @@ void Coordinator::Interface::PublishMetadataCompleterBase::Reply(::fidl::Decoded
 
 void Coordinator::Interface::AddCompositeDeviceCompleterBase::Reply(::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddCompositeDeviceResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<AddCompositeDeviceResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  AddCompositeDeviceResponse _response = {};
   Coordinator::SetTransactionHeaderFor::AddCompositeDeviceResponse(
       ::fidl::DecodedMessage<AddCompositeDeviceResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               AddCompositeDeviceResponse::PrimarySize,
               AddCompositeDeviceResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(AddCompositeDeviceResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<AddCompositeDeviceResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Coordinator::Interface::AddCompositeDeviceCompleterBase::ReplySuccess() {
   Coordinator_AddCompositeDevice_Response response;
@@ -4702,15 +4028,19 @@ void Coordinator::Interface::AddCompositeDeviceCompleterBase::Reply(::fidl::Byte
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<AddCompositeDeviceResponse*>(_buffer.data());
+  AddCompositeDeviceResponse _response = {};
   Coordinator::SetTransactionHeaderFor::AddCompositeDeviceResponse(
       ::fidl::DecodedMessage<AddCompositeDeviceResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               AddCompositeDeviceResponse::PrimarySize,
               AddCompositeDeviceResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(AddCompositeDeviceResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<AddCompositeDeviceResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Coordinator::Interface::AddCompositeDeviceCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Coordinator_AddCompositeDevice_Response response;
@@ -4726,16 +4056,21 @@ void Coordinator::Interface::AddCompositeDeviceCompleterBase::Reply(::fidl::Deco
 
 void Coordinator::Interface::DirectoryWatchCompleterBase::Reply(::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DirectoryWatchResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<DirectoryWatchResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  DirectoryWatchResponse _response = {};
   Coordinator::SetTransactionHeaderFor::DirectoryWatchResponse(
       ::fidl::DecodedMessage<DirectoryWatchResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               DirectoryWatchResponse::PrimarySize,
               DirectoryWatchResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(DirectoryWatchResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<DirectoryWatchResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Coordinator::Interface::DirectoryWatchCompleterBase::ReplySuccess() {
   Coordinator_DirectoryWatch_Response response;
@@ -4751,15 +4086,19 @@ void Coordinator::Interface::DirectoryWatchCompleterBase::Reply(::fidl::BytePart
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<DirectoryWatchResponse*>(_buffer.data());
+  DirectoryWatchResponse _response = {};
   Coordinator::SetTransactionHeaderFor::DirectoryWatchResponse(
       ::fidl::DecodedMessage<DirectoryWatchResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               DirectoryWatchResponse::PrimarySize,
               DirectoryWatchResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(DirectoryWatchResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<DirectoryWatchResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Coordinator::Interface::DirectoryWatchCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Coordinator_DirectoryWatch_Response response;
@@ -4775,16 +4114,21 @@ void Coordinator::Interface::DirectoryWatchCompleterBase::Reply(::fidl::DecodedM
 
 void Coordinator::Interface::RunCompatibilityTestsCompleterBase::Reply(::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RunCompatibilityTestsResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<RunCompatibilityTestsResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  RunCompatibilityTestsResponse _response = {};
   Coordinator::SetTransactionHeaderFor::RunCompatibilityTestsResponse(
       ::fidl::DecodedMessage<RunCompatibilityTestsResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               RunCompatibilityTestsResponse::PrimarySize,
               RunCompatibilityTestsResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(RunCompatibilityTestsResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<RunCompatibilityTestsResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Coordinator::Interface::RunCompatibilityTestsCompleterBase::ReplySuccess() {
   Coordinator_RunCompatibilityTests_Response response;
@@ -4800,15 +4144,19 @@ void Coordinator::Interface::RunCompatibilityTestsCompleterBase::Reply(::fidl::B
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<RunCompatibilityTestsResponse*>(_buffer.data());
+  RunCompatibilityTestsResponse _response = {};
   Coordinator::SetTransactionHeaderFor::RunCompatibilityTestsResponse(
       ::fidl::DecodedMessage<RunCompatibilityTestsResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               RunCompatibilityTestsResponse::PrimarySize,
               RunCompatibilityTestsResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(RunCompatibilityTestsResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<RunCompatibilityTestsResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Coordinator::Interface::RunCompatibilityTestsCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Coordinator_RunCompatibilityTests_Response response;
@@ -4825,101 +4173,129 @@ void Coordinator::Interface::RunCompatibilityTestsCompleterBase::Reply(::fidl::D
 
 void Coordinator::SetTransactionHeaderFor::AddDeviceRequest(const ::fidl::DecodedMessage<Coordinator::AddDeviceRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_AddDevice_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Coordinator::SetTransactionHeaderFor::AddDeviceResponse(const ::fidl::DecodedMessage<Coordinator::AddDeviceResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_AddDevice_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Coordinator::SetTransactionHeaderFor::AddDeviceInvisibleRequest(const ::fidl::DecodedMessage<Coordinator::AddDeviceInvisibleRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_AddDeviceInvisible_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Coordinator::SetTransactionHeaderFor::AddDeviceInvisibleResponse(const ::fidl::DecodedMessage<Coordinator::AddDeviceInvisibleResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_AddDeviceInvisible_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Coordinator::SetTransactionHeaderFor::ScheduleRemoveRequest(const ::fidl::DecodedMessage<Coordinator::ScheduleRemoveRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_ScheduleRemove_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Coordinator::SetTransactionHeaderFor::ScheduleUnbindChildrenRequest(const ::fidl::DecodedMessage<Coordinator::ScheduleUnbindChildrenRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_ScheduleUnbindChildren_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Coordinator::SetTransactionHeaderFor::MakeVisibleRequest(const ::fidl::DecodedMessage<Coordinator::MakeVisibleRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_MakeVisible_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Coordinator::SetTransactionHeaderFor::MakeVisibleResponse(const ::fidl::DecodedMessage<Coordinator::MakeVisibleResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_MakeVisible_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Coordinator::SetTransactionHeaderFor::BindDeviceRequest(const ::fidl::DecodedMessage<Coordinator::BindDeviceRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_BindDevice_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Coordinator::SetTransactionHeaderFor::BindDeviceResponse(const ::fidl::DecodedMessage<Coordinator::BindDeviceResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_BindDevice_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Coordinator::SetTransactionHeaderFor::GetTopologicalPathRequest(const ::fidl::DecodedMessage<Coordinator::GetTopologicalPathRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_GetTopologicalPath_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Coordinator::SetTransactionHeaderFor::GetTopologicalPathResponse(const ::fidl::DecodedMessage<Coordinator::GetTopologicalPathResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_GetTopologicalPath_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Coordinator::SetTransactionHeaderFor::LoadFirmwareRequest(const ::fidl::DecodedMessage<Coordinator::LoadFirmwareRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_LoadFirmware_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Coordinator::SetTransactionHeaderFor::LoadFirmwareResponse(const ::fidl::DecodedMessage<Coordinator::LoadFirmwareResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_LoadFirmware_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Coordinator::SetTransactionHeaderFor::GetMetadataRequest(const ::fidl::DecodedMessage<Coordinator::GetMetadataRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_GetMetadata_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Coordinator::SetTransactionHeaderFor::GetMetadataResponse(const ::fidl::DecodedMessage<Coordinator::GetMetadataResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_GetMetadata_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Coordinator::SetTransactionHeaderFor::GetMetadataSizeRequest(const ::fidl::DecodedMessage<Coordinator::GetMetadataSizeRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_GetMetadataSize_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Coordinator::SetTransactionHeaderFor::GetMetadataSizeResponse(const ::fidl::DecodedMessage<Coordinator::GetMetadataSizeResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_GetMetadataSize_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Coordinator::SetTransactionHeaderFor::AddMetadataRequest(const ::fidl::DecodedMessage<Coordinator::AddMetadataRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_AddMetadata_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Coordinator::SetTransactionHeaderFor::AddMetadataResponse(const ::fidl::DecodedMessage<Coordinator::AddMetadataResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_AddMetadata_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Coordinator::SetTransactionHeaderFor::PublishMetadataRequest(const ::fidl::DecodedMessage<Coordinator::PublishMetadataRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_PublishMetadata_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Coordinator::SetTransactionHeaderFor::PublishMetadataResponse(const ::fidl::DecodedMessage<Coordinator::PublishMetadataResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_PublishMetadata_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Coordinator::SetTransactionHeaderFor::AddCompositeDeviceRequest(const ::fidl::DecodedMessage<Coordinator::AddCompositeDeviceRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_AddCompositeDevice_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Coordinator::SetTransactionHeaderFor::AddCompositeDeviceResponse(const ::fidl::DecodedMessage<Coordinator::AddCompositeDeviceResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_AddCompositeDevice_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Coordinator::SetTransactionHeaderFor::DirectoryWatchRequest(const ::fidl::DecodedMessage<Coordinator::DirectoryWatchRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_DirectoryWatch_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Coordinator::SetTransactionHeaderFor::DirectoryWatchResponse(const ::fidl::DecodedMessage<Coordinator::DirectoryWatchResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_DirectoryWatch_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Coordinator::SetTransactionHeaderFor::RunCompatibilityTestsRequest(const ::fidl::DecodedMessage<Coordinator::RunCompatibilityTestsRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_RunCompatibilityTests_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Coordinator::SetTransactionHeaderFor::RunCompatibilityTestsResponse(const ::fidl::DecodedMessage<Coordinator::RunCompatibilityTestsResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_RunCompatibilityTests_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace manager

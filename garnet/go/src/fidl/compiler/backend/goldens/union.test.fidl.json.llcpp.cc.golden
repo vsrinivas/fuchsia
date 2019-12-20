@@ -8,229 +8,29 @@ namespace llcpp {
 namespace test {
 namespace name {
 
-::llcpp::test::name::Union::Union() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::test::name::Union::~Union() {
-  Destroy();
-}
-
-void ::llcpp::test::name::Union::Destroy() {
-  switch (ordinal_) {
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::test::name::Union::MoveImpl_(Union&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kPrimitive:
-    mutable_Primitive() = std::move(other.mutable_Primitive());
-    break;
-  case Ordinal::kStringNeedsConstructor:
-    mutable_StringNeedsConstructor() = std::move(other.mutable_StringNeedsConstructor());
-    break;
-  case Ordinal::kVectorStringAlsoNeedsConstructor:
-    mutable_VectorStringAlsoNeedsConstructor() = std::move(other.mutable_VectorStringAlsoNeedsConstructor());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
-}
-
 void ::llcpp::test::name::Union::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::test::name::Union, Primitive_) == 8);
-  static_assert(offsetof(::llcpp::test::name::Union, StringNeedsConstructor_) == 8);
-  static_assert(offsetof(::llcpp::test::name::Union, VectorStringAlsoNeedsConstructor_) == 8);
-  static_assert(sizeof(::llcpp::test::name::Union) == ::llcpp::test::name::Union::PrimarySize);
-}
-
-
-int32_t& ::llcpp::test::name::Union::mutable_Primitive() {
-  if (ordinal_ != Ordinal::kPrimitive) {
-    Destroy();
-    new (&Primitive_) int32_t;
-    ordinal_ = Ordinal::kPrimitive;
-  }
-  return Primitive_;
-}
-
-::fidl::StringView& ::llcpp::test::name::Union::mutable_StringNeedsConstructor() {
-  if (ordinal_ != Ordinal::kStringNeedsConstructor) {
-    Destroy();
-    new (&StringNeedsConstructor_) ::fidl::StringView;
-    ordinal_ = Ordinal::kStringNeedsConstructor;
-  }
-  return StringNeedsConstructor_;
-}
-
-::fidl::VectorView<::fidl::StringView>& ::llcpp::test::name::Union::mutable_VectorStringAlsoNeedsConstructor() {
-  if (ordinal_ != Ordinal::kVectorStringAlsoNeedsConstructor) {
-    Destroy();
-    new (&VectorStringAlsoNeedsConstructor_) ::fidl::VectorView<::fidl::StringView>;
-    ordinal_ = Ordinal::kVectorStringAlsoNeedsConstructor;
-  }
-  return VectorStringAlsoNeedsConstructor_;
-}
-
-
-::llcpp::test::name::ReverseOrdinalUnion::ReverseOrdinalUnion() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::test::name::ReverseOrdinalUnion::~ReverseOrdinalUnion() {
-  Destroy();
-}
-
-void ::llcpp::test::name::ReverseOrdinalUnion::Destroy() {
-  switch (ordinal_) {
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::test::name::ReverseOrdinalUnion::MoveImpl_(ReverseOrdinalUnion&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kFirst:
-    mutable_first() = std::move(other.mutable_first());
-    break;
-  case Ordinal::kSecond:
-    mutable_second() = std::move(other.mutable_second());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(Union) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(Union, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(Union, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::test::name::ReverseOrdinalUnion::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::test::name::ReverseOrdinalUnion, first_) == 4);
-  static_assert(offsetof(::llcpp::test::name::ReverseOrdinalUnion, second_) == 4);
-  static_assert(sizeof(::llcpp::test::name::ReverseOrdinalUnion) == ::llcpp::test::name::ReverseOrdinalUnion::PrimarySize);
-}
-
-
-uint32_t& ::llcpp::test::name::ReverseOrdinalUnion::mutable_first() {
-  if (ordinal_ != Ordinal::kFirst) {
-    Destroy();
-    new (&first_) uint32_t;
-    ordinal_ = Ordinal::kFirst;
-  }
-  return first_;
-}
-
-uint32_t& ::llcpp::test::name::ReverseOrdinalUnion::mutable_second() {
-  if (ordinal_ != Ordinal::kSecond) {
-    Destroy();
-    new (&second_) uint32_t;
-    ordinal_ = Ordinal::kSecond;
-  }
-  return second_;
-}
-
-
-::llcpp::test::name::FieldCollision::FieldCollision() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::test::name::FieldCollision::~FieldCollision() {
-  Destroy();
-}
-
-void ::llcpp::test::name::FieldCollision::Destroy() {
-  switch (ordinal_) {
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::test::name::FieldCollision::MoveImpl_(FieldCollision&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kFieldCollisionTag:
-    mutable_field_collision_tag() = std::move(other.mutable_field_collision_tag());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(ReverseOrdinalUnion) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(ReverseOrdinalUnion, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(ReverseOrdinalUnion, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::test::name::FieldCollision::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::test::name::FieldCollision, field_collision_tag_) == 4);
-  static_assert(sizeof(::llcpp::test::name::FieldCollision) == ::llcpp::test::name::FieldCollision::PrimarySize);
-}
-
-
-int32_t& ::llcpp::test::name::FieldCollision::mutable_field_collision_tag() {
-  if (ordinal_ != Ordinal::kFieldCollisionTag) {
-    Destroy();
-    new (&field_collision_tag_) int32_t;
-    ordinal_ = Ordinal::kFieldCollisionTag;
-  }
-  return field_collision_tag_;
-}
-
-
-::llcpp::test::name::ExplicitUnion::ExplicitUnion() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::test::name::ExplicitUnion::~ExplicitUnion() {
-  Destroy();
-}
-
-void ::llcpp::test::name::ExplicitUnion::Destroy() {
-  switch (ordinal_) {
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::test::name::ExplicitUnion::MoveImpl_(ExplicitUnion&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kPrimitive:
-    mutable_Primitive() = std::move(other.mutable_Primitive());
-    break;
-  case Ordinal::kStringNeedsConstructor:
-    mutable_StringNeedsConstructor() = std::move(other.mutable_StringNeedsConstructor());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(FieldCollision) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(FieldCollision, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(FieldCollision, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::test::name::ExplicitUnion::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::test::name::ExplicitUnion, Primitive_) == 8);
-  static_assert(offsetof(::llcpp::test::name::ExplicitUnion, StringNeedsConstructor_) == 8);
-  static_assert(sizeof(::llcpp::test::name::ExplicitUnion) == ::llcpp::test::name::ExplicitUnion::PrimarySize);
+  static_assert(sizeof(ExplicitUnion) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(ExplicitUnion, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(ExplicitUnion, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
-
-
-int32_t& ::llcpp::test::name::ExplicitUnion::mutable_Primitive() {
-  if (ordinal_ != Ordinal::kPrimitive) {
-    Destroy();
-    new (&Primitive_) int32_t;
-    ordinal_ = Ordinal::kPrimitive;
-  }
-  return Primitive_;
-}
-
-::fidl::StringView& ::llcpp::test::name::ExplicitUnion::mutable_StringNeedsConstructor() {
-  if (ordinal_ != Ordinal::kStringNeedsConstructor) {
-    Destroy();
-    new (&StringNeedsConstructor_) ::fidl::StringView;
-    ordinal_ = Ordinal::kStringNeedsConstructor;
-  }
-  return StringNeedsConstructor_;
-}
-
 
 }  // namespace name
 }  // namespace test

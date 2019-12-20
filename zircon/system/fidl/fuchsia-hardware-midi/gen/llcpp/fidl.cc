@@ -162,9 +162,11 @@ void Device::Interface::GetInfoCompleterBase::Reply(::fidl::DecodedMessage<GetIn
 
 void Device::SetTransactionHeaderFor::GetInfoRequest(const ::fidl::DecodedMessage<Device::GetInfoRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetInfo_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Device::SetTransactionHeaderFor::GetInfoResponse(const ::fidl::DecodedMessage<Device::GetInfoResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetInfo_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace midi

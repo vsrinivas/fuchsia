@@ -528,8 +528,8 @@ struct Parameter {
   }
   Tag which() const;
 
-  static constexpr const fidl_type_t* Type = &fuchsia_tee_ParameterTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_tee_ParameterTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_tee_ParameterTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_tee_ParameterTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
@@ -649,8 +649,8 @@ extern "C" const fidl_type_t v1_fuchsia_tee_UuidTable;
 // UUID identifiers are used to identify the TEE Operating System and individual Trusted
 // Applications. This structure matches the UUID type as defined by RFC4122.
 struct Uuid {
-  static constexpr const fidl_type_t* Type = &fuchsia_tee_UuidTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_tee_UuidTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_tee_UuidTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_tee_UuidTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
@@ -674,8 +674,8 @@ extern "C" const fidl_type_t v1_fuchsia_tee_NoneTable;
 // An empty parameter type is used as a placeholder for elements in the parameter set that are not
 // used.
 struct None {
-  static constexpr const fidl_type_t* Type = &fuchsia_tee_NoneTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_tee_NoneTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_tee_NoneTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_tee_NoneTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -716,8 +716,8 @@ class Device final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::tee::OsInfo info;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_tee_DeviceGetOsInfoResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_tee_DeviceGetOsInfoResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_tee_DeviceGetOsInfoResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_tee_DeviceGetOsInfoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 136;
@@ -736,8 +736,8 @@ class Device final {
     uint32_t session_id;
     ::llcpp::fuchsia::tee::OpResult op_result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_tee_DeviceOpenSessionResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_tee_DeviceOpenSessionResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_tee_DeviceOpenSessionResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_tee_DeviceOpenSessionResponseTable;
     static constexpr uint32_t MaxNumHandles = 4;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 624;
@@ -754,8 +754,8 @@ class Device final {
     ::llcpp::fuchsia::tee::Uuid trusted_app;
     ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_tee_DeviceOpenSessionRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_tee_DeviceOpenSessionRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_tee_DeviceOpenSessionRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_tee_DeviceOpenSessionRequestTable;
     static constexpr uint32_t MaxNumHandles = 4;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 544;
@@ -773,8 +773,8 @@ class Device final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::tee::OpResult op_result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_tee_DeviceInvokeCommandResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_tee_DeviceInvokeCommandResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_tee_DeviceInvokeCommandResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_tee_DeviceInvokeCommandResponseTable;
     static constexpr uint32_t MaxNumHandles = 4;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 624;
@@ -792,8 +792,8 @@ class Device final {
     uint32_t command_id;
     ::fidl::VectorView<::llcpp::fuchsia::tee::Parameter> parameter_set;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_tee_DeviceInvokeCommandRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_tee_DeviceInvokeCommandRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_tee_DeviceInvokeCommandRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_tee_DeviceInvokeCommandRequestTable;
     static constexpr uint32_t MaxNumHandles = 4;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 544;
@@ -812,8 +812,8 @@ class Device final {
     fidl_message_header_t _hdr;
     uint32_t session_id;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_tee_DeviceCloseSessionRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_tee_DeviceCloseSessionRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_tee_DeviceCloseSessionRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_tee_DeviceCloseSessionRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;

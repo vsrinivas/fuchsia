@@ -44,8 +44,8 @@ class Provider final {
     fidl_message_header_t _hdr;
     ::zx::channel dir;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_tee_manager_ProviderRequestPersistentStorageRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_tee_manager_ProviderRequestPersistentStorageRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_tee_manager_ProviderRequestPersistentStorageRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_tee_manager_ProviderRequestPersistentStorageRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;

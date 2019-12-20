@@ -33,8 +33,8 @@ extern "C" const fidl_type_t fuchsia_hardware_skipblock_WriteBytesOperationTable
 extern "C" const fidl_type_t v1_fuchsia_hardware_skipblock_WriteBytesOperationTable;
 
 struct WriteBytesOperation {
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_skipblock_WriteBytesOperationTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_skipblock_WriteBytesOperationTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_skipblock_WriteBytesOperationTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_skipblock_WriteBytesOperationTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 32;
   [[maybe_unused]]
@@ -62,8 +62,8 @@ extern "C" const fidl_type_t fuchsia_hardware_skipblock_ReadWriteOperationTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_skipblock_ReadWriteOperationTable;
 
 struct ReadWriteOperation {
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_skipblock_ReadWriteOperationTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_skipblock_ReadWriteOperationTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_skipblock_ReadWriteOperationTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_skipblock_ReadWriteOperationTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
@@ -89,8 +89,8 @@ extern "C" const fidl_type_t fuchsia_hardware_skipblock_PartitionInfoTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_skipblock_PartitionInfoTable;
 
 struct PartitionInfo {
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_skipblock_PartitionInfoTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_skipblock_PartitionInfoTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_skipblock_PartitionInfoTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_skipblock_PartitionInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   [[maybe_unused]]
@@ -136,8 +136,8 @@ class SkipBlock final {
     int32_t status;
     ::llcpp::fuchsia::hardware::skipblock::PartitionInfo partition_info;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_skipblock_SkipBlockGetPartitionInfoResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_skipblock_SkipBlockGetPartitionInfoResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_skipblock_SkipBlockGetPartitionInfoResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_skipblock_SkipBlockGetPartitionInfoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 56;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -155,8 +155,8 @@ class SkipBlock final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_skipblock_SkipBlockReadResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_skipblock_SkipBlockReadResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_skipblock_SkipBlockReadResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_skipblock_SkipBlockReadResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -172,8 +172,8 @@ class SkipBlock final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation op;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_skipblock_SkipBlockReadRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_skipblock_SkipBlockReadRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_skipblock_SkipBlockReadRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_skipblock_SkipBlockReadRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -192,8 +192,8 @@ class SkipBlock final {
     int32_t status;
     bool bad_block_grown;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_skipblock_SkipBlockWriteResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_skipblock_SkipBlockWriteResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_skipblock_SkipBlockWriteResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_skipblock_SkipBlockWriteResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -209,8 +209,8 @@ class SkipBlock final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation op;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_skipblock_SkipBlockWriteRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_skipblock_SkipBlockWriteRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_skipblock_SkipBlockWriteRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_skipblock_SkipBlockWriteRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -229,8 +229,8 @@ class SkipBlock final {
     int32_t status;
     bool bad_block_grown;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_skipblock_SkipBlockWriteBytesResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_skipblock_SkipBlockWriteBytesResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_skipblock_SkipBlockWriteBytesResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_skipblock_SkipBlockWriteBytesResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -246,8 +246,8 @@ class SkipBlock final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::hardware::skipblock::WriteBytesOperation op;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_skipblock_SkipBlockWriteBytesRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_skipblock_SkipBlockWriteBytesRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_skipblock_SkipBlockWriteBytesRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_skipblock_SkipBlockWriteBytesRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 0;

@@ -30,13 +30,206 @@ struct Action;
 class MockDeviceThread;
 class MockDevice;
 
+extern "C" const fidl_type_t fuchsia_device_mock_ActionTable;
+extern "C" const fidl_type_t v1_fuchsia_device_mock_ActionTable;
+
+// What a hook should do.
+struct Action {
+  Action() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kReturnStatus = 1,  // 0x1
+    kWrite = 2,  // 0x2
+    kCreateThread = 3,  // 0x3
+    kAsyncRemoveDevice = 4,  // 0x4
+    kUnbindReply = 5,  // 0x5
+    kAddDevice = 6,  // 0x6
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_return_status() const { return ordinal_ == Ordinal::kReturnStatus; }
+
+  static Action WithReturnStatus(int32_t* val) {
+    Action result;
+    result.set_return_status(val);
+    return result;
+  }
+
+  // Return this status.
+  void set_return_status(int32_t* elem) {
+    ordinal_ = Ordinal::kReturnStatus;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  // Return this status.
+  int32_t& mutable_return_status() {
+    ZX_ASSERT(ordinal_ == Ordinal::kReturnStatus);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  const int32_t& return_status() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kReturnStatus);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+
+  bool is_write() const { return ordinal_ == Ordinal::kWrite; }
+
+  static Action WithWrite(::fidl::VectorView<uint8_t>* val) {
+    Action result;
+    result.set_write(val);
+    return result;
+  }
+
+  // Write these bytes to the buffer associated with the hook.
+  void set_write(::fidl::VectorView<uint8_t>* elem) {
+    ordinal_ = Ordinal::kWrite;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  // Write these bytes to the buffer associated with the hook.
+  ::fidl::VectorView<uint8_t>& mutable_write() {
+    ZX_ASSERT(ordinal_ == Ordinal::kWrite);
+    return *static_cast<::fidl::VectorView<uint8_t>*>(envelope_.data);
+  }
+  const ::fidl::VectorView<uint8_t>& write() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kWrite);
+    return *static_cast<::fidl::VectorView<uint8_t>*>(envelope_.data);
+  }
+
+  bool is_create_thread() const { return ordinal_ == Ordinal::kCreateThread; }
+
+  static Action WithCreateThread(::zx::channel* val) {
+    Action result;
+    result.set_create_thread(val);
+    return result;
+  }
+
+  // Create a new thread with a processing loop.
+  void set_create_thread(::zx::channel* elem) {
+    ordinal_ = Ordinal::kCreateThread;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  // Create a new thread with a processing loop.
+  ::zx::channel& mutable_create_thread() {
+    ZX_ASSERT(ordinal_ == Ordinal::kCreateThread);
+    return *static_cast<::zx::channel*>(envelope_.data);
+  }
+  const ::zx::channel& create_thread() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kCreateThread);
+    return *static_cast<::zx::channel*>(envelope_.data);
+  }
+
+  bool is_async_remove_device() const { return ordinal_ == Ordinal::kAsyncRemoveDevice; }
+
+  static Action WithAsyncRemoveDevice(bool* val) {
+    Action result;
+    result.set_async_remove_device(val);
+    return result;
+  }
+
+  // Invoke device_async_remove() on our device.
+  void set_async_remove_device(bool* elem) {
+    ordinal_ = Ordinal::kAsyncRemoveDevice;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  // Invoke device_async_remove() on our device.
+  bool& mutable_async_remove_device() {
+    ZX_ASSERT(ordinal_ == Ordinal::kAsyncRemoveDevice);
+    return *static_cast<bool*>(envelope_.data);
+  }
+  const bool& async_remove_device() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kAsyncRemoveDevice);
+    return *static_cast<bool*>(envelope_.data);
+  }
+
+  bool is_unbind_reply() const { return ordinal_ == Ordinal::kUnbindReply; }
+
+  static Action WithUnbindReply(::llcpp::fuchsia::device::mock::UnbindReplyAction* val) {
+    Action result;
+    result.set_unbind_reply(val);
+    return result;
+  }
+
+  // Signal that the unbind has completed.
+  void set_unbind_reply(::llcpp::fuchsia::device::mock::UnbindReplyAction* elem) {
+    ordinal_ = Ordinal::kUnbindReply;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  // Signal that the unbind has completed.
+  ::llcpp::fuchsia::device::mock::UnbindReplyAction& mutable_unbind_reply() {
+    ZX_ASSERT(ordinal_ == Ordinal::kUnbindReply);
+    return *static_cast<::llcpp::fuchsia::device::mock::UnbindReplyAction*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::device::mock::UnbindReplyAction& unbind_reply() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kUnbindReply);
+    return *static_cast<::llcpp::fuchsia::device::mock::UnbindReplyAction*>(envelope_.data);
+  }
+
+  bool is_add_device() const { return ordinal_ == Ordinal::kAddDevice; }
+
+  static Action WithAddDevice(::llcpp::fuchsia::device::mock::AddDeviceAction* val) {
+    Action result;
+    result.set_add_device(val);
+    return result;
+  }
+
+  // Create a new child device
+  void set_add_device(::llcpp::fuchsia::device::mock::AddDeviceAction* elem) {
+    ordinal_ = Ordinal::kAddDevice;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  // Create a new child device
+  ::llcpp::fuchsia::device::mock::AddDeviceAction& mutable_add_device() {
+    ZX_ASSERT(ordinal_ == Ordinal::kAddDevice);
+    return *static_cast<::llcpp::fuchsia::device::mock::AddDeviceAction*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::device::mock::AddDeviceAction& add_device() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kAddDevice);
+    return *static_cast<::llcpp::fuchsia::device::mock::AddDeviceAction*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_ActionTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_mock_ActionTable;
+  static constexpr uint32_t MaxNumHandles = 1;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 16400;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 16400;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kReturnStatus = 1,  // 0x1
+    kWrite = 2,  // 0x2
+    kCreateThread = 3,  // 0x3
+    kAsyncRemoveDevice = 4,  // 0x4
+    kUnbindReply = 5,  // 0x5
+    kAddDevice = 6,  // 0x6
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
 extern "C" const fidl_type_t fuchsia_device_mock_AddDeviceActionTable;
 extern "C" const fidl_type_t v1_fuchsia_device_mock_AddDeviceActionTable;
 
 // Request to add a new child device
 struct AddDeviceAction {
-  static constexpr const fidl_type_t* Type = &fuchsia_device_mock_AddDeviceActionTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_mock_AddDeviceActionTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_AddDeviceActionTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_mock_AddDeviceActionTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 56;
   [[maybe_unused]]
@@ -71,8 +264,8 @@ extern "C" const fidl_type_t v1_fuchsia_device_mock_HookInvocationTable;
 
 // A record of the invocation of a hook
 struct HookInvocation {
-  static constexpr const fidl_type_t* Type = &fuchsia_device_mock_HookInvocationTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_mock_HookInvocationTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_HookInvocationTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_mock_HookInvocationTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
@@ -96,8 +289,8 @@ extern "C" const fidl_type_t v1_fuchsia_device_mock_UnbindReplyActionTable;
 
 // Marker struct for unbind reply action
 struct UnbindReplyAction {
-  static constexpr const fidl_type_t* Type = &fuchsia_device_mock_UnbindReplyActionTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_mock_UnbindReplyActionTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_UnbindReplyActionTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_mock_UnbindReplyActionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
@@ -108,247 +301,6 @@ struct UnbindReplyAction {
 
   // Value that will be echoed back in the completion message
   uint64_t action_id = {};
-};
-
-extern "C" const fidl_type_t fuchsia_device_mock_ActionTable;
-extern "C" const fidl_type_t v1_fuchsia_device_mock_ActionTable;
-
-// What a hook should do.
-struct Action {
-  enum class Tag : fidl_union_tag_t {
-    kReturnStatus = 0,
-    kWrite = 1,
-    kCreateThread = 2,
-    kAsyncRemoveDevice = 3,
-    kUnbindReply = 4,
-    kAddDevice = 5,
-  };
-
-  Action();
-  ~Action();
-
-  Action(Action&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  Action& operator=(Action&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_return_status() const { return ordinal_ == Ordinal::kReturnStatus; }
-
-  static Action WithReturnStatus(int32_t* val) {
-    Action result;
-    result.set_return_status(val);
-    return result;
-  }
-
-  // Return this status.
-  int32_t& mutable_return_status();
-
-  // Return this status.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_return_status(const T* v) {
-    mutable_return_status() = *v;
-  }
-
-  // Return this status.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_return_status(T* v) {
-    mutable_return_status() = std::move(*v);
-  }
-
-  // Return this status.
-  int32_t const & return_status() const { return return_status_; }
-
-  bool is_write() const { return ordinal_ == Ordinal::kWrite; }
-
-  static Action WithWrite(::fidl::VectorView<uint8_t>* val) {
-    Action result;
-    result.set_write(val);
-    return result;
-  }
-
-  // Write these bytes to the buffer associated with the hook.
-  ::fidl::VectorView<uint8_t>& mutable_write();
-
-  // Write these bytes to the buffer associated with the hook.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::fidl::VectorView<uint8_t>>::value && std::is_copy_assignable<T>::value>
-  set_write(const T* v) {
-    mutable_write() = *v;
-  }
-
-  // Write these bytes to the buffer associated with the hook.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::fidl::VectorView<uint8_t>>::value && std::is_move_assignable<T>::value>
-  set_write(T* v) {
-    mutable_write() = std::move(*v);
-  }
-
-  // Write these bytes to the buffer associated with the hook.
-  ::fidl::VectorView<uint8_t> const & write() const { return write_; }
-
-  bool is_create_thread() const { return ordinal_ == Ordinal::kCreateThread; }
-
-  static Action WithCreateThread(::zx::channel* val) {
-    Action result;
-    result.set_create_thread(val);
-    return result;
-  }
-
-  // Create a new thread with a processing loop.
-  ::zx::channel& mutable_create_thread();
-
-  // Create a new thread with a processing loop.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::zx::channel>::value && std::is_copy_assignable<T>::value>
-  set_create_thread(const T* v) {
-    mutable_create_thread() = *v;
-  }
-
-  // Create a new thread with a processing loop.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::zx::channel>::value && std::is_move_assignable<T>::value>
-  set_create_thread(T* v) {
-    mutable_create_thread() = std::move(*v);
-  }
-
-  // Create a new thread with a processing loop.
-  ::zx::channel const & create_thread() const { return create_thread_; }
-
-  bool is_async_remove_device() const { return ordinal_ == Ordinal::kAsyncRemoveDevice; }
-
-  static Action WithAsyncRemoveDevice(bool* val) {
-    Action result;
-    result.set_async_remove_device(val);
-    return result;
-  }
-
-  // Invoke device_async_remove() on our device.
-  bool& mutable_async_remove_device();
-
-  // Invoke device_async_remove() on our device.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, bool>::value && std::is_copy_assignable<T>::value>
-  set_async_remove_device(const T* v) {
-    mutable_async_remove_device() = *v;
-  }
-
-  // Invoke device_async_remove() on our device.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, bool>::value && std::is_move_assignable<T>::value>
-  set_async_remove_device(T* v) {
-    mutable_async_remove_device() = std::move(*v);
-  }
-
-  // Invoke device_async_remove() on our device.
-  bool const & async_remove_device() const { return async_remove_device_; }
-
-  bool is_unbind_reply() const { return ordinal_ == Ordinal::kUnbindReply; }
-
-  static Action WithUnbindReply(::llcpp::fuchsia::device::mock::UnbindReplyAction* val) {
-    Action result;
-    result.set_unbind_reply(val);
-    return result;
-  }
-
-  // Signal that the unbind has completed.
-  ::llcpp::fuchsia::device::mock::UnbindReplyAction& mutable_unbind_reply();
-
-  // Signal that the unbind has completed.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::mock::UnbindReplyAction>::value && std::is_copy_assignable<T>::value>
-  set_unbind_reply(const T* v) {
-    mutable_unbind_reply() = *v;
-  }
-
-  // Signal that the unbind has completed.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::mock::UnbindReplyAction>::value && std::is_move_assignable<T>::value>
-  set_unbind_reply(T* v) {
-    mutable_unbind_reply() = std::move(*v);
-  }
-
-  // Signal that the unbind has completed.
-  ::llcpp::fuchsia::device::mock::UnbindReplyAction const & unbind_reply() const { return unbind_reply_; }
-
-  bool is_add_device() const { return ordinal_ == Ordinal::kAddDevice; }
-
-  static Action WithAddDevice(::llcpp::fuchsia::device::mock::AddDeviceAction* val) {
-    Action result;
-    result.set_add_device(val);
-    return result;
-  }
-
-  // Create a new child device
-  ::llcpp::fuchsia::device::mock::AddDeviceAction& mutable_add_device();
-
-  // Create a new child device
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::mock::AddDeviceAction>::value && std::is_copy_assignable<T>::value>
-  set_add_device(const T* v) {
-    mutable_add_device() = *v;
-  }
-
-  // Create a new child device
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::mock::AddDeviceAction>::value && std::is_move_assignable<T>::value>
-  set_add_device(T* v) {
-    mutable_add_device() = std::move(*v);
-  }
-
-  // Create a new child device
-  ::llcpp::fuchsia::device::mock::AddDeviceAction const & add_device() const { return add_device_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_device_mock_ActionTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_mock_ActionTable;
-  static constexpr uint32_t MaxNumHandles = 1;
-  static constexpr uint32_t PrimarySize = 64;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 16384;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 16400;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kReturnStatus = 0,
-    kWrite = 1,
-    kCreateThread = 2,
-    kAsyncRemoveDevice = 3,
-    kUnbindReply = 4,
-    kAddDevice = 5,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(Action&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    int32_t return_status_;
-    ::fidl::VectorView<uint8_t> write_;
-    ::zx::channel create_thread_;
-    bool async_remove_device_;
-    ::llcpp::fuchsia::device::mock::UnbindReplyAction unbind_reply_;
-    ::llcpp::fuchsia::device::mock::AddDeviceAction add_device_;
-  };
 };
 
 extern "C" const fidl_type_t fuchsia_device_mock_MockDeviceThreadPerformActionsRequestTable;
@@ -375,11 +327,11 @@ class MockDeviceThread final {
     fidl_message_header_t _hdr;
     ::fidl::VectorView<::llcpp::fuchsia::device::mock::Action> actions;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceThreadPerformActionsRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_mock_MockDeviceThreadPerformActionsRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_MockDeviceThreadPerformActionsRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_mock_MockDeviceThreadPerformActionsRequestTable;
     static constexpr uint32_t MaxNumHandles = 10;
     static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 164480;
+    static constexpr uint32_t MaxOutOfLine = 164240;
     static constexpr uint32_t AltPrimarySize = 32;
     static constexpr uint32_t AltMaxOutOfLine = 164240;
     static constexpr bool HasFlexibleEnvelope = false;
@@ -393,8 +345,8 @@ class MockDeviceThread final {
     fidl_message_header_t _hdr;
     uint64_t action_id;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceThreadAddDeviceDoneEventTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_mock_MockDeviceThreadAddDeviceDoneEventTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_MockDeviceThreadAddDeviceDoneEventTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_mock_MockDeviceThreadAddDeviceDoneEventTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -410,8 +362,8 @@ class MockDeviceThread final {
     fidl_message_header_t _hdr;
     uint64_t action_id;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceThreadUnbindReplyDoneEventTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_mock_MockDeviceThreadUnbindReplyDoneEventTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_MockDeviceThreadUnbindReplyDoneEventTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_mock_MockDeviceThreadUnbindReplyDoneEventTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -669,11 +621,11 @@ class MockDevice final {
     fidl_message_header_t _hdr;
     ::fidl::VectorView<::llcpp::fuchsia::device::mock::Action> actions;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceBindResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_mock_MockDeviceBindResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_MockDeviceBindResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_mock_MockDeviceBindResponseTable;
     static constexpr uint32_t MaxNumHandles = 10;
     static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 164480;
+    static constexpr uint32_t MaxOutOfLine = 164240;
     static constexpr uint32_t AltPrimarySize = 32;
     static constexpr uint32_t AltMaxOutOfLine = 164240;
     static constexpr bool HasFlexibleEnvelope = false;
@@ -686,8 +638,8 @@ class MockDevice final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::device::mock::HookInvocation record;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceBindRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_mock_MockDeviceBindRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_MockDeviceBindRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_mock_MockDeviceBindRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -705,8 +657,8 @@ class MockDevice final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::device::mock::HookInvocation record;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceReleaseRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_mock_MockDeviceReleaseRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_MockDeviceReleaseRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_mock_MockDeviceReleaseRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -723,11 +675,11 @@ class MockDevice final {
     fidl_message_header_t _hdr;
     ::fidl::VectorView<::llcpp::fuchsia::device::mock::Action> actions;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceGetProtocolResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_mock_MockDeviceGetProtocolResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_MockDeviceGetProtocolResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_mock_MockDeviceGetProtocolResponseTable;
     static constexpr uint32_t MaxNumHandles = 10;
     static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 164480;
+    static constexpr uint32_t MaxOutOfLine = 164240;
     static constexpr uint32_t AltPrimarySize = 32;
     static constexpr uint32_t AltMaxOutOfLine = 164240;
     static constexpr bool HasFlexibleEnvelope = false;
@@ -741,8 +693,8 @@ class MockDevice final {
     ::llcpp::fuchsia::device::mock::HookInvocation record;
     uint32_t protocol_id;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceGetProtocolRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_mock_MockDeviceGetProtocolRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_MockDeviceGetProtocolRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_mock_MockDeviceGetProtocolRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -760,11 +712,11 @@ class MockDevice final {
     fidl_message_header_t _hdr;
     ::fidl::VectorView<::llcpp::fuchsia::device::mock::Action> actions;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceOpenResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_mock_MockDeviceOpenResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_MockDeviceOpenResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_mock_MockDeviceOpenResponseTable;
     static constexpr uint32_t MaxNumHandles = 10;
     static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 164480;
+    static constexpr uint32_t MaxOutOfLine = 164240;
     static constexpr uint32_t AltPrimarySize = 32;
     static constexpr uint32_t AltMaxOutOfLine = 164240;
     static constexpr bool HasFlexibleEnvelope = false;
@@ -778,8 +730,8 @@ class MockDevice final {
     ::llcpp::fuchsia::device::mock::HookInvocation record;
     uint32_t flags;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceOpenRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_mock_MockDeviceOpenRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_MockDeviceOpenRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_mock_MockDeviceOpenRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -797,11 +749,11 @@ class MockDevice final {
     fidl_message_header_t _hdr;
     ::fidl::VectorView<::llcpp::fuchsia::device::mock::Action> actions;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceCloseResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_mock_MockDeviceCloseResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_MockDeviceCloseResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_mock_MockDeviceCloseResponseTable;
     static constexpr uint32_t MaxNumHandles = 10;
     static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 164480;
+    static constexpr uint32_t MaxOutOfLine = 164240;
     static constexpr uint32_t AltPrimarySize = 32;
     static constexpr uint32_t AltMaxOutOfLine = 164240;
     static constexpr bool HasFlexibleEnvelope = false;
@@ -815,8 +767,8 @@ class MockDevice final {
     ::llcpp::fuchsia::device::mock::HookInvocation record;
     uint32_t flags;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceCloseRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_mock_MockDeviceCloseRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_MockDeviceCloseRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_mock_MockDeviceCloseRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -834,11 +786,11 @@ class MockDevice final {
     fidl_message_header_t _hdr;
     ::fidl::VectorView<::llcpp::fuchsia::device::mock::Action> actions;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceUnbindResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_mock_MockDeviceUnbindResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_MockDeviceUnbindResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_mock_MockDeviceUnbindResponseTable;
     static constexpr uint32_t MaxNumHandles = 10;
     static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 164480;
+    static constexpr uint32_t MaxOutOfLine = 164240;
     static constexpr uint32_t AltPrimarySize = 32;
     static constexpr uint32_t AltMaxOutOfLine = 164240;
     static constexpr bool HasFlexibleEnvelope = false;
@@ -851,8 +803,8 @@ class MockDevice final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::device::mock::HookInvocation record;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceUnbindRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_mock_MockDeviceUnbindRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_MockDeviceUnbindRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_mock_MockDeviceUnbindRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -870,11 +822,11 @@ class MockDevice final {
     fidl_message_header_t _hdr;
     ::fidl::VectorView<::llcpp::fuchsia::device::mock::Action> actions;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceReadResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_mock_MockDeviceReadResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_MockDeviceReadResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_mock_MockDeviceReadResponseTable;
     static constexpr uint32_t MaxNumHandles = 10;
     static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 164480;
+    static constexpr uint32_t MaxOutOfLine = 164240;
     static constexpr uint32_t AltPrimarySize = 32;
     static constexpr uint32_t AltMaxOutOfLine = 164240;
     static constexpr bool HasFlexibleEnvelope = false;
@@ -889,8 +841,8 @@ class MockDevice final {
     uint64_t count;
     uint64_t off;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceReadRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_mock_MockDeviceReadRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_MockDeviceReadRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_mock_MockDeviceReadRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 56;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -908,11 +860,11 @@ class MockDevice final {
     fidl_message_header_t _hdr;
     ::fidl::VectorView<::llcpp::fuchsia::device::mock::Action> actions;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceWriteResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_mock_MockDeviceWriteResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_MockDeviceWriteResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_mock_MockDeviceWriteResponseTable;
     static constexpr uint32_t MaxNumHandles = 10;
     static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 164480;
+    static constexpr uint32_t MaxOutOfLine = 164240;
     static constexpr uint32_t AltPrimarySize = 32;
     static constexpr uint32_t AltMaxOutOfLine = 164240;
     static constexpr bool HasFlexibleEnvelope = false;
@@ -927,8 +879,8 @@ class MockDevice final {
     ::fidl::VectorView<uint8_t> buffer;
     uint64_t off;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceWriteRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_mock_MockDeviceWriteRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_MockDeviceWriteRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_mock_MockDeviceWriteRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 64;
     static constexpr uint32_t MaxOutOfLine = 16384;
@@ -946,11 +898,11 @@ class MockDevice final {
     fidl_message_header_t _hdr;
     ::fidl::VectorView<::llcpp::fuchsia::device::mock::Action> actions;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceGetSizeResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_mock_MockDeviceGetSizeResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_MockDeviceGetSizeResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_mock_MockDeviceGetSizeResponseTable;
     static constexpr uint32_t MaxNumHandles = 10;
     static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 164480;
+    static constexpr uint32_t MaxOutOfLine = 164240;
     static constexpr uint32_t AltPrimarySize = 32;
     static constexpr uint32_t AltMaxOutOfLine = 164240;
     static constexpr bool HasFlexibleEnvelope = false;
@@ -963,8 +915,8 @@ class MockDevice final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::device::mock::HookInvocation record;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceGetSizeRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_mock_MockDeviceGetSizeRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_MockDeviceGetSizeRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_mock_MockDeviceGetSizeRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -982,11 +934,11 @@ class MockDevice final {
     fidl_message_header_t _hdr;
     ::fidl::VectorView<::llcpp::fuchsia::device::mock::Action> actions;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceSuspendResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_mock_MockDeviceSuspendResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_MockDeviceSuspendResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_mock_MockDeviceSuspendResponseTable;
     static constexpr uint32_t MaxNumHandles = 10;
     static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 164480;
+    static constexpr uint32_t MaxOutOfLine = 164240;
     static constexpr uint32_t AltPrimarySize = 32;
     static constexpr uint32_t AltMaxOutOfLine = 164240;
     static constexpr bool HasFlexibleEnvelope = false;
@@ -1000,8 +952,8 @@ class MockDevice final {
     ::llcpp::fuchsia::device::mock::HookInvocation record;
     uint32_t flags;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceSuspendRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_mock_MockDeviceSuspendRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_MockDeviceSuspendRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_mock_MockDeviceSuspendRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1019,11 +971,11 @@ class MockDevice final {
     fidl_message_header_t _hdr;
     ::fidl::VectorView<::llcpp::fuchsia::device::mock::Action> actions;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceResumeResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_mock_MockDeviceResumeResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_MockDeviceResumeResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_mock_MockDeviceResumeResponseTable;
     static constexpr uint32_t MaxNumHandles = 10;
     static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 164480;
+    static constexpr uint32_t MaxOutOfLine = 164240;
     static constexpr uint32_t AltPrimarySize = 32;
     static constexpr uint32_t AltMaxOutOfLine = 164240;
     static constexpr bool HasFlexibleEnvelope = false;
@@ -1037,8 +989,8 @@ class MockDevice final {
     ::llcpp::fuchsia::device::mock::HookInvocation record;
     uint32_t flags;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceResumeRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_mock_MockDeviceResumeRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_MockDeviceResumeRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_mock_MockDeviceResumeRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1056,11 +1008,11 @@ class MockDevice final {
     fidl_message_header_t _hdr;
     ::fidl::VectorView<::llcpp::fuchsia::device::mock::Action> actions;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceMessageResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_mock_MockDeviceMessageResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_MockDeviceMessageResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_mock_MockDeviceMessageResponseTable;
     static constexpr uint32_t MaxNumHandles = 10;
     static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 164480;
+    static constexpr uint32_t MaxOutOfLine = 164240;
     static constexpr uint32_t AltPrimarySize = 32;
     static constexpr uint32_t AltMaxOutOfLine = 164240;
     static constexpr bool HasFlexibleEnvelope = false;
@@ -1073,8 +1025,8 @@ class MockDevice final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::device::mock::HookInvocation record;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceMessageRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_mock_MockDeviceMessageRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_MockDeviceMessageRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_mock_MockDeviceMessageRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1092,11 +1044,11 @@ class MockDevice final {
     fidl_message_header_t _hdr;
     ::fidl::VectorView<::llcpp::fuchsia::device::mock::Action> actions;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceRxrpcResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_mock_MockDeviceRxrpcResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_MockDeviceRxrpcResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_mock_MockDeviceRxrpcResponseTable;
     static constexpr uint32_t MaxNumHandles = 10;
     static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 164480;
+    static constexpr uint32_t MaxOutOfLine = 164240;
     static constexpr uint32_t AltPrimarySize = 32;
     static constexpr uint32_t AltMaxOutOfLine = 164240;
     static constexpr bool HasFlexibleEnvelope = false;
@@ -1109,8 +1061,8 @@ class MockDevice final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::device::mock::HookInvocation record;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceRxrpcRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_mock_MockDeviceRxrpcRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_MockDeviceRxrpcRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_mock_MockDeviceRxrpcRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1128,8 +1080,8 @@ class MockDevice final {
     fidl_message_header_t _hdr;
     uint64_t action_id;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceAddDeviceDoneRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_mock_MockDeviceAddDeviceDoneRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_MockDeviceAddDeviceDoneRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_mock_MockDeviceAddDeviceDoneRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1146,8 +1098,8 @@ class MockDevice final {
     fidl_message_header_t _hdr;
     uint64_t action_id;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_mock_MockDeviceUnbindReplyDoneRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_mock_MockDeviceUnbindReplyDoneRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_mock_MockDeviceUnbindReplyDoneRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_mock_MockDeviceUnbindReplyDoneRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;

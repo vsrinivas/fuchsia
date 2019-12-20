@@ -61,8 +61,8 @@ class Device final {
     int32_t status;
     ::zx::resource resource;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_sysinfo_DeviceGetHypervisorResourceResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysinfo_DeviceGetHypervisorResourceResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_sysinfo_DeviceGetHypervisorResourceResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_sysinfo_DeviceGetHypervisorResourceResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -81,8 +81,8 @@ class Device final {
     int32_t status;
     ::fidl::StringView name;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_sysinfo_DeviceGetBoardNameResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysinfo_DeviceGetBoardNameResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_sysinfo_DeviceGetBoardNameResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_sysinfo_DeviceGetBoardNameResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 32;
@@ -101,8 +101,8 @@ class Device final {
     int32_t status;
     uint32_t revision;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_sysinfo_DeviceGetBoardRevisionResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysinfo_DeviceGetBoardRevisionResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_sysinfo_DeviceGetBoardRevisionResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_sysinfo_DeviceGetBoardRevisionResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -121,8 +121,8 @@ class Device final {
     int32_t status;
     ::llcpp::fuchsia::sysinfo::InterruptControllerInfo* info;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_sysinfo_DeviceGetInterruptControllerInfoResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysinfo_DeviceGetInterruptControllerInfoResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_sysinfo_DeviceGetInterruptControllerInfoResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_sysinfo_DeviceGetInterruptControllerInfoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 8;
@@ -481,8 +481,8 @@ extern "C" const fidl_type_t fuchsia_sysinfo_InterruptControllerInfoTable;
 extern "C" const fidl_type_t v1_fuchsia_sysinfo_InterruptControllerInfoTable;
 
 struct InterruptControllerInfo {
-  static constexpr const fidl_type_t* Type = &fuchsia_sysinfo_InterruptControllerInfoTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysinfo_InterruptControllerInfoTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_sysinfo_InterruptControllerInfoTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_sysinfo_InterruptControllerInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]

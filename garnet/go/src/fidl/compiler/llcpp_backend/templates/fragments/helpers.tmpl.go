@@ -22,6 +22,7 @@ const Helpers = `
 {{- $interface_name := .LLProps.InterfaceName -}}
 void {{ $interface_name }}::SetTransactionHeaderFor::{{ template "SetTransactionHeaderForRequestMethodSignature" . }} {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, {{ .Ordinals.Write.Name }});
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 {{- end }}
 
@@ -34,6 +35,7 @@ void {{ $interface_name }}::SetTransactionHeaderFor::{{ template "SetTransaction
 {{- $interface_name := .LLProps.InterfaceName -}}
 void {{ $interface_name }}::SetTransactionHeaderFor::{{ template "SetTransactionHeaderForResponseMethodSignature" . }} {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, {{ .Ordinals.Write.Name }});
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 {{- end }}
 `

@@ -33,11 +33,8 @@ class FakePayloadStream : public ::llcpp::fuchsia::paver::PayloadStream::Interfa
   void ReadSuccess(ReadDataCompleter::Sync completer) {
     vmo_.write(kFileData, 0, sizeof(kFileData));
 
-    ::llcpp::fuchsia::paver::ReadResult result;
-    result.mutable_info().offset = 0;
-    result.mutable_info().size = sizeof(kFileData);
-
-    completer.Reply(std::move(result));
+    ::llcpp::fuchsia::paver::ReadInfo info{.offset = 0, .size = sizeof(kFileData)};
+    completer.Reply(::llcpp::fuchsia::paver::ReadResult::WithInfo(&info));
   }
 
   void ReadError(ReadDataCompleter::Sync completer) {

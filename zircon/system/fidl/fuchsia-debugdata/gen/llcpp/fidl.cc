@@ -258,13 +258,16 @@ void DebugData::Interface::LoadConfigCompleterBase::Reply(::fidl::DecodedMessage
 
 void DebugData::SetTransactionHeaderFor::PublishRequest(const ::fidl::DecodedMessage<DebugData::PublishRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDebugData_Publish_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DebugData::SetTransactionHeaderFor::LoadConfigRequest(const ::fidl::DecodedMessage<DebugData::LoadConfigRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDebugData_LoadConfig_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DebugData::SetTransactionHeaderFor::LoadConfigResponse(const ::fidl::DecodedMessage<DebugData::LoadConfigResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDebugData_LoadConfig_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace debugdata

@@ -51,8 +51,8 @@ class Parent final {
     fidl_message_header_t _hdr;
     ::zx::channel c;
 
-    static constexpr const fidl_type_t* Type = &test_name_ParentGetChildResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_test_name_ParentGetChildResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_test_name_ParentGetChildResponseTable;
+    static constexpr const fidl_type_t* AltType = &test_name_ParentGetChildResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -70,8 +70,8 @@ class Parent final {
     fidl_message_header_t _hdr;
     ::zx::channel r;
 
-    static constexpr const fidl_type_t* Type = &test_name_ParentGetChildRequestResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_test_name_ParentGetChildRequestResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_test_name_ParentGetChildRequestResponseTable;
+    static constexpr const fidl_type_t* AltType = &test_name_ParentGetChildRequestResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -89,8 +89,8 @@ class Parent final {
     fidl_message_header_t _hdr;
     ::zx::channel c;
 
-    static constexpr const fidl_type_t* Type = &test_name_ParentTakeChildRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_test_name_ParentTakeChildRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_test_name_ParentTakeChildRequestTable;
+    static constexpr const fidl_type_t* AltType = &test_name_ParentTakeChildRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -107,8 +107,8 @@ class Parent final {
     fidl_message_header_t _hdr;
     ::zx::channel r;
 
-    static constexpr const fidl_type_t* Type = &test_name_ParentTakeChildRequestRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_test_name_ParentTakeChildRequestRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_test_name_ParentTakeChildRequestRequestTable;
+    static constexpr const fidl_type_t* AltType = &test_name_ParentTakeChildRequestRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;

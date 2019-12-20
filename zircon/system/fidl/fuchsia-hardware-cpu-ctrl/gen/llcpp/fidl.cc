@@ -10,64 +10,11 @@ namespace hardware {
 namespace cpu {
 namespace ctrl {
 
-::llcpp::fuchsia::hardware::cpu::ctrl::Device_GetPerformanceStateInfo_Result::Device_GetPerformanceStateInfo_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::hardware::cpu::ctrl::Device_GetPerformanceStateInfo_Result::~Device_GetPerformanceStateInfo_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::hardware::cpu::ctrl::Device_GetPerformanceStateInfo_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~Device_GetPerformanceStateInfo_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::hardware::cpu::ctrl::Device_GetPerformanceStateInfo_Result::MoveImpl_(Device_GetPerformanceStateInfo_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
-}
-
 void ::llcpp::fuchsia::hardware::cpu::ctrl::Device_GetPerformanceStateInfo_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::hardware::cpu::ctrl::Device_GetPerformanceStateInfo_Result, response_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::hardware::cpu::ctrl::Device_GetPerformanceStateInfo_Result, err_) == 8);
-  static_assert(sizeof(::llcpp::fuchsia::hardware::cpu::ctrl::Device_GetPerformanceStateInfo_Result) == ::llcpp::fuchsia::hardware::cpu::ctrl::Device_GetPerformanceStateInfo_Result::PrimarySize);
+  static_assert(sizeof(Device_GetPerformanceStateInfo_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(Device_GetPerformanceStateInfo_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(Device_GetPerformanceStateInfo_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
-
-
-::llcpp::fuchsia::hardware::cpu::ctrl::Device_GetPerformanceStateInfo_Response& ::llcpp::fuchsia::hardware::cpu::ctrl::Device_GetPerformanceStateInfo_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::hardware::cpu::ctrl::Device_GetPerformanceStateInfo_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::hardware::cpu::ctrl::Device_GetPerformanceStateInfo_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
 
 namespace {
 
@@ -349,16 +296,21 @@ bool Device::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn
 
 void Device::Interface::GetPerformanceStateInfoCompleterBase::Reply(::llcpp::fuchsia::hardware::cpu::ctrl::Device_GetPerformanceStateInfo_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetPerformanceStateInfoResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<GetPerformanceStateInfoResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  GetPerformanceStateInfoResponse _response = {};
   Device::SetTransactionHeaderFor::GetPerformanceStateInfoResponse(
       ::fidl::DecodedMessage<GetPerformanceStateInfoResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               GetPerformanceStateInfoResponse::PrimarySize,
               GetPerformanceStateInfoResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetPerformanceStateInfoResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<GetPerformanceStateInfoResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Device::Interface::GetPerformanceStateInfoCompleterBase::ReplySuccess(::llcpp::fuchsia::hardware::cpu::ctrl::CpuPerformanceStateInfo info) {
   Device_GetPerformanceStateInfo_Response response;
@@ -375,15 +327,19 @@ void Device::Interface::GetPerformanceStateInfoCompleterBase::Reply(::fidl::Byte
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<GetPerformanceStateInfoResponse*>(_buffer.data());
+  GetPerformanceStateInfoResponse _response = {};
   Device::SetTransactionHeaderFor::GetPerformanceStateInfoResponse(
       ::fidl::DecodedMessage<GetPerformanceStateInfoResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               GetPerformanceStateInfoResponse::PrimarySize,
               GetPerformanceStateInfoResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(GetPerformanceStateInfoResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<GetPerformanceStateInfoResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Device::Interface::GetPerformanceStateInfoCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::cpu::ctrl::CpuPerformanceStateInfo info) {
   Device_GetPerformanceStateInfo_Response response;
@@ -473,23 +429,29 @@ void Device::Interface::GetLogicalCoreIdCompleterBase::Reply(::fidl::DecodedMess
 
 void Device::SetTransactionHeaderFor::GetPerformanceStateInfoRequest(const ::fidl::DecodedMessage<Device::GetPerformanceStateInfoRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetPerformanceStateInfo_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Device::SetTransactionHeaderFor::GetPerformanceStateInfoResponse(const ::fidl::DecodedMessage<Device::GetPerformanceStateInfoResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetPerformanceStateInfo_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Device::SetTransactionHeaderFor::GetNumLogicalCoresRequest(const ::fidl::DecodedMessage<Device::GetNumLogicalCoresRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetNumLogicalCores_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Device::SetTransactionHeaderFor::GetNumLogicalCoresResponse(const ::fidl::DecodedMessage<Device::GetNumLogicalCoresResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetNumLogicalCores_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Device::SetTransactionHeaderFor::GetLogicalCoreIdRequest(const ::fidl::DecodedMessage<Device::GetLogicalCoreIdRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetLogicalCoreId_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Device::SetTransactionHeaderFor::GetLogicalCoreIdResponse(const ::fidl::DecodedMessage<Device::GetLogicalCoreIdResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetLogicalCoreId_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace ctrl

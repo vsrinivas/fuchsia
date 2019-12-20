@@ -29,6 +29,90 @@ struct Device_GetPerformanceStateInfo_Response;
 struct Device_GetPerformanceStateInfo_Result;
 class Device;
 
+extern "C" const fidl_type_t fuchsia_hardware_cpu_ctrl_Device_GetPerformanceStateInfo_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_ctrl_Device_GetPerformanceStateInfo_ResultTable;
+
+struct Device_GetPerformanceStateInfo_Result {
+  Device_GetPerformanceStateInfo_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static Device_GetPerformanceStateInfo_Result WithResponse(::llcpp::fuchsia::hardware::cpu::ctrl::Device_GetPerformanceStateInfo_Response* val) {
+    Device_GetPerformanceStateInfo_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::fuchsia::hardware::cpu::ctrl::Device_GetPerformanceStateInfo_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::hardware::cpu::ctrl::Device_GetPerformanceStateInfo_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::hardware::cpu::ctrl::Device_GetPerformanceStateInfo_Response*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::hardware::cpu::ctrl::Device_GetPerformanceStateInfo_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::hardware::cpu::ctrl::Device_GetPerformanceStateInfo_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static Device_GetPerformanceStateInfo_Result WithErr(int32_t* val) {
+    Device_GetPerformanceStateInfo_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_cpu_ctrl_Device_GetPerformanceStateInfo_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_cpu_ctrl_Device_GetPerformanceStateInfo_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 16;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 16;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
 constexpr int64_t VOLTAGE_UNKNOWN = -1;
 
 // CpuPerformanceStateInfo::frequency_hz and CpuPerformanceStateInfo::voltage_uv
@@ -41,8 +125,8 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_ctrl_CpuPerformanceStateInf
 
 // A collection of some basic information for a given performance state.
 struct CpuPerformanceStateInfo {
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_cpu_ctrl_CpuPerformanceStateInfoTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_cpu_ctrl_CpuPerformanceStateInfoTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_cpu_ctrl_CpuPerformanceStateInfoTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_cpu_ctrl_CpuPerformanceStateInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
@@ -61,8 +145,8 @@ extern "C" const fidl_type_t fuchsia_hardware_cpu_ctrl_Device_GetPerformanceStat
 extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_ctrl_Device_GetPerformanceStateInfo_ResponseTable;
 
 struct Device_GetPerformanceStateInfo_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_cpu_ctrl_Device_GetPerformanceStateInfo_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_cpu_ctrl_Device_GetPerformanceStateInfo_ResponseTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_cpu_ctrl_Device_GetPerformanceStateInfo_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_cpu_ctrl_Device_GetPerformanceStateInfo_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
@@ -72,114 +156,6 @@ struct Device_GetPerformanceStateInfo_Response {
   static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::llcpp::fuchsia::hardware::cpu::ctrl::CpuPerformanceStateInfo info = {};
-};
-
-extern "C" const fidl_type_t fuchsia_hardware_cpu_ctrl_Device_GetPerformanceStateInfo_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_hardware_cpu_ctrl_Device_GetPerformanceStateInfo_ResultTable;
-
-struct Device_GetPerformanceStateInfo_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-  };
-
-  Device_GetPerformanceStateInfo_Result();
-  ~Device_GetPerformanceStateInfo_Result();
-
-  Device_GetPerformanceStateInfo_Result(Device_GetPerformanceStateInfo_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  Device_GetPerformanceStateInfo_Result& operator=(Device_GetPerformanceStateInfo_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
-
-  static Device_GetPerformanceStateInfo_Result WithResponse(::llcpp::fuchsia::hardware::cpu::ctrl::Device_GetPerformanceStateInfo_Response* val) {
-    Device_GetPerformanceStateInfo_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::hardware::cpu::ctrl::Device_GetPerformanceStateInfo_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::cpu::ctrl::Device_GetPerformanceStateInfo_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::cpu::ctrl::Device_GetPerformanceStateInfo_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::hardware::cpu::ctrl::Device_GetPerformanceStateInfo_Response const & response() const { return response_; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static Device_GetPerformanceStateInfo_Result WithErr(int32_t* val) {
-    Device_GetPerformanceStateInfo_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  int32_t const & err() const { return err_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_cpu_ctrl_Device_GetPerformanceStateInfo_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_cpu_ctrl_Device_GetPerformanceStateInfo_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 16;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(Device_GetPerformanceStateInfo_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::hardware::cpu::ctrl::Device_GetPerformanceStateInfo_Response response_;
-    int32_t err_;
-  };
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_cpu_ctrl_DeviceGetPerformanceStateInfoRequestTable;
@@ -204,11 +180,11 @@ class Device final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::hardware::cpu::ctrl::Device_GetPerformanceStateInfo_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_cpu_ctrl_DeviceGetPerformanceStateInfoResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_cpu_ctrl_DeviceGetPerformanceStateInfoResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_cpu_ctrl_DeviceGetPerformanceStateInfoResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_cpu_ctrl_DeviceGetPerformanceStateInfoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t MaxOutOfLine = 16;
     static constexpr uint32_t AltPrimarySize = 40;
     static constexpr uint32_t AltMaxOutOfLine = 16;
     static constexpr bool HasFlexibleEnvelope = false;
@@ -221,8 +197,8 @@ class Device final {
     fidl_message_header_t _hdr;
     uint32_t state;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_cpu_ctrl_DeviceGetPerformanceStateInfoRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_cpu_ctrl_DeviceGetPerformanceStateInfoRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_cpu_ctrl_DeviceGetPerformanceStateInfoRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_cpu_ctrl_DeviceGetPerformanceStateInfoRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -240,8 +216,8 @@ class Device final {
     fidl_message_header_t _hdr;
     uint64_t count;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_cpu_ctrl_DeviceGetNumLogicalCoresResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_cpu_ctrl_DeviceGetNumLogicalCoresResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_cpu_ctrl_DeviceGetNumLogicalCoresResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_cpu_ctrl_DeviceGetNumLogicalCoresResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -259,8 +235,8 @@ class Device final {
     fidl_message_header_t _hdr;
     uint64_t id;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_cpu_ctrl_DeviceGetLogicalCoreIdResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_cpu_ctrl_DeviceGetLogicalCoreIdResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_cpu_ctrl_DeviceGetLogicalCoreIdResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_cpu_ctrl_DeviceGetLogicalCoreIdResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -276,8 +252,8 @@ class Device final {
     fidl_message_header_t _hdr;
     uint64_t index;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_cpu_ctrl_DeviceGetLogicalCoreIdRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_cpu_ctrl_DeviceGetLogicalCoreIdRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_cpu_ctrl_DeviceGetLogicalCoreIdRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_cpu_ctrl_DeviceGetLogicalCoreIdRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -423,7 +399,7 @@ class Device final {
 
     // Returns information about a given performance state for this performance
     // domain.
-    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 80 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetPerformanceStateInfo GetPerformanceStateInfo(uint32_t state);
 
     // Returns information about a given performance state for this performance
@@ -464,7 +440,7 @@ class Device final {
 
     // Returns information about a given performance state for this performance
     // domain.
-    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 80 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetPerformanceStateInfo GetPerformanceStateInfo(::zx::unowned_channel _client_end, uint32_t state);
 
     // Returns information about a given performance state for this performance

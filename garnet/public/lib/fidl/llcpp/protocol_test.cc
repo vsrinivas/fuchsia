@@ -71,16 +71,16 @@ class ResultTest : public ::testing::Test {
 TEST_F(ResultTest, OwnedPrimitiveError) {
   auto client = TakeClient();
   auto resp = client.NoArgsPrimitiveError(true);
-  EXPECT_TRUE(resp.ok());
-  EXPECT_TRUE(resp->result.is_err());
+  ASSERT_TRUE(resp.ok()) << resp.error();
+  ASSERT_TRUE(resp->result.is_err());
   EXPECT_EQ(resp->result.err(), kErrorStatus);
 }
 
 TEST_F(ResultTest, OwnedCustomError) {
   auto client = TakeClient();
   auto resp = client.ManyArgsCustomError(true);
-  EXPECT_TRUE(resp.ok());
-  EXPECT_TRUE(resp->result.is_err());
+  ASSERT_TRUE(resp.ok());
+  ASSERT_TRUE(resp->result.is_err());
   EXPECT_EQ(resp->result.err(), test::MyError::REALLY_BAD_ERROR);
 }
 

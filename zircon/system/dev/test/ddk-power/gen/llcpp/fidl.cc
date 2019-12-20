@@ -10,300 +10,35 @@ namespace device {
 namespace power {
 namespace test {
 
-::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result::TestDevice_GetCurrentDevicePowerState_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result::~TestDevice_GetCurrentDevicePowerState_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~TestDevice_GetCurrentDevicePowerState_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result::MoveImpl_(TestDevice_GetCurrentDevicePowerState_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
-}
-
 void ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result) == ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response& ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result::~TestDevice_GetCurrentDeviceAutoSuspendConfig_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~TestDevice_GetCurrentDeviceAutoSuspendConfig_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result::MoveImpl_(TestDevice_GetCurrentDeviceAutoSuspendConfig_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(TestDevice_GetCurrentDevicePowerState_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(TestDevice_GetCurrentDevicePowerState_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(TestDevice_GetCurrentDevicePowerState_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result) == ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Response& ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentSuspendReason_Result::TestDevice_GetCurrentSuspendReason_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentSuspendReason_Result::~TestDevice_GetCurrentSuspendReason_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentSuspendReason_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~TestDevice_GetCurrentSuspendReason_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentSuspendReason_Result::MoveImpl_(TestDevice_GetCurrentSuspendReason_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(TestDevice_GetCurrentDeviceAutoSuspendConfig_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(TestDevice_GetCurrentDeviceAutoSuspendConfig_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(TestDevice_GetCurrentDeviceAutoSuspendConfig_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentSuspendReason_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentSuspendReason_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentSuspendReason_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentSuspendReason_Result) == ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentSuspendReason_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentSuspendReason_Response& ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentSuspendReason_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentSuspendReason_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentSuspendReason_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Result::TestDevice_GetCurrentDevicePerformanceState_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Result::~TestDevice_GetCurrentDevicePerformanceState_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~TestDevice_GetCurrentDevicePerformanceState_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Result::MoveImpl_(TestDevice_GetCurrentDevicePerformanceState_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(TestDevice_GetCurrentSuspendReason_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(TestDevice_GetCurrentSuspendReason_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(TestDevice_GetCurrentSuspendReason_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Result) == ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Response& ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Result::TestDevice_AddDeviceWithPowerArgs_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Result::~TestDevice_AddDeviceWithPowerArgs_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~TestDevice_AddDeviceWithPowerArgs_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Result::MoveImpl_(TestDevice_AddDeviceWithPowerArgs_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(TestDevice_GetCurrentDevicePerformanceState_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(TestDevice_GetCurrentDevicePerformanceState_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(TestDevice_GetCurrentDevicePerformanceState_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Result) == ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Result::PrimarySize);
+  static_assert(sizeof(TestDevice_AddDeviceWithPowerArgs_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(TestDevice_AddDeviceWithPowerArgs_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(TestDevice_AddDeviceWithPowerArgs_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
-
-
-::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response& ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
 
 namespace {
 
@@ -752,16 +487,21 @@ bool TestDevice::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
 
 void TestDevice::Interface::AddDeviceWithPowerArgsCompleterBase::Reply(::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddDeviceWithPowerArgsResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<AddDeviceWithPowerArgsResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  AddDeviceWithPowerArgsResponse _response = {};
   TestDevice::SetTransactionHeaderFor::AddDeviceWithPowerArgsResponse(
       ::fidl::DecodedMessage<AddDeviceWithPowerArgsResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               AddDeviceWithPowerArgsResponse::PrimarySize,
               AddDeviceWithPowerArgsResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(AddDeviceWithPowerArgsResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<AddDeviceWithPowerArgsResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void TestDevice::Interface::AddDeviceWithPowerArgsCompleterBase::ReplySuccess() {
   TestDevice_AddDeviceWithPowerArgs_Response response;
@@ -777,15 +517,19 @@ void TestDevice::Interface::AddDeviceWithPowerArgsCompleterBase::Reply(::fidl::B
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<AddDeviceWithPowerArgsResponse*>(_buffer.data());
+  AddDeviceWithPowerArgsResponse _response = {};
   TestDevice::SetTransactionHeaderFor::AddDeviceWithPowerArgsResponse(
       ::fidl::DecodedMessage<AddDeviceWithPowerArgsResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               AddDeviceWithPowerArgsResponse::PrimarySize,
               AddDeviceWithPowerArgsResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(AddDeviceWithPowerArgsResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<AddDeviceWithPowerArgsResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void TestDevice::Interface::AddDeviceWithPowerArgsCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   TestDevice_AddDeviceWithPowerArgs_Response response;
@@ -801,16 +545,21 @@ void TestDevice::Interface::AddDeviceWithPowerArgsCompleterBase::Reply(::fidl::D
 
 void TestDevice::Interface::GetCurrentDevicePowerStateCompleterBase::Reply(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetCurrentDevicePowerStateResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<GetCurrentDevicePowerStateResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  GetCurrentDevicePowerStateResponse _response = {};
   TestDevice::SetTransactionHeaderFor::GetCurrentDevicePowerStateResponse(
       ::fidl::DecodedMessage<GetCurrentDevicePowerStateResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               GetCurrentDevicePowerStateResponse::PrimarySize,
               GetCurrentDevicePowerStateResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetCurrentDevicePowerStateResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<GetCurrentDevicePowerStateResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void TestDevice::Interface::GetCurrentDevicePowerStateCompleterBase::ReplySuccess(::llcpp::fuchsia::device::DevicePowerState cur_state) {
   TestDevice_GetCurrentDevicePowerState_Response response;
@@ -827,15 +576,19 @@ void TestDevice::Interface::GetCurrentDevicePowerStateCompleterBase::Reply(::fid
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<GetCurrentDevicePowerStateResponse*>(_buffer.data());
+  GetCurrentDevicePowerStateResponse _response = {};
   TestDevice::SetTransactionHeaderFor::GetCurrentDevicePowerStateResponse(
       ::fidl::DecodedMessage<GetCurrentDevicePowerStateResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               GetCurrentDevicePowerStateResponse::PrimarySize,
               GetCurrentDevicePowerStateResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(GetCurrentDevicePowerStateResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<GetCurrentDevicePowerStateResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void TestDevice::Interface::GetCurrentDevicePowerStateCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::DevicePowerState cur_state) {
   TestDevice_GetCurrentDevicePowerState_Response response;
@@ -852,16 +605,21 @@ void TestDevice::Interface::GetCurrentDevicePowerStateCompleterBase::Reply(::fid
 
 void TestDevice::Interface::GetCurrentSuspendReasonCompleterBase::Reply(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentSuspendReason_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetCurrentSuspendReasonResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<GetCurrentSuspendReasonResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  GetCurrentSuspendReasonResponse _response = {};
   TestDevice::SetTransactionHeaderFor::GetCurrentSuspendReasonResponse(
       ::fidl::DecodedMessage<GetCurrentSuspendReasonResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               GetCurrentSuspendReasonResponse::PrimarySize,
               GetCurrentSuspendReasonResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetCurrentSuspendReasonResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<GetCurrentSuspendReasonResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void TestDevice::Interface::GetCurrentSuspendReasonCompleterBase::ReplySuccess(uint8_t cur_suspend_reason) {
   TestDevice_GetCurrentSuspendReason_Response response;
@@ -878,15 +636,19 @@ void TestDevice::Interface::GetCurrentSuspendReasonCompleterBase::Reply(::fidl::
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<GetCurrentSuspendReasonResponse*>(_buffer.data());
+  GetCurrentSuspendReasonResponse _response = {};
   TestDevice::SetTransactionHeaderFor::GetCurrentSuspendReasonResponse(
       ::fidl::DecodedMessage<GetCurrentSuspendReasonResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               GetCurrentSuspendReasonResponse::PrimarySize,
               GetCurrentSuspendReasonResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(GetCurrentSuspendReasonResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<GetCurrentSuspendReasonResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void TestDevice::Interface::GetCurrentSuspendReasonCompleterBase::ReplySuccess(::fidl::BytePart _buffer, uint8_t cur_suspend_reason) {
   TestDevice_GetCurrentSuspendReason_Response response;
@@ -903,16 +665,21 @@ void TestDevice::Interface::GetCurrentSuspendReasonCompleterBase::Reply(::fidl::
 
 void TestDevice::Interface::GetCurrentDevicePerformanceStateCompleterBase::Reply(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetCurrentDevicePerformanceStateResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<GetCurrentDevicePerformanceStateResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  GetCurrentDevicePerformanceStateResponse _response = {};
   TestDevice::SetTransactionHeaderFor::GetCurrentDevicePerformanceStateResponse(
       ::fidl::DecodedMessage<GetCurrentDevicePerformanceStateResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               GetCurrentDevicePerformanceStateResponse::PrimarySize,
               GetCurrentDevicePerformanceStateResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetCurrentDevicePerformanceStateResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<GetCurrentDevicePerformanceStateResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void TestDevice::Interface::GetCurrentDevicePerformanceStateCompleterBase::ReplySuccess(int32_t cur_state) {
   TestDevice_GetCurrentDevicePerformanceState_Response response;
@@ -929,15 +696,19 @@ void TestDevice::Interface::GetCurrentDevicePerformanceStateCompleterBase::Reply
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<GetCurrentDevicePerformanceStateResponse*>(_buffer.data());
+  GetCurrentDevicePerformanceStateResponse _response = {};
   TestDevice::SetTransactionHeaderFor::GetCurrentDevicePerformanceStateResponse(
       ::fidl::DecodedMessage<GetCurrentDevicePerformanceStateResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               GetCurrentDevicePerformanceStateResponse::PrimarySize,
               GetCurrentDevicePerformanceStateResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(GetCurrentDevicePerformanceStateResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<GetCurrentDevicePerformanceStateResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void TestDevice::Interface::GetCurrentDevicePerformanceStateCompleterBase::ReplySuccess(::fidl::BytePart _buffer, int32_t cur_state) {
   TestDevice_GetCurrentDevicePerformanceState_Response response;
@@ -954,16 +725,21 @@ void TestDevice::Interface::GetCurrentDevicePerformanceStateCompleterBase::Reply
 
 void TestDevice::Interface::GetCurrentDeviceAutoSuspendConfigCompleterBase::Reply(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetCurrentDeviceAutoSuspendConfigResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<GetCurrentDeviceAutoSuspendConfigResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  GetCurrentDeviceAutoSuspendConfigResponse _response = {};
   TestDevice::SetTransactionHeaderFor::GetCurrentDeviceAutoSuspendConfigResponse(
       ::fidl::DecodedMessage<GetCurrentDeviceAutoSuspendConfigResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               GetCurrentDeviceAutoSuspendConfigResponse::PrimarySize,
               GetCurrentDeviceAutoSuspendConfigResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetCurrentDeviceAutoSuspendConfigResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<GetCurrentDeviceAutoSuspendConfigResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void TestDevice::Interface::GetCurrentDeviceAutoSuspendConfigCompleterBase::ReplySuccess(bool enabled, ::llcpp::fuchsia::device::DevicePowerState deepest_sleep_state) {
   TestDevice_GetCurrentDeviceAutoSuspendConfig_Response response;
@@ -981,15 +757,19 @@ void TestDevice::Interface::GetCurrentDeviceAutoSuspendConfigCompleterBase::Repl
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<GetCurrentDeviceAutoSuspendConfigResponse*>(_buffer.data());
+  GetCurrentDeviceAutoSuspendConfigResponse _response = {};
   TestDevice::SetTransactionHeaderFor::GetCurrentDeviceAutoSuspendConfigResponse(
       ::fidl::DecodedMessage<GetCurrentDeviceAutoSuspendConfigResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               GetCurrentDeviceAutoSuspendConfigResponse::PrimarySize,
               GetCurrentDeviceAutoSuspendConfigResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(GetCurrentDeviceAutoSuspendConfigResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<GetCurrentDeviceAutoSuspendConfigResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void TestDevice::Interface::GetCurrentDeviceAutoSuspendConfigCompleterBase::ReplySuccess(::fidl::BytePart _buffer, bool enabled, ::llcpp::fuchsia::device::DevicePowerState deepest_sleep_state) {
   TestDevice_GetCurrentDeviceAutoSuspendConfig_Response response;
@@ -1008,37 +788,47 @@ void TestDevice::Interface::GetCurrentDeviceAutoSuspendConfigCompleterBase::Repl
 
 void TestDevice::SetTransactionHeaderFor::AddDeviceWithPowerArgsRequest(const ::fidl::DecodedMessage<TestDevice::AddDeviceWithPowerArgsRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_AddDeviceWithPowerArgs_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void TestDevice::SetTransactionHeaderFor::AddDeviceWithPowerArgsResponse(const ::fidl::DecodedMessage<TestDevice::AddDeviceWithPowerArgsResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_AddDeviceWithPowerArgs_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void TestDevice::SetTransactionHeaderFor::GetCurrentDevicePowerStateRequest(const ::fidl::DecodedMessage<TestDevice::GetCurrentDevicePowerStateRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_GetCurrentDevicePowerState_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void TestDevice::SetTransactionHeaderFor::GetCurrentDevicePowerStateResponse(const ::fidl::DecodedMessage<TestDevice::GetCurrentDevicePowerStateResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_GetCurrentDevicePowerState_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void TestDevice::SetTransactionHeaderFor::GetCurrentSuspendReasonRequest(const ::fidl::DecodedMessage<TestDevice::GetCurrentSuspendReasonRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_GetCurrentSuspendReason_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void TestDevice::SetTransactionHeaderFor::GetCurrentSuspendReasonResponse(const ::fidl::DecodedMessage<TestDevice::GetCurrentSuspendReasonResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_GetCurrentSuspendReason_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void TestDevice::SetTransactionHeaderFor::GetCurrentDevicePerformanceStateRequest(const ::fidl::DecodedMessage<TestDevice::GetCurrentDevicePerformanceStateRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_GetCurrentDevicePerformanceState_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void TestDevice::SetTransactionHeaderFor::GetCurrentDevicePerformanceStateResponse(const ::fidl::DecodedMessage<TestDevice::GetCurrentDevicePerformanceStateResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_GetCurrentDevicePerformanceState_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void TestDevice::SetTransactionHeaderFor::GetCurrentDeviceAutoSuspendConfigRequest(const ::fidl::DecodedMessage<TestDevice::GetCurrentDeviceAutoSuspendConfigRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_GetCurrentDeviceAutoSuspendConfig_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void TestDevice::SetTransactionHeaderFor::GetCurrentDeviceAutoSuspendConfigResponse(const ::fidl::DecodedMessage<TestDevice::GetCurrentDeviceAutoSuspendConfigResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_GetCurrentDeviceAutoSuspendConfig_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace test

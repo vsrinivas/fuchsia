@@ -737,7 +737,7 @@ func (c *compiler) compileType(val types.Type) Type {
 
 			if val.Nullable {
 				r.Decl = fmt.Sprintf("::std::unique_ptr<%s>", t)
-				if declType == types.XUnionDeclType {
+				if declType == types.XUnionDeclType || declType == types.UnionDeclType {
 					r.LLDecl = fmt.Sprintf("%s", ft)
 				} else {
 					r.LLDecl = fmt.Sprintf("%s*", ft)
@@ -966,8 +966,8 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 			RequestSizeV1NoEE:          v.RequestTypeShapeV1NoEE.InlineSize,
 			RequestTypeName:            fmt.Sprintf("%s_%s%sRequestTable", c.symbolPrefix, r.Name, v.Name),
 			V1RequestTypeName:          fmt.Sprintf("v1_%s_%s%sRequestTable", c.symbolPrefix, r.Name, v.Name),
-			RequestMaxHandles:          c.maxHandlesFromParameterArray(v.Request),
-			RequestMaxOutOfLine:        c.maxOutOfLineFromParameterArray(v.Request),
+			RequestMaxHandles:          v.RequestTypeShapeV1.MaxHandles,
+			RequestMaxOutOfLine:        v.RequestTypeShapeV1.MaxOutOfLine,
 			RequestMaxOutOfLineV1NoEE:  v.RequestTypeShapeV1NoEE.MaxOutOfLine,
 			RequestPadding:             v.RequestPadding,
 			RequestFlexible:            v.RequestFlexible,
@@ -979,8 +979,8 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 			ResponseSizeV1NoEE:         v.ResponseTypeShapeV1NoEE.InlineSize,
 			ResponseTypeName:           fmt.Sprintf("%s_%s%s%s", c.symbolPrefix, r.Name, v.Name, responseTypeNameSuffix),
 			V1ResponseTypeName:         fmt.Sprintf("v1_%s_%s%s%s", c.symbolPrefix, r.Name, v.Name, responseTypeNameSuffix),
-			ResponseMaxHandles:         c.maxHandlesFromParameterArray(v.Response),
-			ResponseMaxOutOfLine:       c.maxOutOfLineFromParameterArray(v.Response),
+			ResponseMaxHandles:         v.ResponseTypeShapeV1.MaxHandles,
+			ResponseMaxOutOfLine:       v.ResponseTypeShapeV1.MaxOutOfLine,
 			ResponseMaxOutOfLineV1NoEE: v.ResponseTypeShapeV1NoEE.MaxOutOfLine,
 			ResponsePadding:            v.ResponsePadding,
 			ResponseFlexible:           v.ResponseFlexible,
@@ -1408,6 +1408,6 @@ func CompileLL(r types.Root) Root {
 	// TODO(fxb/39159): Flip to treat unions as xunions. We must be fully on
 	// the v1 wire format to activate this, and both APIs must have been
 	// properly aligned.
-	treatUnionAsXUnions := false
+	treatUnionAsXUnions := true
 	return compile(r, formatLLNamespace, treatUnionAsXUnions)
 }

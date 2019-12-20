@@ -31,8 +31,8 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_midi_InfoTable;
 
 // Describes what type of MIDI device an implementation of Device represents
 struct Info {
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_midi_InfoTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_midi_InfoTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_midi_InfoTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_midi_InfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 2;
   [[maybe_unused]]
@@ -62,8 +62,8 @@ class Device final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::hardware::midi::Info info;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_midi_DeviceGetInfoResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_midi_DeviceGetInfoResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_midi_DeviceGetInfoResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_midi_DeviceGetInfoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;

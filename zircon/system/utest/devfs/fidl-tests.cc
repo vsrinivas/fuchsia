@@ -50,11 +50,10 @@ void FidlOpenValidator(const zx::channel& directory, const char* path,
   bool event_tag_ok = false;
   bool status_ok = false;
   bool node_info_ok = false;
-  event_handlers.on_open = [&](uint32_t s, fio::NodeInfo* info) -> zx_status_t {
+  event_handlers.on_open = [&](uint32_t s, fio::NodeInfo info) -> zx_status_t {
     event_tag_ok = true;
     status_ok = s == ZX_OK;
-    if (info)
-      node_info_ok = info->which() == expected_tag;
+    node_info_ok = info.which() == expected_tag;
     return ZX_OK;
   };
   event_handlers.unknown = []() -> zx_status_t {
@@ -78,10 +77,10 @@ void FidlOpenErrorValidator(const zx::channel& directory, const char* path) {
   bool event_tag_ok = false;
   bool status_ok = false;
   bool node_info_ok = false;
-  event_handlers.on_open = [&](uint32_t s, fio::NodeInfo* info) -> zx_status_t {
+  event_handlers.on_open = [&](uint32_t s, fio::NodeInfo info) -> zx_status_t {
     event_tag_ok = true;
     status_ok = static_cast<int>(s) == ZX_ERR_NOT_FOUND;
-    node_info_ok = info == nullptr;
+    node_info_ok = info.has_invalid_tag();
     return ZX_OK;
   };
   event_handlers.unknown = []() -> zx_status_t {

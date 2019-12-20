@@ -58,48 +58,17 @@ struct Controller_Bind_Response;
 struct Controller_Bind_Result;
 class Controller;
 
-extern "C" const fidl_type_t fuchsia_device_NameProvider_GetDeviceName_ResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_device_NameProvider_GetDeviceName_ResponseTable;
-
-struct NameProvider_GetDeviceName_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_device_NameProvider_GetDeviceName_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_NameProvider_GetDeviceName_ResponseTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 256;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 256;
-
-  ::fidl::StringView name = {};
-};
-
 extern "C" const fidl_type_t fuchsia_device_NameProvider_GetDeviceName_ResultTable;
 extern "C" const fidl_type_t v1_fuchsia_device_NameProvider_GetDeviceName_ResultTable;
 
 struct NameProvider_GetDeviceName_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
+  NameProvider_GetDeviceName_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
   };
 
-  NameProvider_GetDeviceName_Result();
-  ~NameProvider_GetDeviceName_Result();
-
-  NameProvider_GetDeviceName_Result(NameProvider_GetDeviceName_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  NameProvider_GetDeviceName_Result& operator=(NameProvider_GetDeviceName_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
 
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
@@ -111,21 +80,19 @@ struct NameProvider_GetDeviceName_Result {
     return result;
   }
 
-  ::llcpp::fuchsia::device::NameProvider_GetDeviceName_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::NameProvider_GetDeviceName_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
+  void set_response(::llcpp::fuchsia::device::NameProvider_GetDeviceName_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
   }
 
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::NameProvider_GetDeviceName_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
+  ::llcpp::fuchsia::device::NameProvider_GetDeviceName_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::device::NameProvider_GetDeviceName_Response*>(envelope_.data);
   }
-
-  ::llcpp::fuchsia::device::NameProvider_GetDeviceName_Response const & response() const { return response_; }
+  const ::llcpp::fuchsia::device::NameProvider_GetDeviceName_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::device::NameProvider_GetDeviceName_Response*>(envelope_.data);
+  }
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
@@ -135,52 +102,733 @@ struct NameProvider_GetDeviceName_Result {
     return result;
   }
 
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
   }
 
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
   }
-
-  int32_t const & err() const { return err_; }
-
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &fuchsia_device_NameProvider_GetDeviceName_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_NameProvider_GetDeviceName_ResultTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_NameProvider_GetDeviceName_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_NameProvider_GetDeviceName_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 256;
+  static constexpr uint32_t MaxOutOfLine = 272;
   static constexpr uint32_t AltPrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t AltMaxOutOfLine = 272;
 
  private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
   };
-
-  void Destroy();
-  void MoveImpl_(NameProvider_GetDeviceName_Result&& other);
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::device::NameProvider_GetDeviceName_Response response_;
-    int32_t err_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
+extern "C" const fidl_type_t fuchsia_device_Controller_GetPowerStateMapping_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_Controller_GetPowerStateMapping_ResultTable;
+
+struct Controller_GetPowerStateMapping_Result {
+  Controller_GetPowerStateMapping_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
   };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static Controller_GetPowerStateMapping_Result WithResponse(::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Response* val) {
+    Controller_GetPowerStateMapping_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Response*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static Controller_GetPowerStateMapping_Result WithErr(int32_t* val) {
+    Controller_GetPowerStateMapping_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_GetPowerStateMapping_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_Controller_GetPowerStateMapping_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 56;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 56;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
+extern "C" const fidl_type_t fuchsia_device_Controller_GetDevicePowerCaps_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_Controller_GetDevicePowerCaps_ResultTable;
+
+struct Controller_GetDevicePowerCaps_Result {
+  Controller_GetDevicePowerCaps_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static Controller_GetDevicePowerCaps_Result WithResponse(::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Response* val) {
+    Controller_GetDevicePowerCaps_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Response*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static Controller_GetDevicePowerCaps_Result WithErr(int32_t* val) {
+    Controller_GetDevicePowerCaps_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_GetDevicePowerCaps_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_Controller_GetDevicePowerCaps_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 120;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 120;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
+extern "C" const fidl_type_t fuchsia_device_Controller_Resume_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_Controller_Resume_ResultTable;
+
+struct Controller_Resume_Result {
+  Controller_Resume_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static Controller_Resume_Result WithResponse(::llcpp::fuchsia::device::Controller_Resume_Response* val) {
+    Controller_Resume_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::fuchsia::device::Controller_Resume_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::device::Controller_Resume_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::device::Controller_Resume_Response*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::device::Controller_Resume_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::device::Controller_Resume_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static Controller_Resume_Result WithErr(int32_t* val) {
+    Controller_Resume_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_Resume_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_Controller_Resume_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
+extern "C" const fidl_type_t fuchsia_device_Controller_UpdatePowerStateMapping_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_Controller_UpdatePowerStateMapping_ResultTable;
+
+struct Controller_UpdatePowerStateMapping_Result {
+  Controller_UpdatePowerStateMapping_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static Controller_UpdatePowerStateMapping_Result WithResponse(::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Response* val) {
+    Controller_UpdatePowerStateMapping_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Response*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static Controller_UpdatePowerStateMapping_Result WithErr(int32_t* val) {
+    Controller_UpdatePowerStateMapping_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_UpdatePowerStateMapping_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_Controller_UpdatePowerStateMapping_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
+extern "C" const fidl_type_t fuchsia_device_Controller_ScheduleUnbind_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_Controller_ScheduleUnbind_ResultTable;
+
+struct Controller_ScheduleUnbind_Result {
+  Controller_ScheduleUnbind_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static Controller_ScheduleUnbind_Result WithResponse(::llcpp::fuchsia::device::Controller_ScheduleUnbind_Response* val) {
+    Controller_ScheduleUnbind_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::fuchsia::device::Controller_ScheduleUnbind_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::device::Controller_ScheduleUnbind_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::device::Controller_ScheduleUnbind_Response*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::device::Controller_ScheduleUnbind_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::device::Controller_ScheduleUnbind_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static Controller_ScheduleUnbind_Result WithErr(int32_t* val) {
+    Controller_ScheduleUnbind_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_ScheduleUnbind_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_Controller_ScheduleUnbind_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
+extern "C" const fidl_type_t fuchsia_device_Controller_Rebind_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_Controller_Rebind_ResultTable;
+
+struct Controller_Rebind_Result {
+  Controller_Rebind_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static Controller_Rebind_Result WithResponse(::llcpp::fuchsia::device::Controller_Rebind_Response* val) {
+    Controller_Rebind_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::fuchsia::device::Controller_Rebind_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::device::Controller_Rebind_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::device::Controller_Rebind_Response*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::device::Controller_Rebind_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::device::Controller_Rebind_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static Controller_Rebind_Result WithErr(int32_t* val) {
+    Controller_Rebind_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_Rebind_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_Controller_Rebind_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
+extern "C" const fidl_type_t fuchsia_device_Controller_GetTopologicalPath_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_Controller_GetTopologicalPath_ResultTable;
+
+struct Controller_GetTopologicalPath_Result {
+  Controller_GetTopologicalPath_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static Controller_GetTopologicalPath_Result WithResponse(::llcpp::fuchsia::device::Controller_GetTopologicalPath_Response* val) {
+    Controller_GetTopologicalPath_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::fuchsia::device::Controller_GetTopologicalPath_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::device::Controller_GetTopologicalPath_Response*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::device::Controller_GetTopologicalPath_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static Controller_GetTopologicalPath_Result WithErr(int32_t* val) {
+    Controller_GetTopologicalPath_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_GetTopologicalPath_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_Controller_GetTopologicalPath_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 1040;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 1040;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
+extern "C" const fidl_type_t fuchsia_device_Controller_Bind_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_Controller_Bind_ResultTable;
+
+struct Controller_Bind_Result {
+  Controller_Bind_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static Controller_Bind_Result WithResponse(::llcpp::fuchsia::device::Controller_Bind_Response* val) {
+    Controller_Bind_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::fuchsia::device::Controller_Bind_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::device::Controller_Bind_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::device::Controller_Bind_Response*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::device::Controller_Bind_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::device::Controller_Bind_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static Controller_Bind_Result WithErr(int32_t* val) {
+    Controller_Bind_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_Bind_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_Controller_Bind_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
+extern "C" const fidl_type_t fuchsia_device_NameProvider_GetDeviceName_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_NameProvider_GetDeviceName_ResponseTable;
+
+struct NameProvider_GetDeviceName_Response {
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_NameProvider_GetDeviceName_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_NameProvider_GetDeviceName_ResponseTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 256;
+  static constexpr uint32_t AltPrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 256;
+
+  ::fidl::StringView name = {};
 };
 
 extern "C" const fidl_type_t fuchsia_device_NameProviderGetDeviceNameRequestTable;
@@ -199,11 +847,11 @@ class NameProvider final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::device::NameProvider_GetDeviceName_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_NameProviderGetDeviceNameResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_NameProviderGetDeviceNameResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_NameProviderGetDeviceNameResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_NameProviderGetDeviceNameResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 256;
+    static constexpr uint32_t MaxOutOfLine = 272;
     static constexpr uint32_t AltPrimarySize = 40;
     static constexpr uint32_t AltMaxOutOfLine = 272;
     static constexpr bool HasFlexibleEnvelope = false;
@@ -277,7 +925,7 @@ class NameProvider final {
     ::zx::channel* mutable_channel() { return &channel_; }
 
     // Return the name of this Fuchsia device.
-    // Allocates 312 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 328 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetDeviceName GetDeviceName();
 
     // Return the name of this Fuchsia device.
@@ -294,7 +942,7 @@ class NameProvider final {
    public:
 
     // Return the name of this Fuchsia device.
-    // Allocates 312 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 328 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetDeviceName GetDeviceName(::zx::unowned_channel _client_end);
 
     // Return the name of this Fuchsia device.
@@ -395,8 +1043,8 @@ extern "C" const fidl_type_t fuchsia_device_SystemPowerStateInfoTable;
 extern "C" const fidl_type_t v1_fuchsia_device_SystemPowerStateInfoTable;
 
 struct SystemPowerStateInfo {
-  static constexpr const fidl_type_t* Type = &fuchsia_device_SystemPowerStateInfoTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_SystemPowerStateInfoTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_SystemPowerStateInfoTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_SystemPowerStateInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
@@ -418,8 +1066,8 @@ extern "C" const fidl_type_t fuchsia_device_Controller_GetPowerStateMapping_Resp
 extern "C" const fidl_type_t v1_fuchsia_device_Controller_GetPowerStateMapping_ResponseTable;
 
 struct Controller_GetPowerStateMapping_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_GetPowerStateMapping_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_Controller_GetPowerStateMapping_ResponseTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_GetPowerStateMapping_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_Controller_GetPowerStateMapping_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 56;
   [[maybe_unused]]
@@ -431,120 +1079,12 @@ struct Controller_GetPowerStateMapping_Response {
   ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 7> mapping = {};
 };
 
-extern "C" const fidl_type_t fuchsia_device_Controller_GetPowerStateMapping_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_device_Controller_GetPowerStateMapping_ResultTable;
-
-struct Controller_GetPowerStateMapping_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-  };
-
-  Controller_GetPowerStateMapping_Result();
-  ~Controller_GetPowerStateMapping_Result();
-
-  Controller_GetPowerStateMapping_Result(Controller_GetPowerStateMapping_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  Controller_GetPowerStateMapping_Result& operator=(Controller_GetPowerStateMapping_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
-
-  static Controller_GetPowerStateMapping_Result WithResponse(::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Response* val) {
-    Controller_GetPowerStateMapping_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Response const & response() const { return response_; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static Controller_GetPowerStateMapping_Result WithErr(int32_t* val) {
-    Controller_GetPowerStateMapping_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  int32_t const & err() const { return err_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_GetPowerStateMapping_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_Controller_GetPowerStateMapping_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 60;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 56;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(Controller_GetPowerStateMapping_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Response response_;
-    int32_t err_;
-  };
-};
-
 extern "C" const fidl_type_t fuchsia_device_DevicePowerStateInfoTable;
 extern "C" const fidl_type_t v1_fuchsia_device_DevicePowerStateInfoTable;
 
 struct DevicePowerStateInfo {
-  static constexpr const fidl_type_t* Type = &fuchsia_device_DevicePowerStateInfoTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_DevicePowerStateInfoTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_DevicePowerStateInfoTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_DevicePowerStateInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
@@ -572,8 +1112,8 @@ extern "C" const fidl_type_t fuchsia_device_Controller_GetDevicePowerCaps_Respon
 extern "C" const fidl_type_t v1_fuchsia_device_Controller_GetDevicePowerCaps_ResponseTable;
 
 struct Controller_GetDevicePowerCaps_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_GetDevicePowerCaps_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_Controller_GetDevicePowerCaps_ResponseTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_GetDevicePowerCaps_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_Controller_GetDevicePowerCaps_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 120;
   [[maybe_unused]]
@@ -585,120 +1125,12 @@ struct Controller_GetDevicePowerCaps_Response {
   ::fidl::Array<::llcpp::fuchsia::device::DevicePowerStateInfo, 5> dpstates = {};
 };
 
-extern "C" const fidl_type_t fuchsia_device_Controller_GetDevicePowerCaps_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_device_Controller_GetDevicePowerCaps_ResultTable;
-
-struct Controller_GetDevicePowerCaps_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-  };
-
-  Controller_GetDevicePowerCaps_Result();
-  ~Controller_GetDevicePowerCaps_Result();
-
-  Controller_GetDevicePowerCaps_Result(Controller_GetDevicePowerCaps_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  Controller_GetDevicePowerCaps_Result& operator=(Controller_GetDevicePowerCaps_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
-
-  static Controller_GetDevicePowerCaps_Result WithResponse(::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Response* val) {
-    Controller_GetDevicePowerCaps_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Response const & response() const { return response_; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static Controller_GetDevicePowerCaps_Result WithErr(int32_t* val) {
-    Controller_GetDevicePowerCaps_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  int32_t const & err() const { return err_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_GetDevicePowerCaps_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_Controller_GetDevicePowerCaps_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 128;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 120;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(Controller_GetDevicePowerCaps_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Response response_;
-    int32_t err_;
-  };
-};
-
 extern "C" const fidl_type_t fuchsia_device_Controller_Resume_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_Controller_Resume_ResponseTable;
 
 struct Controller_Resume_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_Resume_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_Controller_Resume_ResponseTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_Resume_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_Controller_Resume_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -710,122 +1142,14 @@ struct Controller_Resume_Response {
   ::llcpp::fuchsia::device::DevicePowerState out_state = {};
 };
 
-extern "C" const fidl_type_t fuchsia_device_Controller_Resume_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_device_Controller_Resume_ResultTable;
-
-struct Controller_Resume_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-  };
-
-  Controller_Resume_Result();
-  ~Controller_Resume_Result();
-
-  Controller_Resume_Result(Controller_Resume_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  Controller_Resume_Result& operator=(Controller_Resume_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
-
-  static Controller_Resume_Result WithResponse(::llcpp::fuchsia::device::Controller_Resume_Response* val) {
-    Controller_Resume_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::device::Controller_Resume_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::Controller_Resume_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::Controller_Resume_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::device::Controller_Resume_Response const & response() const { return response_; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static Controller_Resume_Result WithErr(int32_t* val) {
-    Controller_Resume_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  int32_t const & err() const { return err_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_Resume_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_Controller_Resume_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(Controller_Resume_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::device::Controller_Resume_Response response_;
-    int32_t err_;
-  };
-};
-
 extern "C" const fidl_type_t fuchsia_device_DevicePerformanceStateInfoTable;
 extern "C" const fidl_type_t v1_fuchsia_device_DevicePerformanceStateInfoTable;
 
 // Performance state info for a device. A performance state is relevant only
 // when the device is in non-sleeping working device power state.
 struct DevicePerformanceStateInfo {
-  static constexpr const fidl_type_t* Type = &fuchsia_device_DevicePerformanceStateInfoTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_DevicePerformanceStateInfoTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_DevicePerformanceStateInfoTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_DevicePerformanceStateInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
@@ -877,8 +1201,8 @@ extern "C" const fidl_type_t fuchsia_device_Controller_UpdatePowerStateMapping_R
 extern "C" const fidl_type_t v1_fuchsia_device_Controller_UpdatePowerStateMapping_ResponseTable;
 
 struct Controller_UpdatePowerStateMapping_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_UpdatePowerStateMapping_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_Controller_UpdatePowerStateMapping_ResponseTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_UpdatePowerStateMapping_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_Controller_UpdatePowerStateMapping_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -888,122 +1212,14 @@ struct Controller_UpdatePowerStateMapping_Response {
   static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
-};
-
-extern "C" const fidl_type_t fuchsia_device_Controller_UpdatePowerStateMapping_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_device_Controller_UpdatePowerStateMapping_ResultTable;
-
-struct Controller_UpdatePowerStateMapping_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-  };
-
-  Controller_UpdatePowerStateMapping_Result();
-  ~Controller_UpdatePowerStateMapping_Result();
-
-  Controller_UpdatePowerStateMapping_Result(Controller_UpdatePowerStateMapping_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  Controller_UpdatePowerStateMapping_Result& operator=(Controller_UpdatePowerStateMapping_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
-
-  static Controller_UpdatePowerStateMapping_Result WithResponse(::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Response* val) {
-    Controller_UpdatePowerStateMapping_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Response const & response() const { return response_; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static Controller_UpdatePowerStateMapping_Result WithErr(int32_t* val) {
-    Controller_UpdatePowerStateMapping_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  int32_t const & err() const { return err_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_UpdatePowerStateMapping_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_Controller_UpdatePowerStateMapping_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(Controller_UpdatePowerStateMapping_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Response response_;
-    int32_t err_;
-  };
 };
 
 extern "C" const fidl_type_t fuchsia_device_Controller_ScheduleUnbind_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_Controller_ScheduleUnbind_ResponseTable;
 
 struct Controller_ScheduleUnbind_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_ScheduleUnbind_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_Controller_ScheduleUnbind_ResponseTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_ScheduleUnbind_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_Controller_ScheduleUnbind_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -1013,122 +1229,14 @@ struct Controller_ScheduleUnbind_Response {
   static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
-};
-
-extern "C" const fidl_type_t fuchsia_device_Controller_ScheduleUnbind_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_device_Controller_ScheduleUnbind_ResultTable;
-
-struct Controller_ScheduleUnbind_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-  };
-
-  Controller_ScheduleUnbind_Result();
-  ~Controller_ScheduleUnbind_Result();
-
-  Controller_ScheduleUnbind_Result(Controller_ScheduleUnbind_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  Controller_ScheduleUnbind_Result& operator=(Controller_ScheduleUnbind_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
-
-  static Controller_ScheduleUnbind_Result WithResponse(::llcpp::fuchsia::device::Controller_ScheduleUnbind_Response* val) {
-    Controller_ScheduleUnbind_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::device::Controller_ScheduleUnbind_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::Controller_ScheduleUnbind_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::Controller_ScheduleUnbind_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::device::Controller_ScheduleUnbind_Response const & response() const { return response_; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static Controller_ScheduleUnbind_Result WithErr(int32_t* val) {
-    Controller_ScheduleUnbind_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  int32_t const & err() const { return err_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_ScheduleUnbind_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_Controller_ScheduleUnbind_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(Controller_ScheduleUnbind_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::device::Controller_ScheduleUnbind_Response response_;
-    int32_t err_;
-  };
 };
 
 extern "C" const fidl_type_t fuchsia_device_Controller_Rebind_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_Controller_Rebind_ResponseTable;
 
 struct Controller_Rebind_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_Rebind_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_Controller_Rebind_ResponseTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_Rebind_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_Controller_Rebind_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -1140,120 +1248,12 @@ struct Controller_Rebind_Response {
   uint8_t __reserved = {};
 };
 
-extern "C" const fidl_type_t fuchsia_device_Controller_Rebind_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_device_Controller_Rebind_ResultTable;
-
-struct Controller_Rebind_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-  };
-
-  Controller_Rebind_Result();
-  ~Controller_Rebind_Result();
-
-  Controller_Rebind_Result(Controller_Rebind_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  Controller_Rebind_Result& operator=(Controller_Rebind_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
-
-  static Controller_Rebind_Result WithResponse(::llcpp::fuchsia::device::Controller_Rebind_Response* val) {
-    Controller_Rebind_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::device::Controller_Rebind_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::Controller_Rebind_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::Controller_Rebind_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::device::Controller_Rebind_Response const & response() const { return response_; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static Controller_Rebind_Result WithErr(int32_t* val) {
-    Controller_Rebind_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  int32_t const & err() const { return err_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_Rebind_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_Controller_Rebind_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(Controller_Rebind_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::device::Controller_Rebind_Response response_;
-    int32_t err_;
-  };
-};
-
 extern "C" const fidl_type_t fuchsia_device_Controller_GetTopologicalPath_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_Controller_GetTopologicalPath_ResponseTable;
 
 struct Controller_GetTopologicalPath_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_GetTopologicalPath_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_Controller_GetTopologicalPath_ResponseTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_GetTopologicalPath_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_Controller_GetTopologicalPath_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
@@ -1265,120 +1265,12 @@ struct Controller_GetTopologicalPath_Response {
   ::fidl::StringView path = {};
 };
 
-extern "C" const fidl_type_t fuchsia_device_Controller_GetTopologicalPath_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_device_Controller_GetTopologicalPath_ResultTable;
-
-struct Controller_GetTopologicalPath_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-  };
-
-  Controller_GetTopologicalPath_Result();
-  ~Controller_GetTopologicalPath_Result();
-
-  Controller_GetTopologicalPath_Result(Controller_GetTopologicalPath_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  Controller_GetTopologicalPath_Result& operator=(Controller_GetTopologicalPath_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
-
-  static Controller_GetTopologicalPath_Result WithResponse(::llcpp::fuchsia::device::Controller_GetTopologicalPath_Response* val) {
-    Controller_GetTopologicalPath_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Response const & response() const { return response_; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static Controller_GetTopologicalPath_Result WithErr(int32_t* val) {
-    Controller_GetTopologicalPath_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  int32_t const & err() const { return err_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_GetTopologicalPath_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_Controller_GetTopologicalPath_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 1024;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 1040;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(Controller_GetTopologicalPath_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Response response_;
-    int32_t err_;
-  };
-};
-
 extern "C" const fidl_type_t fuchsia_device_Controller_Bind_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_Controller_Bind_ResponseTable;
 
 struct Controller_Bind_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_Bind_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_Controller_Bind_ResponseTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_Controller_Bind_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_Controller_Bind_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -1388,114 +1280,6 @@ struct Controller_Bind_Response {
   static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
-};
-
-extern "C" const fidl_type_t fuchsia_device_Controller_Bind_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_device_Controller_Bind_ResultTable;
-
-struct Controller_Bind_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-  };
-
-  Controller_Bind_Result();
-  ~Controller_Bind_Result();
-
-  Controller_Bind_Result(Controller_Bind_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  Controller_Bind_Result& operator=(Controller_Bind_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
-
-  static Controller_Bind_Result WithResponse(::llcpp::fuchsia::device::Controller_Bind_Response* val) {
-    Controller_Bind_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::device::Controller_Bind_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::Controller_Bind_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::Controller_Bind_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::device::Controller_Bind_Response const & response() const { return response_; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static Controller_Bind_Result WithErr(int32_t* val) {
-    Controller_Bind_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  int32_t const & err() const { return err_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_Bind_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_Controller_Bind_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(Controller_Bind_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::device::Controller_Bind_Response response_;
-    int32_t err_;
-  };
 };
 
 extern "C" const fidl_type_t fuchsia_device_ControllerBindRequestTable;
@@ -1589,12 +1373,12 @@ class Controller final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::device::Controller_Bind_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerBindResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerBindResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_ControllerBindResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_ControllerBindResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 8;
+    static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -1606,8 +1390,8 @@ class Controller final {
     fidl_message_header_t _hdr;
     ::fidl::StringView driver;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerBindRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerBindRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_ControllerBindRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_ControllerBindRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 1024;
@@ -1625,12 +1409,12 @@ class Controller final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::device::Controller_Rebind_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerRebindResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerRebindResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_ControllerRebindResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_ControllerRebindResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 8;
+    static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -1642,8 +1426,8 @@ class Controller final {
     fidl_message_header_t _hdr;
     ::fidl::StringView driver;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerRebindRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerRebindRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_ControllerRebindRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_ControllerRebindRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 1024;
@@ -1661,12 +1445,12 @@ class Controller final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::device::Controller_ScheduleUnbind_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerScheduleUnbindResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerScheduleUnbindResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_ControllerScheduleUnbindResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_ControllerScheduleUnbindResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 8;
+    static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -1681,8 +1465,8 @@ class Controller final {
     int32_t status;
     ::fidl::StringView name;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerGetDriverNameResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerGetDriverNameResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_ControllerGetDriverNameResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_ControllerGetDriverNameResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 32;
@@ -1700,8 +1484,8 @@ class Controller final {
     fidl_message_header_t _hdr;
     ::fidl::StringView name;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerGetDeviceNameResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerGetDeviceNameResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_ControllerGetDeviceNameResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_ControllerGetDeviceNameResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 32;
@@ -1719,11 +1503,11 @@ class Controller final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerGetTopologicalPathResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerGetTopologicalPathResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_ControllerGetTopologicalPathResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_ControllerGetTopologicalPathResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 1024;
+    static constexpr uint32_t MaxOutOfLine = 1040;
     static constexpr uint32_t AltPrimarySize = 40;
     static constexpr uint32_t AltMaxOutOfLine = 1040;
     static constexpr bool HasFlexibleEnvelope = false;
@@ -1739,8 +1523,8 @@ class Controller final {
     int32_t status;
     ::zx::event event;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerGetEventHandleResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerGetEventHandleResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_ControllerGetEventHandleResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_ControllerGetEventHandleResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1759,8 +1543,8 @@ class Controller final {
     int32_t status;
     uint32_t flags;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerGetDriverLogFlagsResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerGetDriverLogFlagsResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_ControllerGetDriverLogFlagsResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_ControllerGetDriverLogFlagsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1778,8 +1562,8 @@ class Controller final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerSetDriverLogFlagsResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerSetDriverLogFlagsResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_ControllerSetDriverLogFlagsResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_ControllerSetDriverLogFlagsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1796,8 +1580,8 @@ class Controller final {
     uint32_t clear_flags;
     uint32_t set_flags;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerSetDriverLogFlagsRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerSetDriverLogFlagsRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_ControllerSetDriverLogFlagsRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_ControllerSetDriverLogFlagsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1815,8 +1599,8 @@ class Controller final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerDebugSuspendResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerDebugSuspendResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_ControllerDebugSuspendResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_ControllerDebugSuspendResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1834,8 +1618,8 @@ class Controller final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerDebugResumeResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerDebugResumeResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_ControllerDebugResumeResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_ControllerDebugResumeResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1853,8 +1637,8 @@ class Controller final {
     fidl_message_header_t _hdr;
     uint32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerRunCompatibilityTestsResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerRunCompatibilityTestsResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_ControllerRunCompatibilityTestsResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_ControllerRunCompatibilityTestsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1870,8 +1654,8 @@ class Controller final {
     fidl_message_header_t _hdr;
     int64_t hook_wait_time;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerRunCompatibilityTestsRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerRunCompatibilityTestsRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_ControllerRunCompatibilityTestsRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_ControllerRunCompatibilityTestsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1889,12 +1673,12 @@ class Controller final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerGetDevicePowerCapsResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerGetDevicePowerCapsResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_ControllerGetDevicePowerCapsResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_ControllerGetDevicePowerCapsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 144;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 120;
+    static constexpr uint32_t AltPrimarySize = 144;
     static constexpr uint32_t AltMaxOutOfLine = 120;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -1909,8 +1693,8 @@ class Controller final {
     ::fidl::Array<::llcpp::fuchsia::device::DevicePerformanceStateInfo, 20> states;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerGetDevicePerformanceStatesResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerGetDevicePerformanceStatesResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_ControllerGetDevicePerformanceStatesResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_ControllerGetDevicePerformanceStatesResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 504;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1928,12 +1712,12 @@ class Controller final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerUpdatePowerStateMappingResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerUpdatePowerStateMappingResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_ControllerUpdatePowerStateMappingResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_ControllerUpdatePowerStateMappingResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 8;
+    static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -1945,8 +1729,8 @@ class Controller final {
     fidl_message_header_t _hdr;
     ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 7> mapping;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerUpdatePowerStateMappingRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerUpdatePowerStateMappingRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_ControllerUpdatePowerStateMappingRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_ControllerUpdatePowerStateMappingRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 72;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1964,12 +1748,12 @@ class Controller final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerGetPowerStateMappingResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerGetPowerStateMappingResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_ControllerGetPowerStateMappingResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_ControllerGetPowerStateMappingResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 80;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 56;
+    static constexpr uint32_t AltPrimarySize = 80;
     static constexpr uint32_t AltMaxOutOfLine = 56;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -1984,8 +1768,8 @@ class Controller final {
     int32_t status;
     ::llcpp::fuchsia::device::DevicePowerState out_state;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerSuspendResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerSuspendResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_ControllerSuspendResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_ControllerSuspendResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2001,8 +1785,8 @@ class Controller final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::device::DevicePowerState requested_state;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerSuspendRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerSuspendRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_ControllerSuspendRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_ControllerSuspendRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2020,12 +1804,12 @@ class Controller final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::device::Controller_Resume_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerResumeResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerResumeResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_ControllerResumeResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_ControllerResumeResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 8;
+    static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -2037,8 +1821,8 @@ class Controller final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::device::DevicePowerState requested_state;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerResumeRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerResumeRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_ControllerResumeRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_ControllerResumeRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2057,8 +1841,8 @@ class Controller final {
     int32_t status;
     uint32_t out_state;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerSetPerformanceStateResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerSetPerformanceStateResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_ControllerSetPerformanceStateResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_ControllerSetPerformanceStateResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2074,8 +1858,8 @@ class Controller final {
     fidl_message_header_t _hdr;
     uint32_t requested_state;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerSetPerformanceStateRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerSetPerformanceStateRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_ControllerSetPerformanceStateRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_ControllerSetPerformanceStateRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2093,8 +1877,8 @@ class Controller final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerConfigureAutoSuspendResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerConfigureAutoSuspendResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_ControllerConfigureAutoSuspendResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_ControllerConfigureAutoSuspendResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2111,8 +1895,8 @@ class Controller final {
     bool enable;
     ::llcpp::fuchsia::device::DevicePowerState requested_deepest_sleep_state;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerConfigureAutoSuspendRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerConfigureAutoSuspendRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_ControllerConfigureAutoSuspendRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_ControllerConfigureAutoSuspendRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2835,7 +2619,7 @@ class Controller final {
     ::zx::channel* mutable_channel() { return &channel_; }
 
     // Attempt to bind the requested driver to this device
-    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
+    // Allocates 32 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::Bind Bind(::fidl::StringView driver);
 
     // Attempt to bind the requested driver to this device
@@ -2845,7 +2629,7 @@ class Controller final {
     // This api will unbind all the children of this device and bind the
     // requested driver. If the driver is empty, it will autobind.
     // The Rebind will not return until the bind completes.
-    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
+    // Allocates 32 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::Rebind Rebind(::fidl::StringView driver);
 
     // This api will unbind all the children of this device and bind the
@@ -2856,7 +2640,7 @@ class Controller final {
 
     // Disconnect this device and allow its parent to be bound again.
     // This may not complete before it returns.
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ScheduleUnbind ScheduleUnbind();
 
     // Disconnect this device and allow its parent to be bound again.
@@ -2948,7 +2732,7 @@ class Controller final {
 
     // Gets the device power capabilities. Used by the system wide power manager
     // to manage power for this device.
-    // Allocates 160 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 280 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetDevicePowerCaps GetDevicePowerCaps();
 
     // Gets the device power capabilities. Used by the system wide power manager
@@ -2968,7 +2752,7 @@ class Controller final {
 
     // Updates the mapping between system power states to device power states. Used by the system
     // wide power manager to manage power for this device
-    // Allocates 96 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 104 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::UpdatePowerStateMapping UpdatePowerStateMapping(::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 7> mapping);
 
     // Updates the mapping between system power states to device power states. Used by the system
@@ -2978,7 +2762,7 @@ class Controller final {
 
     // Get the mapping between system power states to device power states. Used by the system
     // wide power manager to manage power for this device.
-    // Allocates 96 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 152 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetPowerStateMapping GetPowerStateMapping();
 
     // Get the mapping between system power states to device power states. Used by the system
@@ -2997,7 +2781,7 @@ class Controller final {
     UnownedResultOf::Suspend Suspend(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::DevicePowerState requested_state, ::fidl::BytePart _response_buffer);
 
     // Transition this device from a sleep state to a working state.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Resume Resume(::llcpp::fuchsia::device::DevicePowerState requested_state);
 
     // Transition this device from a sleep state to a working state.
@@ -3044,7 +2828,7 @@ class Controller final {
    public:
 
     // Attempt to bind the requested driver to this device
-    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
+    // Allocates 32 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::Bind Bind(::zx::unowned_channel _client_end, ::fidl::StringView driver);
 
     // Attempt to bind the requested driver to this device
@@ -3054,7 +2838,7 @@ class Controller final {
     // This api will unbind all the children of this device and bind the
     // requested driver. If the driver is empty, it will autobind.
     // The Rebind will not return until the bind completes.
-    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
+    // Allocates 32 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::Rebind Rebind(::zx::unowned_channel _client_end, ::fidl::StringView driver);
 
     // This api will unbind all the children of this device and bind the
@@ -3065,7 +2849,7 @@ class Controller final {
 
     // Disconnect this device and allow its parent to be bound again.
     // This may not complete before it returns.
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ScheduleUnbind ScheduleUnbind(::zx::unowned_channel _client_end);
 
     // Disconnect this device and allow its parent to be bound again.
@@ -3157,7 +2941,7 @@ class Controller final {
 
     // Gets the device power capabilities. Used by the system wide power manager
     // to manage power for this device.
-    // Allocates 160 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 280 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetDevicePowerCaps GetDevicePowerCaps(::zx::unowned_channel _client_end);
 
     // Gets the device power capabilities. Used by the system wide power manager
@@ -3177,7 +2961,7 @@ class Controller final {
 
     // Updates the mapping between system power states to device power states. Used by the system
     // wide power manager to manage power for this device
-    // Allocates 96 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 104 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::UpdatePowerStateMapping UpdatePowerStateMapping(::zx::unowned_channel _client_end, ::fidl::Array<::llcpp::fuchsia::device::SystemPowerStateInfo, 7> mapping);
 
     // Updates the mapping between system power states to device power states. Used by the system
@@ -3187,7 +2971,7 @@ class Controller final {
 
     // Get the mapping between system power states to device power states. Used by the system
     // wide power manager to manage power for this device.
-    // Allocates 96 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 152 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetPowerStateMapping GetPowerStateMapping(::zx::unowned_channel _client_end);
 
     // Get the mapping between system power states to device power states. Used by the system
@@ -3206,7 +2990,7 @@ class Controller final {
     static UnownedResultOf::Suspend Suspend(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::device::DevicePowerState requested_state, ::fidl::BytePart _response_buffer);
 
     // Transition this device from a sleep state to a working state.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Resume Resume(::zx::unowned_channel _client_end, ::llcpp::fuchsia::device::DevicePowerState requested_state);
 
     // Transition this device from a sleep state to a working state.

@@ -43,8 +43,8 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_thermal_ThermalTemperatureInfoT
 
 // Temperature units are degrees Celsius.
 struct ThermalTemperatureInfo {
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_thermal_ThermalTemperatureInfoTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_thermal_ThermalTemperatureInfoTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_thermal_ThermalTemperatureInfoTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_thermal_ThermalTemperatureInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 20;
   [[maybe_unused]]
@@ -77,8 +77,8 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_thermal_ThermalInfoTable;
 
 // Temperature units are degrees Celsius.
 struct ThermalInfo {
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_thermal_ThermalInfoTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_thermal_ThermalInfoTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_thermal_ThermalInfoTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_thermal_ThermalInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 80;
   [[maybe_unused]]
@@ -163,8 +163,8 @@ class Device final {
     int32_t status;
     ::llcpp::fuchsia::hardware::thermal::ThermalInfo* info;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_thermal_DeviceGetInfoResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_thermal_DeviceGetInfoResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_thermal_DeviceGetInfoResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_thermal_DeviceGetInfoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 80;
@@ -183,8 +183,8 @@ class Device final {
     int32_t status;
     ::llcpp::fuchsia::hardware::thermal::ThermalDeviceInfo* info;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_thermal_DeviceGetDeviceInfoResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_thermal_DeviceGetDeviceInfoResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_thermal_DeviceGetDeviceInfoResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_thermal_DeviceGetDeviceInfoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 608;
@@ -203,8 +203,8 @@ class Device final {
     int32_t status;
     ::llcpp::fuchsia::hardware::thermal::OperatingPoint* info;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_thermal_DeviceGetDvfsInfoResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_thermal_DeviceGetDvfsInfoResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_thermal_DeviceGetDvfsInfoResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_thermal_DeviceGetDvfsInfoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 136;
@@ -220,8 +220,8 @@ class Device final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_thermal_DeviceGetDvfsInfoRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_thermal_DeviceGetDvfsInfoRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_thermal_DeviceGetDvfsInfoRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_thermal_DeviceGetDvfsInfoRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -240,8 +240,8 @@ class Device final {
     int32_t status;
     float temp;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_thermal_DeviceGetTemperatureCelsiusResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_thermal_DeviceGetTemperatureCelsiusResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_thermal_DeviceGetTemperatureCelsiusResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_thermal_DeviceGetTemperatureCelsiusResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -260,8 +260,8 @@ class Device final {
     int32_t status;
     ::zx::event handle;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_thermal_DeviceGetStateChangeEventResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_thermal_DeviceGetStateChangeEventResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_thermal_DeviceGetStateChangeEventResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_thermal_DeviceGetStateChangeEventResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -280,8 +280,8 @@ class Device final {
     int32_t status;
     ::zx::port handle;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_thermal_DeviceGetStateChangePortResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_thermal_DeviceGetStateChangePortResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_thermal_DeviceGetStateChangePortResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_thermal_DeviceGetStateChangePortResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -299,8 +299,8 @@ class Device final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_thermal_DeviceSetTripCelsiusResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_thermal_DeviceSetTripCelsiusResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_thermal_DeviceSetTripCelsiusResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_thermal_DeviceSetTripCelsiusResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -317,8 +317,8 @@ class Device final {
     uint32_t id;
     float temp;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_thermal_DeviceSetTripCelsiusRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_thermal_DeviceSetTripCelsiusRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_thermal_DeviceSetTripCelsiusRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_thermal_DeviceSetTripCelsiusRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -337,8 +337,8 @@ class Device final {
     int32_t status;
     uint16_t op_idx;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_thermal_DeviceGetDvfsOperatingPointResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_thermal_DeviceGetDvfsOperatingPointResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_thermal_DeviceGetDvfsOperatingPointResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_thermal_DeviceGetDvfsOperatingPointResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -354,8 +354,8 @@ class Device final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_thermal_DeviceGetDvfsOperatingPointRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_thermal_DeviceGetDvfsOperatingPointRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_thermal_DeviceGetDvfsOperatingPointRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_thermal_DeviceGetDvfsOperatingPointRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -373,8 +373,8 @@ class Device final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_thermal_DeviceSetDvfsOperatingPointResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_thermal_DeviceSetDvfsOperatingPointResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_thermal_DeviceSetDvfsOperatingPointResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_thermal_DeviceSetDvfsOperatingPointResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -391,8 +391,8 @@ class Device final {
     uint16_t op_idx;
     ::llcpp::fuchsia::hardware::thermal::PowerDomain power_domain;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_thermal_DeviceSetDvfsOperatingPointRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_thermal_DeviceSetDvfsOperatingPointRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_thermal_DeviceSetDvfsOperatingPointRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_thermal_DeviceSetDvfsOperatingPointRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -411,8 +411,8 @@ class Device final {
     int32_t status;
     uint32_t fan_level;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_thermal_DeviceGetFanLevelResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_thermal_DeviceGetFanLevelResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_thermal_DeviceGetFanLevelResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_thermal_DeviceGetFanLevelResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -430,8 +430,8 @@ class Device final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_thermal_DeviceSetFanLevelResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_thermal_DeviceSetFanLevelResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_thermal_DeviceSetFanLevelResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_thermal_DeviceSetFanLevelResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -447,8 +447,8 @@ class Device final {
     fidl_message_header_t _hdr;
     uint32_t fan_level;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_thermal_DeviceSetFanLevelRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_thermal_DeviceSetFanLevelRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_thermal_DeviceSetFanLevelRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_thermal_DeviceSetFanLevelRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1324,8 +1324,8 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_thermal_OperatingPointEntryTabl
 
 // scpi_opp_entry_t is typedef'd to this.
 struct OperatingPointEntry {
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_thermal_OperatingPointEntryTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_thermal_OperatingPointEntryTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_thermal_OperatingPointEntryTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_thermal_OperatingPointEntryTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
@@ -1346,8 +1346,8 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_thermal_OperatingPointTable;
 
 // scpi_opp_t is typedef'd to this.
 struct OperatingPoint {
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_thermal_OperatingPointTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_thermal_OperatingPointTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_thermal_OperatingPointTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_thermal_OperatingPointTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 136;
   [[maybe_unused]]
@@ -1370,8 +1370,8 @@ extern "C" const fidl_type_t fuchsia_hardware_thermal_ThermalDeviceInfoTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_thermal_ThermalDeviceInfoTable;
 
 struct ThermalDeviceInfo {
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_thermal_ThermalDeviceInfoTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_thermal_ThermalDeviceInfoTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_thermal_ThermalDeviceInfoTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_thermal_ThermalDeviceInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 608;
   [[maybe_unused]]

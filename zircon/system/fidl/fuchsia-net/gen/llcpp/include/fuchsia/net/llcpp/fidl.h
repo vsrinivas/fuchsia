@@ -107,6 +107,259 @@ struct Subnet;
 class NameLookup;
 struct Endpoint;
 
+extern "C" const fidl_type_t fuchsia_net_NameLookup_LookupHostname_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_net_NameLookup_LookupHostname_ResultTable;
+
+struct NameLookup_LookupHostname_Result {
+  NameLookup_LookupHostname_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static NameLookup_LookupHostname_Result WithResponse(::llcpp::fuchsia::net::NameLookup_LookupHostname_Response* val) {
+    NameLookup_LookupHostname_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::fuchsia::net::NameLookup_LookupHostname_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::net::NameLookup_LookupHostname_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::net::NameLookup_LookupHostname_Response*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::net::NameLookup_LookupHostname_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::net::NameLookup_LookupHostname_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static NameLookup_LookupHostname_Result WithErr(::llcpp::fuchsia::net::LookupError* val) {
+    NameLookup_LookupHostname_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(::llcpp::fuchsia::net::LookupError* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::net::LookupError& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<::llcpp::fuchsia::net::LookupError*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::net::LookupError& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<::llcpp::fuchsia::net::LookupError*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_net_NameLookup_LookupHostname_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_net_NameLookup_LookupHostname_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 272;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 272;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
+extern "C" const fidl_type_t fuchsia_net_NameLookup_LookupIp_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_net_NameLookup_LookupIp_ResultTable;
+
+struct NameLookup_LookupIp_Result {
+  NameLookup_LookupIp_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static NameLookup_LookupIp_Result WithResponse(::llcpp::fuchsia::net::NameLookup_LookupIp_Response* val) {
+    NameLookup_LookupIp_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::fuchsia::net::NameLookup_LookupIp_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::net::NameLookup_LookupIp_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::net::NameLookup_LookupIp_Response*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::net::NameLookup_LookupIp_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::net::NameLookup_LookupIp_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static NameLookup_LookupIp_Result WithErr(::llcpp::fuchsia::net::LookupError* val) {
+    NameLookup_LookupIp_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(::llcpp::fuchsia::net::LookupError* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::net::LookupError& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<::llcpp::fuchsia::net::LookupError*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::net::LookupError& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<::llcpp::fuchsia::net::LookupError*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_net_NameLookup_LookupIp_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_net_NameLookup_LookupIp_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 5424;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 5424;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
+extern "C" const fidl_type_t fuchsia_net_IpAddressTable;
+extern "C" const fidl_type_t v1_fuchsia_net_IpAddressTable;
+
+// Represents an IP address that may be either v4 or v6.
+struct IpAddress {
+  IpAddress() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kIpv4 = 1,  // 0x1
+    kIpv6 = 2,  // 0x2
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_ipv4() const { return ordinal_ == Ordinal::kIpv4; }
+
+  static IpAddress WithIpv4(::llcpp::fuchsia::net::Ipv4Address* val) {
+    IpAddress result;
+    result.set_ipv4(val);
+    return result;
+  }
+
+  void set_ipv4(::llcpp::fuchsia::net::Ipv4Address* elem) {
+    ordinal_ = Ordinal::kIpv4;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::net::Ipv4Address& mutable_ipv4() {
+    ZX_ASSERT(ordinal_ == Ordinal::kIpv4);
+    return *static_cast<::llcpp::fuchsia::net::Ipv4Address*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::net::Ipv4Address& ipv4() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kIpv4);
+    return *static_cast<::llcpp::fuchsia::net::Ipv4Address*>(envelope_.data);
+  }
+
+  bool is_ipv6() const { return ordinal_ == Ordinal::kIpv6; }
+
+  static IpAddress WithIpv6(::llcpp::fuchsia::net::Ipv6Address* val) {
+    IpAddress result;
+    result.set_ipv6(val);
+    return result;
+  }
+
+  void set_ipv6(::llcpp::fuchsia::net::Ipv6Address* elem) {
+    ordinal_ = Ordinal::kIpv6;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::net::Ipv6Address& mutable_ipv6() {
+    ZX_ASSERT(ordinal_ == Ordinal::kIpv6);
+    return *static_cast<::llcpp::fuchsia::net::Ipv6Address*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::net::Ipv6Address& ipv6() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kIpv6);
+    return *static_cast<::llcpp::fuchsia::net::Ipv6Address*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_net_IpAddressTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_net_IpAddressTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 16;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 16;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kIpv4 = 1,  // 0x1
+    kIpv6 = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
 extern "C" const fidl_type_t fuchsia_net_ConnectivityOnNetworkReachableRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_net_ConnectivityOnNetworkReachableRequestTable;
 extern "C" const fidl_type_t fuchsia_net_ConnectivityOnNetworkReachableEventTable;
@@ -122,8 +375,8 @@ class Connectivity final {
     fidl_message_header_t _hdr;
     bool reachable;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_net_ConnectivityOnNetworkReachableEventTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_net_ConnectivityOnNetworkReachableEventTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_net_ConnectivityOnNetworkReachableEventTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_net_ConnectivityOnNetworkReachableEventTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -261,8 +514,8 @@ extern "C" const fidl_type_t fuchsia_net_NameLookup_LookupHostname_ResponseTable
 extern "C" const fidl_type_t v1_fuchsia_net_NameLookup_LookupHostname_ResponseTable;
 
 struct NameLookup_LookupHostname_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_net_NameLookup_LookupHostname_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_net_NameLookup_LookupHostname_ResponseTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_net_NameLookup_LookupHostname_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_net_NameLookup_LookupHostname_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
@@ -279,8 +532,8 @@ extern "C" const fidl_type_t v1_fuchsia_net_MacAddressTable;
 
 // A MAC address used to identify a network interface on the data link layer within the network.
 struct MacAddress {
-  static constexpr const fidl_type_t* Type = &fuchsia_net_MacAddressTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_net_MacAddressTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_net_MacAddressTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_net_MacAddressTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 6;
   [[maybe_unused]]
@@ -294,122 +547,14 @@ struct MacAddress {
 
 constexpr uint64_t MAX_HOSTNAME_SIZE = 255u;
 
-extern "C" const fidl_type_t fuchsia_net_NameLookup_LookupHostname_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_net_NameLookup_LookupHostname_ResultTable;
-
-struct NameLookup_LookupHostname_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-  };
-
-  NameLookup_LookupHostname_Result();
-  ~NameLookup_LookupHostname_Result();
-
-  NameLookup_LookupHostname_Result(NameLookup_LookupHostname_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  NameLookup_LookupHostname_Result& operator=(NameLookup_LookupHostname_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
-
-  static NameLookup_LookupHostname_Result WithResponse(::llcpp::fuchsia::net::NameLookup_LookupHostname_Response* val) {
-    NameLookup_LookupHostname_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::net::NameLookup_LookupHostname_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::NameLookup_LookupHostname_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::NameLookup_LookupHostname_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::net::NameLookup_LookupHostname_Response const & response() const { return response_; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static NameLookup_LookupHostname_Result WithErr(::llcpp::fuchsia::net::LookupError* val) {
-    NameLookup_LookupHostname_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::net::LookupError& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::LookupError>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::LookupError>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::net::LookupError const & err() const { return err_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_net_NameLookup_LookupHostname_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_net_NameLookup_LookupHostname_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 256;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 272;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(NameLookup_LookupHostname_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::net::NameLookup_LookupHostname_Response response_;
-    ::llcpp::fuchsia::net::LookupError err_;
-  };
-};
-
 extern "C" const fidl_type_t fuchsia_net_Ipv6AddressTable;
 extern "C" const fidl_type_t v1_fuchsia_net_Ipv6AddressTable;
 
 // Ipv6Address is expressed in network byte order, so the most significant byte
 // ("ff" in the address "ff02::1") will be at index 0.
 struct Ipv6Address {
-  static constexpr const fidl_type_t* Type = &fuchsia_net_Ipv6AddressTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_net_Ipv6AddressTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_net_Ipv6AddressTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_net_Ipv6AddressTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
@@ -427,8 +572,8 @@ extern "C" const fidl_type_t v1_fuchsia_net_Ipv4AddressTable;
 // Ipv4Address is expressed in network byte order, so the most significant byte
 // ("127" in the address "127.0.0.1") will be at index 0.
 struct Ipv4Address {
-  static constexpr const fidl_type_t* Type = &fuchsia_net_Ipv4AddressTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_net_Ipv4AddressTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_net_Ipv4AddressTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_net_Ipv4AddressTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
@@ -444,8 +589,8 @@ extern "C" const fidl_type_t fuchsia_net_IpAddressInfoTable;
 extern "C" const fidl_type_t v1_fuchsia_net_IpAddressInfoTable;
 
 struct IpAddressInfo {
-  static constexpr const fidl_type_t* Type = &fuchsia_net_IpAddressInfoTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_net_IpAddressInfoTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_net_IpAddressInfoTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_net_IpAddressInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 48;
   [[maybe_unused]]
@@ -468,8 +613,8 @@ extern "C" const fidl_type_t fuchsia_net_NameLookup_LookupIp_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_net_NameLookup_LookupIp_ResponseTable;
 
 struct NameLookup_LookupIp_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_net_NameLookup_LookupIp_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_net_NameLookup_LookupIp_ResponseTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_net_NameLookup_LookupIp_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_net_NameLookup_LookupIp_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 48;
   [[maybe_unused]]
@@ -481,238 +626,21 @@ struct NameLookup_LookupIp_Response {
   ::llcpp::fuchsia::net::IpAddressInfo addr = {};
 };
 
-extern "C" const fidl_type_t fuchsia_net_NameLookup_LookupIp_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_net_NameLookup_LookupIp_ResultTable;
-
-struct NameLookup_LookupIp_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-  };
-
-  NameLookup_LookupIp_Result();
-  ~NameLookup_LookupIp_Result();
-
-  NameLookup_LookupIp_Result(NameLookup_LookupIp_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  NameLookup_LookupIp_Result& operator=(NameLookup_LookupIp_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
-
-  static NameLookup_LookupIp_Result WithResponse(::llcpp::fuchsia::net::NameLookup_LookupIp_Response* val) {
-    NameLookup_LookupIp_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::net::NameLookup_LookupIp_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::NameLookup_LookupIp_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::NameLookup_LookupIp_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::net::NameLookup_LookupIp_Response const & response() const { return response_; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static NameLookup_LookupIp_Result WithErr(::llcpp::fuchsia::net::LookupError* val) {
-    NameLookup_LookupIp_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::net::LookupError& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::LookupError>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::LookupError>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::net::LookupError const & err() const { return err_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_net_NameLookup_LookupIp_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_net_NameLookup_LookupIp_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 56;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 5376;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 5424;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(NameLookup_LookupIp_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::net::NameLookup_LookupIp_Response response_;
-    ::llcpp::fuchsia::net::LookupError err_;
-  };
-};
-
-extern "C" const fidl_type_t fuchsia_net_IpAddressTable;
-extern "C" const fidl_type_t v1_fuchsia_net_IpAddressTable;
-
-// Represents an IP address that may be either v4 or v6.
-struct IpAddress {
-  enum class Tag : fidl_union_tag_t {
-    kIpv4 = 0,
-    kIpv6 = 1,
-  };
-
-  IpAddress();
-  ~IpAddress();
-
-  IpAddress(IpAddress&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  IpAddress& operator=(IpAddress&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_ipv4() const { return ordinal_ == Ordinal::kIpv4; }
-
-  static IpAddress WithIpv4(::llcpp::fuchsia::net::Ipv4Address* val) {
-    IpAddress result;
-    result.set_ipv4(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::net::Ipv4Address& mutable_ipv4();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::Ipv4Address>::value && std::is_copy_assignable<T>::value>
-  set_ipv4(const T* v) {
-    mutable_ipv4() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::Ipv4Address>::value && std::is_move_assignable<T>::value>
-  set_ipv4(T* v) {
-    mutable_ipv4() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::net::Ipv4Address const & ipv4() const { return ipv4_; }
-
-  bool is_ipv6() const { return ordinal_ == Ordinal::kIpv6; }
-
-  static IpAddress WithIpv6(::llcpp::fuchsia::net::Ipv6Address* val) {
-    IpAddress result;
-    result.set_ipv6(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::net::Ipv6Address& mutable_ipv6();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::Ipv6Address>::value && std::is_copy_assignable<T>::value>
-  set_ipv6(const T* v) {
-    mutable_ipv6() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::net::Ipv6Address>::value && std::is_move_assignable<T>::value>
-  set_ipv6(T* v) {
-    mutable_ipv6() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::net::Ipv6Address const & ipv6() const { return ipv6_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_net_IpAddressTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_net_IpAddressTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 20;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 16;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kIpv4 = 0,
-    kIpv6 = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(IpAddress&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::net::Ipv4Address ipv4_;
-    ::llcpp::fuchsia::net::Ipv6Address ipv6_;
-  };
-};
-
 extern "C" const fidl_type_t fuchsia_net_SubnetTable;
 extern "C" const fidl_type_t v1_fuchsia_net_SubnetTable;
 
 // Subnet describes an IP subnetwork, where all host IP addresses share the same most significant
 // bits.
 struct Subnet {
-  static constexpr const fidl_type_t* Type = &fuchsia_net_SubnetTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_net_SubnetTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_net_SubnetTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_net_SubnetTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySize = 32;
   [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 32;
+  static constexpr uint32_t MaxOutOfLine = 16;
+  static constexpr uint32_t AltPrimarySize = 24;
   [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 16;
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // The Ipv4 or Ipv6 address. Only the `prefix_len` most significant bits may be set in `addr`;
   // all bits in the host portion of the address must be zero.
@@ -744,12 +672,12 @@ class NameLookup final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::net::NameLookup_LookupIp_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_net_NameLookupLookupIpResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_net_NameLookupLookupIpResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_net_NameLookupLookupIpResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_net_NameLookupLookupIpResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 72;
-    static constexpr uint32_t MaxOutOfLine = 5376;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 5424;
+    static constexpr uint32_t AltPrimarySize = 72;
     static constexpr uint32_t AltMaxOutOfLine = 5424;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -762,8 +690,8 @@ class NameLookup final {
     ::fidl::StringView hostname;
     ::llcpp::fuchsia::net::LookupIpOptions options;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_net_NameLookupLookupIpRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_net_NameLookupLookupIpRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_net_NameLookupLookupIpRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_net_NameLookupLookupIpRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 256;
@@ -781,11 +709,11 @@ class NameLookup final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::net::NameLookup_LookupHostname_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_net_NameLookupLookupHostnameResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_net_NameLookupLookupHostnameResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_net_NameLookupLookupHostnameResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_net_NameLookupLookupHostnameResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 256;
+    static constexpr uint32_t MaxOutOfLine = 272;
     static constexpr uint32_t AltPrimarySize = 40;
     static constexpr uint32_t AltMaxOutOfLine = 272;
     static constexpr bool HasFlexibleEnvelope = false;
@@ -798,11 +726,11 @@ class NameLookup final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::net::IpAddress addr;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_net_NameLookupLookupHostnameRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_net_NameLookupLookupHostnameRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_net_NameLookupLookupHostnameRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_net_NameLookupLookupHostnameRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t MaxOutOfLine = 16;
     static constexpr uint32_t AltPrimarySize = 40;
     static constexpr uint32_t AltMaxOutOfLine = 16;
     static constexpr bool HasFlexibleEnvelope = false;
@@ -922,7 +850,7 @@ class NameLookup final {
     UnownedResultOf::LookupIp LookupIp(::fidl::BytePart _request_buffer, ::fidl::StringView hostname, ::llcpp::fuchsia::net::LookupIpOptions options, ::fidl::BytePart _response_buffer);
 
     // Look up a hostname by IP address.
-    // Allocates 336 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 368 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::LookupHostname LookupHostname(::llcpp::fuchsia::net::IpAddress addr);
 
     // Look up a hostname by IP address.
@@ -951,7 +879,7 @@ class NameLookup final {
     static UnownedResultOf::LookupIp LookupIp(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView hostname, ::llcpp::fuchsia::net::LookupIpOptions options, ::fidl::BytePart _response_buffer);
 
     // Look up a hostname by IP address.
-    // Allocates 336 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 368 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::LookupHostname LookupHostname(::zx::unowned_channel _client_end, ::llcpp::fuchsia::net::IpAddress addr);
 
     // Look up a hostname by IP address.
@@ -1057,15 +985,15 @@ extern "C" const fidl_type_t v1_fuchsia_net_EndpointTable;
 // with the Endpoint will be known from context or communicated through
 // additional structures.
 struct Endpoint {
-  static constexpr const fidl_type_t* Type = &fuchsia_net_EndpointTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_net_EndpointTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_net_EndpointTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_net_EndpointTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
+  static constexpr uint32_t PrimarySize = 32;
   [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 32;
+  static constexpr uint32_t MaxOutOfLine = 16;
+  static constexpr uint32_t AltPrimarySize = 24;
   [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 16;
+  static constexpr uint32_t AltMaxOutOfLine = 0;
 
   // The IP address of the endpoint.
   ::llcpp::fuchsia::net::IpAddress addr = {};
@@ -1147,7 +1075,7 @@ template <>
 struct IsFidlType<::llcpp::fuchsia::net::Subnet> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::net::Subnet>);
 static_assert(offsetof(::llcpp::fuchsia::net::Subnet, addr) == 0);
-static_assert(offsetof(::llcpp::fuchsia::net::Subnet, prefix_len) == 20);
+static_assert(offsetof(::llcpp::fuchsia::net::Subnet, prefix_len) == 24);
 static_assert(sizeof(::llcpp::fuchsia::net::Subnet) == ::llcpp::fuchsia::net::Subnet::PrimarySize);
 
 template <>
@@ -1187,7 +1115,7 @@ template <>
 struct IsFidlType<::llcpp::fuchsia::net::Endpoint> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::net::Endpoint>);
 static_assert(offsetof(::llcpp::fuchsia::net::Endpoint, addr) == 0);
-static_assert(offsetof(::llcpp::fuchsia::net::Endpoint, port) == 20);
+static_assert(offsetof(::llcpp::fuchsia::net::Endpoint, port) == 24);
 static_assert(sizeof(::llcpp::fuchsia::net::Endpoint) == ::llcpp::fuchsia::net::Endpoint::PrimarySize);
 
 }  // namespace fidl

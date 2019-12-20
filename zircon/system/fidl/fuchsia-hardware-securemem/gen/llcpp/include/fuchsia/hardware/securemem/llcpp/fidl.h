@@ -43,8 +43,8 @@ class Device final {
     int32_t s;
     uint64_t paddr;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_securemem_DeviceGetSecureMemoryPhysicalAddressResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_securemem_DeviceGetSecureMemoryPhysicalAddressResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_securemem_DeviceGetSecureMemoryPhysicalAddressResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_securemem_DeviceGetSecureMemoryPhysicalAddressResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -60,8 +60,8 @@ class Device final {
     fidl_message_header_t _hdr;
     ::zx::vmo secure_mem;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_securemem_DeviceGetSecureMemoryPhysicalAddressRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_securemem_DeviceGetSecureMemoryPhysicalAddressRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_securemem_DeviceGetSecureMemoryPhysicalAddressRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_securemem_DeviceGetSecureMemoryPhysicalAddressRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;

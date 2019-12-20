@@ -1164,65 +1164,83 @@ void Partition::Interface::GetNameCompleterBase::Reply(::fidl::DecodedMessage<Ge
 
 void Partition::SetTransactionHeaderFor::GetInfoRequest(const ::fidl::DecodedMessage<Partition::GetInfoRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kPartition_GetInfo_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Partition::SetTransactionHeaderFor::GetInfoResponse(const ::fidl::DecodedMessage<Partition::GetInfoResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kPartition_GetInfo_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Partition::SetTransactionHeaderFor::GetStatsRequest(const ::fidl::DecodedMessage<Partition::GetStatsRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kPartition_GetStats_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Partition::SetTransactionHeaderFor::GetStatsResponse(const ::fidl::DecodedMessage<Partition::GetStatsResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kPartition_GetStats_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Partition::SetTransactionHeaderFor::GetFifoRequest(const ::fidl::DecodedMessage<Partition::GetFifoRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kPartition_GetFifo_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Partition::SetTransactionHeaderFor::GetFifoResponse(const ::fidl::DecodedMessage<Partition::GetFifoResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kPartition_GetFifo_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Partition::SetTransactionHeaderFor::AttachVmoRequest(const ::fidl::DecodedMessage<Partition::AttachVmoRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kPartition_AttachVmo_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Partition::SetTransactionHeaderFor::AttachVmoResponse(const ::fidl::DecodedMessage<Partition::AttachVmoResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kPartition_AttachVmo_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Partition::SetTransactionHeaderFor::CloseFifoRequest(const ::fidl::DecodedMessage<Partition::CloseFifoRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kPartition_CloseFifo_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Partition::SetTransactionHeaderFor::CloseFifoResponse(const ::fidl::DecodedMessage<Partition::CloseFifoResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kPartition_CloseFifo_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Partition::SetTransactionHeaderFor::RebindDeviceRequest(const ::fidl::DecodedMessage<Partition::RebindDeviceRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kPartition_RebindDevice_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Partition::SetTransactionHeaderFor::RebindDeviceResponse(const ::fidl::DecodedMessage<Partition::RebindDeviceResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kPartition_RebindDevice_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Partition::SetTransactionHeaderFor::GetTypeGuidRequest(const ::fidl::DecodedMessage<Partition::GetTypeGuidRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kPartition_GetTypeGuid_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Partition::SetTransactionHeaderFor::GetTypeGuidResponse(const ::fidl::DecodedMessage<Partition::GetTypeGuidResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kPartition_GetTypeGuid_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Partition::SetTransactionHeaderFor::GetInstanceGuidRequest(const ::fidl::DecodedMessage<Partition::GetInstanceGuidRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kPartition_GetInstanceGuid_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Partition::SetTransactionHeaderFor::GetInstanceGuidResponse(const ::fidl::DecodedMessage<Partition::GetInstanceGuidResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kPartition_GetInstanceGuid_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Partition::SetTransactionHeaderFor::GetNameRequest(const ::fidl::DecodedMessage<Partition::GetNameRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kPartition_GetName_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Partition::SetTransactionHeaderFor::GetNameResponse(const ::fidl::DecodedMessage<Partition::GetNameResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kPartition_GetName_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace partition

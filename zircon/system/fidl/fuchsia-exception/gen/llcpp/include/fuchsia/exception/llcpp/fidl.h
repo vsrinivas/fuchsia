@@ -55,6 +55,258 @@ struct ProcessLimbo_RetrieveException_Response;
 struct ProcessLimbo_RetrieveException_Result;
 class ProcessLimbo;
 
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimbo_RemoveFilters_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimbo_RemoveFilters_ResultTable;
+
+struct ProcessLimbo_RemoveFilters_Result {
+  ProcessLimbo_RemoveFilters_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static ProcessLimbo_RemoveFilters_Result WithResponse(::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response* val) {
+    ProcessLimbo_RemoveFilters_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static ProcessLimbo_RemoveFilters_Result WithErr(int32_t* val) {
+    ProcessLimbo_RemoveFilters_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_exception_ProcessLimbo_RemoveFilters_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_exception_ProcessLimbo_RemoveFilters_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimbo_ReleaseProcess_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimbo_ReleaseProcess_ResultTable;
+
+struct ProcessLimbo_ReleaseProcess_Result {
+  ProcessLimbo_ReleaseProcess_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static ProcessLimbo_ReleaseProcess_Result WithResponse(::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response* val) {
+    ProcessLimbo_ReleaseProcess_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static ProcessLimbo_ReleaseProcess_Result WithErr(int32_t* val) {
+    ProcessLimbo_ReleaseProcess_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_exception_ProcessLimbo_ReleaseProcess_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_exception_ProcessLimbo_ReleaseProcess_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimbo_AppendFilters_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimbo_AppendFilters_ResultTable;
+
+struct ProcessLimbo_AppendFilters_Result {
+  ProcessLimbo_AppendFilters_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static ProcessLimbo_AppendFilters_Result WithResponse(::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response* val) {
+    ProcessLimbo_AppendFilters_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static ProcessLimbo_AppendFilters_Result WithErr(int32_t* val) {
+    ProcessLimbo_AppendFilters_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_exception_ProcessLimbo_AppendFilters_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_exception_ProcessLimbo_AppendFilters_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
 extern "C" const fidl_type_t fuchsia_exception_ProcessExceptionMetadataTable;
 extern "C" const fidl_type_t v1_fuchsia_exception_ProcessExceptionMetadataTable;
 
@@ -154,6 +406,90 @@ class ProcessExceptionMetadata::Builder {
 
   uint64_t max_ordinal_ = 0;
   ::fidl::Array<fidl_envelope_t, 3> envelopes_ = {};
+};
+
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimbo_WatchProcessesWaitingOnException_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimbo_WatchProcessesWaitingOnException_ResultTable;
+
+struct ProcessLimbo_WatchProcessesWaitingOnException_Result {
+  ProcessLimbo_WatchProcessesWaitingOnException_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static ProcessLimbo_WatchProcessesWaitingOnException_Result WithResponse(::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response* val) {
+    ProcessLimbo_WatchProcessesWaitingOnException_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static ProcessLimbo_WatchProcessesWaitingOnException_Result WithErr(int32_t* val) {
+    ProcessLimbo_WatchProcessesWaitingOnException_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_exception_ProcessLimbo_WatchProcessesWaitingOnException_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_exception_ProcessLimbo_WatchProcessesWaitingOnException_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 64;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 3344;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 3344;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
 };
 
 extern "C" const fidl_type_t fuchsia_exception_ProcessExceptionTable;
@@ -260,12 +596,96 @@ class ProcessException::Builder {
   ::fidl::Array<fidl_envelope_t, 4> envelopes_ = {};
 };
 
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimbo_RetrieveException_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimbo_RetrieveException_ResultTable;
+
+struct ProcessLimbo_RetrieveException_Result {
+  ProcessLimbo_RetrieveException_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static ProcessLimbo_RetrieveException_Result WithResponse(::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response* val) {
+    ProcessLimbo_RetrieveException_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static ProcessLimbo_RetrieveException_Result WithErr(int32_t* val) {
+    ProcessLimbo_RetrieveException_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_exception_ProcessLimbo_RetrieveException_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_exception_ProcessLimbo_RetrieveException_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 3;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 128;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 128;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimbo_RemoveFilters_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimbo_RemoveFilters_ResponseTable;
 
 struct ProcessLimbo_RemoveFilters_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimbo_RemoveFilters_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimbo_RemoveFilters_ResponseTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_exception_ProcessLimbo_RemoveFilters_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_exception_ProcessLimbo_RemoveFilters_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -275,122 +695,14 @@ struct ProcessLimbo_RemoveFilters_Response {
   static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
-};
-
-extern "C" const fidl_type_t fuchsia_exception_ProcessLimbo_RemoveFilters_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimbo_RemoveFilters_ResultTable;
-
-struct ProcessLimbo_RemoveFilters_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-  };
-
-  ProcessLimbo_RemoveFilters_Result();
-  ~ProcessLimbo_RemoveFilters_Result();
-
-  ProcessLimbo_RemoveFilters_Result(ProcessLimbo_RemoveFilters_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  ProcessLimbo_RemoveFilters_Result& operator=(ProcessLimbo_RemoveFilters_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
-
-  static ProcessLimbo_RemoveFilters_Result WithResponse(::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response* val) {
-    ProcessLimbo_RemoveFilters_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response const & response() const { return response_; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static ProcessLimbo_RemoveFilters_Result WithErr(int32_t* val) {
-    ProcessLimbo_RemoveFilters_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  int32_t const & err() const { return err_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimbo_RemoveFilters_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimbo_RemoveFilters_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(ProcessLimbo_RemoveFilters_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response response_;
-    int32_t err_;
-  };
 };
 
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimbo_ReleaseProcess_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimbo_ReleaseProcess_ResponseTable;
 
 struct ProcessLimbo_ReleaseProcess_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimbo_ReleaseProcess_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimbo_ReleaseProcess_ResponseTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_exception_ProcessLimbo_ReleaseProcess_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_exception_ProcessLimbo_ReleaseProcess_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -400,122 +712,14 @@ struct ProcessLimbo_ReleaseProcess_Response {
   static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
-};
-
-extern "C" const fidl_type_t fuchsia_exception_ProcessLimbo_ReleaseProcess_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimbo_ReleaseProcess_ResultTable;
-
-struct ProcessLimbo_ReleaseProcess_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-  };
-
-  ProcessLimbo_ReleaseProcess_Result();
-  ~ProcessLimbo_ReleaseProcess_Result();
-
-  ProcessLimbo_ReleaseProcess_Result(ProcessLimbo_ReleaseProcess_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  ProcessLimbo_ReleaseProcess_Result& operator=(ProcessLimbo_ReleaseProcess_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
-
-  static ProcessLimbo_ReleaseProcess_Result WithResponse(::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response* val) {
-    ProcessLimbo_ReleaseProcess_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response const & response() const { return response_; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static ProcessLimbo_ReleaseProcess_Result WithErr(int32_t* val) {
-    ProcessLimbo_ReleaseProcess_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  int32_t const & err() const { return err_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimbo_ReleaseProcess_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimbo_ReleaseProcess_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(ProcessLimbo_ReleaseProcess_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response response_;
-    int32_t err_;
-  };
 };
 
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimbo_AppendFilters_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimbo_AppendFilters_ResponseTable;
 
 struct ProcessLimbo_AppendFilters_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimbo_AppendFilters_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimbo_AppendFilters_ResponseTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_exception_ProcessLimbo_AppendFilters_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_exception_ProcessLimbo_AppendFilters_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -525,114 +729,6 @@ struct ProcessLimbo_AppendFilters_Response {
   static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
-};
-
-extern "C" const fidl_type_t fuchsia_exception_ProcessLimbo_AppendFilters_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimbo_AppendFilters_ResultTable;
-
-struct ProcessLimbo_AppendFilters_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-  };
-
-  ProcessLimbo_AppendFilters_Result();
-  ~ProcessLimbo_AppendFilters_Result();
-
-  ProcessLimbo_AppendFilters_Result(ProcessLimbo_AppendFilters_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  ProcessLimbo_AppendFilters_Result& operator=(ProcessLimbo_AppendFilters_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
-
-  static ProcessLimbo_AppendFilters_Result WithResponse(::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response* val) {
-    ProcessLimbo_AppendFilters_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response const & response() const { return response_; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static ProcessLimbo_AppendFilters_Result WithErr(int32_t* val) {
-    ProcessLimbo_AppendFilters_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  int32_t const & err() const { return err_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimbo_AppendFilters_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimbo_AppendFilters_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(ProcessLimbo_AppendFilters_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response response_;
-    int32_t err_;
-  };
 };
 
 constexpr uint64_t MAX_FILTER_LENGTH = 32u;
@@ -649,8 +745,8 @@ extern "C" const fidl_type_t v1_fuchsia_exception_ExceptionInfoTable;
 // Basic exception information associated with a particular exception.
 // Maps to `zx_exception_info_t`.
 struct ExceptionInfo {
-  static constexpr const fidl_type_t* Type = &fuchsia_exception_ExceptionInfoTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ExceptionInfoTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_exception_ExceptionInfoTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_exception_ExceptionInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
@@ -685,8 +781,8 @@ class Handler final {
     ::zx::exception exception;
     ::llcpp::fuchsia::exception::ExceptionInfo info;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_exception_HandlerOnExceptionRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_HandlerOnExceptionRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_exception_HandlerOnExceptionRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_exception_HandlerOnExceptionRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -898,8 +994,8 @@ extern "C" const fidl_type_t fuchsia_exception_ProcessLimbo_WatchProcessesWaitin
 extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimbo_WatchProcessesWaitingOnException_ResponseTable;
 
 struct ProcessLimbo_WatchProcessesWaitingOnException_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimbo_WatchProcessesWaitingOnException_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimbo_WatchProcessesWaitingOnException_ResponseTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_exception_ProcessLimbo_WatchProcessesWaitingOnException_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_exception_ProcessLimbo_WatchProcessesWaitingOnException_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 64;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
@@ -911,120 +1007,12 @@ struct ProcessLimbo_WatchProcessesWaitingOnException_Response {
   ::fidl::VectorView<::llcpp::fuchsia::exception::ProcessExceptionMetadata> exception_list = {};
 };
 
-extern "C" const fidl_type_t fuchsia_exception_ProcessLimbo_WatchProcessesWaitingOnException_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimbo_WatchProcessesWaitingOnException_ResultTable;
-
-struct ProcessLimbo_WatchProcessesWaitingOnException_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-  };
-
-  ProcessLimbo_WatchProcessesWaitingOnException_Result();
-  ~ProcessLimbo_WatchProcessesWaitingOnException_Result();
-
-  ProcessLimbo_WatchProcessesWaitingOnException_Result(ProcessLimbo_WatchProcessesWaitingOnException_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  ProcessLimbo_WatchProcessesWaitingOnException_Result& operator=(ProcessLimbo_WatchProcessesWaitingOnException_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
-
-  static ProcessLimbo_WatchProcessesWaitingOnException_Result WithResponse(::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response* val) {
-    ProcessLimbo_WatchProcessesWaitingOnException_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response const & response() const { return response_; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static ProcessLimbo_WatchProcessesWaitingOnException_Result WithErr(int32_t* val) {
-    ProcessLimbo_WatchProcessesWaitingOnException_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  int32_t const & err() const { return err_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimbo_WatchProcessesWaitingOnException_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimbo_WatchProcessesWaitingOnException_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 64;
-  static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 3328;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 3344;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(ProcessLimbo_WatchProcessesWaitingOnException_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response response_;
-    int32_t err_;
-  };
-};
-
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimbo_RetrieveException_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimbo_RetrieveException_ResponseTable;
 
 struct ProcessLimbo_RetrieveException_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimbo_RetrieveException_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimbo_RetrieveException_ResponseTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_exception_ProcessLimbo_RetrieveException_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_exception_ProcessLimbo_RetrieveException_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 3;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
@@ -1034,114 +1022,6 @@ struct ProcessLimbo_RetrieveException_Response {
   static constexpr uint32_t AltMaxOutOfLine = 112;
 
   ::llcpp::fuchsia::exception::ProcessException process_exception = {};
-};
-
-extern "C" const fidl_type_t fuchsia_exception_ProcessLimbo_RetrieveException_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimbo_RetrieveException_ResultTable;
-
-struct ProcessLimbo_RetrieveException_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-  };
-
-  ProcessLimbo_RetrieveException_Result();
-  ~ProcessLimbo_RetrieveException_Result();
-
-  ProcessLimbo_RetrieveException_Result(ProcessLimbo_RetrieveException_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  ProcessLimbo_RetrieveException_Result& operator=(ProcessLimbo_RetrieveException_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
-
-  static ProcessLimbo_RetrieveException_Result WithResponse(::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response* val) {
-    ProcessLimbo_RetrieveException_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response const & response() const { return response_; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static ProcessLimbo_RetrieveException_Result WithErr(int32_t* val) {
-    ProcessLimbo_RetrieveException_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  int32_t const & err() const { return err_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimbo_RetrieveException_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimbo_RetrieveException_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 3;
-  static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 112;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 128;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(ProcessLimbo_RetrieveException_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response response_;
-    int32_t err_;
-  };
 };
 
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimboSetActiveRequestTable;
@@ -1197,8 +1077,8 @@ class ProcessLimbo final {
     fidl_message_header_t _hdr;
     bool active;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimboSetActiveRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimboSetActiveRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_exception_ProcessLimboSetActiveRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_exception_ProcessLimboSetActiveRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1215,8 +1095,8 @@ class ProcessLimbo final {
     fidl_message_header_t _hdr;
     bool is_active;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimboWatchActiveResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimboWatchActiveResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_exception_ProcessLimboWatchActiveResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_exception_ProcessLimboWatchActiveResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1234,11 +1114,11 @@ class ProcessLimbo final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimboWatchProcessesWaitingOnExceptionResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimboWatchProcessesWaitingOnExceptionResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_exception_ProcessLimboWatchProcessesWaitingOnExceptionResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_exception_ProcessLimboWatchProcessesWaitingOnExceptionResponseTable;
     static constexpr uint32_t MaxNumHandles = 64;
     static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 3328;
+    static constexpr uint32_t MaxOutOfLine = 3344;
     static constexpr uint32_t AltPrimarySize = 40;
     static constexpr uint32_t AltMaxOutOfLine = 3344;
     static constexpr bool HasFlexibleEnvelope = true;
@@ -1253,11 +1133,11 @@ class ProcessLimbo final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimboRetrieveExceptionResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimboRetrieveExceptionResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_exception_ProcessLimboRetrieveExceptionResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_exception_ProcessLimboRetrieveExceptionResponseTable;
     static constexpr uint32_t MaxNumHandles = 3;
     static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 112;
+    static constexpr uint32_t MaxOutOfLine = 128;
     static constexpr uint32_t AltPrimarySize = 40;
     static constexpr uint32_t AltMaxOutOfLine = 128;
     static constexpr bool HasFlexibleEnvelope = true;
@@ -1270,8 +1150,8 @@ class ProcessLimbo final {
     fidl_message_header_t _hdr;
     uint64_t process_koid;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimboRetrieveExceptionRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimboRetrieveExceptionRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_exception_ProcessLimboRetrieveExceptionRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_exception_ProcessLimboRetrieveExceptionRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1289,12 +1169,12 @@ class ProcessLimbo final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimboReleaseProcessResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimboReleaseProcessResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_exception_ProcessLimboReleaseProcessResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_exception_ProcessLimboReleaseProcessResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 8;
+    static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -1306,8 +1186,8 @@ class ProcessLimbo final {
     fidl_message_header_t _hdr;
     uint64_t process_koid;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimboReleaseProcessRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimboReleaseProcessRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_exception_ProcessLimboReleaseProcessRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_exception_ProcessLimboReleaseProcessRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1325,12 +1205,12 @@ class ProcessLimbo final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimboAppendFiltersResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimboAppendFiltersResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_exception_ProcessLimboAppendFiltersResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_exception_ProcessLimboAppendFiltersResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 8;
+    static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -1342,8 +1222,8 @@ class ProcessLimbo final {
     fidl_message_header_t _hdr;
     ::fidl::VectorView<::fidl::StringView> filters;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimboAppendFiltersRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimboAppendFiltersRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_exception_ProcessLimboAppendFiltersRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_exception_ProcessLimboAppendFiltersRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 1536;
@@ -1361,12 +1241,12 @@ class ProcessLimbo final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimboRemoveFiltersResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimboRemoveFiltersResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_exception_ProcessLimboRemoveFiltersResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_exception_ProcessLimboRemoveFiltersResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 8;
+    static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -1378,8 +1258,8 @@ class ProcessLimbo final {
     fidl_message_header_t _hdr;
     ::fidl::VectorView<::fidl::StringView> filters;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimboRemoveFiltersRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimboRemoveFiltersRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_exception_ProcessLimboRemoveFiltersRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_exception_ProcessLimboRemoveFiltersRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 1536;
@@ -1397,8 +1277,8 @@ class ProcessLimbo final {
     fidl_message_header_t _hdr;
     ::fidl::VectorView<::fidl::StringView> filters;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimboGetFiltersResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimboGetFiltersResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_exception_ProcessLimboGetFiltersResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_exception_ProcessLimboGetFiltersResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 1536;
@@ -1805,7 +1685,7 @@ class ProcessLimbo final {
     // Removes the process from limbo, releasing the exception. This will make
     // it "bubble up" beyond the scope of of this limbo, making it
     // unretrievable in the future from here.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ReleaseProcess ReleaseProcess(uint64_t process_koid);
 
     // Removes the process from limbo, releasing the exception. This will make
@@ -1836,7 +1716,7 @@ class ProcessLimbo final {
     // the limbo.
     //
     // Returns ZX_ERR_UNAVAILABLE if limbo is not active.
-    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
+    // Allocates 32 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::AppendFilters AppendFilters(::fidl::VectorView<::fidl::StringView> filters);
 
     // Adds filters to the limbo. Filters determine what processes the limbo
@@ -1868,7 +1748,7 @@ class ProcessLimbo final {
     // on the limbo will be ignored.
     //
     // Returns ZX_ERR_UNAVAILABLE if limbo is not active.
-    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
+    // Allocates 32 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::RemoveFilters RemoveFilters(::fidl::VectorView<::fidl::StringView> filters);
 
     // Removes filters to the limbo. Any filters that are not currently present
@@ -1990,7 +1870,7 @@ class ProcessLimbo final {
     // Removes the process from limbo, releasing the exception. This will make
     // it "bubble up" beyond the scope of of this limbo, making it
     // unretrievable in the future from here.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ReleaseProcess ReleaseProcess(::zx::unowned_channel _client_end, uint64_t process_koid);
 
     // Removes the process from limbo, releasing the exception. This will make
@@ -2021,7 +1901,7 @@ class ProcessLimbo final {
     // the limbo.
     //
     // Returns ZX_ERR_UNAVAILABLE if limbo is not active.
-    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
+    // Allocates 32 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::AppendFilters AppendFilters(::zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::StringView> filters);
 
     // Adds filters to the limbo. Filters determine what processes the limbo
@@ -2053,7 +1933,7 @@ class ProcessLimbo final {
     // on the limbo will be ignored.
     //
     // Returns ZX_ERR_UNAVAILABLE if limbo is not active.
-    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
+    // Allocates 32 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::RemoveFilters RemoveFilters(::zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::StringView> filters);
 
     // Removes filters to the limbo. Any filters that are not currently present

@@ -411,23 +411,29 @@ void Minfs::Interface::GetAllocatedRegionsCompleterBase::Reply(::fidl::DecodedMe
 
 void Minfs::SetTransactionHeaderFor::GetMetricsRequest(const ::fidl::DecodedMessage<Minfs::GetMetricsRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMinfs_GetMetrics_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Minfs::SetTransactionHeaderFor::GetMetricsResponse(const ::fidl::DecodedMessage<Minfs::GetMetricsResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMinfs_GetMetrics_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Minfs::SetTransactionHeaderFor::ToggleMetricsRequest(const ::fidl::DecodedMessage<Minfs::ToggleMetricsRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMinfs_ToggleMetrics_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Minfs::SetTransactionHeaderFor::ToggleMetricsResponse(const ::fidl::DecodedMessage<Minfs::ToggleMetricsResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMinfs_ToggleMetrics_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Minfs::SetTransactionHeaderFor::GetAllocatedRegionsRequest(const ::fidl::DecodedMessage<Minfs::GetAllocatedRegionsRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMinfs_GetAllocatedRegions_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Minfs::SetTransactionHeaderFor::GetAllocatedRegionsResponse(const ::fidl::DecodedMessage<Minfs::GetAllocatedRegionsResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMinfs_GetAllocatedRegions_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace minfs

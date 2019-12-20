@@ -9,186 +9,29 @@ namespace test {
 namespace fidl {
 namespace unionsandwich {
 
-::llcpp::test::fidl::unionsandwich::UnionSize8Alignment4::UnionSize8Alignment4() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::test::fidl::unionsandwich::UnionSize8Alignment4::~UnionSize8Alignment4() {
-  Destroy();
-}
-
-void ::llcpp::test::fidl::unionsandwich::UnionSize8Alignment4::Destroy() {
-  switch (ordinal_) {
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::test::fidl::unionsandwich::UnionSize8Alignment4::MoveImpl_(UnionSize8Alignment4&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kVariant:
-    mutable_variant() = std::move(other.mutable_variant());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
-}
-
 void ::llcpp::test::fidl::unionsandwich::UnionSize8Alignment4::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::test::fidl::unionsandwich::UnionSize8Alignment4, variant_) == 4);
-  static_assert(sizeof(::llcpp::test::fidl::unionsandwich::UnionSize8Alignment4) == ::llcpp::test::fidl::unionsandwich::UnionSize8Alignment4::PrimarySize);
-}
-
-
-uint32_t& ::llcpp::test::fidl::unionsandwich::UnionSize8Alignment4::mutable_variant() {
-  if (ordinal_ != Ordinal::kVariant) {
-    Destroy();
-    new (&variant_) uint32_t;
-    ordinal_ = Ordinal::kVariant;
-  }
-  return variant_;
-}
-
-
-::llcpp::test::fidl::unionsandwich::UnionSize36Alignment4::UnionSize36Alignment4() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::test::fidl::unionsandwich::UnionSize36Alignment4::~UnionSize36Alignment4() {
-  Destroy();
-}
-
-void ::llcpp::test::fidl::unionsandwich::UnionSize36Alignment4::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kVariant:
-    variant_.~Array();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::test::fidl::unionsandwich::UnionSize36Alignment4::MoveImpl_(UnionSize36Alignment4&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kVariant:
-    mutable_variant() = std::move(other.mutable_variant());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(UnionSize8Alignment4) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(UnionSize8Alignment4, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(UnionSize8Alignment4, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::test::fidl::unionsandwich::UnionSize36Alignment4::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::test::fidl::unionsandwich::UnionSize36Alignment4, variant_) == 4);
-  static_assert(sizeof(::llcpp::test::fidl::unionsandwich::UnionSize36Alignment4) == ::llcpp::test::fidl::unionsandwich::UnionSize36Alignment4::PrimarySize);
-}
-
-
-::fidl::Array<uint8_t, 32>& ::llcpp::test::fidl::unionsandwich::UnionSize36Alignment4::mutable_variant() {
-  if (ordinal_ != Ordinal::kVariant) {
-    Destroy();
-    new (&variant_) ::fidl::Array<uint8_t, 32>;
-    ordinal_ = Ordinal::kVariant;
-  }
-  return variant_;
-}
-
-
-::llcpp::test::fidl::unionsandwich::UnionSize12Alignment4::UnionSize12Alignment4() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::test::fidl::unionsandwich::UnionSize12Alignment4::~UnionSize12Alignment4() {
-  Destroy();
-}
-
-void ::llcpp::test::fidl::unionsandwich::UnionSize12Alignment4::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kVariant:
-    variant_.~Array();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::test::fidl::unionsandwich::UnionSize12Alignment4::MoveImpl_(UnionSize12Alignment4&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kVariant:
-    mutable_variant() = std::move(other.mutable_variant());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(UnionSize36Alignment4) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(UnionSize36Alignment4, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(UnionSize36Alignment4, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::test::fidl::unionsandwich::UnionSize12Alignment4::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::test::fidl::unionsandwich::UnionSize12Alignment4, variant_) == 4);
-  static_assert(sizeof(::llcpp::test::fidl::unionsandwich::UnionSize12Alignment4) == ::llcpp::test::fidl::unionsandwich::UnionSize12Alignment4::PrimarySize);
-}
-
-
-::fidl::Array<uint8_t, 6>& ::llcpp::test::fidl::unionsandwich::UnionSize12Alignment4::mutable_variant() {
-  if (ordinal_ != Ordinal::kVariant) {
-    Destroy();
-    new (&variant_) ::fidl::Array<uint8_t, 6>;
-    ordinal_ = Ordinal::kVariant;
-  }
-  return variant_;
-}
-
-
-::llcpp::test::fidl::unionsandwich::UnionSize24Alignment8::UnionSize24Alignment8() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::test::fidl::unionsandwich::UnionSize24Alignment8::~UnionSize24Alignment8() {
-  Destroy();
-}
-
-void ::llcpp::test::fidl::unionsandwich::UnionSize24Alignment8::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kVariant:
-    variant_.~StructSize16Alignment8();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::test::fidl::unionsandwich::UnionSize24Alignment8::MoveImpl_(UnionSize24Alignment8&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kVariant:
-    mutable_variant() = std::move(other.mutable_variant());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(UnionSize12Alignment4) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(UnionSize12Alignment4, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(UnionSize12Alignment4, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::test::fidl::unionsandwich::UnionSize24Alignment8::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::test::fidl::unionsandwich::UnionSize24Alignment8, variant_) == 8);
-  static_assert(sizeof(::llcpp::test::fidl::unionsandwich::UnionSize24Alignment8) == ::llcpp::test::fidl::unionsandwich::UnionSize24Alignment8::PrimarySize);
+  static_assert(sizeof(UnionSize24Alignment8) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(UnionSize24Alignment8, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(UnionSize24Alignment8, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
-
-
-::llcpp::test::fidl::unionsandwich::StructSize16Alignment8& ::llcpp::test::fidl::unionsandwich::UnionSize24Alignment8::mutable_variant() {
-  if (ordinal_ != Ordinal::kVariant) {
-    Destroy();
-    new (&variant_) ::llcpp::test::fidl::unionsandwich::StructSize16Alignment8;
-    ordinal_ = Ordinal::kVariant;
-  }
-  return variant_;
-}
-
 
 }  // namespace unionsandwich
 }  // namespace fidl

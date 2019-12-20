@@ -36,8 +36,8 @@ extern "C" const fidl_type_t fuchsia_hardware_light_RgbTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_light_RgbTable;
 
 struct Rgb {
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_light_RgbTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_light_RgbTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_light_RgbTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_light_RgbTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 3;
   [[maybe_unused]]
@@ -94,8 +94,8 @@ class Light final {
     int32_t status;
     ::fidl::StringView name;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_light_LightGetNameResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_light_LightGetNameResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_light_LightGetNameResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_light_LightGetNameResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 32;
@@ -111,8 +111,8 @@ class Light final {
     fidl_message_header_t _hdr;
     uint32_t index;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_light_LightGetNameRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_light_LightGetNameRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_light_LightGetNameRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_light_LightGetNameRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -130,8 +130,8 @@ class Light final {
     fidl_message_header_t _hdr;
     uint32_t count;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_light_LightGetCountResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_light_LightGetCountResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_light_LightGetCountResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_light_LightGetCountResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -150,8 +150,8 @@ class Light final {
     int32_t status;
     bool has;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_light_LightHasCapabilityResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_light_LightHasCapabilityResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_light_LightHasCapabilityResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_light_LightHasCapabilityResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -168,8 +168,8 @@ class Light final {
     uint32_t index;
     ::llcpp::fuchsia::hardware::light::Capability capability;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_light_LightHasCapabilityRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_light_LightHasCapabilityRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_light_LightHasCapabilityRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_light_LightHasCapabilityRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -188,8 +188,8 @@ class Light final {
     int32_t status;
     uint8_t value;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_light_LightGetSimpleValueResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_light_LightGetSimpleValueResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_light_LightGetSimpleValueResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_light_LightGetSimpleValueResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -205,8 +205,8 @@ class Light final {
     fidl_message_header_t _hdr;
     uint32_t index;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_light_LightGetSimpleValueRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_light_LightGetSimpleValueRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_light_LightGetSimpleValueRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_light_LightGetSimpleValueRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -224,8 +224,8 @@ class Light final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_light_LightSetSimpleValueResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_light_LightSetSimpleValueResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_light_LightSetSimpleValueResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_light_LightSetSimpleValueResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -242,8 +242,8 @@ class Light final {
     uint32_t index;
     uint8_t value;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_light_LightSetSimpleValueRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_light_LightSetSimpleValueRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_light_LightSetSimpleValueRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_light_LightSetSimpleValueRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -262,8 +262,8 @@ class Light final {
     int32_t status;
     ::llcpp::fuchsia::hardware::light::Rgb value;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_light_LightGetRgbValueResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_light_LightGetRgbValueResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_light_LightGetRgbValueResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_light_LightGetRgbValueResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -279,8 +279,8 @@ class Light final {
     fidl_message_header_t _hdr;
     uint32_t index;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_light_LightGetRgbValueRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_light_LightGetRgbValueRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_light_LightGetRgbValueRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_light_LightGetRgbValueRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -298,8 +298,8 @@ class Light final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_light_LightSetRgbValueResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_light_LightSetRgbValueResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_light_LightSetRgbValueResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_light_LightSetRgbValueResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -316,8 +316,8 @@ class Light final {
     uint32_t index;
     ::llcpp::fuchsia::hardware::light::Rgb value;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_light_LightSetRgbValueRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_light_LightSetRgbValueRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_light_LightSetRgbValueRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_light_LightSetRgbValueRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;

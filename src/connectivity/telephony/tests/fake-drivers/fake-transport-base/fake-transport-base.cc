@@ -27,14 +27,11 @@ void Device::SetChannel(::zx::channel transport,
                         fidl_tel_transport::Qmi::Interface::SetChannelCompleter::Sync completer) {
   zx_status_t status = ZX_OK;
   zx_status_t set_channel_res = SetChannelToDevice(std::move(transport));
-  fidl_tel_transport::Qmi_SetChannel_Result result;
   if (set_channel_res == ZX_OK) {
-    fidl_tel_transport::Qmi_SetChannel_Response response;
-    result.set_response(&response);
+    completer.ReplySuccess();
   } else {
-    result.set_err(&set_channel_res);
+    completer.ReplyError(set_channel_res);
   }
-  completer.Reply(std::move(result));
   if (status != ZX_OK) {
     goto done;
   }
@@ -60,12 +57,10 @@ void Device::SetSnoopChannel(
   zx_status_t set_snoop_res = SetSnoopChannelToDevice(std::move(interface));
   fidl_tel_transport::Qmi_SetSnoopChannel_Result result;
   if (set_snoop_res == ZX_OK) {
-    fidl_tel_transport::Qmi_SetSnoopChannel_Response response;
-    result.set_response(&response);
+    completer.ReplySuccess();
   } else {
-    result.set_err(&set_snoop_res);
+    completer.ReplyError(set_snoop_res);
   }
-  completer.Reply(std::move(result));
 }
 
 zx_status_t Device::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {

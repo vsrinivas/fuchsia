@@ -266,17 +266,21 @@ void BufferCollectionToken::Interface::SyncCompleterBase::Reply() {
 
 void BufferCollectionToken::SetTransactionHeaderFor::DuplicateRequest(const ::fidl::DecodedMessage<BufferCollectionToken::DuplicateRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollectionToken_Duplicate_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void BufferCollectionToken::SetTransactionHeaderFor::SyncRequest(const ::fidl::DecodedMessage<BufferCollectionToken::SyncRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollectionToken_Sync_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void BufferCollectionToken::SetTransactionHeaderFor::SyncResponse(const ::fidl::DecodedMessage<BufferCollectionToken::SyncResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollectionToken_Sync_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void BufferCollectionToken::SetTransactionHeaderFor::CloseRequest(const ::fidl::DecodedMessage<BufferCollectionToken::CloseRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollectionToken_Close_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 namespace {
@@ -652,23 +656,29 @@ void Heap::Interface::DestroyResourceCompleterBase::Reply() {
 
 void Heap::SetTransactionHeaderFor::AllocateVmoRequest(const ::fidl::DecodedMessage<Heap::AllocateVmoRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kHeap_AllocateVmo_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Heap::SetTransactionHeaderFor::AllocateVmoResponse(const ::fidl::DecodedMessage<Heap::AllocateVmoResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kHeap_AllocateVmo_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Heap::SetTransactionHeaderFor::CreateResourceRequest(const ::fidl::DecodedMessage<Heap::CreateResourceRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kHeap_CreateResource_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Heap::SetTransactionHeaderFor::CreateResourceResponse(const ::fidl::DecodedMessage<Heap::CreateResourceResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kHeap_CreateResource_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Heap::SetTransactionHeaderFor::DestroyResourceRequest(const ::fidl::DecodedMessage<Heap::DestroyResourceRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kHeap_DestroyResource_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Heap::SetTransactionHeaderFor::DestroyResourceResponse(const ::fidl::DecodedMessage<Heap::DestroyResourceResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kHeap_DestroyResource_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 namespace {
@@ -791,6 +801,7 @@ bool DriverConnector::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transac
 
 void DriverConnector::SetTransactionHeaderFor::ConnectRequest(const ::fidl::DecodedMessage<DriverConnector::ConnectRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDriverConnector_Connect_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 namespace {
@@ -1081,133 +1092,30 @@ bool Allocator::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
 
 void Allocator::SetTransactionHeaderFor::AllocateNonSharedCollectionRequest(const ::fidl::DecodedMessage<Allocator::AllocateNonSharedCollectionRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kAllocator_AllocateNonSharedCollection_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Allocator::SetTransactionHeaderFor::AllocateSharedCollectionRequest(const ::fidl::DecodedMessage<Allocator::AllocateSharedCollectionRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kAllocator_AllocateSharedCollection_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Allocator::SetTransactionHeaderFor::BindSharedCollectionRequest(const ::fidl::DecodedMessage<Allocator::BindSharedCollectionRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kAllocator_BindSharedCollection_GenOrdinal);
-}
-
-::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result::SecureMem_SetPhysicalSecureHeaps_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result::~SecureMem_SetPhysicalSecureHeaps_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~SecureMem_SetPhysicalSecureHeaps_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result::MoveImpl_(SecureMem_SetPhysicalSecureHeaps_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result) == ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response& ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result::SecureMem_GetPhysicalSecureHeaps_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result::~SecureMem_GetPhysicalSecureHeaps_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~SecureMem_GetPhysicalSecureHeaps_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result::MoveImpl_(SecureMem_GetPhysicalSecureHeaps_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(SecureMem_SetPhysicalSecureHeaps_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(SecureMem_SetPhysicalSecureHeaps_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(SecureMem_SetPhysicalSecureHeaps_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result, response_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result, err_) == 8);
-  static_assert(sizeof(::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result) == ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result::PrimarySize);
+  static_assert(sizeof(SecureMem_GetPhysicalSecureHeaps_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(SecureMem_GetPhysicalSecureHeaps_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(SecureMem_GetPhysicalSecureHeaps_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
-
-
-::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response& ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
 
 namespace {
 
@@ -1409,15 +1317,20 @@ void SecureMem::Interface::GetPhysicalSecureHeapsCompleterBase::Reply(::llcpp::f
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetPhysicalSecureHeapsResponse, ::fidl::MessageDirection::kSending>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
-  auto& _response = *reinterpret_cast<GetPhysicalSecureHeapsResponse*>(_write_bytes);
+  GetPhysicalSecureHeapsResponse _response = {};
   SecureMem::SetTransactionHeaderFor::GetPhysicalSecureHeapsResponse(
       ::fidl::DecodedMessage<GetPhysicalSecureHeapsResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               GetPhysicalSecureHeapsResponse::PrimarySize,
               GetPhysicalSecureHeapsResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetPhysicalSecureHeapsResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<GetPhysicalSecureHeapsResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void SecureMem::Interface::GetPhysicalSecureHeapsCompleterBase::ReplySuccess(::llcpp::fuchsia::sysmem::PhysicalSecureHeaps heaps) {
   SecureMem_GetPhysicalSecureHeaps_Response response;
@@ -1434,15 +1347,19 @@ void SecureMem::Interface::GetPhysicalSecureHeapsCompleterBase::Reply(::fidl::By
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<GetPhysicalSecureHeapsResponse*>(_buffer.data());
+  GetPhysicalSecureHeapsResponse _response = {};
   SecureMem::SetTransactionHeaderFor::GetPhysicalSecureHeapsResponse(
       ::fidl::DecodedMessage<GetPhysicalSecureHeapsResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               GetPhysicalSecureHeapsResponse::PrimarySize,
               GetPhysicalSecureHeapsResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(GetPhysicalSecureHeapsResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<GetPhysicalSecureHeapsResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void SecureMem::Interface::GetPhysicalSecureHeapsCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::sysmem::PhysicalSecureHeaps heaps) {
   SecureMem_GetPhysicalSecureHeaps_Response response;
@@ -1459,16 +1376,21 @@ void SecureMem::Interface::GetPhysicalSecureHeapsCompleterBase::Reply(::fidl::De
 
 void SecureMem::Interface::SetPhysicalSecureHeapsCompleterBase::Reply(::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetPhysicalSecureHeapsResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<SetPhysicalSecureHeapsResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  SetPhysicalSecureHeapsResponse _response = {};
   SecureMem::SetTransactionHeaderFor::SetPhysicalSecureHeapsResponse(
       ::fidl::DecodedMessage<SetPhysicalSecureHeapsResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               SetPhysicalSecureHeapsResponse::PrimarySize,
               SetPhysicalSecureHeapsResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetPhysicalSecureHeapsResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<SetPhysicalSecureHeapsResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void SecureMem::Interface::SetPhysicalSecureHeapsCompleterBase::ReplySuccess() {
   SecureMem_SetPhysicalSecureHeaps_Response response;
@@ -1484,15 +1406,19 @@ void SecureMem::Interface::SetPhysicalSecureHeapsCompleterBase::Reply(::fidl::By
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<SetPhysicalSecureHeapsResponse*>(_buffer.data());
+  SetPhysicalSecureHeapsResponse _response = {};
   SecureMem::SetTransactionHeaderFor::SetPhysicalSecureHeapsResponse(
       ::fidl::DecodedMessage<SetPhysicalSecureHeapsResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               SetPhysicalSecureHeapsResponse::PrimarySize,
               SetPhysicalSecureHeapsResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(SetPhysicalSecureHeapsResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<SetPhysicalSecureHeapsResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void SecureMem::Interface::SetPhysicalSecureHeapsCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   SecureMem_SetPhysicalSecureHeaps_Response response;
@@ -1509,16 +1435,20 @@ void SecureMem::Interface::SetPhysicalSecureHeapsCompleterBase::Reply(::fidl::De
 
 void SecureMem::SetTransactionHeaderFor::GetPhysicalSecureHeapsRequest(const ::fidl::DecodedMessage<SecureMem::GetPhysicalSecureHeapsRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kSecureMem_GetPhysicalSecureHeaps_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void SecureMem::SetTransactionHeaderFor::GetPhysicalSecureHeapsResponse(const ::fidl::DecodedMessage<SecureMem::GetPhysicalSecureHeapsResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kSecureMem_GetPhysicalSecureHeaps_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void SecureMem::SetTransactionHeaderFor::SetPhysicalSecureHeapsRequest(const ::fidl::DecodedMessage<SecureMem::SetPhysicalSecureHeapsRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kSecureMem_SetPhysicalSecureHeaps_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void SecureMem::SetTransactionHeaderFor::SetPhysicalSecureHeapsResponse(const ::fidl::DecodedMessage<SecureMem::SetPhysicalSecureHeapsResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kSecureMem_SetPhysicalSecureHeaps_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 namespace {
@@ -1789,14 +1719,17 @@ bool BufferCollectionEvents::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::
 
 void BufferCollectionEvents::SetTransactionHeaderFor::OnDuplicatedTokensKnownByServerRequest(const ::fidl::DecodedMessage<BufferCollectionEvents::OnDuplicatedTokensKnownByServerRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollectionEvents_OnDuplicatedTokensKnownByServer_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void BufferCollectionEvents::SetTransactionHeaderFor::OnBuffersAllocatedRequest(const ::fidl::DecodedMessage<BufferCollectionEvents::OnBuffersAllocatedRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollectionEvents_OnBuffersAllocated_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void BufferCollectionEvents::SetTransactionHeaderFor::OnAllocateSingleBufferDoneRequest(const ::fidl::DecodedMessage<BufferCollectionEvents::OnAllocateSingleBufferDoneRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollectionEvents_OnAllocateSingleBufferDone_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 namespace {
@@ -2744,54 +2677,68 @@ void BufferCollection::Interface::WaitForSingleBufferAllocatedCompleterBase::Rep
 
 void BufferCollection::SetTransactionHeaderFor::SetEventSinkRequest(const ::fidl::DecodedMessage<BufferCollection::SetEventSinkRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_SetEventSink_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void BufferCollection::SetTransactionHeaderFor::SyncRequest(const ::fidl::DecodedMessage<BufferCollection::SyncRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_Sync_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void BufferCollection::SetTransactionHeaderFor::SyncResponse(const ::fidl::DecodedMessage<BufferCollection::SyncResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_Sync_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void BufferCollection::SetTransactionHeaderFor::SetConstraintsRequest(const ::fidl::DecodedMessage<BufferCollection::SetConstraintsRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_SetConstraints_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void BufferCollection::SetTransactionHeaderFor::WaitForBuffersAllocatedRequest(const ::fidl::DecodedMessage<BufferCollection::WaitForBuffersAllocatedRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_WaitForBuffersAllocated_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void BufferCollection::SetTransactionHeaderFor::WaitForBuffersAllocatedResponse(const ::fidl::DecodedMessage<BufferCollection::WaitForBuffersAllocatedResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_WaitForBuffersAllocated_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void BufferCollection::SetTransactionHeaderFor::CheckBuffersAllocatedRequest(const ::fidl::DecodedMessage<BufferCollection::CheckBuffersAllocatedRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_CheckBuffersAllocated_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void BufferCollection::SetTransactionHeaderFor::CheckBuffersAllocatedResponse(const ::fidl::DecodedMessage<BufferCollection::CheckBuffersAllocatedResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_CheckBuffersAllocated_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void BufferCollection::SetTransactionHeaderFor::CloseSingleBufferRequest(const ::fidl::DecodedMessage<BufferCollection::CloseSingleBufferRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_CloseSingleBuffer_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void BufferCollection::SetTransactionHeaderFor::AllocateSingleBufferRequest(const ::fidl::DecodedMessage<BufferCollection::AllocateSingleBufferRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_AllocateSingleBuffer_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void BufferCollection::SetTransactionHeaderFor::WaitForSingleBufferAllocatedRequest(const ::fidl::DecodedMessage<BufferCollection::WaitForSingleBufferAllocatedRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_WaitForSingleBufferAllocated_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void BufferCollection::SetTransactionHeaderFor::WaitForSingleBufferAllocatedResponse(const ::fidl::DecodedMessage<BufferCollection::WaitForSingleBufferAllocatedResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_WaitForSingleBufferAllocated_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void BufferCollection::SetTransactionHeaderFor::CheckSingleBufferAllocatedRequest(const ::fidl::DecodedMessage<BufferCollection::CheckSingleBufferAllocatedRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_CheckSingleBufferAllocated_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void BufferCollection::SetTransactionHeaderFor::CloseRequest(const ::fidl::DecodedMessage<BufferCollection::CloseRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_Close_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace sysmem

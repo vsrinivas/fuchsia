@@ -45,7 +45,7 @@ void OpenAt(Vfs* vfs, const fbl::RefPtr<Vnode>& parent, zx::channel channel, fbl
     if constexpr (std::is_same_v<ResultT, OpenResult::Error>) {
       FS_TRACE_DEBUG("vfs: open failure: %d\n", result);
       if (describe) {
-        fio::Node::SendOnOpenEvent(zx::unowned_channel(channel), result, nullptr);
+        fio::Node::SendOnOpenEvent(zx::unowned_channel(channel), result, fio::NodeInfo());
       }
     } else if constexpr (std::is_same_v<ResultT, OpenResult::Remote>) {
       FS_TRACE_DEBUG("vfs: handoff to remote\n");
@@ -90,8 +90,8 @@ void DirectoryConnection::Describe(DescribeCompleter::Sync completer) {
   if (result.is_error()) {
     return completer.Close(result.error());
   }
-  ConvertToIoV1NodeInfo(result.take_value(), [&](fio::NodeInfo* info) {
-    completer.Reply(std::move(*info));
+  ConvertToIoV1NodeInfo(result.take_value(), [&](fio::NodeInfo info) {
+    completer.Reply(info);
   });
 }
 
@@ -140,7 +140,7 @@ void DirectoryConnection::Open(uint32_t open_flags, uint32_t mode, fidl::StringV
   auto write_error = [describe = open_options.flags.describe](zx::channel channel,
                                                               zx_status_t error) {
     if (describe) {
-      fio::Node::SendOnOpenEvent(zx::unowned_channel(channel), error, nullptr);
+      fio::Node::SendOnOpenEvent(zx::unowned_channel(channel), error, fio::NodeInfo());
     }
   };
 

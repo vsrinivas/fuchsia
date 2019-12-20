@@ -8,77 +8,11 @@ namespace llcpp {
 namespace fuchsia {
 namespace paver {
 
-::llcpp::fuchsia::paver::ReadResult::ReadResult() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::paver::ReadResult::~ReadResult() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::paver::ReadResult::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kInfo:
-    info_.~ReadInfo();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::paver::ReadResult::MoveImpl_(ReadResult&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  case Ordinal::kEof:
-    mutable_eof() = std::move(other.mutable_eof());
-    break;
-  case Ordinal::kInfo:
-    mutable_info() = std::move(other.mutable_info());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
-}
-
 void ::llcpp::fuchsia::paver::ReadResult::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::paver::ReadResult, err_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::paver::ReadResult, eof_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::paver::ReadResult, info_) == 8);
-  static_assert(sizeof(::llcpp::fuchsia::paver::ReadResult) == ::llcpp::fuchsia::paver::ReadResult::PrimarySize);
+  static_assert(sizeof(ReadResult) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(ReadResult, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(ReadResult, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
-
-
-int32_t& ::llcpp::fuchsia::paver::ReadResult::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-bool& ::llcpp::fuchsia::paver::ReadResult::mutable_eof() {
-  if (ordinal_ != Ordinal::kEof) {
-    Destroy();
-    new (&eof_) bool;
-    ordinal_ = Ordinal::kEof;
-  }
-  return eof_;
-}
-
-::llcpp::fuchsia::paver::ReadInfo& ::llcpp::fuchsia::paver::ReadResult::mutable_info() {
-  if (ordinal_ != Ordinal::kInfo) {
-    Destroy();
-    new (&info_) ::llcpp::fuchsia::paver::ReadInfo;
-    ordinal_ = Ordinal::kInfo;
-  }
-  return info_;
-}
-
 
 namespace {
 
@@ -370,14 +304,17 @@ bool Paver::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn)
 
 void Paver::SetTransactionHeaderFor::FindDataSinkRequest(const ::fidl::DecodedMessage<Paver::FindDataSinkRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_FindDataSink_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Paver::SetTransactionHeaderFor::UseBlockDeviceRequest(const ::fidl::DecodedMessage<Paver::UseBlockDeviceRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_UseBlockDevice_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Paver::SetTransactionHeaderFor::FindBootManagerRequest(const ::fidl::DecodedMessage<Paver::FindBootManagerRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kPaver_FindBootManager_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 namespace {
@@ -614,16 +551,21 @@ void PayloadStream::Interface::RegisterVmoCompleterBase::Reply(::fidl::DecodedMe
 
 void PayloadStream::Interface::ReadDataCompleterBase::Reply(::llcpp::fuchsia::paver::ReadResult result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReadDataResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<ReadDataResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  ReadDataResponse _response = {};
   PayloadStream::SetTransactionHeaderFor::ReadDataResponse(
       ::fidl::DecodedMessage<ReadDataResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               ReadDataResponse::PrimarySize,
               ReadDataResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ReadDataResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<ReadDataResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
 void PayloadStream::Interface::ReadDataCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::ReadResult result) {
@@ -631,15 +573,19 @@ void PayloadStream::Interface::ReadDataCompleterBase::Reply(::fidl::BytePart _bu
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<ReadDataResponse*>(_buffer.data());
+  ReadDataResponse _response = {};
   PayloadStream::SetTransactionHeaderFor::ReadDataResponse(
       ::fidl::DecodedMessage<ReadDataResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               ReadDataResponse::PrimarySize,
               ReadDataResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(ReadDataResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<ReadDataResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
 void PayloadStream::Interface::ReadDataCompleterBase::Reply(::fidl::DecodedMessage<ReadDataResponse> params) {
@@ -651,194 +597,39 @@ void PayloadStream::Interface::ReadDataCompleterBase::Reply(::fidl::DecodedMessa
 
 void PayloadStream::SetTransactionHeaderFor::RegisterVmoRequest(const ::fidl::DecodedMessage<PayloadStream::RegisterVmoRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kPayloadStream_RegisterVmo_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void PayloadStream::SetTransactionHeaderFor::RegisterVmoResponse(const ::fidl::DecodedMessage<PayloadStream::RegisterVmoResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kPayloadStream_RegisterVmo_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void PayloadStream::SetTransactionHeaderFor::ReadDataRequest(const ::fidl::DecodedMessage<PayloadStream::ReadDataRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kPayloadStream_ReadData_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void PayloadStream::SetTransactionHeaderFor::ReadDataResponse(const ::fidl::DecodedMessage<PayloadStream::ReadDataResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kPayloadStream_ReadData_GenOrdinal);
-}
-
-::llcpp::fuchsia::paver::DataSink_WipeVolume_Result::DataSink_WipeVolume_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::paver::DataSink_WipeVolume_Result::~DataSink_WipeVolume_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::paver::DataSink_WipeVolume_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~DataSink_WipeVolume_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::paver::DataSink_WipeVolume_Result::MoveImpl_(DataSink_WipeVolume_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void ::llcpp::fuchsia::paver::DataSink_WipeVolume_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::paver::DataSink_WipeVolume_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::paver::DataSink_WipeVolume_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::paver::DataSink_WipeVolume_Result) == ::llcpp::fuchsia::paver::DataSink_WipeVolume_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::paver::DataSink_WipeVolume_Response& ::llcpp::fuchsia::paver::DataSink_WipeVolume_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::paver::DataSink_WipeVolume_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::paver::DataSink_WipeVolume_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Result::BootManager_QueryConfigurationStatus_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Result::~BootManager_QueryConfigurationStatus_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~BootManager_QueryConfigurationStatus_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Result::MoveImpl_(BootManager_QueryConfigurationStatus_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(DataSink_WipeVolume_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(DataSink_WipeVolume_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(DataSink_WipeVolume_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Result) == ::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Response& ::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Result::BootManager_QueryActiveConfiguration_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Result::~BootManager_QueryActiveConfiguration_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~BootManager_QueryActiveConfiguration_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Result::MoveImpl_(BootManager_QueryActiveConfiguration_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(BootManager_QueryConfigurationStatus_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(BootManager_QueryConfigurationStatus_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(BootManager_QueryConfigurationStatus_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Result) == ::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Result::PrimarySize);
+  static_assert(sizeof(BootManager_QueryActiveConfiguration_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(BootManager_QueryActiveConfiguration_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(BootManager_QueryActiveConfiguration_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
-
-
-::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Response& ::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
 
 namespace {
 
@@ -1282,16 +1073,21 @@ bool BootManager::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction
 
 void BootManager::Interface::QueryActiveConfigurationCompleterBase::Reply(::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<QueryActiveConfigurationResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<QueryActiveConfigurationResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  QueryActiveConfigurationResponse _response = {};
   BootManager::SetTransactionHeaderFor::QueryActiveConfigurationResponse(
       ::fidl::DecodedMessage<QueryActiveConfigurationResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               QueryActiveConfigurationResponse::PrimarySize,
               QueryActiveConfigurationResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(QueryActiveConfigurationResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<QueryActiveConfigurationResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void BootManager::Interface::QueryActiveConfigurationCompleterBase::ReplySuccess(::llcpp::fuchsia::paver::Configuration configuration) {
   BootManager_QueryActiveConfiguration_Response response;
@@ -1308,15 +1104,19 @@ void BootManager::Interface::QueryActiveConfigurationCompleterBase::Reply(::fidl
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<QueryActiveConfigurationResponse*>(_buffer.data());
+  QueryActiveConfigurationResponse _response = {};
   BootManager::SetTransactionHeaderFor::QueryActiveConfigurationResponse(
       ::fidl::DecodedMessage<QueryActiveConfigurationResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               QueryActiveConfigurationResponse::PrimarySize,
               QueryActiveConfigurationResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(QueryActiveConfigurationResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<QueryActiveConfigurationResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void BootManager::Interface::QueryActiveConfigurationCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::Configuration configuration) {
   BootManager_QueryActiveConfiguration_Response response;
@@ -1333,16 +1133,21 @@ void BootManager::Interface::QueryActiveConfigurationCompleterBase::Reply(::fidl
 
 void BootManager::Interface::QueryConfigurationStatusCompleterBase::Reply(::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<QueryConfigurationStatusResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<QueryConfigurationStatusResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  QueryConfigurationStatusResponse _response = {};
   BootManager::SetTransactionHeaderFor::QueryConfigurationStatusResponse(
       ::fidl::DecodedMessage<QueryConfigurationStatusResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               QueryConfigurationStatusResponse::PrimarySize,
               QueryConfigurationStatusResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(QueryConfigurationStatusResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<QueryConfigurationStatusResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void BootManager::Interface::QueryConfigurationStatusCompleterBase::ReplySuccess(::llcpp::fuchsia::paver::ConfigurationStatus status) {
   BootManager_QueryConfigurationStatus_Response response;
@@ -1359,15 +1164,19 @@ void BootManager::Interface::QueryConfigurationStatusCompleterBase::Reply(::fidl
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<QueryConfigurationStatusResponse*>(_buffer.data());
+  QueryConfigurationStatusResponse _response = {};
   BootManager::SetTransactionHeaderFor::QueryConfigurationStatusResponse(
       ::fidl::DecodedMessage<QueryConfigurationStatusResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               QueryConfigurationStatusResponse::PrimarySize,
               QueryConfigurationStatusResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(QueryConfigurationStatusResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<QueryConfigurationStatusResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void BootManager::Interface::QueryConfigurationStatusCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::ConfigurationStatus status) {
   BootManager_QueryConfigurationStatus_Response response;
@@ -1493,97 +1302,54 @@ void BootManager::Interface::SetActiveConfigurationHealthyCompleterBase::Reply(:
 
 void BootManager::SetTransactionHeaderFor::QueryActiveConfigurationRequest(const ::fidl::DecodedMessage<BootManager::QueryActiveConfigurationRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kBootManager_QueryActiveConfiguration_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void BootManager::SetTransactionHeaderFor::QueryActiveConfigurationResponse(const ::fidl::DecodedMessage<BootManager::QueryActiveConfigurationResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kBootManager_QueryActiveConfiguration_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void BootManager::SetTransactionHeaderFor::QueryConfigurationStatusRequest(const ::fidl::DecodedMessage<BootManager::QueryConfigurationStatusRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kBootManager_QueryConfigurationStatus_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void BootManager::SetTransactionHeaderFor::QueryConfigurationStatusResponse(const ::fidl::DecodedMessage<BootManager::QueryConfigurationStatusResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kBootManager_QueryConfigurationStatus_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void BootManager::SetTransactionHeaderFor::SetConfigurationActiveRequest(const ::fidl::DecodedMessage<BootManager::SetConfigurationActiveRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kBootManager_SetConfigurationActive_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void BootManager::SetTransactionHeaderFor::SetConfigurationActiveResponse(const ::fidl::DecodedMessage<BootManager::SetConfigurationActiveResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kBootManager_SetConfigurationActive_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void BootManager::SetTransactionHeaderFor::SetConfigurationUnbootableRequest(const ::fidl::DecodedMessage<BootManager::SetConfigurationUnbootableRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kBootManager_SetConfigurationUnbootable_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void BootManager::SetTransactionHeaderFor::SetConfigurationUnbootableResponse(const ::fidl::DecodedMessage<BootManager::SetConfigurationUnbootableResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kBootManager_SetConfigurationUnbootable_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void BootManager::SetTransactionHeaderFor::SetActiveConfigurationHealthyRequest(const ::fidl::DecodedMessage<BootManager::SetActiveConfigurationHealthyRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kBootManager_SetActiveConfigurationHealthy_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void BootManager::SetTransactionHeaderFor::SetActiveConfigurationHealthyResponse(const ::fidl::DecodedMessage<BootManager::SetActiveConfigurationHealthyResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kBootManager_SetActiveConfigurationHealthy_GenOrdinal);
-}
-
-::llcpp::fuchsia::paver::DataSink_ReadAsset_Result::DataSink_ReadAsset_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::paver::DataSink_ReadAsset_Result::~DataSink_ReadAsset_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::paver::DataSink_ReadAsset_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~DataSink_ReadAsset_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::paver::DataSink_ReadAsset_Result::MoveImpl_(DataSink_ReadAsset_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void ::llcpp::fuchsia::paver::DataSink_ReadAsset_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::paver::DataSink_ReadAsset_Result, response_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::paver::DataSink_ReadAsset_Result, err_) == 8);
-  static_assert(sizeof(::llcpp::fuchsia::paver::DataSink_ReadAsset_Result) == ::llcpp::fuchsia::paver::DataSink_ReadAsset_Result::PrimarySize);
+  static_assert(sizeof(DataSink_ReadAsset_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(DataSink_ReadAsset_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(DataSink_ReadAsset_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
-
-
-::llcpp::fuchsia::paver::DataSink_ReadAsset_Response& ::llcpp::fuchsia::paver::DataSink_ReadAsset_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::paver::DataSink_ReadAsset_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::paver::DataSink_ReadAsset_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
 
 namespace {
 
@@ -2124,16 +1890,21 @@ bool DataSink::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* t
 
 void DataSink::Interface::ReadAssetCompleterBase::Reply(::llcpp::fuchsia::paver::DataSink_ReadAsset_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReadAssetResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<ReadAssetResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  ReadAssetResponse _response = {};
   DataSink::SetTransactionHeaderFor::ReadAssetResponse(
       ::fidl::DecodedMessage<ReadAssetResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               ReadAssetResponse::PrimarySize,
               ReadAssetResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ReadAssetResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<ReadAssetResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void DataSink::Interface::ReadAssetCompleterBase::ReplySuccess(::llcpp::fuchsia::mem::Buffer asset) {
   DataSink_ReadAsset_Response response;
@@ -2150,15 +1921,19 @@ void DataSink::Interface::ReadAssetCompleterBase::Reply(::fidl::BytePart _buffer
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<ReadAssetResponse*>(_buffer.data());
+  ReadAssetResponse _response = {};
   DataSink::SetTransactionHeaderFor::ReadAssetResponse(
       ::fidl::DecodedMessage<ReadAssetResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               ReadAssetResponse::PrimarySize,
               ReadAssetResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(ReadAssetResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<ReadAssetResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void DataSink::Interface::ReadAssetCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::mem::Buffer asset) {
   DataSink_ReadAsset_Response response;
@@ -2319,16 +2094,21 @@ void DataSink::Interface::WriteDataFileCompleterBase::Reply(::fidl::DecodedMessa
 
 void DataSink::Interface::WipeVolumeCompleterBase::Reply(::llcpp::fuchsia::paver::DataSink_WipeVolume_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WipeVolumeResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<WipeVolumeResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  WipeVolumeResponse _response = {};
   DataSink::SetTransactionHeaderFor::WipeVolumeResponse(
       ::fidl::DecodedMessage<WipeVolumeResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               WipeVolumeResponse::PrimarySize,
               WipeVolumeResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(WipeVolumeResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<WipeVolumeResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void DataSink::Interface::WipeVolumeCompleterBase::ReplySuccess(::zx::channel volume) {
   DataSink_WipeVolume_Response response;
@@ -2345,15 +2125,19 @@ void DataSink::Interface::WipeVolumeCompleterBase::Reply(::fidl::BytePart _buffe
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<WipeVolumeResponse*>(_buffer.data());
+  WipeVolumeResponse _response = {};
   DataSink::SetTransactionHeaderFor::WipeVolumeResponse(
       ::fidl::DecodedMessage<WipeVolumeResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               WipeVolumeResponse::PrimarySize,
               WipeVolumeResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(WipeVolumeResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<WipeVolumeResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void DataSink::Interface::WipeVolumeCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::zx::channel volume) {
   DataSink_WipeVolume_Response response;
@@ -2371,44 +2155,56 @@ void DataSink::Interface::WipeVolumeCompleterBase::Reply(::fidl::DecodedMessage<
 
 void DataSink::SetTransactionHeaderFor::ReadAssetRequest(const ::fidl::DecodedMessage<DataSink::ReadAssetRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDataSink_ReadAsset_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DataSink::SetTransactionHeaderFor::ReadAssetResponse(const ::fidl::DecodedMessage<DataSink::ReadAssetResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDataSink_ReadAsset_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DataSink::SetTransactionHeaderFor::WriteAssetRequest(const ::fidl::DecodedMessage<DataSink::WriteAssetRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDataSink_WriteAsset_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DataSink::SetTransactionHeaderFor::WriteAssetResponse(const ::fidl::DecodedMessage<DataSink::WriteAssetResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDataSink_WriteAsset_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DataSink::SetTransactionHeaderFor::WriteVolumesRequest(const ::fidl::DecodedMessage<DataSink::WriteVolumesRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDataSink_WriteVolumes_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DataSink::SetTransactionHeaderFor::WriteVolumesResponse(const ::fidl::DecodedMessage<DataSink::WriteVolumesResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDataSink_WriteVolumes_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DataSink::SetTransactionHeaderFor::WriteBootloaderRequest(const ::fidl::DecodedMessage<DataSink::WriteBootloaderRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDataSink_WriteBootloader_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DataSink::SetTransactionHeaderFor::WriteBootloaderResponse(const ::fidl::DecodedMessage<DataSink::WriteBootloaderResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDataSink_WriteBootloader_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DataSink::SetTransactionHeaderFor::WriteDataFileRequest(const ::fidl::DecodedMessage<DataSink::WriteDataFileRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDataSink_WriteDataFile_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DataSink::SetTransactionHeaderFor::WriteDataFileResponse(const ::fidl::DecodedMessage<DataSink::WriteDataFileResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDataSink_WriteDataFile_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DataSink::SetTransactionHeaderFor::WipeVolumeRequest(const ::fidl::DecodedMessage<DataSink::WipeVolumeRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDataSink_WipeVolume_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DataSink::SetTransactionHeaderFor::WipeVolumeResponse(const ::fidl::DecodedMessage<DataSink::WipeVolumeResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDataSink_WipeVolume_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 namespace {
@@ -3110,16 +2906,21 @@ bool DynamicDataSink::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transac
 
 void DynamicDataSink::Interface::ReadAssetCompleterBase::Reply(::llcpp::fuchsia::paver::DataSink_ReadAsset_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReadAssetResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<ReadAssetResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  ReadAssetResponse _response = {};
   DynamicDataSink::SetTransactionHeaderFor::ReadAssetResponse(
       ::fidl::DecodedMessage<ReadAssetResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               ReadAssetResponse::PrimarySize,
               ReadAssetResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ReadAssetResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<ReadAssetResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void DynamicDataSink::Interface::ReadAssetCompleterBase::ReplySuccess(::llcpp::fuchsia::mem::Buffer asset) {
   DataSink_ReadAsset_Response response;
@@ -3136,15 +2937,19 @@ void DynamicDataSink::Interface::ReadAssetCompleterBase::Reply(::fidl::BytePart 
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<ReadAssetResponse*>(_buffer.data());
+  ReadAssetResponse _response = {};
   DynamicDataSink::SetTransactionHeaderFor::ReadAssetResponse(
       ::fidl::DecodedMessage<ReadAssetResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               ReadAssetResponse::PrimarySize,
               ReadAssetResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(ReadAssetResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<ReadAssetResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void DynamicDataSink::Interface::ReadAssetCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::mem::Buffer asset) {
   DataSink_ReadAsset_Response response;
@@ -3305,16 +3110,21 @@ void DynamicDataSink::Interface::WriteDataFileCompleterBase::Reply(::fidl::Decod
 
 void DynamicDataSink::Interface::WipeVolumeCompleterBase::Reply(::llcpp::fuchsia::paver::DataSink_WipeVolume_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<WipeVolumeResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<WipeVolumeResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  WipeVolumeResponse _response = {};
   DynamicDataSink::SetTransactionHeaderFor::WipeVolumeResponse(
       ::fidl::DecodedMessage<WipeVolumeResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               WipeVolumeResponse::PrimarySize,
               WipeVolumeResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(WipeVolumeResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<WipeVolumeResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void DynamicDataSink::Interface::WipeVolumeCompleterBase::ReplySuccess(::zx::channel volume) {
   DataSink_WipeVolume_Response response;
@@ -3331,15 +3141,19 @@ void DynamicDataSink::Interface::WipeVolumeCompleterBase::Reply(::fidl::BytePart
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<WipeVolumeResponse*>(_buffer.data());
+  WipeVolumeResponse _response = {};
   DynamicDataSink::SetTransactionHeaderFor::WipeVolumeResponse(
       ::fidl::DecodedMessage<WipeVolumeResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               WipeVolumeResponse::PrimarySize,
               WipeVolumeResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(WipeVolumeResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<WipeVolumeResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void DynamicDataSink::Interface::WipeVolumeCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::zx::channel volume) {
   DataSink_WipeVolume_Response response;
@@ -3429,58 +3243,74 @@ void DynamicDataSink::Interface::WipePartitionTablesCompleterBase::Reply(::fidl:
 
 void DynamicDataSink::SetTransactionHeaderFor::ReadAssetRequest(const ::fidl::DecodedMessage<DynamicDataSink::ReadAssetRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDynamicDataSink_ReadAsset_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DynamicDataSink::SetTransactionHeaderFor::ReadAssetResponse(const ::fidl::DecodedMessage<DynamicDataSink::ReadAssetResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDynamicDataSink_ReadAsset_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DynamicDataSink::SetTransactionHeaderFor::WriteAssetRequest(const ::fidl::DecodedMessage<DynamicDataSink::WriteAssetRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDynamicDataSink_WriteAsset_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DynamicDataSink::SetTransactionHeaderFor::WriteAssetResponse(const ::fidl::DecodedMessage<DynamicDataSink::WriteAssetResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDynamicDataSink_WriteAsset_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DynamicDataSink::SetTransactionHeaderFor::WriteVolumesRequest(const ::fidl::DecodedMessage<DynamicDataSink::WriteVolumesRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDynamicDataSink_WriteVolumes_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DynamicDataSink::SetTransactionHeaderFor::WriteVolumesResponse(const ::fidl::DecodedMessage<DynamicDataSink::WriteVolumesResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDynamicDataSink_WriteVolumes_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DynamicDataSink::SetTransactionHeaderFor::WriteBootloaderRequest(const ::fidl::DecodedMessage<DynamicDataSink::WriteBootloaderRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDynamicDataSink_WriteBootloader_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DynamicDataSink::SetTransactionHeaderFor::WriteBootloaderResponse(const ::fidl::DecodedMessage<DynamicDataSink::WriteBootloaderResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDynamicDataSink_WriteBootloader_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DynamicDataSink::SetTransactionHeaderFor::WriteDataFileRequest(const ::fidl::DecodedMessage<DynamicDataSink::WriteDataFileRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDynamicDataSink_WriteDataFile_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DynamicDataSink::SetTransactionHeaderFor::WriteDataFileResponse(const ::fidl::DecodedMessage<DynamicDataSink::WriteDataFileResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDynamicDataSink_WriteDataFile_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DynamicDataSink::SetTransactionHeaderFor::WipeVolumeRequest(const ::fidl::DecodedMessage<DynamicDataSink::WipeVolumeRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDynamicDataSink_WipeVolume_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DynamicDataSink::SetTransactionHeaderFor::WipeVolumeResponse(const ::fidl::DecodedMessage<DynamicDataSink::WipeVolumeResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDynamicDataSink_WipeVolume_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DynamicDataSink::SetTransactionHeaderFor::InitializePartitionTablesRequest(const ::fidl::DecodedMessage<DynamicDataSink::InitializePartitionTablesRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDynamicDataSink_InitializePartitionTables_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DynamicDataSink::SetTransactionHeaderFor::InitializePartitionTablesResponse(const ::fidl::DecodedMessage<DynamicDataSink::InitializePartitionTablesResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDynamicDataSink_InitializePartitionTables_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DynamicDataSink::SetTransactionHeaderFor::WipePartitionTablesRequest(const ::fidl::DecodedMessage<DynamicDataSink::WipePartitionTablesRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDynamicDataSink_WipePartitionTables_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DynamicDataSink::SetTransactionHeaderFor::WipePartitionTablesResponse(const ::fidl::DecodedMessage<DynamicDataSink::WipePartitionTablesResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDynamicDataSink_WipePartitionTables_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace paver

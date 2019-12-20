@@ -170,9 +170,11 @@ void Provider::Interface::SocketCompleterBase::Reply(::fidl::DecodedMessage<Sock
 
 void Provider::SetTransactionHeaderFor::SocketRequest(const ::fidl::DecodedMessage<Provider::SocketRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kProvider_Socket_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Provider::SetTransactionHeaderFor::SocketResponse(const ::fidl::DecodedMessage<Provider::SocketResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kProvider_Socket_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 namespace {
@@ -1379,10 +1381,10 @@ zx_status_t Control::Call::HandleEvents(::zx::unowned_channel client_end, Contro
     {
       constexpr uint32_t kTransformerDestSize = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving>();
       ::fidl::internal::ByteStorage<kTransformerDestSize> transformer_dest_storage(::fidl::internal::DelayAllocation);
-      if (fidl_should_decode_union_from_xunion(hdr)) {
+      if (!fidl_should_decode_union_from_xunion(hdr)) {
         transformer_dest_storage.Allocate();
         uint8_t* transformer_dest = transformer_dest_storage.buffer().data();
-        zx_status_t transform_status = fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD,
+        zx_status_t transform_status = fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1,
                                                       OnOpenResponse::AltType,
                                                       reinterpret_cast<uint8_t*>(msg.bytes),
                                                       msg.num_bytes,
@@ -1677,16 +1679,21 @@ void Control::Interface::CloseCompleterBase::Reply(::fidl::DecodedMessage<CloseR
 
 void Control::Interface::DescribeCompleterBase::Reply(::llcpp::fuchsia::io::NodeInfo info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DescribeResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<DescribeResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  DescribeResponse _response = {};
   Control::SetTransactionHeaderFor::DescribeResponse(
       ::fidl::DecodedMessage<DescribeResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               DescribeResponse::PrimarySize,
               DescribeResponse::PrimarySize)));
   _response.info = std::move(info);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(DescribeResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<DescribeResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
 void Control::Interface::DescribeCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::io::NodeInfo info) {
@@ -1694,15 +1701,19 @@ void Control::Interface::DescribeCompleterBase::Reply(::fidl::BytePart _buffer, 
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<DescribeResponse*>(_buffer.data());
+  DescribeResponse _response = {};
   Control::SetTransactionHeaderFor::DescribeResponse(
       ::fidl::DecodedMessage<DescribeResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               DescribeResponse::PrimarySize,
               DescribeResponse::PrimarySize)));
   _response.info = std::move(info);
-  _buffer.set_actual(sizeof(DescribeResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<DescribeResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
 void Control::Interface::DescribeCompleterBase::Reply(::fidl::DecodedMessage<DescribeResponse> params) {
@@ -1711,7 +1722,7 @@ void Control::Interface::DescribeCompleterBase::Reply(::fidl::DecodedMessage<Des
 }
 
 
-zx_status_t Control::SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, ::llcpp::fuchsia::io::NodeInfo* info) {
+zx_status_t Control::SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, ::llcpp::fuchsia::io::NodeInfo info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   OnOpenResponse _response = {};
@@ -1730,7 +1741,7 @@ zx_status_t Control::SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, ::l
   return ::fidl::Write(::zx::unowned_channel(_chan), std::move(_linearize_result.message));
 }
 
-zx_status_t Control::SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::NodeInfo* info) {
+zx_status_t Control::SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::NodeInfo info) {
   if (_buffer.capacity() < OnOpenResponse::PrimarySize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -2266,115 +2277,147 @@ void Control::Interface::GetSockOptCompleterBase::Reply(::fidl::DecodedMessage<G
 
 void Control::SetTransactionHeaderFor::CloneRequest(const ::fidl::DecodedMessage<Control::CloneRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_Clone_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Control::SetTransactionHeaderFor::CloseRequest(const ::fidl::DecodedMessage<Control::CloseRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_Close_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Control::SetTransactionHeaderFor::CloseResponse(const ::fidl::DecodedMessage<Control::CloseResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_Close_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Control::SetTransactionHeaderFor::DescribeRequest(const ::fidl::DecodedMessage<Control::DescribeRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_Describe_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Control::SetTransactionHeaderFor::DescribeResponse(const ::fidl::DecodedMessage<Control::DescribeResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_Describe_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Control::SetTransactionHeaderFor::OnOpenResponse(const ::fidl::DecodedMessage<Control::OnOpenResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_OnOpen_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Control::SetTransactionHeaderFor::SyncRequest(const ::fidl::DecodedMessage<Control::SyncRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_Sync_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Control::SetTransactionHeaderFor::SyncResponse(const ::fidl::DecodedMessage<Control::SyncResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_Sync_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Control::SetTransactionHeaderFor::GetAttrRequest(const ::fidl::DecodedMessage<Control::GetAttrRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_GetAttr_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Control::SetTransactionHeaderFor::GetAttrResponse(const ::fidl::DecodedMessage<Control::GetAttrResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_GetAttr_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Control::SetTransactionHeaderFor::SetAttrRequest(const ::fidl::DecodedMessage<Control::SetAttrRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_SetAttr_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Control::SetTransactionHeaderFor::SetAttrResponse(const ::fidl::DecodedMessage<Control::SetAttrResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_SetAttr_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Control::SetTransactionHeaderFor::NodeGetFlagsRequest(const ::fidl::DecodedMessage<Control::NodeGetFlagsRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_NodeGetFlags_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Control::SetTransactionHeaderFor::NodeGetFlagsResponse(const ::fidl::DecodedMessage<Control::NodeGetFlagsResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_NodeGetFlags_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Control::SetTransactionHeaderFor::NodeSetFlagsRequest(const ::fidl::DecodedMessage<Control::NodeSetFlagsRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_NodeSetFlags_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Control::SetTransactionHeaderFor::NodeSetFlagsResponse(const ::fidl::DecodedMessage<Control::NodeSetFlagsResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_NodeSetFlags_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Control::SetTransactionHeaderFor::BindRequest(const ::fidl::DecodedMessage<Control::BindRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_Bind_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Control::SetTransactionHeaderFor::BindResponse(const ::fidl::DecodedMessage<Control::BindResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_Bind_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Control::SetTransactionHeaderFor::ConnectRequest(const ::fidl::DecodedMessage<Control::ConnectRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_Connect_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Control::SetTransactionHeaderFor::ConnectResponse(const ::fidl::DecodedMessage<Control::ConnectResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_Connect_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Control::SetTransactionHeaderFor::ListenRequest(const ::fidl::DecodedMessage<Control::ListenRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_Listen_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Control::SetTransactionHeaderFor::ListenResponse(const ::fidl::DecodedMessage<Control::ListenResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_Listen_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Control::SetTransactionHeaderFor::AcceptRequest(const ::fidl::DecodedMessage<Control::AcceptRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_Accept_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Control::SetTransactionHeaderFor::AcceptResponse(const ::fidl::DecodedMessage<Control::AcceptResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_Accept_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Control::SetTransactionHeaderFor::GetSockNameRequest(const ::fidl::DecodedMessage<Control::GetSockNameRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_GetSockName_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Control::SetTransactionHeaderFor::GetSockNameResponse(const ::fidl::DecodedMessage<Control::GetSockNameResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_GetSockName_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Control::SetTransactionHeaderFor::GetPeerNameRequest(const ::fidl::DecodedMessage<Control::GetPeerNameRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_GetPeerName_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Control::SetTransactionHeaderFor::GetPeerNameResponse(const ::fidl::DecodedMessage<Control::GetPeerNameResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_GetPeerName_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Control::SetTransactionHeaderFor::SetSockOptRequest(const ::fidl::DecodedMessage<Control::SetSockOptRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_SetSockOpt_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Control::SetTransactionHeaderFor::SetSockOptResponse(const ::fidl::DecodedMessage<Control::SetSockOptResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_SetSockOpt_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Control::SetTransactionHeaderFor::GetSockOptRequest(const ::fidl::DecodedMessage<Control::GetSockOptRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_GetSockOpt_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Control::SetTransactionHeaderFor::GetSockOptResponse(const ::fidl::DecodedMessage<Control::GetSockOptResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kControl_GetSockOpt_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace socket

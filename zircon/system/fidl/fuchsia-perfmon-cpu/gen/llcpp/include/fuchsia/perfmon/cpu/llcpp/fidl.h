@@ -162,13 +162,265 @@ struct Controller_Initialize_Result;
 struct Allocation;
 class Controller;
 
+extern "C" const fidl_type_t fuchsia_perfmon_cpu_Controller_Start_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_Controller_Start_ResultTable;
+
+struct Controller_Start_Result {
+  Controller_Start_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static Controller_Start_Result WithResponse(::llcpp::fuchsia::perfmon::cpu::Controller_Start_Response* val) {
+    Controller_Start_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::fuchsia::perfmon::cpu::Controller_Start_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::perfmon::cpu::Controller_Start_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::perfmon::cpu::Controller_Start_Response*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::perfmon::cpu::Controller_Start_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::perfmon::cpu::Controller_Start_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static Controller_Start_Result WithErr(int32_t* val) {
+    Controller_Start_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_perfmon_cpu_Controller_Start_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_perfmon_cpu_Controller_Start_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
+extern "C" const fidl_type_t fuchsia_perfmon_cpu_Controller_StageConfig_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_Controller_StageConfig_ResultTable;
+
+struct Controller_StageConfig_Result {
+  Controller_StageConfig_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static Controller_StageConfig_Result WithResponse(::llcpp::fuchsia::perfmon::cpu::Controller_StageConfig_Response* val) {
+    Controller_StageConfig_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::fuchsia::perfmon::cpu::Controller_StageConfig_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::perfmon::cpu::Controller_StageConfig_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::perfmon::cpu::Controller_StageConfig_Response*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::perfmon::cpu::Controller_StageConfig_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::perfmon::cpu::Controller_StageConfig_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static Controller_StageConfig_Result WithErr(int32_t* val) {
+    Controller_StageConfig_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_perfmon_cpu_Controller_StageConfig_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_perfmon_cpu_Controller_StageConfig_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
+extern "C" const fidl_type_t fuchsia_perfmon_cpu_Controller_Initialize_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_Controller_Initialize_ResultTable;
+
+struct Controller_Initialize_Result {
+  Controller_Initialize_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static Controller_Initialize_Result WithResponse(::llcpp::fuchsia::perfmon::cpu::Controller_Initialize_Response* val) {
+    Controller_Initialize_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::fuchsia::perfmon::cpu::Controller_Initialize_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::perfmon::cpu::Controller_Initialize_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::perfmon::cpu::Controller_Initialize_Response*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::perfmon::cpu::Controller_Initialize_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::perfmon::cpu::Controller_Initialize_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static Controller_Initialize_Result WithErr(int32_t* val) {
+    Controller_Initialize_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_perfmon_cpu_Controller_Initialize_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_perfmon_cpu_Controller_Initialize_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_PropertiesTable;
 extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_PropertiesTable;
 
 // The properties of this system.
 struct Properties {
-  static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_PropertiesTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_PropertiesTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_perfmon_cpu_PropertiesTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_perfmon_cpu_PropertiesTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   [[maybe_unused]]
@@ -222,8 +474,8 @@ extern "C" const fidl_type_t fuchsia_perfmon_cpu_EventConfigTable;
 extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_EventConfigTable;
 
 struct EventConfig {
-  static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_EventConfigTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_EventConfigTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_perfmon_cpu_EventConfigTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_perfmon_cpu_EventConfigTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 12;
   [[maybe_unused]]
@@ -256,8 +508,8 @@ extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_ConfigTable;
 
 // Passed to `StageConfig()` to select the data to be collected.
 struct Config {
-  static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_ConfigTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_ConfigTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_perfmon_cpu_ConfigTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_perfmon_cpu_ConfigTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 384;
   [[maybe_unused]]
@@ -274,8 +526,8 @@ extern "C" const fidl_type_t fuchsia_perfmon_cpu_Controller_Start_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_Controller_Start_ResponseTable;
 
 struct Controller_Start_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_Controller_Start_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_Controller_Start_ResponseTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_perfmon_cpu_Controller_Start_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_perfmon_cpu_Controller_Start_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -285,122 +537,14 @@ struct Controller_Start_Response {
   static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
-};
-
-extern "C" const fidl_type_t fuchsia_perfmon_cpu_Controller_Start_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_Controller_Start_ResultTable;
-
-struct Controller_Start_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-  };
-
-  Controller_Start_Result();
-  ~Controller_Start_Result();
-
-  Controller_Start_Result(Controller_Start_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  Controller_Start_Result& operator=(Controller_Start_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
-
-  static Controller_Start_Result WithResponse(::llcpp::fuchsia::perfmon::cpu::Controller_Start_Response* val) {
-    Controller_Start_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::perfmon::cpu::Controller_Start_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::perfmon::cpu::Controller_Start_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::perfmon::cpu::Controller_Start_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::perfmon::cpu::Controller_Start_Response const & response() const { return response_; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static Controller_Start_Result WithErr(int32_t* val) {
-    Controller_Start_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  int32_t const & err() const { return err_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_Controller_Start_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_Controller_Start_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(Controller_Start_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::perfmon::cpu::Controller_Start_Response response_;
-    int32_t err_;
-  };
 };
 
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_Controller_StageConfig_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_Controller_StageConfig_ResponseTable;
 
 struct Controller_StageConfig_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_Controller_StageConfig_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_Controller_StageConfig_ResponseTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_perfmon_cpu_Controller_StageConfig_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_perfmon_cpu_Controller_StageConfig_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -410,122 +554,14 @@ struct Controller_StageConfig_Response {
   static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
-};
-
-extern "C" const fidl_type_t fuchsia_perfmon_cpu_Controller_StageConfig_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_Controller_StageConfig_ResultTable;
-
-struct Controller_StageConfig_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-  };
-
-  Controller_StageConfig_Result();
-  ~Controller_StageConfig_Result();
-
-  Controller_StageConfig_Result(Controller_StageConfig_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  Controller_StageConfig_Result& operator=(Controller_StageConfig_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
-
-  static Controller_StageConfig_Result WithResponse(::llcpp::fuchsia::perfmon::cpu::Controller_StageConfig_Response* val) {
-    Controller_StageConfig_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::perfmon::cpu::Controller_StageConfig_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::perfmon::cpu::Controller_StageConfig_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::perfmon::cpu::Controller_StageConfig_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::perfmon::cpu::Controller_StageConfig_Response const & response() const { return response_; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static Controller_StageConfig_Result WithErr(int32_t* val) {
-    Controller_StageConfig_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  int32_t const & err() const { return err_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_Controller_StageConfig_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_Controller_StageConfig_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(Controller_StageConfig_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::perfmon::cpu::Controller_StageConfig_Response response_;
-    int32_t err_;
-  };
 };
 
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_Controller_Initialize_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_Controller_Initialize_ResponseTable;
 
 struct Controller_Initialize_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_Controller_Initialize_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_Controller_Initialize_ResponseTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_perfmon_cpu_Controller_Initialize_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_perfmon_cpu_Controller_Initialize_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -535,114 +571,6 @@ struct Controller_Initialize_Response {
   static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
-};
-
-extern "C" const fidl_type_t fuchsia_perfmon_cpu_Controller_Initialize_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_Controller_Initialize_ResultTable;
-
-struct Controller_Initialize_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-  };
-
-  Controller_Initialize_Result();
-  ~Controller_Initialize_Result();
-
-  Controller_Initialize_Result(Controller_Initialize_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  Controller_Initialize_Result& operator=(Controller_Initialize_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
-
-  static Controller_Initialize_Result WithResponse(::llcpp::fuchsia::perfmon::cpu::Controller_Initialize_Response* val) {
-    Controller_Initialize_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::perfmon::cpu::Controller_Initialize_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::perfmon::cpu::Controller_Initialize_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::perfmon::cpu::Controller_Initialize_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::perfmon::cpu::Controller_Initialize_Response const & response() const { return response_; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static Controller_Initialize_Result WithErr(int32_t* val) {
-    Controller_Initialize_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  int32_t const & err() const { return err_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_Controller_Initialize_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_Controller_Initialize_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(Controller_Initialize_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::perfmon::cpu::Controller_Initialize_Response response_;
-    int32_t err_;
-  };
 };
 
 extern "C" const fidl_type_t fuchsia_perfmon_cpu_AllocationTable;
@@ -652,8 +580,8 @@ extern "C" const fidl_type_t v1_fuchsia_perfmon_cpu_AllocationTable;
 // This is generally the first call to allocate resources for a trace,
 // "trace" is used generically here: == "data collection run".
 struct Allocation {
-  static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_AllocationTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_AllocationTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_perfmon_cpu_AllocationTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_perfmon_cpu_AllocationTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
@@ -717,8 +645,8 @@ class Controller final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::perfmon::cpu::Properties properties;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_ControllerGetPropertiesResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_ControllerGetPropertiesResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_perfmon_cpu_ControllerGetPropertiesResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_perfmon_cpu_ControllerGetPropertiesResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -736,12 +664,12 @@ class Controller final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::perfmon::cpu::Controller_Initialize_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_ControllerInitializeResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_ControllerInitializeResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_perfmon_cpu_ControllerInitializeResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_perfmon_cpu_ControllerInitializeResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 8;
+    static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -753,8 +681,8 @@ class Controller final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::perfmon::cpu::Allocation allocation;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_ControllerInitializeRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_ControllerInitializeRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_perfmon_cpu_ControllerInitializeRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_perfmon_cpu_ControllerInitializeRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -775,8 +703,8 @@ class Controller final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::perfmon::cpu::Allocation* allocation;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_ControllerGetAllocationResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_ControllerGetAllocationResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_perfmon_cpu_ControllerGetAllocationResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_perfmon_cpu_ControllerGetAllocationResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 8;
@@ -794,12 +722,12 @@ class Controller final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::perfmon::cpu::Controller_StageConfig_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_ControllerStageConfigResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_ControllerStageConfigResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_perfmon_cpu_ControllerStageConfigResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_perfmon_cpu_ControllerStageConfigResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 8;
+    static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -811,8 +739,8 @@ class Controller final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::perfmon::cpu::Config config;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_ControllerStageConfigRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_ControllerStageConfigRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_perfmon_cpu_ControllerStageConfigRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_perfmon_cpu_ControllerStageConfigRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 400;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -830,8 +758,8 @@ class Controller final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::perfmon::cpu::Config* config;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_ControllerGetConfigResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_ControllerGetConfigResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_perfmon_cpu_ControllerGetConfigResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_perfmon_cpu_ControllerGetConfigResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 384;
@@ -849,8 +777,8 @@ class Controller final {
     fidl_message_header_t _hdr;
     ::zx::vmo vmo;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_ControllerGetBufferHandleResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_ControllerGetBufferHandleResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_perfmon_cpu_ControllerGetBufferHandleResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_perfmon_cpu_ControllerGetBufferHandleResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -866,8 +794,8 @@ class Controller final {
     fidl_message_header_t _hdr;
     uint32_t descriptor;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_ControllerGetBufferHandleRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_ControllerGetBufferHandleRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_perfmon_cpu_ControllerGetBufferHandleRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_perfmon_cpu_ControllerGetBufferHandleRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -885,12 +813,12 @@ class Controller final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::perfmon::cpu::Controller_Start_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_perfmon_cpu_ControllerStartResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_perfmon_cpu_ControllerStartResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_perfmon_cpu_ControllerStartResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_perfmon_cpu_ControllerStartResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 8;
+    static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -1249,7 +1177,7 @@ class Controller final {
     // "other resources" is basically a catch-all for other things that will
     // be needed. This does not include reserving the events, that is done
     // later by `StageConfig()`.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Initialize Initialize(::llcpp::fuchsia::perfmon::cpu::Allocation allocation);
 
     // Create a trace, allocating the needed trace buffers and other resources.
@@ -1279,7 +1207,7 @@ class Controller final {
     // Must be called with data collection off and after `Initialize()`.
     // Note: This doesn't actually configure the h/w, this just stages
     // the values for subsequent use by `Start()`.
-    // Allocates 424 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 432 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::StageConfig StageConfig(::llcpp::fuchsia::perfmon::cpu::Config config);
 
     // Stage performance monitor specification for a cpu.
@@ -1314,7 +1242,7 @@ class Controller final {
     // Turn on data collection.
     // Must be called after `Initialize()` + `StageConfig()` and with data
     // collection off.
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Start Start();
 
     // Turn on data collection.
@@ -1352,7 +1280,7 @@ class Controller final {
     // "other resources" is basically a catch-all for other things that will
     // be needed. This does not include reserving the events, that is done
     // later by `StageConfig()`.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Initialize Initialize(::zx::unowned_channel _client_end, ::llcpp::fuchsia::perfmon::cpu::Allocation allocation);
 
     // Create a trace, allocating the needed trace buffers and other resources.
@@ -1382,7 +1310,7 @@ class Controller final {
     // Must be called with data collection off and after `Initialize()`.
     // Note: This doesn't actually configure the h/w, this just stages
     // the values for subsequent use by `Start()`.
-    // Allocates 424 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 432 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::StageConfig StageConfig(::zx::unowned_channel _client_end, ::llcpp::fuchsia::perfmon::cpu::Config config);
 
     // Stage performance monitor specification for a cpu.
@@ -1417,7 +1345,7 @@ class Controller final {
     // Turn on data collection.
     // Must be called after `Initialize()` + `StageConfig()` and with data
     // collection off.
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Start Start(::zx::unowned_channel _client_end);
 
     // Turn on data collection.

@@ -35,48 +35,17 @@ enum class ButtonType : uint8_t {
 
 class Buttons;
 
-extern "C" const fidl_type_t fuchsia_buttons_Buttons_RegisterNotify_ResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_buttons_Buttons_RegisterNotify_ResponseTable;
-
-struct Buttons_RegisterNotify_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_buttons_Buttons_RegisterNotify_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_buttons_Buttons_RegisterNotify_ResponseTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
-
-  uint8_t __reserved = {};
-};
-
 extern "C" const fidl_type_t fuchsia_buttons_Buttons_RegisterNotify_ResultTable;
 extern "C" const fidl_type_t v1_fuchsia_buttons_Buttons_RegisterNotify_ResultTable;
 
 struct Buttons_RegisterNotify_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
+  Buttons_RegisterNotify_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
   };
 
-  Buttons_RegisterNotify_Result();
-  ~Buttons_RegisterNotify_Result();
-
-  Buttons_RegisterNotify_Result(Buttons_RegisterNotify_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  Buttons_RegisterNotify_Result& operator=(Buttons_RegisterNotify_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
 
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
@@ -88,21 +57,19 @@ struct Buttons_RegisterNotify_Result {
     return result;
   }
 
-  ::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
+  void set_response(::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
   }
 
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
+  ::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Response*>(envelope_.data);
   }
-
-  ::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Response const & response() const { return response_; }
+  const ::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Response*>(envelope_.data);
+  }
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
@@ -112,52 +79,61 @@ struct Buttons_RegisterNotify_Result {
     return result;
   }
 
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
   }
 
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
   }
-
-  int32_t const & err() const { return err_; }
-
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &fuchsia_buttons_Buttons_RegisterNotify_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_buttons_Buttons_RegisterNotify_ResultTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_buttons_Buttons_RegisterNotify_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_buttons_Buttons_RegisterNotify_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
+  static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr uint32_t AltPrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
   };
-
-  void Destroy();
-  void MoveImpl_(Buttons_RegisterNotify_Result&& other);
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Response response_;
-    int32_t err_;
-  };
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
+extern "C" const fidl_type_t fuchsia_buttons_Buttons_RegisterNotify_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_buttons_Buttons_RegisterNotify_ResponseTable;
+
+struct Buttons_RegisterNotify_Response {
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_buttons_Buttons_RegisterNotify_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_buttons_Buttons_RegisterNotify_ResponseTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
+
+  uint8_t __reserved = {};
 };
 
 extern "C" const fidl_type_t fuchsia_buttons_ButtonsGetStateRequestTable;
@@ -185,8 +161,8 @@ class Buttons final {
     fidl_message_header_t _hdr;
     bool pressed;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_buttons_ButtonsGetStateResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_buttons_ButtonsGetStateResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_buttons_ButtonsGetStateResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_buttons_ButtonsGetStateResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -202,8 +178,8 @@ class Buttons final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::buttons::ButtonType type;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_buttons_ButtonsGetStateRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_buttons_ButtonsGetStateRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_buttons_ButtonsGetStateRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_buttons_ButtonsGetStateRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -221,12 +197,12 @@ class Buttons final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_buttons_ButtonsRegisterNotifyResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_buttons_ButtonsRegisterNotifyResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_buttons_ButtonsRegisterNotifyResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_buttons_ButtonsRegisterNotifyResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 8;
+    static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -238,8 +214,8 @@ class Buttons final {
     fidl_message_header_t _hdr;
     uint8_t types;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_buttons_ButtonsRegisterNotifyRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_buttons_ButtonsRegisterNotifyRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_buttons_ButtonsRegisterNotifyRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_buttons_ButtonsRegisterNotifyRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -258,8 +234,8 @@ class Buttons final {
     ::llcpp::fuchsia::buttons::ButtonType type;
     bool pressed;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_buttons_ButtonsNotifyEventTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_buttons_ButtonsNotifyEventTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_buttons_ButtonsNotifyEventTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_buttons_ButtonsNotifyEventTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -397,7 +373,7 @@ class Buttons final {
     //           the state of the VOLUME_UP button changes. Types not listed
     //           in subsequent calls are removed.
     // @Returns: |status| : ZX_OK if succeeds.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::RegisterNotify RegisterNotify(uint8_t types);
 
     // Registers to receive notifications of a state change for some buttons.
@@ -443,7 +419,7 @@ class Buttons final {
     //           the state of the VOLUME_UP button changes. Types not listed
     //           in subsequent calls are removed.
     // @Returns: |status| : ZX_OK if succeeds.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::RegisterNotify RegisterNotify(::zx::unowned_channel _client_end, uint8_t types);
 
     // Registers to receive notifications of a state change for some buttons.

@@ -133,165 +133,14 @@ bool DirectoryWatcher::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transa
 
 void DirectoryWatcher::SetTransactionHeaderFor::OnEventRequest(const ::fidl::DecodedMessage<DirectoryWatcher::OnEventRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryWatcher_OnEvent_GenOrdinal);
-}
-
-::llcpp::fuchsia::io::NodeInfo::NodeInfo() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::io::NodeInfo::~NodeInfo() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::io::NodeInfo::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kService:
-    service_.~Service();
-    break;
-  case Ordinal::kFile:
-    file_.~FileObject();
-    break;
-  case Ordinal::kDirectory:
-    directory_.~DirectoryObject();
-    break;
-  case Ordinal::kPipe:
-    pipe_.~Pipe();
-    break;
-  case Ordinal::kVmofile:
-    vmofile_.~Vmofile();
-    break;
-  case Ordinal::kDevice:
-    device_.~Device();
-    break;
-  case Ordinal::kTty:
-    tty_.~Tty();
-    break;
-  case Ordinal::kSocket:
-    socket_.~Socket();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::io::NodeInfo::MoveImpl_(NodeInfo&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kService:
-    mutable_service() = std::move(other.mutable_service());
-    break;
-  case Ordinal::kFile:
-    mutable_file() = std::move(other.mutable_file());
-    break;
-  case Ordinal::kDirectory:
-    mutable_directory() = std::move(other.mutable_directory());
-    break;
-  case Ordinal::kPipe:
-    mutable_pipe() = std::move(other.mutable_pipe());
-    break;
-  case Ordinal::kVmofile:
-    mutable_vmofile() = std::move(other.mutable_vmofile());
-    break;
-  case Ordinal::kDevice:
-    mutable_device() = std::move(other.mutable_device());
-    break;
-  case Ordinal::kTty:
-    mutable_tty() = std::move(other.mutable_tty());
-    break;
-  case Ordinal::kSocket:
-    mutable_socket() = std::move(other.mutable_socket());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void ::llcpp::fuchsia::io::NodeInfo::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::io::NodeInfo, service_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::io::NodeInfo, file_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::io::NodeInfo, directory_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::io::NodeInfo, pipe_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::io::NodeInfo, vmofile_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::io::NodeInfo, device_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::io::NodeInfo, tty_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::io::NodeInfo, socket_) == 8);
-  static_assert(sizeof(::llcpp::fuchsia::io::NodeInfo) == ::llcpp::fuchsia::io::NodeInfo::PrimarySize);
+  static_assert(sizeof(NodeInfo) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(NodeInfo, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(NodeInfo, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
-
-
-::llcpp::fuchsia::io::Service& ::llcpp::fuchsia::io::NodeInfo::mutable_service() {
-  if (ordinal_ != Ordinal::kService) {
-    Destroy();
-    new (&service_) ::llcpp::fuchsia::io::Service;
-    ordinal_ = Ordinal::kService;
-  }
-  return service_;
-}
-
-::llcpp::fuchsia::io::FileObject& ::llcpp::fuchsia::io::NodeInfo::mutable_file() {
-  if (ordinal_ != Ordinal::kFile) {
-    Destroy();
-    new (&file_) ::llcpp::fuchsia::io::FileObject;
-    ordinal_ = Ordinal::kFile;
-  }
-  return file_;
-}
-
-::llcpp::fuchsia::io::DirectoryObject& ::llcpp::fuchsia::io::NodeInfo::mutable_directory() {
-  if (ordinal_ != Ordinal::kDirectory) {
-    Destroy();
-    new (&directory_) ::llcpp::fuchsia::io::DirectoryObject;
-    ordinal_ = Ordinal::kDirectory;
-  }
-  return directory_;
-}
-
-::llcpp::fuchsia::io::Pipe& ::llcpp::fuchsia::io::NodeInfo::mutable_pipe() {
-  if (ordinal_ != Ordinal::kPipe) {
-    Destroy();
-    new (&pipe_) ::llcpp::fuchsia::io::Pipe;
-    ordinal_ = Ordinal::kPipe;
-  }
-  return pipe_;
-}
-
-::llcpp::fuchsia::io::Vmofile& ::llcpp::fuchsia::io::NodeInfo::mutable_vmofile() {
-  if (ordinal_ != Ordinal::kVmofile) {
-    Destroy();
-    new (&vmofile_) ::llcpp::fuchsia::io::Vmofile;
-    ordinal_ = Ordinal::kVmofile;
-  }
-  return vmofile_;
-}
-
-::llcpp::fuchsia::io::Device& ::llcpp::fuchsia::io::NodeInfo::mutable_device() {
-  if (ordinal_ != Ordinal::kDevice) {
-    Destroy();
-    new (&device_) ::llcpp::fuchsia::io::Device;
-    ordinal_ = Ordinal::kDevice;
-  }
-  return device_;
-}
-
-::llcpp::fuchsia::io::Tty& ::llcpp::fuchsia::io::NodeInfo::mutable_tty() {
-  if (ordinal_ != Ordinal::kTty) {
-    Destroy();
-    new (&tty_) ::llcpp::fuchsia::io::Tty;
-    ordinal_ = Ordinal::kTty;
-  }
-  return tty_;
-}
-
-::llcpp::fuchsia::io::Socket& ::llcpp::fuchsia::io::NodeInfo::mutable_socket() {
-  if (ordinal_ != Ordinal::kSocket) {
-    Destroy();
-    new (&socket_) ::llcpp::fuchsia::io::Socket;
-    ordinal_ = Ordinal::kSocket;
-  }
-  return socket_;
-}
-
 
 namespace {
 
@@ -926,10 +775,10 @@ zx_status_t Node::Call::HandleEvents(::zx::unowned_channel client_end, Node::Eve
     {
       constexpr uint32_t kTransformerDestSize = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving>();
       ::fidl::internal::ByteStorage<kTransformerDestSize> transformer_dest_storage(::fidl::internal::DelayAllocation);
-      if (fidl_should_decode_union_from_xunion(hdr)) {
+      if (!fidl_should_decode_union_from_xunion(hdr)) {
         transformer_dest_storage.Allocate();
         uint8_t* transformer_dest = transformer_dest_storage.buffer().data();
-        zx_status_t transform_status = fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD,
+        zx_status_t transform_status = fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1,
                                                       OnOpenResponse::AltType,
                                                       reinterpret_cast<uint8_t*>(msg.bytes),
                                                       msg.num_bytes,
@@ -1122,16 +971,21 @@ void Node::Interface::CloseCompleterBase::Reply(::fidl::DecodedMessage<CloseResp
 
 void Node::Interface::DescribeCompleterBase::Reply(::llcpp::fuchsia::io::NodeInfo info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DescribeResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<DescribeResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  DescribeResponse _response = {};
   Node::SetTransactionHeaderFor::DescribeResponse(
       ::fidl::DecodedMessage<DescribeResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               DescribeResponse::PrimarySize,
               DescribeResponse::PrimarySize)));
   _response.info = std::move(info);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(DescribeResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<DescribeResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
 void Node::Interface::DescribeCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::io::NodeInfo info) {
@@ -1139,15 +993,19 @@ void Node::Interface::DescribeCompleterBase::Reply(::fidl::BytePart _buffer, ::l
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<DescribeResponse*>(_buffer.data());
+  DescribeResponse _response = {};
   Node::SetTransactionHeaderFor::DescribeResponse(
       ::fidl::DecodedMessage<DescribeResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               DescribeResponse::PrimarySize,
               DescribeResponse::PrimarySize)));
   _response.info = std::move(info);
-  _buffer.set_actual(sizeof(DescribeResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<DescribeResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
 void Node::Interface::DescribeCompleterBase::Reply(::fidl::DecodedMessage<DescribeResponse> params) {
@@ -1156,7 +1014,7 @@ void Node::Interface::DescribeCompleterBase::Reply(::fidl::DecodedMessage<Descri
 }
 
 
-zx_status_t Node::SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, ::llcpp::fuchsia::io::NodeInfo* info) {
+zx_status_t Node::SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, ::llcpp::fuchsia::io::NodeInfo info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   OnOpenResponse _response = {};
@@ -1175,7 +1033,7 @@ zx_status_t Node::SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, ::llcp
   return ::fidl::Write(::zx::unowned_channel(_chan), std::move(_linearize_result.message));
 }
 
-zx_status_t Node::SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::NodeInfo* info) {
+zx_status_t Node::SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::NodeInfo info) {
   if (_buffer.capacity() < OnOpenResponse::PrimarySize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -1387,59 +1245,75 @@ void Node::Interface::NodeSetFlagsCompleterBase::Reply(::fidl::DecodedMessage<No
 
 void Node::SetTransactionHeaderFor::CloneRequest(const ::fidl::DecodedMessage<Node::CloneRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kNode_Clone_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Node::SetTransactionHeaderFor::CloseRequest(const ::fidl::DecodedMessage<Node::CloseRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kNode_Close_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Node::SetTransactionHeaderFor::CloseResponse(const ::fidl::DecodedMessage<Node::CloseResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kNode_Close_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Node::SetTransactionHeaderFor::DescribeRequest(const ::fidl::DecodedMessage<Node::DescribeRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kNode_Describe_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Node::SetTransactionHeaderFor::DescribeResponse(const ::fidl::DecodedMessage<Node::DescribeResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kNode_Describe_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Node::SetTransactionHeaderFor::OnOpenResponse(const ::fidl::DecodedMessage<Node::OnOpenResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kNode_OnOpen_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Node::SetTransactionHeaderFor::SyncRequest(const ::fidl::DecodedMessage<Node::SyncRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kNode_Sync_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Node::SetTransactionHeaderFor::SyncResponse(const ::fidl::DecodedMessage<Node::SyncResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kNode_Sync_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Node::SetTransactionHeaderFor::GetAttrRequest(const ::fidl::DecodedMessage<Node::GetAttrRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kNode_GetAttr_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Node::SetTransactionHeaderFor::GetAttrResponse(const ::fidl::DecodedMessage<Node::GetAttrResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kNode_GetAttr_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Node::SetTransactionHeaderFor::SetAttrRequest(const ::fidl::DecodedMessage<Node::SetAttrRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kNode_SetAttr_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Node::SetTransactionHeaderFor::SetAttrResponse(const ::fidl::DecodedMessage<Node::SetAttrResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kNode_SetAttr_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Node::SetTransactionHeaderFor::NodeGetFlagsRequest(const ::fidl::DecodedMessage<Node::NodeGetFlagsRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kNode_NodeGetFlags_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Node::SetTransactionHeaderFor::NodeGetFlagsResponse(const ::fidl::DecodedMessage<Node::NodeGetFlagsResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kNode_NodeGetFlags_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Node::SetTransactionHeaderFor::NodeSetFlagsRequest(const ::fidl::DecodedMessage<Node::NodeSetFlagsRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kNode_NodeSetFlags_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Node::SetTransactionHeaderFor::NodeSetFlagsResponse(const ::fidl::DecodedMessage<Node::NodeSetFlagsResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kNode_NodeSetFlags_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 namespace {
@@ -2711,10 +2585,10 @@ zx_status_t File::Call::HandleEvents(::zx::unowned_channel client_end, File::Eve
     {
       constexpr uint32_t kTransformerDestSize = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving>();
       ::fidl::internal::ByteStorage<kTransformerDestSize> transformer_dest_storage(::fidl::internal::DelayAllocation);
-      if (fidl_should_decode_union_from_xunion(hdr)) {
+      if (!fidl_should_decode_union_from_xunion(hdr)) {
         transformer_dest_storage.Allocate();
         uint8_t* transformer_dest = transformer_dest_storage.buffer().data();
-        zx_status_t transform_status = fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD,
+        zx_status_t transform_status = fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1,
                                                       OnOpenResponse::AltType,
                                                       reinterpret_cast<uint8_t*>(msg.bytes),
                                                       msg.num_bytes,
@@ -3023,16 +2897,21 @@ void File::Interface::CloseCompleterBase::Reply(::fidl::DecodedMessage<CloseResp
 
 void File::Interface::DescribeCompleterBase::Reply(::llcpp::fuchsia::io::NodeInfo info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DescribeResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<DescribeResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  DescribeResponse _response = {};
   File::SetTransactionHeaderFor::DescribeResponse(
       ::fidl::DecodedMessage<DescribeResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               DescribeResponse::PrimarySize,
               DescribeResponse::PrimarySize)));
   _response.info = std::move(info);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(DescribeResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<DescribeResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
 void File::Interface::DescribeCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::io::NodeInfo info) {
@@ -3040,15 +2919,19 @@ void File::Interface::DescribeCompleterBase::Reply(::fidl::BytePart _buffer, ::l
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<DescribeResponse*>(_buffer.data());
+  DescribeResponse _response = {};
   File::SetTransactionHeaderFor::DescribeResponse(
       ::fidl::DecodedMessage<DescribeResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               DescribeResponse::PrimarySize,
               DescribeResponse::PrimarySize)));
   _response.info = std::move(info);
-  _buffer.set_actual(sizeof(DescribeResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<DescribeResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
 void File::Interface::DescribeCompleterBase::Reply(::fidl::DecodedMessage<DescribeResponse> params) {
@@ -3057,7 +2940,7 @@ void File::Interface::DescribeCompleterBase::Reply(::fidl::DecodedMessage<Descri
 }
 
 
-zx_status_t File::SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, ::llcpp::fuchsia::io::NodeInfo* info) {
+zx_status_t File::SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, ::llcpp::fuchsia::io::NodeInfo info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   OnOpenResponse _response = {};
@@ -3076,7 +2959,7 @@ zx_status_t File::SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, ::llcp
   return ::fidl::Write(::zx::unowned_channel(_chan), std::move(_linearize_result.message));
 }
 
-zx_status_t File::SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::NodeInfo* info) {
+zx_status_t File::SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::NodeInfo info) {
   if (_buffer.capacity() < OnOpenResponse::PrimarySize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -3655,122 +3538,156 @@ void File::Interface::GetBufferCompleterBase::Reply(::fidl::DecodedMessage<GetBu
 
 void File::SetTransactionHeaderFor::CloneRequest(const ::fidl::DecodedMessage<File::CloneRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kFile_Clone_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void File::SetTransactionHeaderFor::CloseRequest(const ::fidl::DecodedMessage<File::CloseRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kFile_Close_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void File::SetTransactionHeaderFor::CloseResponse(const ::fidl::DecodedMessage<File::CloseResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kFile_Close_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void File::SetTransactionHeaderFor::DescribeRequest(const ::fidl::DecodedMessage<File::DescribeRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kFile_Describe_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void File::SetTransactionHeaderFor::DescribeResponse(const ::fidl::DecodedMessage<File::DescribeResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kFile_Describe_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void File::SetTransactionHeaderFor::OnOpenResponse(const ::fidl::DecodedMessage<File::OnOpenResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kFile_OnOpen_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void File::SetTransactionHeaderFor::SyncRequest(const ::fidl::DecodedMessage<File::SyncRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kFile_Sync_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void File::SetTransactionHeaderFor::SyncResponse(const ::fidl::DecodedMessage<File::SyncResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kFile_Sync_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void File::SetTransactionHeaderFor::GetAttrRequest(const ::fidl::DecodedMessage<File::GetAttrRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kFile_GetAttr_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void File::SetTransactionHeaderFor::GetAttrResponse(const ::fidl::DecodedMessage<File::GetAttrResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kFile_GetAttr_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void File::SetTransactionHeaderFor::SetAttrRequest(const ::fidl::DecodedMessage<File::SetAttrRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kFile_SetAttr_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void File::SetTransactionHeaderFor::SetAttrResponse(const ::fidl::DecodedMessage<File::SetAttrResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kFile_SetAttr_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void File::SetTransactionHeaderFor::NodeGetFlagsRequest(const ::fidl::DecodedMessage<File::NodeGetFlagsRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kFile_NodeGetFlags_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void File::SetTransactionHeaderFor::NodeGetFlagsResponse(const ::fidl::DecodedMessage<File::NodeGetFlagsResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kFile_NodeGetFlags_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void File::SetTransactionHeaderFor::NodeSetFlagsRequest(const ::fidl::DecodedMessage<File::NodeSetFlagsRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kFile_NodeSetFlags_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void File::SetTransactionHeaderFor::NodeSetFlagsResponse(const ::fidl::DecodedMessage<File::NodeSetFlagsResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kFile_NodeSetFlags_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void File::SetTransactionHeaderFor::ReadRequest(const ::fidl::DecodedMessage<File::ReadRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kFile_Read_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void File::SetTransactionHeaderFor::ReadResponse(const ::fidl::DecodedMessage<File::ReadResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kFile_Read_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void File::SetTransactionHeaderFor::ReadAtRequest(const ::fidl::DecodedMessage<File::ReadAtRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kFile_ReadAt_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void File::SetTransactionHeaderFor::ReadAtResponse(const ::fidl::DecodedMessage<File::ReadAtResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kFile_ReadAt_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void File::SetTransactionHeaderFor::WriteRequest(const ::fidl::DecodedMessage<File::WriteRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kFile_Write_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void File::SetTransactionHeaderFor::WriteResponse(const ::fidl::DecodedMessage<File::WriteResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kFile_Write_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void File::SetTransactionHeaderFor::WriteAtRequest(const ::fidl::DecodedMessage<File::WriteAtRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kFile_WriteAt_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void File::SetTransactionHeaderFor::WriteAtResponse(const ::fidl::DecodedMessage<File::WriteAtResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kFile_WriteAt_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void File::SetTransactionHeaderFor::SeekRequest(const ::fidl::DecodedMessage<File::SeekRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kFile_Seek_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void File::SetTransactionHeaderFor::SeekResponse(const ::fidl::DecodedMessage<File::SeekResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kFile_Seek_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void File::SetTransactionHeaderFor::TruncateRequest(const ::fidl::DecodedMessage<File::TruncateRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kFile_Truncate_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void File::SetTransactionHeaderFor::TruncateResponse(const ::fidl::DecodedMessage<File::TruncateResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kFile_Truncate_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void File::SetTransactionHeaderFor::GetFlagsRequest(const ::fidl::DecodedMessage<File::GetFlagsRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kFile_GetFlags_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void File::SetTransactionHeaderFor::GetFlagsResponse(const ::fidl::DecodedMessage<File::GetFlagsResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kFile_GetFlags_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void File::SetTransactionHeaderFor::SetFlagsRequest(const ::fidl::DecodedMessage<File::SetFlagsRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kFile_SetFlags_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void File::SetTransactionHeaderFor::SetFlagsResponse(const ::fidl::DecodedMessage<File::SetFlagsResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kFile_SetFlags_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void File::SetTransactionHeaderFor::GetBufferRequest(const ::fidl::DecodedMessage<File::GetBufferRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kFile_GetBuffer_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void File::SetTransactionHeaderFor::GetBufferResponse(const ::fidl::DecodedMessage<File::GetBufferResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kFile_GetBuffer_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 namespace {
@@ -4995,10 +4912,10 @@ zx_status_t Directory::Call::HandleEvents(::zx::unowned_channel client_end, Dire
     {
       constexpr uint32_t kTransformerDestSize = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving>();
       ::fidl::internal::ByteStorage<kTransformerDestSize> transformer_dest_storage(::fidl::internal::DelayAllocation);
-      if (fidl_should_decode_union_from_xunion(hdr)) {
+      if (!fidl_should_decode_union_from_xunion(hdr)) {
         transformer_dest_storage.Allocate();
         uint8_t* transformer_dest = transformer_dest_storage.buffer().data();
-        zx_status_t transform_status = fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD,
+        zx_status_t transform_status = fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1,
                                                       OnOpenResponse::AltType,
                                                       reinterpret_cast<uint8_t*>(msg.bytes),
                                                       msg.num_bytes,
@@ -5293,16 +5210,21 @@ void Directory::Interface::CloseCompleterBase::Reply(::fidl::DecodedMessage<Clos
 
 void Directory::Interface::DescribeCompleterBase::Reply(::llcpp::fuchsia::io::NodeInfo info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DescribeResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<DescribeResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  DescribeResponse _response = {};
   Directory::SetTransactionHeaderFor::DescribeResponse(
       ::fidl::DecodedMessage<DescribeResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               DescribeResponse::PrimarySize,
               DescribeResponse::PrimarySize)));
   _response.info = std::move(info);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(DescribeResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<DescribeResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
 void Directory::Interface::DescribeCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::io::NodeInfo info) {
@@ -5310,15 +5232,19 @@ void Directory::Interface::DescribeCompleterBase::Reply(::fidl::BytePart _buffer
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<DescribeResponse*>(_buffer.data());
+  DescribeResponse _response = {};
   Directory::SetTransactionHeaderFor::DescribeResponse(
       ::fidl::DecodedMessage<DescribeResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               DescribeResponse::PrimarySize,
               DescribeResponse::PrimarySize)));
   _response.info = std::move(info);
-  _buffer.set_actual(sizeof(DescribeResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<DescribeResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
 void Directory::Interface::DescribeCompleterBase::Reply(::fidl::DecodedMessage<DescribeResponse> params) {
@@ -5327,7 +5253,7 @@ void Directory::Interface::DescribeCompleterBase::Reply(::fidl::DecodedMessage<D
 }
 
 
-zx_status_t Directory::SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, ::llcpp::fuchsia::io::NodeInfo* info) {
+zx_status_t Directory::SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, ::llcpp::fuchsia::io::NodeInfo info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   OnOpenResponse _response = {};
@@ -5346,7 +5272,7 @@ zx_status_t Directory::SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, :
   return ::fidl::Write(::zx::unowned_channel(_chan), std::move(_linearize_result.message));
 }
 
-zx_status_t Directory::SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::NodeInfo* info) {
+zx_status_t Directory::SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::NodeInfo info) {
   if (_buffer.capacity() < OnOpenResponse::PrimarySize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -5824,112 +5750,143 @@ void Directory::Interface::WatchCompleterBase::Reply(::fidl::DecodedMessage<Watc
 
 void Directory::SetTransactionHeaderFor::CloneRequest(const ::fidl::DecodedMessage<Directory::CloneRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectory_Clone_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Directory::SetTransactionHeaderFor::CloseRequest(const ::fidl::DecodedMessage<Directory::CloseRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectory_Close_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Directory::SetTransactionHeaderFor::CloseResponse(const ::fidl::DecodedMessage<Directory::CloseResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectory_Close_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Directory::SetTransactionHeaderFor::DescribeRequest(const ::fidl::DecodedMessage<Directory::DescribeRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectory_Describe_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Directory::SetTransactionHeaderFor::DescribeResponse(const ::fidl::DecodedMessage<Directory::DescribeResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectory_Describe_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Directory::SetTransactionHeaderFor::OnOpenResponse(const ::fidl::DecodedMessage<Directory::OnOpenResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectory_OnOpen_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Directory::SetTransactionHeaderFor::SyncRequest(const ::fidl::DecodedMessage<Directory::SyncRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectory_Sync_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Directory::SetTransactionHeaderFor::SyncResponse(const ::fidl::DecodedMessage<Directory::SyncResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectory_Sync_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Directory::SetTransactionHeaderFor::GetAttrRequest(const ::fidl::DecodedMessage<Directory::GetAttrRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectory_GetAttr_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Directory::SetTransactionHeaderFor::GetAttrResponse(const ::fidl::DecodedMessage<Directory::GetAttrResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectory_GetAttr_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Directory::SetTransactionHeaderFor::SetAttrRequest(const ::fidl::DecodedMessage<Directory::SetAttrRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectory_SetAttr_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Directory::SetTransactionHeaderFor::SetAttrResponse(const ::fidl::DecodedMessage<Directory::SetAttrResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectory_SetAttr_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Directory::SetTransactionHeaderFor::NodeGetFlagsRequest(const ::fidl::DecodedMessage<Directory::NodeGetFlagsRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectory_NodeGetFlags_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Directory::SetTransactionHeaderFor::NodeGetFlagsResponse(const ::fidl::DecodedMessage<Directory::NodeGetFlagsResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectory_NodeGetFlags_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Directory::SetTransactionHeaderFor::NodeSetFlagsRequest(const ::fidl::DecodedMessage<Directory::NodeSetFlagsRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectory_NodeSetFlags_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Directory::SetTransactionHeaderFor::NodeSetFlagsResponse(const ::fidl::DecodedMessage<Directory::NodeSetFlagsResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectory_NodeSetFlags_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Directory::SetTransactionHeaderFor::OpenRequest(const ::fidl::DecodedMessage<Directory::OpenRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectory_Open_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Directory::SetTransactionHeaderFor::UnlinkRequest(const ::fidl::DecodedMessage<Directory::UnlinkRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectory_Unlink_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Directory::SetTransactionHeaderFor::UnlinkResponse(const ::fidl::DecodedMessage<Directory::UnlinkResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectory_Unlink_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Directory::SetTransactionHeaderFor::ReadDirentsRequest(const ::fidl::DecodedMessage<Directory::ReadDirentsRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectory_ReadDirents_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Directory::SetTransactionHeaderFor::ReadDirentsResponse(const ::fidl::DecodedMessage<Directory::ReadDirentsResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectory_ReadDirents_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Directory::SetTransactionHeaderFor::RewindRequest(const ::fidl::DecodedMessage<Directory::RewindRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectory_Rewind_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Directory::SetTransactionHeaderFor::RewindResponse(const ::fidl::DecodedMessage<Directory::RewindResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectory_Rewind_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Directory::SetTransactionHeaderFor::GetTokenRequest(const ::fidl::DecodedMessage<Directory::GetTokenRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectory_GetToken_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Directory::SetTransactionHeaderFor::GetTokenResponse(const ::fidl::DecodedMessage<Directory::GetTokenResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectory_GetToken_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Directory::SetTransactionHeaderFor::RenameRequest(const ::fidl::DecodedMessage<Directory::RenameRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectory_Rename_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Directory::SetTransactionHeaderFor::RenameResponse(const ::fidl::DecodedMessage<Directory::RenameResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectory_Rename_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Directory::SetTransactionHeaderFor::LinkRequest(const ::fidl::DecodedMessage<Directory::LinkRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectory_Link_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Directory::SetTransactionHeaderFor::LinkResponse(const ::fidl::DecodedMessage<Directory::LinkResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectory_Link_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Directory::SetTransactionHeaderFor::WatchRequest(const ::fidl::DecodedMessage<Directory::WatchRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectory_Watch_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Directory::SetTransactionHeaderFor::WatchResponse(const ::fidl::DecodedMessage<Directory::WatchResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectory_Watch_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 namespace {
@@ -7573,10 +7530,10 @@ zx_status_t DirectoryAdmin::Call::HandleEvents(::zx::unowned_channel client_end,
     {
       constexpr uint32_t kTransformerDestSize = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kReceiving>();
       ::fidl::internal::ByteStorage<kTransformerDestSize> transformer_dest_storage(::fidl::internal::DelayAllocation);
-      if (fidl_should_decode_union_from_xunion(hdr)) {
+      if (!fidl_should_decode_union_from_xunion(hdr)) {
         transformer_dest_storage.Allocate();
         uint8_t* transformer_dest = transformer_dest_storage.buffer().data();
-        zx_status_t transform_status = fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD,
+        zx_status_t transform_status = fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1,
                                                       OnOpenResponse::AltType,
                                                       reinterpret_cast<uint8_t*>(msg.bytes),
                                                       msg.num_bytes,
@@ -7945,16 +7902,21 @@ void DirectoryAdmin::Interface::CloseCompleterBase::Reply(::fidl::DecodedMessage
 
 void DirectoryAdmin::Interface::DescribeCompleterBase::Reply(::llcpp::fuchsia::io::NodeInfo info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<DescribeResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<DescribeResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  DescribeResponse _response = {};
   DirectoryAdmin::SetTransactionHeaderFor::DescribeResponse(
       ::fidl::DecodedMessage<DescribeResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               DescribeResponse::PrimarySize,
               DescribeResponse::PrimarySize)));
   _response.info = std::move(info);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(DescribeResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<DescribeResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
 void DirectoryAdmin::Interface::DescribeCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::io::NodeInfo info) {
@@ -7962,15 +7924,19 @@ void DirectoryAdmin::Interface::DescribeCompleterBase::Reply(::fidl::BytePart _b
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<DescribeResponse*>(_buffer.data());
+  DescribeResponse _response = {};
   DirectoryAdmin::SetTransactionHeaderFor::DescribeResponse(
       ::fidl::DecodedMessage<DescribeResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               DescribeResponse::PrimarySize,
               DescribeResponse::PrimarySize)));
   _response.info = std::move(info);
-  _buffer.set_actual(sizeof(DescribeResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<DescribeResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 
 void DirectoryAdmin::Interface::DescribeCompleterBase::Reply(::fidl::DecodedMessage<DescribeResponse> params) {
@@ -7979,7 +7945,7 @@ void DirectoryAdmin::Interface::DescribeCompleterBase::Reply(::fidl::DecodedMess
 }
 
 
-zx_status_t DirectoryAdmin::SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, ::llcpp::fuchsia::io::NodeInfo* info) {
+zx_status_t DirectoryAdmin::SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, ::llcpp::fuchsia::io::NodeInfo info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<OnOpenResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
   OnOpenResponse _response = {};
@@ -7998,7 +7964,7 @@ zx_status_t DirectoryAdmin::SendOnOpenEvent(::zx::unowned_channel _chan, int32_t
   return ::fidl::Write(::zx::unowned_channel(_chan), std::move(_linearize_result.message));
 }
 
-zx_status_t DirectoryAdmin::SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::NodeInfo* info) {
+zx_status_t DirectoryAdmin::SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, ::llcpp::fuchsia::io::NodeInfo info) {
   if (_buffer.capacity() < OnOpenResponse::PrimarySize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -8717,154 +8683,197 @@ void DirectoryAdmin::Interface::GetDevicePathCompleterBase::Reply(::fidl::Decode
 
 void DirectoryAdmin::SetTransactionHeaderFor::CloneRequest(const ::fidl::DecodedMessage<DirectoryAdmin::CloneRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_Clone_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::CloseRequest(const ::fidl::DecodedMessage<DirectoryAdmin::CloseRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_Close_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::CloseResponse(const ::fidl::DecodedMessage<DirectoryAdmin::CloseResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_Close_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::DescribeRequest(const ::fidl::DecodedMessage<DirectoryAdmin::DescribeRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_Describe_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::DescribeResponse(const ::fidl::DecodedMessage<DirectoryAdmin::DescribeResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_Describe_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::OnOpenResponse(const ::fidl::DecodedMessage<DirectoryAdmin::OnOpenResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_OnOpen_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::SyncRequest(const ::fidl::DecodedMessage<DirectoryAdmin::SyncRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_Sync_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::SyncResponse(const ::fidl::DecodedMessage<DirectoryAdmin::SyncResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_Sync_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::GetAttrRequest(const ::fidl::DecodedMessage<DirectoryAdmin::GetAttrRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_GetAttr_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::GetAttrResponse(const ::fidl::DecodedMessage<DirectoryAdmin::GetAttrResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_GetAttr_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::SetAttrRequest(const ::fidl::DecodedMessage<DirectoryAdmin::SetAttrRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_SetAttr_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::SetAttrResponse(const ::fidl::DecodedMessage<DirectoryAdmin::SetAttrResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_SetAttr_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::NodeGetFlagsRequest(const ::fidl::DecodedMessage<DirectoryAdmin::NodeGetFlagsRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_NodeGetFlags_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::NodeGetFlagsResponse(const ::fidl::DecodedMessage<DirectoryAdmin::NodeGetFlagsResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_NodeGetFlags_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::NodeSetFlagsRequest(const ::fidl::DecodedMessage<DirectoryAdmin::NodeSetFlagsRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_NodeSetFlags_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::NodeSetFlagsResponse(const ::fidl::DecodedMessage<DirectoryAdmin::NodeSetFlagsResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_NodeSetFlags_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::OpenRequest(const ::fidl::DecodedMessage<DirectoryAdmin::OpenRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_Open_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::UnlinkRequest(const ::fidl::DecodedMessage<DirectoryAdmin::UnlinkRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_Unlink_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::UnlinkResponse(const ::fidl::DecodedMessage<DirectoryAdmin::UnlinkResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_Unlink_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::ReadDirentsRequest(const ::fidl::DecodedMessage<DirectoryAdmin::ReadDirentsRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_ReadDirents_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::ReadDirentsResponse(const ::fidl::DecodedMessage<DirectoryAdmin::ReadDirentsResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_ReadDirents_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::RewindRequest(const ::fidl::DecodedMessage<DirectoryAdmin::RewindRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_Rewind_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::RewindResponse(const ::fidl::DecodedMessage<DirectoryAdmin::RewindResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_Rewind_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::GetTokenRequest(const ::fidl::DecodedMessage<DirectoryAdmin::GetTokenRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_GetToken_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::GetTokenResponse(const ::fidl::DecodedMessage<DirectoryAdmin::GetTokenResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_GetToken_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::RenameRequest(const ::fidl::DecodedMessage<DirectoryAdmin::RenameRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_Rename_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::RenameResponse(const ::fidl::DecodedMessage<DirectoryAdmin::RenameResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_Rename_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::LinkRequest(const ::fidl::DecodedMessage<DirectoryAdmin::LinkRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_Link_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::LinkResponse(const ::fidl::DecodedMessage<DirectoryAdmin::LinkResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_Link_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::WatchRequest(const ::fidl::DecodedMessage<DirectoryAdmin::WatchRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_Watch_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::WatchResponse(const ::fidl::DecodedMessage<DirectoryAdmin::WatchResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_Watch_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::MountRequest(const ::fidl::DecodedMessage<DirectoryAdmin::MountRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_Mount_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::MountResponse(const ::fidl::DecodedMessage<DirectoryAdmin::MountResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_Mount_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::MountAndCreateRequest(const ::fidl::DecodedMessage<DirectoryAdmin::MountAndCreateRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_MountAndCreate_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::MountAndCreateResponse(const ::fidl::DecodedMessage<DirectoryAdmin::MountAndCreateResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_MountAndCreate_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::UnmountRequest(const ::fidl::DecodedMessage<DirectoryAdmin::UnmountRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_Unmount_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::UnmountResponse(const ::fidl::DecodedMessage<DirectoryAdmin::UnmountResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_Unmount_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::UnmountNodeRequest(const ::fidl::DecodedMessage<DirectoryAdmin::UnmountNodeRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_UnmountNode_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::UnmountNodeResponse(const ::fidl::DecodedMessage<DirectoryAdmin::UnmountNodeResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_UnmountNode_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::QueryFilesystemRequest(const ::fidl::DecodedMessage<DirectoryAdmin::QueryFilesystemRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_QueryFilesystem_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::QueryFilesystemResponse(const ::fidl::DecodedMessage<DirectoryAdmin::QueryFilesystemResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_QueryFilesystem_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DirectoryAdmin::SetTransactionHeaderFor::GetDevicePathRequest(const ::fidl::DecodedMessage<DirectoryAdmin::GetDevicePathRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_GetDevicePath_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DirectoryAdmin::SetTransactionHeaderFor::GetDevicePathResponse(const ::fidl::DecodedMessage<DirectoryAdmin::GetDevicePathResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDirectoryAdmin_GetDevicePath_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace io

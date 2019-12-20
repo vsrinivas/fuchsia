@@ -49,8 +49,8 @@ class CorruptBlobHandler final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::blobfs::TakeAction action;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_blobfs_CorruptBlobHandlerCorruptBlobResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_blobfs_CorruptBlobHandlerCorruptBlobResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_blobfs_CorruptBlobHandlerCorruptBlobResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_blobfs_CorruptBlobHandlerCorruptBlobResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -66,8 +66,8 @@ class CorruptBlobHandler final {
     fidl_message_header_t _hdr;
     ::fidl::VectorView<uint8_t> merkleroot;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_blobfs_CorruptBlobHandlerCorruptBlobRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_blobfs_CorruptBlobHandlerCorruptBlobRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_blobfs_CorruptBlobHandlerCorruptBlobRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_blobfs_CorruptBlobHandlerCorruptBlobRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 64;
@@ -242,8 +242,8 @@ class BlobfsAdmin final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_blobfs_BlobfsAdminHandleCorruptBlobsResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_blobfs_BlobfsAdminHandleCorruptBlobsResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_blobfs_BlobfsAdminHandleCorruptBlobsResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_blobfs_BlobfsAdminHandleCorruptBlobsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -259,8 +259,8 @@ class BlobfsAdmin final {
     fidl_message_header_t _hdr;
     ::zx::channel handler;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_blobfs_BlobfsAdminHandleCorruptBlobsRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_blobfs_BlobfsAdminHandleCorruptBlobsRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_blobfs_BlobfsAdminHandleCorruptBlobsRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_blobfs_BlobfsAdminHandleCorruptBlobsRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -437,8 +437,8 @@ class Blobfs final {
     ::zx::vmo regions;
     uint64_t count;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_blobfs_BlobfsGetAllocatedRegionsResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_blobfs_BlobfsGetAllocatedRegionsResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_blobfs_BlobfsGetAllocatedRegionsResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_blobfs_BlobfsGetAllocatedRegionsResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -603,8 +603,8 @@ extern "C" const fidl_type_t fuchsia_blobfs_BlockRegionTable;
 extern "C" const fidl_type_t v1_fuchsia_blobfs_BlockRegionTable;
 
 struct BlockRegion {
-  static constexpr const fidl_type_t* Type = &fuchsia_blobfs_BlockRegionTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_blobfs_BlockRegionTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_blobfs_BlockRegionTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_blobfs_BlockRegionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]

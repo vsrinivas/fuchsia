@@ -44,8 +44,8 @@ class DeviceConnector final {
     ::zx::channel service_provider;
     ::zx::channel tee_request;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_tee_DeviceConnectorConnectTeeRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_tee_DeviceConnectorConnectTeeRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_tee_DeviceConnectorConnectTeeRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_tee_DeviceConnectorConnectTeeRequestTable;
     static constexpr uint32_t MaxNumHandles = 2;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;

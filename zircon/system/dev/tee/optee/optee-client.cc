@@ -151,7 +151,7 @@ static std::filesystem::path GetPathFromRawMemory(void* mem, size_t max_size) {
 static zx_status_t AwaitIoOnOpenStatus(const zx::unowned_channel channel) {
   fuchsia_io::Node::EventHandlers event_handlers;
   bool call_was_successful = false;
-  event_handlers.on_open = [&](int32_t s, fuchsia_io::NodeInfo* info) {
+  event_handlers.on_open = [&](int32_t s, fuchsia_io::NodeInfo info) {
     call_was_successful = true;
     return s;
   };

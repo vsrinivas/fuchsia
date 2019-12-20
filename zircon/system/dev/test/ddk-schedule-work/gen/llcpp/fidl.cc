@@ -11,241 +11,29 @@ namespace schedule {
 namespace work {
 namespace test {
 
-::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWork_Result::TestDevice_ScheduleWork_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWork_Result::~TestDevice_ScheduleWork_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWork_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~TestDevice_ScheduleWork_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWork_Result::MoveImpl_(TestDevice_ScheduleWork_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
-}
-
 void ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWork_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWork_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWork_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWork_Result) == ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWork_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWork_Response& ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWork_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWork_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWork_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWorkDifferentThread_Result::TestDevice_ScheduleWorkDifferentThread_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWorkDifferentThread_Result::~TestDevice_ScheduleWorkDifferentThread_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWorkDifferentThread_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~TestDevice_ScheduleWorkDifferentThread_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWorkDifferentThread_Result::MoveImpl_(TestDevice_ScheduleWorkDifferentThread_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(TestDevice_ScheduleWork_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(TestDevice_ScheduleWork_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(TestDevice_ScheduleWork_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWorkDifferentThread_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWorkDifferentThread_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWorkDifferentThread_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWorkDifferentThread_Result) == ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWorkDifferentThread_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWorkDifferentThread_Response& ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWorkDifferentThread_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWorkDifferentThread_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWorkDifferentThread_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Result::TestDevice_GetDoneEvent_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Result::~TestDevice_GetDoneEvent_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~TestDevice_GetDoneEvent_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Result::MoveImpl_(TestDevice_GetDoneEvent_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(TestDevice_ScheduleWorkDifferentThread_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(TestDevice_ScheduleWorkDifferentThread_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(TestDevice_ScheduleWorkDifferentThread_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Result) == ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Response& ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_Result::TestDevice_GetChannel_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_Result::~TestDevice_GetChannel_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~TestDevice_GetChannel_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_Result::MoveImpl_(TestDevice_GetChannel_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(TestDevice_GetDoneEvent_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(TestDevice_GetDoneEvent_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(TestDevice_GetDoneEvent_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_Result) == ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_Result::PrimarySize);
+  static_assert(sizeof(TestDevice_GetChannel_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(TestDevice_GetChannel_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(TestDevice_GetChannel_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
-
-
-::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_Response& ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
 
 namespace {
 
@@ -689,16 +477,21 @@ bool TestDevice::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
 
 void TestDevice::Interface::ScheduleWorkCompleterBase::Reply(::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWork_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ScheduleWorkResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<ScheduleWorkResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  ScheduleWorkResponse _response = {};
   TestDevice::SetTransactionHeaderFor::ScheduleWorkResponse(
       ::fidl::DecodedMessage<ScheduleWorkResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               ScheduleWorkResponse::PrimarySize,
               ScheduleWorkResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ScheduleWorkResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<ScheduleWorkResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void TestDevice::Interface::ScheduleWorkCompleterBase::ReplySuccess() {
   TestDevice_ScheduleWork_Response response;
@@ -714,15 +507,19 @@ void TestDevice::Interface::ScheduleWorkCompleterBase::Reply(::fidl::BytePart _b
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<ScheduleWorkResponse*>(_buffer.data());
+  ScheduleWorkResponse _response = {};
   TestDevice::SetTransactionHeaderFor::ScheduleWorkResponse(
       ::fidl::DecodedMessage<ScheduleWorkResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               ScheduleWorkResponse::PrimarySize,
               ScheduleWorkResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(ScheduleWorkResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<ScheduleWorkResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void TestDevice::Interface::ScheduleWorkCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   TestDevice_ScheduleWork_Response response;
@@ -738,16 +535,21 @@ void TestDevice::Interface::ScheduleWorkCompleterBase::Reply(::fidl::DecodedMess
 
 void TestDevice::Interface::ScheduleWorkDifferentThreadCompleterBase::Reply(::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWorkDifferentThread_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ScheduleWorkDifferentThreadResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<ScheduleWorkDifferentThreadResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  ScheduleWorkDifferentThreadResponse _response = {};
   TestDevice::SetTransactionHeaderFor::ScheduleWorkDifferentThreadResponse(
       ::fidl::DecodedMessage<ScheduleWorkDifferentThreadResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               ScheduleWorkDifferentThreadResponse::PrimarySize,
               ScheduleWorkDifferentThreadResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ScheduleWorkDifferentThreadResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<ScheduleWorkDifferentThreadResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void TestDevice::Interface::ScheduleWorkDifferentThreadCompleterBase::ReplySuccess() {
   TestDevice_ScheduleWorkDifferentThread_Response response;
@@ -763,15 +565,19 @@ void TestDevice::Interface::ScheduleWorkDifferentThreadCompleterBase::Reply(::fi
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<ScheduleWorkDifferentThreadResponse*>(_buffer.data());
+  ScheduleWorkDifferentThreadResponse _response = {};
   TestDevice::SetTransactionHeaderFor::ScheduleWorkDifferentThreadResponse(
       ::fidl::DecodedMessage<ScheduleWorkDifferentThreadResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               ScheduleWorkDifferentThreadResponse::PrimarySize,
               ScheduleWorkDifferentThreadResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(ScheduleWorkDifferentThreadResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<ScheduleWorkDifferentThreadResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void TestDevice::Interface::ScheduleWorkDifferentThreadCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   TestDevice_ScheduleWorkDifferentThread_Response response;
@@ -787,16 +593,21 @@ void TestDevice::Interface::ScheduleWorkDifferentThreadCompleterBase::Reply(::fi
 
 void TestDevice::Interface::GetDoneEventCompleterBase::Reply(::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetDoneEventResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<GetDoneEventResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  GetDoneEventResponse _response = {};
   TestDevice::SetTransactionHeaderFor::GetDoneEventResponse(
       ::fidl::DecodedMessage<GetDoneEventResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               GetDoneEventResponse::PrimarySize,
               GetDoneEventResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetDoneEventResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<GetDoneEventResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void TestDevice::Interface::GetDoneEventCompleterBase::ReplySuccess(::zx::event event) {
   TestDevice_GetDoneEvent_Response response;
@@ -813,15 +624,19 @@ void TestDevice::Interface::GetDoneEventCompleterBase::Reply(::fidl::BytePart _b
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<GetDoneEventResponse*>(_buffer.data());
+  GetDoneEventResponse _response = {};
   TestDevice::SetTransactionHeaderFor::GetDoneEventResponse(
       ::fidl::DecodedMessage<GetDoneEventResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               GetDoneEventResponse::PrimarySize,
               GetDoneEventResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(GetDoneEventResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<GetDoneEventResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void TestDevice::Interface::GetDoneEventCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::zx::event event) {
   TestDevice_GetDoneEvent_Response response;
@@ -876,16 +691,21 @@ void TestDevice::Interface::ScheduledWorkRanCompleterBase::Reply(::fidl::Decoded
 
 void TestDevice::Interface::GetChannelCompleterBase::Reply(::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetChannelResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<GetChannelResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  GetChannelResponse _response = {};
   TestDevice::SetTransactionHeaderFor::GetChannelResponse(
       ::fidl::DecodedMessage<GetChannelResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               GetChannelResponse::PrimarySize,
               GetChannelResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetChannelResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<GetChannelResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void TestDevice::Interface::GetChannelCompleterBase::ReplySuccess() {
   TestDevice_GetChannel_Response response;
@@ -901,15 +721,19 @@ void TestDevice::Interface::GetChannelCompleterBase::Reply(::fidl::BytePart _buf
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<GetChannelResponse*>(_buffer.data());
+  GetChannelResponse _response = {};
   TestDevice::SetTransactionHeaderFor::GetChannelResponse(
       ::fidl::DecodedMessage<GetChannelResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               GetChannelResponse::PrimarySize,
               GetChannelResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(GetChannelResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<GetChannelResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void TestDevice::Interface::GetChannelCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   TestDevice_GetChannel_Response response;
@@ -926,97 +750,54 @@ void TestDevice::Interface::GetChannelCompleterBase::Reply(::fidl::DecodedMessag
 
 void TestDevice::SetTransactionHeaderFor::ScheduleWorkRequest(const ::fidl::DecodedMessage<TestDevice::ScheduleWorkRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_ScheduleWork_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void TestDevice::SetTransactionHeaderFor::ScheduleWorkResponse(const ::fidl::DecodedMessage<TestDevice::ScheduleWorkResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_ScheduleWork_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void TestDevice::SetTransactionHeaderFor::ScheduleWorkDifferentThreadRequest(const ::fidl::DecodedMessage<TestDevice::ScheduleWorkDifferentThreadRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_ScheduleWorkDifferentThread_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void TestDevice::SetTransactionHeaderFor::ScheduleWorkDifferentThreadResponse(const ::fidl::DecodedMessage<TestDevice::ScheduleWorkDifferentThreadResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_ScheduleWorkDifferentThread_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void TestDevice::SetTransactionHeaderFor::GetDoneEventRequest(const ::fidl::DecodedMessage<TestDevice::GetDoneEventRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_GetDoneEvent_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void TestDevice::SetTransactionHeaderFor::GetDoneEventResponse(const ::fidl::DecodedMessage<TestDevice::GetDoneEventResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_GetDoneEvent_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void TestDevice::SetTransactionHeaderFor::ScheduledWorkRanRequest(const ::fidl::DecodedMessage<TestDevice::ScheduledWorkRanRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_ScheduledWorkRan_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void TestDevice::SetTransactionHeaderFor::ScheduledWorkRanResponse(const ::fidl::DecodedMessage<TestDevice::ScheduledWorkRanResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_ScheduledWorkRan_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void TestDevice::SetTransactionHeaderFor::GetChannelRequest(const ::fidl::DecodedMessage<TestDevice::GetChannelRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_GetChannel_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void TestDevice::SetTransactionHeaderFor::GetChannelResponse(const ::fidl::DecodedMessage<TestDevice::GetChannelResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_GetChannel_GenOrdinal);
-}
-
-::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Result::OwnedChannelDevice_ScheduleWork_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Result::~OwnedChannelDevice_ScheduleWork_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~OwnedChannelDevice_ScheduleWork_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Result::MoveImpl_(OwnedChannelDevice_ScheduleWork_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void ::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Result, response_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Result, err_) == 8);
-  static_assert(sizeof(::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Result) == ::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Result::PrimarySize);
+  static_assert(sizeof(OwnedChannelDevice_ScheduleWork_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(OwnedChannelDevice_ScheduleWork_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(OwnedChannelDevice_ScheduleWork_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
-
-
-::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Response& ::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
 
 namespace {
 
@@ -1138,16 +919,21 @@ bool OwnedChannelDevice::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tran
 
 void OwnedChannelDevice::Interface::ScheduleWorkCompleterBase::Reply(::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ScheduleWorkResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<ScheduleWorkResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  ScheduleWorkResponse _response = {};
   OwnedChannelDevice::SetTransactionHeaderFor::ScheduleWorkResponse(
       ::fidl::DecodedMessage<ScheduleWorkResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               ScheduleWorkResponse::PrimarySize,
               ScheduleWorkResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ScheduleWorkResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<ScheduleWorkResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void OwnedChannelDevice::Interface::ScheduleWorkCompleterBase::ReplySuccess(::llcpp::fuchsia::device::schedule::work::test::LatencyHistogram histogram) {
   OwnedChannelDevice_ScheduleWork_Response response;
@@ -1164,15 +950,19 @@ void OwnedChannelDevice::Interface::ScheduleWorkCompleterBase::Reply(::fidl::Byt
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<ScheduleWorkResponse*>(_buffer.data());
+  ScheduleWorkResponse _response = {};
   OwnedChannelDevice::SetTransactionHeaderFor::ScheduleWorkResponse(
       ::fidl::DecodedMessage<ScheduleWorkResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               ScheduleWorkResponse::PrimarySize,
               ScheduleWorkResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(ScheduleWorkResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<ScheduleWorkResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void OwnedChannelDevice::Interface::ScheduleWorkCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::schedule::work::test::LatencyHistogram histogram) {
   OwnedChannelDevice_ScheduleWork_Response response;
@@ -1190,9 +980,11 @@ void OwnedChannelDevice::Interface::ScheduleWorkCompleterBase::Reply(::fidl::Dec
 
 void OwnedChannelDevice::SetTransactionHeaderFor::ScheduleWorkRequest(const ::fidl::DecodedMessage<OwnedChannelDevice::ScheduleWorkRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kOwnedChannelDevice_ScheduleWork_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void OwnedChannelDevice::SetTransactionHeaderFor::ScheduleWorkResponse(const ::fidl::DecodedMessage<OwnedChannelDevice::ScheduleWorkResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kOwnedChannelDevice_ScheduleWork_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace test

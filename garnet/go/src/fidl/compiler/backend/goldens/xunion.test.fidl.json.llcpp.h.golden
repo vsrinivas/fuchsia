@@ -117,8 +117,8 @@ struct StrictSimpleXUnion {
     return static_cast<Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &test_name_StrictSimpleXUnionTable;
-  static constexpr const fidl_type_t* AltType = &v1_test_name_StrictSimpleXUnionTable;
+  static constexpr const fidl_type_t* Type = &v1_test_name_StrictSimpleXUnionTable;
+  static constexpr const fidl_type_t* AltType = &test_name_StrictSimpleXUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
@@ -179,8 +179,8 @@ struct StrictBoundedXUnion {
     return static_cast<Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &test_name_StrictBoundedXUnionTable;
-  static constexpr const fidl_type_t* AltType = &v1_test_name_StrictBoundedXUnionTable;
+  static constexpr const fidl_type_t* Type = &v1_test_name_StrictBoundedXUnionTable;
+  static constexpr const fidl_type_t* AltType = &test_name_StrictBoundedXUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
@@ -264,8 +264,8 @@ struct OlderSimpleUnion {
   }
   Tag which() const;
 
-  static constexpr const fidl_type_t* Type = &test_name_OlderSimpleUnionTable;
-  static constexpr const fidl_type_t* AltType = &v1_test_name_OlderSimpleUnionTable;
+  static constexpr const fidl_type_t* Type = &v1_test_name_OlderSimpleUnionTable;
+  static constexpr const fidl_type_t* AltType = &test_name_OlderSimpleUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
@@ -373,8 +373,8 @@ struct NewerSimpleUnion {
   }
   Tag which() const;
 
-  static constexpr const fidl_type_t* Type = &test_name_NewerSimpleUnionTable;
-  static constexpr const fidl_type_t* AltType = &v1_test_name_NewerSimpleUnionTable;
+  static constexpr const fidl_type_t* Type = &v1_test_name_NewerSimpleUnionTable;
+  static constexpr const fidl_type_t* AltType = &test_name_NewerSimpleUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
@@ -460,8 +460,8 @@ struct ExplicitXUnion {
   }
   Tag which() const;
 
-  static constexpr const fidl_type_t* Type = &test_name_ExplicitXUnionTable;
-  static constexpr const fidl_type_t* AltType = &v1_test_name_ExplicitXUnionTable;
+  static constexpr const fidl_type_t* Type = &v1_test_name_ExplicitXUnionTable;
+  static constexpr const fidl_type_t* AltType = &test_name_ExplicitXUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
@@ -523,8 +523,8 @@ struct XUnionContainingEmptyStruct {
   }
   Tag which() const;
 
-  static constexpr const fidl_type_t* Type = &test_name_XUnionContainingEmptyStructTable;
-  static constexpr const fidl_type_t* AltType = &v1_test_name_XUnionContainingEmptyStructTable;
+  static constexpr const fidl_type_t* Type = &v1_test_name_XUnionContainingEmptyStructTable;
+  static constexpr const fidl_type_t* AltType = &test_name_XUnionContainingEmptyStructTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
@@ -548,8 +548,8 @@ extern "C" const fidl_type_t test_name_StructWithNullableXUnionTable;
 extern "C" const fidl_type_t v1_test_name_StructWithNullableXUnionTable;
 
 struct StructWithNullableXUnion {
-  static constexpr const fidl_type_t* Type = &test_name_StructWithNullableXUnionTable;
-  static constexpr const fidl_type_t* AltType = &v1_test_name_StructWithNullableXUnionTable;
+  static constexpr const fidl_type_t* Type = &v1_test_name_StructWithNullableXUnionTable;
+  static constexpr const fidl_type_t* AltType = &test_name_StructWithNullableXUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
@@ -579,8 +579,8 @@ class TestProtocol final {
     fidl_message_header_t _hdr;
     ::llcpp::test::name::StrictBoundedXUnion xu;
 
-    static constexpr const fidl_type_t* Type = &test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
+    static constexpr const fidl_type_t* AltType = &test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 32;
@@ -598,8 +598,8 @@ class TestProtocol final {
     fidl_message_header_t _hdr;
     ::llcpp::test::name::OlderSimpleUnion xu;
 
-    static constexpr const fidl_type_t* Type = &test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
+    static constexpr const fidl_type_t* AltType = &test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8;
@@ -828,8 +828,8 @@ extern "C" const fidl_type_t test_name_EmptyTable;
 extern "C" const fidl_type_t v1_test_name_EmptyTable;
 
 struct Empty {
-  static constexpr const fidl_type_t* Type = &test_name_EmptyTable;
-  static constexpr const fidl_type_t* AltType = &v1_test_name_EmptyTable;
+  static constexpr const fidl_type_t* Type = &v1_test_name_EmptyTable;
+  static constexpr const fidl_type_t* AltType = &test_name_EmptyTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]

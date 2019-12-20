@@ -100,18 +100,14 @@ void SysmemSecureMemServer::StopAsync() {
 void SysmemSecureMemServer::GetPhysicalSecureHeaps(
     llcpp::fuchsia::sysmem::SecureMem::Interface::GetPhysicalSecureHeapsCompleter::Sync completer) {
   ZX_DEBUG_ASSERT(thrd_current() == loop_thread_);
-  llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result result;
-  auto complete = fit::defer([&completer, &result] {
-    ZX_DEBUG_ASSERT(!result.has_invalid_tag());
-    completer.Reply(std::move(result));
-  });
-  zx_status_t status = GetPhysicalSecureHeapsInternal(&result.mutable_response().heaps);
+  llcpp::fuchsia::sysmem::PhysicalSecureHeaps heaps;
+  zx_status_t status = GetPhysicalSecureHeapsInternal(&heaps);
   if (status != ZX_OK) {
     LOG(ERROR, "GetPhysicalSecureHeapsInternal() failed - status: %d", status);
-    result.set_err(&status);
+    completer.ReplyError(status);
     return;
   }
-  ZX_DEBUG_ASSERT(result.is_response());
+  completer.ReplySuccess(std::move(heaps));
 }
 
 void SysmemSecureMemServer::SetPhysicalSecureHeaps(

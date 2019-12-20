@@ -97,13 +97,10 @@ void TestPowerDriverChild::AddDeviceWithPowerArgs(
     ::fidl::VectorView<DevicePowerStateInfo> info,
     ::fidl::VectorView<DevicePerformanceStateInfo> perf_states, bool add_invisible,
     AddDeviceWithPowerArgsCompleter::Sync completer) {
-  ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Result response;
   fbl::AllocChecker ac;
   auto child2 = fbl::make_unique_checked<TestPowerDriverChild>(&ac, this->parent());
   if (!ac.check()) {
-    zx_status_t status = ZX_ERR_NO_MEMORY;
-    response.set_err(&status);
-    completer.Reply(std::move(response));
+    completer.ReplyError(ZX_ERR_NO_MEMORY);
     return;
   }
 
@@ -135,61 +132,34 @@ void TestPowerDriverChild::AddDeviceWithPowerArgs(
     child2->DdkMakeVisible(states.get(), count, performance_states.get(), perf_state_count);
   }
   if (status != ZX_OK) {
-    response.set_err(&status);
+    completer.ReplyError(status);
   } else {
-    llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response resp;
-    response.set_response(&resp);
+    completer.ReplySuccess();
     __UNUSED auto ptr = child2.release();
   }
-  completer.Reply(std::move(response));
 }
 
 void TestPowerDriverChild::GetCurrentDevicePowerState(
     GetCurrentDevicePowerStateCompleter::Sync completer) {
-  ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result result;
-  llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response response{
-      .cur_state = static_cast<llcpp::fuchsia::device::DevicePowerState>(current_power_state_),
-  };
-  result.set_response(&response);
-
-  completer.Reply(std::move(result));
+  completer.ReplySuccess(
+      static_cast<llcpp::fuchsia::device::DevicePowerState>(current_power_state_));
 }
 
 void TestPowerDriverChild::GetCurrentDevicePerformanceState(
     GetCurrentDevicePerformanceStateCompleter::Sync completer) {
-  ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Result result;
-  llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Response
-      response{
-          .cur_state = static_cast<int32_t>(current_performance_state_),
-      };
-  result.set_response(&response);
-
-  completer.Reply(std::move(result));
+  completer.ReplySuccess(static_cast<int32_t>(current_performance_state_));
 }
 
 void TestPowerDriverChild::GetCurrentSuspendReason(
     GetCurrentSuspendReasonCompleter::Sync completer) {
-  ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentSuspendReason_Result result;
-  llcpp::fuchsia::device::power::test::TestDevice_GetCurrentSuspendReason_Response response{
-      .cur_suspend_reason = current_suspend_reason_,
-  };
-  result.set_response(&response);
-
-  completer.Reply(std::move(result));
+  completer.ReplySuccess(current_suspend_reason_);
 }
 
 void TestPowerDriverChild::GetCurrentDeviceAutoSuspendConfig(
     GetCurrentDeviceAutoSuspendConfigCompleter::Sync completer) {
-  ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result result;
-  llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Response
-      response{
-          .enabled = auto_suspend_enabled_,
-          .deepest_sleep_state =
-              static_cast<llcpp::fuchsia::device::DevicePowerState>(auto_suspend_sleep_state_),
-      };
-  result.set_response(&response);
-
-  completer.Reply(std::move(result));
+  completer.ReplySuccess(
+      auto_suspend_enabled_,
+      static_cast<llcpp::fuchsia::device::DevicePowerState>(auto_suspend_sleep_state_));
 }
 
 zx_status_t TestPowerDriverChild::Bind() { return DdkAdd("power-test-child"); }

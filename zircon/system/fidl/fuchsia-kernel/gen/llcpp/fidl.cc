@@ -269,6 +269,7 @@ bool MexecBroker::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction
 
 void MexecBroker::SetTransactionHeaderFor::PerformMexecRequest(const ::fidl::DecodedMessage<MexecBroker::PerformMexecRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMexecBroker_PerformMexec_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 namespace {
@@ -549,16 +550,20 @@ void DebugBroker::Interface::SetTracingEnabledCompleterBase::Reply(::fidl::Decod
 
 void DebugBroker::SetTransactionHeaderFor::SendDebugCommandRequest(const ::fidl::DecodedMessage<DebugBroker::SendDebugCommandRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDebugBroker_SendDebugCommand_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DebugBroker::SetTransactionHeaderFor::SendDebugCommandResponse(const ::fidl::DecodedMessage<DebugBroker::SendDebugCommandResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDebugBroker_SendDebugCommand_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void DebugBroker::SetTransactionHeaderFor::SetTracingEnabledRequest(const ::fidl::DecodedMessage<DebugBroker::SetTracingEnabledRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDebugBroker_SetTracingEnabled_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void DebugBroker::SetTransactionHeaderFor::SetTracingEnabledResponse(const ::fidl::DecodedMessage<DebugBroker::SetTracingEnabledResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDebugBroker_SetTracingEnabled_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 namespace {
@@ -832,16 +837,20 @@ void Counter::Interface::UpdateInspectVmoCompleterBase::Reply(::fidl::DecodedMes
 
 void Counter::SetTransactionHeaderFor::GetInspectVmoRequest(const ::fidl::DecodedMessage<Counter::GetInspectVmoRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kCounter_GetInspectVmo_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Counter::SetTransactionHeaderFor::GetInspectVmoResponse(const ::fidl::DecodedMessage<Counter::GetInspectVmoResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kCounter_GetInspectVmo_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Counter::SetTransactionHeaderFor::UpdateInspectVmoRequest(const ::fidl::DecodedMessage<Counter::UpdateInspectVmoRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kCounter_UpdateInspectVmo_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Counter::SetTransactionHeaderFor::UpdateInspectVmoResponse(const ::fidl::DecodedMessage<Counter::UpdateInspectVmoResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kCounter_UpdateInspectVmo_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 ::llcpp::fuchsia::kernel::MemoryStats::Builder MemoryStats::Build() {
@@ -1218,16 +1227,20 @@ void Stats::Interface::GetCpuStatsCompleterBase::Reply(::fidl::DecodedMessage<Ge
 
 void Stats::SetTransactionHeaderFor::GetMemoryStatsRequest(const ::fidl::DecodedMessage<Stats::GetMemoryStatsRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kStats_GetMemoryStats_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Stats::SetTransactionHeaderFor::GetMemoryStatsResponse(const ::fidl::DecodedMessage<Stats::GetMemoryStatsResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kStats_GetMemoryStats_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Stats::SetTransactionHeaderFor::GetCpuStatsRequest(const ::fidl::DecodedMessage<Stats::GetCpuStatsRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kStats_GetCpuStats_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Stats::SetTransactionHeaderFor::GetCpuStatsResponse(const ::fidl::DecodedMessage<Stats::GetCpuStatsResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kStats_GetCpuStats_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace kernel

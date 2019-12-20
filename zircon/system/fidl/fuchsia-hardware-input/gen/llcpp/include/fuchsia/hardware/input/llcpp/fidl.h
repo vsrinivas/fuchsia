@@ -58,8 +58,8 @@ extern "C" const fidl_type_t v1_fuchsia_hardware_input_DeviceIdsTable;
 // ids in the driver. If the mock HID driver does not assign ids, zeros
 // will be used instead.
 struct DeviceIds {
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_input_DeviceIdsTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_input_DeviceIdsTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_input_DeviceIdsTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_input_DeviceIdsTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 12;
   [[maybe_unused]]
@@ -137,8 +137,8 @@ class Device final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::hardware::input::BootProtocol protocol;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_input_DeviceGetBootProtocolResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_input_DeviceGetBootProtocolResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_input_DeviceGetBootProtocolResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_input_DeviceGetBootProtocolResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -156,8 +156,8 @@ class Device final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::hardware::input::DeviceIds ids;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_input_DeviceGetDeviceIdsResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_input_DeviceGetDeviceIdsResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_input_DeviceGetDeviceIdsResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_input_DeviceGetDeviceIdsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -175,8 +175,8 @@ class Device final {
     fidl_message_header_t _hdr;
     uint16_t size;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_input_DeviceGetReportDescSizeResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_input_DeviceGetReportDescSizeResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_input_DeviceGetReportDescSizeResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_input_DeviceGetReportDescSizeResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -194,8 +194,8 @@ class Device final {
     fidl_message_header_t _hdr;
     ::fidl::VectorView<uint8_t> desc;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_input_DeviceGetReportDescResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_input_DeviceGetReportDescResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_input_DeviceGetReportDescResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_input_DeviceGetReportDescResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 8192;
@@ -213,8 +213,8 @@ class Device final {
     fidl_message_header_t _hdr;
     uint16_t count;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_input_DeviceGetNumReportsResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_input_DeviceGetNumReportsResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_input_DeviceGetNumReportsResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_input_DeviceGetNumReportsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -232,8 +232,8 @@ class Device final {
     fidl_message_header_t _hdr;
     ::fidl::VectorView<uint8_t> ids;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_input_DeviceGetReportIdsResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_input_DeviceGetReportIdsResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_input_DeviceGetReportIdsResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_input_DeviceGetReportIdsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 256;
@@ -252,8 +252,8 @@ class Device final {
     int32_t status;
     uint16_t size;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_input_DeviceGetReportSizeResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_input_DeviceGetReportSizeResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_input_DeviceGetReportSizeResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_input_DeviceGetReportSizeResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -270,8 +270,8 @@ class Device final {
     ::llcpp::fuchsia::hardware::input::ReportType type;
     uint8_t id;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_input_DeviceGetReportSizeRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_input_DeviceGetReportSizeRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_input_DeviceGetReportSizeRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_input_DeviceGetReportSizeRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -289,8 +289,8 @@ class Device final {
     fidl_message_header_t _hdr;
     uint16_t size;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_input_DeviceGetMaxInputReportSizeResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_input_DeviceGetMaxInputReportSizeResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_input_DeviceGetMaxInputReportSizeResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_input_DeviceGetMaxInputReportSizeResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -309,8 +309,8 @@ class Device final {
     int32_t status;
     ::fidl::VectorView<uint8_t> data;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_input_DeviceGetReportsResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_input_DeviceGetReportsResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_input_DeviceGetReportsResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_input_DeviceGetReportsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8192;
@@ -329,8 +329,8 @@ class Device final {
     int32_t status;
     ::zx::event event;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_input_DeviceGetReportsEventResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_input_DeviceGetReportsEventResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_input_DeviceGetReportsEventResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_input_DeviceGetReportsEventResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -349,8 +349,8 @@ class Device final {
     int32_t status;
     ::fidl::VectorView<uint8_t> report;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_input_DeviceGetReportResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_input_DeviceGetReportResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_input_DeviceGetReportResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_input_DeviceGetReportResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8192;
@@ -367,8 +367,8 @@ class Device final {
     ::llcpp::fuchsia::hardware::input::ReportType type;
     uint8_t id;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_input_DeviceGetReportRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_input_DeviceGetReportRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_input_DeviceGetReportRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_input_DeviceGetReportRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -386,8 +386,8 @@ class Device final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_input_DeviceSetReportResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_input_DeviceSetReportResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_input_DeviceSetReportResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_input_DeviceSetReportResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -405,8 +405,8 @@ class Device final {
     uint8_t id;
     ::fidl::VectorView<uint8_t> report;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_input_DeviceSetReportRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_input_DeviceSetReportRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_input_DeviceSetReportRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_input_DeviceSetReportRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 8192;
@@ -424,8 +424,8 @@ class Device final {
     fidl_message_header_t _hdr;
     uint32_t id;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_input_DeviceSetTraceIdRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_input_DeviceSetTraceIdRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_input_DeviceSetTraceIdRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_input_DeviceSetTraceIdRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;

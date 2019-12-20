@@ -64,12 +64,462 @@ struct DataSink_ReadAsset_Result;
 class DataSink;
 class DynamicDataSink;
 
+extern "C" const fidl_type_t fuchsia_paver_ReadResultTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_ReadResultTable;
+
+struct ReadResult {
+  ReadResult() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kErr = 1,  // 0x1
+    kEof = 2,  // 0x2
+    kInfo = 3,  // 0x3
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static ReadResult WithErr(int32_t* val) {
+    ReadResult result;
+    result.set_err(val);
+    return result;
+  }
+
+  // Error encountered while reading data.
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  // Error encountered while reading data.
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+
+  bool is_eof() const { return ordinal_ == Ordinal::kEof; }
+
+  static ReadResult WithEof(bool* val) {
+    ReadResult result;
+    result.set_eof(val);
+    return result;
+  }
+
+  // End of file reached.
+  void set_eof(bool* elem) {
+    ordinal_ = Ordinal::kEof;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  // End of file reached.
+  bool& mutable_eof() {
+    ZX_ASSERT(ordinal_ == Ordinal::kEof);
+    return *static_cast<bool*>(envelope_.data);
+  }
+  const bool& eof() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kEof);
+    return *static_cast<bool*>(envelope_.data);
+  }
+
+  bool is_info() const { return ordinal_ == Ordinal::kInfo; }
+
+  static ReadResult WithInfo(::llcpp::fuchsia::paver::ReadInfo* val) {
+    ReadResult result;
+    result.set_info(val);
+    return result;
+  }
+
+  // Information about location of successfully read data within pre-registered VMO.
+  void set_info(::llcpp::fuchsia::paver::ReadInfo* elem) {
+    ordinal_ = Ordinal::kInfo;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  // Information about location of successfully read data within pre-registered VMO.
+  ::llcpp::fuchsia::paver::ReadInfo& mutable_info() {
+    ZX_ASSERT(ordinal_ == Ordinal::kInfo);
+    return *static_cast<::llcpp::fuchsia::paver::ReadInfo*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::paver::ReadInfo& info() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kInfo);
+    return *static_cast<::llcpp::fuchsia::paver::ReadInfo*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_ReadResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_paver_ReadResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 16;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 16;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kErr = 1,  // 0x1
+    kEof = 2,  // 0x2
+    kInfo = 3,  // 0x3
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
+extern "C" const fidl_type_t fuchsia_paver_DataSink_WipeVolume_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DataSink_WipeVolume_ResultTable;
+
+struct DataSink_WipeVolume_Result {
+  DataSink_WipeVolume_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static DataSink_WipeVolume_Result WithResponse(::llcpp::fuchsia::paver::DataSink_WipeVolume_Response* val) {
+    DataSink_WipeVolume_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::fuchsia::paver::DataSink_WipeVolume_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::paver::DataSink_WipeVolume_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::paver::DataSink_WipeVolume_Response*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::paver::DataSink_WipeVolume_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::paver::DataSink_WipeVolume_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static DataSink_WipeVolume_Result WithErr(int32_t* val) {
+    DataSink_WipeVolume_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DataSink_WipeVolume_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_paver_DataSink_WipeVolume_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 1;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
+extern "C" const fidl_type_t fuchsia_paver_BootManager_QueryConfigurationStatus_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_BootManager_QueryConfigurationStatus_ResultTable;
+
+struct BootManager_QueryConfigurationStatus_Result {
+  BootManager_QueryConfigurationStatus_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static BootManager_QueryConfigurationStatus_Result WithResponse(::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Response* val) {
+    BootManager_QueryConfigurationStatus_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Response*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static BootManager_QueryConfigurationStatus_Result WithErr(int32_t* val) {
+    BootManager_QueryConfigurationStatus_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_BootManager_QueryConfigurationStatus_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_paver_BootManager_QueryConfigurationStatus_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
+extern "C" const fidl_type_t fuchsia_paver_BootManager_QueryActiveConfiguration_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_BootManager_QueryActiveConfiguration_ResultTable;
+
+struct BootManager_QueryActiveConfiguration_Result {
+  BootManager_QueryActiveConfiguration_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static BootManager_QueryActiveConfiguration_Result WithResponse(::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Response* val) {
+    BootManager_QueryActiveConfiguration_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Response*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static BootManager_QueryActiveConfiguration_Result WithErr(int32_t* val) {
+    BootManager_QueryActiveConfiguration_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_BootManager_QueryActiveConfiguration_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_paver_BootManager_QueryActiveConfiguration_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
+extern "C" const fidl_type_t fuchsia_paver_DataSink_ReadAsset_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_paver_DataSink_ReadAsset_ResultTable;
+
+struct DataSink_ReadAsset_Result {
+  DataSink_ReadAsset_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static DataSink_ReadAsset_Result WithResponse(::llcpp::fuchsia::paver::DataSink_ReadAsset_Response* val) {
+    DataSink_ReadAsset_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::fuchsia::paver::DataSink_ReadAsset_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::paver::DataSink_ReadAsset_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::paver::DataSink_ReadAsset_Response*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::paver::DataSink_ReadAsset_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::paver::DataSink_ReadAsset_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static DataSink_ReadAsset_Result WithErr(int32_t* val) {
+    DataSink_ReadAsset_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DataSink_ReadAsset_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_paver_DataSink_ReadAsset_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 1;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 16;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 16;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
 extern "C" const fidl_type_t fuchsia_paver_ReadInfoTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_ReadInfoTable;
 
 struct ReadInfo {
-  static constexpr const fidl_type_t* Type = &fuchsia_paver_ReadInfoTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_ReadInfoTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_ReadInfoTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_paver_ReadInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
@@ -83,153 +533,6 @@ struct ReadInfo {
 
   // Size of read data.
   uint64_t size = {};
-};
-
-extern "C" const fidl_type_t fuchsia_paver_ReadResultTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_ReadResultTable;
-
-struct ReadResult {
-  enum class Tag : fidl_union_tag_t {
-    kErr = 0,
-    kEof = 1,
-    kInfo = 2,
-  };
-
-  ReadResult();
-  ~ReadResult();
-
-  ReadResult(ReadResult&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  ReadResult& operator=(ReadResult&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static ReadResult WithErr(int32_t* val) {
-    ReadResult result;
-    result.set_err(val);
-    return result;
-  }
-
-  // Error encountered while reading data.
-  int32_t& mutable_err();
-
-  // Error encountered while reading data.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  // Error encountered while reading data.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  // Error encountered while reading data.
-  int32_t const & err() const { return err_; }
-
-  bool is_eof() const { return ordinal_ == Ordinal::kEof; }
-
-  static ReadResult WithEof(bool* val) {
-    ReadResult result;
-    result.set_eof(val);
-    return result;
-  }
-
-  // End of file reached.
-  bool& mutable_eof();
-
-  // End of file reached.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, bool>::value && std::is_copy_assignable<T>::value>
-  set_eof(const T* v) {
-    mutable_eof() = *v;
-  }
-
-  // End of file reached.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, bool>::value && std::is_move_assignable<T>::value>
-  set_eof(T* v) {
-    mutable_eof() = std::move(*v);
-  }
-
-  // End of file reached.
-  bool const & eof() const { return eof_; }
-
-  bool is_info() const { return ordinal_ == Ordinal::kInfo; }
-
-  static ReadResult WithInfo(::llcpp::fuchsia::paver::ReadInfo* val) {
-    ReadResult result;
-    result.set_info(val);
-    return result;
-  }
-
-  // Information about location of successfully read data within pre-registered VMO.
-  ::llcpp::fuchsia::paver::ReadInfo& mutable_info();
-
-  // Information about location of successfully read data within pre-registered VMO.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::ReadInfo>::value && std::is_copy_assignable<T>::value>
-  set_info(const T* v) {
-    mutable_info() = *v;
-  }
-
-  // Information about location of successfully read data within pre-registered VMO.
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::ReadInfo>::value && std::is_move_assignable<T>::value>
-  set_info(T* v) {
-    mutable_info() = std::move(*v);
-  }
-
-  // Information about location of successfully read data within pre-registered VMO.
-  ::llcpp::fuchsia::paver::ReadInfo const & info() const { return info_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_paver_ReadResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_ReadResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 16;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kErr = 0,
-    kEof = 1,
-    kInfo = 2,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(ReadResult&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    int32_t err_;
-    bool eof_;
-    ::llcpp::fuchsia::paver::ReadInfo info_;
-  };
 };
 
 extern "C" const fidl_type_t fuchsia_paver_PaverFindDataSinkRequestTable;
@@ -255,8 +558,8 @@ class Paver final {
     fidl_message_header_t _hdr;
     ::zx::channel data_sink;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverFindDataSinkRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_PaverFindDataSinkRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_PaverFindDataSinkRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_paver_PaverFindDataSinkRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -274,8 +577,8 @@ class Paver final {
     ::zx::channel block_device;
     ::zx::channel data_sink;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverUseBlockDeviceRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_PaverUseBlockDeviceRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_PaverUseBlockDeviceRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_paver_PaverUseBlockDeviceRequestTable;
     static constexpr uint32_t MaxNumHandles = 2;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -293,8 +596,8 @@ class Paver final {
     ::zx::channel boot_manager;
     bool initialize;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_PaverFindBootManagerRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_PaverFindBootManagerRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_PaverFindBootManagerRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_paver_PaverFindBootManagerRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -628,8 +931,8 @@ class PayloadStream final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_PayloadStreamRegisterVmoResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_PayloadStreamRegisterVmoResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_PayloadStreamRegisterVmoResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_paver_PayloadStreamRegisterVmoResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -645,8 +948,8 @@ class PayloadStream final {
     fidl_message_header_t _hdr;
     ::zx::vmo vmo;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_PayloadStreamRegisterVmoRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_PayloadStreamRegisterVmoRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_PayloadStreamRegisterVmoRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_paver_PayloadStreamRegisterVmoRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -664,11 +967,11 @@ class PayloadStream final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::paver::ReadResult result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_PayloadStreamReadDataResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_PayloadStreamReadDataResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_PayloadStreamReadDataResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_paver_PayloadStreamReadDataResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t MaxOutOfLine = 16;
     static constexpr uint32_t AltPrimarySize = 40;
     static constexpr uint32_t AltMaxOutOfLine = 16;
     static constexpr bool HasFlexibleEnvelope = false;
@@ -784,7 +1087,7 @@ class PayloadStream final {
     UnownedResultOf::RegisterVmo RegisterVmo(::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer);
 
     // Reads data into the pre-registered vmo.
-    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ReadData ReadData();
 
     // Reads data into the pre-registered vmo.
@@ -809,7 +1112,7 @@ class PayloadStream final {
     static UnownedResultOf::RegisterVmo RegisterVmo(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::vmo vmo, ::fidl::BytePart _response_buffer);
 
     // Reads data into the pre-registered vmo.
-    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ReadData ReadData(::zx::unowned_channel _client_end);
 
     // Reads data into the pre-registered vmo.
@@ -904,8 +1207,8 @@ extern "C" const fidl_type_t fuchsia_paver_DataSink_WipeVolume_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DataSink_WipeVolume_ResponseTable;
 
 struct DataSink_WipeVolume_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_paver_DataSink_WipeVolume_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DataSink_WipeVolume_ResponseTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DataSink_WipeVolume_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_paver_DataSink_WipeVolume_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
@@ -917,120 +1220,12 @@ struct DataSink_WipeVolume_Response {
   ::zx::channel volume = {};
 };
 
-extern "C" const fidl_type_t fuchsia_paver_DataSink_WipeVolume_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_DataSink_WipeVolume_ResultTable;
-
-struct DataSink_WipeVolume_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-  };
-
-  DataSink_WipeVolume_Result();
-  ~DataSink_WipeVolume_Result();
-
-  DataSink_WipeVolume_Result(DataSink_WipeVolume_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  DataSink_WipeVolume_Result& operator=(DataSink_WipeVolume_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
-
-  static DataSink_WipeVolume_Result WithResponse(::llcpp::fuchsia::paver::DataSink_WipeVolume_Response* val) {
-    DataSink_WipeVolume_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::paver::DataSink_WipeVolume_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::DataSink_WipeVolume_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::DataSink_WipeVolume_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::paver::DataSink_WipeVolume_Response const & response() const { return response_; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static DataSink_WipeVolume_Result WithErr(int32_t* val) {
-    DataSink_WipeVolume_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  int32_t const & err() const { return err_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_paver_DataSink_WipeVolume_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DataSink_WipeVolume_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 1;
-  static constexpr uint32_t PrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(DataSink_WipeVolume_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::paver::DataSink_WipeVolume_Response response_;
-    int32_t err_;
-  };
-};
-
 extern "C" const fidl_type_t fuchsia_paver_BootManager_QueryConfigurationStatus_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_BootManager_QueryConfigurationStatus_ResponseTable;
 
 struct BootManager_QueryConfigurationStatus_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_paver_BootManager_QueryConfigurationStatus_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_BootManager_QueryConfigurationStatus_ResponseTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_BootManager_QueryConfigurationStatus_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_paver_BootManager_QueryConfigurationStatus_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
@@ -1042,120 +1237,12 @@ struct BootManager_QueryConfigurationStatus_Response {
   ::llcpp::fuchsia::paver::ConfigurationStatus status = {};
 };
 
-extern "C" const fidl_type_t fuchsia_paver_BootManager_QueryConfigurationStatus_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_BootManager_QueryConfigurationStatus_ResultTable;
-
-struct BootManager_QueryConfigurationStatus_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-  };
-
-  BootManager_QueryConfigurationStatus_Result();
-  ~BootManager_QueryConfigurationStatus_Result();
-
-  BootManager_QueryConfigurationStatus_Result(BootManager_QueryConfigurationStatus_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  BootManager_QueryConfigurationStatus_Result& operator=(BootManager_QueryConfigurationStatus_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
-
-  static BootManager_QueryConfigurationStatus_Result WithResponse(::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Response* val) {
-    BootManager_QueryConfigurationStatus_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Response const & response() const { return response_; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static BootManager_QueryConfigurationStatus_Result WithErr(int32_t* val) {
-    BootManager_QueryConfigurationStatus_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  int32_t const & err() const { return err_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_paver_BootManager_QueryConfigurationStatus_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_BootManager_QueryConfigurationStatus_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(BootManager_QueryConfigurationStatus_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Response response_;
-    int32_t err_;
-  };
-};
-
 extern "C" const fidl_type_t fuchsia_paver_BootManager_QueryActiveConfiguration_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_BootManager_QueryActiveConfiguration_ResponseTable;
 
 struct BootManager_QueryActiveConfiguration_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_paver_BootManager_QueryActiveConfiguration_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_BootManager_QueryActiveConfiguration_ResponseTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_BootManager_QueryActiveConfiguration_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_paver_BootManager_QueryActiveConfiguration_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
@@ -1165,114 +1252,6 @@ struct BootManager_QueryActiveConfiguration_Response {
   static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::llcpp::fuchsia::paver::Configuration configuration = {};
-};
-
-extern "C" const fidl_type_t fuchsia_paver_BootManager_QueryActiveConfiguration_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_BootManager_QueryActiveConfiguration_ResultTable;
-
-struct BootManager_QueryActiveConfiguration_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-  };
-
-  BootManager_QueryActiveConfiguration_Result();
-  ~BootManager_QueryActiveConfiguration_Result();
-
-  BootManager_QueryActiveConfiguration_Result(BootManager_QueryActiveConfiguration_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  BootManager_QueryActiveConfiguration_Result& operator=(BootManager_QueryActiveConfiguration_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
-
-  static BootManager_QueryActiveConfiguration_Result WithResponse(::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Response* val) {
-    BootManager_QueryActiveConfiguration_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Response const & response() const { return response_; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static BootManager_QueryActiveConfiguration_Result WithErr(int32_t* val) {
-    BootManager_QueryActiveConfiguration_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  int32_t const & err() const { return err_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_paver_BootManager_QueryActiveConfiguration_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_BootManager_QueryActiveConfiguration_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(BootManager_QueryActiveConfiguration_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Response response_;
-    int32_t err_;
-  };
 };
 
 extern "C" const fidl_type_t fuchsia_paver_BootManagerQueryActiveConfigurationRequestTable;
@@ -1306,12 +1285,12 @@ class BootManager final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::paver::BootManager_QueryActiveConfiguration_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_BootManagerQueryActiveConfigurationResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_BootManagerQueryActiveConfigurationResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_BootManagerQueryActiveConfigurationResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_paver_BootManagerQueryActiveConfigurationResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 8;
+    static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -1325,12 +1304,12 @@ class BootManager final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::paver::BootManager_QueryConfigurationStatus_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_BootManagerQueryConfigurationStatusResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_BootManagerQueryConfigurationStatusResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_BootManagerQueryConfigurationStatusResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_paver_BootManagerQueryConfigurationStatusResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 8;
+    static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -1342,8 +1321,8 @@ class BootManager final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::paver::Configuration configuration;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_BootManagerQueryConfigurationStatusRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_BootManagerQueryConfigurationStatusRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_BootManagerQueryConfigurationStatusRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_paver_BootManagerQueryConfigurationStatusRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1361,8 +1340,8 @@ class BootManager final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_BootManagerSetConfigurationActiveResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_BootManagerSetConfigurationActiveResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_BootManagerSetConfigurationActiveResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_paver_BootManagerSetConfigurationActiveResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1378,8 +1357,8 @@ class BootManager final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::paver::Configuration configuration;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_BootManagerSetConfigurationActiveRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_BootManagerSetConfigurationActiveRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_BootManagerSetConfigurationActiveRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_paver_BootManagerSetConfigurationActiveRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1397,8 +1376,8 @@ class BootManager final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_BootManagerSetConfigurationUnbootableResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_BootManagerSetConfigurationUnbootableResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_BootManagerSetConfigurationUnbootableResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_paver_BootManagerSetConfigurationUnbootableResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1414,8 +1393,8 @@ class BootManager final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::paver::Configuration configuration;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_BootManagerSetConfigurationUnbootableRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_BootManagerSetConfigurationUnbootableRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_BootManagerSetConfigurationUnbootableRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_paver_BootManagerSetConfigurationUnbootableRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1433,8 +1412,8 @@ class BootManager final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_BootManagerSetActiveConfigurationHealthyResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_BootManagerSetActiveConfigurationHealthyResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_BootManagerSetActiveConfigurationHealthyResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_paver_BootManagerSetActiveConfigurationHealthyResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -1647,7 +1626,7 @@ class BootManager final {
     ::zx::channel* mutable_channel() { return &channel_; }
 
     // Queries active configuration.
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::QueryActiveConfiguration QueryActiveConfiguration();
 
     // Queries active configuration.
@@ -1657,7 +1636,7 @@ class BootManager final {
     // Queries status of |configuration|.
     //
     // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::QueryConfigurationStatus QueryConfigurationStatus(::llcpp::fuchsia::paver::Configuration configuration);
 
     // Queries status of |configuration|.
@@ -1740,7 +1719,7 @@ class BootManager final {
    public:
 
     // Queries active configuration.
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::QueryActiveConfiguration QueryActiveConfiguration(::zx::unowned_channel _client_end);
 
     // Queries active configuration.
@@ -1750,7 +1729,7 @@ class BootManager final {
     // Queries status of |configuration|.
     //
     // Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via |configuration|.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::QueryConfigurationStatus QueryConfigurationStatus(::zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration);
 
     // Queries status of |configuration|.
@@ -1996,8 +1975,8 @@ extern "C" const fidl_type_t fuchsia_paver_DataSink_ReadAsset_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_paver_DataSink_ReadAsset_ResponseTable;
 
 struct DataSink_ReadAsset_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_paver_DataSink_ReadAsset_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DataSink_ReadAsset_ResponseTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DataSink_ReadAsset_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_paver_DataSink_ReadAsset_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
@@ -2007,114 +1986,6 @@ struct DataSink_ReadAsset_Response {
   static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::llcpp::fuchsia::mem::Buffer asset = {};
-};
-
-extern "C" const fidl_type_t fuchsia_paver_DataSink_ReadAsset_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_paver_DataSink_ReadAsset_ResultTable;
-
-struct DataSink_ReadAsset_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-  };
-
-  DataSink_ReadAsset_Result();
-  ~DataSink_ReadAsset_Result();
-
-  DataSink_ReadAsset_Result(DataSink_ReadAsset_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  DataSink_ReadAsset_Result& operator=(DataSink_ReadAsset_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
-
-  static DataSink_ReadAsset_Result WithResponse(::llcpp::fuchsia::paver::DataSink_ReadAsset_Response* val) {
-    DataSink_ReadAsset_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::paver::DataSink_ReadAsset_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::DataSink_ReadAsset_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::paver::DataSink_ReadAsset_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::paver::DataSink_ReadAsset_Response const & response() const { return response_; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static DataSink_ReadAsset_Result WithErr(int32_t* val) {
-    DataSink_ReadAsset_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  int32_t const & err() const { return err_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_paver_DataSink_ReadAsset_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DataSink_ReadAsset_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 1;
-  static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 16;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(DataSink_ReadAsset_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::paver::DataSink_ReadAsset_Response response_;
-    int32_t err_;
-  };
 };
 
 extern "C" const fidl_type_t fuchsia_paver_DataSinkReadAssetRequestTable;
@@ -2152,11 +2023,11 @@ class DataSink final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::paver::DataSink_ReadAsset_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_DataSinkReadAssetResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DataSinkReadAssetResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DataSinkReadAssetResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DataSinkReadAssetResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t MaxOutOfLine = 16;
     static constexpr uint32_t AltPrimarySize = 40;
     static constexpr uint32_t AltMaxOutOfLine = 16;
     static constexpr bool HasFlexibleEnvelope = false;
@@ -2170,8 +2041,8 @@ class DataSink final {
     ::llcpp::fuchsia::paver::Configuration configuration;
     ::llcpp::fuchsia::paver::Asset asset;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_DataSinkReadAssetRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DataSinkReadAssetRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DataSinkReadAssetRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DataSinkReadAssetRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2189,8 +2060,8 @@ class DataSink final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_DataSinkWriteAssetResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DataSinkWriteAssetResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DataSinkWriteAssetResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DataSinkWriteAssetResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2208,8 +2079,8 @@ class DataSink final {
     ::llcpp::fuchsia::paver::Asset asset;
     ::llcpp::fuchsia::mem::Buffer payload;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_DataSinkWriteAssetRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DataSinkWriteAssetRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DataSinkWriteAssetRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DataSinkWriteAssetRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2227,8 +2098,8 @@ class DataSink final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_DataSinkWriteVolumesResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DataSinkWriteVolumesResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DataSinkWriteVolumesResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DataSinkWriteVolumesResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2244,8 +2115,8 @@ class DataSink final {
     fidl_message_header_t _hdr;
     ::zx::channel payload;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_DataSinkWriteVolumesRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DataSinkWriteVolumesRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DataSinkWriteVolumesRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DataSinkWriteVolumesRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2263,8 +2134,8 @@ class DataSink final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_DataSinkWriteBootloaderResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DataSinkWriteBootloaderResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DataSinkWriteBootloaderResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DataSinkWriteBootloaderResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2280,8 +2151,8 @@ class DataSink final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::mem::Buffer payload;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_DataSinkWriteBootloaderRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DataSinkWriteBootloaderRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DataSinkWriteBootloaderRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DataSinkWriteBootloaderRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2299,8 +2170,8 @@ class DataSink final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_DataSinkWriteDataFileResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DataSinkWriteDataFileResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DataSinkWriteDataFileResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DataSinkWriteDataFileResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -2317,8 +2188,8 @@ class DataSink final {
     ::fidl::StringView filename;
     ::llcpp::fuchsia::mem::Buffer payload;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_DataSinkWriteDataFileRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DataSinkWriteDataFileRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DataSinkWriteDataFileRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DataSinkWriteDataFileRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 4096;
@@ -2336,12 +2207,12 @@ class DataSink final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::paver::DataSink_WipeVolume_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_DataSinkWipeVolumeResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DataSinkWipeVolumeResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DataSinkWipeVolumeResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DataSinkWipeVolumeResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 8;
+    static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -2585,7 +2456,7 @@ class DataSink final {
 
     // Reads partition corresponding to |configuration| and |asset| into a
     // vmo and returns it.
-    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 80 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ReadAsset ReadAsset(::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset);
 
     // Reads partition corresponding to |configuration| and |asset| into a
@@ -2661,7 +2532,7 @@ class DataSink final {
     // `fuchsia.io.Node` for now.
     //
     // On success, returns a channel to the initialized FVM volume.
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::WipeVolume WipeVolume();
 
     // Wipes the FVM partition from the device. Should not be confused with factory reset, which
@@ -2690,7 +2561,7 @@ class DataSink final {
 
     // Reads partition corresponding to |configuration| and |asset| into a
     // vmo and returns it.
-    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 80 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ReadAsset ReadAsset(::zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset);
 
     // Reads partition corresponding to |configuration| and |asset| into a
@@ -2766,7 +2637,7 @@ class DataSink final {
     // `fuchsia.io.Node` for now.
     //
     // On success, returns a channel to the initialized FVM volume.
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::WipeVolume WipeVolume(::zx::unowned_channel _client_end);
 
     // Wipes the FVM partition from the device. Should not be confused with factory reset, which
@@ -3017,11 +2888,11 @@ class DynamicDataSink final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::paver::DataSink_ReadAsset_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_DynamicDataSinkReadAssetResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DynamicDataSinkReadAssetResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DynamicDataSinkReadAssetResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DynamicDataSinkReadAssetResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t MaxOutOfLine = 16;
     static constexpr uint32_t AltPrimarySize = 40;
     static constexpr uint32_t AltMaxOutOfLine = 16;
     static constexpr bool HasFlexibleEnvelope = false;
@@ -3035,8 +2906,8 @@ class DynamicDataSink final {
     ::llcpp::fuchsia::paver::Configuration configuration;
     ::llcpp::fuchsia::paver::Asset asset;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_DynamicDataSinkReadAssetRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DynamicDataSinkReadAssetRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DynamicDataSinkReadAssetRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DynamicDataSinkReadAssetRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -3054,8 +2925,8 @@ class DynamicDataSink final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_DynamicDataSinkWriteAssetResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DynamicDataSinkWriteAssetResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DynamicDataSinkWriteAssetResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DynamicDataSinkWriteAssetResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -3073,8 +2944,8 @@ class DynamicDataSink final {
     ::llcpp::fuchsia::paver::Asset asset;
     ::llcpp::fuchsia::mem::Buffer payload;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_DynamicDataSinkWriteAssetRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DynamicDataSinkWriteAssetRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DynamicDataSinkWriteAssetRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DynamicDataSinkWriteAssetRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -3092,8 +2963,8 @@ class DynamicDataSink final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_DynamicDataSinkWriteVolumesResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DynamicDataSinkWriteVolumesResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DynamicDataSinkWriteVolumesResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DynamicDataSinkWriteVolumesResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -3109,8 +2980,8 @@ class DynamicDataSink final {
     fidl_message_header_t _hdr;
     ::zx::channel payload;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_DynamicDataSinkWriteVolumesRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DynamicDataSinkWriteVolumesRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DynamicDataSinkWriteVolumesRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DynamicDataSinkWriteVolumesRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -3128,8 +2999,8 @@ class DynamicDataSink final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_DynamicDataSinkWriteBootloaderResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DynamicDataSinkWriteBootloaderResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DynamicDataSinkWriteBootloaderResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DynamicDataSinkWriteBootloaderResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -3145,8 +3016,8 @@ class DynamicDataSink final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::mem::Buffer payload;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_DynamicDataSinkWriteBootloaderRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DynamicDataSinkWriteBootloaderRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DynamicDataSinkWriteBootloaderRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DynamicDataSinkWriteBootloaderRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -3164,8 +3035,8 @@ class DynamicDataSink final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_DynamicDataSinkWriteDataFileResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DynamicDataSinkWriteDataFileResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DynamicDataSinkWriteDataFileResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DynamicDataSinkWriteDataFileResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -3182,8 +3053,8 @@ class DynamicDataSink final {
     ::fidl::StringView filename;
     ::llcpp::fuchsia::mem::Buffer payload;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_DynamicDataSinkWriteDataFileRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DynamicDataSinkWriteDataFileRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DynamicDataSinkWriteDataFileRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DynamicDataSinkWriteDataFileRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 48;
     static constexpr uint32_t MaxOutOfLine = 4096;
@@ -3201,12 +3072,12 @@ class DynamicDataSink final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::paver::DataSink_WipeVolume_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_DynamicDataSinkWipeVolumeResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DynamicDataSinkWipeVolumeResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DynamicDataSinkWipeVolumeResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DynamicDataSinkWipeVolumeResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 8;
+    static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -3220,8 +3091,8 @@ class DynamicDataSink final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_DynamicDataSinkInitializePartitionTablesResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DynamicDataSinkInitializePartitionTablesResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DynamicDataSinkInitializePartitionTablesResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DynamicDataSinkInitializePartitionTablesResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -3239,8 +3110,8 @@ class DynamicDataSink final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_paver_DynamicDataSinkWipePartitionTablesResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_DynamicDataSinkWipePartitionTablesResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_paver_DynamicDataSinkWipePartitionTablesResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_paver_DynamicDataSinkWipePartitionTablesResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -3556,7 +3427,7 @@ class DynamicDataSink final {
 
     // Reads partition corresponding to |configuration| and |asset| into a
     // vmo and returns it.
-    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 80 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ReadAsset ReadAsset(::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset);
 
     // Reads partition corresponding to |configuration| and |asset| into a
@@ -3632,7 +3503,7 @@ class DynamicDataSink final {
     // `fuchsia.io.Node` for now.
     //
     // On success, returns a channel to the initialized FVM volume.
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::WipeVolume WipeVolume();
 
     // Wipes the FVM partition from the device. Should not be confused with factory reset, which
@@ -3685,7 +3556,7 @@ class DynamicDataSink final {
 
     // Reads partition corresponding to |configuration| and |asset| into a
     // vmo and returns it.
-    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 80 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ReadAsset ReadAsset(::zx::unowned_channel _client_end, ::llcpp::fuchsia::paver::Configuration configuration, ::llcpp::fuchsia::paver::Asset asset);
 
     // Reads partition corresponding to |configuration| and |asset| into a
@@ -3761,7 +3632,7 @@ class DynamicDataSink final {
     // `fuchsia.io.Node` for now.
     //
     // On success, returns a channel to the initialized FVM volume.
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::WipeVolume WipeVolume(::zx::unowned_channel _client_end);
 
     // Wipes the FVM partition from the device. Should not be confused with factory reset, which

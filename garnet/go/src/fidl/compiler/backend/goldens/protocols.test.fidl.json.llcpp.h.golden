@@ -39,12 +39,264 @@ enum class ErrorEnun : uint32_t {
 struct WithErrorSyntax_ErrorAsEnum_Result;
 class WithErrorSyntax;
 
+extern "C" const fidl_type_t test_name_WithErrorSyntax_ResponseAsStruct_ResultTable;
+extern "C" const fidl_type_t v1_test_name_WithErrorSyntax_ResponseAsStruct_ResultTable;
+
+struct WithErrorSyntax_ResponseAsStruct_Result {
+  WithErrorSyntax_ResponseAsStruct_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static WithErrorSyntax_ResponseAsStruct_Result WithResponse(::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response* val) {
+    WithErrorSyntax_ResponseAsStruct_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response*>(envelope_.data);
+  }
+  const ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static WithErrorSyntax_ResponseAsStruct_Result WithErr(uint32_t* val) {
+    WithErrorSyntax_ResponseAsStruct_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(uint32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  uint32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<uint32_t*>(envelope_.data);
+  }
+  const uint32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<uint32_t*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_test_name_WithErrorSyntax_ResponseAsStruct_ResultTable;
+  static constexpr const fidl_type_t* AltType = &test_name_WithErrorSyntax_ResponseAsStruct_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 24;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 24;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
+extern "C" const fidl_type_t test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
+extern "C" const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
+
+struct WithErrorSyntax_ErrorAsPrimitive_Result {
+  WithErrorSyntax_ErrorAsPrimitive_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static WithErrorSyntax_ErrorAsPrimitive_Result WithResponse(::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response* val) {
+    WithErrorSyntax_ErrorAsPrimitive_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response*>(envelope_.data);
+  }
+  const ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static WithErrorSyntax_ErrorAsPrimitive_Result WithErr(uint32_t* val) {
+    WithErrorSyntax_ErrorAsPrimitive_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(uint32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  uint32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<uint32_t*>(envelope_.data);
+  }
+  const uint32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<uint32_t*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
+  static constexpr const fidl_type_t* AltType = &test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
+extern "C" const fidl_type_t test_name_WithErrorSyntax_ErrorAsEnum_ResultTable;
+extern "C" const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsEnum_ResultTable;
+
+struct WithErrorSyntax_ErrorAsEnum_Result {
+  WithErrorSyntax_ErrorAsEnum_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static WithErrorSyntax_ErrorAsEnum_Result WithResponse(::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response* val) {
+    WithErrorSyntax_ErrorAsEnum_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response*>(envelope_.data);
+  }
+  const ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static WithErrorSyntax_ErrorAsEnum_Result WithErr(::llcpp::test::name::ErrorEnun* val) {
+    WithErrorSyntax_ErrorAsEnum_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(::llcpp::test::name::ErrorEnun* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::test::name::ErrorEnun& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<::llcpp::test::name::ErrorEnun*>(envelope_.data);
+  }
+  const ::llcpp::test::name::ErrorEnun& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<::llcpp::test::name::ErrorEnun*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_test_name_WithErrorSyntax_ErrorAsEnum_ResultTable;
+  static constexpr const fidl_type_t* AltType = &test_name_WithErrorSyntax_ErrorAsEnum_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
 extern "C" const fidl_type_t test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable;
 extern "C" const fidl_type_t v1_test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable;
 
 struct WithErrorSyntax_ResponseAsStruct_Response {
-  static constexpr const fidl_type_t* Type = &test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable;
+  static constexpr const fidl_type_t* Type = &v1_test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
@@ -60,120 +312,12 @@ struct WithErrorSyntax_ResponseAsStruct_Response {
   int64_t c = {};
 };
 
-extern "C" const fidl_type_t test_name_WithErrorSyntax_ResponseAsStruct_ResultTable;
-extern "C" const fidl_type_t v1_test_name_WithErrorSyntax_ResponseAsStruct_ResultTable;
-
-struct WithErrorSyntax_ResponseAsStruct_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-  };
-
-  WithErrorSyntax_ResponseAsStruct_Result();
-  ~WithErrorSyntax_ResponseAsStruct_Result();
-
-  WithErrorSyntax_ResponseAsStruct_Result(WithErrorSyntax_ResponseAsStruct_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  WithErrorSyntax_ResponseAsStruct_Result& operator=(WithErrorSyntax_ResponseAsStruct_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
-
-  static WithErrorSyntax_ResponseAsStruct_Result WithResponse(::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response* val) {
-    WithErrorSyntax_ResponseAsStruct_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
-  }
-
-  ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response const & response() const { return response_; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static WithErrorSyntax_ResponseAsStruct_Result WithErr(uint32_t* val) {
-    WithErrorSyntax_ResponseAsStruct_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  uint32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, uint32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, uint32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  uint32_t const & err() const { return err_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &test_name_WithErrorSyntax_ResponseAsStruct_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_test_name_WithErrorSyntax_ResponseAsStruct_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 32;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 24;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(WithErrorSyntax_ResponseAsStruct_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response response_;
-    uint32_t err_;
-  };
-};
-
 extern "C" const fidl_type_t test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
 extern "C" const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
 
 struct WithErrorSyntax_ErrorAsPrimitive_Response {
-  static constexpr const fidl_type_t* Type = &test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
+  static constexpr const fidl_type_t* Type = &v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -185,120 +329,12 @@ struct WithErrorSyntax_ErrorAsPrimitive_Response {
   uint8_t __reserved = {};
 };
 
-extern "C" const fidl_type_t test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
-extern "C" const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
-
-struct WithErrorSyntax_ErrorAsPrimitive_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-  };
-
-  WithErrorSyntax_ErrorAsPrimitive_Result();
-  ~WithErrorSyntax_ErrorAsPrimitive_Result();
-
-  WithErrorSyntax_ErrorAsPrimitive_Result(WithErrorSyntax_ErrorAsPrimitive_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  WithErrorSyntax_ErrorAsPrimitive_Result& operator=(WithErrorSyntax_ErrorAsPrimitive_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
-
-  static WithErrorSyntax_ErrorAsPrimitive_Result WithResponse(::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response* val) {
-    WithErrorSyntax_ErrorAsPrimitive_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
-  }
-
-  ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response const & response() const { return response_; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static WithErrorSyntax_ErrorAsPrimitive_Result WithErr(uint32_t* val) {
-    WithErrorSyntax_ErrorAsPrimitive_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  uint32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, uint32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, uint32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  uint32_t const & err() const { return err_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(WithErrorSyntax_ErrorAsPrimitive_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response response_;
-    uint32_t err_;
-  };
-};
-
 extern "C" const fidl_type_t test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable;
 extern "C" const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable;
 
 struct WithErrorSyntax_ErrorAsEnum_Response {
-  static constexpr const fidl_type_t* Type = &test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable;
+  static constexpr const fidl_type_t* Type = &v1_test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -337,8 +373,8 @@ class ChannelProtocol final {
     int64_t a;
     int64_t b;
 
-    static constexpr const fidl_type_t* Type = &test_name_ChannelProtocolMethodARequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_test_name_ChannelProtocolMethodARequestTable;
+    static constexpr const fidl_type_t* Type = &v1_test_name_ChannelProtocolMethodARequestTable;
+    static constexpr const fidl_type_t* AltType = &test_name_ChannelProtocolMethodARequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -356,8 +392,8 @@ class ChannelProtocol final {
     int64_t a;
     int64_t b;
 
-    static constexpr const fidl_type_t* Type = &test_name_ChannelProtocolEventAEventTable;
-    static constexpr const fidl_type_t* AltType = &v1_test_name_ChannelProtocolEventAEventTable;
+    static constexpr const fidl_type_t* Type = &v1_test_name_ChannelProtocolEventAEventTable;
+    static constexpr const fidl_type_t* AltType = &test_name_ChannelProtocolEventAEventTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -373,8 +409,8 @@ class ChannelProtocol final {
     fidl_message_header_t _hdr;
     int64_t result;
 
-    static constexpr const fidl_type_t* Type = &test_name_ChannelProtocolMethodBResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_test_name_ChannelProtocolMethodBResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_test_name_ChannelProtocolMethodBResponseTable;
+    static constexpr const fidl_type_t* AltType = &test_name_ChannelProtocolMethodBResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -391,8 +427,8 @@ class ChannelProtocol final {
     int64_t a;
     int64_t b;
 
-    static constexpr const fidl_type_t* Type = &test_name_ChannelProtocolMethodBRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_test_name_ChannelProtocolMethodBRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_test_name_ChannelProtocolMethodBRequestTable;
+    static constexpr const fidl_type_t* AltType = &test_name_ChannelProtocolMethodBRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -410,8 +446,8 @@ class ChannelProtocol final {
     fidl_message_header_t _hdr;
     ::zx::socket b;
 
-    static constexpr const fidl_type_t* Type = &test_name_ChannelProtocolMutateSocketResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_test_name_ChannelProtocolMutateSocketResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_test_name_ChannelProtocolMutateSocketResponseTable;
+    static constexpr const fidl_type_t* AltType = &test_name_ChannelProtocolMutateSocketResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -427,8 +463,8 @@ class ChannelProtocol final {
     fidl_message_header_t _hdr;
     ::zx::socket a;
 
-    static constexpr const fidl_type_t* Type = &test_name_ChannelProtocolMutateSocketRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_test_name_ChannelProtocolMutateSocketRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_test_name_ChannelProtocolMutateSocketRequestTable;
+    static constexpr const fidl_type_t* AltType = &test_name_ChannelProtocolMutateSocketRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -770,8 +806,8 @@ class WithAndWithoutRequestResponse final {
     fidl_message_header_t _hdr;
     ::fidl::StringView ret;
 
-    static constexpr const fidl_type_t* Type = &test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
+    static constexpr const fidl_type_t* AltType = &test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -789,8 +825,8 @@ class WithAndWithoutRequestResponse final {
     fidl_message_header_t _hdr;
     ::fidl::StringView arg;
 
-    static constexpr const fidl_type_t* Type = &test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
+    static constexpr const fidl_type_t* AltType = &test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -808,8 +844,8 @@ class WithAndWithoutRequestResponse final {
     fidl_message_header_t _hdr;
     ::fidl::StringView arg;
 
-    static constexpr const fidl_type_t* Type = &test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
+    static constexpr const fidl_type_t* AltType = &test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -826,8 +862,8 @@ class WithAndWithoutRequestResponse final {
     fidl_message_header_t _hdr;
     ::fidl::StringView ret;
 
-    static constexpr const fidl_type_t* Type = &test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
+    static constexpr const fidl_type_t* AltType = &test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -843,8 +879,8 @@ class WithAndWithoutRequestResponse final {
     fidl_message_header_t _hdr;
     ::fidl::StringView arg;
 
-    static constexpr const fidl_type_t* Type = &test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
+    static constexpr const fidl_type_t* AltType = &test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -863,8 +899,8 @@ class WithAndWithoutRequestResponse final {
     fidl_message_header_t _hdr;
     ::fidl::StringView ret;
 
-    static constexpr const fidl_type_t* Type = &test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
-    static constexpr const fidl_type_t* AltType = &v1_test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
+    static constexpr const fidl_type_t* Type = &v1_test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
+    static constexpr const fidl_type_t* AltType = &test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -1321,114 +1357,6 @@ class WithAndWithoutRequestResponse final {
   };
 };
 
-extern "C" const fidl_type_t test_name_WithErrorSyntax_ErrorAsEnum_ResultTable;
-extern "C" const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsEnum_ResultTable;
-
-struct WithErrorSyntax_ErrorAsEnum_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-  };
-
-  WithErrorSyntax_ErrorAsEnum_Result();
-  ~WithErrorSyntax_ErrorAsEnum_Result();
-
-  WithErrorSyntax_ErrorAsEnum_Result(WithErrorSyntax_ErrorAsEnum_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  WithErrorSyntax_ErrorAsEnum_Result& operator=(WithErrorSyntax_ErrorAsEnum_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
-
-  static WithErrorSyntax_ErrorAsEnum_Result WithResponse(::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response* val) {
-    WithErrorSyntax_ErrorAsEnum_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
-  }
-
-  ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response const & response() const { return response_; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static WithErrorSyntax_ErrorAsEnum_Result WithErr(::llcpp::test::name::ErrorEnun* val) {
-    WithErrorSyntax_ErrorAsEnum_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  ::llcpp::test::name::ErrorEnun& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::test::name::ErrorEnun>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::test::name::ErrorEnun>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  ::llcpp::test::name::ErrorEnun const & err() const { return err_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &test_name_WithErrorSyntax_ErrorAsEnum_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_test_name_WithErrorSyntax_ErrorAsEnum_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(WithErrorSyntax_ErrorAsEnum_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response response_;
-    ::llcpp::test::name::ErrorEnun err_;
-  };
-};
-
 extern "C" const fidl_type_t test_name_WithErrorSyntaxResponseAsStructRequestTable;
 extern "C" const fidl_type_t v1_test_name_WithErrorSyntaxResponseAsStructRequestTable;
 extern "C" const fidl_type_t test_name_WithErrorSyntaxResponseAsStructResponseTable;
@@ -1451,12 +1379,12 @@ class WithErrorSyntax final {
     fidl_message_header_t _hdr;
     ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result result;
 
-    static constexpr const fidl_type_t* Type = &test_name_WithErrorSyntaxResponseAsStructResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_test_name_WithErrorSyntaxResponseAsStructResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_test_name_WithErrorSyntaxResponseAsStructResponseTable;
+    static constexpr const fidl_type_t* AltType = &test_name_WithErrorSyntaxResponseAsStructResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 48;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 24;
+    static constexpr uint32_t AltPrimarySize = 48;
     static constexpr uint32_t AltMaxOutOfLine = 24;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -1470,12 +1398,12 @@ class WithErrorSyntax final {
     fidl_message_header_t _hdr;
     ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result result;
 
-    static constexpr const fidl_type_t* Type = &test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
+    static constexpr const fidl_type_t* AltType = &test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 8;
+    static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -1489,12 +1417,12 @@ class WithErrorSyntax final {
     fidl_message_header_t _hdr;
     ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result result;
 
-    static constexpr const fidl_type_t* Type = &test_name_WithErrorSyntaxErrorAsEnumResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_test_name_WithErrorSyntaxErrorAsEnumResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_test_name_WithErrorSyntaxErrorAsEnumResponseTable;
+    static constexpr const fidl_type_t* AltType = &test_name_WithErrorSyntaxErrorAsEnumResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 8;
+    static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -1634,19 +1562,19 @@ class WithErrorSyntax final {
 
     ::zx::channel* mutable_channel() { return &channel_; }
 
-    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ResponseAsStruct ResponseAsStruct();
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::ResponseAsStruct ResponseAsStruct(::fidl::BytePart _response_buffer);
 
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ErrorAsPrimitive ErrorAsPrimitive();
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::ErrorAsPrimitive ErrorAsPrimitive(::fidl::BytePart _response_buffer);
 
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ErrorAsEnum ErrorAsEnum();
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -1661,19 +1589,19 @@ class WithErrorSyntax final {
     Call() = delete;
    public:
 
-    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 88 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ResponseAsStruct ResponseAsStruct(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::ResponseAsStruct ResponseAsStruct(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ErrorAsPrimitive ErrorAsPrimitive(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::ErrorAsPrimitive ErrorAsPrimitive(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ErrorAsEnum ErrorAsEnum(::zx::unowned_channel _client_end);
 
     // Caller provides the backing storage for FIDL message via request and response buffers.

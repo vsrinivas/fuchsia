@@ -137,7 +137,7 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, fidl fidlir.
 }
 
 func wireFormatSupported(wireFormat gidlir.WireFormat) bool {
-	return wireFormat == gidlir.OldWireFormat
+	return wireFormat == gidlir.V1WireFormat
 }
 
 func testCaseName(baseName string, wireFormat gidlir.WireFormat) string {
@@ -311,11 +311,7 @@ func (b *llcppValueBuilder) OnUnion(value gidlir.Object, decl *gidlmixer.UnionDe
 		b.Builder.WriteString(fmt.Sprintf(
 			"%s.set_%s(&%s);\n", containerVar, field.Key.Name, fieldVar))
 	}
-	if decl.IsNullable() {
-		b.lastVar = "&" + containerVar
-	} else {
-		b.lastVar = containerVar
-	}
+	b.lastVar = containerVar
 }
 
 func (b *llcppValueBuilder) OnArray(value []interface{}, decl *gidlmixer.ArrayDecl) {
@@ -377,9 +373,6 @@ func typeName(decl gidlmixer.Declaration) string {
 	case *gidlmixer.TableDecl:
 		return identifierName(decl.Name)
 	case *gidlmixer.UnionDecl:
-		if decl.IsNullable() {
-			return fmt.Sprintf("%s*", identifierName(decl.Name))
-		}
 		return identifierName(decl.Name)
 	case *gidlmixer.XUnionDecl:
 		return identifierName(decl.Name)

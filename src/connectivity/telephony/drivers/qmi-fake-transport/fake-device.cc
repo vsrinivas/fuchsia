@@ -72,7 +72,7 @@ void QmiDevice::SnoopCtrlMsg(uint8_t* snoop_data, uint32_t snoop_data_len,
            qmi_msg.opaque_bytes.data_[1], qmi_msg.opaque_bytes.data_[2],
            qmi_msg.opaque_bytes.data_[3]);
     fidl_tel_snoop::Publisher::Call::SendMessage(zx::unowned_channel(GetCtrlSnoopChannel().get()),
-                                                 std::move(snoop_msg));
+                                                 snoop_msg);
   }
 }
 

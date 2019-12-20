@@ -28,6 +28,75 @@ struct Struct;
 class Interface;
 class Service;
 
+extern "C" const fidl_type_t test_name_UnionTable;
+extern "C" const fidl_type_t v1_test_name_UnionTable;
+
+// union comment #1
+//
+// union comment #3
+struct Union {
+  Union() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kField = 1,  // 0x1
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_Field() const { return ordinal_ == Ordinal::kField; }
+
+  static Union WithField(int32_t* val) {
+    Union result;
+    result.set_Field(val);
+    return result;
+  }
+
+  // union member comment #1
+  //
+  // union member comment #3
+  void set_Field(int32_t* elem) {
+    ordinal_ = Ordinal::kField;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  // union member comment #1
+  //
+  // union member comment #3
+  int32_t& mutable_Field() {
+    ZX_ASSERT(ordinal_ == Ordinal::kField);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  const int32_t& Field() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kField);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_test_name_UnionTable;
+  static constexpr const fidl_type_t* AltType = &test_name_UnionTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kField = 1,  // 0x1
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
 extern "C" const fidl_type_t test_name_TableTable;
 extern "C" const fidl_type_t v1_test_name_TableTable;
 
@@ -97,102 +166,6 @@ class Table::Builder {
   ::fidl::Array<fidl_envelope_t, 1> envelopes_ = {};
 };
 
-extern "C" const fidl_type_t test_name_UnionTable;
-extern "C" const fidl_type_t v1_test_name_UnionTable;
-
-// union comment #1
-//
-// union comment #3
-struct Union {
-  enum class Tag : fidl_union_tag_t {
-    kField = 0,
-  };
-
-  Union();
-  ~Union();
-
-  Union(Union&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  Union& operator=(Union&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_Field() const { return ordinal_ == Ordinal::kField; }
-
-  static Union WithField(int32_t* val) {
-    Union result;
-    result.set_Field(val);
-    return result;
-  }
-
-  // union member comment #1
-  //
-  // union member comment #3
-  int32_t& mutable_Field();
-
-  // union member comment #1
-  //
-  // union member comment #3
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_Field(const T* v) {
-    mutable_Field() = *v;
-  }
-
-  // union member comment #1
-  //
-  // union member comment #3
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_Field(T* v) {
-    mutable_Field() = std::move(*v);
-  }
-
-  // union member comment #1
-  //
-  // union member comment #3
-  int32_t const & Field() const { return Field_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &test_name_UnionTable;
-  static constexpr const fidl_type_t* AltType = &v1_test_name_UnionTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kField = 0,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(Union&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    int32_t Field_;
-  };
-};
-
 extern "C" const fidl_type_t test_name_StructTable;
 extern "C" const fidl_type_t v1_test_name_StructTable;
 
@@ -200,8 +173,8 @@ extern "C" const fidl_type_t v1_test_name_StructTable;
 //
 // struct comment #3
 struct Struct {
-  static constexpr const fidl_type_t* Type = &test_name_StructTable;
-  static constexpr const fidl_type_t* AltType = &v1_test_name_StructTable;
+  static constexpr const fidl_type_t* Type = &v1_test_name_StructTable;
+  static constexpr const fidl_type_t* AltType = &test_name_StructTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]

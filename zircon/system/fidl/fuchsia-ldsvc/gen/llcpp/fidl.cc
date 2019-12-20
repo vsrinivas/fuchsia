@@ -472,27 +472,34 @@ void Loader::Interface::CloneCompleterBase::Reply(::fidl::DecodedMessage<CloneRe
 
 void Loader::SetTransactionHeaderFor::DoneRequest(const ::fidl::DecodedMessage<Loader::DoneRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoader_Done_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Loader::SetTransactionHeaderFor::LoadObjectRequest(const ::fidl::DecodedMessage<Loader::LoadObjectRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoader_LoadObject_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Loader::SetTransactionHeaderFor::LoadObjectResponse(const ::fidl::DecodedMessage<Loader::LoadObjectResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoader_LoadObject_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Loader::SetTransactionHeaderFor::ConfigRequest(const ::fidl::DecodedMessage<Loader::ConfigRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoader_Config_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Loader::SetTransactionHeaderFor::ConfigResponse(const ::fidl::DecodedMessage<Loader::ConfigResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoader_Config_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Loader::SetTransactionHeaderFor::CloneRequest(const ::fidl::DecodedMessage<Loader::CloneRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoader_Clone_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Loader::SetTransactionHeaderFor::CloneResponse(const ::fidl::DecodedMessage<Loader::CloneResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoader_Clone_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace ldsvc

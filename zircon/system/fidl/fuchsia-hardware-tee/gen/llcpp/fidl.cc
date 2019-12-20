@@ -131,6 +131,7 @@ bool DeviceConnector::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transac
 
 void DeviceConnector::SetTransactionHeaderFor::ConnectTeeRequest(const ::fidl::DecodedMessage<DeviceConnector::ConnectTeeRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceConnector_ConnectTee_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace tee

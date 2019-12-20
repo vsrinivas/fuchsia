@@ -38,48 +38,17 @@ struct TestDevice_AddDeviceWithPowerArgs_Response;
 struct TestDevice_AddDeviceWithPowerArgs_Result;
 class TestDevice;
 
-extern "C" const fidl_type_t fuchsia_device_power_test_TestDevice_GetCurrentDevicePowerState_ResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDevice_GetCurrentDevicePowerState_ResponseTable;
-
-struct TestDevice_GetCurrentDevicePowerState_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_device_power_test_TestDevice_GetCurrentDevicePowerState_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_power_test_TestDevice_GetCurrentDevicePowerState_ResponseTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
-
-  ::llcpp::fuchsia::device::DevicePowerState cur_state = {};
-};
-
 extern "C" const fidl_type_t fuchsia_device_power_test_TestDevice_GetCurrentDevicePowerState_ResultTable;
 extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDevice_GetCurrentDevicePowerState_ResultTable;
 
 struct TestDevice_GetCurrentDevicePowerState_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
+  TestDevice_GetCurrentDevicePowerState_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
   };
 
-  TestDevice_GetCurrentDevicePowerState_Result();
-  ~TestDevice_GetCurrentDevicePowerState_Result();
-
-  TestDevice_GetCurrentDevicePowerState_Result(TestDevice_GetCurrentDevicePowerState_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  TestDevice_GetCurrentDevicePowerState_Result& operator=(TestDevice_GetCurrentDevicePowerState_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
 
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
@@ -91,21 +60,19 @@ struct TestDevice_GetCurrentDevicePowerState_Result {
     return result;
   }
 
-  ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
+  void set_response(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
   }
 
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
+  ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response*>(envelope_.data);
   }
-
-  ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response const & response() const { return response_; }
+  const ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response*>(envelope_.data);
+  }
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
@@ -115,60 +82,405 @@ struct TestDevice_GetCurrentDevicePowerState_Result {
     return result;
   }
 
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
   }
 
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
   }
-
-  int32_t const & err() const { return err_; }
-
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type = &fuchsia_device_power_test_TestDevice_GetCurrentDevicePowerState_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_power_test_TestDevice_GetCurrentDevicePowerState_ResultTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_power_test_TestDevice_GetCurrentDevicePowerState_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_power_test_TestDevice_GetCurrentDevicePowerState_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
+  static constexpr uint32_t PrimarySize = 24;
   [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr uint32_t AltPrimarySize = 24;
   [[maybe_unused]]
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
   };
-
-  void Destroy();
-  void MoveImpl_(TestDevice_GetCurrentDevicePowerState_Result&& other);
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response response_;
-    int32_t err_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
+extern "C" const fidl_type_t fuchsia_device_power_test_TestDevice_GetCurrentDeviceAutoSuspendConfig_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDevice_GetCurrentDeviceAutoSuspendConfig_ResultTable;
+
+struct TestDevice_GetCurrentDeviceAutoSuspendConfig_Result {
+  TestDevice_GetCurrentDeviceAutoSuspendConfig_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
   };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static TestDevice_GetCurrentDeviceAutoSuspendConfig_Result WithResponse(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Response* val) {
+    TestDevice_GetCurrentDeviceAutoSuspendConfig_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Response*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static TestDevice_GetCurrentDeviceAutoSuspendConfig_Result WithErr(int32_t* val) {
+    TestDevice_GetCurrentDeviceAutoSuspendConfig_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_power_test_TestDevice_GetCurrentDeviceAutoSuspendConfig_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_power_test_TestDevice_GetCurrentDeviceAutoSuspendConfig_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
+extern "C" const fidl_type_t fuchsia_device_power_test_TestDevice_GetCurrentSuspendReason_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDevice_GetCurrentSuspendReason_ResultTable;
+
+struct TestDevice_GetCurrentSuspendReason_Result {
+  TestDevice_GetCurrentSuspendReason_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static TestDevice_GetCurrentSuspendReason_Result WithResponse(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentSuspendReason_Response* val) {
+    TestDevice_GetCurrentSuspendReason_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentSuspendReason_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentSuspendReason_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentSuspendReason_Response*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentSuspendReason_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentSuspendReason_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static TestDevice_GetCurrentSuspendReason_Result WithErr(int32_t* val) {
+    TestDevice_GetCurrentSuspendReason_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_power_test_TestDevice_GetCurrentSuspendReason_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_power_test_TestDevice_GetCurrentSuspendReason_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
+extern "C" const fidl_type_t fuchsia_device_power_test_TestDevice_GetCurrentDevicePerformanceState_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDevice_GetCurrentDevicePerformanceState_ResultTable;
+
+struct TestDevice_GetCurrentDevicePerformanceState_Result {
+  TestDevice_GetCurrentDevicePerformanceState_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static TestDevice_GetCurrentDevicePerformanceState_Result WithResponse(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Response* val) {
+    TestDevice_GetCurrentDevicePerformanceState_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Response*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static TestDevice_GetCurrentDevicePerformanceState_Result WithErr(int32_t* val) {
+    TestDevice_GetCurrentDevicePerformanceState_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_power_test_TestDevice_GetCurrentDevicePerformanceState_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_power_test_TestDevice_GetCurrentDevicePerformanceState_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
+extern "C" const fidl_type_t fuchsia_device_power_test_TestDevice_AddDeviceWithPowerArgs_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDevice_AddDeviceWithPowerArgs_ResultTable;
+
+struct TestDevice_AddDeviceWithPowerArgs_Result {
+  TestDevice_AddDeviceWithPowerArgs_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static TestDevice_AddDeviceWithPowerArgs_Result WithResponse(::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response* val) {
+    TestDevice_AddDeviceWithPowerArgs_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static TestDevice_AddDeviceWithPowerArgs_Result WithErr(int32_t* val) {
+    TestDevice_AddDeviceWithPowerArgs_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_power_test_TestDevice_AddDeviceWithPowerArgs_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_power_test_TestDevice_AddDeviceWithPowerArgs_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
+extern "C" const fidl_type_t fuchsia_device_power_test_TestDevice_GetCurrentDevicePowerState_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDevice_GetCurrentDevicePowerState_ResponseTable;
+
+struct TestDevice_GetCurrentDevicePowerState_Response {
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_power_test_TestDevice_GetCurrentDevicePowerState_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_power_test_TestDevice_GetCurrentDevicePowerState_ResponseTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
+
+  ::llcpp::fuchsia::device::DevicePowerState cur_state = {};
 };
 
 extern "C" const fidl_type_t fuchsia_device_power_test_TestDevice_GetCurrentDeviceAutoSuspendConfig_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDevice_GetCurrentDeviceAutoSuspendConfig_ResponseTable;
 
 struct TestDevice_GetCurrentDeviceAutoSuspendConfig_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_device_power_test_TestDevice_GetCurrentDeviceAutoSuspendConfig_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_power_test_TestDevice_GetCurrentDeviceAutoSuspendConfig_ResponseTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_power_test_TestDevice_GetCurrentDeviceAutoSuspendConfig_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_power_test_TestDevice_GetCurrentDeviceAutoSuspendConfig_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 2;
   [[maybe_unused]]
@@ -182,120 +494,12 @@ struct TestDevice_GetCurrentDeviceAutoSuspendConfig_Response {
   ::llcpp::fuchsia::device::DevicePowerState deepest_sleep_state = {};
 };
 
-extern "C" const fidl_type_t fuchsia_device_power_test_TestDevice_GetCurrentDeviceAutoSuspendConfig_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDevice_GetCurrentDeviceAutoSuspendConfig_ResultTable;
-
-struct TestDevice_GetCurrentDeviceAutoSuspendConfig_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-  };
-
-  TestDevice_GetCurrentDeviceAutoSuspendConfig_Result();
-  ~TestDevice_GetCurrentDeviceAutoSuspendConfig_Result();
-
-  TestDevice_GetCurrentDeviceAutoSuspendConfig_Result(TestDevice_GetCurrentDeviceAutoSuspendConfig_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  TestDevice_GetCurrentDeviceAutoSuspendConfig_Result& operator=(TestDevice_GetCurrentDeviceAutoSuspendConfig_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
-
-  static TestDevice_GetCurrentDeviceAutoSuspendConfig_Result WithResponse(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Response* val) {
-    TestDevice_GetCurrentDeviceAutoSuspendConfig_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Response const & response() const { return response_; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static TestDevice_GetCurrentDeviceAutoSuspendConfig_Result WithErr(int32_t* val) {
-    TestDevice_GetCurrentDeviceAutoSuspendConfig_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  int32_t const & err() const { return err_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_device_power_test_TestDevice_GetCurrentDeviceAutoSuspendConfig_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_power_test_TestDevice_GetCurrentDeviceAutoSuspendConfig_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(TestDevice_GetCurrentDeviceAutoSuspendConfig_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Response response_;
-    int32_t err_;
-  };
-};
-
 extern "C" const fidl_type_t fuchsia_device_power_test_TestDevice_GetCurrentSuspendReason_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDevice_GetCurrentSuspendReason_ResponseTable;
 
 struct TestDevice_GetCurrentSuspendReason_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_device_power_test_TestDevice_GetCurrentSuspendReason_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_power_test_TestDevice_GetCurrentSuspendReason_ResponseTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_power_test_TestDevice_GetCurrentSuspendReason_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_power_test_TestDevice_GetCurrentSuspendReason_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -307,120 +511,12 @@ struct TestDevice_GetCurrentSuspendReason_Response {
   uint8_t cur_suspend_reason = {};
 };
 
-extern "C" const fidl_type_t fuchsia_device_power_test_TestDevice_GetCurrentSuspendReason_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDevice_GetCurrentSuspendReason_ResultTable;
-
-struct TestDevice_GetCurrentSuspendReason_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-  };
-
-  TestDevice_GetCurrentSuspendReason_Result();
-  ~TestDevice_GetCurrentSuspendReason_Result();
-
-  TestDevice_GetCurrentSuspendReason_Result(TestDevice_GetCurrentSuspendReason_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  TestDevice_GetCurrentSuspendReason_Result& operator=(TestDevice_GetCurrentSuspendReason_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
-
-  static TestDevice_GetCurrentSuspendReason_Result WithResponse(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentSuspendReason_Response* val) {
-    TestDevice_GetCurrentSuspendReason_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentSuspendReason_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentSuspendReason_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentSuspendReason_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentSuspendReason_Response const & response() const { return response_; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static TestDevice_GetCurrentSuspendReason_Result WithErr(int32_t* val) {
-    TestDevice_GetCurrentSuspendReason_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  int32_t const & err() const { return err_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_device_power_test_TestDevice_GetCurrentSuspendReason_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_power_test_TestDevice_GetCurrentSuspendReason_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(TestDevice_GetCurrentSuspendReason_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentSuspendReason_Response response_;
-    int32_t err_;
-  };
-};
-
 extern "C" const fidl_type_t fuchsia_device_power_test_TestDevice_GetCurrentDevicePerformanceState_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDevice_GetCurrentDevicePerformanceState_ResponseTable;
 
 struct TestDevice_GetCurrentDevicePerformanceState_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_device_power_test_TestDevice_GetCurrentDevicePerformanceState_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_power_test_TestDevice_GetCurrentDevicePerformanceState_ResponseTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_power_test_TestDevice_GetCurrentDevicePerformanceState_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_power_test_TestDevice_GetCurrentDevicePerformanceState_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
   [[maybe_unused]]
@@ -432,120 +528,12 @@ struct TestDevice_GetCurrentDevicePerformanceState_Response {
   int32_t cur_state = {};
 };
 
-extern "C" const fidl_type_t fuchsia_device_power_test_TestDevice_GetCurrentDevicePerformanceState_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDevice_GetCurrentDevicePerformanceState_ResultTable;
-
-struct TestDevice_GetCurrentDevicePerformanceState_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-  };
-
-  TestDevice_GetCurrentDevicePerformanceState_Result();
-  ~TestDevice_GetCurrentDevicePerformanceState_Result();
-
-  TestDevice_GetCurrentDevicePerformanceState_Result(TestDevice_GetCurrentDevicePerformanceState_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  TestDevice_GetCurrentDevicePerformanceState_Result& operator=(TestDevice_GetCurrentDevicePerformanceState_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
-
-  static TestDevice_GetCurrentDevicePerformanceState_Result WithResponse(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Response* val) {
-    TestDevice_GetCurrentDevicePerformanceState_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Response const & response() const { return response_; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static TestDevice_GetCurrentDevicePerformanceState_Result WithErr(int32_t* val) {
-    TestDevice_GetCurrentDevicePerformanceState_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  int32_t const & err() const { return err_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_device_power_test_TestDevice_GetCurrentDevicePerformanceState_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_power_test_TestDevice_GetCurrentDevicePerformanceState_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(TestDevice_GetCurrentDevicePerformanceState_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Response response_;
-    int32_t err_;
-  };
-};
-
 extern "C" const fidl_type_t fuchsia_device_power_test_TestDevice_AddDeviceWithPowerArgs_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDevice_AddDeviceWithPowerArgs_ResponseTable;
 
 struct TestDevice_AddDeviceWithPowerArgs_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_device_power_test_TestDevice_AddDeviceWithPowerArgs_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_power_test_TestDevice_AddDeviceWithPowerArgs_ResponseTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_power_test_TestDevice_AddDeviceWithPowerArgs_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_power_test_TestDevice_AddDeviceWithPowerArgs_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -555,114 +543,6 @@ struct TestDevice_AddDeviceWithPowerArgs_Response {
   static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
-};
-
-extern "C" const fidl_type_t fuchsia_device_power_test_TestDevice_AddDeviceWithPowerArgs_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_device_power_test_TestDevice_AddDeviceWithPowerArgs_ResultTable;
-
-struct TestDevice_AddDeviceWithPowerArgs_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-  };
-
-  TestDevice_AddDeviceWithPowerArgs_Result();
-  ~TestDevice_AddDeviceWithPowerArgs_Result();
-
-  TestDevice_AddDeviceWithPowerArgs_Result(TestDevice_AddDeviceWithPowerArgs_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  TestDevice_AddDeviceWithPowerArgs_Result& operator=(TestDevice_AddDeviceWithPowerArgs_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
-
-  static TestDevice_AddDeviceWithPowerArgs_Result WithResponse(::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response* val) {
-    TestDevice_AddDeviceWithPowerArgs_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response const & response() const { return response_; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static TestDevice_AddDeviceWithPowerArgs_Result WithErr(int32_t* val) {
-    TestDevice_AddDeviceWithPowerArgs_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  int32_t const & err() const { return err_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_device_power_test_TestDevice_AddDeviceWithPowerArgs_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_power_test_TestDevice_AddDeviceWithPowerArgs_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(TestDevice_AddDeviceWithPowerArgs_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response response_;
-    int32_t err_;
-  };
 };
 
 extern "C" const fidl_type_t fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsRequestTable;
@@ -695,12 +575,12 @@ class TestDevice final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 8;
+    static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -714,8 +594,8 @@ class TestDevice final {
     ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info;
     bool make_visible;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_power_test_TestDeviceAddDeviceWithPowerArgsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 56;
     static constexpr uint32_t MaxOutOfLine = 4294967295;
@@ -733,12 +613,12 @@ class TestDevice final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_power_test_TestDeviceGetCurrentDevicePowerStateResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_power_test_TestDeviceGetCurrentDevicePowerStateResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_power_test_TestDeviceGetCurrentDevicePowerStateResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_power_test_TestDeviceGetCurrentDevicePowerStateResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 8;
+    static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -752,12 +632,12 @@ class TestDevice final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentSuspendReason_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_power_test_TestDeviceGetCurrentSuspendReasonResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_power_test_TestDeviceGetCurrentSuspendReasonResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_power_test_TestDeviceGetCurrentSuspendReasonResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_power_test_TestDeviceGetCurrentSuspendReasonResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 8;
+    static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -771,12 +651,12 @@ class TestDevice final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_power_test_TestDeviceGetCurrentDevicePerformanceStateResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_power_test_TestDeviceGetCurrentDevicePerformanceStateResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_power_test_TestDeviceGetCurrentDevicePerformanceStateResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_power_test_TestDeviceGetCurrentDevicePerformanceStateResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 8;
+    static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -790,12 +670,12 @@ class TestDevice final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_device_power_test_TestDeviceGetCurrentDeviceAutoSuspendConfigResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_power_test_TestDeviceGetCurrentDeviceAutoSuspendConfigResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_power_test_TestDeviceGetCurrentDeviceAutoSuspendConfigResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_power_test_TestDeviceGetCurrentDeviceAutoSuspendConfigResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 8;
+    static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -1004,7 +884,7 @@ class TestDevice final {
     ::zx::channel* mutable_channel() { return &channel_; }
 
     // Add Test Device with some powerargs
-    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
+    // Allocates 32 bytes of response buffer on the stack. Request is heap-allocated.
     ResultOf::AddDeviceWithPowerArgs AddDeviceWithPowerArgs(::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info, bool make_visible);
 
     // Add Test Device with some powerargs
@@ -1012,7 +892,7 @@ class TestDevice final {
     UnownedResultOf::AddDeviceWithPowerArgs AddDeviceWithPowerArgs(::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info, bool make_visible, ::fidl::BytePart _response_buffer);
 
     // Get current power state of the device
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetCurrentDevicePowerState GetCurrentDevicePowerState();
 
     // Get current power state of the device
@@ -1020,7 +900,7 @@ class TestDevice final {
     UnownedResultOf::GetCurrentDevicePowerState GetCurrentDevicePowerState(::fidl::BytePart _response_buffer);
 
     // Get the suspend reason of the last suspend call
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetCurrentSuspendReason GetCurrentSuspendReason();
 
     // Get the suspend reason of the last suspend call
@@ -1028,7 +908,7 @@ class TestDevice final {
     UnownedResultOf::GetCurrentSuspendReason GetCurrentSuspendReason(::fidl::BytePart _response_buffer);
 
     // Get current performance state of the device
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetCurrentDevicePerformanceState GetCurrentDevicePerformanceState();
 
     // Get current performance state of the device
@@ -1036,7 +916,7 @@ class TestDevice final {
     UnownedResultOf::GetCurrentDevicePerformanceState GetCurrentDevicePerformanceState(::fidl::BytePart _response_buffer);
 
     // Get current auto suspend status and deepest_sleep_state
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetCurrentDeviceAutoSuspendConfig GetCurrentDeviceAutoSuspendConfig();
 
     // Get current auto suspend status and deepest_sleep_state
@@ -1053,7 +933,7 @@ class TestDevice final {
    public:
 
     // Add Test Device with some powerargs
-    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
+    // Allocates 32 bytes of response buffer on the stack. Request is heap-allocated.
     static ResultOf::AddDeviceWithPowerArgs AddDeviceWithPowerArgs(::zx::unowned_channel _client_end, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info, bool make_visible);
 
     // Add Test Device with some powerargs
@@ -1061,7 +941,7 @@ class TestDevice final {
     static UnownedResultOf::AddDeviceWithPowerArgs AddDeviceWithPowerArgs(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePowerStateInfo> info, ::fidl::VectorView<::llcpp::fuchsia::device::DevicePerformanceStateInfo> perf_state_info, bool make_visible, ::fidl::BytePart _response_buffer);
 
     // Get current power state of the device
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetCurrentDevicePowerState GetCurrentDevicePowerState(::zx::unowned_channel _client_end);
 
     // Get current power state of the device
@@ -1069,7 +949,7 @@ class TestDevice final {
     static UnownedResultOf::GetCurrentDevicePowerState GetCurrentDevicePowerState(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Get the suspend reason of the last suspend call
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetCurrentSuspendReason GetCurrentSuspendReason(::zx::unowned_channel _client_end);
 
     // Get the suspend reason of the last suspend call
@@ -1077,7 +957,7 @@ class TestDevice final {
     static UnownedResultOf::GetCurrentSuspendReason GetCurrentSuspendReason(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Get current performance state of the device
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetCurrentDevicePerformanceState GetCurrentDevicePerformanceState(::zx::unowned_channel _client_end);
 
     // Get current performance state of the device
@@ -1085,7 +965,7 @@ class TestDevice final {
     static UnownedResultOf::GetCurrentDevicePerformanceState GetCurrentDevicePerformanceState(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Get current auto suspend status and deepest_sleep_state
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetCurrentDeviceAutoSuspendConfig GetCurrentDeviceAutoSuspendConfig(::zx::unowned_channel _client_end);
 
     // Get current auto suspend status and deepest_sleep_state

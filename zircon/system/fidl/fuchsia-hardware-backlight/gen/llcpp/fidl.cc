@@ -9,300 +9,35 @@ namespace fuchsia {
 namespace hardware {
 namespace backlight {
 
-::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Result::Device_GetStateNormalized_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Result::~Device_GetStateNormalized_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~Device_GetStateNormalized_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Result::MoveImpl_(Device_GetStateNormalized_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
-}
-
 void ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Result, response_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Result, err_) == 8);
-  static_assert(sizeof(::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Result) == ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Response& ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Result::Device_GetStateAbsolute_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Result::~Device_GetStateAbsolute_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~Device_GetStateAbsolute_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Result::MoveImpl_(Device_GetStateAbsolute_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(Device_GetStateNormalized_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(Device_GetStateNormalized_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(Device_GetStateNormalized_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Result, response_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Result, err_) == 8);
-  static_assert(sizeof(::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Result) == ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Response& ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Result::Device_SetStateNormalized_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Result::~Device_SetStateNormalized_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~Device_SetStateNormalized_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Result::MoveImpl_(Device_SetStateNormalized_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(Device_GetStateAbsolute_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(Device_GetStateAbsolute_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(Device_GetStateAbsolute_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Result) == ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Response& ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Result::Device_SetStateAbsolute_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Result::~Device_SetStateAbsolute_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~Device_SetStateAbsolute_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Result::MoveImpl_(Device_SetStateAbsolute_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(Device_SetStateNormalized_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(Device_SetStateNormalized_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(Device_SetStateNormalized_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Result) == ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Response& ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Result::Device_GetMaxAbsoluteBrightness_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Result::~Device_GetMaxAbsoluteBrightness_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~Device_GetMaxAbsoluteBrightness_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Result::MoveImpl_(Device_GetMaxAbsoluteBrightness_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(Device_SetStateAbsolute_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(Device_SetStateAbsolute_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(Device_SetStateAbsolute_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Result, response_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Result, err_) == 8);
-  static_assert(sizeof(::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Result) == ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Result::PrimarySize);
+  static_assert(sizeof(Device_GetMaxAbsoluteBrightness_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(Device_GetMaxAbsoluteBrightness_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(Device_GetMaxAbsoluteBrightness_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
-
-
-::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Response& ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
 
 namespace {
 
@@ -744,16 +479,21 @@ bool Device::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn
 
 void Device::Interface::GetStateNormalizedCompleterBase::Reply(::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetStateNormalizedResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<GetStateNormalizedResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  GetStateNormalizedResponse _response = {};
   Device::SetTransactionHeaderFor::GetStateNormalizedResponse(
       ::fidl::DecodedMessage<GetStateNormalizedResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               GetStateNormalizedResponse::PrimarySize,
               GetStateNormalizedResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetStateNormalizedResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<GetStateNormalizedResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Device::Interface::GetStateNormalizedCompleterBase::ReplySuccess(::llcpp::fuchsia::hardware::backlight::State state) {
   Device_GetStateNormalized_Response response;
@@ -770,15 +510,19 @@ void Device::Interface::GetStateNormalizedCompleterBase::Reply(::fidl::BytePart 
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<GetStateNormalizedResponse*>(_buffer.data());
+  GetStateNormalizedResponse _response = {};
   Device::SetTransactionHeaderFor::GetStateNormalizedResponse(
       ::fidl::DecodedMessage<GetStateNormalizedResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               GetStateNormalizedResponse::PrimarySize,
               GetStateNormalizedResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(GetStateNormalizedResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<GetStateNormalizedResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Device::Interface::GetStateNormalizedCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::backlight::State state) {
   Device_GetStateNormalized_Response response;
@@ -795,16 +539,21 @@ void Device::Interface::GetStateNormalizedCompleterBase::Reply(::fidl::DecodedMe
 
 void Device::Interface::SetStateNormalizedCompleterBase::Reply(::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetStateNormalizedResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<SetStateNormalizedResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  SetStateNormalizedResponse _response = {};
   Device::SetTransactionHeaderFor::SetStateNormalizedResponse(
       ::fidl::DecodedMessage<SetStateNormalizedResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               SetStateNormalizedResponse::PrimarySize,
               SetStateNormalizedResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetStateNormalizedResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<SetStateNormalizedResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Device::Interface::SetStateNormalizedCompleterBase::ReplySuccess() {
   Device_SetStateNormalized_Response response;
@@ -820,15 +569,19 @@ void Device::Interface::SetStateNormalizedCompleterBase::Reply(::fidl::BytePart 
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<SetStateNormalizedResponse*>(_buffer.data());
+  SetStateNormalizedResponse _response = {};
   Device::SetTransactionHeaderFor::SetStateNormalizedResponse(
       ::fidl::DecodedMessage<SetStateNormalizedResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               SetStateNormalizedResponse::PrimarySize,
               SetStateNormalizedResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(SetStateNormalizedResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<SetStateNormalizedResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Device::Interface::SetStateNormalizedCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Device_SetStateNormalized_Response response;
@@ -844,16 +597,21 @@ void Device::Interface::SetStateNormalizedCompleterBase::Reply(::fidl::DecodedMe
 
 void Device::Interface::GetStateAbsoluteCompleterBase::Reply(::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetStateAbsoluteResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<GetStateAbsoluteResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  GetStateAbsoluteResponse _response = {};
   Device::SetTransactionHeaderFor::GetStateAbsoluteResponse(
       ::fidl::DecodedMessage<GetStateAbsoluteResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               GetStateAbsoluteResponse::PrimarySize,
               GetStateAbsoluteResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetStateAbsoluteResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<GetStateAbsoluteResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Device::Interface::GetStateAbsoluteCompleterBase::ReplySuccess(::llcpp::fuchsia::hardware::backlight::State state) {
   Device_GetStateAbsolute_Response response;
@@ -870,15 +628,19 @@ void Device::Interface::GetStateAbsoluteCompleterBase::Reply(::fidl::BytePart _b
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<GetStateAbsoluteResponse*>(_buffer.data());
+  GetStateAbsoluteResponse _response = {};
   Device::SetTransactionHeaderFor::GetStateAbsoluteResponse(
       ::fidl::DecodedMessage<GetStateAbsoluteResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               GetStateAbsoluteResponse::PrimarySize,
               GetStateAbsoluteResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(GetStateAbsoluteResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<GetStateAbsoluteResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Device::Interface::GetStateAbsoluteCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::backlight::State state) {
   Device_GetStateAbsolute_Response response;
@@ -895,16 +657,21 @@ void Device::Interface::GetStateAbsoluteCompleterBase::Reply(::fidl::DecodedMess
 
 void Device::Interface::SetStateAbsoluteCompleterBase::Reply(::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SetStateAbsoluteResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<SetStateAbsoluteResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  SetStateAbsoluteResponse _response = {};
   Device::SetTransactionHeaderFor::SetStateAbsoluteResponse(
       ::fidl::DecodedMessage<SetStateAbsoluteResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               SetStateAbsoluteResponse::PrimarySize,
               SetStateAbsoluteResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SetStateAbsoluteResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<SetStateAbsoluteResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Device::Interface::SetStateAbsoluteCompleterBase::ReplySuccess() {
   Device_SetStateAbsolute_Response response;
@@ -920,15 +687,19 @@ void Device::Interface::SetStateAbsoluteCompleterBase::Reply(::fidl::BytePart _b
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<SetStateAbsoluteResponse*>(_buffer.data());
+  SetStateAbsoluteResponse _response = {};
   Device::SetTransactionHeaderFor::SetStateAbsoluteResponse(
       ::fidl::DecodedMessage<SetStateAbsoluteResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               SetStateAbsoluteResponse::PrimarySize,
               SetStateAbsoluteResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(SetStateAbsoluteResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<SetStateAbsoluteResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Device::Interface::SetStateAbsoluteCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Device_SetStateAbsolute_Response response;
@@ -944,16 +715,21 @@ void Device::Interface::SetStateAbsoluteCompleterBase::Reply(::fidl::DecodedMess
 
 void Device::Interface::GetMaxAbsoluteBrightnessCompleterBase::Reply(::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetMaxAbsoluteBrightnessResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<GetMaxAbsoluteBrightnessResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  GetMaxAbsoluteBrightnessResponse _response = {};
   Device::SetTransactionHeaderFor::GetMaxAbsoluteBrightnessResponse(
       ::fidl::DecodedMessage<GetMaxAbsoluteBrightnessResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               GetMaxAbsoluteBrightnessResponse::PrimarySize,
               GetMaxAbsoluteBrightnessResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetMaxAbsoluteBrightnessResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<GetMaxAbsoluteBrightnessResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Device::Interface::GetMaxAbsoluteBrightnessCompleterBase::ReplySuccess(double max_brightness) {
   Device_GetMaxAbsoluteBrightness_Response response;
@@ -970,15 +746,19 @@ void Device::Interface::GetMaxAbsoluteBrightnessCompleterBase::Reply(::fidl::Byt
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<GetMaxAbsoluteBrightnessResponse*>(_buffer.data());
+  GetMaxAbsoluteBrightnessResponse _response = {};
   Device::SetTransactionHeaderFor::GetMaxAbsoluteBrightnessResponse(
       ::fidl::DecodedMessage<GetMaxAbsoluteBrightnessResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               GetMaxAbsoluteBrightnessResponse::PrimarySize,
               GetMaxAbsoluteBrightnessResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(GetMaxAbsoluteBrightnessResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<GetMaxAbsoluteBrightnessResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Device::Interface::GetMaxAbsoluteBrightnessCompleterBase::ReplySuccess(::fidl::BytePart _buffer, double max_brightness) {
   Device_GetMaxAbsoluteBrightness_Response response;
@@ -996,37 +776,47 @@ void Device::Interface::GetMaxAbsoluteBrightnessCompleterBase::Reply(::fidl::Dec
 
 void Device::SetTransactionHeaderFor::GetStateNormalizedRequest(const ::fidl::DecodedMessage<Device::GetStateNormalizedRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetStateNormalized_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Device::SetTransactionHeaderFor::GetStateNormalizedResponse(const ::fidl::DecodedMessage<Device::GetStateNormalizedResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetStateNormalized_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Device::SetTransactionHeaderFor::SetStateNormalizedRequest(const ::fidl::DecodedMessage<Device::SetStateNormalizedRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_SetStateNormalized_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Device::SetTransactionHeaderFor::SetStateNormalizedResponse(const ::fidl::DecodedMessage<Device::SetStateNormalizedResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_SetStateNormalized_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Device::SetTransactionHeaderFor::GetStateAbsoluteRequest(const ::fidl::DecodedMessage<Device::GetStateAbsoluteRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetStateAbsolute_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Device::SetTransactionHeaderFor::GetStateAbsoluteResponse(const ::fidl::DecodedMessage<Device::GetStateAbsoluteResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetStateAbsolute_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Device::SetTransactionHeaderFor::SetStateAbsoluteRequest(const ::fidl::DecodedMessage<Device::SetStateAbsoluteRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_SetStateAbsolute_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Device::SetTransactionHeaderFor::SetStateAbsoluteResponse(const ::fidl::DecodedMessage<Device::SetStateAbsoluteResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_SetStateAbsolute_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Device::SetTransactionHeaderFor::GetMaxAbsoluteBrightnessRequest(const ::fidl::DecodedMessage<Device::GetMaxAbsoluteBrightnessRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetMaxAbsoluteBrightness_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Device::SetTransactionHeaderFor::GetMaxAbsoluteBrightnessResponse(const ::fidl::DecodedMessage<Device::GetMaxAbsoluteBrightnessResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetMaxAbsoluteBrightness_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace backlight

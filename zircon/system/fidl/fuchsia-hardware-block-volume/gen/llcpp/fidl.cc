@@ -1774,100 +1774,128 @@ void Volume::Interface::DestroyCompleterBase::Reply(::fidl::DecodedMessage<Destr
 
 void Volume::SetTransactionHeaderFor::GetInfoRequest(const ::fidl::DecodedMessage<Volume::GetInfoRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kVolume_GetInfo_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Volume::SetTransactionHeaderFor::GetInfoResponse(const ::fidl::DecodedMessage<Volume::GetInfoResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kVolume_GetInfo_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Volume::SetTransactionHeaderFor::GetStatsRequest(const ::fidl::DecodedMessage<Volume::GetStatsRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kVolume_GetStats_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Volume::SetTransactionHeaderFor::GetStatsResponse(const ::fidl::DecodedMessage<Volume::GetStatsResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kVolume_GetStats_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Volume::SetTransactionHeaderFor::GetFifoRequest(const ::fidl::DecodedMessage<Volume::GetFifoRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kVolume_GetFifo_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Volume::SetTransactionHeaderFor::GetFifoResponse(const ::fidl::DecodedMessage<Volume::GetFifoResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kVolume_GetFifo_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Volume::SetTransactionHeaderFor::AttachVmoRequest(const ::fidl::DecodedMessage<Volume::AttachVmoRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kVolume_AttachVmo_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Volume::SetTransactionHeaderFor::AttachVmoResponse(const ::fidl::DecodedMessage<Volume::AttachVmoResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kVolume_AttachVmo_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Volume::SetTransactionHeaderFor::CloseFifoRequest(const ::fidl::DecodedMessage<Volume::CloseFifoRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kVolume_CloseFifo_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Volume::SetTransactionHeaderFor::CloseFifoResponse(const ::fidl::DecodedMessage<Volume::CloseFifoResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kVolume_CloseFifo_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Volume::SetTransactionHeaderFor::RebindDeviceRequest(const ::fidl::DecodedMessage<Volume::RebindDeviceRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kVolume_RebindDevice_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Volume::SetTransactionHeaderFor::RebindDeviceResponse(const ::fidl::DecodedMessage<Volume::RebindDeviceResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kVolume_RebindDevice_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Volume::SetTransactionHeaderFor::GetTypeGuidRequest(const ::fidl::DecodedMessage<Volume::GetTypeGuidRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kVolume_GetTypeGuid_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Volume::SetTransactionHeaderFor::GetTypeGuidResponse(const ::fidl::DecodedMessage<Volume::GetTypeGuidResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kVolume_GetTypeGuid_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Volume::SetTransactionHeaderFor::GetInstanceGuidRequest(const ::fidl::DecodedMessage<Volume::GetInstanceGuidRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kVolume_GetInstanceGuid_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Volume::SetTransactionHeaderFor::GetInstanceGuidResponse(const ::fidl::DecodedMessage<Volume::GetInstanceGuidResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kVolume_GetInstanceGuid_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Volume::SetTransactionHeaderFor::GetNameRequest(const ::fidl::DecodedMessage<Volume::GetNameRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kVolume_GetName_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Volume::SetTransactionHeaderFor::GetNameResponse(const ::fidl::DecodedMessage<Volume::GetNameResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kVolume_GetName_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Volume::SetTransactionHeaderFor::QueryRequest(const ::fidl::DecodedMessage<Volume::QueryRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kVolume_Query_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Volume::SetTransactionHeaderFor::QueryResponse(const ::fidl::DecodedMessage<Volume::QueryResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kVolume_Query_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Volume::SetTransactionHeaderFor::QuerySlicesRequest(const ::fidl::DecodedMessage<Volume::QuerySlicesRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kVolume_QuerySlices_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Volume::SetTransactionHeaderFor::QuerySlicesResponse(const ::fidl::DecodedMessage<Volume::QuerySlicesResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kVolume_QuerySlices_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Volume::SetTransactionHeaderFor::ExtendRequest(const ::fidl::DecodedMessage<Volume::ExtendRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kVolume_Extend_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Volume::SetTransactionHeaderFor::ExtendResponse(const ::fidl::DecodedMessage<Volume::ExtendResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kVolume_Extend_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Volume::SetTransactionHeaderFor::ShrinkRequest(const ::fidl::DecodedMessage<Volume::ShrinkRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kVolume_Shrink_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Volume::SetTransactionHeaderFor::ShrinkResponse(const ::fidl::DecodedMessage<Volume::ShrinkResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kVolume_Shrink_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Volume::SetTransactionHeaderFor::DestroyRequest(const ::fidl::DecodedMessage<Volume::DestroyRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kVolume_Destroy_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Volume::SetTransactionHeaderFor::DestroyResponse(const ::fidl::DecodedMessage<Volume::DestroyResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kVolume_Destroy_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 namespace {
@@ -2412,30 +2440,38 @@ void VolumeManager::Interface::ActivateCompleterBase::Reply(::fidl::DecodedMessa
 
 void VolumeManager::SetTransactionHeaderFor::AllocatePartitionRequest(const ::fidl::DecodedMessage<VolumeManager::AllocatePartitionRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kVolumeManager_AllocatePartition_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void VolumeManager::SetTransactionHeaderFor::AllocatePartitionResponse(const ::fidl::DecodedMessage<VolumeManager::AllocatePartitionResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kVolumeManager_AllocatePartition_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void VolumeManager::SetTransactionHeaderFor::QueryRequest(const ::fidl::DecodedMessage<VolumeManager::QueryRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kVolumeManager_Query_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void VolumeManager::SetTransactionHeaderFor::QueryResponse(const ::fidl::DecodedMessage<VolumeManager::QueryResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kVolumeManager_Query_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void VolumeManager::SetTransactionHeaderFor::GetInfoRequest(const ::fidl::DecodedMessage<VolumeManager::GetInfoRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kVolumeManager_GetInfo_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void VolumeManager::SetTransactionHeaderFor::GetInfoResponse(const ::fidl::DecodedMessage<VolumeManager::GetInfoResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kVolumeManager_GetInfo_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void VolumeManager::SetTransactionHeaderFor::ActivateRequest(const ::fidl::DecodedMessage<VolumeManager::ActivateRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kVolumeManager_Activate_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void VolumeManager::SetTransactionHeaderFor::ActivateResponse(const ::fidl::DecodedMessage<VolumeManager::ActivateResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kVolumeManager_Activate_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace volume

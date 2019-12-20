@@ -39,8 +39,8 @@ class Device final {
     fidl_message_header_t _hdr;
     ::zx::channel ch;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_test_DeviceGetChannelResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_test_DeviceGetChannelResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_test_DeviceGetChannelResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_test_DeviceGetChannelResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;

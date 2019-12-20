@@ -54,8 +54,8 @@ class Loader final {
     int32_t rv;
     ::zx::vmo object;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_ldsvc_LoaderLoadObjectResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_ldsvc_LoaderLoadObjectResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_ldsvc_LoaderLoadObjectResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_ldsvc_LoaderLoadObjectResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -71,8 +71,8 @@ class Loader final {
     fidl_message_header_t _hdr;
     ::fidl::StringView object_name;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_ldsvc_LoaderLoadObjectRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_ldsvc_LoaderLoadObjectRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_ldsvc_LoaderLoadObjectRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_ldsvc_LoaderLoadObjectRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 1024;
@@ -90,8 +90,8 @@ class Loader final {
     fidl_message_header_t _hdr;
     int32_t rv;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_ldsvc_LoaderConfigResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_ldsvc_LoaderConfigResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_ldsvc_LoaderConfigResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_ldsvc_LoaderConfigResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -107,8 +107,8 @@ class Loader final {
     fidl_message_header_t _hdr;
     ::fidl::StringView config;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_ldsvc_LoaderConfigRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_ldsvc_LoaderConfigRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_ldsvc_LoaderConfigRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_ldsvc_LoaderConfigRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 1024;
@@ -126,8 +126,8 @@ class Loader final {
     fidl_message_header_t _hdr;
     int32_t rv;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_ldsvc_LoaderCloneResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_ldsvc_LoaderCloneResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_ldsvc_LoaderCloneResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_ldsvc_LoaderCloneResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -143,8 +143,8 @@ class Loader final {
     fidl_message_header_t _hdr;
     ::zx::channel loader;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_ldsvc_LoaderCloneRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_ldsvc_LoaderCloneRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_ldsvc_LoaderCloneRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_ldsvc_LoaderCloneRequestTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;

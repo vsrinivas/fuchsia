@@ -102,10 +102,10 @@ zx_status_t {{ .Name }}::Call::HandleEvents(::zx::unowned_channel client_end, {{
       {{- if .ResponseContainsUnion }}
       constexpr uint32_t kTransformerDestSize = ::fidl::internal::ClampedMessageSize<{{ .Name }}Response, ::fidl::MessageDirection::kReceiving>();
       ::fidl::internal::ByteStorage<kTransformerDestSize> transformer_dest_storage(::fidl::internal::DelayAllocation);
-      if (fidl_should_decode_union_from_xunion(hdr)) {
+      if (!fidl_should_decode_union_from_xunion(hdr)) {
         transformer_dest_storage.Allocate();
         uint8_t* transformer_dest = transformer_dest_storage.buffer().data();
-        zx_status_t transform_status = fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD,
+        zx_status_t transform_status = fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1,
                                                       {{ .Name }}Response::AltType,
                                                       reinterpret_cast<uint8_t*>(msg.bytes),
                                                       msg.num_bytes,

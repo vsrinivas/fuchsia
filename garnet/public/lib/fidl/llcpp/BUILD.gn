@@ -78,7 +78,6 @@ executable("fidl_llcpp_types_test_bin") {
     "test_utils.cc",
     "transformer_integration_test.cc",
     "transitional_test.cc",
-    "union_test.cc",
     "xunion_test.cc",
   ]
 

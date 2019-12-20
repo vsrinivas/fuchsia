@@ -246,7 +246,7 @@ zx_status_t Device::SetSnoopChannelToDevice(zx_handle_t channel) {
   } else {
     snoop_channel_ = channel;
     zx_object_wait_async(snoop_channel_, snoop_channel_port_, 0, ZX_CHANNEL_PEER_CLOSED,
-                        ZX_WAIT_ASYNC_ONCE);
+                         ZX_WAIT_ASYNC_ONCE);
   }
   return status;
 }
@@ -260,17 +260,13 @@ zx_status_t Device::CloseQmiChannel() {
 void Device::SetChannel(::zx::channel transport, SetChannelCompleter::Sync completer) {
   zx_status_t set_channel_res = SetChannelToDevice(transport.release());
   if (set_channel_res == ZX_OK) {
-    telephony_transport::Qmi_SetChannel_Response response{
-        .__reserved = 0,
-    };
-    completer.Reply(telephony_transport::Qmi_SetChannel_Result::WithResponse(&response));
+    completer.ReplySuccess();
     zx_status_t status = SetAsyncWait();
     if (status != ZX_OK) {
       CloseQmiChannel();
     }
   } else {
-    completer.Reply(
-        telephony_transport::Qmi_SetChannel_Result::WithErr(static_cast<int32_t*>(&set_channel_res)));
+    completer.ReplyError(set_channel_res);
   }
 }
 
@@ -282,13 +278,9 @@ void Device::SetNetwork(bool connected, SetNetworkCompleter::Sync completer) {
 void Device::SetSnoopChannel(::zx::channel interface, SetSnoopChannelCompleter::Sync completer) {
   zx_status_t set_snoop_res = SetSnoopChannelToDevice(interface.release());
   if (set_snoop_res == ZX_OK) {
-    telephony_transport::Qmi_SetSnoopChannel_Response response{
-        .__reserved = 0,
-    };
-    completer.Reply(telephony_transport::Qmi_SetSnoopChannel_Result::WithResponse(&response));
+    completer.ReplySuccess();
   } else {
-    completer.Reply(telephony_transport::Qmi_SetSnoopChannel_Result::WithErr(
-        static_cast<int32_t*>(&set_snoop_res)));
+    completer.ReplyError(static_cast<uint32_t>(set_snoop_res));
   }
 }
 

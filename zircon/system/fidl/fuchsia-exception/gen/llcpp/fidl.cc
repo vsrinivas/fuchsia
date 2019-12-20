@@ -8,182 +8,23 @@ namespace llcpp {
 namespace fuchsia {
 namespace exception {
 
-::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result::ProcessLimbo_RemoveFilters_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result::~ProcessLimbo_RemoveFilters_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~ProcessLimbo_RemoveFilters_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result::MoveImpl_(ProcessLimbo_RemoveFilters_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
-}
-
 void ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result) == ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response& ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result::ProcessLimbo_ReleaseProcess_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result::~ProcessLimbo_ReleaseProcess_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~ProcessLimbo_ReleaseProcess_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result::MoveImpl_(ProcessLimbo_ReleaseProcess_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(ProcessLimbo_RemoveFilters_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(ProcessLimbo_RemoveFilters_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(ProcessLimbo_RemoveFilters_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result) == ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response& ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result::ProcessLimbo_AppendFilters_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result::~ProcessLimbo_AppendFilters_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~ProcessLimbo_AppendFilters_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result::MoveImpl_(ProcessLimbo_AppendFilters_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(ProcessLimbo_ReleaseProcess_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(ProcessLimbo_ReleaseProcess_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(ProcessLimbo_ReleaseProcess_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result) == ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result::PrimarySize);
+  static_assert(sizeof(ProcessLimbo_AppendFilters_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(ProcessLimbo_AppendFilters_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(ProcessLimbo_AppendFilters_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
-
-
-::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response& ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
 
 namespace {
 
@@ -320,9 +161,11 @@ void Handler::Interface::OnExceptionCompleterBase::Reply() {
 
 void Handler::SetTransactionHeaderFor::OnExceptionRequest(const ::fidl::DecodedMessage<Handler::OnExceptionRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kHandler_OnException_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Handler::SetTransactionHeaderFor::OnExceptionResponse(const ::fidl::DecodedMessage<Handler::OnExceptionResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kHandler_OnException_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 ::llcpp::fuchsia::exception::ProcessExceptionMetadata::Builder ProcessExceptionMetadata::Build() {
@@ -356,64 +199,11 @@ auto ::llcpp::fuchsia::exception::ProcessExceptionMetadata::Builder::set_thread(
   return std::move(*this);
 }
 
-::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Result::ProcessLimbo_WatchProcessesWaitingOnException_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Result::~ProcessLimbo_WatchProcessesWaitingOnException_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~ProcessLimbo_WatchProcessesWaitingOnException_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Result::MoveImpl_(ProcessLimbo_WatchProcessesWaitingOnException_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
-}
-
 void ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Result, response_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Result, err_) == 8);
-  static_assert(sizeof(::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Result) == ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Result::PrimarySize);
+  static_assert(sizeof(ProcessLimbo_WatchProcessesWaitingOnException_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(ProcessLimbo_WatchProcessesWaitingOnException_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(ProcessLimbo_WatchProcessesWaitingOnException_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
-
-
-::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response& ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
 
 ::llcpp::fuchsia::exception::ProcessException::Builder ProcessException::Build() {
   return ProcessException::Builder();
@@ -455,64 +245,11 @@ auto ::llcpp::fuchsia::exception::ProcessException::Builder::set_thread(::zx::th
   return std::move(*this);
 }
 
-::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Result::ProcessLimbo_RetrieveException_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Result::~ProcessLimbo_RetrieveException_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~ProcessLimbo_RetrieveException_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Result::MoveImpl_(ProcessLimbo_RetrieveException_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
-}
-
 void ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Result, response_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Result, err_) == 8);
-  static_assert(sizeof(::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Result) == ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Result::PrimarySize);
+  static_assert(sizeof(ProcessLimbo_RetrieveException_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(ProcessLimbo_RetrieveException_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(ProcessLimbo_RetrieveException_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
-
-
-::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response& ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
 
 namespace {
 
@@ -1382,16 +1119,21 @@ void ProcessLimbo::Interface::RetrieveExceptionCompleterBase::Reply(::fidl::Deco
 
 void ProcessLimbo::Interface::ReleaseProcessCompleterBase::Reply(::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReleaseProcessResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<ReleaseProcessResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  ReleaseProcessResponse _response = {};
   ProcessLimbo::SetTransactionHeaderFor::ReleaseProcessResponse(
       ::fidl::DecodedMessage<ReleaseProcessResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               ReleaseProcessResponse::PrimarySize,
               ReleaseProcessResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ReleaseProcessResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<ReleaseProcessResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void ProcessLimbo::Interface::ReleaseProcessCompleterBase::ReplySuccess() {
   ProcessLimbo_ReleaseProcess_Response response;
@@ -1407,15 +1149,19 @@ void ProcessLimbo::Interface::ReleaseProcessCompleterBase::Reply(::fidl::BytePar
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<ReleaseProcessResponse*>(_buffer.data());
+  ReleaseProcessResponse _response = {};
   ProcessLimbo::SetTransactionHeaderFor::ReleaseProcessResponse(
       ::fidl::DecodedMessage<ReleaseProcessResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               ReleaseProcessResponse::PrimarySize,
               ReleaseProcessResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(ReleaseProcessResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<ReleaseProcessResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void ProcessLimbo::Interface::ReleaseProcessCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   ProcessLimbo_ReleaseProcess_Response response;
@@ -1431,16 +1177,21 @@ void ProcessLimbo::Interface::ReleaseProcessCompleterBase::Reply(::fidl::Decoded
 
 void ProcessLimbo::Interface::AppendFiltersCompleterBase::Reply(::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AppendFiltersResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<AppendFiltersResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  AppendFiltersResponse _response = {};
   ProcessLimbo::SetTransactionHeaderFor::AppendFiltersResponse(
       ::fidl::DecodedMessage<AppendFiltersResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               AppendFiltersResponse::PrimarySize,
               AppendFiltersResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(AppendFiltersResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<AppendFiltersResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void ProcessLimbo::Interface::AppendFiltersCompleterBase::ReplySuccess() {
   ProcessLimbo_AppendFilters_Response response;
@@ -1456,15 +1207,19 @@ void ProcessLimbo::Interface::AppendFiltersCompleterBase::Reply(::fidl::BytePart
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<AppendFiltersResponse*>(_buffer.data());
+  AppendFiltersResponse _response = {};
   ProcessLimbo::SetTransactionHeaderFor::AppendFiltersResponse(
       ::fidl::DecodedMessage<AppendFiltersResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               AppendFiltersResponse::PrimarySize,
               AppendFiltersResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(AppendFiltersResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<AppendFiltersResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void ProcessLimbo::Interface::AppendFiltersCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   ProcessLimbo_AppendFilters_Response response;
@@ -1480,16 +1235,21 @@ void ProcessLimbo::Interface::AppendFiltersCompleterBase::Reply(::fidl::DecodedM
 
 void ProcessLimbo::Interface::RemoveFiltersCompleterBase::Reply(::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RemoveFiltersResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<RemoveFiltersResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  RemoveFiltersResponse _response = {};
   ProcessLimbo::SetTransactionHeaderFor::RemoveFiltersResponse(
       ::fidl::DecodedMessage<RemoveFiltersResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               RemoveFiltersResponse::PrimarySize,
               RemoveFiltersResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(RemoveFiltersResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<RemoveFiltersResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void ProcessLimbo::Interface::RemoveFiltersCompleterBase::ReplySuccess() {
   ProcessLimbo_RemoveFilters_Response response;
@@ -1505,15 +1265,19 @@ void ProcessLimbo::Interface::RemoveFiltersCompleterBase::Reply(::fidl::BytePart
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<RemoveFiltersResponse*>(_buffer.data());
+  RemoveFiltersResponse _response = {};
   ProcessLimbo::SetTransactionHeaderFor::RemoveFiltersResponse(
       ::fidl::DecodedMessage<RemoveFiltersResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               RemoveFiltersResponse::PrimarySize,
               RemoveFiltersResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(RemoveFiltersResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<RemoveFiltersResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void ProcessLimbo::Interface::RemoveFiltersCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   ProcessLimbo_RemoveFilters_Response response;
@@ -1576,58 +1340,74 @@ void ProcessLimbo::Interface::GetFiltersCompleterBase::Reply(::fidl::DecodedMess
 
 void ProcessLimbo::SetTransactionHeaderFor::SetActiveRequest(const ::fidl::DecodedMessage<ProcessLimbo::SetActiveRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_SetActive_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void ProcessLimbo::SetTransactionHeaderFor::SetActiveResponse(const ::fidl::DecodedMessage<ProcessLimbo::SetActiveResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_SetActive_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void ProcessLimbo::SetTransactionHeaderFor::WatchActiveRequest(const ::fidl::DecodedMessage<ProcessLimbo::WatchActiveRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_WatchActive_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void ProcessLimbo::SetTransactionHeaderFor::WatchActiveResponse(const ::fidl::DecodedMessage<ProcessLimbo::WatchActiveResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_WatchActive_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void ProcessLimbo::SetTransactionHeaderFor::WatchProcessesWaitingOnExceptionRequest(const ::fidl::DecodedMessage<ProcessLimbo::WatchProcessesWaitingOnExceptionRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_WatchProcessesWaitingOnException_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void ProcessLimbo::SetTransactionHeaderFor::WatchProcessesWaitingOnExceptionResponse(const ::fidl::DecodedMessage<ProcessLimbo::WatchProcessesWaitingOnExceptionResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_WatchProcessesWaitingOnException_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void ProcessLimbo::SetTransactionHeaderFor::RetrieveExceptionRequest(const ::fidl::DecodedMessage<ProcessLimbo::RetrieveExceptionRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_RetrieveException_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void ProcessLimbo::SetTransactionHeaderFor::RetrieveExceptionResponse(const ::fidl::DecodedMessage<ProcessLimbo::RetrieveExceptionResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_RetrieveException_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void ProcessLimbo::SetTransactionHeaderFor::ReleaseProcessRequest(const ::fidl::DecodedMessage<ProcessLimbo::ReleaseProcessRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_ReleaseProcess_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void ProcessLimbo::SetTransactionHeaderFor::ReleaseProcessResponse(const ::fidl::DecodedMessage<ProcessLimbo::ReleaseProcessResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_ReleaseProcess_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void ProcessLimbo::SetTransactionHeaderFor::AppendFiltersRequest(const ::fidl::DecodedMessage<ProcessLimbo::AppendFiltersRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_AppendFilters_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void ProcessLimbo::SetTransactionHeaderFor::AppendFiltersResponse(const ::fidl::DecodedMessage<ProcessLimbo::AppendFiltersResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_AppendFilters_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void ProcessLimbo::SetTransactionHeaderFor::RemoveFiltersRequest(const ::fidl::DecodedMessage<ProcessLimbo::RemoveFiltersRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_RemoveFilters_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void ProcessLimbo::SetTransactionHeaderFor::RemoveFiltersResponse(const ::fidl::DecodedMessage<ProcessLimbo::RemoveFiltersResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_RemoveFilters_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void ProcessLimbo::SetTransactionHeaderFor::GetFiltersRequest(const ::fidl::DecodedMessage<ProcessLimbo::GetFiltersRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_GetFilters_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void ProcessLimbo::SetTransactionHeaderFor::GetFiltersResponse(const ::fidl::DecodedMessage<ProcessLimbo::GetFiltersResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_GetFilters_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace exception

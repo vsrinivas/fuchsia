@@ -10,300 +10,35 @@ namespace hardware {
 namespace cpu {
 namespace insntrace {
 
-::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Result::Controller_Terminate_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Result::~Controller_Terminate_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~Controller_Terminate_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Result::MoveImpl_(Controller_Terminate_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
-}
-
 void ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Result) == ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Response& ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::hardware::cpu::insntrace::Controller_ReleaseThreadBuffer_Result::Controller_ReleaseThreadBuffer_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::hardware::cpu::insntrace::Controller_ReleaseThreadBuffer_Result::~Controller_ReleaseThreadBuffer_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_ReleaseThreadBuffer_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~Controller_ReleaseThreadBuffer_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_ReleaseThreadBuffer_Result::MoveImpl_(Controller_ReleaseThreadBuffer_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(Controller_Terminate_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(Controller_Terminate_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(Controller_Terminate_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_ReleaseThreadBuffer_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::hardware::cpu::insntrace::Controller_ReleaseThreadBuffer_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::hardware::cpu::insntrace::Controller_ReleaseThreadBuffer_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::hardware::cpu::insntrace::Controller_ReleaseThreadBuffer_Result) == ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_ReleaseThreadBuffer_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::hardware::cpu::insntrace::Controller_ReleaseThreadBuffer_Response& ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_ReleaseThreadBuffer_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_ReleaseThreadBuffer_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_ReleaseThreadBuffer_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Initialize_Result::Controller_Initialize_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Initialize_Result::~Controller_Initialize_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Initialize_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~Controller_Initialize_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Initialize_Result::MoveImpl_(Controller_Initialize_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(Controller_ReleaseThreadBuffer_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(Controller_ReleaseThreadBuffer_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(Controller_ReleaseThreadBuffer_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Initialize_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Initialize_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Initialize_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Initialize_Result) == ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Initialize_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Initialize_Response& ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Initialize_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Initialize_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Initialize_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AssignThreadBuffer_Result::Controller_AssignThreadBuffer_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AssignThreadBuffer_Result::~Controller_AssignThreadBuffer_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AssignThreadBuffer_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~Controller_AssignThreadBuffer_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AssignThreadBuffer_Result::MoveImpl_(Controller_AssignThreadBuffer_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(Controller_Initialize_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(Controller_Initialize_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(Controller_Initialize_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AssignThreadBuffer_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AssignThreadBuffer_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AssignThreadBuffer_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AssignThreadBuffer_Result) == ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AssignThreadBuffer_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AssignThreadBuffer_Response& ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AssignThreadBuffer_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AssignThreadBuffer_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AssignThreadBuffer_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_Result::Controller_AllocateBuffer_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_Result::~Controller_AllocateBuffer_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~Controller_AllocateBuffer_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_Result::MoveImpl_(Controller_AllocateBuffer_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(Controller_AssignThreadBuffer_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(Controller_AssignThreadBuffer_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(Controller_AssignThreadBuffer_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_Result) == ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_Result::PrimarySize);
+  static_assert(sizeof(Controller_AllocateBuffer_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(Controller_AllocateBuffer_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(Controller_AllocateBuffer_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
-
-
-::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_Response& ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
 
 namespace {
 
@@ -1285,16 +1020,21 @@ bool Controller::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
 
 void Controller::Interface::InitializeCompleterBase::Reply(::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Initialize_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<InitializeResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<InitializeResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  InitializeResponse _response = {};
   Controller::SetTransactionHeaderFor::InitializeResponse(
       ::fidl::DecodedMessage<InitializeResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               InitializeResponse::PrimarySize,
               InitializeResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(InitializeResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<InitializeResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Controller::Interface::InitializeCompleterBase::ReplySuccess() {
   Controller_Initialize_Response response;
@@ -1310,15 +1050,19 @@ void Controller::Interface::InitializeCompleterBase::Reply(::fidl::BytePart _buf
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<InitializeResponse*>(_buffer.data());
+  InitializeResponse _response = {};
   Controller::SetTransactionHeaderFor::InitializeResponse(
       ::fidl::DecodedMessage<InitializeResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               InitializeResponse::PrimarySize,
               InitializeResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(InitializeResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<InitializeResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Controller::Interface::InitializeCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Controller_Initialize_Response response;
@@ -1334,16 +1078,21 @@ void Controller::Interface::InitializeCompleterBase::Reply(::fidl::DecodedMessag
 
 void Controller::Interface::TerminateCompleterBase::Reply(::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<TerminateResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<TerminateResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  TerminateResponse _response = {};
   Controller::SetTransactionHeaderFor::TerminateResponse(
       ::fidl::DecodedMessage<TerminateResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               TerminateResponse::PrimarySize,
               TerminateResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(TerminateResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<TerminateResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Controller::Interface::TerminateCompleterBase::ReplySuccess() {
   Controller_Terminate_Response response;
@@ -1359,15 +1108,19 @@ void Controller::Interface::TerminateCompleterBase::Reply(::fidl::BytePart _buff
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<TerminateResponse*>(_buffer.data());
+  TerminateResponse _response = {};
   Controller::SetTransactionHeaderFor::TerminateResponse(
       ::fidl::DecodedMessage<TerminateResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               TerminateResponse::PrimarySize,
               TerminateResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(TerminateResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<TerminateResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Controller::Interface::TerminateCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Controller_Terminate_Response response;
@@ -1428,16 +1181,21 @@ void Controller::Interface::GetAllocationCompleterBase::Reply(::fidl::DecodedMes
 
 void Controller::Interface::AllocateBufferCompleterBase::Reply(::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AllocateBufferResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<AllocateBufferResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  AllocateBufferResponse _response = {};
   Controller::SetTransactionHeaderFor::AllocateBufferResponse(
       ::fidl::DecodedMessage<AllocateBufferResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               AllocateBufferResponse::PrimarySize,
               AllocateBufferResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(AllocateBufferResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<AllocateBufferResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Controller::Interface::AllocateBufferCompleterBase::ReplySuccess(uint32_t descriptor) {
   Controller_AllocateBuffer_Response response;
@@ -1454,15 +1212,19 @@ void Controller::Interface::AllocateBufferCompleterBase::Reply(::fidl::BytePart 
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<AllocateBufferResponse*>(_buffer.data());
+  AllocateBufferResponse _response = {};
   Controller::SetTransactionHeaderFor::AllocateBufferResponse(
       ::fidl::DecodedMessage<AllocateBufferResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               AllocateBufferResponse::PrimarySize,
               AllocateBufferResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(AllocateBufferResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<AllocateBufferResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Controller::Interface::AllocateBufferCompleterBase::ReplySuccess(::fidl::BytePart _buffer, uint32_t descriptor) {
   Controller_AllocateBuffer_Response response;
@@ -1479,16 +1241,21 @@ void Controller::Interface::AllocateBufferCompleterBase::Reply(::fidl::DecodedMe
 
 void Controller::Interface::AssignThreadBufferCompleterBase::Reply(::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AssignThreadBuffer_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AssignThreadBufferResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<AssignThreadBufferResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  AssignThreadBufferResponse _response = {};
   Controller::SetTransactionHeaderFor::AssignThreadBufferResponse(
       ::fidl::DecodedMessage<AssignThreadBufferResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               AssignThreadBufferResponse::PrimarySize,
               AssignThreadBufferResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(AssignThreadBufferResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<AssignThreadBufferResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Controller::Interface::AssignThreadBufferCompleterBase::ReplySuccess() {
   Controller_AssignThreadBuffer_Response response;
@@ -1504,15 +1271,19 @@ void Controller::Interface::AssignThreadBufferCompleterBase::Reply(::fidl::ByteP
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<AssignThreadBufferResponse*>(_buffer.data());
+  AssignThreadBufferResponse _response = {};
   Controller::SetTransactionHeaderFor::AssignThreadBufferResponse(
       ::fidl::DecodedMessage<AssignThreadBufferResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               AssignThreadBufferResponse::PrimarySize,
               AssignThreadBufferResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(AssignThreadBufferResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<AssignThreadBufferResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Controller::Interface::AssignThreadBufferCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Controller_AssignThreadBuffer_Response response;
@@ -1528,16 +1299,21 @@ void Controller::Interface::AssignThreadBufferCompleterBase::Reply(::fidl::Decod
 
 void Controller::Interface::ReleaseThreadBufferCompleterBase::Reply(::llcpp::fuchsia::hardware::cpu::insntrace::Controller_ReleaseThreadBuffer_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ReleaseThreadBufferResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<ReleaseThreadBufferResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  ReleaseThreadBufferResponse _response = {};
   Controller::SetTransactionHeaderFor::ReleaseThreadBufferResponse(
       ::fidl::DecodedMessage<ReleaseThreadBufferResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               ReleaseThreadBufferResponse::PrimarySize,
               ReleaseThreadBufferResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ReleaseThreadBufferResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<ReleaseThreadBufferResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Controller::Interface::ReleaseThreadBufferCompleterBase::ReplySuccess() {
   Controller_ReleaseThreadBuffer_Response response;
@@ -1553,15 +1329,19 @@ void Controller::Interface::ReleaseThreadBufferCompleterBase::Reply(::fidl::Byte
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<ReleaseThreadBufferResponse*>(_buffer.data());
+  ReleaseThreadBufferResponse _response = {};
   Controller::SetTransactionHeaderFor::ReleaseThreadBufferResponse(
       ::fidl::DecodedMessage<ReleaseThreadBufferResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               ReleaseThreadBufferResponse::PrimarySize,
               ReleaseThreadBufferResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(ReleaseThreadBufferResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<ReleaseThreadBufferResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void Controller::Interface::ReleaseThreadBufferCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Controller_ReleaseThreadBuffer_Response response;
@@ -1746,86 +1526,110 @@ void Controller::Interface::StopCompleterBase::Reply() {
 
 void Controller::SetTransactionHeaderFor::InitializeRequest(const ::fidl::DecodedMessage<Controller::InitializeRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_Initialize_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Controller::SetTransactionHeaderFor::InitializeResponse(const ::fidl::DecodedMessage<Controller::InitializeResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_Initialize_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::TerminateRequest(const ::fidl::DecodedMessage<Controller::TerminateRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_Terminate_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Controller::SetTransactionHeaderFor::TerminateResponse(const ::fidl::DecodedMessage<Controller::TerminateResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_Terminate_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::GetAllocationRequest(const ::fidl::DecodedMessage<Controller::GetAllocationRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetAllocation_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Controller::SetTransactionHeaderFor::GetAllocationResponse(const ::fidl::DecodedMessage<Controller::GetAllocationResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetAllocation_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::AllocateBufferRequest(const ::fidl::DecodedMessage<Controller::AllocateBufferRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_AllocateBuffer_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Controller::SetTransactionHeaderFor::AllocateBufferResponse(const ::fidl::DecodedMessage<Controller::AllocateBufferResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_AllocateBuffer_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::AssignThreadBufferRequest(const ::fidl::DecodedMessage<Controller::AssignThreadBufferRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_AssignThreadBuffer_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Controller::SetTransactionHeaderFor::AssignThreadBufferResponse(const ::fidl::DecodedMessage<Controller::AssignThreadBufferResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_AssignThreadBuffer_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::ReleaseThreadBufferRequest(const ::fidl::DecodedMessage<Controller::ReleaseThreadBufferRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_ReleaseThreadBuffer_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Controller::SetTransactionHeaderFor::ReleaseThreadBufferResponse(const ::fidl::DecodedMessage<Controller::ReleaseThreadBufferResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_ReleaseThreadBuffer_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::GetBufferConfigRequest(const ::fidl::DecodedMessage<Controller::GetBufferConfigRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetBufferConfig_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Controller::SetTransactionHeaderFor::GetBufferConfigResponse(const ::fidl::DecodedMessage<Controller::GetBufferConfigResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetBufferConfig_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::GetBufferStateRequest(const ::fidl::DecodedMessage<Controller::GetBufferStateRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetBufferState_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Controller::SetTransactionHeaderFor::GetBufferStateResponse(const ::fidl::DecodedMessage<Controller::GetBufferStateResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetBufferState_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::GetChunkHandleRequest(const ::fidl::DecodedMessage<Controller::GetChunkHandleRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetChunkHandle_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Controller::SetTransactionHeaderFor::GetChunkHandleResponse(const ::fidl::DecodedMessage<Controller::GetChunkHandleResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetChunkHandle_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::FreeBufferRequest(const ::fidl::DecodedMessage<Controller::FreeBufferRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_FreeBuffer_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Controller::SetTransactionHeaderFor::FreeBufferResponse(const ::fidl::DecodedMessage<Controller::FreeBufferResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_FreeBuffer_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::StartRequest(const ::fidl::DecodedMessage<Controller::StartRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_Start_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Controller::SetTransactionHeaderFor::StartResponse(const ::fidl::DecodedMessage<Controller::StartResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_Start_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void Controller::SetTransactionHeaderFor::StopRequest(const ::fidl::DecodedMessage<Controller::StopRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_Stop_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void Controller::SetTransactionHeaderFor::StopResponse(const ::fidl::DecodedMessage<Controller::StopResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_Stop_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace insntrace

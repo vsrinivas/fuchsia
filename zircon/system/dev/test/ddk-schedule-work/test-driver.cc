@@ -194,8 +194,6 @@ zx_status_t TestScheduleWorkDriver::Bind() {
 
 void TestScheduleWorkDriver::ScheduleWork(uint32_t batch_size, uint32_t num_work_items,
                                           ScheduleWorkCompleter::Sync completer) {
-  ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWork_Result result;
-
   batch_size = std::min(batch_size, num_work_items);
 
   work_items_left_ = num_work_items - batch_size;
@@ -208,16 +206,13 @@ void TestScheduleWorkDriver::ScheduleWork(uint32_t batch_size, uint32_t num_work
 
     auto status = DdkScheduleWork(DoWork, work_item_ctx.get());
     if (status != ZX_OK) {
-      result.set_err(&status);
-      completer.Reply(std::move(result));
+      completer.ReplyError(status);
       return;
     }
     work_item_ctx.release();
   }
 
-  ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWork_Response response;
-  result.set_response(&response);
-  completer.Reply(std::move(result));
+  completer.ReplySuccess();
 }
 
 void TestScheduleWorkDriver::ScheduleWorkDifferentThread(
@@ -238,32 +233,21 @@ void TestScheduleWorkDriver::ScheduleWorkDifferentThread(
   });
   thread.join();
 
-  ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWorkDifferentThread_Result
-      result;
   if (status != ZX_OK) {
-    result.set_err(&status);
+    completer.ReplyError(status);
   } else {
-    ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWorkDifferentThread_Response response;
-    result.set_response(&response);
+    completer.ReplySuccess();
   }
-
-  completer.Reply(std::move(result));
 }
 
 void TestScheduleWorkDriver::GetDoneEvent(GetDoneEventCompleter::Sync completer) {
-  ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Result result;
-
   zx::event dup;
   zx_status_t status = done_event_.duplicate(ZX_RIGHT_WAIT | ZX_RIGHT_TRANSFER, &dup);
   if (status != ZX_OK) {
-    result.set_err(&status);
+    completer.ReplyError(status);
   } else {
-    ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Response response;
-    response.event = std::move(dup);
-    result.set_response(&response);
+    completer.ReplySuccess(std::move(dup));
   }
-
-  completer.Reply(std::move(result));
 }
 
 void TestScheduleWorkDriver::ScheduledWorkRan(ScheduledWorkRanCompleter::Sync completer) {
@@ -275,19 +259,14 @@ void TestScheduleWorkDriver::ScheduledWorkRan(ScheduledWorkRanCompleter::Sync co
 }
 
 void TestScheduleWorkDriver::GetChannel(zx::channel request, GetChannelCompleter::Sync completer) {
-  ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_Result result;
-
   auto connection = std::make_unique<Connection>(this);
   auto status = connection->Connect(loop_.dispatcher(), std::move(request));
   if (status == ZX_OK) {
     open_connections_.push_back(std::move(connection));
-    ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_Response response;
-    result.set_response(&response);
+    completer.ReplySuccess();
   } else {
-    result.set_err(&status);
+    completer.ReplyError(status);
   }
-
-  completer.Reply(std::move(result));
 }
 
 void TestScheduleWorkDriver::Connection::ScheduleWork(uint32_t batch_size, uint32_t num_work_items,
@@ -298,8 +277,6 @@ void TestScheduleWorkDriver::Connection::ScheduleWork(uint32_t batch_size, uint3
   work_items_expected_ = num_work_items;
   work_items_ran_ = 0;
 
-  ::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Result result;
-
   for (uint32_t i = 0; i < batch_size; i++) {
     auto work_item_ctx = std::make_unique<WorkItemCtx>();
     work_item_ctx->start = zx::clock::get_monotonic();
@@ -307,8 +284,7 @@ void TestScheduleWorkDriver::Connection::ScheduleWork(uint32_t batch_size, uint3
 
     auto status = parent_->DdkScheduleWork(DoWork, work_item_ctx.get());
     if (status != ZX_OK) {
-      result.set_err(&status);
-      completer.Reply(std::move(result));
+      completer.ReplyError(status);
       return;
     }
     work_item_ctx.release();
@@ -319,12 +295,8 @@ void TestScheduleWorkDriver::Connection::ScheduleWork(uint32_t batch_size, uint3
     sync_completion_reset(&completion_);
   }
 
-  ::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Response response;
-  response.histogram = histogram_;
+  completer.ReplySuccess(histogram_);
   histogram_ = {};
-
-  result.set_response(&response);
-  completer.Reply(std::move(result));
 }
 
 zx_status_t TestScheduleWorkBind(void* ctx, zx_device_t* device) {

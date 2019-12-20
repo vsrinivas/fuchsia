@@ -99,7 +99,7 @@ TEST(ServiceProxyDirTest, Simple) {
     ASSERT_OK(fio::Directory::Call::HandleEvents(
         zx::unowned_channel(h2),
         fio::Directory::EventHandlers{
-            .on_open = [&](int32_t s, fio::NodeInfo*) -> zx_status_t { return s; },
+            .on_open = [&](int32_t s, fio::NodeInfo) -> zx_status_t { return s; },
             .unknown = []() -> zx_status_t { return ZX_ERR_NOT_SUPPORTED; },
         }));
 
@@ -125,7 +125,7 @@ TEST(ServiceProxyDirTest, Simple) {
     ASSERT_OK(fio::Directory::Call::HandleEvents(
         zx::unowned_channel(h2),
         fio::Directory::EventHandlers{
-            .on_open = [&](int32_t s, fio::NodeInfo*) -> zx_status_t { return s; },
+            .on_open = [&](int32_t s, fio::NodeInfo) -> zx_status_t { return s; },
             .unknown = []() -> zx_status_t { return ZX_ERR_NOT_SUPPORTED; },
         }));
 

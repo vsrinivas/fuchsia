@@ -10,182 +10,23 @@ namespace device {
 namespace lifecycle {
 namespace test {
 
-::llcpp::fuchsia::device::lifecycle::test::TestDevice_SubscribeToLifecycle_Result::TestDevice_SubscribeToLifecycle_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::device::lifecycle::test::TestDevice_SubscribeToLifecycle_Result::~TestDevice_SubscribeToLifecycle_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::device::lifecycle::test::TestDevice_SubscribeToLifecycle_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~TestDevice_SubscribeToLifecycle_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::device::lifecycle::test::TestDevice_SubscribeToLifecycle_Result::MoveImpl_(TestDevice_SubscribeToLifecycle_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
-}
-
 void ::llcpp::fuchsia::device::lifecycle::test::TestDevice_SubscribeToLifecycle_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::device::lifecycle::test::TestDevice_SubscribeToLifecycle_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::device::lifecycle::test::TestDevice_SubscribeToLifecycle_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::device::lifecycle::test::TestDevice_SubscribeToLifecycle_Result) == ::llcpp::fuchsia::device::lifecycle::test::TestDevice_SubscribeToLifecycle_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::device::lifecycle::test::TestDevice_SubscribeToLifecycle_Response& ::llcpp::fuchsia::device::lifecycle::test::TestDevice_SubscribeToLifecycle_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::device::lifecycle::test::TestDevice_SubscribeToLifecycle_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::device::lifecycle::test::TestDevice_SubscribeToLifecycle_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::device::lifecycle::test::TestDevice_RemoveChild_Result::TestDevice_RemoveChild_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::device::lifecycle::test::TestDevice_RemoveChild_Result::~TestDevice_RemoveChild_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::device::lifecycle::test::TestDevice_RemoveChild_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~TestDevice_RemoveChild_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::device::lifecycle::test::TestDevice_RemoveChild_Result::MoveImpl_(TestDevice_RemoveChild_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(TestDevice_SubscribeToLifecycle_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(TestDevice_SubscribeToLifecycle_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(TestDevice_SubscribeToLifecycle_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::device::lifecycle::test::TestDevice_RemoveChild_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::device::lifecycle::test::TestDevice_RemoveChild_Result, response_) == 4);
-  static_assert(offsetof(::llcpp::fuchsia::device::lifecycle::test::TestDevice_RemoveChild_Result, err_) == 4);
-  static_assert(sizeof(::llcpp::fuchsia::device::lifecycle::test::TestDevice_RemoveChild_Result) == ::llcpp::fuchsia::device::lifecycle::test::TestDevice_RemoveChild_Result::PrimarySize);
-}
-
-
-::llcpp::fuchsia::device::lifecycle::test::TestDevice_RemoveChild_Response& ::llcpp::fuchsia::device::lifecycle::test::TestDevice_RemoveChild_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::device::lifecycle::test::TestDevice_RemoveChild_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::device::lifecycle::test::TestDevice_RemoveChild_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
-
-::llcpp::fuchsia::device::lifecycle::test::TestDevice_AddChild_Result::TestDevice_AddChild_Result() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::device::lifecycle::test::TestDevice_AddChild_Result::~TestDevice_AddChild_Result() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::device::lifecycle::test::TestDevice_AddChild_Result::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kResponse:
-    response_.~TestDevice_AddChild_Response();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::device::lifecycle::test::TestDevice_AddChild_Result::MoveImpl_(TestDevice_AddChild_Result&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kResponse:
-    mutable_response() = std::move(other.mutable_response());
-    break;
-  case Ordinal::kErr:
-    mutable_err() = std::move(other.mutable_err());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
+  static_assert(sizeof(TestDevice_RemoveChild_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(TestDevice_RemoveChild_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(TestDevice_RemoveChild_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
 void ::llcpp::fuchsia::device::lifecycle::test::TestDevice_AddChild_Result::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::device::lifecycle::test::TestDevice_AddChild_Result, response_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::device::lifecycle::test::TestDevice_AddChild_Result, err_) == 8);
-  static_assert(sizeof(::llcpp::fuchsia::device::lifecycle::test::TestDevice_AddChild_Result) == ::llcpp::fuchsia::device::lifecycle::test::TestDevice_AddChild_Result::PrimarySize);
+  static_assert(sizeof(TestDevice_AddChild_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(TestDevice_AddChild_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(TestDevice_AddChild_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
-
-
-::llcpp::fuchsia::device::lifecycle::test::TestDevice_AddChild_Response& ::llcpp::fuchsia::device::lifecycle::test::TestDevice_AddChild_Result::mutable_response() {
-  if (ordinal_ != Ordinal::kResponse) {
-    Destroy();
-    new (&response_) ::llcpp::fuchsia::device::lifecycle::test::TestDevice_AddChild_Response;
-    ordinal_ = Ordinal::kResponse;
-  }
-  return response_;
-}
-
-int32_t& ::llcpp::fuchsia::device::lifecycle::test::TestDevice_AddChild_Result::mutable_err() {
-  if (ordinal_ != Ordinal::kErr) {
-    Destroy();
-    new (&err_) int32_t;
-    ordinal_ = Ordinal::kErr;
-  }
-  return err_;
-}
-
 
 namespace {
 
@@ -343,6 +184,7 @@ zx_status_t Lifecycle::SendOnChildPreReleaseEvent(::zx::unowned_channel _chan, :
 
 void Lifecycle::SetTransactionHeaderFor::OnChildPreReleaseResponse(const ::fidl::DecodedMessage<Lifecycle::OnChildPreReleaseResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kLifecycle_OnChildPreRelease_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 namespace {
@@ -625,16 +467,21 @@ bool TestDevice::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction*
 
 void TestDevice::Interface::AddChildCompleterBase::Reply(::llcpp::fuchsia::device::lifecycle::test::TestDevice_AddChild_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddChildResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<AddChildResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  AddChildResponse _response = {};
   TestDevice::SetTransactionHeaderFor::AddChildResponse(
       ::fidl::DecodedMessage<AddChildResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               AddChildResponse::PrimarySize,
               AddChildResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(AddChildResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<AddChildResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void TestDevice::Interface::AddChildCompleterBase::ReplySuccess(uint64_t child_id) {
   TestDevice_AddChild_Response response;
@@ -651,15 +498,19 @@ void TestDevice::Interface::AddChildCompleterBase::Reply(::fidl::BytePart _buffe
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<AddChildResponse*>(_buffer.data());
+  AddChildResponse _response = {};
   TestDevice::SetTransactionHeaderFor::AddChildResponse(
       ::fidl::DecodedMessage<AddChildResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               AddChildResponse::PrimarySize,
               AddChildResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(AddChildResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<AddChildResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void TestDevice::Interface::AddChildCompleterBase::ReplySuccess(::fidl::BytePart _buffer, uint64_t child_id) {
   TestDevice_AddChild_Response response;
@@ -676,16 +527,21 @@ void TestDevice::Interface::AddChildCompleterBase::Reply(::fidl::DecodedMessage<
 
 void TestDevice::Interface::RemoveChildCompleterBase::Reply(::llcpp::fuchsia::device::lifecycle::test::TestDevice_RemoveChild_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RemoveChildResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<RemoveChildResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  RemoveChildResponse _response = {};
   TestDevice::SetTransactionHeaderFor::RemoveChildResponse(
       ::fidl::DecodedMessage<RemoveChildResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               RemoveChildResponse::PrimarySize,
               RemoveChildResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(RemoveChildResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<RemoveChildResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void TestDevice::Interface::RemoveChildCompleterBase::ReplySuccess() {
   TestDevice_RemoveChild_Response response;
@@ -701,15 +557,19 @@ void TestDevice::Interface::RemoveChildCompleterBase::Reply(::fidl::BytePart _bu
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<RemoveChildResponse*>(_buffer.data());
+  RemoveChildResponse _response = {};
   TestDevice::SetTransactionHeaderFor::RemoveChildResponse(
       ::fidl::DecodedMessage<RemoveChildResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               RemoveChildResponse::PrimarySize,
               RemoveChildResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(RemoveChildResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<RemoveChildResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void TestDevice::Interface::RemoveChildCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   TestDevice_RemoveChild_Response response;
@@ -725,16 +585,21 @@ void TestDevice::Interface::RemoveChildCompleterBase::Reply(::fidl::DecodedMessa
 
 void TestDevice::Interface::SubscribeToLifecycleCompleterBase::Reply(::llcpp::fuchsia::device::lifecycle::test::TestDevice_SubscribeToLifecycle_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SubscribeToLifecycleResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<SubscribeToLifecycleResponse*>(_write_bytes);
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  SubscribeToLifecycleResponse _response = {};
   TestDevice::SetTransactionHeaderFor::SubscribeToLifecycleResponse(
       ::fidl::DecodedMessage<SubscribeToLifecycleResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               SubscribeToLifecycleResponse::PrimarySize,
               SubscribeToLifecycleResponse::PrimarySize)));
   _response.result = std::move(result);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(SubscribeToLifecycleResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<SubscribeToLifecycleResponse>(std::move(_response_bytes)));
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void TestDevice::Interface::SubscribeToLifecycleCompleterBase::ReplySuccess() {
   TestDevice_SubscribeToLifecycle_Response response;
@@ -750,15 +615,19 @@ void TestDevice::Interface::SubscribeToLifecycleCompleterBase::Reply(::fidl::Byt
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
-  auto& _response = *reinterpret_cast<SubscribeToLifecycleResponse*>(_buffer.data());
+  SubscribeToLifecycleResponse _response = {};
   TestDevice::SetTransactionHeaderFor::SubscribeToLifecycleResponse(
       ::fidl::DecodedMessage<SubscribeToLifecycleResponse>(
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               SubscribeToLifecycleResponse::PrimarySize,
               SubscribeToLifecycleResponse::PrimarySize)));
   _response.result = std::move(result);
-  _buffer.set_actual(sizeof(SubscribeToLifecycleResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<SubscribeToLifecycleResponse>(std::move(_buffer)));
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
 }
 void TestDevice::Interface::SubscribeToLifecycleCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   TestDevice_SubscribeToLifecycle_Response response;
@@ -775,23 +644,29 @@ void TestDevice::Interface::SubscribeToLifecycleCompleterBase::Reply(::fidl::Dec
 
 void TestDevice::SetTransactionHeaderFor::AddChildRequest(const ::fidl::DecodedMessage<TestDevice::AddChildRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_AddChild_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void TestDevice::SetTransactionHeaderFor::AddChildResponse(const ::fidl::DecodedMessage<TestDevice::AddChildResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_AddChild_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void TestDevice::SetTransactionHeaderFor::RemoveChildRequest(const ::fidl::DecodedMessage<TestDevice::RemoveChildRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_RemoveChild_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void TestDevice::SetTransactionHeaderFor::RemoveChildResponse(const ::fidl::DecodedMessage<TestDevice::RemoveChildResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_RemoveChild_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void TestDevice::SetTransactionHeaderFor::SubscribeToLifecycleRequest(const ::fidl::DecodedMessage<TestDevice::SubscribeToLifecycleRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_SubscribeToLifecycle_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void TestDevice::SetTransactionHeaderFor::SubscribeToLifecycleResponse(const ::fidl::DecodedMessage<TestDevice::SubscribeToLifecycleResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_SubscribeToLifecycle_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace test

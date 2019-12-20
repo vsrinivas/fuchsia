@@ -53,8 +53,8 @@ class Bus final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_usb_virtual_bus_BusEnableResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_usb_virtual_bus_BusEnableResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_usb_virtual_bus_BusEnableResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_usb_virtual_bus_BusEnableResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -72,8 +72,8 @@ class Bus final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_usb_virtual_bus_BusDisableResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_usb_virtual_bus_BusDisableResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_usb_virtual_bus_BusDisableResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_usb_virtual_bus_BusDisableResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -91,8 +91,8 @@ class Bus final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_usb_virtual_bus_BusConnectResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_usb_virtual_bus_BusConnectResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_usb_virtual_bus_BusConnectResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_usb_virtual_bus_BusConnectResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -110,8 +110,8 @@ class Bus final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_usb_virtual_bus_BusDisconnectResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_usb_virtual_bus_BusDisconnectResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_usb_virtual_bus_BusDisconnectResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_usb_virtual_bus_BusDisconnectResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;

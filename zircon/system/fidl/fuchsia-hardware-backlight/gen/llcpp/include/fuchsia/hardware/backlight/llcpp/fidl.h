@@ -36,12 +36,432 @@ struct Device_GetMaxAbsoluteBrightness_Response;
 struct Device_GetMaxAbsoluteBrightness_Result;
 class Device;
 
+extern "C" const fidl_type_t fuchsia_hardware_backlight_Device_GetStateNormalized_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_backlight_Device_GetStateNormalized_ResultTable;
+
+struct Device_GetStateNormalized_Result {
+  Device_GetStateNormalized_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static Device_GetStateNormalized_Result WithResponse(::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Response* val) {
+    Device_GetStateNormalized_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Response*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static Device_GetStateNormalized_Result WithErr(int32_t* val) {
+    Device_GetStateNormalized_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_backlight_Device_GetStateNormalized_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_backlight_Device_GetStateNormalized_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 16;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 16;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
+extern "C" const fidl_type_t fuchsia_hardware_backlight_Device_GetStateAbsolute_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_backlight_Device_GetStateAbsolute_ResultTable;
+
+struct Device_GetStateAbsolute_Result {
+  Device_GetStateAbsolute_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static Device_GetStateAbsolute_Result WithResponse(::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Response* val) {
+    Device_GetStateAbsolute_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Response*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static Device_GetStateAbsolute_Result WithErr(int32_t* val) {
+    Device_GetStateAbsolute_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_backlight_Device_GetStateAbsolute_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_backlight_Device_GetStateAbsolute_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 16;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 16;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
+extern "C" const fidl_type_t fuchsia_hardware_backlight_Device_SetStateNormalized_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_backlight_Device_SetStateNormalized_ResultTable;
+
+struct Device_SetStateNormalized_Result {
+  Device_SetStateNormalized_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static Device_SetStateNormalized_Result WithResponse(::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Response* val) {
+    Device_SetStateNormalized_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Response*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static Device_SetStateNormalized_Result WithErr(int32_t* val) {
+    Device_SetStateNormalized_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_backlight_Device_SetStateNormalized_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_backlight_Device_SetStateNormalized_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
+extern "C" const fidl_type_t fuchsia_hardware_backlight_Device_SetStateAbsolute_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_backlight_Device_SetStateAbsolute_ResultTable;
+
+struct Device_SetStateAbsolute_Result {
+  Device_SetStateAbsolute_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static Device_SetStateAbsolute_Result WithResponse(::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Response* val) {
+    Device_SetStateAbsolute_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Response*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static Device_SetStateAbsolute_Result WithErr(int32_t* val) {
+    Device_SetStateAbsolute_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_backlight_Device_SetStateAbsolute_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_backlight_Device_SetStateAbsolute_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
+extern "C" const fidl_type_t fuchsia_hardware_backlight_Device_GetMaxAbsoluteBrightness_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_backlight_Device_GetMaxAbsoluteBrightness_ResultTable;
+
+struct Device_GetMaxAbsoluteBrightness_Result {
+  Device_GetMaxAbsoluteBrightness_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static Device_GetMaxAbsoluteBrightness_Result WithResponse(::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Response* val) {
+    Device_GetMaxAbsoluteBrightness_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Response*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static Device_GetMaxAbsoluteBrightness_Result WithErr(int32_t* val) {
+    Device_GetMaxAbsoluteBrightness_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_backlight_Device_GetMaxAbsoluteBrightness_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_backlight_Device_GetMaxAbsoluteBrightness_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
 extern "C" const fidl_type_t fuchsia_hardware_backlight_StateTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_backlight_StateTable;
 
 struct State {
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_backlight_StateTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_backlight_StateTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_backlight_StateTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_backlight_StateTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
@@ -66,8 +486,8 @@ extern "C" const fidl_type_t fuchsia_hardware_backlight_Device_GetStateNormalize
 extern "C" const fidl_type_t v1_fuchsia_hardware_backlight_Device_GetStateNormalized_ResponseTable;
 
 struct Device_GetStateNormalized_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_backlight_Device_GetStateNormalized_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_backlight_Device_GetStateNormalized_ResponseTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_backlight_Device_GetStateNormalized_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_backlight_Device_GetStateNormalized_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
@@ -77,122 +497,14 @@ struct Device_GetStateNormalized_Response {
   static constexpr uint32_t AltMaxOutOfLine = 0;
 
   ::llcpp::fuchsia::hardware::backlight::State state = {};
-};
-
-extern "C" const fidl_type_t fuchsia_hardware_backlight_Device_GetStateNormalized_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_hardware_backlight_Device_GetStateNormalized_ResultTable;
-
-struct Device_GetStateNormalized_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-  };
-
-  Device_GetStateNormalized_Result();
-  ~Device_GetStateNormalized_Result();
-
-  Device_GetStateNormalized_Result(Device_GetStateNormalized_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  Device_GetStateNormalized_Result& operator=(Device_GetStateNormalized_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
-
-  static Device_GetStateNormalized_Result WithResponse(::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Response* val) {
-    Device_GetStateNormalized_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Response const & response() const { return response_; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static Device_GetStateNormalized_Result WithErr(int32_t* val) {
-    Device_GetStateNormalized_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  int32_t const & err() const { return err_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_backlight_Device_GetStateNormalized_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_backlight_Device_GetStateNormalized_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 16;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(Device_GetStateNormalized_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Response response_;
-    int32_t err_;
-  };
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_backlight_Device_GetStateAbsolute_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_backlight_Device_GetStateAbsolute_ResponseTable;
 
 struct Device_GetStateAbsolute_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_backlight_Device_GetStateAbsolute_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_backlight_Device_GetStateAbsolute_ResponseTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_backlight_Device_GetStateAbsolute_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_backlight_Device_GetStateAbsolute_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
@@ -204,120 +516,12 @@ struct Device_GetStateAbsolute_Response {
   ::llcpp::fuchsia::hardware::backlight::State state = {};
 };
 
-extern "C" const fidl_type_t fuchsia_hardware_backlight_Device_GetStateAbsolute_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_hardware_backlight_Device_GetStateAbsolute_ResultTable;
-
-struct Device_GetStateAbsolute_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-  };
-
-  Device_GetStateAbsolute_Result();
-  ~Device_GetStateAbsolute_Result();
-
-  Device_GetStateAbsolute_Result(Device_GetStateAbsolute_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  Device_GetStateAbsolute_Result& operator=(Device_GetStateAbsolute_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
-
-  static Device_GetStateAbsolute_Result WithResponse(::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Response* val) {
-    Device_GetStateAbsolute_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Response const & response() const { return response_; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static Device_GetStateAbsolute_Result WithErr(int32_t* val) {
-    Device_GetStateAbsolute_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  int32_t const & err() const { return err_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_backlight_Device_GetStateAbsolute_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_backlight_Device_GetStateAbsolute_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 16;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(Device_GetStateAbsolute_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Response response_;
-    int32_t err_;
-  };
-};
-
 extern "C" const fidl_type_t fuchsia_hardware_backlight_Device_SetStateNormalized_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_backlight_Device_SetStateNormalized_ResponseTable;
 
 struct Device_SetStateNormalized_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_backlight_Device_SetStateNormalized_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_backlight_Device_SetStateNormalized_ResponseTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_backlight_Device_SetStateNormalized_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_backlight_Device_SetStateNormalized_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -327,122 +531,14 @@ struct Device_SetStateNormalized_Response {
   static constexpr uint32_t AltMaxOutOfLine = 0;
 
   uint8_t __reserved = {};
-};
-
-extern "C" const fidl_type_t fuchsia_hardware_backlight_Device_SetStateNormalized_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_hardware_backlight_Device_SetStateNormalized_ResultTable;
-
-struct Device_SetStateNormalized_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-  };
-
-  Device_SetStateNormalized_Result();
-  ~Device_SetStateNormalized_Result();
-
-  Device_SetStateNormalized_Result(Device_SetStateNormalized_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  Device_SetStateNormalized_Result& operator=(Device_SetStateNormalized_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
-
-  static Device_SetStateNormalized_Result WithResponse(::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Response* val) {
-    Device_SetStateNormalized_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Response const & response() const { return response_; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static Device_SetStateNormalized_Result WithErr(int32_t* val) {
-    Device_SetStateNormalized_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  int32_t const & err() const { return err_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_backlight_Device_SetStateNormalized_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_backlight_Device_SetStateNormalized_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(Device_SetStateNormalized_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Response response_;
-    int32_t err_;
-  };
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_backlight_Device_SetStateAbsolute_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_backlight_Device_SetStateAbsolute_ResponseTable;
 
 struct Device_SetStateAbsolute_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_backlight_Device_SetStateAbsolute_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_backlight_Device_SetStateAbsolute_ResponseTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_backlight_Device_SetStateAbsolute_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_backlight_Device_SetStateAbsolute_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -454,120 +550,12 @@ struct Device_SetStateAbsolute_Response {
   uint8_t __reserved = {};
 };
 
-extern "C" const fidl_type_t fuchsia_hardware_backlight_Device_SetStateAbsolute_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_hardware_backlight_Device_SetStateAbsolute_ResultTable;
-
-struct Device_SetStateAbsolute_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-  };
-
-  Device_SetStateAbsolute_Result();
-  ~Device_SetStateAbsolute_Result();
-
-  Device_SetStateAbsolute_Result(Device_SetStateAbsolute_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  Device_SetStateAbsolute_Result& operator=(Device_SetStateAbsolute_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
-
-  static Device_SetStateAbsolute_Result WithResponse(::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Response* val) {
-    Device_SetStateAbsolute_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Response const & response() const { return response_; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static Device_SetStateAbsolute_Result WithErr(int32_t* val) {
-    Device_SetStateAbsolute_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  int32_t const & err() const { return err_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_backlight_Device_SetStateAbsolute_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_backlight_Device_SetStateAbsolute_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(Device_SetStateAbsolute_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Response response_;
-    int32_t err_;
-  };
-};
-
 extern "C" const fidl_type_t fuchsia_hardware_backlight_Device_GetMaxAbsoluteBrightness_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_backlight_Device_GetMaxAbsoluteBrightness_ResponseTable;
 
 struct Device_GetMaxAbsoluteBrightness_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_backlight_Device_GetMaxAbsoluteBrightness_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_backlight_Device_GetMaxAbsoluteBrightness_ResponseTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_backlight_Device_GetMaxAbsoluteBrightness_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_hardware_backlight_Device_GetMaxAbsoluteBrightness_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
@@ -577,114 +565,6 @@ struct Device_GetMaxAbsoluteBrightness_Response {
   static constexpr uint32_t AltMaxOutOfLine = 0;
 
   double max_brightness = {};
-};
-
-extern "C" const fidl_type_t fuchsia_hardware_backlight_Device_GetMaxAbsoluteBrightness_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_hardware_backlight_Device_GetMaxAbsoluteBrightness_ResultTable;
-
-struct Device_GetMaxAbsoluteBrightness_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-  };
-
-  Device_GetMaxAbsoluteBrightness_Result();
-  ~Device_GetMaxAbsoluteBrightness_Result();
-
-  Device_GetMaxAbsoluteBrightness_Result(Device_GetMaxAbsoluteBrightness_Result&& other) {
-    ordinal_ = Ordinal::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  Device_GetMaxAbsoluteBrightness_Result& operator=(Device_GetMaxAbsoluteBrightness_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
-
-  static Device_GetMaxAbsoluteBrightness_Result WithResponse(::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Response* val) {
-    Device_GetMaxAbsoluteBrightness_Result result;
-    result.set_response(val);
-    return result;
-  }
-
-  ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T* v) {
-    mutable_response() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T* v) {
-    mutable_response() = std::move(*v);
-  }
-
-  ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Response const & response() const { return response_; }
-
-  bool is_err() const { return ordinal_ == Ordinal::kErr; }
-
-  static Device_GetMaxAbsoluteBrightness_Result WithErr(int32_t* val) {
-    Device_GetMaxAbsoluteBrightness_Result result;
-    result.set_err(val);
-    return result;
-  }
-
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T* v) {
-    mutable_err() = *v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T* v) {
-    mutable_err() = std::move(*v);
-  }
-
-  int32_t const & err() const { return err_; }
-
-  Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_backlight_Device_GetMaxAbsoluteBrightness_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_backlight_Device_GetMaxAbsoluteBrightness_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
-
- private:
-  enum class Ordinal : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  void Destroy();
-  void MoveImpl_(Device_GetMaxAbsoluteBrightness_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Ordinal ordinal_;
-  union {
-    ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Response response_;
-    int32_t err_;
-  };
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_backlight_DeviceGetStateNormalizedRequestTable;
@@ -717,11 +597,11 @@ class Device final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_backlight_DeviceGetStateNormalizedResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_backlight_DeviceGetStateNormalizedResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_backlight_DeviceGetStateNormalizedResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_backlight_DeviceGetStateNormalizedResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t MaxOutOfLine = 16;
     static constexpr uint32_t AltPrimarySize = 40;
     static constexpr uint32_t AltMaxOutOfLine = 16;
     static constexpr bool HasFlexibleEnvelope = false;
@@ -736,12 +616,12 @@ class Device final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_backlight_DeviceSetStateNormalizedResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_backlight_DeviceSetStateNormalizedResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_backlight_DeviceSetStateNormalizedResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_backlight_DeviceSetStateNormalizedResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 8;
+    static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -753,8 +633,8 @@ class Device final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::hardware::backlight::State state;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_backlight_DeviceSetStateNormalizedRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_backlight_DeviceSetStateNormalizedRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_backlight_DeviceSetStateNormalizedRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_backlight_DeviceSetStateNormalizedRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -772,11 +652,11 @@ class Device final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_backlight_DeviceGetStateAbsoluteResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_backlight_DeviceGetStateAbsoluteResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_backlight_DeviceGetStateAbsoluteResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_backlight_DeviceGetStateAbsoluteResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t MaxOutOfLine = 16;
     static constexpr uint32_t AltPrimarySize = 40;
     static constexpr uint32_t AltMaxOutOfLine = 16;
     static constexpr bool HasFlexibleEnvelope = false;
@@ -791,12 +671,12 @@ class Device final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_backlight_DeviceSetStateAbsoluteResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_backlight_DeviceSetStateAbsoluteResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_backlight_DeviceSetStateAbsoluteResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_backlight_DeviceSetStateAbsoluteResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 8;
+    static constexpr uint32_t AltPrimarySize = 24;
     static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -808,8 +688,8 @@ class Device final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::hardware::backlight::State state;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_backlight_DeviceSetStateAbsoluteRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_backlight_DeviceSetStateAbsoluteRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_backlight_DeviceSetStateAbsoluteRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_backlight_DeviceSetStateAbsoluteRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -827,12 +707,12 @@ class Device final {
     fidl_message_header_t _hdr;
     ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Result result;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_backlight_DeviceGetMaxAbsoluteBrightnessResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_backlight_DeviceGetMaxAbsoluteBrightnessResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_hardware_backlight_DeviceGetMaxAbsoluteBrightnessResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_hardware_backlight_DeviceGetMaxAbsoluteBrightnessResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 32;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 8;
+    static constexpr uint32_t AltPrimarySize = 32;
     static constexpr uint32_t AltMaxOutOfLine = 8;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = true;
@@ -1042,7 +922,7 @@ class Device final {
 
     // Gets the current backlight brightness as a percentage value between 0.0
     // and 1.0
-    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetStateNormalized GetStateNormalized();
 
     // Gets the current backlight brightness as a percentage value between 0.0
@@ -1052,7 +932,7 @@ class Device final {
 
     // Sets the current backlight brightness as a percentage value between 0.0
     // and 1.0
-    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::SetStateNormalized SetStateNormalized(::llcpp::fuchsia::hardware::backlight::State state);
 
     // Sets the current backlight brightness as a percentage value between 0.0
@@ -1061,7 +941,7 @@ class Device final {
     UnownedResultOf::SetStateNormalized SetStateNormalized(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::backlight::State state, ::fidl::BytePart _response_buffer);
 
     // Gets the current backlight brightness in nits
-    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetStateAbsolute GetStateAbsolute();
 
     // Gets the current backlight brightness in nits
@@ -1069,7 +949,7 @@ class Device final {
     UnownedResultOf::GetStateAbsolute GetStateAbsolute(::fidl::BytePart _response_buffer);
 
     // Sets the current backlight brightness in nits
-    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::SetStateAbsolute SetStateAbsolute(::llcpp::fuchsia::hardware::backlight::State state);
 
     // Sets the current backlight brightness in nits
@@ -1078,7 +958,7 @@ class Device final {
 
     // Gets the maximum supported backlight brightness in nits, if known.
     // Otherwise returns error ZX_ERR_NOT_SUPPORTED.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetMaxAbsoluteBrightness GetMaxAbsoluteBrightness();
 
     // Gets the maximum supported backlight brightness in nits, if known.
@@ -1097,7 +977,7 @@ class Device final {
 
     // Gets the current backlight brightness as a percentage value between 0.0
     // and 1.0
-    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetStateNormalized GetStateNormalized(::zx::unowned_channel _client_end);
 
     // Gets the current backlight brightness as a percentage value between 0.0
@@ -1107,7 +987,7 @@ class Device final {
 
     // Sets the current backlight brightness as a percentage value between 0.0
     // and 1.0
-    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::SetStateNormalized SetStateNormalized(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::backlight::State state);
 
     // Sets the current backlight brightness as a percentage value between 0.0
@@ -1116,7 +996,7 @@ class Device final {
     static UnownedResultOf::SetStateNormalized SetStateNormalized(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::hardware::backlight::State state, ::fidl::BytePart _response_buffer);
 
     // Gets the current backlight brightness in nits
-    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 72 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetStateAbsolute GetStateAbsolute(::zx::unowned_channel _client_end);
 
     // Gets the current backlight brightness in nits
@@ -1124,7 +1004,7 @@ class Device final {
     static UnownedResultOf::GetStateAbsolute GetStateAbsolute(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Sets the current backlight brightness in nits
-    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::SetStateAbsolute SetStateAbsolute(::zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::backlight::State state);
 
     // Sets the current backlight brightness in nits
@@ -1133,7 +1013,7 @@ class Device final {
 
     // Gets the maximum supported backlight brightness in nits, if known.
     // Otherwise returns error ZX_ERR_NOT_SUPPORTED.
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetMaxAbsoluteBrightness GetMaxAbsoluteBrightness(::zx::unowned_channel _client_end);
 
     // Gets the maximum supported backlight brightness in nits, if known.

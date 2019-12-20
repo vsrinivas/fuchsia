@@ -9,122 +9,11 @@ namespace fuchsia {
 namespace device {
 namespace mock {
 
-::llcpp::fuchsia::device::mock::Action::Action() {
-  ordinal_ = Ordinal::Invalid;
-}
-
-::llcpp::fuchsia::device::mock::Action::~Action() {
-  Destroy();
-}
-
-void ::llcpp::fuchsia::device::mock::Action::Destroy() {
-  switch (ordinal_) {
-  case Ordinal::kCreateThread:
-    create_thread_.~channel();
-    break;
-  case Ordinal::kUnbindReply:
-    unbind_reply_.~UnbindReplyAction();
-    break;
-  case Ordinal::kAddDevice:
-    add_device_.~AddDeviceAction();
-    break;
-  default:
-    break;
-  }
-  ordinal_ = Ordinal::Invalid;
-}
-
-void ::llcpp::fuchsia::device::mock::Action::MoveImpl_(Action&& other) {
-  switch (other.ordinal_) {
-  case Ordinal::kReturnStatus:
-    mutable_return_status() = std::move(other.mutable_return_status());
-    break;
-  case Ordinal::kWrite:
-    mutable_write() = std::move(other.mutable_write());
-    break;
-  case Ordinal::kCreateThread:
-    mutable_create_thread() = std::move(other.mutable_create_thread());
-    break;
-  case Ordinal::kAsyncRemoveDevice:
-    mutable_async_remove_device() = std::move(other.mutable_async_remove_device());
-    break;
-  case Ordinal::kUnbindReply:
-    mutable_unbind_reply() = std::move(other.mutable_unbind_reply());
-    break;
-  case Ordinal::kAddDevice:
-    mutable_add_device() = std::move(other.mutable_add_device());
-    break;
-  default:
-    break;
-  }
-  other.Destroy();
-}
-
 void ::llcpp::fuchsia::device::mock::Action::SizeAndOffsetAssertionHelper() {
-  static_assert(offsetof(::llcpp::fuchsia::device::mock::Action, return_status_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::device::mock::Action, write_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::device::mock::Action, create_thread_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::device::mock::Action, async_remove_device_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::device::mock::Action, unbind_reply_) == 8);
-  static_assert(offsetof(::llcpp::fuchsia::device::mock::Action, add_device_) == 8);
-  static_assert(sizeof(::llcpp::fuchsia::device::mock::Action) == ::llcpp::fuchsia::device::mock::Action::PrimarySize);
+  static_assert(sizeof(Action) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(Action, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(Action, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
-
-
-int32_t& ::llcpp::fuchsia::device::mock::Action::mutable_return_status() {
-  if (ordinal_ != Ordinal::kReturnStatus) {
-    Destroy();
-    new (&return_status_) int32_t;
-    ordinal_ = Ordinal::kReturnStatus;
-  }
-  return return_status_;
-}
-
-::fidl::VectorView<uint8_t>& ::llcpp::fuchsia::device::mock::Action::mutable_write() {
-  if (ordinal_ != Ordinal::kWrite) {
-    Destroy();
-    new (&write_) ::fidl::VectorView<uint8_t>;
-    ordinal_ = Ordinal::kWrite;
-  }
-  return write_;
-}
-
-::zx::channel& ::llcpp::fuchsia::device::mock::Action::mutable_create_thread() {
-  if (ordinal_ != Ordinal::kCreateThread) {
-    Destroy();
-    new (&create_thread_) ::zx::channel;
-    ordinal_ = Ordinal::kCreateThread;
-  }
-  return create_thread_;
-}
-
-bool& ::llcpp::fuchsia::device::mock::Action::mutable_async_remove_device() {
-  if (ordinal_ != Ordinal::kAsyncRemoveDevice) {
-    Destroy();
-    new (&async_remove_device_) bool;
-    ordinal_ = Ordinal::kAsyncRemoveDevice;
-  }
-  return async_remove_device_;
-}
-
-::llcpp::fuchsia::device::mock::UnbindReplyAction& ::llcpp::fuchsia::device::mock::Action::mutable_unbind_reply() {
-  if (ordinal_ != Ordinal::kUnbindReply) {
-    Destroy();
-    new (&unbind_reply_) ::llcpp::fuchsia::device::mock::UnbindReplyAction;
-    ordinal_ = Ordinal::kUnbindReply;
-  }
-  return unbind_reply_;
-}
-
-::llcpp::fuchsia::device::mock::AddDeviceAction& ::llcpp::fuchsia::device::mock::Action::mutable_add_device() {
-  if (ordinal_ != Ordinal::kAddDevice) {
-    Destroy();
-    new (&add_device_) ::llcpp::fuchsia::device::mock::AddDeviceAction;
-    ordinal_ = Ordinal::kAddDevice;
-  }
-  return add_device_;
-}
-
 
 namespace {
 
@@ -331,10 +220,10 @@ bool MockDeviceThread::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
     {
       constexpr uint32_t kTransformerDestSize = ::fidl::internal::ClampedMessageSize<PerformActionsRequest, ::fidl::MessageDirection::kReceiving>();
       ::fidl::internal::ByteStorage<kTransformerDestSize> transformer_dest_storage(::fidl::internal::DelayAllocation);
-      if (fidl_should_decode_union_from_xunion(hdr)) {
+      if (!fidl_should_decode_union_from_xunion(hdr)) {
         transformer_dest_storage.Allocate();
         uint8_t* transformer_dest = transformer_dest_storage.buffer().data();
-        zx_status_t transform_status = fidl_transform(FIDL_TRANSFORMATION_V1_TO_OLD,
+        zx_status_t transform_status = fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1,
                                                       PerformActionsRequest::AltType,
                                                       reinterpret_cast<uint8_t*>(msg->bytes),
                                                       msg->num_bytes,
@@ -448,14 +337,17 @@ zx_status_t MockDeviceThread::SendUnbindReplyDoneEvent(::zx::unowned_channel _ch
 
 void MockDeviceThread::SetTransactionHeaderFor::PerformActionsRequest(const ::fidl::DecodedMessage<MockDeviceThread::PerformActionsRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMockDeviceThread_PerformActions_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void MockDeviceThread::SetTransactionHeaderFor::AddDeviceDoneResponse(const ::fidl::DecodedMessage<MockDeviceThread::AddDeviceDoneResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMockDeviceThread_AddDeviceDone_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void MockDeviceThread::SetTransactionHeaderFor::UnbindReplyDoneResponse(const ::fidl::DecodedMessage<MockDeviceThread::UnbindReplyDoneResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMockDeviceThread_UnbindReplyDone_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 namespace {
@@ -2303,98 +2195,125 @@ void MockDevice::Interface::RxrpcCompleterBase::Reply(::fidl::DecodedMessage<Rxr
 
 void MockDevice::SetTransactionHeaderFor::BindRequest(const ::fidl::DecodedMessage<MockDevice::BindRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMockDevice_Bind_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void MockDevice::SetTransactionHeaderFor::BindResponse(const ::fidl::DecodedMessage<MockDevice::BindResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMockDevice_Bind_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void MockDevice::SetTransactionHeaderFor::ReleaseRequest(const ::fidl::DecodedMessage<MockDevice::ReleaseRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMockDevice_Release_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void MockDevice::SetTransactionHeaderFor::GetProtocolRequest(const ::fidl::DecodedMessage<MockDevice::GetProtocolRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMockDevice_GetProtocol_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void MockDevice::SetTransactionHeaderFor::GetProtocolResponse(const ::fidl::DecodedMessage<MockDevice::GetProtocolResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMockDevice_GetProtocol_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void MockDevice::SetTransactionHeaderFor::OpenRequest(const ::fidl::DecodedMessage<MockDevice::OpenRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMockDevice_Open_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void MockDevice::SetTransactionHeaderFor::OpenResponse(const ::fidl::DecodedMessage<MockDevice::OpenResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMockDevice_Open_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void MockDevice::SetTransactionHeaderFor::CloseRequest(const ::fidl::DecodedMessage<MockDevice::CloseRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMockDevice_Close_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void MockDevice::SetTransactionHeaderFor::CloseResponse(const ::fidl::DecodedMessage<MockDevice::CloseResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMockDevice_Close_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void MockDevice::SetTransactionHeaderFor::UnbindRequest(const ::fidl::DecodedMessage<MockDevice::UnbindRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMockDevice_Unbind_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void MockDevice::SetTransactionHeaderFor::UnbindResponse(const ::fidl::DecodedMessage<MockDevice::UnbindResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMockDevice_Unbind_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void MockDevice::SetTransactionHeaderFor::ReadRequest(const ::fidl::DecodedMessage<MockDevice::ReadRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMockDevice_Read_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void MockDevice::SetTransactionHeaderFor::ReadResponse(const ::fidl::DecodedMessage<MockDevice::ReadResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMockDevice_Read_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void MockDevice::SetTransactionHeaderFor::WriteRequest(const ::fidl::DecodedMessage<MockDevice::WriteRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMockDevice_Write_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void MockDevice::SetTransactionHeaderFor::WriteResponse(const ::fidl::DecodedMessage<MockDevice::WriteResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMockDevice_Write_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void MockDevice::SetTransactionHeaderFor::GetSizeRequest(const ::fidl::DecodedMessage<MockDevice::GetSizeRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMockDevice_GetSize_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void MockDevice::SetTransactionHeaderFor::GetSizeResponse(const ::fidl::DecodedMessage<MockDevice::GetSizeResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMockDevice_GetSize_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void MockDevice::SetTransactionHeaderFor::SuspendRequest(const ::fidl::DecodedMessage<MockDevice::SuspendRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMockDevice_Suspend_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void MockDevice::SetTransactionHeaderFor::SuspendResponse(const ::fidl::DecodedMessage<MockDevice::SuspendResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMockDevice_Suspend_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void MockDevice::SetTransactionHeaderFor::ResumeRequest(const ::fidl::DecodedMessage<MockDevice::ResumeRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMockDevice_Resume_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void MockDevice::SetTransactionHeaderFor::ResumeResponse(const ::fidl::DecodedMessage<MockDevice::ResumeResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMockDevice_Resume_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void MockDevice::SetTransactionHeaderFor::MessageRequest(const ::fidl::DecodedMessage<MockDevice::MessageRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMockDevice_Message_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void MockDevice::SetTransactionHeaderFor::MessageResponse(const ::fidl::DecodedMessage<MockDevice::MessageResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMockDevice_Message_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void MockDevice::SetTransactionHeaderFor::RxrpcRequest(const ::fidl::DecodedMessage<MockDevice::RxrpcRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMockDevice_Rxrpc_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 void MockDevice::SetTransactionHeaderFor::RxrpcResponse(const ::fidl::DecodedMessage<MockDevice::RxrpcResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMockDevice_Rxrpc_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void MockDevice::SetTransactionHeaderFor::AddDeviceDoneRequest(const ::fidl::DecodedMessage<MockDevice::AddDeviceDoneRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMockDevice_AddDeviceDone_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 void MockDevice::SetTransactionHeaderFor::UnbindReplyDoneRequest(const ::fidl::DecodedMessage<MockDevice::UnbindReplyDoneRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kMockDevice_UnbindReplyDone_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 
 }  // namespace mock

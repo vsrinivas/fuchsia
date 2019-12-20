@@ -33,8 +33,8 @@ extern "C" const fidl_type_t fuchsia_minfs_MetricsTable;
 extern "C" const fidl_type_t v1_fuchsia_minfs_MetricsTable;
 
 struct Metrics {
-  static constexpr const fidl_type_t* Type = &fuchsia_minfs_MetricsTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_minfs_MetricsTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_minfs_MetricsTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_minfs_MetricsTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 688;
   [[maybe_unused]]
@@ -83,8 +83,8 @@ class Minfs final {
     int32_t status;
     ::llcpp::fuchsia::minfs::Metrics* metrics;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_minfs_MinfsGetMetricsResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_minfs_MinfsGetMetricsResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_minfs_MinfsGetMetricsResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_minfs_MinfsGetMetricsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 688;
@@ -102,8 +102,8 @@ class Minfs final {
     fidl_message_header_t _hdr;
     int32_t status;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_minfs_MinfsToggleMetricsResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_minfs_MinfsToggleMetricsResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_minfs_MinfsToggleMetricsResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_minfs_MinfsToggleMetricsResponseTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -119,8 +119,8 @@ class Minfs final {
     fidl_message_header_t _hdr;
     bool enable;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_minfs_MinfsToggleMetricsRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_minfs_MinfsToggleMetricsRequestTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_minfs_MinfsToggleMetricsRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_minfs_MinfsToggleMetricsRequestTable;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -140,8 +140,8 @@ class Minfs final {
     ::zx::vmo regions;
     uint64_t count;
 
-    static constexpr const fidl_type_t* Type = &fuchsia_minfs_MinfsGetAllocatedRegionsResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_minfs_MinfsGetAllocatedRegionsResponseTable;
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_minfs_MinfsGetAllocatedRegionsResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_minfs_MinfsGetAllocatedRegionsResponseTable;
     static constexpr uint32_t MaxNumHandles = 1;
     static constexpr uint32_t PrimarySize = 32;
     static constexpr uint32_t MaxOutOfLine = 0;
@@ -434,8 +434,8 @@ extern "C" const fidl_type_t fuchsia_minfs_BlockRegionTable;
 extern "C" const fidl_type_t v1_fuchsia_minfs_BlockRegionTable;
 
 struct BlockRegion {
-  static constexpr const fidl_type_t* Type = &fuchsia_minfs_BlockRegionTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_minfs_BlockRegionTable;
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_minfs_BlockRegionTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_minfs_BlockRegionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   [[maybe_unused]]
