@@ -104,7 +104,25 @@ uint32_t ValidateRange(const debug_ipc::AddressRange& range) {
   }
 }
 
-void SetWatchpointFlags(uint32_t* dbgwcr, uint64_t base_address,
+// Returns the bit flag to enable each different kind of watchpoint.
+uint32_t GetWatchpointWriteFlag(debug_ipc::BreakpointType type) {
+  // clang-format off
+  switch (type) {
+    case debug_ipc::BreakpointType::kRead: return 0b01;
+    case debug_ipc::BreakpointType::kReadWrite: return 0b11;
+    case debug_ipc::BreakpointType::kWrite: return 0b10;
+    case debug_ipc::BreakpointType::kSoftware:
+    case debug_ipc::BreakpointType::kHardware:
+    case debug_ipc::BreakpointType::kLast:
+      break;
+  }
+  // clang-format on
+
+  FXL_NOTREACHED() << "Invalid breakpoint type: " << static_cast<uint32_t>(type);
+  return 0;
+}
+
+void SetWatchpointFlags(uint32_t* dbgwcr, debug_ipc::BreakpointType type, uint64_t base_address,
                         const debug_ipc::AddressRange& range) {
   if (range.size() == 1) {
     uint32_t bas = 1u << (range.begin() - base_address);
@@ -123,7 +141,7 @@ void SetWatchpointFlags(uint32_t* dbgwcr, uint64_t base_address,
 
   // Set type.
   // TODO(donosoc): Support other types. This is only write for now.
-  ARM64_DBGWCR_LSC_SET(dbgwcr, 0b10);
+  ARM64_DBGWCR_LSC_SET(dbgwcr, GetWatchpointWriteFlag(type));
 
   // Set enabled.
   ARM64_DBGWCR_E_SET(dbgwcr, 1);
@@ -132,9 +150,15 @@ void SetWatchpointFlags(uint32_t* dbgwcr, uint64_t base_address,
 }  // namespace
 
 WatchpointInstallationResult SetupWatchpoint(zx_thread_state_debug_regs_t* regs,
+                                             debug_ipc::BreakpointType type,
                                              const debug_ipc::AddressRange& range,
                                              uint32_t watchpoint_count) {
   FXL_DCHECK(watchpoint_count <= 16);
+  if (!IsWatchpointType(type)) {
+    FXL_NOTREACHED() << "Requires a watchpoint type, received "
+                     << debug_ipc::BreakpointTypeToString(type);
+    return CreateResult(ZX_ERR_INVALID_ARGS);
+  }
 
   uint32_t base_address = ValidateRange(range);
   if (base_address == 0)
@@ -159,7 +183,7 @@ WatchpointInstallationResult SetupWatchpoint(zx_thread_state_debug_regs_t* regs,
 
   // We found a slot, we bind the watchpoint.
   regs->hw_wps[slot].dbgwvr = base_address;
-  SetWatchpointFlags(&regs->hw_wps[slot].dbgwcr, base_address, range);
+  SetWatchpointFlags(&regs->hw_wps[slot].dbgwcr, type, base_address, range);
 
   return CreateResult(ZX_OK, range, slot);
 }

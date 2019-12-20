@@ -20,9 +20,10 @@ namespace arch {
 constexpr uint32_t kWatchpointCount = 4;
 
 inline bool ResultVerification(zx_thread_state_debug_regs_t* regs, uint64_t address, uint64_t size,
+                               debug_ipc::BreakpointType type,
                                WatchpointInstallationResult expected) {
   WatchpointInstallationResult result =
-      SetupWatchpoint(regs, {address, address + size}, kWatchpointCount);
+      SetupWatchpoint(regs, type, {address, address + size}, kWatchpointCount);
   if (result.status != expected.status) {
     ADD_FAILURE() << "Status failed. Expected: " << zx_status_get_string(expected.status)
                   << ", got: " << zx_status_get_string(result.status);
@@ -44,8 +45,9 @@ inline bool ResultVerification(zx_thread_state_debug_regs_t* regs, uint64_t addr
 }
 
 inline bool Check(zx_thread_state_debug_regs_t* regs, uint64_t address, uint64_t size,
-                  WatchpointInstallationResult expected, uint32_t expected_bas = 0) {
-  if (!ResultVerification(regs, address, size, expected))
+                  debug_ipc::BreakpointType type, WatchpointInstallationResult expected,
+                  uint32_t expected_bas = 0) {
+  if (!ResultVerification(regs, address, size, type, expected))
     return false;
 
   // If no installation was made, we don't compare against BAS.
@@ -63,10 +65,11 @@ inline bool Check(zx_thread_state_debug_regs_t* regs, uint64_t address, uint64_t
 }
 
 inline bool ResetCheck(zx_thread_state_debug_regs_t* regs, uint64_t address, uint64_t size,
-                       WatchpointInstallationResult expected, uint32_t expected_bas = 0) {
+                       debug_ipc::BreakpointType type, WatchpointInstallationResult expected,
+                       uint32_t expected_bas = 0) {
   // Restart the registers.
   *regs = {};
-  return Check(regs, address, size, expected, expected_bas);
+  return Check(regs, address, size, type, expected, expected_bas);
 }
 
 inline bool CheckAddresses(const zx_thread_state_debug_regs_t& regs,
@@ -138,9 +141,9 @@ inline bool CheckEnabled(const zx_thread_state_debug_regs& regs, std::vector<uin
   return true;
 }
 
-/* constexpr uint32_t kRead = 0b01; */
+constexpr uint32_t kRead = 0b01;
 constexpr uint32_t kWrite = 0b10;
-/* constexpr uint32_t kReadWrite = 0b11; */
+constexpr uint32_t kReadWrite = 0b11;
 
 inline bool CheckTypes(const zx_thread_state_debug_regs& regs, std::vector<uint32_t> types) {
   for (uint32_t i = 0; i < types.size(); i++) {

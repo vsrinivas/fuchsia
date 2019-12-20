@@ -48,11 +48,12 @@ void RemoveHWBreakpointTest(debug_ipc::FileLineFunction file_line,
       << ", expected: " << debug_ipc::ZxStatusToString(expected_result);
 }
 
-constexpr uint64_t kAddress1 = 0x0123;
-constexpr uint64_t kAddress2 = 0x4567;
-constexpr uint64_t kAddress3 = 0x89ab;
-constexpr uint64_t kAddress4 = 0xcdef;
-constexpr uint64_t kAddress5 = 0xdeadbeef;
+// Always aligned address.
+constexpr uint64_t kAddress1 = 0x10000;
+constexpr uint64_t kAddress2 = 0x20000;
+constexpr uint64_t kAddress3 = 0x30000;
+constexpr uint64_t kAddress4 = 0x40000;
+constexpr uint64_t kAddress5 = 0x50000;
 
 TEST(arm64Helpers, SettingBreakpoints) {
   auto debug_regs = GetDefaultRegs();
@@ -382,44 +383,43 @@ TEST(ArmHelpers, WriteDebugRegs) {
 TEST(ArmHelpers_SetupWatchpoint, SetupMany) {
   zx_thread_state_debug_regs regs = {};
 
-  // Always aligned address.
-  constexpr uint64_t kAddress1 = 0x10000;
-  constexpr uint64_t kAddress2 = 0x20000;
-  constexpr uint64_t kAddress3 = 0x30000;
-  constexpr uint64_t kAddress4 = 0x40000;
-  constexpr uint64_t kAddress5 = 0x50000;
-
-  ASSERT_TRUE(Check(&regs, kAddress1, 1, CreateResult(ZX_OK, {kAddress1, kAddress1 + 1}, 0), 0x1));
+  ASSERT_TRUE(Check(&regs, kAddress1, 1, debug_ipc::BreakpointType::kWrite,
+                    CreateResult(ZX_OK, {kAddress1, kAddress1 + 1}, 0), 0x1));
   EXPECT_TRUE(CheckAddresses(regs, {kAddress1, 0, 0, 0}));
   EXPECT_TRUE(CheckEnabled(regs, {1, 0, 0, 0}));
   EXPECT_TRUE(CheckLengths(regs, {1, 0, 0, 0}));
   EXPECT_TRUE(CheckTypes(regs, {kWrite, 0, 0, 0}));
 
-  ASSERT_TRUE(Check(&regs, kAddress1, 1, CreateResult(ZX_ERR_ALREADY_BOUND)));
+  ASSERT_TRUE(Check(&regs, kAddress1, 1, debug_ipc::BreakpointType::kWrite,
+                    CreateResult(ZX_ERR_ALREADY_BOUND)));
   EXPECT_TRUE(CheckAddresses(regs, {kAddress1, 0, 0, 0}));
   EXPECT_TRUE(CheckEnabled(regs, {1, 0, 0, 0}));
   EXPECT_TRUE(CheckLengths(regs, {1, 0, 0, 0}));
   EXPECT_TRUE(CheckTypes(regs, {kWrite, 0, 0, 0}));
 
-  ASSERT_TRUE(Check(&regs, kAddress2, 2, CreateResult(ZX_OK, {kAddress2, kAddress2 + 2}, 1), 0x3));
+  ASSERT_TRUE(Check(&regs, kAddress2, 2, debug_ipc::BreakpointType::kWrite,
+                    CreateResult(ZX_OK, {kAddress2, kAddress2 + 2}, 1), 0x3));
   EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, 0, 0}));
   EXPECT_TRUE(CheckEnabled(regs, {1, 1, 0, 0}));
   EXPECT_TRUE(CheckLengths(regs, {1, 2, 0, 0}));
   EXPECT_TRUE(CheckTypes(regs, {kWrite, kWrite, 0, 0}));
 
-  ASSERT_TRUE(Check(&regs, kAddress3, 4, CreateResult(ZX_OK, {kAddress3, kAddress3 + 4}, 2), 0xf));
+  ASSERT_TRUE(Check(&regs, kAddress3, 4, debug_ipc::BreakpointType::kWrite,
+                    CreateResult(ZX_OK, {kAddress3, kAddress3 + 4}, 2), 0xf));
   EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, kAddress3, 0}));
   EXPECT_TRUE(CheckEnabled(regs, {1, 1, 1, 0}));
   EXPECT_TRUE(CheckLengths(regs, {1, 2, 4, 0}));
   EXPECT_TRUE(CheckTypes(regs, {kWrite, kWrite, kWrite, 0}));
 
-  ASSERT_TRUE(Check(&regs, kAddress4, 8, CreateResult(ZX_OK, {kAddress4, kAddress4 + 8}, 3), 0xff));
+  ASSERT_TRUE(Check(&regs, kAddress4, 8, debug_ipc::BreakpointType::kWrite,
+                    CreateResult(ZX_OK, {kAddress4, kAddress4 + 8}, 3), 0xff));
   EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, kAddress3, kAddress4}));
   EXPECT_TRUE(CheckEnabled(regs, {1, 1, 1, 1}));
   EXPECT_TRUE(CheckLengths(regs, {1, 2, 4, 8}));
   EXPECT_TRUE(CheckTypes(regs, {kWrite, kWrite, kWrite, kWrite}));
 
-  ASSERT_TRUE(Check(&regs, kAddress5, 8, CreateResult(ZX_ERR_NO_RESOURCES)));
+  ASSERT_TRUE(Check(&regs, kAddress5, 8, debug_ipc::BreakpointType::kWrite,
+                    CreateResult(ZX_ERR_NO_RESOURCES)));
   EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, kAddress3, kAddress4}));
   EXPECT_TRUE(CheckEnabled(regs, {1, 1, 1, 1}));
   EXPECT_TRUE(CheckLengths(regs, {1, 2, 4, 8}));
@@ -431,7 +431,8 @@ TEST(ArmHelpers_SetupWatchpoint, SetupMany) {
   EXPECT_TRUE(CheckLengths(regs, {1, 2, 0, 8}));
   EXPECT_TRUE(CheckTypes(regs, {kWrite, kWrite, 0, kWrite}));
 
-  ASSERT_TRUE(Check(&regs, kAddress5, 8, CreateResult(ZX_OK, {kAddress5, kAddress5 + 8}, 2), 0xff));
+  ASSERT_TRUE(Check(&regs, kAddress5, 8, debug_ipc::BreakpointType::kWrite,
+                    CreateResult(ZX_OK, {kAddress5, kAddress5 + 8}, 2), 0xff));
   EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, kAddress5, kAddress4}));
   EXPECT_TRUE(CheckEnabled(regs, {1, 1, 1, 1}));
   EXPECT_TRUE(CheckLengths(regs, {1, 2, 8, 8}));
@@ -449,198 +450,328 @@ TEST(ArmHelpers_SetupWatchpoint, Ranges) {
   zx_thread_state_debug_regs_t regs = {};
 
   // 1-byte alignment.
-  ASSERT_TRUE(ResetCheck(&regs, 0x1000, 1, CreateResult(ZX_OK, {0x1000, 0x1001}, 0), 0b00000001));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1001, 1, CreateResult(ZX_OK, {0x1001, 0x1002}, 0), 0b00000010));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1002, 1, CreateResult(ZX_OK, {0x1002, 0x1003}, 0), 0b00000100));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1003, 1, CreateResult(ZX_OK, {0x1003, 0x1004}, 0), 0b00001000));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1004, 1, CreateResult(ZX_OK, {0x1004, 0x1005}, 0), 0b00000001));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1005, 1, CreateResult(ZX_OK, {0x1005, 0x1006}, 0), 0b00000010));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1006, 1, CreateResult(ZX_OK, {0x1006, 0x1007}, 0), 0b00000100));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1007, 1, CreateResult(ZX_OK, {0x1007, 0x1008}, 0), 0b00001000));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1008, 1, CreateResult(ZX_OK, {0x1008, 0x1009}, 0), 0b00000001));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1009, 1, CreateResult(ZX_OK, {0x1009, 0x100a}, 0), 0b00000010));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100a, 1, CreateResult(ZX_OK, {0x100a, 0x100b}, 0), 0b00000100));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100b, 1, CreateResult(ZX_OK, {0x100b, 0x100c}, 0), 0b00001000));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100c, 1, CreateResult(ZX_OK, {0x100c, 0x100d}, 0), 0b00000001));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100d, 1, CreateResult(ZX_OK, {0x100d, 0x100e}, 0), 0b00000010));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100e, 1, CreateResult(ZX_OK, {0x100e, 0x100f}, 0), 0b00000100));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100f, 1, CreateResult(ZX_OK, {0x100f, 0x1010}, 0), 0b00001000));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1010, 1, CreateResult(ZX_OK, {0x1010, 0x1011}, 0), 0b00000001));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1000, 1, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_OK, {0x1000, 0x1001}, 0), 0b00000001));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1001, 1, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_OK, {0x1001, 0x1002}, 0), 0b00000010));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1002, 1, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_OK, {0x1002, 0x1003}, 0), 0b00000100));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1003, 1, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_OK, {0x1003, 0x1004}, 0), 0b00001000));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1004, 1, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_OK, {0x1004, 0x1005}, 0), 0b00000001));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1005, 1, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_OK, {0x1005, 0x1006}, 0), 0b00000010));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1006, 1, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_OK, {0x1006, 0x1007}, 0), 0b00000100));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1007, 1, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_OK, {0x1007, 0x1008}, 0), 0b00001000));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1008, 1, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_OK, {0x1008, 0x1009}, 0), 0b00000001));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1009, 1, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_OK, {0x1009, 0x100a}, 0), 0b00000010));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100a, 1, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_OK, {0x100a, 0x100b}, 0), 0b00000100));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100b, 1, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_OK, {0x100b, 0x100c}, 0), 0b00001000));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100c, 1, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_OK, {0x100c, 0x100d}, 0), 0b00000001));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100d, 1, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_OK, {0x100d, 0x100e}, 0), 0b00000010));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100e, 1, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_OK, {0x100e, 0x100f}, 0), 0b00000100));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100f, 1, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_OK, {0x100f, 0x1010}, 0), 0b00001000));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1010, 1, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_OK, {0x1010, 0x1011}, 0), 0b00000001));
 
   // 2-byte alignment.
-  ASSERT_TRUE(ResetCheck(&regs, 0x1000, 2, CreateResult(ZX_OK, {0x1000, 0x1002}, 0), 0b00000011));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1001, 2, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1002, 2, CreateResult(ZX_OK, {0x1002, 0x1004}, 0), 0b00001100));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1003, 2, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1000, 2, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_OK, {0x1000, 0x1002}, 0), 0b00000011));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1001, 2, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1002, 2, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_OK, {0x1002, 0x1004}, 0), 0b00001100));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1003, 2, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
 
-  ASSERT_TRUE(ResetCheck(&regs, 0x1004, 2, CreateResult(ZX_OK, {0x1004, 0x1006}, 0), 0b00000011));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1005, 2, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1006, 2, CreateResult(ZX_OK, {0x1006, 0x1008}, 0), 0b00001100));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1007, 2, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1004, 2, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_OK, {0x1004, 0x1006}, 0), 0b00000011));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1005, 2, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1006, 2, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_OK, {0x1006, 0x1008}, 0), 0b00001100));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1007, 2, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
 
-  ASSERT_TRUE(ResetCheck(&regs, 0x1008, 2, CreateResult(ZX_OK, {0x1008, 0x100a}, 0), 0b00000011));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1009, 2, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100a, 2, CreateResult(ZX_OK, {0x100a, 0x100c}, 0), 0b00001100));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100b, 2, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1008, 2, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_OK, {0x1008, 0x100a}, 0), 0b00000011));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1009, 2, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100a, 2, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_OK, {0x100a, 0x100c}, 0), 0b00001100));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100b, 2, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
 
-  ASSERT_TRUE(ResetCheck(&regs, 0x100c, 2, CreateResult(ZX_OK, {0x100c, 0x100e}, 0), 0b00000011));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100d, 2, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100e, 2, CreateResult(ZX_OK, {0x100e, 0x1010}, 0), 0b00001100));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100f, 2, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100c, 2, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_OK, {0x100c, 0x100e}, 0), 0b00000011));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100d, 2, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100e, 2, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_OK, {0x100e, 0x1010}, 0), 0b00001100));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100f, 2, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
 
-  ASSERT_TRUE(ResetCheck(&regs, 0x1010, 2, CreateResult(ZX_OK, {0x1010, 0x1012}, 0), 0b00000011));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1010, 2, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_OK, {0x1010, 0x1012}, 0), 0b00000011));
 
   // 3-byte alignment.
-  ASSERT_TRUE(ResetCheck(&regs, 0x1000, 3, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1001, 3, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1002, 3, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1003, 3, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1000, 3, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1001, 3, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1002, 3, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1003, 3, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
 
-  ASSERT_TRUE(ResetCheck(&regs, 0x1004, 3, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1005, 3, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1006, 3, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1007, 3, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1004, 3, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1005, 3, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1006, 3, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1007, 3, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
 
-  ASSERT_TRUE(ResetCheck(&regs, 0x1008, 3, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1009, 3, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100a, 3, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100b, 3, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1008, 3, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1009, 3, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100a, 3, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100b, 3, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
 
   // 4 byte range.
-  ASSERT_TRUE(ResetCheck(&regs, 0x1000, 4, CreateResult(ZX_OK, {0x1000, 0x1004}, 0), 0x0f));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1001, 4, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1002, 4, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1003, 4, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1000, 4, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_OK, {0x1000, 0x1004}, 0), 0x0f));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1001, 4, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1002, 4, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1003, 4, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
 
-  ASSERT_TRUE(ResetCheck(&regs, 0x1004, 4, CreateResult(ZX_OK, {0x1004, 0x1008}, 0), 0x0f));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1005, 4, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1006, 4, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1007, 4, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1004, 4, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_OK, {0x1004, 0x1008}, 0), 0x0f));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1005, 4, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1006, 4, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1007, 4, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
 
-  ASSERT_TRUE(ResetCheck(&regs, 0x1008, 4, CreateResult(ZX_OK, {0x1008, 0x100c}, 0), 0x0f));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1009, 4, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100a, 4, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100b, 4, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1008, 4, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_OK, {0x1008, 0x100c}, 0), 0x0f));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1009, 4, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100a, 4, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100b, 4, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
 
-  ASSERT_TRUE(ResetCheck(&regs, 0x100c, 4, CreateResult(ZX_OK, {0x100c, 0x1010}, 0), 0x0f));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100c, 4, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_OK, {0x100c, 0x1010}, 0), 0x0f));
 
   // 5 byte range.
-  ASSERT_TRUE(ResetCheck(&regs, 0x1000, 5, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1001, 5, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1002, 5, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1003, 5, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1004, 5, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1005, 5, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1006, 5, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1007, 5, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1000, 5, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1001, 5, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1002, 5, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1003, 5, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1004, 5, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1005, 5, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1006, 5, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1007, 5, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
 
-  ASSERT_TRUE(ResetCheck(&regs, 0x1008, 5, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1009, 5, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100a, 5, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100b, 5, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100c, 5, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100d, 5, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100e, 5, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100f, 5, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1008, 5, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1009, 5, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100a, 5, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100b, 5, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100c, 5, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100d, 5, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100e, 5, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100f, 5, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
 
   // 6 byte range.
-  ASSERT_TRUE(ResetCheck(&regs, 0x1000, 6, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1001, 6, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1002, 6, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1003, 6, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1004, 6, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1005, 6, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1006, 6, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1007, 6, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1000, 6, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1001, 6, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1002, 6, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1003, 6, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1004, 6, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1005, 6, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1006, 6, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1007, 6, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
 
-  ASSERT_TRUE(ResetCheck(&regs, 0x1008, 6, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1009, 6, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100a, 6, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100b, 6, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100c, 6, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100d, 6, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100e, 6, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100f, 6, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1008, 6, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1009, 6, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100a, 6, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100b, 6, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100c, 6, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100d, 6, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100e, 6, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100f, 6, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
 
   // 7 byte range.
-  ASSERT_TRUE(ResetCheck(&regs, 0x1000, 7, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1001, 7, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1002, 7, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1003, 7, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1004, 7, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1005, 7, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1006, 7, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1007, 7, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1000, 7, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1001, 7, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1002, 7, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1003, 7, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1004, 7, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1005, 7, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1006, 7, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1007, 7, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
 
-  ASSERT_TRUE(ResetCheck(&regs, 0x1008, 7, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1009, 7, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100a, 7, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100b, 7, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100c, 7, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100d, 7, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100e, 7, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100f, 7, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1008, 7, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1009, 7, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100a, 7, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100b, 7, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100c, 7, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100d, 7, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100e, 7, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100f, 7, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
 
   // 8 byte range.
-  ASSERT_TRUE(ResetCheck(&regs, 0x1000, 8, CreateResult(ZX_OK, {0x1000, 0x1008}, 0), 0xff));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1001, 8, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1002, 8, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1003, 8, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1004, 8, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1005, 8, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1006, 8, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1007, 8, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1000, 8, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_OK, {0x1000, 0x1008}, 0), 0xff));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1001, 8, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1002, 8, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1003, 8, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1004, 8, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1005, 8, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1006, 8, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1007, 8, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
 
-  ASSERT_TRUE(ResetCheck(&regs, 0x1008, 8, CreateResult(ZX_OK, {0x1008, 0x1010}, 0), 0xff));
-  ASSERT_TRUE(ResetCheck(&regs, 0x1009, 8, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100a, 8, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100b, 8, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100c, 8, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100d, 8, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100e, 8, CreateResult(ZX_ERR_OUT_OF_RANGE)));
-  ASSERT_TRUE(ResetCheck(&regs, 0x100f, 8, CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1008, 8, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_OK, {0x1008, 0x1010}, 0), 0xff));
+  ASSERT_TRUE(ResetCheck(&regs, 0x1009, 8, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100a, 8, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100b, 8, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100c, 8, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100d, 8, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100e, 8, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
+  ASSERT_TRUE(ResetCheck(&regs, 0x100f, 8, debug_ipc::BreakpointType::kWrite,
+                         CreateResult(ZX_ERR_OUT_OF_RANGE)));
 }
 
 TEST(ArmHelpers_SettingWatchpoints, RangeIsDifferentWatchpoint) {
   zx_thread_state_debug_regs_t regs = {};
 
-  ASSERT_TRUE(Check(&regs, 0x100, 1, CreateResult(ZX_OK, {0x100, 0x100 + 1}, 0), 0b00000001));
+  ASSERT_TRUE(Check(&regs, 0x100, 1, debug_ipc::BreakpointType::kWrite,
+                    CreateResult(ZX_OK, {0x100, 0x100 + 1}, 0), 0b00000001));
   ASSERT_TRUE(CheckAddresses(regs, {0x100, 0, 0, 0}));
   EXPECT_TRUE(CheckEnabled(regs, {1, 0, 0, 0}));
   ASSERT_TRUE(CheckLengths(regs, {1, 0, 0, 0}));
   EXPECT_TRUE(CheckTypes(regs, {kWrite, 0, 0, 0}));
 
-  ASSERT_TRUE(Check(&regs, 0x100, 1, CreateResult(ZX_ERR_ALREADY_BOUND)));
+  ASSERT_TRUE(Check(&regs, 0x100, 1, debug_ipc::BreakpointType::kWrite,
+                    CreateResult(ZX_ERR_ALREADY_BOUND)));
   ASSERT_TRUE(CheckAddresses(regs, {0x100, 0, 0, 0}));
   EXPECT_TRUE(CheckEnabled(regs, {1, 0, 0, 0}));
   ASSERT_TRUE(CheckLengths(regs, {1, 0, 0, 0}));
   EXPECT_TRUE(CheckTypes(regs, {kWrite, 0, 0, 0}));
 
-  ASSERT_TRUE(Check(&regs, 0x100, 2, CreateResult(ZX_OK, {0x100, 0x100 + 2}, 1), 0b00000011));
+  ASSERT_TRUE(Check(&regs, 0x100, 2, debug_ipc::BreakpointType::kWrite,
+                    CreateResult(ZX_OK, {0x100, 0x100 + 2}, 1), 0b00000011));
   ASSERT_TRUE(CheckAddresses(regs, {0x100, 0x100, 0, 0}));
   EXPECT_TRUE(CheckEnabled(regs, {1, 1, 0, 0}));
   ASSERT_TRUE(CheckLengths(regs, {1, 2, 0, 0}));
   EXPECT_TRUE(CheckTypes(regs, {kWrite, kWrite, 0, 0}));
 
-  ASSERT_TRUE(Check(&regs, 0x100, 2, CreateResult(ZX_ERR_ALREADY_BOUND)));
+  ASSERT_TRUE(Check(&regs, 0x100, 2, debug_ipc::BreakpointType::kWrite,
+                    CreateResult(ZX_ERR_ALREADY_BOUND)));
   ASSERT_TRUE(CheckAddresses(regs, {0x100, 0x100, 0, 0}));
   EXPECT_TRUE(CheckEnabled(regs, {1, 1, 0, 0}));
   ASSERT_TRUE(CheckLengths(regs, {1, 2, 0, 0}));
   EXPECT_TRUE(CheckTypes(regs, {kWrite, kWrite, 0, 0}));
 
-  ASSERT_TRUE(Check(&regs, 0x100, 4, CreateResult(ZX_OK, {0x100, 0x100 + 4}, 2), 0b00001111));
+  ASSERT_TRUE(Check(&regs, 0x100, 4, debug_ipc::BreakpointType::kWrite,
+                    CreateResult(ZX_OK, {0x100, 0x100 + 4}, 2), 0b00001111));
   ASSERT_TRUE(CheckAddresses(regs, {0x100, 0x100, 0x100, 0}));
   EXPECT_TRUE(CheckEnabled(regs, {1, 1, 1, 0}));
   ASSERT_TRUE(CheckLengths(regs, {1, 2, 4, 0}));
   EXPECT_TRUE(CheckTypes(regs, {kWrite, kWrite, kWrite, 0}));
 
-  ASSERT_TRUE(Check(&regs, 0x100, 4, CreateResult(ZX_ERR_ALREADY_BOUND)));
+  ASSERT_TRUE(Check(&regs, 0x100, 4, debug_ipc::BreakpointType::kWrite,
+                    CreateResult(ZX_ERR_ALREADY_BOUND)));
   ASSERT_TRUE(CheckAddresses(regs, {0x100, 0x100, 0x100, 0}));
   EXPECT_TRUE(CheckEnabled(regs, {1, 1, 1, 0}));
   ASSERT_TRUE(CheckLengths(regs, {1, 2, 4, 0}));
   EXPECT_TRUE(CheckTypes(regs, {kWrite, kWrite, kWrite, 0}));
 
-  ASSERT_TRUE(Check(&regs, 0x100, 8, CreateResult(ZX_OK, {0x100, 0x100 + 8}, 3), 0b11111111));
+  ASSERT_TRUE(Check(&regs, 0x100, 8, debug_ipc::BreakpointType::kWrite,
+                    CreateResult(ZX_OK, {0x100, 0x100 + 8}, 3), 0b11111111));
   ASSERT_TRUE(CheckAddresses(regs, {0x100, 0x100, 0x100, 0x100}));
   EXPECT_TRUE(CheckEnabled(regs, {1, 1, 1, 1}));
   ASSERT_TRUE(CheckLengths(regs, {1, 2, 4, 8}));
@@ -688,6 +819,65 @@ TEST(ArmHelpers_SettingWatchpoints, RangeIsDifferentWatchpoint) {
   EXPECT_TRUE(CheckEnabled(regs, {0, 0, 0, 0}));
   ASSERT_TRUE(CheckLengths(regs, {0, 0, 0, 0}));
   EXPECT_TRUE(CheckTypes(regs, {0, 0, 0, 0}));
+}
+
+TEST(ArmHelpers_SettingWatchpoints, DifferentTypes) {
+  zx_thread_state_debug_regs_t regs = {};
+
+  ASSERT_TRUE(Check(&regs, kAddress1, 1, debug_ipc::BreakpointType::kWrite,
+                    CreateResult(ZX_OK, {kAddress1, kAddress1 + 1}, 0), 0x1));
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress1, 0, 0, 0}));
+  EXPECT_TRUE(CheckEnabled(regs, {1, 0, 0, 0}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 0, 0, 0}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, 0, 0, 0}));
+
+  ASSERT_TRUE(Check(&regs, kAddress2, 2, debug_ipc::BreakpointType::kRead,
+                    CreateResult(ZX_OK, {kAddress2, kAddress2 + 2}, 1), 0x3));
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, 0, 0}));
+  EXPECT_TRUE(CheckEnabled(regs, {1, 1, 0, 0}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 2, 0, 0}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, kRead, 0, 0}));
+
+  ASSERT_TRUE(Check(&regs, kAddress3, 4, debug_ipc::BreakpointType::kReadWrite,
+                    CreateResult(ZX_OK, {kAddress3, kAddress3 + 4}, 2), 0xf));
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, kAddress3, 0}));
+  EXPECT_TRUE(CheckEnabled(regs, {1, 1, 1, 0}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 2, 4, 0}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, kRead, kReadWrite, 0}));
+
+  ASSERT_TRUE(Check(&regs, kAddress4, 8, debug_ipc::BreakpointType::kRead,
+                    CreateResult(ZX_OK, {kAddress4, kAddress4 + 8}, 3), 0xff));
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, kAddress3, kAddress4}));
+  EXPECT_TRUE(CheckEnabled(regs, {1, 1, 1, 1}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 2, 4, 8}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, kRead, kReadWrite, kRead}));
+
+  ASSERT_TRUE(Check(&regs, kAddress5, 8, debug_ipc::BreakpointType::kWrite,
+                    CreateResult(ZX_ERR_NO_RESOURCES)));
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, kAddress3, kAddress4}));
+  EXPECT_TRUE(CheckEnabled(regs, {1, 1, 1, 1}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 2, 4, 8}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, kRead, kReadWrite, kRead}));
+
+  ASSERT_ZX_EQ(RemoveWatchpoint(&regs, {kAddress3, kAddress3 + 4}, kWatchpointCount), ZX_OK);
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, 0, kAddress4}));
+  EXPECT_TRUE(CheckEnabled(regs, {1, 1, 0, 1}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 2, 0, 8}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, kRead, 0, kRead}));
+
+  ASSERT_TRUE(Check(&regs, kAddress5, 8, debug_ipc::BreakpointType::kWrite,
+                    CreateResult(ZX_OK, {kAddress5, kAddress5 + 8}, 2), 0xff));
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, kAddress5, kAddress4}));
+  EXPECT_TRUE(CheckEnabled(regs, {1, 1, 1, 1}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 2, 8, 8}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, kRead, kWrite, kRead}));
+
+  ASSERT_ZX_EQ(RemoveWatchpoint(&regs, {kAddress3, kAddress3 + 4}, kWatchpointCount),
+               ZX_ERR_NOT_FOUND);
+  EXPECT_TRUE(CheckAddresses(regs, {kAddress1, kAddress2, kAddress5, kAddress4}));
+  EXPECT_TRUE(CheckEnabled(regs, {1, 1, 1, 1}));
+  EXPECT_TRUE(CheckLengths(regs, {1, 2, 8, 8}));
+  EXPECT_TRUE(CheckTypes(regs, {kWrite, kRead, kWrite, kRead}));
 }
 
 }  // namespace

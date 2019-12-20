@@ -254,6 +254,8 @@ enum class BreakpointType : uint32_t {
   kLast,
 };
 const char* BreakpointTypeToString(BreakpointType);
+
+// Read, ReadWrite and Write are considered watchpoint types.
 bool IsWatchpointType(BreakpointType);
 
 struct BreakpointSettings {
