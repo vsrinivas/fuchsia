@@ -424,14 +424,14 @@ Dart analyzer uses a lot of memory which may cause issues when building
 with many parallel jobs e.g. when using goma. To avoid out-of-memory
 errors we explicitly reduce the number of jobs.
 
-**Current value (from the default):** `16`
+**Current value (from the default):** `32`
 
 From //build/dart/BUILD.gn:15
 
 ### concurrent_go_jobs
 Maximum number of Go processes to run in parallel.
 
-**Current value (from the default):** `16`
+**Current value (from the default):** `32`
 
 From //build/go/BUILD.gn:11
 
@@ -443,7 +443,7 @@ linking is memory-intensive. The default to use varies by platform and by
 the amount of memory available, so we call out to a script to get the right
 value.
 
-**Current value (from the default):** `16`
+**Current value (from the default):** `32`
 
 From //build/toolchain/BUILD.gn:15
 
@@ -454,7 +454,7 @@ We run multiple rustc jobs in parallel, each of which can cause significant
 amount of memory, especially when using LTO. To avoid out-of-memory errors
 we explicitly reduce the number of jobs.
 
-**Current value (from the default):** `14`
+**Current value (from the default):** `29`
 
 From //build/rust/BUILD.gn:15
 
@@ -2075,7 +2075,7 @@ From //build/config/lto/config.gni:7
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:25](https://fuchsia.googlesource.com/third_party/mesa/+/8ae2abb75f78b28817a926440dbc2256e0064686/src/intel/vulkan/BUILD.gn#25)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:25](https://fuchsia.googlesource.com/third_party/mesa/+/ddebe0486a033812e0df176a9ebc8c88d41fe3f8/src/intel/vulkan/BUILD.gn#25)
 
 ### use_netstack3
 
