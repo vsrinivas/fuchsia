@@ -44,6 +44,45 @@ struct iwl_trans_pcie_wrapper {
   PcieTest* test;
 };
 
+// In the SyncHostCommandEmpty() test, this function will generate an ECHO response in order to
+// simulate the firmware event for iwl_pcie_hcmd_complete().
+static void FakeEchoWrite32(struct iwl_trans* trans, uint32_t ofs, uint32_t val) {
+  if (ofs != HBUS_TARG_WRPTR) {
+    return;
+  }
+
+  io_buffer_t io_buf;
+  zx::bti fake_bti;
+  fake_bti_create(fake_bti.reset_and_get_address());
+  io_buffer_init(&io_buf, fake_bti.get(), 128, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+  struct iwl_rx_cmd_buffer rxcb = {
+      ._io_buf = io_buf,
+      ._offset = 0,
+  };
+  struct iwl_rx_packet* resp_pkt = reinterpret_cast<struct iwl_rx_packet*>(io_buffer_virt(&io_buf));
+  resp_pkt->len_n_flags = cpu_to_le32(0);
+  resp_pkt->hdr.cmd = ECHO_CMD;
+  resp_pkt->hdr.group_id = 0;
+  resp_pkt->hdr.sequence = 0;
+
+  // iwl_pcie_hcmd_complete() will require the txq->lock. However, we already have done it in
+  // iwl_trans_pcie_send_hcmd(). So release the lock before calling it. Note that this is safe
+  // because in the test, it is always single thread and has no race.
+  //
+  // The GCC pragma is to depress the compile warning on mutex check.
+  //
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+  struct iwl_txq* txq = trans_pcie->txq[trans_pcie->cmd_queue];
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wthread-safety-analysis"
+  mtx_unlock(&txq->lock);
+  iwl_pcie_hcmd_complete(trans, &rxcb);
+  mtx_lock(&txq->lock);
+
+  io_buffer_release(&io_buf);
+}
+#pragma GCC diagnostic pop
+
 class PcieTest : public zxtest::Test {
  public:
   PcieTest() {
@@ -380,7 +419,7 @@ TEST_F(TxTest, AsyncHostCommandTwoFragments) {
   EXPECT_BYTES_EQ(out_cmd->payload + sizeof(fragment1), fragment2, sizeof(fragment2));
 }
 
-TEST_F(TxTest, AsyncHostCommandTooLarge) {
+TEST_F(TxTest, AsyncLargeHostCommands) {
   ASSERT_OK(iwl_pcie_tx_init(trans_));
   std::array<uint8_t, TFD_MAX_PAYLOAD_SIZE> fragment = {0};
   struct iwl_host_cmd default_hcmd = {
@@ -389,6 +428,7 @@ TEST_F(TxTest, AsyncHostCommandTooLarge) {
   };
   default_hcmd.len[0] = sizeof(fragment);
   default_hcmd.data[0] = fragment.data();
+  EXPECT_EQ(iwl_trans_pcie_send_hcmd(trans_, &default_hcmd), ZX_ERR_INVALID_ARGS);
 
   struct iwl_host_cmd nocopy_hcmd = {
       .flags = CMD_ASYNC,
@@ -397,6 +437,7 @@ TEST_F(TxTest, AsyncHostCommandTooLarge) {
   nocopy_hcmd.len[0] = sizeof(fragment);
   nocopy_hcmd.data[0] = fragment.data();
   nocopy_hcmd.dataflags[0] = IWL_HCMD_DFL_NOCOPY;
+  EXPECT_EQ(iwl_trans_pcie_send_hcmd(trans_, &nocopy_hcmd), ZX_OK);
 
   struct iwl_host_cmd dup_hcmd = {
       .flags = CMD_ASYNC,
@@ -406,49 +447,128 @@ TEST_F(TxTest, AsyncHostCommandTooLarge) {
   dup_hcmd.data[0] = fragment.data();
   dup_hcmd.dataflags[0] = IWL_HCMD_DFL_DUP;
 
-  EXPECT_EQ(iwl_trans_pcie_send_hcmd(trans_, &default_hcmd), ZX_ERR_INVALID_ARGS);
-  EXPECT_EQ(iwl_trans_pcie_send_hcmd(trans_, &nocopy_hcmd), ZX_ERR_NO_RESOURCES);
-  EXPECT_EQ(iwl_trans_pcie_send_hcmd(trans_, &dup_hcmd), ZX_ERR_NO_RESOURCES);
+  EXPECT_EQ(iwl_trans_pcie_send_hcmd(trans_, &dup_hcmd), ZX_OK);
 }
 
-// In the SyncHostCommandEmpty() test, this function will generate an ECHO response in order to
-// simulate the firmware event for iwl_pcie_hcmd_complete().
-static void FakeEchoWrite32(struct iwl_trans* trans, uint32_t ofs, uint32_t val) {
-  if (ofs != HBUS_TARG_WRPTR) {
-    return;
-  }
-
-  io_buffer_t io_buf;
-  zx::bti fake_bti;
-  fake_bti_create(fake_bti.reset_and_get_address());
-  io_buffer_init(&io_buf, fake_bti.get(), 128, IO_BUFFER_RW | IO_BUFFER_CONTIG);
-  struct iwl_rx_cmd_buffer rxcb = {
-      ._io_buf = io_buf,
-      ._offset = 0,
+TEST_F(TxTest, SyncTwoFragmentsWithOneDup) {
+  ASSERT_OK(iwl_pcie_tx_init(trans_));
+  // Must be long enough so that len(fragment1+iwl_cmd_header) >= IWL_FIRST_TB_SIZE(20)
+  uint8_t fragment0[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+  uint8_t fragment1[TFD_MAX_PAYLOAD_SIZE] = {0xa, 0xb, 0xc, 0xd, 0xe, 0xf};
+  struct iwl_host_cmd hcmd = {
+      .flags = CMD_WANT_SKB,
+      .id = ECHO_CMD,
   };
-  struct iwl_rx_packet* resp_pkt = reinterpret_cast<struct iwl_rx_packet*>(io_buffer_virt(&io_buf));
-  resp_pkt->len_n_flags = cpu_to_le32(0);
-  resp_pkt->hdr.cmd = ECHO_CMD;
-  resp_pkt->hdr.group_id = 0;
-  resp_pkt->hdr.sequence = 0;
+  hcmd.len[0] = sizeof(fragment0);
+  hcmd.data[0] = fragment0;
+  hcmd.len[1] = sizeof(fragment1);
+  hcmd.data[1] = fragment1;
+  hcmd.dataflags[1] = IWL_HCMD_DFL_DUP;
 
-  // iwl_pcie_hcmd_complete() will require the txq->lock. However, we already have done it in
-  // iwl_trans_pcie_send_hcmd(). So release the lock before calling it. Note that this is safe
-  // because in the test, it is always single thread and has no race.
-  //
-  // The GCC pragma is to depress the compile warning on mutex check.
-  //
-  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-  struct iwl_txq* txq = trans_pcie->txq[trans_pcie->cmd_queue];
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wthread-safety-analysis"
-  mtx_unlock(&txq->lock);
-  iwl_pcie_hcmd_complete(trans, &rxcb);
-  mtx_lock(&txq->lock);
+  // Save the orginal command index
+  struct iwl_txq* txq = trans_pcie_->txq[trans_pcie_->cmd_queue];
+  int cmd_idx = iwl_pcie_get_cmd_index(txq, txq->write_ptr);
 
-  io_buffer_release(&io_buf);
+  trans_ops_.write32 = FakeEchoWrite32;
+  ASSERT_OK(iwl_trans_pcie_send_hcmd(trans_, &hcmd));
+
+  struct iwl_device_cmd* out_cmd =
+      static_cast<iwl_device_cmd*>(io_buffer_virt(&txq->entries[cmd_idx].cmd));
+  EXPECT_BYTES_EQ(out_cmd->payload, fragment0, sizeof(fragment0));
+  EXPECT_BYTES_EQ(out_cmd->payload + sizeof(fragment0), fragment1, sizeof(fragment1));
+  ASSERT_TRUE(io_buffer_is_valid(&txq->entries[cmd_idx].dup_io_buf));
+  uint8_t* dup_buf = static_cast<uint8_t*>(io_buffer_virt(&txq->entries[cmd_idx].dup_io_buf));
+  EXPECT_BYTES_EQ(dup_buf, fragment1, sizeof(fragment1));
 }
-#pragma GCC diagnostic pop
+
+TEST_F(TxTest, SyncTwoFragmentsWithTwoDups) {
+  ASSERT_OK(iwl_pcie_tx_init(trans_));
+  // Must be long enough so that len(fragment1+iwl_cmd_header) >= IWL_FIRST_TB_SIZE(20)
+  uint8_t fragment0[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+  uint8_t fragment1[] = {0xa, 0xb, 0xc, 0xd, 0xe, 0xf};
+  struct iwl_host_cmd hcmd = {
+      .flags = CMD_WANT_SKB,
+      .id = ECHO_CMD,
+  };
+  hcmd.len[0] = sizeof(fragment0);
+  hcmd.data[0] = fragment0;
+  hcmd.dataflags[0] = IWL_HCMD_DFL_DUP;
+  hcmd.len[1] = sizeof(fragment1);
+  hcmd.data[1] = fragment1;
+  hcmd.dataflags[1] = IWL_HCMD_DFL_DUP;
+
+  trans_ops_.write32 = FakeEchoWrite32;
+  ASSERT_EQ(iwl_trans_pcie_send_hcmd(trans_, &hcmd), ZX_ERR_INVALID_ARGS);
+}
+
+TEST_F(TxTest, SyncTwoFragmentsWithOneNocopy) {
+  ASSERT_OK(iwl_pcie_tx_init(trans_));
+  // Must be long enough so that len(fragment1+iwl_cmd_header) >= IWL_FIRST_TB_SIZE(20)
+  uint8_t fragment0[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+  uint8_t fragment1[TFD_MAX_PAYLOAD_SIZE] = {0xa, 0xb, 0xc, 0xd, 0xe, 0xf};
+  struct iwl_host_cmd hcmd = {
+      .flags = CMD_WANT_SKB,
+      .id = ECHO_CMD,
+  };
+  hcmd.len[0] = sizeof(fragment0);
+  hcmd.data[0] = fragment0;
+  hcmd.len[1] = sizeof(fragment1);
+  hcmd.data[1] = fragment1;
+  hcmd.dataflags[1] = IWL_HCMD_DFL_NOCOPY;
+
+  // Save the orginal command index
+  struct iwl_txq* txq = trans_pcie_->txq[trans_pcie_->cmd_queue];
+  int cmd_idx = iwl_pcie_get_cmd_index(txq, txq->write_ptr);
+
+  trans_ops_.write32 = FakeEchoWrite32;
+  ASSERT_OK(iwl_trans_pcie_send_hcmd(trans_, &hcmd));
+
+  struct iwl_device_cmd* out_cmd =
+      static_cast<iwl_device_cmd*>(io_buffer_virt(&txq->entries[cmd_idx].cmd));
+  EXPECT_BYTES_EQ(out_cmd->payload, fragment0, sizeof(fragment0));
+  EXPECT_BYTES_EQ(out_cmd->payload + sizeof(fragment0), fragment1, sizeof(fragment1));
+  ASSERT_TRUE(io_buffer_is_valid(&txq->entries[cmd_idx].dup_io_buf));
+  uint8_t* dup_buf = static_cast<uint8_t*>(io_buffer_virt(&txq->entries[cmd_idx].dup_io_buf));
+  EXPECT_BYTES_EQ(dup_buf, fragment1, sizeof(fragment1));
+}
+
+TEST_F(TxTest, SyncTwoFragmentsWithFirstDup) {
+  ASSERT_OK(iwl_pcie_tx_init(trans_));
+  // Must be long enough so that len(fragment1+iwl_cmd_header) >= IWL_FIRST_TB_SIZE(20)
+  uint8_t fragment0[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+  uint8_t fragment1[] = {0xa, 0xb, 0xc, 0xd, 0xe, 0xf};
+  struct iwl_host_cmd hcmd = {
+      .flags = CMD_WANT_SKB,
+      .id = ECHO_CMD,
+  };
+  hcmd.len[0] = sizeof(fragment0);
+  hcmd.data[0] = fragment0;
+  hcmd.dataflags[0] = IWL_HCMD_DFL_DUP;
+  hcmd.len[1] = sizeof(fragment1);
+  hcmd.data[1] = fragment1;
+
+  trans_ops_.write32 = FakeEchoWrite32;
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, iwl_trans_pcie_send_hcmd(trans_, &hcmd));
+}
+
+TEST_F(TxTest, SyncTwoFragmentsWithFirstNocopy) {
+  ASSERT_OK(iwl_pcie_tx_init(trans_));
+  // Must be long enough so that len(fragment1+iwl_cmd_header) >= IWL_FIRST_TB_SIZE(20)
+  uint8_t fragment0[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
+  uint8_t fragment1[TFD_MAX_PAYLOAD_SIZE] = {0xa, 0xb, 0xc, 0xd, 0xe, 0xf};
+  struct iwl_host_cmd hcmd = {
+      .flags = CMD_WANT_SKB,
+      .id = ECHO_CMD,
+  };
+  hcmd.len[0] = sizeof(fragment0);
+  hcmd.data[0] = fragment0;
+  hcmd.dataflags[0] = IWL_HCMD_DFL_NOCOPY;
+  hcmd.len[1] = sizeof(fragment1);
+  hcmd.data[1] = fragment1;
+
+  trans_ops_.write32 = FakeEchoWrite32;
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, iwl_trans_pcie_send_hcmd(trans_, &hcmd));
+}
 
 // This test is going to go through the sync host command call:
 //

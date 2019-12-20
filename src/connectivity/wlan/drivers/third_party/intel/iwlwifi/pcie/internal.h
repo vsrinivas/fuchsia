@@ -273,11 +273,8 @@ struct iwl_cmd_meta {
 #define IWL_FIRST_TB_SIZE_ALIGN ROUND_UP(IWL_FIRST_TB_SIZE, 64)
 
 struct iwl_pcie_txq_entry {
-  // struct iwl_device_cmd* cmd;
-  io_buffer_t cmd;
-  struct sk_buff* skb;
-  /* buffer to free after command completes */
-  void* free_buf;
+  io_buffer_t cmd;  // Used to store the command
+  io_buffer_t dup_io_buf;
   struct iwl_cmd_meta meta;
 };
 

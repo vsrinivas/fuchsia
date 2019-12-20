@@ -709,13 +709,12 @@ static void iwl_pcie_txq_free(struct iwl_trans* trans, int txq_id) {
 #endif  // NEEDS_PORTING
 
   /* De-alloc array of command/tx buffers */
-  if (txq_id == trans_pcie->cmd_queue)
+  if (txq_id == trans_pcie->cmd_queue) {
     for (i = 0; i < txq->n_window; i++) {
       io_buffer_release(&txq->entries[i].cmd);
-#if 0   // NEEDS_PORTING
-            free(txq->entries[i].free_buf);
-#endif  // NEEDS_PORTING
+      io_buffer_release(&txq->entries[i].dup_io_buf);
     }
+  }
 
   /* De-alloc circular buffer of TFDs */
   io_buffer_release(&txq->tfds);
@@ -1418,23 +1417,96 @@ void iwl_trans_pcie_txq_disable(struct iwl_trans* trans, int txq_id, bool config
 
 /*************** HOST COMMAND QUEUE FUNCTIONS   *****/
 
-/*
- * iwl_pcie_enqueue_hcmd - enqueue a uCode command
- * @priv: device private data point
- * @cmd: a pointer to the ucode command structure
- */
+//
+// iwl_pcie_enqueue_hcmd - enqueue a uCode command
+//
+// @priv: device private data point
+// @cmd: a pointer to the ucode command structure
+//
+// Below is how a Tx host command is built:
+//
+// A host command from MVM can contain 2 data framgents:
+//
+//   - The first fragment must contain the command header including command ID, length ... etc.
+//     It may not contain the payload since it can be passed in the second fragment.
+//
+//   - The second fragment is optional. Usually it is used for different flags from the first
+//     fragment. For example, copying a host command with very large payload has performance
+//     concern. Then the first fragment can only contain the command header while the second
+//     fragment can contain its large payload with NOCOPY flag.
+//
+// So, down to the transport layer, a host command can be re-mapped to multiple descriptors in order
+// to satisfy the upper layer's demand. This is why TFD (Transmit Frame Descriptor) is introduced.
+//
+// txq->tfds[] (TFDs) are used by driver to indicate the data fragements for firmware. A host
+// command can be re-mapped into 1~3 descriptors depending on the fragment lengths and flags
+// (check how the iwl_pcie_txq_build_tfd() is called in this function):
+//
+//   - For small-sized command (<= 20 bytes):
+//
+//     At driver initialization time, it already allocated a special buffer (txq->first_tb_bufs[],
+//     also called 'tb0' in this function) for small host commands.
+//
+//     For these commands, no memory mapping is required, and just copy the whole command to the
+//     buffer. Note that each entry in this buffer must be 64-byte aligned although only the first
+//     20-byte is used.
+//
+//        <-- 20-B -->
+//       +------------+
+//       |     tb0    |
+//       +------------+
+//
+//
+//   - For medium-sized command (20 < len <= 328 bytes):
+//
+//     The first 20-byte still goes to 'tb0'. The remaining content will be mapped into the second
+//     descriptor -- the 'cmd' io_buffer in 'struct iwl_pcie_txq_entry'.
+//
+//        <-----------   20 ~ 328 bytes   ----------->
+//       +------------+  +----------------------------+
+//       |     tb0    |  |   2nd descriptor ('cmd')   |
+//       +------------+  +----------------------------+
+//           1st fragment (or with the 2nd fragment)
+//
+//
+//   - For large-sized command (> 328 bytes):
+//
+//     It cannot be fit within one fragment (seems a hardware issue?). The second fragment must be
+//     marked with NOCOPY flag (observed from the code using this function).
+//
+//     + If first fragment is smaller than or equal to 20-byte, then 2 descriptors will be built.
+//       The first descriptor points to the first fragment while the second descriptor points to
+//        second fragment -- the 'dup_io_buf' in 'struct iwl_pcie_txq_entry'.
+//
+//          <-- 20-B -->    <---------  any length  ---------->
+//         +------------+  +-----------------------------------+
+//         |     tb0    |  |   2nd descriptor ('dup_io_buf')   |
+//         +------------+  +-----------------------------------+
+//          1st fragment       2nd fragment (NOCOPY)
+//
+//
+//     + If the first fragment is larger than 20-byte, similar as the medium-sized command, the
+//       first fragment will be split into 2 descriptos: 'tb0' and 'cmd' io_buffer. However, the
+//       second fragment (with the NOCOPY flag) will be stored in 3rd descriptor.
+//
+//          <-----------   20 ~ 328 bytes   ----------->    <---------  any length  ---------->
+//         +------------+  +----------------------------+  +-----------------------------------+
+//         |     tb0    |  |   2nd descriptor ('cmd')   |  |   3rd descriptor ('dup_io_buf')   |
+//         +------------+  +----------------------------+  +-----------------------------------+
+//                     1st fragment                              2nd fragment (NOCOPY)
+//
 static zx_status_t iwl_pcie_enqueue_hcmd(struct iwl_trans* trans, struct iwl_host_cmd* cmd,
                                          int* cmd_idx_out) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
   struct iwl_txq* txq = trans_pcie->txq[trans_pcie->cmd_queue];
   struct iwl_cmd_meta* out_meta;
-  void* dup_buf = NULL;
-  uint16_t copy_size, cmd_size, tb0_size;
+  bool had_dup_flag = false;
+  uint16_t copy_size;  // The size to copy into allocated DMA area (without the NOCOPY data).
+  uint16_t cmd_size;   // Whole command size writing to HW, including header and data.
   bool had_nocopy = false;
   uint8_t group_id = iwl_cmd_groupid(cmd->id);
-  uint32_t cmd_pos;
   const uint8_t* cmddata[IWL_MAX_CMD_TBS_PER_TFD];
-  uint16_t cmdlen[IWL_MAX_CMD_TBS_PER_TFD];
+  uint16_t cmdlen[IWL_MAX_CMD_TBS_PER_TFD];  // Locally manipulated data lengths.
   zx_status_t status = ZX_OK;
 
   if (!trans->wide_cmd_header && group_id > IWL_ALWAYS_LONG_GROUP) {
@@ -1487,15 +1559,12 @@ static zx_status_t iwl_pcie_enqueue_hcmd(struct iwl_trans* trans, struct iwl_hos
       had_nocopy = true;
 
       /* only allowed once */
-      if (WARN_ON(dup_buf)) {
+      if (WARN_ON(had_dup_flag)) {
         status = ZX_ERR_INVALID_ARGS;
         goto free_dup_buf;
       }
 
-      dup_buf = kmemdup(cmddata[i], cmdlen[i]);
-      if (!dup_buf) {
-        return ZX_ERR_NO_MEMORY;
-      }
+      had_dup_flag = true;
     } else {
       /* NOCOPY must not be followed by normal! */
       if (WARN_ON(had_nocopy)) {
@@ -1514,8 +1583,8 @@ static zx_status_t iwl_pcie_enqueue_hcmd(struct iwl_trans* trans, struct iwl_hos
    * increase the size of the buffers.
    */
   if (copy_size > TFD_MAX_PAYLOAD_SIZE) {
-    IWL_WARN(trans, "Command %s (%#x) is too large (%d bytes)\n",
-             iwl_get_cmd_string(trans, cmd->id), cmd->id, copy_size);
+    IWL_WARN(trans, "Command %s (%#x) is too large (%d bytes, expect <= %lu bytes)\n",
+             iwl_get_cmd_string(trans, cmd->id), cmd->id, copy_size, TFD_MAX_PAYLOAD_SIZE);
     status = ZX_ERR_INVALID_ARGS;
     goto free_dup_buf;
   }
@@ -1542,6 +1611,7 @@ static zx_status_t iwl_pcie_enqueue_hcmd(struct iwl_trans* trans, struct iwl_hos
   }
 
   /* set up the header */
+  uint32_t cmd_pos;  // Pointer used with 'out_cmd' to indicate the location for 'next copy data'.
   if (group_id != 0) {
     out_cmd->hdr_wide.cmd = iwl_cmd_opcode(cmd->id);
     out_cmd->hdr_wide.group_id = group_id;
@@ -1585,17 +1655,9 @@ static zx_status_t iwl_pcie_enqueue_hcmd(struct iwl_trans* trans, struct iwl_hos
      * Otherwise we need at least IWL_FIRST_TB_SIZE copied
      * in total (for bi-directional DMA), but copy up to what
      * we can fit into the payload for debug dump purposes.
+     * TODO(43084): Remove the un-necessary memcpy below.
      */
     copy = min_t(int, TFD_MAX_PAYLOAD_SIZE - cmd_pos, cmd->len[i]);
-
-    // TODO(fxb/37782): We don't currently fully support NO_COPY or DUP. If the command is too large
-    // to fit in the pre-allocated buffer we fail here.
-    if (copy < cmd->len[i]) {
-      IWL_ERR(trans, "Commands larger than %lu are not supported.\n", TFD_MAX_PAYLOAD_SIZE);
-      status = ZX_ERR_NO_RESOURCES;
-      goto out;
-    }
-
     memcpy((uint8_t*)out_cmd + cmd_pos, cmd->data[i], copy);
     cmd_pos += copy;
 
@@ -1615,25 +1677,22 @@ static zx_status_t iwl_pcie_enqueue_hcmd(struct iwl_trans* trans, struct iwl_hos
                le16_to_cpu(out_cmd->hdr.sequence), cmd_size, txq->write_ptr, cmd_idx,
                trans_pcie->cmd_queue);
 
-  /* start the TFD with the minimum copy bytes */
+  // start the TFD with the minimum copy bytes (tb0).
   struct iwl_pcie_first_tb_buf* tb_bufs = io_buffer_virt(&txq->first_tb_bufs);
-  tb0_size = min_t(int, copy_size, IWL_FIRST_TB_SIZE);
+  uint16_t tb0_size = min_t(int, copy_size, IWL_FIRST_TB_SIZE);
   memcpy(&tb_bufs[cmd_idx], &out_cmd->hdr, tb0_size);
   uint32_t num_tbs;
   iwl_pcie_txq_build_tfd(trans, txq, iwl_pcie_get_first_tb_dma(txq, cmd_idx), tb0_size, true,
                          &num_tbs);
 
   /* map first command fragment, if any remains */
-  // TODO: Make sure all of out_cmd is pinned.
   if (copy_size > tb0_size) {
     iwl_pcie_txq_build_tfd(trans, txq, phys_addr + tb0_size, copy_size - tb0_size, false, &num_tbs);
   }
 
-  // TODO(fxb/37782): We don't currently fully support NO_COPY or DUP. If there are more fragments
-  // we already returned failure above.
-#if 0   // NEEDS_PORTING
   /* map the remaining (adjusted) nocopy/dup fragments */
-  for (i = 0; i < IWL_MAX_CMD_TBS_PER_TFD; i++) {
+  bool used_dup_io_buf = false;
+  for (int i = 0; i < IWL_MAX_CMD_TBS_PER_TFD; i++) {
     const void* data = cmddata[i];
 
     if (!cmdlen[i]) {
@@ -1642,29 +1701,54 @@ static zx_status_t iwl_pcie_enqueue_hcmd(struct iwl_trans* trans, struct iwl_hos
     if (!(cmd->dataflags[i] & (IWL_HCMD_DFL_NOCOPY | IWL_HCMD_DFL_DUP))) {
       continue;
     }
-    if (cmd->dataflags[i] & IWL_HCMD_DFL_DUP) {
-      data = dup_buf;
-    }
-    phys_addr = dma_map_single(trans->dev, (void*)data, cmdlen[i], DMA_TO_DEVICE);
-    if (dma_mapping_error(trans->dev, phys_addr)) {
-      iwl_pcie_tfd_unmap(trans, out_meta, txq, txq->write_ptr);
-      idx = -ENOMEM;
-      goto out;
+
+    // Assume only one fragment needs DUP and NOCOPY. Needs to extend the txq_entry.dup_io_buf to 2
+    // if we need to support 2 NOCOPY fragments.
+    if (used_dup_io_buf) {
+      IWL_ERR(trans, "Cannot have 2 NOCOPY or DUP fragments in one command.\n");
+      return ZX_ERR_IO_INVALID;
+    } else {
+      used_dup_io_buf = true;
     }
 
-    iwl_pcie_txq_build_tfd(trans, txq, phys_addr, cmdlen[i], false);
+    // Allocate an io_buffer to store the remaining data (either a DUP or a NOCOPY fragment).
+    //
+    // For the DUP case, as the flag described, the data is copied into the io_buffer for the
+    // caller to use it in Rx path.
+    //
+    // For the NOCOPY case, since it is larger than TFD_MAX_PAYLOAD_SIZE, we have to copy the data
+    // into the io_buffer and map it to physical address. However, the original purpose of this flag
+    // is to avoid copy due to performance consideration. So created TODO(42212) to track this.
+    //
+    io_buffer_t* dup_io_buf = &txq->entries[cmd_idx].dup_io_buf;
+
+    // Allocate a cached io_buffer, copy the data, and flush the cache at once. The io_buffer will
+    // be released (reclaimed) in iwl_pcie_rx_handle_rb().
+    //
+    // In theory, using cached io_buffer is faster. No matter how memcpy is implemented (copying
+    // byte-by-byte or word-by-word), writing to cache always has smaller cycles than writing to
+    // SDRAM. Even during the cache flush stage, the memory write is done in cache-line size, which
+    // is still faster than CPU write.
+    //
+    // However, it is arguable weather flush is needed or not since some x86 platforms/PCIe devices
+    // support cached read. But this is not guaranteed on all platforms (e.g. ARM). So let's play
+    // safe first.
+    //
+    ZX_ASSERT(!io_buffer_is_valid(dup_io_buf));
+    uint16_t dup_len = cmdlen[i];
+    io_buffer_init(dup_io_buf, trans_pcie->bti, dup_len, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    void* virt_addr = io_buffer_virt(dup_io_buf);
+    memcpy(virt_addr, data, dup_len);
+    phys_addr = io_buffer_phys(dup_io_buf);
+    iwl_pcie_txq_build_tfd(trans, txq, phys_addr, dup_len, false, &num_tbs);
+    io_buffer_cache_flush(dup_io_buf, 0, dup_len);
   }
 
   BUILD_BUG_ON(IWL_TFH_NUM_TBS > sizeof(out_meta->tbs) * BITS_PER_BYTE);
-#endif  // NEEDS_PORTING
+
   out_meta->flags = cmd->flags;
 
 #if 0   // NEEDS_PORTING
-  if (WARN_ON_ONCE(txq->entries[idx].free_buf)) {
-    kzfree(txq->entries[idx].free_buf);
-  }
-  txq->entries[idx].free_buf = dup_buf;
-
   trace_iwlwifi_dev_hcmd(trans->dev, cmd, cmd_size, &out_cmd->hdr_wide);
 #endif  // NEEDS_PORTING
 
@@ -1689,9 +1773,6 @@ static zx_status_t iwl_pcie_enqueue_hcmd(struct iwl_trans* trans, struct iwl_hos
 out:
   mtx_unlock(&txq->lock);
 free_dup_buf:
-  if (status != ZX_OK) {
-    kfree(dup_buf);
-  }
   if (cmd_idx_out) {
     *cmd_idx_out = cmd_idx;
   }
@@ -1918,6 +1999,15 @@ int iwl_trans_pcie_send_hcmd(struct iwl_trans* trans, struct iwl_host_cmd* cmd) 
     IWL_DEBUG_RF_KILL(trans, "Dropping CMD 0x%x: RF KILL\n", cmd->id);
     return ZX_ERR_BAD_STATE;
   }
+
+  IWL_DEBUG_TX(trans, "HCMD: iwl_trans_pcie_send_hcmd( %s ) len=%4d,%4d %s %s [%s %s, %s %s]\n",
+               iwl_get_cmd_string(trans, cmd->id), cmd->len[0], cmd->len[1],
+               cmd->flags & CMD_ASYNC ? "ASYNC" : " SYNC",
+               cmd->flags & CMD_WANT_SKB ? "SKB" : "   ",
+               cmd->dataflags[0] & IWL_HCMD_DFL_NOCOPY ? "NOCOPY" : "",
+               cmd->dataflags[0] & IWL_HCMD_DFL_DUP ? "DUP" : "",
+               cmd->dataflags[1] & IWL_HCMD_DFL_NOCOPY ? "NOCOPY" : "",
+               cmd->dataflags[1] & IWL_HCMD_DFL_DUP ? "DUP" : "");
 
   zx_status_t status;
   if (cmd->flags & CMD_ASYNC) {

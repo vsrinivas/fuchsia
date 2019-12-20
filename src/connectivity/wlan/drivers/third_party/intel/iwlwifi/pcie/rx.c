@@ -913,11 +913,9 @@ static void iwl_pcie_rx_handle_rb(struct iwl_trans* trans, struct iwl_rxq* rxq,
     }
 
     if (reclaim) {
-      free(txq->entries[cmd_index].free_buf);
-      txq->entries[cmd_index].free_buf = NULL;
-    }
+      // Release the duplicated buffer (for large transmitting packets) in TX (if any).
+      io_buffer_release(&txq->entries[cmd_index].dup_io_buf);
 
-    if (reclaim) {
       /* Invoke any callbacks, transfer the buffer to caller,
        * and fire off the (possibly) blocking
        * iwl_trans_send_cmd()
