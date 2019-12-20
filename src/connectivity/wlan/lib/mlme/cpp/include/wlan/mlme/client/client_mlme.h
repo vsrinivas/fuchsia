@@ -11,9 +11,6 @@
 #include <memory>
 #include <optional>
 
-#include <wlan/mlme/client/client_interface.h>
-#include <wlan/mlme/client/join_context.h>
-#include <wlan/mlme/client/timeout_target.h>
 #include <wlan/mlme/mlme.h>
 #include <wlan/mlme/rust_utils.h>
 #include <wlan/mlme/service.h>
@@ -43,28 +40,15 @@ class ClientMlme : public Mlme {
   zx_status_t HandleFramePacket(std::unique_ptr<Packet> pkt) override;
   zx_status_t HandleTimeout(const ObjectId id) override;
   void HwScanComplete(uint8_t code) override final;
-  ::fuchsia::wlan::stats::MlmeStats GetMlmeStats() const override final;
-  void ResetMlmeStats() override final;
 
   // Visible for tests only
   bool OnChannel();
 
  private:
-  zx_status_t HandleMlmeJoinReq(const MlmeMsg<::fuchsia::wlan::mlme::JoinRequest>& msg);
-  zx_status_t SpawnStation();
-
-  void Unjoin();
-
   DeviceInterface* const device_;
-  std::unique_ptr<TimerManager<TimeoutTarget>> timer_mgr_;
+  std::unique_ptr<TimerManager<>> timer_mgr_;
   RustClientMlme rust_mlme_;
   wlan_client_mlme_config_t config_;
-  // TODO(tkilbourn): track other STAs
-  std::unique_ptr<ClientInterface> sta_;
-  // The BSS the MLME synchronized with.
-  // The MLME must synchronize to a BSS before it can start the association
-  // flow.
-  std::optional<JoinContext> join_ctx_;
 };
 
 }  // namespace wlan

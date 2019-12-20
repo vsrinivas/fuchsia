@@ -23,6 +23,7 @@ use {
     wlan_common::{
         ie,
         mac::{self, MacAddr},
+        tim,
         time::TimeUnit,
     },
     wlan_statemachine::*,
@@ -47,10 +48,10 @@ impl Joined {
     /// The returned state is unchanged in an error case. Otherwise, the state transitions into
     /// "Authenticating".
     /// Returns Ok(timeout) if authentication request was sent successfully, Err(()) otherwise.
-    fn authenticate(
+    fn on_sme_authenticate(
         &self,
         sta: &mut BoundClient<'_>,
-        timeout_bcn_count: u8,
+        timeout_bcn_count: u16,
     ) -> Result<EventId, ()> {
         match sta.send_open_auth_frame() {
             Ok(()) => {
@@ -92,7 +93,9 @@ impl Authenticating {
             }
             Err(e) => {
                 error!("authentication with BSS failed: {}", e);
-                sta.send_authenticate_conf(fidl_mlme::AuthenticateResultCodes::Refused);
+                sta.send_authenticate_conf(
+                    fidl_mlme::AuthenticateResultCodes::AuthenticationRejected,
+                );
                 Err(())
             }
         }
@@ -136,21 +139,18 @@ impl Authenticated {
     /// Initiates an association with the currently joined BSS.
     /// Returns Ok(timeout) if association request was sent successfully.
     /// Otherwise an Err(()) is returned and an ASSOCIATE.confirm message to its SME peer.
-    fn associate(&self, sta: &mut BoundClient<'_>) -> Result<EventId, ()> {
-        // TODO(eyw) Send actual IEs.
-        let ssid = vec![];
-        let rates = vec![1, 2, 8];
-        let rsne = vec![];
-        let ht_cap = vec![];
-        let vht_cap = vec![];
-        match sta.send_assoc_req_frame(
-            0,
-            &ssid[..],
-            &rates[..],
-            &rsne[..],
-            &ht_cap[..],
-            &vht_cap[..],
-        ) {
+    fn on_sme_associate(
+        &self,
+        sta: &mut BoundClient<'_>,
+        req: fidl_mlme::AssociateRequest,
+    ) -> Result<EventId, ()> {
+        // clone ssid here because we will mutably borrow sta.
+        let cap_info = req.cap_info;
+        let rsne = req.rsne.as_ref().map(|rsne| &rsne[..]).unwrap_or(&[]);
+        let ht_cap = req.ht_cap.as_ref().map(|h| &h.bytes[..]).unwrap_or(&[]);
+        let vht_cap = req.vht_cap.as_ref().map(|v| &v.bytes[..]).unwrap_or(&[]);
+
+        match sta.send_assoc_req_frame(cap_info, &req.rates[..], rsne, ht_cap, vht_cap) {
             Ok(()) => {
                 let duration_tus = TimeUnit::DEFAULT_BEACON_INTERVAL * ASSOC_TIMEOUT_BCN_PERIODS;
                 let deadline = sta.ctx.timer.now() + duration_tus.into();
@@ -159,7 +159,7 @@ impl Authenticated {
                 Ok(event_id)
             }
             Err(e) => {
-                error!("{}", e);
+                error!("Error sending association request frame: {}", e);
                 sta.send_associate_conf_failure(
                     fidl_mlme::AssociateResultCodes::RefusedTemporarily,
                 );
@@ -227,6 +227,7 @@ impl Associating {
                         error!("Cannot set ethernet to UP. Status: {}", e);
                     }
                 }
+                sta.start_lost_bss_counter();
 
                 Ok(Association {
                     aid: assoc_resp_hdr.aid,
@@ -324,7 +325,7 @@ fn extract_ht_vht_op<B: ByteSlice>(elements: B) -> (Option<HtOpByteArray>, Optio
 }
 
 #[derive(Debug, PartialEq)]
-enum Qos {
+pub enum Qos {
     Enabled,
     Disabled,
     // Intermediate state between when an association response frame is received from AP and
@@ -349,18 +350,18 @@ impl Qos {
 }
 #[derive(Debug)]
 pub struct Association {
-    aid: mac::Aid,
+    pub aid: mac::Aid,
 
-    // Represents an 802.1X controlled port.
-    // A closed controlled port only processes EAP frames while an open one processes any frames.
-    controlled_port_open: bool,
+    /// Represents an 802.1X controlled port.
+    /// A closed controlled port only processes EAP frames while an open one processes any frames.
+    pub controlled_port_open: bool,
 
-    ap_ht_op: Option<HtOpByteArray>,
-    ap_vht_op: Option<VhtOpByteArray>,
+    pub ap_ht_op: Option<HtOpByteArray>,
+    pub ap_vht_op: Option<VhtOpByteArray>,
 
-    // Whether to set QoS bit when MLME constructs an outgoing WLAN data frame.
-    // Currently, QoS is enabled if the associated PHY is HT or VHT.
-    qos: Qos,
+    /// Whether to set QoS bit when MLME constructs an outgoing WLAN data frame.
+    /// Currently, QoS is enabled if the associated PHY is HT or VHT.
+    pub qos: Qos,
 }
 
 /// Client received a "successful" association response from the BSS.
@@ -377,6 +378,7 @@ impl Associated {
 
     /// Sends an MLME-DEAUTHENTICATE.indication message to MLME's SME peer.
     fn on_deauth_frame(&mut self, sta: &mut BoundClient<'_>, deauth_hdr: &mac::DeauthHdr) {
+        self.0.controlled_port_open = false;
         if let Err(e) = self.deauth_device(sta) {
             error!("Error clearing association in device: {}", e);
         }
@@ -404,12 +406,32 @@ impl Associated {
         }
         // IEEE Std. 802.11-2016, 9.2.4.1.8
         if fc.more_data() && dst_addr == sta.sta.iface_mac {
-            let _ignored = sta.send_ps_poll_frame(self.0.aid);
+            let _result = sta.send_ps_poll_frame(self.0.aid);
+        }
+    }
+
+    /// Process and inbound beacon frame.
+    /// check buffered frame if available.
+    /// TODO(eyw): Resets LostBssCounter
+    /// TODO(eyw): Record rssi_dbm.
+    fn on_beacon_frame<B: ByteSlice>(&mut self, sta: &mut BoundClient<'_>, elements: B) {
+        for (id, body) in ie::Reader::new(elements) {
+            match id {
+                ie::Id::TIM => match ie::parse_tim(body) {
+                    Ok(ie::TimView { header, bitmap }) => {
+                        if tim::is_traffic_buffered(header.bmp_ctrl.offset(), &bitmap, self.0.aid) {
+                            let _result = sta.send_ps_poll_frame(self.0.aid);
+                        }
+                    }
+                    _ => (),
+                },
+
+                _ => (),
+            }
         }
     }
 
     /// Processes inbound data frames.
-    // TODO(42159): Drop frames from foreign BSS.
     fn on_data_frame<B: ByteSlice>(
         &self,
         sta: &mut BoundClient<'_>,
@@ -566,7 +588,6 @@ impl Associated {
 
 statemachine!(
     /// Client state machine.
-    /// Note: Only authentication is supported right now.
     pub enum States,
     // Regular successful flow:
     () => Joined,
@@ -598,43 +619,6 @@ impl States {
         States::from(State::new(Joined))
     }
 
-    /// Only Open System authentication is supported.
-    /// Shared Key authentication is intentionally unsupported within Fuchsia.
-    /// SAE will be supported sometime in the future.
-    pub fn authenticate(self, sta: &mut BoundClient<'_>, timeout_bcn_count: u8) -> States {
-        match self {
-            // MLME-AUTHENTICATE.request messages are only processed when the Client is "Joined".
-            States::Joined(state) => match state.authenticate(sta, timeout_bcn_count) {
-                Ok(timeout) => state.transition_to(Authenticating { timeout }).into(),
-                Err(()) => state.into(),
-            },
-            // Reject MLME-AUTHENTICATE.request if STA is not in "Joined" state.
-            _ => {
-                error!("received MLME-AUTHENTICATE.request in invalid state");
-                sta.send_authenticate_conf(fidl_mlme::AuthenticateResultCodes::Refused);
-                self
-            }
-        }
-    }
-
-    /// Initiates an association with the joined BSS.
-    // TODO(eyw): Carry MLME-ASSOCIATE.request information to construct correct association frame.
-    pub fn associate(self, sta: &mut BoundClient<'_>) -> States {
-        match self {
-            States::Authenticated(state) => match state.associate(sta) {
-                Ok(timeout) => state.transition_to(Associating { timeout }).into(),
-                Err(()) => state.into(),
-            },
-            _ => {
-                error!("received MLME-ASSOCIATE.request in invalid state");
-                sta.send_associate_conf_failure(
-                    fidl_mlme::AssociateResultCodes::RefusedNotAuthenticated,
-                );
-                self
-            }
-        }
-    }
-
     /// Callback to process arbitrary IEEE 802.11 frames.
     /// Frames are dropped if:
     /// - frames are corrupted (too short)
@@ -645,6 +629,10 @@ impl States {
         bytes: B,
         body_aligned: bool,
     ) -> States {
+        // For now, silently drop all frames when we are off channel.
+        if !sta.is_on_channel() {
+            return self;
+        }
         // Parse mac frame. Drop corrupted ones.
         let mac_frame = match mac::MacFrame::parse(bytes, body_aligned) {
             Some(mac_frame) => mac_frame,
@@ -745,6 +733,10 @@ impl States {
             States::Associated(mut state) => {
                 state.on_any_mgmt_frame(sta, mgmt_hdr);
                 match mgmt_body {
+                    mac::MgmtBody::Beacon { bcn_hdr: _, elements } => {
+                        state.on_beacon_frame(sta, elements);
+                        state.into()
+                    }
                     mac::MgmtBody::Deauthentication { deauth_hdr, .. } => {
                         state.on_deauth_frame(sta, &deauth_hdr);
                         state.transition_to(Joined).into()
@@ -814,6 +806,15 @@ impl States {
         use fidl_mlme::MlmeRequestMessage as MlmeMsg;
 
         match self {
+            States::Joined(state) => match msg {
+                MlmeMsg::AuthenticateReq { req } => {
+                    match state.on_sme_authenticate(sta, req.auth_failure_timeout as u16) {
+                        Ok(timeout) => state.transition_to(Authenticating { timeout }).into(),
+                        Err(()) => state.into(),
+                    }
+                }
+                _ => state.into(),
+            },
             States::Authenticating(state) => match msg {
                 MlmeMsg::DeauthenticateReq { req: _ } => {
                     state.on_sme_deauthenticate(sta);
@@ -822,6 +823,10 @@ impl States {
                 _ => state.into(),
             },
             States::Authenticated(state) => match msg {
+                MlmeMsg::AssociateReq { req } => match state.on_sme_associate(sta, req) {
+                    Ok(timeout) => state.transition_to(Associating { timeout }).into(),
+                    Err(()) => state.into(),
+                },
                 MlmeMsg::DeauthenticateReq { req } => {
                     state.on_sme_deauthenticate(sta, req);
                     state.transition_to(Joined).into()
@@ -858,7 +863,6 @@ impl States {
                 }
                 _ => state.into(),
             },
-            _ => self,
         }
     }
 
@@ -988,11 +992,11 @@ mod tests {
     }
 
     fn make_client_station() -> Client {
-        Client::new(BSSID, IFACE_MAC, false)
+        Client::new(vec![], BSSID, IFACE_MAC, TimeUnit::DEFAULT_BEACON_INTERVAL.0, false)
     }
 
     fn make_protected_client_station() -> Client {
-        Client::new(BSSID, IFACE_MAC, true)
+        Client::new(vec![], BSSID, IFACE_MAC, TimeUnit::DEFAULT_BEACON_INTERVAL.0, true)
     }
 
     fn empty_associate_conf() -> fidl_mlme::AssociateConfirm {
@@ -1046,6 +1050,27 @@ mod tests {
         }
     }
 
+    fn empty_authenticate_request() -> fidl_mlme::AuthenticateRequest {
+        fidl_mlme::AuthenticateRequest {
+            peer_sta_address: [0; 6],
+            auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
+            auth_failure_timeout: 0,
+            auth_content: None,
+        }
+    }
+
+    fn empty_associate_request() -> fidl_mlme::AssociateRequest {
+        fidl_mlme::AssociateRequest {
+            peer_sta_address: [1, 2, 3, 4, 5, 6],
+            cap_info: 0,
+            rates: vec![1, 2, 3],
+            ht_cap: None,
+            vht_cap: None,
+            rsne: None,
+            vendor_ies: None,
+        }
+    }
+
     #[test]
     fn join_state_authenticate_success() {
         let mut m = MockObjects::new();
@@ -1053,7 +1078,7 @@ mod tests {
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let state = Joined;
-        let timeout_id = state.authenticate(&mut sta, 10).expect("failed authenticating");
+        let timeout_id = state.on_sme_authenticate(&mut sta, 10).expect("failed authenticating");
 
         // Verify an event was queued up in the timer.
         assert_variant!(sta.ctx.timer.triggered(&timeout_id), Some(TimedEvent::Authenticating));
@@ -1092,7 +1117,7 @@ mod tests {
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
 
         let state = Joined;
-        state.authenticate(&mut sta, 10).expect_err("should fail authenticating");
+        state.on_sme_authenticate(&mut sta, 10).expect_err("should fail authenticating");
 
         // Verify no event was queued up in the timer.
         assert_eq!(sta.ctx.timer.scheduled_event_count(), 0);
@@ -1183,7 +1208,7 @@ mod tests {
             fidl_mlme::AuthenticateConfirm {
                 peer_sta_address: BSSID.0,
                 auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
-                result_code: fidl_mlme::AuthenticateResultCodes::Refused,
+                result_code: fidl_mlme::AuthenticateResultCodes::AuthenticationRejected,
                 auth_content: None,
             }
         );
@@ -1814,6 +1839,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)] // for raw MlmeRequestMessage
     fn state_transitions_joined_authing() {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
@@ -1823,7 +1849,15 @@ mod tests {
         assert_variant!(state, States::Joined(_), "not in joined state");
 
         // Successful: Joined > Authenticating
-        state = state.authenticate(&mut sta, 10);
+        state = state.handle_mlme_msg(
+            &mut sta,
+            fidl_mlme::MlmeRequestMessage::AuthenticateReq {
+                req: fidl_mlme::AuthenticateRequest {
+                    auth_failure_timeout: 10,
+                    ..empty_authenticate_request()
+                },
+            },
+        );
         assert_variant!(state, States::Authenticating(_), "not in auth'ing state");
     }
 
@@ -1886,6 +1920,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)] // for raw MlmeRequestMessage
     fn state_transitions_authing_timeout() {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
@@ -1895,7 +1930,15 @@ mod tests {
         assert_variant!(state, States::Joined(_), "not in joined state");
 
         // Timeout: Joined > Authenticating > Joined
-        state = state.authenticate(&mut sta, 10);
+        state = state.handle_mlme_msg(
+            &mut sta,
+            fidl_mlme::MlmeRequestMessage::AuthenticateReq {
+                req: fidl_mlme::AuthenticateRequest {
+                    auth_failure_timeout: 10,
+                    ..empty_authenticate_request()
+                },
+            },
+        );
         let timeout_id = assert_variant!(state, States::Authenticating(ref state) => {
             state.timeout
         }, "not in auth'ing state");
@@ -2064,6 +2107,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)] // for raw MlmeRequestMessage
     fn state_transitions_associng_timeout() {
         let mut m = MockObjects::new();
         let mut ctx = m.make_ctx();
@@ -2071,7 +2115,10 @@ mod tests {
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let mut state = States::from(statemachine::testing::new_state(Authenticated));
 
-        state = state.associate(&mut sta);
+        state = state.handle_mlme_msg(
+            &mut sta,
+            fidl_mlme::MlmeRequestMessage::AssociateReq { req: empty_associate_request() },
+        );
         let timeout_id = assert_variant!(state, States::Associating(ref state) => {
             state.timeout.clone()
         }, "not in assoc'ing state");
@@ -2353,7 +2400,8 @@ mod tests {
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let state = States::from(statemachine::testing::new_state(Joined));
-        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_deauth_req());
+        let state = state.handle_mlme_msg(&mut sta, fake_mlme_deauth_req());
+        assert_variant!(state, States::Joined(_), "Joined should stay in Joined");
         // No MLME message was sent because MLME already deauthenticated.
         m.fake_device
             .next_mlme_msg::<fidl_mlme::DeauthenticateIndication>()
@@ -2651,6 +2699,7 @@ mod tests {
             },
         }
     }
+
     #[test]
     #[allow(deprecated)]
     fn mlme_set_controlled_port_not_associated() {
@@ -2707,5 +2756,75 @@ mod tests {
         assert_eq!(m.fake_device.link_status, crate::device::LinkStatus::UP);
         let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_ctrl_port_open(false));
         assert_eq!(m.fake_device.link_status, crate::device::LinkStatus::DOWN);
+    }
+
+    #[test]
+    fn associated_request_bu_if_tim_indicates_buffered_frame() {
+        let mut m = MockObjects::new();
+        let mut ctx = m.make_ctx();
+        let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let state = States::from(statemachine::testing::new_state(Associated(Association {
+            aid: 1,
+            ..empty_association()
+        })));
+
+        let beacon = [
+            // Mgmt header
+            0b10000000, 0, // Frame Control
+            0, 0, // Duration
+            6, 6, 6, 6, 6, 6, // Addr1
+            7, 7, 7, 7, 7, 7, // Addr2
+            6, 6, 6, 6, 6, 6, // Addr3
+            0, 0, // Sequence Control
+            // Beacon header:
+            0, 0, 0, 0, 0, 0, 0, 0, // Timestamp
+            10, 0, // Beacon interval
+            33, 0, // Capabilities
+            5, 4, 0, 0, 0, 0b00000010, // Tim IE: bit 1 in the last octet indicates AID 1
+        ];
+
+        state.on_mac_frame(&mut sta, &beacon[..], false);
+
+        assert_eq!(m.fake_device.wlan_queue.len(), 1);
+        assert_eq!(
+            &m.fake_device.wlan_queue[0].0[..],
+            &[
+                0b10100100, 0, // Frame control
+                1, 0b11000000, // ID (2 MSBs are set to 1 from the AID)
+                6, 6, 6, 6, 6, 6, // BSSID
+                3, 3, 3, 3, 3, 3, // TA
+            ][..]
+        );
+    }
+
+    #[test]
+    fn associated_does_not_request_bu_if_tim_indicates_no_buffered_frame() {
+        let mut m = MockObjects::new();
+        let mut ctx = m.make_ctx();
+        let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let state = States::from(statemachine::testing::new_state(Associated(Association {
+            aid: 1,
+            ..empty_association()
+        })));
+
+        let beacon = [
+            // Mgmt header
+            0b10000000, 0, // Frame Control
+            0, 0, // Duration
+            6, 6, 6, 6, 6, 6, // Addr1
+            7, 7, 7, 7, 7, 7, // Addr2
+            6, 6, 6, 6, 6, 6, // Addr3
+            0, 0, // Sequence Control
+            // Beacon header:
+            0, 0, 0, 0, 0, 0, 0, 0, // Timestamp
+            10, 0, // Beacon interval
+            33, 0, // Capabilities
+            5, 4, 0, 0, 0, 0, // Tim IE: No buffered frame for any client.
+        ];
+        state.on_mac_frame(&mut sta, &beacon[..], false);
+
+        assert_eq!(m.fake_device.wlan_queue.len(), 0);
     }
 }

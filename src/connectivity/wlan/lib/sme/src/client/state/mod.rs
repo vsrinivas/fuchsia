@@ -244,11 +244,11 @@ impl Associating {
                     let negotiated_cap = intersect_with_ap_as_client(cap, &conf.into());
                     // TODO(eyw): Enable this check once we switch to Rust MLME which populates
                     // associate confirm with IEs.
-                    if false && negotiated_cap.rates.is_empty() {
+                    if negotiated_cap.rates.is_empty() {
                         // This is unlikely to happen with any spec-compliant AP. In case the
                         // user somehow decided to connect to a malicious AP, reject and reset.
                         error!(
-                            "Associate terminated because AP's capabilies in association \
+                            "Associate terminated because AP's capabilities in association \
                                  response is different from beacon"
                         );
                         report_connect_finished(

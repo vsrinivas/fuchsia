@@ -17,7 +17,6 @@
 #include <wlan/common/channel.h>
 #include <wlan/common/logging.h>
 #include <wlan/mlme/client/client_mlme.h>
-#include <wlan/mlme/client/station.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/service.h>
@@ -30,7 +29,7 @@ namespace wlan {
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 namespace wlan_stats = ::fuchsia::wlan::stats;
 
-#define TIMER_MGR(c) static_cast<TimerManager<TimeoutTarget>*>(c)
+#define TIMER_MGR(c) static_cast<TimerManager<>*>(c)
 #define DEVICE(c) static_cast<DeviceInterface*>(c)
 
 wlan_client_mlme_config_t ClientMlmeDefaultConfig() {
@@ -63,7 +62,7 @@ zx_status_t ClientMlme::Init() {
     errorf("could not create channel scheduler timer: %d\n", status);
     return status;
   }
-  timer_mgr_ = std::make_unique<TimerManager<TimeoutTarget>>(std::move(timer));
+  timer_mgr_ = std::make_unique<TimerManager<>>(std::move(timer));
 
   // Initialize Rust dependencies
   auto rust_device = mlme_device_ops_t{
@@ -121,7 +120,7 @@ zx_status_t ClientMlme::Init() {
       .now = [](void* cookie) -> zx_time_t { return TIMER_MGR(cookie)->Now().get(); },
       .schedule = [](void* cookie, int64_t deadline) -> wlan_scheduler_event_id_t {
         TimeoutId id = {};
-        TIMER_MGR(cookie)->Schedule(zx::time(deadline), TimeoutTarget::kRust, &id);
+        TIMER_MGR(cookie)->Schedule(zx::time(deadline), {}, &id);
         return {._0 = id.raw()};
       },
       .cancel = [](void* cookie,
@@ -140,28 +139,7 @@ zx_status_t ClientMlme::HandleTimeout(const ObjectId id) {
   }
 
   auto status = timer_mgr_->HandleTimeout([&](auto now, auto target, auto timeout_id) {
-    switch (target) {
-      case TimeoutTarget::kDefault:
-        if (sta_ != nullptr) {
-          sta_->HandleTimeout(now, target, timeout_id);
-        } else {
-          warnf("timeout for unknown STA: %zu\n", id.mac());
-        }
-        break;
-      case TimeoutTarget::kRust:
-        wlan_client_sta_t* rust_client;
-        if (sta_ != nullptr) {
-          rust_client = sta_->GetRustClientSta();
-        } else {
-          rust_client = nullptr;
-        }
-        auto auto_deauth = client_mlme_timeout_fired(
-            rust_mlme_.get(), rust_client, wlan_scheduler_event_id_t{._0 = timeout_id.raw()});
-        if (sta_ != nullptr && auto_deauth) {
-          sta_->NotifyAutoDeauth();
-        }
-        break;
-    }
+    client_mlme_timeout_fired(rust_mlme_.get(), wlan_scheduler_event_id_t{._0 = timeout_id.raw()});
   });
 
   if (status != ZX_OK) {
@@ -177,117 +155,24 @@ void ClientMlme::HwScanComplete(uint8_t result_code) {
 
 zx_status_t ClientMlme::HandleEncodedMlmeMsg(fbl::Span<const uint8_t> msg) {
   debugfn();
-  wlan_client_sta_t* rust_client = nullptr;
-  if (sta_ != nullptr) {
-    rust_client = sta_->GetRustClientSta();
-  }
-  return client_mlme_handle_mlme_msg(rust_mlme_.get(), rust_client, AsWlanSpan(msg));
+  return client_mlme_handle_mlme_msg(rust_mlme_.get(), AsWlanSpan(msg));
 }
 
-zx_status_t ClientMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
-  if (auto join_req = msg.As<wlan_mlme::JoinRequest>()) {
-    // An MLME-JOIN-request will synchronize the MLME with the request's BSS.
-    // Synchronization is mandatory for spawning a client and starting its
-    // association flow.
-
-    Unjoin();
-    return HandleMlmeJoinReq(*join_req);
-  } else if (!join_ctx_.has_value()) {
-    warnf("rx'ed MLME message (ordinal: %lu) before synchronizing with a BSS\n", msg.ordinal());
-    return ZX_ERR_BAD_STATE;
-  }
-
-  // TODO(hahnr): Keys should not be handled in the STA and instead in the MLME.
-  // For now, shortcut into the STA and leave this change as a follow-up.
-  if (auto setkeys_req = msg.As<wlan_mlme::SetKeysRequest>()) {
-    if (sta_ != nullptr) {
-      return sta_->SetKeys(setkeys_req->body()->keylist);
-    } else {
-      warnf("rx'ed MLME message (ordinal: %lu) before authenticating with a BSS\n", msg.ordinal());
-      return ZX_ERR_BAD_STATE;
-    }
-  }
-
-  // All remaining message must use the same BSS this MLME synchronized to
-  // before.
-  auto peer_addr = service::GetPeerAddr(msg);
-  if (!peer_addr.has_value()) {
-    warnf("rx'ed unsupported MLME msg (ordinal: %lu)\n", msg.ordinal());
-    return ZX_ERR_INVALID_ARGS;
-  } else if (peer_addr.value() != join_ctx_->bssid()) {
-    warnf(
-        "rx'ed MLME msg (ordinal: %lu) with unexpected peer addr; expected: %s "
-        "; actual: %s\n",
-        msg.ordinal(), join_ctx_->bssid().ToString().c_str(), peer_addr->ToString().c_str());
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  // This will spawn a new client instance and start association flow.
-  if (auto auth_req = msg.As<wlan_mlme::AuthenticateRequest>()) {
-    auto status = SpawnStation();
-    if (status != ZX_OK) {
-      errorf("error spawning STA: %d\n", status);
-      return service::SendAuthConfirm(device_, join_ctx_->bssid(),
-                                      wlan_mlme::AuthenticateResultCodes::REFUSED);
-    }
-
-    // Let station handle the request itself.
-    return sta_->Authenticate(auth_req->body()->auth_type, auth_req->body()->auth_failure_timeout);
-  }
-
-  // If the STA exists, forward all incoming MLME messages.
-  if (sta_ == nullptr) {
-    warnf("rx'ed MLME message (ordinal: %lu) before authenticating with a BSS\n", msg.ordinal());
-    return ZX_ERR_BAD_STATE;
-  }
-
-  if (auto deauth_req = msg.As<wlan_mlme::DeauthenticateRequest>()) {
-    return sta_->Deauthenticate(deauth_req->body()->reason_code);
-  } else if (auto assoc_req = msg.As<wlan_mlme::AssociateRequest>()) {
-    return sta_->Associate(*assoc_req->body());
-  } else if (auto eapol_req = msg.As<wlan_mlme::EapolRequest>()) {
-    auto body = eapol_req->body();
-    return sta_->SendEapolFrame(body->data, common::MacAddr(body->src_addr),
-                                common::MacAddr(body->dst_addr));
-  } else if (auto setctrlport_req = msg.As<wlan_mlme::SetControlledPortRequest>()) {
-    sta_->UpdateControlledPort(setctrlport_req->body()->state);
-    return ZX_OK;
-  } else {
-    warnf("rx'ed unsupported MLME message for client; ordinal: %lu\n", msg.ordinal());
-    return ZX_ERR_BAD_STATE;
-  }
-}
+zx_status_t ClientMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t ClientMlme::HandleFramePacket(std::unique_ptr<Packet> pkt) {
   switch (pkt->peer()) {
     case Packet::Peer::kEthernet: {
-      // For outbound frame (Ethernet frame), hand to station directly so
-      // station sends frame to device when on channel, or buffers it when
-      // off channel.
-      if (sta_ != nullptr) {
-        if (auto eth_frame = EthFrameView::CheckType(pkt.get()).CheckLength()) {
-          return sta_->HandleEthFrame(eth_frame.IntoOwned(std::move(pkt)));
-        }
-      }
-      return ZX_ERR_BAD_STATE;
+      return client_mlme_handle_eth_frame(rust_mlme_.get(), AsWlanSpan({pkt->data(), pkt->len()}));
     }
     case Packet::Peer::kWlan: {
-      wlan_client_sta_t* rust_client = nullptr;
-      if (sta_ != nullptr) {
-        rust_client = sta_->GetRustClientSta();
-      }
       auto frame_span = fbl::Span<uint8_t>{pkt->data(), pkt->len()};
       const wlan_rx_info_t* rx_info = nullptr;
       if (pkt->has_ctrl_data<wlan_rx_info_t>()) {
         rx_info = pkt->ctrl_data<wlan_rx_info_t>();
       }
-      client_mlme_on_mac_frame(rust_mlme_.get(), rust_client, AsWlanSpan(frame_span), rx_info);
+      client_mlme_on_mac_frame(rust_mlme_.get(), AsWlanSpan(frame_span), rx_info);
 
-      if (OnChannel()) {
-        if (sta_ != nullptr) {
-          sta_->HandleWlanFrame(std::move(pkt));
-        }
-      }
       return ZX_OK;
     }
     default:
@@ -296,80 +181,5 @@ zx_status_t ClientMlme::HandleFramePacket(std::unique_ptr<Packet> pkt) {
   }
 }
 
-zx_status_t ClientMlme::HandleMlmeJoinReq(const MlmeMsg<wlan_mlme::JoinRequest>& req) {
-  debugfn();
-
-  wlan_mlme::BSSDescription bss;
-  auto status = req.body()->selected_bss.Clone(&bss);
-  if (status != ZX_OK) {
-    errorf("error cloning MLME-JOIN.request: %d\n", status);
-    return status;
-  }
-  JoinContext join_ctx(std::move(bss), req.body()->phy, req.body()->cbw);
-
-  auto join_chan = join_ctx.channel();
-  debugjoin("setting channel to %s\n", common::ChanStrLong(join_chan).c_str());
-  status = client_mlme_set_main_channel(rust_mlme_.get(), join_chan);
-  if (status != ZX_OK) {
-    errorf("could not set WLAN channel to %s: %d\n", common::ChanStrLong(join_chan).c_str(),
-           status);
-    service::SendJoinConfirm(device_, wlan_mlme::JoinResultCodes::JOIN_FAILURE_TIMEOUT);
-    return status;
-  }
-
-  // Notify driver about BSS.
-  wlan_bss_config_t cfg{
-      .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
-      .remote = true,
-  };
-  join_ctx.bssid().CopyTo(cfg.bssid);
-  status = device_->ConfigureBss(&cfg);
-  if (status != ZX_OK) {
-    errorf("error configuring BSS in driver; aborting: %d\n", status);
-    // TODO(hahnr): JoinResultCodes needs to define better result codes.
-    return service::SendJoinConfirm(device_, wlan_mlme::JoinResultCodes::JOIN_FAILURE_TIMEOUT);
-  }
-
-  join_ctx_ = std::move(join_ctx);
-
-  // Send confirmation for successful synchronization to SME.
-  return service::SendJoinConfirm(device_, wlan_mlme::JoinResultCodes::SUCCESS);
-}
-
-zx_status_t ClientMlme::SpawnStation() {
-  if (!join_ctx_.has_value()) {
-    return ZX_ERR_BAD_STATE;
-  }
-
-  auto client = std::make_unique<Station>(device_, &config_, timer_mgr_.get(), &join_ctx_.value(),
-                                          rust_mlme_.get());
-
-  if (!client) {
-    return ZX_ERR_INTERNAL;
-  }
-  sta_ = std::move(client);
-  return ZX_OK;
-}
-
-wlan_stats::MlmeStats ClientMlme::GetMlmeStats() const {
-  wlan_stats::MlmeStats mlme_stats{};
-  if (sta_ != nullptr) {
-    mlme_stats.set_client_mlme_stats(sta_->stats());
-  }
-  return mlme_stats;
-}
-
-void ClientMlme::ResetMlmeStats() {
-  if (sta_ != nullptr) {
-    sta_->ResetStats();
-  }
-}
-
 bool ClientMlme::OnChannel() { return client_mlme_on_channel(rust_mlme_.get()); }
-
-void ClientMlme::Unjoin() {
-  join_ctx_.reset();
-  sta_.reset();
-}
-
 }  // namespace wlan

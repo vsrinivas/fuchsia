@@ -80,34 +80,34 @@ struct ClientTest : public ::testing::Test {
   }
 
   void Join(bool rsne = true) {
-    ASSERT_EQ(ZX_OK, client.HandleMlmeMsg(CreateJoinRequest(rsne)));
-    device.svc_queue.clear();
+    ASSERT_EQ(ZX_OK, EncodeAndHandleMlmeMsg(CreateJoinRequest(rsne)));
+    device.AssertNextMsgFromSmeChannel<wlan_mlme::JoinConfirm>();
   }
 
   void Authenticate() {
-    client.HandleMlmeMsg(CreateAuthRequest());
+    EncodeAndHandleMlmeMsg(CreateAuthRequest());
     client.HandleFramePacket(CreateAuthRespFrame(AuthAlgorithm::kOpenSystem));
-    device.svc_queue.clear();
+    device.AssertNextMsgFromSmeChannel<wlan_mlme::AuthenticateConfirm>();
     device.wlan_queue.clear();
     TriggerTimeout();
   }
 
   void Associate(bool rsne = true) {
-    client.HandleMlmeMsg(CreateAssocRequest(rsne));
+    EncodeAndHandleMlmeMsg(CreateAssocRequest(rsne));
     client.HandleFramePacket(CreateAssocRespFrame());
-    device.svc_queue.clear();
+    device.AssertNextMsgFromSmeChannel<wlan_mlme::AssociateConfirm>();
     device.wlan_queue.clear();
     TriggerTimeout();
   }
 
   void SetKey() {
     auto key_data = std::vector(std::cbegin(kKeyData), std::cend(kKeyData));
-    client.HandleMlmeMsg(
+    EncodeAndHandleMlmeMsg(
         CreateSetKeysRequest(common::MacAddr(kBssid1), key_data, wlan_mlme::KeyType::PAIRWISE));
   }
 
   void EstablishRsna() {
-    client.HandleMlmeMsg(
+    EncodeAndHandleMlmeMsg(
         CreateSetCtrlPortRequest(common::MacAddr(kBssid1), wlan_mlme::ControlledPortState::OPEN));
   }
 
@@ -246,38 +246,28 @@ struct ClientTest : public ::testing::Test {
 TEST_F(ClientTest, Join) {
   // (sme->mlme) Send JOIN.request. Verify a JOIN.confirm message was then sent
   // to SME.
-  ASSERT_EQ(ZX_OK, client.HandleMlmeMsg(CreateJoinRequest(true)));
-  ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
-  auto joins = device.GetServiceMsgs<wlan_mlme::JoinConfirm>(
-      fuchsia::wlan::mlme::internal::kMLME_JoinConf_GenOrdinal);
-  ASSERT_EQ(joins.size(), 1ULL);
-  ASSERT_EQ(joins[0].body()->result_code, wlan_mlme::JoinResultCodes::SUCCESS);
+  ASSERT_EQ(ZX_OK, EncodeAndHandleMlmeMsg(CreateJoinRequest(true)));
+  auto join_confirm = device.AssertNextMsgFromSmeChannel<wlan_mlme::JoinConfirm>();
+  ASSERT_EQ(join_confirm.body()->result_code, wlan_mlme::JoinResultCodes::SUCCESS);
 }
 
 TEST_F(ClientTest, Authenticate) {
   Join();
-
   // (sme->mlme) Send AUTHENTICATION.request. Verify that no confirmation was
   // sent yet.
-  ASSERT_EQ(ZX_OK, client.HandleMlmeMsg(CreateAuthRequest()));
-  ASSERT_TRUE(device.svc_queue.empty());
+  ASSERT_EQ(ZX_OK, EncodeAndHandleMlmeMsg(CreateAuthRequest()));
 
   // Verify wlan frame sent to AP is correct.
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
   AssertAuthFrame(std::move(*device.wlan_queue.begin()));
-
   // (ap->mlme) Respond with a Authentication frame. Verify a
   // AUTHENTICATION.confirm message was
   //            then sent to SME
   ASSERT_EQ(ZX_OK, client.HandleFramePacket(CreateAuthRespFrame(AuthAlgorithm::kOpenSystem)));
-  ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
-  auto auths = device.GetServiceMsgs<wlan_mlme::AuthenticateConfirm>(
-      fuchsia::wlan::mlme::internal::kMLME_AuthenticateConf_GenOrdinal);
-  ASSERT_EQ(auths.size(), 1ULL);
-  AssertAuthConfirm(std::move(auths[0]), wlan_mlme::AuthenticateResultCodes::SUCCESS);
+  auto auth_confirm = device.AssertNextMsgFromSmeChannel<wlan_mlme::AuthenticateConfirm>();
+  AssertAuthConfirm(std::move(auth_confirm), wlan_mlme::AuthenticateResultCodes::SUCCESS);
 
   // Verify a delayed timeout won't cause another confirmation.
-  device.svc_queue.clear();
   SetTimeInBeaconPeriods(100);
   TriggerTimeout();
   ASSERT_TRUE(device.svc_queue.empty());
@@ -289,8 +279,9 @@ TEST_F(ClientTest, Associate_Protected) {
 
   // (sme->mlme) Send ASSOCIATE.request. Verify that no confirmation was sent
   // yet.
-  ASSERT_EQ(ZX_OK, client.HandleMlmeMsg(CreateAssocRequest(true)));
-  ASSERT_TRUE(device.svc_queue.empty());
+  ASSERT_EQ(ZX_OK, EncodeAndHandleMlmeMsg(CreateAssocRequest(true)));
+  // Potential false negative if the message arrives after 10ms. Good enough for sanity check.
+  ASSERT_FALSE(device.GetNextMsgFromSmeChannel<wlan_mlme::AssociateConfirm>().has_value());
 
   // Verify wlan frame sent to AP is correct.
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
@@ -300,35 +291,28 @@ TEST_F(ClientTest, Associate_Protected) {
   // ASSOCIATE.confirm message was
   //            then sent to SME.
   ASSERT_EQ(ZX_OK, client.HandleFramePacket(CreateAssocRespFrame()));
-  ASSERT_FALSE(device.svc_queue.empty());
-  auto assocs = device.GetServiceMsgs<wlan_mlme::AssociateConfirm>(
-      fuchsia::wlan::mlme::internal::kMLME_AssociateConf_GenOrdinal);
-  ASSERT_EQ(assocs.size(), 1ULL);
-  AssertAssocConfirm(std::move(assocs[0]), kAid, wlan_mlme::AssociateResultCodes::SUCCESS);
+  auto assoc_confirm = device.AssertNextMsgFromSmeChannel<wlan_mlme::AssociateConfirm>();
+  AssertAssocConfirm(std::move(assoc_confirm), kAid, wlan_mlme::AssociateResultCodes::SUCCESS);
 
   // Verify a delayed timeout won't cause another confirmation.
-  device.svc_queue.clear();
   SetTimeInBeaconPeriods(100);
   TriggerTimeout();
-  assocs = device.GetServiceMsgs<wlan_mlme::AssociateConfirm>(
-      fuchsia::wlan::mlme::internal::kMLME_AssociateConf_GenOrdinal);
-  ASSERT_EQ(assocs.size(), 0ULL);
+  // Potential false negative if the message arrives after 10ms. Good enough for sanity check.
+  ASSERT_FALSE(device.GetNextMsgFromSmeChannel<wlan_mlme::AssociateConfirm>().has_value());
 }
 
 TEST_F(ClientTest, Associate_Unprotected) {
   // (sme->mlme) Send JOIN.request. Verify a JOIN.confirm message was then sent
   // to SME.
-  ASSERT_EQ(ZX_OK, client.HandleMlmeMsg(CreateJoinRequest(false)));
-  ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
-  auto joins = device.GetServiceMsgs<wlan_mlme::JoinConfirm>(
-      fuchsia::wlan::mlme::internal::kMLME_JoinConf_GenOrdinal);
-  ASSERT_EQ(joins.size(), 1ULL);
-  ASSERT_EQ(joins[0].body()->result_code, wlan_mlme::JoinResultCodes::SUCCESS);
+  ASSERT_EQ(ZX_OK, EncodeAndHandleMlmeMsg(CreateJoinRequest(false)));
+  auto join_conf = device.AssertNextMsgFromSmeChannel<wlan_mlme::JoinConfirm>();
+  ASSERT_EQ(join_conf.body()->result_code, wlan_mlme::JoinResultCodes::SUCCESS);
 
   // (sme->mlme) Send AUTHENTICATION.request. Verify that no confirmation was
   // sent yet.
-  ASSERT_EQ(ZX_OK, client.HandleMlmeMsg(CreateAuthRequest()));
-  ASSERT_TRUE(device.svc_queue.empty());
+  ASSERT_EQ(ZX_OK, EncodeAndHandleMlmeMsg(CreateAuthRequest()));
+  // Potential false negative if the message arrives after 10ms. Good enough for sanity check.
+  ASSERT_FALSE(device.GetNextMsgFromSmeChannel<wlan_mlme::AuthenticateConfirm>().has_value());
 
   // Verify wlan frame sent to AP is correct.
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
@@ -339,16 +323,15 @@ TEST_F(ClientTest, Associate_Unprotected) {
   // AUTHENTICATION.confirm message was
   //            then sent to SME
   ASSERT_EQ(ZX_OK, client.HandleFramePacket(CreateAuthRespFrame(AuthAlgorithm::kOpenSystem)));
-  ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
-  auto auths = device.GetServiceMsgs<wlan_mlme::AuthenticateConfirm>(
-      fuchsia::wlan::mlme::internal::kMLME_AuthenticateConf_GenOrdinal);
-  ASSERT_EQ(auths.size(), 1ULL);
-  AssertAuthConfirm(std::move(auths[0]), wlan_mlme::AuthenticateResultCodes::SUCCESS);
+
+  auto auth_conf = device.AssertNextMsgFromSmeChannel<wlan_mlme::AuthenticateConfirm>();
+  AssertAuthConfirm(std::move(auth_conf), wlan_mlme::AuthenticateResultCodes::SUCCESS);
 
   // (sme->mlme) Send ASSOCIATE.request. Verify that no confirmation was sent
   // yet.
-  ASSERT_EQ(ZX_OK, client.HandleMlmeMsg(CreateAssocRequest(false)));
-  ASSERT_TRUE(device.svc_queue.empty());
+  ASSERT_EQ(ZX_OK, EncodeAndHandleMlmeMsg(CreateAssocRequest(false)));
+  // Potential false negative if the message arrives after 10ms. Good enough for sanity check.
+  ASSERT_FALSE(device.GetNextMsgFromSmeChannel<wlan_mlme::AssociateConfirm>().has_value());
 
   // Verify wlan frame sent to AP is correct.
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
@@ -358,11 +341,8 @@ TEST_F(ClientTest, Associate_Unprotected) {
   // ASSOCIATE.confirm message
   //            was then sent SME.
   ASSERT_EQ(ZX_OK, client.HandleFramePacket(CreateAssocRespFrame()));
-  ASSERT_FALSE(device.svc_queue.empty());
-  auto assocs = device.GetServiceMsgs<wlan_mlme::AssociateConfirm>(
-      fuchsia::wlan::mlme::internal::kMLME_AssociateConf_GenOrdinal);
-  ASSERT_EQ(assocs.size(), static_cast<size_t>(1));
-  AssertAssocConfirm(std::move(assocs[0]), kAid, wlan_mlme::AssociateResultCodes::SUCCESS);
+  auto assoc_conf = device.AssertNextMsgFromSmeChannel<wlan_mlme::AssociateConfirm>();
+  AssertAssocConfirm(std::move(assoc_conf), kAid, wlan_mlme::AssociateResultCodes::SUCCESS);
 }
 
 TEST_F(ClientTest, ExchangeEapolFrames) {
@@ -371,8 +351,8 @@ TEST_F(ClientTest, ExchangeEapolFrames) {
   Associate();
 
   // (sme->mlme) Send EAPOL.request
-  auto&& eapol_req = CreateEapolRequest(common::MacAddr(kClientAddress), common::MacAddr(kBssid1));
-  ASSERT_EQ(ZX_OK, client.HandleMlmeMsg(std::move(eapol_req)));
+  ASSERT_EQ(ZX_OK, EncodeAndHandleMlmeMsg(CreateEapolRequest(common::MacAddr(kClientAddress),
+                                                             common::MacAddr(kBssid1))));
 
   // Verify EAPOL frame was sent to AP
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
@@ -402,8 +382,8 @@ TEST_F(ClientTest, ExchangeEapolFrames) {
 
   // After controlled port opens, EAPOL frame has protected flag enabled
   EstablishRsna();
-  ASSERT_EQ(ZX_OK, client.HandleMlmeMsg(std::move(CreateEapolRequest(
-                       common::MacAddr(kClientAddress), common::MacAddr(kBssid1)))));
+  ASSERT_EQ(ZX_OK, EncodeAndHandleMlmeMsg(CreateEapolRequest(common::MacAddr(kClientAddress),
+                                                             common::MacAddr(kBssid1))));
   ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
   pkt = std::move(*device.wlan_queue.begin());
   frame = TypeCheckWlanFrame<DataFrameView<LlcHeader>>(pkt.pkt.get());
@@ -418,7 +398,7 @@ TEST_F(ClientTest, SetKeys) {
   // (sme->mlme) Send SETKEYS.request
   auto key_data = std::vector(std::cbegin(kKeyData), std::cend(kKeyData));
   common::MacAddr bssid(kBssid1);
-  client.HandleMlmeMsg(CreateSetKeysRequest(bssid, key_data, wlan_mlme::KeyType::PAIRWISE));
+  EncodeAndHandleMlmeMsg(CreateSetKeysRequest(bssid, key_data, wlan_mlme::KeyType::PAIRWISE));
 
   ASSERT_EQ(device.GetKeys().size(), static_cast<size_t>(1));
   auto key_config = device.GetKeys()[0];
@@ -435,13 +415,15 @@ TEST_F(ClientTest, ConstructAssociateContext) {
   Authenticate();
 
   // Send ASSOCIATE.request. Verify that no confirmation was sent yet.
-  ASSERT_EQ(ZX_OK, client.HandleMlmeMsg(CreateAssocRequest(false)));
+  ASSERT_EQ(ZX_OK, EncodeAndHandleMlmeMsg(CreateAssocRequest(false)));
   // Respond with a Association Response frame and verify a ASSOCIATE.confirm
   // message was sent.
   auto ap_assoc_ctx = wlan::test_utils::FakeDdkAssocCtx();
   ap_assoc_ctx.has_vht_cap = false;
   ap_assoc_ctx.has_vht_op = false;
   ASSERT_EQ(ZX_OK, client.HandleFramePacket(CreateAssocRespFrame(ap_assoc_ctx)));
+  ASSERT_EQ(ZX_OK,
+            EncodeAndHandleMlmeMsg(CreateFinalizeAssociationRequest(ap_assoc_ctx, kBssChannel)));
   auto sta_assoc_ctx = device.GetStationAssocContext();
 
   ASSERT_TRUE(sta_assoc_ctx != nullptr);
@@ -461,8 +443,9 @@ TEST_F(ClientTest, AuthTimeout) {
 
   // (sme->mlme) Send AUTHENTICATE.request. Verify that no confirmation was sent
   // yet.
-  ASSERT_EQ(ZX_OK, client.HandleMlmeMsg(CreateAuthRequest()));
-  ASSERT_TRUE(device.svc_queue.empty());
+  ASSERT_EQ(ZX_OK, EncodeAndHandleMlmeMsg(CreateAuthRequest()));
+  // Potential false negative if the message arrives after 10ms. Good enough for sanity check.
+  ASSERT_FALSE(device.GetNextMsgFromSmeChannel<wlan_mlme::AuthenticateConfirm>().has_value());
 
   // Timeout not yet hit.
   SetTimeInBeaconPeriods(kAuthTimeout - 1);
@@ -472,11 +455,8 @@ TEST_F(ClientTest, AuthTimeout) {
   // Timeout hit, verify a AUTHENTICATION.confirm message was sent to SME.
   SetTimeInBeaconPeriods(kAuthTimeout);
   TriggerTimeout();
-  ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
-  auto auths = device.GetServiceMsgs<wlan_mlme::AuthenticateConfirm>(
-      fuchsia::wlan::mlme::internal::kMLME_AuthenticateConf_GenOrdinal);
-  ASSERT_EQ(auths.size(), 1ULL);
-  AssertAuthConfirm(std::move(auths[0]), wlan_mlme::AuthenticateResultCodes::AUTH_FAILURE_TIMEOUT);
+  auto auth_conf = device.AssertNextMsgFromSmeChannel<wlan_mlme::AuthenticateConfirm>();
+  AssertAuthConfirm(std::move(auth_conf), wlan_mlme::AuthenticateResultCodes::AUTH_FAILURE_TIMEOUT);
 }
 
 TEST_F(ClientTest, AssocTimeout) {
@@ -485,8 +465,8 @@ TEST_F(ClientTest, AssocTimeout) {
 
   // (sme->mlme) Send ASSOCIATE.request. Verify that no confirmation was sent
   // yet.
-  ASSERT_EQ(ZX_OK, client.HandleMlmeMsg(CreateAssocRequest(false)));
-  ASSERT_TRUE(device.svc_queue.empty());
+  ASSERT_EQ(ZX_OK, EncodeAndHandleMlmeMsg(CreateAssocRequest(false)));
+  ASSERT_FALSE(device.GetNextMsgFromSmeChannel<wlan_mlme::AssociateConfirm>().has_value());
 
   // Timeout not yet hit.
   SetTimeInBeaconPeriods(10);
@@ -496,11 +476,9 @@ TEST_F(ClientTest, AssocTimeout) {
   // Timeout hit, verify a ASSOCIATE.confirm message was sent to SME.
   SetTimeInBeaconPeriods(40);
   TriggerTimeout();
-  ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
-  auto assocs = device.GetServiceMsgs<wlan_mlme::AssociateConfirm>(
-      fuchsia::wlan::mlme::internal::kMLME_AssociateConf_GenOrdinal);
-  ASSERT_EQ(assocs.size(), 1ULL);
-  AssertAssocConfirm(std::move(assocs[0]), 0, wlan_mlme::AssociateResultCodes::REFUSED_TEMPORARILY);
+  auto assoc_conf = device.AssertNextMsgFromSmeChannel<wlan_mlme::AssociateConfirm>();
+  AssertAssocConfirm(std::move(assoc_conf), 0,
+                     wlan_mlme::AssociateResultCodes::REFUSED_TEMPORARILY);
 }
 
 TEST_F(ClientTest, ReceiveDataAfterAssociation_Protected) {
@@ -541,21 +519,15 @@ TEST_F(ClientTest, SendDataAfterAssociation_Protected) {
   client.HandleFramePacket(CreateEthFrame(kTestPayload));
   ASSERT_TRUE(device.AreQueuesEmpty());
 
-  // After association but before RSNA is established, data frame is sent out
-  // but unprotected
+  // After association but before RSNA is established, data frame is dropped.
   Associate();
   client.HandleFramePacket(CreateEthFrame(kTestPayload));
-  EXPECT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
-  AssertDataFrameSentToAp(std::move(*device.wlan_queue.begin()), kTestPayload);
-  device.wlan_queue.clear();
+  EXPECT_EQ(device.wlan_queue.size(), static_cast<size_t>(0));
 
-  // Setting key does not open controlled port, so data frame is still
-  // unprotected
+  // Setting key does not open controlled port, so data frame is dropped.
   SetKey();
   client.HandleFramePacket(CreateEthFrame(kTestPayload));
-  EXPECT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
-  AssertDataFrameSentToAp(std::move(*device.wlan_queue.begin()), kTestPayload);
-  device.wlan_queue.clear();
+  EXPECT_EQ(device.wlan_queue.size(), static_cast<size_t>(0));
 
   // After RSNA is established, outbound data frames have `protected_frame` flag
   // enabled
@@ -897,18 +869,16 @@ TEST_F(ClientTest, InvalidAuthenticationResponse) {
   Join();
 
   // Send AUTHENTICATION.request. Verify that no confirmation was sent yet.
-  ASSERT_EQ(ZX_OK, client.HandleMlmeMsg(CreateAuthRequest()));
-  ASSERT_TRUE(device.svc_queue.empty());
+  ASSERT_EQ(ZX_OK, EncodeAndHandleMlmeMsg(CreateAuthRequest()));
+  // Potential false negative if the message arrives after 10ms. Good enough for sanity check.
+  ASSERT_FALSE(device.GetNextMsgFromSmeChannel<wlan_mlme::AuthenticateConfirm>().has_value());
 
   // Send authentication frame with wrong algorithm.
   ASSERT_EQ(ZX_OK, client.HandleFramePacket(CreateAuthRespFrame(AuthAlgorithm::kSae)));
 
   // Verify that AUTHENTICATION.confirm was received.
-  ASSERT_EQ(device.svc_queue.size(), static_cast<size_t>(1));
-  auto auths = device.GetServiceMsgs<wlan_mlme::AuthenticateConfirm>(
-      fuchsia::wlan::mlme::internal::kMLME_AuthenticateConf_GenOrdinal);
-  ASSERT_EQ(auths.size(), 1ULL);
-  AssertAuthConfirm(std::move(auths[0]),
+  auto auth_conf = device.AssertNextMsgFromSmeChannel<wlan_mlme::AuthenticateConfirm>();
+  AssertAuthConfirm(std::move(auth_conf),
                     wlan_mlme::AuthenticateResultCodes::AUTHENTICATION_REJECTED);
 
   // Fast forward in time would have caused a timeout.
@@ -931,7 +901,8 @@ TEST_F(ClientTest, InvalidAuthenticationResponse) {
   ASSERT_TRUE(device.svc_queue.empty());
 }
 
-TEST_F(ClientTest, ProcessZeroRssiFrame) {
+// TODO(43456): Enable this test again once MLME stats is implemented in Rust.
+TEST_F(ClientTest, DISABLED_ProcessZeroRssiFrame) {
   auto no_rssi_pkt = CreateDataFrame(kTestPayload);
   auto rx_info = const_cast<wlan_rx_info_t*>(no_rssi_pkt->ctrl_data<wlan_rx_info_t>());
   rx_info->valid_fields &= ~WLAN_RX_INFO_VALID_DATA_RATE;  // no rssi

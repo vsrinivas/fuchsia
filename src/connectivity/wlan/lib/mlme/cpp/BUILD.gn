@@ -22,11 +22,7 @@ source_set("mlme") {
   public = [
     "include/wlan/mlme/ap/ap_mlme.h",
     "include/wlan/mlme/ap/tim.h",
-    "include/wlan/mlme/assoc_context.h",
     "include/wlan/mlme/client/client_mlme.h",
-    "include/wlan/mlme/client/join_context.h",
-    "include/wlan/mlme/client/station.h",
-    "include/wlan/mlme/client/timeout_target.h",
     "include/wlan/mlme/convert.h",
     "include/wlan/mlme/debug.h",
     "include/wlan/mlme/device_caps.h",
@@ -50,11 +46,8 @@ source_set("mlme") {
   sources = [
     "ap/ap_mlme.cc",
     "ap/tim.cc",
-    "assoc_context.cc",
     "beacon.cc",
     "client/client_mlme.cc",
-    "client/join_context.cc",
-    "client/station.cc",
     "convert.cc",
     "debug.cc",
     "device_caps.cc",

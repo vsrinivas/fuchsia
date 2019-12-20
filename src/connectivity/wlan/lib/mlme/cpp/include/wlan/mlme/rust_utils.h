@@ -16,7 +16,6 @@ namespace wlan {
 using SequenceManager =
     std::unique_ptr<mlme_sequence_manager_t, void (*)(mlme_sequence_manager_t*)>;
 using RustClientMlme = std::unique_ptr<wlan_client_mlme_t, void (*)(wlan_client_mlme_t*)>;
-using ClientStation = std::unique_ptr<wlan_client_sta_t, void (*)(wlan_client_sta_t*)>;
 using ApStation = std::unique_ptr<wlan_ap_sta_t, void (*)(wlan_ap_sta_t*)>;
 
 SequenceManager NewSequenceManager();

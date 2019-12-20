@@ -220,8 +220,7 @@ extern "C" void ap_sta_timeout_fired(wlan_ap_sta_t *sta, wlan_scheduler_event_id
 
 extern "C" void client_mlme_delete(wlan_client_mlme_t *mlme);
 
-extern "C" int32_t client_mlme_handle_mlme_msg(wlan_client_mlme_t *mlme, wlan_client_sta_t *sta,
-                                               wlan_span_t bytes);
+extern "C" int32_t client_mlme_handle_mlme_msg(wlan_client_mlme_t *mlme, wlan_span_t bytes);
 
 extern "C" void client_mlme_hw_scan_complete(wlan_client_mlme_t *mlme, uint8_t status);
 
@@ -232,65 +231,16 @@ extern "C" wlan_client_mlme_t *client_mlme_new(wlan_client_mlme_config_t config,
 
 extern "C" bool client_mlme_on_channel(wlan_client_mlme_t *mlme);
 
-extern "C" void client_mlme_on_mac_frame(wlan_client_mlme_t *mlme, wlan_client_sta_t *sta,
-                                         wlan_span_t frame, const wlan_rx_info_t *rx_info);
-
-extern "C" mlme_sequence_manager_t *client_mlme_seq_mgr(wlan_client_mlme_t *mlme);
-
-extern "C" int32_t client_mlme_set_main_channel(wlan_client_mlme_t *mlme,
-                                                wlan_channel_t main_channel);
+extern "C" void client_mlme_on_mac_frame(wlan_client_mlme_t *mlme, wlan_span_t bytes,
+                                         const wlan_rx_info_t *rx_info);
 
 /**
  * Return true if auto-deauth triggers. Return false otherwise
  */
-extern "C" bool client_mlme_timeout_fired(wlan_client_mlme_t *mlme, wlan_client_sta_t *sta,
+extern "C" void client_mlme_timeout_fired(wlan_client_mlme_t *mlme,
                                           wlan_scheduler_event_id_t event_id);
 
-extern "C" void client_sta_delete(wlan_client_sta_t *sta);
-
-extern "C" void client_sta_ensure_on_channel(wlan_client_sta_t *sta, wlan_client_mlme_t *mlme);
-
-extern "C" int32_t client_sta_handle_data_frame(wlan_client_sta_t *sta, wlan_client_mlme_t *mlme,
-                                                wlan_span_t data_frame, bool has_padding,
-                                                bool controlled_port_open);
-
-extern "C" int32_t client_sta_handle_eth_frame(wlan_client_sta_t *sta, wlan_client_mlme_t *mlme,
-                                               wlan_span_t frame);
-
-extern "C" wlan_client_sta_t *client_sta_new(const uint8_t (*bssid)[6],
-                                             const uint8_t (*iface_mac)[6], bool is_rsn);
-
-extern "C" int32_t client_sta_send_assoc_req_frame(wlan_client_sta_t *sta, wlan_client_mlme_t *mlme,
-                                                   uint16_t cap_info, wlan_span_t ssid,
-                                                   wlan_span_t rates, wlan_span_t rsne,
-                                                   wlan_span_t ht_cap, wlan_span_t vht_cap);
-
-extern "C" int32_t client_sta_send_data_frame(wlan_client_sta_t *sta, wlan_client_mlme_t *mlme,
-                                              const uint8_t (*src)[6], const uint8_t (*dest)[6],
-                                              bool is_protected, bool is_qos, uint16_t ether_type,
-                                              wlan_span_t payload);
-
-extern "C" int32_t client_sta_send_deauth_frame(wlan_client_sta_t *sta, wlan_client_mlme_t *mlme,
-                                                uint16_t reason_code);
-
-extern "C" void client_sta_send_eapol_frame(wlan_client_sta_t *sta, wlan_client_mlme_t *mlme,
-                                            const uint8_t (*src)[6], const uint8_t (*dest)[6],
-                                            bool is_protected, wlan_span_t payload);
-
-extern "C" int32_t client_sta_send_open_auth_frame(wlan_client_sta_t *sta,
-                                                   wlan_client_mlme_t *mlme);
-
-extern "C" int32_t client_sta_send_power_state_frame(wlan_client_sta_t *sta,
-                                                     wlan_client_mlme_t *mlme,
-                                                     wlan_power_state_t state);
-
-extern "C" int32_t client_sta_send_ps_poll_frame(wlan_client_sta_t *sta, wlan_client_mlme_t *mlme,
-                                                 uint16_t aid);
-
-extern "C" void client_sta_start_lost_bss_counter(wlan_client_sta_t *sta, wlan_client_mlme_t *mlme,
-                                                  uint16_t beacon_period);
-
-extern "C" void client_sta_stop_lost_bss_counter(wlan_client_sta_t *sta);
+extern "C" int32_t client_mlme_handle_eth_frame(wlan_client_mlme_t *mlme, wlan_span_t frame);
 
 extern "C" int32_t mlme_is_valid_open_auth_resp(wlan_span_t auth_resp);
 
