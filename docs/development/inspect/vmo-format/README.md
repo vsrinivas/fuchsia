@@ -1,5 +1,4 @@
-
-# Inspection File Format
+# Inspect file format
 
 [TOC]
 
@@ -8,6 +7,8 @@ This document describes the **Component Inspection File Format** (Inspect Format
 Files formatted using the Inspect Format are known as **Inspect Files**,
 which commonly have a `.inspect` file extension.
 
+For information on how to change the format. Please see
+[Extending the Inspect file format](updating.md).
 
 # Overview
 
