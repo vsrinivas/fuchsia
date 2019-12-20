@@ -137,8 +137,22 @@ protocol Handler {
 /// Allows injecting capabilities over FIDL.
 /// Used by RouteFrameworkCapability and RouteBuiltinCapability
 protocol RoutingProtocol {
-    /// Inject a CapabilityProvider in response to a routing event.
+    /// Set a CapabilityProvider. Invoking this method will replace
+    /// any existing provider.
+    ///
+    /// When a component attempts to connect to a capability,
+    /// this method can be used to mock/inject that capability.
     SetProvider(CapabilityProvider client_end) -> ();
+
+    /// Replace the existing provider with the given client_end and
+    /// open the existing provider with given server end.
+    ///
+    /// This method is used to interpose between a client and service:
+    /// Client <---> Interposer <---> Server
+    ///
+    /// Opening the existing provider sets up Interposer <---> Server
+    /// Replacing the existing provider sets up Client <---> Interposer
+    ReplaceAndOpen(CapabilityProvider client_end, handle<channel> server_end) -> ();
 };
 
 /// A FIDL-based version of a CapabilityProvider

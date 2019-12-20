@@ -303,14 +303,47 @@ async fn serve_routing_protocol(
     capability_provider: Arc<Mutex<Option<Box<dyn CapabilityProvider>>>>,
     mut stream: fbreak::RoutingProtocolRequestStream,
 ) {
-    while let Some(Ok(fbreak::RoutingProtocolRequest::SetProvider { client_end, responder })) =
-        stream.next().await
-    {
-        // Create the external capability provider and set it
-        let external_provider = ExternalCapabilityProvider::new(client_end);
-        let mut capability_provider = capability_provider.lock().await;
-        *capability_provider = Some(Box::new(external_provider));
-        responder.send().unwrap();
+    while let Some(Ok(request)) = stream.next().await {
+        match request {
+            fbreak::RoutingProtocolRequest::SetProvider { client_end, responder } => {
+                // Lock on the provider
+                let mut capability_provider = capability_provider.lock().await;
+
+                // Create an external provider and set it
+                let external_provider = ExternalCapabilityProvider::new(client_end);
+                *capability_provider = Some(Box::new(external_provider));
+
+                responder.send().unwrap();
+            }
+            fbreak::RoutingProtocolRequest::ReplaceAndOpen {
+                client_end,
+                server_end,
+                responder,
+            } => {
+                // Lock on the provider
+                let mut capability_provider = capability_provider.lock().await;
+
+                // Take out the existing provider
+                let existing_provider = capability_provider.take();
+
+                // Create an external provider and set it
+                let external_provider = ExternalCapabilityProvider::new(client_end);
+                *capability_provider = Some(Box::new(external_provider));
+
+                // Open the existing provider
+                if let Some(existing_provider) = existing_provider {
+                    // TODO(xbhatnag): We should be passing in the flags, mode and path
+                    // to open the existing provider with. For a service, it doesn't matter
+                    // but it would for other kinds of capabilities.
+                    if let Err(e) = existing_provider.open(0, 0, String::new(), server_end).await {
+                        panic!("Could not open existing provider -> {}", e);
+                    }
+                } else {
+                    panic!("No provider set!");
+                }
+                responder.send().unwrap();
+            }
+        }
     }
 }
 

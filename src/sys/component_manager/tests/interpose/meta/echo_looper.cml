@@ -1,0 +1,12 @@
+// Component manifest for the `echo_client` example program, which sends a message to the Echo
+// service.
+{
+    "program": {
+        "binary": "bin/echo_looper",
+    },
+    "use": [
+        {
+            "service_protocol": "/svc/fidl.examples.routing.echo.Echo",
+        },
+    ],
+}

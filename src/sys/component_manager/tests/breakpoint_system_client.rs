@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 use {
+    async_trait::async_trait,
     failure::{err_msg, Error, ResultExt},
-    fidl::endpoints::{create_proxy, create_request_stream, ClientEnd},
+    fidl::endpoints::{create_proxy, create_request_stream, ClientEnd, ServerEnd, ServiceMarker},
     fidl::Channel,
     fidl_fuchsia_test_breakpoints as fbreak, fuchsia_async as fasync,
     fuchsia_component::client::*,
@@ -205,34 +206,54 @@ impl Handler for fbreak::Invocation {
     }
 }
 
+/// An Interposer allows a test to sit between a service and a client
+/// and mutate or silently observe messages being passed between them.
+///
+/// Client <---> Interposer <---> Service
+#[async_trait]
+pub trait Interposer: Sync + Send {
+    type Marker: ServiceMarker;
+
+    /// This function will be run asynchronously when a client attempts
+    /// to connect to the service being interposed. `from_client` is a stream of
+    /// requests coming in from the client and `to_service` is a proxy to the
+    /// real service.
+    async fn interpose(
+        self: Arc<Self>,
+        mut from_client: <<Self as Interposer>::Marker as ServiceMarker>::RequestStream,
+        to_service: <<Self as Interposer>::Marker as ServiceMarker>::Proxy,
+    );
+}
+
 /// A protocol that allows routing capabilities over FIDL.
+#[async_trait]
 pub trait RoutingProtocol {
     fn protocol_proxy(&self) -> fbreak::RoutingProtocolProxy;
 
     #[must_use = "futures do nothing unless you await on them!"]
-    fn set_provider<'a>(
+    async fn set_provider(
         &self,
         client_end: ClientEnd<fbreak::CapabilityProviderMarker>,
-    ) -> BoxFuture<'a, Result<(), fidl::Error>> {
+    ) -> Result<(), fidl::Error> {
         let proxy = self.protocol_proxy();
-        Box::pin(async move { proxy.set_provider(client_end).await })
+        proxy.set_provider(client_end).await
     }
 
     /// Creates a capability provider on behalf of the client.
     /// When an Open request is received, runs the closure provided.
     #[must_use = "futures do nothing unless you await on them!"]
-    fn inject<'a>(
-        &self,
-        serving_fn: Box<dyn Fn(Channel) + Send>,
-    ) -> BoxFuture<'a, Result<(), fidl::Error>> {
-        // Serve the CapabilityProvider protocol
+    async fn inject<F: 'static>(&self, serving_fn: F) -> Result<(), fidl::Error>
+    where
+        F: Fn(Channel) + Send,
+    {
+        // Create the CapabilityProvider channel
         let (client_end, mut capability_stream) =
             create_request_stream::<fbreak::CapabilityProviderMarker>()
                 .expect("Could not create request stream for CapabilityProvider");
 
-        // For all open requests, run the serving_fn
+        // For an open requests, run the serving_fn
         fasync::spawn(async move {
-            while let Some(Ok(fbreak::CapabilityProviderRequest::Open { server_end, responder })) =
+            if let Some(Ok(fbreak::CapabilityProviderRequest::Open { server_end, responder })) =
                 capability_stream.next().await
             {
                 // Begin serving the capability. It is assumed this function
@@ -243,12 +264,57 @@ pub trait RoutingProtocol {
 
                 // Unblock component manager from the open request
                 responder.send().expect("Could not respond to CapabilityProvider::Open");
+            } else {
+                panic!("Failed to inject! CapabilityProvider was not able to invoke Open");
             }
         });
 
         // Send the client end of the CapabilityProvider protocol
-        let proxy = self.protocol_proxy();
-        Box::pin(async move { proxy.set_provider(client_end).await })
+        self.protocol_proxy().set_provider(client_end).await
+    }
+
+    /// Set an Interposer for the given capability.
+    #[must_use = "futures do nothing unless you await on them!"]
+    async fn interpose<I: 'static>(&self, interposer: Arc<I>) -> Result<(), fidl::Error>
+    where
+        I: Interposer,
+    {
+        // Create the Interposer <---> Server channel
+        let (client_end, server_end) = Channel::create().expect("could not create channel");
+
+        // Create the CapabilityProvider channel
+        let (provider_client_end, mut provider_capability_stream) =
+            create_request_stream::<fbreak::CapabilityProviderMarker>()
+                .expect("Could not create request stream for CapabilityProvider");
+
+        // Wait for an Open request on the CapabilityProvider channel
+        fasync::spawn(async move {
+            if let Some(Ok(fbreak::CapabilityProviderRequest::Open { server_end, responder })) =
+                provider_capability_stream.next().await
+            {
+                // Unblock component manager from the open request
+                responder.send().expect("Could not respond to CapabilityProvider::Open");
+
+                // Create the proxy for the Interposer <---> Server connection
+                let proxy = ClientEnd::<I::Marker>::new(client_end)
+                    .into_proxy()
+                    .expect("could not convert into proxy");
+
+                // Create the stream for the Client <---> Interposer connection
+                let stream = ServerEnd::<I::Marker>::new(server_end)
+                    .into_stream()
+                    .expect("could not convert channel into stream");
+
+                // Start interposing!
+                interposer.interpose(stream, proxy).await;
+            } else {
+                panic!("Failed to interpose! CapabilityProvider was not able to invoke Open");
+            }
+        });
+
+        // Replace the existing provider and open it with the
+        // server end of the Interposer <---> Server channel.
+        self.protocol_proxy().replace_and_open(provider_client_end, server_end).await
     }
 }
 

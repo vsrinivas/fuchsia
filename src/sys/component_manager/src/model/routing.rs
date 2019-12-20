@@ -4,7 +4,9 @@
 
 use {
     crate::{
-        capability::{CapabilitySource, ComponentCapability, FrameworkCapability},
+        capability::{
+            CapabilityProvider, CapabilitySource, ComponentCapability, FrameworkCapability,
+        },
         model::{
             binding::Binder,
             error::ModelError,
@@ -14,6 +16,7 @@ use {
             storage,
         },
     },
+    async_trait::async_trait,
     cm_rust::{
         self, CapabilityPath, ExposeDecl, ExposeDirectoryDecl, ExposeTarget, OfferDecl,
         OfferDirectorySource, OfferRunnerSource, OfferServiceSource, OfferStorageSource,
@@ -120,60 +123,70 @@ pub(super) async fn route_expose_capability<'a>(
     .await
 }
 
-/// This method is invoked when a capability provider was not set by a hook
-/// in the component hierarchy. Attempt to manually open the capability based on its source.
-async fn try_open_capability_manually(
-    model: &Model,
-    flags: u32,
-    open_mode: u32,
-    source: CapabilitySource,
-    server_chan: zx::Channel,
-) -> Result<(), ModelError> {
-    match source {
-        CapabilitySource::Framework { capability, scope_moniker: None } => {
-            // If a hook did not set a capability provider for a global framework
-            // capability, try and route the capability from component manager's namespace.
-            // TODO(xbhatnag): Isn't this a security flaw?
-            let path = capability.path().ok_or_else(|| {
-                ModelError::capability_discovery_error(format_err!(
-                    "no provider found for capability"
-                ))
-            })?;
-            io_util::connect_in_namespace(&path.to_string(), server_chan, flags)
-                .map_err(|e| ModelError::capability_discovery_error(e))?;
-            Ok(())
+/// The default provider for a ComponentCapability.
+/// This provider will bind to the source moniker's realm and then open the service
+/// from the realm's outgoing directory.
+struct DefaultComponentCapabilityProvider {
+    model: Model,
+    path: CapabilityPath,
+    source_moniker: AbsoluteMoniker,
+}
+
+#[async_trait]
+impl CapabilityProvider for DefaultComponentCapabilityProvider {
+    async fn open(
+        self: Box<Self>,
+        flags: u32,
+        open_mode: u32,
+        _relative_path: String,
+        server_end: zx::Channel,
+    ) -> Result<(), ModelError> {
+        // Start the source component, if necessary
+        let source_realm = self.model.bind(&self.source_moniker).await?;
+
+        // TODO(36541): changing the flags for pkgfs is a hack, directory permissions
+        // should be recorded in the manifests
+        let mut flags = flags;
+        if self.path.to_string().contains("pkgfs") {
+            flags = fio::OPEN_RIGHT_READABLE;
         }
-        CapabilitySource::Framework { capability, scope_moniker: Some(_) } => {
-            // If a hook did not set a capability provider for a scoped framework
-            // capability, nothing can be done.
-            Err(ModelError::capability_discovery_error(format_err!(
-                "no provider found for scoped framework capability {:?}",
-                capability
-            )))
+        source_realm.open_outgoing(flags, open_mode, &self.path, server_end).await?;
+        Ok(())
+    }
+}
+
+/// This method gets an optional default capability provider based on the
+/// capability source.
+fn get_default_provider(
+    model: &Model,
+    source: &CapabilitySource,
+) -> Option<Box<dyn CapabilityProvider>> {
+    match source {
+        CapabilitySource::Framework { .. } => {
+            // There is no default provider for a Framework capability
+            None
         }
         CapabilitySource::Component { capability, source_moniker } => {
-            // If a hook did not set a capability provider for a component capability
-            // (think of injecting a component capability externally), then route the
-            // component normally. Bind to the source component and open the capability.
+            // Route normally for a component capability with a source path
             if let Some(path) = capability.source_path() {
-                // Start the source component, if necessary
-                let source_realm = model.bind(&source_moniker).await?;
-
-                // TODO(36541): changing the flags for pkgfs is a hack, directory permissions
-                // should be recorded in the manifests
-                let mut flags = flags;
-                if path.to_string().contains("pkgfs") {
-                    flags = fio::OPEN_RIGHT_READABLE;
-                }
-                source_realm.open_outgoing(flags, open_mode, &path, server_chan).await?;
-                Ok(())
+                Some(Box::new(DefaultComponentCapabilityProvider {
+                    model: model.clone(),
+                    path: path.clone(),
+                    source_moniker: source_moniker.clone(),
+                }))
             } else {
-                Err(ModelError::capability_discovery_error(format_err!(
-                    "invalid capability type to come from a component"
-                )))
+                None
             }
         }
-        _ => Err(ModelError::capability_discovery_error(format_err!("invalid capability source"))),
+        _ => None,
+    }
+}
+
+/// Returns the optional path for a global framework capability, None otherwise.
+pub fn get_framework_capability_path(source: &CapabilitySource) -> Option<&CapabilityPath> {
+    match source {
+        CapabilitySource::Framework { capability, scope_moniker: None } => capability.path(),
+        _ => None,
     }
 }
 
@@ -187,7 +200,7 @@ pub async fn open_capability_at_source(
     target_moniker: AbsoluteMoniker,
     server_chan: zx::Channel,
 ) -> Result<(), ModelError> {
-    let capability_provider = Arc::new(Mutex::new(None));
+    let capability_provider = Arc::new(Mutex::new(get_default_provider(model, &source)));
     let target_realm = model.look_up_realm(&target_moniker).await?;
 
     let event = Event::new(
@@ -209,14 +222,21 @@ pub async fn open_capability_at_source(
     let capability_provider = capability_provider.lock().await.take();
 
     // If a hook in the component tree gave a capability provider, then use it.
-    // Otherwise, try manual methods to open the capability
     if let Some(capability_provider) = capability_provider {
         capability_provider.open(flags, open_mode, relative_path, server_chan).await?;
+        Ok(())
+    } else if let Some(path) = get_framework_capability_path(&source) {
+        // TODO(fsamuel): This is a temporary hack. If a global path-based framework capability
+        // is not provided by a hook in the component tree, then attempt to connect to the service
+        // in component manager's namespace. We could have modeled this as a default provider,
+        // but several hooks (such as WorkScheduler) require that a provider is not set.
+        io_util::connect_in_namespace(&path.to_string(), server_chan, flags)
+            .map_err(|e| ModelError::capability_discovery_error(e))
     } else {
-        try_open_capability_manually(model, flags, open_mode, source, server_chan).await?;
+        Err(ModelError::capability_discovery_error(format_err!(
+            "No providers for this capability were found!"
+        )))
     }
-
-    Ok(())
 }
 
 /// Routes a `UseDecl::Storage` to the component instance providing the backing directory and

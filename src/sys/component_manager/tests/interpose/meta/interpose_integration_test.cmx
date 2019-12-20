@@ -1,0 +1,17 @@
+{
+    "program": {
+        "binary": "test/interpose_integration_test"
+    },
+    "sandbox": {
+        "features": [
+            "hub",
+            "deprecated-ambient-replace-as-executable"
+        ],
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Environment",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

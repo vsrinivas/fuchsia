@@ -18,6 +18,7 @@ group("tests") {
     "collections:collections_integration_test",
     "destruction:destruction_integration_test",
     "hub:hub_integration_test",
+    "interpose:interpose_integration_test",
     "routing:tests",
     "storage:storage_integration_test",
     "work_scheduler:work_scheduler_integration_test",
@@ -33,6 +34,7 @@ rustc_library("breakpoint_system_client") {
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//src/sys/component_manager/tests/fidl:breakpoints-rustc",
+    "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
   ]
