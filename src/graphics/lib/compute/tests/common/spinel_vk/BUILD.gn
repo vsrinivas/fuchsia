@@ -1,0 +1,42 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("../../../gn/build_rules.gni")
+
+config("public_config") {
+  # For now clients should include "tests/common/spinel/xxx.h"
+  include_dirs = [ graphics_compute_dir ]
+}
+
+# Spinel Vulkan-specific utilities. This depends on the Spinel Vulkan backend
+# and cannot be used with other backends.
+source_set("spinel_vk_utils") {
+  sources = [
+    "spinel_vk_device_config_utils.c",
+    "spinel_vk_device_config_utils.h",
+    "spinel_vk_submit_state.c",
+    "spinel_vk_submit_state.h",
+  ]
+  deps = [
+    "${graphics_compute_dir}/tests:common",
+    "${graphics_compute_dir}/tests:common_vk",
+  ]
+  public_configs = [ ":public_config" ]
+  public_deps = [
+    "${graphics_compute_dir}/hotsort/platforms/vk",
+    "${graphics_compute_dir}/spinel:spinel_headers",
+    "${graphics_compute_dir}/spinel/platforms/vk:vk",
+    "${graphics_compute_dir}/spinel/platforms/vk:vk_find_target",
+  ]
+}
+
+graphics_compute_unittests("unittests") {
+  sources = [
+    "spinel_vk_device_config_utils_unittest.cc",
+  ]
+  deps = [
+    ":spinel_vk_utils",
+    "${graphics_compute_dir}/tests:common_vk",
+  ]
+}

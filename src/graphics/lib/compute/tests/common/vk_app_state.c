@@ -1336,7 +1336,7 @@ vk_app_state_init(vk_app_state_t * app_state, const vk_app_state_config_t * conf
   VkDeviceCreateInfo const device_info = {
 
     .sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-    .pNext                   = NULL,
+    .pNext                   = &device_config.features,
     .flags                   = 0,
     .queueCreateInfoCount    = queue_family_count,
     .pQueueCreateInfos       = queue_family_info,
@@ -1344,7 +1344,6 @@ vk_app_state_init(vk_app_state_t * app_state, const vk_app_state_config_t * conf
     .ppEnabledLayerNames     = NULL,
     .enabledExtensionCount   = device_extensions.count,
     .ppEnabledExtensionNames = device_extensions.items,
-    .pEnabledFeatures        = &device_config.features,
   };
 
   vk(CreateDevice(app_state->pd, &device_info, app_state->ac, &app_state->d));

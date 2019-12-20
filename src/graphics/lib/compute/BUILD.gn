@@ -100,11 +100,12 @@ graphics_compute_unittests_package("graphics_compute_unittests") {
 }
 
 # A target used to group all graphics compute unit-tests that depend
-# on a working Vulkan environment.
+# on a working Vulkan environment and that link against the Spinel library.
 graphics_compute_unittests_package("graphics_compute_vk_unittests") {
   deps = [
     "spinel:vk_unittests",
     "tests:common_vk_unittests",
+    "tests/common/spinel_vk:unittests",
   ]
   needs_vulkan = true
 }

@@ -117,7 +117,7 @@ typedef struct vk_device_config_t
   const char * extensions_names[VK_DEVICE_CONFIG_MAX_EXTENSIONS];
 
   // The list of required features to be supported by the device.
-  VkPhysicalDeviceFeatures features;
+  VkPhysicalDeviceFeatures2 features;
 
 } vk_device_config_t;
 
