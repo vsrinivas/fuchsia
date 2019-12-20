@@ -102,7 +102,7 @@ class GptDevicePartitioner {
   // directly. If it is not provided, we search for a device with a valid GPT,
   // with an entry for an FVM. If multiple devices with valid GPT containing
   // FVM entries are found, an error is returned.
-  static zx_status_t InitializeGpt(fbl::unique_fd devfs_root, Arch arch,
+  static zx_status_t InitializeGpt(fbl::unique_fd devfs_root,
                                    std::optional<fbl::unique_fd> block_device,
                                    std::unique_ptr<GptDevicePartitioner>* gpt_out);
 
@@ -124,7 +124,7 @@ class GptDevicePartitioner {
 
   // Creates a partition, adds an entry to the GPT, and returns a file descriptor to it.
   // Assumes that the partition does not already exist.
-  zx_status_t AddPartition(const char* name, uint8_t* type, size_t minimum_size_bytes,
+  zx_status_t AddPartition(const char* name, const uint8_t* type, size_t minimum_size_bytes,
                            size_t optional_reserve_bytes,
                            std::unique_ptr<PartitionClient>* out_partition) const;
 
@@ -140,9 +140,11 @@ class GptDevicePartitioner {
   // Removes all partitions from GPT.
   zx_status_t WipePartitionTables() const;
 
+  // Wipes all partitions meeting given criteria.
+  zx_status_t WipePartitions(FilterCallback filter) const;
+
  private:
   using GptDevices = std::vector<std::pair<std::string, fbl::unique_fd>>;
-  using WipeCheck = bool(const gpt_partition_t&);
 
   // Find all block devices which could contain a GPT.
   static bool FindGptDevices(const fbl::unique_fd& devfs_root, GptDevices* out);
@@ -160,11 +162,8 @@ class GptDevicePartitioner {
         gpt_(std::move(gpt)),
         block_info_(block_info) {}
 
-  zx_status_t CreateGptPartition(const char* name, uint8_t* type, uint64_t offset, uint64_t blocks,
-                                 uint8_t* out_guid) const;
-
-  // Wipes all partitions meeting given criteria.
-  zx_status_t WipePartitions(WipeCheck check_cb) const;
+  zx_status_t CreateGptPartition(const char* name, const uint8_t* type, uint64_t offset,
+                                 uint64_t blocks, uint8_t* out_guid) const;
 
   fbl::unique_fd devfs_root_;
   fzl::FdioCaller caller_;
@@ -294,6 +293,35 @@ class SkipBlockDevicePartitioner : public DevicePartitioner {
   fbl::unique_fd devfs_root_;
   zx::channel svc_root_;
 };
+
+class SherlockPartitioner : public DevicePartitioner {
+ public:
+  static zx_status_t Initialize(fbl::unique_fd devfs_root,
+                                std::optional<fbl::unique_fd> block_device,
+                                std::unique_ptr<DevicePartitioner>* partitioner);
+
+  bool IsFvmWithinFtl() const override { return false; }
+
+  zx_status_t AddPartition(Partition partition_type,
+                           std::unique_ptr<PartitionClient>* out_partition) const override;
+
+  zx_status_t FindPartition(Partition partition_type,
+                            std::unique_ptr<PartitionClient>* out_partition) const override;
+
+  zx_status_t FinalizePartition(Partition unused) const override { return ZX_OK; }
+
+  zx_status_t WipeFvm() const override;
+
+  zx_status_t InitPartitionTables() const override;
+
+  zx_status_t WipePartitionTables() const override;
+
+ private:
+  SherlockPartitioner(std::unique_ptr<GptDevicePartitioner> gpt) : gpt_(std::move(gpt)) {}
+
+  std::unique_ptr<GptDevicePartitioner> gpt_;
+};
+
 }  // namespace paver
 
 #endif  // ZIRCON_SYSTEM_ULIB_PAVER_DEVICE_PARTITIONER_H_

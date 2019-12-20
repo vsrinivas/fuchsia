@@ -205,6 +205,15 @@ static_assert(GPT_ENTRY_SIZE == sizeof(gpt_entry_t), "Gpt entry size invalid");
 }
 #define GUID_VBMETA_R_NAME "vbmeta_r"
 
+#define GUID_ABR_META_STRING "1D75395D-F2C6-476B-A8B7-45CC1C97B476"
+#define GUID_ABR_META_VALUE {                      \
+    0x5d, 0x39, 0x75, 0x1d,                        \
+    0xc6, 0xf2,                                    \
+    0x6b, 0x47,                                    \
+    0xa8, 0xb7, 0x45, 0xcc, 0x1c, 0x97, 0xb4, 0x76 \
+}
+#define GUID_ABR_META_NAME "misc"
+
 #define GUID_CROS_KERNEL_STRING "FE3A2A5D-4F32-41A7-B725-ACCC3285A309"
 #define GUID_CROS_KERNEL_VALUE {                   \
     0x5d, 0x2a, 0x3a, 0xfe,                        \

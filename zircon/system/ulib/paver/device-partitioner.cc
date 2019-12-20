@@ -12,6 +12,7 @@
 #include <fuchsia/hardware/block/llcpp/fidl.h>
 #include <fuchsia/hardware/block/partition/llcpp/fidl.h>
 #include <fuchsia/hardware/skipblock/llcpp/fidl.h>
+#include <fuchsia/sysinfo/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -30,13 +31,16 @@
 #include <chromeos-disk-setup/chromeos-disk-setup.h>
 #include <fbl/auto_call.h>
 #include <fbl/function.h>
+#include <fbl/span.h>
 #include <fbl/string_buffer.h>
 #include <fs-management/fvm.h>
 #include <gpt/cros.h>
+#include <soc/aml-common/aml-guid.h>
 #include <zxcrypt/volume.h>
 
 #include "lib/fidl/llcpp/string_view.h"
 #include "pave-logging.h"
+#include "zircon/errors.h"
 #include "zircon/hw/gpt.h"
 
 namespace paver {
@@ -92,7 +96,7 @@ std::unique_ptr<T> WrapUnique(T* ptr) {
 zx_status_t UnbindDevice(zx::channel device, fbl::unique_fd directory, zx_duration_t timeout) {
   auto cb = [](int dirfd, int event, const char* filename, void* cookie) {
     auto device = reinterpret_cast<zx::channel*>(cookie);
-    switch (event)  {
+    switch (event) {
       case WATCH_EVENT_REMOVE_FILE:
         return ZX_ERR_STOP;
       case WATCH_EVENT_WAITING: {
@@ -307,6 +311,40 @@ zx_status_t WipeBlockPartition(const fbl::unique_fd& devfs_root, const uint8_t* 
   return ZX_OK;
 }
 
+zx_status_t IsBoard(const fbl::unique_fd& devfs_root, fbl::StringPiece board_name) {
+  fzl::UnownedFdioCaller caller(devfs_root.get());
+  zx::channel local, remote;
+  zx_status_t status = zx::channel::create(0, &local, &remote);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  status = fdio_service_connect_at(caller.borrow_channel(), "misc/sysinfo", remote.release());
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  auto result = ::llcpp::fuchsia::sysinfo::Device::Call::GetBoardName(zx::unowned(local));
+  status = result.ok() ? result->status : result.status();
+  if (status != ZX_OK) {
+    return status;
+  }
+  if (result->name.size() == board_name.size() &&
+      strncmp(result->name.data(), board_name.data(), result->name.size()) == 0) {
+    return ZX_OK;
+  }
+
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+void utf16_to_cstring(char* dst, const uint8_t* src, size_t charcount) {
+  while (charcount > 0) {
+    *dst++ = *src;
+    src += 2;
+    charcount -= 2;
+  }
+}
+
 }  // namespace
 
 const char* PartitionName(Partition type) {
@@ -337,6 +375,7 @@ std::unique_ptr<DevicePartitioner> DevicePartitioner::Create(fbl::unique_fd devf
                                                              zx::channel block_device) {
   std::optional<fbl::unique_fd> block_dev;
   std::optional<fbl::unique_fd> block_dev_dup;
+  std::optional<fbl::unique_fd> block_dev_dup2;
   if (block_device) {
     int fd;
     zx_status_t status = fdio_fd_create(block_device.release(), &fd);
@@ -348,9 +387,12 @@ std::unique_ptr<DevicePartitioner> DevicePartitioner::Create(fbl::unique_fd devf
     }
     block_dev.emplace(fd);
     block_dev_dup = block_dev->duplicate();
+    block_dev_dup2 = block_dev->duplicate();
   }
   std::unique_ptr<DevicePartitioner> device_partitioner;
-  if ((SkipBlockDevicePartitioner::Initialize(devfs_root.duplicate(), std::move(svc_root),
+  if ((SherlockPartitioner::Initialize(devfs_root.duplicate(), std::move(block_dev_dup2),
+                                       &device_partitioner) == ZX_OK) ||
+      (SkipBlockDevicePartitioner::Initialize(devfs_root.duplicate(), std::move(svc_root),
                                               &device_partitioner) == ZX_OK) ||
       (CrosDevicePartitioner::Initialize(devfs_root.duplicate(), arch, std::move(block_dev_dup),
                                          &device_partitioner) == ZX_OK) ||
@@ -472,13 +514,9 @@ zx_status_t GptDevicePartitioner::InitializeProvidedGptDevice(
   return ZX_OK;
 }
 
-zx_status_t GptDevicePartitioner::InitializeGpt(fbl::unique_fd devfs_root, Arch arch,
+zx_status_t GptDevicePartitioner::InitializeGpt(fbl::unique_fd devfs_root,
                                                 std::optional<fbl::unique_fd> block_device,
                                                 std::unique_ptr<GptDevicePartitioner>* gpt_out) {
-  if (arch != Arch::kX64) {
-    return ZX_ERR_NOT_FOUND;
-  }
-
   if (block_device) {
     return InitializeProvidedGptDevice(std::move(devfs_root), *std::move(block_device), gpt_out);
   }
@@ -610,7 +648,7 @@ zx_status_t GptDevicePartitioner::FindFirstFit(size_t bytes_requested, size_t* s
   return ZX_ERR_NO_RESOURCES;
 }
 
-zx_status_t GptDevicePartitioner::CreateGptPartition(const char* name, uint8_t* type,
+zx_status_t GptDevicePartitioner::CreateGptPartition(const char* name, const uint8_t* type,
                                                      uint64_t offset, uint64_t blocks,
                                                      uint8_t* out_guid) const {
   zx_cprng_draw(out_guid, GPT_GUID_LEN);
@@ -643,7 +681,7 @@ zx_status_t GptDevicePartitioner::CreateGptPartition(const char* name, uint8_t* 
 }
 
 zx_status_t GptDevicePartitioner::AddPartition(
-    const char* name, uint8_t* type, size_t minimum_size_bytes, size_t optional_reserve_bytes,
+    const char* name, const uint8_t* type, size_t minimum_size_bytes, size_t optional_reserve_bytes,
     std::unique_ptr<PartitionClient>* out_partition) const {
   uint64_t start, length;
   zx_status_t status;
@@ -719,14 +757,14 @@ zx_status_t GptDevicePartitioner::FindPartition(FilterCallback filter,
   return ZX_ERR_NOT_FOUND;
 }
 
-zx_status_t GptDevicePartitioner::WipePartitions(WipeCheck check_cb) const {
+zx_status_t GptDevicePartitioner::WipePartitions(FilterCallback filter) const {
   bool modify = false;
   for (uint32_t i = 0; i < gpt::kPartitionCount; i++) {
     const gpt_partition_t* p = gpt_->GetPartition(i);
     if (!p) {
       continue;
     }
-    if (!check_cb(*p)) {
+    if (!filter(*p)) {
       continue;
     }
 
@@ -767,9 +805,13 @@ zx_status_t GptDevicePartitioner::WipePartitionTables() const {
 zx_status_t EfiDevicePartitioner::Initialize(fbl::unique_fd devfs_root, Arch arch,
                                              std::optional<fbl::unique_fd> block_device,
                                              std::unique_ptr<DevicePartitioner>* partitioner) {
+  if (arch != Arch::kX64) {
+    return ZX_ERR_NOT_FOUND;
+  }
+
   std::unique_ptr<GptDevicePartitioner> gpt;
-  zx_status_t status = GptDevicePartitioner::InitializeGpt(std::move(devfs_root), arch,
-                                                           std::move(block_device), &gpt);
+  zx_status_t status =
+      GptDevicePartitioner::InitializeGpt(std::move(devfs_root), std::move(block_device), &gpt);
   if (status != ZX_OK) {
     return status;
   }
@@ -873,12 +915,9 @@ zx_status_t EfiDevicePartitioner::FindPartition(
 zx_status_t EfiDevicePartitioner::WipeFvm() const { return gpt_->WipeFvm(); }
 
 zx_status_t EfiDevicePartitioner::InitPartitionTables() const {
-  constexpr std::array<Partition, 4>  partitions = {
-      Partition::kZirconA,
-      Partition::kZirconB,
-      Partition::kZirconR,
-      Partition::kFuchsiaVolumeManager
-  };
+  constexpr std::array<Partition, 4> partitions = {Partition::kZirconA, Partition::kZirconB,
+                                                   Partition::kZirconR,
+                                                   Partition::kFuchsiaVolumeManager};
 
   zx_status_t status;
   for (auto partition_type : partitions) {
@@ -912,9 +951,13 @@ zx_status_t EfiDevicePartitioner::WipePartitionTables() const {
 zx_status_t CrosDevicePartitioner::Initialize(fbl::unique_fd devfs_root, Arch arch,
                                               std::optional<fbl::unique_fd> block_device,
                                               std::unique_ptr<DevicePartitioner>* partitioner) {
+  if (arch != Arch::kX64) {
+    return ZX_ERR_NOT_FOUND;
+  }
+
   std::unique_ptr<GptDevicePartitioner> gpt_partitioner;
   zx_status_t status = GptDevicePartitioner::InitializeGpt(
-      std::move(devfs_root), arch, std::move(block_device), &gpt_partitioner);
+      std::move(devfs_root), std::move(block_device), &gpt_partitioner);
   if (status != ZX_OK) {
     return status;
   }
@@ -1097,12 +1140,9 @@ zx_status_t CrosDevicePartitioner::FinalizePartition(Partition partition_type) c
 zx_status_t CrosDevicePartitioner::WipeFvm() const { return gpt_->WipeFvm(); }
 
 zx_status_t CrosDevicePartitioner::InitPartitionTables() const {
-  constexpr std::array<Partition, 4>  partitions = {
-      Partition::kZirconA,
-      Partition::kZirconB,
-      Partition::kZirconR,
-      Partition::kFuchsiaVolumeManager
-  };
+  constexpr std::array<Partition, 4> partitions = {Partition::kZirconA, Partition::kZirconB,
+                                                   Partition::kZirconR,
+                                                   Partition::kFuchsiaVolumeManager};
 
   zx_status_t status;
   for (auto partition_type : partitions) {
@@ -1224,6 +1264,219 @@ zx_status_t FixedDevicePartitioner::WipeFvm() const {
 zx_status_t FixedDevicePartitioner::InitPartitionTables() const { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t FixedDevicePartitioner::WipePartitionTables() const { return ZX_ERR_NOT_SUPPORTED; }
+
+/*====================================================*
+ *                    SHERLOCK                        *
+ *====================================================*/
+
+zx_status_t SherlockPartitioner::Initialize(fbl::unique_fd devfs_root,
+                                            std::optional<fbl::unique_fd> block_device,
+                                            std::unique_ptr<DevicePartitioner>* partitioner) {
+  if (IsBoard(devfs_root, "sherlock") != ZX_OK) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  std::unique_ptr<GptDevicePartitioner> gpt;
+  zx_status_t status =
+      GptDevicePartitioner::InitializeGpt(std::move(devfs_root), std::move(block_device), &gpt);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  LOG("Successfully initialized SherlockPartitioner Device Partitioner\n");
+  *partitioner = WrapUnique(new SherlockPartitioner(std::move(gpt)));
+  return ZX_OK;
+}
+
+zx_status_t SherlockPartitioner::AddPartition(
+    Partition partition_type, std::unique_ptr<PartitionClient>* out_partition) const {
+  ERROR("Cannot add partitions to a sherlock device\n");
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t SherlockPartitioner::FindPartition(
+    Partition partition_type, std::unique_ptr<PartitionClient>* out_partition) const {
+  uint8_t type[GPT_GUID_LEN];
+
+  switch (partition_type) {
+    case Partition::kBootloader: {
+      const uint8_t bootloader_type[GPT_GUID_LEN] = GUID_BOOTLOADER_VALUE;
+      memcpy(type, bootloader_type, GPT_GUID_LEN);
+      break;
+    }
+    case Partition::kZirconA: {
+      const uint8_t zircon_a_type[GPT_GUID_LEN] = GUID_ZIRCON_A_VALUE;
+      memcpy(type, zircon_a_type, GPT_GUID_LEN);
+      break;
+    }
+    case Partition::kZirconB: {
+      const uint8_t zircon_b_type[GPT_GUID_LEN] = GUID_ZIRCON_B_VALUE;
+      memcpy(type, zircon_b_type, GPT_GUID_LEN);
+      break;
+    }
+    case Partition::kZirconR: {
+      const uint8_t zircon_r_type[GPT_GUID_LEN] = GUID_ZIRCON_R_VALUE;
+      memcpy(type, zircon_r_type, GPT_GUID_LEN);
+      break;
+    }
+    case Partition::kVbMetaA: {
+      const uint8_t vbmeta_a_type[GPT_GUID_LEN] = GUID_VBMETA_A_VALUE;
+      memcpy(type, vbmeta_a_type, GPT_GUID_LEN);
+      break;
+    }
+    case Partition::kVbMetaB: {
+      const uint8_t vbmeta_b_type[GPT_GUID_LEN] = GUID_VBMETA_B_VALUE;
+      memcpy(type, vbmeta_b_type, GPT_GUID_LEN);
+      break;
+    }
+    case Partition::kVbMetaR: {
+      const uint8_t vbmeta_r_type[GPT_GUID_LEN] = GUID_VBMETA_R_VALUE;
+      memcpy(type, vbmeta_r_type, GPT_GUID_LEN);
+      break;
+    }
+    case Partition::kFuchsiaVolumeManager: {
+      const uint8_t fvm_type[GPT_GUID_LEN] = GUID_FVM_VALUE;
+      memcpy(type, fvm_type, GPT_GUID_LEN);
+      break;
+    }
+    default:
+      ERROR("partition_type is invalid!\n");
+      return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  const auto filter = [type](const gpt_partition_t& part) {
+    return memcmp(part.type, type, GPT_GUID_LEN) == 0;
+  };
+  return gpt_->FindPartition(std::move(filter), out_partition);
+}
+
+zx_status_t SherlockPartitioner::WipeFvm() const { return gpt_->WipeFvm(); }
+
+zx_status_t SherlockPartitioner::InitPartitionTables() const {
+  struct Partition {
+    const char* name;
+    uint8_t type[GPT_GUID_LEN];
+    size_t min_size;
+  };
+
+  const auto add_partitions = [&](fbl::Span<const Partition> partitions) {
+    for (const auto& part : partitions) {
+      std::unique_ptr<PartitionClient> out;
+      if (auto status = gpt_->AddPartition(part.name, part.type, part.min_size, 0, &out);
+          status != ZX_OK) {
+        return status;
+      }
+    }
+    return ZX_OK;
+  };
+
+  const char* partitions_to_wipe[] = {
+      "recovery",
+      "boot",
+      "system",
+      kFvmPartitionName,
+      GUID_FVM_NAME,
+      "cache",
+      "fct",
+      GUID_SYS_CONFIG_NAME,
+      GUID_ABR_META_NAME,
+      GUID_VBMETA_A_NAME,
+      GUID_VBMETA_B_NAME,
+      GUID_VBMETA_R_NAME,
+      "migration",
+      "buf",
+      "buffer",
+  };
+  const auto wipe = [&partitions_to_wipe](const gpt_partition_t& part) {
+    char cstring_name[GPT_NAME_LEN] = {};
+    utf16_to_cstring(cstring_name, part.name, GPT_NAME_LEN);
+
+    for (const auto& partition_name : fbl::Span(partitions_to_wipe)) {
+      if (strncmp(cstring_name, partition_name, GPT_NAME_LEN) == 0) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  if (auto status = gpt_->WipePartitions(wipe); status != ZX_OK) {
+    return status;
+  }
+
+  constexpr size_t kKibibyte = 1024;
+  constexpr size_t kMebibyte = kKibibyte * 1024;
+
+  const Partition partitions_to_add[] = {
+      {
+          "recovery",
+          GUID_ZIRCON_R_VALUE,
+          32 * kMebibyte,
+      },
+      {
+          "boot",
+          GUID_ZIRCON_A_VALUE,
+          32 * kMebibyte,
+      },
+      {
+          "system",
+          GUID_ZIRCON_B_VALUE,
+          32 * kMebibyte,
+      },
+      {
+          GUID_FVM_NAME,
+          GUID_FVM_VALUE,
+          3280 * kMebibyte,
+      },
+      {
+          "fct",
+          GUID_AMLOGIC_VALUE,
+          64 * kMebibyte,
+      },
+      {
+          GUID_SYS_CONFIG_NAME,
+          GUID_SYS_CONFIG_VALUE,
+          828 * kKibibyte,
+      },
+      {
+          GUID_ABR_META_NAME,
+          GUID_ABR_META_VALUE,
+          4 * kKibibyte,
+      },
+      {
+          GUID_VBMETA_A_NAME,
+          GUID_VBMETA_A_VALUE,
+          64 * kKibibyte,
+      },
+      {
+          GUID_VBMETA_B_NAME,
+          GUID_VBMETA_B_VALUE,
+          64 * kKibibyte,
+      },
+      {
+          GUID_VBMETA_R_NAME,
+          GUID_VBMETA_R_VALUE,
+          64 * kKibibyte,
+      },
+      {
+          "migration",
+          GUID_AMLOGIC_VALUE,
+          7 * kMebibyte,
+      },
+      {
+          "buffer",
+          GUID_AMLOGIC_VALUE,
+          48 * kMebibyte,
+      },
+  };
+
+  if (auto status = add_partitions(fbl::Span(partitions_to_add)); status != ZX_OK) {
+    return status;
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t SherlockPartitioner::WipePartitionTables() const { return ZX_ERR_NOT_SUPPORTED; }
 
 /*====================================================*
  *                SKIP BLOCK SPECIFIC                 *
@@ -1389,7 +1642,32 @@ zx_status_t SkipBlockDevicePartitioner::WipeFvm() const {
   return result2.ok() ? result2.value().status : result2.status();
 }
 
-zx_status_t SkipBlockDevicePartitioner::InitPartitionTables() const { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t SkipBlockDevicePartitioner::InitPartitionTables() const {
+  constexpr std::array<Partition, 4> partitions = {Partition::kZirconA, Partition::kZirconB,
+                                                   Partition::kZirconR,
+                                                   Partition::kFuchsiaVolumeManager};
+
+  zx_status_t status;
+  for (auto partition_type : partitions) {
+    std::unique_ptr<PartitionClient> partition;
+    if ((status = FindPartition(partition_type, &partition)) != ZX_OK) {
+      if (status != ZX_ERR_NOT_FOUND) {
+        ERROR("Failure looking for partition: %s\n", zx_status_get_string(status));
+        return status;
+      }
+
+      LOG("Could not find \"%s\" Partition on device. Attemping to add new partition\n",
+          PartitionName(partition_type));
+
+      if ((status = AddPartition(partition_type, &partition)) != ZX_OK) {
+        ERROR("Failure creating partition: %s\n", zx_status_get_string(status));
+        return status;
+      }
+    }
+  }
+  LOG("Successfully initialized gpt.\n");
+  return ZX_OK;
+}
 
 zx_status_t SkipBlockDevicePartitioner::WipePartitionTables() const { return ZX_ERR_NOT_SUPPORTED; }
 
