@@ -32,7 +32,7 @@ class DataSourceTest : public ledger::TestLoopFixture {
       if (received_status == DataSource::Status::ERROR) {
         return;
       }
-      result += data->Get();
+      result += std::string(data->Get());
     });
 
     RunLoopUntilIdle();
