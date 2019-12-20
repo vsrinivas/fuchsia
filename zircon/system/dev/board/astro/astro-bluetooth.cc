@@ -6,7 +6,6 @@
 #include <lib/mmio/mmio.h>
 #include <unistd.h>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
@@ -16,7 +15,6 @@
 #include <hw/reg.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
-#include <soc/aml-s905d2/s905d2-pwm.h>
 
 #include "astro.h"
 
@@ -78,26 +76,42 @@ static pbus_dev_t bt_uart_dev = []() {
 }();
 
 // Composite binding rules for bluetooth.
-constexpr zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
-constexpr zx_bind_inst_t pwm_e_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PWM),
-    BI_MATCH_IF(EQ, BIND_PWM_ID, S905D2_PWM_E),
-};
-constexpr device_component_part_t pwm_e_component[] = {
-    {countof(root_match), root_match},
-    {countof(pwm_e_match), pwm_e_match},
-};
-constexpr device_component_t bt_uart_components[] = {
-    {countof(pwm_e_component), pwm_e_component},
-};
+constexpr device_component_t bt_uart_components[] = {};
 
 // Enables and configures PWM_E on the SOC_WIFI_LPO_32k768 line for the
 // Wifi/Bluetooth module
 zx_status_t Astro::EnableWifi32K() {
   // Configure SOC_WIFI_LPO_32k768 pin for PWM_E
-  return gpio_impl_.SetAltFunction(SOC_WIFI_LPO_32k768, 1);
+  zx_status_t status = gpio_impl_.SetAltFunction(SOC_WIFI_LPO_32k768, 1);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  zx::bti bti;
+  status = iommu_.GetBti(BTI_BOARD, 0, &bti);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: GetBti failed: %d\n", __func__, status);
+    return status;
+  }
+
+  std::optional<ddk::MmioBuffer> pwm_base;
+
+  // Please do not use get_root_resource() in new code. See ZX-1467.
+  zx::unowned_resource resource(get_root_resource());
+  status = ddk::MmioBuffer::Create(S905D2_PWM_BASE, 0x1a000, *resource,
+                                   ZX_CACHE_POLICY_UNCACHED_DEVICE, &pwm_base);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: Create(pwm_base) error: %d\n", __func__, status);
+  }
+  // these magic numbers were gleaned by instrumenting
+  // drivers/amlogic/pwm/pwm_meson.c
+  // TODO(voydanoff) write a proper PWM driver
+  pwm_base->Write32(0x016d016e, S905D2_PWM_PWM_E << 2);
+  pwm_base->Write32(0x016d016d, S905D2_PWM_E2 << 2);
+  pwm_base->Write32(0x0a0a0609, S905D2_PWM_TIME_EF << 2);
+  pwm_base->Write32(0x02808003, S905D2_PWM_MISC_REG_EF << 2);
+
+  return ZX_OK;
 }
 
 zx_status_t Astro::BluetoothInit() {
