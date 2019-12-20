@@ -2,9 +2,9 @@
 
 ## Motivation
 
-The black box testing framework enables an integration test with component
-manager to observe or influence the behavior of component manager without
-depending on its internal libraries.
+The black box testing framework enables an integration test to observe or
+influence the behavior of component manager without depending on its internal
+libraries.
 
 Creating dependencies on component manager's internal libraries is problematic
 for a number of reasons:
@@ -20,11 +20,12 @@ To test the behavior of a component or a component manager feature, you must be
 able to write a black box test that can:
 
 - Start component manager in a hermetic environment.
-- Communicate with component manager using only FIDL and the [hub](hub.md)
+- Communicate with component manager using only FIDL and the [hub](hub.md).
 - Access the hub of the root component.
 - Wait for events to occur in component manager.
 - Halt a component manager task on an event.
 - Inject framework or builtin capabilities into component manager.
+- Interpose between a client and a service.
 
 Note: The black box testing framework covers all of these points.
 
@@ -188,6 +189,7 @@ functionality:
 - [Multiple receivers](#multiple-receivers)
 - [Discardable receivers](#discardable-receivers)
 - [Capability injection](#capability-injection)
+- [Capability interposition](#capability-interposition)
 - [Event sinks](#event-sinks)
 
 #### Multiple receivers {#multiple-receivers}
@@ -196,11 +198,11 @@ It is possible to register multiple receivers, each listening to their own set
 of events:
 
 ```rust
-// StartInstance and RouteFrameworkCapability events can be interleaved,
+// StartInstance and RouteCapability events can be interleaved,
 // so use different receivers.
 let start_receiver = breakpoint_system.set_breakpoints(vec![StartInstance::TYPE]).await?;
 let route_receiver =
-    breakpoint_system.set_breakpoints(vec![RouteFrameworkCapability::TYPE]).await?;
+    breakpoint_system.set_breakpoints(vec![RouteCapability::TYPE]).await?;
 
 // Expect 5 components to start
 for _ in 1..=5 {
@@ -208,9 +210,8 @@ for _ in 1..=5 {
     invocation.resume().await?;
 }
 
-// Expect a RouteFrameworkCapability event from /foo:0
-let invocation =
-    route_receiver.expect_exact::<RouteFrameworkCapability>("/foo:0").await?;
+// Expect a RouteCapability event from /foo:0
+let invocation = route_receiver.expect_exact::<RouteCapability>("/foo:0").await?;
 invocation.resume().await?;
 ```
 
@@ -248,19 +249,18 @@ invocation.resume().await?;
 Several tests need to communicate with components directly. The simplest way
 to do this is for a component to connect to a capability offered by the test.
 
-It is possible to listen for a `RouteFrameworkCapability` or
-`RouteBuiltinCapability` event and inject an external capability provider:
+It is possible to listen for a `RouteCapability` event and inject an external
+capability provider:
 
 ```rust
 // Create the server end of EchoService
 let echo_service = EchoService::new();
 
-// Set a breakpoint on RouteFrameworkCapability events
-let receiver =
-    breakpoint_system.set_breakpoints(vec![RouteFrameworkCapability::TYPE]).await?;
+// Set a breakpoint on RouteCapability events
+let receiver = breakpoint_system.set_breakpoints(vec![RouteCapability::TYPE]).await?;
 
-// Wait until /foo:0 attempts to connect to the EchoService framework capability
-let invocation = receiver.wait_until_route_framework_capability(
+// Wait until /foo:0 attempts to connect to the EchoService component capability
+let invocation = receiver.wait_until_component_capability(
     "/foo:0",
     "/svc/fuchsia.echo.EchoService",
 ).await?;
@@ -270,6 +270,63 @@ let serve_fn = echo_capability.serve_async();
 invocation.inject(serve_fn).await?;
 
 // Resume from the invocation
+invocation.resume().await?;
+```
+
+#### Capability interposition {#capability-interposition}
+
+Tests may want to silently observe or mutate messages between a client
+and service. It is possible to interpose a capability and manipulate the traffic
+over the channel. Consider an interposer for an Echo service that mutates the input from
+the client before sending it to the service:
+
+```rust
+/// Client <---> EchoInterposer <---> Echo service
+/// The EchoInterposer copies all echo responses from the service
+/// and sends them over an mpsc::Channel to the test.
+struct EchoInterposer;
+
+#[async_trait]
+impl Interposer for EchoInterposer {
+    type Marker = fecho::EchoMarker;
+
+    async fn interpose(
+        self: Arc<Self>,
+        mut from_client: fecho::EchoRequestStream,
+        to_service: fecho::EchoProxy,
+    ) {
+        // Start listening to requests from client
+        while let Some(Ok(fecho::EchoRequest::EchoString { value: Some(input), responder })) =
+            from_client.next().await
+        {
+            // Copy the response from the service and send it to the test
+            let modified_input = format!("{} Let there be chaos!", input);
+
+            // Forward the request to the service and get a response
+            let out = to_service
+                .echo_string(Some(&modified_input))
+                .await
+                .expect("echo_string failed")
+                .expect("echo_string got empty result");
+
+            // Respond to the client with the response from the service
+            responder.send(Some(out.as_str())).expect("failed to send echo response");
+        }
+    }
+}
+```
+
+The test can use `EchoInterposer` on any `RouteCapability` event:
+
+```rust
+// Wait for echo_looper to attempt to connect to the Echo service
+let invocation = receiver
+    .wait_until_component_capability("/echo_looper:0", "/svc/fidl.examples.routing.echo.Echo")
+    .await?;
+
+// Setup the interposer
+let (interposer, mut rx) = EchoInterposer::new();
+invocation.interpose(interposer).await?;
 invocation.resume().await?;
 ```
 
