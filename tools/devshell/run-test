@@ -80,7 +80,7 @@ function main {
   fi
 
   # TODO: remove reliance on pkgfs/packages.
-  fx-command-run shell runtests "pkgfs/packages/${target}/0/test" "$@"
+  fx-command-run shell runtests "pkgfs/packages/${target}/0/test" "$@" |& fx-symbolize
 }
 
 main "$@"
