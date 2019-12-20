@@ -71,7 +71,7 @@ void ProcessBreakpoint::OnHit(debug_ipc::BreakpointType exception_type,
   hit_breakpoints->clear();
   for (Breakpoint* breakpoint : breakpoints_) {
     // Only care for breakpoints that match the exception type.
-    if (breakpoint->type() != exception_type)
+    if (!Breakpoint::DoesExceptionApply(breakpoint->type(), exception_type))
       continue;
 
     breakpoint->OnHit();

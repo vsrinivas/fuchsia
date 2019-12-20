@@ -208,14 +208,12 @@ class DebuggedThread {
   // Breakpoints affected will have their updated stats added to
   // *hit_breakpoints.
   //
-  // WARNING: The ProcessBreakpoint argument could be deleted in this call
-  // if it was a one-shot breakpoint.
+  // WARNING: The ProcessBreakpoint argument could be deleted in this call if it was a one-shot
+  //          breakpoint, so it must not be used after this call.
   void UpdateForHitProcessBreakpoint(debug_ipc::BreakpointType exception_type,
                                      ProcessBreakpoint* process_breakpoint,
                                      zx_thread_state_general_regs* regs,
                                      std::vector<debug_ipc::BreakpointStats>* hit_breakpoints);
-  void UpdateForHitWatchpoint(Watchpoint* watchpoint,
-                              std::vector<debug_ipc::BreakpointStats>* hit_breakpoints);
 
   // Sets or clears the single step bit on the thread.
   void SetSingleStep(bool single_step);

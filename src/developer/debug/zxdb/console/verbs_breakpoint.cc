@@ -128,7 +128,8 @@ Err CreateOrEditBreakpoint(ConsoleContext* context, const Command& cmd, Breakpoi
     } else if (type_str == "h" || type_str == "hardware") {
       break_type = debug_ipc::BreakpointType::kHardware;
     } else if (type_str == "w" || type_str == "watchpoint") {
-      break_type = debug_ipc::BreakpointType::kWatchpoint;
+      // TODO: Plumb in kRead/kReadWrite.
+      break_type = debug_ipc::BreakpointType::kWrite;
     } else {
       return Err(fxl::StringPrintf("Unknown breakpoint type: %s", type_str.data()));
     }

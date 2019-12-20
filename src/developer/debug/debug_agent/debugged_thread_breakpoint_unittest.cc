@@ -124,8 +124,8 @@ class TestProcess : public MockProcess {
 
   void AppendWatchpoint(Breakpoint* breakpoint, debug_ipc::AddressRange range,
                         std::shared_ptr<arch::ArchProvider> arch_provider) {
-    watchpoints_[range] =
-        std::make_unique<Watchpoint>(breakpoint, this, std::move(arch_provider), range);
+    watchpoints_[range] = std::make_unique<Watchpoint>(
+        debug_ipc::BreakpointType::kWrite, breakpoint, this, std::move(arch_provider), range);
   }
 
  private:
@@ -440,7 +440,7 @@ TEST(DebuggedThreadBreakpoint, Watchpoint) {
   debug_ipc::BreakpointSettings settings = {};
   settings.id = kBreakpointId;
   settings.locations.push_back(CreateLocation(proc_object->koid, 0, kRange));
-  breakpoint.SetSettings(debug_ipc::BreakpointType::kWatchpoint, settings);
+  breakpoint.SetSettings(debug_ipc::BreakpointType::kWrite, settings);
 
   process.AppendWatchpoint(&breakpoint, kRange, context.arch_provider);
 

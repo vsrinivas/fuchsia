@@ -10,6 +10,36 @@
 
 namespace debug_agent {
 
+// Breakpoint::DoesExceptionApply ------------------------------------------------------------------
+
+bool Breakpoint::DoesExceptionApply(debug_ipc::BreakpointType exception_type,
+                                    debug_ipc::BreakpointType bp_type) {
+  if (exception_type == debug_ipc::BreakpointType::kLast ||
+      bp_type == debug_ipc::BreakpointType::kLast) {
+    FXL_NOTREACHED() << "Wrong exception (" << static_cast<uint32_t>(exception_type)
+                     << ") or bp_type (" << static_cast<uint32_t>(bp_type) << ").";
+    return false;
+  }
+
+  if (exception_type == debug_ipc::BreakpointType::kSoftware)
+    return bp_type == debug_ipc::BreakpointType::kSoftware;
+
+  if (exception_type == debug_ipc::BreakpointType::kHardware)
+    return bp_type == debug_ipc::BreakpointType::kHardware;
+
+  // Now only watchpoint types are left.
+  if (!IsWatchpointType(bp_type))
+    return false;
+
+  // If any the types is a read write, it targets this type.
+  if (exception_type == debug_ipc::BreakpointType::kReadWrite ||
+      bp_type == debug_ipc::BreakpointType::kReadWrite)
+    return true;
+
+  // R/W case are already covered.
+  return exception_type == bp_type;
+}
+
 // Breakpoint::ProcessDelegate ---------------------------------------------------------------------
 
 zx_status_t Breakpoint::ProcessDelegate::RegisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid,
@@ -96,7 +126,11 @@ zx_status_t Breakpoint::SetSettings(debug_ipc::BreakpointType type,
     case debug_ipc::BreakpointType::kSoftware:
     case debug_ipc::BreakpointType::kHardware:
       return SetBreakpointLocations(settings);
-    case debug_ipc::BreakpointType::kWatchpoint:
+    // TODO(donosoc): Add the R/RW support.
+    case debug_ipc::BreakpointType::kRead:
+    case debug_ipc::BreakpointType::kReadWrite:
+      return ZX_ERR_NOT_SUPPORTED;
+    case debug_ipc::BreakpointType::kWrite:
       return SetWatchpointLocations(settings);
     case debug_ipc::BreakpointType::kLast:
       break;

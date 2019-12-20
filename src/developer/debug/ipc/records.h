@@ -248,10 +248,13 @@ enum class Stop : uint32_t {
 enum class BreakpointType : uint32_t {
   kSoftware,
   kHardware,
-  kWatchpoint,
+  kRead,
+  kReadWrite,
+  kWrite,
   kLast,
 };
 const char* BreakpointTypeToString(BreakpointType);
+bool IsWatchpointType(BreakpointType);
 
 struct BreakpointSettings {
   // The ID if this breakpoint. This is assigned by the client. This is different than the ID in

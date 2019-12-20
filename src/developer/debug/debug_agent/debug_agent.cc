@@ -354,7 +354,9 @@ void DebugAgent::OnAddOrChangeBreakpoint(const debug_ipc::AddOrChangeBreakpointR
   switch (request.breakpoint_type) {
     case debug_ipc::BreakpointType::kSoftware:
     case debug_ipc::BreakpointType::kHardware:
-    case debug_ipc::BreakpointType::kWatchpoint:
+    case debug_ipc::BreakpointType::kRead:
+    case debug_ipc::BreakpointType::kReadWrite:
+    case debug_ipc::BreakpointType::kWrite:
       return SetupBreakpoint(request, reply);
     case debug_ipc::BreakpointType::kLast:
       break;

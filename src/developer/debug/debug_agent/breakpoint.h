@@ -24,6 +24,15 @@ class ProcessMemoryAccessor;
 // they have the same process/address.
 class Breakpoint {
  public:
+  // Normally an exception applies to a breakpoint only if both types match. But in the case of
+  // watchpoints, they can be triggered either by a read or a write exception, so a same address
+  // could apply or not depending on the type of the breakpoint (eg. a read exception would apply
+  // to both read and read/write breakpoints).
+  //
+  // All checks to see if an exception matches a breakpoint should be done by this function and not
+  // directly checking |type()|.
+  static bool DoesExceptionApply(debug_ipc::BreakpointType exception,
+                                 debug_ipc::BreakpointType bp_type);
   enum class HitResult {
     // Breakpoint was hit and the hit count was incremented.
     kHit,

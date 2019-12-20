@@ -17,12 +17,13 @@ namespace debug_agent {
 
 class Watchpoint : public ProcessBreakpoint {
  public:
-  explicit Watchpoint(Breakpoint* breakpoint, DebuggedProcess* process,
-                      std::shared_ptr<arch::ArchProvider> arch_provider,
+  // |type| must be kRead, kReadWrite or kWrite.
+  explicit Watchpoint(debug_ipc::BreakpointType type, Breakpoint* breakpoint,
+                      DebuggedProcess* process, std::shared_ptr<arch::ArchProvider> arch_provider,
                       const debug_ipc::AddressRange& range);
   ~Watchpoint();
 
-  debug_ipc::BreakpointType Type() const override { return debug_ipc::BreakpointType::kWatchpoint; }
+  debug_ipc::BreakpointType Type() const override { return type_; }
   bool Installed(zx_koid_t thread_koid) const override;
 
   bool MatchesException(zx_koid_t thread_koid, uint64_t watchpoint_address, int slot);
@@ -48,6 +49,8 @@ class Watchpoint : public ProcessBreakpoint {
 
   zx_status_t Uninstall(DebuggedThread* thread) override;
   zx_status_t Uninstall() override;
+
+  debug_ipc::BreakpointType type_ = debug_ipc::BreakpointType::kLast;
 
   debug_ipc::AddressRange range_;
 

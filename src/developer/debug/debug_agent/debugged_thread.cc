@@ -312,7 +312,8 @@ void DebuggedThread::HandleWatchpoint(debug_ipc::NotifyException* exception,
     return;
   }
 
-  UpdateForHitProcessBreakpoint(debug_ipc::BreakpointType::kWatchpoint, watchpoint, regs,
+  // TODO(donosoc): Plumb in R/RW types.
+  UpdateForHitProcessBreakpoint(debug_ipc::BreakpointType::kWrite, watchpoint, regs,
                                 &exception->hit_breakpoints);
   // The ProcessBreakpoint could'be been deleted, so we cannot use it anymore.
   watchpoint = nullptr;
@@ -649,20 +650,6 @@ void DebuggedThread::UpdateForHitProcessBreakpoint(
   current_breakpoint_ = process_breakpoint;
 
   process_breakpoint->OnHit(exception_type, hit_breakpoints);
-
-  // Delete any one-shot breakpoints. Since there can be multiple Breakpoints
-  // (some one-shot, some not) referring to the current ProcessBreakpoint,
-  // this operation could delete the ProcessBreakpoint or it could not. If it
-  // does, our observer will be told and current_breakpoint_ will be cleared.
-  for (const auto& stats : *hit_breakpoints) {
-    if (stats.should_delete)
-      process_->debug_agent()->RemoveBreakpoint(stats.id);
-  }
-}
-
-void DebuggedThread::UpdateForHitWatchpoint(
-    Watchpoint* watchpoint, std::vector<debug_ipc::BreakpointStats>* hit_breakpoints) {
-  watchpoint->OnHit(debug_ipc::BreakpointType::kWatchpoint, hit_breakpoints);
 
   // Delete any one-shot breakpoints. Since there can be multiple Breakpoints
   // (some one-shot, some not) referring to the current ProcessBreakpoint,

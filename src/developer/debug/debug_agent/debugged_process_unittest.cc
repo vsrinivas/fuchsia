@@ -117,7 +117,7 @@ debug_ipc::AddressRange SetLocation(Breakpoint* breakpoint, zx_koid_t koid,
                                     const debug_ipc::AddressRange& range) {
   debug_ipc::BreakpointSettings settings;
   settings.locations.push_back(CreateLocation(koid, 0, range));
-  breakpoint->SetSettings(debug_ipc::BreakpointType::kWatchpoint, settings);
+  breakpoint->SetSettings(debug_ipc::BreakpointType::kWrite, settings);
 
   return range;
 }
@@ -198,7 +198,7 @@ TEST(DebuggedProcess, RegisterBreakpoints) {
   Breakpoint wp_breakpoint(&process_delegate);
   debug_ipc::BreakpointSettings wp_settings;
   wp_settings.locations.push_back(CreateLocation(kProcessKoid, 0, kAddressRange1));
-  wp_breakpoint.SetSettings(debug_ipc::BreakpointType::kWatchpoint, wp_settings);
+  wp_breakpoint.SetSettings(debug_ipc::BreakpointType::kWrite, wp_settings);
 
   ASSERT_ZX_EQ(process.RegisterWatchpoint(&wp_breakpoint, kAddressRange1), ZX_OK);
   ASSERT_EQ(process.software_breakpoints().size(), 2u);

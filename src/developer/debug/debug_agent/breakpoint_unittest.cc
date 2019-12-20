@@ -247,12 +247,51 @@ TEST(Breakpoint, WatchpointLocations) {
   settings.locations.push_back(CreateLocation(kProcess1Koid, 0, kProcess1Range));
   settings.locations.push_back(CreateLocation(kProcess2Koid, 0, kProcess2Range));
 
-  ASSERT_ZX_EQ(breakpoint.SetSettings(debug_ipc::BreakpointType::kWatchpoint, settings), ZX_OK);
+  ASSERT_ZX_EQ(breakpoint.SetSettings(debug_ipc::BreakpointType::kRead, settings),
+               ZX_ERR_NOT_SUPPORTED);
+  ASSERT_ZX_EQ(breakpoint.SetSettings(debug_ipc::BreakpointType::kReadWrite, settings),
+               ZX_ERR_NOT_SUPPORTED);
+
+  ASSERT_ZX_EQ(breakpoint.SetSettings(debug_ipc::BreakpointType::kWrite, settings), ZX_OK);
 
   EXPECT_EQ(
       process_delegate.wp_register_calls(),
       WPVector({WPPair{kProcess1Koid, kProcess1Range}, WPPair{kProcess2Koid, kProcess2Range}}));
   EXPECT_EQ(process_delegate.wp_unregister_calls(), WPVector{});
+}
+
+using BPType = debug_ipc::BreakpointType;
+
+TEST(Breakpoint, DoesExceptionApply) {
+  EXPECT_TRUE(Breakpoint::DoesExceptionApply(BPType::kSoftware, BPType::kSoftware));
+  EXPECT_FALSE(Breakpoint::DoesExceptionApply(BPType::kSoftware, BPType::kHardware));
+  EXPECT_FALSE(Breakpoint::DoesExceptionApply(BPType::kSoftware, BPType::kRead));
+  EXPECT_FALSE(Breakpoint::DoesExceptionApply(BPType::kSoftware, BPType::kReadWrite));
+  EXPECT_FALSE(Breakpoint::DoesExceptionApply(BPType::kSoftware, BPType::kWrite));
+
+  EXPECT_FALSE(Breakpoint::DoesExceptionApply(BPType::kHardware, BPType::kSoftware));
+  EXPECT_TRUE(Breakpoint::DoesExceptionApply(BPType::kHardware, BPType::kHardware));
+  EXPECT_FALSE(Breakpoint::DoesExceptionApply(BPType::kHardware, BPType::kRead));
+  EXPECT_FALSE(Breakpoint::DoesExceptionApply(BPType::kHardware, BPType::kReadWrite));
+  EXPECT_FALSE(Breakpoint::DoesExceptionApply(BPType::kHardware, BPType::kWrite));
+
+  EXPECT_FALSE(Breakpoint::DoesExceptionApply(BPType::kRead, BPType::kSoftware));
+  EXPECT_FALSE(Breakpoint::DoesExceptionApply(BPType::kRead, BPType::kHardware));
+  EXPECT_TRUE(Breakpoint::DoesExceptionApply(BPType::kRead, BPType::kRead));
+  EXPECT_TRUE(Breakpoint::DoesExceptionApply(BPType::kRead, BPType::kReadWrite));
+  EXPECT_FALSE(Breakpoint::DoesExceptionApply(BPType::kRead, BPType::kWrite));
+
+  EXPECT_FALSE(Breakpoint::DoesExceptionApply(BPType::kReadWrite, BPType::kSoftware));
+  EXPECT_FALSE(Breakpoint::DoesExceptionApply(BPType::kReadWrite, BPType::kHardware));
+  EXPECT_TRUE(Breakpoint::DoesExceptionApply(BPType::kReadWrite, BPType::kRead));
+  EXPECT_TRUE(Breakpoint::DoesExceptionApply(BPType::kReadWrite, BPType::kReadWrite));
+  EXPECT_TRUE(Breakpoint::DoesExceptionApply(BPType::kReadWrite, BPType::kWrite));
+
+  EXPECT_FALSE(Breakpoint::DoesExceptionApply(BPType::kWrite, BPType::kSoftware));
+  EXPECT_FALSE(Breakpoint::DoesExceptionApply(BPType::kWrite, BPType::kHardware));
+  EXPECT_FALSE(Breakpoint::DoesExceptionApply(BPType::kWrite, BPType::kRead));
+  EXPECT_TRUE(Breakpoint::DoesExceptionApply(BPType::kWrite, BPType::kReadWrite));
+  EXPECT_TRUE(Breakpoint::DoesExceptionApply(BPType::kWrite, BPType::kWrite));
 }
 
 }  // namespace

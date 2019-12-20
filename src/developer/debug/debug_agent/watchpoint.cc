@@ -54,8 +54,8 @@ std::set<zx_koid_t> ThreadsTargeted(const Watchpoint& watchpoint) {
   std::set<zx_koid_t> ids;
   bool all_threads = false;
   for (Breakpoint* bp : watchpoint.breakpoints()) {
-    // We only care about hardware breakpoints.
-    if (bp->type() != debug_ipc::BreakpointType::kWatchpoint)
+    // We only care about breakpoint that cover our case.
+    if (!Breakpoint::DoesExceptionApply(watchpoint.Type(), bp->type()))
       continue;
 
     for (auto& location : bp->settings().locations) {
@@ -88,12 +88,16 @@ std::set<zx_koid_t> ThreadsTargeted(const Watchpoint& watchpoint) {
 
 }  // namespace
 
-Watchpoint::Watchpoint(Breakpoint* breakpoint, DebuggedProcess* process,
-                       std::shared_ptr<arch::ArchProvider> arch_provider,
+Watchpoint::Watchpoint(debug_ipc::BreakpointType type, Breakpoint* breakpoint,
+                       DebuggedProcess* process, std::shared_ptr<arch::ArchProvider> arch_provider,
                        const debug_ipc::AddressRange& range)
     : ProcessBreakpoint(breakpoint, process, range.begin()),
+      type_(type),
       range_(range),
-      arch_provider_(std::move(arch_provider)) {}
+      arch_provider_(std::move(arch_provider)) {
+  FXL_DCHECK(IsWatchpointType(type))
+      << "Wrong breakpoint type: " << debug_ipc::BreakpointTypeToString(type);
+}
 
 Watchpoint::~Watchpoint() { Uninstall(); }
 

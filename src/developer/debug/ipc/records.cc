@@ -35,7 +35,6 @@ __int128 Register::GetValue() const {
   return result;
 }
 
-
 const char* ExceptionTypeToString(ExceptionType type) {
   switch (type) {
     case ExceptionType::kNone:
@@ -133,14 +132,26 @@ const char* BreakpointTypeToString(BreakpointType type) {
       return "Software";
     case BreakpointType::kHardware:
       return "Hardware";
-    case BreakpointType::kWatchpoint:
-      return "Watchpoint";
+    case BreakpointType::kRead:
+      return "Read";
+    case BreakpointType::kReadWrite:
+      return "ReadWrite";
+    case BreakpointType::kWrite:
+      return "Write";
     case BreakpointType::kLast:
       return "Last";
   }
 
   FXL_NOTREACHED();
   return nullptr;
+}
+
+bool IsWatchpointType(debug_ipc::BreakpointType type) {
+  // clang-format off
+  return type == BreakpointType::kRead ||
+         type == BreakpointType::kReadWrite ||
+         type == BreakpointType::kWrite;
+  // clang-format on
 }
 
 const char* ConfigAction::TypeToString(Type type) {

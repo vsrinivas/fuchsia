@@ -100,9 +100,10 @@ TEST(Watchpoint, SimpleInstallAndRemove) {
   settings.locations.push_back(CreateLocation(process, thread1, kAddressRange));
 
   Breakpoint breakpoint1(&process_delegate);
-  breakpoint1.SetSettings(debug_ipc::BreakpointType::kWatchpoint, settings);
+  breakpoint1.SetSettings(debug_ipc::BreakpointType::kWrite, settings);
 
-  Watchpoint watchpoint(&breakpoint1, &process, arch_provider, kAddressRange);
+  Watchpoint watchpoint(debug_ipc::BreakpointType::kWrite, &breakpoint1, &process, arch_provider,
+                        kAddressRange);
   ASSERT_EQ(watchpoint.breakpoints().size(), 1u);
 
   // Update should install one thread
@@ -156,7 +157,7 @@ TEST(Watchpoint, SimpleInstallAndRemove) {
   settings2.locations.push_back(CreateLocation(process, thread3, address_range2));
 
   Breakpoint breakpoint2(&process_delegate);
-  breakpoint2.SetSettings(debug_ipc::BreakpointType::kWatchpoint, settings2);
+  breakpoint2.SetSettings(debug_ipc::BreakpointType::kWrite, settings2);
 
   ASSERT_EQ(watchpoint.RegisterBreakpoint(&breakpoint2), ZX_OK);
   ASSERT_EQ(watchpoint.breakpoints().size(), 2u);
@@ -183,7 +184,7 @@ TEST(Watchpoint, SimpleInstallAndRemove) {
   // Add a location to the already bound breakpoint.
 
   settings2.locations.push_back(CreateLocation(process, thread3, kAddressRange));
-  breakpoint2.SetSettings(debug_ipc::BreakpointType::kWatchpoint, settings2);
+  breakpoint2.SetSettings(debug_ipc::BreakpointType::kWrite, settings2);
 
   // Updating should've only installed for the third thread.
 
@@ -207,7 +208,7 @@ TEST(Watchpoint, SimpleInstallAndRemove) {
   settings3.locations.push_back(CreateLocation(process, nullptr, kAddressRange));
 
   Breakpoint breakpoint3(&process_delegate);
-  breakpoint3.SetSettings(debug_ipc::BreakpointType::kWatchpoint, settings3);
+  breakpoint3.SetSettings(debug_ipc::BreakpointType::kWrite, settings3);
 
   // Registering the breakpoint should add a breakpoint for all threads, but only updating the ones
   // that are not currently installed.
@@ -276,9 +277,10 @@ TEST(Watchpoint, InstalledRanges) {
   settings.locations.push_back(CreateLocation(process, thread1, kAddressRange));
 
   Breakpoint breakpoint1(&process_delegate);
-  breakpoint1.SetSettings(debug_ipc::BreakpointType::kWatchpoint, settings);
+  breakpoint1.SetSettings(debug_ipc::BreakpointType::kWrite, settings);
 
-  Watchpoint watchpoint(&breakpoint1, &process, arch_provider, kAddressRange);
+  Watchpoint watchpoint(debug_ipc::BreakpointType::kWrite, &breakpoint1, &process, arch_provider,
+                        kAddressRange);
   ASSERT_EQ(watchpoint.breakpoints().size(), 1u);
 
   const debug_ipc::AddressRange kSubRange = {0x900, 0x2100};
@@ -324,9 +326,10 @@ TEST(Watchpoint, MatchesException) {
   settings.locations.push_back(CreateLocation(process, thread1, kAddressRange));
 
   Breakpoint breakpoint1(&process_delegate);
-  breakpoint1.SetSettings(debug_ipc::BreakpointType::kWatchpoint, settings);
+  breakpoint1.SetSettings(debug_ipc::BreakpointType::kWrite, settings);
 
-  Watchpoint watchpoint(&breakpoint1, &process, arch_provider, kAddressRange);
+  Watchpoint watchpoint(debug_ipc::BreakpointType::kWrite, &breakpoint1, &process, arch_provider,
+                        kAddressRange);
   ASSERT_EQ(watchpoint.breakpoints().size(), 1u);
 
   const debug_ipc::AddressRange kSubRange = {0x900, 0x2100};

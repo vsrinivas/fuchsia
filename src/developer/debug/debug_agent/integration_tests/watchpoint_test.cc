@@ -178,7 +178,7 @@ std::pair<AddOrChangeBreakpointRequest, AddOrChangeBreakpointReply> GetWatchpoin
   location.address_range = {address, address};
 
   debug_ipc::AddOrChangeBreakpointRequest watchpoint_request = {};
-  watchpoint_request.breakpoint_type = BreakpointType::kWatchpoint;
+  watchpoint_request.breakpoint_type = BreakpointType::kWrite;
   watchpoint_request.breakpoint.id = kWatchpointId;
   watchpoint_request.breakpoint.one_shot = true;
   watchpoint_request.breakpoint.locations.push_back(location);
