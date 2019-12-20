@@ -105,6 +105,8 @@ if (target_cpu == "arm64") {
       "vp9_decoder.h",
       "vp9_utils.cc",
       "vp9_utils.h",
+      "watchdog.cc",
+      "watchdog.h",
 
       # CodecFactory+Codec interface handling:
       "codec_adapter_h264.cc",

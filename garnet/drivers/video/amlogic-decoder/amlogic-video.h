@@ -32,11 +32,13 @@
 #include "registers.h"
 #include "stream_buffer.h"
 #include "video_decoder.h"
+#include "watchdog.h"
 
 class AmlogicVideo final : public VideoDecoder::Owner,
                            public DecoderCore::Owner,
                            public CanvasEntry::Owner,
-                           public Parser::Owner {
+                           public Parser::Owner,
+                           public Watchdog::Owner {
  public:
   AmlogicVideo();
 
@@ -74,6 +76,9 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   // This tries to schedule the next runnable decoder. It may leave the current
   // decoder scheduled if no other decoder is runnable.
   void TryToReschedule() override __TA_REQUIRES(video_decoder_lock_);
+  [[nodiscard]] Watchdog* watchdog() override __TA_REQUIRES(video_decoder_lock_) {
+    return &watchdog_;
+  }
 
   // DecoderCore::Owner implementation.
   __WARN_UNUSED_RESULT
@@ -86,6 +91,9 @@ class AmlogicVideo final : public VideoDecoder::Owner,
 
   // Parser::Owner implementation.
   [[nodiscard]] bool is_parser_gated() const override { return is_parser_gated_; }
+
+  // Watchdog::Owner implementation.
+  void OnSignaledWatchdog() override;
 
   // The pts manager has its own locking, so don't worry about the video decoder
   // lock.
@@ -228,6 +236,12 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   std::unique_ptr<DecoderInstance> current_instance_;
   __TA_GUARDED(video_decoder_lock_)
   std::list<std::unique_ptr<DecoderInstance>> swapped_out_instances_;
+
+  // This is the watchdog for the video decoder core. It's owned by AmlogicVideo and not the video
+  // decoder because destroying it can (implicitly) block on the video_decoder_lock_, while decoder
+  // destruction happens with the video decoder lock held.
+  __TA_GUARDED(video_decoder_lock_)
+  Watchdog watchdog_{this};
 };
 
 #endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_AMLOGIC_VIDEO_H_

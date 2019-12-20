@@ -288,6 +288,7 @@ REGISTER_NAME(HevcParserIntControl, DosRegisterIo, 0x3120)
 };
 DEFINE_REGISTER(HevcParserIntStatus, DosRegisterIo, 0x3121);
 DEFINE_REGISTER(HevcParserPictureSize, DosRegisterIo, 0x3123);
+DEFINE_REGISTER(HevcParserLcuStart, DosRegisterIo, 0x3124);
 
 DEFINE_REGISTER(HevcStreamLevel, DosRegisterIo, 0x3106);
 REGISTER_NAME(HevcCabacControl, DosRegisterIo, 0x3110)

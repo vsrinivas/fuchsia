@@ -558,6 +558,68 @@ class TestVP9 {
     video.reset();
   }
 
+  static void DecodeMalformed(const char* input_filename, uint32_t modification_offset,
+                              uint8_t modification_value) {
+    auto video = std::make_unique<AmlogicVideo>();
+    ASSERT_TRUE(video);
+
+    EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
+    EXPECT_EQ(ZX_OK, video->InitDecoder());
+
+    TestFrameAllocator frame_allocator(video.get());
+    std::promise<void> first_wait_valid;
+    {
+      std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
+      video->SetDefaultInstance(
+          std::make_unique<Vp9Decoder>(video.get(), Vp9Decoder::InputType::kSingleStream,
+                                       /*use_compressed_output=*/false, false),
+          true);
+      video->video_decoder()->SetErrorHandler([&first_wait_valid]() {
+        DLOG("Got decode error");
+        first_wait_valid.set_value();
+      });
+    }
+    EXPECT_EQ(ZX_OK,
+              video->InitializeStreamBuffer(/*use_parser=*/true, PAGE_SIZE, /*is_secure=*/false));
+
+    EXPECT_EQ(ZX_OK, video->InitializeEsParser());
+
+    {
+      std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
+      frame_allocator.set_decoder(video->video_decoder_);
+      EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
+    }
+
+    uint32_t frame_count = 0;
+    {
+      std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
+      video->video_decoder_->SetFrameReadyNotifier(
+          [&video, &frame_count](std::shared_ptr<VideoFrame> frame) {
+            ++frame_count;
+            DECODE_ERROR("Got frame %d", frame_count);
+            DLOG("Got frame %d\n", frame_count);
+            EXPECT_EQ(320u, frame->display_width);
+            EXPECT_EQ(240u, frame->display_height);
+            ReturnFrame(video.get(), frame);
+          });
+    }
+    auto test_ivf = TestSupport::LoadFirmwareFile(input_filename);
+    ASSERT_NE(nullptr, test_ivf);
+
+    auto aml_data = ConvertIvfToAmlV(test_ivf->ptr, test_ivf->size);
+    // Arbitrary modifications to an AMLV header shouldn't happen in production code,
+    // because the driver is what creates that. The rest is fair game, though.
+    aml_data[modification_offset] = modification_value;
+    EXPECT_EQ(ZX_OK, video->parser()->ParseVideo(aml_data.data(), aml_data.size()));
+    EXPECT_EQ(std::future_status::ready,
+              first_wait_valid.get_future().wait_for(std::chrono::seconds(1)));
+    // The decoder should now be hung without having gotten through all the input so we should
+    // cancel parsing before teardown.
+    video->parser()->CancelParsing();
+
+    video.reset();
+  }
+
  private:
   // This is called from the interrupt handler, which already holds the lock.
   static void ReturnFrame(AmlogicVideo* video, std::shared_ptr<VideoFrame> frame) {
@@ -604,3 +666,9 @@ TEST(VP9, DecodeResetHardwareWithParser) {
 TEST(VP9, DecodeMultiInstance) { TestVP9::DecodeMultiInstance(false); }
 
 TEST(VP9, DecodeMultiInstanceWithInitializationFault) { TestVP9::DecodeMultiInstance(true); }
+
+TEST(VP9, DecodeMalformedHang) {
+  // Numbers are essentially random, but picked to ensure the decoder would
+  // normally hang. The offset should be >= 16 to avoid hitting the AMLV header.
+  TestVP9::DecodeMalformed("video_test_data/test-25fps.vp9", 17, 10);
+}

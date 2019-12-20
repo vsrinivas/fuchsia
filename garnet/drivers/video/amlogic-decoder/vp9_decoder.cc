@@ -16,6 +16,7 @@
 #include "third_party/libvpx/vp9/common/vp9_loopfilter.h"
 #include "third_party/vp9_adapt_probs/vp9_coefficient_adaptation.h"
 #include "util.h"
+#include "watchdog.h"
 
 using HevcDecStatusReg = HevcAssistScratch0;
 using HevcRpmBuffer = HevcAssistScratch1;
@@ -170,6 +171,7 @@ Vp9Decoder::~Vp9Decoder() {
   if (owner_->IsDecoderCurrent(this)) {
     owner_->core()->StopDecoding();
     owner_->core()->WaitForIdle();
+    owner_->watchdog()->Cancel();
   }
 
   BarrierBeforeRelease();  // For all working buffers
@@ -397,9 +399,11 @@ zx_status_t Vp9Decoder::InitializeHardware() {
   if (input_type_ == InputType::kSingleStream) {
     state_ = DecoderState::kRunning;
     owner_->core()->StartDecoding();
+    owner_->watchdog()->Start();
   } else {
     state_ = DecoderState::kInitialWaitingForInput;
   }
+  DLOG("Initialized decoder\n");
   return ZX_OK;
 }
 
@@ -612,6 +616,7 @@ void Vp9Decoder::UpdateDecodeSize(uint32_t size) {
   }
   owner_->core()->StartDecoding();
   state_ = DecoderState::kRunning;
+  owner_->watchdog()->Start();
 }
 
 void Vp9Decoder::SetPausedAtEndOfStream() {
@@ -665,6 +670,8 @@ void Vp9Decoder::AdaptProbabilityCoefficients(uint32_t adapt_prob_status) {
 void Vp9Decoder::HandleInterrupt() {
   DLOG("%p Got VP9 interrupt\n", this);
   ZX_DEBUG_ASSERT(state_ == DecoderState::kRunning);
+  owner_->watchdog()->Cancel();
+  already_got_watchdog_ = false;
 
   HevcAssistMbox0ClrReg::Get().FromValue(1).WriteTo(owner_->dosbus());
 
@@ -694,13 +701,14 @@ void Vp9Decoder::HandleInterrupt() {
     state_ = DecoderState::kFrameJustProduced;
     frame_done_count_++;
     owner_->TryToReschedule();
-    if (state_ != DecoderState::kSwappedOut) {
+    if (state_ != DecoderState::kSwappedOut && state_ != DecoderState::kRunning) {
       // TODO: Avoid running the decoder if there's no input data or output
       // buffers available. Once it starts running we don't let it swap out, so
       // one decoder could hang indefinitely in this case without being swapped
       // out. This can happen if the player's paused or if the client hangs.
       state_ = DecoderState::kRunning;
       HevcDecStatusReg::Get().FromValue(kVp9ActionDone).WriteTo(owner_->dosbus());
+      owner_->watchdog()->Start();
     }
     return;
   }
@@ -980,6 +988,7 @@ void Vp9Decoder::ShowExistingFrame(HardwareRenderParams* params) {
   ZX_DEBUG_ASSERT(state_ == DecoderState::kPausedAtHeader);
   HevcDecStatusReg::Get().FromValue(kVp9CommandDecodeSlice).WriteTo(owner_->dosbus());
   state_ = DecoderState::kRunning;
+  owner_->watchdog()->Start();
 }
 
 void Vp9Decoder::PrepareNewFrame(bool params_checked_previously) {
@@ -1057,6 +1066,7 @@ void Vp9Decoder::PrepareNewFrame(bool params_checked_previously) {
   ZX_DEBUG_ASSERT(state_ == DecoderState::kPausedAtHeader);
   HevcDecStatusReg::Get().FromValue(kVp9CommandDecodeSlice).WriteTo(owner_->dosbus());
   state_ = DecoderState::kRunning;
+  owner_->watchdog()->Start();
 }
 
 void Vp9Decoder::SetFrameReadyNotifier(FrameReadyNotifier notifier) {
@@ -1112,9 +1122,9 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
   // collection is always ok in terms of frame count.
   if (!buffers_allocated || reallocate_buffers_next_frame_for_testing_ ||
       (is_current_output_buffer_collection_usable_ &&
-       !is_current_output_buffer_collection_usable_(
-           valid_frames_count_, valid_frames_count_, coded_width, coded_height, stride,
-           display_width, display_height))) {
+       !is_current_output_buffer_collection_usable_(valid_frames_count_, valid_frames_count_,
+                                                    coded_width, coded_height, stride,
+                                                    display_width, display_height))) {
     reallocate_buffers_next_frame_for_testing_ = false;
     if (params_checked_previously) {
       // If we get here, it means we're seeing rejection of
@@ -1534,4 +1544,25 @@ void Vp9Decoder::InitializeParser() {
   HevcShiftStartCode::Get().FromValue(0x00000001).WriteTo(owner_->dosbus());
   // Shouldn't matter, since the emulation check is disabled.
   HevcShiftEmulateCode::Get().FromValue(0x00003000).WriteTo(owner_->dosbus());
+}
+
+void Vp9Decoder::OnSignaledWatchdog() {
+  DLOG("Watchdog timeout");
+  DLOG("HevcParserLcuStart %x\n", HevcParserLcuStart::Get().ReadFrom(owner_->dosbus()).reg_value());
+  DLOG("HevcStreamLevel %d\n", HevcStreamLevel::Get().ReadFrom(owner_->dosbus()).reg_value());
+  DLOG("HevcParserIntStatus 0x%x\n",
+       HevcParserIntStatus::Get().ReadFrom(owner_->dosbus()).reg_value());
+  if (already_got_watchdog_ || !frame_data_provider_) {
+    DECODE_ERROR("Got Vp9 watchdog timeout - fatal error");
+    CallErrorHandler();
+  } else {
+    DECODE_ERROR("Got Vp9 watchdog timeout");
+    // The first watchdog timeout just stop the decoder and ask for more input data to be read -
+    // this will hopefully restart the decoder to allow it to resynchronize and continue.
+    owner_->core()->StopDecoding();
+    state_ = DecoderState::kStoppedWaitingForInput;
+    // ReadMoreInputData may restart the watchdog.
+    frame_data_provider_->ReadMoreInputData(this);
+    already_got_watchdog_ = true;
+  }
 }

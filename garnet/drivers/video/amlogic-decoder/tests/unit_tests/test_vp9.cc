@@ -72,6 +72,10 @@ class FakeOwner : public VideoDecoder::Owner {
     return ZX_OK;
   }
   void TryToReschedule() override { EXPECT_TRUE(false); }
+  Watchdog* watchdog() override {
+    std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
+    return video_->watchdog();
+  }
 
   bool have_set_protected() const { return have_set_protected_; }
 
@@ -135,6 +139,10 @@ class Vp9UnitTest {
 
     decoder->state_ = Vp9Decoder::DecoderState::kSwappedOut;
 
+    {
+      std::lock_guard<std::mutex> lock(*video->video_decoder_lock());
+      video->watchdog()->Cancel();
+    }
     EXPECT_EQ(ZX_OK, decoder->InitializeHardware());
     EXPECT_EQ(0, memcmp(dosbus_memory.get(), dosbus_memory_copy.get(), kDosbusMemorySize));
   }

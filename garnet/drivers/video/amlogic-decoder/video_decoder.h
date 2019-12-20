@@ -61,12 +61,13 @@ class CanvasEntry {
 };
 
 class CodecPacket;
+class Watchdog;
+
 class VideoDecoder {
  public:
-  using IsCurrentOutputBufferCollectionUsable =
-      fit::function<bool(uint32_t min_frame_count, uint32_t max_frame_count, uint32_t coded_width,
-                         uint32_t coded_height, uint32_t stride, uint32_t display_width,
-                         uint32_t display_height)>;
+  using IsCurrentOutputBufferCollectionUsable = fit::function<bool(
+      uint32_t min_frame_count, uint32_t max_frame_count, uint32_t coded_width,
+      uint32_t coded_height, uint32_t stride, uint32_t display_width, uint32_t display_height)>;
   using InitializeFramesHandler = fit::function<zx_status_t(::zx::bti,
                                                             uint32_t,  // min_frame_count
                                                             uint32_t,  // max_frame_count
@@ -120,6 +121,7 @@ class VideoDecoder {
     // decoder finished a frame or because a new decoder is now runnable.  Must be called with the
     // decoder lock held.
     virtual void TryToReschedule() = 0;
+    [[nodiscard]] virtual Watchdog* watchdog() = 0;
   };
 
   explicit VideoDecoder(Owner* owner, bool is_secure) : owner_(owner), is_secure_(is_secure) {
@@ -157,6 +159,8 @@ class VideoDecoder {
   virtual bool __WARN_UNUSED_RESULT CanBeSwappedIn() { return false; }
   // Returns true if the decoder is at a place where it can be swapped out.
   virtual bool __WARN_UNUSED_RESULT CanBeSwappedOut() const { return false; }
+  virtual void OnSignaledWatchdog() {}
+
   virtual ~VideoDecoder() {}
 
   __WARN_UNUSED_RESULT PtsManager* pts_manager() { return pts_manager_.get(); }

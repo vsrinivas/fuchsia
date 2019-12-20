@@ -273,6 +273,16 @@ void AmlogicVideo::FreeCanvas(CanvasEntry* canvas) {
   amlogic_canvas_free(&canvas_, canvas->index());
 }
 
+void AmlogicVideo::OnSignaledWatchdog() {
+  std::lock_guard<std::mutex> lock(video_decoder_lock_);
+  // Check after taking lock to ensure a cancel didn't just happen.
+  if (!watchdog_.CheckAndResetTimeout())
+    return;
+  // The watchdog should never be valid if the decoder was disconnected.
+  ZX_ASSERT(video_decoder_);
+  video_decoder_->OnSignaledWatchdog();
+}
+
 zx_status_t AmlogicVideo::AllocateIoBuffer(io_buffer_t* buffer, size_t size,
                                            uint32_t alignment_log2, uint32_t flags,
                                            const char* name) {
@@ -405,6 +415,7 @@ void AmlogicVideo::TryToReschedule() {
     DLOG("nothing to swap to\n");
     return;
   }
+  ZX_ASSERT(!watchdog_.is_running());
   if (current_instance_)
     SwapOutCurrentInstance();
   current_instance_ = std::move(*other_instance);

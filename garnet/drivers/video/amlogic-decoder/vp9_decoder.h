@@ -5,6 +5,9 @@
 #ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VP9_DECODER_H_
 #define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VP9_DECODER_H_
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/task.h>
+
 #include <vector>
 
 #include "macros.h"
@@ -47,7 +50,8 @@ class Vp9Decoder : public VideoDecoder {
     // another frame.
     kFrameJustProduced,
 
-    // The hardware is currently processing data.
+    // The hardware is currently processing data. The watchdog should always be
+    // running while the hardware's in this state.
     kRunning,
 
     // The hardware is waiting for reference frames and outputs to be
@@ -96,6 +100,7 @@ class Vp9Decoder : public VideoDecoder {
   }
   void SetSwappedOut() override { state_ = DecoderState::kSwappedOut; }
   void SwappedIn() override { frame_data_provider_->ReadMoreInputDataFromReschedule(this); }
+  void OnSignaledWatchdog() override;
 
   void SetFrameDataProvider(FrameDataProvider* provider) { frame_data_provider_ = provider; }
   void UpdateDecodeSize(uint32_t size);
@@ -352,6 +357,8 @@ class Vp9Decoder : public VideoDecoder {
 
   bool use_compressed_output_ = {};
   bool have_fatal_error_ = false;
+
+  bool already_got_watchdog_ = false;
 };
 
 #endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VP9_DECODER_H_
