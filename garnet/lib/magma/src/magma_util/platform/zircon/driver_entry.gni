@@ -23,13 +23,17 @@ template("magma_pci_entry") {
     }
 
     deps += [
-      "//garnet/lib/magma/src/magma_util/platform/zircon:entry",
       "//zircon/public/lib/ddk",
     ]
 
     if (test_entry) {
       deps += [
+        "//garnet/lib/magma/src/magma_util/platform/zircon:entry_test",
         "//garnet/lib/magma/src/magma_util/platform/zircon:pci_driver_gtest",
+      ]
+    } else {
+      deps += [
+        "//garnet/lib/magma/src/magma_util/platform/zircon:entry",
       ]
     }
   }
@@ -56,13 +60,17 @@ template("magma_pdev_entry") {
     }
 
     deps += [
-      "//garnet/lib/magma/src/magma_util/platform/zircon:entry",
       "//zircon/public/lib/ddk",
     ]
 
     if (test_entry) {
       deps += [
+        "//garnet/lib/magma/src/magma_util/platform/zircon:entry_test",
         "//garnet/lib/magma/src/magma_util/platform/zircon:pdev_driver_gtest",
+      ]
+    } else {
+      deps += [
+        "//garnet/lib/magma/src/magma_util/platform/zircon:entry",
       ]
     }
   }
