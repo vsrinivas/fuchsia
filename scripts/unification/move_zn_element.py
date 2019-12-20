@@ -214,6 +214,9 @@ def run_convert(args):
         '',
         'Generated with: ' + SCRIPT_LABEL,
         '',
+        'scripts/unification/verify_element_move.py --reference local/initial.json:',
+        'TODO PASTE VERIFICATION RESULT HERE',
+        '',
         'Bug: 36139'
     ]
     commit_command = ['git', 'commit', '-a']
