@@ -115,10 +115,14 @@ table CreateContextParams {
     // removed.
     2: fuchsia.io.Directory data_directory;
 
-    /// Optional suffix to append to the UserAgent string, to describe the
-    /// embedder's product & version. See the User-Agent HTTP header
-    /// specification at https://tools.ietf.org/html/rfc7231#section-5.5.3
+    /// Optional string describing the embedding product to append to the User-Agent string.
+    /// See the specification for the
+    /// [HTTP User-Agent header](https://tools.ietf.org/html/rfc7231#section-5.5.3).
+    /// Requires that `user_agent_version` is also specified.
     3: string:128 user_agent_product;
+
+    /// Optional version for the embedding product to append to the User-Agent string.
+    /// Requires that `user_agent_product` is also specified.
     4: string:128 user_agent_version;
 
     /// Enables Frames to be created with remote debugging enabled using the DevTools protocol. If
