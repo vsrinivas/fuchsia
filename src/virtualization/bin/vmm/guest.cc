@@ -121,7 +121,7 @@ zx_status_t Guest::Init(const std::vector<MemorySpec>& memory) {
       FXL_LOG(ERROR) << "Failed to map guest physical memory " << status;
       return status;
     }
-    if (!phys_mem_.vmo()) {
+    if (!phys_mem_.vmo() && spec.policy == MemoryPolicy::GUEST_CACHED) {
       status = phys_mem_.Init(std::move(vmo));
       if (status != ZX_OK) {
         FXL_LOG(ERROR) << "Failed to initialize guest physical memory " << status;
