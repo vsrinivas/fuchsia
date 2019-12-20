@@ -118,7 +118,6 @@ DebuggedThread::SuspendToken::SuspendToken(DebuggedThread* thread) : thread_(thr
 DebuggedThread::SuspendToken::~SuspendToken() {
   if (!thread_)
     return;
-
   thread_->DecreaseSuspend();
 }
 
@@ -388,7 +387,7 @@ zx::time DebuggedThread::DefaultSuspendDeadline() {
   // so this needs to be a relatively long time. We don't generally expect
   // error cases that take infinitely long so there isn't much downside of a
   // long timeout.
-  return zx::deadline_after(zx::sec(1));
+  return zx::deadline_after(zx::msec(100));
 }
 
 bool DebuggedThread::WaitForSuspension(zx::time deadline) {
@@ -727,17 +726,16 @@ void DebuggedThread::IncreaseSuspend() {
 
   zx_status_t status = handle_.suspend(&ref_counted_suspend_token_);
   if (status != ZX_OK) {
-    FXL_LOG(WARNING) << ThreadPreamble(this)
-                     << "Could not suspend: " << zx_status_get_string(status);
+    DEBUG_LOG(Thread) << ThreadPreamble(this)
+                      << "Could not suspend: " << zx_status_get_string(status);
   }
 }
 
 void DebuggedThread::DecreaseSuspend() {
   suspend_count_--;
+  FXL_DCHECK(suspend_count_ >= 0);
   if (suspend_count_ > 0)
     return;
-
-  FXL_DCHECK(ref_counted_suspend_token_.is_valid());
   ref_counted_suspend_token_.reset();
 }
 

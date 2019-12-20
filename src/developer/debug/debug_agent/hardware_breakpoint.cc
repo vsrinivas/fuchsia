@@ -41,14 +41,15 @@ enum class WarningType {
   kUninstall,
 };
 
-void Warn(WarningType type, zx_koid_t thread_koid, uint64_t address, zx_status_t status) {
+void Warn(const debug_ipc::FileLineFunction& origin, WarningType type, zx_koid_t thread_koid,
+          uint64_t address, zx_status_t status) {
   // This happens normally when we receive a ZX_EXCP_THREAD_EXITING exception,
   // making the system ignore our uninstall requests.
   if (status == ZX_ERR_NOT_FOUND)
     return;
 
   const char* verb = type == WarningType::kInstall ? "install" : "uninstall";
-  FXL_LOG(WARNING) << fxl::StringPrintf(
+  DEBUG_LOG_WITH_LOCATION(Breakpoint, origin) << fxl::StringPrintf(
       "Could not %s HW breakpoint for thread %u at "
       "%" PRIX64 ": %s",
       verb, static_cast<uint32_t>(thread_koid), address, zx_status_get_string(status));
@@ -185,7 +186,7 @@ zx_status_t HardwareBreakpoint::Update() {
 
 zx_status_t HardwareBreakpoint::Install(DebuggedThread* thread) {
   if (!thread) {
-    Warn(WarningType::kInstall, thread->koid(), address(), ZX_ERR_NOT_FOUND);
+    Warn(FROM_HERE, WarningType::kInstall, thread->koid(), address(), ZX_ERR_NOT_FOUND);
     return ZX_ERR_NOT_FOUND;
   }
 
@@ -197,7 +198,7 @@ zx_status_t HardwareBreakpoint::Install(DebuggedThread* thread) {
   // Do the actual installation.
   zx_status_t status = arch_provider_->InstallHWBreakpoint(thread->handle(), address());
   if (status != ZX_OK) {
-    Warn(WarningType::kInstall, thread->koid(), address(), status);
+    Warn(FROM_HERE, WarningType::kInstall, thread->koid(), address(), status);
     return status;
   }
 
@@ -222,7 +223,7 @@ zx_status_t HardwareBreakpoint::Uninstall() {
 
 zx_status_t HardwareBreakpoint::Uninstall(DebuggedThread* thread) {
   if (!thread) {
-    Warn(WarningType::kInstall, thread->koid(), address(), ZX_ERR_NOT_FOUND);
+    Warn(FROM_HERE, WarningType::kUninstall, thread->koid(), address(), ZX_ERR_NOT_FOUND);
     return ZX_ERR_NOT_FOUND;
   }
 
@@ -230,10 +231,9 @@ zx_status_t HardwareBreakpoint::Uninstall(DebuggedThread* thread) {
                         << std::hex << address();
 
   auto suspend_token = thread->RefCountedSuspend(true);
-
   zx_status_t status = arch_provider_->UninstallHWBreakpoint(thread->handle(), address());
   if (status != ZX_OK) {
-    Warn(WarningType::kInstall, thread->koid(), address(), status);
+    Warn(FROM_HERE, WarningType::kUninstall, thread->koid(), address(), status);
     return status;
   }
 

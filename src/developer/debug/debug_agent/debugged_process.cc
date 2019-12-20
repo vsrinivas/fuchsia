@@ -149,10 +149,11 @@ void DebuggedProcess::DetachFromProcess() {
       thread->WillDeleteProcessBreakpoint(breakpoint.get());
     }
   }
-  software_breakpoints_.clear();
 
-  // TODO(donosoc): Remove HW breakpoints.
-  // TODO(donosoc): Remove Watchpoints.
+  // Clear the resources.
+  software_breakpoints_.clear();
+  hardware_breakpoints_.clear();
+  watchpoints_.clear();
 
   // 2. Resume threads.
   // Technically a 0'ed request would work, but being explicit is future-proof.
