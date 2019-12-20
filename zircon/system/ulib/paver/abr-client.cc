@@ -30,7 +30,10 @@ std::optional<std::string_view> GetBootSlot(std::string_view boot_args) {
     if (sep + 1 < end) {
       std::string_view key(&boot_args[begin], sep - begin);
       if (key.compare("zvb.current_slot") == 0) {
-        return std::string_view(&boot_args[sep + 1], end - (sep + 1));
+        std::string_view slot(&boot_args[sep + 1], end - (sep + 1));
+        // Some bootloaders prefix slot with dash or underscore. We strip them for consistency.
+        slot.remove_prefix(std::min(slot.find_first_not_of("_-"), slot.size()));
+        return slot;
       }
     }
   }
@@ -69,11 +72,11 @@ zx_status_t QueryBootConfig(const zx::channel& svc_root, Configuration* out) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  if (slot->compare("-a") == 0) {
+  if (slot->compare("a") == 0) {
     *out = Configuration::A;
-  } else if (slot->compare("-b") == 0) {
+  } else if (slot->compare("b") == 0) {
     *out = Configuration::B;
-  } else if (slot->compare("-r") == 0) {
+  } else if (slot->compare("r") == 0) {
     *out = Configuration::RECOVERY;
   } else {
     ERROR("Invalid value `%.*s` found in zvb.current_slot!\n", static_cast<int>(slot->size()),
