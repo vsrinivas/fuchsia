@@ -88,9 +88,11 @@ MessageLoopPoll::MessageLoopPoll() {
 
 MessageLoopPoll::~MessageLoopPoll() = default;
 
-void MessageLoopPoll::Init() {
-  MessageLoop::Init();
+bool MessageLoopPoll::Init(std::string* error_message) {
+  if (!MessageLoop::Init(error_message))
+    return false;
   wakeup_pipe_watch_ = WatchFD(WatchMode::kRead, wakeup_pipe_out_.get(), this);
+  return true;
 }
 
 void MessageLoopPoll::Cleanup() {

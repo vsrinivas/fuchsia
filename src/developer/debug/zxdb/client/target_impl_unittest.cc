@@ -11,6 +11,7 @@
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/remote_api.h"
 #include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/common/test_with_loop.h"
 
 namespace zxdb {
 
@@ -87,25 +88,19 @@ class TargetSink : public RemoteAPI {
   debug_ipc::ProcessStatusReply process_status_reply_;
 };
 
-class TargetImplTest : public testing::Test {
+class TargetImplTest : public TestWithLoop {
  public:
   TargetImplTest() {
-    loop_.Init();
     sink_ = new TargetSink;
     session_ = std::make_unique<Session>(std::unique_ptr<RemoteAPI>(sink_), debug_ipc::Arch::kX64);
   }
-  ~TargetImplTest() {
-    session_.reset();
-    loop_.Cleanup();
-  }
+  ~TargetImplTest() { session_.reset(); }
 
-  debug_ipc::PlatformMessageLoop& loop() { return loop_; }
   debug_ipc::TestStreamBuffer& stream() { return stream_; }
   TargetSink& sink() { return *sink_; }
   Session& session() { return *session_; }
 
  private:
-  debug_ipc::PlatformMessageLoop loop_;
   debug_ipc::TestStreamBuffer stream_;
 
   TargetSink* sink_;  // Owned by the session_.

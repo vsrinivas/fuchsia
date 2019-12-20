@@ -154,7 +154,11 @@ int ConsoleMain(int argc, const char* argv[]) {
   }
 
   debug_ipc::MessageLoopPoll loop;
-  loop.Init();
+  std::string error_message;
+  if (!loop.Init(&error_message)) {
+    fprintf(stderr, "%s", error_message.c_str());
+    return 1;
+  }
 
   // This scope forces all the objects to be destroyed before the Cleanup() call which will mark the
   // message loop as not-current.

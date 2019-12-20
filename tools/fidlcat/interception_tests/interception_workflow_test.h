@@ -424,7 +424,7 @@ class InterceptionWorkflowTestArmAborted : public InterceptionWorkflowTest {
 class ProcessController {
  public:
   ProcessController(InterceptionWorkflowTest* remote_api, zxdb::Session& session,
-                    debug_ipc::PlatformMessageLoop& loop);
+                    debug_ipc::MessageLoop& loop);
   ~ProcessController();
 
   InterceptionWorkflowTest* remote_api() const { return remote_api_; }

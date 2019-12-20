@@ -10,6 +10,7 @@
 #include <limits>
 #include <map>
 #include <mutex>
+#include <string>
 #include <vector>
 
 #include "lib/fit/promise.h"
@@ -76,8 +77,10 @@ class MessageLoop : public fit::executor, public fit::suspended_task::resolver {
   MessageLoop();
   ~MessageLoop() override;
 
-  // These must be called on the same thread as Run().
-  virtual void Init();
+  // Init() and Cleanup() must be called on the same thread as Run().
+  //
+  // Init() returns true on success. On false the error message will be put into the output param.
+  virtual bool Init(std::string* error_message);
   virtual void Cleanup();
 
   // Exits the message loop immediately, not running pending functions. This must be called only on

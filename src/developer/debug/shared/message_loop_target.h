@@ -46,9 +46,7 @@ class MessageLoopTarget : public MessageLoop {
   MessageLoopTarget();
   ~MessageLoopTarget();
 
-  void Init() override;
-  zx_status_t InitTarget();
-
+  bool Init(std::string* error_message) override;
   void Cleanup() override;
 
   // Returns the current message loop or null if there isn't one.

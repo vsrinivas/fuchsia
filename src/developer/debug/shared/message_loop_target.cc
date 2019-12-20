@@ -37,10 +37,10 @@ MessageLoopTarget::~MessageLoopTarget() {
   FXL_DCHECK(Current() != this);  // Cleanup should have been called.
 }
 
-void MessageLoopTarget::Init() { InitTarget(); }
-
-zx_status_t MessageLoopTarget::InitTarget() {
-  MessageLoop::Init();
+bool MessageLoopTarget::Init(std::string* error_message) {
+  FXL_DCHECK(error_message);  // Error message out param not optional.
+  if (!MessageLoop::Init(error_message))
+    return false;
 
   FXL_DCHECK(!current_message_loop);
   current_message_loop = this;
@@ -51,11 +51,14 @@ zx_status_t MessageLoopTarget::InitTarget() {
   info.type = WatchType::kTask;
   zx_status_t status = AddSignalHandler(kTaskSignalKey, task_event_.get(), kTaskSignal, &info);
 
-  if (status != ZX_OK)
-    return status;
+  if (status != ZX_OK) {
+    *error_message = "Could not initialize message loop: ";
+    error_message->append(debug_ipc::ZxStatusToString(status));
+    return false;
+  }
 
   watches_[kTaskSignalKey] = std::move(info);
-  return ZX_OK;
+  return true;
 }
 
 void MessageLoopTarget::Cleanup() {

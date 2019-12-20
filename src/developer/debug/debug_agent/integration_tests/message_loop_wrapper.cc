@@ -4,13 +4,17 @@
 
 #include "src/developer/debug/debug_agent/integration_tests/message_loop_wrapper.h"
 
-#include "src/developer/debug/shared/message_loop_target.h"
+#include "src/developer/debug/shared/platform_message_loop.h"
+#include "src/lib/fxl/logging.h"
 
 namespace debug_agent {
 
 MessageLoopWrapper::MessageLoopWrapper() {
-  loop_ = std::make_unique<debug_ipc::MessageLoopTarget>();
-  loop_->Init();
+  loop_ = std::make_unique<debug_ipc::PlatformMessageLoop>();
+
+  std::string error_message;
+  bool success = loop_->Init(&error_message);
+  FXL_CHECK(success) << error_message;
 }
 
 MessageLoopWrapper::~MessageLoopWrapper() { loop_->Cleanup(); }

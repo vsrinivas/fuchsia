@@ -6,7 +6,6 @@
 #include <map>
 
 #include "gtest/gtest.h"
-#include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/process_observer.h"
 #include "src/developer/debug/zxdb/client/remote_api.h"
@@ -16,15 +15,15 @@
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/client/thread_observer.h"
 #include "src/developer/debug/zxdb/common/host_util.h"
+#include "src/developer/debug/zxdb/common/test_with_loop.h"
 
 namespace zxdb {
 
-class MinidumpTest : public testing::Test, public ThreadObserver, public SystemObserver {
+class MinidumpTest : public TestWithLoop, public ThreadObserver, public SystemObserver {
  public:
   MinidumpTest();
   virtual ~MinidumpTest();
 
-  debug_ipc::PlatformMessageLoop& loop() { return loop_; }
   Session& session() { return *session_; }
   debug_ipc::ExceptionType last_hit() { return last_hit_; }
 
@@ -41,20 +40,15 @@ class MinidumpTest : public testing::Test, public ThreadObserver, public SystemO
 
  private:
   debug_ipc::ExceptionType last_hit_ = debug_ipc::ExceptionType::kNone;
-  debug_ipc::PlatformMessageLoop loop_;
   std::unique_ptr<Session> session_;
 };
 
 MinidumpTest::MinidumpTest() {
-  loop_.Init();
   session_ = std::make_unique<Session>();
   session().thread_observers().AddObserver(this);
 }
 
-MinidumpTest::~MinidumpTest() {
-  session().thread_observers().RemoveObserver(this);
-  loop_.Cleanup();
-}
+MinidumpTest::~MinidumpTest() { session().thread_observers().RemoveObserver(this); }
 
 Err MinidumpTest::TryOpen(const std::string& filename) {
   static auto data_dir = std::filesystem::path(GetSelfPath()).parent_path() / "test_data" / "zxdb";

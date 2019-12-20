@@ -1,10 +1,13 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
+#ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_SOCKET_CONNECTION_H_
+#define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_SOCKET_CONNECTION_H_
+
 #include "lib/sys/cpp/service_directory.h"
 #include "src/developer/debug/debug_agent/remote_api_adapter.h"
 #include "src/developer/debug/shared/buffered_fd.h"
-#include "src/developer/debug/shared/message_loop_target.h"
+#include "src/developer/debug/shared/platform_message_loop.h"
 
 namespace debug_agent {
 
@@ -41,7 +44,7 @@ class SocketServer {
   //            the main thread after the connection has been made. This is because the agent has a
   //            lot of assumptions of being run on the thread of the message loop.
   struct ConnectionConfig {
-    debug_ipc::MessageLoopTarget* message_loop = nullptr;
+    debug_ipc::PlatformMessageLoop* message_loop = nullptr;
     debug_agent::DebugAgent* debug_agent = nullptr;
     int port = 0;
   };
@@ -87,3 +90,5 @@ class SocketConnection {
 };
 
 }  // namespace debug_agent
+
+#endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_SOCKET_CONNECTION_H_

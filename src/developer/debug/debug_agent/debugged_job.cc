@@ -8,7 +8,7 @@
 #include "src/developer/debug/debug_agent/system_info.h"
 #include "src/developer/debug/shared/component_utils.h"
 #include "src/developer/debug/shared/logging/logging.h"
-#include "src/developer/debug/shared/message_loop_target.h"
+#include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/shared/regex.h"
 #include "src/developer/debug/shared/zx_status.h"
 #include "src/lib/fxl/logging.h"

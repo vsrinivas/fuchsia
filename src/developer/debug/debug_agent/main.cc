@@ -18,7 +18,7 @@
 #include "src/developer/debug/debug_agent/socket_connection.h"
 #include "src/developer/debug/debug_agent/unwind.h"
 #include "src/developer/debug/shared/logging/logging.h"
-#include "src/developer/debug/shared/message_loop_target.h"
+#include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/shared/zx_status.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -163,11 +163,11 @@ int main(int argc, const char* argv[]) {
     zx::channel exception_channel;
     auto exception_watcher = debug_agent::CreateExceptionWatcher(&exception_channel);
 
-    auto message_loop = std::make_unique<MessageLoopTarget>();
-    zx_status_t status = message_loop->InitTarget();
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Could not initialize message loop: "
-                     << debug_ipc::ZxStatusToString(status);
+    auto message_loop = std::make_unique<PlatformMessageLoop>();
+    std::string init_error_message;
+    if (!message_loop->Init(&init_error_message)) {
+      FXL_LOG(ERROR) << init_error_message;
+      return 1;
     }
 
     // The scope ensures the objects are destroyed before calling Cleanup on the MessageLoop.

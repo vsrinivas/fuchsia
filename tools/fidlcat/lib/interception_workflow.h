@@ -94,7 +94,7 @@ class InterceptionWorkflow {
   ~InterceptionWorkflow();
 
   // For testing, you can provide your own |session| and |loop|
-  InterceptionWorkflow(zxdb::Session* session, debug_ipc::PlatformMessageLoop* loop);
+  InterceptionWorkflow(zxdb::Session* session, debug_ipc::MessageLoop* loop);
 
   // Some initialization steps:
   // - Set the paths for the zxdb client to look for symbols.
@@ -165,7 +165,7 @@ class InterceptionWorkflow {
   zxdb::Session* session_;
   std::vector<zxdb::Filter*> filters_;
   bool delete_session_;
-  debug_ipc::PlatformMessageLoop* loop_;
+  debug_ipc::MessageLoop* loop_;
   bool delete_loop_;
   bool shutdown_done_ = false;
 

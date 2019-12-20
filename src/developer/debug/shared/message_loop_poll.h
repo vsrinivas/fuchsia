@@ -23,7 +23,7 @@ class MessageLoopPoll : public MessageLoop, public FDWatcher {
   ~MessageLoopPoll();
 
   // MessageLoop implementation.
-  void Init() override;
+  bool Init(std::string* error_message) override;
   void Cleanup() override;
   WatchHandle WatchFD(WatchMode mode, int fd, FDWatcher* watcher) override;
 

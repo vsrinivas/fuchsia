@@ -39,7 +39,8 @@ class SetOnDestruct {
 // not clear why timer tasks would.
 TEST(MessageLoop, PostQuit) {
   PlatformMessageLoop loop;
-  loop.Init();
+  std::string error_message;
+  ASSERT_TRUE(loop.Init(&error_message)) << error_message;
 
   loop.PostTask(FROM_HERE, [loop_ptr = &loop]() { loop_ptr->QuitNow(); });
   loop.Run();
@@ -50,7 +51,8 @@ TEST(MessageLoop, PostQuit) {
 // Like the above but expresses the task as a fit::promise.
 TEST(MessageLoop, PostPendingTaskQuit) {
   PlatformMessageLoop loop;
-  loop.Init();
+  std::string error_message;
+  ASSERT_TRUE(loop.Init(&error_message)) << error_message;
 
   loop.PostTask(FROM_HERE, fit::make_promise([&loop]() { loop.QuitNow(); }));
   loop.Run();
@@ -62,7 +64,8 @@ TEST(MessageLoop, TimerQuit) {
   const uint64_t kNano = 1000000000;
 
   PlatformMessageLoop loop;
-  loop.Init();
+  std::string error_message;
+  ASSERT_TRUE(loop.Init(&error_message)) << error_message;
 
   struct timespec start;
   ASSERT_FALSE(clock_gettime(CLOCK_MONOTONIC, &start));
@@ -89,7 +92,8 @@ TEST(MessageLoop, TimerQuit) {
 // Tests a promise that suspends itself and then continues.
 TEST(MessageLoop, SuspendPromise) {
   PlatformMessageLoop loop;
-  loop.Init();
+  std::string error_message;
+  ASSERT_TRUE(loop.Init(&error_message)) << error_message;
 
   bool lambda_destructed = false;
 
@@ -148,7 +152,8 @@ TEST(MessageLoop, SuspendPromise) {
 // Duplicates the suspended_task controlling the suspended promise.
 TEST(MessageLoop, DuplicateSuspendedPromise) {
   PlatformMessageLoop loop;
-  loop.Init();
+  std::string error_message;
+  ASSERT_TRUE(loop.Init(&error_message)) << error_message;
 
   bool lambda_destructed = false;
 
@@ -199,7 +204,8 @@ TEST(MessageLoop, DuplicateSuspendedPromise) {
 // Tests a promise that suspends itself and then becomes abandoned (deleted before it's runnable).
 TEST(MessageLoop, AbandonPromise) {
   PlatformMessageLoop loop;
-  loop.Init();
+  std::string error_message;
+  ASSERT_TRUE(loop.Init(&error_message)) << error_message;
 
   bool lambda_destructed = false;
 
@@ -235,7 +241,8 @@ TEST(MessageLoop, AbandonPromise) {
 // Runs a promise right away without posting to the message loop.
 TEST(MessageLoop, RunPromiseSync) {
   PlatformMessageLoop loop;
-  loop.Init();
+  std::string error_message;
+  ASSERT_TRUE(loop.Init(&error_message)) << error_message;
 
   bool lambda_destructed = false;
 
@@ -280,7 +287,8 @@ TEST(MessageLoop, RunPromiseSync) {
 // Runs a promise without posting from inside another promise.
 TEST(MessageLoop, RunNestedPromiseSync) {
   PlatformMessageLoop loop;
-  loop.Init();
+  std::string error_message;
+  ASSERT_TRUE(loop.Init(&error_message)) << error_message;
 
   fit::suspended_task inner_suspended;
   int inner_run_count = 0;
@@ -386,7 +394,8 @@ TEST(MessageLoop, WatchPipeFD) {
   };
 
   PlatformMessageLoop loop;
-  loop.Init();
+  std::string error_message;
+  ASSERT_TRUE(loop.Init(&error_message)) << error_message;
 
   // Scope everything to before MessageLoop::Cleanup().
   {
@@ -425,7 +434,8 @@ TEST(MessageLoop, RunUntilNoTasks) {
     calls.called[i] = -1;
   }
 
-  loop.Init();
+  std::string error_message;
+  ASSERT_TRUE(loop.Init(&error_message)) << error_message;
   {
     loop.PostTask(FROM_HERE, [&calls]() mutable { calls.called[0] = 0; });
     loop.PostTask(FROM_HERE, [&calls]() mutable { calls.called[1] = 1; });
@@ -447,7 +457,6 @@ TEST(MessageLoop, RunUntilNoTasks) {
     EXPECT_EQ(calls.called[2], 2);
     EXPECT_EQ(calls.called[3], 3);
     EXPECT_EQ(calls.called[4], 4);
-
   }
 
   loop.Cleanup();
@@ -466,10 +475,9 @@ TEST(MessageLoop, RunUntilNoTasks_EmptyQueue) {
     calls.called[i] = -1;
   }
 
-  loop.Init();
-  {
-    loop.RunUntilNoTasks();
-  }
+  std::string error_message;
+  ASSERT_TRUE(loop.Init(&error_message)) << error_message;
+  { loop.RunUntilNoTasks(); }
 
   loop.Cleanup();
 }
@@ -489,7 +497,8 @@ TEST(MessageLoop, ZirconSocket) {
   };
 
   PlatformMessageLoop loop;
-  loop.Init();
+  std::string error_message;
+  ASSERT_TRUE(loop.Init(&error_message)) << error_message;
 
   // Scope everything to before MessageLoop::Cleanup().
   {

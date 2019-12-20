@@ -6,7 +6,7 @@
 
 #include "gtest/gtest.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "src/developer/debug/shared/platform_message_loop.h"
+#include "src/developer/debug/zxdb/common/test_with_loop.h"
 #include "src/developer/debug/zxdb/symbols/arch.h"
 #include "src/developer/debug/zxdb/symbols/mock_symbol_data_provider.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -21,15 +21,13 @@ using debug_ipc::RegisterID;
 // this number.
 constexpr TargetPointer kModuleBase = 0x78000000;
 
-class DwarfExprEvalTest : public testing::Test {
+class DwarfExprEvalTest : public TestWithLoop {
  public:
-  DwarfExprEvalTest() : provider_(fxl::MakeRefCounted<MockSymbolDataProvider>()) { loop_.Init(); }
-  ~DwarfExprEvalTest() { loop_.Cleanup(); }
+  DwarfExprEvalTest() : provider_(fxl::MakeRefCounted<MockSymbolDataProvider>()) {}
 
   DwarfExprEval& eval() { return eval_; }
   fxl::RefPtr<MockSymbolDataProvider> provider() { return provider_; }
   const SymbolContext symbol_context() const { return symbol_context_; }
-  debug_ipc::MessageLoop& loop() { return loop_; }
 
   // If expected_message is non-null, this error message will be expected on failure. The expected
   // result will only be checked on success, true, and the expected_message will only be checked on
@@ -47,7 +45,6 @@ class DwarfExprEvalTest : public testing::Test {
 
  private:
   DwarfExprEval eval_;
-  debug_ipc::PlatformMessageLoop loop_;
   fxl::RefPtr<MockSymbolDataProvider> provider_;
   SymbolContext symbol_context_ = SymbolContext(kModuleBase);
 };
@@ -88,7 +85,7 @@ void DwarfExprEvalTest::DoEvalTest(const std::vector<uint8_t> data, bool expecte
     EXPECT_FALSE(callback_issued);
 
     // Ensure the callback was made after running the loop.
-    loop_.Run();
+    loop().Run();
   }
 
   EXPECT_TRUE(eval_.is_complete());

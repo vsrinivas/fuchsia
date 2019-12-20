@@ -8,6 +8,7 @@
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/zxdb/client/mock_frame.h"
 #include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/common/test_with_loop.h"
 #include "src/developer/debug/zxdb/console/async_output_buffer_test_util.h"
 #include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/console/format_node_console.h"
@@ -20,22 +21,20 @@ namespace zxdb {
 
 namespace {
 
-// Synchronous wrapper around asynchronous long formatting.
-std::string SyncFormatFrame(const Frame* frame, FormatFrameDetail detail,
-                            const ConsoleFormatOptions& options) {
-  debug_ipc::PlatformMessageLoop loop;
-  loop.Init();
-
-  auto out = LoopUntilAsyncOutputBufferComplete(
-      FormatFrame(frame, detail, FormatLocationOptions(), options));
-
-  loop.Cleanup();
-  return out.AsString();
-}
+class FormatFrameTest : public TestWithLoop {
+ public:
+  // Synchronous wrapper around asynchronous long formatting.
+  std::string SyncFormatFrame(const Frame* frame, FormatFrameDetail detail,
+                              const ConsoleFormatOptions& options) {
+    auto out = LoopUntilAsyncOutputBufferComplete(
+        FormatFrame(frame, detail, FormatLocationOptions(), options));
+    return out.AsString();
+  }
+};
 
 }  // namespace
 
-TEST(FormatFrame, Unsymbolized) {
+TEST_F(FormatFrameTest, Unsymbolized) {
   MockFrame frame(nullptr, nullptr, Location(Location::State::kSymbolized, 0x12345678), 0x567890, 0,
                   std::vector<debug_ipc::Register>(), 0xdeadbeef);
 
@@ -52,7 +51,7 @@ TEST(FormatFrame, Unsymbolized) {
   EXPECT_EQ("Frame 3 0x12345678", out.AsString());
 }
 
-TEST(FormatFrame, Inline) {
+TEST_F(FormatFrameTest, Inline) {
   // This is to have some place for the inline frame to refer to as the underlying physical frame.
   // The values are ignored.
   MockFrame physical_frame(nullptr, nullptr, Location(Location::State::kSymbolized, 0x12345678),

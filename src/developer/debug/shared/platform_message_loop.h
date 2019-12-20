@@ -6,7 +6,7 @@
 #define SRC_DEVELOPER_DEBUG_SHARED_PLATFORM_MESSAGE_LOOP_H_
 
 #if defined(__Fuchsia__)
-#include "src/developer/debug/shared/message_loop_zircon.h"
+#include "src/developer/debug/shared/message_loop_target.h"
 #else
 #include "src/developer/debug/shared/message_loop_poll.h"
 #endif
@@ -14,7 +14,7 @@
 namespace debug_ipc {
 
 #if defined(__Fuchsia__)
-using PlatformMessageLoop = MessageLoopZircon;
+using PlatformMessageLoop = MessageLoopTarget;
 #else
 using PlatformMessageLoop = MessageLoopPoll;
 #endif

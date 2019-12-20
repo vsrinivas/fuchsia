@@ -13,6 +13,7 @@
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/shared/test_stream_buffer.h"
 #include "src/developer/debug/zxdb/client/remote_api.h"
+#include "src/developer/debug/zxdb/common/test_with_loop.h"
 
 namespace zxdb {
 
@@ -26,16 +27,12 @@ class Thread;
 // loop and the necessary plumbing.
 //
 // The individual tests supply their own implementation of RemoteAPI.
-class RemoteAPITest : public testing::Test {
+class RemoteAPITest : public TestWithLoop {
  public:
-  RemoteAPITest();
-  virtual ~RemoteAPITest();
-
   // testing::Test implementation.
   void SetUp() override;
   void TearDown() override;
 
-  debug_ipc::PlatformMessageLoop& loop() { return loop_; }
   Session& session() { return *session_; }
 
   // Returns the MockRemoteAPI constructed by the default implementation of GetRemoteAPIImpl()
@@ -88,7 +85,6 @@ class RemoteAPITest : public testing::Test {
   virtual debug_ipc::Arch GetArch() const { return debug_ipc::Arch::kX64; }
 
  private:
-  debug_ipc::PlatformMessageLoop loop_;
   std::unique_ptr<Session> session_;
   MockRemoteAPI* mock_remote_api_ = nullptr;  // See getter above. Owned by System.
 };

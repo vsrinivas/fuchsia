@@ -7,6 +7,7 @@
 
 #include "gtest/gtest.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
+#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 
@@ -23,7 +24,11 @@ namespace zxdb {
 //   }
 class TestWithLoop : public testing::Test {
  public:
-  TestWithLoop() { loop_.Init(); }
+  TestWithLoop() {
+    std::string error_message;
+    bool success = loop_.Init(&error_message);
+    FXL_CHECK(success) << error_message;
+  }
   ~TestWithLoop() { loop_.Cleanup(); }
 
   debug_ipc::MessageLoop& loop() { return loop_; }

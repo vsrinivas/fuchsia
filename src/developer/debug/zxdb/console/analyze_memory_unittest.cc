@@ -5,11 +5,11 @@
 #include "src/developer/debug/zxdb/console/analyze_memory.h"
 
 #include "gtest/gtest.h"
-#include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/zxdb/client/mock_frame.h"
 #include "src/developer/debug/zxdb/client/mock_process.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/stack.h"
+#include "src/developer/debug/zxdb/common/test_with_loop.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols_test_setup.h"
 
@@ -20,14 +20,7 @@ namespace {
 using ::zxdb::internal::MemoryAnalysis;
 using namespace debug_ipc;
 
-class AnalyzeMemoryTest : public testing::Test {
- public:
-  AnalyzeMemoryTest() { loop_.Init(); }
-  ~AnalyzeMemoryTest() { loop_.Cleanup(); }
-
- private:
-  debug_ipc::PlatformMessageLoop loop_;
-};
+class AnalyzeMemoryTest : public TestWithLoop {};
 
 }  // namespace
 

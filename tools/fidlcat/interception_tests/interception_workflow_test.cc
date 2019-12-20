@@ -387,7 +387,7 @@ void InterceptionWorkflowTest::PerformFunctionTest(ProcessController* controller
 }
 
 ProcessController::ProcessController(InterceptionWorkflowTest* remote_api, zxdb::Session& session,
-                                     debug_ipc::PlatformMessageLoop& loop)
+                                     debug_ipc::MessageLoop& loop)
     : remote_api_(remote_api), workflow_(&session, &loop) {
   process_koids_ = {kFirstPid, kSecondPid};
   thread_koids_[kFirstPid] = kFirstThreadKoid;

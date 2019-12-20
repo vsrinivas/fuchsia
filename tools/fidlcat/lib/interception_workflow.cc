@@ -165,7 +165,7 @@ InterceptionWorkflow::InterceptionWorkflow()
 }
 
 InterceptionWorkflow::InterceptionWorkflow(zxdb::Session* session,
-                                           debug_ipc::PlatformMessageLoop* loop)
+                                           debug_ipc::MessageLoop* loop)
     : session_(session),
       delete_session_(false),
       loop_(loop),
@@ -230,7 +230,9 @@ void InterceptionWorkflow::Initialize(
 
   // 3) Provide a loop, if none exists.
   if (debug_ipc::MessageLoop::Current() == nullptr) {
-    loop_->Init();
+    std::string error_message;
+    bool success = loop_->Init(&error_message);
+    FXL_CHECK(success) << error_message;
   }
 
   // 4) Initialize the symbol servers.

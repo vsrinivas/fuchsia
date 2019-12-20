@@ -194,6 +194,7 @@ source_set("e2e_tests") {
   deps = [
     ":console",
     "//src/developer/debug/zxdb:e2e_test_headers",
+    "//src/developer/debug/zxdb/common:test_support",
     "//third_party/googletest:gtest",
   ]
 }

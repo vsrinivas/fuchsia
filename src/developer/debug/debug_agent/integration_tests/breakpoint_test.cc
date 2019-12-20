@@ -11,7 +11,7 @@
 #include "src/developer/debug/debug_agent/local_stream_backend.h"
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/shared/logging/logging.h"
-#include "src/developer/debug/shared/message_loop_target.h"
+#include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/shared/zx_status.h"
 #include "src/lib/fxl/logging.h"
 

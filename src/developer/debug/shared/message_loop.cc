@@ -28,9 +28,10 @@ MessageLoop::~MessageLoop() {
   FXL_DCHECK(Current() != this);  // Cleanup() should have been called.
 }
 
-void MessageLoop::Init() {
+bool MessageLoop::Init(std::string* error_message) {
   FXL_DCHECK(!current_message_loop);
   current_message_loop = this;
+  return true;
 }
 
 void MessageLoop::Cleanup() {

@@ -14,7 +14,8 @@
 #include "src/developer/debug/debug_agent/test_utils.h"
 #include "src/developer/debug/ipc/agent_protocol.h"
 #include "src/developer/debug/ipc/message_writer.h"
-#include "src/developer/debug/shared/message_loop_target.h"
+#include "src/developer/debug/shared/platform_message_loop.h"
+#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 using namespace fuchsia::exception;
@@ -24,13 +25,15 @@ namespace {
 
 // Setup -------------------------------------------------------------------------------------------
 
-class DebugAgentMessageLoop : public debug_ipc::MessageLoopTarget {
+class DebugAgentMessageLoop : public debug_ipc::PlatformMessageLoop {
  public:
-  DebugAgentMessageLoop() { Init(); }
+  DebugAgentMessageLoop() {
+    std::string error_message;
+    bool success = Init(&error_message);
+    FXL_CHECK(success) << error_message;
+  }
   ~DebugAgentMessageLoop() { Cleanup(); }
 
-  void Init() override { MessageLoopTarget::Init(); }
-  void Cleanup() override { MessageLoopTarget::Cleanup(); }
   void StopWatching(int id) override {}
 
   zx_status_t WatchProcessExceptions(WatchProcessConfig config, WatchHandle* out) override {

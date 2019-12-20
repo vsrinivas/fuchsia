@@ -7,6 +7,7 @@
 #include "gtest/gtest.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/common/test_with_loop.h"
 #include "src/developer/debug/zxdb/console/console_impl.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -39,16 +40,13 @@ class ConsoleTest : public ConsoleImpl {
   size_t call_count = 0;
 };
 
-class ActionsTest : public testing::Test {
+class ActionsTest : public TestWithLoop {
  protected:
   ActionsTest() {
-    loop.Init();
     session = std::make_unique<Session>();
     console = std::make_unique<ConsoleTest>(session.get());
   }
-  ~ActionsTest() { loop.Cleanup(); }
 
-  debug_ipc::PlatformMessageLoop loop;
   std::unique_ptr<Session> session;
   std::unique_ptr<ConsoleTest> console;
 };
@@ -82,7 +80,7 @@ TEST_F(ActionsTest, ScriptFile) {
   // The callback mechanism depends on a global ActionFlow
   ActionFlow& flow = ActionFlow::Singleton();
   flow.ScheduleActions(std::move(actions), session.get(), console.get(), callback);
-  loop.Run();
+  loop().Run();
 
   EXPECT_FALSE(callback_err.has_error()) << callback_err.msg();
 
@@ -124,7 +122,7 @@ TEST_F(ActionsTest, ScriptFileWithFailure) {
   ActionFlow& flow = ActionFlow::Singleton();
   flow.Clear();
   flow.ScheduleActions(std::move(actions), session.get(), console.get(), callback);
-  loop.Run();
+  loop().Run();
 
   // The error callback was called
   EXPECT_TRUE(callback_err.has_error());
