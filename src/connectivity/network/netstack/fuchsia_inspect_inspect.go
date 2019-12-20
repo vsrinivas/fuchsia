@@ -9,7 +9,6 @@ import (
 	"reflect"
 	"sort"
 	"strconv"
-	"sync"
 	"syscall/zx"
 	"syscall/zx/fidl"
 
@@ -209,8 +208,8 @@ func (impl *nicInfoMapInspectImpl) ReadData() inspect.Object {
 
 func (impl *nicInfoMapInspectImpl) ListChildren() []string {
 	var children []string
-	for key := range impl.value {
-		children = append(children, strconv.FormatUint(uint64(key), 10))
+	for nicID := range impl.value {
+		children = append(children, strconv.FormatUint(uint64(nicID), 10))
 	}
 	sort.Strings(children)
 	return children
@@ -370,7 +369,7 @@ func (impl *dhcpInfoInspectImpl) GetChild(childName string) inspectInner {
 var _ inspectInner = (*socketInfoMapInspectImpl)(nil)
 
 type socketInfoMapInspectImpl struct {
-	value *sync.Map
+	value *endpointsMap
 }
 
 func (impl *socketInfoMapInspectImpl) ReadData() inspect.Object {
@@ -381,8 +380,8 @@ func (impl *socketInfoMapInspectImpl) ReadData() inspect.Object {
 
 func (impl *socketInfoMapInspectImpl) ListChildren() []string {
 	var children []string
-	impl.value.Range(func(key, value interface{}) bool {
-		children = append(children, strconv.FormatUint(key.(uint64), 10))
+	impl.value.Range(func(handle zx.Handle, value tcpip.Endpoint) bool {
+		children = append(children, strconv.FormatUint(uint64(handle), 10))
 		return true
 	})
 	return children
@@ -394,8 +393,7 @@ func (impl *socketInfoMapInspectImpl) GetChild(childName string) inspectInner {
 		syslog.VLogTf(syslog.DebugVerbosity, inspect.InspectName, "GetChild: %s", err)
 		return nil
 	}
-	if e, ok := impl.value.Load(id); ok {
-		ep := e.(tcpip.Endpoint)
+	if ep, ok := impl.value.Load(zx.Handle(id)); ok {
 		return &socketInfoInspectImpl{
 			name:  childName,
 			info:  ep.Info(),

@@ -142,8 +142,8 @@ func TestCloseEndpointsMap(t *testing.T) {
 		ios.local = localS
 		ios.peer = peerS
 	}
-	if _, loaded := ns.endpoints.LoadOrStore(uint64(ios.local), ios.ep); loaded {
-		t.Fatalf("endpoint map load error, key %d exists", uint64(ios.local))
+	if _, loaded := ns.endpoints.LoadOrStore(zx.Handle(ios.local), ios.ep); loaded {
+		t.Fatalf("endpoint map store error, key %d exists", ios.local)
 	}
 
 	ios.clones = 1
@@ -157,8 +157,8 @@ func TestCloseEndpointsMap(t *testing.T) {
 	}
 
 	// Check if the reference to the endpoint is deleted from endpoints.
-	if _, ok := ios.metadata.endpoints.Load(uint64(ios.local)); ok {
-		t.Fatal("endpoint map not updated on ios.close.")
+	if _, ok := ios.metadata.endpoints.Load(zx.Handle(ios.local)); ok {
+		t.Fatal("endpoint map not updated on ios.close")
 	}
 }
 

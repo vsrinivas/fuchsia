@@ -177,6 +177,42 @@ func eventCount(period int64, count uint64) cobalt.EventPayload {
 	return cobalt.EventPayloadWithEventCount(cobalt.CountEvent{PeriodDurationMicros: period, Count: int64(count)})
 }
 
+// endpointsMap is a map from zx.Handle to tcpip.Endpoint.
+//
+// It is a typesafe wrapper around sync.Map.
+type endpointsMap struct {
+	inner sync.Map
+}
+
+func (m *endpointsMap) Load(key zx.Handle) (tcpip.Endpoint, bool) {
+	if value, ok := m.inner.Load(key); ok {
+		return value.(tcpip.Endpoint), true
+	}
+	return nil, false
+}
+
+func (m *endpointsMap) Store(key zx.Handle, value tcpip.Endpoint) {
+	m.inner.Store(key, value)
+}
+
+func (m *endpointsMap) LoadOrStore(key zx.Handle, value tcpip.Endpoint) (tcpip.Endpoint, bool) {
+	// Create a scope to allow `value` to be shadowed below.
+	{
+		value, ok := m.inner.LoadOrStore(key, value)
+		return value.(tcpip.Endpoint), ok
+	}
+}
+
+func (m *endpointsMap) Delete(key zx.Handle) {
+	m.inner.Delete(key)
+}
+
+func (m *endpointsMap) Range(f func(key zx.Handle, value tcpip.Endpoint) bool) {
+	m.inner.Range(func(key, value interface{}) bool {
+		return f(key.(zx.Handle), value.(tcpip.Endpoint))
+	})
+}
+
 // A Netstack tracks all of the running state of the network stack.
 type Netstack struct {
 	arena        *eth.Arena
@@ -199,9 +235,7 @@ type Netstack struct {
 
 	OnInterfacesChanged func([]netstack.NetInterface2)
 
-	// endpoints is a map of transport endpoints of each socket associated
-	// with the netstack.
-	endpoints sync.Map
+	endpoints endpointsMap
 }
 
 // Each ifState tracks the state of a network interface.

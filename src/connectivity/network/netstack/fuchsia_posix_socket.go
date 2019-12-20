@@ -112,7 +112,7 @@ const localSignalClosing = zx.SignalUser5
 // introspection.
 type socketMetadata struct {
 	// Reference to the netstack global endpoint-map.
-	endpoints *sync.Map
+	endpoints *endpointsMap
 	// socketsCreated should be incremented on successful calls to Socket and
 	// Accept.
 	socketsCreated tcpip.StatCounter
@@ -567,15 +567,15 @@ func (sp *providerImpl) newSocket(netProto tcpip.NetworkProtocolNumber, transPro
 	// As the ios.local would be unique across all endpoints for the netstack,
 	// we can use that as a key for the endpoints. The ep.ID is not yet initialized
 	// at this point and hence we cannot use that as a key.
-	if e, loaded := ios.metadata.endpoints.LoadOrStore(uint64(ios.local), ios.ep); loaded {
+	if ep, loaded := ios.metadata.endpoints.LoadOrStore(zx.Handle(ios.local), ios.ep); loaded {
 		var info stack.TransportEndpointInfo
-		switch t := e.(tcpip.Endpoint).Info().(type) {
+		switch t := ep.Info().(type) {
 		case *tcp.EndpointInfo:
 			info = t.TransportEndpointInfo
 		case *stack.TransportEndpointInfo:
 			info = *t
 		}
-		syslog.Errorf("endpoint map load error, key %d exists with endpoint %+v", uint64(ios.local), info)
+		syslog.Errorf("endpoint map store error, key %d exists with endpoint %+v", ios.local, info)
 	}
 
 	// This must be registered before returning to prevent a race
@@ -652,7 +652,7 @@ func (ios *endpoint) close(loopDone ...<-chan struct{}) int64 {
 			ios.ep.Close()
 
 			// Delete this endpoint from the global endpoints.
-			ios.metadata.endpoints.Delete(uint64(ios.local))
+			ios.metadata.endpoints.Delete(zx.Handle(ios.local))
 
 			if err := ios.local.Close(); err != nil {
 				panic(err)

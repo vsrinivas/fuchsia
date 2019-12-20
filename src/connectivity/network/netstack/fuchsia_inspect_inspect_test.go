@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"sort"
 	"strconv"
+	"syscall/zx"
 	"testing"
 
 	inspect "fidl/fuchsia/inspect/deprecated"
@@ -71,11 +72,11 @@ func TestSocketStatCounterInspectImpl(t *testing.T) {
 	wq := new(waiter.Queue)
 	// Grab locks just in case the callee has any isLock checks.
 	ns.mu.Lock()
-	tcpep, err := ns.mu.stack.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, wq)
+	tcpEP, err := ns.mu.stack.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, wq)
 	if err != nil {
 		t.Fatal(err)
 	}
-	udpep, err := ns.mu.stack.NewEndpoint(udp.ProtocolNumber, ipv4.ProtocolNumber, wq)
+	udpEP, err := ns.mu.stack.NewEndpoint(udp.ProtocolNumber, ipv4.ProtocolNumber, wq)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,12 +91,14 @@ func TestSocketStatCounterInspectImpl(t *testing.T) {
 
 	// Add the 2 endpoints to endpoints with key being the transport protocol
 	// number.
-	ns.endpoints.Store(uint64(tcp.ProtocolNumber), tcpep)
-	ns.endpoints.Store(uint64(udp.ProtocolNumber), udpep)
+	const key1 = 1
+	const key2 = 2
+	ns.endpoints.Store(key1, tcpEP)
+	ns.endpoints.Store(key2, udpEP)
 
 	children = v.ListChildren()
 	sort.Strings(children)
-	if diff := cmp.Diff(children, []string{"17", "6"}); diff != "" {
+	if diff := cmp.Diff(children, []string{strconv.Itoa(key1), strconv.Itoa(key2)}); diff != "" {
 		t.Errorf("ListChildren() mismatch (-want +got):\n%s", diff)
 	}
 
@@ -117,7 +120,8 @@ func TestSocketStatCounterInspectImpl(t *testing.T) {
 		if err != nil {
 			t.Fatalf("string parsing error %s", err)
 		}
-		if val == uint64(tcp.ProtocolNumber) {
+		switch val {
+		case key1:
 			protoName = "TCP"
 			expectInspectObj = inspect.Object{
 				Name: "Stats",
@@ -127,7 +131,7 @@ func TestSocketStatCounterInspectImpl(t *testing.T) {
 					{Key: "FailedConnectionAttempts", Value: inspect.MetricValueWithUintValue(0)},
 				},
 			}
-		} else {
+		case key2:
 			protoName = "UDP"
 			expectInspectObj = inspect.Object{
 				Name: "Stats",
@@ -181,8 +185,8 @@ func TestSocketStatCounterInspectImpl(t *testing.T) {
 	}
 
 	// Empty the endpoints.
-	ns.endpoints.Range(func(key, value interface{}) bool {
-		ns.endpoints.Delete(key.(uint64))
+	ns.endpoints.Range(func(handle zx.Handle, _ tcpip.Endpoint) bool {
+		ns.endpoints.Delete(handle)
 		return true
 	})
 	children = v.ListChildren()
