@@ -6,7 +6,6 @@ use {
     bitfield::bitfield,
     bt_avdtp::RtpHeader,
     failure::{bail, format_err, Error, ResultExt},
-    fidl::client::QueryResponseFut,
     fidl_fuchsia_media::{
         AudioConsumerProxy, AudioConsumerStartFlags, AudioConsumerStatus, AudioSampleFormat,
         AudioStreamType, Compression, SessionAudioConsumerFactoryMarker,
@@ -14,15 +13,10 @@ use {
         AUDIO_ENCODING_SBC, NO_TIMESTAMP, STREAM_PACKET_FLAG_DISCONTINUITY,
     },
     fuchsia_zircon::{self as zx, HandleBased},
-    futures::{
-        future::Future,
-        ready,
-        stream::{FusedStream, Stream},
-        task::{Context, Poll},
-        FutureExt, StreamExt,
-    },
-    std::pin::Pin,
+    futures::{Future, FutureExt, StreamExt},
 };
+
+use crate::hanging_get::HangingGetStream;
 
 const DEFAULT_BUFFER_LEN: usize = 65536;
 
@@ -35,10 +29,7 @@ pub struct Player {
     current_offset: usize,
     stream_sink: StreamSinkProxy,
     audio_consumer: AudioConsumerProxy,
-    watch_status_stream: HangingGetStream<
-        QueryResponseFut<AudioConsumerStatus>,
-        Result<AudioConsumerStatus, fidl::Error>,
-    >,
+    watch_status_stream: HangingGetStream<AudioConsumerStatus>,
     playing: bool,
     next_packet_flags: u32,
     last_seq_played: u16,
@@ -138,46 +129,6 @@ impl SbcHeader {
     }
 }
 
-struct HangingGetStream<Fut, T>
-where
-    Fut: Future<Output = T> + Unpin,
-{
-    generator: Box<dyn Fn() -> Fut>,
-    future: Fut,
-}
-
-impl<Fut, T> HangingGetStream<Fut, T>
-where
-    Fut: Future<Output = T> + Unpin,
-{
-    fn new(generator: Box<dyn Fn() -> Fut>) -> Self {
-        let future = generator();
-        Self { generator, future }
-    }
-}
-
-impl<Fut, T> FusedStream for HangingGetStream<Fut, T>
-where
-    Fut: Future<Output = T> + Unpin,
-{
-    fn is_terminated(&self) -> bool {
-        false
-    }
-}
-
-impl<Fut, T> Stream for HangingGetStream<Fut, T>
-where
-    Fut: Future<Output = T> + Unpin,
-{
-    type Item = T;
-
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let result = ready!(self.future.poll_unpin(cx));
-        self.future = (self.generator)();
-        Poll::Ready(Some(result))
-    }
-}
-
 impl Player {
     /// Attempt to make a new player that decodes and plays frames encoded in the
     /// `codec`
@@ -222,7 +173,7 @@ impl Player {
 
         let audio_consumer_clone = audio_consumer.clone();
         let watch_status_stream =
-            HangingGetStream::new(Box::new(move || audio_consumer_clone.watch_status()));
+            HangingGetStream::new(Box::new(move || Some(audio_consumer_clone.watch_status())));
 
         let mut player = Player {
             buffer,
@@ -374,12 +325,12 @@ impl Player {
 
     /// If PlayerEvent::Closed is returned, that indicates the underlying
     /// service went away and the player should be closed/rebuilt
-    pub async fn next_event(&mut self) -> PlayerEvent {
-        match self.watch_status_stream.next().await {
+    pub fn next_event(&mut self) -> impl Future<Output = PlayerEvent> + '_ {
+        self.watch_status_stream.next().map(|event| match event {
             None => PlayerEvent::Closed,
             Some(Err(_)) => PlayerEvent::Closed,
             Some(Ok(s)) => PlayerEvent::Status(s),
-        }
+        })
     }
 }
 
@@ -602,14 +553,6 @@ mod tests {
 
         let (mut player, mut sink_request_stream, mut player_request_stream, _) =
             setup_player(&mut exec, AUDIO_ENCODING_AACLATM);
-
-        let complete = exec.run_until_stalled(&mut player_request_stream.select_next_some());
-        let player_req = match complete {
-            Poll::Ready(Ok(req)) => req,
-            x => panic!("expected player req message but got {:?}", x),
-        };
-
-        assert_matches!(player_req, AudioConsumerRequest::WatchStatus { .. });
 
         player.play().expect("player plays");
 

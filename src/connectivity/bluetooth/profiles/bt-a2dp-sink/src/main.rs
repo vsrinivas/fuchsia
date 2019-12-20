@@ -31,6 +31,7 @@ use crate::inspect_types::StreamingInspectData;
 
 mod avrcp_relay;
 mod connected_peers;
+mod hanging_get;
 mod inspect_types;
 mod peer;
 mod player;
@@ -394,32 +395,28 @@ async fn decode_media_stream(
     inspect.stream_started();
     loop {
         select! {
-            item = stream.next().fuse() => {
-                if item.is_none() {
-                    fx_log_info!("Media transport closed");
-                    break;
-                }
-                match item.unwrap() {
-                    Ok(pkt) => {
-                        match player.push_payload(&pkt.as_slice()) {
-                            Err(e) => {
-                                fx_log_info!("can't push packet: {:?}", e);
-                            }
-                            _ => (),
-                        };
-                        if !player.playing() {
-                            player.play().unwrap_or_else(|e| fx_log_info!("Problem playing: {:}", e));
-                        }
-                        inspect.accumulated_bytes += pkt.len() as u64;
-                    }
-                    Err(e) => {
+            stream_packet = stream.next().fuse() => {
+                let pkt = match stream_packet {
+                    None => {
+                        fx_log_info!("Media transport closed");
+                        break;
+                    },
+                    Some(Err(e)) => {
                         fx_log_info!("Error in media stream: {:?}", e);
                         break;
                     }
+                    Some(Ok(packet)) => packet,
+                };
+                if let Err(e) = player.push_payload(&pkt.as_slice())  {
+                    fx_log_info!("can't push packet: {:?}", e);
                 }
+                if !player.playing() {
+                    player.play().unwrap_or_else(|e| fx_log_info!("Problem playing: {:}", e));
+                }
+                inspect.accumulated_bytes += pkt.len() as u64;
             },
-            evt = player.next_event().fuse() => {
-                match evt {
+            player_event = player.next_event().fuse() => {
+                match player_event {
                     player::PlayerEvent::Closed => {
                         fx_log_info!("Rebuilding Player");
                         // The player died somehow? Attempt to rebuild the player.
