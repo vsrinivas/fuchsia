@@ -260,7 +260,9 @@ mod tests {
     use {
         crate::{
             model::testing::routing_test_helpers::{RoutingTest, RoutingTestBuilder},
-            model::testing::test_helpers::{self, default_component_decl},
+            model::testing::test_helpers::{
+                self, component_decl_with_test_runner, ComponentDeclBuilder, TEST_RUNNER_NAME,
+            },
         },
         cm_rust::*,
         fidl_fuchsia_io2 as fio2,
@@ -273,34 +275,24 @@ mod tests {
         let components = vec![
             (
                 "a",
-                ComponentDecl {
-                    children: vec![
-                        ChildDecl {
-                            name: "b".to_string(),
-                            url: "test:///b".to_string(),
-                            startup: fsys::StartupMode::Lazy,
-                        },
-                        ChildDecl {
-                            name: "c".to_string(),
-                            url: "test:///c".to_string(),
-                            startup: fsys::StartupMode::Lazy,
-                        },
-                    ],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_lazy_child("b")
+                    .add_lazy_child("c")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "b",
-                ComponentDecl {
-                    exposes: vec![ExposeDecl::Directory(ExposeDirectoryDecl {
+                ComponentDeclBuilder::new()
+                    .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
                         source_path: "/data".try_into().unwrap(),
                         source: ExposeSource::Self_,
                         target_path: "/data".try_into().unwrap(),
                         target: ExposeTarget::Realm,
                         rights: Some(fio2::Operations::Connect),
-                    })],
-                    ..default_component_decl()
-                },
+                    }))
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
         ];
         let test = RoutingTest::new("a", components).await;
@@ -371,7 +363,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn open_isolated_storage_failure_test() {
-        let components = vec![("a", default_component_decl())];
+        let components = vec![("a", component_decl_with_test_runner())];
 
         // Create a universe with a single component, whose outgoing directory service
         // simply closes the channel of incoming reuqests.
@@ -406,34 +398,24 @@ mod tests {
         let components = vec![
             (
                 "a",
-                ComponentDecl {
-                    children: vec![
-                        ChildDecl {
-                            name: "b".to_string(),
-                            url: "test:///b".to_string(),
-                            startup: fsys::StartupMode::Lazy,
-                        },
-                        ChildDecl {
-                            name: "c".to_string(),
-                            url: "test:///c".to_string(),
-                            startup: fsys::StartupMode::Lazy,
-                        },
-                    ],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_lazy_child("b")
+                    .add_lazy_child("c")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "b",
-                ComponentDecl {
-                    exposes: vec![ExposeDecl::Directory(ExposeDirectoryDecl {
+                ComponentDeclBuilder::new()
+                    .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
                         source_path: "/data".try_into().unwrap(),
                         source: ExposeSource::Self_,
                         target_path: "/data".try_into().unwrap(),
                         target: ExposeTarget::Realm,
                         rights: Some(fio2::Operations::Connect),
-                    })],
-                    ..default_component_decl()
-                },
+                    }))
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
         ];
         let test = RoutingTest::new("a", components).await;

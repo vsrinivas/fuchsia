@@ -261,6 +261,12 @@ impl ComponentDeclBuilder {
         self
     }
 
+    /// Add a custom storage declaration.
+    pub fn storage(mut self, storage: cm_rust::StorageDecl) -> Self {
+        self.result.storage.push(storage);
+        self
+    }
+
     /// Generate the final ComponentDecl.
     pub fn build(self) -> ComponentDecl {
         self.result

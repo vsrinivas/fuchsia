@@ -22,30 +22,26 @@ async fn storage_and_dir_from_parent() {
     let components = vec![
         (
             "a",
-            ComponentDecl {
-                offers: vec![OfferDecl::Storage(OfferStorageDecl::Cache(OfferStorage {
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Storage(OfferStorageDecl::Cache(OfferStorage {
                     source: OfferStorageSource::Storage("mystorage".to_string()),
                     target: OfferTarget::Child("b".to_string()),
-                }))],
-                children: vec![ChildDecl {
-                    name: "b".to_string(),
-                    url: "test:///b".to_string(),
-                    startup: fsys::StartupMode::Lazy,
-                }],
-                storage: vec![StorageDecl {
+                })))
+                .add_lazy_child("b")
+                .storage(StorageDecl {
                     name: "mystorage".to_string(),
                     source_path: "/data".try_into().unwrap(),
                     source: StorageDirectorySource::Self_,
-                }],
-                ..default_component_decl()
-            },
+                })
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
         (
             "b",
-            ComponentDecl {
-                uses: vec![UseDecl::Storage(UseStorageDecl::Cache("/storage".try_into().unwrap()))],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Storage(UseStorageDecl::Cache("/storage".try_into().unwrap())))
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
     ];
     let test = RoutingTest::new("a", components).await;
@@ -72,30 +68,26 @@ async fn meta_storage_and_dir_from_parent() {
     let components = vec![
         (
             "a",
-            ComponentDecl {
-                offers: vec![OfferDecl::Storage(OfferStorageDecl::Meta(OfferStorage {
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Storage(OfferStorageDecl::Meta(OfferStorage {
                     source: OfferStorageSource::Storage("mystorage".to_string()),
                     target: OfferTarget::Child("b".to_string()),
-                }))],
-                children: vec![ChildDecl {
-                    name: "b".to_string(),
-                    url: "test:///b".to_string(),
-                    startup: fsys::StartupMode::Lazy,
-                }],
-                storage: vec![StorageDecl {
+                })))
+                .add_lazy_child("b")
+                .storage(StorageDecl {
                     name: "mystorage".to_string(),
                     source_path: "/data".try_into().unwrap(),
                     source: StorageDirectorySource::Self_,
-                }],
-                ..default_component_decl()
-            },
+                })
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
         (
             "b",
-            ComponentDecl {
-                uses: vec![UseDecl::Storage(UseStorageDecl::Meta)],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Storage(UseStorageDecl::Meta))
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
     ];
     let test = RoutingTest::new("a", components).await;
@@ -125,48 +117,40 @@ async fn storage_from_parent_dir_from_grandparent() {
     let components = vec![
         (
             "a",
-            ComponentDecl {
-                offers: vec![OfferDecl::Directory(OfferDirectoryDecl {
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Directory(OfferDirectoryDecl {
                     source: OfferDirectorySource::Self_,
                     source_path: "/data".try_into().unwrap(),
                     target_path: "/minfs".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(fio2::Operations::Connect),
-                })],
-                children: vec![ChildDecl {
-                    name: "b".to_string(),
-                    url: "test:///b".to_string(),
-                    startup: fsys::StartupMode::Lazy,
-                }],
-                ..default_component_decl()
-            },
+                }))
+                .add_lazy_child("b")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
         (
             "b",
-            ComponentDecl {
-                offers: vec![OfferDecl::Storage(OfferStorageDecl::Data(OfferStorage {
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Storage(OfferStorageDecl::Data(OfferStorage {
                     source: OfferStorageSource::Storage("mystorage".to_string()),
                     target: OfferTarget::Child("c".to_string()),
-                }))],
-                children: vec![ChildDecl {
-                    name: "c".to_string(),
-                    url: "test:///c".to_string(),
-                    startup: fsys::StartupMode::Lazy,
-                }],
-                storage: vec![StorageDecl {
+                })))
+                .add_lazy_child("c")
+                .storage(StorageDecl {
                     name: "mystorage".to_string(),
                     source_path: "/minfs".try_into().unwrap(),
                     source: StorageDirectorySource::Realm,
-                }],
-                ..default_component_decl()
-            },
+                })
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
         (
             "c",
-            ComponentDecl {
-                uses: vec![UseDecl::Storage(UseStorageDecl::Data("/storage".try_into().unwrap()))],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Storage(UseStorageDecl::Data("/storage".try_into().unwrap())))
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
     ];
     let test = RoutingTest::new("a", components).await;
@@ -196,45 +180,37 @@ async fn storage_and_dir_from_grandparent() {
     let components = vec![
         (
             "a",
-            ComponentDecl {
-                offers: vec![OfferDecl::Storage(OfferStorageDecl::Data(OfferStorage {
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Storage(OfferStorageDecl::Data(OfferStorage {
                     source: OfferStorageSource::Storage("mystorage".to_string()),
                     target: OfferTarget::Child("b".to_string()),
-                }))],
-                children: vec![ChildDecl {
-                    name: "b".to_string(),
-                    url: "test:///b".to_string(),
-                    startup: fsys::StartupMode::Lazy,
-                }],
-                storage: vec![StorageDecl {
+                })))
+                .add_lazy_child("b")
+                .storage(StorageDecl {
                     name: "mystorage".to_string(),
                     source_path: "/data".try_into().unwrap(),
                     source: StorageDirectorySource::Self_,
-                }],
-                ..default_component_decl()
-            },
+                })
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
         (
             "b",
-            ComponentDecl {
-                offers: vec![OfferDecl::Storage(OfferStorageDecl::Data(OfferStorage {
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Storage(OfferStorageDecl::Data(OfferStorage {
                     source: OfferStorageSource::Realm,
                     target: OfferTarget::Child("c".to_string()),
-                }))],
-                children: vec![ChildDecl {
-                    name: "c".to_string(),
-                    url: "test:///c".to_string(),
-                    startup: fsys::StartupMode::Lazy,
-                }],
-                ..default_component_decl()
-            },
+                })))
+                .add_lazy_child("c")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
         (
             "c",
-            ComponentDecl {
-                uses: vec![UseDecl::Storage(UseStorageDecl::Data("/storage".try_into().unwrap()))],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Storage(UseStorageDecl::Data("/storage".try_into().unwrap())))
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
     ];
     let test = RoutingTest::new("a", components).await;
@@ -264,45 +240,37 @@ async fn meta_storage_and_dir_from_grandparent() {
     let components = vec![
         (
             "a",
-            ComponentDecl {
-                offers: vec![OfferDecl::Storage(OfferStorageDecl::Meta(OfferStorage {
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Storage(OfferStorageDecl::Meta(OfferStorage {
                     source: OfferStorageSource::Storage("mystorage".to_string()),
                     target: OfferTarget::Child("b".to_string()),
-                }))],
-                children: vec![ChildDecl {
-                    name: "b".to_string(),
-                    url: "test:///b".to_string(),
-                    startup: fsys::StartupMode::Lazy,
-                }],
-                storage: vec![StorageDecl {
+                })))
+                .add_lazy_child("b")
+                .storage(StorageDecl {
                     name: "mystorage".to_string(),
                     source_path: "/data".try_into().unwrap(),
                     source: StorageDirectorySource::Self_,
-                }],
-                ..default_component_decl()
-            },
+                })
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
         (
             "b",
-            ComponentDecl {
-                offers: vec![OfferDecl::Storage(OfferStorageDecl::Meta(OfferStorage {
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Storage(OfferStorageDecl::Meta(OfferStorage {
                     source: OfferStorageSource::Realm,
                     target: OfferTarget::Child("c".to_string()),
-                }))],
-                children: vec![ChildDecl {
-                    name: "c".to_string(),
-                    url: "test:///c".to_string(),
-                    startup: fsys::StartupMode::Lazy,
-                }],
-                ..default_component_decl()
-            },
+                })))
+                .add_lazy_child("c")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
         (
             "c",
-            ComponentDecl {
-                uses: vec![UseDecl::Storage(UseStorageDecl::Meta)],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Storage(UseStorageDecl::Meta))
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
     ];
     let test = RoutingTest::new("a", components).await;
@@ -330,50 +298,40 @@ async fn storage_from_parent_dir_from_sibling() {
     let components = vec![
         (
             "a",
-            ComponentDecl {
-                storage: vec![StorageDecl {
+            ComponentDeclBuilder::new()
+                .storage(StorageDecl {
                     name: "mystorage".to_string(),
                     source_path: "/minfs".try_into().unwrap(),
                     source: StorageDirectorySource::Child("b".to_string()),
-                }],
-                offers: vec![OfferDecl::Storage(OfferStorageDecl::Cache(OfferStorage {
+                })
+                .offer(OfferDecl::Storage(OfferStorageDecl::Cache(OfferStorage {
                     source: OfferStorageSource::Storage("mystorage".to_string()),
                     target: OfferTarget::Child("c".to_string()),
-                }))],
-                children: vec![
-                    ChildDecl {
-                        name: "b".to_string(),
-                        url: "test:///b".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    },
-                    ChildDecl {
-                        name: "c".to_string(),
-                        url: "test:///c".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    },
-                ],
-                ..default_component_decl()
-            },
+                })))
+                .add_lazy_child("b")
+                .add_lazy_child("c")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
         (
             "b",
-            ComponentDecl {
-                exposes: vec![ExposeDecl::Directory(ExposeDirectoryDecl {
+            ComponentDeclBuilder::new()
+                .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
                     source_path: "/data".try_into().unwrap(),
                     source: ExposeSource::Self_,
                     target_path: "/minfs".try_into().unwrap(),
                     target: ExposeTarget::Realm,
                     rights: Some(fio2::Operations::Connect),
-                })],
-                ..default_component_decl()
-            },
+                }))
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
         (
             "c",
-            ComponentDecl {
-                uses: vec![UseDecl::Storage(UseStorageDecl::Cache("/storage".try_into().unwrap()))],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Storage(UseStorageDecl::Cache("/storage".try_into().unwrap())))
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
     ];
     let test = RoutingTest::new("a", components).await;
@@ -405,66 +363,55 @@ async fn use_in_collection_from_parent() {
     let components = vec![
         (
             "a",
-            ComponentDecl {
-                offers: vec![OfferDecl::Directory(OfferDirectoryDecl {
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Directory(OfferDirectoryDecl {
                     source: OfferDirectorySource::Self_,
                     source_path: "/data".try_into().unwrap(),
                     target_path: "/minfs".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(fio2::Operations::Connect),
-                })],
-                children: vec![ChildDecl {
-                    name: "b".to_string(),
-                    url: "test:///b".to_string(),
-                    startup: fsys::StartupMode::Lazy,
-                }],
-                ..default_component_decl()
-            },
+                }))
+                .add_lazy_child("b")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
         (
             "b",
-            ComponentDecl {
-                uses: vec![UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                     source: UseSource::Framework,
                     source_path: "/svc/fuchsia.sys2.Realm".try_into().unwrap(),
                     target_path: "/svc/fuchsia.sys2.Realm".try_into().unwrap(),
-                })],
-                offers: vec![
-                    OfferDecl::Storage(OfferStorageDecl::Data(OfferStorage {
-                        source: OfferStorageSource::Storage("mystorage".to_string()),
-                        target: OfferTarget::Collection("coll".to_string()),
-                    })),
-                    OfferDecl::Storage(OfferStorageDecl::Cache(OfferStorage {
-                        source: OfferStorageSource::Storage("mystorage".to_string()),
-                        target: OfferTarget::Collection("coll".to_string()),
-                    })),
-                    OfferDecl::Storage(OfferStorageDecl::Meta(OfferStorage {
-                        source: OfferStorageSource::Storage("mystorage".to_string()),
-                        target: OfferTarget::Collection("coll".to_string()),
-                    })),
-                ],
-                storage: vec![StorageDecl {
+                }))
+                .offer(OfferDecl::Storage(OfferStorageDecl::Data(OfferStorage {
+                    source: OfferStorageSource::Storage("mystorage".to_string()),
+                    target: OfferTarget::Collection("coll".to_string()),
+                })))
+                .offer(OfferDecl::Storage(OfferStorageDecl::Cache(OfferStorage {
+                    source: OfferStorageSource::Storage("mystorage".to_string()),
+                    target: OfferTarget::Collection("coll".to_string()),
+                })))
+                .offer(OfferDecl::Storage(OfferStorageDecl::Meta(OfferStorage {
+                    source: OfferStorageSource::Storage("mystorage".to_string()),
+                    target: OfferTarget::Collection("coll".to_string()),
+                })))
+                .storage(StorageDecl {
                     name: "mystorage".to_string(),
                     source_path: "/minfs".try_into().unwrap(),
                     source: StorageDirectorySource::Realm,
-                }],
-                collections: vec![CollectionDecl {
-                    name: "coll".to_string(),
-                    durability: fsys::Durability::Transient,
-                }],
-                ..default_component_decl()
-            },
+                })
+                .add_collection("coll", fsys::Durability::Transient)
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
         (
             "c",
-            ComponentDecl {
-                uses: vec![
-                    UseDecl::Storage(UseStorageDecl::Data("/data".try_into().unwrap())),
-                    UseDecl::Storage(UseStorageDecl::Cache("/cache".try_into().unwrap())),
-                    UseDecl::Storage(UseStorageDecl::Meta),
-                ],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Storage(UseStorageDecl::Data("/data".try_into().unwrap())))
+                .use_(UseDecl::Storage(UseStorageDecl::Cache("/cache".try_into().unwrap())))
+                .use_(UseDecl::Storage(UseStorageDecl::Meta))
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
     ];
     let test = RoutingTest::new("a", components).await;
@@ -537,73 +484,60 @@ async fn use_in_collection_from_grandparent() {
     let components = vec![
         (
             "a",
-            ComponentDecl {
-                offers: vec![
-                    OfferDecl::Storage(OfferStorageDecl::Data(OfferStorage {
-                        source: OfferStorageSource::Storage("mystorage".to_string()),
-                        target: OfferTarget::Child("b".to_string()),
-                    })),
-                    OfferDecl::Storage(OfferStorageDecl::Cache(OfferStorage {
-                        source: OfferStorageSource::Storage("mystorage".to_string()),
-                        target: OfferTarget::Child("b".to_string()),
-                    })),
-                    OfferDecl::Storage(OfferStorageDecl::Meta(OfferStorage {
-                        source: OfferStorageSource::Storage("mystorage".to_string()),
-                        target: OfferTarget::Child("b".to_string()),
-                    })),
-                ],
-                children: vec![ChildDecl {
-                    name: "b".to_string(),
-                    url: "test:///b".to_string(),
-                    startup: fsys::StartupMode::Lazy,
-                }],
-                storage: vec![StorageDecl {
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Storage(OfferStorageDecl::Data(OfferStorage {
+                    source: OfferStorageSource::Storage("mystorage".to_string()),
+                    target: OfferTarget::Child("b".to_string()),
+                })))
+                .offer(OfferDecl::Storage(OfferStorageDecl::Cache(OfferStorage {
+                    source: OfferStorageSource::Storage("mystorage".to_string()),
+                    target: OfferTarget::Child("b".to_string()),
+                })))
+                .offer(OfferDecl::Storage(OfferStorageDecl::Meta(OfferStorage {
+                    source: OfferStorageSource::Storage("mystorage".to_string()),
+                    target: OfferTarget::Child("b".to_string()),
+                })))
+                .add_lazy_child("b")
+                .storage(StorageDecl {
                     name: "mystorage".to_string(),
                     source_path: "/data".try_into().unwrap(),
                     source: StorageDirectorySource::Self_,
-                }],
-                ..default_component_decl()
-            },
+                })
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
         (
             "b",
-            ComponentDecl {
-                uses: vec![UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                     source: UseSource::Framework,
                     source_path: "/svc/fuchsia.sys2.Realm".try_into().unwrap(),
                     target_path: "/svc/fuchsia.sys2.Realm".try_into().unwrap(),
-                })],
-                offers: vec![
-                    OfferDecl::Storage(OfferStorageDecl::Data(OfferStorage {
-                        source: OfferStorageSource::Realm,
-                        target: OfferTarget::Collection("coll".to_string()),
-                    })),
-                    OfferDecl::Storage(OfferStorageDecl::Cache(OfferStorage {
-                        source: OfferStorageSource::Realm,
-                        target: OfferTarget::Collection("coll".to_string()),
-                    })),
-                    OfferDecl::Storage(OfferStorageDecl::Meta(OfferStorage {
-                        source: OfferStorageSource::Realm,
-                        target: OfferTarget::Collection("coll".to_string()),
-                    })),
-                ],
-                collections: vec![CollectionDecl {
-                    name: "coll".to_string(),
-                    durability: fsys::Durability::Transient,
-                }],
-                ..default_component_decl()
-            },
+                }))
+                .offer(OfferDecl::Storage(OfferStorageDecl::Data(OfferStorage {
+                    source: OfferStorageSource::Realm,
+                    target: OfferTarget::Collection("coll".to_string()),
+                })))
+                .offer(OfferDecl::Storage(OfferStorageDecl::Cache(OfferStorage {
+                    source: OfferStorageSource::Realm,
+                    target: OfferTarget::Collection("coll".to_string()),
+                })))
+                .offer(OfferDecl::Storage(OfferStorageDecl::Meta(OfferStorage {
+                    source: OfferStorageSource::Realm,
+                    target: OfferTarget::Collection("coll".to_string()),
+                })))
+                .add_collection("coll", fsys::Durability::Transient)
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
         (
             "c",
-            ComponentDecl {
-                uses: vec![
-                    UseDecl::Storage(UseStorageDecl::Data("/data".try_into().unwrap())),
-                    UseDecl::Storage(UseStorageDecl::Cache("/cache".try_into().unwrap())),
-                    UseDecl::Storage(UseStorageDecl::Meta),
-                ],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Storage(UseStorageDecl::Data("/data".try_into().unwrap())))
+                .use_(UseDecl::Storage(UseStorageDecl::Cache("/cache".try_into().unwrap())))
+                .use_(UseDecl::Storage(UseStorageDecl::Meta))
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
     ];
     let test = RoutingTest::new("a", components).await;
@@ -693,88 +627,66 @@ async fn storage_multiple_types() {
     let components = vec![
         (
             "a",
-            ComponentDecl {
-                storage: vec![StorageDecl {
+            ComponentDeclBuilder::new()
+                .storage(StorageDecl {
                     name: "mystorage".to_string(),
                     source_path: "/minfs".try_into().unwrap(),
                     source: StorageDirectorySource::Child("b".to_string()),
-                }],
-                offers: vec![
-                    OfferDecl::Storage(OfferStorageDecl::Cache(OfferStorage {
-                        source: OfferStorageSource::Storage("mystorage".to_string()),
-                        target: OfferTarget::Child("c".to_string()),
-                    })),
-                    OfferDecl::Storage(OfferStorageDecl::Data(OfferStorage {
-                        source: OfferStorageSource::Storage("mystorage".to_string()),
-                        target: OfferTarget::Child("c".to_string()),
-                    })),
-                    OfferDecl::Storage(OfferStorageDecl::Meta(OfferStorage {
-                        source: OfferStorageSource::Storage("mystorage".to_string()),
-                        target: OfferTarget::Child("c".to_string()),
-                    })),
-                ],
-                children: vec![
-                    ChildDecl {
-                        name: "b".to_string(),
-                        url: "test:///b".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    },
-                    ChildDecl {
-                        name: "c".to_string(),
-                        url: "test:///c".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    },
-                ],
-                ..default_component_decl()
-            },
+                })
+                .offer(OfferDecl::Storage(OfferStorageDecl::Cache(OfferStorage {
+                    source: OfferStorageSource::Storage("mystorage".to_string()),
+                    target: OfferTarget::Child("c".to_string()),
+                })))
+                .offer(OfferDecl::Storage(OfferStorageDecl::Data(OfferStorage {
+                    source: OfferStorageSource::Storage("mystorage".to_string()),
+                    target: OfferTarget::Child("c".to_string()),
+                })))
+                .offer(OfferDecl::Storage(OfferStorageDecl::Meta(OfferStorage {
+                    source: OfferStorageSource::Storage("mystorage".to_string()),
+                    target: OfferTarget::Child("c".to_string()),
+                })))
+                .add_lazy_child("b")
+                .add_lazy_child("c")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
         (
             "b",
-            ComponentDecl {
-                exposes: vec![ExposeDecl::Directory(ExposeDirectoryDecl {
+            ComponentDeclBuilder::new()
+                .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
                     source_path: "/data".try_into().unwrap(),
                     source: ExposeSource::Self_,
                     target_path: "/minfs".try_into().unwrap(),
                     target: ExposeTarget::Realm,
                     rights: Some(fio2::Operations::Connect),
-                })],
-                ..default_component_decl()
-            },
+                }))
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
         (
             "c",
-            ComponentDecl {
-                offers: vec![
-                    OfferDecl::Storage(OfferStorageDecl::Data(OfferStorage {
-                        source: OfferStorageSource::Realm,
-                        target: OfferTarget::Child("d".to_string()),
-                    })),
-                    OfferDecl::Storage(OfferStorageDecl::Meta(OfferStorage {
-                        source: OfferStorageSource::Realm,
-                        target: OfferTarget::Child("d".to_string()),
-                    })),
-                ],
-                uses: vec![
-                    UseDecl::Storage(UseStorageDecl::Cache("/storage".try_into().unwrap())),
-                    UseDecl::Storage(UseStorageDecl::Meta),
-                ],
-                children: vec![ChildDecl {
-                    name: "d".to_string(),
-                    url: "test:///d".to_string(),
-                    startup: fsys::StartupMode::Lazy,
-                }],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Storage(OfferStorageDecl::Data(OfferStorage {
+                    source: OfferStorageSource::Realm,
+                    target: OfferTarget::Child("d".to_string()),
+                })))
+                .offer(OfferDecl::Storage(OfferStorageDecl::Meta(OfferStorage {
+                    source: OfferStorageSource::Realm,
+                    target: OfferTarget::Child("d".to_string()),
+                })))
+                .use_(UseDecl::Storage(UseStorageDecl::Cache("/storage".try_into().unwrap())))
+                .use_(UseDecl::Storage(UseStorageDecl::Meta))
+                .add_lazy_child("d")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
         (
             "d",
-            ComponentDecl {
-                uses: vec![
-                    UseDecl::Storage(UseStorageDecl::Data("/storage".try_into().unwrap())),
-                    UseDecl::Storage(UseStorageDecl::Meta),
-                ],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Storage(UseStorageDecl::Data("/storage".try_into().unwrap())))
+                .use_(UseDecl::Storage(UseStorageDecl::Meta))
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
     ];
     let test = RoutingTest::new("a", components).await;
@@ -829,33 +741,27 @@ async fn use_the_wrong_type_of_storage() {
     let components = vec![
         (
             "a",
-            ComponentDecl {
-                offers: vec![OfferDecl::Storage(OfferStorageDecl::Cache(OfferStorage {
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Storage(OfferStorageDecl::Cache(OfferStorage {
                     source: OfferStorageSource::Storage("mystorage".to_string()),
                     target: OfferTarget::Child("b".to_string()),
-                }))],
-                children: vec![ChildDecl {
-                    name: "b".to_string(),
-                    url: "test:///b".to_string(),
-                    startup: fsys::StartupMode::Lazy,
-                }],
-                storage: vec![StorageDecl {
+                })))
+                .add_lazy_child("b")
+                .storage(StorageDecl {
                     name: "mystorage".to_string(),
                     source_path: "/data".try_into().unwrap(),
                     source: StorageDirectorySource::Self_,
-                }],
-                ..default_component_decl()
-            },
+                })
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
         (
             "b",
-            ComponentDecl {
-                uses: vec![
-                    UseDecl::Storage(UseStorageDecl::Data("/storage".try_into().unwrap())),
-                    UseDecl::Storage(UseStorageDecl::Meta),
-                ],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Storage(UseStorageDecl::Data("/storage".try_into().unwrap())))
+                .use_(UseDecl::Storage(UseStorageDecl::Meta))
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
     ];
     let test = RoutingTest::new("a", components).await;
@@ -890,28 +796,24 @@ async fn directories_are_not_storage() {
     let components = vec![
         (
             "a",
-            ComponentDecl {
-                offers: vec![OfferDecl::Directory(OfferDirectoryDecl {
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Directory(OfferDirectoryDecl {
                     source: OfferDirectorySource::Self_,
                     source_path: "/data".try_into().unwrap(),
                     target_path: "/data".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(fio2::Operations::Connect),
-                })],
-                children: vec![ChildDecl {
-                    name: "b".to_string(),
-                    url: "test:///b".to_string(),
-                    startup: fsys::StartupMode::Lazy,
-                }],
-                ..default_component_decl()
-            },
+                }))
+                .add_lazy_child("b")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
         (
             "b",
-            ComponentDecl {
-                uses: vec![UseDecl::Storage(UseStorageDecl::Data("/storage".try_into().unwrap()))],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Storage(UseStorageDecl::Data("/storage".try_into().unwrap())))
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
     ];
     let test = RoutingTest::new("a", components).await;
@@ -938,29 +840,23 @@ async fn use_storage_when_not_offered() {
     let components = vec![
         (
             "a",
-            ComponentDecl {
-                children: vec![ChildDecl {
-                    name: "b".to_string(),
-                    url: "test:///b".to_string(),
-                    startup: fsys::StartupMode::Lazy,
-                }],
-                storage: vec![StorageDecl {
+            ComponentDeclBuilder::new()
+                .add_lazy_child("b")
+                .storage(StorageDecl {
                     name: "mystorage".to_string(),
                     source_path: "/data".try_into().unwrap(),
                     source: StorageDirectorySource::Self_,
-                }],
-                ..default_component_decl()
-            },
+                })
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
         (
             "b",
-            ComponentDecl {
-                uses: vec![
-                    UseDecl::Storage(UseStorageDecl::Data("/storage".try_into().unwrap())),
-                    UseDecl::Storage(UseStorageDecl::Meta),
-                ],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Storage(UseStorageDecl::Data("/storage".try_into().unwrap())))
+                .use_(UseDecl::Storage(UseStorageDecl::Meta))
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
     ];
     let test = RoutingTest::new("a", components).await;
@@ -999,58 +895,45 @@ async fn dir_offered_from_nonexecutable() {
     let components = vec![
         (
             "a",
-            ComponentDecl {
-                program: None,
-                offers: vec![OfferDecl::Directory(OfferDirectoryDecl {
+            ComponentDeclBuilder::new_empty_component()
+                .offer(OfferDecl::Directory(OfferDirectoryDecl {
                     source: OfferDirectorySource::Self_,
                     source_path: "/data".try_into().unwrap(),
                     target_path: "/minfs".try_into().unwrap(),
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(fio2::Operations::Connect),
-                })],
-                children: vec![ChildDecl {
-                    name: "b".to_string(),
-                    url: "test:///b".to_string(),
-                    startup: fsys::StartupMode::Lazy,
-                }],
-                ..default_component_decl()
-            },
+                }))
+                .add_lazy_child("b")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
         (
             "b",
-            ComponentDecl {
-                offers: vec![
-                    OfferDecl::Storage(OfferStorageDecl::Data(OfferStorage {
-                        source: OfferStorageSource::Storage("mystorage".to_string()),
-                        target: OfferTarget::Child("c".to_string()),
-                    })),
-                    OfferDecl::Storage(OfferStorageDecl::Meta(OfferStorage {
-                        source: OfferStorageSource::Storage("mystorage".to_string()),
-                        target: OfferTarget::Child("c".to_string()),
-                    })),
-                ],
-                children: vec![ChildDecl {
-                    name: "c".to_string(),
-                    url: "test:///c".to_string(),
-                    startup: fsys::StartupMode::Lazy,
-                }],
-                storage: vec![StorageDecl {
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Storage(OfferStorageDecl::Data(OfferStorage {
+                    source: OfferStorageSource::Storage("mystorage".to_string()),
+                    target: OfferTarget::Child("c".to_string()),
+                })))
+                .offer(OfferDecl::Storage(OfferStorageDecl::Meta(OfferStorage {
+                    source: OfferStorageSource::Storage("mystorage".to_string()),
+                    target: OfferTarget::Child("c".to_string()),
+                })))
+                .add_lazy_child("c")
+                .storage(StorageDecl {
                     name: "mystorage".to_string(),
                     source_path: "/minfs".try_into().unwrap(),
                     source: StorageDirectorySource::Realm,
-                }],
-                ..default_component_decl()
-            },
+                })
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
         (
             "c",
-            ComponentDecl {
-                uses: vec![
-                    UseDecl::Storage(UseStorageDecl::Data("/storage".try_into().unwrap())),
-                    UseDecl::Storage(UseStorageDecl::Meta),
-                ],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Storage(UseStorageDecl::Data("/storage".try_into().unwrap())))
+                .use_(UseDecl::Storage(UseStorageDecl::Meta))
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
     ];
     let test = RoutingTest::new("a", components).await;
