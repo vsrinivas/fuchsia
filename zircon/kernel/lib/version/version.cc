@@ -17,8 +17,6 @@
 /* generated for us */
 #include <config-buildid.h>
 
-/* ARCH, PLATFORM, TARGET, PROJECT should be defined by the build system */
-
 /* BUILDID is optional, and may be defined anywhere */
 #ifndef BUILDID
 #define BUILDID ""
@@ -32,9 +30,6 @@ static char elf_build_id_string[65];
 const lk_version_t version = {
     .struct_version = VERSION_STRUCT_VERSION,
     .arch = ARCH,
-    .platform = PLATFORM,
-    .target = TARGET,
-    .project = PROJECT,
     .buildid = BUILDID,
     .elf_build_id = elf_build_id_string,
 };
@@ -42,9 +37,6 @@ const lk_version_t version = {
 void print_version(void) {
   printf("version:\n");
   printf("\tarch:     %s\n", version.arch);
-  printf("\tplatform: %s\n", version.platform);
-  printf("\ttarget:   %s\n", version.target);
-  printf("\tproject:  %s\n", version.project);
   printf("\tbuildid:  %s\n", version.buildid);
   printf("\tELF build ID: %s\n", version.elf_build_id);
 }

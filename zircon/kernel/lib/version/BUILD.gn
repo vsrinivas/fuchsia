@@ -34,13 +34,7 @@ if (current_toolchain == default_toolchain) {
     sources = [
       "version.cc",
     ]
-    defines = [
-      # TODO(ZX-3413): These should all go away; the values are useless.
-      "ARCH=\"$zircon_cpu\"",
-      "PROJECT=\"$current_cpu\"",
-      "PLATFORM=\"XXX\"",
-      "TARGET=\"XXX\"",
-    ]
+    defines = [ "ARCH=\"$current_cpu\"" ]
     deps = [
       ":config-buildid-header",
       "$zx/kernel/lib/console",
