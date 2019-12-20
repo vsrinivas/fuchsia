@@ -267,6 +267,12 @@ impl ComponentDeclBuilder {
         self
     }
 
+    /// Add a custom runner declartion.
+    pub fn runner(mut self, runner: cm_rust::RunnerDecl) -> Self {
+        self.result.runners.push(runner);
+        self
+    }
+
     /// Generate the final ComponentDecl.
     pub fn build(self) -> ComponentDecl {
         self.result
