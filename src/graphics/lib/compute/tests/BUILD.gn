@@ -21,6 +21,7 @@ config("common_public_config") {
 
 source_set("common") {
   public = [
+    "common/affine_transform.h",
     "common/argparse.h",
     "common/fps_counter.h",
     "common/list_ostream.h",
@@ -28,6 +29,8 @@ source_set("common") {
     "common/utils.h",
   ]
   sources = [
+    "common/affine_transform.c",
+    "common/affine_transform.h",
     "common/argparse.c",
     "common/argparse.h",
     "common/fps_counter.c",
@@ -42,6 +45,7 @@ source_set("common") {
 
 graphics_compute_unittests("common_unittests") {
   sources = [
+    "common/affine_transform_unittest.cc",
     "common/argparse_unittest.cc",
     "common/fps_counter_unittest.cc",
     "common/list_ostream_unittest.cc",

@@ -25,11 +25,11 @@ class ScopedSvg {
     return ScopedSvg(svg_open(file_path, false));
   }
 
-  // Create new instance by parsing an SVG document
+  // Create new instance by parsing an SVG string.
   static ScopedSvg
-  parseText(const char * text)
+  parseString(const char * str)
   {
-    return ScopedSvg(svg_parse(text, false));
+    return ScopedSvg(svg_parse(str, false));
   }
 
   // Access the underlying svg object. Note that this does not return

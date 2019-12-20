@@ -38,7 +38,7 @@ group("compute") {
 # launch a test that was defined with graphics_compute_test_package() or
 # graphics_compute_unittests_package().
 #
-# Other programs (e.g. graphics_compute_executable() targts) can be run with
+# Other programs (e.g. graphics_compute_executable() targets) can be run with
 # "fx shell run <name>" or "out/default/host_x64/<name>" instead.
 #
 
@@ -63,6 +63,7 @@ group("tests") {
   if (_build_host_tests) {
     data_deps = [
       ":tests($host_toolchain)",
+      "tests/common/svg:spn_svg_dump($host_toolchain)",
     ]
   }
 }

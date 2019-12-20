@@ -9,34 +9,13 @@
 
 #include "spinel/spinel_opcodes.h"
 #include "tests/common/spinel/spinel_test_utils.h"
+#include "tests/common/svg/scoped_svg.h"
 #include "tests/common/utils.h"  // For ARRAY_SIZE() macro.
 #include "tests/mock_spinel/mock_spinel_test_utils.h"
 
 namespace {
 
 class Svg2SpinelTest : public mock_spinel::Test {
-};
-
-class ScopedSvg {
- public:
-  ScopedSvg(const char * doc) : svg_(svg_parse(doc, false))
-  {
-  }
-
-  ~ScopedSvg()
-  {
-    if (svg_)
-      svg_dispose(svg_);
-  }
-
-  svg *
-  get() const
-  {
-    return svg_;
-  }
-
- private:
-  svg * svg_;
 };
 
 }  // namespace
@@ -53,7 +32,7 @@ TEST_F(Svg2SpinelTest, polyline)
                        "  </g>\n"
                        "</svg>\n" };
 
-  ScopedSvg svg(doc);
+  ScopedSvg svg = ScopedSvg::parseString(doc);
   ASSERT_TRUE(svg.get());
 
   uint32_t const layer_count = svg_layer_count(svg.get());

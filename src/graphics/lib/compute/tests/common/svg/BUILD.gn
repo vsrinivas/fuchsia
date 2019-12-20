@@ -5,26 +5,44 @@
 import("../../../gn/build_rules.gni")
 
 config("public_config") {
-  # Client should include "tests/common/svg/scoped_svg.h"
+  # Clients should include "tests/common/svg/<header>"
   include_dirs = [ graphics_compute_dir ]
 }
 
 source_set("svg") {
   public = [
     "scoped_svg.h",
+    "svg_bounds.h",
+    "svg_print.h",
   ]
   sources = [
     "scoped_svg.h",
+    "svg_bounds.cc",
+    "svg_bounds.h",
+    "svg_print.cc",
+    "svg_print.h",
   ]
   public_deps = [
-    "${graphics_compute_dir}/svg",
+    "${graphics_compute_dir}/svg:svg",
+    "${graphics_compute_dir}/tests:common",
   ]
   public_configs = [ ":public_config" ]
+}
+
+executable("spn_svg_dump") {
+  sources = [
+    "svg_dump_main.cc",
+  ]
+  deps = [
+    ":svg",
+  ]
 }
 
 graphics_compute_unittests("unittests") {
   sources = [
     "scoped_svg_unittest.cc",
+    "svg_bounds_unittest.cc",
+    "svg_print_unittest.cc",
   ]
   deps = [
     ":svg",

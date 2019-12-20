@@ -14,7 +14,7 @@ TEST(ScopedSvg, Creation)
                                  "  </g>\n"
                                  "</svg>\n";
 
-  ScopedSvg svg = ScopedSvg::parseText(kSvgData);
+  ScopedSvg svg = ScopedSvg::parseString(kSvgData);
   ASSERT_TRUE(svg.get());
   ASSERT_EQ(1u, svg.path_count());
   ASSERT_EQ(1u, svg.raster_count());

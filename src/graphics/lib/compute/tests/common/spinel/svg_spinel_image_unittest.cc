@@ -23,7 +23,7 @@ TEST_F(SvgSpinelImageTest, SimpleTest)
                                  "  </g>\n"
                                  "</svg>\n";
 
-  ScopedSvg svg = ScopedSvg::parseText(kSvgData);
+  ScopedSvg svg = ScopedSvg::parseString(kSvgData);
 
   ScopedStruct<SvgSpinelImage> image(svg.get(), context_);
 
