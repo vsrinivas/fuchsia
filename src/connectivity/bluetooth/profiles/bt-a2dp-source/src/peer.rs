@@ -96,13 +96,13 @@ impl Peer {
         lock.peer.clone()
     }
 
-    /// Perform Discovery and then Capability detection to discover the capabilities of the
-    /// connected peer's stream endpoints
-    /// Returns a map of remote stream endpoint ids associated with the MediaCoded serviice capability of
+    /// Perform Discovery and then Capability detection to discover the endpoints and capabilities of the
+    /// connected peer.
+    /// Returns a vector of remote stream endpoints.
     /// the endpoint.
     pub fn collect_capabilities(
         &self,
-    ) -> impl Future<Output = avdtp::Result<HashMap<StreamEndpointId, ServiceCapability>>> {
+    ) -> impl Future<Output = avdtp::Result<Vec<avdtp::StreamEndpoint>>> {
         let avdtp = self.inner.lock().peer.clone();
         let get_all = self.descriptor.lock().map_or(false, a2dp_version_check);
         async move {
@@ -129,16 +129,7 @@ impl Peer {
                     }
                 };
             }
-
-            let mut result = HashMap::new();
-
-            for stream in remote_streams {
-                if let Some(cap) = stream.capabilities().iter().find(|s| s.is_codec()) {
-                    result.insert(stream.local_id().clone(), cap.clone());
-                }
-            }
-
-            Ok(result)
+            Ok(remote_streams)
         }
     }
 
@@ -608,23 +599,27 @@ mod tests {
         match res {
             Poll::Pending => panic!("collect capabilities should be complete"),
             Poll::Ready(Err(e)) => panic!("collect capabilities should have succeeded: {}", e),
-            Poll::Ready(Ok(map)) => {
-                let seid = 0x3E_u8.try_into().unwrap();
-                assert!(map.contains_key(&seid));
-                let expected_codec = ServiceCapability::MediaCodec {
-                    media_type: avdtp::MediaType::Audio,
-                    codec_type: avdtp::MediaCodecType::new(0x40),
-                    codec_extra: vec![0xF0, 0x9F, 0x92, 0x96],
-                };
-                assert_eq!(Some(&expected_codec), map.get(&seid));
-                let seid = 0x01_u8.try_into().unwrap();
-                assert!(map.contains_key(&seid));
-                let expected_codec = ServiceCapability::MediaCodec {
-                    media_type: avdtp::MediaType::Audio,
-                    codec_type: avdtp::MediaCodecType::new(0x00),
-                    codec_extra: vec![0xC0, 0xDE],
-                };
-                assert_eq!(Some(&expected_codec), map.get(&seid));
+            Poll::Ready(Ok(endpoints)) => {
+                let first_seid: StreamEndpointId = 0x3E_u8.try_into().unwrap();
+                let second_seid: StreamEndpointId = 0x01_u8.try_into().unwrap();
+                for stream in endpoints {
+                    if stream.local_id() == &first_seid {
+                        let expected_caps = vec![
+                            ServiceCapability::MediaTransport,
+                            ServiceCapability::MediaCodec {
+                                media_type: avdtp::MediaType::Audio,
+                                codec_type: avdtp::MediaCodecType::new(0x40),
+                                codec_extra: vec![0xF0, 0x9F, 0x92, 0x96],
+                            },
+                        ];
+                        assert_eq!(&expected_caps, stream.capabilities());
+                    } else if stream.local_id() == &second_seid {
+                        let expected_codec_type = avdtp::MediaCodecType::new(0x00);
+                        assert_eq!(Some(&expected_codec_type), stream.codec_type());
+                    } else {
+                        panic!("Unexpected endpoint in the streams collected");
+                    }
+                }
             }
         }
     }

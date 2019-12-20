@@ -20,8 +20,8 @@ use {
 
 use crate::{
     types::{
-        EndpointType, Error, ErrorCode, MediaType, Result, ServiceCapability, StreamEndpointId,
-        StreamInformation,
+        EndpointType, Error, ErrorCode, MediaCodecType, MediaType, Result, ServiceCapability,
+        StreamEndpointId, StreamInformation,
     },
     Peer, SimpleResponder,
 };
@@ -331,6 +331,16 @@ impl StreamEndpoint {
         &self.capabilities
     }
 
+    /// Returns the CodecType of this StreamEndpoint.
+    /// Returns None if there is no MediaCodec capability in the endpoint.
+    /// Note: a MediaCodec capability is required by all endpoints by the spec.
+    pub fn codec_type(&self) -> Option<&MediaCodecType> {
+        self.capabilities.iter().find_map(|cap| match cap {
+            ServiceCapability::MediaCodec { codec_type, .. } => Some(codec_type),
+            _ => None,
+        })
+    }
+
     /// Returns the local StreamEndpointId for this endpoint.
     pub fn local_id(&self) -> &StreamEndpointId {
         &self.id
@@ -497,6 +507,36 @@ mod tests {
         assert_eq!(&seid, endpoint.local_id());
         assert_eq!(&false, endpoint.information().in_use());
         assert_eq!(1, endpoint.capabilities().len());
+    }
+
+    #[test]
+    fn codec_type() {
+        let s = StreamEndpoint::new(
+            REMOTE_ID_VAL,
+            MediaType::Audio,
+            EndpointType::Sink,
+            vec![
+                ServiceCapability::MediaTransport,
+                ServiceCapability::MediaCodec {
+                    media_type: MediaType::Audio,
+                    codec_type: MediaCodecType::new(0x40),
+                    codec_extra: vec![0xDE, 0xAD, 0xBE, 0xEF], // Meaningless test data.
+                },
+            ],
+        )
+        .unwrap();
+
+        assert_eq!(Some(&MediaCodecType::new(0x40)), s.codec_type());
+
+        let s = StreamEndpoint::new(
+            REMOTE_ID_VAL,
+            MediaType::Audio,
+            EndpointType::Sink,
+            vec![ServiceCapability::MediaTransport],
+        )
+        .unwrap();
+
+        assert_eq!(None, s.codec_type());
     }
 
     #[test]

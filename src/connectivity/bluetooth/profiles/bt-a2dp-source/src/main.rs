@@ -204,16 +204,17 @@ async fn start_streaming(
     peer: &DetachableWeak<PeerId, Peer>,
     source_type: AudioSourceType,
 ) -> Result<(), failure::Error> {
-    let stream_caps_fut = {
+    let streams_fut = {
         let strong = peer.upgrade().ok_or(format_err!("Disconnected"))?;
         strong.collect_capabilities()
     };
-    let stream_caps = stream_caps_fut.await?;
+    let remote_streams = streams_fut.await?;
 
-    // Find the required SBC stream.
-    let (remote_stream_id, _capability) = stream_caps
+    // Find the SBC stream, which should exist (it is required)
+    let remote_stream = remote_streams
         .iter()
-        .find(|(_id, codec)| codec.is_codec_type(&avdtp::MediaCodecType::AUDIO_SBC))
+        .filter(|stream| stream.information().endpoint_type() == &avdtp::EndpointType::Sink)
+        .find(|stream| stream.codec_type() == Some(&avdtp::MediaCodecType::AUDIO_SBC))
         .ok_or(format_err!("Couldn't find a compatible stream"))?;
 
     // TODO(39321): Choose codec options based on availability and quality.
@@ -227,7 +228,7 @@ async fn start_streaming(
         let strong = peer.upgrade().ok_or(format_err!("Disconnected"))?;
         strong.start_stream(
             SBC_SEID.try_into().unwrap(),
-            remote_stream_id.clone(),
+            remote_stream.local_id().clone(),
             sbc_settings.clone(),
         )
     };
