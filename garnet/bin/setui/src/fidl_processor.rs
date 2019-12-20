@@ -114,6 +114,20 @@ where
     }
 }
 
+impl<S, T, ST> Drop for SettingProcessingUnit<S, T, ST>
+where
+    S: ServiceMarker,
+    T: From<SettingResponse> + Send + Sync + 'static,
+    ST: Sender<T> + Send + Sync + 'static,
+{
+    fn drop(&mut self) {
+        let hanging_get_handler = self.hanging_get_handler.clone();
+        fasync::spawn_local(async move {
+            hanging_get_handler.lock().await.close();
+        });
+    }
+}
+
 impl<S, T, ST> ProcessingUnit<S> for SettingProcessingUnit<S, T, ST>
 where
     S: ServiceMarker,
@@ -176,7 +190,9 @@ where
         self.processing_units.push(processing_unit);
     }
 
-    pub async fn process(&mut self) {
+    // Process the stream. Note that we pass in the processor here as it cannot
+    // be used again afterwards.
+    pub async fn process(mut self) {
         while let Ok(Some(mut req)) = self.request_stream.try_next().await {
             for processing_unit in &self.processing_units {
                 // If the processing unit consumes the request (a non-empty

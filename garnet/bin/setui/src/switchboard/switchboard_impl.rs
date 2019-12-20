@@ -16,19 +16,18 @@ use fuchsia_async as fasync;
 use futures::stream::StreamExt;
 
 type ResponderMap = HashMap<u64, SettingRequestResponder>;
-type Listener = UnboundedSender<SettingType>;
 type ListenerMap = HashMap<SettingType, Vec<ListenSessionInfo>>;
 
 /// Minimal data necessary to uniquely identify and interact with a listen
 /// session.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 struct ListenSessionInfo {
     session_id: u64,
 
     /// Setting type listening to
     setting_type: SettingType,
 
-    listener: Listener,
+    callback: ListenCallback,
 }
 
 impl PartialEq for ListenSessionInfo {
@@ -175,7 +174,7 @@ impl SwitchboardImpl {
     fn notify_listeners(&self, setting_type: SettingType) {
         if let Some(session_infos) = self.listeners.get(&setting_type) {
             for info in session_infos {
-                info.listener.unbounded_send(setting_type).ok();
+                (info.callback)(setting_type);
             }
         }
     }
@@ -210,7 +209,7 @@ impl Switchboard for SwitchboardImpl {
     fn listen(
         &mut self,
         setting_type: SettingType,
-        listener: UnboundedSender<SettingType>,
+        listener: ListenCallback,
     ) -> Result<Box<dyn ListenSession + Send + Sync>, Error> {
         let action_id = self.get_next_action_id();
 
@@ -222,7 +221,7 @@ impl Switchboard for SwitchboardImpl {
             let info = ListenSessionInfo {
                 session_id: self.next_session_id,
                 setting_type: setting_type,
-                listener: listener,
+                callback: listener,
             };
 
             self.next_session_id += 1;
@@ -289,7 +288,12 @@ mod tests {
 
         // Register first listener and verify count.
         let (notify_tx1, _notify_rx1) = futures::channel::mpsc::unbounded::<SettingType>();
-        let listen_result = switchboard.lock().await.listen(setting_type, notify_tx1);
+        let listen_result = switchboard.lock().await.listen(
+            setting_type,
+            Arc::new(move |setting| {
+                notify_tx1.unbounded_send(setting).ok();
+            }),
+        );
 
         assert!(listen_result.is_ok());
         {
@@ -322,7 +326,16 @@ mod tests {
 
         // Register first listener and verify count.
         let (notify_tx1, mut notify_rx1) = futures::channel::mpsc::unbounded::<SettingType>();
-        assert!(switchboard.lock().await.listen(setting_type, notify_tx1).is_ok());
+        assert!(switchboard
+            .lock()
+            .await
+            .listen(
+                setting_type,
+                Arc::new(move |setting_type| {
+                    notify_tx1.unbounded_send(setting_type).ok();
+                })
+            )
+            .is_ok());
         {
             let action = action_rx.next().await.unwrap();
 
@@ -332,7 +345,16 @@ mod tests {
 
         // Register second listener and verify count
         let (notify_tx2, mut notify_rx2) = futures::channel::mpsc::unbounded::<SettingType>();
-        assert!(switchboard.lock().await.listen(setting_type, notify_tx2).is_ok());
+        assert!(switchboard
+            .lock()
+            .await
+            .listen(
+                setting_type,
+                Arc::new(move |setting_type| {
+                    notify_tx2.unbounded_send(setting_type).ok();
+                })
+            )
+            .is_ok());
         {
             let action = action_rx.next().await.unwrap();
 

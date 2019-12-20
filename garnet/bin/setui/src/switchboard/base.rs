@@ -6,7 +6,6 @@ use crate::switchboard::intl_types::IntlInfo;
 use bitflags::bitflags;
 use failure::Error;
 use fuchsia_syslog::fx_log_warn;
-use futures::channel::mpsc::UnboundedSender;
 use futures::channel::oneshot::Sender;
 use futures::lock::Mutex;
 use serde_derive::{Deserialize, Serialize};
@@ -17,6 +16,8 @@ pub type SwitchboardHandle = Arc<Mutex<dyn Switchboard + Send + Sync>>;
 
 pub type SettingResponseResult = Result<Option<SettingResponse>, Error>;
 pub type SettingRequestResponder = Sender<SettingResponseResult>;
+
+pub type ListenCallback = Arc<dyn Fn(SettingType) + Send + Sync>;
 
 /// A trait for structs where all fields are options. Recursively performs
 /// [Option::or](std::option::Option::or) on each field in the struct and substructs.
@@ -287,7 +288,7 @@ pub trait Switchboard {
     fn listen(
         &mut self,
         setting_type: SettingType,
-        listener: UnboundedSender<SettingType>,
+        listener: ListenCallback,
     ) -> Result<Box<dyn ListenSession + Send + Sync>, Error>;
 }
 

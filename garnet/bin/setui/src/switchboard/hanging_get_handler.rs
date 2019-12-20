@@ -65,18 +65,38 @@ impl<T> HangingGetController<T> {
 /// for that type.
 /// To use, one should implement a sender, as well as a way to convert SettingResponse into
 /// something that sender can use.
-pub struct HangingGetHandler<T, ST> {
+pub struct HangingGetHandler<T, ST>
+where
+    T: From<SettingResponse> + Send + Sync + 'static,
+    ST: Sender<T> + Send + Sync + 'static,
+{
     switchboard_handle: SwitchboardHandle,
     _listen_session: Box<dyn ListenSession + Send + Sync>,
     hanging_get: Option<ST>,
     data_type: PhantomData<T>,
     setting_type: SettingType,
     controller: HangingGetController<T>,
+    command_tx: futures::channel::mpsc::UnboundedSender<ListenCommand>,
 }
 
 /// Trait that should be implemented to send data to the hanging get watcher.
 pub trait Sender<T> {
     fn send_response(self, data: T);
+}
+
+enum ListenCommand {
+    Change(SettingType),
+    Exit,
+}
+
+impl<T, ST> Drop for HangingGetHandler<T, ST>
+where
+    T: From<SettingResponse> + Send + Sync + 'static,
+    ST: Sender<T> + Send + Sync + 'static,
+{
+    fn drop(&mut self) {
+        self.close();
+    }
 }
 
 impl<T, ST> HangingGetHandler<T, ST>
@@ -88,35 +108,53 @@ where
         switchboard_handle: SwitchboardHandle,
         setting_type: SettingType,
     ) -> Arc<Mutex<HangingGetHandler<T, ST>>> {
-        let (on_change_sender, mut on_change_receiver) =
-            futures::channel::mpsc::unbounded::<SettingType>();
+        let (on_command_sender, mut on_command_receiver) =
+            futures::channel::mpsc::unbounded::<ListenCommand>();
 
+        let on_command_sender_clone = on_command_sender.clone();
         let hanging_get_handler = Arc::new(Mutex::new(HangingGetHandler::<T, ST> {
             switchboard_handle: switchboard_handle.clone(),
             _listen_session: switchboard_handle
                 .clone()
                 .lock()
                 .await
-                .listen(setting_type, on_change_sender)
+                .listen(
+                    setting_type,
+                    Arc::new(move |setting| {
+                        on_command_sender_clone.unbounded_send(ListenCommand::Change(setting)).ok();
+                    }),
+                )
                 .expect("started listening successfully"),
             hanging_get: None,
             data_type: PhantomData,
             setting_type: setting_type,
             controller: HangingGetController::new(),
+            command_tx: on_command_sender.clone(),
         }));
 
         {
             let hanging_get_handler_clone = hanging_get_handler.clone();
             fasync::spawn(async move {
-                while let Some(setting_type) = on_change_receiver.next().await {
-                    assert_eq!(setting_type, setting_type);
-                    let mut handler_lock = hanging_get_handler_clone.lock().await;
-                    handler_lock.on_change().await;
+                while let Some(command) = on_command_receiver.next().await {
+                    match command {
+                        ListenCommand::Change(setting_type) => {
+                            assert_eq!(setting_type, setting_type);
+                            let mut handler_lock = hanging_get_handler_clone.lock().await;
+                            handler_lock.on_change().await;
+                        }
+                        ListenCommand::Exit => {
+                            return;
+                        }
+                    }
                 }
             });
         }
 
         hanging_get_handler
+    }
+
+    pub fn close(&mut self) {
+        self.command_tx.unbounded_send(ListenCommand::Exit).ok();
     }
 
     /// Park a new hanging get in the handler
@@ -219,14 +257,14 @@ mod tests {
     struct TestSwitchboard {
         id_to_send: Arc<RwLock<f32>>,
         setting_type: Option<SettingType>,
-        listener: Option<UnboundedSender<SettingType>>,
+        listener: Option<ListenCallback>,
     }
 
     impl TestSwitchboard {
         fn notify_listener(&self) {
             if let Some(setting_type_value) = self.setting_type {
                 if let Some(listener_sender) = self.listener.clone() {
-                    listener_sender.unbounded_send(setting_type_value).unwrap();
+                    (listener_sender)(setting_type_value);
                     return;
                 }
             }
@@ -269,7 +307,7 @@ mod tests {
         fn listen(
             &mut self,
             setting_type: SettingType,
-            listener: UnboundedSender<SettingType>,
+            listener: ListenCallback,
         ) -> Result<Box<dyn ListenSession + Send + Sync>, Error> {
             self.setting_type = Some(setting_type);
             self.listener = Some(listener);
