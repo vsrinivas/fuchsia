@@ -30,11 +30,11 @@ const NodeLevelCalculator* GetDefaultNodeLevelCalculator();
 
 // Applies changes provided by |changes| to the B-Tree starting at |root_identifier|. |changes| must
 // provide |EntryChange| objects sorted by their key. |new_root_identifier| will contain the object
-// identifier of the new root and |new_identifiers| the list of object identifiers of all new nodes
-// created after the changes (not their individual pieces), ie. it will contain the set of nodes of
-// the new tree that were not present in the original tree. Insertions are turned into updates if
-// the key exists, and ignored if they only change the entry id. Deletions only need to mention the
-// key that is being deleted.
+// identifier of the new root and |new_identifiers| the list of object identifiers of all new
+// non-inline nodes created after the changes (not their individual pieces), ie. it will contain the
+// set of nodes of the new tree that were not present in the original tree. Insertions are turned
+// into updates if the key exists, and ignored if they only change the entry id. Deletions only need
+// to mention the key that is being deleted.
 Status ApplyChanges(
     coroutine::CoroutineHandler* coroutine_handler, PageStorage* page_storage,
     LocatedObjectIdentifier root_identifier, std::vector<EntryChange> changes,

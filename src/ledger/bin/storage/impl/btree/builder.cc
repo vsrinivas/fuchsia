@@ -296,7 +296,11 @@ Status NodeBuilder::Build(SynchronousStorage* page_storage, ObjectIdentifier* ob
     RETURN_ON_ERROR(page_storage->TreeNodeFromEntries(0, {}, {}, &object_identifier_));
 
     *object_identifier = object_identifier_;
-    new_identifiers->insert(object_identifier_);
+    // The empty tree node may be small enough to be inline. In that case, it has not been written
+    // to PageStorage, and must not be added to |new_identifiers|.
+    if (!GetObjectDigestInfo(object_identifier_.object_digest()).is_inlined()) {
+      new_identifiers->insert(object_identifier_);
+    }
     type_ = BuilderType::EXISTING_NODE;
     return Status::OK;
   }
@@ -322,6 +326,10 @@ Status NodeBuilder::Build(SynchronousStorage* page_storage, ObjectIdentifier* ob
           [new_identifiers, child, location = location_, callback = waiter->NewCallback()](
               Status status, ObjectIdentifier object_identifier) {
             if (status == Status::OK) {
+              LEDGER_DCHECK(!GetObjectDigestInfo(object_identifier.object_digest()).is_inlined())
+                  << "Unexpected inline identifier for child node: " << object_identifier << " ("
+                  << child->entries_.size() << " entries, " << child->children_.size()
+                  << " children).";
               child->type_ = BuilderType::EXISTING_NODE;
               child->object_identifier_ = object_identifier;
               child->location_ = location;
