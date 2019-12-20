@@ -602,6 +602,7 @@ TEST_F(SherlockPartitionerTests, InitializePartitionTable) {
   EXPECT_OK(partitioner->FindPartition(paver::Partition::kZirconA, &partition));
   EXPECT_OK(partitioner->FindPartition(paver::Partition::kZirconB, &partition));
   EXPECT_OK(partitioner->FindPartition(paver::Partition::kZirconR, &partition));
+  EXPECT_OK(partitioner->FindPartition(paver::Partition::kABRMeta, &partition));
   EXPECT_OK(partitioner->FindPartition(paver::Partition::kVbMetaA, &partition));
   EXPECT_OK(partitioner->FindPartition(paver::Partition::kVbMetaB, &partition));
   EXPECT_OK(partitioner->FindPartition(paver::Partition::kVbMetaR, &partition));

@@ -1229,6 +1229,11 @@ zx_status_t FixedDevicePartitioner::FindPartition(
       memcpy(type, vbmeta_r_type, GPT_GUID_LEN);
       break;
     }
+    case Partition::kABRMeta: {
+      const uint8_t abr_meta_type[GPT_GUID_LEN] = GUID_ABR_META_VALUE;
+      memcpy(type, abr_meta_type, GPT_GUID_LEN);
+      break;
+    }
     case Partition::kFuchsiaVolumeManager: {
       const uint8_t fvm_type[GPT_GUID_LEN] = GUID_FVM_VALUE;
       memcpy(type, fvm_type, GPT_GUID_LEN);
@@ -1332,6 +1337,11 @@ zx_status_t SherlockPartitioner::FindPartition(
     case Partition::kVbMetaR: {
       const uint8_t vbmeta_r_type[GPT_GUID_LEN] = GUID_VBMETA_R_VALUE;
       memcpy(type, vbmeta_r_type, GPT_GUID_LEN);
+      break;
+    }
+    case Partition::kABRMeta: {
+      const uint8_t abr_meta_type[GPT_GUID_LEN] = GUID_ABR_META_VALUE;
+      memcpy(type, abr_meta_type, GPT_GUID_LEN);
       break;
     }
     case Partition::kFuchsiaVolumeManager: {

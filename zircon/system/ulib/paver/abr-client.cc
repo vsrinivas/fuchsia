@@ -14,6 +14,7 @@
 #include "device-partitioner.h"
 #include "partition-client.h"
 #include "pave-logging.h"
+#include "zircon/errors.h"
 
 namespace abr {
 
@@ -157,6 +158,9 @@ zx_status_t PartitionClient::Persist(abr::Data data) {
   if (zx_status_t status = partition_->Write(vmo_, block_size_); status != ZX_OK) {
     return status;
   }
+  if (zx_status_t status = partition_->Flush(); status != ZX_OK) {
+    return status;
+  }
 
   data_ = data;
   return ZX_OK;
@@ -166,7 +170,15 @@ zx_status_t PartitionClient::Persist(abr::Data data) {
 
 zx_status_t Client::Create(fbl::unique_fd devfs_root, zx::channel svc_root,
                            std::unique_ptr<abr::Client>* out) {
-  return AstroClient::Create(std::move(devfs_root), std::move(svc_root), out);
+  if (zx_status_t status = SupportsVerfiedBoot(svc_root); status != ZX_OK) {
+    return status;
+  }
+
+  if (AstroClient::Create(devfs_root.duplicate(), std::move(svc_root), out) == ZX_OK ||
+      SherlockClient::Create(std::move(devfs_root), out) == ZX_OK) {
+    return ZX_OK;
+  }
+  return ZX_ERR_NOT_FOUND;
 }
 
 bool Client::IsValid() const {
@@ -186,13 +198,27 @@ void Client::UpdateCrc(abr::Data* data) {
 
 zx_status_t AstroClient::Create(fbl::unique_fd devfs_root, zx::channel svc_root,
                                 std::unique_ptr<abr::Client>* out) {
-  if (zx_status_t status = SupportsVerfiedBoot(svc_root); status != ZX_OK) {
-    return status;
-  }
-
   std::unique_ptr<paver::DevicePartitioner> partitioner;
   zx_status_t status = paver::SkipBlockDevicePartitioner::Initialize(
       std::move(devfs_root), std::move(svc_root), &partitioner);
+  if (status != ZX_OK) {
+    return ZX_OK;
+  }
+
+  std::unique_ptr<paver::PartitionClient> partition;
+  if (zx_status_t status = partitioner->FindPartition(paver::Partition::kABRMeta, &partition);
+      status != ZX_OK) {
+    return status;
+  }
+
+  return PartitionClient::Create(std::move(partition), out);
+}
+
+zx_status_t SherlockClient::Create(fbl::unique_fd devfs_root, std::unique_ptr<abr::Client>* out) {
+
+  std::unique_ptr<paver::DevicePartitioner> partitioner;
+  zx_status_t status =
+      paver::SherlockPartitioner::Initialize(std::move(devfs_root), std::nullopt, &partitioner);
   if (status != ZX_OK) {
     return ZX_OK;
   }

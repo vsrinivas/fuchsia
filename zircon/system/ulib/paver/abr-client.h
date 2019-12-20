@@ -43,4 +43,9 @@ class AstroClient {
                             std::unique_ptr<abr::Client>* out);
 };
 
+class SherlockClient {
+ public:
+  static zx_status_t Create(fbl::unique_fd devfs_root, std::unique_ptr<abr::Client>* out);
+};
+
 }  // namespace abr
