@@ -1,4 +1,5 @@
 mod accessibility_tests;
+mod agent_tests;
 mod audio_tests;
 mod device_tests;
 mod display_tests;

@@ -6,6 +6,7 @@ use {
     crate::accessibility::spawn_accessibility_controller,
     crate::accessibility::spawn_accessibility_fidl_handler,
     crate::account::spawn_account_controller,
+    crate::agent::authority_impl::AuthorityImpl,
     crate::audio::spawn_audio_controller,
     crate::audio::spawn_audio_fidl_handler,
     crate::device::spawn_device_controller,
@@ -55,6 +56,7 @@ mod privacy;
 mod setup;
 mod system;
 
+pub mod agent;
 pub mod config;
 pub mod registry;
 pub mod service_context;
@@ -77,6 +79,8 @@ pub fn create_fidl_service<'a, T: DeviceStorageFactory>(
     // Creates switchboard, handed to interface implementations to send messages
     // to handlers.
     let (switchboard_handle, event_tx) = SwitchboardImpl::create(action_tx);
+
+    let _agent_authority = AuthorityImpl::new();
 
     // Creates registry, used to register handlers for setting types.
     let registry_handle = RegistryImpl::create(event_tx, action_rx);
