@@ -165,6 +165,8 @@ config("relative_paths") {
     # superfluous for purposes of the debugging information.
     "-no-canonical-prefixes",
   ]
+  asmflags = cflags
+  ldflags = cflags
 }
 
 config("debug") {
