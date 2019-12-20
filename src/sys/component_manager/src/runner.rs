@@ -156,16 +156,16 @@ mod tests {
         hooks.install(vec![builtin_runner.hook()]).await;
         let provider_result = Arc::new(Mutex::new(None));
         hooks
-            .dispatch(&Event {
-                target_realm: Arc::new(create_test_realm()),
-                payload: EventPayload::RouteCapability {
+            .dispatch(&Event::new(
+                Arc::new(create_test_realm()),
+                EventPayload::RouteCapability {
                     source: CapabilitySource::Framework {
                         capability: FrameworkCapability::Runner("elf".into()),
                         scope_moniker: None,
                     },
                     capability_provider: provider_result.clone(),
                 },
-            })
+            ))
             .await?;
         let provider = provider_result.lock().await.take().expect("did not get runner cap");
 

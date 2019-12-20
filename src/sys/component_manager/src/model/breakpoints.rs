@@ -10,10 +10,8 @@ use {
         moniker::AbsoluteMoniker,
     },
     failure::Error,
-    futures::{
-        channel::oneshot::Canceled, channel::*, future::BoxFuture, lock::Mutex, sink::SinkExt,
-        FutureExt, StreamExt,
-    },
+    fuchsia_trace as trace,
+    futures::{channel::*, future::BoxFuture, lock::Mutex, sink::SinkExt, StreamExt},
     log::*,
     std::{
         collections::HashMap,
@@ -33,6 +31,8 @@ pub struct Invocation {
 
 impl Invocation {
     pub fn resume(self) {
+        trace::duration!("component_manager", "breakpoints:resume");
+        trace::flow_step!("component_manager", "event", self.event.id);
         self.responder.send(()).unwrap()
     }
 }
@@ -58,6 +58,16 @@ impl InvocationSender {
 
     /// Sends the event to a receiver. Returns a responder which can be blocked on.
     async fn send(&self, event: Event) -> Result<oneshot::Receiver<()>, Error> {
+        trace::duration!("component_manager", "breakpoints:send");
+        let event_type = format!("{:?}", event.payload.type_());
+        let target_moniker = event.target_realm.abs_moniker.to_string();
+        trace::flow_begin!(
+            "component_manager",
+            "event",
+            event.id,
+            "event_type" => event_type.as_str(),
+            "target_moniker" => target_moniker.as_str()
+        );
         let (responder_tx, responder_rx) = oneshot::channel();
         {
             let mut tx = self.tx.lock().await;
@@ -79,8 +89,11 @@ impl InvocationReceiver {
 
     /// Receives an invocation from the sender.
     pub async fn receive(&self) -> Invocation {
+        trace::duration!("component_manager", "breakpoints:receive");
         let mut rx = self.rx.lock().await;
-        rx.next().await.expect("Breakpoint did not occur")
+        let invocation = rx.next().await.expect("Breakpoint did not occur");
+        trace::flow_step!("component_manager", "event", invocation.event.id);
+        invocation
     }
 
     /// Waits for an invocation with a particular EventType against a component with a
@@ -157,18 +170,19 @@ impl BreakpointRegistry {
                     // means that the receiver is no longer interested in future
                     // events. So we force each future to return a success. This
                     // ensures that all the futures can be driven to completion.
-                    let responder_channel =
-                        responder_channel.map(|actual_result| -> Result<(), Canceled> {
-                            if let Err(error) = actual_result {
-                                warn!(
-                                    "A responder channel was canceled. This may \
-                                     mean that an InvocationReceiver  was dropped \
-                                     unintentionally. Error -> {}",
-                                    error
-                                );
-                            }
-                            Ok(())
-                        });
+                    let responder_channel = async move {
+                        trace::duration!("component_manager", "breakpoints:wait_for_resume");
+                        let result = responder_channel.await;
+                        trace::flow_end!("component_manager", "event", event.id);
+                        if let Err(error) = result {
+                            warn!(
+                                "A responder channel was canceled. This may \
+                                 mean that an InvocationReceiver was dropped \
+                                 unintentionally. Error -> {}",
+                                error
+                            );
+                        }
+                    };
                     responder_channels.push(responder_channel);
                 }
                 Err(error) => {
@@ -188,7 +202,10 @@ impl BreakpointRegistry {
         }
 
         // Wait until all tasks have used the responder to unblock.
-        futures::future::join_all(responder_channels).await;
+        {
+            trace::duration!("component_manager", "breakpoints:wait_for_all_resume");
+            futures::future::join_all(responder_channels).await;
+        }
 
         Ok(())
     }

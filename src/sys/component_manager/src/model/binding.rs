@@ -77,14 +77,14 @@ impl Model {
                 })
                 .collect();
             let live_child_realms = state.live_child_realms().map(|(_, r)| r.clone()).collect();
-            let event = Event {
-                target_realm: realm.clone(),
-                payload: EventPayload::StartInstance {
+            let event = Event::new(
+                realm.clone(),
+                EventPayload::StartInstance {
                     component_decl: state.decl().clone(),
                     live_child_realms,
                     routing_facade,
                 },
-            };
+            );
             (event, eager_child_realms)
         };
         realm.hooks.dispatch(&event).await?;

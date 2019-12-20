@@ -21,6 +21,7 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{DirectoryProxy, NodeMarker, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY},
     fuchsia_async::EHandle,
+    fuchsia_trace as trace,
     fuchsia_vfs_pseudo_fs_mt::{
         directory::entry::DirectoryEntry, directory::immutable::simple as pfs,
         execution_scope::ExecutionScope, file::pcb::asynchronous::read_only_static,
@@ -185,6 +186,7 @@ impl HubInner {
         component_url: String,
         instance_map: &mut HashMap<AbsoluteMoniker, Instance>,
     ) -> Result<Option<Directory>, ModelError> {
+        trace::duration!("component_manager", "hub:add_instance_if_necessary");
         if instance_map.contains_key(&abs_moniker) {
             return Ok(None);
         }
@@ -245,6 +247,8 @@ impl HubInner {
             HubInner::add_instance_if_necessary(&abs_moniker, component_url, &mut instances_map)?
         {
             if let (Some(leaf), Some(parent_moniker)) = (abs_moniker.leaf(), abs_moniker.parent()) {
+                // In the children directory, the child's instance id is not used
+                trace::duration!("component_manager", "hub:add_instance_to_parent");
                 let partial_moniker = leaf.to_partial();
                 instances_map[&parent_moniker].children_directory.add_node(
                     partial_moniker.as_str(),
@@ -301,6 +305,7 @@ impl HubInner {
         routing_facade: &RoutingFacade,
         abs_moniker: &AbsoluteMoniker,
     ) -> Result<(), ModelError> {
+        trace::duration!("component_manager", "hub:add_expose_directory");
         let tree = DirTree::build_from_exposes(
             routing_facade.route_expose_fn_factory(),
             &abs_moniker,
@@ -317,6 +322,7 @@ impl HubInner {
         runtime: &Runtime,
         abs_moniker: &AbsoluteMoniker,
     ) -> Result<(), ModelError> {
+        trace::duration!("component_manager", "hub:add_out_directory");
         if let Some(out_dir) = Self::clone_dir(runtime.outgoing_dir.as_ref()) {
             execution_directory.add_node(
                 "out",
@@ -332,6 +338,7 @@ impl HubInner {
         runtime: &Runtime,
         abs_moniker: &AbsoluteMoniker,
     ) -> Result<(), ModelError> {
+        trace::duration!("component_manager", "hub:add_runtime_directory");
         if let Some(runtime_dir) = Self::clone_dir(runtime.runtime_dir.as_ref()) {
             execution_directory.add_node(
                 "runtime",
@@ -349,6 +356,7 @@ impl HubInner {
         live_child_realms: &'a Vec<Arc<Realm>>,
         routing_facade: RoutingFacade,
     ) -> Result<(), ModelError> {
+        trace::duration!("component_manager", "hub:on_start_instance_async");
         let component_url = realm.component_url.clone();
         let abs_moniker = realm.abs_moniker.clone();
         let mut instances_map = self.instances.lock().await;
@@ -362,8 +370,10 @@ impl HubInner {
 
         // If we haven't already created an execution directory, create one now.
         if instance.execution.is_none() {
+            trace::duration!("component_manager", "hub:create_execution");
             let execution = realm.lock_execution().await;
             if let Some(runtime) = execution.runtime.as_ref() {
+                trace::duration!("component_manager", "hub:create_runtime");
                 let execution_directory = pfs::simple();
 
                 let used = pfs::simple();
@@ -409,6 +419,8 @@ impl HubInner {
 
         // TODO: Loop over deleting realms also?
         for child_realm in live_child_realms {
+            let child_moniker = child_realm.abs_moniker.to_string();
+            trace::duration!("component_manager", "hub:add_live_child", "child_moniker" => child_moniker.as_ref());
             Self::add_instance_to_parent_if_necessary(
                 &child_realm.abs_moniker,
                 child_realm.component_url.clone(),
@@ -421,6 +433,7 @@ impl HubInner {
     }
 
     async fn on_add_dynamic_child_async(&self, realm: Arc<Realm>) -> Result<(), ModelError> {
+        trace::duration!("component_manager", "hub:on_add_dynamic_child_async");
         let mut instances_map = self.instances.lock().await;
         Self::add_instance_to_parent_if_necessary(
             &realm.abs_moniker,
@@ -432,6 +445,7 @@ impl HubInner {
     }
 
     async fn on_post_destroy_instance_async(&self, realm: Arc<Realm>) -> Result<(), ModelError> {
+        trace::duration!("component_manager", "hub:on_post_destroy_instance_async");
         let mut instance_map = self.instances.lock().await;
 
         // TODO(xbhatnag): Investigate error handling scenarios here.
@@ -449,6 +463,7 @@ impl HubInner {
     }
 
     async fn on_stop_instance_async(&self, realm: Arc<Realm>) -> Result<(), ModelError> {
+        trace::duration!("component_manager", "hub:on_stop_instance_async");
         let mut instance_map = self.instances.lock().await;
         instance_map[&realm.abs_moniker].directory.remove_node("exec")?;
         instance_map.get_mut(&realm.abs_moniker).expect("instance must exist").execution = None;
@@ -456,6 +471,7 @@ impl HubInner {
     }
 
     async fn on_pre_destroy_instance_async(&self, realm: Arc<Realm>) -> Result<(), ModelError> {
+        trace::duration!("component_manager", "hub:on_pre_destroy_instance_async");
         let instance_map = self.instances.lock().await;
 
         let parent_moniker =
@@ -482,6 +498,7 @@ impl HubInner {
         source: &'a CapabilitySource,
         capability_provider: Arc<Mutex<Option<Box<dyn CapabilityProvider>>>>,
     ) {
+        trace::duration!("component_manager", "hub:try_set_capability_provider");
         // If this is a scoped framework directory capability, then check the source path
         if let CapabilitySource::Framework {
             capability: FrameworkCapability::Directory(source_path),
@@ -512,6 +529,7 @@ impl HubInner {
         source: CapabilitySource,
         capability_provider: Arc<Mutex<Option<Box<dyn CapabilityProvider>>>>,
     ) -> Result<(), ModelError> {
+        trace::duration!("component_manager", "hub:on_route_capability_async");
         self.clone().try_set_capability_provider(&source, capability_provider).await;
 
         let mut instance_map = self.instances.lock().await;

@@ -194,8 +194,7 @@ async fn do_delete_child(
 
     // The child may not exist or may already be deleted by a previous DeleteChild action.
     if let Some(child_realm) = child_realm {
-        let event =
-            Event { target_realm: child_realm.clone(), payload: EventPayload::PreDestroyInstance };
+        let event = Event::new(child_realm.clone(), EventPayload::PreDestroyInstance);
 
         child_realm.hooks.dispatch(&event).await?;
 
@@ -206,8 +205,7 @@ async fn do_delete_child(
             state.as_mut().expect("do_delete_child: not resolved").remove_child_realm(&moniker);
         }
 
-        let event =
-            Event { target_realm: child_realm.clone(), payload: EventPayload::PostDestroyInstance };
+        let event = Event::new(child_realm.clone(), EventPayload::PostDestroyInstance);
         child_realm.hooks.dispatch(&event).await?;
     }
 

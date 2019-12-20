@@ -104,8 +104,7 @@ impl Realm {
                     *state = Some(RealmState::new(realm, component.decl).await?);
                 }
             }
-            let event =
-                Event { target_realm: realm.clone(), payload: EventPayload::ResolveInstance };
+            let event = Event::new(realm.clone(), EventPayload::ResolveInstance);
             realm.hooks.dispatch(&event).await?;
         }
         Ok(())
@@ -276,8 +275,7 @@ impl Realm {
             }
         };
         // Call hooks outside of lock
-        let event =
-            Event { target_realm: child_realm.clone(), payload: EventPayload::AddDynamicChild };
+        let event = Event::new(child_realm.clone(), EventPayload::AddDynamicChild);
         realm.hooks.dispatch(&event).await?;
         Ok(())
     }

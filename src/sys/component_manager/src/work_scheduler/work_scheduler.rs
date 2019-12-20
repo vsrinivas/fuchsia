@@ -769,13 +769,13 @@ mod connect_tests {
             let root_component_url = "test:///root".to_string();
             Arc::new(Realm::new_root_realm(resolver, root_component_url))
         };
-        let event = Event {
-            target_realm: realm.clone(),
-            payload: EventPayload::RouteCapability {
+        let event = Event::new(
+            realm.clone(),
+            EventPayload::RouteCapability {
                 source,
                 capability_provider: capability_provider.clone(),
             },
-        };
+        );
         hooks.dispatch(&event).await?;
 
         let capability_provider = capability_provider.lock().await.take();

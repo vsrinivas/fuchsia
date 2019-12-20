@@ -246,7 +246,7 @@ pub async fn do_shutdown(model: Arc<Model>, realm: Arc<Realm>) -> Result<(), Mod
         };
         join_all(nfs).await.into_iter().fold(Ok(()), |acc, r| acc.and_then(|_| r))?;
         if was_running {
-            let event = Event { target_realm: realm.clone(), payload: EventPayload::StopInstance };
+            let event = Event::new(realm.clone(), EventPayload::StopInstance);
             realm.hooks.dispatch(&event).await?;
         }
     } else {

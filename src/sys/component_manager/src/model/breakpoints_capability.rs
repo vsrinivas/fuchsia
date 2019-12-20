@@ -13,7 +13,8 @@ use {
     },
     async_trait::async_trait,
     fidl::endpoints::{create_request_stream, ClientEnd, ServerEnd},
-    fidl_fuchsia_test_breakpoints as fbreak, fuchsia_async as fasync, fuchsia_zircon as zx,
+    fidl_fuchsia_test_breakpoints as fbreak, fuchsia_async as fasync, fuchsia_trace as trace,
+    fuchsia_zircon as zx,
     futures::{future::BoxFuture, lock::Mutex, StreamExt},
     lazy_static::lazy_static,
     std::{convert::TryInto, sync::Arc},
@@ -218,6 +219,7 @@ async fn serve_receiver(
 ) {
     while let Some(Ok(fbreak::InvocationReceiverRequest::Next { responder })) = stream.next().await
     {
+        trace::duration!("component_manager", "breakpoints:fidl_get_next");
         // Wait for the next breakpoint to occur
         let invocation = receiver.receive().await;
 

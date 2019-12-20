@@ -10,6 +10,7 @@ use {
     cm_rust::ComponentDecl,
     fuchsia_trace as trace,
     futures::{future::BoxFuture, lock::Mutex},
+    rand::random,
     std::{
         collections::HashMap,
         fmt,
@@ -124,8 +125,22 @@ impl fmt::Debug for EventPayload {
 
 #[derive(Clone, Debug)]
 pub struct Event {
+    /// Each event has a unique 64-bit integer assigned to it
+    pub id: u64,
+
+    /// Realm that this event applies to
     pub target_realm: Arc<Realm>,
+
+    /// Payload of the event
     pub payload: EventPayload,
+}
+
+impl Event {
+    pub fn new(target_realm: Arc<Realm>, payload: EventPayload) -> Self {
+        // Generate a random 64-bit integer to identify this event
+        let id = random::<u64>();
+        Self { id, target_realm, payload }
+    }
 }
 
 /// This is a collection of hooks to component manager events.
@@ -175,6 +190,12 @@ impl Hooks {
             );
 
             let hooks = {
+                trace::duration!(
+                   "component_manager",
+                   "hooks:upgrade_dedup",
+                   "event_type" => event_type.as_ref(),
+                   "target_moniker" => target_moniker.as_ref()
+                );
                 // We must upgrade our weak references to hooks to strong ones before we can
                 // call out to them. Since hooks are deduped at install time, we do not need
                 // to worry about that here.
@@ -193,12 +214,25 @@ impl Hooks {
                 strong_hooks
             };
             for hook in hooks.into_iter() {
+                trace::duration!(
+                    "component_manager",
+                    "hooks:on",
+                    "event_type" => event_type.as_ref(),
+                    "target_moniker" => target_moniker.as_ref()
+                );
                 hook.on(event).await?;
             }
 
             if let Some(parent) = &self.parent {
+                trace::duration!(
+                    "component_manager",
+                    "hooks:parent_dispatch",
+                    "event_type" => event_type.as_ref(),
+                    "target_moniker" => target_moniker.as_ref()
+                );
                 parent.dispatch(event).await?;
             }
+
             Ok(())
         })
     }
@@ -306,7 +340,7 @@ mod tests {
             let root_component_url = "test:///root".to_string();
             Arc::new(Realm::new_root_realm(resolver, root_component_url))
         };
-        let event = Event { target_realm: realm.clone(), payload: EventPayload::AddDynamicChild };
+        let event = Event::new(realm.clone(), EventPayload::AddDynamicChild);
         hooks.dispatch(&event).await.expect("Unable to call hooks.");
         assert_eq!(1, call_counter.count().await);
     }
@@ -342,7 +376,7 @@ mod tests {
             let root_component_url = "test:///root".to_string();
             Arc::new(Realm::new_root_realm(resolver, root_component_url))
         };
-        let event = Event { target_realm: realm.clone(), payload: EventPayload::AddDynamicChild };
+        let event = Event::new(realm.clone(), EventPayload::AddDynamicChild);
         child_hooks.dispatch(&event).await.expect("Unable to call hooks.");
         // parent_call_counter gets informed of the event on child_hooks even though it has
         // been installed on parent_hooks.
