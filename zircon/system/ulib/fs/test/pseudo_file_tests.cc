@@ -332,7 +332,7 @@ bool TestGetattrUnbuffered() {
     EXPECT_RESULT_OK(file->ValidateOptions(VnodeOptions().set_node_reference()));
     fs::VnodeAttributes path_attr;
     EXPECT_EQ(ZX_OK, file->GetAttributes(&path_attr));
-    EXPECT_BYTES_EQ((uint8_t*)&attr, (uint8_t*)&path_attr, sizeof(attr), "");
+    EXPECT_ATTR_EQ(attr, path_attr);
   }
 
   // read handler, no write handler
