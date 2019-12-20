@@ -235,6 +235,7 @@ source_set("tests") {
   testonly = true
   sources = [
     "breakpoint_impl_unittest.cc",
+    "client_eval_context_impl_unittest.cc",
     "disassembler_unittest.cc",
     "filter_unittest.cc",
     "finish_physical_frame_thread_controller_unittest.cc",

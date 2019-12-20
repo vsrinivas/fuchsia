@@ -11,6 +11,15 @@ namespace zxdb {
 
 // Schema definition -------------------------------------------------------------------------------
 
+const char* ClientSettings::System::kAutoCastToDerived = "auto-cast-to-derived";
+static const char* kAutoCastToDerivedDescription =
+    R"(  Automatically cast pointers and references to the final derived class when
+  possible.
+
+  When a class has virtual members, zxdb can use the vtable information to
+  deduce the specific derived class for the object. This affects printing and
+  the resolution of class/struct members in expressions.)";
+
 const char* ClientSettings::System::kDebugMode = "debug-mode";
 static const char* kDebugModeDescription =
     R"(  Output debug information about zxdb.
@@ -81,6 +90,7 @@ namespace {
 fxl::RefPtr<SettingSchema> CreateSchema() {
   auto schema = fxl::MakeRefCounted<SettingSchema>();
 
+  schema->AddBool(ClientSettings::System::kAutoCastToDerived, kAutoCastToDerivedDescription, true);
   schema->AddBool(ClientSettings::System::kDebugMode, kDebugModeDescription, false);
   schema->AddList(ClientSettings::System::kSymbolPaths, kSymbolPathsDescription, {});
   schema->AddList(ClientSettings::System::kSymbolRepoPaths, kSymbolRepoPathsDescription, {});

@@ -315,10 +315,6 @@ Location EvalContextImpl::GetLocationForAddress(uint64_t address) const {
   return locations[0];
 }
 
-bool EvalContextImpl::ShouldPromoteToDerived() const {
-  return false;  // TODO(brettw) implement this.
-}
-
 Err EvalContextImpl::ResolveExternValue(const fxl::RefPtr<Value>& input_value,
                                         fxl::RefPtr<Variable>* resolved) const {
   FXL_DCHECK(input_value->is_external());

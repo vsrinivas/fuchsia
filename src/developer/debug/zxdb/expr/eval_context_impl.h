@@ -58,6 +58,10 @@ class EvalContextImpl : public EvalContext {
   ~EvalContextImpl() override;
 
   // EvalContext implementation.
+  //
+  // NOTE: Some of these implementations return constant values because the expression library
+  // doesn't have enough context to know what they should be. The ClientEvalContextImpl hooks
+  // some things up to the debugger settings system.
   ExprLanguage GetLanguage() const override;
   void GetNamedValue(const ParsedIdentifier& name, EvalCallback cb) const override;
   void GetVariableValue(fxl::RefPtr<Value> variable, EvalCallback cb) const override;
@@ -68,13 +72,10 @@ class EvalContextImpl : public EvalContext {
   NameLookupCallback GetSymbolNameLookupCallback() override;
   Location GetLocationForAddress(uint64_t address) const override;
   const PrettyTypeManager& GetPrettyTypeManager() const override { return pretty_type_manager_; }
-  bool ShouldPromoteToDerived() const override;
-
-  // This implementation of EvalContextImpl always returns "double". To configure, implementations
-  // should override this to hook into their own settings systems. See ClientEvalContextImpl.
   VectorRegisterFormat GetVectorRegisterFormat() const override {
     return VectorRegisterFormat::kDouble;
   }
+  bool ShouldPromoteToDerived() const override { return false; }
 
  private:
   // Converts an extern value to a real Variable by looking the name up in the index.

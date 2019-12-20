@@ -25,6 +25,7 @@ class SettingSchema;
 // most specific level they're needed.
 struct ClientSettings {
   struct System {
+    static const char* kAutoCastToDerived;
     static const char* kDebugMode;
     static const char* kSymbolPaths;
     static const char* kSymbolRepoPaths;
@@ -35,6 +36,7 @@ struct ClientSettings {
     static const char* kShowStdout;
     static const char* kSymbolServers;
     static const char* kSymbolCache;
+
     static const char* kLanguage;
     static const char* kLanguage_Cpp;
     static const char* kLanguage_Rust;
