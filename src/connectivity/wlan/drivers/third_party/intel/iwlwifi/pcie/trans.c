@@ -38,6 +38,7 @@
 #include <threads.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
+#include <zircon/system/public/zircon/time.h>
 
 #include <ddk/protocol/pci.h>
 #include <hw/pci.h>
@@ -340,8 +341,8 @@ static zx_status_t iwl_pcie_apm_init(struct iwl_trans* trans) {
    * and accesses to uCode SRAM.
    */
   ret = iwl_poll_bit(trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_mac_clock_ready),
-                     BIT(trans->cfg->csr->flag_mac_clock_ready), 25000);
-  if (ret < 0) {
+                     BIT(trans->cfg->csr->flag_mac_clock_ready), 25000, NULL);
+  if (ret != ZX_OK) {
     IWL_ERR(trans, "Failed to init the card\n");
     return ret;
   }
@@ -570,49 +571,45 @@ static zx_status_t iwl_pcie_nic_init(struct iwl_trans* trans) {
 
 #define HW_READY_TIMEOUT (50)
 
-/* Note: returns poll_bit return value, which is >= 0 if success */
-static int iwl_pcie_set_hw_ready(struct iwl_trans* trans) {
-  int ret;
+static zx_status_t iwl_pcie_set_hw_ready(struct iwl_trans* trans) {
+  zx_status_t ret;
 
   iwl_set_bit(trans, CSR_HW_IF_CONFIG_REG, CSR_HW_IF_CONFIG_REG_BIT_NIC_READY);
 
   /* See if we got it */
   ret = iwl_poll_bit(trans, CSR_HW_IF_CONFIG_REG, CSR_HW_IF_CONFIG_REG_BIT_NIC_READY,
-                     CSR_HW_IF_CONFIG_REG_BIT_NIC_READY, HW_READY_TIMEOUT);
+                     CSR_HW_IF_CONFIG_REG_BIT_NIC_READY, HW_READY_TIMEOUT, NULL);
 
-  if (ret >= 0) {
+  if (ret == ZX_OK) {
     iwl_set_bit(trans, CSR_MBOX_SET_REG, CSR_MBOX_SET_REG_OS_ALIVE);
   }
 
-  IWL_DEBUG_INFO(trans, "hardware%s ready\n", ret < 0 ? " not" : "");
+  IWL_DEBUG_INFO(trans, "hardware%s ready\n", ret != ZX_OK ? " not" : "");
   return ret;
 }
 
-/* Note: returns standard 0/-ERROR code */
-int iwl_pcie_prepare_card_hw(struct iwl_trans* trans) {
-  int ret;
+zx_status_t iwl_pcie_prepare_card_hw(struct iwl_trans* trans) {
   int t = 0;
   int iter;
 
   IWL_DEBUG_INFO(trans, "iwl_trans_prepare_card_hw enter\n");
 
-  ret = iwl_pcie_set_hw_ready(trans);
   /* If the card is ready, exit 0 */
-  if (ret >= 0) {
-    return 0;
+  if (ZX_OK == iwl_pcie_set_hw_ready(trans)) {
+    return ZX_OK;
   }
 
   iwl_set_bit(trans, CSR_DBG_LINK_PWR_MGMT_REG, CSR_RESET_LINK_PWR_MGMT_DISABLED);
   zx_nanosleep(zx_deadline_after(ZX_MSEC(2)));
 
+  zx_status_t ret;
   for (iter = 0; iter < 10; iter++) {
     /* If HW is not ready, prepare the conditions to check again */
     iwl_set_bit(trans, CSR_HW_IF_CONFIG_REG, CSR_HW_IF_CONFIG_REG_PREPARE);
 
     do {
-      ret = iwl_pcie_set_hw_ready(trans);
-      if (ret >= 0) {
-        return 0;
+      if (ZX_OK == (ret = iwl_pcie_set_hw_ready(trans))) {
+        return ZX_OK;
       }
 
       zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
@@ -1309,7 +1306,7 @@ static zx_status_t iwl_trans_pcie_start_fw(struct iwl_trans* trans, const struct
   zx_status_t ret;
 
   /* This may fail if AMT took ownership of the device */
-  if (iwl_pcie_prepare_card_hw(trans)) {
+  if (ZX_OK != iwl_pcie_prepare_card_hw(trans)) {
     IWL_WARN(trans, "Exit HW not ready\n");
     ret = ZX_ERR_UNAVAILABLE;
     goto out;
@@ -1675,10 +1672,9 @@ static int iwl_pcie_init_msix_handler(struct pci_dev* pdev, struct iwl_trans_pci
 static zx_status_t _iwl_trans_pcie_start_hw(struct iwl_trans* trans, bool low_power) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
   uint32_t hpm;
-  zx_status_t err;
 
-  err = iwl_pcie_prepare_card_hw(trans);
-  if (err) {
+  zx_status_t err = iwl_pcie_prepare_card_hw(trans);
+  if (err != ZX_OK) {
     IWL_ERR(trans, "Error while preparing HW: %d\n", err);
     return err;
   }
@@ -1694,8 +1690,7 @@ static zx_status_t _iwl_trans_pcie_start_hw(struct iwl_trans* trans, bool low_po
 
   iwl_trans_pcie_sw_reset(trans);
 
-  err = iwl_pcie_apm_init(trans);
-  if (err) {
+  if (ZX_OK != (err = iwl_pcie_apm_init(trans))) {
     return err;
   }
 
@@ -1943,8 +1938,9 @@ static bool iwl_trans_pcie_grab_nic_access(struct iwl_trans* trans, unsigned lon
    */
   ret = iwl_poll_bit(
       trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_val_mac_access_en),
-      (BIT(trans->cfg->csr->flag_mac_clock_ready) | CSR_GP_CNTRL_REG_FLAG_GOING_TO_SLEEP), 15000);
-  if (unlikely(ret < 0)) {
+      (BIT(trans->cfg->csr->flag_mac_clock_ready) | CSR_GP_CNTRL_REG_FLAG_GOING_TO_SLEEP), 15000,
+      NULL);
+  if (unlikely(ret != ZX_OK)) {
     uint32_t cntrl = iwl_read32(trans, CSR_GP_CNTRL);
 
     IWL_WARN(trans, "Timeout waiting for hardware access (CSR_GP_CNTRL 0x%08x)\n", cntrl);

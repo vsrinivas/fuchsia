@@ -520,8 +520,8 @@ static void iwl_mvm_dump_lmac_error_log(struct iwl_mvm* mvm, uint8_t lmac_num) {
     }
 
     err = iwl_poll_bit(trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_mac_clock_ready),
-                       BIT(trans->cfg->csr->flag_mac_clock_ready), 25000);
-    if (err < 0) {
+                       BIT(trans->cfg->csr->flag_mac_clock_ready), 25000 /* usecs */, NULL);
+    if (err != ZX_OK) {
       IWL_DEBUG_INFO(trans, "Failed to reset the card for the dump\n");
       return;
     }

@@ -32,6 +32,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_IO_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_IO_H_
 
+#include <zircon/system/public/zircon/time.h>
 #include <zircon/types.h>
 
 #if 0  // NEEDS_PORTING
@@ -53,7 +54,7 @@ static inline void iwl_clear_bit(struct iwl_trans* trans, uint32_t reg, uint32_t
 }
 
 zx_status_t iwl_poll_bit(struct iwl_trans* trans, uint32_t addr, uint32_t bits, uint32_t mask,
-                         int timeout);
+                         int timeout, zx_duration_t* elapsed);
 zx_status_t iwl_poll_direct_bit(struct iwl_trans* trans, uint32_t addr, uint32_t mask, int timeout);
 
 uint32_t iwl_read_direct32(struct iwl_trans* trans, uint32_t reg);

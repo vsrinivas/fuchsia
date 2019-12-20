@@ -61,21 +61,26 @@ uint32_t iwl_read32(struct iwl_trans* trans, uint32_t ofs) {
   return val;
 }
 
-#define IWL_POLL_INTERVAL 10 /* microseconds */
+#define IWL_POLL_INTERVAL ZX_USEC(10)
 
 zx_status_t iwl_poll_bit(struct iwl_trans* trans, uint32_t addr, uint32_t bits, uint32_t mask,
-                         int timeout) {
-  int t = 0;
+                         int timeout, zx_duration_t* elapsed) {
+  zx_status_t ret = ZX_ERR_TIMED_OUT;
+  zx_duration_t t = 0;
 
   do {
     if ((iwl_read32(trans, addr) & mask) == (bits & mask)) {
-      return t;
+      ret = ZX_OK;
+      break;
     }
-    zx_nanosleep(zx_deadline_after(ZX_USEC(IWL_POLL_INTERVAL)));
-    t += IWL_POLL_INTERVAL;
+    zx_nanosleep(zx_deadline_after(IWL_POLL_INTERVAL));
+    t = zx_duration_add_duration(t, IWL_POLL_INTERVAL);
   } while (t < timeout);
 
-  return ZX_ERR_TIMED_OUT;
+  if (elapsed) {
+    *elapsed = t;
+  }
+  return ret;
 }
 
 uint32_t iwl_read_direct32(struct iwl_trans* trans, uint32_t reg) {
@@ -109,14 +114,14 @@ void iwl_write_direct64(struct iwl_trans* trans, uint64_t reg, uint64_t value) {
 
 zx_status_t iwl_poll_direct_bit(struct iwl_trans* trans, uint32_t addr, uint32_t mask,
                                 int timeout) {
-  int t = 0;
+  zx_duration_t t = 0;
 
   do {
     if ((iwl_read_direct32(trans, addr) & mask) == mask) {
       return t;
     }
-    zx_nanosleep(zx_deadline_after(ZX_USEC(IWL_POLL_INTERVAL)));
-    t += IWL_POLL_INTERVAL;
+    zx_nanosleep(zx_deadline_after(IWL_POLL_INTERVAL));
+    t = zx_duration_add_duration(t, IWL_POLL_INTERVAL);
   } while (t < timeout);
 
   return ZX_ERR_TIMED_OUT;
@@ -164,8 +169,8 @@ zx_status_t iwl_poll_prph_bit(struct iwl_trans* trans, uint32_t addr, uint32_t b
     if ((iwl_read_prph(trans, addr) & mask) == (bits & mask)) {
       return t;
     }
-    zx_nanosleep(zx_deadline_after(ZX_USEC(IWL_POLL_INTERVAL)));
-    t += IWL_POLL_INTERVAL;
+    zx_nanosleep(zx_deadline_after(IWL_POLL_INTERVAL));
+    t = zx_duration_add_duration(t, IWL_POLL_INTERVAL);
   } while (t < timeout);
 
   return ZX_ERR_TIMED_OUT;

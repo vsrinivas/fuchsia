@@ -1178,7 +1178,7 @@ static zx_status_t iwl_pcie_set_cmd_in_flight(struct iwl_trans* trans,
 
     zx_status_t status = iwl_poll_bit(
         trans, CSR_GP_CNTRL, BIT(cfg->csr->flag_val_mac_access_en),
-        (BIT(cfg->csr->flag_mac_clock_ready) | CSR_GP_CNTRL_REG_FLAG_GOING_TO_SLEEP), 15000);
+        (BIT(cfg->csr->flag_mac_clock_ready) | CSR_GP_CNTRL_REG_FLAG_GOING_TO_SLEEP), 15000, NULL);
     if (status != ZX_OK) {
       __iwl_trans_pcie_clear_bit(trans, CSR_GP_CNTRL, BIT(cfg->csr->flag_mac_access_req));
       IWL_ERR(trans, "Failed to wake NIC for hcmd\n");
