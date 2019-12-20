@@ -255,6 +255,18 @@ source_set("handle") {
   ]
 }
 
+source_set("iommu") {
+  configs += [ "..:platform_include_config" ]
+
+  sources = [
+    "zircon_platform_iommu.cc",
+  ]
+
+  deps = [
+    "..:iommu_header",
+  ]
+}
+
 source_set("logger") {
   public_deps = [
     "..:logger_header",
