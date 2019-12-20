@@ -17,8 +17,7 @@ use {
         frame_len,
         ie::{self, IE_PREFIX_LEN, SUPPORTED_RATES_MAX_LEN},
         mac::{
-            self, Aid, AuthAlgorithmNumber, Bssid, CapabilityInfo, MacAddr, OptionalField,
-            Presence, StatusCode,
+            self, Aid, AuthAlgorithmNumber, Bssid, MacAddr, OptionalField, Presence, StatusCode,
         },
         sequence::SequenceManager,
         TimeUnit,
@@ -27,7 +26,6 @@ use {
 
 pub struct Context {
     pub device: Device,
-    pub capabilities: CapabilityInfo,
     pub buf_provider: BufferProvider,
     pub timer: Timer<TimedEvent>,
     pub seq_mgr: SequenceManager,
@@ -37,12 +35,11 @@ pub struct Context {
 impl Context {
     pub fn new(
         device: Device,
-        capabilities: CapabilityInfo,
         buf_provider: BufferProvider,
         timer: Timer<TimedEvent>,
         bssid: Bssid,
     ) -> Self {
-        Self { device, capabilities, timer, buf_provider, seq_mgr: SequenceManager::new(), bssid }
+        Self { device, timer, buf_provider, seq_mgr: SequenceManager::new(), bssid }
     }
 
     pub fn schedule_after(&mut self, duration: zx::Duration, event: TimedEvent) -> EventId {
@@ -418,13 +415,7 @@ mod test {
     const CLIENT_ADDR2: MacAddr = [3u8; 6];
 
     fn make_context(device: Device, scheduler: Scheduler) -> Context {
-        Context::new(
-            device,
-            CapabilityInfo(0),
-            FakeBufferProvider::new(),
-            Timer::<TimedEvent>::new(scheduler),
-            BSSID,
-        )
+        Context::new(device, FakeBufferProvider::new(), Timer::<TimedEvent>::new(scheduler), BSSID)
     }
 
     #[test]

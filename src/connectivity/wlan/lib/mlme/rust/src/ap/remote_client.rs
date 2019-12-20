@@ -836,7 +836,6 @@ mod tests {
     fn make_context(device: Device, scheduler: Scheduler) -> Context {
         Context::new(
             device,
-            CapabilityInfo(0),
             FakeBufferProvider::new(),
             Timer::<TimedEvent>::new(scheduler),
             AP_ADDR,

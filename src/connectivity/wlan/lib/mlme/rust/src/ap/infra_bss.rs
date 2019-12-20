@@ -18,7 +18,7 @@ use {
     std::collections::HashMap,
     wlan_common::{
         appendable::Appendable,
-        mac::{self, MacAddr},
+        mac::{self, CapabilityInfo, MacAddr},
         TimeUnit,
     },
     zerocopy::ByteSlice,
@@ -28,6 +28,7 @@ pub struct InfraBss {
     pub ssid: Vec<u8>,
     pub rsne: Option<Vec<u8>>,
     pub beacon_interval: TimeUnit,
+    pub capabilities: CapabilityInfo,
     pub rates: Vec<u8>,
     pub channel: u8,
     pub clients: HashMap<MacAddr, RemoteClient>,
@@ -64,11 +65,20 @@ impl InfraBss {
         ctx: &mut Context,
         ssid: Vec<u8>,
         beacon_interval: TimeUnit,
+        capabilities: CapabilityInfo,
         rates: Vec<u8>,
         channel: u8,
         rsne: Option<Vec<u8>>,
     ) -> Result<Self, Error> {
-        let bss = Self { ssid, rsne, beacon_interval, rates, channel, clients: HashMap::new() };
+        let bss = Self {
+            ssid,
+            rsne,
+            beacon_interval,
+            rates,
+            capabilities,
+            channel,
+            clients: HashMap::new(),
+        };
 
         ctx.device
             .set_channel(WlanChannel {
@@ -157,7 +167,7 @@ impl InfraBss {
                 self.channel,
                 // We don't set the ESS bit here: IEEE Std 802.11-2016, 9.4.1.4 only specifies it
                 // for Beacon and Probe Response frames, and NOT Association Response frames.
-                ctx.capabilities
+                self.capabilities
                     // IEEE Std 802.11-2016, 9.4.1.4: An AP sets the Privacy subfield to 1 within
                     // transmitted Beacon, Probe Response, (Re)Association Response frames if data
                     // confidentiality is required for all Data frames exchanged within the BSS.
@@ -211,7 +221,7 @@ impl InfraBss {
             ctx.bssid,
             0,
             self.beacon_interval,
-            ctx.capabilities
+            self.capabilities
                 // IEEE Std 802.11-2016, 9.4.1.4: An AP sets the ESS subfield to 1 and the IBSS
                 // subfield to 0 within transmitted Beacon or Probe Response frames.
                 .with_ess(true)
@@ -377,7 +387,6 @@ mod tests {
     fn make_context(device: Device, scheduler: Scheduler) -> Context {
         Context::new(
             device,
-            CapabilityInfo(0),
             FakeBufferProvider::new(),
             Timer::<TimedEvent>::new(scheduler),
             BSSID,
@@ -393,6 +402,7 @@ mod tests {
             &mut ctx,
             vec![1, 2, 3, 4, 5],
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            CapabilityInfo(0),
             vec![0b11111000],
             1,
             None,
@@ -438,6 +448,7 @@ mod tests {
             &mut ctx,
             vec![1, 2, 3, 4, 5],
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            CapabilityInfo(0),
             vec![0b11111000],
             1,
             None,
@@ -456,6 +467,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            CapabilityInfo(0),
             vec![0b11111000],
             1,
             None,
@@ -500,6 +512,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            CapabilityInfo(0),
             vec![0b11111000],
             1,
             None,
@@ -530,6 +543,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            CapabilityInfo(0),
             vec![0b11111000],
             1,
             None,
@@ -574,6 +588,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            CapabilityInfo(0),
             vec![0b11111000],
             1,
             None,
@@ -617,6 +632,58 @@ mod tests {
     }
 
     #[test]
+    fn handle_mlme_assoc_resp_with_caps() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let mut bss = InfraBss::new(
+            &mut ctx,
+            b"coolnet".to_vec(),
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            CapabilityInfo(0b00000000_00001000),
+            vec![0b11111000],
+            1,
+            None,
+        )
+        .expect("expected InfraBss::new ok");
+
+        bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
+
+        bss.handle_mlme_assoc_resp(
+            &mut ctx,
+            fidl_mlme::AssociateResponse {
+                peer_sta_address: CLIENT_ADDR,
+                result_code: fidl_mlme::AssociateResultCodes::Success,
+                association_id: 1,
+                rates: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+            },
+        )
+        .expect("expected InfraBss::handle_mlme_assoc_resp ok");
+        assert_eq!(fake_device.wlan_queue.len(), 1);
+        assert_eq!(
+            &fake_device.wlan_queue[0].0[..],
+            &[
+                // Mgmt header
+                0b00010000, 0, // Frame Control
+                0, 0, // Duration
+                1, 1, 1, 1, 1, 1, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                2, 2, 2, 2, 2, 2, // addr3
+                0x10, 0, // Sequence Control
+                // Association response header:
+                0b00001000, 0b00000000, // Capabilities
+                0, 0, // status code
+                1, 0, // AID
+                // IEs
+                1, 8, 1, 2, 3, 4, 5, 6, 7, 8, // Rates
+                50, 2, 9, 10, // Extended rates
+                90, 3, 90, 0, 0, // BSS max idle period
+            ][..]
+        );
+        assert!(fake_device.assocs.contains_key(&CLIENT_ADDR));
+    }
+
+    #[test]
     fn handle_mlme_disassoc_req() {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
@@ -625,6 +692,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            CapabilityInfo(0),
             vec![0b11111000],
             1,
             None,
@@ -667,6 +735,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            CapabilityInfo(0),
             vec![0b11111000],
             1,
             Some(fake_wpa2_rsne()),
@@ -702,6 +771,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            CapabilityInfo(0),
             vec![0b11111000],
             1,
             None,
@@ -748,6 +818,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            CapabilityInfo(0),
             vec![0b11111000],
             1,
             None,
@@ -798,6 +869,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            CapabilityInfo(0),
             vec![0b11111000],
             1,
             None,
@@ -860,6 +932,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            CapabilityInfo(0),
             vec![0b11111000],
             1,
             None,
@@ -903,6 +976,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            CapabilityInfo(0),
             vec![0b11111000],
             1,
             None,
@@ -946,6 +1020,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            CapabilityInfo(0),
             vec![0b11111000],
             1,
             None,
@@ -986,6 +1061,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            CapabilityInfo(0),
             vec![0b11111000],
             1,
             None,
@@ -1025,6 +1101,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            CapabilityInfo(0),
             vec![0b11111000],
             1,
             None,
@@ -1096,6 +1173,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            CapabilityInfo(0),
             vec![0b11111000],
             1,
             None,
@@ -1141,6 +1219,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            CapabilityInfo(0),
             vec![0b11111000],
             1,
             None,
@@ -1211,6 +1290,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            CapabilityInfo(0),
             vec![0b11111000],
             1,
             None,
@@ -1272,6 +1352,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            CapabilityInfo(0),
             vec![0b11111000],
             1,
             None,
@@ -1344,6 +1425,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            CapabilityInfo(0),
             vec![0b11111000],
             1,
             None,
@@ -1400,6 +1482,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            CapabilityInfo(0),
             vec![0b11111000],
             1,
             None,
@@ -1424,6 +1507,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            CapabilityInfo(0),
             vec![0b11111000],
             1,
             Some(fake_wpa2_rsne()),
@@ -1464,6 +1548,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            CapabilityInfo(0),
             vec![0b11111000],
             1,
             Some(fake_wpa2_rsne()),
@@ -1524,6 +1609,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            CapabilityInfo(0),
             vec![0b11111000],
             1,
             Some(fake_wpa2_rsne()),
@@ -1572,6 +1658,7 @@ mod tests {
             &mut ctx,
             b"coolnet".to_vec(),
             TimeUnit::DEFAULT_BEACON_INTERVAL,
+            CapabilityInfo(0),
             vec![0b11111000],
             1,
             None,

@@ -16,7 +16,8 @@ use rsn::*;
 
 use {
     crate::{
-        phy_selection::{derive_phy_cbw_for_ap, get_device_rates},
+        clone_utils::clone_band_cap,
+        phy_selection::{derive_phy_cbw_for_ap, get_device_band_info},
         responder::Responder,
         sink::MlmeSink,
         timer::{self, EventId, TimedEvent, Timer},
@@ -29,7 +30,7 @@ use {
     std::collections::HashMap,
     wlan_common::{
         channel::{Channel, Phy},
-        ie::{intersect, rsn::rsne::Rsne, SupportedRate},
+        ie::{rsn::rsne::Rsne, SupportedRate},
         RadioConfig,
     },
     wlan_rsn::{self, psk},
@@ -62,7 +63,7 @@ enum State {
         ctx: Context,
         ssid: Ssid,
         rsn_cfg: Option<RsnCfg>,
-        rates: Vec<SupportedRate>,
+        band_cap: fidl_mlme::BandCapabilities,
         responder: Responder<StartResult>,
         start_timeout: EventId,
     },
@@ -149,25 +150,30 @@ impl ApSme {
                     Ok(rsn_cfg) => rsn_cfg
                 };
 
-                let rates = get_device_rates(&ctx.device_info, op.chan);
+                let band_cap = match get_device_band_info(&ctx.device_info, op.chan.primary) {
+                    None => {
+                        error!("band info for channel {} not found", op.chan);
+                        responder.respond(StartResult::InternalError);
+                        return State::Idle { ctx };
+                    },
+                    Some(band_cap) => clone_band_cap(band_cap)
+                };
 
                 let req = create_start_request(
                     &op,
                     &config.ssid,
                     rsn_cfg.as_ref(),
-                    &rates,
+                    &band_cap,
                 );
                 ctx.mlme_sink.send(MlmeRequest::Start(req));
                 let event = Event::Sme { event: SmeEvent::StartTimeout };
                 let start_timeout = ctx.timer.schedule(event);
 
-                let ap_rates = intersect::ApRates::from(rates).0.to_vec();
-
                 State::Starting {
                     ctx,
                     ssid: config.ssid,
                     rsn_cfg,
-                    rates: ap_rates,
+                    band_cap,
                     responder,
                     start_timeout,
                 }
@@ -244,14 +250,14 @@ impl super::Station for ApSme {
                 warn!("received MlmeEvent while ApSme is idle {:?}", event);
                 state
             }
-            State::Starting { ctx, ssid, rsn_cfg, rates, responder, start_timeout } => {
+            State::Starting { ctx, ssid, rsn_cfg, band_cap, responder, start_timeout } => {
                 match event {
                     MlmeEvent::StartConf { resp } => {
-                        handle_start_conf(resp, ctx, ssid, rsn_cfg, rates, responder)
+                        handle_start_conf(resp, ctx, ssid, rsn_cfg, band_cap, responder)
                     }
                     _ => {
                         warn!("received MlmeEvent while ApSme is starting {:?}", event);
-                        State::Starting { ctx, ssid, rsn_cfg, rates, responder, start_timeout }
+                        State::Starting { ctx, ssid, rsn_cfg, band_cap, responder, start_timeout }
                     }
                 }
             }
@@ -288,7 +294,7 @@ impl super::Station for ApSme {
     fn on_timeout(&mut self, timed_event: TimedEvent<Event>) {
         self.state = self.state.take().map(|mut state| match state {
             State::Idle { .. } => state,
-            State::Starting { start_timeout, ctx, responder, rates, ssid, rsn_cfg } => {
+            State::Starting { start_timeout, ctx, responder, band_cap, ssid, rsn_cfg } => {
                 match timed_event.event {
                     Event::Sme { event } => match event {
                         SmeEvent::StartTimeout if start_timeout == timed_event.id => {
@@ -296,11 +302,16 @@ impl super::Station for ApSme {
                             responder.respond(StartResult::TimedOut);
                             State::Idle { ctx }
                         }
-                        _ => {
-                            State::Starting { start_timeout, ctx, responder, rates, ssid, rsn_cfg }
-                        }
+                        _ => State::Starting {
+                            start_timeout,
+                            ctx,
+                            responder,
+                            band_cap,
+                            ssid,
+                            rsn_cfg,
+                        },
                     },
-                    _ => State::Starting { start_timeout, ctx, responder, rates, ssid, rsn_cfg },
+                    _ => State::Starting { start_timeout, ctx, responder, band_cap, ssid, rsn_cfg },
                 }
             }
             State::Started { ref mut bss } => {
@@ -331,7 +342,7 @@ fn handle_start_conf(
     ctx: Context,
     ssid: Ssid,
     rsn_cfg: Option<RsnCfg>,
-    rates: Vec<SupportedRate>,
+    band_cap: fidl_mlme::BandCapabilities,
     responder: Responder<StartResult>,
 ) -> State {
     match conf.result_code {
@@ -343,8 +354,7 @@ fn handle_start_conf(
                     rsn_cfg,
                     clients: HashMap::new(),
                     aid_map: aid::Map::default(),
-                    // This unwrap should always be safe, as SupportedRates is just a newtype of u8.
-                    rates,
+                    rates: band_cap.rates.iter().map(|r| SupportedRate(*r)).collect(),
                     ctx,
                 },
             }
@@ -520,7 +530,7 @@ fn create_start_request(
     op: &OpRadioConfig,
     ssid: &Ssid,
     ap_rsn: Option<&RsnCfg>,
-    rates: &[u8],
+    band_cap: &fidl_mlme::BandCapabilities,
 ) -> fidl_mlme::StartRequest {
     let rsne_bytes = ap_rsn.as_ref().map(|RsnCfg { rsne, .. }| {
         let mut buf = Vec::with_capacity(rsne.len());
@@ -538,7 +548,8 @@ fn create_start_request(
         beacon_period: DEFAULT_BEACON_PERIOD,
         dtim_period: DEFAULT_DTIM_PERIOD,
         channel: op.chan.primary,
-        rates: rates.to_vec(),
+        cap: band_cap.cap,
+        rates: band_cap.rates.clone(),
         country: fidl_mlme::Country {
             // TODO(WLAN-870): Get config from wlancfg
             alpha2: ['U' as u8, 'S' as u8],
@@ -636,6 +647,7 @@ mod tests {
 
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Start(start_req))) => {
             assert_eq!(start_req.ssid, SSID.to_vec());
+            assert_eq!(start_req.cap, 0b00000000_00100000);
             assert_eq!(start_req.bss_type, fidl_mlme::BssTypes::Infrastructure);
             assert_ne!(start_req.beacon_period, 0);
             assert_ne!(start_req.dtim_period, 0);

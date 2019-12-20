@@ -89,11 +89,6 @@ pub fn get_device_band_info(
     device_info.bands.iter().find(|b| b.band_id == target)
 }
 
-pub fn get_device_rates(device_info: &DeviceInfo, channel: Channel) -> &[u8] {
-    // TODO(41085): Maybe hard fail if there are no basic rates.
-    get_device_band_info(device_info, channel.primary).map_or(&[], |band| &band.rates)
-}
-
 /// Derive PHY and CBW for Client role
 pub fn derive_phy_cbw(
     bss: &fidl_mlme::BssDescription,
@@ -342,17 +337,6 @@ mod tests {
             get_device_band_info(&fake_device_info_ht(ChanWidthSet::TWENTY_FORTY), 36)
                 .unwrap()
                 .band_id
-        );
-    }
-
-    #[test]
-    fn test_get_device_rates() {
-        assert_eq!(
-            &[12, 18, 24, 36, 48, 72, 96, 108][..],
-            get_device_rates(
-                &fake_device_info_ht(ChanWidthSet::TWENTY_FORTY),
-                Channel::new(36, Cbw::Cbw20)
-            )
         );
     }
 

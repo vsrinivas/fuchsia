@@ -457,6 +457,9 @@ struct StartRequest {
     // PHY parameter sets
     uint8 channel;
 
+    // Capability information.
+    CapabilityInfo cap;
+
     // This combines both the BSSBasicRateSet and the OperationalRateSet, as the MLME will split
     // them up.
     bytes:RATES_MAX_LEN rates;

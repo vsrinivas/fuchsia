@@ -223,7 +223,7 @@ pub fn fake_capability_info() -> CapabilityInfo {
         .with_cf_pollable(false)
         .with_cf_poll_req(false)
         .with_privacy(false)
-        .with_short_preamble(false)
+        .with_short_preamble(true)
         .with_spectrum_mgmt(false)
         .with_qos(false)
         .with_short_slot_time(false)
