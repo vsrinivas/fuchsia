@@ -3,7 +3,7 @@
 set -eufo pipefail
 
 normalize() {
-    sed 's/_//g' | tr A-Z a-z | sed 's/^transformer//;s/case1$//'
+    sed 's/_//g' | tr A-Z a-z | sed 's/^transformer//;s/case1//'
 }
 
 show() {
@@ -13,7 +13,7 @@ show() {
 }
 
 gidl="$FUCHSIA_DIR/tools/fidl/gidl-conformance-suite/transformer.gidl"
-unit="$FUCHSIA_DIR/zircon/system/utest/fidl/transformer_tests.cc"
+unit="$FUCHSIA_DIR/zircon/system/utest/fidl/transformer_tests.c"
 
 gidl_tests=$(
     grep '^success' "$gidl" | sed 's/.*"\(.*\)".*/\1/' | normalize | sort)

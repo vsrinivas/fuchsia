@@ -4,6 +4,13 @@
 
 library conformance;
 
+struct TransactionHeader {
+    uint32 tx_id;
+    array<uint8>:3 flags;
+    uint8 magic_number;
+    uint64 ordinal;
+};
+
 union UnionSize8Align4 {
     1: uint8 unused1;
     2: uint8 unused2;
@@ -33,6 +40,11 @@ struct Sandwich1 {
     uint32 before;
     UnionSize8Align4 the_union;
     uint32 after;
+};
+
+struct Sandwich1Message {
+    TransactionHeader header;
+    Sandwich1 body;
 };
 
 struct Sandwich1WithOptUnion {
@@ -66,6 +78,11 @@ struct Sandwich4 {
     uint32 after;
 };
 
+struct Sandwich4Message {
+    TransactionHeader header;
+    Sandwich4 body;
+};
+
 union UnionOfUnion {
     1: uint8 unused1;
     2: UnionSize8Align4 size8align4; // used in Sandwich5Case1, Sandwich8Case1
@@ -78,6 +95,11 @@ struct Sandwich5 {
     uint32 before;
     UnionOfUnion union_of_union;
     uint32 after;
+};
+
+struct Sandwich5Message {
+    TransactionHeader header;
+    Sandwich5 body;
 };
 
 struct StructSize3Align1 {
@@ -95,7 +117,7 @@ union UnionWithVector {
     3: string s;
     4: vector<StructSize3Align1> vector_s3_a1;
     5: vector<StructSize3Align2> vector_s3_a2;
-    // 6: vector<handle> handles;  // TODO(mkember): Support handles in GIDL.
+    // 6: vector<handle> handles;  // TODO(fxb/36441): Support handles in GIDL.
     6: vector<uint32> handles;
     7: array<StructSize3Align1>:2 array_s3_a1;
     8: array<StructSize3Align2>:2 array_s3_a2;
@@ -112,6 +134,11 @@ struct Sandwich7 {
     uint32 before;
     Sandwich1? opt_sandwich1;
     uint32 after;
+};
+
+struct Sandwich7Message {
+    TransactionHeader header;
+    Sandwich7 body;
 };
 
 // Same as Sandwich5 except `before` is uint64 (so no padding before the union).
@@ -142,9 +169,17 @@ struct Regression3 {
 table Table_NoFields {
 };
 
+struct Struct_Table_NoFields {
+    Table_NoFields t;
+};
+
 table Table_TwoReservedFields {
     1: reserved;
     2: reserved;
+};
+
+struct Struct_Table_TwoReservedFields {
+    Table_TwoReservedFields t;
 };
 
 table Table_StructWithReservedSandwich {
@@ -302,6 +337,188 @@ struct Regression4 {
     uint8 f6;
 };
 
+enum EnumUint32 : uint32 {
+    MEMBER = 0x3231302F;
+};
+
+enum EnumUint8 : uint8 {
+    MEMBER = 0x08;
+};
+
+// Regression1, but with enums.
+struct Regression5 {
+    uint8 f1;
+    // TODO(fxb/43254): Make f2 and f3 enums once GIDL supports them.
+    // EnumUint32 f2;
+    // EnumUint8 f3;
+    uint32 f2;
+    uint8 f3;
+    uint16 f4;
+    uint64 f5;
+    uint8 f6;
+};
+
+bits BitsUint32 : uint32 {
+    MEMBER_LOW_1 = 0x00000001;
+    MEMBER_LOW_2 = 0x00000002;
+    MEMBER_HIG_1 = 0x10000000;
+    MEMBER_HIG_2 = 0x20000000;
+};
+
+bits BitsUint8 : uint8 {
+    MEMBER = 0x08;
+};
+
+// Regression1, but with bits.
+struct Regression6 {
+    uint8 f1;
+    // TODO(fxb/43254): Make f2 and f3 bits once GIDL supports them.
+    uint32 f2;
+    uint8 f3;
+    uint16 f4;
+    uint64 f5;
+    uint8 f6;
+};
+
+union UnionAtTheBottom {
+    1: uint8 unused1;
+    2: uint8 unused2;
+    3: uint8 tiny;
+};
+
+xunion XUnionOfUnion {
+    1: UnionAtTheBottom variant; // 0x5F67105B
+};
+
+table TableOfXUnionThenUnion {
+    1: reserved;
+    2: XUnionOfUnion member;
+};
+
+xunion XUnionOfTableThenXUnionThenUnion {
+    1: TableOfXUnionThenUnion variant; //0x5B15934E
+};
+
+union UnionOfXUnionThenTableThenXUnionThenUnion {
+    1: uint8 unused1; // avoid tag 0
+    2: reserved; // no tag correspondance
+    3: XUnionOfTableThenXUnionThenUnion variant; // tag = 1
+};
+
+table TableOfUnionThenXUnionThenTableThenXUnionThenUnion {
+    1: reserved;
+    2: reserved;
+    3: UnionOfXUnionThenTableThenXUnionThenUnion member;
+};
+
+struct Regression7TableUnionXUnion {
+    TableOfUnionThenXUnionThenTableThenXUnionThenUnion value;
+};
+
+struct Regression8OptUnionSize12Align4 {
+    UnionSize12Align4? opt_union1;
+    UnionSize12Align4? opt_union2;
+    UnionSize12Align4? opt_union3;
+};
+
+struct Regression8VectorOfOptUnionSize12Align4 {
+    vector<UnionSize12Align4?> value;
+};
+
+table TableWithUnionSize12Align4 {
+    1: uint8 before;
+    2: reserved;
+    3: UnionSize12Align4 member;
+    4: reserved;
+    5: uint8 after;
+};
+
+struct Regression8TableWithUnionSize12Align4 {
+    TableWithUnionSize12Align4 value;
+};
+
+union StringBoolUnion {
+    1: string s;
+    2: bool b;
+};
+
+struct StringUnionStruct {
+    StringBoolUnion u;
+    StringBoolUnion? nullable_u;
+};
+
+struct StringUnionStructWrapper {
+    StringUnionStruct sus;
+};
+
+struct StringUnionStructWrapperResponse {
+    TransactionHeader header;
+    StringUnionStructWrapper body;
+};
+
+struct Regression9Value {
+    StringBoolUnion u;
+    StringBoolUnion? nullable_u;
+};
+
+// Simulate an error result type.
+union Regression9Result {
+    1: Regression9Value ok;
+    2: uint32 error;
+};
+
+struct Regression9Message {
+    TransactionHeader header;
+    Regression9Result body;
+};
+
+// At first, only one member.
+table Regression10TableV1 {
+    1: uint64 member1;
+};
+
+// Then, we add a second member in 5th position.
+table Regression10TableV2 {
+    1: uint64 member1;
+    2: reserved;
+    3: reserved;
+    4: reserved;
+    5: uint64 member2;
+};
+
+// Third, we add a third member in 6th position, and reserve the 7th.
+table Regression10TableV3 {
+    1: int64 x;
+    2: reserved;
+    3: reserved;
+    4: reserved;
+    5: int64 y;
+    6: int64 z;
+    7: reserved;
+};
+
+struct Regression10V1 {
+    Regression10TableV1 table;
+};
+
+struct Regression10V2 {
+    Regression10TableV2 table;
+};
+
+struct Regression10V3 {
+    Regression10TableV3 table;
+};
+
+union UnionWithRegression10Table {
+    1: uint8 unused; // avoid tag 0
+    2: reserved;
+    3: Regression10TableV2 at_v2; // but consider the evolution v1, v2, v3, ...
+};
+
+struct Regression11 {
+    UnionWithRegression10Table table_of_table;
+};
+
 struct Sandwich4Align8 {
     Sandwich4 sandwich4;
     uint64 alignment8_enforcement;
@@ -340,7 +557,7 @@ struct LaunchInfo {
     vector<string>? arguments;
     TransformerEmptyStruct? out;
     TransformerEmptyStruct? err;
-    // handle<channel>? directory_request; // TODO(mkember): Support handles in GIDL.
+    // handle<channel>? directory_request; // TODO(fxb/36441): Support handles in GIDL.
     uint32 directory_request;
     TransformerEmptyStruct? flat_namespace;
     TransformerEmptyStruct? additional_services;
@@ -348,6 +565,54 @@ struct LaunchInfo {
 
 struct CreateComponentRequest {
     LaunchInfo launch_info;
-    // request<ComponentController>? controller;  // TODO(mkember): Support handles in GIDL.
+    // request<ComponentController>? controller;  // TODO(fxb/36441): Support handles in GIDL.
     uint32 controller;
+};
+
+union CompatUnion {
+    1: string s;
+    2: bool b;
+};
+
+table CompatTableString {
+    1: string s;
+};
+
+xunion CompatXUnion {
+    1: string s; // hashed ordinal 0x5af8efa8
+    2: bool b;
+};
+
+table CompatTableValue {
+    1: CompatUnion union_member;
+    2: array<uint32>:3 array_member;
+    3: CompatTableString table_member;
+    4: CompatXUnion xunion_member;
+};
+
+struct CompatTable {
+    CompatTableValue value;
+    string empty;
+};
+
+struct MixedFieldsBody {
+    uint32 before;
+    UnionSize8Align4 first_union;
+    uint16 middle_start;
+    uint64 middle_end;
+    UnionSize8Align4 second_union;
+    uint32 after;
+};
+
+struct MixedFieldsMessage {
+    TransactionHeader header;
+    MixedFieldsBody body;
+};
+
+table TableWithXUnion {
+    1: CompatXUnion member;
+};
+
+struct StructOfTableWithXUnion {
+    TableWithXUnion value;
 };
