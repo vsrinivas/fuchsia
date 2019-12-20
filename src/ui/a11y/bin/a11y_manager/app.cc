@@ -23,16 +23,7 @@ App::App(std::unique_ptr<sys::ComponentContext> context)
       log_engine_(startup_context_.get()) {
   startup_context_->outgoing()->AddPublicService(
       semantics_manager_bindings_.GetHandler(&semantics_manager_));
-  startup_context_->outgoing()->AddPublicService(
-      settings_manager_bindings_.GetHandler(&settings_manager_));
   startup_context_->outgoing()->AddPublicService(magnifier_bindings_.GetHandler(&magnifier_));
-
-  // Register a11y manager as a settings provider.
-  settings_manager_.RegisterSettingProvider(settings_provider_ptr_.NewRequest());
-  settings_provider_ptr_.set_error_handler([](zx_status_t status) {
-    FX_LOGS(ERROR) << "Error from fuchsia::accessibility::settings::SettingsProvider"
-                   << zx_status_get_string(status);
-  });
 
   // Connect to Root presenter service.
   pointer_event_registry_ =
@@ -59,7 +50,7 @@ void App::SetState(A11yManagerState state) {
 
   UpdateScreenReaderState();
   UpdateMagnifierState();
-
+  UpdateColorTransformState();
   // May rely on screen reader existence.
   UpdateGestureManagerState();
 }
@@ -81,6 +72,12 @@ void App::UpdateMagnifierState() {
   if (!state_.magnifier_enabled()) {
     magnifier_.ZoomOutIfMagnified();
   }
+}
+
+void App::UpdateColorTransformState() {
+  bool color_inversion = state_.color_inversion_enabled();
+  fuchsia::accessibility::ColorCorrectionMode color_blindness_type = state_.color_correction_mode();
+  color_transform_manager_.ChangeColorTransform(color_inversion, color_blindness_type);
 }
 
 void App::UpdateGestureManagerState() {
@@ -115,53 +112,6 @@ void App::UpdateGestureManagerState() {
   }
 }
 
-void InternalSettingsCallback(fuchsia::accessibility::SettingsManagerStatus status) {
-  if (status == fuchsia::accessibility::SettingsManagerStatus::ERROR) {
-    FX_LOGS(ERROR) << "Error writing internal accessibility settings.";
-  }
-}
-
-// This currently ignores errors in the internal settings API. That API is being removed in favor of
-// smaller feature-oriented APIs.
-void App::UpdateInternalSettings(const fuchsia::settings::AccessibilitySettings& systemSettings) {
-  // New codepath for color transforms.
-  bool color_inversion =
-      systemSettings.has_color_inversion() ? systemSettings.color_inversion() : false;
-  fuchsia::accessibility::ColorCorrectionMode color_blindness_type =
-      systemSettings.has_color_correction()
-          ? ConvertColorCorrection(systemSettings.color_correction())
-          : fuchsia::accessibility::ColorCorrectionMode::DISABLED;
-  color_transform_manager_.ChangeColorTransform(color_inversion, color_blindness_type);
-
-  // Everything below here in this method is old code for  the legacy settings API.
-  // TODO(17180): Remove this code when nothing else depends on it.
-  if (systemSettings.has_color_inversion()) {
-    settings_provider_ptr_->SetColorInversionEnabled(systemSettings.color_inversion(),
-                                                     InternalSettingsCallback);
-  }
-  if (systemSettings.has_color_correction()) {
-    switch (systemSettings.color_correction()) {
-      case fuchsia::settings::ColorBlindnessType::NONE:
-        settings_provider_ptr_->SetColorCorrection(
-            fuchsia::accessibility::ColorCorrection::DISABLED, InternalSettingsCallback);
-        break;
-      case fuchsia::settings::ColorBlindnessType::PROTANOMALY:
-        settings_provider_ptr_->SetColorCorrection(
-            fuchsia::accessibility::ColorCorrection::CORRECT_PROTANOMALY, InternalSettingsCallback);
-        break;
-      case fuchsia::settings::ColorBlindnessType::DEUTERANOMALY:
-        settings_provider_ptr_->SetColorCorrection(
-            fuchsia::accessibility::ColorCorrection::CORRECT_DEUTERANOMALY,
-            InternalSettingsCallback);
-        break;
-      case fuchsia::settings::ColorBlindnessType::TRITANOMALY:
-        settings_provider_ptr_->SetColorCorrection(
-            fuchsia::accessibility::ColorCorrection::CORRECT_TRITANOMALY, InternalSettingsCallback);
-        break;
-    }
-  }
-}
-
 bool App::GestureState::operator==(GestureState o) const {
   return screen_reader_gestures == o.screen_reader_gestures &&
          magnifier_gestures == o.magnifier_gestures;
@@ -171,7 +121,6 @@ void App::SetuiWatchCallback(fuchsia::settings::Accessibility_Watch_Result resul
   if (result.is_err()) {
     FX_LOGS(ERROR) << "Error reading setui accessibility settings.";
   } else if (result.is_response()) {
-    UpdateInternalSettings(result.response().settings);
     SetState(state_.withSettings(result.response().settings));
   }
   WatchSetui();
@@ -179,11 +128,8 @@ void App::SetuiWatchCallback(fuchsia::settings::Accessibility_Watch_Result resul
 
 void App::WatchSetui() { setui_settings_->Watch(fit::bind_member(this, &App::SetuiWatchCallback)); }
 
-fuchsia::accessibility::SettingsPtr App::GetSettings() const {
-  return settings_manager_.GetSettings();
-}
-
-fuchsia::accessibility::ColorCorrectionMode App::ConvertColorCorrection(
+// Converts setui color blindess type to the relevant accessibility color correction mode.
+fuchsia::accessibility::ColorCorrectionMode ConvertColorCorrection(
     fuchsia::settings::ColorBlindnessType color_blindness_type) {
   switch (color_blindness_type) {
     case fuchsia::settings::ColorBlindnessType::PROTANOMALY:
@@ -198,6 +144,29 @@ fuchsia::accessibility::ColorCorrectionMode App::ConvertColorCorrection(
     default:
       return fuchsia::accessibility::ColorCorrectionMode::DISABLED;
   }
+}
+
+A11yManagerState A11yManagerState::withSettings(
+    const fuchsia::settings::AccessibilitySettings& systemSettings) {
+  A11yManagerState state = *this;
+
+  if (systemSettings.has_screen_reader()) {
+    state.screen_reader_enabled_ = systemSettings.screen_reader();
+  }
+
+  if (systemSettings.has_enable_magnification()) {
+    state.magnifier_enabled_ = systemSettings.enable_magnification();
+  }
+
+  if (systemSettings.has_color_inversion()) {
+    state.color_inversion_enabled_ = systemSettings.color_inversion();
+  }
+
+  if (systemSettings.has_color_correction()) {
+    state.color_correction_mode_ = ConvertColorCorrection(systemSettings.color_correction());
+  }
+
+  return state;
 }
 
 }  // namespace a11y_manager

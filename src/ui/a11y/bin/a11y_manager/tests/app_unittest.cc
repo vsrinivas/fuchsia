@@ -160,74 +160,6 @@ TEST_F(AppUnitTest, UpdateNodeToSemanticsManager) {
   EXPECT_EQ(kSemanticTreeSingle, buffer);
 }
 
-// Test to make sure SettingsManager Service is exposed by A11y.
-// Test sends connects a fake settings provider to SettingsManager, and make
-// sure App gets the updates.
-TEST_F(AppUnitTest, VerifyAppSettingsWatcher) {
-  a11y_manager::App app = a11y_manager::App(context_provider_.TakeContext());
-  RunLoopUntilIdle();
-
-  // Create Settings Service.
-  MockSettingsProvider settings_provider(&context_provider_);
-  RunLoopUntilIdle();
-
-  // Verify default values of settings in App.
-  float kDefaultZoomFactor = 1.0;
-  SettingsPtr settings = app.GetSettings();
-  EXPECT_TRUE(settings->has_magnification_enabled());
-  EXPECT_FALSE(settings->magnification_enabled());
-  EXPECT_TRUE(settings->has_magnification_zoom_factor());
-  EXPECT_EQ(kDefaultZoomFactor, settings->magnification_zoom_factor());
-  EXPECT_TRUE(settings->has_screen_reader_enabled());
-  EXPECT_FALSE(settings->screen_reader_enabled());
-  EXPECT_TRUE(settings->has_color_inversion_enabled());
-  EXPECT_FALSE(settings->color_inversion_enabled());
-  EXPECT_TRUE(settings->has_color_correction());
-  EXPECT_EQ(fuchsia::accessibility::ColorCorrection::DISABLED, settings->color_correction());
-  EXPECT_TRUE(settings->has_color_adjustment_matrix());
-  EXPECT_EQ(kIdentityMatrix, settings->color_adjustment_matrix());
-
-  // Change settings and verify the changes are reflected in App.
-  SettingsManagerStatus status = SettingsManagerStatus::OK;
-  settings_provider.SetMagnificationEnabled(
-      true, [&status](SettingsManagerStatus retval) { status = retval; });
-  RunLoopUntilIdle();
-  EXPECT_EQ(status, SettingsManagerStatus::OK);
-  settings_provider.SetMagnificationZoomFactor(
-      10, [&status](SettingsManagerStatus retval) { status = retval; });
-  RunLoopUntilIdle();
-  EXPECT_EQ(status, SettingsManagerStatus::OK);
-  settings_provider.SetScreenReaderEnabled(
-      true, [&status](SettingsManagerStatus retval) { status = retval; });
-  RunLoopUntilIdle();
-  EXPECT_EQ(status, SettingsManagerStatus::OK);
-  settings_provider.SetColorInversionEnabled(
-      true, [&status](SettingsManagerStatus retval) { status = retval; });
-  RunLoopUntilIdle();
-  EXPECT_EQ(status, SettingsManagerStatus::OK);
-  settings_provider.SetColorCorrection(
-      fuchsia::accessibility::ColorCorrection::CORRECT_PROTANOMALY,
-      [&status](SettingsManagerStatus retval) { status = retval; });
-  RunLoopUntilIdle();
-  EXPECT_EQ(status, SettingsManagerStatus::OK);
-
-  // Verify new settings in App.
-  float kExpectedZoomFactor = 10.0;
-  settings = app.GetSettings();
-  EXPECT_TRUE(settings->has_magnification_enabled());
-  EXPECT_TRUE(settings->magnification_enabled());
-  EXPECT_TRUE(settings->has_magnification_zoom_factor());
-  EXPECT_EQ(kExpectedZoomFactor, settings->magnification_zoom_factor());
-  EXPECT_TRUE(settings->has_screen_reader_enabled());
-  EXPECT_TRUE(settings->screen_reader_enabled());
-  EXPECT_TRUE(settings->has_color_inversion_enabled());
-  EXPECT_TRUE(settings->color_inversion_enabled());
-  EXPECT_TRUE(settings->has_color_correction());
-  EXPECT_EQ(fuchsia::accessibility::ColorCorrection::CORRECT_PROTANOMALY,
-            settings->color_correction());
-  EXPECT_TRUE(settings->has_color_adjustment_matrix());
-}
-
 // This test makes sure that services implemented by the Tts manager are
 // available.
 TEST_F(AppUnitTest, OffersTtsManagerServices) {
@@ -374,47 +306,6 @@ TEST_F(AppUnitTest, MagnifierGestureWithScreenReader) {
   EXPECT_GT(mag_handler.transform().scale, 1);
 }
 
-// This test makes sure that the accessibility manager is watching for settings updates from setUI.
-// TODO(17180): When we move away from a monolithic settings UI inside a11y manager this should test
-// that configuration changes actually happen rather than just making sure bits get set.
-TEST_F(AppUnitTest, WatchesSetUISettings) {
-  // Create a mock setUI & configure initial settings (everything off).
-  MockSetUIAccessibility mock_setui(&context_provider_);
-  fuchsia::settings::AccessibilitySettings accessibilitySettings;
-  accessibilitySettings.set_screen_reader(false);
-  accessibilitySettings.set_color_inversion(false);
-  accessibilitySettings.set_enable_magnification(false);
-  accessibilitySettings.set_color_correction(fuchsia::settings::ColorBlindnessType::NONE);
-  mock_setui.Set(std::move(accessibilitySettings), [](auto) {});
-  a11y_manager::App app = a11y_manager::App(context_provider_.TakeContext());
-  RunLoopUntilIdle();
-
-  // Verify that app settings are initialized appropriately.
-  SettingsPtr settings = app.GetSettings();
-  EXPECT_TRUE(settings->has_color_inversion_enabled());
-  EXPECT_FALSE(settings->color_inversion_enabled());
-  EXPECT_TRUE(settings->has_color_correction());
-  EXPECT_EQ(fuchsia::accessibility::ColorCorrection::DISABLED, settings->color_correction());
-
-  // Change the settings values (everything on).
-  fuchsia::settings::AccessibilitySettings newAccessibilitySettings;
-  newAccessibilitySettings.set_screen_reader(true);
-  newAccessibilitySettings.set_color_inversion(true);
-  newAccessibilitySettings.set_enable_magnification(true);
-  newAccessibilitySettings.set_color_correction(
-      fuchsia::settings::ColorBlindnessType::DEUTERANOMALY);
-  mock_setui.Set(std::move(newAccessibilitySettings), [](auto) {});
-  RunLoopUntilIdle();
-
-  // Verify that stuff changed
-  settings = app.GetSettings();
-  EXPECT_TRUE(settings->has_color_inversion_enabled());
-  EXPECT_TRUE(settings->color_inversion_enabled());
-  EXPECT_TRUE(settings->has_color_correction());
-  EXPECT_EQ(fuchsia::accessibility::ColorCorrection::CORRECT_DEUTERANOMALY,
-            settings->color_correction());
-}
-
 TEST_F(AppUnitTest, ColorCorrectionApplied) {
   // Create a mock color transform handler.
   MockColorTransformHandler mock_color_transform_handler(&context_provider_);
@@ -438,12 +329,33 @@ TEST_F(AppUnitTest, ColorCorrectionApplied) {
   RunLoopUntilIdle();
 
   // Verify that stuff changed
-  SettingsPtr settings = app.GetSettings();
-  EXPECT_TRUE(settings->has_color_correction());
-  EXPECT_EQ(fuchsia::accessibility::ColorCorrection::CORRECT_DEUTERANOMALY,
-            settings->color_correction());
   EXPECT_EQ(fuchsia::accessibility::ColorCorrectionMode::CORRECT_DEUTERANOMALY,
             mock_color_transform_handler.GetColorCorrectionMode());
+}
+
+TEST_F(AppUnitTest, ColorInversionApplied) {
+  // Create a mock color transform handler.
+  MockColorTransformHandler mock_color_transform_handler(&context_provider_);
+
+  // Create a mock setUI & configure initial settings (everything off).
+  MockSetUIAccessibility mock_setui(&context_provider_);
+  fuchsia::settings::AccessibilitySettings accessibilitySettings;
+  accessibilitySettings.set_screen_reader(false);
+  accessibilitySettings.set_color_inversion(false);
+  accessibilitySettings.set_enable_magnification(false);
+  accessibilitySettings.set_color_correction(fuchsia::settings::ColorBlindnessType::NONE);
+  mock_setui.Set(std::move(accessibilitySettings), [](auto) {});
+  a11y_manager::App app = a11y_manager::App(context_provider_.TakeContext());
+  RunLoopUntilIdle();
+
+  // Turn on color correction.
+  fuchsia::settings::AccessibilitySettings newAccessibilitySettings;
+  newAccessibilitySettings.set_color_inversion(true);
+  mock_setui.Set(std::move(newAccessibilitySettings), [](auto) {});
+  RunLoopUntilIdle();
+
+  // Verify that stuff changed
+  EXPECT_TRUE(mock_color_transform_handler.GetColorInversionEnabled());
 }
 
 }  // namespace

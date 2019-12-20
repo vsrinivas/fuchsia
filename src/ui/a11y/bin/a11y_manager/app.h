@@ -21,7 +21,6 @@
 #include "src/ui/a11y/lib/magnifier/magnifier.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader.h"
 #include "src/ui/a11y/lib/semantics/semantics_manager.h"
-#include "src/ui/a11y/lib/settings/settings_manager.h"
 #include "src/ui/a11y/lib/tts/log_engine.h"
 #include "src/ui/a11y/lib/tts/tts_manager.h"
 
@@ -32,7 +31,11 @@ namespace a11y_manager {
 class A11yManagerState {
  public:
   // Default state with all values as disabled
-  A11yManagerState() : screen_reader_enabled_(false), magnifier_enabled_(false) {}
+  A11yManagerState()
+      : screen_reader_enabled_(false),
+        magnifier_enabled_(false),
+        color_inversion_enabled_(false),
+        color_correction_mode_(fuchsia::accessibility::ColorCorrectionMode::DISABLED) {}
 
   // Copy constructor
   A11yManagerState(const A11yManagerState& other) = default;
@@ -41,6 +44,12 @@ class A11yManagerState {
   bool screen_reader_enabled() const { return screen_reader_enabled_; }
 
   bool magnifier_enabled() const { return magnifier_enabled_; }
+
+  bool color_inversion_enabled() const { return color_inversion_enabled_; }
+
+  fuchsia::accessibility::ColorCorrectionMode color_correction_mode() const {
+    return color_correction_mode_;
+  }
 
   A11yManagerState withScreenReaderEnabled(bool enabled) {
     A11yManagerState state = *this;
@@ -56,23 +65,13 @@ class A11yManagerState {
 
   // Creates a new instance of state that has any set values from the given AccessibilitySettings
   // applied.
-  A11yManagerState withSettings(const fuchsia::settings::AccessibilitySettings& systemSettings) {
-    A11yManagerState state = *this;
-
-    if (systemSettings.has_screen_reader()) {
-      state.screen_reader_enabled_ = systemSettings.screen_reader();
-    }
-
-    if (systemSettings.has_enable_magnification()) {
-      state.magnifier_enabled_ = systemSettings.enable_magnification();
-    }
-
-    return state;
-  }
+  A11yManagerState withSettings(const fuchsia::settings::AccessibilitySettings& systemSettings);
 
  private:
   bool screen_reader_enabled_;
   bool magnifier_enabled_;
+  bool color_inversion_enabled_;
+  fuchsia::accessibility::ColorCorrectionMode color_correction_mode_;
 };
 
 // A11y manager application entry point.
@@ -80,9 +79,6 @@ class App {
  public:
   explicit App(std::unique_ptr<sys::ComponentContext> context);
   ~App();
-
-  // Returns a copy of current set of settings owned by A11y Manager.
-  fuchsia::accessibility::SettingsPtr GetSettings() const;
 
   // Sets the a11y manager to the given configuration. Visible for testing.
   void SetState(A11yManagerState newState);
@@ -108,18 +104,8 @@ class App {
 
   void UpdateScreenReaderState();
   void UpdateMagnifierState();
+  void UpdateColorTransformState();
   void UpdateGestureManagerState();
-
-  // Converts setui color blindess type to the relevant accessibility color correction mode.
-  fuchsia::accessibility::ColorCorrectionMode ConvertColorCorrection(
-      fuchsia::settings::ColorBlindnessType color_blindness_type);
-
-  // Makes changes to internal settings based on new settings from SetUI. This is not particularly
-  // efficient since the existing internal API forces a new call to watchers for each changed
-  // setting.
-  // TODO(17180): This should be removed when the internal settings API is replaced with smaller
-  // configuration APIs.
-  void UpdateInternalSettings(const fuchsia::settings::AccessibilitySettings& systemSettings);
 
   // Current state of the a11y manager
   A11yManagerState state_;
@@ -128,7 +114,6 @@ class App {
 
   std::unique_ptr<a11y::ScreenReader> screen_reader_;
   a11y::SemanticsManager semantics_manager_;
-  a11y::SettingsManager settings_manager_;
   a11y::TtsManager tts_manager_;
   a11y::ColorTransformManager color_transform_manager_;
   // A simple Tts engine which logs output.
@@ -140,10 +125,6 @@ class App {
   a11y::Magnifier magnifier_;
 
   fidl::BindingSet<fuchsia::accessibility::semantics::SemanticsManager> semantics_manager_bindings_;
-
-  // TODO(17180): This will be removed and replaced this with smaller configuration APIs.
-  fidl::BindingSet<fuchsia::accessibility::SettingsManager> settings_manager_bindings_;
-  fuchsia::accessibility::SettingsProviderPtr settings_provider_ptr_;
 
   fidl::BindingSet<fuchsia::ui::input::accessibility::PointerEventListener> listener_bindings_;
 

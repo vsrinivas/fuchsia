@@ -25,6 +25,7 @@ class MockColorTransformHandler : public fuchsia::accessibility::ColorTransformH
   fuchsia::accessibility::ColorCorrectionMode GetColorCorrectionMode() {
     return color_correction_mode_;
   }
+  bool GetColorInversionEnabled() { return color_inversion_enabled_; }
 
  private:
   fuchsia::accessibility::ColorTransformPtr color_transform_ptr_;
