@@ -11,10 +11,22 @@
 #include "private.h"
 
 struct fdio {
+  // The operation function table which encapsulates specialized I/O
+  // transport under a common interface.
   const fdio_ops_t* ops;
+
+  // The number of references on this object. Note that each appearance
+  // in the fd table counts as one reference on the corresponding object.
   std::atomic_int_fast32_t refcount;
+
+  // The number of times this fdio object appears in the fd table.
   int32_t dupcount;
+
+  // |ioflag| contains mutable properties of this object, shared by
+  // different transports. Possible values are |IOFLAG_*| in private.h.
   uint32_t ioflag;
+
+  // The zxio object, if the zxio transport is selected in |ops|.
   zxio_storage_t storage;
 
   // Used to implement SO_RCVTIMEO. See `man 7 socket` for details.
@@ -44,7 +56,7 @@ static fdio_t fdio_reserved_io = {
     .sndtimeo = zx::duration::infinite(),
 };
 
-fdio_t* fdio_get_reserved_io(void) { return &fdio_reserved_io; }
+fdio_t* fdio_get_reserved_io() { return &fdio_reserved_io; }
 
 zxio_t* fdio_get_zxio(fdio_t* io) { return &io->storage.io; }
 

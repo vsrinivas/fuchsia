@@ -22,17 +22,28 @@ namespace {
 
 namespace fio = ::llcpp::fuchsia::io;
 
-// The directory represents a local directory (either / or
-// some directory between / and a mount point), so it has
+// The directory represents a local directory (either "/" or
+// some directory between "/" and a mount point), so it has
 // to emulate directory behavior.
 struct LocalConnection {
+  // Hack to embed LocalConnection in the |storage| field of the |fdio_t| struct.
+  // See definition of |zxio_storage_t|, where |zxio_t io| is also the first element.
+  // This allows us to track extra state related to the local connection, as
+  // witnessed by the fields below.
   zxio_t io;
 
-  // Although these are raw pointers for C compatibility, they are
-  // actually strong references to both the namespace and vnode object.
+  // For the following two fields, although these are raw pointers for
+  // C compatibility, they are actually strong references to both the
+  // namespace and vnode object.
   //
   // On close, they must be destroyed.
+
+  // The namespace instance, containing a directory tree terminating
+  // with various remote channels.
   const fdio_namespace* fs;
+
+  // The vnode corresponding to this directory. |vn| references some
+  // directory in |fs|.
   const LocalVnode* vn;
 
   // Readdir sequence number.
@@ -40,16 +51,17 @@ struct LocalConnection {
 };
 
 static_assert(offsetof(LocalConnection, io) == 0, "LocalConnection must be castable to zxio_t");
+static_assert(offsetof(zxio_storage_t, io) == 0, "LocalConnection must be castable to zxio_t");
 
 static_assert(sizeof(LocalConnection) <= sizeof(zxio_storage_t),
               "LocalConnection must fit inside zxio_storage_t.");
 
-LocalConnection* fdio_get_zxio_dir(fdio_t* io) {
+LocalConnection* fdio_get_local_dir(fdio_t* io) {
   return reinterpret_cast<LocalConnection*>(fdio_get_zxio(io));
 }
 
-zx_status_t zxio_dir_close(fdio_t* io) {
-  LocalConnection* dir = fdio_get_zxio_dir(io);
+zx_status_t local_dir_close(fdio_t* io) {
+  LocalConnection* dir = fdio_get_local_dir(io);
   // Reclaim a strong reference to |fs| which was leaked during
   // |CreateLocalConnection()|
   __UNUSED auto fs = fbl::ImportFromRawPtr<const fdio_namespace>(dir->fs);
@@ -61,14 +73,14 @@ zx_status_t zxio_dir_close(fdio_t* io) {
 
 // Expects a canonical path (no ..) with no leading
 // slash and no trailing slash
-zx_status_t zxio_dir_open(fdio_t* io, const char* path, uint32_t flags, uint32_t mode,
-                          fdio_t** out) {
-  LocalConnection* dir = fdio_get_zxio_dir(io);
+zx_status_t local_dir_open(fdio_t* io, const char* path, uint32_t flags, uint32_t mode,
+                           fdio_t** out) {
+  LocalConnection* dir = fdio_get_local_dir(io);
 
   return dir->fs->Open(fbl::RefPtr(dir->vn), path, flags, mode, out);
 }
 
-zx_status_t zxio_dir_get_attr(fdio_t* io, fio::NodeAttributes* attr) {
+zx_status_t local_dir_get_attr(fdio_t* io, fio::NodeAttributes* attr) {
   *attr = {};
   attr->mode = V_TYPE_DIR | V_IRUSR;
   attr->id = fio::INO_UNKNOWN;
@@ -76,14 +88,14 @@ zx_status_t zxio_dir_get_attr(fdio_t* io, fio::NodeAttributes* attr) {
   return ZX_OK;
 }
 
-zx_status_t zxio_dir_rewind(fdio_t* io) {
-  LocalConnection* dir = fdio_get_zxio_dir(io);
+zx_status_t local_dir_rewind(fdio_t* io) {
+  LocalConnection* dir = fdio_get_local_dir(io);
   dir->seq.store(0);
   return ZX_OK;
 }
 
-zx_status_t zxio_dir_readdir(fdio_t* io, void* ptr, size_t max, size_t* out_actual) {
-  LocalConnection* dir = fdio_get_zxio_dir(io);
+zx_status_t local_dir_readdir(fdio_t* io, void* ptr, size_t max, size_t* out_actual) {
+  LocalConnection* dir = fdio_get_local_dir(io);
   int n = dir->seq.fetch_add(1);
   if (n != 0) {
     *out_actual = 0;
@@ -92,13 +104,15 @@ zx_status_t zxio_dir_readdir(fdio_t* io, void* ptr, size_t max, size_t* out_actu
   return dir->fs->Readdir(*dir->vn, ptr, max, out_actual);
 }
 
-zx_status_t zxio_dir_unlink(fdio_t* io, const char* path, size_t len) { return ZX_ERR_UNAVAILABLE; }
+zx_status_t local_dir_unlink(fdio_t* io, const char* path, size_t len) {
+  return ZX_ERR_UNAVAILABLE;
+}
 
 constexpr fdio_ops_t kLocalConnectionOps = []() {
   fdio_ops_t ops = {};
-  ops.get_attr = zxio_dir_get_attr;
-  ops.close = zxio_dir_close;
-  ops.open = zxio_dir_open;
+  ops.get_attr = local_dir_get_attr;
+  ops.close = local_dir_close;
+  ops.open = local_dir_open;
   ops.clone = fdio_default_clone;
   ops.wait_begin = fdio_default_wait_begin;
   ops.wait_end = fdio_default_wait_end;
@@ -107,16 +121,16 @@ constexpr fdio_ops_t kLocalConnectionOps = []() {
   ops.get_vmo = fdio_default_get_vmo;
   ops.get_token = fdio_default_get_token;
   ops.set_attr = fdio_default_set_attr;
-  ops.readdir = zxio_dir_readdir;
-  ops.rewind = zxio_dir_rewind;
-  ops.unlink = zxio_dir_unlink;
+  ops.readdir = local_dir_readdir;
+  ops.rewind = local_dir_rewind;
+  ops.unlink = local_dir_unlink;
   ops.truncate = fdio_default_truncate;
   ops.rename = fdio_default_rename;
   ops.link = fdio_default_link;
   ops.get_flags = fdio_default_get_flags;
   ops.set_flags = fdio_default_set_flags;
-  ops.recvmsg = fdio_zxio_recvmsg;
-  ops.sendmsg = fdio_zxio_sendmsg;
+  ops.recvmsg = fdio_default_recvmsg;
+  ops.sendmsg = fdio_default_sendmsg;
   ops.shutdown = fdio_default_shutdown;
   return ops;
 }();
@@ -133,7 +147,7 @@ fdio_t* CreateLocalConnection(fbl::RefPtr<const fdio_namespace> fs,
   // destructible, we can avoid invoking the destructor.
   static_assert(std::is_trivially_destructible<LocalConnection>::value,
                 "LocalConnection must have trivial destructor");
-  char* storage = reinterpret_cast<char*>(fdio_get_zxio_dir(io));
+  char* storage = reinterpret_cast<char*>(fdio_get_local_dir(io));
   LocalConnection* dir = new (storage) LocalConnection();
   zxio_null_init(&(fdio_get_zxio_storage(io)->io));
 

@@ -49,6 +49,16 @@ zx_status_t fdio_default_get_flags(fdio_t* io, uint32_t* out_flags) { return ZX_
 
 zx_status_t fdio_default_set_flags(fdio_t* io, uint32_t flags) { return ZX_ERR_NOT_SUPPORTED; }
 
+zx_status_t fdio_default_recvmsg(fdio_t* io, struct msghdr* msg, int flags, size_t* out_actual,
+                                 int16_t* out_code) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t fdio_default_sendmsg(fdio_t* io, const struct msghdr* msg, int flags,
+                                 size_t* out_actual, int16_t* out_code) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_status_t fdio_default_open(fdio_t* io, const char* path, uint32_t flags, uint32_t mode,
                               fdio_t** out) {
   return ZX_ERR_NOT_SUPPORTED;

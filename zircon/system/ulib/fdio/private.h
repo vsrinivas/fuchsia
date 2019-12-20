@@ -19,16 +19,25 @@
 typedef struct fdio fdio_t;
 typedef struct fdio_namespace fdio_ns_t;
 
-// FDIO provides open/close/read/write io over various transports
+// FDIO provides POSIX I/O functionality over various transports
 // via the fdio_t interface abstraction.
 //
-// The PIPE protocol uses message ports as simple, no-flow-control
-// io pipes with a maximum message size of ZX_PIPE_SIZE.
+// The "pipe" transport is a thin wrapper over Zircon sockets supporting
+// vector read/write.
 //
-// The REMOTEIO protocol uses message ports to implement simple
-// synchronous remoting of read/write/close operations.
+// The "socket_stream"/"socket_dgram" transports implement BSD sockets.
 //
-// The NULL protocol absorbs writes and is never readable.
+// The "remote" transport uses Zircon channels to implement POSIX files
+// and directories.
+//
+// The "local" transport resolves and forwards open calls by looking up
+// paths in a namespace.
+//
+// The "null" transport absorbs writes and is never readable.
+//
+// TODO(fxb/43267): Eventually, with the exception of the "local" and "null"
+// transport, the different transports should become an implementation detail
+// in zxio.
 
 typedef zx_status_t (*two_path_op)(fdio_t* io, const char* src, size_t srclen,
                                    zx_handle_t dst_token, const char* dst, size_t dstlen);
@@ -85,7 +94,7 @@ typedef struct fdio_ops {
 #define IOFLAG_NONBLOCK (1 << 6)
 
 // The subset of fdio_t per-fd flags queryable via fcntl.
-// Static assertions in unistd.c ensure we aren't colliding.
+// Static assertions in unistd.cc ensure we aren't colliding.
 #define IOFLAG_FD_FLAGS IOFLAG_CLOEXEC
 
 typedef struct fdio fdio_t;
@@ -95,7 +104,7 @@ typedef struct fdio fdio_t;
 //
 // It is unsafe to call any ops within this object.
 // It is unsafe to change the reference count of this object.
-fdio_t* fdio_get_reserved_io(void);
+fdio_t* fdio_get_reserved_io();
 
 // Access the |zxio_t| field within an |fdio_t|.
 zxio_t* fdio_get_zxio(fdio_t* io);
@@ -143,8 +152,7 @@ zx::duration* fdio_get_sndtimeo(fdio_t* io);
 // Upon creation, fdio objects have a refcount of 1.
 // fdio_acquire() and fdio_release() are used to upref
 // and downref, respectively.  Upon downref to 0,
-// fdio_free() is called, which poisons the object and
-// free()s it.
+// the object will be freed.
 //
 // The close hook must be called before free and should
 // only be called once.  In normal use, fdio objects are
@@ -161,7 +169,12 @@ zx::duration* fdio_get_sndtimeo(fdio_t* io);
 // is in.  close() reduces the dupcount, and only actually
 // closes the underlying object when it reaches zero.
 
+// Closes the underlying I/O backend object.
 zx_status_t fdio_close(fdio_t* io);
+
+// Waits until one or more |events| are signalled, or the |deadline| passes.
+// The |events| are of the form |FDIO_EVT_*|, defined in io.h.
+// If not NULL, |out_pending| returns a bitmap of all observed events.
 zx_status_t fdio_wait(fdio_t* io, uint32_t events, zx::time deadline, uint32_t* out_pending);
 
 // Wraps a channel with an fdio_t using remote io.
@@ -208,9 +221,10 @@ fdio_t* fdio_vmofile_create(llcpp::fuchsia::io::File::SyncClient control, zx::vm
 zx_status_t fdio_socket_create(llcpp::fuchsia::posix::socket::Control::SyncClient control,
                                zx::socket socket, fdio_t** out_io);
 
-// creates a message port and pair of simple io fdio_t's
+// Creates a message port and pair of simple io fdio_t's
 int fdio_pipe_pair(fdio_t** a, fdio_t** b);
 
+// Creates an |fdio_t| referencing the root of the |ns| namespace.
 fdio_t* fdio_ns_open_root(fdio_ns_t* ns);
 
 // Validates a |path| argument.
@@ -292,6 +306,10 @@ zx_status_t fdio_default_link(fdio_t* io, const char* src, size_t srclen, zx_han
                               const char* dst, size_t dstlen);
 zx_status_t fdio_default_get_flags(fdio_t* io, uint32_t* out_flags);
 zx_status_t fdio_default_set_flags(fdio_t* io, uint32_t flags);
+zx_status_t fdio_default_recvmsg(fdio_t* io, struct msghdr* msg, int flags, size_t* out_actual,
+                                 int16_t* out_code);
+zx_status_t fdio_default_sendmsg(fdio_t* io, const struct msghdr* msg, int flags,
+                                 size_t* out_actual, int16_t* out_code);
 zx_status_t fdio_default_get_attr(fdio_t* io, llcpp::fuchsia::io::NodeAttributes* out);
 zx_status_t fdio_default_open(fdio_t* io, const char* path, uint32_t flags, uint32_t mode,
                               fdio_t** out);
