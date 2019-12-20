@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+pub mod avdtp_facade;
 pub mod ble_advertise_facade;
 pub mod bt_control_facade;
 pub mod commands;

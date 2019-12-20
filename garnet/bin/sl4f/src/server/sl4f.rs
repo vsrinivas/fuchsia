@@ -26,6 +26,7 @@ use crate::audio::facade::AudioFacade;
 use crate::basemgr::facade::BaseManagerFacade;
 
 // Bluetooth related includes
+use crate::bluetooth::avdtp_facade::AvdtpFacade;
 use crate::bluetooth::ble_advertise_facade::BleAdvertiseFacade;
 use crate::bluetooth::bt_control_facade::BluetoothControlFacade;
 use crate::bluetooth::gatt_client_facade::GattClientFacade;
@@ -95,6 +96,7 @@ impl Sl4f {
             values = to_arc_trait_object,
             hashmap!(
                 "audio_facade" => AudioFacade::new()?,
+                "avdtp_facade" => AvdtpFacade::new(),
                 "basemgr_facade" => BaseManagerFacade::new(),
                 "ble_advertise_facade" => BleAdvertiseFacade::new(),
                 "bluetooth" => BluetoothFacade::new(),

@@ -12,6 +12,7 @@ use parking_lot::RwLock;
 use serde_json::{to_value, Value};
 
 // Bluetooth-related functionality
+use crate::bluetooth::avdtp_facade::AvdtpFacade;
 use crate::bluetooth::ble_advertise_facade::BleAdvertiseFacade;
 use crate::bluetooth::bt_control_facade::BluetoothControlFacade;
 use crate::bluetooth::facade::BluetoothFacade;
@@ -453,6 +454,84 @@ async fn profile_server_method_to_fidl(
             Ok(to_value(result)?)
         }
         _ => bail!("Invalid Profile Server FIDL method: {:?}", method_name),
+    }
+}
+
+impl Facade for AvdtpFacade {
+    fn handle_request(
+        &self,
+        method: String,
+        args: Value,
+    ) -> LocalBoxFuture<'_, Result<Value, Error>> {
+        avdtp_method_to_fidl(method, args, self).boxed_local()
+    }
+}
+
+pub async fn avdtp_method_to_fidl(
+    method_name: String,
+    args: Value,
+    facade: &AvdtpFacade,
+) -> Result<Value, Error> {
+    match method_name.as_ref() {
+        "AvdtpInit" => {
+            let role = parse_arg!(args, as_str, "role")?;
+            let result = facade.init_avdtp_service_proxy(role.to_string()).await?;
+            Ok(to_value(result)?)
+        }
+        "AvdtpGetConnectedPeers" => {
+            let result = facade.get_connected_peers().await?;
+            Ok(to_value(result)?)
+        }
+        "AvdtpSetConfiguration" => {
+            let peer_id = parse_u64_identifier(args)?;
+            let result = facade.set_configuration(peer_id).await?;
+            Ok(to_value(result)?)
+        }
+        "AvdtpGetConfiguration" => {
+            let peer_id = parse_u64_identifier(args)?;
+            let result = facade.get_configuration(peer_id).await?;
+            Ok(to_value(result)?)
+        }
+        "AvdtpGetCapabilities" => {
+            let peer_id = parse_u64_identifier(args)?;
+            let result = facade.get_capabilities(peer_id).await?;
+            Ok(to_value(result)?)
+        }
+        "AvdtpGetAllCapabilities" => {
+            let peer_id = parse_u64_identifier(args)?;
+            let result = facade.get_all_capabilities(peer_id).await?;
+            Ok(to_value(result)?)
+        }
+        "AvdtpReconfigureStream" => {
+            let peer_id = parse_u64_identifier(args)?;
+            let result = facade.reconfigure_stream(peer_id).await?;
+            Ok(to_value(result)?)
+        }
+        "AvdtpSuspendStream" => {
+            let peer_id = parse_u64_identifier(args)?;
+            let result = facade.suspend_stream(peer_id).await?;
+            Ok(to_value(result)?)
+        }
+        "AvdtpSuspendAndReconfigure" => {
+            let peer_id = parse_u64_identifier(args)?;
+            let result = facade.suspend_and_reconfigure(peer_id).await?;
+            Ok(to_value(result)?)
+        }
+        "AvdtpReleaseStream" => {
+            let peer_id = parse_u64_identifier(args)?;
+            let result = facade.release_stream(peer_id).await?;
+            Ok(to_value(result)?)
+        }
+        "AvdtpEstablishStream" => {
+            let peer_id = parse_u64_identifier(args)?;
+            let result = facade.establish_stream(peer_id).await?;
+            Ok(to_value(result)?)
+        }
+        "AvdtpRemoveService" => {
+            let result = facade.remove_service().await;
+            Ok(to_value(result)?)
+        }
+        _ => bail!("Invalid AVDTP FIDL method: {:?}", method_name),
     }
 }
 
