@@ -205,9 +205,8 @@ __asm__(
 
 __NO_SAFESTACK static bool should_break_on_load(void) {
   intptr_t dyn_break_on_load = 0;
-  zx_status_t status =
-      _zx_object_get_property(__zircon_process_self, ZX_PROP_PROCESS_BREAK_ON_LOAD,
-                             &dyn_break_on_load, sizeof(dyn_break_on_load));
+  zx_status_t status = _zx_object_get_property(__zircon_process_self, ZX_PROP_PROCESS_BREAK_ON_LOAD,
+                                               &dyn_break_on_load, sizeof(dyn_break_on_load));
   if (status != ZX_OK)
     return false;
 
@@ -2025,6 +2024,138 @@ __NO_SAFESTACK NO_ASAN static dl_start_return_t __dls3(void* start_arg) {
     // This should be impossible.
     __builtin_trap();
   }
+
+#ifdef __aarch64__
+// The official psABI document at
+// https://developer.arm.com/docs/ihi0057/c/dwarf-for-the-arm-64-bit-architecture-aarch64-abi-2018q4
+// does not assign a DWARF register number for TPIDR_mode.  For now use 128, which
+// is above the range reserved in the ABI.
+// TODO(mcgrathr): I've pinged ARM about assigning more numbers; hopefully we'll
+// get a tentative assignment from them soon and update this to match.
+#define DWARG_REGNO_TP 128  // TPIDR_EL0
+#elif defined(__x86_64__)
+#define DWARG_REGNO_TP 58  // %fs.base
+#endif
+
+  // This has to be inside some function so that it can use extended asm to
+  // inject constants from C.  It has to be somewhere that definitely doesn't
+  // get optimized away as unreachable by the compiler so that it's actually
+  // assembled into the final shared library.
+  //
+  // This establishes a new protocol with the debugger: there will be a
+  // debugging section called .zxdb_debug_api (non-allocated like other
+  // such sections).  ELF symbols in this section provide named API
+  // "calls".  Each "call" is a DWARF expression whose offset into the
+  // section and size in bytes are indicated by the st_value and st_size
+  // fields of the symbol.  The protocol for what values each call expects
+  // on the stack and/or delivers on the stack on return is described for
+  // each call below.  Every call may need access to process memory via
+  // DW_OP_deref et al.  Some calls need access to thread registers via
+  // DW_OP_breg*; these calls document that need in their "Input:" section.
+  // Any DW_OP_addr operations encode an address relative to the load
+  // address of the module containing this section.
+  __asm__ volatile(
+      ".pushsection .zxdb_debug_api,\"\",%%progbits\n"
+#define DEBUG_API(name) #name ":\n"
+#define DEBUG_API_END(name) ".size " #name ", . - " #name "\n"
+
+      // zxdb.thrd_t: Yield the thrd_current() value from thread registers.
+      // zxdb.pthread_t: Yield the pthread_self() value from thread registers.
+      // Input: Consumes no stack entries; uses thread registers.
+      // Output: Pushes one word, to be displayed as a thrd_t value.
+      // This is the value thrd_current() returns in this thread; as per the
+      // C standard, this value never changes for the lifetime of the thread.
+      // In Fuchsia's implementation thrd_t and pthread_t happen to be the
+      // same thing and thrd_current() and pthread_self() always return the
+      // same thing.  That is why these two debugging APIs are just aliases
+      // for the same code, but it is not something a debugger should assume
+      // generically as it might differ in future implementations.
+      DEBUG_API(zxdb.thrd_t)
+      DEBUG_API(zxdb.pthread_t)
+      ".byte %c[bregx]\n"
+      "  .uleb128 %c[tp_regno]\n"
+      "  .sleb128 %c[pthread_tp_offset]\n"
+      DEBUG_API_END(zxdb.thrd_t)
+      DEBUG_API_END(zxdb.pthread_t)
+
+      // zxdb.link_map_tls_modid: Yield TLS module ID from `struct link_map`.
+      // Input: Pops a `struct link_map *` value; uses no thread registers.
+      // The valid `struct link_map *` pointer values can be obtained by walking
+      // the list from the `struct r_debug` structure accessed via the ELF
+      // DT_DEBUG protocol or the Zircon ZX_PROP_PROCESS_DEBUG_ADDR protocol.
+      // Output: Pushes one word, the TLS module ID or 0 if no PT_TLS segment.
+      // This value is fixed at load time, so it can be computed just once per
+      // module and cached.  The TLS module ID is a positive integer that
+      // appears in GOT slots with DTPMOD relocations and can be used with
+      // zxdb.tlsbase (below) to refer to the given module's PT_TLS segment.
+      DEBUG_API(zxdb.link_map_tls_modid)
+      ".byte %c[plus_uconst]\n"
+      "  .uleb128 %c[tls_id_offset]\n"
+      ".byte %c[deref]\n"
+      DEBUG_API_END(zxdb.link_map_tls_modid)
+
+      // zxdb.tlsbase: Yield the address of a given module's TLS block.
+      // Input: Pops one word, the TLS module ID; uses thread registers.
+      // Output: Pushes one word, the address of the thread's TLS block for
+      // that module or 0 if the thread hasn't allocated one.  Each module
+      // with a PT_TLS segment has a TLS block in each thread that corresponds
+      // to the SHT_TLS symbols that appear in that module, which their
+      // st_value offsets being the offsets into that TLS block (i.e. `p_vaddr
+      // + st_value` is where the initial contents for that symbol appear).
+      // When a particular thread has not yet allocated a particular module's
+      // TLS block the debugger can show the initial values from the PT_TLS
+      // segment's p_vaddr, but cannot modify the values until the thread does
+      // an actual TLS access to get the block allocated.  A later attempt on
+      // the same thread and module ID might yield a nonzero value.  Once a
+      // nonzero value has been delivered for a given thread and module, it
+      // will never change but becomes an invalid pointer when the thread dies
+      // and when the module is unloaded.
+      DEBUG_API(zxdb.tlsbase)
+      // This matches the logic in the __tls_get_addr implementation.
+      ".byte %c[bregx]\n"  // Compute &pthread_self()->head.dtv.
+      "  .uleb128 %c[tp_regno]\n"
+      "  .sleb128 %c[dtv_offset]\n"
+      ".byte %c[deref]\n"  // tos is now the DTV address itself.
+      ".byte %c[over]\n"   // Push a copy of the module ID.
+      ".byte %c[over]\n"   // Save a copy of the DTV address for later.
+      ".byte %c[deref]\n"  // tos is now the thread's DTV generation.
+      ".byte %c[le]\n"     // modid <= generation?
+      ".byte %c[bra]\n"    // If yes, goto 1.
+      "  .short 1f-0f\n"
+      "0:\n"
+      ".byte %c[drop], %c[drop]\n"  // Clear the stack.
+      ".byte %c[lit0]\n"            // Push return value of zero.
+      ".byte %c[skip]\n"            // Branch to the end, i.e. return.
+      "  .short 2f-1f\n"
+      "1:\n"
+      ".byte %c[swap]\n"  // Get the module ID back to the top of the stack.
+      // The module ID is an index into the DTV; scale that to the byte offset.
+      ".byte %c[const1u], %c[dtvscale], %c[mul]\n"  // tos *= dtvscale
+      ".byte %c[plus], %c[deref]\n"                 // Return dtv[id].
+      "2:\n"
+      DEBUG_API_END(zxdb.tlsbase)
+
+#undef DEBUG_API
+#undef DEBUG_API_END
+      ".popsection"
+      :
+      :
+      // DW_OP_* constants per DWARF spec.
+      [ bra ] "i"(0x28), [ bregx ] "i"(0x92), [ const1u ] "i"(0x08), [ deref ] "i"(0x06),
+      [ drop ] "i"(0x13), [ dup ] "i"(0x12), [ le ] "i"(0x2c), [ lit0 ] "i"(0x30),
+      [ mul ] "i"(0x1e), [ over ] "i"(0x14), [ plus ] "i"(0x22), [ plus_uconst ] "i"(0x23),
+      [ skip ] "i"(0x2f), [ swap ] "i"(0x16),
+
+      // Used in thrd_t.
+      [ tp_regno ] "i"(DWARG_REGNO_TP), [ pthread_tp_offset ] "i"(-PTHREAD_TP_OFFSET),
+
+      // Used in link_map_tls_modid.
+      [ tls_id_offset ] "i"(offsetof(struct dso, tls_id)),
+
+      // Used in tlsbase.
+      [ dtv_offset ] "i"(TP_OFFSETOF(head.dtv)), [ dtvscale ] "i"(sizeof((tcbhead_t){}.dtv[0])));
+
+#undef OP
 
   return DL_START_RETURN(entry, start_arg);
 }
