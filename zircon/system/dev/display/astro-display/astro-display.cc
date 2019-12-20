@@ -143,50 +143,63 @@ void AstroDisplay::PopulateAddedDisplayArgs(added_display_args_t* args) {
 zx_status_t AstroDisplay::DisplayInit() {
   zx_status_t status;
   fbl::AllocChecker ac;
-  if (!skip_disp_init_) {
-    // Detect panel type
-    PopulatePanelType();
-    if (panel_type_ == PANEL_TV070WSM_FT) {
-      init_disp_table_ = &kDisplaySettingTV070WSM_FT;
-    } else if (panel_type_ == PANEL_P070ACB_FT) {
-      init_disp_table_ = &kDisplaySettingP070ACB_FT;
-    } else if (panel_type_ == PANEL_TV101WXM_FT) {
-      init_disp_table_ = &kDisplaySettingTV101WXM_FT;
-    } else if (panel_type_ == PANEL_G101B158_FT) {
-      init_disp_table_ = &kDisplaySettingG101B158_FT;
-    } else {
-      DISP_ERROR("Unsupported panel detected!\n");
-      status = ZX_ERR_NOT_SUPPORTED;
-      return status;
-    }
 
-    // Populated internal structures based on predefined tables
-    CopyDisplaySettings();
+  // Setup VPU and VPP units first
+  vpu_ = fbl::make_unique_checked<astro_display::Vpu>(&ac);
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
+  status = vpu_->Init(components_[COMPONENT_PDEV]);
+  if (status != ZX_OK) {
+    DISP_ERROR("Could not initialize VPU object\n");
+    return status;
+  }
 
-    // Ensure Max Bit Rate / pixel clock ~= 8 (8.xxx). This is because the clock calculation
-    // part of code assumes a clock factor of 1. All the LCD tables from Astro have this
-    // relationship established. We'll have to revisit the calculation if this ratio cannot
-    // be met.
-    if (init_disp_table_->bit_rate_max / (init_disp_table_->lcd_clock / 1000 / 1000) != 8) {
-      DISP_ERROR("Max Bit Rate / pixel clock != 8\n");
-      status = ZX_ERR_INVALID_ARGS;
-      return status;
-    }
+  // Determine whether it's first time boot or not
+  bool skip_disp_init = false;
+  if (vpu_->SetFirstTimeDriverLoad()) {
+    DISP_INFO("First time driver load. Skip display initialization\n");
+    skip_disp_init = true;
+  } else {
+    skip_disp_init = false;
+    DISP_INFO("Display driver reloaded. Initialize display system\n");
+  }
 
-    // Setup VPU and VPP units first
-    vpu_ = fbl::make_unique_checked<astro_display::Vpu>(&ac);
-    if (!ac.check()) {
-      return ZX_ERR_NO_MEMORY;
-    }
-    status = vpu_->Init(components_[COMPONENT_PDEV]);
-    if (status != ZX_OK) {
-      DISP_ERROR("Could not initialize VPU object\n");
-      return status;
-    }
+  // Detect panel type
+  PopulatePanelType();
+  if (panel_type_ == PANEL_TV070WSM_FT) {
+    init_disp_table_ = &kDisplaySettingTV070WSM_FT;
+  } else if (panel_type_ == PANEL_P070ACB_FT) {
+    init_disp_table_ = &kDisplaySettingP070ACB_FT;
+  } else if (panel_type_ == PANEL_TV101WXM_FT) {
+    init_disp_table_ = &kDisplaySettingTV101WXM_FT;
+  } else if (panel_type_ == PANEL_G101B158_FT) {
+    init_disp_table_ = &kDisplaySettingG101B158_FT;
+  } else {
+    DISP_ERROR("Unsupported panel detected!\n");
+    status = ZX_ERR_NOT_SUPPORTED;
+    return status;
+  }
 
+  // Populated internal structures based on predefined tables
+  CopyDisplaySettings();
+
+  // Ensure Max Bit Rate / pixel clock ~= 8 (8.xxx). This is because the clock calculation
+  // part of code assumes a clock factor of 1. All the LCD tables from Astro have this
+  // relationship established. We'll have to revisit the calculation if this ratio cannot
+  // be met.
+  if (init_disp_table_->bit_rate_max / (init_disp_table_->lcd_clock / 1000 / 1000) != 8) {
+    DISP_ERROR("Max Bit Rate / pixel clock != 8\n");
+    status = ZX_ERR_INVALID_ARGS;
+    return status;
+  }
+
+  if (!skip_disp_init) {
     vpu_->PowerOff();
     vpu_->PowerOn();
     vpu_->VppInit();
+    // Need to call this function since VPU/VPP registers were reset
+    vpu_->SetFirstTimeDriverLoad();
     clock_ = fbl::make_unique_checked<astro_display::AstroDisplayClock>(&ac);
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
@@ -236,9 +249,7 @@ zx_status_t AstroDisplay::DisplayInit() {
     return status;
   }
 
-  if (!skip_disp_init_) {
-    osd_->HwInit();
-  }
+  osd_->HwInit();
 
   // Configure osd layer
   current_image_valid_ = false;

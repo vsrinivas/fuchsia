@@ -111,4 +111,6 @@
 #define VPP_PREBLEND_EN (1 << 6)
 #define VPP_POST_FG_OSD2 (1 << 4)
 
+#define VPP_DUMMY_DATA (0x1d00 << 2)
+
 #endif  // ZIRCON_SYSTEM_DEV_DISPLAY_ASTRO_DISPLAY_VPP_REGS_H_

@@ -164,9 +164,6 @@ class AstroDisplay : public DeviceType,
 
   const display_setting_t* init_disp_table_ = nullptr;
 
-  // This flag is used to skip all driver initializations
-  bool skip_disp_init_ TA_GUARDED(display_lock_) = false;
-
   bool full_init_done_ = false;
 
   // board revision and panel type detected by the display driver

@@ -34,6 +34,9 @@ class Vpu {
   // This function sets up default video post processing unit. It contains undocumented
   // registers and/or initialization sequences
   void VppInit();
+  // This function sets a flag to indicate the first time driver is loaded. Returns
+  // false if driver was already loaded previously
+  bool SetFirstTimeDriverLoad();
 
   zx_status_t CaptureInit(uint8_t canvas_idx, uint32_t height, uint32_t stride);
   zx_status_t CaptureStart();
@@ -57,6 +60,8 @@ class Vpu {
   pdev_protocol_t pdev_ = {};
 
   bool initialized_ = false;
+
+  uint32_t first_time_load_ = false;
 
   fbl::Mutex capture_lock_;
   CaptureState capture_state_ TA_GUARDED(capture_lock_);

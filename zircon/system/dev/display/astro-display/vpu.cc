@@ -16,6 +16,7 @@
 namespace astro_display {
 
 namespace {
+constexpr uint32_t kFirstTimeLoadMagicNumber = 0x304e65;  // 0Ne
 constexpr uint32_t kVpuMux = 0;
 constexpr uint32_t kVpuDiv = 3;
 
@@ -111,6 +112,18 @@ zx_status_t Vpu::Init(zx_device_t* parent) {
   fbl::AutoLock lock(&capture_lock_);
   capture_state_ = CAPTURE_RESET;
   return ZX_OK;
+}
+
+bool Vpu::SetFirstTimeDriverLoad() {
+  ZX_DEBUG_ASSERT(initialized_);
+  uint32_t regVal = READ32_REG(VPU, VPP_DUMMY_DATA);
+  if (regVal == kFirstTimeLoadMagicNumber) {
+    // we have already been loaded once. don't set again.
+    return false;
+  }
+  WRITE32_REG(VPU, VPP_DUMMY_DATA, kFirstTimeLoadMagicNumber);
+  first_time_load_ = true;
+  return true;
 }
 
 void Vpu::VppInit() {

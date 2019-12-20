@@ -432,6 +432,10 @@ zx_status_t capture_setup() {
     printf("Failed to start capture: %s\n", importcap_resp.error());
     return importcap_resp.status();
   }
+  if (importcap_resp.value().result.is_err()) {
+    printf("Could not import image for capture %d\n", importcap_resp.value().result.err());
+    return importcap_resp.value().result.err();
+  }
   capture_id = importcap_resp.value().result.response().image_id;
   return ZX_OK;
 }
