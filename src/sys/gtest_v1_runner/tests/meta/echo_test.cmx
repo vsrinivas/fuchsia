@@ -2,7 +2,7 @@
     "program": {
         "binary": "bin/echo_test"
     },
-    "runner": "fuchsia-pkg://fuchsia.com/gtest_runner#meta/gtest_runner.cmx",
+    "runner": "fuchsia-pkg://fuchsia.com/gtest_v1_runner#meta/gtest_v1_runner.cmx",
     "sandbox": {
         "features": [
             "isolated-temp"

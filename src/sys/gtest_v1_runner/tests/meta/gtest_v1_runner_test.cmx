@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/gtest_runner_test"
+        "binary": "test/gtest_v1_runner_test"
     },
     "sandbox": {
         "services": [

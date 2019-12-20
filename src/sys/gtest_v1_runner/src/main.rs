@@ -268,7 +268,7 @@ async fn run_runner_server(
 }
 
 fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["gtest_runner"])?;
+    fuchsia_syslog::init_with_tags(&["gtest_v1_runner"])?;
     fx_log_info!("runner started");
 
     let mut executor = fasync::Executor::new().context("Error creating executor")?;

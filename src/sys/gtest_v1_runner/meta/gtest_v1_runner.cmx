@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/gtest_runner"
+        "binary": "bin/gtest_v1_runner"
     },
     "sandbox": {
         "features": [

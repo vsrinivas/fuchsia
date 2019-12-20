@@ -7,7 +7,7 @@ import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
 
 rustc_binary("bin") {
-  name = "gtest_runner"
+  name = "gtest_v1_runner"
   with_unit_tests = true
   edition = "2018"
 
@@ -41,34 +41,34 @@ rustc_binary("bin") {
   ]
 }
 
-package("gtest_runner") {
+package("gtest_v1_runner") {
   deps = [
     ":bin",
   ]
 
   binaries = [
     {
-      name = "gtest_runner"
+      name = "gtest_v1_runner"
     },
   ]
 
   meta = [
     {
-      path = "meta/gtest_runner.cmx"
-      dest = "gtest_runner.cmx"
+      path = "meta/gtest_v1_runner.cmx"
+      dest = "gtest_v1_runner.cmx"
     },
   ]
 }
 
-test_package("gtest_runner_unittests") {
+test_package("gtest_v1_runner_unittests") {
   deps = [
     ":bin_test",
   ]
 
   tests = [
     {
-      name = "gtest_runner_bin_test"
-      dest = "gtest_runner_unittests"
+      name = "gtest_v1_runner_bin_test"
+      dest = "gtest_v1_runner_unittests"
       environments = basic_envs
     },
   ]
@@ -77,8 +77,8 @@ test_package("gtest_runner_unittests") {
 group("tests") {
   testonly = true
   deps = [
-    ":gtest_runner",
-    ":gtest_runner_unittests",
+    ":gtest_v1_runner",
+    ":gtest_v1_runner_unittests",
     "tests",
   ]
 }

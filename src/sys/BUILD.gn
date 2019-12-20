@@ -22,7 +22,7 @@ group("tests") {
     "component_manager:tests",
     "component_manager_for_test:tests",
     "dash:tests",
-    "gtest_runner:tests",
+    "gtest_v1_runner:tests",
     "lib:tests",
     "locate:tests",
     "pkg:tests",

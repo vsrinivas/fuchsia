@@ -25,9 +25,9 @@ executable("echo_bin") {
 }
 
 rustc_test("test_bin") {
-  name = "gtest_runner_test"
+  name = "gtest_v1_runner_test"
   edition = "2018"
-  source_root = "gtest_runner_test.rs"
+  source_root = "gtest_v1_runner_test.rs"
 
   deps = [
     "//garnet/examples/fidl/services:echo-rustc",
@@ -40,7 +40,7 @@ rustc_test("test_bin") {
   ]
 }
 
-test_package("gtest_runner_test") {
+test_package("gtest_v1_runner_test") {
   deps = [
     ":echo_bin",
     ":test_bin",
@@ -61,7 +61,7 @@ test_package("gtest_runner_test") {
 
   tests = [
     {
-      name = "gtest_runner_test"
+      name = "gtest_v1_runner_test"
       environments = basic_envs
     },
   ]
@@ -70,6 +70,6 @@ test_package("gtest_runner_test") {
 group("tests") {
   testonly = true
   deps = [
-    ":gtest_runner_test",
+    ":gtest_v1_runner_test",
   ]
 }

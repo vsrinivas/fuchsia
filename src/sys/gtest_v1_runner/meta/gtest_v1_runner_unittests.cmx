@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/gtest_v1_runner_unittests"
+    }
+}

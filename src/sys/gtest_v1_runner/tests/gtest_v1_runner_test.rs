@@ -24,7 +24,7 @@ fn echo_server((send, stream): (mpsc::Sender<()>, EchoRequestStream)) -> impl Fu
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn can_launch_test_with_gtest_runner() {
+async fn can_launch_test_with_gtest_v1_runner() {
     let mut fs = ServiceFs::new();
 
     let (send, mut recv) = mpsc::channel(0);
@@ -33,7 +33,7 @@ async fn can_launch_test_with_gtest_runner() {
 
     let (_new_env_controller, _child_app) = fs
         .launch_component_in_nested_environment(
-            "fuchsia-pkg://fuchsia.com/gtest_runner_test#meta/echo_test.cmx".to_string(),
+            "fuchsia-pkg://fuchsia.com/gtest_v1_runner_test#meta/echo_test.cmx".to_string(),
             None,
             "env",
         )
