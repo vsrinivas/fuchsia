@@ -179,7 +179,7 @@ zx_status_t GetFvmPartition(const DevicePartitioner& partitioner,
       return status;
     }
 
-    LOG("Coud not find FVM Partition on device. Attemping to add new partition\n");
+    LOG("Could not find FVM Partition on device. Attemping to add new partition\n");
 
     if ((status = partitioner.AddPartition(partition, client)) != ZX_OK) {
       ERROR("Failure creating FVM partition: %s\n", zx_status_get_string(status));
@@ -261,7 +261,7 @@ zx_status_t PartitionRead(const DevicePartitioner& partitioner, Partition partit
 
   std::unique_ptr<PartitionClient> partition;
   if (zx_status_t status = partitioner.FindPartition(partition_type, &partition); status != ZX_OK) {
-    ERROR("Coud not find \"%s\" Partition on device: %s\n", PartitionName(partition_type),
+    ERROR("Could not find \"%s\" Partition on device: %s\n", PartitionName(partition_type),
           zx_status_get_string(status));
     return status;
   }
@@ -308,7 +308,7 @@ zx_status_t PartitionPave(const DevicePartitioner& partitioner, zx::vmo payload_
       return status;
     }
 
-    LOG("Coud not find \"%s\" Partition on device. Attemping to add new partition\n",
+    LOG("Could not find \"%s\" Partition on device. Attemping to add new partition\n",
         PartitionName(partition_type));
 
     if ((status = partitioner.AddPartition(partition_type, &partition)) != ZX_OK) {
