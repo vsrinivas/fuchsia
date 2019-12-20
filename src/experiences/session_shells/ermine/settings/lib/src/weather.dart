@@ -20,7 +20,7 @@ class Weather extends UiSpec {
   static const changeUnitAction = 2;
 
   // TODO(sanjayc): Replace hardcoded locations with user specified ones.
-  static final List<_Location> _locations = <_Location>[
+  static List<_Location> _locations = <_Location>[
     _Location('Mountain View', station: 'KSJC'),
     _Location('San Francisco', station: 'KSFO'),
   ];
@@ -37,8 +37,8 @@ class Weather extends UiSpec {
 
   void _onChange() async {
     try {
-      await _refresh();
-      spec = _specForWeather(tempInFahrenheit);
+      await _refresh(locations);
+      spec = _specForWeather(tempInFahrenheit, locations);
     } on Exception catch (_) {
       spec = null;
     }
@@ -49,7 +49,7 @@ class Weather extends UiSpec {
     if (value.$tag == ValueTag.button &&
         value.button.action == changeUnitAction) {
       tempInFahrenheit = !tempInFahrenheit;
-      spec = _specForWeather(tempInFahrenheit);
+      spec = _specForWeather(tempInFahrenheit, locations);
     }
   }
 
@@ -58,12 +58,13 @@ class Weather extends UiSpec {
     _timer.cancel();
   }
 
-  static Spec _specForWeather(bool tempInFahrenheit) {
-    final locations = _locations
+  static Spec _specForWeather(
+      bool tempInFahrenheit, List<_Location> locations) {
+    final loadedLocations = locations
         .where((location) =>
             location.observation != null && location.tempInDegrees != null)
         .toList();
-    if (locations.isEmpty) {
+    if (loadedLocations.isEmpty) {
       return UiSpec.nullSpec;
     }
     return Spec(title: _title, groups: [
@@ -87,8 +88,8 @@ class Weather extends UiSpec {
     ]);
   }
 
-  static Future<void> _refresh() async {
-    await Future.forEach(_locations, _loadCurrentCondition);
+  static Future<void> _refresh(List<_Location> locations) async {
+    await Future.forEach(locations, _loadCurrentCondition);
   }
 
   // Get the latest observation for weather station in [_Location] using:
@@ -118,6 +119,12 @@ class Weather extends UiSpec {
       contents.write(data);
     }, onDone: () => completer.complete(contents.toString()));
     return completer.future;
+  }
+
+  List<_Location> get locations => _locations;
+  set locations(List<_Location> values) {
+    _locations = values;
+    spec = _specForWeather(tempInFahrenheit, locations);
   }
 }
 
