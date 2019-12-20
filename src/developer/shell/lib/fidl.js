@@ -102,6 +102,8 @@ function loadIR(libraryName) {
     // Hack: replace 64-bit ordinals with strings.  Better support for BigInts would be better.
     let regex = /("ordinal"\s*:\s*)([0-9]+)\s*,/gi;
     str = str.replace(regex, '$1"$2",');
+    regex = /("generated_ordinal"\s*:\s*)([0-9]+)\s*,/gi;
+    str = str.replace(regex, '$1"$2",');
     let ir = JSON.parse(str);
     libraries.set(ir.name, new Library(ir));
   } catch {
@@ -399,6 +401,16 @@ class ProtocolClientImpl {
     this._channel.waitAsync(
         zx.ZX_CHANNEL_READABLE | zx.ZX_CHANNEL_PEER_CLOSED, () => this._readable(method));
     return new Promise((resolve, reject) => {
+      if (typeof method.generated_ordinal != 'undefined') {
+        this._eventProcessors.set(method.generated_ordinal, (args) => {
+          try {
+            resolve(fn(args));
+          } catch (e) {
+            reject(e);
+            console.log(e);
+          }
+        });
+      }
       this._eventProcessors.set(method.ordinal, (args) => {
         try {
           resolve(fn(args));
@@ -752,5 +764,4 @@ var fidling_handler = {
 const fidling = new Proxy({}, fidling_handler);
 
 global['fidling'] = fidling;
-
 })(globalThis);

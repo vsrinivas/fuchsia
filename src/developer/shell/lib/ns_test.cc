@@ -92,6 +92,10 @@ TEST_F(NsTest, ListFiles) {
       ns.ls("/ns_test_tmp").
         then((result) => { globalThis.resultTwo = result; }).
         catch((e) => { globalThis.resultTwo = e;});
+      globalThis.resultThree = undefined;
+      ns.ls("/pkg/data/fidling").
+        then((result) => { globalThis.resultThree = result; }).
+        catch((e) => { globalThis.resultThree = e;});
   )";
   ASSERT_TRUE(Eval(test_string));
   js_std_loop(ctx_->Get());
@@ -111,8 +115,45 @@ TEST_F(NsTest, ListFiles) {
               throw "Bad filenames: Expected " + expectedTwo[i] + ", got " + actualTwo[i];
           }
       }
+      let resThree = globalThis.resultThree;
+      if ("stack" in resThree) {
+        throw resThree;
+      }
+      if (resThree.length == 0) {
+        throw "Could not read subdirectory";
+      }
   )";
   ASSERT_TRUE(Eval(test_string));
 }
 
+TEST_F(NsTest, ListRootDir) {
+  InitBuiltins("/pkg/data/fidling", "/pkg/data/lib");
+  std::string test_string = R"(
+      globalThis.resultOne = undefined;
+      ns.ls("/pkg").
+        then((result) => { globalThis.resultOne = result; }).
+        catch((e) => { globalThis.resultOne = e;});
+  )";
+  ASSERT_TRUE(Eval(test_string));
+  js_std_loop(ctx_->Get());
+  test_string = R"(
+      let res = globalThis.resultOne;
+      if ("stack" in res) {
+        throw res;
+      }
+      if (res.length == 0) {
+        throw "No entries for pkg found in " + res;
+      }
+      let elt = -1;
+      for (let i = 0; i < res.length; i++) {
+        if (res[i].name == "meta") {
+          elt = i;
+        }
+      }
+      if (elt < 0) {
+        throw "meta subdirectory not found";
+      }
+  )";
+  ASSERT_TRUE(Eval(test_string));
+}
 }  // namespace shell

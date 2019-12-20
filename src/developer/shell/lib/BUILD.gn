@@ -53,6 +53,7 @@ action("js_libs") {
   script = "generate_js_libs.sh"
   sources = [
     "ns.js",
+    "pp.js",
     "task.js",
     "util.js",
   ]
