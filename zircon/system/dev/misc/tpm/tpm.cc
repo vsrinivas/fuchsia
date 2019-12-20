@@ -163,13 +163,17 @@ void Device::DdkUnbindNew(ddk::UnbindTxn txn) {
   txn.Reply();
 }
 
-zx_status_t Device::DdkSuspend(uint32_t flags) {
+zx_status_t Device::Suspend(uint8_t requested_state, bool wakeup_enabled, uint8_t suspend_reason,
+                            uint8_t* out_state) {
+  // TODO(fxb/43205): Implement suspend hook, based on the requested
+  // low power state and suspend reason. Also make this asynchronous
   fbl::AutoLock guard(&lock_);
 
-  if (flags == DEVICE_SUSPEND_FLAG_SUSPEND_RAM) {
+  if (suspend_reason == DEVICE_SUSPEND_REASON_SUSPEND_RAM) {
     zx_status_t status = ShutdownLocked(TPM_SU_STATE);
     if (status != ZX_OK) {
       zxlogf(ERROR, "tpm: Failed to save state: %d\n", status);
+      *out_state = DEV_POWER_STATE_D0;
       return status;
     }
   }
@@ -177,9 +181,18 @@ zx_status_t Device::DdkSuspend(uint32_t flags) {
   zx_status_t status = ReleaseLocalityLocked(0);
   if (status != ZX_OK) {
     zxlogf(ERROR, "tpm: Failed to release locality: %d\n", status);
+    *out_state = DEV_POWER_STATE_D0;
     return status;
   }
+  *out_state = requested_state;
   return status;
+}
+
+void Device::DdkSuspendNew(ddk::SuspendTxn txn) {
+  uint8_t out_state;
+  zx_status_t status =
+      Device::Suspend(txn.requested_state(), txn.enable_wake(), txn.suspend_reason(), &out_state);
+  txn.Reply(status, out_state);
 }
 
 zx_status_t Device::Bind() {

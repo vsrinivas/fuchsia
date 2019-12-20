@@ -29,8 +29,8 @@ TEST(TpmCommandTestCase, GetRandom) {
     }
   }
   EXPECT_TRUE(found_nonzero);
-
-  ASSERT_OK(dev->DdkSuspend(DEVICE_SUSPEND_FLAG_POWEROFF));
+  uint8_t out_state;
+  EXPECT_OK(dev->Suspend(DEV_POWER_STATE_DCOLD, false, DEVICE_SUSPEND_REASON_POWEROFF, &out_state));
 }
 
 }  // namespace

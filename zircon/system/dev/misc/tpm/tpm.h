@@ -54,7 +54,7 @@ class HardwareInterface {
 };
 
 class Device;
-using DeviceType = ddk::Device<Device, ddk::UnbindableNew, ddk::Suspendable>;
+using DeviceType = ddk::Device<Device, ddk::UnbindableNew, ddk::SuspendableNew>;
 
 class Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_TPM> {
  public:
@@ -76,9 +76,11 @@ class Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_TPM> {
   // DDK methods
   void DdkRelease();
   void DdkUnbindNew(ddk::UnbindTxn txn);
-  zx_status_t DdkSuspend(uint32_t flags);
+  void DdkSuspendNew(ddk::SuspendTxn txn);
 
   zx_status_t Init();
+  zx_status_t Suspend(uint8_t requested_state, bool wakeup_enabled, uint8_t suspend_reason,
+                      uint8_t* out_state);
 
  private:
   // Register this instance with devmgr and launch the deferred
