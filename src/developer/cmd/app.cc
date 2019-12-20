@@ -24,6 +24,10 @@ void App::Init(QuitCallback quit_callback) {
 }
 
 zx_status_t App::OnConsoleCommand(Command command) {
+  if (!command.parse_error().empty()) {
+    fprintf(stderr, "error: Invalid command: %s\n", command.parse_error().c_str());
+    return ZX_ERR_NEXT;
+  }
   zx_status_t status =
       executor_.Execute(std::move(command), [this]() { console_.GetNextCommand(); });
   if (status == ZX_ERR_STOP) {

@@ -21,12 +21,16 @@ class Command {
   Command(Command&&) = default;
   Command& operator=(Command&&) = default;
 
-  void Parse(const std::string& line);
+  bool Parse(const std::string& line);
   const std::vector<std::string>& args() const { return args_; }
 
+  const std::string& parse_error() const { return parse_error_; }
   bool is_empty() const { return args_.empty(); }
 
  private:
+  bool ParseQuotedToken(const std::string& line, size_t pos, std::string* token, size_t* end);
+
+  std::string parse_error_;
   std::vector<std::string> args_;
 };
 
