@@ -889,7 +889,7 @@ group("json") {
 group("pkg_resolver") {
   testonly = true
   public_deps = [
-    "//garnet/bin/pkg_resolver:pkg_resolver_tests",
+    "//garnet/bin/pkg_resolver:pkg-resolver-unit-tests",
     "//garnet/packages/prod:pkg_resolver",
   ]
 }

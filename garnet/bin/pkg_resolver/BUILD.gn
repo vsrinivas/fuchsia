@@ -81,7 +81,7 @@ package("pkg_resolver") {
   ]
 }
 
-test_package("pkg_resolver_tests") {
+test_package("pkg-resolver-unit-tests") {
   deps = [
     ":bin_test",
   ]
