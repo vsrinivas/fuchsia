@@ -6,9 +6,10 @@ import("//build/host.gni")
 
 if (!is_fuchsia) {
   import("//build/rust/rustc_binary.gni")
+  import("//build/rust/rustc_library.gni")
 
-  rustc_binary("bin") {
-    name = "ascendd"
+  rustc_library("lib") {
+    name = "ascendd-lib"
     edition = "2018"
 
     deps = [
@@ -18,6 +19,22 @@ if (!is_fuchsia) {
       "//src/connectivity/overnet/lib/hoist",
       "//src/connectivity/overnet/lib/salt_slab",
       "//third_party/rust_crates:clap",
+      "//third_party/rust_crates:failure",
+      "//third_party/rust_crates:futures",
+      "//third_party/rust_crates:log",
+      "//third_party/rust_crates:tokio",
+    ]
+
+    non_rust_deps = [ "//third_party/boringssl" ]
+  }
+
+  rustc_binary("bin") {
+    name = "ascendd"
+    edition = "2018"
+
+    deps = [
+      ":lib",
+      "//src/lib/argh",
       "//third_party/rust_crates:failure",
       "//third_party/rust_crates:futures",
       "//third_party/rust_crates:log",
