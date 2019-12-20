@@ -79,41 +79,6 @@ zx_status_t RemoveHWBreakpoint(uint64_t address, zx_thread_state_debug_regs_t* d
 
 namespace {
 
-uint32_t GetWatchpointLength(uint32_t dbgwcr) {
-  // Because base range addresses have to be 4 bytes aligned, having a watchpoint for smaller ranges
-  // (1, 2 or 4 bytes) could have many combinarions of the BAS register (which determines which
-  // byte will trigger an exception offseted from the base range address.
-
-  // clang-format off
-  uint32_t bas = ARM64_DBGWCR_BAS_GET(dbgwcr);
-  switch (bas) {
-    case 0b00000000: return 0;
-
-    case 0b00000001: return 1;
-    case 0b00000010: return 1;
-    case 0b00000100: return 1;
-    case 0b00001000: return 1;
-    case 0b00010000: return 1;
-    case 0b00100000: return 1;
-    case 0b01000000: return 1;
-    case 0b10000000: return 1;
-
-    case 0b00000011: return 2;
-    case 0b00001100: return 2;
-    case 0b00110000: return 2;
-    case 0b11000000: return 2;
-
-    case 0b00001111: return 4;
-    case 0b11110000: return 4;
-
-    case 0b11111111: return 8;
-    default:
-      FXL_NOTREACHED() << "Wrong bas value: 0x" << std::hex << bas;
-      return 0;
-  }
-  // clang-format on
-}
-
 uint32_t ValidateRange(const debug_ipc::AddressRange& range) {
   constexpr uint64_t kMask = 0b11;
 
@@ -233,19 +198,43 @@ zx_status_t RemoveWatchpoint(zx_thread_state_debug_regs_t* regs,
 
 std::string DebugRegistersToString(const zx_thread_state_debug_regs_t& regs) {
   std::stringstream ss;
-  for (size_t i = 0; i < debug_ipc::kMaxArm64HWBreakpoints; i++) {
+
+  ss << "ESR: 0x" << std::hex << regs.esr << std::endl;
+
+  ss << "HW breakpoints: " << std::endl;
+  for (size_t i = 0; i < std::size(regs.hw_bps); i++) {
     uint32_t dbgbcr = regs.hw_bps[i].dbgbcr;
     uint64_t dbgbvr = regs.hw_bps[i].dbgbvr;
+    if (dbgbvr == 0)
+      continue;
 
     ss << fxl::StringPrintf(
-        "%lu. DBGBVR: 0x%lx, DBGBCR: E=%d, PMC=%d, BAS=%d, HMC=%d, SSC=%d, LBN=%d, BT=%d", i,
+        "%02lu. DBGBVR: 0x%lx, DBGBCR: E=%d, PMC=%d, BAS=%d, HMC=%d, SSC=%d, LBN=%d, BT=%d", i,
         dbgbvr, ARM64_FLAG_VALUE(dbgbcr, DBGBCR, E), ARM64_FLAG_VALUE(dbgbcr, DBGBCR, PMC),
         ARM64_FLAG_VALUE(dbgbcr, DBGBCR, BAS), ARM64_FLAG_VALUE(dbgbcr, DBGBCR, HMC),
         ARM64_FLAG_VALUE(dbgbcr, DBGBCR, SSC), ARM64_FLAG_VALUE(dbgbcr, DBGBCR, LBN),
         ARM64_FLAG_VALUE(dbgbcr, DBGBCR, BT));
     ss << std::endl;
   }
-  ss << "ESR: 0x" << std::hex << regs.esr;
+
+  ss << "Watchpoints: " << std::endl;
+  for (size_t i = 0; i < std::size(regs.hw_wps); i++) {
+    uint32_t dbgwcr = regs.hw_wps[i].dbgwcr;
+    uint64_t dbgwvr = regs.hw_wps[i].dbgwvr;
+    if (dbgwvr == 0)
+      continue;
+
+    ss << fxl::StringPrintf(
+              "%02lu. DBGWVR: 0x%lx, DBGWCR: "
+              "E=%d, PAC=%d, LSC=%d, BAS=0x%x, HMC=%d, SSC=%d, LBN=%d, WT=%d, MASK=0x%x",
+              i, dbgwvr, ARM64_DBGWCR_E_GET(dbgwcr), ARM64_DBGWCR_PAC_GET(dbgwcr),
+              ARM64_DBGWCR_LSC_GET(dbgwcr), ARM64_DBGWCR_BAS_GET(dbgwcr),
+              ARM64_DBGWCR_HMC_GET(dbgwcr), ARM64_DBGWCR_SSC_GET(dbgwcr),
+              ARM64_DBGWCR_LBN_GET(dbgwcr), ARM64_DBGWCR_WT_GET(dbgwcr),
+              ARM64_DBGWCR_MSK_GET(dbgwcr))
+       << std::endl;
+  }
+
   return ss.str();
 }
 
@@ -335,6 +324,41 @@ zx_status_t WriteDebugRegisters(const std::vector<Register>& updates,
       return status;
   }
   return ZX_OK;
+}
+
+uint32_t GetWatchpointLength(uint32_t dbgwcr) {
+  // Because base range addresses have to be 4 bytes aligned, having a watchpoint for smaller ranges
+  // (1, 2 or 4 bytes) could have many combinarions of the BAS register (which determines which
+  // byte will trigger an exception offseted from the base range address.
+
+  // clang-format off
+  uint32_t bas = ARM64_DBGWCR_BAS_GET(dbgwcr);
+  switch (bas) {
+    case 0b00000000: return 0;
+
+    case 0b00000001: return 1;
+    case 0b00000010: return 1;
+    case 0b00000100: return 1;
+    case 0b00001000: return 1;
+    case 0b00010000: return 1;
+    case 0b00100000: return 1;
+    case 0b01000000: return 1;
+    case 0b10000000: return 1;
+
+    case 0b00000011: return 2;
+    case 0b00001100: return 2;
+    case 0b00110000: return 2;
+    case 0b11000000: return 2;
+
+    case 0b00001111: return 4;
+    case 0b11110000: return 4;
+
+    case 0b11111111: return 8;
+    default:
+      FXL_NOTREACHED() << "Wrong bas value: 0x" << std::hex << bas;
+      return 0;
+  }
+  // clang-format on
 }
 
 }  // namespace arch

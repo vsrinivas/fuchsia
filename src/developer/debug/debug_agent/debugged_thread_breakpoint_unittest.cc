@@ -20,6 +20,8 @@ namespace {
 
 // Dependencies -----------------------------------------------------------------------------------
 
+constexpr uint64_t kWatchpointLength = 8;
+
 class MockArchProvider : public arch::ArchProvider {
  public:
   zx_status_t ReadGeneralState(const zx::thread&, zx_thread_state_general_regs*) override {
@@ -61,8 +63,9 @@ class MockArchProvider : public arch::ArchProvider {
     return exception_addr;
   }
 
-  std::pair<uint64_t, int> InstructionForWatchpointHit(const DebuggedThread&) const override {
-    return {exception_addr_, slot_};
+  std::pair<debug_ipc::AddressRange, int> InstructionForWatchpointHit(
+      const DebuggedThread&) const override {
+    return {{exception_addr_, exception_addr_ + kWatchpointLength}, slot_};
   }
 
   void set_exception_addr(uint64_t addr) { exception_addr_ = addr; }
@@ -429,7 +432,7 @@ TEST(DebuggedThreadBreakpoint, Watchpoint) {
   DebuggedThread thread(context.debug_agent.get(), std::move(create_info));
 
   // Add a watchpoint.
-  const debug_ipc::AddressRange kRange = {0x1000, 0x1008};
+  const debug_ipc::AddressRange kRange = {0x1000, 0x1000 + kWatchpointLength};
   MockProcessDelegate process_delegate;
   Breakpoint breakpoint(&process_delegate);
 

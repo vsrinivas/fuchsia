@@ -164,10 +164,19 @@ zx_status_t arch_get_debug_regs(thread_t* thread, zx_thread_state_debug_regs* ou
 
   // The kernel ensures that this state is being kept up to date, so we can safely copy the
   // information over.
+
+  // HW breakpoints.
   for (size_t i = 0; i < out->hw_bps_count; i++) {
     out->hw_bps[i].dbgbcr = thread->arch.debug_state.hw_bps[i].dbgbcr;
     out->hw_bps[i].dbgbvr = thread->arch.debug_state.hw_bps[i].dbgbvr;
   }
+
+  // Watchpoints.
+  for (size_t i = 0; i < out->hw_wps_count; i++) {
+    out->hw_wps[i].dbgwcr = thread->arch.debug_state.hw_wps[i].dbgwcr;
+    out->hw_wps[i].dbgwvr = thread->arch.debug_state.hw_wps[i].dbgwvr;
+  }
+
   out->esr = thread->arch.debug_state.esr;
   out->far = thread->arch.debug_state.far;
 
@@ -197,6 +206,7 @@ zx_status_t arch_set_debug_regs(thread_t* thread, const zx_thread_state_debug_re
   }
 
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+
   // If the suspended registers are not there, we cannot save the MDSCR values for this thread,
   // meaning that the debug HW state will be cleared almost immediatelly.
   // This should always be there.
@@ -206,7 +216,11 @@ zx_status_t arch_set_debug_regs(thread_t* thread, const zx_thread_state_debug_re
   }
 
   bool hw_debug_needed = (active_breakpoints > 0) || (active_watchpoints > 0);
+
   arm64_set_debug_state_for_thread(thread, hw_debug_needed);
+  state.esr = thread->arch.debug_state.esr;
+  state.far = thread->arch.debug_state.far;
+
   thread->arch.track_debug_state = true;
   thread->arch.debug_state = state;
 

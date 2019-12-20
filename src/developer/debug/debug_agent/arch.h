@@ -47,7 +47,8 @@ class ArchProvider {
   virtual zx_status_t ReadGeneralState(const zx::thread& handle,
                                        zx_thread_state_general_regs* regs);
 
-  virtual zx_status_t ReadDebugState(const zx::thread& handle, zx_thread_state_debug_regs* regs);
+  virtual zx_status_t ReadDebugState(const zx::thread& handle,
+                                     zx_thread_state_debug_regs* regs) const;
 
   // zx_thread_write_state with ZX_THREAD_STATE_GENERAL_REGS.
   virtual zx_status_t WriteGeneralState(const zx::thread& handle,
@@ -85,7 +86,8 @@ class ArchProvider {
   // register triggered it).
   //
   // Returns {0, -1} on error or not found.
-  virtual std::pair<uint64_t, int> InstructionForWatchpointHit(const DebuggedThread&) const;
+  virtual std::pair<debug_ipc::AddressRange, int> InstructionForWatchpointHit(
+      const DebuggedThread&) const;
 
   // Returns true if there is a breakpoint instruction at the given address.
   // This doesn't just check equality of kBreakInstruction which is guaranteed

@@ -18,7 +18,7 @@ class TestArchProvider : public MockArchProvider {
  public:
   TestArchProvider() { watchpoint_count_ = 4; }
 
-  zx_status_t ReadDebugState(const zx::thread&, zx_thread_state_debug_regs_t* regs) override {
+  zx_status_t ReadDebugState(const zx::thread&, zx_thread_state_debug_regs_t* regs) const override {
     *regs = regs_;
     return ZX_OK;
   }

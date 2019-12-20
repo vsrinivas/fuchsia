@@ -63,6 +63,10 @@ zx_status_t WriteVectorRegisters(const std::vector<debug_ipc::Register>& update,
 zx_status_t WriteDebugRegisters(const std::vector<debug_ipc::Register>& update,
                                 zx_thread_state_debug_regs_t* regs);
 
+// Simple helpers ----------------------------------------------------------------------------------
+
+uint32_t GetWatchpointLength(uint32_t dbgwcr);
+
 }  // namespace arch
 }  // namespace debug_agent
 

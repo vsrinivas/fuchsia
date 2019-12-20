@@ -32,7 +32,7 @@ zx_status_t ArchProvider::WriteSingleStep(const zx::thread& thread, bool single_
 }
 
 zx_status_t ArchProvider::ReadDebugState(const zx::thread& thread,
-                                         zx_thread_state_debug_regs* regs) {
+                                         zx_thread_state_debug_regs* regs) const {
   return thread.read_state(ZX_THREAD_STATE_DEBUG_REGS, regs, sizeof(zx_thread_state_debug_regs));
 }
 

@@ -4,6 +4,7 @@
 
 #include "src/developer/debug/debug_agent/arch_arm64.h"
 
+#include <zircon/hw/debug/arm64.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/exception.h>
 
@@ -109,8 +110,10 @@ class ExceptionInfo : public debug_ipc::Arm64ExceptionInfo {
     zx_thread_state_debug_regs_t debug_regs;
     zx_status_t status = thread_.handle().read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
                                                      sizeof(zx_thread_state_debug_regs_t));
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
+      DEBUG_LOG(ArchArm64) << "Could not get ESR: " << zx_status_get_string(status);
       return std::nullopt;
+    }
 
     return debug_regs.esr;
   }
@@ -149,9 +152,56 @@ uint64_t ArchProvider::NextInstructionForWatchpointHit(uint64_t) {
   return 0;
 }
 
-std::pair<uint64_t, int> ArchProvider::InstructionForWatchpointHit(const DebuggedThread&) const {
-  FXL_NOTREACHED() << "Not implemented.";
-  return {0, -1};
+std::pair<debug_ipc::AddressRange, int> ArchProvider::InstructionForWatchpointHit(
+    const DebuggedThread& thread) const {
+  zx_thread_state_debug_regs_t debug_regs;
+  if (zx_status_t status = ReadDebugState(thread.handle(), &debug_regs); status != ZX_OK) {
+    DEBUG_LOG(ArchArm64) << "Could not read debug state: " << zx_status_get_string(status);
+    return {{}, -1};
+  }
+
+  DEBUG_LOG(ArchArm64) << "Got FAR: 0x" << std::hex << debug_regs.far;
+
+  // Get the closest watchpoint.
+  uint64_t min_distance = UINT64_MAX;
+  int closest_index = -1;
+  debug_ipc::AddressRange closest_range = {};
+  for (uint32_t i = 0; i < watchpoint_count(); i++) {
+    uint64_t dbgwcr = debug_regs.hw_wps[i].dbgwcr;
+    uint64_t dbgwvr = debug_regs.hw_wps[i].dbgwvr;  // The actual watchpoint address.
+
+    DEBUG_LOG(ArchArm64) << "DBGWCR " << i << ": 0x" << std::hex << dbgwcr;
+
+    if (!ARM64_DBGWCR_E_GET(dbgwcr))
+      continue;
+
+    uint32_t length = GetWatchpointLength(dbgwcr);
+    if (length == 0)
+      continue;
+
+    const debug_ipc::AddressRange wp_range = {dbgwvr, dbgwvr + length};
+    if (wp_range.InRange(debug_regs.far))
+      return {wp_range, i};
+
+    // Otherwise find the distance and then decide on the closest one.
+    uint64_t distance = UINT64_MAX;
+    if (debug_regs.far < wp_range.begin()) {
+      distance = wp_range.begin() - debug_regs.far;
+    } else if (debug_regs.far >= wp_range.end()) {
+      distance = debug_regs.far - wp_range.end();
+    } else {
+      FXL_NOTREACHED() << "Invalid far/range combo. FAR: 0x" << std::hex << debug_regs.far
+                       << ", range: " << wp_range.begin() << ", " << wp_range.end();
+    }
+
+    if (distance < min_distance) {
+      min_distance = distance;
+      closest_index = i;
+      closest_range = wp_range;
+    }
+  }
+
+  return {closest_range, closest_index};
 }
 
 bool ArchProvider::IsBreakpointInstruction(zx::process& process, uint64_t address) {
@@ -316,15 +366,17 @@ WatchpointInstallationResult ArchProvider::InstallWatchpoint(const zx::thread& t
   if (zx_status_t status = ReadDebugState(thread, &debug_regs); status != ZX_OK)
     return WatchpointInstallationResult(status);
 
-  DEBUG_LOG(Archx64) << "Before installing watchpoint: " << std::endl
-                     << DebugRegistersToString(debug_regs);
+  DEBUG_LOG(ArchArm64) << "Before installing watchpoint: " << std::endl
+                       << DebugRegistersToString(debug_regs);
 
   WatchpointInstallationResult result = SetupWatchpoint(&debug_regs, range, watchpoint_count());
-  if (result.status != ZX_OK)
+  if (result.status != ZX_OK) {
+    DEBUG_LOG(ArchArm64) << "Could not install watchpoint: " << zx_status_get_string(result.status);
     return result;
+  }
 
-  DEBUG_LOG(Archx64) << "After installing watchpoint: " << std::endl
-                     << DebugRegistersToString(debug_regs);
+  DEBUG_LOG(ArchArm64) << "After installing watchpoint: " << std::endl
+                       << DebugRegistersToString(debug_regs);
 
   if (zx_status_t status = WriteDebugState(thread, debug_regs); status != ZX_OK)
     return WatchpointInstallationResult(status);

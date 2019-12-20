@@ -122,6 +122,9 @@ ExceptionType DecodeESR(uint32_t esr) {
     case 0b110010: /* software step from lower level */
     case 0b110011: /* software step from same level */
       return ExceptionType::kSingleStep;
+    case 0b110100: /* HW watchpoint from a lower level */
+    case 0b110101: /* HW watchpoint from same level */
+      return ExceptionType::kWatchpoint;
     default:
       break;
   }
@@ -146,14 +149,13 @@ ExceptionType DecodeException(uint32_t code, Arm64ExceptionInfo* info) {
   }
 
   auto decoded_type = DecodeESR(esr);
-
-  if (decoded_type == debug_ipc::ExceptionType::kSingleStep ||
-      decoded_type == debug_ipc::ExceptionType::kHardware) {
-    return decoded_type;
+  if (decoded_type == ExceptionType::kUnknown) {
+    FXL_NOTREACHED() << "Received invalid ESR value: 0x" << std::hex << esr << " (EC: 0x"
+                     << (esr >> 26) << ").";
+    return debug_ipc::ExceptionType::kUnknown;
   }
 
-  FXL_NOTREACHED() << "Received invalid ESR value: 0x" << std::hex << esr;
-  return debug_ipc::ExceptionType::kUnknown;
+  return decoded_type;
 }
 
 }  // namespace debug_ipc

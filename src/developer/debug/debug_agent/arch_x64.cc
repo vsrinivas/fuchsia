@@ -184,27 +184,38 @@ void ArchProvider::SaveGeneralRegs(const zx_thread_state_general_regs& input,
   out->push_back(CreateRegister(RegisterID::kX64_gsbase, 8u, &input.gs_base));
 }
 
-std::pair<uint64_t, int> ArchProvider::InstructionForWatchpointHit(
+std::pair<debug_ipc::AddressRange, int> ArchProvider::InstructionForWatchpointHit(
     const DebuggedThread& thread) const {
   zx_thread_state_debug_regs_t debug_regs;
-  zx_status_t status =
-      thread.handle().read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs, sizeof(debug_regs));
-  if (status != ZX_OK)
-    return {0, -1};
+  if (zx_status_t status = ReadDebugState(thread.handle(), &debug_regs); status != ZX_OK)
+    return {{}, -1};
 
   // HW breakpoints have priority over single-step.
+  uint64_t addr = 0;
+  uint64_t length = 0;
+  int slot = 0;
   if (X86_FLAG_VALUE(debug_regs.dr6, DR6B0)) {
-    return {debug_regs.dr[0], 0};
+    addr = debug_regs.dr[0];
+    length = GetWatchpointLength(debug_regs.dr7, 0);
+    slot = 0;
   } else if (X86_FLAG_VALUE(debug_regs.dr6, DR6B1)) {
-    return {debug_regs.dr[1], 1};
+    addr = debug_regs.dr[1];
+    length = GetWatchpointLength(debug_regs.dr7, 1);
+    slot = 1;
   } else if (X86_FLAG_VALUE(debug_regs.dr6, DR6B2)) {
-    return {debug_regs.dr[2], 2};
+    addr = debug_regs.dr[2];
+    length = GetWatchpointLength(debug_regs.dr7, 2);
+    slot = 2;
   } else if (X86_FLAG_VALUE(debug_regs.dr6, DR6B3)) {
-    return {debug_regs.dr[3], 3};
+    addr = debug_regs.dr[3];
+    length = GetWatchpointLength(debug_regs.dr7, 3);
+    slot = 3;
   } else {
     FXL_NOTREACHED() << "x86: No known hw exception set in DR6";
-    return {0, -1};
+    return {{}, -1};
   }
+
+  return {{addr, addr + length}, slot};
 }
 
 uint64_t ArchProvider::NextInstructionForWatchpointHit(uint64_t exception_addr) {

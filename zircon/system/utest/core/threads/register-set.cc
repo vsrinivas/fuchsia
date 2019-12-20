@@ -130,15 +130,29 @@ void debug_regs_fill_test_values(zx_thread_state_debug_regs_t* to_write,
 
   // We only set two because we know that arm64 ensures that.
   ARM64_DBGBCR_E_SET(&to_write->hw_bps[0].dbgbcr, 1);
-  to_write->hw_bps[0].dbgbvr = base;
   ARM64_DBGBCR_E_SET(&to_write->hw_bps[1].dbgbcr, 1);
-  to_write->hw_bps[0].dbgbvr = base + 0x4000;
+  to_write->hw_bps[0].dbgbvr = base;
+  to_write->hw_bps[1].dbgbvr = base + 0x4000;
+
+  ARM64_DBGWCR_E_SET(&to_write->hw_wps[0].dbgwcr, 1);
+  ARM64_DBGWCR_BAS_SET(&to_write->hw_wps[0].dbgwcr, 0xf);
+  ARM64_DBGWCR_E_SET(&to_write->hw_wps[1].dbgwcr, 1);
+  ARM64_DBGWCR_BAS_SET(&to_write->hw_wps[1].dbgwcr, 0xf0);
+  to_write->hw_wps[0].dbgwvr = base;
+  to_write->hw_wps[1].dbgwvr = base + 0x4000;
 
   *expected = *to_write;
   ARM64_DBGBCR_PMC_SET(&expected->hw_bps[0].dbgbcr, 0b10);
   ARM64_DBGBCR_BAS_SET(&expected->hw_bps[0].dbgbcr, 0xf);
   ARM64_DBGBCR_PMC_SET(&expected->hw_bps[1].dbgbcr, 0b10);
   ARM64_DBGBCR_BAS_SET(&expected->hw_bps[1].dbgbcr, 0xf);
+
+  ARM64_DBGWCR_PAC_SET(&expected->hw_wps[0].dbgwcr, 0b10);
+  ARM64_DBGWCR_LSC_SET(&expected->hw_wps[0].dbgwcr, 0b10);
+  ARM64_DBGWCR_SSC_SET(&expected->hw_wps[0].dbgwcr, 1);
+  ARM64_DBGWCR_PAC_SET(&expected->hw_wps[1].dbgwcr, 0b10);
+  ARM64_DBGWCR_LSC_SET(&expected->hw_wps[1].dbgwcr, 0b10);
+  ARM64_DBGWCR_SSC_SET(&expected->hw_wps[1].dbgwcr, 1);
 #else
 #error Unsupported architecture
 #endif
@@ -255,6 +269,14 @@ bool debug_regs_expect_eq(const char* file, int line, const zx_thread_state_debu
     EXPECT_EQ(regs1.hw_bps[i].dbgbcr, regs2.hw_bps[i].dbgbcr);
     EXPECT_EQ(regs1.hw_bps[i].dbgbvr, regs2.hw_bps[i].dbgbvr);
   }
+
+  for (uint32_t i = 0; i < 16; i++) {
+    EXPECT_EQ(regs1.hw_wps[i].dbgwcr, regs2.hw_wps[i].dbgwcr);
+    EXPECT_EQ(regs1.hw_wps[i].dbgwvr, regs2.hw_wps[i].dbgwvr);
+  }
+
+  EXPECT_EQ(regs1.esr, regs2.esr);
+  EXPECT_EQ(regs1.far, regs2.far);
 #else
 #error Unsupported architecture
 #endif

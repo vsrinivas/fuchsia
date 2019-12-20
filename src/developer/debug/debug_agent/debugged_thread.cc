@@ -293,19 +293,30 @@ void DebuggedThread::HandleHardwareBreakpoint(debug_ipc::NotifyException* except
 
 void DebuggedThread::HandleWatchpoint(debug_ipc::NotifyException* exception,
                                       zx_thread_state_general_regs* regs) {
-  auto [watchpoint_address, slot] = arch_provider_->InstructionForWatchpointHit(*this);
-
-  // Comparison is by the base of the address range.
-  Watchpoint* watchpoint = process_->FindWatchpoint({watchpoint_address, watchpoint_address + 1});
+  auto [range, slot] = arch_provider_->InstructionForWatchpointHit(*this);
+  DEBUG_LOG(Thread) << "Found watchpoint hit at 0x" << std::hex << range.ToString() << " on slot "
+                    << std::dec << slot;
 
   // If no process matches this watchpoint, we send the exception notification and let the client
-  // handle it.
-  if (!watchpoint) {
+  // handle the exception.
+  if (slot == -1) {
+    DEBUG_LOG(Thread) << "Could not find watchpoint.";
     SendExceptionNotification(exception, regs);
     return;
   }
 
-  UpdateForHitWatchpoint(watchpoint, &exception->hit_breakpoints);
+  // Comparison is by the base of the address range.
+  Watchpoint* watchpoint = process_->FindWatchpoint(range);
+  if (!watchpoint) {
+    DEBUG_LOG(Thread) << "Could not find watchpoint for range " << range.ToString();
+    SendExceptionNotification(exception, regs);
+    return;
+  }
+
+  UpdateForHitProcessBreakpoint(debug_ipc::BreakpointType::kWatchpoint, watchpoint, regs,
+                                &exception->hit_breakpoints);
+  // The ProcessBreakpoint could'be been deleted, so we cannot use it anymore.
+  watchpoint = nullptr;
   SendExceptionNotification(exception, regs);
 }
 

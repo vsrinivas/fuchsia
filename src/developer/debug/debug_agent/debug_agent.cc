@@ -89,6 +89,24 @@ DebugAgent::DebugAgent(std::shared_ptr<sys::ServiceDirectory> services, SystemPr
   FXL_DCHECK(arch_provider_);
   FXL_DCHECK(limbo_provider_);
   FXL_DCHECK(object_provider_);
+
+  // Get some resources.
+  uint32_t val = 0;
+  if (zx_status_t status = zx_system_get_features(ZX_FEATURE_KIND_HW_BREAKPOINT_COUNT, &val);
+      status == ZX_OK) {
+    DEBUG_LOG(Agent) << "Got HW breakpoint count: " << val;
+    arch_provider_->set_hw_breakpoint_count(val);
+  } else {
+    FXL_LOG(WARNING) << "Could not get HW breakpoint count: " << zx_status_get_string(status);
+  }
+
+  if (zx_status_t status = zx_system_get_features(ZX_FEATURE_KIND_HW_WATCHPOINT_COUNT, &val);
+      status == ZX_OK) {
+    DEBUG_LOG(Agent) << "Got watchpoint count: " << val;
+    arch_provider_->set_watchpoint_count(val);
+  } else {
+    FXL_LOG(WARNING) << "Could not get Watchpoint count: " << zx_status_get_string(status);
+  }
 }
 
 DebugAgent::~DebugAgent() = default;
@@ -351,9 +369,8 @@ void DebugAgent::OnSysInfo(const debug_ipc::SysInfoRequest& request,
   reply->num_cpus = zx_system_get_num_cpus();
   reply->memory_mb = zx_system_get_physmem() / kMegabyte;
 
-  zx_system_get_features(ZX_FEATURE_KIND_HW_BREAKPOINT_COUNT, &reply->hw_breakpoint_count);
-
-  zx_system_get_features(ZX_FEATURE_KIND_HW_WATCHPOINT_COUNT, &reply->hw_watchpoint_count);
+  reply->hw_watchpoint_count = arch_provider_->hw_breakpoint_count();
+  reply->hw_watchpoint_count = arch_provider_->watchpoint_count();
 }
 
 void DebugAgent::OnProcessStatus(const debug_ipc::ProcessStatusRequest& request,
