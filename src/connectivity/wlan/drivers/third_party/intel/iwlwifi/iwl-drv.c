@@ -1463,7 +1463,6 @@ static void iwl_req_fw_callback(struct firmware* ucode_raw, struct iwl_drv* drv)
   size_t trigger_tlv_sz[FW_DBG_TRIGGER_MAX];
   uint32_t api_ver;
   size_t i;
-  bool load_module = false;
   bool usniffer_images = false;
 
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
@@ -1722,6 +1721,7 @@ static void iwl_req_fw_callback(struct firmware* ucode_raw, struct iwl_drv* drv)
   /* add this device to the list of devices using this op_mode */
   list_add_tail(&op->drv, &drv->list);
 
+  bool load_mvm_module = false;
   if (op->ops) {
     drv->op_mode = _iwl_op_mode_start(drv, op);
 
@@ -1730,7 +1730,7 @@ static void iwl_req_fw_callback(struct firmware* ucode_raw, struct iwl_drv* drv)
       goto out_unbind;
     }
   } else {
-    load_module = true;
+    load_mvm_module = true;
   }
   mtx_unlock(&iwlwifi_opmode_table_mtx);
 
@@ -1741,11 +1741,13 @@ static void iwl_req_fw_callback(struct firmware* ucode_raw, struct iwl_drv* drv)
    */
   sync_completion_signal(&drv->request_firmware_complete);
 
-  // Call to MVM module.
-  zx_status_t status = iwl_mvm_init();
-  if (status != ZX_OK) {
-    IWL_ERR(drv, "Cannot start MVM: %s\n", zx_status_get_string(status));
-    goto free;
+  // If the op_mode doesn't start, load the MVM module.
+  if (load_mvm_module) {
+    zx_status_t status = iwl_mvm_init();
+    if (status != ZX_OK) {
+      IWL_ERR(drv, "Cannot init MVM: %s\n", zx_status_get_string(status));
+      goto free;
+    }
   }
 
   goto free;
