@@ -40,6 +40,10 @@ void PromotePtrRefToDerived(const fxl::RefPtr<EvalContext>& context, PromoteToDe
 // Determines if the given collection type has a vtable pointer and returns it. This does not
 // look in base classes because the vtable goes with the exact class it's on.
 //
+// This function can also be used to determine if the collection might possibly have a derived class
+// it can be converted to. If this function returns null, PromotePtrRefToDerived is guaranteed to
+// be a no-op.
+//
 // The input type must be concrete.
 fxl::RefPtr<DataMember> GetVtableMember(const Collection* coll);
 

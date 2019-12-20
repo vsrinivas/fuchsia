@@ -62,7 +62,9 @@ struct VirtualBaseTestSetup {
   fxl::RefPtr<ElfSymbol> derived_vtable;
 
   // The values of the two data members in the derived_data.
+  static const char* kBaseIName;  // member name = "base_i".
   static constexpr uint32_t kBaseI = 42;
+  static const char* kDerivedIName;  // member name = "derived_i".
   static constexpr uint32_t kDerivedI = 99;
 
   // Sample data for the derived class. This will have a vtable address of kVtableAddress and

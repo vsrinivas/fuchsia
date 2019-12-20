@@ -28,6 +28,22 @@ Err GetPointerValue(const ExprValue& value, TargetPointer* pointer_value) {
   return Err();
 }
 
+// Backend for the higher-level variant of ResolvePointer that does not handle upcasting to derived
+// types.
+void DoResolvePointer(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& pointer,
+                      EvalCallback cb) {
+  fxl::RefPtr<Type> pointed_to;
+  if (Err err = GetPointedToType(eval_context, pointer.type(), &pointed_to); err.has_error())
+    return cb(err);
+
+  TargetPointer pointer_value = 0;
+  if (Err err = GetPointerValue(pointer, &pointer_value); err.has_error())
+    return cb(err);
+
+  // Forward to low-level pointer resolution.
+  ResolvePointer(std::move(eval_context), pointer_value, std::move(pointed_to), std::move(cb));
+}
+
 // Backend for EnsureResolveReference that does not handle upcasting to derived types.
 void DoEnsureResolveReference(const fxl::RefPtr<EvalContext>& eval_context, ExprValue value,
                               EvalCallback cb) {
@@ -90,15 +106,19 @@ void ResolvePointer(const fxl::RefPtr<EvalContext>& eval_context, uint64_t addre
 
 void ResolvePointer(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& pointer,
                     EvalCallback cb) {
-  fxl::RefPtr<Type> pointed_to;
-  if (Err err = GetPointedToType(eval_context, pointer.type(), &pointed_to); err.has_error())
-    return cb(err);
-
-  TargetPointer pointer_value = 0;
-  if (Err err = GetPointerValue(pointer, &pointer_value); err.has_error())
-    return cb(err);
-
-  ResolvePointer(std::move(eval_context), pointer_value, std::move(pointed_to), std::move(cb));
+  if (eval_context->ShouldPromoteToDerived()) {
+    // Check to see if this is a pointer to a base class that we can convert to a derived class.
+    PromotePtrRefToDerived(eval_context, PromoteToDerived::kPtrOnly, pointer,
+                           [eval_context, cb = std::move(cb)](ErrOrValue result) mutable {
+                             if (result.has_error())
+                               cb(result);
+                             else
+                               DoResolvePointer(eval_context, result.take_value(), std::move(cb));
+                           });
+  } else {
+    // No magic base-class resolution is required, just check the reference.
+    DoResolvePointer(eval_context, pointer, std::move(cb));
+  }
 }
 
 void EnsureResolveReference(const fxl::RefPtr<EvalContext>& eval_context, ExprValue value,

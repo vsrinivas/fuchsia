@@ -198,15 +198,17 @@ TEST_F(ResolvePtrRefTest, GetPointedToType_Good) {
   EXPECT_EQ(int32_type.get(), pointed_to.get());
 }
 
-// Tests that EnsureResolveReference automatically converts a reference to be a derived class
-// according to the setting value.
-TEST_F(ResolvePtrRefTest, EnsureResolveReference_Derived) {
+// Tests that ResolvePointer and EnsureResolveReference automatically converts a reference to be a
+// derived class according to the setting value.
+TEST_F(ResolvePtrRefTest, Derived) {
   auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
   VirtualBaseTestSetup setup(eval_context.get());
 
   ExprValue ref_value(setup.kBaseAddress, setup.base_class_ref);
+  ExprValue ptr_value(setup.kBaseAddress, setup.base_class_ptr);
 
-  // No promotion to derived classes.
+  // Reference: No promotion to derived classes.
+  // -------------------------------------------
   eval_context->set_should_promote_to_derived(false);
   ErrOrValue result(Err("Uncalled"));
   EnsureResolveReference(eval_context, ref_value, [&result](ErrOrValue r) { result = r; });
@@ -218,10 +220,36 @@ TEST_F(ResolvePtrRefTest, EnsureResolveReference_Derived) {
   EXPECT_EQ(setup.base_class->byte_size(), result.value().data().size());
   EXPECT_EQ(setup.kBaseAddress, result.value().source().address());
 
-  // Auto promotion to derived classes.
+  // Pointer: No promotion to derived classes.
+  // -----------------------------------------
+  result = Err("Uncalled");
+  ResolvePointer(eval_context, ptr_value, [&result](ErrOrValue r) { result = r; });
+  loop().RunUntilNoTasks();
+
+  // The result should be a "BaseClass" object.
+  ASSERT_TRUE(result.ok()) << result.err().msg();
+  EXPECT_EQ("BaseClass", result.value().type()->GetFullName());
+  EXPECT_EQ(setup.base_class->byte_size(), result.value().data().size());
+  EXPECT_EQ(setup.kBaseAddress, result.value().source().address());
+
+  // Reference: Auto promotion to derived classes.
+  // ---------------------------------------------
   eval_context->set_should_promote_to_derived(true);
   result = Err("Uncalled");
   EnsureResolveReference(eval_context, ref_value, [&result](ErrOrValue r) { result = r; });
+  loop().RunUntilNoTasks();
+
+  // The result should be a "DerivedClass" object.
+  ASSERT_TRUE(result.ok()) << result.err().msg();
+  EXPECT_EQ("DerivedClass", result.value().type()->GetFullName());
+  EXPECT_EQ(setup.derived_class->byte_size(), result.value().data().size());
+  EXPECT_EQ(setup.kDerivedAddress, result.value().source().address());
+
+  // Pointer: Auto promotion to derived classes.
+  // -------------------------------------------
+  eval_context->set_should_promote_to_derived(true);
+  result = Err("Uncalled");
+  ResolvePointer(eval_context, ptr_value, [&result](ErrOrValue r) { result = r; });
   loop().RunUntilNoTasks();
 
   // The result should be a "DerivedClass" object.

@@ -10,6 +10,7 @@
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/find_name.h"
+#include "src/developer/debug/zxdb/expr/resolve_base.h"
 #include "src/developer/debug/zxdb/expr/resolve_const_value.h"
 #include "src/developer/debug/zxdb/expr/resolve_ptr_ref.h"
 #include "src/developer/debug/zxdb/symbols/arch.h"
@@ -94,6 +95,8 @@ Err GetMemberType(const fxl::RefPtr<EvalContext>& context, const Collection* col
   return Err();
 }
 
+// Backend for ResolveMemberByPointer variants that does the actual memory fetch. It's given a
+// concrete pointer and pointed-to type, along with a specific found member inside it.
 void DoResolveMemberByPointer(const fxl::RefPtr<EvalContext>& context, const ExprValue& base_ptr,
                               const Collection* pointed_to_type, const FoundMember& member,
                               EvalCallback cb) {
@@ -125,6 +128,26 @@ void DoResolveMemberByPointer(const fxl::RefPtr<EvalContext>& context, const Exp
     ResolvePointer(context, base_address + member.data_member_offset(), std::move(member_type),
                    std::move(cb));
   }
+}
+
+// Implementation of ResolveMemberByPointer with a named member. This does everything except handle
+// conversion to base classes.
+void DoResolveMemberNameByPointer(const fxl::RefPtr<EvalContext>& context,
+                                  const ExprValue& base_ptr, const ParsedIdentifier& identifier,
+                                  fit::callback<void(ErrOrValue, const FoundMember&)> cb) {
+  fxl::RefPtr<Collection> coll;
+  if (Err err = GetConcretePointedToCollection(context, base_ptr.type(), &coll); err.has_error())
+    return cb(err, FoundMember());
+
+  ErrOr<FoundMember> found = FindMemberWithErr(coll.get(), identifier);
+  if (found.has_error())
+    return cb(found.err(), FoundMember());
+
+  // Dispatch to low-level version now that the member is found by name.
+  DoResolveMemberByPointer(context, base_ptr, coll.get(), found.value(),
+                           [cb = std::move(cb), found = found.value()](ErrOrValue value) mutable {
+                             cb(std::move(value), found);
+                           });
 }
 
 // Extracts an embedded type inside of a base. This can be used for finding collection data members
@@ -250,18 +273,21 @@ void ResolveMemberByPointer(const fxl::RefPtr<EvalContext>& context, const ExprV
 void ResolveMemberByPointer(const fxl::RefPtr<EvalContext>& context, const ExprValue& base_ptr,
                             const ParsedIdentifier& identifier,
                             fit::callback<void(ErrOrValue, const FoundMember&)> cb) {
-  fxl::RefPtr<Collection> coll;
-  if (Err err = GetConcretePointedToCollection(context, base_ptr.type(), &coll); err.has_error())
-    return cb(err, FoundMember());
-
-  ErrOr<FoundMember> found = FindMemberWithErr(coll.get(), identifier);
-  if (found.has_error())
-    return cb(found.err(), FoundMember());
-
-  DoResolveMemberByPointer(context, base_ptr, coll.get(), found.value(),
-                           [cb = std::move(cb), found = found.value()](ErrOrValue value) mutable {
-                             cb(std::move(value), found);
+  if (context->ShouldPromoteToDerived()) {
+    // Check to see if this is a reference to a base class that we can convert to a derived class.
+    PromotePtrRefToDerived(context, PromoteToDerived::kPtrOnly, std::move(base_ptr),
+                           [context, identifier, cb = std::move(cb)](ErrOrValue result) mutable {
+                             if (result.has_error()) {
+                               cb(result, {});
+                             } else {
+                               DoResolveMemberNameByPointer(context, result.take_value(),
+                                                            identifier, std::move(cb));
+                             }
                            });
+  } else {
+    // No magic base-class resolution is required, just check the pointer.
+    DoResolveMemberNameByPointer(context, base_ptr, identifier, std::move(cb));
+  }
 }
 
 void ResolveInherited(const fxl::RefPtr<EvalContext>& context, const ExprValue& value,

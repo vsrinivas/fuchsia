@@ -13,6 +13,7 @@
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/mock_eval_context.h"
+#include "src/developer/debug/zxdb/expr/virtual_base_test_setup.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
@@ -256,6 +257,39 @@ TEST_F(ResolveCollectionTest, ExternStaticMember) {
   EXPECT_TRUE(called);
 }
 
+// Tests that "foo->bar" works where "foo" is a pointer to a base class, and "bar" is a member of
+// class derived from "foo". When EvalContext::ShouldPromoteToDerived() is set, the pointer should
+// be automatically up-casted when we know the types (this requires a vtable).
+TEST_F(ResolveCollectionTest, ResolveMemberByPtr_Derived) {
+  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
+  VirtualBaseTestSetup setup(eval_context.get());
+
+  ExprValue ptr_value(setup.kBaseAddress, setup.base_class_ptr);
+  ParsedIdentifier member_name(setup.kDerivedIName);  // Name of member on derived class.
+
+  // Test with no promotion to derived classes.
+  eval_context->set_should_promote_to_derived(false);
+  ErrOrValue result(Err("Uncalled"));
+  ResolveMemberByPointer(eval_context, ptr_value, member_name,
+                         [&result](ErrOrValue r, const FoundMember&) { result = r; });
+  loop().RunUntilNoTasks();
+
+  // Member should not have been found since promotion was disabled.
+  ASSERT_FALSE(result.ok());
+  EXPECT_EQ("No member 'derived_i' in struct 'BaseClass'.", result.err().msg());
+
+  // Now try with promotion enabled.
+  eval_context->set_should_promote_to_derived(true);
+  result = Err("Uncalled");
+  ResolveMemberByPointer(eval_context, ptr_value, member_name,
+                         [&result](ErrOrValue r, const FoundMember&) { result = r; });
+  loop().RunUntilNoTasks();
+
+  // Member should have been found and resolved.
+  ASSERT_TRUE(result.ok()) << result.err().msg();
+  EXPECT_EQ(setup.kDerivedI, result.value().GetAs<uint32_t>());
+}
+
 TEST_F(ResolveCollectionTest, BadMemberArgs) {
   const DataMember* a_data;
   const DataMember* b_data;
@@ -299,8 +333,8 @@ TEST_F(ResolveCollectionTest, BadMemberAccess) {
   EXPECT_EQ("Invalid data offset 5 in object of size 8.", out.err().msg());
 }
 
-// Tests foo.bar where bar is in a derived class of foo's type.
-TEST_F(ResolveCollectionTest, DerivedClass) {
+// Tests foo.bar where bar is in a base class of foo's type.
+TEST_F(ResolveCollectionTest, BaseClass) {
   const DataMember* a_data;
   const DataMember* b_data;
   auto base = GetTestClassType(&a_data, &b_data);
@@ -341,7 +375,7 @@ TEST_F(ResolveCollectionTest, DerivedClass) {
   EXPECT_EQ(expected_base, base_value.value());
 }
 
-// Like DerivedClass but using virtual inheritance. This data was copied from a test program.
+// Like BaseClass but using virtual inheritance. This data was copied from a test program.
 TEST_F(ResolveCollectionTest, VirtualInheritance) {
   // This is the vtable information (from the ELF file).
   constexpr uint64_t kVtableAddress = 0x70f355000;

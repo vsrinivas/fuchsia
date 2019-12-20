@@ -364,6 +364,12 @@ void EvalContextImpl::DoResolve(FoundName found, EvalCallback cb) const {
       return cb(value);
 
     // Got |this|, resolve |this-><DataMember>|.
+    //
+    // Here we do not support automatically converting a base class pointer to a derived class if
+    // we can. First, that's more difficult to implement because it requires asynchronously
+    // computing the derived class based on |this|'s vtable pointer. Second, it's not linguistically
+    // in scope and it could be surprising, especially if it shadows another value. The user can
+    // always do "this->foo" to expicitly request the conversion if enabled.
     ResolveMemberByPointer(fxl::RefPtr<EvalContextImpl>(weak_this.get()), value.value(),
                            found.member(),
                            [weak_this, found, cb = std::move(cb)](ErrOrValue value) mutable {

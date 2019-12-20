@@ -19,12 +19,17 @@ class Type;
 // Creates an ExprValue of the given type from the data at the given address. Issues the callback on
 // completion. The type can be null (it will immediately call the callback with an error).
 //
-// It's assumed the type is already concrete (so it has a size).
+// It's assumed the type is already concrete (so it has a size). This will not do any fancy stuff
+// like casting to a derived type. It is a low-level function that just fetches the requested
+// memory.
 void ResolvePointer(const fxl::RefPtr<EvalContext>& eval_context, uint64_t address,
                     fxl::RefPtr<Type> type, EvalCallback cb);
 
 // Similar to the above but the pointer and type comes from the given ExprValue, which is assumed to
 // be a pointer type. If it's not a pointer type, the callback will be issued with an error.
+//
+// This will automatically cast to a derived type if the EvalContext requests it, so the resulting
+// object may be a different type or from a different address than the input pointer value.
 void ResolvePointer(const fxl::RefPtr<EvalContext>& eval_context, const ExprValue& pointer,
                     EvalCallback cb);
 

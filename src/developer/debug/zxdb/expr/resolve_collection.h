@@ -40,7 +40,8 @@ void ResolveMember(const fxl::RefPtr<EvalContext>& context, const ExprValue& bas
                    const ParsedIdentifier& identifier, EvalCallback cb);
 
 // Synchronous versions of ResolveMember for cases where the value is known not to be an extern
-// (static) member. This is generally used when hardcoding support for known structures.
+// (static) member or on a derived class. This is generally used when hardcoding support for known
+// structures.
 //
 // The variant that takes an initializer list will interpret the strings as identifiers, parse
 // them, and resolve a nested series of members using those strings. For example, if the input
@@ -53,12 +54,19 @@ ErrOrValue ResolveNonstaticMember(const fxl::RefPtr<EvalContext>& context, const
                                   std::initializer_list<std::string> names);
 
 // The variant takes an ExprValue which is a pointer to the base/struct or class. Because it fetches
-// memory it is asynchronous.
+// memory it is always asynchronous.
+//
+// Since it's given a FoundMember, this can not check for members of derived classes. Use the
+// version that takes an Identifier if you want this capability.
 void ResolveMemberByPointer(const fxl::RefPtr<EvalContext>& context, const ExprValue& base_ptr,
                             const FoundMember& found_member, EvalCallback cb);
 
 // Same as previous version but takes the name of the member to find. The callback also provides the
 // FoundMember corresponding to what the name matched.
+//
+// This also supports (when requested by the EvalContext) automatically converting base class
+// pointers to derived class pointers when the derived class is known. It allows "foo->bar" where
+// "bar" is a data member on the current derived class's instance of foo.
 void ResolveMemberByPointer(const fxl::RefPtr<EvalContext>& context, const ExprValue& base_ptr,
                             const ParsedIdentifier& identifier,
                             fit::callback<void(ErrOrValue, const FoundMember&)> cb);

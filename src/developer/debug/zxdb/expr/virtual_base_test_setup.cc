@@ -19,7 +19,9 @@ constexpr uint32_t VirtualBaseTestSetup::kBaseOffset;
 constexpr TargetPointer VirtualBaseTestSetup::kVtableAddress;
 constexpr TargetPointer VirtualBaseTestSetup::kDerivedAddress;
 constexpr TargetPointer VirtualBaseTestSetup::kBaseAddress;
+const char* VirtualBaseTestSetup::kBaseIName = "base_i";
 constexpr uint32_t VirtualBaseTestSetup::kBaseI;
+const char* VirtualBaseTestSetup::kDerivedIName = "derived_i";
 constexpr uint32_t VirtualBaseTestSetup::kDerivedI;
 
 VirtualBaseTestSetup::VirtualBaseTestSetup(MockEvalContext* eval_context) {
@@ -29,8 +31,9 @@ VirtualBaseTestSetup::VirtualBaseTestSetup(MockEvalContext* eval_context) {
 
   // Base class.
   auto int32_type = MakeInt32Type();
-  base_class = MakeCollectionType(DwarfTag::kStructureType, "BaseClass",
-                                  {{"_vptr$BaseClass", vtbl_ptr_type_ptr}, {"base_i", int32_type}});
+  base_class =
+      MakeCollectionType(DwarfTag::kStructureType, "BaseClass",
+                         {{"_vptr$BaseClass", vtbl_ptr_type_ptr}, {kBaseIName, int32_type}});
   FXL_DCHECK(base_class->byte_size() == 12);  // point = 8 bytes, int32 = 4.
   // The artificial flag must be set on the vtable pointer.
   const_cast<DataMember*>(base_class->data_members()[0].Get()->AsDataMember())
@@ -47,7 +50,7 @@ VirtualBaseTestSetup::VirtualBaseTestSetup(MockEvalContext* eval_context) {
   // functions are on the BaseClass).
   derived_class = MakeCollectionTypeWithOffset(DwarfTag::kStructureType, "DerivedClass",
                                                kBaseOffset + base_class->byte_size(),
-                                               {{"derived_i", int32_type}});
+                                               {{kDerivedIName, int32_type}});
   FXL_DCHECK(derived_class->byte_size() == kBaseOffset + base_class->byte_size() + 4);
 
   auto inherited_from = fxl::MakeRefCounted<InheritedFrom>(base_class, kBaseOffset);
