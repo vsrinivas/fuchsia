@@ -214,6 +214,11 @@ impl RoutingTest {
         }
         resolver.register("test".to_string(), Box::new(mock_resolver));
 
+        // Set up runners for the system, including a default runner "test_runner"
+        // backed by mock_runner.
+        let mut builtin_runners = builder.builtin_runners;
+        builtin_runners.insert(TEST_RUNNER_NAME.into(), runner.clone());
+
         let startup_args = startup::Arguments {
             use_builtin_process_launcher: false,
             use_builtin_vmex: false,
@@ -221,11 +226,12 @@ impl RoutingTest {
             debug: false,
         };
         let echo_service = Arc::new(EchoService::new());
+
         let model = Arc::new(Model::new(ModelParams {
             root_component_url: format!("test:///{}", builder.root_component),
             root_resolver_registry: resolver,
             elf_runner: runner.clone(),
-            builtin_runners: builder.builtin_runners,
+            builtin_runners,
         }));
         let builtin_environment =
             BuiltinEnvironment::new(&startup_args, &model, ComponentManagerConfig::default())

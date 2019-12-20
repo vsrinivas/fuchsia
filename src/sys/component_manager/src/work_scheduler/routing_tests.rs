@@ -9,9 +9,9 @@ use {
         },
     },
     cm_rust::{
-        self, CapabilityPath, ChildDecl, ComponentDecl, ExposeDecl, ExposeServiceProtocolDecl,
-        ExposeSource, ExposeTarget, OfferDecl, OfferServiceProtocolDecl, OfferServiceSource,
-        OfferTarget, UseDecl, UseServiceProtocolDecl, UseSource,
+        self, CapabilityPath, ExposeDecl, ExposeServiceProtocolDecl, ExposeSource, ExposeTarget,
+        OfferDecl, OfferServiceProtocolDecl, OfferServiceSource, OfferTarget, UseDecl,
+        UseServiceProtocolDecl, UseSource,
     },
     fidl_fuchsia_io::{MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
     fidl_fuchsia_sys2 as fsys,
@@ -135,31 +135,27 @@ async fn use_work_scheduler_with_expose_to_framework() {
     let components = vec![
         (
             "a",
-            ComponentDecl {
-                children: vec![ChildDecl {
-                    name: "b".to_string(),
-                    url: "test:///b".to_string(),
-                    startup: fsys::StartupMode::Lazy,
-                }],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .add_lazy_child("b")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
         (
             "b",
-            ComponentDecl {
-                exposes: vec![ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
+            ComponentDeclBuilder::new()
+                .expose(ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
                     source: ExposeSource::Self_,
                     source_path: (*WORKER_CAPABILITY_PATH).clone(),
                     target_path: (*WORKER_CAPABILITY_PATH).clone(),
                     target: ExposeTarget::Framework,
-                })],
-                uses: vec![UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                }))
+                .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                     source: UseSource::Framework,
                     source_path: (*WORK_SCHEDULER_CAPABILITY_PATH).clone(),
                     target_path: (*WORK_SCHEDULER_CAPABILITY_PATH).clone(),
-                })],
-                ..default_component_decl()
-            },
+                }))
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
     ];
     let work_scheduler = new_work_scheduler().await;
@@ -181,25 +177,21 @@ async fn use_work_scheduler_without_expose() {
     let components = vec![
         (
             "a",
-            ComponentDecl {
-                children: vec![ChildDecl {
-                    name: "b".to_string(),
-                    url: "test:///b".to_string(),
-                    startup: fsys::StartupMode::Lazy,
-                }],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .add_lazy_child("b")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
         (
             "b",
-            ComponentDecl {
-                uses: vec![UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                     source: UseSource::Framework,
                     source_path: (*WORK_SCHEDULER_CAPABILITY_PATH).clone(),
                     target_path: (*WORK_SCHEDULER_CAPABILITY_PATH).clone(),
-                })],
-                ..default_component_decl()
-            },
+                }))
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
     ];
     let work_scheduler = new_work_scheduler().await;
@@ -221,31 +213,27 @@ async fn use_work_scheduler_with_expose_to_realm() {
     let components = vec![
         (
             "a",
-            ComponentDecl {
-                children: vec![ChildDecl {
-                    name: "b".to_string(),
-                    url: "test:///b".to_string(),
-                    startup: fsys::StartupMode::Lazy,
-                }],
-                ..default_component_decl()
-            },
+            ComponentDeclBuilder::new()
+                .add_lazy_child("b")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
         (
             "b",
-            ComponentDecl {
-                exposes: vec![ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
+            ComponentDeclBuilder::new()
+                .expose(ExposeDecl::ServiceProtocol(ExposeServiceProtocolDecl {
                     source: ExposeSource::Self_,
                     source_path: (*WORKER_CAPABILITY_PATH).clone(),
                     target_path: (*WORKER_CAPABILITY_PATH).clone(),
                     target: ExposeTarget::Realm,
-                })],
-                uses: vec![UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+                }))
+                .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                     source: UseSource::Framework,
                     source_path: (*WORK_SCHEDULER_CAPABILITY_PATH).clone(),
                     target_path: (*WORK_SCHEDULER_CAPABILITY_PATH).clone(),
-                })],
-                ..default_component_decl()
-            },
+                }))
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
     ];
     let work_scheduler = new_work_scheduler().await;
@@ -267,31 +255,27 @@ async fn use_work_scheduler_control_routed() {
     let components = vec![
         (
             "a",
-            ComponentDecl {
-                offers: vec![OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                     source: OfferServiceSource::Realm,
                     source_path: (*WORK_SCHEDULER_CONTROL_CAPABILITY_PATH).clone(),
                     target_path: offer_use_path.clone(),
                     target: OfferTarget::Child("b".to_string()),
-                })],
-                children: vec![ChildDecl {
-                    name: "b".to_string(),
-                    url: "test:///b".to_string(),
-                    startup: fsys::StartupMode::Lazy,
-                }],
-                ..default_component_decl()
-            },
+                }))
+                .add_lazy_child("b")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
         (
             "b",
-            ComponentDecl {
-                uses: vec![UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                     source: UseSource::Realm,
                     source_path: offer_use_path.clone(),
                     target_path: offer_use_path.clone(),
-                })],
-                ..default_component_decl()
-            },
+                }))
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
     ];
     let work_scheduler = new_work_scheduler().await;
@@ -315,31 +299,27 @@ async fn use_work_scheduler_control_fail() {
     let components = vec![
         (
             "a",
-            ComponentDecl {
-                offers: vec![OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::ServiceProtocol(OfferServiceProtocolDecl {
                     source: OfferServiceSource::Realm,
                     source_path: (*WORK_SCHEDULER_CONTROL_CAPABILITY_PATH).clone(),
                     target_path: offer_use_path.clone(),
                     target: OfferTarget::Child("b".to_string()),
-                })],
-                children: vec![ChildDecl {
-                    name: "b".to_string(),
-                    url: "test:///b".to_string(),
-                    startup: fsys::StartupMode::Lazy,
-                }],
-                ..default_component_decl()
-            },
+                }))
+                .add_lazy_child("b")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
         (
             "b",
-            ComponentDecl {
-                uses: vec![UseDecl::ServiceProtocol(UseServiceProtocolDecl {
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::ServiceProtocol(UseServiceProtocolDecl {
                     source: UseSource::Framework,
                     source_path: offer_use_path.clone(),
                     target_path: offer_use_path.clone(),
-                })],
-                ..default_component_decl()
-            },
+                }))
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
         ),
     ];
     let work_scheduler = new_work_scheduler().await;
