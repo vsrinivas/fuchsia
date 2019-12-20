@@ -5,7 +5,7 @@
 // These tests ensure the zircon libc can talk to netstack.
 // No network connection is required, only a running netstack binary.
 
-#include <fuchsia/posix/socket/cpp/fidl.h>
+#include <fuchsia/posix/socket/llcpp/fidl.h>
 #include <lib/fdio/fd.h>
 #include <lib/sync/completion.h>
 #include <poll.h>
@@ -96,19 +96,19 @@ TEST(NetStreamTest, RaceClose) {
 
   sync_completion_t completion;
 
-  fuchsia::posix::socket::Control_SyncProxy control((zx::channel(handle)));
+  ::llcpp::fuchsia::posix::socket::Control::SyncClient client((zx::channel(handle)));
 
   std::vector<std::thread> workers;
   for (int i = 0; i < 10; i++) {
-    workers.push_back(std::thread([&control, &completion]() {
+    workers.push_back(std::thread([&client, &completion]() {
       zx_status_t status = sync_completion_wait(&completion, ZX_TIME_INFINITE);
       ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
 
-      zx_status_t io_status = control.Close(&status);
-      if (io_status == ZX_OK) {
-        EXPECT_EQ(status, ZX_OK) << zx_status_get_string(status);
+      auto response = client.Close();
+      if ((status = response.status()) != ZX_OK) {
+        EXPECT_EQ(status, ZX_ERR_PEER_CLOSED) << zx_status_get_string(status);
       } else {
-        EXPECT_EQ(io_status, ZX_ERR_PEER_CLOSED) << zx_status_get_string(io_status);
+        EXPECT_EQ(status = response.Unwrap()->s, ZX_OK) << zx_status_get_string(status);
       }
     }));
   }
@@ -127,13 +127,14 @@ TEST(SocketTest, ZXSocketSignalNotPermitted) {
   ASSERT_EQ(status = fdio_fd_transfer(fd.get(), channel.reset_and_get_address()), ZX_OK)
       << zx_status_get_string(status);
 
-  fuchsia::posix::socket::Control_SyncProxy control(std::move(channel));
+  ::llcpp::fuchsia::posix::socket::Control::SyncClient client(std::move(channel));
 
-  fuchsia::io::NodeInfo node_info;
-  ASSERT_EQ(status = control.Describe(&node_info), ZX_OK) << zx_status_get_string(status);
-  ASSERT_EQ(node_info.Which(), fuchsia::io::NodeInfo::Tag::kSocket);
+  auto response = client.Describe();
+  ASSERT_EQ(status = response.status(), ZX_OK) << zx_status_get_string(status);
+  const ::llcpp::fuchsia::io::NodeInfo& node_info = response.Unwrap()->info;
+  ASSERT_EQ(node_info.which(), ::llcpp::fuchsia::io::NodeInfo::Tag::kSocket);
 
-  zx::socket& socket = node_info.socket().socket;
+  const zx::socket& socket = node_info.socket().socket;
 
   EXPECT_EQ(status = socket.signal(ZX_USER_SIGNAL_0, 0), ZX_ERR_ACCESS_DENIED)
       << zx_status_get_string(status);
@@ -153,11 +154,12 @@ TEST(SocketTest, CloseZXSocketOnClose) {
   zx_status_t status;
   ASSERT_EQ(status = fdio_fd_transfer(fd, &handle), ZX_OK) << zx_status_get_string(status);
 
-  fuchsia::posix::socket::Control_SyncProxy control((zx::channel(handle)));
+  ::llcpp::fuchsia::posix::socket::Control::SyncClient client((zx::channel(handle)));
 
-  fuchsia::io::NodeInfo node_info;
-  ASSERT_EQ(status = control.Describe(&node_info), ZX_OK) << zx_status_get_string(status);
-  ASSERT_EQ(node_info.Which(), fuchsia::io::NodeInfo::Tag::kSocket);
+  auto describe_response = client.Describe();
+  ASSERT_EQ(status = describe_response.status(), ZX_OK) << zx_status_get_string(status);
+  const ::llcpp::fuchsia::io::NodeInfo& node_info = describe_response.Unwrap()->info;
+  ASSERT_EQ(node_info.which(), ::llcpp::fuchsia::io::NodeInfo::Tag::kSocket);
 
   zx_signals_t observed;
   ASSERT_EQ(status = node_info.socket().socket.wait_one(ZX_SOCKET_WRITABLE,
@@ -169,9 +171,9 @@ TEST(SocketTest, CloseZXSocketOnClose) {
             ZX_OK)
       << zx_status_get_string(status);
 
-  zx_status_t io_status;
-  ASSERT_EQ(io_status = control.Close(&status), ZX_OK) << zx_status_get_string(status);
-  ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
+  auto close_response = client.Close();
+  EXPECT_EQ(status = close_response.status(), ZX_OK) << zx_status_get_string(status);
+  EXPECT_EQ(status = close_response.Unwrap()->s, ZX_OK) << zx_status_get_string(status);
 
   ASSERT_EQ(status = node_info.socket().socket.wait_one(ZX_SOCKET_PEER_CLOSED,
                                                         zx::time::infinite_past(), &observed),
@@ -221,13 +223,14 @@ TEST(SocketTest, AcceptedSocketIsConnected) {
   ASSERT_EQ(status = fdio_fd_transfer(connfd.get(), channel.reset_and_get_address()), ZX_OK)
       << zx_status_get_string(status);
 
-  fuchsia::posix::socket::Control_SyncProxy control(std::move(channel));
+  ::llcpp::fuchsia::posix::socket::Control::SyncClient client(std::move(channel));
 
-  fuchsia::io::NodeInfo node_info;
-  ASSERT_EQ(status = control.Describe(&node_info), ZX_OK) << zx_status_get_string(status);
-  ASSERT_EQ(node_info.Which(), fuchsia::io::NodeInfo::Tag::kSocket);
+  auto response = client.Describe();
+  ASSERT_EQ(status = response.status(), ZX_OK) << zx_status_get_string(status);
+  const ::llcpp::fuchsia::io::NodeInfo& node_info = response.Unwrap()->info;
+  ASSERT_EQ(node_info.which(), ::llcpp::fuchsia::io::NodeInfo::Tag::kSocket);
 
-  zx::socket& socket = node_info.socket().socket;
+  const zx::socket& socket = node_info.socket().socket;
 
   zx_signals_t pending;
   ASSERT_EQ(status = socket.wait_one(ZX_USER_SIGNAL_1 | ZX_USER_SIGNAL_3, zx::time::infinite_past(),
@@ -297,14 +300,12 @@ TEST(SocketTest, DISABLED_CloseClonedSocketAfterTcpRst) {
   ASSERT_EQ(status = fdio_fd_clone(connfd.get(), channel2.reset_and_get_address()), ZX_OK)
       << zx_status_get_string(status);
 
-  zx_status_t io_status;
-  fuchsia::posix::socket::Control_SyncProxy control1(std::move(channel1));
-  ASSERT_EQ(io_status = control1.Close(&status), ZX_OK) << zx_status_get_string(io_status);
-  ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
-
-  fuchsia::posix::socket::Control_SyncProxy control2(std::move(channel2));
-  ASSERT_EQ(io_status = control2.Close(&status), ZX_OK) << zx_status_get_string(io_status);
-  ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
+  for (auto channel : {&channel1, &channel2}) {
+    ::llcpp::fuchsia::posix::socket::Control::SyncClient client(std::move(*channel));
+    auto response = client.Close();
+    EXPECT_EQ(status = response.status(), ZX_OK) << zx_status_get_string(status);
+    EXPECT_EQ(status = response.Unwrap()->s, ZX_OK) << zx_status_get_string(status);
+  }
 
   ASSERT_EQ(close(connfd.release()), 0) << strerror(errno);
 }
