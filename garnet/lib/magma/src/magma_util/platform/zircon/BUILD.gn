@@ -113,19 +113,22 @@ source_set("device") {
     "zircon_platform_pci_device.h",
   ]
 
+  public_deps = [
+    "//zircon/public/lib/ddk",
+    "//zircon/system/banjo/ddk.protocol.pci",
+    "//zircon/system/banjo/ddk.protocol.platform.device",
+  ]
+
   deps = [
     ":bus_mapper",
     ":interrupt",
     "$magma_build_root/src/magma_util",
-    "$zircon_build_root/public/lib/ddk",
     "$zircon_build_root/public/lib/zx",
     "..:device_header",
     "//src/devices/host:driver",
     "//zircon/public/lib/device-protocol-pci",
     "//zircon/public/lib/device-protocol-platform-device",
     "//zircon/system/banjo/ddk.protocol.composite",
-    "//zircon/system/banjo/ddk.protocol.pci",
-    "//zircon/system/banjo/ddk.protocol.platform.device",
   ]
 }
 

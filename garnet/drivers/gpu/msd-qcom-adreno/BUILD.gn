@@ -1,0 +1,86 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/lib/magma/gnbuild/magma.gni")
+
+if (is_fuchsia) {
+  import("//build/config/fuchsia/rules.gni")
+  driver_module = "driver_module"
+  driver_module_test = driver_module
+} else {
+  driver_module = "shared_library"
+  driver_module_test = "executable"
+}
+
+magma_pdev_entry("msd_qcom_entry") {
+  pdev_device_id = 0
+}
+
+magma_pdev_entry("msd_qcom_entry_test") {
+  test_entry = true
+  pdev_device_id = 0
+}
+
+target(driver_module, "msd_qcom") {
+  deps = [
+    "src",
+    "//garnet/lib/magma/src/magma_util/platform:logger_for_system_drivers",
+    "//garnet/lib/magma/src/sys_driver",
+  ]
+
+  if (is_fuchsia) {
+    output_name = "libmsd_qcom"
+    deps += [ ":msd_qcom_entry" ]
+
+    configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+    configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  }
+
+  if (is_linux) {
+    deps += [ "//garnet/lib/magma/src/magma_util/platform:entry" ]
+  }
+}
+
+group("msd_qcom_linux_arm64") {
+  deps = [
+    ":msd_qcom(//build/toolchain:linux_arm64-shared)",
+  ]
+}
+
+target(driver_module_test, "msd_qcom_test") {
+  testonly = true
+
+  deps = [
+    "src",
+    "//garnet/lib/magma/src/magma_util/platform:logger_for_system_drivers",
+    "//garnet/lib/magma/src/sys_driver",
+  ]
+
+  if (is_fuchsia) {
+    output_name = "libmsd_qcom_test"
+    deps += [ ":msd_qcom_entry_test" ]
+
+    configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+    configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  }
+
+  if (is_linux) {
+    deps += [
+      "//garnet/lib/magma/src/magma_util/platform:entry",
+      "//garnet/lib/magma/tests_linux:drm_test_runner",
+    ]
+  }
+
+  deps += [
+    "//garnet/lib/magma/tests/unit_tests:magma_platform_hardware_tests",
+    "//garnet/lib/magma/tests/unit_tests:msd_abi_conformance_tests",
+  ]
+}
+
+group("msd_qcom_test_linux_arm64") {
+  testonly = true
+  deps = [
+    ":msd_qcom_test(//build/toolchain:linux_arm64)",
+  ]
+}

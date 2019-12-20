@@ -27,11 +27,29 @@ package("magma-qcom-adreno") {
     testonly = true
   }
 
+  deps = []
+
   if (build_libvulkan_qcom_adreno != []) {
-    deps = build_libvulkan_qcom_adreno
+    deps += build_libvulkan_qcom_adreno
     libraries = [
       {
         name = "libvulkan_adreno.so"
+      },
+    ]
+  }
+
+  if (magma_enable_developer_build) {
+    deps += [ "//garnet/drivers/gpu/msd-qcom-adreno:msd_qcom_test" ]
+    drivers = [
+      {
+        name = "libmsd_qcom_test.so"
+      },
+    ]
+  } else {
+    deps += [ "//garnet/drivers/gpu/msd-qcom-adreno:msd_qcom" ]
+    drivers = [
+      {
+        name = "libmsd_qcom.so"
       },
     ]
   }

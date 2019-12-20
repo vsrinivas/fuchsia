@@ -9,6 +9,7 @@
 #include <magma_util/macros.h>
 
 #include "instructions.h"
+#include "msd_qcom_connection.h"
 #include "msd_qcom_platform_device.h"
 #include "registers.h"
 
@@ -303,3 +304,27 @@ bool MsdQcomDevice::EnableClockGating(bool enable) {
 
   return DRETF(false, "EnableClockGating: not implemented: enable %d val 0x%x", enable, val);
 }
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+msd_connection_t* msd_device_open(msd_device_t* device, msd_client_id_t client_id) {
+  auto connection = std::make_unique<MsdQcomConnection>(client_id);
+  return new MsdQcomAbiConnection(std::move(connection));
+}
+
+void msd_device_destroy(msd_device_t* device) { delete MsdQcomDevice::cast(device); }
+
+magma_status_t msd_device_query(msd_device_t* device, uint64_t id, uint64_t* value_out) {
+  if (id == MAGMA_QUERY_VENDOR_ID) {
+    *value_out = 0x05c6;
+    return MAGMA_STATUS_OK;
+  }
+  return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "unhandled query: %lu", id);
+}
+
+magma_status_t msd_device_query_returns_buffer(msd_device_t* device, uint64_t id,
+                                               uint32_t* buffer_out) {
+  return DRET(MAGMA_STATUS_UNIMPLEMENTED);
+}
+
+void msd_device_dump_status(msd_device_t* device, uint32_t dump_type) {}

@@ -13,6 +13,10 @@
 #include "sys_driver/magma_system_context.h"
 #include "sys_driver/magma_system_device.h"
 
+namespace {
+inline uint64_t page_size() { return sysconf(_SC_PAGESIZE); }
+}  // namespace
+
 // This test is meant to run on all devices and exercise
 // the execution of command buffers from multiple connections
 // simultaneously.  So doing requires some device specific knowledge
@@ -21,19 +25,6 @@
 // may bail out early on some devices.
 class TestMultithread {
  public:
-  static std::unique_ptr<TestMultithread> Create() {
-    auto driver = MagmaDriver::Create();
-    if (!driver)
-      return DRETP(nullptr, "no driver");
-
-    auto device = driver->CreateDevice(GetTestDeviceHandle());
-    if (!device)
-      return DRETP(nullptr, "no device");
-
-    return std::make_unique<TestMultithread>(std::move(driver),
-                                             std::shared_ptr<MagmaSystemDevice>(std::move(device)));
-  }
-
   TestMultithread(std::unique_ptr<MagmaDriver> driver, std::shared_ptr<MagmaSystemDevice> device)
       : driver_(std::move(driver)), device_(std::move(device)) {}
 
@@ -72,7 +63,7 @@ class TestMultithread {
     uint64_t gpu_addr = 0;
 
     for (uint32_t i = 0; i < num_iterations; i++) {
-      auto batch_buffer = magma::PlatformBuffer::Create(PAGE_SIZE, "test");
+      auto batch_buffer = magma::PlatformBuffer::Create(page_size(), "test");
 
       uint32_t handle;
       EXPECT_TRUE(batch_buffer->duplicate_handle(&handle));
@@ -84,8 +75,8 @@ class TestMultithread {
       if (!InitBatchBuffer(batch_buffer.get()))
         break;  // Abort the test
 
-      EXPECT_TRUE(connection->MapBufferGpu(id, gpu_addr, 0, batch_buffer->size() / PAGE_SIZE, 0));
-      gpu_addr += batch_buffer->size() + extra_page_count * PAGE_SIZE;
+      EXPECT_TRUE(connection->MapBufferGpu(id, gpu_addr, 0, batch_buffer->size() / page_size(), 0));
+      gpu_addr += batch_buffer->size() + extra_page_count * page_size();
 
       auto command_buffer = std::make_unique<magma_system_command_buffer>();
       std::vector<magma_system_exec_resource> exec_resources(1);
@@ -113,17 +104,15 @@ class TestMultithread {
   }
 
   bool InitBatchBuffer(magma::PlatformBuffer* buffer) {
-    if (!TestPlatformPciDevice::is_intel_gen(device_->GetDeviceId()))
-      return DRETF(false, "not an intel gen9 device");
+    EXPECT_TRUE(TestPlatformPciDevice::is_intel_gen(device_->GetDeviceId()));
 
     void* vaddr;
     if (!buffer->MapCpu(&vaddr))
-      return DRETF(false, "couldn't map buffer");
+      return false;
 
     *reinterpret_cast<uint32_t*>(vaddr) = 0xA << 23;
 
-    if (!buffer->UnmapCpu())
-      return DRETF(false, "couldn't unmap buffer");
+    EXPECT_TRUE(buffer->UnmapCpu());
 
     return true;
   }
@@ -135,7 +124,20 @@ class TestMultithread {
 };
 
 TEST(MagmaSystem, Multithread) {
-  auto test = TestMultithread::Create();
-  ASSERT_NE(test, nullptr);
+  auto driver = MagmaDriver::Create();
+  ASSERT_TRUE(driver);
+
+  auto device = driver->CreateDevice(GetTestDeviceHandle());
+  ASSERT_TRUE(device);
+
+  uint64_t vendor_id;
+  ASSERT_TRUE(device->Query(MAGMA_QUERY_VENDOR_ID, &vendor_id));
+  if (vendor_id != 0x8086)
+    GTEST_SKIP();
+
+  auto test = std::make_unique<TestMultithread>(
+      std::move(driver), std::shared_ptr<MagmaSystemDevice>(std::move(device)));
+  ASSERT_TRUE(test);
+
   test->Test(2);
 }

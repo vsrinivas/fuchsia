@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <msd_qcom_platform_device.h>
-
 #include <magma_util/platform/linux/linux_platform_device.h>
+
+#include "../msd_qcom_platform_device.h"
 
 class MsdQcomPlatformDeviceLinux : public MsdQcomPlatformDevice {
  public:

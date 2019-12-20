@@ -5,22 +5,37 @@
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
 source_set("src") {
-  include_dirs = [ "." ]
-
   sources = [
     "address_space.h",
     "allocating_address_space.h",
     "firmware.cc",
     "firmware.h",
     "gpu_mapping.h",
+    "msd_qcom_buffer.cc",
+    "msd_qcom_buffer.h",
+    "msd_qcom_connection.cc",
+    "msd_qcom_connection.h",
+    "msd_qcom_context.cc",
+    "msd_qcom_context.h",
     "msd_qcom_device.cc",
     "msd_qcom_device.h",
+    "msd_qcom_driver.cc",
+    "msd_qcom_driver.h",
+    "msd_qcom_semaphore.cc",
     "ringbuffer.h",
   ]
+
+  if (is_fuchsia) {
+    sources += [ "zircon/msd_qcom_platform_device_zircon.cc" ]
+  }
 
   if (is_linux) {
     sources += [ "linux/msd_qcom_platform_device_linux.cc" ]
   }
+
+  public_deps = [
+    "//garnet/lib/magma/include:msd_abi",
+  ]
 
   deps = [
     "$magma_build_root/src/magma_util:address_space",
@@ -31,4 +46,8 @@ source_set("src") {
     "$magma_build_root/src/magma_util/platform:device",
     "$magma_build_root/src/magma_util/platform:iommu",
   ]
+
+  if (is_fuchsia) {
+    deps += [ "$magma_build_root/src/magma_util/platform/zircon:device" ]
+  }
 }

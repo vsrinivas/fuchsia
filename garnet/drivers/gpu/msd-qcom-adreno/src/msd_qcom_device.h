@@ -5,6 +5,7 @@
 #ifndef MSD_QCOM_DEVICE_H
 #define MSD_QCOM_DEVICE_H
 
+#include <msd.h>
 #include <platform_bus_mapper.h>
 
 #include <magma_util/register_io.h>
@@ -14,15 +15,23 @@
 #include "msd_qcom_platform_device.h"
 #include "ringbuffer.h"
 
-class MsdQcomDevice : public magma::AddressSpaceOwner {
+class MsdQcomDevice : public msd_device_t, public magma::AddressSpaceOwner {
  public:
   static std::unique_ptr<MsdQcomDevice> Create(void* device_handle);
+
+  MsdQcomDevice() { magic_ = kMagic; }
 
   uint32_t GetChipId() { return qcom_platform_device_->GetChipId(); }
 
   uint32_t GetGmemSize() { return qcom_platform_device_->GetGmemSize(); }
 
   static void GetCpInitPacket(std::vector<uint32_t>& packet);
+
+  static MsdQcomDevice* cast(msd_device_t* dev) {
+    DASSERT(dev);
+    DASSERT(dev->magic_ == kMagic);
+    return static_cast<MsdQcomDevice*>(dev);
+  }
 
  private:
   std::shared_ptr<AddressSpace> address_space() { return address_space_; }
@@ -32,6 +41,8 @@ class MsdQcomDevice : public magma::AddressSpaceOwner {
 
   // magma::AddressSpaceOwner
   magma::PlatformBusMapper* GetBusMapper() override { return bus_mapper_.get(); }
+
+  static const uint32_t kMagic = 0x64657669;  //"devi"
 
   static constexpr uint64_t kGmemGpuAddrBase = 0x00100000;
   static constexpr uint64_t kClientGpuAddrBase = 0x01000000;

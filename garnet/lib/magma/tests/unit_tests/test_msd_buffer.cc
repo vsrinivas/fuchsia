@@ -9,6 +9,8 @@
 
 namespace {
 
+inline uint64_t page_size() { return sysconf(_SC_PAGESIZE); }
+
 class TestMsd {
  public:
   ~TestMsd() {
@@ -43,7 +45,7 @@ class TestMsd {
   }
 
   bool CreateBuffer(uint32_t size_in_pages, msd_buffer_t** buffer_out) {
-    auto platform_buf = magma::PlatformBuffer::Create(size_in_pages * PAGE_SIZE, "test");
+    auto platform_buf = magma::PlatformBuffer::Create(size_in_pages * page_size(), "test");
     if (!platform_buf)
       return DRETF(false, "couldn't create platform buffer size_in_pages %u", size_in_pages);
 
@@ -92,7 +94,7 @@ TEST(MsdBuffer, MapAndUnmap) {
   constexpr uint32_t kBufferSizeInPages = 1;
 
   {
-    auto platform_buf = magma::PlatformBuffer::Create(kBufferSizeInPages * PAGE_SIZE, "test");
+    auto platform_buf = magma::PlatformBuffer::Create(kBufferSizeInPages * page_size(), "test");
     ASSERT_TRUE(platform_buf);
 
     uint32_t raw_handle;
@@ -116,7 +118,7 @@ TEST(MsdBuffer, MapAndUnmap) {
   msd_connection_t* connection = msd_device_open(device, 0);
   ASSERT_TRUE(connection);
 
-  std::vector<uint64_t> gpu_addr{0, PAGE_SIZE * 1024};
+  std::vector<uint64_t> gpu_addr{0, page_size() * 1024};
 
   // Mapping should keep alive the msd buffer.
   for (uint32_t i = 0; i < gpu_addr.size(); i++) {
@@ -133,7 +135,8 @@ TEST(MsdBuffer, MapAndUnmap) {
   EXPECT_GE(2u, handle_count);
 
   // Try to unmap a region that doesn't exist.
-  EXPECT_NE(MAGMA_STATUS_OK, msd_connection_unmap_buffer_gpu(connection, buffer, PAGE_SIZE * 2048));
+  EXPECT_NE(MAGMA_STATUS_OK,
+            msd_connection_unmap_buffer_gpu(connection, buffer, page_size() * 2048));
 
   // Unmap the valid regions.
   magma_status_t status;
@@ -173,7 +176,7 @@ TEST(MsdBuffer, MapAndAutoUnmap) {
   constexpr uint32_t kBufferSizeInPages = 1;
 
   {
-    auto platform_buf = magma::PlatformBuffer::Create(kBufferSizeInPages * PAGE_SIZE, "test");
+    auto platform_buf = magma::PlatformBuffer::Create(kBufferSizeInPages * page_size(), "test");
     ASSERT_TRUE(platform_buf);
 
     uint32_t raw_handle;
@@ -230,7 +233,7 @@ TEST(MsdBuffer, Commit) {
 
   constexpr uint32_t kBufferSizeInPages = 1;
 
-  auto platform_buf = magma::PlatformBuffer::Create(kBufferSizeInPages * PAGE_SIZE, "test");
+  auto platform_buf = magma::PlatformBuffer::Create(kBufferSizeInPages * page_size(), "test");
   ASSERT_NE(platform_buf, nullptr);
 
   uint32_t duplicate_handle;
@@ -293,9 +296,9 @@ TEST(MsdBuffer, MapDoesntFit) {
   constexpr uint64_t kGpuAddressSpaceSize = 1ull << 48;
   magma_status_t status = msd_connection_map_buffer_gpu(
       test.connection(), buffer,
-      kGpuAddressSpaceSize - kBufferSizeInPages / 2 * PAGE_SIZE,  // gpu addr
-      0,                                                          // page offset
-      kBufferSizeInPages,                                         // page count
+      kGpuAddressSpaceSize - kBufferSizeInPages / 2 * page_size(),  // gpu addr
+      0,                                                            // page offset
+      kBufferSizeInPages,                                           // page count
       MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE);
   EXPECT_TRUE(status == MAGMA_STATUS_INVALID_ARGS || status == MAGMA_STATUS_INTERNAL_ERROR);
 
