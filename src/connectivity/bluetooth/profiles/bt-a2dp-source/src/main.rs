@@ -127,9 +127,13 @@ impl Peers {
         self.peers.get(id).and_then(|p| p.upgrade())
     }
 
-    async fn discovered(&mut self, id: PeerId) -> Result<(), Error> {
-        if self.peers.contains_key(&id) {
-            fx_log_info!("Ignoring discovery of already-connected {}", id);
+    async fn discovered(&mut self, id: PeerId, desc: ProfileDescriptor) -> Result<(), Error> {
+        if let Some(peer) = self.peers.get(&id) {
+            if let Some(peer) = peer.upgrade() {
+                if let None = peer.set_descriptor(desc.clone()) {
+                    self.spawn_streaming(id);
+                }
+            }
             return Ok(());
         }
         let (status, channel) =
@@ -140,13 +144,18 @@ impl Peers {
             return Ok(());
         }
         match channel {
-            Some(channel) => self.connected(id, channel)?,
+            Some(channel) => self.connected(id, channel, Some(desc))?,
             None => fx_log_warn!("Couldn't connect {}: no channel", id),
         };
         Ok(())
     }
 
-    fn connected(&mut self, id: PeerId, channel: zx::Socket) -> Result<(), Error> {
+    fn connected(
+        &mut self,
+        id: PeerId,
+        channel: zx::Socket,
+        desc: Option<ProfileDescriptor>,
+    ) -> Result<(), Error> {
         if let Some(peer) = self.peers.get(&id) {
             if let Some(peer) = peer.upgrade() {
                 if let Err(e) = peer.receive_channel(channel) {
@@ -157,17 +166,31 @@ impl Peers {
             let avdtp_peer =
                 avdtp::Peer::new(channel).map_err(|e| avdtp::Error::ChannelSetup(e))?;
             let endpoints = build_local_endpoints()?;
-            self.peers.insert(id, Peer::create(id, avdtp_peer, endpoints, self.profile.clone()));
-            let weak_peer = self.peers.get(&id).expect("just added");
-            let source_type = self.source_type.clone();
-            fuchsia_async::spawn_local(async move {
-                if let Err(e) = start_streaming(&weak_peer, source_type).await {
-                    fx_log_info!("Failed to stream: {:?}", e);
-                    weak_peer.detach();
-                }
+            let peer = Peer::create(id, avdtp_peer, endpoints, self.profile.clone());
+            // Start the streaming task if the profile information is populated.
+            // Otherwise, `self.discovered()` will do so.
+            let start_streaming_flag = desc.map_or(false, |d| {
+                peer.set_descriptor(d);
+                true
             });
+            self.peers.insert(id, peer);
+
+            if start_streaming_flag {
+                self.spawn_streaming(id);
+            }
         }
         Ok(())
+    }
+
+    fn spawn_streaming(&mut self, id: PeerId) {
+        let weak_peer = self.peers.get(&id).expect("just added");
+        let source_type = self.source_type.clone();
+        fuchsia_async::spawn_local(async move {
+            if let Err(e) = start_streaming(&weak_peer, source_type).await {
+                fx_log_info!("Failed to stream: {:?}", e);
+                weak_peer.detach();
+            }
+        });
     }
 }
 
@@ -290,8 +313,9 @@ async fn main() -> Result<(), Error> {
     while let Some(evt) = evt_stream.next().await {
         let res = match evt? {
             ProfileEvent::OnConnected { device_id, channel, .. } => {
+                fx_log_info!("Connected sink {}", device_id);
                 let peer_id = device_id.parse().expect("peer ids from profile should parse");
-                let connected_res = peers.connected(device_id.parse()?, channel);
+                let connected_res = peers.connected(device_id.parse()?, channel, None);
                 if let Some(peer) = peers.get(&peer_id) {
                     controller_pool.lock().peer_connected(peer_id, peer.avdtp_peer());
                 }
@@ -304,7 +328,7 @@ async fn main() -> Result<(), Error> {
                     profile,
                     attributes
                 );
-                peers.discovered(peer_id.parse()?).await
+                peers.discovered(peer_id.parse()?, profile).await
             }
         };
         if let Err(e) = res {

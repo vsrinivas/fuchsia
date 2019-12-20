@@ -4,7 +4,7 @@
 
 use {
     bt_avdtp::{self as avdtp, ServiceCapability, StreamEndpoint, StreamEndpointId},
-    fidl_fuchsia_bluetooth_bredr::{ProfileProxy, PSM_AVDTP},
+    fidl_fuchsia_bluetooth_bredr::{ProfileDescriptor, ProfileProxy, PSM_AVDTP},
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::PeerId,
     fuchsia_syslog::{self, fx_log_info, fx_log_warn, fx_vlog},
@@ -53,6 +53,8 @@ pub struct Peer {
     inner: Arc<Mutex<PeerInner>>,
     /// Profile Proxy, used to connect new transport sockets.
     profile: ProfileProxy,
+    /// The profile descriptor for this peer, if it has been discovered.
+    descriptor: Mutex<Option<ProfileDescriptor>>,
     // TODO(39730): Add a future for when the peer closes?
 }
 
@@ -67,9 +69,18 @@ impl Peer {
         streams: Vec<avdtp::StreamEndpoint>,
         profile: ProfileProxy,
     ) -> Self {
-        let res = Self { id, inner: Arc::new(Mutex::new(PeerInner::new(peer, streams))), profile };
+        let res = Self {
+            id,
+            inner: Arc::new(Mutex::new(PeerInner::new(peer, streams))),
+            profile,
+            descriptor: Mutex::new(None),
+        };
         res.start_requests_task();
         res
+    }
+
+    pub fn set_descriptor(&self, descriptor: ProfileDescriptor) -> Option<ProfileDescriptor> {
+        self.descriptor.lock().replace(descriptor)
     }
 
     /// Receive a channel from the peer that was initiated remotely.
@@ -93,14 +104,19 @@ impl Peer {
         &self,
     ) -> impl Future<Output = avdtp::Result<HashMap<StreamEndpointId, ServiceCapability>>> {
         let avdtp = self.inner.lock().peer.clone();
+        let get_all = self.descriptor.lock().map_or(false, a2dp_version_check);
         async move {
             fx_vlog!(1, "Discovering peer streams..");
             let infos = avdtp.discover().await?;
             fx_vlog!(1, "Discovered {} streams", infos.len());
             let mut remote_streams = Vec::new();
             for info in infos {
-                // TODO(38605): call get_all_capabilities if the sink profile is 1.3 or above.
-                match avdtp.get_capabilities(info.id()).await {
+                let capabilities = if get_all {
+                    avdtp.get_all_capabilities(info.id()).await
+                } else {
+                    avdtp.get_capabilities(info.id()).await
+                };
+                match capabilities {
                     Ok(capabilities) => {
                         fx_vlog!(1, "Stream {:?}", info);
                         for cap in &capabilities {
@@ -219,6 +235,11 @@ impl Peer {
             fx_log_info!("Peer {} disconnected", id);
         });
     }
+}
+
+/// Determines if Peer profile version is newer (>= 1.3) or older (< 1.3)
+fn a2dp_version_check(profile: ProfileDescriptor) -> bool {
+    (profile.major_version == 1 && profile.minor_version >= 3) || profile.major_version > 1
 }
 
 /// Peer handles the communicaton with the AVDTP layer, and provides responses as appropriate
@@ -400,7 +421,9 @@ mod tests {
 
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_bluetooth::{Error, ErrorCode, Status};
-    use fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequest};
+    use fidl_fuchsia_bluetooth_bredr::{
+        ProfileMarker, ProfileRequest, ServiceClassProfileIdentifier,
+    };
     use futures::pin_mut;
     use std::convert::TryInto;
     use std::task::Poll;
@@ -483,8 +506,33 @@ mod tests {
         assert!(remote.write(&get_capabilities_rsp).is_ok());
     }
 
+    fn expect_get_all_capabilities_and_respond(
+        remote: &zx::Socket,
+        expected_seid: u8,
+        response_capabilities: &[u8],
+    ) {
+        let received = recv_remote(&remote).unwrap();
+        // Last half of header must be Single (0b00) and Command (0b00)
+        assert_eq!(0x00, received[0] & 0xF);
+        assert_eq!(0x0C, received[1]); // 0x0C = Get All Capabilities
+        assert_eq!(expected_seid << 2, received[2]);
+
+        let txlabel_raw = received[0] & 0xF0;
+
+        // Expect a get capabilities and respond.
+        #[rustfmt::skip]
+        let mut get_capabilities_rsp = vec![
+            txlabel_raw << 4 | 0x2, // TxLabel (same) + ResponseAccept (0x02)
+            0x0C // GetAllCapabilities
+        ];
+
+        get_capabilities_rsp.extend_from_slice(response_capabilities);
+
+        assert!(remote.write(&get_capabilities_rsp).is_ok());
+    }
+
     #[test]
-    fn test_peer_collect_capabilties_success() {
+    fn test_peer_collect_capabilities_success() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
 
         let (avdtp, remote) = setup_avdtp_peer();
@@ -498,6 +546,12 @@ mod tests {
             build_local_endpoints().expect("endpoints"),
             profile_proxy,
         );
+        let p: ProfileDescriptor = ProfileDescriptor {
+            profile_id: ServiceClassProfileIdentifier::AdvancedAudioDistribution,
+            major_version: 1,
+            minor_version: 2,
+        };
+        peer.set_descriptor(p);
 
         let collect_future = peer.collect_capabilities();
         pin_mut!(collect_future);
@@ -576,7 +630,105 @@ mod tests {
     }
 
     #[test]
-    fn test_peer_collect_capailities_discovery_fails() {
+    fn test_peer_collect_all_capabilities_success() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+
+        let (avdtp, remote) = setup_avdtp_peer();
+
+        let (profile_proxy, _) =
+            create_proxy_and_stream::<ProfileMarker>().expect("test proxy pair creation");
+
+        let peer = Peer::create(
+            PeerId(1),
+            avdtp,
+            build_local_endpoints().expect("endpoints"),
+            profile_proxy,
+        );
+        let p: ProfileDescriptor = ProfileDescriptor {
+            profile_id: ServiceClassProfileIdentifier::AdvancedAudioDistribution,
+            major_version: 1,
+            minor_version: 3,
+        };
+        peer.set_descriptor(p);
+
+        let collect_future = peer.collect_capabilities();
+        pin_mut!(collect_future);
+
+        assert!(exec.run_until_stalled(&mut collect_future).is_pending());
+
+        // Expect a discover command.
+        let received = recv_remote(&remote).unwrap();
+        // Last half of header must be Single (0b00) and Command (0b00)
+        assert_eq!(0x00, received[0] & 0xF);
+        assert_eq!(0x01, received[1]); // 0x01 = Discover
+
+        let txlabel_raw = received[0] & 0xF0;
+
+        // Respond with a set of streams.
+        let response: &[u8] = &[
+            txlabel_raw << 4 | 0x0 << 2 | 0x2, // txlabel (same), Single (0b00), Response Accept (0b10)
+            0x01,                              // Discover
+            0x3E << 2 | 0x0 << 1,              // SEID (3E), Not In Use (0b0)
+            0x00 << 4 | 0x1 << 3,              // Audio (0x00), Sink (0x01)
+            0x01 << 2 | 0x1 << 1,              // SEID (1), In Use (0b1)
+            0x00 << 4 | 0x1 << 3,              // Audio (0x00), Sink (0x01)
+        ];
+        assert!(remote.write(response).is_ok());
+
+        assert!(exec.run_until_stalled(&mut collect_future).is_pending());
+
+        // Expect a get all capabilities and respond.
+        #[rustfmt::skip]
+        let capabilities_rsp = &[
+            // MediaTransport (Length of Service Capability = 0)
+            0x01, 0x00,
+            // Media Codec (LOSC = 2 + 4), Media Type Audio (0x00), Codec type (0x40), Codec specific 0xF09F9296
+            0x07, 0x06, 0x00, 0x40, 0xF0, 0x9F, 0x92, 0x96
+        ];
+        expect_get_all_capabilities_and_respond(&remote, 0x3E, capabilities_rsp);
+
+        assert!(exec.run_until_stalled(&mut collect_future).is_pending());
+
+        // Expect a get all capabilities and respond.
+        #[rustfmt::skip]
+        let capabilities_rsp = &[
+            // MediaTransport (Length of Service Capability = 0)
+            0x01, 0x00,
+            // Media Codec (LOSC = 2 + 2), Media Type Audio (0x00), Codec type (0x00), Codec specific 0xC0DE
+            0x07, 0x04, 0x00, 0x00, 0xC0, 0xDE
+        ];
+        expect_get_all_capabilities_and_respond(&remote, 0x01, capabilities_rsp);
+
+        // Should finish!
+        let res = exec.run_until_stalled(&mut collect_future);
+        assert!(res.is_ready());
+
+        match res {
+            Poll::Pending => panic!("collect capabilities should be complete"),
+            Poll::Ready(Err(e)) => panic!("collect capabilities should have succeeded: {}", e),
+            Poll::Ready(Ok(map)) => {
+                let seid = 0x3E_u8.try_into().unwrap();
+                assert!(map.contains_key(&seid));
+                let expected_codec = ServiceCapability::MediaCodec {
+                    media_type: avdtp::MediaType::Audio,
+                    codec_type: avdtp::MediaCodecType::new(0x40),
+                    codec_extra: vec![0xF0, 0x9F, 0x92, 0x96],
+                };
+                assert_eq!(Some(&expected_codec), map.get(&seid));
+                let seid = 0x01_u8.try_into().unwrap();
+                assert!(map.contains_key(&seid));
+                let expected_codec = ServiceCapability::MediaCodec {
+                    media_type: avdtp::MediaType::Audio,
+                    codec_type: avdtp::MediaCodecType::new(0x00),
+                    codec_extra: vec![0xC0, 0xDE],
+                };
+                assert_eq!(Some(&expected_codec), map.get(&seid));
+            }
+        }
+    }
+
+    #[test]
+    fn test_peer_collect_capabilities_discovery_fails() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
 
         let (avdtp, remote) = setup_avdtp_peer();
@@ -624,7 +776,7 @@ mod tests {
     }
 
     #[test]
-    fn test_peer_collect_capailities_get_capability_fails() {
+    fn test_peer_collect_capabilities_get_capability_fails() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
 
         let (avdtp, remote) = setup_avdtp_peer();
@@ -874,5 +1026,45 @@ mod tests {
             Poll::Ready(Ok(_stream)) => panic!("Shouldn't have succeeded stream here"),
             Poll::Ready(Err(_)) => {}
         }
+    }
+
+    #[test]
+    /// Test that the version check method correctly differentiates between newer
+    /// and older A2DP versions.
+    fn test_a2dp_version_check() {
+        let p1: ProfileDescriptor = ProfileDescriptor {
+            profile_id: ServiceClassProfileIdentifier::AdvancedAudioDistribution,
+            major_version: 1,
+            minor_version: 3,
+        };
+        assert_eq!(true, a2dp_version_check(p1));
+
+        let p1: ProfileDescriptor = ProfileDescriptor {
+            profile_id: ServiceClassProfileIdentifier::AdvancedAudioDistribution,
+            major_version: 2,
+            minor_version: 10,
+        };
+        assert_eq!(true, a2dp_version_check(p1));
+
+        let p1: ProfileDescriptor = ProfileDescriptor {
+            profile_id: ServiceClassProfileIdentifier::AdvancedAudioDistribution,
+            major_version: 1,
+            minor_version: 0,
+        };
+        assert_eq!(false, a2dp_version_check(p1));
+
+        let p1: ProfileDescriptor = ProfileDescriptor {
+            profile_id: ServiceClassProfileIdentifier::AdvancedAudioDistribution,
+            major_version: 0,
+            minor_version: 9,
+        };
+        assert_eq!(false, a2dp_version_check(p1));
+
+        let p1: ProfileDescriptor = ProfileDescriptor {
+            profile_id: ServiceClassProfileIdentifier::AdvancedAudioDistribution,
+            major_version: 2,
+            minor_version: 2,
+        };
+        assert_eq!(true, a2dp_version_check(p1));
     }
 }
