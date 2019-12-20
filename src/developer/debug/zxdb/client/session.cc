@@ -585,6 +585,11 @@ void Session::DispatchNotifyModules(const debug_ipc::NotifyModules& notify) {
 }
 
 void Session::DispatchProcessStarting(const debug_ipc::NotifyProcessStarting& notify) {
+  if (notify.type == debug_ipc::NotifyProcessStarting::Type::kLimbo) {
+    // TODO(donosoc): Handle this case.
+    return;
+  }
+
   // Search the targets to see if there is a non-attached empty one. Normally this would be the
   // initial one. Assume that targets that have a name have been set up by the user which we don't
   // want to overwrite.

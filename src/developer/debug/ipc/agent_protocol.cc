@@ -555,6 +555,7 @@ void WriteNotifyProcessExiting(const NotifyProcessExiting& notify, MessageWriter
 
 void WriteNotifyProcessStarting(const NotifyProcessStarting& notify, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kNotifyProcessStarting, 0);
+  writer->WriteUint32(static_cast<uint32_t>(notify.type));
   writer->WriteUint64(notify.koid);
   writer->WriteUint32(notify.component_id);
   writer->WriteString(notify.name);

@@ -107,6 +107,14 @@ DebugAgent::DebugAgent(std::shared_ptr<sys::ServiceDirectory> services, SystemPr
   } else {
     FXL_LOG(WARNING) << "Could not get Watchpoint count: " << zx_status_get_string(status);
   }
+
+  // Set a callback to the limbo_provider to let us know when new processes enter the limbo.
+  limbo_provider_->set_on_enter_limbo(
+      [agent = GetWeakPtr()](std::vector<fuchsia::exception::ProcessExceptionMetadata> processes) {
+        if (!agent)
+          return;
+        agent->OnProcessesEnteredLimbo(std::move(processes));
+      });
 }
 
 DebugAgent::~DebugAgent() = default;
@@ -928,6 +936,22 @@ void DebugAgent::OnComponentTerminated(int64_t return_code, const ComponentDescr
       ss << std::endl << "* " << expected.first;
     }
     DEBUG_LOG(Process) << ss.str();
+  }
+}
+
+void DebugAgent::OnProcessesEnteredLimbo(
+    std::vector<fuchsia::exception::ProcessExceptionMetadata> processes) {
+  for (auto& process : processes) {
+    DEBUG_LOG(Agent) << "Process " << process.info().process_koid << " entered limbo.";
+
+    debug_ipc::NotifyProcessStarting process_starting = {};
+    process_starting.type = debug_ipc::NotifyProcessStarting::Type::kLimbo;
+    process_starting.koid = process.info().process_koid;
+    process_starting.name = object_provider_->NameForObject(process.process());
+
+    debug_ipc::MessageWriter writer;
+    debug_ipc::WriteNotifyProcessStarting(std::move(process_starting), &writer);
+    stream()->Write(writer.MessageComplete());
   }
 }
 

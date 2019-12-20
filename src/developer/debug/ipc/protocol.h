@@ -384,7 +384,18 @@ struct ConfigAgentReply {
 // Notifications ---------------------------------------------------------------
 
 // Notify that a new process was created in debugged job.
+
 struct NotifyProcessStarting {
+  enum class Type : uint32_t {
+    kNormal,  // Normal process startup.
+    kLimbo,   // Process entered the limbo. See debug_agent/limbo_provider.h.
+
+    kLast,  // Not valid, for verification purposes.
+  };
+  static const char* TypeToString(Type);
+
+  Type type = Type::kNormal;
+
   uint64_t koid = 0;
   // When components are launched from the debugger, they look like normal
   // processes starting. The debug agent sets an id to them so the debugger can

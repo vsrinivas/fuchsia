@@ -110,24 +110,14 @@ class MockLimboProvider : public LimboProvider {
     if (it == limbo_.end())
       return ZX_ERR_NOT_FOUND;
 
-    auto excp_it = exception_koids_.find(process_koid);
-    FXL_DCHECK(excp_it != exception_koids_.end());
+    *out = ToProcessException(it->second);
 
-    ProcessException exception;
-    exception.set_info(it->second.info());
-    exception.set_exception(zx::exception(exception_koids_[process_koid]));
-    exception.set_process(std::move(*it->second.mutable_process()));
-    exception.set_thread(std::move(*it->second.mutable_thread()));
-
-    *out = std::move(exception);
-
-    exception_koids_.erase(process_koid);
     limbo_.erase(it);
     return ZX_OK;
   }
 
   void AppendException(const MockProcessObject* process, const MockThreadObject* thread,
-                       ExceptionType exception_type, zx_koid_t exception_koid) {
+                       ExceptionType exception_type) {
     ExceptionInfo info = {};
     info.process_koid = process->koid;
     info.thread_koid = thread->koid;
@@ -138,12 +128,43 @@ class MockLimboProvider : public LimboProvider {
     metadata.set_process(process->GetHandle());
     metadata.set_thread(thread->GetHandle());
 
-    exception_koids_[process->koid] = exception_koid;
     limbo_[process->koid] = std::move(metadata);
   }
 
+  void CallOnEnterLimbo() {
+    FXL_DCHECK(on_enter_limbo_);
+
+    std::vector<ProcessExceptionMetadata> processes;
+    processes.reserve(limbo_.size());
+    for (const auto& [process_koid, metadata] : limbo_) {
+      processes.push_back(CopyMetadata(metadata));
+    }
+
+    on_enter_limbo_(std::move(processes));
+  }
+
  private:
-  std::map<zx_koid_t, zx_koid_t> exception_koids_;
+  ProcessExceptionMetadata CopyMetadata(const ProcessExceptionMetadata& metadata) {
+    ProcessExceptionMetadata exception = {};
+
+    exception.set_info(metadata.info());
+    exception.set_process(zx::process(metadata.info().process_koid));
+    exception.set_thread(zx::thread(metadata.info().thread_koid));
+
+    return exception;
+  }
+
+  ProcessException ToProcessException(const ProcessExceptionMetadata& metadata) {
+    ProcessException exception = {};
+
+    exception.set_info(metadata.info());
+    exception.set_exception(zx::exception(metadata.info().thread_koid));
+    exception.set_process(zx::process(metadata.info().process_koid));
+    exception.set_thread(zx::thread(metadata.info().thread_koid));
+
+    return exception;
+  }
+
   std::map<zx_koid_t, ProcessExceptionMetadata> limbo_;
 };
 
@@ -265,8 +286,8 @@ TEST(DebugAgent, OnGlobalStatus) {
   auto [limbo_proc2, limbo_thread2] =
       GetProcessThread(object_provider, kLimboProcess2, kLimboProcess2Thread);
 
-  test_context->limbo_provider->AppendException(limbo_proc1, limbo_thread1, kLimboException1, 1);
-  test_context->limbo_provider->AppendException(limbo_proc2, limbo_thread2, kLimboException2, 2);
+  test_context->limbo_provider->AppendException(limbo_proc1, limbo_thread1, kLimboException1);
+  test_context->limbo_provider->AppendException(limbo_proc2, limbo_thread2, kLimboException2);
 
   reply = {};
   remote_api->OnStatus(request, &reply);
@@ -377,7 +398,7 @@ TEST(DebugAgent, OnAttachNotFound) {
   auto [proc_object, thread_object] =
       GetProcessThread(*test_context->object_provider, "job11-p1", "second-thread");
   test_context->limbo_provider->AppendException(proc_object, thread_object,
-                                                ExceptionType::FATAL_PAGE_FAULT, 1);
+                                                ExceptionType::FATAL_PAGE_FAULT);
 
   // Even with limbo it should fail.
   remote_api->OnAttach(transaction_id++, attach_request);
@@ -458,11 +479,10 @@ TEST(DebugAgent, AttachToLimbo) {
   debug_agent.Connect(&test_context->stream_backend.stream());
   RemoteAPI* remote_api = &debug_agent;
 
-  constexpr zx_koid_t kExceptionKoid = 0x1234;
   auto [proc_object, thread_object] =
       GetProcessThread(*test_context->object_provider, "job11-p1", "second-thread");
   test_context->limbo_provider->AppendException(proc_object, thread_object,
-                                                ExceptionType::FATAL_PAGE_FAULT, kExceptionKoid);
+                                                ExceptionType::FATAL_PAGE_FAULT);
 
   debug_ipc::AttachRequest attach_request = {};
   attach_request.type = debug_ipc::TaskType::kProcess;
@@ -501,7 +521,32 @@ TEST(DebugAgent, AttachToLimbo) {
 
     ASSERT_TRUE(exception_thread);
     ASSERT_TRUE(exception_thread->IsInException());
-    EXPECT_EQ(exception_thread->exception_handle().get(), kExceptionKoid);
+    EXPECT_EQ(exception_thread->exception_handle().get(), thread_object->koid);
+  }
+}
+
+TEST(DebugAgent, OnEnterLimbo) {
+  auto test_context = CreateTestContext();
+  DebugAgent debug_agent(nullptr, ToSystemProviders(*test_context));
+  debug_agent.Connect(&test_context->stream_backend.stream());
+
+  auto [proc_object, thread_object] =
+      GetProcessThread(*test_context->object_provider, "job11-p1", "second-thread");
+  test_context->limbo_provider->AppendException(proc_object, thread_object,
+                                                ExceptionType::FATAL_PAGE_FAULT);
+
+  // Call the limbo.
+  test_context->limbo_provider->CallOnEnterLimbo();
+
+  // Should've sent a notification.
+  {
+    ASSERT_EQ(test_context->stream_backend.process_starts().size(), 1u);
+
+    auto& process_start = test_context->stream_backend.process_starts()[0];
+    EXPECT_EQ(process_start.type, debug_ipc::NotifyProcessStarting::Type::kLimbo);
+    EXPECT_EQ(process_start.koid, proc_object->koid);
+    EXPECT_EQ(process_start.component_id, 0u);
+    EXPECT_EQ(process_start.name, proc_object->name);
   }
 }
 

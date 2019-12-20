@@ -605,6 +605,14 @@ bool ReadNotifyProcessStarting(MessageReader* reader, NotifyProcessStarting* pro
   MsgHeader header;
   if (!reader->ReadHeader(&header))
     return false;
+
+  uint32_t type = UINT32_MAX;
+  if (!reader->ReadUint32(&type) ||
+      type >= static_cast<uint32_t>(NotifyProcessStarting::Type::kLast)) {
+    return false;
+  }
+  process->type = static_cast<NotifyProcessStarting::Type>(type);
+
   if (!reader->ReadUint64(&process->koid))
     return false;
   if (!reader->ReadUint32(&process->component_id))

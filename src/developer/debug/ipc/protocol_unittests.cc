@@ -908,6 +908,7 @@ TEST(Protocol, NotifyModules) {
 
 TEST(Protocol, NotifyProcessStarting) {
   NotifyProcessStarting initial;
+  initial.type = NotifyProcessStarting::Type::kLimbo;
   initial.koid = 10;
   initial.component_id = 2;
   initial.name = "some_process";
@@ -916,6 +917,7 @@ TEST(Protocol, NotifyProcessStarting) {
   ASSERT_TRUE(SerializeDeserializeNotification(initial, &second, &WriteNotifyProcessStarting,
                                                &ReadNotifyProcessStarting));
 
+  EXPECT_EQ(second.type, initial.type);
   EXPECT_EQ(initial.koid, second.koid);
   EXPECT_EQ(initial.component_id, second.component_id);
   EXPECT_EQ(initial.name, second.name);

@@ -149,6 +149,12 @@ class DebugAgent : public RemoteAPI,
   void OnComponentTerminated(int64_t return_code, const ComponentDescription& description,
                              fuchsia::sys::TerminationReason reason);
 
+  // Process Limbo ---------------------------------------------------------------------------------
+
+  void OnProcessesEnteredLimbo(std::vector<fuchsia::exception::ProcessExceptionMetadata>);
+
+  // Members ---------------------------------------------------------------------------------------
+
   debug_ipc::StreamBuffer* stream_ = nullptr;
 
   std::shared_ptr<sys::ServiceDirectory> services_;

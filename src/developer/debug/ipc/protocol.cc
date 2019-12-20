@@ -159,4 +159,17 @@ const char* ResumeRequest::HowToString(How how) {
   return "<unknown>";
 }
 
+const char* NotifyProcessStarting::TypeToString(Type type) {
+  // clang-format off
+  switch (type) {
+    case Type::kNormal: return "Normal";
+    case Type::kLimbo: return "Limbo";
+    case Type::kLast: return "<last>";
+  }
+  // clang-format on
+
+  FXL_NOTREACHED();
+  return "<unknown>";
+}
+
 }  // namespace debug_ipc

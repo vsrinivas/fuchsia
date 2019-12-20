@@ -37,8 +37,8 @@ class LimboProvider {
   // issued, this provider is considered invalid and Init should be called again.
   virtual zx_status_t Init();
 
-  // Callback to be called whenever new processes enter the connected limbo. See |on_enter_limbo_|
-  // for more details.
+  // Callback to be called whenever new processes enter the connected limbo.
+  // See |on_enter_limbo_| for more details.
   void set_on_enter_limbo(OnEnterLimboCallback cb) { on_enter_limbo_ = std::move(cb); }
 
   // Limbo can fail to initialize (eg. failed to connect). There is no point querying an invalid
@@ -56,6 +56,12 @@ class LimboProvider {
 
   virtual zx_status_t ReleaseProcess(zx_koid_t process_koid);
 
+ protected:
+  // Callback to be triggered whenever a new process enters the the limbo. Provides the list of
+  // new processes that just entered the limbo on this event. |Limbo()| is up to date at the moment
+  // of this callback.
+  OnEnterLimboCallback on_enter_limbo_;
+
  private:
   void Reset();
 
@@ -68,11 +74,6 @@ class LimboProvider {
   // synchronous inteface, we need to keep track of the current state in order to be able to
   // return it immediatelly.
   std::map<zx_koid_t, fuchsia::exception::ProcessExceptionMetadata> limbo_;
-
-  // Callback to be triggered whenever a new process enters the the limbo. Provides the list of
-  // new processes that just entered the limbo on this event. |Limbo()| is up to date at the moment
-  // of this callback.
-  OnEnterLimboCallback on_enter_limbo_;
 
   bool is_limbo_active_ = false;
 
