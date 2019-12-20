@@ -175,10 +175,12 @@ mod tests {
         crate::capability::CapabilityProvider,
         crate::model::{
             binding::Binder,
-            testing::test_helpers::{default_component_decl, ActionsTest, ComponentInfo},
+            testing::test_helpers::{
+                component_decl_with_test_runner, ActionsTest, ComponentDeclBuilder, ComponentInfo,
+                TEST_RUNNER_NAME,
+            },
         },
         crate::system_controller::SystemControllerCapabilityProvider,
-        cm_rust::{ChildDecl, ComponentDecl},
         fidl::endpoints,
         fidl_fuchsia_sys2 as fsys,
     };
@@ -196,46 +198,28 @@ mod tests {
         let components = vec![
             (
                 "root",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "a".to_string(),
-                        url: "test:///a".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_lazy_child("a")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "a",
-                ComponentDecl {
-                    children: vec![ChildDecl {
-                        name: "b".to_string(),
-                        url: "test:///b".to_string(),
-                        startup: fsys::StartupMode::Eager,
-                    }],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_eager_child("b")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
             (
                 "b",
-                ComponentDecl {
-                    children: vec![
-                        ChildDecl {
-                            name: "c".to_string(),
-                            url: "test:///c".to_string(),
-                            startup: fsys::StartupMode::Eager,
-                        },
-                        ChildDecl {
-                            name: "d".to_string(),
-                            url: "test:///d".to_string(),
-                            startup: fsys::StartupMode::Eager,
-                        },
-                    ],
-                    ..default_component_decl()
-                },
+                ComponentDeclBuilder::new()
+                    .add_eager_child("c")
+                    .add_eager_child("d")
+                    .offer_runner_to_children(TEST_RUNNER_NAME)
+                    .build(),
             ),
-            ("c", ComponentDecl { ..default_component_decl() }),
-            ("d", ComponentDecl { ..default_component_decl() }),
+            ("c", component_decl_with_test_runner()),
+            ("d", component_decl_with_test_runner()),
         ];
         let test = ActionsTest::new("root", components, None).await;
         let realm_a = test.look_up(vec!["a:0"].into()).await;
