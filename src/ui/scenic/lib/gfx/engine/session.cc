@@ -22,7 +22,6 @@
 #include "src/ui/scenic/lib/gfx/engine/gfx_command_applier.h"
 #include "src/ui/scenic/lib/gfx/engine/session_handler.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"
-#include "src/ui/scenic/lib/gfx/resources/image_pipe.h"
 #include "src/ui/scenic/lib/gfx/swapchain/swapchain_factory.h"
 #include "src/ui/scenic/lib/gfx/util/time.h"
 #include "src/ui/scenic/lib/gfx/util/unwrap.h"
@@ -63,7 +62,6 @@ Session::Session(SessionId id, SessionContext session_context,
            session_context_.escher_resource_recycler, session_context_.escher_image_factory}),
       resources_(error_reporter_),
       view_tree_updater_(id),
-      image_pipe_updater_(std::make_shared<ImagePipeUpdater>(id, session_context_.frame_scheduler)),
       inspect_node_(std::move(inspect_node)),
       weak_factory_(this) {
   FXL_DCHECK(error_reporter_);
@@ -255,13 +253,6 @@ Session::ApplyUpdateResult Session::ApplyScheduledUpdates(CommandContext* comman
     inspect_resource_count_.Set(resource_count_);
   }
 
-  ImagePipeUpdater::ApplyScheduledUpdatesResult image_pipe_update_results =
-      image_pipe_updater_->ApplyScheduledUpdates(target_presentation_time,
-                                                 session_context_.release_fence_signaller);
-
-  update_results.needs_render =
-      update_results.needs_render || image_pipe_update_results.needs_render;
-  update_results.image_pipe_callbacks = std::move(image_pipe_update_results.callbacks);
   update_results.success = true;
   return update_results;
 }

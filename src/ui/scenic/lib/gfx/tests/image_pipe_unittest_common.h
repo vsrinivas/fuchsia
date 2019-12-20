@@ -41,6 +41,8 @@ fuchsia::images::ImageInfo CreateImageInfoForBgra8Image(size_t w, size_t h);
 
 fxl::RefPtr<fsl::SharedVmo> CreateVmoWithGradientPixels(size_t w, size_t h);
 
+std::unique_ptr<ImagePipeUpdater> CreateImagePipeUpdater(Session* session);
+
 }  // namespace test
 }  // namespace gfx
 }  // namespace scenic_impl

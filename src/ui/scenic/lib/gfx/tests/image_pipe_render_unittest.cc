@@ -44,8 +44,9 @@ class ImagePipeRenderTest : public VkSessionHandlerTest {
 // updated only after Visit().
 VK_TEST_F(ImagePipeRenderTest, ImageUpdatedOnlyAfterVisit) {
   ResourceId next_id = 1;
+  auto image_pipe_updater = CreateImagePipeUpdater(session());
   ImagePipePtr image_pipe = fxl::MakeRefCounted<ImagePipe>(
-      session(), next_id++, session()->image_pipe_updater(), shared_error_reporter());
+      session(), next_id++, std::move(image_pipe_updater), shared_error_reporter());
   MaterialPtr pipe_material = fxl::MakeRefCounted<Material>(session(), next_id++);
   pipe_material->SetTexture(image_pipe);
 
@@ -115,8 +116,9 @@ VK_TEST_F(ImagePipeRenderTest, ImageUpdatedOnlyAfterVisit) {
 // being listened to and release fences are signalled.
 VK_TEST_F(ImagePipeRenderTest, ImagePipePresentTwoFrames) {
   ResourceId next_id = 1;
+  auto image_pipe_updater = CreateImagePipeUpdater(session());
   ImagePipePtr image_pipe = fxl::MakeRefCounted<ImagePipe>(
-      session(), next_id++, session()->image_pipe_updater(), shared_error_reporter());
+      session(), next_id++, std::move(image_pipe_updater), shared_error_reporter());
   MaterialPtr pipe_material = fxl::MakeRefCounted<Material>(session(), next_id++);
   pipe_material->SetTexture(image_pipe);
 

@@ -27,7 +27,7 @@ class ImagePipeTest : public SessionHandlerTest, public escher::ResourceManager 
 class ImagePipeThatCreatesFakeImages : public ImagePipe {
  public:
   ImagePipeThatCreatesFakeImages(Session* session, escher::ResourceManager* fake_resource_manager)
-      : ImagePipe(session, 0u, session->image_pipe_updater(), session->shared_error_reporter()),
+      : ImagePipe(session, 0u, CreateImagePipeUpdater(session), session->shared_error_reporter()),
         fake_resource_manager_(fake_resource_manager) {
     FXL_CHECK(session->session_context().frame_scheduler);
   }

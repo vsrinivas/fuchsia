@@ -287,7 +287,7 @@ void ImagePipe2::RemoveImage(uint32_t image_id) {
 void ImagePipe2::PresentImage(uint32_t image_id, zx::time presentation_time,
                               std::vector<::zx::event> acquire_fences,
                               std::vector<::zx::event> release_fences,
-                              PresentImageCallback callback) {
+                              PresentCallback callback) {
   // NOTE: This name is important for benchmarking.  Do not remove or modify it
   // without also updating the script.
   TRACE_DURATION("gfx", "ImagePipe2::PresentImage", "image_id", image_id, "use_protected_memory",

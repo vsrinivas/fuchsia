@@ -45,6 +45,11 @@ fxl::RefPtr<fsl::SharedVmo> CreateVmoWithGradientPixels(size_t w, size_t h) {
   return CreateVmoWithBuffer(pixels_size, std::move(pixels));
 }
 
+std::unique_ptr<ImagePipeUpdater> CreateImagePipeUpdater(Session* session) {
+  return std::make_unique<ImagePipeUpdater>(session->session_context().frame_scheduler,
+                                            session->session_context().release_fence_signaller);
+}
+
 }  // namespace test
 }  // namespace gfx
 }  // namespace scenic_impl

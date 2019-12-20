@@ -16,6 +16,9 @@ using SessionId = uint64_t;
 // Value 0 reserved as invalid.
 constexpr scheduling::SessionId INVALID_SESSION_ID = 0u;
 
+// Generates a new global id. Thread-safe.
+SessionId GetNextSessionId();
+
 }  // namespace scheduling
 
 #endif  // SRC_UI_SCENIC_LIB_SCHEDULING_ID_H_

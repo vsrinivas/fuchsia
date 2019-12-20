@@ -7,6 +7,8 @@
 
 #include <memory>
 
+#include <trace/event.h>
+
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/scenic/lib/gfx/engine/engine.h"
 #include "src/ui/scenic/lib/gfx/engine/gfx_command_applier.h"

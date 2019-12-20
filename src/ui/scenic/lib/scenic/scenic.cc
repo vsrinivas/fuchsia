@@ -86,7 +86,7 @@ void Scenic::CreateSessionImmediately(
     fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
     fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener,
     fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser) {
-  const SessionId session_id = next_session_id_++;
+  const SessionId session_id = scheduling::GetNextSessionId();
   auto destroy_session_function = [this, session_id](auto ...) { CloseSession(session_id); };
 
   auto session = std::make_unique<scenic_impl::Session>(

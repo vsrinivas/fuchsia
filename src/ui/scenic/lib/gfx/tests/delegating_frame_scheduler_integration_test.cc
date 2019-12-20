@@ -145,13 +145,13 @@ TEST_F(DelegatingFrameSchedulerIntegrationTest, GfxCommandApplierIntegration) {
 TEST_F(DelegatingFrameSchedulerIntegrationTest, ImagePipeUpdaterIntegration) {
   TestGfxSession gfx_session =
       CreateTestGfxSession(shared_event_reporter(), shared_error_reporter());
-  auto image_pipe = fxl::MakeRefCounted<ImagePipe>(gfx_session.session.get(), /*id=*/1,
-                                                   gfx_session.session->image_pipe_updater(),
-                                                   shared_error_reporter());
+  // This ImagePipeUpdater is using the delegating frame scheduler in the session context.
+  auto image_pipe_updater =
+      std::make_unique<ImagePipeUpdater>(gfx_session.session_context.frame_scheduler,
+                                         gfx_session.session_context.release_fence_signaller);
 
   constexpr zx::time kPresentationTime = zx::time(5);
-  gfx_session.session->image_pipe_updater()->ScheduleImagePipeUpdate(kPresentationTime,
-                                                                     image_pipe->GetWeakPtr());
+  image_pipe_updater->ScheduleImagePipeUpdate(kPresentationTime, /*image_pipe=*/nullptr);
 
   auto frame_scheduler = std::make_shared<scheduling::test::MockFrameScheduler>();
 
@@ -161,7 +161,7 @@ TEST_F(DelegatingFrameSchedulerIntegrationTest, ImagePipeUpdaterIntegration) {
       [&](zx::time presentation_time, scenic_impl::SessionId session_id) {
         scheduled_update = true;
         EXPECT_EQ(kPresentationTime, presentation_time);
-        EXPECT_EQ(kSessionId, session_id);
+        EXPECT_EQ(image_pipe_updater->GetSchedulingId(), session_id);
       });
 
   // Once |frame_scheduler| is set, expect it to get a call to ScheduleUpdateForSession.

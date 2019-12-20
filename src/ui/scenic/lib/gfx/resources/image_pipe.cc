@@ -19,26 +19,24 @@ const ResourceTypeInfo ImagePipe::kTypeInfo = {ResourceType::kImagePipe | Resour
                                                "ImagePipe"};
 
 ImagePipe::ImagePipe(Session* session, ResourceId id,
-                     std::shared_ptr<ImagePipeUpdater> image_pipe_updater,
+                     std::unique_ptr<ImagePipeUpdater> image_pipe_updater,
                      std::shared_ptr<ErrorReporter> error_reporter)
     : ImagePipeBase(session, id, ImagePipe::kTypeInfo),
       image_pipe_updater_(std::move(image_pipe_updater)),
       error_reporter_(std::move(error_reporter)),
       weak_ptr_factory_(this) {
-  FXL_CHECK(image_pipe_updater_);
   FXL_CHECK(error_reporter_);
 }
 
 ImagePipe::ImagePipe(Session* session, ResourceId id,
                      fidl::InterfaceRequest<fuchsia::images::ImagePipe> request,
-                     std::shared_ptr<ImagePipeUpdater> image_pipe_updater,
+                     std::unique_ptr<ImagePipeUpdater> image_pipe_updater,
                      std::shared_ptr<ErrorReporter> error_reporter)
     : ImagePipeBase(session, id, ImagePipe::kTypeInfo),
       handler_(std::make_unique<ImagePipeHandler>(std::move(request), this)),
       image_pipe_updater_(std::move(image_pipe_updater)),
       error_reporter_(std::move(error_reporter)),
       weak_ptr_factory_(this) {
-  FXL_CHECK(image_pipe_updater_);
   FXL_CHECK(error_reporter_);
 }
 
@@ -87,6 +85,7 @@ void ImagePipe::CloseConnectionAndCleanUp() {
   images_.clear();
 
   // Schedule a new frame.
+  FXL_DCHECK(image_pipe_updater_);
   image_pipe_updater_->ScheduleImagePipeUpdate(zx::time(0), fxl::WeakPtr<ImagePipeBase>());
 }
 
@@ -138,6 +137,7 @@ void ImagePipe::PresentImage(uint32_t image_id, zx::time presentation_time,
   acquire_fences_listener->WaitReadyAsync(
       [weak = weak_ptr_factory_.GetWeakPtr(), presentation_time] {
         if (weak) {
+          FXL_DCHECK(weak->image_pipe_updater_);
           weak->image_pipe_updater_->ScheduleImagePipeUpdate(presentation_time, weak);
         }
       });

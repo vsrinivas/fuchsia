@@ -9,8 +9,8 @@
 
 #include <queue>
 
-#include "src/ui/scenic/lib/gfx/engine/gfx_command_applier.h"  // for CommandContext
-#include "src/ui/scenic/lib/gfx/engine/session_context.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/ui/lib/escher/flib/release_fence_signaller.h"
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 
 namespace scenic_impl {
@@ -30,29 +30,28 @@ using PresentImageCallback = fuchsia::images::ImagePipe::PresentImageCallback;
 //   - Session calls ApplyScheduledUpdates() when a frame is to be rendered.  At this time, all
 //     updates (from all ImagePipes in the Session) are applied, by calling ImagePipe::Update() on
 //     the corresponding ImagePipe.
-class ImagePipeUpdater {
+class ImagePipeUpdater : public scheduling::SessionUpdater {
  public:
-  // Return type for ApplyScheduledUpdates.
-  struct ApplyScheduledUpdatesResult {
-    bool needs_render;
-    std::deque<PresentImageCallback> callbacks;
-  };
-
-  ImagePipeUpdater(SessionId id, std::shared_ptr<scheduling::FrameScheduler> frame_scheduler);
-  ~ImagePipeUpdater();
+  ImagePipeUpdater(const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler,
+                   escher::ReleaseFenceSignaller* release_fence_signaller);
 
   // Called by ImagePipe::PresentImage(). Stashes the arguments without applying them; they will
   // later be applied by ApplyScheduledUpdates(). This method can also be used to clean up after an
   // ImagePipe when it is being closed/cleaned-up; in this case, pass in a null ImagePipe.
   void ScheduleImagePipeUpdate(zx::time presentation_time, fxl::WeakPtr<ImagePipeBase> image_pipe);
 
- private:
-  // Make it clear that ImagePipe should only call ScheduleImagePipeUpdate(); the session is
-  // responsible for deciding when to apply the updates.
-  friend class Session;
-  ApplyScheduledUpdatesResult ApplyScheduledUpdates(
-      zx::time target_presentation_time, escher::ReleaseFenceSignaller* release_fence_signaller);
+  // |scheduling::SessionUpdater|
+  UpdateResults UpdateSessions(std::unordered_set<scheduling::SessionId> sessions_to_update,
+                               zx::time presentation_time, zx::time latched_time,
+                               uint64_t trace_id) override;
 
+  // |scheduling::SessionUpdater|
+  void PrepareFrame(zx::time presentation_time, uint64_t trace_id) override;
+
+  // For tests.
+  scheduling::SessionId GetSchedulingId() { return scheduling_id_; }
+
+ private:
   struct ImagePipeUpdate {
     zx::time presentation_time;
     fxl::WeakPtr<ImagePipeBase> image_pipe;
@@ -65,8 +64,21 @@ class ImagePipeUpdater {
   std::priority_queue<ImagePipeUpdate, std::vector<ImagePipeUpdate>, std::greater<ImagePipeUpdate>>
       scheduled_image_pipe_updates_;
 
-  SessionId session_id_;
-  std::shared_ptr<scheduling::FrameScheduler> frame_scheduler_;
+  const scheduling::SessionId scheduling_id_;
+  std::weak_ptr<scheduling::FrameScheduler> frame_scheduler_;
+
+  // TODO(43165): Remove this pointer once the release fences are handled by FrameScheduler. This
+  // code is only safe now because we guarantee that the ReleaseFenceSignaller outlives the
+  // ImagePipeUpdater (ReleaseFenceSignaller lives in Engine). Do not add any additional
+  // dependencies on this pointer, as this will change in the future.
+  escher::ReleaseFenceSignaller* release_fence_signaller_;
+
+  // Tracks the number of sessions returning ApplyUpdateResult::needs_render
+  // and uses it for tracing.
+  uint64_t needs_render_count_ = 0;
+  uint64_t processed_needs_render_count_ = 0;
+
+  fxl::WeakPtrFactory<ImagePipeUpdater> weak_factory_;
 };
 
 }  // namespace gfx

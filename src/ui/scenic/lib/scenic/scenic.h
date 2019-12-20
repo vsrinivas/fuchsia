@@ -18,10 +18,10 @@
 
 #include "src/lib/fxl/macros.h"
 #include "src/lib/inspect_deprecated/inspect.h"
+#include "src/ui/scenic/lib/gfx/engine/view_focuser_registry.h"
 #include "src/ui/scenic/lib/scenic/session.h"
 #include "src/ui/scenic/lib/scenic/system.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
-#include "src/ui/scenic/lib/gfx/engine/view_focuser_registry.h"
 
 namespace scenic_impl {
 
@@ -130,9 +130,6 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
   std::unordered_map<scheduling::SessionId, std::unique_ptr<scenic_impl::Session>> sessions_;
   fidl::BindingSet<fuchsia::ui::scenic::Scenic> scenic_bindings_;
   fidl::BindingSet<fuchsia::ui::scenic::internal::Snapshot> snapshot_bindings_;
-
-  // See lib/scheduling/id.h for SessionId properties.
-  scheduling::SessionId next_session_id_ = 1;
 
   GetDisplayInfoDelegateDeprecated* display_delegate_ = nullptr;
   TakeScreenshotDelegateDeprecated* screenshot_delegate_ = nullptr;

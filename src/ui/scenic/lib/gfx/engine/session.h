@@ -17,7 +17,6 @@
 #include "src/lib/inspect_deprecated/inspect.h"
 #include "src/ui/lib/escher/flib/fence_set_listener.h"
 #include "src/ui/scenic/lib/gfx/engine/gfx_command_applier.h"
-#include "src/ui/scenic/lib/gfx/engine/image_pipe_updater.h"
 #include "src/ui/scenic/lib/gfx/engine/resource_map.h"
 #include "src/ui/scenic/lib/gfx/engine/session_context.h"
 #include "src/ui/scenic/lib/gfx/engine/session_manager.h"
@@ -54,7 +53,6 @@ class Session {
 
     std::deque<PresentCallback> present1_callbacks;
     std::deque<scheduling::Present2Info> present2_infos;
-    std::deque<PresentImageCallback> image_pipe_callbacks;
   };
 
   Session(SessionId id, SessionContext context,
@@ -75,10 +73,6 @@ class Session {
   const fxl::WeakPtr<Session> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
   const SessionContext& session_context() const { return session_context_; }
   const ResourceContext& resource_context() const { return resource_context_; }
-
-  const std::shared_ptr<ImagePipeUpdater>& image_pipe_updater() const {
-    return image_pipe_updater_;
-  }
 
   // Return the total number of existing resources associated with this Session.
   size_t GetTotalResourceCount() const { return resource_count_; }
@@ -206,8 +200,6 @@ class Session {
   // Tracks the number of method calls for tracing.
   uint64_t scheduled_update_count_ = 0;
   uint64_t applied_update_count_ = 0;
-
-  std::shared_ptr<ImagePipeUpdater> image_pipe_updater_;
 
   // Combined with |kMaxFramesInFlight|, track how many Present()s the client can still call. We
   // use this for throttling clients.

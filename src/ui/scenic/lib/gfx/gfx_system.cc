@@ -12,8 +12,6 @@
 
 #include <set>
 
-#include <trace/event.h>
-
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/ui/lib/escher/escher_process_init.h"
 #include "src/ui/lib/escher/fs/hack_filesystem.h"
@@ -271,15 +269,6 @@ scheduling::SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
           ++itr;
         }
         apply_results.present1_callbacks.clear();
-      }
-      {
-        // ImagePipe Present callbacks.
-        auto itr = apply_results.image_pipe_callbacks.begin();
-        while (itr != apply_results.image_pipe_callbacks.end()) {
-          update_results.present1_callbacks.push_back({session_id, std::move(*itr)});
-          ++itr;
-        }
-        apply_results.image_pipe_callbacks.clear();
       }
       {
         // Present2 callbacks.

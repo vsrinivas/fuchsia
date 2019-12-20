@@ -24,6 +24,7 @@ struct SysmemTokens {
   fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
   fuchsia::sysmem::BufferCollectionTokenSyncPtr dup_token;
 };
+
 SysmemTokens CreateSysmemTokens(fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
                                 bool duplicate_token) {
   fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
@@ -122,7 +123,7 @@ class ImagePipe2ThatCreatesFakeImages : public ImagePipe2 {
   ImagePipe2ThatCreatesFakeImages(Session* session,
                                   fidl::InterfaceRequest<fuchsia::images::ImagePipe2> request,
                                   escher::ResourceManager* fake_resource_manager)
-      : ImagePipe2(session, 0u, std::move(request), session->image_pipe_updater(),
+      : ImagePipe2(session, 0u, std::move(request), CreateImagePipeUpdater(session),
                    session->shared_error_reporter()),
         fake_resource_manager_(fake_resource_manager) {
     FXL_CHECK(session->session_context().frame_scheduler);

@@ -13,6 +13,7 @@
 
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/lib/escher/flib/fence_set_listener.h"
+#include "src/ui/scenic/lib/gfx/engine/image_pipe_updater.h"
 #include "src/ui/scenic/lib/gfx/resources/image.h"
 #include "src/ui/scenic/lib/gfx/resources/image_pipe_base.h"
 #include "src/ui/scenic/lib/gfx/resources/image_pipe_handler.h"
@@ -28,17 +29,16 @@ namespace gfx {
 
 class ImagePipe;
 using ImagePipePtr = fxl::RefPtr<ImagePipe>;
-using PresentImageCallback = fuchsia::images::ImagePipe::PresentImageCallback;
 
 class ImagePipe : public ImagePipeBase {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  ImagePipe(Session* session, ResourceId id, std::shared_ptr<ImagePipeUpdater> image_pipe_updater,
+  ImagePipe(Session* session, ResourceId id, std::unique_ptr<ImagePipeUpdater> image_pipe_updater,
             std::shared_ptr<ErrorReporter> error_reporter);
   ImagePipe(Session* session, ResourceId id,
             fidl::InterfaceRequest<fuchsia::images::ImagePipe> request,
-            std::shared_ptr<ImagePipeUpdater> image_pipe_updater,
+            std::unique_ptr<ImagePipeUpdater> image_pipe_updater,
             std::shared_ptr<ErrorReporter> error_reporter);
 
   // Called by |ImagePipeHandler|, part of |ImagePipe| interface.
@@ -49,7 +49,7 @@ class ImagePipe : public ImagePipeBase {
 
   void PresentImage(uint32_t image_id, zx::time presentation_time,
                     std::vector<zx::event> acquire_fences, std::vector<zx::event> release_fences,
-                    fuchsia::images::ImagePipe::PresentImageCallback callback);
+                    PresentCallback callback);
 
   // ImagePipeBase implementation
   ImagePipeUpdateResults Update(escher::ReleaseFenceSignaller* release_fence_signaller,
@@ -99,7 +99,7 @@ class ImagePipe : public ImagePipeBase {
 
     // Callback to report when the update has been applied in response to
     // an invocation of |ImagePipe.PresentImage()|.
-    PresentImageCallback present_image_callback;
+    PresentCallback present_image_callback;
   };
   std::queue<Frame> frames_;
   std::unique_ptr<ImagePipeHandler> handler_;
@@ -111,7 +111,7 @@ class ImagePipe : public ImagePipeBase {
   std::unordered_map<ResourceId, ImagePtr> images_;
   bool is_valid_ = true;
 
-  const std::shared_ptr<ImagePipeUpdater> image_pipe_updater_;
+  const std::unique_ptr<ImagePipeUpdater> image_pipe_updater_;
   const std::shared_ptr<ErrorReporter> error_reporter_;
 
   fxl::WeakPtrFactory<ImagePipe> weak_ptr_factory_;  // must be last

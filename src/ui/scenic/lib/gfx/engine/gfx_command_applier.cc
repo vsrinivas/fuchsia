@@ -1006,16 +1006,22 @@ bool GfxCommandApplier::ApplyCreateImage(Session* session, ResourceId id,
 
 bool GfxCommandApplier::ApplyCreateImagePipe(Session* session, ResourceId id,
                                              fuchsia::ui::gfx::ImagePipeArgs args) {
+  auto image_pipe_updater =
+      std::make_unique<ImagePipeUpdater>(session->session_context().frame_scheduler,
+                                         session->session_context().release_fence_signaller);
   auto image_pipe = fxl::MakeRefCounted<ImagePipe>(session, id, std::move(args.image_pipe_request),
-                                                   session->image_pipe_updater(),
+                                                   std::move(image_pipe_updater),
                                                    session->shared_error_reporter());
   return session->resources()->AddResource(id, image_pipe);
 }
 
 bool GfxCommandApplier::ApplyCreateImagePipe2(Session* session, ResourceId id,
                                               fuchsia::ui::gfx::ImagePipe2Args args) {
+  auto image_pipe_updater =
+      std::make_unique<ImagePipeUpdater>(session->session_context().frame_scheduler,
+                                         session->session_context().release_fence_signaller);
   auto image_pipe = fxl::MakeRefCounted<ImagePipe2>(session, id, std::move(args.image_pipe_request),
-                                                    session->image_pipe_updater(),
+                                                    std::move(image_pipe_updater),
                                                     session->shared_error_reporter());
   return session->resources()->AddResource(id, image_pipe);
 }

@@ -55,7 +55,7 @@ TEST_F(DumpVisitorTest, DynamicVisitOfBaseImageTypes) {
   MaterialPtr pipe_material = fxl::MakeRefCounted<Material>(session(), next_id++);
   ImagePtr image = CreateImage(next_id++);
   ImagePipePtr pipe = fxl::MakeRefCounted<ImagePipe>(
-      session(), next_id++, session()->image_pipe_updater(), session()->shared_error_reporter());
+      session(), next_id++, nullptr, session()->shared_error_reporter());
 
   image_material->SetTexture(image);
   pipe_material->SetTexture(pipe);

@@ -13,6 +13,7 @@
 
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/ui/scenic/lib/gfx/engine/image_pipe_updater.h"
 #include "src/ui/scenic/lib/gfx/resources/image.h"
 #include "src/ui/scenic/lib/gfx/resources/image_pipe2_handler.h"
 #include "src/ui/scenic/lib/gfx/resources/image_pipe_base.h"
@@ -52,7 +53,7 @@ class ImagePipe2 : public ImagePipeBase {
   // fuchsia::images::ImagePipe2 implementation
   void PresentImage(uint32_t image_id, zx::time presentation_time,
                     std::vector<::zx::event> acquire_fences,
-                    std::vector<::zx::event> release_fences, PresentImageCallback callback);
+                    std::vector<::zx::event> release_fences, PresentCallback callback);
 
   // ImagePipeBase implementation
   ImagePipeUpdateResults Update(escher::ReleaseFenceSignaller* release_fence_signaller,
@@ -119,7 +120,7 @@ class ImagePipe2 : public ImagePipeBase {
 
     // Callback to report when the update has been applied in response to an invocation of
     // |ImagePipe.PresentImage()|.
-    PresentImageCallback present_image_callback;
+    PresentCallback present_image_callback;
   };
   std::queue<Frame> frames_;
   std::unique_ptr<ImagePipe2Handler> handler_;
