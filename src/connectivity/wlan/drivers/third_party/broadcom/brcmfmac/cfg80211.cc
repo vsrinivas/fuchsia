@@ -3682,6 +3682,10 @@ static bool brcmf_is_linkdown(const struct brcmf_event_msg* e) {
       (event == BRCMF_E_DISASSOC_IND) ||
       ((event == BRCMF_E_LINK) && (!(flags & BRCMF_EVENT_MSG_LINK)))) {
     BRCMF_DBG(CONN, "Processing link down\n");
+    // Adding this log for debugging disconnect issues.
+    // TODO(karthikrish) : Move this to CONN level for production code
+    BRCMF_INFO("Link Down Event: event: %d flags: 0x%x reason: %d status: %d\n",
+              event, flags, e->reason, e->status);
     return true;
   }
   return false;
