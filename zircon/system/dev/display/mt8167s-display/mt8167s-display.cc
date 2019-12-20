@@ -763,7 +763,7 @@ zx_status_t Mt8167sDisplay::Bind() {
 
   status = DdkAdd("mt8167s-display");
   if (status != ZX_OK) {
-    DISP_ERROR("coud not add device\n");
+    DISP_ERROR("Could not add device\n");
     Shutdown();
     return status;
   }
