@@ -18,6 +18,7 @@
 #include <arch/ops.h>
 #include <dev/interrupt.h>
 #include <dev/timer/arm_generic.h>
+#include <ktl/atomic.h>
 #include <ktl/limits.h>
 #include <lk/init.h>
 #include <pdev/driver.h>
@@ -46,6 +47,18 @@
 #define TIMER_REG_CNTVCT "cntvct_el0"
 
 static int timer_irq;
+
+namespace {
+
+enum timer_irq_assignment {
+  IRQ_PHYS,
+  IRQ_VIRT,
+  IRQ_SPHYS,
+};
+
+timer_irq_assignment timer_assignment;
+
+}  // anonymous namespace
 
 zx_time_t cntpct_to_zx_time(uint64_t cntpct) {
   DEBUG_ASSERT(cntpct < static_cast<uint64_t>(ktl::numeric_limits<int64_t>::max()));
@@ -120,6 +133,26 @@ static void write_cntps_tval(int32_t val) {
   __isb(ARM_MB_SY);
 }
 
+static uint64_t read_cntpct_a73(void) {
+  // Workaround for Cortex-A73 erratum 858921.
+  // Fix will be applied to all cores, as two consecutive reads should be
+  // faster than checking if core is A73 and branching before every read.
+  const uint64_t old_read = __arm_rsr64(TIMER_REG_CNTPCT);
+  const uint64_t new_read = __arm_rsr64(TIMER_REG_CNTPCT);
+
+  return (((old_read ^ new_read) >> 32) & 1) ? old_read : new_read;
+}
+
+static uint64_t read_cntvct_a73(void) {
+  // Workaround for Cortex-A73 erratum 858921.
+  // Fix will be applied to all cores, as two consecutive reads should be
+  // faster than checking if core is A73 and branching before every read.
+  const uint64_t old_read = __arm_rsr64(TIMER_REG_CNTVCT);
+  const uint64_t new_read = __arm_rsr64(TIMER_REG_CNTVCT);
+
+  return (((old_read ^ new_read) >> 32) & 1) ? old_read : new_read;
+}
+
 static uint64_t read_cntpct(void) { return __arm_rsr64(TIMER_REG_CNTPCT); }
 
 static uint64_t read_cntvct(void) { return __arm_rsr64(TIMER_REG_CNTVCT); }
@@ -138,6 +171,13 @@ __UNUSED static const struct timer_reg_procs cntp_procs = {
     .read_ct = read_cntpct,
 };
 
+__UNUSED static const struct timer_reg_procs cntp_procs_a73 = {
+    .write_ctl = write_cntp_ctl,
+    .write_cval = write_cntp_cval,
+    .write_tval = write_cntp_tval,
+    .read_ct = read_cntpct_a73,
+};
+
 __UNUSED static const struct timer_reg_procs cntv_procs = {
     .write_ctl = write_cntv_ctl,
     .write_cval = write_cntv_cval,
@@ -145,11 +185,25 @@ __UNUSED static const struct timer_reg_procs cntv_procs = {
     .read_ct = read_cntvct,
 };
 
+__UNUSED static const struct timer_reg_procs cntv_procs_a73 = {
+    .write_ctl = write_cntv_ctl,
+    .write_cval = write_cntv_cval,
+    .write_tval = write_cntv_tval,
+    .read_ct = read_cntvct_a73,
+};
+
 __UNUSED static const struct timer_reg_procs cntps_procs = {
     .write_ctl = write_cntps_ctl,
     .write_cval = write_cntps_cval,
     .write_tval = write_cntps_tval,
     .read_ct = read_cntpct,
+};
+
+__UNUSED static const struct timer_reg_procs cntps_procs_a73 = {
+    .write_ctl = write_cntps_ctl,
+    .write_cval = write_cntps_cval,
+    .write_tval = write_cntps_tval,
+    .read_ct = read_cntpct_a73,
 };
 
 #if (TIMER_ARM_GENERIC_SELECTED_CNTV)
@@ -276,12 +330,15 @@ static void arm_generic_timer_pdev_init(const void* driver_data, uint32_t length
   }
   if (irq_phys) {
     timer_irq = irq_phys;
+    timer_assignment = IRQ_PHYS;
     reg_procs = &cntp_procs;
   } else if (irq_virt) {
     timer_irq = irq_virt;
+    timer_assignment = IRQ_VIRT;
     reg_procs = &cntv_procs;
   } else if (irq_sphys) {
     timer_irq = irq_sphys;
+    timer_assignment = IRQ_SPHYS;
     reg_procs = &cntps_procs;
   } else {
     panic("no irqs set in arm_generic_timer_pdev_init\n");
@@ -291,8 +348,31 @@ static void arm_generic_timer_pdev_init(const void* driver_data, uint32_t length
   arm_generic_timer_init(driver->freq_override);
 }
 
+// This only gets called if ARM Cortex-A73 cores are detected in device.
+void late_update_reg_procs(uint) {
+  ASSERT(timer_assignment == IRQ_PHYS || timer_assignment == IRQ_VIRT ||
+         timer_assignment == IRQ_SPHYS);
+
+  if (arm64_read_percpu_ptr()->microarch == ARM_CORTEX_A73) {
+    if (timer_assignment == IRQ_PHYS) {
+      reg_procs = &cntp_procs_a73;
+    } else if (timer_assignment == IRQ_VIRT) {
+      reg_procs = &cntv_procs_a73;
+    } else if (timer_assignment == IRQ_SPHYS) {
+      reg_procs = &cntps_procs_a73;
+    } else {
+      panic("no irqs set in late_update_reg_procs\n");
+    }
+
+    ktl::atomic_thread_fence(ktl::memory_order_seq_cst);
+  }
+}
+
 LK_PDEV_INIT(arm_generic_timer_pdev_init, KDRV_ARM_GENERIC_TIMER, arm_generic_timer_pdev_init,
              LK_INIT_LEVEL_PLATFORM_EARLY)
+
+LK_INIT_HOOK_FLAGS(late_update_reg_procs, &late_update_reg_procs, LK_INIT_LEVEL_PLATFORM_EARLY + 1,
+                   LK_INIT_FLAG_ALL_CPUS)
 
 /********************************************************************************
  *
