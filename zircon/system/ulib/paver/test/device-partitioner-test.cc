@@ -444,6 +444,8 @@ class SherlockPartitionerTests : public zxtest::Test {
 
     fbl::unique_fd fd;
     ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "misc/ramctl", &fd));
+    ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "misc/sysinfo", &fd));
+    ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "sys/platform", &fd));
   }
 
   IsolatedDevmgr devmgr_;
