@@ -108,6 +108,8 @@ PaperDemoScene1::~PaperDemoScene1() {}
 
 void PaperDemoScene1::Update(const escher::Stopwatch& stopwatch, escher::PaperScene* scene,
                              escher::PaperRenderer* renderer) {
+  UpdateGraphWithExampleData(scene, renderer);
+
   const float current_time_sec = stopwatch.GetElapsedSeconds();
   const float screen_width = scene->bounding_box.width();
   const float screen_height = scene->bounding_box.height();

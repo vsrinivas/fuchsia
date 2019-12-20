@@ -166,14 +166,8 @@ class PaperRenderer final : public Renderer {
   void DrawHLine(DebugRects::Color kColor, int32_t y_coord, int32_t x_start, uint32_t x_end,
                  int32_t thickness);
 
-  // Draws a graph onto the screen using DrawDebugText and Draw Line calls. The graph corners are:
-  // (150, 100)                                          (width - 150, 100)
-  //
-  // (150, height - 100)                        (width - 150, height - 100)
-  void DrawDebugGraph(std::string x_label, std::string y_label, DebugRects::Color lineColor);
-
   // Corresponds to FrameTimings::Timestamps and will be used to calculate values to graph.
-  struct TimeStamp {
+  struct Timestamp {
     int16_t latch_point;
     int16_t update_done;
     int16_t render_start;
@@ -181,12 +175,6 @@ class PaperRenderer final : public Renderer {
     int16_t target_present;
     int16_t actual_present;
   };
-
-  // Used to calculate the area of the debug graph that bars will be drawn in.
-  const static int32_t kHeightPadding = 100;
-
-  // Add TimeStamp to be graphed.
-  void AddDebugTimeStamp(TimeStamp ts);
 
  private:
   explicit PaperRenderer(EscherWeakPtr escher, const PaperRendererConfig& config);
@@ -245,12 +233,6 @@ class PaperRenderer final : public Renderer {
   // Called to write text onto screen
   void GenerateDebugCommands(CommandBuffer* cmd_buf);
 
-  // Loops through debug_times_ array to draw data to the graph.
-
-  // Red      render_time         Blue     random_value
-  // Yellow   random_value        Purple   presentation_time
-  void GraphDebugData();
-
   // Called when |config_.debug_frame_number| is true.  Uses |debug_font_| to
   // blit the current frame number to the output image.
   void RenderFrameCounter();
@@ -274,10 +256,6 @@ class PaperRenderer final : public Renderer {
 
   std::unique_ptr<DebugFont> debug_font_;
   std::unique_ptr<DebugRects> debug_lines_;
-
-  // A list of TimeStamps where each cell represents the data we want to
-  // display on the graph for each frame.
-  std::vector<TimeStamp> debug_times_;
 };
 
 }  // namespace escher

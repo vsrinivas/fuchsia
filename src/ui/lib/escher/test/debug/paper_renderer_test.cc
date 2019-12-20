@@ -10,6 +10,7 @@
 #include "src/ui/lib/escher/geometry/bounding_box.h"
 #include "src/ui/lib/escher/paper/paper_renderer_static_config.h"
 #include "src/ui/lib/escher/paper/paper_scene.h"
+#include "src/ui/lib/escher/paper/paper_timestamp_graph.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/scene/viewing_volume.h"
 #include "src/ui/lib/escher/test/fixtures/readback_test.h"
@@ -207,12 +208,15 @@ VK_TEST_F(PaperRendererTest, Lines) {
 }
 
 // Tests drawing fake data used by the Debug Graph.
-VK_TEST_F(PaperRendererTest, Data) {
+VK_TEST_F(PaperRendererTest, PaperTimestampGraph) {
   int16_t expected_colored = 0;
+
+  PaperTimestampGraph graph;
+
   for (int32_t i = 1; i <= 10; ++i) {
     frame_setup();
 
-    // Creates an escher TimeStamp where |done_time| > |start_time| so that the values are
+    // Creates an escher Timestamp where |done_time| > |start_time| so that the values are
     // not negative. All other values are 0 to simplify the test.
     std::function<void(int8_t, int8_t)> draw_and_check_histogram = [&](uint8_t start_time,
                                                                        uint8_t done_time) {
@@ -221,7 +225,7 @@ VK_TEST_F(PaperRendererTest, Data) {
 
       ren->BeginFrame(fd.frame, gpu_uploader, scene, cameras, fd.color_attachment);
 
-      escher::PaperRenderer::TimeStamp ts;
+      PaperRenderer::Timestamp ts;
       ts.latch_point = 0;
       ts.update_done = 0;
       ts.render_start = start_time;
@@ -229,7 +233,11 @@ VK_TEST_F(PaperRendererTest, Data) {
       ts.target_present = 0;
       ts.actual_present = 0;
 
-      ren->AddDebugTimeStamp(ts);
+      graph.AddTimestamp(ts);
+      constexpr uint32_t kGraphHeight = 500;
+      constexpr uint32_t kGraphWidth = 500;
+      graph.DrawGraphContentOn(ren.get(), {{0, 0}, {kGraphWidth, kGraphHeight}});
+
       ren->FinalizeFrame();
       auto upload_semaphore = escher::Semaphore::New(escher()->vk_device());
       gpu_uploader->AddSignalSemaphore(upload_semaphore);
@@ -238,8 +246,8 @@ VK_TEST_F(PaperRendererTest, Data) {
 
       int16_t render_time = done_time - start_time;
 
-      const int16_t h_interval = (kFramebufferHeight - (PaperRenderer::kHeightPadding * 2)) / 35;
-      const int16_t w_interval = kFramebufferWidth / 100;
+      const int16_t h_interval = kGraphHeight / 35;
+      const int16_t w_interval = PaperTimestampGraph::kSampleLineThickness;
 
       expected_colored += (render_time * h_interval) * w_interval;
       auto returned_colored = get_colored_data(escher::DebugRects::kRed);

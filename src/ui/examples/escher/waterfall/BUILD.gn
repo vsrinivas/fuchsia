@@ -41,8 +41,6 @@ source_set("waterfall_scenes") {
   sources = [
     "scenes/paper_demo_scene1.cc",
     "scenes/paper_demo_scene1.h",
-    "scenes/paper_demo_scene2.cc",
-    "scenes/paper_demo_scene2.h",
     "scenes/scene.cc",
     "scenes/scene.h",
   ]

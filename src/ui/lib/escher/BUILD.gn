@@ -355,6 +355,8 @@ template("escher_library") {
       "paper/paper_shader_structs.h",
       "paper/paper_shape_cache.cc",
       "paper/paper_shape_cache.h",
+      "paper/paper_timestamp_graph.cc",
+      "paper/paper_timestamp_graph.h",
       "paper/paper_transform_stack.cc",
       "paper/paper_transform_stack.h",
       "profiling/timestamp_profiler.cc",

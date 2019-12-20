@@ -5,7 +5,6 @@
 #include "src/ui/examples/escher/waterfall/waterfall_demo.h"
 
 #include "src/ui/examples/escher/waterfall/scenes/paper_demo_scene1.h"
-#include "src/ui/examples/escher/waterfall/scenes/paper_demo_scene2.h"
 #include "src/ui/lib/escher/defaults/default_shader_program_factory.h"
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/mesh/tessellation.h"
@@ -73,7 +72,8 @@ void WaterfallDemo::SetWindowSize(vk::Extent2D window_size) {
 void WaterfallDemo::InitializeDemoScenes() {
   demo_scenes_.clear();
   demo_scenes_.emplace_back(new PaperDemoScene1(this));
-  demo_scenes_.emplace_back(new PaperDemoScene2(this));
+  demo_scenes_.emplace_back(new PaperDemoScene1(this));
+  demo_scenes_.back()->ToggleGraph();
   for (auto& scene : demo_scenes_) {
     scene->Init(paper_scene_.get());
   }
