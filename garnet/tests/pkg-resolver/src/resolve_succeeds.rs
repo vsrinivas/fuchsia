@@ -974,7 +974,11 @@ async fn dedup_concurrent_content_blob_fetches() {
 async fn rust_tuf_experiment_identity() {
     let env = TestEnv::new_without_amber();
     let pkg = Package::identity().await.unwrap();
-    let repo = RepositoryBuilder::new().add_package(&pkg).build().await.unwrap();
+    let repo = RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+        .add_package(&pkg)
+        .build()
+        .await
+        .unwrap();
     let served_repository = repo.serve(env.launcher()).await.unwrap();
     let repo_url = "fuchsia-pkg://test".parse().unwrap();
     let repo_config = served_repository.make_repo_config(repo_url);

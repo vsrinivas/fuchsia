@@ -100,7 +100,12 @@ impl Repository {
             .root_keys()
             .iter()
             .map(|key| match key {
-                RepositoryKey::Ed25519(bytes) => PublicKey::from_ed25519(bytes.clone()),
+                RepositoryKey::Ed25519(bytes) => {
+                    PublicKey::from_ed25519_with_keyid_hash_algorithms(
+                        bytes.clone(),
+                        Some(vec!["sha256".to_string()]),
+                    )
+                }
             })
             .collect::<Result<Vec<PublicKey>, _>>()?;
         Ok(Self {

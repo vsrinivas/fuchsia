@@ -118,7 +118,11 @@ async fn test_resolving_package_updates_inspect_state() {
     env.set_experiment_state(Experiment::RustTuf, true).await;
 
     let pkg = PackageBuilder::new("just_meta_far").build().await.expect("created pkg");
-    let repo = RepositoryBuilder::new().add_package(&pkg).build().await.unwrap();
+    let repo = RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+        .add_package(&pkg)
+        .build()
+        .await
+        .unwrap();
     let served_repository = repo.serve(env.launcher()).await.unwrap();
     let repo_url = "fuchsia-pkg://example.com".parse().unwrap();
     let config = served_repository.make_repo_config(repo_url);
