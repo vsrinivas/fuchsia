@@ -6,13 +6,12 @@ use crate::atomic_future::AtomicFuture;
 use crossbeam::queue::SegQueue;
 use fuchsia_zircon::{self as zx, AsHandleRef};
 use futures::future::{self, FutureObj, LocalFutureObj};
-use futures::FutureExt;
 use futures::task::{waker_ref, ArcWake, AtomicWaker, Spawn, SpawnError};
+use futures::FutureExt;
 use parking_lot::{Condvar, Mutex};
 use pin_utils::pin_mut;
-use slab::Slab;
 use std::cell::RefCell;
-use std::collections::BinaryHeap;
+use std::collections::{BinaryHeap, HashMap};
 use std::future::Future;
 use std::marker::Unpin;
 use std::ops::Deref;
@@ -325,7 +324,7 @@ impl Executor {
                 done: AtomicBool::new(false),
                 threadiness: Threadiness::default(),
                 threads: Mutex::new(Vec::new()),
-                receivers: Mutex::new(Slab::new()),
+                receivers: Mutex::new(PacketReceiverMap::new()),
                 ready_tasks: SegQueue::new(),
                 time: time,
             }),
@@ -912,12 +911,48 @@ enum ExecutorTime {
     FakeTime(AtomicI64),
 }
 
+// Simple slab::Slab replacement that doesn't re-use keys
+// TODO(43101): figure out how to safely cancel async waits so we can re-use keys again.
+struct PacketReceiverMap<T> {
+    next_key: usize,
+    mapping: HashMap<usize, T>,
+}
+
+impl<T> PacketReceiverMap<T> {
+    fn new() -> Self {
+        Self { next_key: 0, mapping: HashMap::new() }
+    }
+
+    fn clear(&mut self) {
+        self.mapping.clear()
+    }
+
+    fn get(&self, key: usize) -> Option<&T> {
+        self.mapping.get(&key)
+    }
+
+    fn insert(&mut self, val: T) -> usize {
+        let key = self.next_key;
+        self.next_key = self.next_key.checked_add(1).expect("ran out of keys");
+        self.mapping.insert(key, val);
+        key
+    }
+
+    fn remove(&mut self, key: usize) -> T {
+        self.mapping.remove(&key).unwrap_or_else(|| panic!("invalid key"))
+    }
+
+    fn contains(&self, key: usize) -> bool {
+        self.mapping.contains_key(&key)
+    }
+}
+
 struct Inner {
     port: zx::Port,
     done: AtomicBool,
     threadiness: Threadiness,
     threads: Mutex<Vec<thread::JoinHandle<()>>>,
-    receivers: Mutex<Slab<Arc<dyn PacketReceiver>>>,
+    receivers: Mutex<PacketReceiverMap<Arc<dyn PacketReceiver>>>,
     ready_tasks: SegQueue<Arc<Task>>,
     time: ExecutorTime,
 }
@@ -1251,5 +1286,25 @@ mod tests {
         // timer in `main_fut`.
         assert_eq!(executor.run_until_stalled(&mut main_fut), Poll::Ready(()));
         assert_eq!(spawned_fut_completed.load(Ordering::SeqCst), true);
+    }
+
+    #[test]
+    fn packet_receiver_map_does_not_reuse_keys() {
+        #[derive(Debug, Copy, Clone, PartialEq)]
+        struct DummyPacketReceiver {
+            id: i32,
+        }
+        let mut map = PacketReceiverMap::<DummyPacketReceiver>::new();
+        let e1 = DummyPacketReceiver { id: 1 };
+        assert_eq!(map.insert(e1), 0);
+        assert_eq!(map.insert(e1), 1);
+
+        // Still doesn't reuse IDs after one is removed
+        map.remove(1);
+        assert_eq!(map.insert(e1), 2);
+
+        // Still doesn't reuse IDs after map is cleared
+        map.clear();
+        assert_eq!(map.insert(e1), 3);
     }
 }
