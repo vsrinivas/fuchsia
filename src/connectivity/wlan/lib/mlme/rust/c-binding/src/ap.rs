@@ -55,13 +55,7 @@ pub extern "C" fn ap_sta_handle_mac_frame(
 }
 
 #[no_mangle]
-pub extern "C" fn ap_sta_handle_eth_frame(
-    sta: &mut Ap,
-    dst_addr: &[u8; 6],
-    src_addr: &[u8; 6],
-    ether_type: u16,
-    body: CSpan<'_>,
-) -> i32 {
-    sta.handle_eth_frame(*dst_addr, *src_addr, ether_type, body.into());
+pub extern "C" fn ap_sta_handle_eth_frame(sta: &mut Ap, frame: CSpan<'_>) -> i32 {
+    sta.handle_eth_frame(frame.into());
     zx::sys::ZX_OK
 }

@@ -321,23 +321,19 @@ impl InfraBss {
             .map_err(|e| Rejection::Client(client.addr, e))
     }
 
-    pub fn handle_eth_frame(
-        &mut self,
-        ctx: &mut Context,
-        dst_addr: MacAddr,
-        src_addr: MacAddr,
-        ether_type: u16,
-        body: &[u8],
-    ) -> Result<(), Rejection> {
+    pub fn handle_eth_frame(&mut self, ctx: &mut Context, frame: &[u8]) -> Result<(), Rejection> {
+        let mac::EthernetFrame { hdr, body } =
+            mac::EthernetFrame::parse(frame).ok_or_else(|| Rejection::FrameMalformed)?;
+
         // Handle the frame, pretending that the client is an unauthenticated client if we don't
         // know about it.
         let mut maybe_client = None;
         let client = self
             .clients
-            .get_mut(&dst_addr)
-            .unwrap_or_else(|| maybe_client.get_or_insert(RemoteClient::new(dst_addr)));
+            .get_mut(&hdr.da)
+            .unwrap_or_else(|| maybe_client.get_or_insert(RemoteClient::new(hdr.da)));
         client
-            .handle_eth_frame(ctx, dst_addr, src_addr, ether_type, body)
+            .handle_eth_frame(ctx, hdr.da, hdr.sa, hdr.ether_type.to_native(), body)
             .map_err(|e| Rejection::Client(client.addr, e))
     }
 
@@ -391,6 +387,18 @@ mod tests {
             Timer::<TimedEvent>::new(scheduler),
             BSSID,
         )
+    }
+
+    fn make_eth_frame(
+        dst_addr: MacAddr,
+        src_addr: MacAddr,
+        protocol_id: u16,
+        body: &[u8],
+    ) -> Vec<u8> {
+        let mut buf = vec![];
+        crate::write_eth_frame(&mut buf, dst_addr, src_addr, protocol_id, body)
+            .expect("writing to vec always succeeds");
+        buf
     }
 
     #[test]
@@ -1450,8 +1458,11 @@ mod tests {
             .expect("expected OK");
         fake_device.wlan_queue.clear();
 
-        bss.handle_eth_frame(&mut ctx, CLIENT_ADDR, CLIENT_ADDR2, 0x1234, &[1, 2, 3, 4, 5][..])
-            .expect("expected OK");
+        bss.handle_eth_frame(
+            &mut ctx,
+            &make_eth_frame(CLIENT_ADDR, CLIENT_ADDR2, 0x1234, &[1, 2, 3, 4, 5][..]),
+        )
+        .expect("expected OK");
 
         assert_eq!(fake_device.wlan_queue.len(), 1);
         assert_eq!(
@@ -1490,8 +1501,11 @@ mod tests {
         .expect("expected InfraBss::new ok");
 
         assert_variant!(
-            bss.handle_eth_frame(&mut ctx, CLIENT_ADDR, CLIENT_ADDR2, 0x1234, &[1, 2, 3, 4, 5][..])
-                .expect_err("expected error"),
+            bss.handle_eth_frame(
+                &mut ctx,
+                &make_eth_frame(CLIENT_ADDR, CLIENT_ADDR2, 0x1234, &[1, 2, 3, 4, 5][..])
+            )
+            .expect_err("expected error"),
             Rejection::Client(_, ClientRejection::NotAssociated)
         );
 
@@ -1533,8 +1547,11 @@ mod tests {
         fake_device.wlan_queue.clear();
 
         assert_variant!(
-            bss.handle_eth_frame(&mut ctx, CLIENT_ADDR, CLIENT_ADDR2, 0x1234, &[1, 2, 3, 4, 5][..])
-                .expect_err("expected error"),
+            bss.handle_eth_frame(
+                &mut ctx,
+                &make_eth_frame(CLIENT_ADDR, CLIENT_ADDR2, 0x1234, &[1, 2, 3, 4, 5][..])
+            )
+            .expect_err("expected error"),
             Rejection::Client(_, ClientRejection::ControlledPortClosed)
         );
     }
@@ -1577,8 +1594,11 @@ mod tests {
             .handle_mlme_set_controlled_port_req(fidl_mlme::ControlledPortState::Open)
             .expect("expected OK");
 
-        bss.handle_eth_frame(&mut ctx, CLIENT_ADDR, CLIENT_ADDR2, 0x1234, &[1, 2, 3, 4, 5][..])
-            .expect("expected OK");
+        bss.handle_eth_frame(
+            &mut ctx,
+            &make_eth_frame(CLIENT_ADDR, CLIENT_ADDR2, 0x1234, &[1, 2, 3, 4, 5][..]),
+        )
+        .expect("expected OK");
 
         assert_eq!(fake_device.wlan_queue.len(), 1);
         assert_eq!(

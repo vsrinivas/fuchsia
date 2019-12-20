@@ -40,6 +40,11 @@ pub enum Rejection {
     /// frame) management frame, or the reserved From DS bit was set.
     BadDsBits,
 
+    /// For ethernet frames
+
+    /// Frame is malformed (For example, a minimum Ethernet frame must contain a header(14 bytes).
+    FrameMalformed,
+
     /// No source address was found.
     NoSrcAddr,
 
@@ -56,7 +61,7 @@ pub enum Rejection {
 impl Rejection {
     fn log_level(&self) -> log::Level {
         match self {
-            Self::NoSrcAddr => log::Level::Error,
+            Self::NoSrcAddr | Self::FrameMalformed => log::Level::Error,
             Self::Client(_, e) => e.log_level(),
             _ => log::Level::Trace,
         }
@@ -227,13 +232,7 @@ impl Ap {
         })
     }
 
-    pub fn handle_eth_frame(
-        &mut self,
-        dst_addr: MacAddr,
-        src_addr: MacAddr,
-        ether_type: u16,
-        body: &[u8],
-    ) {
+    pub fn handle_eth_frame(&mut self, frame: &[u8]) {
         let bss = match self.bss.as_mut() {
             Some(bss) => bss,
             None => {
@@ -242,7 +241,7 @@ impl Ap {
             }
         };
 
-        if let Err(e) = bss.handle_eth_frame(&mut self.ctx, dst_addr, src_addr, ether_type, body) {
+        if let Err(e) = bss.handle_eth_frame(&mut self.ctx, frame) {
             log!(e.log_level(), "failed to handle Ethernet frame: {}", e)
         }
     }
@@ -304,6 +303,18 @@ mod tests {
     const BSSID: Bssid = Bssid([2u8; 6]);
     const CLIENT_ADDR2: MacAddr = [3u8; 6];
 
+    fn make_eth_frame(
+        dst_addr: MacAddr,
+        src_addr: MacAddr,
+        protocol_id: u16,
+        body: &[u8],
+    ) -> Vec<u8> {
+        let mut buf = vec![];
+        crate::write_eth_frame(&mut buf, dst_addr, src_addr, protocol_id, body)
+            .expect("writing to vec always succeeds");
+        buf
+    }
+
     #[test]
     fn ap_handle_eth_frame() {
         let mut fake_device = FakeDevice::new();
@@ -345,7 +356,12 @@ mod tests {
             .expect("expected OK");
         fake_device.wlan_queue.clear();
 
-        ap.handle_eth_frame(CLIENT_ADDR, CLIENT_ADDR2, 0x1234, &[1, 2, 3, 4, 5][..]);
+        ap.handle_eth_frame(&make_eth_frame(
+            CLIENT_ADDR,
+            CLIENT_ADDR2,
+            0x1234,
+            &[1, 2, 3, 4, 5][..],
+        ));
 
         assert_eq!(fake_device.wlan_queue.len(), 1);
         assert_eq!(
@@ -389,7 +405,12 @@ mod tests {
             )
             .expect("expected InfraBss::new ok"),
         );
-        ap.handle_eth_frame(CLIENT_ADDR2, CLIENT_ADDR, 0x1234, &[1, 2, 3, 4, 5][..]);
+        ap.handle_eth_frame(&make_eth_frame(
+            CLIENT_ADDR2,
+            CLIENT_ADDR,
+            0x1234,
+            &[1, 2, 3, 4, 5][..],
+        ));
     }
 
     #[test]

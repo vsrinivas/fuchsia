@@ -61,14 +61,14 @@ ApMlme::ApMlme(DeviceInterface* device) : device_(device), rust_ap_(nullptr, ap_
         return MLME(mlme)->device_->EnableBeaconing(nullptr);
       },
       .set_link_status = [](void* mlme, uint8_t status) -> zx_status_t {
-        (void) mlme;
-        (void) status;
+        (void)mlme;
+        (void)status;
         return ZX_ERR_NOT_SUPPORTED;
       },
       .configure_assoc = [](void* mlme, wlan_assoc_ctx_t* assoc_ctx) -> zx_status_t {
         return MLME(mlme)->device_->ConfigureAssoc(assoc_ctx);
       },
-      .clear_assoc = [](void* mlme, const uint8_t (*addr)[6]) -> zx_status_t {
+      .clear_assoc = [](void* mlme, const uint8_t(*addr)[6]) -> zx_status_t {
         return MLME(mlme)->device_->ClearAssoc(common::MacAddr(*addr));
       },
   };
@@ -135,9 +135,7 @@ zx_status_t ApMlme::HandleFramePacket(std::unique_ptr<Packet> pkt) {
   switch (pkt->peer()) {
     case Packet::Peer::kEthernet: {
       if (auto eth_frame = EthFrameView::CheckType(pkt.get()).CheckLength()) {
-        return ap_sta_handle_eth_frame(rust_ap_.get(), &eth_frame.hdr()->dest.byte,
-                                       &eth_frame.hdr()->src.byte, eth_frame.hdr()->ether_type(),
-                                       AsWlanSpan(eth_frame.body_data()));
+        return ap_sta_handle_eth_frame(rust_ap_.get(), AsWlanSpan({pkt->data(), pkt->len()}));
       }
       break;
     }
