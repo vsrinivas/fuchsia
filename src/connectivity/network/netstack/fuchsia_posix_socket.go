@@ -779,7 +779,7 @@ func (s *socketImpl) Clone(flags uint32, object io.NodeInterfaceRequest) error {
 		bindingKey, err := s.sp.controlService.Add(s, object.Channel, func(error) { s.close() })
 		sCopy.bindingKey = bindingKey
 
-		syslog.VLogTf(syslog.DebugVerbosity, "Clone", "%p: clones=%d flags=%b err=%v", s.endpoint, clones, flags, err)
+		syslog.VLogTf(syslog.DebugVerbosity, "Clone", "%p: clones=%d flags=%b key=%d err=%v", s.endpoint, clones, flags, bindingKey, err)
 
 		return err
 	}
@@ -790,7 +790,7 @@ func (s *socketImpl) close() {
 
 	removed := s.sp.controlService.Remove(s.bindingKey)
 
-	syslog.VLogTf(syslog.DebugVerbosity, "close", "%p: clones=%d removed=%t", s.endpoint, clones, removed)
+	syslog.VLogTf(syslog.DebugVerbosity, "close", "%p: clones=%d key=%d removed=%t", s.endpoint, clones, s.bindingKey, removed)
 }
 
 func (s *socketImpl) Close() (int32, error) {
