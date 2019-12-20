@@ -5,12 +5,22 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.identity.tokens") {
-  # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
-  excluded_checks = [ "string-bounds-not-specified" ]
+ # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
+  excluded_checks = [
+    "invalid-case-for-decl-name",
+    "string-bounds-not-specified",
+    "vector-bounds-not-specified",
+  ]
 
   sources = [
     "common.fidl",
     "overview.fidl",
+    "token_manager.fidl",
     "token_types.fidl",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.auth",
+    "//sdk/fidl/fuchsia.ui.views",
   ]
 }
