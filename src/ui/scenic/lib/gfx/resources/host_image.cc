@@ -90,6 +90,8 @@ ImagePtr HostImage::New(Session* session, ResourceId id, MemoryPtr memory,
     return nullptr;
   }
 
+  // TODO(43039): Directly mapped images actually work as GpuImage, and they
+  // should be created as GpuImage as well.
   if (image_info.pixel_format == fuchsia::images::PixelFormat::NV12 &&
       image_info.stride % kYuvStrideRequirement == 0) {
     // If we are not on a UMA platform, GetGpuMem will return a null pointer.
@@ -152,9 +154,9 @@ ImagePtr HostImage::New(Session* session, ResourceId id, MemoryPtr memory,
 void HostImage::UpdateEscherImage(escher::BatchGpuUploader* gpu_uploader,
                                   escher::ImageLayoutUpdater* layout_updater) {
   if (is_directly_mapped_) {
-    // For directly mapped host images, the image should never be dirty, so
-    // we only update the image layout.
-    FXL_CHECK(!dirty_) << "Directly-mapped host images should never be dirty.";
+    // Directly mapped host images are never dirty. So this function should do
+    // nothing unless we need to update the image layout.
+    dirty_ = false;
     if (!image_->is_layout_initialized()) {
       if (layout_updater) {
         layout_updater->ScheduleSetImageInitialLayout(image_, vk::ImageLayout::eGeneral);
