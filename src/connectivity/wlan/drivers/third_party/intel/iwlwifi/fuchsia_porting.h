@@ -61,9 +61,11 @@ typedef char* acpi_string;
 #define upper_32_bits(x) (x >> 32)
 
 #define BITS_PER_BYTE 8
+#define BITS_PER_INT (sizeof(int) * BITS_PER_BYTE)
 #define BITS_PER_LONG (sizeof(long) * BITS_PER_BYTE)
 
-#define BITS_TO_LONGS(nr) (nr / BITS_PER_LONG)
+#define BITS_TO_INTS(nr) (DIV_ROUND_UP(nr, BITS_PER_INT))
+#define BITS_TO_LONGS(nr) (DIV_ROUND_UP(nr, BITS_PER_LONG))
 
 #define ETHTOOL_FWVERS_LEN 32
 
@@ -293,6 +295,35 @@ static inline void list_splice_after_tail(list_node_t* splice_from, list_node_t*
 static inline bool is_valid_ether_addr(const uint8_t* mac) {
   return !((!mac[0] && !mac[1] && !mac[2] && !mac[3] && !mac[4] && !mac[5]) ||  // 00:00:00:00:00:00
            (mac[0] & 1));                                                       // multicast
+}
+
+// Fill the MAC address with broadcast address (all-0xff).
+//
+static inline void eth_broadcast_addr(uint8_t* addr) {
+  for (size_t i = 0; i < ETH_ALEN; i++) {
+    addr[i] = 0xff;
+  }
+}
+
+// Find the first asserted LSB.
+//
+// Returns:
+//   [0, num_bits): found. The index of first asserted bit (the least significant one.
+//   num_bits: No asserted bit found in num_bits.
+//
+static inline size_t find_first_bit(unsigned* bits, const size_t num_bits) {
+    const size_t num_of_ints = DIV_ROUND_UP(num_bits, BITS_PER_INT);
+    size_t ret = num_bits;
+
+    for (size_t i = 0; i < num_of_ints; ++i) {
+        if (bits[i] == 0) {
+            continue;
+        }
+        ret = (i * BITS_PER_INT) + __builtin_ctz(bits[i]);
+        break;
+    }
+
+    return MIN(num_bits, ret);
 }
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FUCHSIA_PORTING_H_
