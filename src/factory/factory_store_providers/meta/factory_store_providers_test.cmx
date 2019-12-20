@@ -6,7 +6,8 @@
                 "fuchsia.factory.CastCredentialsFactoryStoreProvider": "fuchsia-pkg://fuchsia.com/factory_store_providers_tests#meta/factory_store_providers.cmx",
                 "fuchsia.factory.MiscFactoryStoreProvider": "fuchsia-pkg://fuchsia.com/factory_store_providers_tests#meta/factory_store_providers.cmx",
                 "fuchsia.factory.PlayReadyFactoryStoreProvider": "fuchsia-pkg://fuchsia.com/factory_store_providers_tests#meta/factory_store_providers.cmx",
-                "fuchsia.factory.WidevineFactoryStoreProvider": "fuchsia-pkg://fuchsia.com/factory_store_providers_tests#meta/factory_store_providers.cmx"
+                "fuchsia.factory.WidevineFactoryStoreProvider": "fuchsia-pkg://fuchsia.com/factory_store_providers_tests#meta/factory_store_providers.cmx",
+                "fuchsia.factory.WeaveFactoryStoreProvider": "fuchsia-pkg://fuchsia.com/factory_store_providers_tests#meta/factory_store_providers.cmx"
             }
         }
     },
@@ -20,6 +21,7 @@
             "fuchsia.factory.MiscFactoryStoreProvider",
             "fuchsia.factory.PlayReadyFactoryStoreProvider",
             "fuchsia.factory.WidevineFactoryStoreProvider",
+            "fuchsia.factory.WeaveFactoryStoreProvider",
             "fuchsia.logger.LogSink"
         ]
     }

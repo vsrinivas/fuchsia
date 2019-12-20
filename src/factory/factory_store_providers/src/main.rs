@@ -15,8 +15,10 @@ use {
         CastCredentialsFactoryStoreProviderRequestStream, MiscFactoryStoreProviderMarker,
         MiscFactoryStoreProviderRequest, MiscFactoryStoreProviderRequestStream,
         PlayReadyFactoryStoreProviderMarker, PlayReadyFactoryStoreProviderRequest,
-        PlayReadyFactoryStoreProviderRequestStream, WidevineFactoryStoreProviderMarker,
-        WidevineFactoryStoreProviderRequest, WidevineFactoryStoreProviderRequestStream,
+        PlayReadyFactoryStoreProviderRequestStream, WeaveFactoryStoreProviderMarker,
+        WeaveFactoryStoreProviderRequest, WeaveFactoryStoreProviderRequestStream,
+        WidevineFactoryStoreProviderMarker, WidevineFactoryStoreProviderRequest,
+        WidevineFactoryStoreProviderRequestStream,
     },
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, NodeMarker, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,
@@ -43,6 +45,7 @@ enum IncomingServices {
     MiscFactoryStoreProvider(MiscFactoryStoreProviderRequestStream),
     PlayReadyFactoryStoreProvider(PlayReadyFactoryStoreProviderRequestStream),
     WidevineFactoryStoreProvider(WidevineFactoryStoreProviderRequestStream),
+    WeaveFactoryStoreProvider(WeaveFactoryStoreProviderRequestStream),
 }
 
 fn parse_bootfs<'a>(vmo: zx::Vmo) -> HashMap<String, Vec<u8>> {
@@ -188,7 +191,8 @@ async fn main() -> Result<(), Error> {
         .add_fidl_service(IncomingServices::CastCredentialsFactoryStoreProvider)
         .add_fidl_service(IncomingServices::MiscFactoryStoreProvider)
         .add_fidl_service(IncomingServices::PlayReadyFactoryStoreProvider)
-        .add_fidl_service(IncomingServices::WidevineFactoryStoreProvider);
+        .add_fidl_service(IncomingServices::WidevineFactoryStoreProvider)
+        .add_fidl_service(IncomingServices::WeaveFactoryStoreProvider);
     fs.take_and_serve_directory_handle().expect("Failed to serve factory providers");
 
     let items_mtx = Arc::new(Mutex::new(directory_items));
@@ -206,11 +210,16 @@ async fn main() -> Result<(), Error> {
     let widevine_config = Config::load::<WidevineFactoryStoreProviderMarker>()?;
     let widevine_directory = Arc::new(Mutex::new(apply_config(widevine_config, items_mtx.clone())));
 
+    // The weave config may or may not be present.
+    let weave_config = Config::load::<WeaveFactoryStoreProviderMarker>().unwrap_or_default();
+    let weave_directory = Arc::new(Mutex::new(apply_config(weave_config, items_mtx.clone())));
+
     fs.for_each_concurrent(CONCURRENT_LIMIT, move |incoming_service| {
         let cast_directory_clone = cast_directory.clone();
         let misc_directory_clone = misc_directory.clone();
         let playready_directory_clone = playready_directory.clone();
         let widevine_directory_clone = widevine_directory.clone();
+        let weave_directory_clone = weave_directory.clone();
 
         async move {
             match incoming_service {
@@ -253,6 +262,17 @@ async fn main() -> Result<(), Error> {
                         stream,
                         widevine_directory_clone,
                         |req: WidevineFactoryStoreProviderRequest| {
+                            req.into_get_factory_store().map(|item| item.0)
+                        },
+                    )
+                    .await
+                }
+                IncomingServices::WeaveFactoryStoreProvider(stream) => {
+                    let weave_directory_clone = weave_directory_clone.clone();
+                    handle_request_stream(
+                        stream,
+                        weave_directory_clone,
+                        |req: WeaveFactoryStoreProviderRequest| {
                             req.into_get_factory_store().map(|item| item.0)
                         },
                     )

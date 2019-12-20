@@ -152,6 +152,10 @@ test_package("factory_store_providers_tests") {
       path = rebase_path("testdata/input/widevine_file")
       dest = "widevine_file"
     },
+    {
+      path = rebase_path("testdata/input/weave_file")
+      dest = "weave_file"
+    },
   ]
 
   meta = [
@@ -184,6 +188,7 @@ config_data("factory_store_providers_tests_config") {
     "testdata/fuchsia.factory.CastCredentialsFactoryStoreProvider.config",
     "testdata/fuchsia.factory.MiscFactoryStoreProvider.config",
     "testdata/fuchsia.factory.PlayReadyFactoryStoreProvider.config",
+    "testdata/fuchsia.factory.WeaveFactoryStoreProvider.config",
     "testdata/fuchsia.factory.WidevineFactoryStoreProvider.config",
   ]
 

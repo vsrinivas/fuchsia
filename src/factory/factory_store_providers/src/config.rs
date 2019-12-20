@@ -9,7 +9,7 @@ use {
     fuchsia_syslog as syslog,
     serde_derive::Deserialize,
     serde_json::{self, value::Value},
-    std::{collections::HashMap, io},
+    std::{collections::HashMap, default::Default, io},
 };
 
 /// Type that maps a file to a group of arguments passed to a validator.
@@ -43,7 +43,7 @@ pub struct ConfigContext {
     pub validator_contexts: Vec<ValidatorContext>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Deserialize)]
 pub struct Config {
     files: Vec<FactoryFileSpec>,
 }
