@@ -91,6 +91,7 @@ static_library("expr") {
     "//src/developer/debug/zxdb/common",
     "//src/developer/debug/zxdb/symbols",
     "//src/lib/fxl",
+    "//third_party/double-conversion",
     "//zircon/public/lib/fit",
   ]
 }

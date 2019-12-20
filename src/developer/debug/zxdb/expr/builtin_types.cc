@@ -136,4 +136,38 @@ fxl::RefPtr<BaseType> GetBuiltinType(ExprLanguage lang, std::string_view name) {
   return fxl::MakeRefCounted<BaseType>(info.base_type, info.byte_size, info.name);
 }
 
+fxl::RefPtr<BaseType> GetBuiltinFloatType(ExprLanguage lang) {
+  switch (lang) {
+    case ExprLanguage::kC:
+      return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 4, "float");
+    case ExprLanguage::kRust:
+      return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 4, "f32");
+  }
+  FXL_NOTREACHED();
+  return fxl::RefPtr<BaseType>();
+}
+
+fxl::RefPtr<BaseType> GetBuiltinDoubleType(ExprLanguage lang) {
+  switch (lang) {
+    case ExprLanguage::kC:
+      return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 8, "double");
+    case ExprLanguage::kRust:
+      return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 8, "f64");
+  }
+  FXL_NOTREACHED();
+  return fxl::RefPtr<BaseType>();
+}
+
+fxl::RefPtr<BaseType> GetBuiltinLongDoubleType(ExprLanguage lang) {
+  switch (lang) {
+    case ExprLanguage::kC:
+      return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 10, "long double");
+    case ExprLanguage::kRust:
+      // Rust doesn't have a "long double" type, just return a 64-bit double.
+      return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 8, "f64");
+  }
+  FXL_NOTREACHED();
+  return fxl::RefPtr<BaseType>();
+}
+
 }  // namespace zxdb

@@ -8,6 +8,7 @@
 
 #include <type_traits>
 
+#include "src/developer/debug/zxdb/expr/number_parser.h"
 #include "src/developer/debug/zxdb/expr/parse_string.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -81,6 +82,13 @@ bool ExprTokenizer::Tokenize() {
 
       tokens_.emplace_back(ExprTokenType::kStringLiteral, result.value(),
                            string_info->string_begin);
+      continue;
+    }
+
+    // Floats.
+    if (size_t float_len = GetFloatTokenLength(language_, input_.substr(cur_))) {
+      tokens_.emplace_back(ExprTokenType::kFloat, input_.substr(cur_, float_len), cur_);
+      cur_ += float_len;
       continue;
     }
 
@@ -201,14 +209,13 @@ const ExprTokenRecord& ExprTokenizer::ClassifyCurrent() {
   if (longest)
     return *longest;
 
-  // Numbers.
+  // Integers.
   if (IsIntegerFirstChar(cur))
     return RecordForTokenType(ExprTokenType::kInteger);
 
   // Everything else is a general name.
-  if (IsNameFirstChar(cur)) {
+  if (IsNameFirstChar(cur))
     return RecordForTokenType(ExprTokenType::kName);
-  }
 
   error_location_ = cur_;
   err_ = Err(fxl::StringPrintf("Invalid character '%c' in expression.\n", cur) +

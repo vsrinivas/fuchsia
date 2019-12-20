@@ -5,10 +5,14 @@
 #include "src/developer/debug/zxdb/expr/number_parser.h"
 
 #include <ctype.h>
+#include <math.h>
 #include <stdlib.h>
 
+#include "src/developer/debug/zxdb/expr/builtin_types.h"
+#include "src/developer/debug/zxdb/expr/expr_token.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
+#include "third_party/double-conversion/double-conversion/double-conversion.h"
 
 namespace zxdb {
 
@@ -78,6 +82,18 @@ bool ValidForBase(IntegerPrefix::Base base, char c) {
   }
   return false;
 }
+
+// Returns the length of a <digits> sequence starting at the beginning of the input.
+size_t GetDigitsLength(std::string_view input) {
+  size_t result = 0;
+  while (result < input.size() && isdigit(input[result]))
+    result++;
+  return result;
+}
+
+bool IsExponentCharacter(char c) { return c == 'e' || c == 'E'; }
+
+bool IsSign(char c) { return c == '+' || c == '-'; }
 
 }  // namespace
 
@@ -249,6 +265,144 @@ ErrOr<IntegerSuffix> ExtractIntegerSuffix(std::string_view* s) {
 
   *s = s->substr(0, suffix_begin);
   return suffix;
+}
+
+// The floating-point format we expect is:
+//
+//   <float> := ( <significand> [<exponent>] [<suffix>] ) |
+//              ( <digis> <exponent> [<suffix>] )
+//
+//   <significant> := ( <digits> "." <digits> ) |
+//                    ( "." <digits> ) |
+//                    ( <digits> "." )
+//
+//   <exponent> := ("e" | "E") [("+" | "-")] <digits>
+//
+//   <suffix> := "f" | "F" | "l" | "L"
+//
+// In other words, a floating point number must have either a "." or an "e", and a "." must have
+// digits on at least one side of it.
+//
+// Rust requires that there be digits before a ".". This is important to disambiguate cases like
+// "tuple.0" as being "tuple dot zero" from "tuple float-zero".
+//
+// TODO(bug 43220) Handle Rust-specific suffixes.
+// TODO(bug 43222) Support C++17 hex floating point literals "0x342.1a"
+size_t GetFloatTokenLength(ExprLanguage lang, std::string_view input) {
+  std::string_view cur = input;
+
+  // Digits before the dot.
+  size_t before_dot = GetDigitsLength(cur);
+  cur = cur.substr(before_dot);
+  if (lang == ExprLanguage::kRust & before_dot == 0)
+    return 0;
+
+  // "."
+  bool has_dot = false;
+  if (!cur.empty() && cur[0] == '.') {
+    has_dot = true;
+    cur = cur.substr(1);
+  }
+  if (!before_dot && !has_dot)
+    return 0;  // Must begin with digits or a dot to be a float.
+
+  // Digits after the dot.
+  size_t after_dot = GetDigitsLength(cur);
+  cur = cur.substr(after_dot);
+  if (has_dot && !before_dot && !after_dot)
+    return 0;  // A dot must have digits on at least one side.
+
+  // Optional exponent.
+  bool has_exponent = false;
+  if (!cur.empty() && IsExponentCharacter(cur[0])) {
+    has_exponent = true;
+    cur = cur.substr(1);
+
+    if (!cur.empty() && IsSign(cur[0]))
+      cur = cur.substr(1);  // Skip optional sign.
+
+    size_t exponent = GetDigitsLength(cur);
+    if (!exponent)
+      return 0;  // Must have exponent digits to be a float.
+    cur = cur.substr(exponent);
+  }
+  if (!has_dot && !has_exponent)
+    return 0;  // Must have a dot or an exponend to be a float.
+
+  // Consider all alphanumeric characters immediately following to be part of the token. This will
+  // get any suffix characters but may get garbage also. The tokenizer isn't in charge of validating
+  // floating point formatting, and something like "2.3hello" should be considered one invalid
+  // floating-point token rather than a valid float followed by a valid identifier.
+  while (!cur.empty() && isalnum(cur[0]))
+    cur = cur.substr(1);
+
+  return &cur[0] - &input[0];
+}
+
+FloatSuffix StripFloatSuffix(std::string_view* view) {
+  if (view->empty())
+    return FloatSuffix::kNone;
+
+  char back = view->back();
+
+  if (back == 'f' || back == 'F') {
+    *view = view->substr(0, view->size() - 1);
+    return FloatSuffix::kFloat;
+  }
+
+  if (back == 'l' || back == 'L') {
+    *view = view->substr(0, view->size() - 1);
+    return FloatSuffix::kLong;
+  }
+
+  return FloatSuffix::kNone;
+}
+
+ErrOrValue ValueForFloatToken(ExprLanguage lang, const ExprToken& token) {
+  FXL_DCHECK(token.type() == ExprTokenType::kFloat);
+
+  std::string_view value = token.value();
+  FloatSuffix suffix = StripFloatSuffix(&value);
+  if (lang != ExprLanguage::kC && suffix == FloatSuffix::kLong)
+    suffix = FloatSuffix::kNone;  // Only C has a "long double" type.
+
+  double_conversion::StringToDoubleConverter converter(0, 0.0, nan(""), nullptr, nullptr);
+
+  fxl::RefPtr<BaseType> type;
+  std::vector<uint8_t> data;
+
+  int consumed = 0;
+  switch (suffix) {
+    case FloatSuffix::kNone: {
+      double d = converter.StringToDouble(value.data(), static_cast<int>(value.size()), &consumed);
+      data.resize(sizeof(double));
+      memcpy(&data[0], &d, sizeof(double));
+      type = GetBuiltinDoubleType(lang);
+      break;
+    }
+    case FloatSuffix::kFloat: {
+      float f = converter.StringToFloat(value.data(), static_cast<int>(value.size()), &consumed);
+      data.resize(sizeof(float));
+      memcpy(&data[0], &f, sizeof(float));
+      type = GetBuiltinFloatType(lang);
+      break;
+    }
+    case FloatSuffix::kLong: {
+      // The parser doesn't support long doubles, but we can at least upcast if the local system
+      // supports it.
+      double d = converter.StringToDouble(value.data(), static_cast<int>(value.size()), &consumed);
+      long double ld = d;
+      data.resize(sizeof(long double));
+      memcpy(&data[0], &ld, sizeof(long double));
+      type = GetBuiltinLongDoubleType(lang);
+      break;
+    }
+  }
+
+  if (consumed != static_cast<int>(value.size()))
+    return Err("Trailing characters on floating-point constant.");
+
+  return ExprValue(std::move(type), std::move(data));
 }
 
 }  // namespace zxdb

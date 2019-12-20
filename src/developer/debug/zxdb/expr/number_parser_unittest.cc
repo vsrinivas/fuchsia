@@ -4,9 +4,12 @@
 
 #include "src/developer/debug/zxdb/expr/number_parser.h"
 
+#include <string.h>
+
 #include <variant>
 
 #include "gtest/gtest.h"
+#include "src/developer/debug/zxdb/expr/expr_token.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/lib/fxl/arraysize.h"
@@ -212,6 +215,123 @@ TEST(NumberParser, StringToNumber) {
           cur.expected);
     }
   }
+}
+
+TEST(NumberParser, GetFloatTokenLength) {
+  EXPECT_EQ(0u, GetFloatTokenLength(ExprLanguage::kC, std::string_view()));
+  EXPECT_EQ(0u, GetFloatTokenLength(ExprLanguage::kC, " 2.3"));   // Whitespace doesn't count.
+  EXPECT_EQ(0u, GetFloatTokenLength(ExprLanguage::kC, "12"));     // Integer, not a float.
+  EXPECT_EQ(0u, GetFloatTokenLength(ExprLanguage::kC, "-12.2"));  // Signs not counted.
+  EXPECT_EQ(0u, GetFloatTokenLength(ExprLanguage::kC, "12foo"));  // Not a number.
+
+  // Simple valid cases.
+  EXPECT_EQ(3u, GetFloatTokenLength(ExprLanguage::kC, "2.3"));
+  EXPECT_EQ(3u, GetFloatTokenLength(ExprLanguage::kC, "2.3"));
+  EXPECT_EQ(2u, GetFloatTokenLength(ExprLanguage::kC, "2. foo"));
+  EXPECT_EQ(3u, GetFloatTokenLength(ExprLanguage::kC, "12.+float"));
+
+  // Exponents.
+  EXPECT_EQ(0u, GetFloatTokenLength(ExprLanguage::kC, "12e"));  // Exponent needs digits.
+  EXPECT_EQ(0u, GetFloatTokenLength(ExprLanguage::kC, "12extremely"));
+  EXPECT_EQ(0u, GetFloatTokenLength(ExprLanguage::kC, "12e+"));  // Exponent needs digits.
+  EXPECT_EQ(5u, GetFloatTokenLength(ExprLanguage::kC, "12e12"));
+  EXPECT_EQ(6u, GetFloatTokenLength(ExprLanguage::kC, "12.e12 "));
+  EXPECT_EQ(9u, GetFloatTokenLength(ExprLanguage::kC, "12.019e12+aa"));
+  EXPECT_EQ(5u, GetFloatTokenLength(ExprLanguage::kC,
+                                    "12e12.2"));  // ".2" not counted as part of the number.
+  EXPECT_EQ(0u, GetFloatTokenLength(ExprLanguage::kC, "12e+"));
+  EXPECT_EQ(6u, GetFloatTokenLength(ExprLanguage::kC, "12e+12"));
+  EXPECT_EQ(6u, GetFloatTokenLength(ExprLanguage::kC, "12E-12"));
+  EXPECT_EQ(0u, GetFloatTokenLength(ExprLanguage::kC, "12 e-12"));
+  EXPECT_EQ(0u, GetFloatTokenLength(ExprLanguage::kC, "12e- 12"));
+
+  // Suffixes. A valid number with any alphanumeric characters following is included. The suffixed
+  // will be validated in the parsing phase, not this tokenizing phase.
+  // TODO(bug 43220) Handle Rust-specific suffixes.
+  EXPECT_EQ(4u, GetFloatTokenLength(ExprLanguage::kC, "12.f"));
+  EXPECT_EQ(8u, GetFloatTokenLength(ExprLanguage::kC, "12.float"));
+  EXPECT_EQ(14u, GetFloatTokenLength(ExprLanguage::kC, "12e-12nonsense"));
+
+  // Rust requires a leading digit, C doesn't (as long as there's a digit following);
+  EXPECT_EQ(3u, GetFloatTokenLength(ExprLanguage::kC, ".14"));
+  EXPECT_EQ(0u, GetFloatTokenLength(ExprLanguage::kC, ".e12"));
+  EXPECT_EQ(0u, GetFloatTokenLength(ExprLanguage::kRust, ".14"));
+}
+
+TEST(NumberParser, StripFloatSuffix) {
+  std::string_view input;
+  EXPECT_EQ(FloatSuffix::kNone, StripFloatSuffix(&input));
+
+  input = "2.4";
+  EXPECT_EQ(FloatSuffix::kNone, StripFloatSuffix(&input));
+  EXPECT_EQ(input, "2.4");
+
+  input = "2.F";
+  EXPECT_EQ(FloatSuffix::kFloat, StripFloatSuffix(&input));
+  EXPECT_EQ(input, "2.");
+
+  // Extra characters are tolerated, these will be identified when parsed.
+  input = "2.4e7randomf";
+  EXPECT_EQ(FloatSuffix::kFloat, StripFloatSuffix(&input));
+  EXPECT_EQ(input, "2.4e7random");
+
+  input = "9L";
+  EXPECT_EQ(FloatSuffix::kLong, StripFloatSuffix(&input));
+  EXPECT_EQ(input, "9");
+
+  input = "l";
+  EXPECT_EQ(FloatSuffix::kLong, StripFloatSuffix(&input));
+  EXPECT_EQ(input, "");
+}
+
+namespace {
+
+template <typename FloatType>
+bool FloatValuesEqual(ExprLanguage lang, const char* input, const char* expected_type,
+                      FloatType expected_value) {
+  ExprToken token(ExprTokenType::kFloat, input, 0);
+
+  ErrOrValue result = ValueForFloatToken(lang, token);
+  EXPECT_TRUE(result.ok()) << result.err().msg();
+  if (!result.ok())
+    return false;
+
+  EXPECT_EQ(expected_type, result.value().type()->GetFullName());
+  EXPECT_EQ(sizeof(expected_value), result.value().data().size());
+  if (sizeof(expected_value) != result.value().data().size())
+    return false;
+
+  // Say the float converter makes the same floating-point value as the current compiler. This
+  // should be the case for all sane compilers.
+  FloatType result_float;
+  memcpy(&result_float, &result.value().data()[0], sizeof(FloatType));
+  EXPECT_EQ(expected_value, result_float);
+  return expected_value == result_float;
+}
+
+}  // namespace
+
+TEST(NumberParser, ValueForFloatToken) {
+  EXPECT_TRUE(FloatValuesEqual(ExprLanguage::kC, "2.3", "double", 2.3));
+  EXPECT_TRUE(FloatValuesEqual(ExprLanguage::kC, "3.14e+0f", "float", 3.14f));
+  EXPECT_TRUE(FloatValuesEqual(ExprLanguage::kC, "2e9", "double", 2e9));
+
+  EXPECT_TRUE(FloatValuesEqual(ExprLanguage::kRust, ".3", "f64", .3));
+  EXPECT_TRUE(FloatValuesEqual(ExprLanguage::kRust, "3.", "f64", 3.));
+  // Technically this line is wrong. It should be "2e9f32".
+  // TODO(bug 43220) Handle Rust-specific suffixes.
+  EXPECT_TRUE(FloatValuesEqual(ExprLanguage::kRust, "2e9f", "f32", 2e9f));
+
+  // Some error cases.
+  const char kTrailingMsg[] = "Trailing characters on floating-point constant.";
+  EXPECT_EQ(kTrailingMsg,
+            ValueForFloatToken(ExprLanguage::kC, ExprToken(ExprTokenType::kFloat, "3blah", 0))
+                .err()
+                .msg());
+  EXPECT_EQ(kTrailingMsg,
+            ValueForFloatToken(ExprLanguage::kC, ExprToken(ExprTokenType::kFloat, "3.2.3", 0))
+                .err()
+                .msg());
 }
 
 }  // namespace zxdb

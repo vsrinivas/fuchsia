@@ -164,9 +164,10 @@ TEST_F(ExprParserTest, DotNumberNoRust) {
   auto result = Parse("base.0");
   ASSERT_FALSE(result);
 
-  EXPECT_EQ("Expected identifier for right-hand-side of \".\".", parser().err().msg());
+  // This is parsed as an identifier followed by a floating-point number.
+  EXPECT_EQ("Unexpected input, did you forget an operator?", parser().err().msg());
   EXPECT_EQ(4u, parser().error_token().byte_offset());
-  EXPECT_EQ(".", parser().error_token().value());
+  EXPECT_EQ(".0", parser().error_token().value());
 }
 
 TEST_F(ExprParserTest, AccessorAtEnd) {
@@ -587,11 +588,11 @@ TEST_F(ExprParserTest, Comparison) {
       "BINARY_OP(||)\n"
       " BINARY_OP(<=)\n"
       "  LITERAL(1)\n"
-      "  LITERAL(2)\n"
+      "  LITERAL(2.3)\n"
       " BINARY_OP(>=)\n"
       "  IDENTIFIER(\"a\")\n"
-      "  LITERAL(4)\n",
-      GetParseString("1 <= 2 || a >= 4"));
+      "  LITERAL(4e9f)\n",
+      GetParseString("1 <= 2.3 || a >= 4e9f"));
 
   EXPECT_EQ(
       "BINARY_OP(<=>)\n"

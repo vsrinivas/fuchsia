@@ -308,6 +308,10 @@ void LiteralExprNode::Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback
       cb(StringToNumber(token_.value()));
       break;
     }
+    case ExprTokenType::kFloat: {
+      cb(ValueForFloatToken(context->GetLanguage(), token_));
+      break;
+    }
     case ExprTokenType::kStringLiteral: {
       // Include the null terminator in the string array as C would.
       std::vector<uint8_t> string_as_array;

@@ -16,6 +16,10 @@ namespace zxdb {
 // will be returned. Otherwise an empty refptr will be returned.
 fxl::RefPtr<BaseType> GetBuiltinType(ExprLanguage lang, std::string_view name);
 
+fxl::RefPtr<BaseType> GetBuiltinFloatType(ExprLanguage lang);
+fxl::RefPtr<BaseType> GetBuiltinDoubleType(ExprLanguage lang);
+fxl::RefPtr<BaseType> GetBuiltinLongDoubleType(ExprLanguage lang);
+
 }  // namespace zxdb
 
 #endif  // SRC_DEVELOPER_DEBUG_ZXDB_EXPR_BUILTIN_TYPES_H_

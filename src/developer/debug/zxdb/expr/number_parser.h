@@ -8,9 +8,12 @@
 #include <string_view>
 
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/expr/expr_language.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 
 namespace zxdb {
+
+class ExprToken;
 
 // Converts the given string to a number. Currently this only handles integers (no floating point).
 //
@@ -69,6 +72,31 @@ struct IntegerSuffix {
 // If there is no suffix, it will return a signed integer and not trim anything. If the suffix is
 // invalid, return the error.
 ErrOr<IntegerSuffix> ExtractIntegerSuffix(std::string_view* s);
+
+// Checks if the current input begins with a floating-point literal and returns its length if it
+// does. Returns 0 if it does not begin a floating point literal.
+//
+// Whitespace is not stripped so leading whitespace will not be considered a floating point token.
+// As in C, a leading '-' is not considered part of the token. "-23.5" is a unary '-' operator
+// applied to a positive floating-point literal.
+//
+// On success, the identified token may not represent a valid floating-point number. It may have
+// extra garbage in it, or may be malformed in various ways. It is just the range of text to be
+// considered a float. See ValueForFloatToken for conversion + validation.
+size_t GetFloatTokenLength(ExprLanguage lang, std::string_view input);
+
+enum class FloatSuffix {
+  kNone,   // No known suffix.
+  kFloat,  // 'f' or "F" meaning "float" instead of a double.
+  kLong,   // "l" or "L" meaning "long double".
+};
+
+// Identifies and strips the suffix from the end of a float token. The suffix is assumed to be the
+// last character of the input.
+FloatSuffix StripFloatSuffix(std::string_view* view);
+
+// Given a floating-point token, returns the ExprValue for it if possible.
+ErrOrValue ValueForFloatToken(ExprLanguage lang, const ExprToken& token);
 
 }  // namespace zxdb
 

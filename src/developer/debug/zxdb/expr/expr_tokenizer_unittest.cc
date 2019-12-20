@@ -205,6 +205,36 @@ TEST(ExprTokenizer, Integers) {
   EXPECT_EQ(31u, tokens[7].byte_offset());
 }
 
+// Most floating-point stuff is checked by the NumberParser test. This just validates integration.
+TEST(ExprTokenizer, Floats) {
+  ExprTokenizer t(" 7.2 3e12 78e+19+1 ");
+
+  EXPECT_TRUE(t.Tokenize());
+  EXPECT_FALSE(t.err().has_error()) << t.err().msg();
+  const auto& tokens = t.tokens();
+  ASSERT_EQ(5u, tokens.size());
+
+  EXPECT_EQ(ExprTokenType::kFloat, tokens[0].type());
+  EXPECT_EQ("7.2", tokens[0].value());
+  EXPECT_EQ(1u, tokens[0].byte_offset());
+
+  EXPECT_EQ(ExprTokenType::kFloat, tokens[1].type());
+  EXPECT_EQ("3e12", tokens[1].value());
+  EXPECT_EQ(5u, tokens[1].byte_offset());
+
+  EXPECT_EQ(ExprTokenType::kFloat, tokens[2].type());
+  EXPECT_EQ("78e+19", tokens[2].value());
+  EXPECT_EQ(10u, tokens[2].byte_offset());
+
+  EXPECT_EQ(ExprTokenType::kPlus, tokens[3].type());
+  EXPECT_EQ("+", tokens[3].value());
+  EXPECT_EQ(16u, tokens[3].byte_offset());
+
+  EXPECT_EQ(ExprTokenType::kInteger, tokens[4].type());
+  EXPECT_EQ("1", tokens[4].value());
+  EXPECT_EQ(17u, tokens[4].byte_offset());
+}
+
 TEST(ExprTokenizer, CStrings) {
   // Char offsets:         0 12345 67890123 45 67890 12345678
   // Token #'s:            0                 1

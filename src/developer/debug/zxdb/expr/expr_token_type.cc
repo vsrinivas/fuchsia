@@ -50,6 +50,7 @@ constexpr ExprTokenRecord kRecords[kNumExprTokenTypes] = {
     {ExprTokenType::kInvalid,         0},
     {ExprTokenType::kName,            kLangAll},
     {ExprTokenType::kInteger,         kLangAll},
+    {ExprTokenType::kFloat,           kLangAll},
     {ExprTokenType::kStringLiteral,   kLangAll},
     {ExprTokenType::kEquals,          kLangAll,  "="},
     {ExprTokenType::kEquality,        kLangAll,  "=="},
