@@ -344,6 +344,9 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
     if (!info.buffers[0].vmo) {
       return DRET(MAGMA_STATUS_INTERNAL_ERROR);
     }
+    const char* kBufferName =
+        (flags & MAGMA_SYSMEM_FLAG_PROTECTED) ? "MagmaProtectedSysmem" : "MagmaUnprotectedSysmem";
+    info.buffers[0].vmo.set_property(ZX_PROP_NAME, kBufferName, strlen(kBufferName));
 
     *buffer_out = magma::PlatformBuffer::Import(info.buffers[0].vmo.release());
     if (!buffer_out) {
