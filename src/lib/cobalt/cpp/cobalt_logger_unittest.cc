@@ -17,8 +17,6 @@
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/macros.h"
 
-using fuchsia::cobalt::ReleaseStage;
-
 namespace cobalt {
 namespace {
 
@@ -250,9 +248,7 @@ class FakeLoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
   void CreateLogger(fuchsia::cobalt::ProjectProfile profile,
                     fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
                     CreateLoggerCallback callback) override {
-    received_project_name_ = "";
     received_project_id_ = 0;
-    received_release_stage_ = fuchsia::cobalt::ReleaseStage::GA;
     logger_.reset(new FakeLoggerImpl());
     logger_bindings_.AddBinding(logger_.get(), std::move(request));
     callback(fuchsia::cobalt::Status::OK);
@@ -266,13 +262,7 @@ class FakeLoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
 
   void CreateLoggerFromProjectName(std::string project_name, fuchsia::cobalt::ReleaseStage stage,
                                    fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
-                                   CreateLoggerFromProjectNameCallback callback) override {
-    received_project_name_ = project_name;
-    received_release_stage_ = stage;
-    logger_.reset(new FakeLoggerImpl());
-    logger_bindings_.AddBinding(logger_.get(), std::move(request));
-    callback(fuchsia::cobalt::Status::OK);
-  }
+                                   CreateLoggerFromProjectNameCallback callback) override {}
 
   void CreateLoggerSimpleFromProjectName(
       std::string project_name, fuchsia::cobalt::ReleaseStage stage,
@@ -293,14 +283,10 @@ class FakeLoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
       CreateLoggerSimpleFromProjectIdCallback callback) override {}
 
   FakeLoggerImpl* logger() { return logger_.get(); }
-  std::string received_project_name() { return received_project_name_; }
   uint32_t received_project_id() { return received_project_id_; }
-  ReleaseStage received_release_stage() { return received_release_stage_; }
 
  private:
-  std::string received_project_name_;
   uint32_t received_project_id_;
-  ReleaseStage received_release_stage_;
   std::unique_ptr<FakeLoggerImpl> logger_;
   fidl::BindingSet<fuchsia::cobalt::Logger> logger_bindings_;
 };
@@ -357,22 +343,9 @@ class CobaltLoggerTest : public gtest::TestLoopFixture {
 
 TEST_F(CobaltLoggerTest, InitializeCobalt) {
   EXPECT_NE(cobalt_logger(), nullptr);
-  EXPECT_EQ("", logger_factory()->received_project_name());
-  EXPECT_EQ(fuchsia::cobalt::ReleaseStage::GA, logger_factory()->received_release_stage());
-  NewCobaltLoggerFromProjectName(async_get_default_dispatcher(), service_directory(), "MyProject",
-                                 fuchsia::cobalt::ReleaseStage::DEBUG);
-  RunLoopUntilIdle();
-  EXPECT_EQ("MyProject", logger_factory()->received_project_name());
-  EXPECT_EQ(fuchsia::cobalt::ReleaseStage::DEBUG, logger_factory()->received_release_stage());
-}
-
-TEST_F(CobaltLoggerTest, InitializeCobaltFromId) {
-  EXPECT_NE(cobalt_logger(), nullptr);
-  EXPECT_EQ("", logger_factory()->received_project_name());
   EXPECT_EQ(0u, logger_factory()->received_project_id());
   NewCobaltLoggerFromProjectId(async_get_default_dispatcher(), service_directory(), 1234);
   RunLoopUntilIdle();
-  EXPECT_EQ("", logger_factory()->received_project_name());
   EXPECT_EQ(1234u, logger_factory()->received_project_id());
 }
 

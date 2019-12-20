@@ -36,13 +36,6 @@ std::unique_ptr<CobaltLogger> NewCobaltLogger(async_dispatcher_t* dispatcher,
   return std::make_unique<CobaltLoggerImpl>(dispatcher, services, std::move(profile));
 }
 
-std::unique_ptr<CobaltLogger> NewCobaltLoggerFromProjectName(
-    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    std::string project_name, fuchsia::cobalt::ReleaseStage release_stage) {
-  return std::make_unique<CobaltLoggerImpl>(dispatcher, services, std::move(project_name),
-                                            release_stage);
-}
-
 std::unique_ptr<CobaltLogger> NewCobaltLoggerFromProjectId(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
     uint32_t project_id) {
