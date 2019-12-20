@@ -4,225 +4,188 @@
 
 library fuchsia.identity.tokens;
 
-using fuchsia.auth;
+/// The maximum number of service providers for which `AuthProvider` components
+/// can be simultaneously installed.
+const uint32 MAX_SERVICE_PROVIDER_COUNT = 128;
 
-/// Specifies the success/failure status of TokenManager calls.
-enum Status {
-    /// The command completed successfully
-    OK = 0;
-    /// The command referred to a missing, misconfigured, or failed auth provider.
-    /// Retrying is not recommended.
-    AUTH_PROVIDER_SERVICE_UNAVAILABLE = 1;
-    /// The auth server was reachable but responded with an error. These errors
-    /// are typically caused by a configuration problem or a revoked token and so
-    /// should not be retried.
-    AUTH_PROVIDER_SERVER_ERROR = 2;
-    /// An internal error occurred. This usually indicates a bug within the Token
-    /// Manager itself. Retry is optional.
-    INTERNAL_ERROR = 3;
-    /// An invalid or non-functional AuthContextProvider was provided. Retrying is
-    /// unlikely to correct this error.
-    INVALID_AUTH_CONTEXT = 4;
-    /// The request was malformed in some way, such as using an empty string for
-    /// the user_profile_id. The request should not be retried.
-    INVALID_REQUEST = 5;
-    /// The requested user profile could not be found in the database. The request
-    /// should not be retried.
-    USER_NOT_FOUND = 6;
-    /// A local error occurred such as disk I/O or memory allocation. Retry, after
-    /// a delay, is recommended.
-    IO_ERROR = 7;
-    /// Some other problem occurred that cannot be classified using one of the more
-    /// specific statuses. Retry is optional.
-    UNKNOWN_ERROR = 8;
-    /// The auth server requires that the user reauthenticate. The client should
-    /// call the Authorize method.
-    REAUTH_REQUIRED = 9;
-    /// The user cancelled the flow. User consent is required before any retry.
-    USER_CANCELLED = 10;
-    /// A network error occurred while communicating with the auth server. Retry,
-    /// after a delay, is recommended.
-    NETWORK_ERROR = 11;
-};
+/// The maximum number of Accounts that can be authorized within a service
+/// provider for a single instance of TokenManager.
+const uint32 MAX_ACCOUNT_COUNT = 128;
 
-/// Stores configuration parameters required to connect to available
-/// `AuthProvider`s. It is used by TokenManager to instantiate all auth providers
-/// during startup.
-struct AuthProviderConfig {
-    /// Type of OAuth Identity provider. An identity provider authenticates and
-    /// authorizes users for accessing their services. They also provide unique
-    /// identifiers for users to interact with the system and may provide
-    /// information about the user that is known to the provider.
-    ///
-    /// Sample auth provider types include:
-    ///     Dev : An identity provider that's used for development and testing.
-    ///     Google: Uses Google as the identity provider. Authorization from Google
-    ///             requires a working network connection and a web view.
-    ///     Spotify: Uses Spotify as an identity provider.
-    string auth_provider_type;
+/// The primary domain name of the service provider used to authorize accounts.
+/// Only one `AuthProvider` component can be installed for each service provider
+/// at a time.
+using ServiceProvider = string:256;
 
-    /// Url of the Fuchsia component implementing the AuthProvider.
-    string url;
-
-    /// Optional parameters specified during AuthProvider startup.
-    vector<string>? params;
-};
-
-/// Stores OAuth configuration details for a given client application. These
-/// details are used in the OAuth authorization step.
-struct AppConfig {
-    /// An OAuth identity provider matching a configuration set in
-    /// AuthProviderConfig.auth_provider_type.
-    string auth_provider_type;
-
-    /// OAuth client id.
-    string? client_id;
-
-    /// OAuth client secret.
-    /// This field is optional and will only be used on calls to Authorize.
-    string? client_secret;
-
-    /// OAuth application's redirect uri.
-    /// This field is optional and will only be used on calls to Authorize.
-    string? redirect_uri;
-};
-
-/// Implemented by a privileged system component with the ability to display UI
-/// to the end user.
-///
-/// This is provided during the initialization of TokenManager service and is
-/// used for any subsequent authorize calls. The UI contexts created by this
-/// interface are used to display OAuth login and permission screens to the end
-/// user.
-protocol AuthenticationContextProvider {
-    GetAuthenticationUIContext(request<fuchsia.auth.AuthenticationUIContext> request);
-};
-
-/// This interface provides a discoverable mechanism to create TokenManager
-/// instances for each user, and to supply auth provider configuration
-/// information using the structs defined in `auth_provider.fidl`.
-[Discoverable]
-protocol TokenManagerFactory {
-    /// Creates an OAuth TokenManager instance scoped for the component specified
-    /// by `application_url`, the Fuchsia user specified by `user_id`, and the list
-    /// of auth providers specified in `auth_provider_configs`.
-    ///
-    /// `auth_context_provider` is used to generate AuthenticationUIContexts during
-    /// TokenManager methods that require UI, unless the caller of those methods
-    /// supplies an alternative AuthenticationUIContext.
-    GetTokenManager(string user_id, string application_url,
-                    vector<AuthProviderConfig> auth_provider_configs,
-                    AuthenticationContextProvider auth_context_provider,
-                    request<TokenManager> token_manager);
-};
-
-/// This interface manages OAuth tokens at the Fuchsia system level for different
-/// auth identity providers.
-///
-/// If user authorization is required for minting tokens, TokenManager uses the
-/// `auth_context_provider's` UI context for displaying OAuth UI to the end user.
-///
-/// After initialization, TokenManager handles are typically handed out by
-/// Framework to components like Ledger and Agents. These components fetch
-/// OAuth tokens from any configured auth provider, and use the
-/// `auth_context_provider` initialized above for new authorizations.
+/// `TokenManager` maintains a set of credentials for accounts with service
+/// providers (such as Google) and provides access to standard tokens based on
+/// these credentials (such as OAuth2 access tokens and OpenID Connect ID
+/// tokens). This provides a "single sign-on" experience for these services on
+/// Fuchsia, where multiple components can use a service without requiring that
+/// the user signs in multiple times.
 protocol TokenManager {
-    /// The first step of OAuth is to get authorization from the user. For Fuchsia
-    /// components, this is accomplished by displaying OAuth permissions in a view
-    /// provided by the caller. This view will use `auth_ui_context` if supplied,
-    /// or the `auth_context_provider` supplied at TokenManager creation if not.
-    /// The component's OAuth configuration is provided in `app_config` and
-    /// `app_scopes`. An optional `user_profile_id` that uniquely identifies an
-    /// account for a given auth provider may be provided to identify an existing
-    /// account during a re-auth flow.
+    /// Returns the list of service providers that are available through this
+    /// `TokenManager`.
     ///
-    /// IoT ID authorization includes a mode where the user authorizes on a second
-    /// device and that device acquires an auth code from the auth provider.
-    /// In this mode, the auth code may be supplied in `auth_code` and no local
-    /// user interface will be displayed.
-    ///
-    /// After the user has successfully authorized, Token manager receives and
-    /// securely stores a persistent credential, such as an OAuth refresh token,
-    /// for the intended scopes. TokenManager later uses this credential for
-    /// minting short lived tokens.
-    ///
-    /// If the operation is successful, an OK status is returned along with user
-    /// profile information in `user_profile_info` such as the user's email,
-    /// image_url, profile_url, and first and last names as configured on the auth
-    /// provider backend system.
-    Authorize(AppConfig app_config, fuchsia.auth.AuthenticationUIContext? auth_ui_context,
-              vector<string> app_scopes, string? user_profile_id, string? auth_code)
-        -> (Status status, fuchsia.auth.UserProfileInfo? user_profile_info);
+    /// - `service_providers` a vector of available service providers.
+    ListServiceProviders() -> (
+        vector<ServiceProvider>:MAX_SERVICE_PROVIDER_COUNT service_providers
+        ) error Error;
 
-    /// Returns a downscoped access token from an auth provider for the given user
-    /// `user_profile_id` and `scopes` to a Fuchsia component. The component's
-    /// OAuth configuration is provided in `app_config` and the `user_profile_id`
-    /// is the unique user identifier returned by the Authorize() call.
+    /// Returns the list of currently authorized accounts for a particular
+    /// service provider.
     ///
-    /// In the interests of performance, Token Manager does not place the supplied
-    /// scopes in a canonical order during caching. To benefit from caching of
-    /// tokens, clients must request the same scopes in the same order across
-    /// calls.
+    /// + `service_provider` the service provider to query.
+    /// - `account_ids` a vector of authorized accounts for `service_provider`.
+    ListAccounts(ServiceProvider service_provider)
+        -> (vector<AccountId>:MAX_ACCOUNT_COUNT account_ids) error Error;
+
+    /// Acquires credentials for a new account from a service provider.
+    ///
+    /// This process typically requires the user to interactively authenticate
+    /// with the service provider and authorize the requested access.
+    ///
+    /// Once `AddAccount` has succeeded, tokens for the account may be acquired
+    /// using the other `TokenManager` methods.
+    ///
+    /// + `service_provider` The `ServiceProvider` used to authorize the new
+    ///                      account.
+    /// + `scopes` A list of OAuth scope strings that the caller wishes to
+    ///            subsequently use in `GetOauthAccessToken`. The AuthProvider
+    ///            component chooses if and how to combine these with any
+    ///            default or threshold scopes.
+    /// - `account_id`  A unique identifier within this service provider for the
+    ///                 newly authorized account.
+    /// * error `ABORTED` The user cancelled or failed an interactive flow.
+    /// * error `SERVICE_PROVIDER_DENIED` The service provider refused to grant
+    ///         the requested token.
+    AddAccount(ServiceProvider service_provider,
+               vector<Scope>:MAX_SCOPE_COUNT scopes)
+        -> (AccountId account_id) error Error;
+
+    /// Refreshes credentials or changes credential scopes for an account that
+    /// was previously authorized.
+    ///
+    /// This process may require the user to interactively authenticate with the
+    /// service provider and authorize the requested access.
+    ///
+    /// + `service_provider` The `ServiceProvider` used to reauthorize the
+    ///                      account.
+    /// + `account_id`  An `AccountId` that has previously been authorized for
+    ///                 this `ServiceProvider`.
+    /// + `scopes` A list of OAuth scope strings that the caller wishes to
+    ///            subsequently use in `GetOauthAccessToken`. The AuthProvider
+    ///            component chooses if and how to combine these with any
+    ///            default or threshold scopes.
+    /// * error `ABORTED` The user cancelled or failed an interactive flow.
+    /// * error `SERVICE_PROVIDER_DENIED` The service provider refused to grant
+    ///         the requested token.
+    ReauthorizeAccount(ServiceProvider service_provider,
+                       AccountId account_id,
+                       vector<Scope>:MAX_SCOPE_COUNT scopes) -> () error Error;
+
+    /// Returns an OAuth 2.0 access token for the specified account.
+    ///
+    /// The access token may optionally be sidescoped (i.e. issued to a
+    /// different `client_id` than the default `client_id` used during
+    /// authorization) and may contain a smaller set of scopes than those
+    /// acquired during authorization.
     ///
     /// The access token is returned from cache if possible, otherwise the auth
     /// provider is used to exchange the persistent credential for a new access
-    /// token.
-    GetAccessToken(AppConfig app_config, string user_profile_id,
-                   vector<string> app_scopes) -> (Status status, string? access_token);
+    /// token. In the interests of performance, Token Manager does not place the
+    /// supplied scopes in a canonical order during caching. To benefit from
+    /// caching of tokens, clients must request the same scopes in the same
+    /// order across calls.
+    ///
+    /// + `service_provider` The `ServiceProvider` from which the token should
+    ///                      be requested.
+    /// + `account_id` An `AccountId` that has previously been authorized for
+    ///                this `ServiceProvider`.
+    /// + `client_id` The `ClientId` that the token will be used by. If ommitted
+    ///               (and if supported by the auth provider component) a
+    ///               default `client_id` is used.
+    /// + `scopes` A list of OAuth scopes that should be included in the token,
+    ///            as defined by the service provider's API documention.
+    /// - `access_token` An `OauthAccessToken`.
+    /// * error `ABORTED` The user rejected an interactive permission request.
+    /// * error `SERVICE_PROVIDER_DENIED` The service provider refused to grant
+    ///         the requested token.
+    /// * error `SERVICE_PROVIDER_REAUTHORIZE` The service provider requires
+    ///         that the user reauthenticate before supplying the requested
+    ///         token. The client should call the `ReauthorizeAccount` method
+    ///         before retrying the request.
+    GetOauthAccessToken(ServiceProvider service_provider,
+                        AccountId account_id,
+                        ClientId? client_id,
+                        vector<Scope>:MAX_SCOPE_COUNT scopes)
+        -> (OauthAccessToken access_token) error Error;
 
-    /// Returns a JWT identity token from an auth provider to a Fuchsia component
-    /// intended for the given `audience`. The component's OAuth configuration is
-    /// supplied in `app_config`, the intended recipient of the id_token is
-    /// supplied in `audience`, and `user_profile_id` is a unique account
-    /// identifier returned by the Authorize() or ListProfileIds() calls.
+    /// Returns user information for the specified account as defined by
+    /// OpenID Connect.
     ///
-    /// `user_profile_id` is the unique user identifier returned by the
-    /// Authorize() call.
-    ///
-    /// The identity token is returned from cache if possible, otherwise the auth
-    /// provider is used to exchange the persistant credential for a new identity
-    /// token.
-    GetIdToken(AppConfig app_config, string user_profile_id, string? audience)
-        -> (Status status, string? id_token);
+    /// + `service_provider` The `ServiceProvider` from which the token should
+    ///                      be requested.
+    /// + `account_id` An `AccountId` that has previously been authorized for
+    ///                this `ServiceProvider`.
+    /// - `user_info` An `OpenIdUserInfo` containing account information.
+    /// * error `ABORTED` The user rejected an interactive permission request.
+    /// * error `SERVICE_PROVIDER_REAUTHORIZE` The service provider requires
+    ///         that the user reauthenticate before supplying the user info.
+    /// * error `UNSUPPORTED_OPERATION` The auth provider does not support
+    ///         OpenID Connect.
+    GetOpenIdUserInfo(ServiceProvider service_provider, AccountId account_id)
+        -> (OpenIdUserInfo user_info) error Error;
 
-    /// Returns a Firebase token from an auth provider for the given account and
-    /// Fuchsia component, and Firebase client. The component's OAuth configuration
-    /// is supplied in `app_config`, the Firebase client is supplied in
-    /// `firebase_api_key`, and `user_profile_id` is a unique account identifier
-    /// returned by the Authorize() or ListProfileIds() calls.
+    /// Returns an OpenID Connect ID token for the specified account.
     ///
-    /// This api invokes firebase auth's VerifyAssertion endpoint that takes an
-    /// OAuth IdToken as the fuchsia.ui.input. Audience is the intended recipient
-    /// of the firebase id token.
+    /// The identity token is returned from cache if possible, otherwise the
+    /// auth provider is used to exchange the persistant credential for a new
+    /// identity token.
     ///
-    /// The Firebase auth token is returned from cache if possible, otherwise it is
-    /// refreshed from the auth provider.
-    GetFirebaseToken(AppConfig app_config, string user_profile_id,
-                     string audience, string firebase_api_key)
-        -> (Status status, fuchsia.auth.FirebaseToken? firebase_token);
+    /// + `service_provider` The `ServiceProvider` from which the token should
+    ///                      be requested.
+    /// + `account_id` An `AccountId` that has previously been authorized for
+    ///                this `ServiceProvider`.
+    /// + `audience` The `Audience` that the ID token will be used by. If
+    ///              ommitted (and if supported by the auth provider component)
+    ///              a default `audience` is used.
+    /// - `id_token` An `OpenIdToken`.
+    /// * error `ABORTED` The user rejected an interactive permission request.
+    /// * error `SERVICE_PROVIDER_DENIED` The service provider refused to grant
+    ///         the requested token.
+    /// * error `SERVICE_PROVIDER_REAUTHORIZE` The service provider requires
+    ///         that the user reauthenticate before supplying the user info.
+    /// * error `UNSUPPORTED_OPERATION` The auth provider does not support
+    ///         OpenID Connect.
+    GetOpenIdToken(ServiceProvider service_provider,
+                   AccountId account_id,
+                   Audience? audience)
+        -> (OpenIdToken id_token) error Error;
 
     /// Deletes and revokes all long lived and short lived tokens generated for
-    /// an account and on behalf of a Fuchsia component. The component's OAuth
-    /// configuration is provided in `app_config` and `user_profile_id`
-    /// is a unique account identifier returned by the Authorize() or
-    /// ListProfileIds() calls.
+    /// an account.
     ///
     /// Deletion of tokens involves three steps:
     ///
-    ///   1. Revoking credentials remotely at the auth provider.
+    ///   1. Revoking credentials remotely at the service provider.
     ///   2. Deleting short lived tokens from the in-memory cache.
     ///   3. Deleting persistent credentials stored locally on disk.
     ///
-    /// If `force` is false then a failure at step 1 will terminate the method,
+    /// If `force` is false then a failure at step 1 terminates the method,
     /// ensuring client and server state remain consistent. If `force` is true
-    /// then steps 2&3 will be performed and the method will return OK even if
+    /// then steps 2&3 are performed and the method returns success even if
     /// step 1 fails, ensuring the local credentials are wiped in all
     /// circumstances.
-    DeleteAllTokens(AppConfig app_config, string user_profile_id, bool force)
-        -> (Status status);
-
-    /// Returns a vector of all currently authorized user_profile_ids for a
-    /// component's OAuth configuration provided in `app_config`.
-    ListProfileIds(AppConfig app_config)
-        -> (Status status, vector<string> user_profile_ids);
+    ///
+    /// + `service_provider` The `ServiceProvider` from which the token should
+    ///                      be requested.
+    /// + `account_id` An `AccountId` that has previously been authorized for
+    ///                this `ServiceProvider`.
+    /// + `force` Whether to force local deletion even when the remote
+    ///           revocation cannot be completed.
+    DeleteAccount(ServiceProvider service_provider,
+                  AccountId account_id,
+                  bool force)
+        -> () error Error;
 };

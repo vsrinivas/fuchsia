@@ -1,0 +1,29 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.identity.tokens;
+
+using fuchsia.auth;
+
+/// `TokenManagerFactory` provides access to a global `TokenManager` on systems
+/// that do not include an `AccountManager`.
+///
+/// On systems that do include `AccountManager`, that API should be used to
+/// acquire a separate `TokenManager` instance for each system account.
+[Discoverable]
+protocol TokenManagerFactory {
+    /// Connects a new `TokenManager` channel.
+    ///
+    /// + `ui_context_provider` An `AuthenticationContextProvider` capable of
+    ///                         generating the `AuthenticationUiContext`
+    ///                         channels used to display interactive
+    ///                         authentication and authorization flows.
+    /// + `token_manager` The server end of a `TokenManager` channel.
+    // TODO(fxb/43298): Remove the dependency on AuthenticationContextProvider
+    // once auth providers can acquire their UI resources through the session
+    // framework. At this point we may be able to remove the TokenManagerFactory
+    // protocol entirely and make the TokenManager protocol discoverable.
+    GetTokenManager(fuchsia.auth.AuthenticationContextProvider
+                    ui_context_provider, request<TokenManager> token_manager);
+};

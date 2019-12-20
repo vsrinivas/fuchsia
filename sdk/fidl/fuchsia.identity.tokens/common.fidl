@@ -5,7 +5,7 @@
 library fuchsia.identity.tokens;
 
 /// The maximum length of an account ID string, in bytes.
-const uint32 MAX_ACCOUNT_ID_SIZE = 1024;
+const uint32 MAX_ACCOUNT_ID_SIZE = 256;
 
 /// An identifier for the account that a token is issued against, as specified
 /// by the authorization server. Account identifiers are guaranteed to be unique
@@ -13,30 +13,78 @@ const uint32 MAX_ACCOUNT_ID_SIZE = 1024;
 using AccountId = string:MAX_ACCOUNT_ID_SIZE;
 
 /// The maximum length of an OAuth client ID, in bytes.
-/// We reserve the right to increase this size in future.
-const uint32 MAX_CLIENT_ID_SIZE = 1024;
+const uint32 MAX_CLIENT_ID_SIZE = 256;
 
 /// An OAuth client ID string.
 using ClientId = string:MAX_CLIENT_ID_SIZE;
 
 /// The maximum length of an OAuth scope, in bytes.
-/// We reserve the right to increase this size in future.
-const uint32 MAX_SCOPE_SIZE = 1024;
+const uint32 MAX_SCOPE_SIZE = 256;
 
 /// An OAuth scope string.
 using Scope = string:MAX_SCOPE_SIZE;
 
 /// The maximum number of OAuth scopes that may be requested for a single token.
-/// We reserve the right to increase this value in future.
-const uint32 MAX_SCOPE_COUNT = 128;
+const uint32 MAX_SCOPE_COUNT = 64;
 
 /// The maximum length of an OpenID audience string, in bytes.
-/// We reserve the right to increase this size in future.
-const uint32 MAX_AUDIENCE_SIZE = 1024;
+const uint32 MAX_AUDIENCE_SIZE = 256;
 
 /// An OpenID audience string.
 using Audience = string:MAX_AUDIENCE_SIZE;
 
 /// The maximum number of audiences that may be requested for a single ID token.
-/// We reserve the right to increase this value in future.
 const uint32 MAX_AUDIENCE_COUNT = 16;
+
+/// Specifies the reason that a fuchsia.identity.tokens method failed.
+enum Error {
+    /// Some other problem occurred that cannot be classified using one of the
+    /// more specific statuses. Retry is optional.
+    UNKNOWN = 1;
+
+    /// An internal error occurred. This usually indicates a bug within the
+    /// Token Manager itself. Retry is optional.
+    INTERNAL = 2;
+
+    /// The requested operation is not supported for the requested entity. For
+    /// example, some service providers may not support some types of token.
+    /// The request should not be retried.
+    UNSUPPORTED_OPERATION = 3;
+
+    /// The request was malformed in some way, such as using an empty string for
+    /// service provider. The request should not be retried.
+    INVALID_REQUEST = 4;
+
+    /// A local resource error occurred such as I/O, FIDL, or memory allocation
+    /// failure. Retry, after a delay, is recommended.
+    RESOURCE = 5;
+
+    /// A network error occurred while communicating with a server or the server
+    /// was unreachable.  Retry, after a delay, is recommended.
+    NETWORK = 6;
+
+    /// The request referred to a missing service provider or one where the auth
+    /// provider component is misconfigured or failed.
+    INVALID_SERVICE_PROVIDER = 7;
+
+    /// The request referred to an account that is not found for the specified
+    /// service provider. The request should not be retried.
+    INVALID_ACCOUNT = 8;
+
+    /// The service provider returned a error that indicates a failure within
+    /// the service provider itself. Retry, after a delay, is recommended.
+    SERVICE_PROVIDER_ERROR = 10;
+
+    /// The service provider refused to grant the requested token. The request
+    /// should not be retried.
+    SERVICE_PROVIDER_DENIED = 11;
+
+    /// The service provider requires that the user reauthenticate before
+    /// supplying the requested token. The client should call the
+    /// `ReauthorizeAccount` method before retrying the request.
+    SERVICE_PROVIDER_REAUTHORIZE = 12;
+
+    /// The user cancelled or failed an interactive flow. The caller should
+    /// gather user consent before any retry of the request.
+    ABORTED = 13;
+};
