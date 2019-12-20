@@ -6,18 +6,21 @@ use {
     crate::{
         ap::{
             frame_writer::{write_beacon_frame, BeaconOffloadParams},
-            remote_client::RemoteClient,
+            remote_client::{ClientRejection, RemoteClient},
             Context, Rejection, TimedEvent,
         },
         error::Error,
         key::KeyConfig,
         timer::EventId,
     },
+    banjo_ddk_hw_wlan_wlaninfo::WlanInfoDriverFeature,
     banjo_ddk_protocol_wlan_info::{WlanChannel, WlanChannelBandwidth},
+    failure::format_err,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     std::collections::HashMap,
     wlan_common::{
         appendable::Appendable,
+        ie,
         mac::{self, CapabilityInfo, MacAddr},
         TimeUnit,
     },
@@ -224,24 +227,77 @@ impl InfraBss {
         )
     }
 
+    fn handle_probe_req(
+        &mut self,
+        ctx: &mut Context,
+        client_addr: MacAddr,
+    ) -> Result<(), Rejection> {
+        // According to IEEE Std 802.11-2016, 11.1.4.1, we should intersect our IEs with the probe
+        // request IEs. However, the client is able to do this anyway so we just send the same IEs
+        // as we would with a beacon frame.
+        ctx.send_probe_resp_frame(
+            client_addr,
+            0,
+            self.beacon_interval,
+            self.capabilities,
+            &self.ssid,
+            &self.rates,
+            self.channel,
+            self.rsne.as_ref().map_or(&[], |rsne| &rsne),
+        )
+        .map_err(|e| Rejection::Client(client_addr, ClientRejection::WlanSendError(e)))
+    }
+
     pub fn handle_mgmt_frame<B: ByteSlice>(
         &mut self,
         ctx: &mut Context,
         mgmt_hdr: mac::MgmtHdr,
         body: B,
     ) -> Result<(), Rejection> {
-        if mgmt_hdr.addr1 != ctx.bssid.0 || mgmt_hdr.addr3 != ctx.bssid.0 {
-            // Frame is not for this BSS.
-            return Err(Rejection::OtherBss);
-        }
-
         if *&{ mgmt_hdr.frame_ctrl }.to_ds() || *&{ mgmt_hdr.frame_ctrl }.from_ds() {
             // IEEE Std 802.11-2016, 9.2.4.1.4 and Table 9-4: The To DS bit is only set for QMF
             // (QoS Management frame) management frames, and the From DS bit is reserved.
             return Err(Rejection::BadDsBits);
         }
 
+        let to_bss = mgmt_hdr.addr1 == ctx.bssid.0 && mgmt_hdr.addr3 == ctx.bssid.0;
         let client_addr = mgmt_hdr.addr2;
+
+        let mgmt_subtype = *&{ mgmt_hdr.frame_ctrl }.mgmt_subtype();
+        if mgmt_subtype == mac::MgmtSubtype::PROBE_REQ {
+            let driver_features = ctx.device.wlan_info().ifc_info.driver_features;
+            if (driver_features & WlanInfoDriverFeature::PROBE_RESP_OFFLOAD).0 > 0 {
+                // We expected the probe response to be handled by hardware.
+                return Err(Rejection::Error(format_err!(
+                    "driver indicates probe response offload but MLME received a probe response!"
+                )));
+            }
+
+            if to_bss || (mgmt_hdr.addr1 == mac::BCAST_ADDR && mgmt_hdr.addr3 == mac::BCAST_ADDR) {
+                // Allow either probe request sent directly to the AP, or ones that are broadcast.
+                for (id, ie_body) in ie::Reader::new(&body[..]) {
+                    match id {
+                        ie::Id::SSID => {
+                            if ie_body != &[][..] && ie_body != &self.ssid[..] {
+                                // Frame is not for this BSS.
+                                return Err(Rejection::OtherBss);
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+
+                // Technically, the probe request must contain an SSID IE (IEEE Std 802.11-2016,
+                // 11.1.4.1), but we just treat it here as the same as it being an empty SSID.
+                return self.handle_probe_req(ctx, client_addr);
+            } else {
+                // Frame is not for this BSS.
+                return Err(Rejection::OtherBss);
+            }
+        } else if !to_bss {
+            // Frame is not for this BSS.
+            return Err(Rejection::OtherBss);
+        }
 
         // We might allocate a client into the Option if there is none present in the map. We do not
         // allocate directly into the map as we do not know yet if the client will even be added
@@ -1691,6 +1747,232 @@ mod tests {
             )
             .expect_err("expected InfraBss::handle_mlme_setkeys_req error"),
             Error::Status(_, zx::Status::BAD_STATE)
+        );
+    }
+
+    #[test]
+    fn handle_probe_req() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let mut bss = InfraBss::new(
+            &mut ctx,
+            vec![1, 2, 3, 4, 5],
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            mac::CapabilityInfo(33),
+            vec![248],
+            1,
+            Some(vec![48, 2, 77, 88]),
+        )
+        .expect("expected InfraBss::new ok");
+
+        bss.handle_probe_req(&mut ctx, CLIENT_ADDR)
+            .expect("expected InfraBss::handle_probe_req ok");
+        assert_eq!(fake_device.wlan_queue.len(), 1);
+        assert_eq!(
+            &fake_device.wlan_queue[0].0[..],
+            &[
+                // Mgmt header
+                0b01010000, 0, // Frame Control
+                0, 0, // Duration
+                1, 1, 1, 1, 1, 1, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                2, 2, 2, 2, 2, 2, // addr3
+                0x10, 0, // Sequence Control
+                // Beacon header:
+                0, 0, 0, 0, 0, 0, 0, 0, // Timestamp
+                100, 0, // Beacon interval
+                33, 0, // Capabilities
+                // IEs:
+                0, 5, 1, 2, 3, 4, 5, // SSID
+                1, 1, 248, // Supported rates
+                3, 1, 1, // DSSS parameter set
+                48, 2, 77, 88, // RSNE
+            ][..]
+        );
+    }
+
+    #[test]
+    fn handle_probe_req_has_offload() {
+        let mut fake_device = FakeDevice::new();
+        fake_device.info.ifc_info.driver_features |= WlanInfoDriverFeature::PROBE_RESP_OFFLOAD;
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let mut bss = InfraBss::new(
+            &mut ctx,
+            vec![1, 2, 3, 4, 5],
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            CapabilityInfo(33),
+            vec![0b11111000],
+            1,
+            Some(vec![48, 2, 77, 88]),
+        )
+        .expect("expected InfraBss::new ok");
+
+        bss.handle_mgmt_frame(
+            &mut ctx,
+            mac::MgmtHdr {
+                frame_ctrl: mac::FrameControl(0)
+                    .with_frame_type(mac::FrameType::MGMT)
+                    .with_mgmt_subtype(mac::MgmtSubtype::PROBE_REQ),
+                duration: 0,
+                addr1: BSSID.0,
+                addr2: CLIENT_ADDR,
+                addr3: BSSID.0,
+                seq_ctrl: mac::SequenceControl(10),
+            },
+            &[][..],
+        )
+        .expect_err("expected InfraBss::handle_mgmt_frame error");
+    }
+
+    #[test]
+    fn handle_probe_req_wildcard_ssid() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let mut bss = InfraBss::new(
+            &mut ctx,
+            vec![1, 2, 3, 4, 5],
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            CapabilityInfo(33),
+            vec![0b11111000],
+            1,
+            Some(vec![48, 2, 77, 88]),
+        )
+        .expect("expected InfraBss::new ok");
+
+        bss.handle_mgmt_frame(
+            &mut ctx,
+            mac::MgmtHdr {
+                frame_ctrl: mac::FrameControl(0)
+                    .with_frame_type(mac::FrameType::MGMT)
+                    .with_mgmt_subtype(mac::MgmtSubtype::PROBE_REQ),
+                duration: 0,
+                addr1: BSSID.0,
+                addr2: CLIENT_ADDR,
+                addr3: BSSID.0,
+                seq_ctrl: mac::SequenceControl(10),
+            },
+            &[
+                0, 0, // Wildcard SSID
+            ][..],
+        )
+        .expect("expected InfraBss::handle_mgmt_frame ok");
+
+        assert_eq!(fake_device.wlan_queue.len(), 1);
+        assert_eq!(
+            &fake_device.wlan_queue[0].0[..],
+            &[
+                // Mgmt header
+                0b01010000, 0, // Frame Control
+                0, 0, // Duration
+                1, 1, 1, 1, 1, 1, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                2, 2, 2, 2, 2, 2, // addr3
+                0x10, 0, // Sequence Control
+                // Beacon header:
+                0, 0, 0, 0, 0, 0, 0, 0, // Timestamp
+                100, 0, // Beacon interval
+                33, 0, // Capabilities
+                // IEs:
+                0, 5, 1, 2, 3, 4, 5, // SSID
+                1, 1, 248, // Supported rates
+                3, 1, 1, // DSSS parameter set
+                48, 2, 77, 88, // RSNE
+            ][..]
+        );
+    }
+
+    #[test]
+    fn handle_probe_req_matching_ssid() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let mut bss = InfraBss::new(
+            &mut ctx,
+            vec![1, 2, 3, 4, 5],
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            CapabilityInfo(33),
+            vec![0b11111000],
+            1,
+            Some(vec![48, 2, 77, 88]),
+        )
+        .expect("expected InfraBss::new ok");
+
+        bss.handle_mgmt_frame(
+            &mut ctx,
+            mac::MgmtHdr {
+                frame_ctrl: mac::FrameControl(0)
+                    .with_frame_type(mac::FrameType::MGMT)
+                    .with_mgmt_subtype(mac::MgmtSubtype::PROBE_REQ),
+                duration: 0,
+                addr1: BSSID.0,
+                addr2: CLIENT_ADDR,
+                addr3: BSSID.0,
+                seq_ctrl: mac::SequenceControl(10),
+            },
+            &[0, 5, 1, 2, 3, 4, 5][..],
+        )
+        .expect("expected InfraBss::handle_mgmt_frame ok");
+
+        assert_eq!(fake_device.wlan_queue.len(), 1);
+        assert_eq!(
+            &fake_device.wlan_queue[0].0[..],
+            &[
+                // Mgmt header
+                0b01010000, 0, // Frame Control
+                0, 0, // Duration
+                1, 1, 1, 1, 1, 1, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                2, 2, 2, 2, 2, 2, // addr3
+                0x10, 0, // Sequence Control
+                // Beacon header:
+                0, 0, 0, 0, 0, 0, 0, 0, // Timestamp
+                100, 0, // Beacon interval
+                33, 0, // Capabilities
+                // IEs:
+                0, 5, 1, 2, 3, 4, 5, // SSID
+                1, 1, 248, // Supported rates
+                3, 1, 1, // DSSS parameter set
+                48, 2, 77, 88, // RSNE
+            ][..]
+        );
+    }
+
+    #[test]
+    fn handle_probe_req_mismatching_ssid() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let mut bss = InfraBss::new(
+            &mut ctx,
+            vec![1, 2, 3, 4, 5],
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            CapabilityInfo(33),
+            vec![0b11111000],
+            1,
+            Some(vec![48, 2, 77, 88]),
+        )
+        .expect("expected InfraBss::new ok");
+
+        assert_variant!(
+            bss.handle_mgmt_frame(
+                &mut ctx,
+                mac::MgmtHdr {
+                    frame_ctrl: mac::FrameControl(0)
+                        .with_frame_type(mac::FrameType::MGMT)
+                        .with_mgmt_subtype(mac::MgmtSubtype::PROBE_REQ),
+                    duration: 0,
+                    addr1: BSSID.0,
+                    addr2: CLIENT_ADDR,
+                    addr3: BSSID.0,
+                    seq_ctrl: mac::SequenceControl(10),
+                },
+                &[0, 5, 1, 2, 3, 4, 6][..],
+            )
+            .expect_err("expected InfraBss::handle_mgmt_frame error"),
+            Rejection::OtherBss
         );
     }
 }
