@@ -79,8 +79,8 @@ test_package("amberctl-tests") {
     },
     {
       path = rebase_path(
-              "//garnet/bin/pkg_resolver/meta/pkg_resolver_integration_test.cmx")
-      dest = "pkg_resolver_integration_test.cmx"
+              "//garnet/bin/pkg_resolver/meta/pkg_resolver_for_integration_test.cmx")
+      dest = "pkg_resolver_for_integration_test.cmx"
     },
   ]
 
