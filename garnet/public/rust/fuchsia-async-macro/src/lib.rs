@@ -192,7 +192,8 @@ pub fn run_until_stalled(attr: TokenStream, item: TokenStream) -> TokenStream {
         ::fuchsia_async::pin_mut!(fut);
         match #executor.run_until_stalled(&mut fut) {
             ::core::task::Poll::Ready(result) => result,
-            _ => panic!("Stalled without completing. Did you mean to use 'run_singlethreaded'?"),
+            _ => panic!("Stalled without completing. Consider using \"run_singlethreaded\", \
+                         or check for a deadlock."),
         }
     };
     common(item, executor, run_executor.into(), test)
