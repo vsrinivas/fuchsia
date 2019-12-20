@@ -238,7 +238,7 @@ TEST(SocketTest, AcceptedSocketIsConnected) {
   EXPECT_TRUE(pending & ZX_USER_SIGNAL_3);
 }
 
-TEST(SocketTest, CloseClonedSocketAfterTcpRst) {
+TEST(SocketTest, DISABLED_CloseClonedSocketAfterTcpRst) {
   // Create the listening endpoint (server).
   fbl::unique_fd serverfd;
   ASSERT_TRUE(serverfd = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
