@@ -22,6 +22,9 @@ namespace a11y {
 // actions when necessary.
 class GestureHandler {
  public:
+  // Callback which will be used to add recognizers to gesture arena.
+  using AddRecognizerToArenaCallback = fit::function<void(GestureRecognizer*)>;
+
   // The high-level gestures identified by this class.
   // TODO(lucasradaelli): Implement time-based gestures (such as double taps).
   // TODO(lucasradaelli): Implement swipe-like gestures.
@@ -42,7 +45,7 @@ class GestureHandler {
   // Callback invoked when the gesture it is bound to is detected.
   using OnGestureCallback = fit::function<void(zx_koid_t, fuchsia::math::PointF)>;
 
-  explicit GestureHandler(GestureArena* arena);
+  explicit GestureHandler(AddRecognizerToArenaCallback add_recognizer_callback);
   ~GestureHandler() = default;
 
   // Binds the action defined in |callback| with the gesture |kOneFingerTap|.
@@ -55,9 +58,11 @@ class GestureHandler {
   // Calls an action bound to |gesture_type| if it exists and returns true, false otherwise.
   bool OnGesture(GestureType gesture_type, GestureArguments args);
 
-  GestureArena* arena_ = nullptr;
   // Action of kOneFingerTap.
   OnGestureCallback one_finger_tap_callback_;
+
+  // Callback to add recognizer to gesture arena.
+  AddRecognizerToArenaCallback add_recognizer_callback_;
 
   // As callbacks are added to the handler to be invoked when a gesture is
   // performed, the recognizers capable of identifying them are instantiated and

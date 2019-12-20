@@ -44,15 +44,22 @@ class GestureManager : public fuchsia::ui::input::accessibility::PointerEventLis
   GestureArena* arena() { return &arena_; }
 
  private:
+  // Adds GestureRecognizer to gesture arena.
+  void AddRecognizer(GestureRecognizer* recognizer);
+
   // Binding to the listener implemented by this class. This object is owned
   // here instead in an external BindingSet so that FIDL events can be called.
   fidl::Binding<fuchsia::ui::input::accessibility::PointerEventListener> binding_;
 
-  // An arena to manage contending of pointer events across multiple gesture recognizers.
-  GestureArena arena_;
-
   // Manages bound actions and gestures.
   GestureHandler gesture_handler_;
+
+  // An arena to manage contending of pointer events across multiple gesture recognizers.
+  // arena_ should be instantiated after gesture_hander_, since arena_ depends on recognizers owned
+  // by handler_.
+  // TODO(fxb/43223): Recognizer pointers should be owned by a single class. Other users of
+  // these pointers should be able to validate pointers before use.
+  GestureArena arena_;
 };
 }  // namespace a11y
 

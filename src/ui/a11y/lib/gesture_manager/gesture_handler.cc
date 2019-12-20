@@ -17,7 +17,8 @@ AnyRecognizer consume_all;
 
 }  // namespace
 
-GestureHandler::GestureHandler(GestureArena* arena) : arena_(arena) {}
+GestureHandler::GestureHandler(AddRecognizerToArenaCallback add_recognizer_callback)
+    : add_recognizer_callback_(std::move(add_recognizer_callback)) {}
 
 bool GestureHandler::OnGesture(GestureType gesture_type, GestureArguments args) {
   switch (gesture_type) {
@@ -46,10 +47,10 @@ void GestureHandler::BindOneFingerTapAction(OnGestureCallback callback) {
                     {.viewref_koid = context.view_ref_koid, .coordinates = context.local_point});
         },
         number_of_taps);
-    arena_->Add(gesture_recognizers_[kOneFingerTap].get());
+    add_recognizer_callback_(gesture_recognizers_[kOneFingerTap].get());
   }
 }
 
-void GestureHandler::ConsumeAll() { arena_->Add(&consume_all); }
+void GestureHandler::ConsumeAll() { add_recognizer_callback_(&consume_all); }
 
 }  // namespace a11y
