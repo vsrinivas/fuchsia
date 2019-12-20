@@ -31,6 +31,68 @@ class IOFlagsGuard {
 
 constexpr const char* kIndent = "    ";
 
+const std::set<std::string> allowed_c_unions{{
+    "fuchsia_cobalt_EventPayload",
+    "fuchsia_cobalt_Value",
+    "fuchsia_device_Controller_Bind_Result",
+    "fuchsia_device_Controller_GetDevicePowerCaps_Result",
+    "fuchsia_device_Controller_GetPowerStateMapping_Result",
+    "fuchsia_device_Controller_GetTopologicalPath_Result",
+    "fuchsia_device_Controller_Rebind_Result",
+    "fuchsia_device_Controller_Resume_Result",
+    "fuchsia_device_Controller_ScheduleUnbind_Result",
+    "fuchsia_device_Controller_UpdatePowerStateMapping_Result",
+    "fuchsia_device_manager_Coordinator_AddCompositeDevice_Result",
+    "fuchsia_device_manager_Coordinator_AddDevice_Result",
+    "fuchsia_device_manager_Coordinator_AddDeviceInvisible_Result",
+    "fuchsia_device_manager_Coordinator_AddMetadata_Result",
+    "fuchsia_device_manager_Coordinator_BindDevice_Result",
+    "fuchsia_device_manager_Coordinator_DirectoryWatch_Result",
+    "fuchsia_device_manager_Coordinator_GetMetadata_Result",
+    "fuchsia_device_manager_Coordinator_GetMetadataSize_Result",
+    "fuchsia_device_manager_Coordinator_GetTopologicalPath_Result",
+    "fuchsia_device_manager_Coordinator_LoadFirmware_Result",
+    "fuchsia_device_manager_Coordinator_MakeVisible_Result",
+    "fuchsia_device_manager_Coordinator_PublishMetadata_Result",
+    "fuchsia_device_manager_Coordinator_RunCompatibilityTests_Result",
+    "fuchsia_device_manager_DeviceController_CompleteRemoval_Result",
+    "fuchsia_device_manager_DeviceController_Unbind_Result",
+    "fuchsia_device_NameProvider_GetDeviceName_Result",
+    "fuchsia_hardware_display_Controller_ImportImageForCapture_Result",
+    "fuchsia_hardware_display_Controller_IsCaptureSupported_Result",
+    "fuchsia_hardware_display_Controller_ReleaseCapture_Result",
+    "fuchsia_hardware_display_Controller_StartCapture_Result",
+    "fuchsia_hardware_power_statecontrol_Admin_Suspend_Result",
+    "fuchsia_hardware_serial_NewDevice_Read_Result",
+    "fuchsia_hardware_serial_NewDevice_Write_Result",
+    "fuchsia_hardware_usb_peripheral_Device_SetConfiguration_Result",
+    "fuchsia_io_NodeInfo",
+    "fuchsia_paver_BootManager_QueryActiveConfiguration_Result",
+    "fuchsia_paver_BootManager_QueryConfigurationStatus_Result",
+    "fuchsia_paver_DataSink_ReadAsset_Result",
+    "fuchsia_paver_DataSink_WipeVolume_Result",
+    "fuchsia_paver_ReadResult",
+    "fuchsia_sysmem_SecureMem_GetPhysicalSecureHeaps_Result",
+    "fuchsia_sysmem_SecureMem_SetPhysicalSecureHeaps_Result",
+    "fuchsia_wlan_stats_MlmeStats",
+}};
+
+const std::vector<std::string> allowed_c_union_prefixes{
+  "example_", "fidl_test_example_codingtables_",
+};
+
+bool CUnionAllowed(const std::string& union_name) {
+  if (allowed_c_unions.find(union_name) != allowed_c_unions.end()) {
+    return true;
+  }
+  for (const auto& prefix : allowed_c_union_prefixes) {
+    if (union_name.find(prefix) == 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
 CGenerator::Member MessageHeader() {
   return {
       flat::Type::Kind::kIdentifier,
@@ -923,6 +985,9 @@ std::map<const flat::Decl*, CGenerator::NamedUnion> CGenerator::NameUnions(
   std::map<const flat::Decl*, NamedUnion> named_unions;
   for (const auto& union_info : union_infos) {
     std::string union_name = NameCodedName(union_info->name, WireFormat::kOld);
+    if (!CUnionAllowed(union_name)) {
+      continue;
+    }
     named_unions.emplace(union_info.get(), NamedUnion{std::move(union_name), *union_info});
   }
   return named_unions;
