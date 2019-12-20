@@ -413,6 +413,7 @@ void ConsoleContext::HandleNotification(NotificationType type, const std::string
       out.Append(Syntax::kError, std::move(preamble));
     case NotificationType::kWarning:
       out.Append(Syntax::kWarning, std::move(preamble));
+    case NotificationType::kProcessEnteredLimbo:
     case NotificationType::kProcessStdout:
     case NotificationType::kProcessStderr:
       break;

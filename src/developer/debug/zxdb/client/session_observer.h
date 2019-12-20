@@ -23,6 +23,7 @@ class SessionObserver {
   enum class NotificationType {
     kNone,  // Meant to signal a no-op.
     kError,
+    kProcessEnteredLimbo,
     kProcessStderr,
     kProcessStdout,
     kWarning,

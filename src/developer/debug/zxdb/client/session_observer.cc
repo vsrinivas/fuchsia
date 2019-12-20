@@ -12,10 +12,12 @@ const char* SessionObserver::NotificationTypeToString(NotificationType type) {
   switch (type) {
     case NotificationType::kError:
       return "Error";
+    case NotificationType::kProcessEnteredLimbo:
+      return "kProcessEnteredLimbo";
     case NotificationType::kProcessStderr:
-      return "kProcessStderr";
+      return "ProcessStderr";
     case NotificationType::kProcessStdout:
-      return "kProcessStdout";
+      return "ProcessStdout";
     case NotificationType::kWarning:
       return "Warning";
     case NotificationType::kNone:
@@ -23,7 +25,7 @@ const char* SessionObserver::NotificationTypeToString(NotificationType type) {
   }
 
   FXL_NOTREACHED();
-  return nullptr;
+  return "<unknown>";
 }
 
 }  // namespace zxdb
