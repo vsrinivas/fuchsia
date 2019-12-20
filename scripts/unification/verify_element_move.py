@@ -20,6 +20,10 @@ FUCHSIA_ROOT = os.path.dirname(SCRIPTS_DIR)
 # A greater amount will raise a flag.
 MAX_SIZE_DECREASE = 10
 
+# The maximum number of size percentage points a binary is allowed to gain.
+# A greater amount will raise a flag.
+MAX_SIZE_INCREASE = 1
+
 
 class Type(object):
     AUX = 'aux'
@@ -170,12 +174,15 @@ def generate_summary(manifests, base_dir):
     return result
 
 
+def report(manifest, is_error, message):
+    type = 'Error' if is_error else 'Warning'
+    print('%s%s%s' % (type.ljust(10), manifest.ljust(8), message))
+
+
 def compare_summaries(reference, current):
     '''Compares summaries for two states of the build.'''
     match = True
     for type in Type.all():
-        type_match = True
-
         reference_objects = reference.get_objects(type)
         current_objects = current.get_objects(type)
         reference_names = reference_objects.filenames()
@@ -183,17 +190,15 @@ def compare_summaries(reference, current):
 
         # Missing and new files.
         if reference_names != current_names:
-            type_match = False
+            match = False
             removed = reference_names - current_names
             if removed:
-                print('Elements that have been removed:')
                 for element in removed:
-                    print(' - ' + element)
+                    report(type, True, 'element removed: ' + element)
             added = current_names - reference_names
             if added:
-                print('Elements that have been added:')
                 for element in added:
-                    print(' - ' + element)
+                    report(type, True, 'element removed: ' + element)
 
         # Size changes.
         for name in reference_names & current_names:
@@ -201,18 +206,16 @@ def compare_summaries(reference, current):
             current_size = current_objects.get_file(name).size
             if current_size == reference_size:
                 continue
+            is_diff_positive = current_size > reference_size
             diff_percentage = 100 * (current_size - reference_size) / reference_size
-            if 0 > diff_percentage and diff_percentage > -MAX_SIZE_DECREASE:
-                # Ignore relatively small decreases in binary size.
-                continue
-            type_match = False
-            print('Error: size change for ' + name + ': ' +
-                  ('+' if diff_percentage > 0 else '') +
-                  str(diff_percentage) + '%')
-
-        if not type_match:
-            match = False
-            print('--> [%s] manifests do not match <--\n' % type)
+            is_error = False
+            if (diff_percentage < -MAX_SIZE_DECREASE or
+                diff_percentage > MAX_SIZE_INCREASE):
+                match = False
+                is_error = True
+            report(type, is_error, 'size change for ' + name + ': ' +
+                   ('+' if is_diff_positive else '-') +
+                   str(abs(diff_percentage)) + '%')
 
     return match
 
