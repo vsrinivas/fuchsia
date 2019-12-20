@@ -86,7 +86,7 @@ func expectData(t *transfer, b []byte, addr *net.UDPAddr) error {
 	case opError:
 		return t.handleError(b)
 	default:
-		return handleUnexpected(b)
+		return handleUnexpected("data", b)
 	}
 }
 
@@ -97,7 +97,7 @@ func expectAck(t *transfer, b []byte, addr *net.UDPAddr) error {
 	case opError:
 		return t.handleError(b)
 	default:
-		return handleUnexpected(b)
+		return handleUnexpected("ack", b)
 	}
 }
 
@@ -112,7 +112,7 @@ func expectAny(t *transfer, b []byte, addr *net.UDPAddr) error {
 	case opOack:
 		return t.handleOack(b, addr)
 	default:
-		return handleUnexpected(b)
+		return handleUnexpected("any", b)
 	}
 }
 
@@ -123,7 +123,7 @@ func expectOack(t *transfer, b []byte, addr *net.UDPAddr) error {
 	case opOack:
 		return t.handleOack(b, addr)
 	default:
-		return handleUnexpected(b)
+		return handleUnexpected("oack", b)
 	}
 }
 
@@ -237,8 +237,10 @@ func (t *transfer) handleError(p []byte) error {
 	return fmt.Errorf("server canceled transfer: %s", msg)
 }
 
-func handleUnexpected(p []byte) error {
+func handleUnexpected(expected string, p []byte) error {
 	// This should never happen.  This represents the client and
 	// server having mismatched state and a very real bug somewhere.
-	panic(fmt.Sprintf("unexpected opcode!\n%v", p))
+	// But this happens. fxb/42283. We'll log and try to recover the best we
+	// can.
+	return fmt.Errorf("unexpected opcode! (expected %s)\n%v", expected, p)
 }

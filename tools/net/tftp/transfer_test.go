@@ -120,13 +120,10 @@ func TestHandleData(t *testing.T) {
 	}
 }
 
-func testHandleUnexpectedHelper(t *testing.T, f func()) {
-	defer func() {
-		if r := recover(); r == nil {
-			t.Errorf("Expected Panic() did not occur.")
-		}
-	}()
-	f()
+func testHandleUnexpectedHelper(t *testing.T, err error) {
+	if err == nil {
+		t.Errorf("Expected error, but received nil")
+	}
 }
 
 func TestHandleUnexpected(t *testing.T) {
@@ -137,26 +134,26 @@ func TestHandleUnexpected(t *testing.T) {
 	xfer := &transfer{}
 
 	t.Run("expectAck(); got data", func(t *testing.T) {
-		testHandleUnexpectedHelper(t, func() { expectAck(xfer, dataPacket, nil) })
+		testHandleUnexpectedHelper(t, expectAck(xfer, dataPacket, nil))
 	})
 
 	t.Run("expectAck(); got oack", func(t *testing.T) {
-		testHandleUnexpectedHelper(t, func() { expectAck(xfer, oackPacket, nil) })
+		testHandleUnexpectedHelper(t, expectAck(xfer, oackPacket, nil))
 	})
 
 	t.Run("expectData(); got ack", func(t *testing.T) {
-		testHandleUnexpectedHelper(t, func() { expectData(xfer, ackPacket, nil) })
+		testHandleUnexpectedHelper(t, expectData(xfer, ackPacket, nil))
 	})
 
 	t.Run("expectData(); got oack", func(t *testing.T) {
-		testHandleUnexpectedHelper(t, func() { expectData(xfer, oackPacket, nil) })
+		testHandleUnexpectedHelper(t, expectData(xfer, oackPacket, nil))
 	})
 
 	t.Run("expectOack(); got ack", func(t *testing.T) {
-		testHandleUnexpectedHelper(t, func() { expectOack(xfer, ackPacket, nil) })
+		testHandleUnexpectedHelper(t, expectOack(xfer, ackPacket, nil))
 	})
 
 	t.Run("expectOack(); got data", func(t *testing.T) {
-		testHandleUnexpectedHelper(t, func() { expectOack(xfer, dataPacket, nil) })
+		testHandleUnexpectedHelper(t, expectOack(xfer, dataPacket, nil))
 	})
 }
