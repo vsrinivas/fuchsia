@@ -59,10 +59,9 @@ components at runtime.
 ### Runtime
 
 The component framework doesn't dictate a particular format for programs, but
-instead allows components to specify which runtime they need by specifying a
-[runner](runners.md). By default, if no runner is explicitly specified for a
-component, the component is launched with the component manager's built in ELF
-runner.
+instead requires components to specify which runtime they need by specifying a
+[runner](runners.md). The component framework provides a built-in ELF runner,
+while other runtimes are implemented as components within the framework.
 
 The [`program`](#program) section of a component manifest declares to the runner
 how the component is run, such as the program location and any arguments.
@@ -321,6 +320,9 @@ properties:
     "binary": "bin/hippo",
     "args": [ "Hello", "hippos!" ],
 },
+"use": [
+    { "runner": "elf" },
+],
 ```
 
 See also: [ELF Runner](elf_runner.md)

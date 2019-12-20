@@ -114,7 +114,8 @@ by various situations, such as:
 - A component `C` offered a capability from its child `D`, but child `D` did not
   expose the capability to `C`.
 
-For example, consider the following tree of components and their manifests:
+For example, consider the following tree of components and their manifests
+(`program` blocks and runner setup omitted for brevity):
 
 ```
     C
@@ -125,9 +126,7 @@ A
 
 A.cml:
 {
-    "program": {
-        "binary": "bin/hippo",
-    },
+    // ...
     "expose: [
         {
             "service": "/svc/fuchsia.example.Foo",
@@ -138,6 +137,7 @@ A.cml:
 
 B.cml:
 {
+    // ...
     "expose: [
         {
             "service": "/svc/fuchsia.example.Foo",
@@ -154,6 +154,7 @@ B.cml:
 
 C.cml:
 {
+    // ...
     "offer": [
         {
             "service": "/svc/fuchsia.example.Foo",
@@ -177,9 +178,7 @@ C.cml:
 
 D.cml:
 {
-    "program": {
-        "binary": "bin/hippo",
-    },
+    // ...
     "use": [
         {
             "service": "/svc/fuchsia.example.Foo",

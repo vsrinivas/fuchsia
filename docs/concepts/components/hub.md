@@ -52,6 +52,7 @@ manifest file of a component that accesses its own hub:
         "binary": "bin/program"
     },
     "use": [
+        { "runner": "elf" },
         {
             "directory": "/hub",
             "from": "framework",
@@ -274,11 +275,17 @@ In the parent component manifest:
 
 ```
 {
-    // Route the root hub to hub_client.
     "offer": [
+        // Route the root hub to hub_client.
         {
           "directory": "/hub",
           "from": "framework",
+          "to": "#hub_client",
+        },
+        // Route the ELF runner capability to hub_client.
+        {
+          "runner": "elf",
+          "from": "realm",
           "to": "#hub_client",
         },
     ],
@@ -299,6 +306,7 @@ In `hub_client.cml`:
         "binary": "bin/hub_client",
     },
     "use": [
+        { "runner": "elf" },
         {
           "directory": "/hub",
           "from": "realm",
@@ -322,6 +330,9 @@ In `hub_client_sibling.cml`:
     "program": {
         "binary": "bin/hub_client_sibling",
     },
+    "use": [
+        { "runner": "elf" },
+    ],
     "expose": [
         {
             "directory": "/hub",
@@ -367,6 +378,7 @@ In hub_client.cml:
         "binary": "bin/hub_client",
     },
     "use": [
+        { "runner": "elf" },
         {
             "directory": "/sibling_hub", "from": "realm",
         }
