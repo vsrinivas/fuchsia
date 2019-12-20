@@ -436,7 +436,8 @@ tftp_status Paver::OpenWrite(const char* filename, size_t size) {
 
 tftp_status Paver::Write(const void* data, size_t* length, off_t offset) {
   if (!InProgress()) {
-    printf("netsvc: paver exited prematurely with %d\n", exit_code());
+    printf("netsvc: paver exited prematurely with %s\n",
+            zx_status_get_string(exit_code()));
     reset_exit_code();
     return TFTP_ERR_IO;
   }
