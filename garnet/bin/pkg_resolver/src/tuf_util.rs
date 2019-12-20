@@ -78,8 +78,9 @@ impl Repository {
             .get(0)
             .ok_or_else(|| format_err!("Cannot obtain remote url from repo config: {:?}", config))?
             .mirror_url();
-        let remote = HttpRepositoryBuilder::new(
-            url::Url::parse(remote_url).map_err(|e| {
+
+        let remote = HttpRepositoryBuilder::new_with_uri(
+            remote_url.parse::<http::Uri>().map_err(|e| {
                 format_err!("Unable to parse url {:?}, received error {:?}", remote_url, e)
             })?,
             fuchsia_hyper::new_https_client(),
