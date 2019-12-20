@@ -160,11 +160,10 @@ void SimpleAudioStream::DdkRelease() {
   auto thiz = fbl::ImportFromRawPtr(this);
 }
 
-zx_status_t SimpleAudioStream::DdkSuspend(uint32_t flags) {
-  // TODO(voydanoff) do different things based on the flags.
-  // for now we shutdown the driver in preparation for mexec
+void SimpleAudioStream::DdkSuspendNew(ddk::SuspendTxn txn) {
+  // TODO(fxb/42613): Implement proper power management based on the requested state.
   Shutdown();
-  return ZX_OK;
+  txn.Reply(ZX_OK, txn.requested_state());
 }
 
 void SimpleAudioStream::GetChannel(GetChannelCompleter::Sync completer) {

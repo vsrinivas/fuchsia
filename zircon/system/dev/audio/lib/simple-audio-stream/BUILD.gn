@@ -40,6 +40,7 @@ zx_test("sa-unittest") {
     ":simple-audio-stream",
     "$zx/system/dev/lib/fake_ddk",
     "$zx/system/dev/lib/operation",
+    "$zx/system/fidl/fuchsia-device:llcpp",
     "$zx/system/fidl/fuchsia-hardware-audio:llcpp",
     "$zx/system/ulib/audio-driver-proto",
     "$zx/system/ulib/audio-proto-utils",

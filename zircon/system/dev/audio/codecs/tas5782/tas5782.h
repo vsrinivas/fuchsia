@@ -5,6 +5,8 @@
 #ifndef ZIRCON_SYSTEM_DEV_AUDIO_CODECS_TAS5782_TAS5782_H_
 #define ZIRCON_SYSTEM_DEV_AUDIO_CODECS_TAS5782_TAS5782_H_
 
+#include <lib/device-protocol/i2c-channel.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <threads.h>
 
 #include <memory>
@@ -17,13 +19,13 @@
 #include <ddktl/protocol/gpio.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
-#include <lib/device-protocol/i2c-channel.h>
-#include <lib/zircon-internal/thread_annotations.h>
+
+#include "ddktl/suspend-txn.h"
 
 namespace audio {
 
 class Tas5782;
-using DeviceType = ddk::Device<Tas5782, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<Tas5782, ddk::UnbindableNew, ddk::SuspendableNew>;
 
 class Tas5782 : public DeviceType,  // Not final for unit tests.
                 public ddk::CodecProtocol<Tas5782, ddk::base_protocol> {
@@ -41,9 +43,11 @@ class Tas5782 : public DeviceType,  // Not final for unit tests.
     Shutdown();
     txn.Reply();
   }
-  zx_status_t DdkSuspend(uint32_t flags) {
+
+  void DdkSuspendNew(ddk::SuspendTxn txn) {
+    // TODO(fxb/42613): Implement proper power management based on the requested state.
     Shutdown();
-    return ZX_OK;
+    txn.Reply(ZX_OK, txn.requested_state());
   }
 
   void CodecReset(codec_reset_callback callback, void* cookie);

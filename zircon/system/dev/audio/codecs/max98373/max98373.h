@@ -5,6 +5,8 @@
 #ifndef ZIRCON_SYSTEM_DEV_AUDIO_CODECS_MAX98373_MAX98373_H_
 #define ZIRCON_SYSTEM_DEV_AUDIO_CODECS_MAX98373_MAX98373_H_
 
+#include <lib/device-protocol/i2c-channel.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <threads.h>
 
 #include <memory>
@@ -16,13 +18,13 @@
 #include <ddktl/protocol/gpio.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
-#include <lib/device-protocol/i2c-channel.h>
-#include <lib/zircon-internal/thread_annotations.h>
+
+#include "ddktl/suspend-txn.h"
 
 namespace audio {
 
 class Max98373;
-using DeviceType = ddk::Device<Max98373, ddk::UnbindableNew>;
+using DeviceType = ddk::Device<Max98373, ddk::UnbindableNew, ddk::SuspendableNew>;
 
 class Max98373 : public DeviceType,  // Not final for unit tests.
                  public ddk::CodecProtocol<Max98373, ddk::base_protocol> {
@@ -39,9 +41,11 @@ class Max98373 : public DeviceType,  // Not final for unit tests.
     Shutdown();
     txn.Reply();
   }
-  zx_status_t DdkSuspend(uint32_t flags) {
+
+  void DdkSuspendNew(ddk::SuspendTxn txn) {
+    // TODO(fxb/42613): Implement proper power management based on the requested state.
     Shutdown();
-    return ZX_OK;
+    txn.Reply(ZX_OK, txn.requested_state());
   }
 
   // Codec protocol.

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/audio/llcpp/fidl.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/simple-audio-stream/simple-audio-stream.h>
@@ -185,7 +186,8 @@ TEST(SimpleAudioTest, DdkLifeCycleTest) {
   Bind tester;
   auto server = audio::SimpleAudioStream::Create<audio::MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
-  ASSERT_EQ(ZX_OK, server->DdkSuspend(0));
+  ddk::SuspendTxn txn(server->zxdev(), 0, false, DEVICE_SUSPEND_REASON_SELECTIVE_SUSPEND);
+  server->DdkSuspendNew(std::move(txn));
   EXPECT_FALSE(tester.IsRemoved());
   server->DdkUnbindDeprecated();
   EXPECT_TRUE(tester.Ok());
