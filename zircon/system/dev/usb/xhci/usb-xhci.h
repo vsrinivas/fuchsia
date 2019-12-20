@@ -4,22 +4,23 @@
 
 #pragma once
 
-#include <ddktl/device.h>
 #include <lib/device-protocol/pdev.h>
+
+#include <memory>
+
+#include <ddktl/device.h>
 #include <ddktl/protocol/composite.h>
 #include <ddktl/protocol/pci.h>
 #include <ddktl/protocol/platform/device.h>
 #include <ddktl/protocol/usb/hci.h>
 #include <fbl/array.h>
 
-#include <memory>
-
 #include "xhci.h"
 
 namespace usb_xhci {
 
 class UsbXhci;
-using UsbXhciType = ddk::Device<UsbXhci, ddk::Suspendable, ddk::UnbindableNew>;
+using UsbXhciType = ddk::Device<UsbXhci, ddk::SuspendableNew, ddk::UnbindableNew>;
 
 // This is the main class for the USB XHCI host controller driver.
 class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::base_protocol> {
@@ -30,7 +31,7 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   // Device protocol implementation.
-  zx_status_t DdkSuspend(uint32_t flags);
+  void DdkSuspendNew(ddk::SuspendTxn txn);
   void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
 

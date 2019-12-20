@@ -180,13 +180,11 @@ static void xhci_shutdown(xhci_t* xhci) {
   }
 }
 
-zx_status_t UsbXhci::DdkSuspend(uint32_t flags) {
-  zxlogf(TRACE, "UsbXhci::DdkSuspend %u\n", flags);
-  // TODO(voydanoff) do different things based on the flags.
+void UsbXhci::DdkSuspendNew(ddk::SuspendTxn txn) {
+  // TODO(fxb/42612) do different things based on the requested_state and suspend reason.
   // for now we shutdown the driver in preparation for mexec
   xhci_shutdown(xhci_.get());
-
-  return ZX_OK;
+  txn.Reply(ZX_OK, 0);
 }
 
 void UsbXhci::DdkUnbindNew(ddk::UnbindTxn txn) {
