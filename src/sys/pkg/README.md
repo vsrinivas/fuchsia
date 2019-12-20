@@ -186,7 +186,7 @@ Tab 1 > fx set core.x64 --with //bundles:tests && fx build && fx serve
 
 Tab 2 > fx qemu -kN
 
-Tab 3 > fx run-test pkg-resolver-tests # example of running the pkg_resolver integration tests
+Tab 3 > fx run-test pkg-resolver-integration-tests # example of running the pkg_resolver integration tests
 
 ```
 

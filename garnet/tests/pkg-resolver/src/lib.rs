@@ -170,15 +170,17 @@ impl<P: PkgFs> TestEnv<P> {
     }
 
     fn new_with_pkg_fs_and_mounts(pkgfs: P, mounts: Mounts, include_amber: bool) -> Self {
-        let mut amber =
-            AppBuilder::new("fuchsia-pkg://fuchsia.com/pkg-resolver-tests#meta/amber.cmx")
-                .add_handle_to_namespace(
-                    "/pkgfs".to_owned(),
-                    pkgfs.root_dir_handle().expect("pkgfs dir to open").into(),
-                );
+        let mut amber = AppBuilder::new(
+            "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/amber.cmx",
+        )
+        .add_handle_to_namespace(
+            "/pkgfs".to_owned(),
+            pkgfs.root_dir_handle().expect("pkgfs dir to open").into(),
+        );
 
         let mut pkg_cache = AppBuilder::new(
-            "fuchsia-pkg://fuchsia.com/pkg-resolver-tests#meta/pkg_cache.cmx".to_owned(),
+            "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg_cache.cmx"
+                .to_owned(),
         )
         .add_handle_to_namespace(
             "/pkgfs".to_owned(),
@@ -186,7 +188,8 @@ impl<P: PkgFs> TestEnv<P> {
         );
 
         let mut pkg_resolver = AppBuilder::new(
-            "fuchsia-pkg://fuchsia.com/pkg-resolver-tests#meta/pkg_resolver.cmx".to_owned(),
+            "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg_resolver.cmx"
+                .to_owned(),
         )
         .add_handle_to_namespace(
             "/pkgfs".to_owned(),
