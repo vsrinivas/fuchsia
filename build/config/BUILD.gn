@@ -148,6 +148,11 @@ config("relative_paths") {
     ]
   }
 
+  rustflags = [
+    "--remap-path-prefix",
+    rebase_path("//") + "=" + rebase_path("//", root_build_dir),
+  ]
+
   cflags += [
     # This makes sure that include directories in the toolchain are
     # represented as relative to the build directory (because that's how
