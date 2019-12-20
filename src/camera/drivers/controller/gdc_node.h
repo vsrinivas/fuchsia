@@ -45,8 +45,8 @@ class GdcNode : public ProcessNode {
           fuchsia::camera2::CameraStreamType current_stream_type,
           std::vector<fuchsia::camera2::CameraStreamType> supported_streams)
       : ProcessNode(gdc, NodeType::kGdc, parent_node, output_image_formats,
-                    std::move(output_buffer_collection), current_stream_type, supported_streams),
-        dispatcher_(dispatcher),
+                    std::move(output_buffer_collection), current_stream_type, supported_streams,
+                    dispatcher),
         gdc_(gdc),
         frame_callback_{OnGdcFrameAvailable, this},
         res_callback_{OnGdcResChange, this},
@@ -85,7 +85,6 @@ class GdcNode : public ProcessNode {
   void OnShutdown() override;
 
  private:
-  __UNUSED async_dispatcher_t* dispatcher_;
   // Protocol to talk to the GDC driver.
   ddk::GdcProtocolClient gdc_;
   // Task index for this node.

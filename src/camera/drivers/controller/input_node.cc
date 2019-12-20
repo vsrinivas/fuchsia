@@ -92,9 +92,11 @@ void InputNode::OnStartStreaming() {
 }
 
 void InputNode::OnStopStreaming() {
-  if (AllChildNodesDisabled()) {
-    enabled_ = false;
-    isp_stream_protocol_->Stop();
+  if (enabled_) {
+    if (AllChildNodesDisabled()) {
+      enabled_ = false;
+      isp_stream_protocol_->Stop();
+    }
   }
 }
 

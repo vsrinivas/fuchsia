@@ -38,12 +38,6 @@ class PipelineManager {
         gdc_(gdc),
         memory_allocator_(std::move(sysmem_allocator)) {}
 
-  // For tests.
-  PipelineManager(zx_device_t* device, const ddk::IspProtocolClient& isp,
-                  const ddk::GdcProtocolClient& gdc,
-                  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
-      : device_(device), isp_(isp), gdc_(gdc), memory_allocator_(std::move(sysmem_allocator)) {}
-
   zx_status_t ConfigureStreamPipeline(StreamCreationData* info,
                                       fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream);
 
@@ -73,6 +67,9 @@ class PipelineManager {
   fit::result<std::unique_ptr<InputNode>, zx_status_t> ConfigureStreamPipelineHelper(
       StreamCreationData* info, fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream);
 
+  // Lock to guard |event_queue_|.
+  fbl::Mutex event_queue_lock_;
+
   zx_device_t* device_;
   async_dispatcher_t* dispatcher_;
   ddk::IspProtocolClient isp_;
@@ -80,6 +77,7 @@ class PipelineManager {
   ControllerMemoryAllocator memory_allocator_;
   std::unique_ptr<ProcessNode> full_resolution_stream_;
   std::unique_ptr<ProcessNode> downscaled_resolution_stream_;
+  std::queue<async::TaskClosure> event_queue_ __TA_GUARDED(event_queue_lock_);
 };
 
 }  // namespace camera

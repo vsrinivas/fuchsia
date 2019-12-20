@@ -36,11 +36,6 @@ class ControllerImpl : public fuchsia::camera2::hal::Controller {
                  const ddk::GdcProtocolClient& gdc, fit::closure on_connection_closed,
                  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator);
 
-  explicit ControllerImpl(zx_device_t* device, const ddk::IspProtocolClient& isp,
-                          const ddk::GdcProtocolClient& gdc,
-                          fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
-      : binding_(nullptr), pipeline_manager_(device, isp, gdc, std::move(sysmem_allocator)) {}
-
   zx_status_t GetInternalConfiguration(uint32_t config_index, InternalConfigInfo** internal_config);
   InternalConfigNode* GetStreamConfigNode(InternalConfigInfo* internal_config,
                                           fuchsia::camera2::CameraStreamType stream_config_type);

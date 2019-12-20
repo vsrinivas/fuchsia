@@ -6,8 +6,10 @@
 #define SRC_CAMERA_DRIVERS_CONTROLLER_PROCESSING_NODE_H_
 #include <fuchsia/camera2/cpp/fidl.h>
 #include <fuchsia/camera2/hal/cpp/fidl.h>
+#include <lib/async/cpp/task.h>
 #include <zircon/assert.h>
 
+#include <queue>
 #include <vector>
 
 #include <ddktl/protocol/gdc.h>
@@ -36,8 +38,10 @@ class ProcessNode {
   ProcessNode(NodeType type, std::vector<fuchsia::sysmem::ImageFormat_2> output_image_formats,
               fuchsia::sysmem::BufferCollectionInfo_2 output_buffer_collection,
               fuchsia::camera2::CameraStreamType current_stream_type,
-              std::vector<fuchsia::camera2::CameraStreamType> supported_streams)
-      : type_(type),
+              std::vector<fuchsia::camera2::CameraStreamType> supported_streams,
+              async_dispatcher_t* dispatcher)
+      : dispatcher_(dispatcher),
+        type_(type),
         parent_node_(nullptr),
         output_buffer_collection_(std::move(output_buffer_collection)),
         output_image_formats_(output_image_formats),
@@ -50,8 +54,10 @@ class ProcessNode {
 
   ProcessNode(NodeType type, ProcessNode* parent_node,
               fuchsia::camera2::CameraStreamType current_stream_type,
-              std::vector<fuchsia::camera2::CameraStreamType> supported_streams)
-      : type_(type),
+              std::vector<fuchsia::camera2::CameraStreamType> supported_streams,
+              async_dispatcher_t* dispatcher)
+      : dispatcher_(dispatcher),
+        type_(type),
         parent_node_(parent_node),
         enabled_(false),
         supported_streams_(supported_streams) {
@@ -64,8 +70,10 @@ class ProcessNode {
               std::vector<fuchsia::sysmem::ImageFormat_2> output_image_formats,
               fuchsia::sysmem::BufferCollectionInfo_2 output_buffer_collection,
               fuchsia::camera2::CameraStreamType current_stream_type,
-              std::vector<fuchsia::camera2::CameraStreamType> supported_streams)
-      : type_(type),
+              std::vector<fuchsia::camera2::CameraStreamType> supported_streams,
+              async_dispatcher_t* dispatcher)
+      : dispatcher_(dispatcher),
+        type_(type),
         parent_node_(parent_node),
         output_buffer_collection_(std::move(output_buffer_collection)),
         output_image_formats_(output_image_formats),
@@ -138,9 +146,13 @@ class ProcessNode {
 
  protected:
   bool AllChildNodesDisabled();
-
+  // Dispatcher for the frame processng loop.
+  async_dispatcher_t* dispatcher_;
   // Lock to guard |in_use_buffer_count_|
   fbl::Mutex in_use_buffer_lock_;
+  // Lock to guard |event_queue_|.
+  fbl::Mutex event_queue_lock_;
+
   // Type of node.
   NodeType type_;
   // List of all the children for this node.
@@ -159,6 +171,8 @@ class ProcessNode {
   // A vector to keep track of outstanding in-use buffers handed off to all child nodes.
   // [buffer_index] --> [count]
   std::vector<uint32_t> in_use_buffer_count_ __TA_GUARDED(in_use_buffer_lock_);
+  // Task queue for all the frame processing.
+  std::queue<async::TaskClosure> event_queue_ __TA_GUARDED(event_queue_lock_);
 };
 
 }  // namespace camera

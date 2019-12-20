@@ -145,12 +145,19 @@ void GdcNode::OnReleaseFrame(uint32_t buffer_index) {
   if (in_use_buffer_count_[buffer_index] != 0) {
     return;
   }
-
   gdc_.ReleaseFrame(task_index_, buffer_index);
 }
 
 void GdcNode::OnReadyToProcess(uint32_t buffer_index) {
-  ZX_ASSERT(ZX_OK == gdc_.ProcessFrame(task_index_, buffer_index));
+  fbl::AutoLock guard(&event_queue_lock_);
+  event_queue_.emplace([this, buffer_index]() {
+    if (enabled_) {
+      ZX_ASSERT(ZX_OK == gdc_.ProcessFrame(task_index_, buffer_index));
+    }
+    fbl::AutoLock guard(&event_queue_lock_);
+    event_queue_.pop();
+  });
+  event_queue_.back().Post(dispatcher_);
 }
 
 void GdcNode::OnShutdown() { gdc_.RemoveTask(task_index_); }

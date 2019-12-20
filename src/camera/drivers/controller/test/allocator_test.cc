@@ -25,14 +25,18 @@ namespace camera {
 
 class ControllerMemoryAllocatorTest : public gtest::TestLoopFixture {
  public:
-  ControllerMemoryAllocatorTest() : context_(sys::ComponentContext::Create()) {}
+  ControllerMemoryAllocatorTest()
+      : loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
+        context_(sys::ComponentContext::Create()) {}
 
   void SetUp() override {
     ASSERT_EQ(ZX_OK, context_->svc()->Connect(sysmem_allocator_.NewRequest()));
+    ASSERT_EQ(ZX_OK, loop_.StartThread("test-controller-frame-processing-thread",
+                                       &controller_frame_processing_thread_));
     controller_memory_allocator_ =
         std::make_unique<ControllerMemoryAllocator>(std::move(sysmem_allocator_));
-    pipeline_manager_ = std::make_unique<PipelineManager>(fake_ddk::kFakeParent, isp_, gdc_,
-                                                          std::move(sysmem_allocator1_));
+    pipeline_manager_ = std::make_unique<PipelineManager>(
+        fake_ddk::kFakeParent, loop_.dispatcher(), isp_, gdc_, std::move(sysmem_allocator1_));
   }
 
   void TearDown() override {
@@ -40,6 +44,8 @@ class ControllerMemoryAllocatorTest : public gtest::TestLoopFixture {
     sysmem_allocator_ = nullptr;
   }
 
+  async::Loop loop_;
+  thrd_t controller_frame_processing_thread_;
   std::unique_ptr<sys::ComponentContext> context_;
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
   std::unique_ptr<ControllerMemoryAllocator> controller_memory_allocator_;

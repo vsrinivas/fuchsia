@@ -15,27 +15,35 @@ namespace camera {
 
 void ProcessNode::OnFrameAvailable(const frame_available_info_t* info) {
   ZX_ASSERT_MSG(type_ != NodeType::kOutputStream, "Invalid for OuputNode");
-  // Free up parent's frame
-  if (type_ != kInputStream) {
-    parent_node_->OnReleaseFrame(info->metadata.input_buffer_index);
-  }
-
-  if (info->frame_status == FRAME_STATUS_OK) {
-    for (auto& i : child_nodes_info_) {
-      auto& child_node = i.child_node;
-      // TODO(braval): Regulate frame rate here
-      if (child_node->enabled()) {
-        {
-          fbl::AutoLock al(&in_use_buffer_lock_);
-          ZX_ASSERT(info->buffer_id < in_use_buffer_count_.size());
-          in_use_buffer_count_[info->buffer_id]++;
-        }
-        child_node->OnReadyToProcess(info->buffer_id);
-      }
+  fbl::AutoLock guard(&event_queue_lock_);
+  frame_available_info_t local_info = *info;
+  event_queue_.emplace([this, local_info]() {
+    // Free up parent's frame
+    if (type_ != kInputStream) {
+      parent_node_->OnReleaseFrame(local_info.metadata.input_buffer_index);
     }
-    return;
-  }
-  // TODO(braval): Handle all frame_status errors.
+
+    if (enabled_ && local_info.frame_status == FRAME_STATUS_OK) {
+      for (auto& i : child_nodes_info_) {
+        auto& child_node = i.child_node;
+        // TODO(braval): Regulate frame rate here
+        if (child_node->enabled()) {
+          {
+            fbl::AutoLock al(&in_use_buffer_lock_);
+            ZX_ASSERT(local_info.buffer_id < in_use_buffer_count_.size());
+            in_use_buffer_count_[local_info.buffer_id]++;
+          }
+          child_node->OnReadyToProcess(local_info.buffer_id);
+        }
+      }
+      return;
+    }
+    // TODO(braval): Handle all frame_status errors.
+
+    fbl::AutoLock guard(&event_queue_lock_);
+    event_queue_.pop();
+  });
+  event_queue_.back().Post(dispatcher_);
 }
 
 void ProcessNode::OnStartStreaming() {
@@ -56,9 +64,11 @@ bool ProcessNode::AllChildNodesDisabled() {
 }
 
 void ProcessNode::OnStopStreaming() {
-  if (AllChildNodesDisabled()) {
-    enabled_ = false;
-    parent_node_->OnStopStreaming();
+  if (enabled_) {
+    if (AllChildNodesDisabled()) {
+      enabled_ = false;
+      parent_node_->OnStopStreaming();
+    }
   }
 }
 

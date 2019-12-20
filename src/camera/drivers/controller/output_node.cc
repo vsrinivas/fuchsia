@@ -49,8 +49,10 @@ fit::result<OutputNode*, zx_status_t> OutputNode::CreateOutputNode(
 }
 
 void OutputNode::OnReadyToProcess(uint32_t buffer_index) {
-  ZX_ASSERT(client_stream_ != nullptr);
-  client_stream_->FrameReady(buffer_index);
+  if (enabled_) {
+    ZX_ASSERT(client_stream_ != nullptr);
+    client_stream_->FrameReady(buffer_index);
+  }
 }
 
 void OutputNode::OnReleaseFrame(uint32_t buffer_index) {

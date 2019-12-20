@@ -22,8 +22,7 @@ class OutputNode : public ProcessNode {
              fuchsia::camera2::CameraStreamType current_stream_type,
              std::vector<fuchsia::camera2::CameraStreamType> supported_streams)
       : ProcessNode(NodeType::kOutputStream, parent_node, current_stream_type,
-                    std::move(supported_streams)),
-        dispatcher_(dispatcher){};
+                    std::move(supported_streams), dispatcher){};
 
   ~OutputNode() { OnShutdown(); }
 
