@@ -10,12 +10,15 @@
 #include <lib/fdio/fdio.h>
 #include <lib/zx/debuglog.h>
 #include <lib/zx/job.h>
+#include <lib/zx/process.h>
+#include <lib/zx/time.h>
 #include <stdio.h>
 #include <zircon/boot/image.h>
 #include <zircon/dlfcn.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
+#include <zircon/syscalls/system.h>
 
 #include <sstream>
 #include <thread>
@@ -156,10 +159,13 @@ zx_status_t LoadBootArgs(const fbl::RefPtr<bootsvc::BootfsService>& bootfs,
 //     - fuchsia.boot.RootJob, which provides root job handles
 //     - fuchsia.boot.RootResource, which provides root resource handles
 // - A loader that can load libraries from /boot, hosted by bootsvc
+// If set to true `shutdown` will cause the system to power off when the next
+// process exits. If set to false, the system will reboot insted of powering
+// off.
 void LaunchNextProcess(fbl::RefPtr<bootsvc::BootfsService> bootfs,
                        fbl::RefPtr<bootsvc::SvcfsService> svcfs,
-                       fbl::RefPtr<bootsvc::BootfsLoaderService> loader_svc,
-                       const zx::debuglog& log) {
+                       fbl::RefPtr<bootsvc::BootfsLoaderService> loader_svc, zx::resource root_rsrc,
+                       bool shutdown, const zx::debuglog& log) {
   const char* bootsvc_next = getenv("bootsvc.next");
   if (bootsvc_next == nullptr) {
     bootsvc_next =
@@ -233,12 +239,27 @@ void LaunchNextProcess(fbl::RefPtr<bootsvc::BootfsService> bootfs,
   }
 
   const char* errmsg;
-  status = launchpad_go(lp, nullptr, &errmsg);
+  zx::process proc_handle;
+  status = launchpad_go(lp, proc_handle.reset_and_get_address(), &errmsg);
   if (status != ZX_OK) {
     printf("bootsvc: launchpad %s failed: %s: %s\n", next_program, errmsg,
            zx_status_get_string(status));
+    return;
+  }
+  printf("bootsvc: Launched %s\n", next_program);
+
+  // wait for termination and then reboot or power off the system
+  zx_signals_t observed = ZX_SIGNAL_NONE;
+  zx_status_t termination_result =
+      proc_handle.wait_one(ZX_TASK_TERMINATED, zx::time::basic_time::infinite(), &observed);
+  if (termination_result != ZX_OK) {
+    printf("bootsvc: failure waiting for next process termination %i\n", termination_result);
+    return;
+  }
+  if (shutdown) {
+    zx_system_powerctl(root_rsrc.get(), ZX_SYSTEM_POWERCTL_SHUTDOWN, NULL);
   } else {
-    printf("bootsvc: Launched %s\n", next_program);
+    zx_system_powerctl(root_rsrc.get(), ZX_SYSTEM_POWERCTL_REBOOT, NULL);
   }
 }
 
@@ -310,7 +331,10 @@ int main(int argc, char** argv) {
       bootsvc::CreateFactoryItemsService(loop.dispatcher(), std::move(factory_item_map)));
 
   zx::resource dup_root;
+  zx::resource restart_dup_root;
   status = root_resource_handle.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_root);
+  ZX_ASSERT_MSG(status == ZX_OK && dup_root.is_valid(), "Failed to duplicate root resource");
+  status = root_resource_handle.duplicate(ZX_RIGHT_SAME_RIGHTS, &restart_dup_root);
   ZX_ASSERT_MSG(status == ZX_OK && dup_root.is_valid(), "Failed to duplicate root resource");
   svcfs_svc->AddService(fuchsia_boot_ReadOnlyLog_Name,
                         bootsvc::CreateReadOnlyLogService(loop.dispatcher(), dup_root));
@@ -344,11 +368,21 @@ int main(int argc, char** argv) {
   ZX_ASSERT_MSG(status == ZX_OK, "BootfsLoaderService creation failed: %s\n",
                 zx_status_get_string(status));
 
+  const char* suspend_behavior = getenv("bootsvc.on_next_process_exit");
+  bool shutdown = false;
+  if (suspend_behavior != nullptr) {
+    if (strlen(suspend_behavior) == 8 && strcmp("shutdown", suspend_behavior) == 0) {
+      shutdown = true;
+    }
+  }
+
   // Launch the next process in the chain.  This must be in a thread, since
   // it may issue requests to the loader, which runs in the async loop that
   // starts running after this.
   printf("bootsvc: Launching next process...\n");
-  std::thread(LaunchNextProcess, bootfs_svc, svcfs_svc, loader_svc, std::cref(log)).detach();
+  std::thread(LaunchNextProcess, bootfs_svc, svcfs_svc, loader_svc, std::move(restart_dup_root),
+              std::move(shutdown), std::cref(log))
+      .detach();
 
   // Begin serving the bootfs fileystem and loader
   loop.Run();

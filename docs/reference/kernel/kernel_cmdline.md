@@ -41,6 +41,11 @@ Arguments to the program can optionally be specified using a comma separator
 between the program and individual arguments. For example,
 'bootsvc.next=bin/mybin,arg1,arg2'.
 
+## bootsvc.on_next_process_exit=reboot|shutdown
+
+What bootsvc should do when the "next process" (see
+[bootsvc.next](#bootsvc_next_bootfs-path)) exits. This defaults to 'reboot'.
+
 ## clock\.backstop=\<seconds\>
 
 Sets the initial offset (from the Unix epoch, in seconds) for the UTC clock.

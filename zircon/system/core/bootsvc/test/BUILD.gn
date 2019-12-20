@@ -54,6 +54,7 @@ zbi_input("integration-test-deps") {
     ":integration-test-crashlog",
     ":integration-test-factory-item",
     ":integration-test-image-arg",
+    ":shutdown-flag",
 
     # Pull in the dependencies of devcoordinator so that we can test
     # requesting libdriver.so from the bootsvc loader service.
@@ -82,6 +83,15 @@ zbi_input("integration-test-crashlog") {
   testonly = true
   type = "CRASHLOG"
   args = [ "--entry=IAmACrashLogButNotAVeryLongOne" ]
+}
+
+# This flag is passed to the bootsvc so that when the test binary exits bootsvc
+# shuts the system down.
+zbi_input("shutdown-flag") {
+  visibility = [ ":*" ]
+  testonly = true
+  type = "cmdline"
+  args = [ "--entry=bootsvc.on_next_process_exit=shutdown" ]
 }
 
 # This file must contain a trailing newline, but you can't inline that in a

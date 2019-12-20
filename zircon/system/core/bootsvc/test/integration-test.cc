@@ -45,24 +45,6 @@ constexpr char kRootJobForInspectPath[] = "/svc/" fuchsia_boot_RootJobForInspect
 constexpr char kRootResourcePath[] = "/svc/" fuchsia_boot_RootResource_Name;
 constexpr char kWriteOnlyLogPath[] = "/svc/" fuchsia_boot_WriteOnlyLog_Name;
 
-[[noreturn]] void poweroff() {
-  // Grab the root resource, needed to make the poweroff call.
-  // We ignore returned status codes; there's nothing useful for us to do in
-  // the event of a failure.
-  zx::channel local, remote;
-  zx::channel::create(0, &local, &remote);
-  fdio_service_connect(kRootResourcePath, remote.release());
-  zx::resource root_resource;
-  fuchsia_boot_RootResourceGet(local.get(), root_resource.reset_and_get_address());
-
-  // Power off.
-  zx_system_powerctl(root_resource.get(), ZX_SYSTEM_POWERCTL_SHUTDOWN, NULL);
-
-  while (true) {
-    __builtin_trap();
-  }
-}
-
 void print_test_success_string() {
   // Get the debuglog handle.
   // If any of these operations fail, there's nothing we can really do here, so
@@ -101,9 +83,10 @@ int main(int argc, char** argv) {
   // Sleep 3 seconds to allow buffers to flush before powering off
   zx::nanosleep(zx::deadline_after(zx::sec(3)));
 
-  // Exit.  This won't actually return.
-  poweroff();
-
+  // Return. WAIT, how does this test manage to finish if "success" is QEMU
+  // turning off? The ZBI that this is packaged on should set the
+  // bootsvc.on_next_process_exit flag so that bootsvc turns the system off
+  // when the "next process" (in this case, this test) exits.
   return result;
 }
 
