@@ -87,7 +87,8 @@ fit::result<OutputNode*, zx_status_t> PipelineManager::CreateGraph(
     }
     // GDC
     case NodeType::kGdc: {
-      auto gdc_result = CreateGdcNode(info, parent_node, *next_node_internal);
+      auto gdc_result = camera::GdcNode::CreateGdcNode(
+          memory_allocator_, dispatcher_, device_, gdc_, info, parent_node, *next_node_internal);
       if (gdc_result.is_error()) {
         FX_PLOGST(ERROR, TAG, gdc_result.error()) << "Failed to configure GDC Node";
         // TODO(braval): Handle already configured nodes

@@ -14,11 +14,11 @@
 #include <ddktl/protocol/isp.h>
 #include <fbl/auto_lock.h>
 
-#include "configs/sherlock/internal-config.h"
 #include "fbl/macros.h"
-#include "isp_stream_protocol.h"
-#include "memory_allocation.h"
-#include "stream_protocol.h"
+#include "src/camera/drivers/controller/configs/sherlock/internal-config.h"
+#include "src/camera/drivers/controller/isp_stream_protocol.h"
+#include "src/camera/drivers/controller/memory_allocation.h"
+#include "src/camera/drivers/controller/stream_protocol.h"
 namespace camera {
 
 class ProcessNode;
@@ -71,9 +71,6 @@ class ProcessNode {
         parent_node_(parent_node),
         output_buffer_collection_(std::move(output_buffer_collection)),
         output_image_formats_(output_image_formats),
-        hw_accelerator_frame_callback_{OnFrameAvailable, this},
-        hw_accelerator_res_callback_{OnResChange, this},
-        gdc_(gdc),
         enabled_(false),
         supported_streams_(supported_streams),
         in_use_buffer_count_(output_buffer_collection.buffer_count, 0) {
@@ -84,12 +81,11 @@ class ProcessNode {
   virtual ~ProcessNode() {
     // We need to ensure that the child nodes
     // are destructed before parent node.
-    OnShutdown();
     child_nodes_info_.clear();
   }
 
   // Notifies that a frame is ready for processing at this node.
-  virtual void OnReadyToProcess(uint32_t buffer_index);
+  virtual void OnReadyToProcess(uint32_t buffer_index) { ZX_ASSERT_MSG(false, "NOT SUPPORTED"); }
 
   // Notifies that a frame is done processing by this node.
   virtual void OnFrameAvailable(const frame_available_info_t* info);
@@ -99,6 +95,7 @@ class ProcessNode {
 
   // Notifies that the client has requested to start streaming.
   virtual void OnStartStreaming();
+
   // Notifies that the client has requested to stop streaming.
   virtual void OnStopStreaming();
 
@@ -110,7 +107,6 @@ class ProcessNode {
     isp_stream_protocol_ = std::move(isp_stream_protocol);
   }
 
-  void set_task_index(uint32_t task_index) { hw_accelerator_task_index_ = task_index; }
   void set_enabled(bool enabled) { enabled_ = enabled; }
 
   std::unique_ptr<camera::IspStreamProtocol>& isp_stream_protocol() { return isp_stream_protocol_; }
@@ -118,9 +114,6 @@ class ProcessNode {
 
   const hw_accel_frame_callback_t* hw_accelerator_frame_callback() {
     return &hw_accelerator_frame_callback_;
-  }
-  const hw_accel_res_change_callback_t* hw_accelerator_res_callback() {
-    return &hw_accelerator_res_callback_;
   }
 
   std::vector<fuchsia::sysmem::ImageFormat_2>& output_image_formats() {
@@ -156,14 +149,10 @@ class ProcessNode {
   bool enabled() { return enabled_; }
 
  protected:
-  // Invoked by GDC, GE2D, or the ISP when a new frame is available.
+  // Invoked by ISP when a new frame is available.
   static void OnFrameAvailable(void* ctx, const frame_available_info_t* info) {
     static_cast<ProcessNode*>(ctx)->OnFrameAvailable(info);
   }
-
-  // Invoked by GDC or GE2D on a Resolution change completion.
-  // TODO: Implement this (Bug: 41730 @braval).
-  static void OnResChange(void* ctx, const frame_available_info_t* info) {}
 
   bool AllChildNodesDisabled();
 
@@ -182,12 +171,8 @@ class ProcessNode {
   std::vector<fuchsia::sysmem::ImageFormat_2> output_image_formats_;
   // Valid for input node
   std::unique_ptr<IspStreamProtocol> isp_stream_protocol_;
-  // GDC/GE2D/ISP Frame callback
+  // ISP Frame callback
   hw_accel_frame_callback_t hw_accelerator_frame_callback_;
-  // GDC/GE2D Res change callback
-  hw_accel_res_change_callback_t hw_accelerator_res_callback_;
-  ddk::GdcProtocolClient gdc_;
-  uint32_t hw_accelerator_task_index_;
   bool enabled_;
   // The Stream types this node already supports and configured.
   std::vector<fuchsia::camera2::CameraStreamType> configured_streams_;

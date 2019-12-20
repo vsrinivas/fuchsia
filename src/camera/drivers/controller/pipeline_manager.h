@@ -12,11 +12,12 @@
 
 #include "configs/sherlock/internal-config.h"
 #include "fbl/macros.h"
-#include "output_node.h"
-#include "processing_node.h"
+#include "src/camera/drivers/controller/gdc_node.h"
+#include "src/camera/drivers/controller/output_node.h"
+#include "src/camera/drivers/controller/processing_node.h"
+#include "src/camera/drivers/controller/stream_pipeline_info.h"
 #include "src/camera/lib/format_conversion/buffer_collection_helper.h"
 #include "src/camera/lib/format_conversion/format_conversion.h"
-#include "stream_pipeline_info.h"
 
 namespace camera {
 
@@ -69,9 +70,6 @@ class PipelineManager {
 
   zx_status_t AppendToExistingGraph(StreamCreationData* info, ProcessNode* graph_node,
                                     fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream);
-
-  fit::result<gdc_config_info, zx_status_t> LoadGdcConfiguration(
-      const camera::GdcConfig& config_type);
 
   void OnClientStreamDisconnect(StreamCreationData* info);
 

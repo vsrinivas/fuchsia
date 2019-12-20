@@ -50,10 +50,10 @@ source_set("controller-source") {
   sources = [
     "controller-device.cc",
     "controller-protocol.cc",
+    "gdc_node.cc",
     "graph_utils.cc",
     "memory_allocation.cc",
     "output_node.cc",
-    "pipeline_gdc.cc",
     "pipeline_manager.cc",
     "processing_node.cc",
     "stream_protocol.cc",

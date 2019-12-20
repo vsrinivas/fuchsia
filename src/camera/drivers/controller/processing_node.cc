@@ -13,13 +13,6 @@
 
 namespace camera {
 
-void ProcessNode::OnReadyToProcess(uint32_t buffer_index) {
-  if (type_ == NodeType::kGdc) {
-    ZX_ASSERT(ZX_OK == gdc_.ProcessFrame(hw_accelerator_task_index_, buffer_index));
-  }
-  // TODO(braval): Add support for other types of nodes
-}
-
 void ProcessNode::OnFrameAvailable(const frame_available_info_t* info) {
   // Free up parent's frame
   if (type_ != kInputStream) {
@@ -54,10 +47,6 @@ void ProcessNode::OnReleaseFrame(uint32_t buffer_index) {
 
   // First release this nodes Frames (GDC, GE2D)
   switch (type_) {
-    case NodeType::kGdc: {
-      gdc_.ReleaseFrame(hw_accelerator_task_index_, buffer_index);
-      break;
-    }
     case NodeType::kGe2d: {
       // TODO(braval): Inform the HW accelerator for freeing up the frames
       break;
@@ -107,20 +96,12 @@ void ProcessNode::OnStopStreaming() {
 
 void ProcessNode::OnShutdown() {
   switch (type_) {
-    case NodeType::kGdc: {
-      gdc_.RemoveTask(hw_accelerator_task_index_);
-      break;
-    }
     case NodeType::kGe2d: {
       // TODO(braval): Add support for this.
       break;
     }
     case NodeType::kInputStream: {
       // TODO(braval): Add support for this.
-      break;
-    }
-    case NodeType::kOutputStream: {
-      // No clean up required for output node.
       break;
     }
     default: {

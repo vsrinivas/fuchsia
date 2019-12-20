@@ -223,6 +223,28 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_EQ(ZX_ERR_INVALID_ARGS, output_result.error());
   }
 
+  void TestGdcNode() {
+    auto stream_config_node = GetStreamConfigNode(kMonitorConfig, kStreamTypeDS | kStreamTypeML);
+    ASSERT_NE(nullptr, stream_config_node);
+    StreamCreationData info;
+    fuchsia::camera2::hal::StreamConfig stream_config;
+    stream_config.properties.set_stream_type(kStreamTypeDS | kStreamTypeML);
+    info.stream_config = &stream_config;
+    info.node = *stream_config_node;
+
+    auto input_result = GetInputNode(kStreamTypeDS | kStreamTypeML, &info);
+    // Testing successful creation of |GdcNode|.
+    async_dispatcher_t dispatcher;
+    auto next_node_internal = GetNextNodeInPipeline(kStreamTypeDS | kStreamTypeML, info.node);
+    ASSERT_NE(nullptr, next_node_internal);
+    auto gdc_result = GdcNode::CreateGdcNode(*controller_memory_allocator_.release(), &dispatcher,
+                                             fake_ddk::kFakeParent, gdc_, &info,
+                                             input_result.value().get(), *next_node_internal);
+    EXPECT_TRUE(gdc_result.is_ok());
+    ASSERT_NE(nullptr, gdc_result.value());
+    EXPECT_EQ(NodeType::kGdc, gdc_result.value()->type());
+  }
+
   void TestConfigureDebugConfig() {
     auto stream_type = kStreamTypeFR;
     auto stream_config_node = GetStreamConfigNode(kDebugConfig, stream_type);
@@ -413,10 +435,10 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
   }
 
   void TestGdcConfigLoading() {
-    auto result = pipeline_manager_->LoadGdcConfiguration(GdcConfig::INVALID);
+    auto result = camera::LoadGdcConfiguration(fake_ddk::kFakeParent, GdcConfig::INVALID);
     EXPECT_TRUE(result.is_error());
 
-    result = pipeline_manager_->LoadGdcConfiguration(GdcConfig::MONITORING_360p);
+    result = camera::LoadGdcConfiguration(fake_ddk::kFakeParent, GdcConfig::MONITORING_360p);
     EXPECT_FALSE(result.is_error());
   }
 
@@ -718,6 +740,8 @@ TEST_F(ControllerProtocolTest, TestConfigure_MonitorConfig_MultiStreamFR) {
 TEST_F(ControllerProtocolTest, TestInUseBufferCounts) { TestInUseBufferCounts(); }
 
 TEST_F(ControllerProtocolTest, TestOutputNode) { TestOutputNode(); }
+
+TEST_F(ControllerProtocolTest, TestGdcNode) { TestGdcNode(); }
 
 TEST_F(ControllerProtocolTest, LoadGdcConfig) {
 #ifdef INTERNAL_ACCESS

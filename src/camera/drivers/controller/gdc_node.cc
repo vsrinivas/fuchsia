@@ -2,15 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/camera/drivers/controller/gdc_node.h"
+
+#include <zircon/errors.h>
+#include <zircon/types.h>
+
 #include <fbl/auto_call.h>
 
-#include "graph_utils.h"
-#include "pipeline_manager.h"
+#include "src/camera/drivers/controller/graph_utils.h"
+#include "src/camera/drivers/controller/stream_pipeline_info.h"
 #include "src/lib/syslog/cpp/logger.h"
-#include "stream_pipeline_info.h"
+
 namespace camera {
 
-constexpr auto TAG = "camera_controller";
+constexpr auto TAG = "camera_controller_gdc_node";
 
 const char* ToConfigFileName(const camera::GdcConfig& config_type) {
   switch (config_type) {
@@ -34,8 +39,8 @@ const char* ToConfigFileName(const camera::GdcConfig& config_type) {
   }
 }
 
-fit::result<gdc_config_info, zx_status_t> PipelineManager::LoadGdcConfiguration(
-    const camera::GdcConfig& config_type) {
+fit::result<gdc_config_info, zx_status_t> LoadGdcConfiguration(
+    zx_device_t* device, const camera::GdcConfig& config_type) {
   if (config_type == GdcConfig::INVALID) {
     FX_LOGST(ERROR, TAG) << "Invalid GDC configuration type";
     return fit::error(ZX_ERR_INVALID_ARGS);
@@ -43,7 +48,7 @@ fit::result<gdc_config_info, zx_status_t> PipelineManager::LoadGdcConfiguration(
 
   gdc_config_info info;
   size_t size;
-  auto status = load_firmware(device_, ToConfigFileName(config_type), &info.config_vmo, &size);
+  auto status = load_firmware(device, ToConfigFileName(config_type), &info.config_vmo, &size);
   if (status != ZX_OK || size == 0) {
     FX_PLOGST(ERROR, TAG, status) << "Failed to load the GDC firmware";
     return fit::error(status);
@@ -52,11 +57,12 @@ fit::result<gdc_config_info, zx_status_t> PipelineManager::LoadGdcConfiguration(
   return fit::ok(std::move(info));
 }
 
-fit::result<ProcessNode*, zx_status_t> PipelineManager::CreateGdcNode(
-    StreamCreationData* info, ProcessNode* parent_node,
-    const InternalConfigNode& internal_gdc_node) {
+fit::result<ProcessNode*, zx_status_t> GdcNode::CreateGdcNode(
+    ControllerMemoryAllocator& memory_allocator, async_dispatcher_t* dispatcher,
+    zx_device_t* device, const ddk::GdcProtocolClient& gdc, StreamCreationData* info,
+    ProcessNode* parent_node, const InternalConfigNode& internal_gdc_node) {
   auto& input_buffers_hlcpp = parent_node->output_buffer_collection();
-  auto result = GetBuffers(memory_allocator_, internal_gdc_node, info, parent_node);
+  auto result = GetBuffers(memory_allocator, internal_gdc_node, info, parent_node);
   if (result.is_error()) {
     FX_LOGST(ERROR, TAG) << "Failed to get buffers";
     return fit::error(result.error());
@@ -83,7 +89,7 @@ fit::result<ProcessNode*, zx_status_t> PipelineManager::CreateGdcNode(
   // Get the GDC configurations loaded
   std::vector<gdc_config_info> config_vmos_info;
   for (uint32_t i = 0; i < internal_gdc_node.gdc_info.config_type.size(); i++) {
-    auto gdc_config = LoadGdcConfiguration(internal_gdc_node.gdc_info.config_type[i]);
+    auto gdc_config = LoadGdcConfiguration(device, internal_gdc_node.gdc_info.config_type[i]);
     if (gdc_config.is_error()) {
       FX_LOGST(ERROR, TAG) << "Failed to load GDC configuration";
       return fit::error(gdc_config.error());
@@ -98,8 +104,8 @@ fit::result<ProcessNode*, zx_status_t> PipelineManager::CreateGdcNode(
   });
 
   // Create GDC Node
-  auto gdc_node = std::make_unique<camera::ProcessNode>(
-      gdc_, internal_gdc_node.type, parent_node, internal_gdc_node.image_formats,
+  auto gdc_node = std::make_unique<camera::GdcNode>(
+      dispatcher, gdc, parent_node, internal_gdc_node.image_formats,
       std::move(output_buffers_hlcpp), info->stream_config->properties.stream_type(),
       internal_gdc_node.supported_streams);
   if (!gdc_node) {
@@ -109,12 +115,11 @@ fit::result<ProcessNode*, zx_status_t> PipelineManager::CreateGdcNode(
 
   // Initialize the GDC to get a unique task index
   uint32_t gdc_task_index;
-  auto status = gdc_.InitTask(input_buffer_collection_helper.GetC(),
-                              output_buffer_collection_helper.GetC(), &input_image_formats_c,
-                              output_image_formats_c.data(), output_image_formats_c.size(),
-                              info->image_format_index, config_vmos_info.data(),
-                              config_vmos_info.size(), gdc_node->hw_accelerator_frame_callback(),
-                              gdc_node->hw_accelerator_res_callback(), &gdc_task_index);
+  auto status = gdc.InitTask(
+      input_buffer_collection_helper.GetC(), output_buffer_collection_helper.GetC(),
+      &input_image_formats_c, output_image_formats_c.data(), output_image_formats_c.size(),
+      info->image_format_index, config_vmos_info.data(), config_vmos_info.size(),
+      gdc_node->frame_callback(), gdc_node->res_callback(), &gdc_task_index);
   if (status != ZX_OK) {
     FX_PLOGST(ERROR, TAG, status) << "Failed to initialize GDC";
     return fit::error(status);
@@ -131,5 +136,22 @@ fit::result<ProcessNode*, zx_status_t> PipelineManager::CreateGdcNode(
   parent_node->AddChildNodeInfo(std::move(child_info));
   return return_value;
 }
+
+void GdcNode::OnReleaseFrame(uint32_t buffer_index) {
+  fbl::AutoLock al(&in_use_buffer_lock_);
+  ZX_ASSERT(buffer_index < in_use_buffer_count_.size());
+  in_use_buffer_count_[buffer_index]--;
+  if (in_use_buffer_count_[buffer_index] != 0) {
+    return;
+  }
+
+  gdc_.ReleaseFrame(task_index_, buffer_index);
+}
+
+void GdcNode::OnReadyToProcess(uint32_t buffer_index) {
+  ZX_ASSERT(ZX_OK == gdc_.ProcessFrame(task_index_, buffer_index));
+}
+
+void GdcNode::OnShutdown() { gdc_.RemoveTask(task_index_); }
 
 }  // namespace camera
