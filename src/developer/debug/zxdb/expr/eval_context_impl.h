@@ -68,6 +68,7 @@ class EvalContextImpl : public EvalContext {
   NameLookupCallback GetSymbolNameLookupCallback() override;
   Location GetLocationForAddress(uint64_t address) const override;
   const PrettyTypeManager& GetPrettyTypeManager() const override { return pretty_type_manager_; }
+  bool ShouldPromoteToDerived() const override;
 
   // This implementation of EvalContextImpl always returns "double". To configure, implementations
   // should override this to hook into their own settings systems. See ClientEvalContextImpl.

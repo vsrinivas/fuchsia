@@ -149,6 +149,8 @@ source_set("tests") {
     "template_type_extractor_unittest.cc",
     "type_glob_unittest.cc",
     "vector_register_format_unittest.cc",
+    "virtual_base_test_setup.cc",
+    "virtual_base_test_setup.h",
   ]
 
   deps = [

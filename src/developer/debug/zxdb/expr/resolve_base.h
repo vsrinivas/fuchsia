@@ -18,6 +18,14 @@ class DataMember;
 class EvalContext;
 class ExprValue;
 
+// Selects whether PromotePtrRefToDerived will convert, references (either rvalue or regular),
+// pointers, or both.
+enum class PromoteToDerived {
+  kPtrOnly,
+  kRefOnly,
+  kPtrOrRef,
+};
+
 // Promotes a pointer/reference type to its derived class if possible. If unknown or there's any
 // error, the input value will be given to the callback (the callback will never report an error,
 // but is an EvalCallback for consistency).
@@ -26,8 +34,8 @@ class ExprValue;
 // NOT promote actual objects (Base -> Derived). From a language perspective, all base classes will
 // need to be passed as a pointer or a reference so this operation will pick up all cases. And
 // trying to do this on all types will be much slower since it will trigger for everything.
-void PromotePtrRefToDerived(const fxl::RefPtr<EvalContext>& context, ExprValue value,
-                            EvalCallback cb);
+void PromotePtrRefToDerived(const fxl::RefPtr<EvalContext>& context, PromoteToDerived what,
+                            ExprValue value, EvalCallback cb);
 
 // Determines if the given collection type has a vtable pointer and returns it. This does not
 // look in base classes because the vtable goes with the exact class it's on.

@@ -65,6 +65,11 @@ class PrettyEvalContext : public EvalContext {
   VectorRegisterFormat GetVectorRegisterFormat() const override {
     return VectorRegisterFormat::kDouble;
   }
+  bool ShouldPromoteToDerived() const override {
+    // Pretty-printers should be coded such that they always handle the types given, so don't
+    // promote to derived classes for them.
+    return false;
+  }
 
  private:
   fxl::RefPtr<EvalContext> impl_;

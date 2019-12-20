@@ -33,22 +33,34 @@ const char kVtableSymbolNamePrefix[] = "vtable for ";
 
 }  // namespace
 
-void PromotePtrRefToDerived(const fxl::RefPtr<EvalContext>& context, ExprValue value,
-                            EvalCallback cb) {
+// The code would be a little simpler if we just tried to dereference the pointer/reference and
+// then check for the vtable member. But this will be called a lot when evaluating collections,
+// usually won't match, and the dereference will require a slow memory fetch. By checking the
+// pointed-to/referenced type first, we avoid this overhead.
+void PromotePtrRefToDerived(const fxl::RefPtr<EvalContext>& context, PromoteToDerived what,
+                            ExprValue value, EvalCallback cb) {
   if (!value.type())
     return cb(std::move(value));
 
-  // Type must be a pointer or a reference.
-  //
-  // The code would be a little simpler if we just tried to dereference the pointer/reference and
-  // then check for the vtable member. But this will be called a lot when evaluating collections,
-  // usually won't match, and the dereference will require a slow memory fetch. By checking the
-  // pointed-to/referenced type first, we avoid this overhead.
+  // Type must be the right match pointer or a reference.
   fxl::RefPtr<Type> input_concrete = context->GetConcreteType(value.type());
   const ModifiedType* mod_type = input_concrete->AsModifiedType();
   if (!mod_type)
     return cb(std::move(value));
-  if (!DwarfTagIsPointerOrReference(mod_type->tag()))
+
+  bool tag_match = false;
+  switch (what) {
+    case PromoteToDerived::kPtrOnly:
+      tag_match = (mod_type->tag() == DwarfTag::kPointerType);
+      break;
+    case PromoteToDerived::kRefOnly:
+      tag_match = DwarfTagIsEitherReference(mod_type->tag());
+      break;
+    case PromoteToDerived::kPtrOrRef:
+      tag_match = DwarfTagIsPointerOrReference(mod_type->tag());
+      break;
+  }
+  if (!tag_match)
     return cb(std::move(value));
 
   // Referenced type must be a collection.

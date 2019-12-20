@@ -9,6 +9,7 @@
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/mock_eval_context.h"
+#include "src/developer/debug/zxdb/expr/virtual_base_test_setup.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
@@ -195,6 +196,39 @@ TEST_F(ResolvePtrRefTest, GetPointedToType_Good) {
   Err err = GetPointedToType(eval_context, ptr_type.get(), &pointed_to);
   EXPECT_FALSE(err.has_error()) << err.msg();
   EXPECT_EQ(int32_type.get(), pointed_to.get());
+}
+
+// Tests that EnsureResolveReference automatically converts a reference to be a derived class
+// according to the setting value.
+TEST_F(ResolvePtrRefTest, EnsureResolveReference_Derived) {
+  auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
+  VirtualBaseTestSetup setup(eval_context.get());
+
+  ExprValue ref_value(setup.kBaseAddress, setup.base_class_ref);
+
+  // No promotion to derived classes.
+  eval_context->set_should_promote_to_derived(false);
+  ErrOrValue result(Err("Uncalled"));
+  EnsureResolveReference(eval_context, ref_value, [&result](ErrOrValue r) { result = r; });
+  loop().RunUntilNoTasks();
+
+  // The result should be a "BaseClass" object.
+  ASSERT_TRUE(result.ok()) << result.err().msg();
+  EXPECT_EQ("BaseClass", result.value().type()->GetFullName());
+  EXPECT_EQ(setup.base_class->byte_size(), result.value().data().size());
+  EXPECT_EQ(setup.kBaseAddress, result.value().source().address());
+
+  // Auto promotion to derived classes.
+  eval_context->set_should_promote_to_derived(true);
+  result = Err("Uncalled");
+  EnsureResolveReference(eval_context, ref_value, [&result](ErrOrValue r) { result = r; });
+  loop().RunUntilNoTasks();
+
+  // The result should be a "DerivedClass" object.
+  ASSERT_TRUE(result.ok()) << result.err().msg();
+  EXPECT_EQ("DerivedClass", result.value().type()->GetFullName());
+  EXPECT_EQ(setup.derived_class->byte_size(), result.value().data().size());
+  EXPECT_EQ(setup.kDerivedAddress, result.value().source().address());
 }
 
 }  // namespace zxdb

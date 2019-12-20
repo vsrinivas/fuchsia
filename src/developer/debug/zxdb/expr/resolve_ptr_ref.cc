@@ -7,6 +7,7 @@
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/expr/eval_context.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
+#include "src/developer/debug/zxdb/expr/resolve_base.h"
 #include "src/developer/debug/zxdb/symbols/arch.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
@@ -25,6 +26,37 @@ Err GetPointerValue(const ExprValue& value, TargetPointer* pointer_value) {
     return err;
   *pointer_value = value.GetAs<TargetPointer>();
   return Err();
+}
+
+// Backend for EnsureResolveReference that does not handle upcasting to derived types.
+void DoEnsureResolveReference(const fxl::RefPtr<EvalContext>& eval_context, ExprValue value,
+                              EvalCallback cb) {
+  Type* type = value.type();
+  if (!type) {
+    // Untyped input, pass the value forward and let the callback handle the problem.
+    return cb(std::move(value));
+  }
+
+  // The computed type will have the same const, etc. on it as the original, so we need to
+  // make it concrete.
+  fxl::RefPtr<Type> concrete = eval_context->GetConcreteType(type);
+  if (concrete->tag() != DwarfTag::kReferenceType &&
+      concrete->tag() != DwarfTag::kRvalueReferenceType) {
+    // Not a reference, nothing to do.
+    return cb(std::move(value));
+  }
+
+  // The symbol provider should have created the right object type.
+  const ModifiedType* reference = concrete->AsModifiedType();
+  FXL_DCHECK(reference);
+  const Type* underlying_type = reference->modified().Get()->AsType();
+
+  TargetPointer pointer_value = 0;
+  if (Err err = GetPointerValue(value, &pointer_value); err.has_error()) {
+    cb(err);
+  } else {
+    ResolvePointer(eval_context, pointer_value, RefPtrTo(underlying_type), std::move(cb));
+  }
 }
 
 }  // namespace
@@ -71,32 +103,20 @@ void ResolvePointer(const fxl::RefPtr<EvalContext>& eval_context, const ExprValu
 
 void EnsureResolveReference(const fxl::RefPtr<EvalContext>& eval_context, ExprValue value,
                             EvalCallback cb) {
-  Type* type = value.type();
-  if (!type) {
-    // Untyped input, pass the value forward and let the callback handle the problem.
-    return cb(std::move(value));
-  }
-
-  // Strip "const", etc. and check type.
-  fxl::RefPtr<Type> concrete = eval_context->GetConcreteType(type);
-  if (concrete->tag() != DwarfTag::kReferenceType &&
-      concrete->tag() != DwarfTag::kRvalueReferenceType) {
-    // Not a reference, nothing to do.
-    return cb(std::move(value));
-  }
-  // The symbol provider should have created the right object type.
-  const ModifiedType* reference = concrete->AsModifiedType();
-  FXL_DCHECK(reference);
-  const Type* underlying_type = reference->modified().Get()->AsType();
-
-  // The value will be the address for reference types.
-  TargetPointer pointer_value = 0;
-  Err err = GetPointerValue(value, &pointer_value);
-  if (err.has_error()) {
-    cb(err);
+  if (eval_context->ShouldPromoteToDerived()) {
+    // Check to see if this is a reference to a base class that we can convert to a derived class.
+    PromotePtrRefToDerived(eval_context, PromoteToDerived::kRefOnly, std::move(value),
+                           [eval_context, cb = std::move(cb)](ErrOrValue result) mutable {
+                             if (result.has_error()) {
+                               cb(result);
+                             } else {
+                               DoEnsureResolveReference(eval_context, result.take_value(),
+                                                        std::move(cb));
+                             }
+                           });
   } else {
-    ResolvePointer(std::move(eval_context), pointer_value, RefPtrTo(underlying_type),
-                   std::move(cb));
+    // No magic base-class resolution is required, just check the reference.
+    DoEnsureResolveReference(eval_context, std::move(value), std::move(cb));
   }
 }
 
