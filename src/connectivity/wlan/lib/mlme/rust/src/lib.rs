@@ -2,24 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub use wlan_common as common;
-
 pub mod ap;
 pub mod auth;
 pub mod buffer;
 pub mod client;
+mod ddk_converter;
 pub mod device;
 pub mod error;
+mod eth_writer;
+mod frame_writer;
 pub mod key;
+mod logger;
+mod rates_writer;
 pub mod timer;
 
-mod rates_writer;
-pub use rates_writer::*;
-
-mod eth_writer;
-pub use eth_writer::*;
-
-mod ddk_converter;
-pub use ddk_converter::*;
-
-mod logger;
+use frame_writer::*;
+pub use {ddk_converter::*, eth_writer::*, rates_writer::*, wlan_common as common};

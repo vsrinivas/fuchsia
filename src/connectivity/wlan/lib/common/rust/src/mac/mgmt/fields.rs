@@ -224,3 +224,21 @@ pub struct AddbaReqHdr {
     // TCLAS
     // ADDBA Extension
 }
+
+// IEEE Std 802.11-2016, 9.6.5.3 - ADDBA stands for Add BlockAck.
+#[derive(Default, FromBytes, AsBytes, Unaligned, Clone, Copy, Debug)]
+#[repr(C, packed)]
+pub struct AddbaRespHdr {
+    pub action: BlockAckAction,
+    // IEEE Std 802.11-2016, 9.4.1.12 - This is a numeric value.
+    pub dialog_token: u8,
+    pub status: StatusCode,
+    pub parameters: BlockAckParameters,
+    // IEEE Std 802.11-2016, 9.4.1.15 - unit is TU, 0 disables the timeout.
+    pub timeout: u16,
+    // TODO(29887): Evaluate the use cases and support optional fields.
+    // GCR Group Address element
+    // Multi-band
+    // TCLAS
+    // ADDBA Extension
+}

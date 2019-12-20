@@ -261,58 +261,68 @@ pub fn write_probe_req_frame<B: Appendable>(
     Ok(())
 }
 
-// IEEE Std 802.11-2016, 9.6.5.2 - ADDBA stands for Add BlockAck
-pub fn write_addba_req_frame<B: Appendable>(
+/// Writes the header of the management frame for an `ADDBA` request or response
+/// to the given buffer.
+///
+/// The address may be that of the originator or recipient. The frame formats
+/// are described by IEEE Std 802.11-2016, 9.6.5.
+fn write_addba_hdr<B: Appendable>(
     buf: &mut B,
     bssid: Bssid,
-    client_addr: MacAddr,
+    addr: MacAddr,
     seq_mgr: &mut SequenceManager,
 ) -> Result<(), Error> {
+    // The management header differs for APs and clients. The frame control and
+    // management header are constructed here, but AP and client STAs share the
+    // code that constructs the management body.
     let frame_ctrl = mac::FrameControl(0)
         .with_frame_type(mac::FrameType::MGMT)
         .with_mgmt_subtype(mac::MgmtSubtype::ACTION);
     let seq_ctrl = mac::SequenceControl(0).with_seq_num(seq_mgr.next_sns1(&bssid.0) as u16);
     mgmt_writer::write_mgmt_hdr(
         buf,
-        mgmt_writer::mgmt_hdr_to_ap(frame_ctrl, bssid, client_addr, seq_ctrl),
+        mgmt_writer::mgmt_hdr_to_ap(frame_ctrl, bssid, addr, seq_ctrl),
         None,
-    )?;
+    )
+    .map_err(Into::into)
+}
 
-    buf.append_value(&mac::ActionHdr { action: mac::ActionCategory::BLOCK_ACK })?;
+/// Writes a complete `ADDBA` client request frame into the given buffer.
+/// `ADDBA` is a management frame.
+///
+/// `ADDBA` is an abbreviation for _add BlockAck_ and this frame initiates a
+/// BlockAck session. The frame format is described by IEEE Std 802.11-2016,
+/// 9.6.5.2.
+///
+/// See `write_addba_resp_frame`.
+pub fn write_addba_req_frame<B: Appendable>(
+    buf: &mut B,
+    bssid: Bssid,
+    originator_addr: MacAddr,
+    dialog_token: u8,
+    seq_mgr: &mut SequenceManager,
+) -> Result<(), Error> {
+    write_addba_hdr(buf, bssid, originator_addr, seq_mgr)
+        .and_then(|_| crate::write_addba_req_body(buf, dialog_token))
+}
 
-    let action = mac::BlockAckAction::ADDBA_REQUEST;
-    // It appears there is no particular rule to choose the value for
-    // dialog_token. See IEEE Std 802.11-2016, 9.6.5.2.
-    let dialog_token = 1;
-    // IEEE Std 802.11-2016, 3.1(Traffic Identifier), 5.1.1.1 (Data Service -
-    // General), 9.4.2.30 (Access Policy), 9.2.4.5.2 (TID subfield) Related
-    // topics: QoS facility, TSPEC, WM, QMF, TXOP. A TID is from [0, 15], and is
-    // assigned to an MSDU in the layers above the MAC. [0, 7] identify Traffic
-    // Categories (TCs) [8, 15] identify parameterized Traffic Streams (TSs).
-
-    // TODO(29325): Implement QoS policy engine.
-    const TEMPORARY_TID: u16 = 0;
-
-    // TODO(29887): Determine better value.
-    const TEMPORARY_BUFFER_SIZE: u16 = 64;
-    const TEMPORARY_STARTING_SEQUENCE: u16 = 1;
-    // IEEE Std 802.11-2016, 9.6.5.2 - Fragment number is always 0.
-    const IEEE_FRAGMENT_NUMBER: u16 = 0;
-    let parameters = mac::BlockAckParameters(0)
-        .with_amsdu(true)
-        .with_policy(mac::BlockAckPolicy::IMMEDIATE)
-        .with_tid(TEMPORARY_TID)
-        .with_buffer_size(TEMPORARY_BUFFER_SIZE);
-    let timeout = 0; // Timeout disabled here.
-    let starting_sequence_control = mac::BlockAckStartingSequenceControl(0)
-        .with_fragment_number(IEEE_FRAGMENT_NUMBER)
-        .with_starting_sequence_number(TEMPORARY_STARTING_SEQUENCE);
-    let addba_req_hdr =
-        mac::AddbaReqHdr { action, dialog_token, parameters, timeout, starting_sequence_control };
-
-    buf.append_value(&addba_req_hdr)?;
-
-    Ok(())
+/// Writes a complete `ADDBA` client response frame into the given buffer.
+/// `ADDBA` is a management frame.
+///
+/// `ADDBA` is an abbreviation for _add BlockAck_ and this frame responds to an
+/// `ADDBA` request. The frame format is described by IEEE Std 802.11-2016,
+/// 9.6.5.3.
+///
+/// See `write_addba_req_frame`.
+pub fn write_addba_resp_frame<B: Appendable>(
+    buf: &mut B,
+    bssid: Bssid,
+    recipient_addr: MacAddr,
+    dialog_token: u8,
+    seq_mgr: &mut SequenceManager,
+) -> Result<(), Error> {
+    write_addba_hdr(buf, bssid, recipient_addr, seq_mgr)
+        .and_then(|_| crate::write_addba_resp_body(buf, dialog_token))
 }
 
 #[cfg(test)]
@@ -689,7 +699,7 @@ mod tests {
         let mut buf = vec![];
         let mut seq_mgr = SequenceManager::new();
 
-        write_addba_req_frame(&mut buf, Bssid([3; 6]), [6; 6], &mut seq_mgr)
+        write_addba_req_frame(&mut buf, Bssid([3; 6]), [6; 6], 1, &mut seq_mgr)
             .expect("write addba should succeed");
         assert_eq!(
             &buf[..],

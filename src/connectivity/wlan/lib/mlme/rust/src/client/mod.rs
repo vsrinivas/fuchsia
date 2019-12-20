@@ -569,16 +569,61 @@ impl<'a> BoundClient<'a> {
             .map_err(|s| Error::Status(format!("error sending PS-Poll frame"), s))
     }
 
-    // IEEE Std 802.11-2016, 9.6.5.2 - ADDBA stands for Add BlockAck
+    /// Sends an `ADDBA` request to the associated AP to begin a BlockAck
+    /// session. This frame is sent to initiate a BlockAck session with the AP
+    /// and is described by 802.11-2016, 9.6.5.2.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the management frame cannot be sent to the AP.
     pub fn send_addba_req_frame(&mut self, ctx: &mut Context) -> Result<(), Error> {
         const FRAME_LEN: usize = frame_len!(mac::MgmtHdr, mac::ActionHdr, mac::AddbaReqHdr);
         let mut buf = ctx.buf_provider.get_buffer(FRAME_LEN)?;
         let mut w = BufferWriter::new(&mut buf[..]);
-        write_addba_req_frame(&mut w, self.sta.bssid, self.sta.iface_mac, &mut ctx.seq_mgr)?;
+        // TODO(29887): It appears there is no particular rule to choose the
+        //              value for `dialog_token`. Persist the dialog token for
+        //              the BlockAck session and find a proven way to generate
+        //              tokens.  See IEEE Std 802.11-2016, 9.6.5.2.
+        let dialog_token = 1;
+        write_addba_req_frame(
+            &mut w,
+            self.sta.bssid,
+            self.sta.iface_mac,
+            dialog_token,
+            &mut ctx.seq_mgr,
+        )?;
         let bytes_written = w.bytes_written();
         let out_buf = OutBuf::from(buf, bytes_written);
         self.send_mgmt_or_ctrl_frame(ctx, out_buf)
-            .map_err(|s| Error::Status(format!("error sending add block ack frame"), s))
+            .map_err(|s| Error::Status(format!("error sending addba request frame"), s))
+    }
+
+    /// Sends an `ADDBA` response to the associated AP to begin a BlockAck
+    /// session. This frame is sent in response to an `ADDBA` request from the
+    /// AP and is described by 802.11-2016, 9.6.5.3.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the management frame cannot be sent to the AP.
+    pub fn send_addba_resp_frame(
+        &mut self,
+        ctx: &mut Context,
+        dialog_token: u8,
+    ) -> Result<(), Error> {
+        const FRAME_LEN: usize = frame_len!(mac::MgmtHdr, mac::ActionHdr, mac::AddbaRespHdr);
+        let mut buf = ctx.buf_provider.get_buffer(FRAME_LEN)?;
+        let mut w = BufferWriter::new(&mut buf[..]);
+        write_addba_resp_frame(
+            &mut w,
+            self.sta.bssid,
+            self.sta.iface_mac,
+            dialog_token,
+            &mut ctx.seq_mgr,
+        )?;
+        let bytes_written = w.bytes_written();
+        let out_buf = OutBuf::from(buf, bytes_written);
+        self.send_mgmt_or_ctrl_frame(ctx, out_buf)
+            .map_err(|s| Error::Status(format!("error sending addba response frame"), s))
     }
 
     /// Called when a previously scheduled `TimedEvent` fired.
@@ -598,6 +643,40 @@ impl<'a> BoundClient<'a> {
         let (state, result) = self.sta.state.take().unwrap().on_eth_frame(self, ctx, frame);
         self.sta.state = Some(state);
         result
+    }
+
+    // TODO(39899): The Rust crate does not yet support channel scheduling. When
+    //              channel scheduling is available, use this code to doze and
+    //              awake as needed.
+    /// Sends a power management data frame to the associated AP indicating that
+    /// the client has entered the given power state. See `PowerState`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the data frame cannot be sent to the AP.
+    pub fn send_power_state_frame(
+        &mut self,
+        ctx: &mut Context,
+        state: PowerState,
+    ) -> Result<(), Error> {
+        let mut buffer = ctx.buf_provider.get_buffer(mac::FixedDataHdrFields::len(
+            mac::Addr4::ABSENT,
+            mac::QosControl::ABSENT,
+            mac::HtControl::ABSENT,
+        ))?;
+        let mut writer = BufferWriter::new(&mut buffer[..]);
+        write_power_state_frame(
+            &mut writer,
+            self.sta.bssid,
+            self.sta.iface_mac,
+            &mut ctx.seq_mgr,
+            state,
+        )?;
+        let n = writer.bytes_written();
+        let buffer = OutBuf::from(buffer, n);
+        ctx.device
+            .send_wlan_frame(buffer, TxFlags::NONE)
+            .map_err(|error| Error::Status(format!("error sending power management frame"), error))
     }
 
     /// Sends an MLME-AUTHENTICATE.confirm message to the SME with authentication type
@@ -1437,16 +1516,14 @@ mod tests {
     }
 
     #[test]
-    fn addba_req_frame_success() {
+    fn send_addba_req_frame() {
         let mut m = MockObjects::new();
         let mut me = m.make_mlme();
         let mut client = make_client_station();
-
         client
             .bind(&mut me.scanner, &mut me.chan_sched, &mut me.channel_state)
             .send_addba_req_frame(&mut me.ctx)
             .expect("failed sending addba frame");
-
         assert_eq!(
             &m.fake_device.wlan_queue[0].0[..],
             &[
@@ -1464,6 +1541,36 @@ mod tests {
                 0b00000011, 0b00010000, // block ack parameters (u16)
                 0, 0, // block ack timeout (u16) (0: disabled)
                 0b00010000, 0, // block ack starting sequence number: fragment 0, sequence 1
+            ][..]
+        );
+    }
+
+    #[test]
+    fn send_addba_resp_frame() {
+        let mut m = MockObjects::new();
+        let mut me = m.make_mlme();
+        let mut client = make_client_station();
+        client
+            .bind(&mut me.scanner, &mut me.chan_sched, &mut me.channel_state)
+            .send_addba_resp_frame(&mut me.ctx, 1)
+            .expect("failed sending addba frame");
+        assert_eq!(
+            &m.fake_device.wlan_queue[0].0[..],
+            &[
+                // Mgmt header 1101 for action frame
+                0b11010000, 0b00000000, // frame control
+                0, 0, // duration
+                6, 6, 6, 6, 6, 6, // addr1
+                7, 7, 7, 7, 7, 7, // addr2
+                6, 6, 6, 6, 6, 6, // addr3
+                0x10, 0, // sequence control
+                // Action frame header (Also part of ADDBA response frame)
+                0x03, // Action Category: block ack (0x03)
+                0x01, // block ack action: ADDBA response (0x01)
+                1,    // block ack dialog token
+                0, 0, // status
+                0b00000011, 0b00010000, // block ack parameters (u16)
+                0, 0, // block ack timeout (u16) (0: disabled)
             ][..]
         );
     }
