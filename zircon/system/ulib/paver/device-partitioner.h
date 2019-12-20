@@ -143,6 +143,8 @@ class GptDevicePartitioner {
   // Wipes all partitions meeting given criteria.
   zx_status_t WipePartitions(FilterCallback filter) const;
 
+  const fbl::unique_fd& devfs_root() { return devfs_root_; }
+
  private:
   using GptDevices = std::vector<std::pair<std::string, fbl::unique_fd>>;
 

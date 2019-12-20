@@ -8,7 +8,11 @@
 #include <lib/fdio/fd.h>
 #include <zircon/status.h>
 
+#include <cstdint>
+#include <numeric>
+
 #include "pave-logging.h"
+#include "zircon/errors.h"
 
 namespace paver {
 namespace {
@@ -164,6 +168,23 @@ zx_status_t BlockPartitionClient::Write(const zx::vmo& vmo, size_t vmo_size) {
   return ZX_OK;
 }
 
+zx_status_t BlockPartitionClient::Trim() {
+  zx_status_t status = RegisterFastBlockIo();
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  block_fifo_request_t request;
+  request.group = 0;
+  request.vmoid = BLOCK_VMOID_INVALID;
+  request.opcode = BLOCKIO_TRIM;
+  request.length = static_cast<uint32_t>(block_info_->block_count);
+  request.vmo_offset = 0;
+  request.dev_offset = 0;
+
+  return client_->Transaction(&request, 1);
+}
+
 zx_status_t BlockPartitionClient::Flush() {
   zx_status_t status = RegisterFastBlockIo();
   if (status != ZX_OK) {
@@ -286,6 +307,8 @@ zx_status_t SkipBlockPartitionClient::Write(const zx::vmo& vmo, size_t size) {
   return ZX_OK;
 }
 
+zx_status_t SkipBlockPartitionClient::Trim() { return ZX_ERR_NOT_SUPPORTED; }
+
 zx_status_t SkipBlockPartitionClient::Flush() { return ZX_OK; }
 
 zx::channel SkipBlockPartitionClient::GetChannel() { return {}; }
@@ -313,10 +336,94 @@ zx_status_t SysconfigPartitionClient::Write(const zx::vmo& vmo, size_t size) {
   return client_.WritePartition(partition_, vmo, 0);
 }
 
+zx_status_t SysconfigPartitionClient::Trim() { return ZX_ERR_NOT_SUPPORTED; }
+
 zx_status_t SysconfigPartitionClient::Flush() { return ZX_OK; }
 
 zx::channel SysconfigPartitionClient::GetChannel() { return {}; }
 
 fbl::unique_fd SysconfigPartitionClient::block_fd() { return fbl::unique_fd(); }
+
+zx_status_t PartitionCopyClient::GetBlockSize(size_t* out_size) {
+  // Choose the lowest common multiple of all block sizes.
+  size_t lcm = 1;
+  for (auto& partition : partitions_) {
+    size_t size = 0;
+    if (auto status = partition->GetBlockSize(&size); status == ZX_OK) {
+      lcm = std::lcm(lcm, size);
+    }
+  }
+  if (lcm == 0 || lcm == 1) {
+    return ZX_ERR_IO;
+  }
+  *out_size = lcm;
+  return ZX_OK;
+}
+
+zx_status_t PartitionCopyClient::GetPartitionSize(size_t* out_size) {
+  // Return minimum size of all partitions.
+  bool one_succeed = false;
+  size_t minimum_size = UINT64_MAX;
+  for (auto& partition : partitions_) {
+    size_t size;
+    if (auto status = partition->GetPartitionSize(&size); status == ZX_OK) {
+      one_succeed = true;
+      minimum_size = std::min(minimum_size, size);
+    }
+  }
+  if (!one_succeed) {
+    return ZX_ERR_IO;
+  }
+  *out_size = minimum_size;
+  return ZX_OK;
+}
+
+zx_status_t PartitionCopyClient::Read(const zx::vmo& vmo, size_t size) {
+  // Read until one is successful.
+  for (auto& partition : partitions_) {
+    if (auto status = partition->Read(vmo, size); status == ZX_OK) {
+      return status;
+    }
+  }
+  return ZX_ERR_IO;
+}
+
+zx_status_t PartitionCopyClient::Write(const zx::vmo& vmo, size_t size) {
+  // Guaranatee at least one write was successful.
+  bool one_succeed = false;
+  for (auto& partition : partitions_) {
+    if (auto status = partition->Write(vmo, size); status == ZX_OK) {
+      one_succeed = true;
+    } else {
+      // Best effort trim the partition.
+      partition->Trim();
+    }
+  }
+  return one_succeed ? ZX_OK : ZX_ERR_IO;
+}
+
+zx_status_t PartitionCopyClient::Trim() {
+  // All must trim successfully.
+  for (auto& partition : partitions_) {
+    if (auto status = partition->Trim(); status != ZX_OK) {
+      return status;
+    }
+  }
+  return ZX_OK;
+}
+
+zx_status_t PartitionCopyClient::Flush() {
+  // All must flush successfully.
+  for (auto& partition : partitions_) {
+    if (auto status = partition->Flush(); status != ZX_OK) {
+      return status;
+    }
+  }
+  return ZX_OK;
+}
+
+zx::channel PartitionCopyClient::GetChannel() { return {}; }
+
+fbl::unique_fd PartitionCopyClient::block_fd() { return fbl::unique_fd(); }
 
 }  // namespace paver

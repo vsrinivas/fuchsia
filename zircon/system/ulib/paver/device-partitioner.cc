@@ -1305,9 +1305,28 @@ zx_status_t SherlockPartitioner::FindPartition(
 
   switch (partition_type) {
     case Partition::kBootloader: {
-      const uint8_t bootloader_type[GPT_GUID_LEN] = GUID_BOOTLOADER_VALUE;
-      memcpy(type, bootloader_type, GPT_GUID_LEN);
-      break;
+      const uint8_t boot0_type[GPT_GUID_LEN] = GUID_EMMC_BOOT1_VALUE;
+      zx::channel chan;
+      zx_status_t status =
+          OpenBlockPartition(gpt_->devfs_root(), nullptr, boot0_type, ZX_SEC(5), &chan);
+      if (status != ZX_OK) {
+        return status;
+      }
+      auto boot0 = std::make_unique<BlockPartitionClient>(std::move(chan));
+
+      const uint8_t boot1_type[GPT_GUID_LEN] = GUID_EMMC_BOOT2_VALUE;
+      status = OpenBlockPartition(gpt_->devfs_root(), nullptr, boot1_type, ZX_SEC(5), &chan);
+      if (status != ZX_OK) {
+        return status;
+      }
+      auto boot1 = std::make_unique<BlockPartitionClient>(std::move(chan));
+
+      std::vector<std::unique_ptr<PartitionClient>> partitions;
+      partitions.push_back(std::move(boot0));
+      partitions.push_back(std::move(boot1));
+      *out_partition = std::make_unique<PartitionCopyClient>(std::move(partitions));
+
+      return ZX_OK;
     }
     case Partition::kZirconA: {
       const uint8_t zircon_a_type[GPT_GUID_LEN] = GUID_ZIRCON_A_VALUE;

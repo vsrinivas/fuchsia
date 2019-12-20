@@ -57,6 +57,7 @@ zx_test("paver-test") {
     "test/abr-test.cc",
     "test/device-partitioner-test.cc",
     "test/fvm-test.cc",
+    "test/partition-client-test.cc",
     "test/paversvc-test.cc",
     "test/stream-reader-test.cc",
     "test/test-utils.cc",

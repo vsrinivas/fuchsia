@@ -34,6 +34,9 @@ class PartitionClient {
   // `GetBlockSize`.
   virtual zx_status_t Write(const zx::vmo& vmo, size_t vmo_size) = 0;
 
+  // Issues a trim to the entire partition.
+  virtual zx_status_t Trim() = 0;
+
   // Flushes all previous operations to persistent storage.
   virtual zx_status_t Flush() = 0;
 
@@ -55,6 +58,7 @@ class BlockPartitionClient final : public PartitionClient {
   zx_status_t GetPartitionSize(size_t* out_size) final;
   zx_status_t Read(const zx::vmo& vmo, size_t size) final;
   zx_status_t Write(const zx::vmo& vmo, size_t vmo_size) final;
+  zx_status_t Trim() final;
   zx_status_t Flush() final;
   zx::channel GetChannel() final;
   fbl::unique_fd block_fd() final;
@@ -84,6 +88,7 @@ class SkipBlockPartitionClient final : public PartitionClient {
   zx_status_t GetPartitionSize(size_t* out_size) final;
   zx_status_t Read(const zx::vmo& vmo, size_t size) final;
   zx_status_t Write(const zx::vmo& vmo, size_t vmo_size) final;
+  zx_status_t Trim() final;
   zx_status_t Flush() final;
   zx::channel GetChannel() final;
   fbl::unique_fd block_fd() final;
@@ -112,6 +117,7 @@ class SysconfigPartitionClient final : public PartitionClient {
   zx_status_t GetPartitionSize(size_t* out_size) final;
   zx_status_t Read(const zx::vmo& vmo, size_t size) final;
   zx_status_t Write(const zx::vmo& vmo, size_t vmo_size) final;
+  zx_status_t Trim() final;
   zx_status_t Flush() final;
   zx::channel GetChannel() final;
   fbl::unique_fd block_fd() final;
@@ -125,6 +131,33 @@ class SysconfigPartitionClient final : public PartitionClient {
  private:
   ::sysconfig::SyncClient client_;
   ::sysconfig::SyncClient::PartitionType partition_;
+};
+
+// Specialized partition client which duplciates to multiple partitions, and attempts to read from
+// each.
+class PartitionCopyClient final : public PartitionClient {
+ public:
+  explicit PartitionCopyClient(std::vector<std::unique_ptr<PartitionClient>> partitions)
+      : partitions_(std::move(partitions)) {}
+
+  zx_status_t GetBlockSize(size_t* out_size) final;
+  zx_status_t GetPartitionSize(size_t* out_size) final;
+  zx_status_t Read(const zx::vmo& vmo, size_t size) final;
+  zx_status_t Write(const zx::vmo& vmo, size_t vmo_size) final;
+  zx_status_t Trim() final;
+  zx_status_t Flush() final;
+  zx::channel GetChannel() final;
+  fbl::unique_fd block_fd() final;
+
+  // No copy, no move.
+  PartitionCopyClient(const PartitionCopyClient&) = delete;
+  PartitionCopyClient& operator=(const PartitionCopyClient&) = delete;
+  PartitionCopyClient(PartitionCopyClient&&) = delete;
+  PartitionCopyClient& operator=(PartitionCopyClient&&) = delete;
+
+ private:
+
+  std::vector<std::unique_ptr<PartitionClient>> partitions_;
 };
 
 }  // namespace paver

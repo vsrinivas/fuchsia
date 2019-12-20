@@ -47,6 +47,9 @@ constexpr uint8_t kFvmType[GPT_GUID_LEN] = GUID_FVM_VALUE;
 constexpr uint8_t kSysconfigType[GPT_GUID_LEN] = GUID_SYS_CONFIG_VALUE;
 constexpr uint8_t kAbrMetaType[GPT_GUID_LEN] = GUID_ABR_META_VALUE;
 
+constexpr uint8_t kBoot0Type[GPT_GUID_LEN] = GUID_EMMC_BOOT1_VALUE;
+constexpr uint8_t kBoot1Type[GPT_GUID_LEN] = GUID_EMMC_BOOT2_VALUE;
+
 constexpr uint8_t kDummyType[GPT_GUID_LEN] = {0xaf, 0x3d, 0xc6, 0x0f, 0x83, 0x84, 0x72, 0x47,
                                               0x8e, 0x79, 0x3d, 0x69, 0xd8, 0x47, 0x7d, 0xe4};
 
@@ -607,6 +610,28 @@ TEST_F(SherlockPartitionerTests, InitializePartitionTable) {
   EXPECT_OK(partitioner->FindPartition(paver::Partition::kVbMetaB, &partition));
   EXPECT_OK(partitioner->FindPartition(paver::Partition::kVbMetaR, &partition));
   EXPECT_OK(partitioner->FindPartition(paver::Partition::kFuchsiaVolumeManager, &partition));
+}
+
+TEST_F(SherlockPartitionerTests, FindBootloader) {
+  std::unique_ptr<BlockDevice> gpt_dev, boot0_dev, boot1_dev;
+  ASSERT_NO_FATAL_FAILURES(
+      BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, kBlockCount, kBlockSize, &gpt_dev));
+  ASSERT_NO_FATAL_FAILURES(
+      BlockDevice::Create(devmgr_.devfs_root(), kBoot0Type, kBlockCount, kBlockSize, &boot0_dev));
+  ASSERT_NO_FATAL_FAILURES(
+      BlockDevice::Create(devmgr_.devfs_root(), kBoot1Type, kBlockCount, kBlockSize, &boot1_dev));
+
+  std::unique_ptr<gpt::GptDevice> gpt;
+  ASSERT_OK(gpt::GptDevice::Create(gpt_dev->fd(), kBlockSize, kBlockCount, &gpt));
+  ASSERT_OK(gpt->Sync());
+
+  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
+  std::unique_ptr<paver::DevicePartitioner> partitioner;
+  ASSERT_OK(paver::SherlockPartitioner::Initialize(devmgr_.devfs_root().duplicate(),
+                                                   std::move(gpt_fd), &partitioner));
+
+  std::unique_ptr<paver::PartitionClient> partition;
+  ASSERT_OK(partitioner->FindPartition(paver::Partition::kBootloader, &partition));
 }
 
 TEST(SkipBlockDevicePartitionerTests, IsFvmWithinFtl) {
