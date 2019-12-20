@@ -93,8 +93,8 @@ EOF
 
 if [[ ! -z "${PRODUCT}" ]]; then
   cat >> "${OUTPUT}" << EOF
-PRODUCT=${PRODUCT}
-actual=\$(fastboot \${FASTBOOT_ARGS} getvar product 2>&1 | head -n1 | cut -d' ' -f2)
+PRODUCT="${PRODUCT}"
+actual=\$(fastboot \${FASTBOOT_ARGS} getvar product 2>&1 | head -n1 | cut -d' ' -f2-)
 if [[ "\${actual}" != "\${PRODUCT}" ]]; then
   echo >&2 "Expected device \${PRODUCT} but found \${actual}"
   exit 1
