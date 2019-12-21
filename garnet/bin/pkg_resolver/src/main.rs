@@ -10,6 +10,7 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect::{self as inspect, Property, StringProperty},
     fuchsia_syslog::{self, fx_log_err, fx_log_info},
+    fuchsia_trace as trace,
     futures::{prelude::*, stream::FuturesUnordered},
     parking_lot::RwLock,
     std::{io, sync::Arc},
@@ -46,7 +47,10 @@ use crate::{
     rewrite_service::RewriteService,
 };
 
-// FIXME: allow for multiple threads once rust_tuf repo updates
+// FIXME: allow for multiple threads and sendable futures once rust_tuf repo updates support it.
+// FIXME(43342): trace durations assume they start and end on the same thread, but since the
+// package resolver's executor is multi-threaded, a trace duration that includes an 'await' may not
+// end on the same thread it starts on, resulting in invalid trace events.
 // const SERVER_THREADS: usize = 2;
 const MAX_CONCURRENT_BLOB_FETCHES: usize = 5;
 
@@ -78,6 +82,7 @@ impl ChannelInspectState {
 
 fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["pkg_resolver"]).expect("can't init logger");
+    fuchsia_trace_provider::trace_provider_create_with_fdio();
     fx_log_info!("starting package resolver");
 
     let mut executor = fasync::Executor::new().context("error creating executor")?;
@@ -210,6 +215,8 @@ fn main() -> Result<(), Error> {
     fs.take_and_serve_directory_handle()?;
 
     futures.push(fs.collect().boxed_local());
+
+    trace::instant!("app", "startup", trace::Scope::Process);
 
     let () = executor.run_singlethreaded(futures.collect());
 

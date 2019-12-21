@@ -16,6 +16,7 @@ use {
         PackageResolverRequestStream, UpdatePolicy,
     },
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
+    fuchsia_trace as trace,
     fuchsia_url::pkg_url::{ParseError, PkgUrl},
     fuchsia_zircon::Status,
     futures::prelude::*,
@@ -42,6 +43,7 @@ where
             responder,
         } = event;
 
+        trace::duration_begin!("app", "resolve", "url" => package_url.as_str());
         let status = resolve(
             &rewrites,
             &repo_manager,
@@ -53,6 +55,7 @@ where
             dir,
         )
         .await;
+        trace::duration_end!("app", "resolve", "status" => Status::from(status).to_string().as_str());
 
         responder.send(Status::from(status).into_raw())?;
     }

@@ -27,6 +27,8 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-hyper",
     "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-trace",
+    "//garnet/public/rust/fuchsia-trace-provider",
     "//garnet/public/rust/fuchsia-zircon",
     "//garnet/public/rust/tuf",
     "//src/lib/http-sse:http_sse",

@@ -235,6 +235,7 @@ impl<P: PkgFs> TestEnv<P> {
         let mut fs = ServiceFs::new();
         fs.add_proxy_service::<fidl_fuchsia_net::NameLookupMarker, _>()
             .add_proxy_service::<fidl_fuchsia_posix_socket::ProviderMarker, _>()
+            .add_proxy_service::<fidl_fuchsia_tracing_provider::RegistryMarker, _>()
             .add_proxy_service_to::<PackageCacheMarker, _>(
                 pkg_cache.directory_request().unwrap().clone(),
             )

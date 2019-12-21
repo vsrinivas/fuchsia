@@ -8,7 +8,8 @@
             "versions"
         ],
         "services": [
-            "fuchsia.logger.LogSink"
+            "fuchsia.logger.LogSink",
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }

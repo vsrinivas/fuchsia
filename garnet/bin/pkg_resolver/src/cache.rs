@@ -11,6 +11,7 @@ use {
     fidl_fuchsia_pkg::PackageCacheProxy,
     fidl_fuchsia_pkg_ext::{BlobId, BlobIdParseError, MirrorConfig, RepositoryConfig},
     fuchsia_syslog::{fx_log_err, fx_log_info},
+    fuchsia_trace as trace,
     fuchsia_url::pkg_url::PkgUrl,
     fuchsia_zircon::Status,
     futures::{
@@ -466,14 +467,16 @@ pub fn make_blob_fetch_queue(
 ) -> (impl Future<Output = ()>, BlobFetcher) {
     let http_client = Arc::new(fuchsia_hyper::new_https_client());
 
-    let (blob_fetch_queue, blob_fetcher) =
-        queue::work_queue(max_concurrency, move |merkle, context: FetchBlobContext| {
+    let (blob_fetch_queue, blob_fetcher) = queue::work_queue(
+        max_concurrency,
+        move |merkle: BlobId, context: FetchBlobContext| {
             let http_client = Arc::clone(&http_client);
             let cache = cache.clone();
             let stats = Arc::clone(&stats);
 
             async move {
-                fetch_blob(
+                trace::duration_begin!("app", "fetch_blob", "merkle" => merkle.to_string().as_str());
+                let res = fetch_blob(
                     &*http_client,
                     &context.mirrors,
                     merkle,
@@ -483,9 +486,12 @@ pub fn make_blob_fetch_queue(
                     stats,
                 )
                 .map_err(Arc::new)
-                .await
+                .await;
+                trace::duration_end!("app", "fetch_blob", "result" => format!("{:?}", res).as_str());
+                res
             }
-        });
+        },
+    );
 
     (blob_fetch_queue.into_future(), blob_fetcher)
 }

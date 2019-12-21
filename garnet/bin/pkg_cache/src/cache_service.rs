@@ -9,6 +9,7 @@ use {
     fidl_fuchsia_pkg::{NeededBlobsMarker, PackageCacheRequest, PackageCacheRequestStream},
     fidl_fuchsia_pkg_ext::{BlobId, BlobInfo},
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
+    fuchsia_trace as trace,
     fuchsia_zircon::Status,
     futures::prelude::*,
 };
@@ -20,12 +21,22 @@ pub async fn serve(
     while let Some(event) = stream.try_next().await? {
         match event {
             PackageCacheRequest::Get { meta_far_blob, selectors, needed_blobs, dir, responder } => {
+                let meta_far_blob: BlobInfo = meta_far_blob.into();
+                trace::duration_begin!("app", "cache_get",
+                    "meta_far_blob_id" => meta_far_blob.blob_id.to_string().as_str());
                 let status =
-                    get(&pkgfs_versions, meta_far_blob.into(), selectors, needed_blobs, dir).await;
+                    get(&pkgfs_versions, meta_far_blob, selectors, needed_blobs, dir).await;
+                trace::duration_end!("app", "cache_get",
+                    "status" => Status::from(status).to_string().as_str());
                 responder.send(Status::from(status).into_raw())?;
             }
             PackageCacheRequest::Open { meta_far_blob_id, selectors, dir, responder } => {
-                let status = open(&pkgfs_versions, meta_far_blob_id.into(), selectors, dir).await;
+                let meta_far_blob_id: BlobId = meta_far_blob_id.into();
+                trace::duration_begin!("app", "cache_open",
+                    "meta_far_blob_id" => meta_far_blob_id.to_string().as_str());
+                let status = open(&pkgfs_versions, meta_far_blob_id, selectors, dir).await;
+                trace::duration_end!("app", "cache_open",
+                    "status" => Status::from(status).to_string().as_str());
                 responder.send(Status::from(status).into_raw())?;
             }
         }

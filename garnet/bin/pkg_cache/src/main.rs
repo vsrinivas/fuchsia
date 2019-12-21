@@ -17,6 +17,7 @@ const SERVER_THREADS: usize = 2;
 
 fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["pkg_cache"]).expect("can't init logger");
+    fuchsia_trace_provider::trace_provider_create_with_fdio();
     fx_log_info!("starting package cache service");
 
     let mut executor = fasync::Executor::new().context("error creating executor")?;
