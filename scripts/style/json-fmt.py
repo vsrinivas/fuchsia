@@ -25,19 +25,19 @@ def main():
     for json_file in args.file:
         try:
             with json_file:
-                data = json.load(json_file)
-                json_file.seek(0)
-                json_file.truncate()
-                json.dump(
-                    data,
-                    json_file,
-                    indent=4,
-                    sort_keys=True,
-                    separators=(',', ': '))
-                json_file.write('\n')
+                original = json_file.read()
+                data = json.loads(original)
+                formatted = json.dumps(
+                    data, indent=4, sort_keys=True, separators=(',', ': '))
+                if original != formatted:
+                    json_file.seek(0)
+                    json_file.truncate()
+                    json_file.write(formatted + '\n')
         except:
-            print("Exception encountered while processing file " + json_file.name)
+            print(
+                "Exception encountered while processing file " + json_file.name)
             raise
+
 
 if __name__ == "__main__":
     main()
