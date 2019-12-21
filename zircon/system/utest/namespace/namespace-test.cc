@@ -19,6 +19,9 @@
 #include <zircon/syscalls.h>
 #include <zxtest/zxtest.h>
 
+#include <string>
+#include <vector>
+
 namespace {
 
 struct Mapping {
@@ -151,7 +154,7 @@ TEST(NamespaceTest, ExportRoot) {
   fdio_flat_namespace_t* flat = nullptr;
   ASSERT_OK(fdio_ns_export(ns, &flat));
   ASSERT_EQ(flat->count, 1);
-  ASSERT_EQ(strcmp(flat->path[0], "/"), 0);
+  ASSERT_STR_EQ(flat->path[0], "/");
 
   fdio_ns_free_flat_ns(flat);
   ASSERT_OK(fdio_ns_destroy(ns));
@@ -169,7 +172,7 @@ TEST(NamespaceTest, Export) {
   // Validate the contents match the initialized mapping.
   ASSERT_EQ(flat->count, fbl::count_of(NS));
   for (unsigned n = 0; n < fbl::count_of(NS); n++) {
-    ASSERT_EQ(strcmp(flat->path[n], NS[n].local), 0);
+    ASSERT_STR_EQ(flat->path[n], NS[n].local);
   }
 
   fdio_ns_free_flat_ns(flat);
@@ -190,24 +193,25 @@ TEST(NamespaceTest, Chdir) {
 
   // should show "bin", "lib", "fake" -- our rootdir
   ASSERT_TRUE((dir = opendir(".")));
-  ASSERT_TRUE((de = readdir(dir)));
-  ASSERT_EQ(strcmp(de->d_name, "."), 0);
-  ASSERT_TRUE((de = readdir(dir)));
-  ASSERT_EQ(strcmp(de->d_name, "bin"), 0);
-  ASSERT_TRUE((de = readdir(dir)));
-  ASSERT_EQ(strcmp(de->d_name, "lib"), 0);
-  ASSERT_TRUE((de = readdir(dir)));
-  ASSERT_EQ(strcmp(de->d_name, "fake"), 0);
+  ASSERT_NOT_NULL((de = readdir(dir)));
+  EXPECT_STR_EQ(de->d_name, ".");
+  ASSERT_NOT_NULL((de = readdir(dir)));
+  EXPECT_STR_EQ(de->d_name, "bin");
+  ASSERT_NOT_NULL((de = readdir(dir)));
+  EXPECT_STR_EQ(de->d_name, "lib");
+  ASSERT_NOT_NULL((de = readdir(dir)));
+  EXPECT_STR_EQ(de->d_name, "fake");
+  ASSERT_NULL((de = readdir(dir)));
   ASSERT_EQ(closedir(dir), 0);
 
   // should show "fake" directory, containing parent's pre-allocated tmp dir.
   ASSERT_TRUE((dir = opendir("fake")));
   ASSERT_TRUE((de = readdir(dir)));
-  ASSERT_EQ(strcmp(de->d_name, "."), 0);
+  ASSERT_STR_EQ(de->d_name, ".");
   ASSERT_TRUE((de = readdir(dir)));
-  ASSERT_EQ(strcmp(de->d_name, "dev"), 0);
+  ASSERT_STR_EQ(de->d_name, "dev");
   ASSERT_TRUE((de = readdir(dir)));
-  ASSERT_EQ(strcmp(de->d_name, "tmp"), 0);
+  ASSERT_STR_EQ(de->d_name, "tmp");
   ASSERT_EQ(closedir(dir), 0);
 
   // Try doing some basic file ops within the namespace
@@ -335,6 +339,42 @@ TEST(NamespaceTest, GetInstalled) {
   fdio_ns_t* ns = nullptr;
   ASSERT_OK(fdio_ns_get_installed(&ns));
   ASSERT_NE(nullptr, ns);
+}
+
+TEST(NamespaceTest, Readdir) {
+  fdio_ns_t* old_ns;
+  ASSERT_OK(fdio_ns_get_installed(&old_ns));
+
+  // Create new ns
+  constexpr size_t kNumChildren = 1000;
+  fdio_ns_t* ns;
+  ASSERT_OK(fdio_ns_create(&ns));
+  std::vector<zx::channel> client_ends;
+  for (size_t n = 0; n < kNumChildren; n++) {
+    std::string path = std::string("/test_") + std::to_string(n);
+    zx::channel fake_client_end, fake_server_end;
+    zx::channel::create(0, &fake_client_end, &fake_server_end);
+    ASSERT_OK(fdio_ns_bind(ns, path.c_str(), fake_server_end.release()));
+    client_ends.push_back(std::move(fake_client_end));
+  }
+  ASSERT_OK(fdio_ns_chdir(ns));
+
+  DIR* dir;
+  struct dirent* de;
+  ASSERT_TRUE((dir = opendir(".")));
+  ASSERT_NOT_NULL((de = readdir(dir)));
+  ASSERT_STR_EQ(de->d_name, ".");
+
+  for (size_t i = 0; i < kNumChildren; i++) {
+    std::string expected_name = std::string("test_") + std::to_string(i);
+    ASSERT_NOT_NULL((de = readdir(dir)));
+    EXPECT_STR_EQ(de->d_name, expected_name.c_str());
+  }
+  ASSERT_NULL((de = readdir(dir)));
+  ASSERT_EQ(closedir(dir), 0);
+
+  ASSERT_OK(fdio_ns_chdir(old_ns));
+  ASSERT_OK(fdio_ns_destroy(ns));
 }
 
 }  // namespace

@@ -21,4 +21,14 @@ namespace fdio_internal {
 fdio_t* CreateLocalConnection(fbl::RefPtr<const fdio_namespace> fs,
                               fbl::RefPtr<const LocalVnode> vn);
 
+struct DirentIteratorState {
+  // The ID of the most recent vnode returned by |LocalVnode::Readdir|.
+  uint64_t last_seen = 0;
+
+  // The first directory entry is always ".", but this is emulated
+  // and not an actual entry. This boolean tracks if the iterator
+  // has returned the "." entry.
+  bool encountered_dot = false;
+};
+
 }  // namespace fdio_internal

@@ -332,6 +332,12 @@ zx_status_t zxio_dirent_iterator_init(zxio_dirent_iterator_t* iterator, zxio_t* 
 // |zxio_dirent_iterator_init|.
 zx_status_t zxio_dirent_iterator_next(zxio_dirent_iterator_t* iterator, zxio_dirent_t** out_entry);
 
+// Destroys a |zxio_dirent_iterator_t|, freeing associated resources.
+//
+// After destruction, another |zxio_dirent_iterator_init| call might be made on
+// the corresponding directory.
+void zxio_dirent_iterator_destroy(zxio_dirent_iterator_t* iterator);
+
 // Return in |tty| whether or not |io| represents a TTY object (should
 // line buffer for stdio, etc).
 zx_status_t zxio_isatty(zxio_t* io, bool* tty);

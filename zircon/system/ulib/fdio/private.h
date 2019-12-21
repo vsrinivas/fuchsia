@@ -55,8 +55,11 @@ typedef struct fdio_ops {
   zx_status_t (*get_attr)(fdio_t* io, llcpp::fuchsia::io::NodeAttributes* out);
   zx_status_t (*set_attr)(fdio_t* io, uint32_t flags,
                           const llcpp::fuchsia::io::NodeAttributes* attr);
-  zx_status_t (*readdir)(fdio_t* io, void* ptr, size_t max, size_t* actual);
-  zx_status_t (*rewind)(fdio_t* io);
+  zx_status_t (*dirent_iterator_init)(fdio_t* io, zxio_dirent_iterator_t* iterator,
+                                      zxio_t* directory, void* buffer, size_t capacity);
+  zx_status_t (*dirent_iterator_next)(fdio_t* io, zxio_dirent_iterator_t* iterator,
+                                      zxio_dirent_t** out_entry);
+  void (*dirent_iterator_destroy)(fdio_t* io, zxio_dirent_iterator_t* iterator);
   zx_status_t (*unlink)(fdio_t* io, const char* path, size_t len);
   zx_status_t (*truncate)(fdio_t* io, off_t off);
   two_path_op rename;
@@ -296,8 +299,11 @@ fdio_t* fdio_waitable_create(zx_handle_t h, zx_signals_t signals_in, zx_signals_
 zx_status_t fdio_default_get_token(fdio_t* io, zx_handle_t* out);
 zx_status_t fdio_default_set_attr(fdio_t* io, uint32_t flags,
                                   const llcpp::fuchsia::io::NodeAttributes* attr);
-zx_status_t fdio_default_readdir(fdio_t* io, void* ptr, size_t max, size_t* actual);
-zx_status_t fdio_default_rewind(fdio_t* io);
+zx_status_t fdio_default_dirent_iterator_init(fdio_t* io, zxio_dirent_iterator_t* iterator,
+                                              zxio_t* directory, void* buffer, size_t capacity);
+zx_status_t fdio_default_dirent_iterator_next(fdio_t* io, zxio_dirent_iterator_t* iterator,
+                                              zxio_dirent_t** out_entry);
+void fdio_default_dirent_iterator_destroy(fdio_t* io, zxio_dirent_iterator_t* iterator);
 zx_status_t fdio_default_unlink(fdio_t* io, const char* path, size_t len);
 zx_status_t fdio_default_truncate(fdio_t* io, off_t off);
 zx_status_t fdio_default_rename(fdio_t* io, const char* src, size_t srclen, zx_handle_t dst_token,

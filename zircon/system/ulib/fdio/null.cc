@@ -21,11 +21,17 @@ zx_status_t fdio_default_set_attr(fdio_t* io, uint32_t flags,
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t fdio_default_readdir(fdio_t* io, void* ptr, size_t max, size_t* actual) {
+zx_status_t fdio_default_dirent_iterator_init(fdio_t* io, zxio_dirent_iterator_t* iterator,
+                                              zxio_t* directory, void* buffer, size_t capacity) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t fdio_default_rewind(fdio_t* io) { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t fdio_default_dirent_iterator_next(fdio_t* io, zxio_dirent_iterator_t* iterator,
+                                              zxio_dirent_t** out_entry) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+void fdio_default_dirent_iterator_destroy(fdio_t* io, zxio_dirent_iterator_t* iterator) {}
 
 zx_status_t fdio_default_unlink(fdio_t* io, const char* path, size_t len) {
   return ZX_ERR_NOT_SUPPORTED;

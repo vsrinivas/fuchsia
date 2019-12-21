@@ -8,9 +8,16 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/namespace.h>
 #include <lib/zx/channel.h>
+#include <lib/zxio/zxio.h>
 
 #include "local-vnode.h"
+
+namespace fdio_internal {
+struct DirentIteratorState;
+}
 
 // A local filesystem consisting of LocalVnodes, mapping string names
 // to remote handles.
@@ -19,6 +26,7 @@
 struct fdio_namespace : public fbl::RefCounted<fdio_namespace> {
  public:
   using LocalVnode = fdio_internal::LocalVnode;
+  using DirentIteratorState = fdio_internal::DirentIteratorState;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(fdio_namespace);
 
@@ -33,9 +41,12 @@ struct fdio_namespace : public fbl::RefCounted<fdio_namespace> {
   // Export all remote references and their paths in a flat format.
   zx_status_t Export(fdio_flat_namespace_t** out) const;
 
-  // Reads the contents of |vn|'s children into a flattened buffer.
-  // The buffer is filled with entries of variable-length type |vdirent_t|.
-  zx_status_t Readdir(const LocalVnode& vn, void* buffer, size_t length, size_t* out_actual) const;
+  // Reads a single entry from the list of directory entries into a flattened buffer.
+  // |state| contains the position of the iteration.
+  // |buffer| and |length| describe the buffer for placing the directory entry.
+  // If we have reached the end, |out_entry| is set to NULL, and ZX_OK is returned.
+  zx_status_t Readdir(const LocalVnode& vn, DirentIteratorState* state, void* buffer, size_t length,
+                      zxio_dirent_t** out_entry) const;
 
   // Create a new |fdio_t| object referring to the object at |path|.
   //

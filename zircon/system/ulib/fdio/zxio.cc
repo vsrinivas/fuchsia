@@ -155,6 +155,21 @@ static zx_status_t fdio_zxio_get_vmo(fdio_t* io, int flags, zx::vmo* out_vmo) {
   return ZX_OK;
 }
 
+static zx_status_t fdio_zxio_dirent_iterator_init(fdio_t* io, zxio_dirent_iterator_t* iterator,
+                                                  zxio_t* directory, void* buffer,
+                                                  size_t capacity) {
+  return zxio_dirent_iterator_init(iterator, directory, buffer, capacity);
+}
+
+static zx_status_t fdio_zxio_dirent_iterator_next(fdio_t* io, zxio_dirent_iterator_t* iterator,
+                                                  zxio_dirent_t** out_entry) {
+  return zxio_dirent_iterator_next(iterator, out_entry);
+}
+
+static void fdio_zxio_dirent_iterator_destroy(fdio_t* io, zxio_dirent_iterator_t* iterator) {
+  return zxio_dirent_iterator_destroy(iterator);
+}
+
 // Generic ---------------------------------------------------------------------
 
 static fdio_ops_t fdio_zxio_ops = {
@@ -169,8 +184,9 @@ static fdio_ops_t fdio_zxio_ops = {
     .get_token = fdio_default_get_token,
     .get_attr = fdio_zxio_get_attr,
     .set_attr = fdio_zxio_set_attr,
-    .readdir = fdio_default_readdir,
-    .rewind = fdio_default_rewind,
+    .dirent_iterator_init = fdio_zxio_dirent_iterator_init,
+    .dirent_iterator_next = fdio_zxio_dirent_iterator_next,
+    .dirent_iterator_destroy = fdio_zxio_dirent_iterator_destroy,
     .unlink = fdio_default_unlink,
     .truncate = fdio_zxio_truncate,
     .rename = fdio_default_rename,
@@ -243,40 +259,6 @@ static void fdio_zxio_remote_wait_end(fdio_t* io, zx_signals_t signals, uint32_t
   *_events = ((signals >> POLL_SHIFT) & POLL_MASK) | events;
 }
 
-static zx_status_t fdio_zxio_remote_readdir(fdio_t* io, void* ptr, size_t max, size_t* out_actual) {
-  zxio_remote_t* rio = fdio_get_zxio_remote(io);
-  uint8_t request_buffer[fidl::MaxSizeInChannel<fio::Directory::ReadDirentsRequest>()];
-  fidl::DecodedMessage<fio::Directory::ReadDirentsRequest> request(
-      fidl::BytePart::WrapFull(request_buffer));
-  uint8_t response_buffer[fidl::MaxSizeInChannel<fio::Directory::ReadDirentsResponse>()];
-  request.message()->max_bytes = max;
-  fidl::DecodeResult result =
-      fio::Directory::InPlace::ReadDirents(zx::unowned_channel(rio->control), std::move(request),
-                                           fidl::BytePart::WrapEmpty(response_buffer));
-  zx_status_t status = result.status;
-  if (status != ZX_OK) {
-    return status;
-  }
-  fio::Directory::ReadDirentsResponse* response = result.Unwrap();
-  status = response->s;
-  if (status != ZX_OK) {
-    return status;
-  }
-  fidl::VectorView<uint8_t> dirents = response->dirents;
-  if (dirents.count() > max) {
-    return ZX_ERR_IO;
-  }
-  *out_actual = dirents.count();
-  memcpy(ptr, dirents.data(), dirents.count());
-  return ZX_OK;
-}
-
-static zx_status_t fdio_zxio_remote_rewind(fdio_t* io) {
-  zxio_remote_t* rio = fdio_get_zxio_remote(io);
-  auto result = fio::Directory::Call::Rewind(zx::unowned_channel(rio->control));
-  return result.ok() ? result.Unwrap()->s : result.status();
-}
-
 static zx_status_t fdio_zxio_remote_unlink(fdio_t* io, const char* path, size_t len) {
   zxio_remote_t* rio = fdio_get_zxio_remote(io);
   auto result =
@@ -305,8 +287,9 @@ static fdio_ops_t fdio_zxio_remote_ops = {
     .get_token = fdio_zxio_get_token,
     .get_attr = fdio_zxio_get_attr,
     .set_attr = fdio_zxio_set_attr,
-    .readdir = fdio_zxio_remote_readdir,
-    .rewind = fdio_zxio_remote_rewind,
+    .dirent_iterator_init = fdio_zxio_dirent_iterator_init,
+    .dirent_iterator_next = fdio_zxio_dirent_iterator_next,
+    .dirent_iterator_destroy = fdio_zxio_dirent_iterator_destroy,
     .unlink = fdio_zxio_remote_unlink,
     .truncate = fdio_zxio_truncate,
     .rename = fdio_zxio_rename,
@@ -501,8 +484,9 @@ static fdio_ops_t fdio_zxio_vmofile_ops = {
     .get_token = fdio_default_get_token,
     .get_attr = fdio_zxio_get_attr,
     .set_attr = fdio_zxio_set_attr,
-    .readdir = fdio_default_readdir,
-    .rewind = fdio_default_rewind,
+    .dirent_iterator_init = fdio_default_dirent_iterator_init,
+    .dirent_iterator_next = fdio_default_dirent_iterator_next,
+    .dirent_iterator_destroy = fdio_default_dirent_iterator_destroy,
     .unlink = fdio_default_unlink,
     .truncate = fdio_zxio_truncate,
     .rename = fdio_default_rename,
@@ -646,8 +630,9 @@ static fdio_ops_t fdio_zxio_pipe_ops = {
     .get_token = fdio_default_get_token,
     .get_attr = fdio_zxio_get_attr,
     .set_attr = fdio_zxio_set_attr,
-    .readdir = fdio_default_readdir,
-    .rewind = fdio_default_rewind,
+    .dirent_iterator_init = fdio_default_dirent_iterator_init,
+    .dirent_iterator_next = fdio_default_dirent_iterator_next,
+    .dirent_iterator_destroy = fdio_default_dirent_iterator_destroy,
     .unlink = fdio_default_unlink,
     .truncate = fdio_zxio_truncate,
     .rename = fdio_default_rename,

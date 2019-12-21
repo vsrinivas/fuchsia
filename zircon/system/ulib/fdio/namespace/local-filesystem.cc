@@ -33,38 +33,6 @@ namespace fio = ::llcpp::fuchsia::io;
 
 namespace {
 
-class DirentFiller {
- public:
-  explicit DirentFiller(void* buffer, size_t length)
-      : start_(buffer), buffer_(buffer), length_(length) {}
-
-  zx_status_t Add(const char* name, size_t len, uint32_t type) {
-    size_t sz = sizeof(vdirent_t) + len;
-
-    if (sz > length_ || len > NAME_MAX) {
-      return ZX_ERR_INVALID_ARGS;
-    }
-    vdirent_t* de = static_cast<vdirent_t*>(buffer_);
-    de->ino = fio::INO_UNKNOWN;
-    de->size = static_cast<uint8_t>(len);
-    de->type = static_cast<uint8_t>(type);
-    memcpy(de->name, name, len);
-
-    buffer_ = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(buffer_) + sz);
-    length_ -= sz;
-    return ZX_OK;
-  }
-
-  size_t Used() const {
-    return reinterpret_cast<uintptr_t>(buffer_) - reinterpret_cast<uintptr_t>(start_);
-  }
-
- private:
-  void* start_;
-  void* buffer_;
-  size_t length_;
-};
-
 struct ExportState {
   // The minimum size of flat namespace which will contain all the
   // information about this |fdio_namespace|.
@@ -118,20 +86,23 @@ zx_status_t fdio_namespace::WalkLocked(fbl::RefPtr<const LocalVnode>* in_out_vn,
       return ZX_ERR_BAD_PATH;
     }
 
-    fbl::RefPtr<LocalVnode> child = vn->Lookup(fbl::StringPiece(name, len));
-    if (child == nullptr) {
-      // If no child exists with this name, we either failed to lookup a node,
-      // or we must transmit this request to the remote node.
-      if (!vn->Remote().is_valid()) {
-        return ZX_ERR_NOT_FOUND;
-      }
+    // "." matches current node.
+    if (!((path[0] == '.') && (path[1] == 0))) {
+      fbl::RefPtr<LocalVnode> child = vn->Lookup(fbl::StringPiece(name, len));
+      if (child == nullptr) {
+        // If no child exists with this name, we either failed to lookup a node,
+        // or we must transmit this request to the remote node.
+        if (!vn->Remote().is_valid()) {
+          return ZX_ERR_NOT_FOUND;
+        }
 
-      *in_out_vn = vn;
-      *in_out_path = path;
-      return ZX_OK;
+        *in_out_vn = vn;
+        *in_out_path = path;
+        return ZX_OK;
+      }
+      vn = child;
     }
 
-    vn = child;
     if (!next) {
       // Lookup has completed successfully for all nodes, and no path remains.
       // Return the requested local node.
@@ -174,18 +145,49 @@ zx_status_t fdio_namespace::Open(fbl::RefPtr<const LocalVnode> vn, const char* p
   return fdio_remote_open_at(vn->Remote().get(), path, flags, mode, out);
 }
 
-zx_status_t fdio_namespace::Readdir(const LocalVnode& vn, void* buffer, size_t length,
-                                    size_t* out_actual) const {
+zx_status_t fdio_namespace::Readdir(const LocalVnode& vn, DirentIteratorState* state, void* buffer,
+                                    size_t length, zxio_dirent_t** out_entry) const {
   fbl::AutoLock lock(&lock_);
-  DirentFiller dirents(buffer, length);
-  if (dirents.Add(".", 1, VTYPE_TO_DTYPE(V_TYPE_DIR)) != ZX_OK) {
-    *out_actual = 0;
+
+  auto populate_entry = [length](zxio_dirent_t* entry, fbl::StringPiece name) {
+    if (name.size() > NAME_MAX) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    uint8_t name_size = static_cast<uint8_t>(name.size());
+    entry->inode = fio::INO_UNKNOWN;
+    entry->size = name_size;
+    entry->type = static_cast<uint8_t>(VTYPE_TO_DTYPE(V_TYPE_DIR));
+    if (sizeof(zxio_dirent_t) + name_size > length) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    memcpy(entry->name, name.data(), name_size);
+    return ZX_OK;
+  };
+
+  if (!state->encountered_dot) {
+    auto entry = reinterpret_cast<zxio_dirent_t*>(buffer);
+    zx_status_t status = populate_entry(entry, fbl::StringPiece("."));
+    if (status != ZX_OK) {
+      *out_entry = nullptr;
+      return status;
+    }
+    *out_entry = entry;
+    state->encountered_dot = true;
     return ZX_OK;
   }
-  vn.ForAllChildren([&dirents](const LocalVnode& vn) {
-    return dirents.Add(vn.Name().data(), vn.Name().length(), VTYPE_TO_DTYPE(V_TYPE_DIR));
-  });
-  *out_actual = dirents.Used();
+  fbl::RefPtr<LocalVnode> child_vnode;
+  vn.Readdir(&state->last_seen, &child_vnode);
+  if (!child_vnode) {
+    *out_entry = nullptr;
+    return ZX_OK;
+  }
+  auto entry = reinterpret_cast<zxio_dirent_t*>(buffer);
+  zx_status_t status = populate_entry(entry, child_vnode->Name());
+  if (status != ZX_OK) {
+    *out_entry = nullptr;
+    return status;
+  }
+  *out_entry = entry;
   return ZX_OK;
 }
 

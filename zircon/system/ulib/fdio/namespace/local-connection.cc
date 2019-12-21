@@ -14,6 +14,7 @@
 #include <fbl/ref_ptr.h>
 
 #include "../private.h"
+#include "local-connection.h"
 #include "local-filesystem.h"
 #include "local-vnode.h"
 
@@ -45,9 +46,6 @@ struct LocalConnection {
   // The vnode corresponding to this directory. |vn| references some
   // directory in |fs|.
   const LocalVnode* vn;
-
-  // Readdir sequence number.
-  std::atomic<int32_t> seq;
 };
 
 static_assert(offsetof(LocalConnection, io) == 0, "LocalConnection must be castable to zxio_t");
@@ -88,24 +86,44 @@ zx_status_t local_dir_get_attr(fdio_t* io, fio::NodeAttributes* attr) {
   return ZX_OK;
 }
 
-zx_status_t local_dir_rewind(fdio_t* io) {
-  LocalConnection* dir = fdio_get_local_dir(io);
-  dir->seq.store(0);
+zx_status_t local_dir_unlink(fdio_t* io, const char* path, size_t len) {
+  return ZX_ERR_UNAVAILABLE;
+}
+
+struct local_dir_dirent_iterator {
+  // Buffer for storing dirents.
+  void* buffer;
+
+  // Size of |buffer|.
+  size_t capacity;
+
+  // Used by |Readdir| to resume from the middle of a directory.
+  DirentIteratorState iterator_state;
+};
+
+zx_status_t local_dir_dirent_iterator_init(fdio_t* io, zxio_dirent_iterator_t* iterator,
+                                           zxio_t* directory, void* buffer, size_t capacity) {
+  auto dir_iterator = new (iterator) local_dir_dirent_iterator;
+  dir_iterator->buffer = buffer;
+  dir_iterator->capacity = capacity;
   return ZX_OK;
 }
 
-zx_status_t local_dir_readdir(fdio_t* io, void* ptr, size_t max, size_t* out_actual) {
+zx_status_t local_dir_dirent_iterator_next(fdio_t* io, zxio_dirent_iterator_t* iterator,
+                                           zxio_dirent_t** out_entry) {
   LocalConnection* dir = fdio_get_local_dir(io);
-  int n = dir->seq.fetch_add(1);
-  if (n != 0) {
-    *out_actual = 0;
-    return ZX_OK;
+  auto dir_iterator = reinterpret_cast<local_dir_dirent_iterator*>(iterator);
+  zx_status_t status = dir->fs->Readdir(*dir->vn, &dir_iterator->iterator_state,
+                                        dir_iterator->buffer, dir_iterator->capacity, out_entry);
+  if (*out_entry == nullptr && status == ZX_OK) {
+    return ZX_ERR_NOT_FOUND;
   }
-  return dir->fs->Readdir(*dir->vn, ptr, max, out_actual);
+  return status;
 }
 
-zx_status_t local_dir_unlink(fdio_t* io, const char* path, size_t len) {
-  return ZX_ERR_UNAVAILABLE;
+void local_dir_dirent_iterator_destroy(fdio_t* io, zxio_dirent_iterator_t* iterator) {
+  static_assert(std::is_trivially_destructible<local_dir_dirent_iterator>::value,
+                "local_dir_dirent_iterator must have trivial destructor");
 }
 
 constexpr fdio_ops_t kLocalConnectionOps = []() {
@@ -121,8 +139,9 @@ constexpr fdio_ops_t kLocalConnectionOps = []() {
   ops.get_vmo = fdio_default_get_vmo;
   ops.get_token = fdio_default_get_token;
   ops.set_attr = fdio_default_set_attr;
-  ops.readdir = local_dir_readdir;
-  ops.rewind = local_dir_rewind;
+  ops.dirent_iterator_init = local_dir_dirent_iterator_init;
+  ops.dirent_iterator_next = local_dir_dirent_iterator_next;
+  ops.dirent_iterator_destroy = local_dir_dirent_iterator_destroy;
   ops.unlink = local_dir_unlink;
   ops.truncate = fdio_default_truncate;
   ops.rename = fdio_default_rename;
