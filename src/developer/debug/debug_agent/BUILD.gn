@@ -18,6 +18,9 @@ static_library("lib") {
     "arch.h",
     "arch_helpers.cc",
     "arch_helpers.h",
+    "arch_provider_fuchsia.cc",
+    "arch_provider_fuchsia.h",
+    "arch_provider_impl.h",
     "binary_launcher.cc",
     "binary_launcher.h",
     "breakpoint.cc",
@@ -60,17 +63,17 @@ static_library("lib") {
 
   if (current_cpu == "x64") {
     sources += [
+      "arch_provider_x64.h",
       "arch_x64.cc",
-      "arch_x64.h",
       "arch_x64_helpers.cc",
       "arch_x64_helpers.h",
     ]
   } else if (current_cpu == "arm64") {
     sources += [
       "arch_arm64.cc",
-      "arch_arm64.h",
       "arch_arm64_helpers.cc",
       "arch_arm64_helpers.h",
+      "arch_provider_arm64.h",
     ]
   } else {
     assert(false, "Un-supported CPU: ${current_cpu}")

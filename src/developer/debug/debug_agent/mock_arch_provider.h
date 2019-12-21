@@ -16,6 +16,16 @@ namespace debug_agent {
 // the code is doing within the tests.
 class MockArchProvider : public arch::ArchProvider {
  public:
+  zx_status_t ReadGeneralState(const zx::thread& handle,
+                               zx_thread_state_general_regs* regs) const override;
+  zx_status_t WriteGeneralState(const zx::thread& handle,
+                                const zx_thread_state_general_regs& regs) override;
+  zx_status_t ReadDebugState(const zx::thread& handle,
+                             zx_thread_state_debug_regs* regs) const override;
+  zx_status_t WriteDebugState(const zx::thread& handle,
+                              const zx_thread_state_debug_regs& regs) override;
+  zx_status_t WriteSingleStep(const zx::thread& thread, bool single_step) override;
+
   zx_status_t InstallHWBreakpoint(const zx::thread& thread, uint64_t address) override;
 
   zx_status_t UninstallHWBreakpoint(const zx::thread& thread, uint64_t address) override;

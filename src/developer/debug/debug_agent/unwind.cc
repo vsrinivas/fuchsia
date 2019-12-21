@@ -195,9 +195,10 @@ int LookupDso(void* context, unw_word_t pc, unw_word_t* base, const char** name)
   return 0;
 }
 
-zx_status_t UnwindStackNgUnwind(const zx::process& process, uint64_t dl_debug_addr,
-                                const zx::thread& thread, const zx_thread_state_general_regs& regs,
-                                size_t max_depth, std::vector<debug_ipc::StackFrame>* stack) {
+zx_status_t UnwindStackNgUnwind(arch::ArchProvider* arch_provider, const zx::process& process,
+                                uint64_t dl_debug_addr, const zx::thread& thread,
+                                const zx_thread_state_general_regs& regs, size_t max_depth,
+                                std::vector<debug_ipc::StackFrame>* stack) {
   stack->clear();
 
   // Ignore errors getting modules, the empty case can at least give the current location, and maybe
@@ -221,17 +222,16 @@ zx_status_t UnwindStackNgUnwind(const zx::process& process, uint64_t dl_debug_ad
     return ZX_ERR_INTERNAL;
 
   // Compute the register IDs for this platform's IP/SP.
-  arch::ArchProvider arch_provider;
-  auto arch = arch_provider.GetArch();
+  auto arch = arch_provider->GetArch();
   RegisterID ip_reg_id = GetSpecialRegisterID(arch, debug_ipc::SpecialRegisterType::kIP);
   RegisterID sp_reg_id = GetSpecialRegisterID(arch, debug_ipc::SpecialRegisterType::kSP);
 
   // Top stack frame.
   debug_ipc::StackFrame frame;
-  frame.ip = *arch_provider.IPInRegs(const_cast<zx_thread_state_general_regs*>(&regs));
-  frame.sp = *arch_provider.SPInRegs(const_cast<zx_thread_state_general_regs*>(&regs));
+  frame.ip = *arch_provider->IPInRegs(const_cast<zx_thread_state_general_regs*>(&regs));
+  frame.sp = *arch_provider->SPInRegs(const_cast<zx_thread_state_general_regs*>(&regs));
   frame.cfa = 0;
-  arch_provider.SaveGeneralRegs(regs, &frame.regs);
+  arch_provider->SaveGeneralRegs(regs, &frame.regs);
   stack->push_back(std::move(frame));
 
   while (frame.sp >= 0x1000000 && stack->size() < max_depth + 1) {
@@ -280,12 +280,14 @@ zx_status_t UnwindStackNgUnwind(const zx::process& process, uint64_t dl_debug_ad
 
 void SetUnwinderType(UnwinderType type) { unwinder_type = type; }
 
-zx_status_t UnwindStack(const zx::process& process, uint64_t dl_debug_addr,
-                        const zx::thread& thread, const zx_thread_state_general_regs& regs,
-                        size_t max_depth, std::vector<debug_ipc::StackFrame>* stack) {
+zx_status_t UnwindStack(arch::ArchProvider* arch_provider, const zx::process& process,
+                        uint64_t dl_debug_addr, const zx::thread& thread,
+                        const zx_thread_state_general_regs& regs, size_t max_depth,
+                        std::vector<debug_ipc::StackFrame>* stack) {
   switch (unwinder_type) {
     case UnwinderType::kNgUnwind:
-      return UnwindStackNgUnwind(process, dl_debug_addr, thread, regs, max_depth, stack);
+      return UnwindStackNgUnwind(arch_provider, process, dl_debug_addr, thread, regs, max_depth,
+                                 stack);
     case UnwinderType::kAndroid:
       return UnwindStackAndroid(process, dl_debug_addr, thread, regs, max_depth, stack);
   }

@@ -7,6 +7,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/developer/debug/debug_agent/arch_provider_impl.h"
 #include "src/developer/debug/debug_agent/local_stream_backend.h"
 #include "src/developer/debug/debug_agent/mock_object_provider.h"
 #include "src/developer/debug/debug_agent/mock_process.h"
@@ -215,7 +216,7 @@ SystemProviders ToSystemProviders(const TestContext& context) {
 
 std::unique_ptr<TestContext> CreateTestContext() {
   auto context = std::make_unique<TestContext>();
-  context->arch_provider = std::make_shared<arch::ArchProvider>();
+  context->arch_provider = std::make_shared<ArchProviderImpl>();
   context->limbo_provider = std::make_shared<MockLimboProvider>();
   context->object_provider = CreateDefaultMockObjectProvider();
   return context;

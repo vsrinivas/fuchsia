@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/debug_agent/arch_arm64.h"
-
 #include <gtest/gtest.h>
 
+#include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/arch_arm64_helpers_unittest.h"
 #include "src/developer/debug/debug_agent/mock_arch_provider.h"
 #include "src/developer/debug/debug_agent/test_utils.h"

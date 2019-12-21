@@ -6,12 +6,13 @@
 #define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_ARCH_X64_HELPERS_H_
 
 #include <lib/zx/thread.h>
+#include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
 
 #include <vector>
 
 #include "src/developer/debug/debug_agent/arch_helpers.h"
-#include "src/developer/debug/debug_agent/arch_x64.h"
+#include "src/developer/debug/debug_agent/arch_types.h"
 
 namespace debug_ipc {
 struct Register;

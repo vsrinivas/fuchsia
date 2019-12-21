@@ -8,6 +8,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/developer/debug/debug_agent/arch_provider_impl.h"
 #include "src/developer/debug/debug_agent/breakpoint.h"
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 #include "src/developer/debug/debug_agent/mock_arch_provider.h"
@@ -170,7 +171,7 @@ void CheckVectorContainsElements(const debug_ipc::FileLineFunction& location,
 }  // namespace
 
 TEST(ProcessBreakpoint, InstallAndFixup) {
-  auto arch_provider = std::make_shared<arch::ArchProvider>();
+  auto arch_provider = std::make_shared<ArchProviderImpl>();
   auto object_provider = std::make_shared<ObjectProvider>();
 
   TestProcessDelegate process_delegate;
@@ -210,7 +211,7 @@ TEST(ProcessBreakpoint, InstallAndFixup) {
 
 // clang-format off
 TEST(ProcessBreakpoint, StepSingle) {
-  auto arch_provider = std::make_shared<arch::ArchProvider>();
+  auto arch_provider = std::make_shared<ArchProviderImpl>();
   auto object_provider = std::make_shared<ObjectProvider>();
 
   TestProcessDelegate process_delegate;
@@ -434,7 +435,7 @@ TEST(ProcessBreakpoint, StepSingle) {
 
 // clang-format off
 TEST(ProcessBreakpoint, MultipleBreakpoints) {
-  auto arch_provider = std::make_shared<arch::ArchProvider>();
+  auto arch_provider = std::make_shared<ArchProviderImpl>();
   auto object_provider = std::make_shared<ObjectProvider>();
 
   TestProcessDelegate process_delegate1;

@@ -468,8 +468,8 @@ void DebuggedThread::FillThreadRecord(debug_ipc::ThreadRecord::StackAmount stack
       uint32_t max_stack_depth =
           stack_amount == debug_ipc::ThreadRecord::StackAmount::kMinimal ? 2 : 256;
 
-      UnwindStack(process_->handle(), process_->dl_debug_addr(), handle_, *regs, max_stack_depth,
-                  &record->frames);
+      UnwindStack(arch_provider_.get(), process_->handle(), process_->dl_debug_addr(), handle_,
+                  *regs, max_stack_depth, &record->frames);
     }
   } else {
     // Didn't bother querying the stack.

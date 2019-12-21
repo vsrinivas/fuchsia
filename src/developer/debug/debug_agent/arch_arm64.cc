@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/debug_agent/arch_arm64.h"
-
 #include <zircon/hw/debug/arm64.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/exception.h>
@@ -11,6 +9,7 @@
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/arch_arm64_helpers.h"
 #include "src/developer/debug/debug_agent/arch_helpers.h"
+#include "src/developer/debug/debug_agent/arch_types.h"
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 #include "src/developer/debug/ipc/decode_exception.h"
 #include "src/developer/debug/ipc/register_desc.h"

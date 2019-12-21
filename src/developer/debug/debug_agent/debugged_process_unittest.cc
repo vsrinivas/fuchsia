@@ -6,13 +6,14 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/debug/debug_agent/breakpoint.h"
+#include "src/developer/debug/debug_agent/mock_arch_provider.h"
 #include "src/developer/debug/debug_agent/mock_object_provider.h"
 #include "src/developer/debug/debug_agent/test_utils.h"
 
 namespace debug_agent {
 namespace {
 
-class MockArchProvider : public arch::ArchProvider {
+class MockProcessArchProvider : public MockArchProvider {
  public:
   zx_status_t InstallHWBreakpoint(const zx::thread& thread, uint64_t address) override {
     installs_.push_back({thread.get(), address});
@@ -85,7 +86,7 @@ DebuggedProcess CreateProcess(zx_koid_t koid, std::string name) {
   DebuggedProcessCreateInfo create_info = {};
   create_info.koid = koid;
   create_info.name = std::move(name);
-  create_info.arch_provider = std::make_unique<MockArchProvider>();
+  create_info.arch_provider = std::make_unique<MockProcessArchProvider>();
   create_info.object_provider = CreateDefaultMockObjectProvider();
   create_info.memory_accessor = std::make_unique<MockProcessMemoryAccessor>();
 

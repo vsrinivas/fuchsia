@@ -6,10 +6,11 @@
 #define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_ARCH_ARM64_HELPERS_H_
 
 #include <lib/zx/thread.h>
+#include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
 
-#include "src/developer/debug/debug_agent/arch_arm64.h"
 #include "src/developer/debug/debug_agent/arch_helpers.h"
+#include "src/developer/debug/debug_agent/arch_types.h"
 #include "src/developer/debug/ipc/protocol.h"
 
 namespace debug_agent {

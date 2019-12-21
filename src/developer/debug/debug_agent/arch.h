@@ -7,16 +7,11 @@
 
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
+#include <zircon/syscalls/debug.h>
 
 #include "src/developer/debug/debug_agent/arch_helpers.h"
+#include "src/developer/debug/debug_agent/arch_types.h"
 #include "src/developer/debug/ipc/protocol.h"
-#if defined(__x86_64__)
-#include "src/developer/debug/debug_agent/arch_x64.h"
-#elif defined(__aarch64__)
-#include "src/developer/debug/debug_agent/arch_arm64.h"
-#else
-#error
-#endif
 
 namespace debug_agent {
 
@@ -43,21 +38,19 @@ class ArchProvider {
 
   // Thread Management -----------------------------------------------------------------------------
 
-  // zx_thread_read_state with ZX_THREAD_STATE_GENERAL_REGS.
+  // Read/write general-purpose registers.
   virtual zx_status_t ReadGeneralState(const zx::thread& handle,
-                                       zx_thread_state_general_regs* regs);
-
-  virtual zx_status_t ReadDebugState(const zx::thread& handle,
-                                     zx_thread_state_debug_regs* regs) const;
-
-  // zx_thread_write_state with ZX_THREAD_STATE_GENERAL_REGS.
+                                       zx_thread_state_general_regs* regs) const = 0;
   virtual zx_status_t WriteGeneralState(const zx::thread& handle,
-                                        const zx_thread_state_general_regs& regs);
+                                        const zx_thread_state_general_regs& regs) = 0;
 
-  virtual zx_status_t WriteSingleStep(const zx::thread& thread, bool single_step);
-
+  // Read/write debug registers.
+  virtual zx_status_t ReadDebugState(const zx::thread& handle,
+                                     zx_thread_state_debug_regs* regs) const = 0;
   virtual zx_status_t WriteDebugState(const zx::thread& handle,
-                                      const zx_thread_state_debug_regs& regs);
+                                      const zx_thread_state_debug_regs& regs) = 0;
+
+  virtual zx_status_t WriteSingleStep(const zx::thread& thread, bool single_step) = 0;
 
   // Returns the address of the instruction pointer/stack pointer/base pointer
   // in the given reg structure.

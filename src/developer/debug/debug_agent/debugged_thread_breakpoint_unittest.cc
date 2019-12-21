@@ -7,6 +7,7 @@
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 #include "src/developer/debug/debug_agent/hardware_breakpoint.h"
 #include "src/developer/debug/debug_agent/local_stream_backend.h"
+#include "src/developer/debug/debug_agent/mock_arch_provider.h"
 #include "src/developer/debug/debug_agent/mock_object_provider.h"
 #include "src/developer/debug/debug_agent/mock_process.h"
 #include "src/developer/debug/debug_agent/mock_process_breakpoint.h"
@@ -22,9 +23,9 @@ namespace {
 
 constexpr uint64_t kWatchpointLength = 8;
 
-class MockArchProvider : public arch::ArchProvider {
+class MockBreakpointArchProvider : public MockArchProvider {
  public:
-  zx_status_t ReadGeneralState(const zx::thread&, zx_thread_state_general_regs*) override {
+  zx_status_t ReadGeneralState(const zx::thread&, zx_thread_state_general_regs*) const override {
     return ZX_OK;
   }
 
@@ -160,7 +161,7 @@ class MockProcessDelegate : public Breakpoint::ProcessDelegate {
 // Helpers -----------------------------------------------------------------------------------------
 
 struct TestContext {
-  std::shared_ptr<MockArchProvider> arch_provider;
+  std::shared_ptr<MockBreakpointArchProvider> arch_provider;
   std::shared_ptr<LimboProvider> limbo_provider;
   std::shared_ptr<MockObjectProvider> object_provider;
 
@@ -172,7 +173,7 @@ TestContext CreateTestContext() {
   TestContext context;
 
   // Mock the system.
-  context.arch_provider = std::make_shared<MockArchProvider>();
+  context.arch_provider = std::make_shared<MockBreakpointArchProvider>();
   context.limbo_provider = std::make_shared<LimboProvider>(nullptr);
   context.object_provider = CreateDefaultMockObjectProvider();
 

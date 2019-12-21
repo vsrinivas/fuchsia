@@ -12,6 +12,7 @@
 
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/debugged_process.h"
+#include "src/developer/debug/debug_agent/mock_arch_provider.h"
 #include "src/developer/debug/debug_agent/object_provider.h"
 
 namespace debug_agent {
@@ -60,7 +61,7 @@ void SetRegister(const Register& reg, std::vector<Register>* regs) {
   regs->push_back(reg);
 }
 
-class FakeArchProvider : public arch::ArchProvider {
+class FakeArchProvider : public MockArchProvider {
  public:
   zx_status_t ReadRegisters(const debug_ipc::RegisterCategory& type, const zx::thread&,
                             std::vector<debug_ipc::Register>* out) override {

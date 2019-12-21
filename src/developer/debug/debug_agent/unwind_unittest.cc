@@ -11,6 +11,7 @@
 #include <thread>
 
 #include "gtest/gtest.h"
+#include "src/developer/debug/debug_agent/arch_provider_impl.h"
 
 namespace debug_agent {
 
@@ -73,6 +74,8 @@ zx::suspend_token SyncSuspendThread(zx::thread& thread) {
 }
 
 void DoUnwindTest() {
+  ArchProviderImpl arch_provider;
+
   ThreadData data;
   std::thread background(ThreadFunc1, &data);
 
@@ -99,7 +102,8 @@ void DoUnwindTest() {
     ASSERT_NE(0u, debug_addr);
 
     // Do the unwinding.
-    status = UnwindStack(*zx::process::self(), debug_addr, data.thread, regs, 16, &stack);
+    status = UnwindStack(&arch_provider, *zx::process::self(), debug_addr, data.thread, regs, 16,
+                         &stack);
     ASSERT_EQ(ZX_OK, status);
 
     data.backtrace_done = true;

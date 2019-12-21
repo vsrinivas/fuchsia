@@ -5,6 +5,7 @@
 #include "src/developer/debug/debug_agent/arch_arm64_helpers.h"
 
 #include <zircon/hw/debug/arm64.h>
+#include <zircon/syscalls/debug.h>
 
 #include <sstream>
 
