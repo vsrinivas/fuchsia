@@ -84,10 +84,40 @@ package("pkg_resolver") {
   ]
 }
 
+generate_manifest("empty-repo.manifest") {
+  visibility = [ ":*" ]
+  testonly = true
+  sources = []
+  args = []
+
+  foreach(path,
+          [
+            "keys/root.json",
+            "keys/snapshot.json",
+            "keys/targets.json",
+            "keys/timestamp.json",
+            "repository/1.root.json",
+            "repository/1.snapshot.json",
+            "repository/1.targets.json",
+            "repository/root.json",
+            "repository/snapshot.json",
+            "repository/targets.json",
+            "repository/timestamp.json",
+          ]) {
+    source = "//garnet/tests/pkg-resolver/template/${path}"
+    sources += [ source ]
+    args += [ "--entry=empty-repo/${path}=" + rebase_path(source) ]
+  }
+}
+empty_repo_manifest_outputs = get_target_outputs(":empty-repo.manifest")
+empty_repo_manifest_file = empty_repo_manifest_outputs[0]
+
 test_package("pkg-resolver-unit-tests") {
   deps = [
     ":bin_test",
+    ":empty-repo.manifest",
   ]
+  extra = [ empty_repo_manifest_file ]
 
   tests = [
     {

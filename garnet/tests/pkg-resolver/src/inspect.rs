@@ -171,7 +171,7 @@ async fn test_resolving_package_updates_inspect_state() {
                 static_configs: {},
                 amber_conns: {},
                 repos: {
-                    "example.com": contains {
+                    "example.com": {
                         merkles_successfully_resolved_count: 1u64,
                         last_merkle_successfully_resolved_time: OptionDebugStringProperty::Some(
                             AnyProperty

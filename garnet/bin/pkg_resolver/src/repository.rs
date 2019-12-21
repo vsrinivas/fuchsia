@@ -195,6 +195,8 @@ mod tests {
         updating_tuf_client::SUBSCRIBE_CACHE_STALE_TIMEOUT,
     };
 
+    const EMPTY_REPO_PATH: &str = "/pkg/empty-repo";
+
     impl Repository {
         pub async fn new_no_inspect(config: &RepositoryConfig) -> Result<Self, failure::Error> {
             Repository::new(config, inspect::Inspector::new().root().create_child("inner-node"))
@@ -203,12 +205,15 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    #[ignore] // TODO(42573) re-enable all these tests
     async fn test_get_merkle_at_path() {
         // Serve static repo and connect to it
         let pkg = PackageBuilder::new("just-meta-far").build().await.expect("created pkg");
         let repo = Arc::new(
-            RepositoryBuilder::new().add_package(&pkg).build().await.expect("created repo"),
+            RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+                .add_package(&pkg)
+                .build()
+                .await
+                .expect("created repo"),
         );
         let served_repository = repo.build_server().start().expect("create served repo");
         let repo_url = RepoUrl::parse("fuchsia-pkg://test").expect("created repo url");
@@ -227,9 +232,13 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    #[ignore]
     async fn test_get_merkle_at_path_fails_when_no_package() {
-        let repo = Arc::new(RepositoryBuilder::new().build().await.expect("created repo"));
+        let repo = Arc::new(
+            RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+                .build()
+                .await
+                .expect("created repo"),
+        );
         let served_repository = repo.build_server().start().expect("create served repo");
         let repo_url = RepoUrl::parse("fuchsia-pkg://test").expect("created repo url");
         let repo_config = served_repository.make_repo_config(repo_url);
@@ -242,12 +251,15 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    #[ignore]
     async fn test_get_merkle_at_path_fails_when_remote_repo_down() {
         // Serve static repo
         let pkg = PackageBuilder::new("just-meta-far").build().await.expect("created pkg");
         let repo = Arc::new(
-            RepositoryBuilder::new().add_package(&pkg).build().await.expect("created repo"),
+            RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+                .add_package(&pkg)
+                .build()
+                .await
+                .expect("created repo"),
         );
         let should_fail = AtomicToggle::new(false);
         let served_repository = repo
@@ -282,7 +294,11 @@ mod tests {
     ) -> (ServedRepository, mpsc::UnboundedReceiver<()>, Repository) {
         let pkg = PackageBuilder::new("just-meta-far").build().await.expect("created pkg");
         let repo = Arc::new(
-            RepositoryBuilder::new().add_package(&pkg).build().await.expect("created repo"),
+            RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+                .add_package(&pkg)
+                .build()
+                .await
+                .expect("created repo"),
         );
         let (notify_on_request_handler, notified) = NotifyWhenRequested::new();
         let served_repository = repo
@@ -298,7 +314,6 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    #[ignore]
     async fn update_subscribed_repo_on_auto_event() {
         let (served_repository, mut ts_metadata_fetched, _repo) =
             make_repo_with_auto_and_watched_timestamp_metadata().await;
@@ -312,7 +327,6 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    #[ignore]
     async fn only_update_subscribed_repo_if_stale() {
         let initial_time = zx::Time::from_nanos(0);
         clock::mock::set(initial_time);
@@ -343,7 +357,6 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    #[ignore]
     async fn auto_client_reconnects() {
         let (served_repository, _ts_metadata_fetched, _repo) =
             make_repo_with_auto_and_watched_timestamp_metadata().await;
@@ -371,12 +384,17 @@ mod inspect_tests {
         std::sync::Arc,
     };
 
+    const EMPTY_REPO_PATH: &str = "/pkg/empty-repo";
+
     #[fasync::run_singlethreaded(test)]
-    // TODO(42445) figure out why these tests are flaking
-    #[ignore]
     async fn initialization_and_destruction() {
         let inspector = inspect::Inspector::new();
-        let repo = Arc::new(RepositoryBuilder::new().build().await.expect("created repo"));
+        let repo = Arc::new(
+            RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+                .build()
+                .await
+                .expect("created repo"),
+        );
         let served_repository = repo.build_server().start().expect("create served repo");
         let repo_url = RepoUrl::parse("fuchsia-pkg://test").expect("created repo url");
         let repo_config = served_repository.make_repo_config(repo_url);
@@ -408,13 +426,16 @@ mod inspect_tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    #[ignore]
     async fn get_merkle_at_path_updates_inspect() {
         clock::mock::set(zx::Time::from_nanos(0));
         let inspector = inspect::Inspector::new();
         let pkg = PackageBuilder::new("just-meta-far").build().await.expect("created pkg");
         let repo = Arc::new(
-            RepositoryBuilder::new().add_package(&pkg).build().await.expect("created repo"),
+            RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+                .add_package(&pkg)
+                .build()
+                .await
+                .expect("created repo"),
         );
         let served_repository = repo.build_server().start().expect("create served repo");
         let repo_url = RepoUrl::parse("fuchsia-pkg://test").expect("created repo url");
@@ -445,13 +466,16 @@ mod inspect_tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    #[ignore]
     async fn subscribed_repo_after_event() {
         clock::mock::set(zx::Time::from_nanos(0));
         let inspector = inspect::Inspector::new();
         let pkg = PackageBuilder::new("just-meta-far").build().await.expect("created pkg");
         let repo = Arc::new(
-            RepositoryBuilder::new().add_package(&pkg).build().await.expect("created repo"),
+            RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+                .add_package(&pkg)
+                .build()
+                .await
+                .expect("created repo"),
         );
         let (notify_on_request_handler, mut notified) = NotifyWhenRequested::new();
         let served_repository = repo
