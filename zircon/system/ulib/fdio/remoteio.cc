@@ -16,6 +16,7 @@
 
 #include <mutex>
 
+#include "lib/zx/channel.h"
 #include "private-socket.h"
 
 namespace fio = ::llcpp::fuchsia::io;
@@ -362,11 +363,15 @@ zx_status_t fdio_create(zx_handle_t handle, fdio_t** out_io) {
 
 // Creates an |fdio_t| by waiting for a |fuchsia.io/Node.OnOpen| event on |channel|.
 zx_status_t fdio_from_on_open_event(zx::channel channel, fdio_t** out_io) {
+  // HandleEvents will read an event message from its first parameter, then call
+  // one of the callbacks in EventHandlers to handle the event data, so its first
+  // parameter is no longer needed once it gets to the callback. We need to extract
+  // the underlying handle from |channel|, then use it to create the unowned
+  // channel used by HandleEvents, since the handle may be moved out of |channel|
+  // before the first parameter to HandleEvents is evaluated.
+  zx_handle_t event_channel_handle = channel.get();
   return fio::Directory::Call::HandleEvents(
-      // the first arg to HandleEvents (the client_end channel) is not used after the callback
-      // is called, so it is safe to pass this as an unowned_channel then move the channel inside
-      // the callback
-      zx::unowned_channel(channel),
+      zx::unowned_channel(event_channel_handle),
       fio::Directory::EventHandlers{
           .on_open =
               [channel = std::move(channel), out_io](zx_status_t status, fio::NodeInfo info) mutable {
