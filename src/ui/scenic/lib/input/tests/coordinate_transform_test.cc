@@ -58,12 +58,12 @@ class CoordinateTransformTest : public InputSystemTest {
 // in device space. The touch events move diagonally up and to the right, and we have the following
 // correspondence of coordinates:
 //
-// Event  Mark  Device  View-1      View-2
-// ADD    y     (4,4)   (4.5,4.5)   (0.5, 0.5)
-// DOWN   y     (4,4)   (4.5,4.5)   (0.5, 0.5)
-// MOVE   M     (5,3)   (5.5,3.5)   (1.5,-0.5)
-// UP     U     (6,2)   (6.5,2.5)   (2.5,-1.5)
-// REMOVE U     (6,2)   (6.5,2.5)   (2.5,-1.5)
+// Event  Mark  Device      View-1      View-2
+// ADD    y     (4.5,4.5)   (4.5,4.5)   (0.5, 0.5)
+// DOWN   y     (4.5,4.5)   (4.5,4.5)   (0.5, 0.5)
+// MOVE   M     (5.5,3.5)   (5.5,3.5)   (1.5,-0.5)
+// UP     U     (6.5,2.5)   (6.5,2.5)   (2.5,-1.5)
+// REMOVE U     (6.5,2.5)   (6.5,2.5)   (2.5,-1.5)
 //
 // N.B. View 1 sits *above* View 2 in elevation; hence, View 1 should receive the focus event.
 //
@@ -108,11 +108,11 @@ TEST_F(CoordinateTransformTest, Translated) {
     // The sequence ends 2x2 diagonally away (north-east) from the touch down.
     // Note that although this gesture escapes the bounds of view 1, we expect delivery to be
     // latched to it due to it being under DOWN.
-    session->Enqueue(pointer.Add(4, 4));
-    session->Enqueue(pointer.Down(4, 4));
-    session->Enqueue(pointer.Move(5, 3));
-    session->Enqueue(pointer.Up(6, 2));
-    session->Enqueue(pointer.Remove(6, 2));
+    session->Enqueue(pointer.Add(4.5, 4.5));
+    session->Enqueue(pointer.Down(4.5, 4.5));
+    session->Enqueue(pointer.Move(5.5, 3.5));
+    session->Enqueue(pointer.Up(6.5, 2.5));
+    session->Enqueue(pointer.Remove(6.5, 2.5));
   }
   RunLoopUntilIdle();
 
@@ -205,9 +205,9 @@ TEST_F(CoordinateTransformTest, ScaledBehind) {
 
     PointerCommandGenerator pointer(root_resources.compositor.id(), /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
-    // Touch once at (2, 2)
-    session->Enqueue(pointer.Add(2, 2));
-    session->Enqueue(pointer.Down(2, 2));
+    // Touch once at (2.5, 2.5)
+    session->Enqueue(pointer.Add(2.5, 2.5));
+    session->Enqueue(pointer.Down(2.5, 2.5));
   }
   RunLoopUntilIdle();
 
@@ -277,9 +277,9 @@ TEST_F(CoordinateTransformTest, ScaledInFront) {
 
     PointerCommandGenerator pointer(root_resources.compositor.id(), /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
-    // Touch once at (2, 2)
-    session->Enqueue(pointer.Add(2, 2));
-    session->Enqueue(pointer.Down(2, 2));
+    // Touch once at (2.5, 2.5)
+    session->Enqueue(pointer.Add(2.5, 2.5));
+    session->Enqueue(pointer.Down(2.5, 2.5));
   }
   RunLoopUntilIdle();
 

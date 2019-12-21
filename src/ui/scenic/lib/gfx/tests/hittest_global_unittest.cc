@@ -32,6 +32,7 @@
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/shape_node.h"
 #include "src/ui/scenic/lib/gfx/resources/renderers/renderer.h"
+#include "src/ui/scenic/lib/input/helper.h"
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
 #include "src/ui/scenic/lib/scenic/util/error_reporter.h"
 #include "src/ui/scenic/lib/scenic/util/print_event.h"
@@ -44,20 +45,8 @@ namespace gfx {
 namespace test {
 namespace {
 
-// Creates a unit ray entering at (x, y) from z = 1 pointed at -z.
-//
-// This should be kept pretty consistent with input_system.cc CreateJitteredScreenPerpendicularRay.
-// One notable divergence is that we don't jitter the x,y here, for more straightforward
-// expectations.
-escher::ray4 HitRay(float x, float y) {
-  return {
-      .origin = {x, y, 1, 1},
-      .direction = {0, 0, -1, 0},
-  };
-}
-
 // Creates a hit ray in world space. This is an input hit ray after being transformed by the layer.
-escher::ray4 WorldSpaceHitRay(float x, float y) {
+escher::ray4 WorldSpaceCreateScreenPerpendicularRay(float x, float y) {
   return {
       .origin = {x, y, -1000, 1},
       .direction = {0, 0, 1000, 0},
@@ -243,7 +232,7 @@ TEST_F(SingleSessionHitTestTest, HitCoordinates) {
     // view volume depth (though the relative scale isn't used for anything user facing so it
     // doesn't actually matter).
     TestHitAccumulator<ViewHit> accumulator;
-    const escher::ray4 ray = HitRay(1, 1.5f);
+    const escher::ray4 ray = input::CreateScreenPerpendicularRay(1, 1.5f);
     layer_stack()->HitTest(ray, &accumulator);
     ASSERT_FALSE(accumulator.hits().empty());
 
@@ -306,7 +295,7 @@ TEST_F(SingleSessionHitTestTest, Scaling) {
     // = -1 in 1000-space, + 1 due to the ray origin). Although the rectangle is scaled, the view is
     // not.
     TestHitAccumulator<ViewHit> accumulator;
-    const escher::ray4 ray = HitRay(1, 1.5f);
+    const escher::ray4 ray = input::CreateScreenPerpendicularRay(1, 1.5f);
     layer_stack()->HitTest(ray, &accumulator);
     ASSERT_FALSE(accumulator.hits().empty());
 
@@ -370,7 +359,7 @@ TEST_F(SingleSessionHitTestTest, ViewTransform) {
     // Hit from (5, 6) should be at (2/3, 4/3, -1) in view coordinates and depth should be 1.998 (z
     // = -2 in 1000-space, + 1 due to the ray origin).
     TestHitAccumulator<ViewHit> accumulator;
-    const escher::ray4 ray = HitRay(5, 6);
+    const escher::ray4 ray = input::CreateScreenPerpendicularRay(5, 6);
     layer_stack()->HitTest(ray, &accumulator);
     ASSERT_FALSE(accumulator.hits().empty());
 
@@ -439,7 +428,7 @@ TEST_F(SingleSessionHitTestTest, CameraTransform) {
     // effective input space, scaled down 3x to view space).
     // Depth should still be 1.999 (the clip-space scaling is not applied to Z).
     TestHitAccumulator<ViewHit> accumulator;
-    const escher::ray4 ray = HitRay(1, 1.5f);
+    const escher::ray4 ray = input::CreateScreenPerpendicularRay(1, 1.5f);
     layer_stack()->HitTest(ray, &accumulator);
     ASSERT_FALSE(accumulator.hits().empty());
 
@@ -520,13 +509,16 @@ TEST_F(SingleSessionHitTestTest, ViewClipping) {
   {
     // First hit test should intersect the view's bounding box.
     TestHitAccumulator<ViewHit> accumulator;
-    layer_stack()->HitTest(HitRay(5, layer_height() / 2), &accumulator);
+    layer_stack()->HitTest(input::CreateScreenPerpendicularRay(5, layer_height() / 2),
+                           &accumulator);
     EXPECT_EQ(accumulator.hits().size(), 1u) << "Should see a hit on the rectangle";
   }
   {
     // Second hit test should completely miss the view's bounding box.
     TestHitAccumulator<ViewHit> accumulator;
-    layer_stack()->HitTest(HitRay(layer_width() / 2 + 50, layer_height() / 2), &accumulator);
+    layer_stack()->HitTest(
+        input::CreateScreenPerpendicularRay(layer_width() / 2 + 50, layer_height() / 2),
+        &accumulator);
     EXPECT_EQ(accumulator.hits().size(), 0u)
         << "Should see no hits since its outside the view bounds";
   }
@@ -607,7 +599,8 @@ TEST_F(SingleSessionHitTestTest, SuppressedHitTestForSubtree) {
 
   {
     TestHitAccumulator<NodeHit> accumulator;
-    HitTest(scene(), WorldSpaceHitRay(layer_width() / 2, layer_height() / 2), &accumulator);
+    HitTest(scene(), WorldSpaceCreateScreenPerpendicularRay(layer_width() / 2, layer_height() / 2),
+            &accumulator);
 
     ASSERT_EQ(accumulator.hits().size(), 1u);
     EXPECT_EQ(accumulator.hits().front().node->id(), kHittableShapeNodeId);
@@ -667,12 +660,12 @@ TEST_F(SingleSessionHitTestTest, InclusiveViewBounds) {
 
   {
     TestHitAccumulator<ViewHit> accumulator;
-    layer_stack()->HitTest(HitRay(4, 4.5f), &accumulator);
+    layer_stack()->HitTest(input::CreateScreenPerpendicularRay(4, 4.5f), &accumulator);
     EXPECT_FALSE(accumulator.hits().empty());
   }
   {
     TestHitAccumulator<ViewHit> accumulator;
-    layer_stack()->HitTest(HitRay(12, 4.5f), &accumulator);
+    layer_stack()->HitTest(input::CreateScreenPerpendicularRay(12, 4.5f), &accumulator);
     EXPECT_FALSE(accumulator.hits().empty());
   }
 }
@@ -772,7 +765,8 @@ TEST_F(MultiSessionHitTestTest, ChildBiggerThanParent) {
 
   {
     TestHitAccumulator<NodeHit> accumulator;
-    HitTest(scene(), WorldSpaceHitRay(layer_width() / 2, layer_height() / 2), &accumulator);
+    HitTest(scene(), WorldSpaceCreateScreenPerpendicularRay(layer_width() / 2, layer_height() / 2),
+            &accumulator);
     EXPECT_EQ(accumulator.hits().size(), 1u)
         << "Should only hit the shape encompassed by both views.";
     EXPECT_EQ(accumulator.hits().front().node->id(), kInnerShapeNodeId);
@@ -866,7 +860,9 @@ TEST_F(MultiSessionHitTestTest, ChildCompletelyClipped) {
 
   {
     TestHitAccumulator<ViewHit> accumulator;
-    layer_stack()->HitTest(HitRay(3 * layer_width() / 4, 3 * layer_height() / 4), &accumulator);
+    layer_stack()->HitTest(
+        input::CreateScreenPerpendicularRay(3 * layer_width() / 4, 3 * layer_height() / 4),
+        &accumulator);
     EXPECT_TRUE(accumulator.hits().empty());
   }
 }
@@ -962,7 +958,7 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
 
   {
     SessionHitAccumulator accumulator;
-    layer_stack()->HitTest(HitRay(4, 4), &accumulator);
+    layer_stack()->HitTest(input::CreateScreenPerpendicularRay(4, 4), &accumulator);
 
     const auto& hits = accumulator.hits();
 

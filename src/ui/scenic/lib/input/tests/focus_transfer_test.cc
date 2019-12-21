@@ -185,8 +185,8 @@ TEST_F(FocusTransferTest, TouchFocusWithValidTarget) {
 
     PointerCommandGenerator finger(root_resources()->compositor.id(), /*device id*/ 1,
                                    /*pointer id*/ 1, PointerEventType::TOUCH);
-    session->Enqueue(finger.Add(7, 3));
-    session->Enqueue(finger.Down(7, 3));
+    session->Enqueue(finger.Add(7.5, 3.5));
+    session->Enqueue(finger.Down(7.5, 3.5));
   }
   RunLoopUntilIdle();
 
@@ -232,8 +232,8 @@ TEST_F(FocusTransferTest, TouchFocusWithInvalidTarget) {
 
     PointerCommandGenerator finger(root_resources()->compositor.id(), /*device id*/ 1,
                                    /*pointer id*/ 1, PointerEventType::TOUCH);
-    session->Enqueue(finger.Add(7, 2));
-    session->Enqueue(finger.Down(7, 2));
+    session->Enqueue(finger.Add(7.5, 2.5));
+    session->Enqueue(finger.Down(7.5, 2.5));
   }
   RunLoopUntilIdle();
 
@@ -271,8 +271,8 @@ TEST_F(FocusTransferTest, TouchFocusDisconnectSceneAfterDown) {
 
     PointerCommandGenerator finger(root_resources()->compositor.id(), /*device id*/ 1,
                                    /*pointer id*/ 1, PointerEventType::TOUCH);
-    session->Enqueue(finger.Add(7, 3));
-    session->Enqueue(finger.Down(7, 3));
+    session->Enqueue(finger.Add(7.5, 3.5));
+    session->Enqueue(finger.Down(7.5, 3.5));
   }
   RunLoopUntilIdle();
 
@@ -321,8 +321,8 @@ TEST_F(FocusTransferTest, TouchFocusWithValidTargetAfterA11yRejects) {
 
     PointerCommandGenerator finger(root_resources()->compositor.id(), /*device id*/ 1,
                                    /*pointer id*/ 1, PointerEventType::TOUCH);
-    session->Enqueue(finger.Add(7, 3));
-    session->Enqueue(finger.Down(7, 3));
+    session->Enqueue(finger.Add(7.5, 3.5));
+    session->Enqueue(finger.Down(7.5, 3.5));
   }
   RunLoopUntilIdle();
 
@@ -338,7 +338,7 @@ TEST_F(FocusTransferTest, TouchFocusWithValidTargetAfterA11yRejects) {
 
     PointerCommandGenerator finger(root_resources()->compositor.id(), /*device id*/ 1,
                                    /*pointer id*/ 1, PointerEventType::TOUCH);
-    session->Enqueue(finger.Move(7, 3));
+    session->Enqueue(finger.Move(7.5, 3.5));
   }
   RunLoopUntilIdle();
 
@@ -438,8 +438,8 @@ TEST_F(FocusTransferTest, MouseFocusWithValidTarget) {
 
     PointerCommandGenerator finger(root_resources()->compositor.id(), /*device id*/ 1,
                                    /*pointer id*/ 1, PointerEventType::MOUSE);
-    session->Enqueue(finger.Move(7, 3));
-    session->Enqueue(finger.Down(7, 3));
+    session->Enqueue(finger.Move(7.5, 3.5));
+    session->Enqueue(finger.Down(7.5, 3.5));
   }
   RunLoopUntilIdle();
 

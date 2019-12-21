@@ -118,14 +118,14 @@ TEST_F(FocusAvoidanceTest, ViewHierarchyByScenic) {
     PointerCommandGenerator pointer_1(compositor_id, /*device id*/ 1,
                                       /*pointer id*/ 1, PointerEventType::TOUCH);
     // A touch sequence that starts in the upper left corner of the display.
-    session->Enqueue(pointer_1.Add(0, 0));
-    session->Enqueue(pointer_1.Down(0, 0));
+    session->Enqueue(pointer_1.Add(0.5, 0.5));
+    session->Enqueue(pointer_1.Down(0.5, 0.5));
 
     PointerCommandGenerator pointer_2(compositor_id, /*device id*/ 1,
                                       /*pointer id*/ 2, PointerEventType::TOUCH);
     // A touch sequence that starts in the middle of the display.
-    session->Enqueue(pointer_2.Add(4, 4));
-    session->Enqueue(pointer_2.Down(4, 4));
+    session->Enqueue(pointer_2.Add(4.5, 4.5));
+    session->Enqueue(pointer_2.Down(4.5, 4.5));
   }
   RunLoopUntilIdle();
 

@@ -45,17 +45,6 @@ trace_flow_id_t PointerTraceHACK(float fa, float fb) {
   return (((uint64_t)ia) << 32) | ib;
 }
 
-// View bound clipping is supposed to be exclusive, so to avoid spurious edge cases it's important
-// to dispatch input events from their logical center. For discrete pixel coordinates, this would
-// involve jittering it by (.5, .5). In addition, we floor the coordinate first in case the input
-// device does support subpixel coordinates; if we wanted to center within the subpixel input
-// resolution, we'd need to know the actual input resolution, which we don't, so just pretend
-// they're always at pixel resolution.
-void JitterPointerEvent(PointerEvent* pointer_event) {
-  pointer_event->x = std::floor(pointer_event->x) + .5f;
-  pointer_event->y = std::floor(pointer_event->y) + .5f;
-}
-
 gfx::LayerStackPtr GetLayerStack(gfx::Engine* engine, GlobalId compositor_id) {
   FXL_DCHECK(engine);
   gfx::CompositorWeakPtr compositor = engine->scene_graph()->GetCompositor(compositor_id);
@@ -145,15 +134,12 @@ void InputCommandDispatcher::DispatchCommand(ScenicCommand command) {
 void InputCommandDispatcher::DispatchCommand(const SendPointerInputCmd& command) {
   TRACE_DURATION("input", "dispatch_command", "command", "PointerCmd");
 
-  SendPointerInputCmd jittered = command;
-  JitterPointerEvent(&jittered.pointer_event);
-
   switch (command.pointer_event.type) {
     case PointerEventType::TOUCH:
-      DispatchTouchCommand(jittered);
+      DispatchTouchCommand(command);
       break;
     case PointerEventType::MOUSE:
-      DispatchMouseCommand(jittered);
+      DispatchMouseCommand(command);
       break;
     default:
       // TODO(SCN-940), TODO(SCN-164): Stylus support needs to account for HOVER

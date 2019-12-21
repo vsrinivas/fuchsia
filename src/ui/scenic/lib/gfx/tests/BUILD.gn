@@ -199,6 +199,7 @@ executable("unittests") {
     "//src/lib/fsl",
     "//src/ui/lib/glm_workaround",
     "//src/ui/scenic/lib/gfx:object_linker",
+    "//src/ui/scenic/lib/input",
     "//src/ui/scenic/lib/scheduling:id",
     "//third_party/googletest:gmock",
   ]

@@ -119,7 +119,7 @@ The conversion from input device space to world space involves the input system,
 
 ![Input Coordinate Spaces](meta/input_coordinate_spaces.png)
 
-The original input coordinate is a two-dimensional coordinate in screen pixels. The input system and compositor agree on a convention, illustrated above as device coordinates in 3 dimensions (blue), where the viewing volume has depth 1, the near plane is at z = 0, and the far plane is at z = -1. With this in mind, the input system constructs a hit ray with its origin at the touch coordinates at a distance of 1 behind the camera, z = 1, and direction (0,&nbsp;0,&nbsp;-1), towards the scene. (As described in [Pixel Offsets](#pixel-offsets) below, the touch coordinates are jittered by (0.5,&nbsp;0.5); not shown above for simplicity.)
+The original input coordinate is a two-dimensional coordinate in screen pixels. The input system and compositor agree on a convention, illustrated above as device coordinates in 3 dimensions (blue), where the viewing volume has depth 1, the near plane is at z = 0, and the far plane is at z = -1. With this in mind, the input system constructs a hit ray with its origin at the touch coordinates at a distance of 1 behind the camera, z = 1, and direction (0,&nbsp;0,&nbsp;-1), towards the scene.
 
 The input device space as described here is a left-handed coordinate system, a holdover from when Scenic was left-handed. Future work may adjust the z convention of input device space to match NDC or the viewing volume, as a right-handed coordinate system, and adjust the hit ray to originate at the near plane, z = 0.
 
@@ -156,27 +156,3 @@ There are two ways collisions can occur:
 It is also best practice to follow these rules to avoid Z-fighting for visual content.
 
 When a collision is detected, a warning is logged of the colliding nodes by session id and resource id.
-
-### Pixel Offsets {#pixel-offsets}
-
-When issuing input commands in screen space, pixel values are jittered by (0.5,&nbsp;0.5) so that commands are issued from the center of the pixel and not the top-left corner. This is important to take into account when testing ray-hit tests with bounding boxes, as it will affect the ray origins in world space after they have been transformed, and thus whether or not it results in an intersection.
-
-The rationale can be illustrated by imagining a 1x1 display. On such a display, to split the difference it would be reasonable for any touch events to be delivered at (0.5,&nbsp;0.5), the center of the screen, rather than at the upper left corner.
-
-#### Example {#example-3}
-
-```cpp
-// Set the bounding box dimensions, just like in the examples above.
-view_holder.SetViewProperties({.bounding_box{.max{5, 5, 1}}});
-
-PointerCommandGenerator pointer(compositor_id, 1, 1,
-                                PointerEventType::TOUCH);
-// Touch the upper left corner of the display.
-session->Enqueue(pointer.Add(0.f, 0.f));
-```
-
-This example shows an orthographic camera setup with a view whose min and max bound points are (0,&nbsp;0,&nbsp;0) and (5,&nbsp;5,&nbsp;1) respectively. There is a touch event at the screen space coordinate point (0,&nbsp;0). If there were no corrections to the pixel offset, an orthographic ray generated at the (0,&nbsp;0) point and transformed into world space would wind up grazing against the edge of the bounding box  and would not register as a hit. However, the “Add” command is jittered to (0.5,&nbsp;0.5) which does actually result in a ray which hits the bounding box. Doing this is the equivalent of running the following command with no jittering:
-
-```cpp
-session->Enqueue(pointer.Add(0.5f, 0.5f));
-```

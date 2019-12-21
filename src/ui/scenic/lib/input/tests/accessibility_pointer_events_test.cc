@@ -172,9 +172,9 @@ TEST_F(AccessibilityPointerEventsTest, ConsumesPointerEvents) {
     scenic::Session* const session = root_session.session();
     PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
-    // A touch sequence that starts at the (2,2) location of the 5x5 display.
-    session->Enqueue(pointer.Add(2, 2));
-    session->Enqueue(pointer.Down(2, 2));  // Consume happens here.
+    // A touch sequence that starts at the (2.5,2.5) location of the 5x5 display.
+    session->Enqueue(pointer.Add(2.5, 2.5));
+    session->Enqueue(pointer.Down(2.5, 2.5));  // Consume happens here.
   }
   RunLoopUntilIdle();
 
@@ -190,11 +190,6 @@ TEST_F(AccessibilityPointerEventsTest, ConsumesPointerEvents) {
     {
       const AccessibilityPointerEvent& add = events[0];
       EXPECT_EQ(add.phase(), Phase::ADD);
-      // A note on normalized coordinates: normalized coordinates are still subject to pixel jitter,
-      // so the discrete [0, 5) becomes [-.8, .8]:
-      //  0      1      2      3      4      5
-      //      .5    1.5    2.5    3.5    4.5
-      // -1  -.8    -.4     0      .4     .8 1
       EXPECT_EQ(add.ndc_point().x, 0);
       EXPECT_EQ(add.ndc_point().y, 0);
       EXPECT_EQ(add.viewref_koid(), view.ViewKoid());
@@ -223,8 +218,8 @@ TEST_F(AccessibilityPointerEventsTest, ConsumesPointerEvents) {
     scenic::Session* const session = root_session.session();
     PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
-    session->Enqueue(pointer.Up(2, 3));
-    session->Enqueue(pointer.Remove(2, 3));
+    session->Enqueue(pointer.Up(2.5, 3.5));
+    session->Enqueue(pointer.Remove(2.5, 3.5));
   }
   RunLoopUntilIdle();
 
@@ -267,10 +262,10 @@ TEST_F(AccessibilityPointerEventsTest, ConsumesPointerEvents) {
     scenic::Session* const session = root_session.session();
     PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
-    session->Enqueue(pointer.Add(3, 1));
-    session->Enqueue(pointer.Down(3, 1));
-    session->Enqueue(pointer.Up(3, 1));
-    session->Enqueue(pointer.Remove(3, 1));  // Consume happens here.
+    session->Enqueue(pointer.Add(3.5, 1.5));
+    session->Enqueue(pointer.Down(3.5, 1.5));
+    session->Enqueue(pointer.Up(3.5, 1.5));
+    session->Enqueue(pointer.Remove(3.5, 1.5));  // Consume happens here.
   }
   RunLoopUntilIdle();
 
@@ -341,9 +336,9 @@ TEST_F(AccessibilityPointerEventsTest, RejectsPointerEvents) {
     scenic::Session* const session = root_session.session();
     PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
-    // A touch sequence that starts at the (2,2) location of the 5x5 display.
-    session->Enqueue(pointer.Add(2, 2));
-    session->Enqueue(pointer.Down(2, 2));  // Reject happens here.
+    // A touch sequence that starts at the (2.5,2.5) location of the 5x5 display.
+    session->Enqueue(pointer.Add(2.5, 2.5));
+    session->Enqueue(pointer.Down(2.5, 2.5));  // Reject happens here.
   }
   RunLoopUntilIdle();
 
@@ -408,8 +403,8 @@ TEST_F(AccessibilityPointerEventsTest, RejectsPointerEvents) {
     scenic::Session* const session = root_session.session();
     PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
-    session->Enqueue(pointer.Up(2, 3));
-    session->Enqueue(pointer.Remove(2, 3));
+    session->Enqueue(pointer.Up(2.5, 3.5));
+    session->Enqueue(pointer.Remove(2.5, 3.5));
   }
   RunLoopUntilIdle();
 
@@ -455,22 +450,22 @@ TEST_F(AccessibilityPointerEventsTest, AlternatingResponses) {
     scenic::Session* const session = root_session.session();
     PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
-    // A touch sequence that starts at the (2,2) location of the 5x5 display.
+    // A touch sequence that starts at the (2.5,2.5) location of the 5x5 display.
     // First stream:
-    session->Enqueue(pointer.Add(1, 1));
-    session->Enqueue(pointer.Down(1, 1));
-    session->Enqueue(pointer.Up(1, 1));
-    session->Enqueue(pointer.Remove(1, 1));  // Consume happens here.
+    session->Enqueue(pointer.Add(1.5, 1.5));
+    session->Enqueue(pointer.Down(1.5, 1.5));
+    session->Enqueue(pointer.Up(1.5, 1.5));
+    session->Enqueue(pointer.Remove(1.5, 1.5));  // Consume happens here.
     // Second stream:
-    session->Enqueue(pointer.Add(2, 2));
-    session->Enqueue(pointer.Down(2, 2));
-    session->Enqueue(pointer.Up(2, 2));
-    session->Enqueue(pointer.Remove(2, 2));  // Reject happens here.
+    session->Enqueue(pointer.Add(2.5, 2.5));
+    session->Enqueue(pointer.Down(2.5, 2.5));
+    session->Enqueue(pointer.Up(2.5, 2.5));
+    session->Enqueue(pointer.Remove(2.5, 2.5));  // Reject happens here.
     // Third stream:
-    session->Enqueue(pointer.Add(3, 3));
-    session->Enqueue(pointer.Down(3, 3));
-    session->Enqueue(pointer.Up(3, 3));
-    session->Enqueue(pointer.Remove(3, 3));  // Consume happens here.
+    session->Enqueue(pointer.Add(3.5, 3.5));
+    session->Enqueue(pointer.Down(3.5, 3.5));
+    session->Enqueue(pointer.Up(3.5, 3.5));
+    session->Enqueue(pointer.Remove(3.5, 3.5));  // Consume happens here.
   }
   RunLoopUntilIdle();
 
@@ -668,9 +663,9 @@ TEST_F(AccessibilityPointerEventsTest, DiscardActiveStreamOnConnection) {
     scenic::Session* const session = root_session.session();
     PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
-    // A touch sequence that starts at the (2,2) location of the 5x5 display.
-    session->Enqueue(pointer.Add(2, 2));
-    session->Enqueue(pointer.Down(2, 2));
+    // A touch sequence that starts at the (2.5,2.5) location of the 5x5 display.
+    session->Enqueue(pointer.Add(2.5, 2.5));
+    session->Enqueue(pointer.Down(2.5, 2.5));
   }
   RunLoopUntilIdle();
 
@@ -687,8 +682,8 @@ TEST_F(AccessibilityPointerEventsTest, DiscardActiveStreamOnConnection) {
     scenic::Session* const session = root_session.session();
     PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
-    session->Enqueue(pointer.Up(2, 3));
-    session->Enqueue(pointer.Remove(2, 3));
+    session->Enqueue(pointer.Up(2.5, 3.5));
+    session->Enqueue(pointer.Remove(2.5, 3.5));
   }
   RunLoopUntilIdle();
 
@@ -731,9 +726,9 @@ TEST_F(AccessibilityPointerEventsTest, DispatchEventsAfterDisconnection) {
       scenic::Session* const session = root_session.session();
       PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
                                       /*pointer id*/ 1, PointerEventType::TOUCH);
-      // A touch sequence that starts at the (2,2) location of the 5x5 display.
-      session->Enqueue(pointer.Add(2, 2));
-      session->Enqueue(pointer.Down(2, 2));
+      // A touch sequence that starts at the (2.5,2.5) location of the 5x5 display.
+      session->Enqueue(pointer.Add(2.5, 2.5));
+      session->Enqueue(pointer.Down(2.5, 2.5));
     }
     RunLoopUntilIdle();
 
@@ -754,8 +749,8 @@ TEST_F(AccessibilityPointerEventsTest, DispatchEventsAfterDisconnection) {
     scenic::Session* const session = root_session.session();
     PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
-    session->Enqueue(pointer.Up(2, 3));
-    session->Enqueue(pointer.Remove(2, 3));
+    session->Enqueue(pointer.Up(2.5, 3.5));
+    session->Enqueue(pointer.Remove(2.5, 3.5));
   }
   RunLoopUntilIdle();
 
@@ -814,9 +809,9 @@ TEST_F(AccessibilityPointerEventsTest, FocusGetsSentAfterAddRejecting) {
     scenic::Session* const session = root_session.session();
     PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
-    // A touch sequence that starts at the (2,2) location of the 5x5 display.
-    session->Enqueue(pointer.Add(2, 2));  // Reject happens here.
-    session->Enqueue(pointer.Down(2, 2));
+    // A touch sequence that starts at the (2.5,2.5) location of the 5x5 display.
+    session->Enqueue(pointer.Add(2.5, 2.5));  // Reject happens here.
+    session->Enqueue(pointer.Down(2.5, 2.5));
   }
   RunLoopUntilIdle();
 
@@ -870,8 +865,8 @@ TEST_F(AccessibilityPointerEventsTest, FocusGetsSentAfterAddRejecting) {
     scenic::Session* const session = root_session.session();
     PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
-    session->Enqueue(pointer.Up(2, 3));
-    session->Enqueue(pointer.Remove(2, 3));
+    session->Enqueue(pointer.Up(2.5, 3.5));
+    session->Enqueue(pointer.Remove(2.5, 3.5));
   }
   RunLoopUntilIdle();
 
@@ -938,9 +933,9 @@ TEST_F(AccessibilityPointerEventsTest, ExposeTopMostViewRefKoid) {
   {
     PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
-    // A touch sequence that starts at the (2,2) location of the 5x5 display.
-    session->Enqueue(pointer.Add(2, 2));
-    session->Enqueue(pointer.Down(2, 2));
+    // A touch sequence that starts at the (2.5,2.5) location of the 5x5 display.
+    session->Enqueue(pointer.Add(2.5, 2.5));
+    session->Enqueue(pointer.Down(2.5, 2.5));
   }
   RunLoopUntilIdle();
 
@@ -988,9 +983,9 @@ TEST_F(AccessibilityPointerEventsTest, ExposeTopMostViewRefKoid) {
   {
     PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
-    // A touch sequence that ends at the (1,3) location of the 5x5 display.
-    session->Enqueue(pointer.Up(1, 3));
-    session->Enqueue(pointer.Remove(1, 3));
+    // A touch sequence that ends at the (1.5,3.5) location of the 5x5 display.
+    session->Enqueue(pointer.Up(1.5, 3.5));
+    session->Enqueue(pointer.Remove(1.5, 3.5));
   }
   RunLoopUntilIdle();
 
@@ -1077,9 +1072,9 @@ TEST_F(LargeDisplayAccessibilityPointerEventsTest, NoDownLatchAndA11yRejects) {
   {
     PointerCommandGenerator pointer(root_resources.compositor.id(), /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
-    // A touch sequence that starts at the (0,0) location of the 7x7 display.
-    root_session.session()->Enqueue(pointer.Add(0, 0));
-    root_session.session()->Enqueue(pointer.Down(0, 0));
+    // A touch sequence that starts at the (0.5,0.5) location of the 7x7 display.
+    root_session.session()->Enqueue(pointer.Add(0.5, 0.5));
+    root_session.session()->Enqueue(pointer.Down(0.5, 0.5));
   }
   RunLoopUntilIdle();
 
@@ -1092,8 +1087,8 @@ TEST_F(LargeDisplayAccessibilityPointerEventsTest, NoDownLatchAndA11yRejects) {
   {
     PointerCommandGenerator pointer(root_resources.compositor.id(), /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
-    // A touch sequence that starts at the (0,0) location of the 7x7 display.
-    root_session.session()->Enqueue(pointer.Move(0, 0));
+    // A touch sequence that starts at the (0.5,0.5) location of the 7x7 display.
+    root_session.session()->Enqueue(pointer.Move(0.5, 0.5));
   }
   RunLoopUntilIdle();
 
@@ -1158,9 +1153,9 @@ TEST_F(LargeDisplayAccessibilityPointerEventsTest, NoDownLatchAndA11yAccepts) {
   {
     PointerCommandGenerator pointer(root_resources.compositor.id(), /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
-    // A touch sequence that starts at the (0,0) location of the 7x7 display.
-    root_session.session()->Enqueue(pointer.Add(0, 0));
-    root_session.session()->Enqueue(pointer.Down(0, 0));
+    // A touch sequence that starts at the (0.5,0.5) location of the 7x7 display.
+    root_session.session()->Enqueue(pointer.Add(0.5, 0.5));
+    root_session.session()->Enqueue(pointer.Down(0.5, 0.5));
   }
   RunLoopUntilIdle();
 
@@ -1174,8 +1169,8 @@ TEST_F(LargeDisplayAccessibilityPointerEventsTest, NoDownLatchAndA11yAccepts) {
     PointerCommandGenerator pointer(root_resources.compositor.id(), /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
     // Send MOVE events *over* the view.
-    root_session.session()->Enqueue(pointer.Move(1, 1));
-    root_session.session()->Enqueue(pointer.Move(2, 2));
+    root_session.session()->Enqueue(pointer.Move(1.5, 1.5));
+    root_session.session()->Enqueue(pointer.Move(2.5, 2.5));
   }
   RunLoopUntilIdle();
 

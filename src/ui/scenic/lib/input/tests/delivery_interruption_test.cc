@@ -73,8 +73,8 @@ TEST_F(DeliveryInterruptionTest, SessionDied) {
       PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
                                       /*pointer id*/ 1, PointerEventType::TOUCH);
       // Sent in as device (display) coordinates.
-      session->Enqueue(pointer.Add(2, 2));
-      session->Enqueue(pointer.Down(2, 2));
+      session->Enqueue(pointer.Add(2.5, 2.5));
+      session->Enqueue(pointer.Down(2.5, 2.5));
 
       RequestToPresent(session);
     }

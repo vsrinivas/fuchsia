@@ -346,28 +346,27 @@ TEST_F(PointerCaptureTest, CapturedInputCoordinates_ShouldMatch_RegularInputCoor
   }
 
   // Verify client gets all expected touch events through both channels.
-  // Input gets jittered to mid-pixel before being returned to clients.
   {
     const std::vector<InputEvent>& events = client->events();
 
     ASSERT_EQ(events.size(), 3u);
 
     EXPECT_TRUE(events[0].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::ADD, 2.5, 2.5));
+    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::ADD, 2, 2));
 
     EXPECT_TRUE(events[1].is_focus());
     EXPECT_TRUE(events[1].focus().focused);
 
     EXPECT_TRUE(events[2].is_pointer());
-    EXPECT_TRUE(PointerMatches(events[2].pointer(), 1u, PointerEventPhase::DOWN, 3.5, 6.5));
+    EXPECT_TRUE(PointerMatches(events[2].pointer(), 1u, PointerEventPhase::DOWN, 3, 6));
   }
 
   {
     const std::vector<fuchsia::ui::input::PointerEvent>& events = client->listener_.events_;
     ASSERT_EQ(events.size(), 2u);
     // View covers display exactly, so view coordinates match display coordinates.
-    EXPECT_TRUE(PointerMatches(events[0], 1u, PointerEventPhase::ADD, 2.5, 2.5));
-    EXPECT_TRUE(PointerMatches(events[1], 1u, PointerEventPhase::DOWN, 3.5, 6.5));
+    EXPECT_TRUE(PointerMatches(events[0], 1u, PointerEventPhase::ADD, 2, 2));
+    EXPECT_TRUE(PointerMatches(events[1], 1u, PointerEventPhase::DOWN, 3, 6));
   }
 }
 
@@ -419,13 +418,12 @@ TEST_F(PointerCaptureTest, TransformedListenerView_ShouldGetTransformedInput) {
   ASSERT_EQ(events.size(), 2u);
 
   // Verify capture client gets properly transformed input coordinates.
-  // Input gets jittered to mid-pixel before transformation.
   EXPECT_TRUE(PointerMatches(events[0], 1u, PointerEventPhase::ADD,
-                             (0.5 * 2.5) + test_display_width_px(),
-                             (0.5 * 2.5) + test_display_height_px()));
+                             (0.5 * 2) + test_display_width_px(),
+                             (0.5 * 2) + test_display_height_px()));
   EXPECT_TRUE(PointerMatches(events[1], 1u, PointerEventPhase::DOWN,
-                             (0.5 * 3.5) + test_display_width_px(),
-                             (0.5 * 6.5) + test_display_height_px()));
+                             (0.5 * 3) + test_display_width_px(),
+                             (0.5 * 6) + test_display_height_px()));
 }
 
 // Sets up a scene and creates a view for capturing input events, but never attaches it to the

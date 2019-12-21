@@ -13,7 +13,6 @@ namespace input {
 
 using fuchsia::ui::input::PointerEvent;
 
-// LINT.IfChange
 escher::ray4 CreateScreenPerpendicularRay(float x, float y) {
   // We set the elevation for the origin point, and Z value for the direction,
   // such that we start above the scene and point into the scene.
@@ -30,10 +29,11 @@ escher::ray4 CreateScreenPerpendicularRay(float x, float y) {
   //
   // During hit testing, we translate an arbitrary pointer's (x,y) device-space
   // coordinates to a View's (x', y') model-space coordinates.
-  return {{x, y, 1, 1},  // Origin as homogeneous point.
-          {0, 0, -1, 0}};
+  return {
+      .origin = {x, y, 1, 1},  // Origin as homogeneous point.
+      .direction = {0, 0, -1, 0},
+  };
 }
-// LINT.ThenChange(//src/ui/scenic/lib/gfx/tests/hittest_global_unittest.cc)
 
 PointerEvent ClonePointerWithCoords(const PointerEvent& event, const escher::vec2& coords) {
   PointerEvent clone;

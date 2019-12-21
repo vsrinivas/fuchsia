@@ -118,15 +118,15 @@ TEST_F(MouseDeliveryTest, StandardTest) {
 
     PointerCommandGenerator pointer(root_resources.compositor.id(), /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::MOUSE);
-    // A touch sequence that starts at the (0,6) location of the 7x7 display and
-    // ends in the (6,0) location. Sent in as device (display) coordinates.
-    session->Enqueue(pointer.Move(0, 6));
-    session->Enqueue(pointer.Move(1, 5));
-    session->Enqueue(pointer.Move(2, 4));
-    session->Enqueue(pointer.Down(3, 3));
-    session->Enqueue(pointer.Move(4, 2));
-    session->Enqueue(pointer.Up(5, 1));
-    session->Enqueue(pointer.Move(6, 0));
+    // A touch sequence that starts at the (0.5,6.5) location of the 7x7 display and
+    // ends in the (6.5,0.5) location. Sent in as device (display) coordinates.
+    session->Enqueue(pointer.Move(0.5, 6.5));
+    session->Enqueue(pointer.Move(1.5, 5.5));
+    session->Enqueue(pointer.Move(2.5, 4.5));
+    session->Enqueue(pointer.Down(3.5, 3.5));
+    session->Enqueue(pointer.Move(4.5, 2.5));
+    session->Enqueue(pointer.Up(5.5, 1.5));
+    session->Enqueue(pointer.Move(6.5, 0.5));
   }
   RunLoopUntilIdle();
 
@@ -314,15 +314,15 @@ TEST_F(MouseDeliveryTest, NoFocusTest) {
 
     PointerCommandGenerator pointer(root_resources.compositor.id(), /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::MOUSE);
-    // A touch sequence that starts at the (0,6) location of the 7x7 display and
-    // ends in the (6,0) location. Sent in as device (display) coordinates.
-    session->Enqueue(pointer.Move(0, 6));
-    session->Enqueue(pointer.Move(1, 5));
-    session->Enqueue(pointer.Move(2, 4));
-    session->Enqueue(pointer.Down(3, 3));
-    session->Enqueue(pointer.Move(4, 2));
-    session->Enqueue(pointer.Up(5, 1));
-    session->Enqueue(pointer.Move(6, 0));
+    // A touch sequence that starts at the (0.5,6.5) location of the 7x7 display and
+    // ends in the (6.5,0.5) location. Sent in as device (display) coordinates.
+    session->Enqueue(pointer.Move(0.5, 6.5));
+    session->Enqueue(pointer.Move(1.5, 5.5));
+    session->Enqueue(pointer.Move(2.5, 4.5));
+    session->Enqueue(pointer.Down(3.5, 3.5));
+    session->Enqueue(pointer.Move(4.5, 2.5));
+    session->Enqueue(pointer.Up(5.5, 1.5));
+    session->Enqueue(pointer.Move(6.5, 0.5));
   }
   RunLoopUntilIdle();
 

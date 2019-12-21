@@ -74,10 +74,10 @@ TEST_F(HardKeyboardDeliveryTest, InputsGetCorrectlyDelivered) {
 
     PointerCommandGenerator pointer(root_resources.compositor.id(), /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::TOUCH);
-    // A touch sequence that starts at the (2,2) location of the 5x5 display.
+    // A touch sequence that starts at the (2.5,2.5) location of the 5x5 display.
     // We do enough to trigger a focus change to the View.
-    session->Enqueue(pointer.Add(2, 2));
-    session->Enqueue(pointer.Down(2, 2));
+    session->Enqueue(pointer.Add(2.5, 2.5));
+    session->Enqueue(pointer.Down(2.5, 2.5));
 
     // The character 'a', pressed and released.
     KeyboardCommandGenerator keyboard(compositor_id, /*device id*/ 2);
