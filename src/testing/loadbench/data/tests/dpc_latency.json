@@ -1,0 +1,37 @@
+// Measures the latency of wakeups that bounce through kernel DPC threads.
+{
+  "name": "DPC Latency Test.",
+  "config": {
+    "interval": "20s"
+  },
+  "objects": {
+    "timer": { "type": "timer" }
+  },
+  "workers": [
+    {
+      "name": "Event Loop",
+      "priority": 24,
+      "actions": [
+        { "action": "timer_set", "timer": "timer", "deadline": "16ms" },
+        { "action": "wait_one", "object": "timer", "signals": 8 },
+        { "action": "spin", "uniform": { "min": "2ms", "max": "3ms" } }
+      ]
+    },
+    {
+      "name": "Light Load",
+      "instances": 8,
+      "actions": [
+        { "action": "sleep", "uniform": { "min": "1ms", "max": "20ms" } },
+        { "action": "spin", "uniform": { "min": "100us", "max": "2ms" } }
+      ]
+    },
+    {
+      "name": "Heavy Load",
+      "instances": 2,
+      "actions": [
+        { "action": "sleep", "uniform": { "min": "5ms", "max": "8ms" } },
+        { "action": "spin", "uniform": { "min": "3us", "max": "8ms" } }
+      ]
+    }
+  ]
+}

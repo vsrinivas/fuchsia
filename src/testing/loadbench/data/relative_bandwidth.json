@@ -1,0 +1,31 @@
+// Measures the relative bandwidth of threads running at different priorities.
+{
+  "name": "Relative bandwidth test.",
+  "config": {
+    "priority": 25,
+    "interval": "20s"
+  },
+  "behaviors": {
+    "busywork": { "action": "spin", "duration": "10m" }
+  },
+  "workers": [
+    {
+      "group": "low",
+      "instances": 8,
+      "priority": 0,
+      "actions": "busywork"
+    },
+    {
+      "group": "default",
+      "instances": 8,
+      "priority": 16,
+      "actions": "busywork"
+    },
+    {
+      "group": "high",
+      "instances": 8,
+      "priority": 31,
+      "actions": "busywork"
+    }
+  ]
+}

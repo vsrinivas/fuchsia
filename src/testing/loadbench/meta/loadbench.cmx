@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "features": [],
+        "services": [
+            "fuchsia.boot.RootResource",
+            "fuchsia.scheduler.ProfileProvider"
+        ]
+    }
+}
+

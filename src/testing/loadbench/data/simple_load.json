@@ -1,0 +1,16 @@
+// Simple load generator.
+{
+  "name": "Simple load generator.",
+  "config": {
+    "priority": 25
+  },
+  "workers": [
+    {
+      "instances": 4,
+      "actions": [
+        { "action": "spin", "duration": "250us" },
+        { "action": "sleep", "duration": "1ms" },
+      ]
+    }
+  ]
+}

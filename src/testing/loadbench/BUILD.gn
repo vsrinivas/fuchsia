@@ -1,0 +1,73 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/testing/environments.gni")
+
+executable("bin") {
+  output_name = "loadbench"
+  sources = [
+    "action.h",
+    "loadbench.cc",
+    "measurement.h",
+    "object.h",
+    "random.h",
+    "utility.cc",
+    "utility.h",
+    "worker.h",
+    "workload.cc",
+    "workload.h",
+  ]
+  deps = [
+    "//src/lib/files",
+    "//src/lib/fxl",
+    "//third_party/rapidjson",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-boot",
+    "//zircon/system/fidl/fuchsia-scheduler",
+  ]
+}
+
+package("loadbench") {
+  rootresource_svc = "//build"
+
+  deps = [
+    ":bin",
+  ]
+
+  binary = "loadbench"
+
+  meta = [
+    {
+      path = rebase_path("meta/loadbench.cmx")
+      dest = "loadbench.cmx"
+    },
+  ]
+
+  # Add benchmark specification files to this array.
+  json_files = [
+    "deadline_test.json",
+    "default.json",
+    "example.json",
+    "port_test.json",
+    "simple_load.json",
+    "relative_bandwidth.json",
+    "tests/dpc_latency.json",
+  ]
+
+  # Build a resource entry for each benchmark specification.
+  resources = []
+  foreach(file, json_files) {
+    resources += [
+      {
+        path = rebase_path("data/$file")
+        dest = "$file"
+      },
+    ]
+  }
+}

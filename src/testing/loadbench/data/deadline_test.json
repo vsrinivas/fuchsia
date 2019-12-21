@@ -1,0 +1,26 @@
+// Deadline scheduling test.
+{
+  "name": "Deadline scheduling test.",
+  "config": {
+    "priority": 25,
+    "interval": "20s"
+  },
+  "workers": [
+    {
+      "group": "Deadline Threads",
+      "instances": 8,
+      "priority": { "capacity": "5ms", "deadline": "20ms", "period": "20ms" },
+      "actions": [
+        { "action": "spin", "duration": "500us" },
+        { "action": "sleep", "duration": "4ms" },
+      ]
+    },
+    {
+      "group": "Fair Threads",
+      "instances": 0,
+      "actions": [
+        { "action": "spin", "duration": "5m" }
+      ]
+    },
+  ]
+}

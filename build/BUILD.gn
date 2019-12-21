@@ -112,6 +112,7 @@ group("rootresource_svc_allowlist") {
     "//garnet/bin/system_monitor/harvester:system_monitor_harvester_tests",
     "//garnet/bin/thermd:thermd",
     "//src/sys/component_manager:component_manager_tests",
+    "//src/testing/loadbench:loadbench",
     "//src/virtualization/bin/vmm:vmm",
   ]
 }

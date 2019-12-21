@@ -8,6 +8,7 @@ group("testing") {
     ":tests",
     "fuzzing",
     "host_target_testing",
+    "loadbench",
   ]
 }
 

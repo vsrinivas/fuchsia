@@ -1,0 +1,38 @@
+// Port stress test.
+{
+  "name": "Port stress test.",
+  "config": {
+    "priority": 25,
+    "interval": "20s"
+  },
+  "objects": {
+    "port": { "type": "port" },
+    "event": { "type": "event" }
+  },
+  "workers": [
+    {
+      "group": "Event Source",
+      "actions": [
+        { "action": "signal", "object": "event", "clear": 0, "set": 8 },
+        { "action": "sleep", "duration": "5ms" }
+      ]
+    },
+    {
+      "instances": 16,
+      "group": "Observers",
+      "actions": [
+        { "action": "wait_async", "port": "port", "object": "event", "signals": 8 },
+        { "action": "port_wait", "port": "port" },
+        { "action": "signal", "object": "event", "clear": 8, "set": 0 }
+      ]
+    },
+    //{
+    //  "instances": 8,
+    //  "group": "Background Load",
+    //  "actions": [
+    //    { "action": "spin", "uniform": { "min": "2500us", "max": "7500us" } },
+    //    { "action": "sleep", "uniform": { "min": "2500us", "max": "7500us" } }
+    //  ]
+    //}
+  ]
+}

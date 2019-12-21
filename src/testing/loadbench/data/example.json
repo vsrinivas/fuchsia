@@ -1,0 +1,58 @@
+{
+  // Optional name to report in the output.
+  "name": "Example benchmark spec.",
+
+  // Optional global configuraton.
+  "config": {
+    // Optional priority to set the main executive thread to avoid starvation.
+    "priority": 25
+  },
+
+  // Optional set of objects that actions can refer to by name.
+  "objects": {
+    "my timer": { "type": "timer" },
+    "my port": { "type": "port" },
+    "my channel": { "type": "channel" }
+  },
+
+  // Optional set of behaviors that workers may refer to by name.
+  "behaviors": {
+    "spinner": { "action": "spin", "uniform": { "min": "10ms", "max": "100ms" } },
+    "sequence": [
+      { "action": "spin", "interval": "fixed short" },
+      { "action": "sleep", "interval": "varying short" }
+    ]
+  },
+
+  // Optional set of intervals that actions may refer to by name.
+  "intervals": {
+    "fixed short": { "duration": "10ms" },
+    "varying short": { "uniform": { "min": "1ms", "max": "10ms" } }
+  },
+
+  // Array of worker definitions.
+  "workers": [
+    // Worker defintion.
+    {
+      // Optional name of the worker to report in output.
+      "name": "optional string name",
+
+      // Array of actions the worker performs in sequence in a loop.
+      "actions": [
+        { "action": "spin", "uniform": { "min": "10ms", "max": "100ms" } },
+        { "action": "sleep", "interval": "fixed short" },
+        { "action": "write", "channel": "my channel", "side": 0, "bytes": 65536 },
+        { "action": "read", "channel": "my channel", "side": 1 },
+        { "action": "behavior", "name": "spinner" },
+        { "action": "behavior", "name": "sequence" },
+        { "action": "exit" }
+      ]
+    },
+
+    // Defines a set of workers.
+    {
+      "instances" : 10,
+      "actions": "sequence"
+    }
+  ]
+}
