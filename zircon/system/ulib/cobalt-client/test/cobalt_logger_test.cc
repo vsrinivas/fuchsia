@@ -51,19 +51,6 @@ class FakeLoggerFactoryService : public ::llcpp::fuchsia::cobalt::LoggerFactory:
     ZX_PANIC("Not Implemented.");
   }
 
-  void CreateLoggerFromProjectName(::fidl::StringView project_name,
-                                   ::llcpp::fuchsia::cobalt::ReleaseStage release_stage,
-                                   ::zx::channel logger,
-                                   CreateLoggerFromProjectNameCompleter::Sync completer) final {
-    ZX_PANIC("Not Implemented.");
-  }
-
-  void CreateLoggerSimpleFromProjectName(
-      ::fidl::StringView project_name, ::llcpp::fuchsia::cobalt::ReleaseStage release_stage,
-      ::zx::channel logger, CreateLoggerSimpleFromProjectNameCompleter::Sync completer) final {
-    ZX_PANIC("Not Implemented.");
-  }
-
   void CreateLoggerFromProjectId(uint32_t project_id, ::zx::channel logger,
                                  CreateLoggerFromProjectIdCompleter::Sync completer) final {
     completer.Reply(create_logger_handler_(project_id, std::move(logger)));
@@ -225,9 +212,7 @@ class LoggerServiceFixture : public zxtest::Test {
                                      service_loop_->dispatcher());
   }
 
-  std::unique_ptr<CobaltLogger> MakeLogger() {
-    return std::make_unique<CobaltLogger>(Options());
-  }
+  std::unique_ptr<CobaltLogger> MakeLogger() { return std::make_unique<CobaltLogger>(Options()); }
 
   CobaltOptions Options() {
     CobaltOptions options;

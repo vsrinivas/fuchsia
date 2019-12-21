@@ -50,9 +50,6 @@ const uint32 MAX_BATCHED_EVENTS = 64;
 // Component strings should not be longer than this.
 const uint32 MAX_COMPONENT_LENGTH = 64;
 
-// Project Names should not be longer than this.
-const uint32 MAX_PROJECT_NAME_LENGTH = 64;
-
 // Timer ids should not be longer than this.
 const uint32 MAX_TIMER_ID_LENGTH = 64;
 
@@ -133,56 +130,6 @@ protocol LoggerFactory {
     CreateLoggerSimple(ProjectProfile profile, request<LoggerSimple> logger)
         -> (Status status);
 
-    // Creates a Logger for the project with the given name, using the state of
-    // the metrics registry that is bundled with Cobalt.
-    //
-    // WARNING: This version of CreateLogger does not allow the client to
-    // provide Cobalt with an updated version of the metrics registry. Therefore
-    // only metrics that were already registered at the time Cobalt was built
-    // may be used. This method may be appropriate in the case where it is known
-    // that new versions of the calling package will only be installed along
-    // with new versions of Cobalt. For other cases consider the method
-    // CreateLogger() above.
-    //
-    // `project_name` The name of the client's Cobalt project. (Only Cobalt v1.0
-    // projects are supported)
-    //
-    // `release_stage` Deprecated; This value is ignored.
-    //
-    // `status` Returns OK on success or INVALID_ARGUMENTS if there is no
-    // project with the given name in the version of the metrics registry that
-    // is bundled with Cobalt.
-    [Deprecated = "Use CreateLoggerFromProjectId instead."]
-    CreateLoggerFromProjectName(string:MAX_PROJECT_NAME_LENGTH project_name,
-                                ReleaseStage release_stage,
-                                request<Logger> logger)
-        -> (Status status);
-
-    // Creates a LoggerSimple for the project with the given name, using the
-    // state of the metrics registry that is bundled with Cobalt.
-    //
-    // WARNING: This version of CreateLoggerSimple does not allow the client to
-    // provide Cobalt with an updated version of the metrics registry. Therefore
-    // only metrics that were already registered at the time Cobalt was built
-    // may be used. This method may be appropriate in the case where it is known
-    // that new versions of the calling package will only be installed along
-    // with new versions of Cobalt. For other cases consider the method
-    // CreateLoggerSimple() above.
-    //
-    // `project_name` The name of the client's Cobalt project. (Only Cobalt v1.0
-    // projects are supported)
-    //
-    // `release_stage` Deprecated; This value is ignored.
-    //
-    // `status` Returns OK on success or INVALID_ARGUMENTS if there is no
-    // project with the given name in the version of the metrics registry that
-    // is bundled with Cobalt.
-    [Deprecated = "Use CreateLoggerSimpleFromProjectId instead."]
-    CreateLoggerSimpleFromProjectName(string:MAX_PROJECT_NAME_LENGTH project_name,
-                                      ReleaseStage release_stage,
-                                      request<LoggerSimple> logger)
-        -> (Status status);
-
     // Creates a Logger for the project with the given ID, using the state of
     // the metrics registry that is bundled with Cobalt.
     //
@@ -197,7 +144,7 @@ protocol LoggerFactory {
     // `project_id` The ID of the client's Cobalt project.
     //
     // `status` Returns OK on success or INVALID_ARGUMENTS if there is no
-    // project with the given name in the version of the metrics registry that
+    // project with the given ID in the version of the metrics registry that
     // is bundled with Cobalt.
     CreateLoggerFromProjectId(uint32 project_id,
                               request<Logger> logger)
@@ -217,7 +164,7 @@ protocol LoggerFactory {
     // `project_id` The ID of the client's Cobalt project.
     //
     // `status` Returns OK on success or INVALID_ARGUMENTS if there is no
-    // project with the given name in the version of the metrics registry that
+    // project with the given ID in the version of the metrics registry that
     // is bundled with Cobalt.
     CreateLoggerSimpleFromProjectId(uint32 project_id,
                                     request<LoggerSimple> logger)

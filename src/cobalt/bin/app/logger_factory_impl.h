@@ -55,23 +55,10 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
       Callback callback,
       fidl::BindingSet<LoggerInterface, std::unique_ptr<LoggerInterface>>* binding_set);
 
-  // Extracts the Cobalt 1.0 project with the given |project_name| from the
-  // global CobaltRegistry, if there is such a project in the registry, and
-  // uses this to construct a  LoggerImpl. Binds this to
-  // |request| and stores the binding in |binding_set|. |callback| will be
-  // invoked with OK upon success or an error status otherwise.
-  // |LoggerInterface| should be Logger or LoggerSimple.
-  template <typename LoggerInterface, typename Callback>
-  void CreateAndBindLoggerFromProjectName(
-      std::string project_name, fidl::InterfaceRequest<LoggerInterface> request, Callback callback,
-      fidl::BindingSet<LoggerInterface, std::unique_ptr<LoggerInterface>>* binding_set);
-
-  // Extracts the Cobalt 1.0 project with the given |project_id| from the
-  // global CobaltRegistry, if there is such a project in the registry, and
-  // uses this, and |release_stage|, to construct a  LoggerImpl. Binds this to
-  // |request| and stores the binding in |binding_set|. |callback| will be
-  // invoked with OK upon success or an error status otherwise.
-  // |LoggerInterface| should be Logger or LoggerSimple.
+  // Extracts the Cobalt 1.0 project with the given |project_id| from the global CobaltRegistry, if
+  // there is such a project in the registry, and uses this to construct a LoggerImpl. Binds this to
+  // |request| and stores the binding in |binding_set|. |callback| will be invoked with OK upon
+  // success or an error status otherwise. |LoggerInterface| should be Logger or LoggerSimple.
   template <typename LoggerInterface, typename Callback>
   void CreateAndBindLoggerFromProjectId(
       uint32_t project_id, fidl::InterfaceRequest<LoggerInterface> request, Callback callback,
@@ -84,15 +71,6 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
   void CreateLoggerSimple(fuchsia::cobalt::ProjectProfile profile,
                           fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
                           CreateLoggerSimpleCallback callback);
-
-  void CreateLoggerFromProjectName(std::string project_name, fuchsia::cobalt::ReleaseStage stage,
-                                   fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
-                                   CreateLoggerFromProjectNameCallback callback);
-
-  void CreateLoggerSimpleFromProjectName(
-      std::string project_name, fuchsia::cobalt::ReleaseStage stage,
-      fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
-      CreateLoggerSimpleFromProjectNameCallback callback);
 
   void CreateLoggerFromProjectId(uint32_t project_id,
                                  fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,

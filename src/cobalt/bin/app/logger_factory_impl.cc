@@ -16,7 +16,6 @@ using config::ProjectConfigs;
 using fuchsia::cobalt::ProjectProfile;
 using fuchsia::cobalt::Status;
 
-constexpr char kFuchsiaCustomerName[] = "fuchsia";
 constexpr uint32_t kFuchsiaCustomerId = 1;
 
 namespace {
@@ -111,23 +110,6 @@ void LoggerFactoryImpl::CreateAndBindLogger(
 }
 
 template <typename LoggerInterface, typename Callback>
-void LoggerFactoryImpl::CreateAndBindLoggerFromProjectName(
-    std::string project_name, fidl::InterfaceRequest<LoggerInterface> request, Callback callback,
-    fidl::BindingSet<LoggerInterface, std::unique_ptr<LoggerInterface>>* binding_set) {
-  auto project_context =
-      global_project_context_factory_->NewProjectContext(kFuchsiaCustomerName, project_name);
-  if (!project_context) {
-    FX_LOGS(ERROR) << "The CobaltRegistry bundled with this release does not "
-                      "include a Fuchsia project named "
-                   << project_name;
-    callback(Status::INVALID_ARGUMENTS);
-    return;
-  }
-  BindNewLogger(std::move(project_context), std::move(request), binding_set);
-  callback(Status::OK);
-}
-
-template <typename LoggerInterface, typename Callback>
 void LoggerFactoryImpl::CreateAndBindLoggerFromProjectId(
     uint32_t project_id, fidl::InterfaceRequest<LoggerInterface> request, Callback callback,
     fidl::BindingSet<LoggerInterface, std::unique_ptr<LoggerInterface>>* binding_set) {
@@ -156,22 +138,6 @@ void LoggerFactoryImpl::CreateLoggerSimple(
     CreateLoggerSimpleCallback callback) {
   CreateAndBindLogger(std::move(profile), std::move(request), std::move(callback),
                       &logger_simple_bindings_);
-}
-
-void LoggerFactoryImpl::CreateLoggerFromProjectName(
-    std::string project_name, fuchsia::cobalt::ReleaseStage /*release_stage*/,
-    fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
-    CreateLoggerFromProjectNameCallback callback) {
-  CreateAndBindLoggerFromProjectName(std::move(project_name), std::move(request),
-                                     std::move(callback), &logger_bindings_);
-}
-
-void LoggerFactoryImpl::CreateLoggerSimpleFromProjectName(
-    std::string project_name, fuchsia::cobalt::ReleaseStage /*release_stage*/,
-    fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
-    CreateLoggerSimpleFromProjectNameCallback callback) {
-  CreateAndBindLoggerFromProjectName(std::move(project_name), std::move(request),
-                                     std::move(callback), &logger_simple_bindings_);
 }
 
 void LoggerFactoryImpl::CreateLoggerFromProjectId(

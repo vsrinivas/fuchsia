@@ -52,12 +52,6 @@ class StubCobaltLoggerFactoryBase : public fuchsia::cobalt::LoggerFactory {
   }
 
  protected:
-  virtual void CreateLoggerFromProjectName(
-      std::string project_name, fuchsia::cobalt::ReleaseStage release_stage,
-      fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
-      fuchsia::cobalt::LoggerFactory::CreateLoggerFromProjectNameCallback callback) override {
-    FXL_NOTIMPLEMENTED();
-  }
   virtual void CreateLogger(
       fuchsia::cobalt::ProjectProfile profile,
       ::fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
@@ -68,12 +62,6 @@ class StubCobaltLoggerFactoryBase : public fuchsia::cobalt::LoggerFactory {
       fuchsia::cobalt::ProjectProfile profile,
       fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> logger,
       fuchsia::cobalt::LoggerFactory::CreateLoggerSimpleCallback callback) override {
-    FXL_NOTIMPLEMENTED();
-  }
-  virtual void CreateLoggerSimpleFromProjectName(
-      std::string project_name, fuchsia::cobalt::ReleaseStage release_stage,
-      fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> logger,
-      fuchsia::cobalt::LoggerFactory::CreateLoggerSimpleFromProjectNameCallback callback) override {
     FXL_NOTIMPLEMENTED();
   }
   void CreateLoggerFromProjectId(
