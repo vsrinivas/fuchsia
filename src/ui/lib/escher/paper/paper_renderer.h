@@ -201,14 +201,21 @@ class PaperRenderer final : public Renderer {
     vk::Rect2D rect;
   };
 
-  // Stores all per-frame data in one place. See |FrameData| in |Renderer|
-  // for base-struct data.
-  struct PaperFrame : FrameData {
-    PaperFrame(const FramePtr& frame, std::shared_ptr<BatchGpuUploader> gpu_uploader,
-               const PaperScenePtr& scene, const ImagePtr& output_image,
-               std::pair<TexturePtr, TexturePtr> depth_and_msaa_textures,
-               const std::vector<Camera>& cameras);
-    ~PaperFrame() override;
+  // Basic struct for the data a renderer needs to render a given
+  // frame. Data that is reusable amongst different renderer
+  // subclasses are stored here. Each renderer can also extend this
+  // struct to include any additional data they may need.
+  struct FrameData {
+    FrameData(const FramePtr& frame, std::shared_ptr<BatchGpuUploader> gpu_uploader,
+              const PaperScenePtr& scene, const ImagePtr& output_image,
+              std::pair<TexturePtr, TexturePtr> depth_and_msaa_textures,
+              const std::vector<Camera>& cameras);
+    ~FrameData();
+    FramePtr frame;
+    ImagePtr output_image;
+    TexturePtr depth_texture;
+    TexturePtr msaa_texture;
+    std::shared_ptr<BatchGpuUploader> gpu_uploader;
     PaperScenePtr scene;
     size_t num_lights;
     std::vector<CameraData> cameras;
@@ -244,7 +251,7 @@ class PaperRenderer final : public Renderer {
   PaperShapeCache shape_cache_;
   PaperTransformStack transform_stack_;
 
-  std::unique_ptr<PaperFrame> frame_data_;
+  std::unique_ptr<FrameData> frame_data_;
 
   ShaderProgramPtr ambient_light_program_;
   ShaderProgramPtr no_lighting_program_;

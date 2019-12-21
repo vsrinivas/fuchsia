@@ -19,7 +19,7 @@ struct RenderQueueItem;
 
 class RenderFuncs {
  public:
-  // Struct referenced by |MeshData|, see below.
+  // Struct to hold vertex index data.
   struct IndexBinding {
     vk::Buffer index_buffer;
     vk::IndexType index_type;
@@ -30,7 +30,7 @@ class RenderFuncs {
     }
   };
 
-  // Struct referenced by |MeshData|, see below.
+  // Struct to hold vertex buffer data.
   struct VertexBinding {
     uint32_t binding_index;
     vk::Buffer buffer;
@@ -40,7 +40,7 @@ class RenderFuncs {
     void Bind(CommandBuffer* cb) const { cb->BindVertices(binding_index, buffer, offset, stride); }
   };
 
-  // Struct referenced by |MeshData|, see below.
+  // Struct to hold vertex attribute data.
   struct VertexAttributeBinding {
     uint32_t binding_index;
     uint32_t attribute_index;
@@ -51,6 +51,18 @@ class RenderFuncs {
       cb->SetVertexAttributes(binding_index, attribute_index, format, offset);
     }
   };
+
+  // Called in PaperRenderer::BeginFrame() to obtain suitable render targets.
+  static void ObtainDepthAndMsaaTextures(Escher* escher, const FramePtr& frame,
+                                         const ImageInfo& info, uint32_t msaa_sample_count,
+                                         vk::Format depth_stencil_format,
+                                         TexturePtr& depth_texture, TexturePtr& msaa_texture);
+
+  // Updates or replaces the passed in depth texture (depth_texture_in_out) based on the provided
+  // ImageInfo and vk::Format. If the texture pointer is null, a new texture will be allocated.
+  static void ObtainDepthTexture(Escher* escher, const bool use_protected_memory,
+                                 const ImageInfo& info, vk::Format depth_stencil_format,
+                                 TexturePtr& depth_texture_in_out);
 };
 
 }  // namespace escher

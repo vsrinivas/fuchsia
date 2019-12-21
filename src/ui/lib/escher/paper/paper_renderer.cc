@@ -17,6 +17,7 @@
 #include "src/ui/lib/escher/paper/paper_scene.h"
 #include "src/ui/lib/escher/paper/paper_shader_structs.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
+#include "src/ui/lib/escher/renderer/render_funcs.h"
 #include "src/ui/lib/escher/scene/object.h"
 #include "src/ui/lib/escher/util/string_utils.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
@@ -53,13 +54,16 @@ PaperRenderer::PaperRenderer(EscherWeakPtr weak_escher, const PaperRendererConfi
 
 PaperRenderer::~PaperRenderer() { escher()->Cleanup(); }
 
-PaperRenderer::PaperFrame::PaperFrame(const FramePtr& frame_in,
-                                      std::shared_ptr<BatchGpuUploader> gpu_uploader_in,
-                                      const PaperScenePtr& scene_in,
-                                      const ImagePtr& output_image_in,
-                                      std::pair<TexturePtr, TexturePtr> depth_and_msaa_textures,
-                                      const std::vector<Camera>& cameras_in)
-    : FrameData(frame_in, gpu_uploader_in, output_image_in, depth_and_msaa_textures),
+PaperRenderer::FrameData::FrameData(const FramePtr& frame_in,
+                                    std::shared_ptr<BatchGpuUploader> gpu_uploader_in,
+                                    const PaperScenePtr& scene_in, const ImagePtr& output_image_in,
+                                    std::pair<TexturePtr, TexturePtr> depth_and_msaa_textures,
+                                    const std::vector<Camera>& cameras_in)
+    : frame(frame_in),
+      output_image(output_image_in),
+      depth_texture(depth_and_msaa_textures.first),
+      msaa_texture(depth_and_msaa_textures.second),
+      gpu_uploader(gpu_uploader_in),
       scene(scene_in) {
   // Scale the camera viewports to pixel coordinates in the output framebuffer.
   for (auto& cam : cameras_in) {
@@ -118,7 +122,7 @@ PaperRenderer::PaperFrame::PaperFrame(const FramePtr& frame_in,
   }
 }
 
-PaperRenderer::PaperFrame::~PaperFrame() = default;
+PaperRenderer::FrameData::~FrameData() = default;
 
 void PaperRenderer::SetConfig(const PaperRendererConfig& config) {
   FXL_DCHECK(!frame_data_) << "Illegal call to SetConfig() during a frame.";
@@ -187,10 +191,16 @@ void PaperRenderer::BeginFrame(const FramePtr& frame, std::shared_ptr<BatchGpuUp
   FXL_DCHECK(!frame_data_) << "already in a frame.";
   FXL_DCHECK(frame && uploader && scene && !cameras.empty() && output_image);
 
-  frame_data_ = std::make_unique<PaperFrame>(
+  auto index = frame->frame_number() % depth_buffers_.size();
+  TexturePtr& depth_texture = depth_buffers_[index];
+  TexturePtr& msaa_texture = msaa_buffers_[index];
+  RenderFuncs::ObtainDepthAndMsaaTextures(
+          escher(), frame, output_image->info(), config_.msaa_sample_count,
+          config_.depth_stencil_format, depth_texture, msaa_texture);
+
+  frame_data_ = std::make_unique<FrameData>(
       frame, std::move(uploader), scene, output_image,
-      ObtainDepthAndMsaaTextures(frame, output_image->info(), config_.msaa_sample_count,
-                                 config_.depth_stencil_format),
+      std::make_pair<TexturePtr, TexturePtr>(std::move(depth_texture), std::move(msaa_texture)),
       cameras);
 
   shape_cache_.BeginFrame(frame_data_->gpu_uploader.get(), frame->frame_number());
@@ -453,8 +463,9 @@ void PaperRenderer::GenerateCommandsForNoShadows(uint32_t camera_index) {
   RenderPassInfo render_pass_info;
   FXL_DCHECK(camera_index < frame_data_->cameras.size());
   auto render_area = frame_data_->cameras[camera_index].rect;
-  InitRenderPassInfo(&render_pass_info, escher()->image_view_allocator(), *frame_data_.get(),
-                     render_area);
+  RenderPassInfo::InitRenderPassInfo(&render_pass_info, render_area, frame_data_->output_image,
+                                     frame_data_->depth_texture, frame_data_->msaa_texture,
+                                     escher()->image_view_allocator());
 
   cmd_buf->BeginRenderPass(render_pass_info);
   frame->AddTimestamp("started no-shadows render pass");
@@ -503,8 +514,9 @@ void PaperRenderer::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
   RenderPassInfo render_pass_info;
   FXL_DCHECK(camera_index < frame_data_->cameras.size());
   auto render_area = frame_data_->cameras[camera_index].rect;
-  InitRenderPassInfo(&render_pass_info, escher()->image_view_allocator(), *frame_data_.get(),
-                     render_area);
+  RenderPassInfo::InitRenderPassInfo(&render_pass_info, render_area, frame_data_->output_image,
+                                     frame_data_->depth_texture, frame_data_->msaa_texture,
+                                     escher()->image_view_allocator());
 
   cmd_buf->BeginRenderPass(render_pass_info);
   frame->AddTimestamp("started shadow_volume render pass");

@@ -34,6 +34,8 @@ class Texture : public ImageView {
   vk::ImageView vk_image_view() const { return vk(); }
   const SamplerPtr& sampler() const { return sampler_; }
 
+  uint32_t sample_count() const { return image()->info().sample_count; }
+
  private:
   SamplerPtr sampler_;
 

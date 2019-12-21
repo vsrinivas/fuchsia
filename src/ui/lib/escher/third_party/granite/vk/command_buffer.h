@@ -219,6 +219,11 @@ class CommandBuffer : public Reffable {
   void DrawIndexed(uint32_t index_count, uint32_t instance_count = 1, uint32_t first_index = 0,
                    int32_t vertex_offset = 0, uint32_t first_instance = 0);
 
+  // Wraps vkCmdDraw(), first flushing any dirty render state; this may cause
+  // descriptor sets to be written/bound, or a new pipeline to be created.
+  void Draw(uint32_t vertex_count, uint32_t instance_count = 1, uint32_t first_vertex = 0,
+            uint32_t first_instance = 0);
+
   // Wraps vkCmdClearAttachments().  Clears the specified rectangle of the
   // specified attachment (see RenderPassInfo), filling it with the specified
   // values.

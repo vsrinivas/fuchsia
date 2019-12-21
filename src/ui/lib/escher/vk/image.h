@@ -88,7 +88,7 @@ class Image : public Resource {
   }
 
  protected:
-  // Constructor.  In some cases it is necessary to wrap an un-owned vk::Image,
+  // Constructor. In some cases it is necessary to wrap an un-owned vk::Image,
   // which should not be destroyed when this Image is destroyed (e.g. when
   // working with images associated with a vk::SwapchainKHR); this is done by
   // passing nullptr as the |mem| argument.

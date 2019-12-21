@@ -143,6 +143,16 @@ struct RenderPassInfo {
   // - there must be at least one attachment (either color or depth-stencil).
   // - the same attachment cannot be both loaded and cleared.
   bool Validate() const;
+
+  // Handles the logic for setting up a vulkan render pass. If there are MSAA buffers a resolve
+  // subpass is also added. Clear color is set to transparent-black and if the frame has a depth
+  // texture that will also be used. This is general enough to meet most standard needs but if a
+  // client wants something that is not handled here they will have to manually initialize their
+  // own RenderPassInfo struct.
+  static void InitRenderPassInfo(RenderPassInfo* rp, vk::Rect2D render_area,
+                                 const ImagePtr& output_image, const TexturePtr& depth_texture,
+                                 const TexturePtr& msaa_texture = nullptr,
+                                 ImageViewAllocator* allocator = nullptr);
 };
 
 }  // namespace escher

@@ -26,6 +26,7 @@
 #include "src/ui/lib/escher/third_party/granite/vk/render_pass_info.h"
 
 #include "src/ui/lib/escher/util/bit_ops.h"
+#include "src/ui/lib/escher/vk/texture.h"
 
 namespace escher {
 
@@ -178,6 +179,67 @@ bool RenderPassInfo::Validate() const {
   }
 
   return success;
+}
+
+void RenderPassInfo::InitRenderPassInfo(RenderPassInfo* rp, vk::Rect2D render_area,
+                                        const ImagePtr& output_image,
+                                        const TexturePtr& depth_texture,
+                                        const TexturePtr& msaa_texture,
+                                        ImageViewAllocator* allocator) {
+  FXL_DCHECK(output_image->info().sample_count == 1);
+  rp->render_area = render_area;
+
+  static constexpr uint32_t kRenderTargetAttachmentIndex = 0;
+  static constexpr uint32_t kResolveTargetAttachmentIndex = 1;
+  {
+    // TODO(43279): Can we get away sharing image views across multiple RenderPassInfo structs?
+    if (allocator) {
+      rp->color_attachments[kRenderTargetAttachmentIndex] =
+          allocator->ObtainImageView(output_image);
+    } else {
+      rp->color_attachments[kRenderTargetAttachmentIndex] = ImageView::New(output_image);
+    }
+    rp->num_color_attachments = 1;
+    // Clear and store color attachment 0, the sole color attachment.
+    rp->clear_attachments = 1u << kRenderTargetAttachmentIndex;
+    rp->store_attachments = 1u << kRenderTargetAttachmentIndex;
+    // NOTE: we don't need to keep |depth_texture| alive explicitly because it
+    // will be kept alive by the render-pass.
+    rp->depth_stencil_attachment = depth_texture;
+    // Standard flags for a depth-testing render-pass that needs to first clear
+    // the depth image.
+    rp->op_flags = RenderPassInfo::kClearDepthStencilOp | RenderPassInfo::kOptimalColorLayoutOp |
+                   RenderPassInfo::kOptimalDepthStencilLayoutOp;
+    rp->clear_color[0].setFloat32({0.f, 0.f, 0.f, 0.f});
+
+    // If MSAA is enabled, we need to explicitly specify the sub-pass in order
+    // to specify the resolve attachment.  Otherwise we allow a default subclass
+    // to be created.
+    if (msaa_texture) {
+      FXL_DCHECK(depth_texture->sample_count() == msaa_texture->sample_count());
+      FXL_DCHECK(rp->num_color_attachments == 1 && rp->clear_attachments == 1u);
+      // Move the output image to attachment #1, so that attachment #0 is always
+      // the attachment that we render into.
+      rp->color_attachments[kResolveTargetAttachmentIndex] =
+          std::move(rp->color_attachments[kRenderTargetAttachmentIndex]);
+      rp->color_attachments[kRenderTargetAttachmentIndex] = msaa_texture;
+      rp->num_color_attachments = 2;
+
+      // Now that the output image is attachment #1, that's the one we need to
+      // store.
+      rp->store_attachments = 1u << kResolveTargetAttachmentIndex;
+
+      rp->subpasses.push_back(RenderPassInfo::Subpass{
+          .color_attachments = {kRenderTargetAttachmentIndex},
+          .input_attachments = {},
+          .resolve_attachments = {kResolveTargetAttachmentIndex},
+          .num_color_attachments = 1,
+          .num_input_attachments = 0,
+          .num_resolve_attachments = 1,
+      });
+    }
+  }
+  FXL_DCHECK(rp->Validate());
 }
 
 }  // namespace escher

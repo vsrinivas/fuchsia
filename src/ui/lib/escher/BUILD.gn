@@ -88,6 +88,14 @@ test_package("escher_tests") {
       path = rebase_path("shaders/paper/vert/vertex_attributes.vert")
       dest = "shaders/paper/vert/vertex_attributes.vert"
     },
+    {
+      path = rebase_path("shaders/flatland/flat_main.vert")
+      dest = "shaders/flatland/flat_main.vert"
+    },
+    {
+      path = rebase_path("shaders/flatland/flat_main.frag")
+      dest = "shaders/flatland/flat_main.frag"
+    },
 
     # Spirv shaders
     {
@@ -272,6 +280,9 @@ template("escher_library") {
       "escher_process_init.h",
       "flatland/flatland_static_config.cc",
       "flatland/flatland_static_config.h",
+      "flatland/rectangle_compositor.cc",
+      "flatland/rectangle_compositor.h",
+      "flatland/rectangle_renderable.h",
       "forward_declarations.h",
       "fs/hack_filesystem.cc",
       "fs/hack_filesystem.h",
@@ -369,6 +380,7 @@ template("escher_library") {
       "renderer/buffer_cache.h",
       "renderer/frame.cc",
       "renderer/frame.h",
+      "renderer/render_funcs.cc",
       "renderer/render_funcs.h",
       "renderer/render_queue.cc",
       "renderer/render_queue.h",

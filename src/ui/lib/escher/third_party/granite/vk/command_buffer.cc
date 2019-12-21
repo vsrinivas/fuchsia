@@ -383,6 +383,19 @@ void CommandBuffer::DrawIndexed(uint32_t index_count, uint32_t instance_count, u
   vk().drawIndexed(index_count, instance_count, first_index, vertex_offset, first_instance);
 }
 
+// Wraps vkCmdDraw() which is able to render raw vertices without using an index buffer.
+void CommandBuffer::Draw(uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex,
+                         uint32_t first_instance) {
+  TRACE_DURATION("gfx", "escher::CommandBuffer::Draw");
+  FXL_DCHECK(current_program_);
+  FXL_DCHECK(!is_compute_);
+
+  FlushRenderState();
+
+  TRACE_DURATION("gfx", "escher::CommandBuffer::Draw[vulkan]");
+  vk().draw(vertex_count, instance_count, first_vertex, first_instance);
+}
+
 void CommandBuffer::FlushRenderState() {
   TRACE_DURATION("gfx", "escher::CommandBuffer::FlushRenderState");
 
