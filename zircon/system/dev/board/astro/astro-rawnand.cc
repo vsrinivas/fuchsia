@@ -11,6 +11,7 @@
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/platform/bus.h>
 #include <hw/reg.h>
+#include <soc/aml-common/aml-guid.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <unistd.h>
@@ -60,6 +61,11 @@ static const nand_config_t config = {
     .extra_partition_config_count = 2,
     .extra_partition_config =
         {
+            {
+                .type_guid = GUID_BL2_VALUE,
+                .copy_count = 8,
+                .copy_byte_offset = 0,
+            },
             {
                 .type_guid = GUID_BOOTLOADER_VALUE,
                 .copy_count = 4,
