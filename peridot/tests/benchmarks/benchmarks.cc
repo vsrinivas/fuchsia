@@ -43,8 +43,8 @@ void AddPerfTests(benchmarking::BenchmarksRunner* benchmarks_runner, bool perfco
       // Performance tests implemented in the Garnet repo (the name
       // "zircon_benchmarks" is now misleading).
       benchmarks_runner->AddLibPerfTestBenchmark(
-          fxl::StringPrintf("zircon_benchmarks_process%06d", process),
-          "/pkgfs/packages/zircon_benchmarks/0/test/zircon_benchmarks", extra_args);
+          fxl::StringPrintf("zircon_benchmarks_process%06d", process), "/bin/zircon_benchmarks",
+          extra_args);
     }
   } else {
     std::vector<std::string> extra_args = {"--quiet"};
@@ -55,9 +55,8 @@ void AddPerfTests(benchmarking::BenchmarksRunner* benchmarks_runner, bool perfco
 
     // Performance tests implemented in the Garnet repo (the name
     // "zircon_benchmarks" is now misleading).
-    benchmarks_runner->AddLibPerfTestBenchmark(
-        "zircon_benchmarks", "/pkgfs/packages/zircon_benchmarks/0/test/zircon_benchmarks",
-        extra_args);
+    benchmarks_runner->AddLibPerfTestBenchmark("zircon_benchmarks", "/bin/zircon_benchmarks",
+                                               extra_args);
   }
 
   // Fuchsia inspect Rust benchmarks.

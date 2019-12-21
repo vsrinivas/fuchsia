@@ -63,15 +63,45 @@ copy("runtime_deps") {
   ]
 }
 
-# Packages required by the Dart test wrappers in this directory.
+# Packages required either:
+#  1) by the Dart test wrappers in this directory, or
+#  2) by the older test runner in peridot/tests/benchmarks/ which is
+#     used by the peridot-perf and fuchsia-perfcompare builders.  This
+#     test runner will eventually be replaced by the Dart test
+#     wrappers (TODO(fxb/23091)), but sharing the same dependency
+#     declarations will ease this transition.
 group("package_deps") {
   testonly = true
   public_deps = [
+    "//garnet/bin/ui/tests/performance:scenic_benchmarks",
     "//garnet/bin/zircon_benchmarks:zircon_benchmarks_perftestmode",
     "//garnet/examples/benchmark",
+    "//garnet/tests/benchmarks/input_latency:garnet_input_latency_benchmarks",
     "//src/ledger:bin",
     "//src/ledger/bin/tests/benchmark",
     "//src/lib/inspect/rust/fuchsia-inspect:benchmarks",
+
+    # These are used by garnet_input_latency_benchmarks.
+    "//src/ui/bin/activity",
+    "//src/ui/examples:simplest_app",
+    "//src/ui/examples:yuv_to_image_pipe",
+    "//src/ui/tools:present_view",
+    "//third_party/sbase:date",
+    "//third_party/sbase:sleep",
+
+    # These are used by scenic_benchmarks.
+    "//garnet/bin/ui/benchmarks/image_grid_cpp",
+    "//src/ui/examples:standalone_app",
+    "//src/ui/examples:tile_view",
+    "//src/ui/tools:present_view",
+
+    # These are used by the test runner in peridot/tests/benchmarks/,
+    # used by the peridot-perf and fuchsia-perfcompare builders.
+    "//garnet/bin/catapult_converter",
+    "//peridot/tests/benchmarks:fuchsia_benchmarks",
+    "//third_party/sbase:mkdir",
+    "//third_party/sbase:rm",
+    "//third_party/sbase:touch",
   ]
 }
 
