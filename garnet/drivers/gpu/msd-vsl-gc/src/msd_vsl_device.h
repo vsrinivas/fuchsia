@@ -6,6 +6,8 @@
 #define MSD_VSL_DEVICE_H
 
 #include <memory>
+#include <mutex>
+#include <thread>
 
 #include "gpu_features.h"
 #include "magma_util/macros.h"
@@ -17,6 +19,7 @@
 #include "page_table_slot_allocator.h"
 #include "platform_bus_mapper.h"
 #include "platform_device.h"
+#include "platform_semaphore.h"
 #include "ringbuffer.h"
 
 class MsdVslDevice : public msd_device_t, public MsdVslConnection::Owner {
@@ -26,7 +29,7 @@ class MsdVslDevice : public msd_device_t, public MsdVslConnection::Owner {
 
   MsdVslDevice() { magic_ = kMagic; }
 
-  virtual ~MsdVslDevice() = default;
+  virtual ~MsdVslDevice();
 
   uint32_t device_id() { return device_id_; }
 
@@ -45,13 +48,40 @@ class MsdVslDevice : public msd_device_t, public MsdVslConnection::Owner {
   }
 
  private:
+  // The hardware provides 30 bits for interrupt events and 2 bits for errors.
+  static constexpr uint32_t kNumEvents = 30;
+  struct Event {
+    bool allocated = false;
+    bool submitted = false;
+    // TODO(fxb/43238): this should link to the command buffer which stores the semaphores.
+    std::shared_ptr<magma::PlatformSemaphore> signal;
+  };
+
   bool Init(void* device_handle, bool enable_mmu);
-  void HardwareInit(bool enable_mmu);
+  bool HardwareInit(bool enable_mmu);
   void Reset();
+  void DisableInterrupts();
+  // Processes the hardware interrupts.
+  int InterruptThreadLoop();
+
+  // Events for triggering interrupts.
+  bool AllocInterruptEvent(uint32_t* out_event_id);
+  bool FreeInterruptEvent(uint32_t event_id);
+  // Writes a new interrupt event to the end of the ringbuffer. The event must have been allocated
+  // using |AllocInterruptEvent|.
+  bool WriteInterruptEvent(uint32_t event_id, std::shared_ptr<magma::PlatformSemaphore> signal);
+  bool CompleteInterruptEvent(uint32_t event_id);
 
   // Returns true if initializing the ringbuffer succeeded,
   // or the ringbuffer was already initialized.
   bool InitRingbuffer(std::shared_ptr<AddressSpace> address_space);
+  // Adds a WAIT-LINK to the end of the ringbuffer.
+  bool AddRingbufferWaitLink();
+  // Modifies the last WAIT in the ringbuffer to link to |gpu_addr|.
+  // |num_new_rb_instructions| is the number of ringbuffer instructions that have been written
+  // since the last WAIT.
+  // |dest_prefetch| is the prefetch of the buffer we are linking to.
+  bool LinkRingbuffer(uint32_t num_new_rb_instructions, uint32_t gpu_addr, uint32_t dest_prefetch);
 
   // Writes a LINK command at the end of the given buffer.
   bool WriteLinkCommand(magma::PlatformBuffer* buf, uint32_t length,
@@ -85,7 +115,17 @@ class MsdVslDevice : public msd_device_t, public MsdVslConnection::Owner {
   // The command queue.
   std::unique_ptr<Ringbuffer> ringbuffer_;
 
+  std::thread interrupt_thread_;
+  std::unique_ptr<magma::PlatformInterrupt> interrupt_;
+  std::atomic_bool stop_interrupt_thread_{false};
+
+  MAGMA_GUARDED(events_mutex_) Event events_[kNumEvents] = {};
+  // TODO(fxb/43235): this can be removed once we process events on the device thread.
+  std::mutex events_mutex_;
+
   friend class TestMsdVslDevice;
+  friend class MsdVslDevice_AllocFreeInterruptEvents_Test;
+  friend class MsdVslDevice_WriteInterruptEvents_Test;
   friend class MsdVslDeviceTest_FetchEngineDma_Test;
   friend class MsdVslDeviceTest_LoadAddressSpace_Test;
 };

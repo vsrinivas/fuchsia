@@ -34,6 +34,31 @@ class MiLink {
   }
 };
 
+class MiLoadState {
+ public:
+  static constexpr uint32_t kCommandType = 0x8000000;
+  static constexpr uint32_t kRegMask = 0xffff;
+
+  static void write(magma::InstructionWriter* writer, uint32_t reg, uint32_t value) {
+    uint32_t count = 1 << 16;
+    uint32_t reg_index = (reg >> 2) & kRegMask;
+    writer->Write32(kCommandType | count | reg_index);
+    writer->Write32(value);
+  }
+};
+
+class MiEvent {
+ public:
+  static constexpr uint32_t kEventReg = 0x3804;
+  static constexpr uint32_t kEventIdMask = 0x1f;
+  static constexpr uint32_t kEventFromPE = 0x40;
+
+  static void write(magma::InstructionWriter* writer, uint32_t event_id) {
+    DASSERT(event_id <= kEventIdMask);
+    MiLoadState::write(writer, kEventReg, event_id | kEventFromPE);
+  }
+};
+
 class MiEnd {
  public:
   static constexpr uint32_t kCommandType = 0x10000000;

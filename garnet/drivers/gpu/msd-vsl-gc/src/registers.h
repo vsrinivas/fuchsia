@@ -20,6 +20,22 @@ class ClockControl : public magma::RegisterBase {
   static auto Get() { return magma::RegisterAddr<ClockControl>(0x0); }
 };
 
+class IrqAck : public magma::RegisterBase {
+ public:
+  DEF_BIT(31, bus_error);
+  DEF_BIT(30, mmu_exception);
+  DEF_FIELD(29, 0, value);
+
+  static auto Get() { return magma::RegisterAddr<IrqAck>(0x10); }
+};
+
+class IrqEnable : public magma::RegisterBase {
+ public:
+  DEF_FIELD(31, 0, enable);
+
+  static auto Get() { return magma::RegisterAddr<IrqEnable>(0x14); }
+};
+
 class ChipId : public magma::RegisterBase {
  public:
   DEF_FIELD(31, 0, chip_id);

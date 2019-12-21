@@ -14,7 +14,23 @@
 #include "platform_barriers.h"
 #include "platform_logger.h"
 #include "platform_mmio.h"
+#include "platform_thread.h"
 #include "registers.h"
+
+static constexpr uint32_t kInterruptIndex = 0;
+
+MsdVslDevice::~MsdVslDevice() {
+  DisableInterrupts();
+
+  stop_interrupt_thread_ = true;
+  if (interrupt_) {
+    interrupt_->Signal();
+  }
+  if (interrupt_thread_.joinable()) {
+    interrupt_thread_.join();
+    DLOG("Joined interrupt thread");
+  }
+}
 
 std::unique_ptr<MsdVslDevice> MsdVslDevice::Create(void* device_handle, bool enable_mmu) {
   auto device = std::make_unique<MsdVslDevice>();
@@ -80,12 +96,26 @@ bool MsdVslDevice::Init(void* device_handle, bool enable_mmu) {
   ringbuffer_ = std::make_unique<Ringbuffer>(std::move(buffer), 0 /* start_offset */);
 
   Reset();
-  HardwareInit(enable_mmu);
+  if (!HardwareInit(enable_mmu)) {
+    return DRETF(false, "Failed to initialize hardware");
+  }
+
+  interrupt_thread_ = std::thread([this] { this->InterruptThreadLoop(); });
 
   return true;
 }
 
-void MsdVslDevice::HardwareInit(bool enable_mmu) {
+bool MsdVslDevice::HardwareInit(bool enable_mmu) {
+  interrupt_ = platform_device_->RegisterInterrupt(kInterruptIndex);
+  if (!interrupt_) {
+    return DRETF(false, "Failed to register interrupt");
+  }
+
+  {
+    auto reg = registers::IrqEnable::Get().FromValue(~0);
+    reg.WriteTo(register_io_.get());
+  }
+
   {
     auto reg = registers::SecureAhbControl::Get().ReadFrom(register_io_.get());
     reg.non_secure_access().set(1);
@@ -96,6 +126,125 @@ void MsdVslDevice::HardwareInit(bool enable_mmu) {
   page_table_arrays_->Enable(register_io(), enable_mmu);
 
   page_table_slot_allocator_ = std::make_unique<PageTableSlotAllocator>(page_table_arrays_->size());
+  return true;
+}
+
+void MsdVslDevice::DisableInterrupts() {
+  if (!register_io_) {
+    DLOG("Register io was not initialized, skipping disabling interrupts");
+    return;
+  }
+  auto reg = registers::IrqEnable::Get().FromValue(0);
+  reg.WriteTo(register_io_.get());
+}
+
+int MsdVslDevice::InterruptThreadLoop() {
+  magma::PlatformThreadHelper::SetCurrentThreadName("VSL InterruptThread");
+  DLOG("VSL Interrupt thread started");
+
+  std::unique_ptr<magma::PlatformHandle> profile = platform_device_->GetSchedulerProfile(
+      magma::PlatformDevice::kPriorityHigher, "msd-vsl-gc/vsl-interrupt-thread");
+  if (!profile) {
+    return DRETF(0, "Failed to get higher priority");
+  }
+  if (!magma::PlatformThreadHelper::SetProfile(profile.get())) {
+    return DRETF(0, "Failed to set priority");
+  }
+
+  while (!stop_interrupt_thread_) {
+    interrupt_->Wait();
+
+    if (stop_interrupt_thread_) {
+      break;
+    }
+
+    auto irq_status = registers::IrqAck::Get().ReadFrom(register_io_.get());
+    auto mmu_exception = irq_status.mmu_exception().get();
+    auto bus_error = irq_status.bus_error().get();
+    auto value = irq_status.value().get();
+    if (mmu_exception) {
+      DMESSAGE("Interrupt thread received mmu_exception");
+    }
+    if (bus_error) {
+      DMESSAGE("Interrupt thread received bus error");
+    }
+    // Check which bits are set and complete the corresponding event.
+    for (unsigned int i = 0; i < kNumEvents; i++) {
+      if (value & (1 << i)) {
+        // TODO(fxb/43235): this should be processed on the driver device thread once it exists.
+        if (!CompleteInterruptEvent(i)) {
+          DLOG("Failed to complete event %u\n", i);
+        }
+      }
+    }
+    interrupt_->Complete();
+  }
+  DLOG("VSL Interrupt thread exiting");
+  return 0;
+}
+
+bool MsdVslDevice::AllocInterruptEvent(uint32_t* out_event_id) {
+  std::lock_guard<std::mutex> lock(events_mutex_);
+
+  for (uint32_t i = 0; i < kNumEvents; i++) {
+    if (!events_[i].allocated) {
+      events_[i].allocated = true;
+      *out_event_id = i;
+      return true;
+    }
+  }
+  return DRETF(false, "No events are currently available");
+}
+
+bool MsdVslDevice::FreeInterruptEvent(uint32_t event_id) {
+  std::lock_guard<std::mutex> lock(events_mutex_);
+
+  if (event_id >= kNumEvents) {
+    return DRETF(false, "Invalid event id %u", event_id);
+  }
+  if (!events_[event_id].allocated) {
+    return DRETF(false, "Event id %u was not allocated", event_id);
+  }
+  events_[event_id] = {};
+  return true;
+}
+
+// Writes an event into the end of the ringbuffer.
+bool MsdVslDevice::WriteInterruptEvent(uint32_t event_id,
+                                       std::shared_ptr<magma::PlatformSemaphore> signal) {
+  std::lock_guard<std::mutex> lock(events_mutex_);
+
+  if (event_id >= kNumEvents) {
+    return DRETF(false, "Invalid event id %u", event_id);
+  }
+  if (!events_[event_id].allocated) {
+    return DRETF(false, "Event id %u was not allocated", event_id);
+  }
+  if (events_[event_id].submitted) {
+    return DRETF(false, "Event id %u was already submitted", event_id);
+  }
+  events_[event_id].submitted = true;
+  events_[event_id].signal = signal;
+  MiEvent::write(ringbuffer_.get(), event_id);
+  return true;
+}
+
+bool MsdVslDevice::CompleteInterruptEvent(uint32_t event_id) {
+  std::lock_guard<std::mutex> lock(events_mutex_);
+
+  if (event_id >= kNumEvents) {
+    return DRETF(false, "Invalid event id %u", event_id);
+  }
+  if (!events_[event_id].allocated || !events_[event_id].submitted) {
+    return DRETF(false, "Cannot complete event %u, allocated %u submitted %u",
+                 event_id, events_[event_id].allocated, events_[event_id].submitted);
+  }
+  if (events_[event_id].signal) {
+    events_[event_id].signal->Signal();
+  }
+  events_[event_id].submitted = false;
+  events_[event_id].signal = nullptr;
+  return true;
 }
 
 void MsdVslDevice::Reset() {
@@ -220,6 +369,37 @@ bool MsdVslDevice::InitRingbuffer(std::shared_ptr<AddressSpace> address_space) {
   return true;
 }
 
+bool MsdVslDevice::AddRingbufferWaitLink() {
+  uint64_t rb_gpu_addr;
+  bool res = ringbuffer_->GetGpuAddress(&rb_gpu_addr);
+  if (!res) {
+    return DRETF(false, "Failed to get ringbuffer gpu address");
+  }
+  uint32_t wait_gpu_addr = rb_gpu_addr + ringbuffer_->tail();
+  MiWait::write(ringbuffer_.get());
+  MiLink::write(ringbuffer_.get(), 2 /* prefetch */, wait_gpu_addr);
+  return true;
+}
+
+bool MsdVslDevice::LinkRingbuffer(uint32_t num_new_rb_instructions, uint32_t gpu_addr,
+                                  uint32_t dest_prefetch) {
+  // Replace the penultimate WAIT (before the newly added one) with a LINK to the command buffer.
+  // We need to calculate the offset from the current tail, skipping past the new commands
+  // we wrote into the ringbuffer and also the WAIT-LINK that we are modifying.
+  uint32_t prev_wait_offset_dwords =
+     (num_new_rb_instructions * kInstructionDwords) + kWaitLinkDwords;
+  DASSERT(prev_wait_offset_dwords > 0);
+
+  // prev_wait_offset_dwords is pointing to the beginning of the WAIT instruction.
+  // We will first modify the second dword which specifies the address,
+  // as the hardware may be executing at the address of the current WAIT.
+  ringbuffer_->Overwrite32(prev_wait_offset_dwords - 1 /* dwords_before_tail */, gpu_addr);
+  magma::barriers::Barrier();
+  ringbuffer_->Overwrite32(prev_wait_offset_dwords, MiLink::kCommandType | dest_prefetch);
+  magma::barriers::Barrier();
+  return true;
+}
+
 bool MsdVslDevice::WriteLinkCommand(magma::PlatformBuffer* buf, uint32_t length,
                                     uint16_t link_prefetch, uint32_t link_addr) {
   // Check if we have enough space for the LINK command.
@@ -279,26 +459,15 @@ bool MsdVslDevice::SubmitCommandBuffer(std::shared_ptr<AddressSpace> address_spa
   *prefetch_out = prefetch & 0xFFFF;
 
   // Add a new WAIT-LINK to the end of the ringbuffer.
-  uint32_t wait_gpu_addr = rb_gpu_addr + ringbuffer_->tail();
-  MiWait::write(ringbuffer_.get());
-  MiLink::write(ringbuffer_.get(), 2 /* prefetch */, wait_gpu_addr);
+  if (!AddRingbufferWaitLink()) {
+    return DRETF(false, "Failed to add WAIT-LINK to ringbuffer");
+  }
 
   DLOG("Submitting buffer at gpu addr 0x%x", gpu_addr);
 
-  // Replace the penultimate WAIT (before the newly added one) with a LINK to the command buffer.
-  // We need to calculate the offset from the current tail, skipping past the new commands
-  // we wrote into the ringbuffer and also the WAIT-LINK that we are modifying.
-  uint32_t prev_wait_offset_dwords = (kRbPrefetch * 2) + kWaitLinkDwords;
-  DASSERT(prev_wait_offset_dwords > 0);
-
-  // prev_wait_offset_dwords is pointing to the beginning of the WAIT instruction.
-  // We will first modify the second dword which specifies the address,
-  // as the hardware may be executing at the address of the current WAIT.
-  ringbuffer_->Overwrite32(prev_wait_offset_dwords - 1 /* dwords_before_tail */, gpu_addr);
-  magma::barriers::Barrier();
-  ringbuffer_->Overwrite32(prev_wait_offset_dwords, MiLink::kCommandType | (*prefetch_out));
-  magma::barriers::Barrier();
-
+  if (!LinkRingbuffer(kRbPrefetch, gpu_addr, *prefetch_out)) {
+    return DRETF(false, "Failed to link ringbuffer");
+  }
   return true;
 }
 

@@ -354,3 +354,82 @@ void etna_cmd_stream_finish(struct etna_cmd_stream* stream) {
     EXPECT_EQ(0u, reg.reg_value());
   }
 }
+
+TEST(MsdVslDevice, AllocFreeInterruptEvents) {
+  auto test_info = std::make_unique<TestMsdVslDevice>();
+  ASSERT_TRUE(test_info->Init());
+
+  auto device = test_info->device();
+
+  for (unsigned int i = 0; i < 2; i++) {
+    uint32_t event_ids[MsdVslDevice::kNumEvents] = {};
+    for (unsigned int j = 0; j < MsdVslDevice::kNumEvents; j++) {
+      ASSERT_TRUE(device->AllocInterruptEvent(&event_ids[j]));
+    }
+    // We should have no events left.
+    uint32_t id;
+    ASSERT_FALSE(device->AllocInterruptEvent(&id));
+
+    ASSERT_FALSE(device->CompleteInterruptEvent(0));  // Not yet submitted.
+
+    for (unsigned int j = 0; j < MsdVslDevice::kNumEvents; j++) {
+      ASSERT_TRUE(device->FreeInterruptEvent(event_ids[j]));
+    }
+    ASSERT_FALSE(device->FreeInterruptEvent(0));  // Already freed.
+    ASSERT_FALSE(device->FreeInterruptEvent(100));  // Out of bounds.
+  }
+  ASSERT_FALSE(device->CompleteInterruptEvent(0));  // Not yet allocated.
+}
+
+TEST(MsdVslDevice, WriteInterruptEvents) {
+  auto test_info = std::make_unique<TestMsdVslDevice>();
+  ASSERT_TRUE(test_info->Init());
+
+  auto device = test_info->device();
+  ASSERT_TRUE(device->InitRingbuffer(test_info->address_space()));
+
+  auto& ringbuffer = device->ringbuffer_;
+  uint64_t rb_gpu_addr;
+  ASSERT_TRUE(ringbuffer->GetGpuAddress(&rb_gpu_addr));
+
+  // Allocate the maximum number of interrupt events, and corresponding semaphores.
+  uint32_t event_ids[MsdVslDevice::kNumEvents] = {};
+  std::unique_ptr<magma::PlatformSemaphore> semaphores[MsdVslDevice::kNumEvents] = {};
+  for (unsigned int i = 0; i < MsdVslDevice::kNumEvents; i++) {
+    ASSERT_TRUE(device->AllocInterruptEvent(&event_ids[i]));
+    auto semaphore = magma::PlatformSemaphore::Create();
+    ASSERT_NE(semaphore, nullptr);
+    semaphores[i] = std::move(semaphore);
+  }
+
+  for (unsigned int i = 0; i < 2; i++) {
+    // We will link to the end of the ringbuffer, where we are adding new events.
+    uint32_t rb_link_addr = rb_gpu_addr + ringbuffer->tail();
+
+    for (unsigned int j = 0; j < MsdVslDevice::kNumEvents; j++) {
+      auto copy = semaphores[j]->Clone();
+      ASSERT_NE(copy, nullptr);
+      ASSERT_TRUE(device->WriteInterruptEvent(event_ids[j], std::move(copy)));
+      // Should not be able to submit the same event while it is still pending.
+      ASSERT_FALSE(device->WriteInterruptEvent(event_ids[j], nullptr));
+    }
+
+    ASSERT_TRUE(device->AddRingbufferWaitLink());
+
+    // Link the ringbuffer to the newly written events.
+    uint32_t num_new_rb_instructions = MsdVslDevice::kNumEvents + 2;  // Add 2 for WAIT-LINK.
+    device->LinkRingbuffer(num_new_rb_instructions, rb_link_addr,
+                           num_new_rb_instructions /* prefetch */);
+
+    constexpr uint64_t kTimeoutMs = 5000;
+    for (unsigned int j = 0; j < MsdVslDevice::kNumEvents; j++) {
+      EXPECT_EQ(MAGMA_STATUS_OK, semaphores[j]->Wait(kTimeoutMs).get());
+    }
+  }
+
+  for (unsigned int i = 0; i < MsdVslDevice::kNumEvents; i++) {
+    ASSERT_TRUE(device->FreeInterruptEvent(event_ids[i]));
+  }
+
+  test_info->StopRingbuffer();
+}
