@@ -15,13 +15,6 @@ enum StreamType : uint8 {
     SCALAR = 3;
 };
 
-[Layout = "ddk-callback"]
-protocol OutputStreamCallback {
-    // This is called by the ISP driver, everytime a frame is ready to be
-    // consumed.
-    FrameReady(uint32 buffer_id);
-};
-
 [Layout = "ddk-protocol"]
 protocol OutputStream {
     // Starts the streaming of frames.
