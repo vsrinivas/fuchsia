@@ -145,6 +145,8 @@ constexpr fuchsia_hardware_nand_RamNandInfo kNandInfo = {
 
 }  // namespace
 
+// TODO(fxb/42894): Re-enable after de-flaking
+#if 0
 class EfiPartitionerTests : public zxtest::Test {
  protected:
   EfiPartitionerTests() {
@@ -355,6 +357,7 @@ TEST_F(EfiPartitionerTests, InitPartitionTables) {
   ASSERT_OK(partitioner->FindPartition(paver::Partition::kZirconR, nullptr));
   ASSERT_OK(partitioner->FindPartition(paver::Partition::kFuchsiaVolumeManager, nullptr));
 }
+#endif
 
 class FixedDevicePartitionerTests : public zxtest::Test {
  protected:
