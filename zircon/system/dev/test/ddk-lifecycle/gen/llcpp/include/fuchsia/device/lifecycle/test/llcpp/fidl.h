@@ -28,6 +28,8 @@ struct TestDevice_SubscribeToLifecycle_Response;
 struct TestDevice_SubscribeToLifecycle_Result;
 struct TestDevice_RemoveChild_Response;
 struct TestDevice_RemoveChild_Result;
+struct TestDevice_CompleteChildInit_Response;
+struct TestDevice_CompleteChildInit_Result;
 struct TestDevice_AddChild_Response;
 struct TestDevice_AddChild_Result;
 class Lifecycle;
@@ -201,6 +203,90 @@ struct TestDevice_RemoveChild_Result {
   fidl_envelope_t envelope_;
 };
 
+extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDevice_CompleteChildInit_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDevice_CompleteChildInit_ResultTable;
+
+struct TestDevice_CompleteChildInit_Result {
+  TestDevice_CompleteChildInit_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  enum class Tag : fidl_xunion_tag_t {
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+
+
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
+
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
+
+  static TestDevice_CompleteChildInit_Result WithResponse(::llcpp::fuchsia::device::lifecycle::test::TestDevice_CompleteChildInit_Response* val) {
+    TestDevice_CompleteChildInit_Result result;
+    result.set_response(val);
+    return result;
+  }
+
+  void set_response(::llcpp::fuchsia::device::lifecycle::test::TestDevice_CompleteChildInit_Response* elem) {
+    ordinal_ = Ordinal::kResponse;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  ::llcpp::fuchsia::device::lifecycle::test::TestDevice_CompleteChildInit_Response& mutable_response() {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::device::lifecycle::test::TestDevice_CompleteChildInit_Response*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::device::lifecycle::test::TestDevice_CompleteChildInit_Response& response() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kResponse);
+    return *static_cast<::llcpp::fuchsia::device::lifecycle::test::TestDevice_CompleteChildInit_Response*>(envelope_.data);
+  }
+
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
+
+  static TestDevice_CompleteChildInit_Result WithErr(int32_t* val) {
+    TestDevice_CompleteChildInit_Result result;
+    result.set_err(val);
+    return result;
+  }
+
+  void set_err(int32_t* elem) {
+    ordinal_ = Ordinal::kErr;
+    envelope_.data = static_cast<void*>(elem);
+  }
+
+  int32_t& mutable_err() {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  const int32_t& err() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kErr);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_lifecycle_test_TestDevice_CompleteChildInit_ResultTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_lifecycle_test_TestDevice_CompleteChildInit_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kResponse = 1,  // 0x1
+    kErr = 2,  // 0x2
+  };
+  static void SizeAndOffsetAssertionHelper();
+  Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  fidl_envelope_t envelope_;
+};
+
 extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDevice_AddChild_ResultTable;
 extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDevice_AddChild_ResultTable;
 
@@ -308,6 +394,23 @@ extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDevice_RemoveC
 struct TestDevice_RemoveChild_Response {
   static constexpr const fidl_type_t* Type = &v1_fuchsia_device_lifecycle_test_TestDevice_RemoveChild_ResponseTable;
   static constexpr const fidl_type_t* AltType = &fuchsia_device_lifecycle_test_TestDevice_RemoveChild_ResponseTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
+
+  uint8_t __reserved = {};
+};
+
+extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDevice_CompleteChildInit_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDevice_CompleteChildInit_ResponseTable;
+
+struct TestDevice_CompleteChildInit_Response {
+  static constexpr const fidl_type_t* Type = &v1_fuchsia_device_lifecycle_test_TestDevice_CompleteChildInit_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &fuchsia_device_lifecycle_test_TestDevice_CompleteChildInit_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -485,6 +588,10 @@ extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDeviceRemoveChild
 extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDeviceRemoveChildRequestTable;
 extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDeviceRemoveChildResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDeviceRemoveChildResponseTable;
+extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDeviceCompleteChildInitRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDeviceCompleteChildInitRequestTable;
+extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDeviceCompleteChildInitResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDeviceCompleteChildInitResponseTable;
 extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDeviceSubscribeToLifecycleRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDeviceSubscribeToLifecycleRequestTable;
 extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDeviceSubscribeToLifecycleResponseTable;
@@ -511,7 +618,25 @@ class TestDevice final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
-  using AddChildRequest = ::fidl::AnyZeroArgMessage;
+  struct AddChildRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    bool init_complete;
+    int32_t init_status;
+
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_lifecycle_test_TestDeviceAddChildRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_lifecycle_test_TestDeviceAddChildRequestTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = AddChildResponse;
+  };
 
   struct RemoveChildResponse final {
     FIDL_ALIGNDECL
@@ -547,6 +672,42 @@ class TestDevice final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = RemoveChildResponse;
+  };
+
+  struct CompleteChildInitResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::llcpp::fuchsia::device::lifecycle::test::TestDevice_CompleteChildInit_Result result;
+
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_lifecycle_test_TestDeviceCompleteChildInitResponseTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_lifecycle_test_TestDeviceCompleteChildInitResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 8;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = true;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  struct CompleteChildInitRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    uint64_t child_id;
+
+    static constexpr const fidl_type_t* Type = &v1_fuchsia_device_lifecycle_test_TestDeviceCompleteChildInitRequestTable;
+    static constexpr const fidl_type_t* AltType = &fuchsia_device_lifecycle_test_TestDeviceCompleteChildInitRequestTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = CompleteChildInitResponse;
   };
 
   struct SubscribeToLifecycleResponse final {
@@ -594,7 +755,7 @@ class TestDevice final {
     class AddChild_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      AddChild_Impl(::zx::unowned_channel _client_end);
+      AddChild_Impl(::zx::unowned_channel _client_end, bool init_complete, int32_t init_status);
       ~AddChild_Impl() = default;
       AddChild_Impl(AddChild_Impl&& other) = default;
       AddChild_Impl& operator=(AddChild_Impl&& other) = default;
@@ -623,6 +784,22 @@ class TestDevice final {
       using Super::operator*;
     };
     template <typename ResponseType>
+    class CompleteChildInit_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      CompleteChildInit_Impl(::zx::unowned_channel _client_end, uint64_t child_id);
+      ~CompleteChildInit_Impl() = default;
+      CompleteChildInit_Impl(CompleteChildInit_Impl&& other) = default;
+      CompleteChildInit_Impl& operator=(CompleteChildInit_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
     class SubscribeToLifecycle_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
@@ -642,6 +819,7 @@ class TestDevice final {
    public:
     using AddChild = AddChild_Impl<AddChildResponse>;
     using RemoveChild = RemoveChild_Impl<RemoveChildResponse>;
+    using CompleteChildInit = CompleteChildInit_Impl<CompleteChildInitResponse>;
     using SubscribeToLifecycle = SubscribeToLifecycle_Impl<SubscribeToLifecycleResponse>;
   };
 
@@ -654,7 +832,7 @@ class TestDevice final {
     class AddChild_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      AddChild_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      AddChild_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool init_complete, int32_t init_status, ::fidl::BytePart _response_buffer);
       ~AddChild_Impl() = default;
       AddChild_Impl(AddChild_Impl&& other) = default;
       AddChild_Impl& operator=(AddChild_Impl&& other) = default;
@@ -683,6 +861,22 @@ class TestDevice final {
       using Super::operator*;
     };
     template <typename ResponseType>
+    class CompleteChildInit_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      CompleteChildInit_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t child_id, ::fidl::BytePart _response_buffer);
+      ~CompleteChildInit_Impl() = default;
+      CompleteChildInit_Impl(CompleteChildInit_Impl&& other) = default;
+      CompleteChildInit_Impl& operator=(CompleteChildInit_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
     class SubscribeToLifecycle_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
@@ -702,6 +896,7 @@ class TestDevice final {
    public:
     using AddChild = AddChild_Impl<AddChildResponse>;
     using RemoveChild = RemoveChild_Impl<RemoveChildResponse>;
+    using CompleteChildInit = CompleteChildInit_Impl<CompleteChildInitResponse>;
     using SubscribeToLifecycle = SubscribeToLifecycle_Impl<SubscribeToLifecycleResponse>;
   };
 
@@ -717,12 +912,16 @@ class TestDevice final {
     ::zx::channel* mutable_channel() { return &channel_; }
 
     // Adds a child device and returns a unique |id| for the created device.
-    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::AddChild AddChild();
+    // |complete_init| specifies whether the init hook should be replied to immediately,
+    // or completed later by the caller with |CompleteChildInit|.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::AddChild AddChild(bool init_complete, int32_t init_status);
 
     // Adds a child device and returns a unique |id| for the created device.
+    // |complete_init| specifies whether the init hook should be replied to immediately,
+    // or completed later by the caller with |CompleteChildInit|.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::AddChild AddChild(::fidl::BytePart _response_buffer);
+    UnownedResultOf::AddChild AddChild(::fidl::BytePart _request_buffer, bool init_complete, int32_t init_status, ::fidl::BytePart _response_buffer);
 
     // Removes the child device of the given |id|.
     // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
@@ -731,6 +930,16 @@ class TestDevice final {
     // Removes the child device of the given |id|.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::RemoveChild RemoveChild(::fidl::BytePart _request_buffer, uint64_t child_id, ::fidl::BytePart _response_buffer);
+
+    // Replies to the child init hook.
+    // Returns an error if the child has no pending init.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::CompleteChildInit CompleteChildInit(uint64_t child_id);
+
+    // Replies to the child init hook.
+    // Returns an error if the child has no pending init.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::CompleteChildInit CompleteChildInit(::fidl::BytePart _request_buffer, uint64_t child_id, ::fidl::BytePart _response_buffer);
 
     // Registers the client for device lifecycle events.
     // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
@@ -750,12 +959,16 @@ class TestDevice final {
    public:
 
     // Adds a child device and returns a unique |id| for the created device.
-    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::AddChild AddChild(::zx::unowned_channel _client_end);
+    // |complete_init| specifies whether the init hook should be replied to immediately,
+    // or completed later by the caller with |CompleteChildInit|.
+    // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::AddChild AddChild(::zx::unowned_channel _client_end, bool init_complete, int32_t init_status);
 
     // Adds a child device and returns a unique |id| for the created device.
+    // |complete_init| specifies whether the init hook should be replied to immediately,
+    // or completed later by the caller with |CompleteChildInit|.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::AddChild AddChild(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::AddChild AddChild(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool init_complete, int32_t init_status, ::fidl::BytePart _response_buffer);
 
     // Removes the child device of the given |id|.
     // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
@@ -764,6 +977,16 @@ class TestDevice final {
     // Removes the child device of the given |id|.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::RemoveChild RemoveChild(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t child_id, ::fidl::BytePart _response_buffer);
+
+    // Replies to the child init hook.
+    // Returns an error if the child has no pending init.
+    // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::CompleteChildInit CompleteChildInit(::zx::unowned_channel _client_end, uint64_t child_id);
+
+    // Replies to the child init hook.
+    // Returns an error if the child has no pending init.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::CompleteChildInit CompleteChildInit(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t child_id, ::fidl::BytePart _response_buffer);
 
     // Registers the client for device lifecycle events.
     // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
@@ -782,10 +1005,16 @@ class TestDevice final {
    public:
 
     // Adds a child device and returns a unique |id| for the created device.
-    static ::fidl::DecodeResult<AddChildResponse> AddChild(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+    // |complete_init| specifies whether the init hook should be replied to immediately,
+    // or completed later by the caller with |CompleteChildInit|.
+    static ::fidl::DecodeResult<AddChildResponse> AddChild(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddChildRequest> params, ::fidl::BytePart response_buffer);
 
     // Removes the child device of the given |id|.
     static ::fidl::DecodeResult<RemoveChildResponse> RemoveChild(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<RemoveChildRequest> params, ::fidl::BytePart response_buffer);
+
+    // Replies to the child init hook.
+    // Returns an error if the child has no pending init.
+    static ::fidl::DecodeResult<CompleteChildInitResponse> CompleteChildInit(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<CompleteChildInitRequest> params, ::fidl::BytePart response_buffer);
 
     // Registers the client for device lifecycle events.
     static ::fidl::DecodeResult<SubscribeToLifecycleResponse> SubscribeToLifecycle(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<SubscribeToLifecycleRequest> params, ::fidl::BytePart response_buffer);
@@ -815,7 +1044,7 @@ class TestDevice final {
 
     using AddChildCompleter = ::fidl::Completer<AddChildCompleterBase>;
 
-    virtual void AddChild(AddChildCompleter::Sync _completer) = 0;
+    virtual void AddChild(bool init_complete, int32_t init_status, AddChildCompleter::Sync _completer) = 0;
 
     class RemoveChildCompleterBase : public _Base {
      public:
@@ -833,6 +1062,23 @@ class TestDevice final {
     using RemoveChildCompleter = ::fidl::Completer<RemoveChildCompleterBase>;
 
     virtual void RemoveChild(uint64_t child_id, RemoveChildCompleter::Sync _completer) = 0;
+
+    class CompleteChildInitCompleterBase : public _Base {
+     public:
+      void Reply(::llcpp::fuchsia::device::lifecycle::test::TestDevice_CompleteChildInit_Result result);
+      void ReplySuccess();
+      void ReplyError(int32_t error);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::lifecycle::test::TestDevice_CompleteChildInit_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer);
+      void Reply(::fidl::DecodedMessage<CompleteChildInitResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using CompleteChildInitCompleter = ::fidl::Completer<CompleteChildInitCompleterBase>;
+
+    virtual void CompleteChildInit(uint64_t child_id, CompleteChildInitCompleter::Sync _completer) = 0;
 
     class SubscribeToLifecycleCompleterBase : public _Base {
      public:
@@ -880,6 +1126,8 @@ class TestDevice final {
     static void AddChildResponse(const ::fidl::DecodedMessage<TestDevice::AddChildResponse>& _msg);
     static void RemoveChildRequest(const ::fidl::DecodedMessage<TestDevice::RemoveChildRequest>& _msg);
     static void RemoveChildResponse(const ::fidl::DecodedMessage<TestDevice::RemoveChildResponse>& _msg);
+    static void CompleteChildInitRequest(const ::fidl::DecodedMessage<TestDevice::CompleteChildInitRequest>& _msg);
+    static void CompleteChildInitResponse(const ::fidl::DecodedMessage<TestDevice::CompleteChildInitResponse>& _msg);
     static void SubscribeToLifecycleRequest(const ::fidl::DecodedMessage<TestDevice::SubscribeToLifecycleRequest>& _msg);
     static void SubscribeToLifecycleResponse(const ::fidl::DecodedMessage<TestDevice::SubscribeToLifecycleResponse>& _msg);
   };
@@ -914,6 +1162,16 @@ struct IsFidlType<::llcpp::fuchsia::device::lifecycle::test::TestDevice_RemoveCh
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::lifecycle::test::TestDevice_RemoveChild_Result>);
 
 template <>
+struct IsFidlType<::llcpp::fuchsia::device::lifecycle::test::TestDevice_CompleteChildInit_Response> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::lifecycle::test::TestDevice_CompleteChildInit_Response>);
+static_assert(offsetof(::llcpp::fuchsia::device::lifecycle::test::TestDevice_CompleteChildInit_Response, __reserved) == 0);
+static_assert(sizeof(::llcpp::fuchsia::device::lifecycle::test::TestDevice_CompleteChildInit_Response) == ::llcpp::fuchsia::device::lifecycle::test::TestDevice_CompleteChildInit_Response::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::lifecycle::test::TestDevice_CompleteChildInit_Result> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::lifecycle::test::TestDevice_CompleteChildInit_Result>);
+
+template <>
 struct IsFidlType<::llcpp::fuchsia::device::lifecycle::test::TestDevice_AddChild_Response> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::lifecycle::test::TestDevice_AddChild_Response>);
 static_assert(offsetof(::llcpp::fuchsia::device::lifecycle::test::TestDevice_AddChild_Response, child_id) == 0);
@@ -930,6 +1188,15 @@ struct IsFidlMessage<::llcpp::fuchsia::device::lifecycle::test::Lifecycle::OnChi
 static_assert(sizeof(::llcpp::fuchsia::device::lifecycle::test::Lifecycle::OnChildPreReleaseResponse)
     == ::llcpp::fuchsia::device::lifecycle::test::Lifecycle::OnChildPreReleaseResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::device::lifecycle::test::Lifecycle::OnChildPreReleaseResponse, child_id) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::lifecycle::test::TestDevice::AddChildRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::device::lifecycle::test::TestDevice::AddChildRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::lifecycle::test::TestDevice::AddChildRequest)
+    == ::llcpp::fuchsia::device::lifecycle::test::TestDevice::AddChildRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::lifecycle::test::TestDevice::AddChildRequest, init_complete) == 16);
+static_assert(offsetof(::llcpp::fuchsia::device::lifecycle::test::TestDevice::AddChildRequest, init_status) == 20);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::lifecycle::test::TestDevice::AddChildResponse> : public std::true_type {};
@@ -954,6 +1221,22 @@ struct IsFidlMessage<::llcpp::fuchsia::device::lifecycle::test::TestDevice::Remo
 static_assert(sizeof(::llcpp::fuchsia::device::lifecycle::test::TestDevice::RemoveChildResponse)
     == ::llcpp::fuchsia::device::lifecycle::test::TestDevice::RemoveChildResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::device::lifecycle::test::TestDevice::RemoveChildResponse, result) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::lifecycle::test::TestDevice::CompleteChildInitRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::device::lifecycle::test::TestDevice::CompleteChildInitRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::lifecycle::test::TestDevice::CompleteChildInitRequest)
+    == ::llcpp::fuchsia::device::lifecycle::test::TestDevice::CompleteChildInitRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::lifecycle::test::TestDevice::CompleteChildInitRequest, child_id) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::lifecycle::test::TestDevice::CompleteChildInitResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::device::lifecycle::test::TestDevice::CompleteChildInitResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::lifecycle::test::TestDevice::CompleteChildInitResponse)
+    == ::llcpp::fuchsia::device::lifecycle::test::TestDevice::CompleteChildInitResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::lifecycle::test::TestDevice::CompleteChildInitResponse, result) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::lifecycle::test::TestDevice::SubscribeToLifecycleRequest> : public std::true_type {};

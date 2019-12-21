@@ -52,7 +52,12 @@ void DeviceControllerConnection::CompleteCompatibilityTests(
 }
 
 void DeviceControllerConnection::Init(InitCompleter::Sync completer) {
-  // TODO(jocelyndang): implement this.
+  ZX_ASSERT(this->dev()->init_cb == nullptr);
+  this->dev()->init_cb = [completer = completer.ToAsync()](zx_status_t status) mutable {
+    completer.Reply(status);
+  };
+  ApiAutoLock lock;
+  devhost_device_init(this->dev());
 }
 
 void DeviceControllerConnection::Suspend(uint32_t flags, SuspendCompleter::Sync completer) {

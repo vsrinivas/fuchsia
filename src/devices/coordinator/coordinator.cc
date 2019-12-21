@@ -502,8 +502,8 @@ zx_status_t Coordinator::AddDevice(const fbl::RefPtr<Device>& parent, zx::channe
                                    zx::channel coordinator, const uint64_t* props_data,
                                    size_t props_count, fbl::StringPiece name, uint32_t protocol_id,
                                    fbl::StringPiece driver_path, fbl::StringPiece args,
-                                   bool invisible, bool do_init, zx::channel client_remote,
-                                   fbl::RefPtr<Device>* new_device) {
+                                   bool invisible, bool has_init, bool always_init,
+                                   zx::channel client_remote, fbl::RefPtr<Device>* new_device) {
   // If this is true, then |name_data|'s size is properly bounded.
   static_assert(fuchsia_device_manager_DEVICE_NAME_MAX == ZX_DEVICE_NAME_MAX);
   static_assert(fuchsia_device_manager_PROPERTIES_MAX <= UINT32_MAX);
@@ -550,11 +550,18 @@ zx_status_t Coordinator::AddDevice(const fbl::RefPtr<Device>& parent, zx::channe
     return ZX_ERR_NO_MEMORY;
   }
 
+  // TODO(fxb/43370): remove this check once init tasks can be enabled for all devices.
+  bool want_init_task = has_init || always_init;
+  // We use the legacy invisible / device_make_visible behavior if the device is added
+  // as invisible and the device has not implemented the init hook.
+  // TODO(fxb/43261): remove |has_init| once device_make_visible() is deprecated.
+  bool init_wait_make_visible = invisible && !has_init;
   fbl::RefPtr<Device> dev;
   zx_status_t status = Device::Create(this, parent, std::move(name_str), std::move(driver_path_str),
                                       std::move(args_str), protocol_id, std::move(props),
                                       std::move(coordinator), std::move(device_controller),
-                                      invisible, do_init, std::move(client_remote), &dev);
+                                      init_wait_make_visible, want_init_task,
+                                      std::move(client_remote), &dev);
   if (status != ZX_OK) {
     return status;
   }
@@ -582,8 +589,8 @@ zx_status_t Coordinator::AddDevice(const fbl::RefPtr<Device>& parent, zx::channe
     }
   }
 
-  // If a device has an init hook, it will be made visible once the hook completes.
-  if (!invisible && !do_init) {
+  // TODO(fxb/43370): remove this once init tasks can be enabled for all devices.
+  if (!invisible && !want_init_task) {
     log(DEVLC, "devcoord: publish %p '%s' props=%zu args='%s' parent=%p\n", dev.get(),
         dev->name().data(), dev->props().size(), dev->args().data(), dev->parent().get());
     status = dev->SignalReadyForBind();
@@ -597,8 +604,13 @@ zx_status_t Coordinator::AddDevice(const fbl::RefPtr<Device>& parent, zx::channe
 }
 
 zx_status_t Coordinator::MakeVisible(const fbl::RefPtr<Device>& dev) {
-  if ((dev->state() == Device::State::kDead) || (dev->state() == Device::State::kInitializing)) {
+  if (dev->state() == Device::State::kDead) {
     return ZX_ERR_BAD_STATE;
+  }
+  // We will make the device visible once the init hook completes.
+  if (dev->state() == Device::State::kInitializing) {
+    dev->clear_wait_make_visible();
+    return ZX_ERR_SHOULD_WAIT;
   }
   if (dev->flags & DEV_CTX_INVISIBLE) {
     dev->flags &= ~DEV_CTX_INVISIBLE;

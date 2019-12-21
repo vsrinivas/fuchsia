@@ -14,10 +14,12 @@ void TestLifecycleDriverChild::DdkRelease() {
   __UNUSED bool dummy = Release();
 }
 
-zx_status_t TestLifecycleDriverChild::Create(zx_device_t* parent,
+zx_status_t TestLifecycleDriverChild::Create(zx_device_t* parent, bool complete_init,
+                                             zx_status_t init_status,
                                              fbl::RefPtr<TestLifecycleDriverChild>* out_device) {
   fbl::AllocChecker ac;
-  auto device = fbl::MakeRefCountedChecked<TestLifecycleDriverChild>(&ac, parent);
+  auto device = fbl::MakeRefCountedChecked<TestLifecycleDriverChild>(
+      &ac, parent, complete_init, init_status);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -31,5 +33,27 @@ zx_status_t TestLifecycleDriverChild::Create(zx_device_t* parent,
   }
   // Hold a reference while devmgr has a pointer to this object.
   device->AddRef();
+  return ZX_OK;
+}
+
+void TestLifecycleDriverChild::DdkInit(ddk::InitTxn txn) {
+  if (complete_init_) {
+    txn.Reply(init_status_);
+  } else {
+    init_txn_ = std::move(txn);
+  }
+}
+
+void TestLifecycleDriverChild::DdkUnbindNew(ddk::UnbindTxn txn) {
+  ZX_ASSERT(!init_txn_);
+  txn.Reply();
+}
+
+zx_status_t TestLifecycleDriverChild::CompleteInit() {
+  if (!init_txn_) {
+    return ZX_ERR_BAD_STATE;
+  }
+  init_txn_->Reply(init_status_);
+  init_txn_ = std::nullopt;
   return ZX_OK;
 }

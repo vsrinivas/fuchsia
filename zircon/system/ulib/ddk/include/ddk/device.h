@@ -95,6 +95,17 @@ typedef struct zx_protocol_device {
   // synchronously in the same thread as the caller.
   zx_status_t (*get_protocol)(void* ctx, uint32_t proto_id, void* protocol);
 
+  //@ ## init
+  // The init hook is called when a device is initially added.
+  //
+  // If implemented, the device is guaranteed to not be unbound before the driver
+  // calls **device_init_reply()** on itself. This allows drivers to safely complete
+  // initialization without explicit synchronization with the unbind hook,
+  // such as adding device metadata or spawning a worker thread.
+  //
+  // The hook is always called from the devhost's main thread.
+  void (*init)(void* ctx);
+
   //@ ## open
   // The open hook is called when a device is opened via the device filesystem,
   // or when an existing open connection to a device is cloned (for example,

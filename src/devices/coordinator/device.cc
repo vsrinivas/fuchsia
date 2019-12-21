@@ -27,8 +27,12 @@
 
 namespace devmgr {
 
+  // TODO(fxb/43370): remove this once init tasks can be enabled for all devices.
+static constexpr bool kEnableAlwaysInit = false;
+
 Device::Device(Coordinator* coord, fbl::String name, fbl::String libname, fbl::String args,
-               fbl::RefPtr<Device> parent, uint32_t protocol_id, zx::channel client_remote)
+               fbl::RefPtr<Device> parent, uint32_t protocol_id, zx::channel client_remote,
+               bool wait_make_visible)
     : coordinator(coord),
       name_(std::move(name)),
       libname_(std::move(libname)),
@@ -36,7 +40,8 @@ Device::Device(Coordinator* coord, fbl::String name, fbl::String libname, fbl::S
       parent_(std::move(parent)),
       protocol_id_(protocol_id),
       publish_task_([this] { coordinator->HandleNewDevice(fbl::RefPtr(this)); }),
-      client_remote_(std::move(client_remote)) {
+      client_remote_(std::move(client_remote)),
+      wait_make_visible_(wait_make_visible) {
   test_reporter = std::make_unique<DriverTestReporter>(name_);
 }
 
@@ -72,7 +77,7 @@ zx_status_t Device::Create(Coordinator* coordinator, const fbl::RefPtr<Device>& 
                            fbl::String name, fbl::String driver_path, fbl::String args,
                            uint32_t protocol_id, fbl::Array<zx_device_prop_t> props,
                            zx::channel coordinator_rpc, zx::channel device_controller_rpc,
-                           bool invisible, bool do_init, zx::channel client_remote,
+                           bool wait_make_visible, bool want_init_task, zx::channel client_remote,
                            fbl::RefPtr<Device>* device) {
   fbl::RefPtr<Device> real_parent;
   // If our parent is a proxy, for the purpose of devfs, we need to work with
@@ -85,7 +90,8 @@ zx_status_t Device::Create(Coordinator* coordinator, const fbl::RefPtr<Device>& 
 
   auto dev = fbl::MakeRefCounted<Device>(coordinator, std::move(name), std::move(driver_path),
                                          std::move(args), real_parent, protocol_id,
-                                         std::move(client_remote));
+                                         std::move(client_remote),
+                                         wait_make_visible);
   if (!dev) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -107,7 +113,10 @@ zx_status_t Device::Create(Coordinator* coordinator, const fbl::RefPtr<Device>& 
 
   // We must mark the device as invisible before publishing so
   // that we don't send "device added" notifications.
-  if (invisible || do_init) {
+  // The init task must complete before marking the device visible.
+  // If |wait_make_visible| is true, we also wait for a device_make_visible call.
+  // TODO(fxb/43370): this check should be removed once init tasks apply to all devices.
+  if (wait_make_visible || want_init_task) {
     dev->flags |= DEV_CTX_INVISIBLE;
   }
 
@@ -126,7 +135,7 @@ zx_status_t Device::Create(Coordinator* coordinator, const fbl::RefPtr<Device>& 
   real_parent->children_.push_back(dev.get());
   log(DEVLC, "devcoord: dev %p name='%s' (child)\n", real_parent.get(), real_parent->name().data());
 
-  if (do_init) {
+  if (want_init_task) {
     dev->CreateInitTask();
   }
 
@@ -770,18 +779,18 @@ void Device::AddDevice(::zx::channel coordinator, ::zx::channel device_controlle
                        uint32_t protocol_id, ::fidl::StringView driver_path_view,
                        ::fidl::StringView args_view,
                        llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config,
-                       ::zx::channel client_remote, AddDeviceCompleter::Sync completer) {
+                       bool has_init, ::zx::channel client_remote,
+                       AddDeviceCompleter::Sync completer) {
   auto parent = fbl::RefPtr(this);
   fbl::StringPiece name(name_view.data(), name_view.size());
   fbl::StringPiece driver_path(driver_path_view.data(), driver_path_view.size());
   fbl::StringPiece args(args_view.data(), args_view.size());
 
   fbl::RefPtr<Device> device;
-  // TODO(jocelyndang): |do_init| should be supplied from devhost.
   zx_status_t status = parent->coordinator->AddDevice(
       parent, std::move(device_controller_client), std::move(coordinator), props.data(),
       props.count(), name, protocol_id, driver_path, args, false /* invisible */,
-      false /* do_init */, std::move(client_remote), &device);
+      has_init, kEnableAlwaysInit, std::move(client_remote), &device);
   if (device != nullptr &&
       (device_add_config &
        llcpp::fuchsia::device::manager::AddDeviceConfig::ALLOW_MULTI_COMPOSITE)) {
@@ -797,7 +806,7 @@ void Device::AddDevice(::zx::channel coordinator, ::zx::channel device_controlle
         .local_device_id = local_id};
     response.set_response(&resp);
     completer.Reply(std::move(response));
-  }  
+  }
 }
 
 void Device::PublishMetadata(::fidl::StringView device_path, uint32_t key,
@@ -823,7 +832,8 @@ void Device::PublishMetadata(::fidl::StringView device_path, uint32_t key,
 void Device::AddDeviceInvisible(::zx::channel coordinator, ::zx::channel device_controller_client,
                                 ::fidl::VectorView<uint64_t> props, ::fidl::StringView name_view,
                                 uint32_t protocol_id, ::fidl::StringView driver_path_view,
-                                ::fidl::StringView args_view, ::zx::channel client_remote,
+                                ::fidl::StringView args_view, bool has_init,
+                                ::zx::channel client_remote,
                                 AddDeviceInvisibleCompleter::Sync completer) {
   auto parent = fbl::RefPtr(this);
   fbl::StringPiece name(name_view.data(), name_view.size());
@@ -831,11 +841,10 @@ void Device::AddDeviceInvisible(::zx::channel coordinator, ::zx::channel device_
   fbl::StringPiece args(args_view.data(), args_view.size());
 
   fbl::RefPtr<Device> device;
-  // TODO(jocelyndang): |do_init| should be supplied from devhost.
   zx_status_t status = parent->coordinator->AddDevice(
       parent, std::move(device_controller_client), std::move(coordinator), props.data(),
       props.count(), name, protocol_id, driver_path, args, true /* invisible */,
-      false /* do_init */, std::move(client_remote), &device);
+      has_init, kEnableAlwaysInit, std::move(client_remote), &device);
   uint64_t local_id = device != nullptr ? device->local_id() : 0;
   llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result response;
   if (status != ZX_OK) {

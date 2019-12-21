@@ -450,6 +450,44 @@ zx_status_t devhost_device_add(const fbl::RefPtr<zx_device_t>& dev,
   return ZX_OK;
 }
 
+zx_status_t devhost_device_init(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
+  if (dev->flags & DEV_FLAG_INITIALIZING) {
+    return ZX_ERR_BAD_STATE;
+  }
+  // Call dev's init op.
+  if (dev->ops->init) {
+    dev->flags |= DEV_FLAG_INITIALIZING;
+    ApiAutoRelock relock;
+    dev->InitOp();
+  } else {
+    dev->init_cb(ZX_OK);
+  }
+  return ZX_OK;
+}
+
+void devhost_device_init_reply(const fbl::RefPtr<zx_device_t>& dev,
+                               zx_status_t status,
+                               const device_init_reply_args_t* args) REQ_DM_LOCK {
+  if (!(dev->flags & DEV_FLAG_INITIALIZING)) {
+    ZX_PANIC("device: %p(%s): cannot reply to init, flags are: (%x)\n",
+             dev.get(), dev->name, dev->flags);
+  }
+  if (status == ZX_OK) {
+    if (args && args->power_states && args->power_state_count != 0) {
+      dev->SetPowerStates(args->power_states, args->power_state_count);
+    }
+    if (args && args->performance_states && (args->performance_state_count != 0)) {
+      dev->SetPerformanceStates(args->performance_states, args->performance_state_count);
+    }
+  }
+  if (dev->init_cb) {
+    dev->init_cb(status);
+  } else {
+    ZX_PANIC("device: %p(%s): cannot reply to init, no callback set, flags are 0x%x\n",
+             dev.get(), dev->name, dev->flags);
+  }
+}
+
 #define REMOVAL_BAD_FLAGS (DEV_FLAG_DEAD | DEV_FLAG_BUSY | DEV_FLAG_INSTANCE | DEV_FLAG_MULTI_BIND)
 
 static const char* removal_problem(uint32_t flags) {

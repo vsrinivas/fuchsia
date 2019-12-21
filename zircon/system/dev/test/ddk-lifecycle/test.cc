@@ -37,26 +37,50 @@ class LifecycleTest : public zxtest::Test {
     ASSERT_GT(fd.get(), 0);
     ASSERT_OK(fdio_get_service_handle(fd.release(), chan_.reset_and_get_address()));
     ASSERT_NE(chan_.get(), ZX_HANDLE_INVALID);
+
+    // Subscribe to the device lifecycle events.
+    zx::channel local, remote;
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+
+    auto result = TestDevice::Call::SubscribeToLifecycle(
+        zx::unowned(chan_), std::move(remote));
+    ASSERT_OK(result.status());
+    ASSERT_FALSE(result->result.is_err());
+    lifecycle_chan_ = std::move(local);
   }
 
  protected:
+  void WaitPreRelease(uint64_t child_id);
+
   zx::channel chan_;
   IsolatedDevmgr devmgr_;
+
+  zx::channel lifecycle_chan_;
 };
 
+void LifecycleTest::WaitPreRelease(uint64_t child_id) {
+  bool removed = false;
+  uint64_t device_id = 0;
+  while (!removed) {
+    Lifecycle::EventHandlers event_handlers;
+    event_handlers.on_child_pre_release = [&](uint64_t id) -> zx_status_t {
+      device_id = id;
+      removed = true;
+      return ZX_OK;
+    };
+    ASSERT_OK(Lifecycle::Call::HandleEvents(
+        zx::unowned_channel(lifecycle_chan_), std::move(event_handlers)));
+  }
+  ASSERT_EQ(device_id, child_id);
+}
+
 TEST_F(LifecycleTest, ChildPreRelease) {
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
-
-  auto result = TestDevice::Call::SubscribeToLifecycle(zx::unowned(chan_), std::move(remote));
-  ASSERT_OK(result.status());
-  ASSERT_FALSE(result->result.is_err());
-
   // Add some child devices and store the returned ids.
   std::vector<uint64_t> child_ids;
   const uint32_t num_children = 10;
   for (unsigned int i = 0; i < num_children; i++) {
-    auto result = TestDevice::Call::AddChild(zx::unowned(chan_));
+    auto result = TestDevice::Call::AddChild(zx::unowned(chan_), true /* complete_init */,
+                                             ZX_OK /* init_status */);
     ASSERT_OK(result.status());
     ASSERT_FALSE(result->result.is_err());
     child_ids.push_back(result->result.response().child_id);
@@ -69,18 +93,40 @@ TEST_F(LifecycleTest, ChildPreRelease) {
     ASSERT_FALSE(result->result.is_err());
 
     // Wait for the child pre-release notification.
-    bool removed = false;
-    uint64_t device_id = 0;
-    while (!removed) {
-      Lifecycle::EventHandlers event_handlers;
-      event_handlers.on_child_pre_release = [&](uint64_t id) -> zx_status_t {
-        device_id = id;
-        removed = true;
-        return ZX_OK;
-      };
-      ASSERT_OK(Lifecycle::Call::HandleEvents(
-          zx::unowned_channel(local), std::move(event_handlers)));
-    }
-    ASSERT_EQ(device_id, child_id);
+    ASSERT_NO_FATAL_FAILURES(WaitPreRelease(child_id));
   }
+}
+
+TEST_F(LifecycleTest, Init) {
+  // Add a child device that does not complete its init hook yet.
+  uint64_t child_id;
+  auto result = TestDevice::Call::AddChild(zx::unowned(chan_), false /* complete_init */,
+                                           ZX_OK /* init_status */);
+  ASSERT_OK(result.status());
+  ASSERT_FALSE(result->result.is_err());
+  child_id = result->result.response().child_id;
+
+  auto remove_result = TestDevice::Call::RemoveChild(zx::unowned(chan_), child_id);
+  ASSERT_OK(remove_result.status());
+  ASSERT_FALSE(remove_result->result.is_err());
+
+  auto init_result = TestDevice::Call::CompleteChildInit(zx::unowned(chan_), child_id);
+  ASSERT_OK(init_result.status());
+  ASSERT_FALSE(init_result->result.is_err());
+
+  // Wait for the child pre-release notification.
+  ASSERT_NO_FATAL_FAILURES(WaitPreRelease(child_id));
+}
+
+// Tests that the child device is removed if init fails.
+TEST_F(LifecycleTest, FailedInit) {
+  uint64_t child_id;
+  auto result = TestDevice::Call::AddChild(zx::unowned(chan_), true /* complete_init */,
+                                           ZX_ERR_BAD_STATE /* init_status */);
+  ASSERT_OK(result.status());
+  ASSERT_FALSE(result->result.is_err());
+  child_id = result->result.response().child_id;
+
+  // Wait for the child pre-release notification.
+  ASSERT_NO_FATAL_FAILURES(WaitPreRelease(child_id));
 }

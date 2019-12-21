@@ -27,7 +27,8 @@ using llcpp::fuchsia::device::power::test::TestDevice;
 class TestPowerDriverChild;
 using DeviceType =
     ddk::Device<TestPowerDriverChild, ddk::UnbindableNew, ddk::Messageable, ddk::SuspendableNew,
-                ddk::ResumableNew, ddk::PerformanceTunable, ddk::AutoSuspendable>;
+                ddk::ResumableNew, ddk::PerformanceTunable, ddk::AutoSuspendable,
+                ddk::Initializable>;
 class TestPowerDriverChild : public DeviceType, public TestDevice::Interface {
  public:
   TestPowerDriverChild(zx_device_t* parent) : DeviceType(parent) {}
@@ -52,12 +53,22 @@ class TestPowerDriverChild : public DeviceType, public TestDevice::Interface {
     ::llcpp::fuchsia::device::power::test::TestDevice::Dispatch(this, msg, &transaction);
     return transaction.Status();
   }
-
+  void DdkInit(ddk::InitTxn txn);
   void DdkRelease() { delete this; }
   void DdkSuspendNew(ddk::SuspendTxn txn);
   zx_status_t DdkSetPerformanceState(uint32_t requested_state, uint32_t* out_state);
   zx_status_t DdkResumeNew(uint8_t requested_state, uint8_t* out_state);
   zx_status_t DdkConfigureAutoSuspend(bool enable, uint8_t deepest_sleep_state);
+
+  void SavePowerStateInfo(std::unique_ptr<device_power_state_info_t[]> states,
+                          uint8_t states_count,
+                          std::unique_ptr<device_performance_state_info_t[]> perf_states,
+                          uint8_t perf_states_count) {
+    states_ = std::move(states);
+    states_count_ = states_count;
+    perf_states_ = std::move(perf_states);
+    perf_states_count_ = perf_states_count;
+  }
 
  private:
   uint8_t current_power_state_ = 0;
@@ -65,7 +76,16 @@ class TestPowerDriverChild : public DeviceType, public TestDevice::Interface {
   uint8_t auto_suspend_sleep_state_ = 0;
   bool auto_suspend_enabled_ = false;
   uint8_t current_suspend_reason_ = 0;
+
+  std::unique_ptr<device_power_state_info_t[]> states_;
+  uint8_t states_count_ = 0;
+  std::unique_ptr<device_performance_state_info_t[]> perf_states_;
+  uint8_t perf_states_count_ = 0;
 };
+
+void TestPowerDriverChild::DdkInit(ddk::InitTxn txn) {
+  txn.Reply(ZX_OK, states_.get(), states_count_, perf_states_.get(), perf_states_count_);
+}
 
 void TestPowerDriverChild::DdkSuspendNew(ddk::SuspendTxn txn) {
   current_power_state_ = txn.requested_state();
@@ -128,8 +148,9 @@ void TestPowerDriverChild::AddDeviceWithPowerArgs(
     status = child2->DdkAdd("power-test-child-2", 0, nullptr, 0, 0, nullptr, ZX_HANDLE_INVALID,
                             states.get(), count, performance_states.get(), perf_state_count);
   } else {
+    child2->SavePowerStateInfo(std::move(states), count,
+                               std::move(performance_states), perf_state_count);
     status = child2->DdkAdd("power-test-child-2", DEVICE_ADD_INVISIBLE);
-    child2->DdkMakeVisible(states.get(), count, performance_states.get(), perf_state_count);
   }
   if (status != ZX_OK) {
     completer.ReplyError(status);

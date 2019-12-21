@@ -578,7 +578,8 @@ zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& parent,
                            prop_count),
         ::fidl::StringView(child->name, strlen(child->name)), child->protocol_id,
         ::fidl::StringView(child->driver->libname()),
-        ::fidl::StringView(proxy_args, proxy_args_len), std::move(client_remote));
+        ::fidl::StringView(proxy_args, proxy_args_len), child->ops->init /* has_init */,
+        std::move(client_remote));
     status = response.status();
     if (status == ZX_OK) {
       if (response.Unwrap()->result.is_response()) {
@@ -596,7 +597,7 @@ zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& parent,
         ::fidl::StringView(child->name, strlen(child->name)), child->protocol_id,
         ::fidl::StringView(child->driver->libname()),
         ::fidl::StringView(proxy_args, proxy_args_len), add_device_config,
-        std::move(client_remote));
+        child->ops->init /* has_init */, std::move(client_remote));
     status = response.status();
     if (status == ZX_OK) {
       if (response.Unwrap()->result.is_response()) {
@@ -640,6 +641,8 @@ static void log_rpc_result(const char* opname, zx_status_t status,
 
 void devhost_make_visible(const fbl::RefPtr<zx_device_t>& dev,
                           const device_make_visible_args_t* args) {
+  ZX_ASSERT_MSG(!dev->ops->init, "Cannot call device_make_visible if init hook is implemented."
+                "The device will automatically be made visible once the init hook is replied to.");
   const zx::channel& rpc = *dev->coordinator_rpc;
   if (!rpc.is_valid()) {
     return;

@@ -3896,14 +3896,15 @@ class Coordinator final {
     ::fidl::StringView driver_path;
     ::fidl::StringView args;
     ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config;
+    bool has_init;
     ::zx::channel client_remote;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_device_manager_CoordinatorAddDeviceRequestTable;
     static constexpr const fidl_type_t* AltType = &fuchsia_device_manager_CoordinatorAddDeviceRequestTable;
     static constexpr uint32_t MaxNumHandles = 3;
-    static constexpr uint32_t PrimarySize = 104;
+    static constexpr uint32_t PrimarySize = 112;
     static constexpr uint32_t MaxOutOfLine = 4128;
-    static constexpr uint32_t AltPrimarySize = 104;
+    static constexpr uint32_t AltPrimarySize = 112;
     static constexpr uint32_t AltMaxOutOfLine = 4128;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
@@ -3939,6 +3940,7 @@ class Coordinator final {
     uint32_t protocol_id;
     ::fidl::StringView driver_path;
     ::fidl::StringView args;
+    bool has_init;
     ::zx::channel client_remote;
 
     static constexpr const fidl_type_t* Type = &v1_fuchsia_device_manager_CoordinatorAddDeviceInvisibleRequestTable;
@@ -4352,7 +4354,7 @@ class Coordinator final {
     class AddDevice_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      AddDevice_Impl(::zx::unowned_channel _client_end, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, ::zx::channel client_remote);
+      AddDevice_Impl(::zx::unowned_channel _client_end, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, bool has_init, ::zx::channel client_remote);
       ~AddDevice_Impl() = default;
       AddDevice_Impl(AddDevice_Impl&& other) = default;
       AddDevice_Impl& operator=(AddDevice_Impl&& other) = default;
@@ -4368,7 +4370,7 @@ class Coordinator final {
     class AddDeviceInvisible_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      AddDeviceInvisible_Impl(::zx::unowned_channel _client_end, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote);
+      AddDeviceInvisible_Impl(::zx::unowned_channel _client_end, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, bool has_init, ::zx::channel client_remote);
       ~AddDeviceInvisible_Impl() = default;
       AddDeviceInvisible_Impl(AddDeviceInvisible_Impl&& other) = default;
       AddDeviceInvisible_Impl& operator=(AddDeviceInvisible_Impl&& other) = default;
@@ -4606,7 +4608,7 @@ class Coordinator final {
     class AddDevice_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      AddDevice_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, ::zx::channel client_remote, ::fidl::BytePart _response_buffer);
+      AddDevice_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, bool has_init, ::zx::channel client_remote, ::fidl::BytePart _response_buffer);
       ~AddDevice_Impl() = default;
       AddDevice_Impl(AddDevice_Impl&& other) = default;
       AddDevice_Impl& operator=(AddDevice_Impl&& other) = default;
@@ -4622,7 +4624,7 @@ class Coordinator final {
     class AddDeviceInvisible_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      AddDeviceInvisible_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote, ::fidl::BytePart _response_buffer);
+      AddDeviceInvisible_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, bool has_init, ::zx::channel client_remote, ::fidl::BytePart _response_buffer);
       ~AddDeviceInvisible_Impl() = default;
       AddDeviceInvisible_Impl(AddDeviceInvisible_Impl&& other) = default;
       AddDeviceInvisible_Impl& operator=(AddDeviceInvisible_Impl&& other) = default;
@@ -4870,7 +4872,7 @@ class Coordinator final {
     // will be passed to the device as an open connection for the client.
     // On success, the returned `local_device_id` is the identifier assigned by devmgr.
     // Allocates 40 bytes of response buffer on the stack. Request is heap-allocated.
-    ResultOf::AddDevice AddDevice(::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, ::zx::channel client_remote);
+    ResultOf::AddDevice AddDevice(::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, bool has_init, ::zx::channel client_remote);
 
     // Record the addition of a new device that can be communicated with via `rpc`.
     // For binding purposes, it is has properties `props`. `name` and `driver_path`
@@ -4880,19 +4882,19 @@ class Coordinator final {
     // will be passed to the device as an open connection for the client.
     // On success, the returned `local_device_id` is the identifier assigned by devmgr.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::AddDevice AddDevice(::fidl::BytePart _request_buffer, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, ::zx::channel client_remote, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::AddDevice AddDevice(::fidl::BytePart _request_buffer, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, bool has_init, ::zx::channel client_remote, ::fidl::BytePart _response_buffer);
 
     // Behaves as AddDevice, but marks the device as initially invisible.  This means
     // that it will not be visible to other devices or the devfs until it is later marked
     // visible (via MakeVisible).
     // Allocates 40 bytes of response buffer on the stack. Request is heap-allocated.
-    ResultOf::AddDeviceInvisible AddDeviceInvisible(::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote);
+    ResultOf::AddDeviceInvisible AddDeviceInvisible(::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, bool has_init, ::zx::channel client_remote);
 
     // Behaves as AddDevice, but marks the device as initially invisible.  This means
     // that it will not be visible to other devices or the devfs until it is later marked
     // visible (via MakeVisible).
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::AddDeviceInvisible AddDeviceInvisible(::fidl::BytePart _request_buffer, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::AddDeviceInvisible AddDeviceInvisible(::fidl::BytePart _request_buffer, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, bool has_init, ::zx::channel client_remote, ::fidl::BytePart _response_buffer);
 
     // Requests the devcoordinator schedule the removal of this device,
     // and the unbinding of its children.
@@ -5042,7 +5044,7 @@ class Coordinator final {
     // will be passed to the device as an open connection for the client.
     // On success, the returned `local_device_id` is the identifier assigned by devmgr.
     // Allocates 40 bytes of response buffer on the stack. Request is heap-allocated.
-    static ResultOf::AddDevice AddDevice(::zx::unowned_channel _client_end, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, ::zx::channel client_remote);
+    static ResultOf::AddDevice AddDevice(::zx::unowned_channel _client_end, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, bool has_init, ::zx::channel client_remote);
 
     // Record the addition of a new device that can be communicated with via `rpc`.
     // For binding purposes, it is has properties `props`. `name` and `driver_path`
@@ -5052,19 +5054,19 @@ class Coordinator final {
     // will be passed to the device as an open connection for the client.
     // On success, the returned `local_device_id` is the identifier assigned by devmgr.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::AddDevice AddDevice(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, ::zx::channel client_remote, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::AddDevice AddDevice(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, bool has_init, ::zx::channel client_remote, ::fidl::BytePart _response_buffer);
 
     // Behaves as AddDevice, but marks the device as initially invisible.  This means
     // that it will not be visible to other devices or the devfs until it is later marked
     // visible (via MakeVisible).
     // Allocates 40 bytes of response buffer on the stack. Request is heap-allocated.
-    static ResultOf::AddDeviceInvisible AddDeviceInvisible(::zx::unowned_channel _client_end, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote);
+    static ResultOf::AddDeviceInvisible AddDeviceInvisible(::zx::unowned_channel _client_end, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, bool has_init, ::zx::channel client_remote);
 
     // Behaves as AddDevice, but marks the device as initially invisible.  This means
     // that it will not be visible to other devices or the devfs until it is later marked
     // visible (via MakeVisible).
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::AddDeviceInvisible AddDeviceInvisible(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::AddDeviceInvisible AddDeviceInvisible(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, bool has_init, ::zx::channel client_remote, ::fidl::BytePart _response_buffer);
 
     // Requests the devcoordinator schedule the removal of this device,
     // and the unbinding of its children.
@@ -5298,7 +5300,7 @@ class Coordinator final {
 
     using AddDeviceCompleter = ::fidl::Completer<AddDeviceCompleterBase>;
 
-    virtual void AddDevice(::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, ::zx::channel client_remote, AddDeviceCompleter::Sync _completer) = 0;
+    virtual void AddDevice(::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, bool has_init, ::zx::channel client_remote, AddDeviceCompleter::Sync _completer) = 0;
 
     class AddDeviceInvisibleCompleterBase : public _Base {
      public:
@@ -5315,7 +5317,7 @@ class Coordinator final {
 
     using AddDeviceInvisibleCompleter = ::fidl::Completer<AddDeviceInvisibleCompleterBase>;
 
-    virtual void AddDeviceInvisible(::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote, AddDeviceInvisibleCompleter::Sync _completer) = 0;
+    virtual void AddDeviceInvisible(::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, bool has_init, ::zx::channel client_remote, AddDeviceInvisibleCompleter::Sync _completer) = 0;
 
     using ScheduleRemoveCompleter = ::fidl::Completer<>;
 
@@ -5987,7 +5989,8 @@ static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddDevice
 static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddDeviceRequest, driver_path) == 64);
 static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddDeviceRequest, args) == 80);
 static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddDeviceRequest, device_add_config) == 96);
-static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddDeviceRequest, client_remote) == 100);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddDeviceRequest, has_init) == 100);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddDeviceRequest, client_remote) == 104);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::manager::Coordinator::AddDeviceResponse> : public std::true_type {};
@@ -6010,7 +6013,8 @@ static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddDevice
 static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddDeviceInvisibleRequest, protocol_id) == 56);
 static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddDeviceInvisibleRequest, driver_path) == 64);
 static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddDeviceInvisibleRequest, args) == 80);
-static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddDeviceInvisibleRequest, client_remote) == 96);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddDeviceInvisibleRequest, has_init) == 96);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddDeviceInvisibleRequest, client_remote) == 100);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::manager::Coordinator::AddDeviceInvisibleResponse> : public std::true_type {};

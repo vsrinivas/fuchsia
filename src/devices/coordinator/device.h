@@ -90,7 +90,7 @@ class Device : public fbl::RefCounted<Device>,
   void AddDevice(::zx::channel coordinator, ::zx::channel device_controller,
                  ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id,
                  ::fidl::StringView driver_path, ::fidl::StringView args,
-                 llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config,
+                 llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, bool has_init,
                  ::zx::channel client_remote, AddDeviceCompleter::Sync _completer) override;
   void ScheduleRemove(bool unbind_self, ScheduleRemoveCompleter::Sync _completer) override;
   void AddCompositeDevice(::fidl::StringView name,
@@ -102,7 +102,7 @@ class Device : public fbl::RefCounted<Device>,
   void AddDeviceInvisible(::zx::channel coordinator, ::zx::channel device_controller,
                           ::fidl::VectorView<uint64_t> props, ::fidl::StringView name,
                           uint32_t protocol_id, ::fidl::StringView driver_path,
-                          ::fidl::StringView args, ::zx::channel client_remote,
+                          ::fidl::StringView args, bool has_init, ::zx::channel client_remote,
                           AddDeviceInvisibleCompleter::Sync _completer) override;
   void MakeVisible(MakeVisibleCompleter::Sync _completer) override;
   void BindDevice(::fidl::StringView driver_path, BindDeviceCompleter::Sync _completer) override;
@@ -264,7 +264,8 @@ class Device : public fbl::RefCounted<Device>,
   };
 
   Device(Coordinator* coord, fbl::String name, fbl::String libname, fbl::String args,
-         fbl::RefPtr<Device> parent, uint32_t protocol_id, zx::channel client_remote);
+         fbl::RefPtr<Device> parent, uint32_t protocol_id, zx::channel client_remote,
+         bool wait_make_visible = false);
   ~Device();
 
   // Create a new device with the given parameters.  This sets up its
@@ -275,7 +276,7 @@ class Device : public fbl::RefCounted<Device>,
                             fbl::String name, fbl::String driver_path, fbl::String args,
                             uint32_t protocol_id, fbl::Array<zx_device_prop_t> props,
                             zx::channel coordinator_rpc, zx::channel device_controller_rpc,
-                            bool invisible, bool do_init, zx::channel client_remote,
+                            bool wait_make_visible, bool want_init_task, zx::channel client_remote,
                             fbl::RefPtr<Device>* device);
   static zx_status_t CreateComposite(Coordinator* coordinator, Devhost* devhost,
                                      const CompositeDevice& composite, zx::channel coordinator_rpc,
@@ -473,6 +474,9 @@ class Device : public fbl::RefCounted<Device>,
   void set_state(Device::State state) { state_ = state; }
   State state() const { return state_; }
 
+  void clear_wait_make_visible() { wait_make_visible_ = false; }
+  bool wait_make_visible() const { return wait_make_visible_; }
+
   void inc_num_removal_attempts() { num_removal_attempts_++; }
   size_t num_removal_attempts() const { return num_removal_attempts_; }
 
@@ -631,6 +635,10 @@ class Device : public fbl::RefCounted<Device>,
   // For attaching as an open connection to the proxy device,
   // or once the device becomes visible.
   zx::channel client_remote_;
+
+  // If true, we should only make the device visible after DdkMakeVisible is called
+  // (and after the init task has completed).
+  bool wait_make_visible_ = false;
 
   // For compatibility tests.
   fbl::Mutex test_state_lock_;

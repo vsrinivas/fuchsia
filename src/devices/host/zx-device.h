@@ -54,6 +54,8 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
 
   static zx_status_t Create(fbl::RefPtr<zx_device>* out_dev);
 
+  void InitOp() { Dispatch(ops->init); }
+
   zx_status_t OpenOp(zx_device_t** dev_out, uint32_t flags) {
     return Dispatch(ops->open, ZX_OK, dev_out, flags);
   }
@@ -145,6 +147,8 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
   // The RPC channel is owned by |conn|
   // fuchsia.device.manager.Coordinator
   zx::unowned_channel coordinator_rpc;
+
+  fit::callback<void(zx_status_t)> init_cb;
 
   fit::callback<void(zx_status_t)> removal_cb;
 
@@ -308,6 +312,7 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
 
 #define DEV_FLAG_DEAD                  0x00000001  // this device has been removed and
                                                    // is safe for ref0 and release()
+#define DEV_FLAG_INITIALIZING          0x00000002  // device is being initialized
 #define DEV_FLAG_UNBINDABLE            0x00000004  // nobody may bind to this device
 #define DEV_FLAG_BUSY                  0x00000010  // device being created
 #define DEV_FLAG_INSTANCE              0x00000020  // this device was created-on-open

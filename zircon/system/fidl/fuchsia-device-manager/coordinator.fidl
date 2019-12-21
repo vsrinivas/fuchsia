@@ -197,7 +197,7 @@ protocol Coordinator {
               vector<DeviceProperty>:PROPERTIES_MAX props,
               string:DEVICE_NAME_MAX name, uint32 protocol_id,
               string:DEVICE_PATH_MAX? driver_path, string:DEVICE_ARGS_MAX? args,
-              AddDeviceConfig device_add_config,
+              AddDeviceConfig device_add_config, bool has_init,
               handle<channel>? client_remote)
         -> (LocalDeviceId local_device_id) error zx.status;
 
@@ -208,7 +208,8 @@ protocol Coordinator {
                        vector<DeviceProperty>:PROPERTIES_MAX props,
                        string:DEVICE_NAME_MAX name, uint32 protocol_id,
                        string:DEVICE_PATH_MAX? driver_path,
-                       string:DEVICE_ARGS_MAX? args, handle<channel>? client_remote)
+                       string:DEVICE_ARGS_MAX? args, bool has_init,
+                       handle<channel>? client_remote)
         -> (LocalDeviceId local_device_id) error zx.status;
 
     /// Requests the devcoordinator schedule the removal of this device,

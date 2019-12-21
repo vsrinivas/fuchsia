@@ -16,11 +16,14 @@ __EXPORT zx_status_t device_remove(zx_device_t* dev) { __builtin_abort(); }
 
 __EXPORT zx_status_t device_rebind(zx_device_t* dev) { __builtin_abort(); }
 
-__EXPORT void device_make_visible(zx_device_t* dev, const device_make_visible_args_t* args) {
+__EXPORT void device_make_visible(zx_device_t* dev, const device_init_reply_args_t* args) {
   __builtin_abort();
 }
 
 __EXPORT void device_async_remove(zx_device_t* dev) { __builtin_abort(); }
+
+__EXPORT void device_init_reply(zx_device_t* dev, zx_status_t status,
+                                const device_make_visible_args_t* args) { __builtin_abort(); }
 
 __EXPORT void device_unbind_reply(zx_device_t* dev) { __builtin_abort(); }
 

@@ -12,6 +12,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddktl/device-internal.h>
+#include <ddktl/init-txn.h>
 #include <ddktl/suspend-txn.h>
 #include <ddktl/unbind-txn.h>
 
@@ -38,6 +39,8 @@
 // +-------------------------+----------------------------------------------------+
 // | ddk::GetProtocolable    | zx_status_t DdkGetProtocol(uint32_t proto_id,      |
 // |                         |                            void* out)              |
+// |                         |                                                    |
+// | ddk::Initializable      | void DdkInit(ddk::InitTxn txn)                     |
 // |                         |                                                    |
 // | ddk::Openable           | zx_status_t DdkOpen(zx_device_t** dev_out,         |
 // |                         |                     uint32_t flags)                |
@@ -156,6 +159,22 @@ class GetProtocolable : public base_mixin {
  private:
   static zx_status_t GetProtocol(void* ctx, uint32_t proto_id, void* out) {
     return static_cast<D*>(ctx)->DdkGetProtocol(proto_id, out);
+  }
+};
+
+template <typename D>
+class Initializable : public base_mixin {
+ protected:
+  static constexpr void InitOp(zx_protocol_device_t* proto) {
+    internal::CheckInitializable<D>();
+    proto->init = Init;
+  }
+
+ private:
+  static void Init(void* ctx) {
+    auto dev = static_cast<D*>(ctx);
+    InitTxn txn(dev->zxdev());
+    dev->DdkInit(std::move(txn));
   }
 };
 
@@ -538,8 +557,8 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
 // Convenience type for implementations that would like to override all
 // zx_protocol_device_t methods.
 template <class D>
-using FullDevice = Device<D, GetProtocolable, Openable, Closable, UnbindableNew, Readable, Writable,
-                          GetSizable, Suspendable, Resumable, Rxrpcable>;
+using FullDevice = Device<D, GetProtocolable, Initializable, Openable, Closable, UnbindableNew,
+                          Readable, Writable, GetSizable, Suspendable, Resumable, Rxrpcable>;
 
 }  // namespace ddk
 

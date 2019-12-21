@@ -43,6 +43,7 @@ class MockDevice : public MockDeviceType {
   // Device protocol implementation.
   void DdkRelease();
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
+  void DdkInit(ddk::InitTxn txn) { txn.Reply(ZX_OK); }
   zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
   zx_status_t DdkClose(uint32_t flags);
   void DdkUnbindNew(ddk::UnbindTxn txn);

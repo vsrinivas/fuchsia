@@ -163,6 +163,13 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
   return r;
 }
 
+__EXPORT void device_init_reply(zx_device_t* dev, zx_status_t status,
+                                const device_init_reply_args_t* args) {
+  ApiAutoLock lock;
+  fbl::RefPtr<zx_device_t> dev_ref(dev);
+  devhost_device_init_reply(dev_ref, status, args);
+}
+
 __EXPORT zx_status_t device_remove_deprecated(zx_device_t* dev) {
   ApiAutoLock lock;
   // The leaked reference in device_add_from_driver() will be recovered when

@@ -22,6 +22,12 @@ void ::llcpp::fuchsia::device::lifecycle::test::TestDevice_RemoveChild_Result::S
   static_assert(offsetof(TestDevice_RemoveChild_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
 }
 
+void ::llcpp::fuchsia::device::lifecycle::test::TestDevice_CompleteChildInit_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(sizeof(TestDevice_CompleteChildInit_Result) == sizeof(fidl_xunion_t));
+  static_assert(offsetof(TestDevice_CompleteChildInit_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
+  static_assert(offsetof(TestDevice_CompleteChildInit_Result, envelope_) == offsetof(fidl_xunion_t, envelope));
+}
+
 void ::llcpp::fuchsia::device::lifecycle::test::TestDevice_AddChild_Result::SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(TestDevice_AddChild_Result) == sizeof(fidl_xunion_t));
   static_assert(offsetof(TestDevice_AddChild_Result, ordinal_) == offsetof(fidl_xunion_t, tag));
@@ -204,6 +210,13 @@ extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDeviceRemoveChild
 extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDeviceRemoveChildResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDeviceRemoveChildResponseTable;
 [[maybe_unused]]
+constexpr uint64_t kTestDevice_CompleteChildInit_Ordinal = 0x2d7bf2ad00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kTestDevice_CompleteChildInit_GenOrdinal = 0x5004816bf608d448lu;
+extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDeviceCompleteChildInitRequestTable;
+extern "C" const fidl_type_t fuchsia_device_lifecycle_test_TestDeviceCompleteChildInitResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDeviceCompleteChildInitResponseTable;
+[[maybe_unused]]
 constexpr uint64_t kTestDevice_SubscribeToLifecycle_Ordinal = 0x41ac589900000000lu;
 [[maybe_unused]]
 constexpr uint64_t kTestDevice_SubscribeToLifecycle_GenOrdinal = 0x650868f21ef733bflu;
@@ -213,51 +226,54 @@ extern "C" const fidl_type_t v1_fuchsia_device_lifecycle_test_TestDeviceSubscrib
 
 }  // namespace
 template <>
-TestDevice::ResultOf::AddChild_Impl<TestDevice::AddChildResponse>::AddChild_Impl(::zx::unowned_channel _client_end) {
+TestDevice::ResultOf::AddChild_Impl<TestDevice::AddChildResponse>::AddChild_Impl(::zx::unowned_channel _client_end, bool init_complete, int32_t init_status) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddChildRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
   auto& _write_bytes_array = _write_bytes_inlined;
   uint8_t* _write_bytes = _write_bytes_array.view().data();
   memset(_write_bytes, 0, AddChildRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<AddChildRequest*>(_write_bytes);
+  _request.init_complete = std::move(init_complete);
+  _request.init_status = std::move(init_status);
   ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(AddChildRequest));
   ::fidl::DecodedMessage<AddChildRequest> _decoded_request(std::move(_request_bytes));
   Super::SetResult(
-      TestDevice::InPlace::AddChild(std::move(_client_end), Super::response_buffer()));
+      TestDevice::InPlace::AddChild(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-TestDevice::ResultOf::AddChild TestDevice::SyncClient::AddChild() {
-    return ResultOf::AddChild(::zx::unowned_channel(this->channel_));
+TestDevice::ResultOf::AddChild TestDevice::SyncClient::AddChild(bool init_complete, int32_t init_status) {
+    return ResultOf::AddChild(::zx::unowned_channel(this->channel_), std::move(init_complete), std::move(init_status));
 }
 
-TestDevice::ResultOf::AddChild TestDevice::Call::AddChild(::zx::unowned_channel _client_end) {
-  return ResultOf::AddChild(std::move(_client_end));
+TestDevice::ResultOf::AddChild TestDevice::Call::AddChild(::zx::unowned_channel _client_end, bool init_complete, int32_t init_status) {
+  return ResultOf::AddChild(std::move(_client_end), std::move(init_complete), std::move(init_status));
 }
 
 template <>
-TestDevice::UnownedResultOf::AddChild_Impl<TestDevice::AddChildResponse>::AddChild_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(AddChildRequest)] = {};
-  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+TestDevice::UnownedResultOf::AddChild_Impl<TestDevice::AddChildResponse>::AddChild_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool init_complete, int32_t init_status, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < AddChildRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<AddChildResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
   memset(_request_buffer.data(), 0, AddChildRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<AddChildRequest*>(_request_buffer.data());
+  _request.init_complete = std::move(init_complete);
+  _request.init_status = std::move(init_status);
   _request_buffer.set_actual(sizeof(AddChildRequest));
   ::fidl::DecodedMessage<AddChildRequest> _decoded_request(std::move(_request_buffer));
   Super::SetResult(
-      TestDevice::InPlace::AddChild(std::move(_client_end), std::move(_response_buffer)));
+      TestDevice::InPlace::AddChild(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-TestDevice::UnownedResultOf::AddChild TestDevice::SyncClient::AddChild(::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::AddChild(::zx::unowned_channel(this->channel_), std::move(_response_buffer));
+TestDevice::UnownedResultOf::AddChild TestDevice::SyncClient::AddChild(::fidl::BytePart _request_buffer, bool init_complete, int32_t init_status, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::AddChild(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(init_complete), std::move(init_status), std::move(_response_buffer));
 }
 
-TestDevice::UnownedResultOf::AddChild TestDevice::Call::AddChild(::zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::AddChild(std::move(_client_end), std::move(_response_buffer));
+TestDevice::UnownedResultOf::AddChild TestDevice::Call::AddChild(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, bool init_complete, int32_t init_status, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::AddChild(std::move(_client_end), std::move(_request_buffer), std::move(init_complete), std::move(init_status), std::move(_response_buffer));
 }
 
-::fidl::DecodeResult<TestDevice::AddChildResponse> TestDevice::InPlace::AddChild(::zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
-  constexpr uint32_t _write_num_bytes = sizeof(AddChildRequest);
-  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
-  ::fidl::BytePart _request_buffer = _write_bytes.view();
-  _request_buffer.set_actual(_write_num_bytes);
-  ::fidl::DecodedMessage<AddChildRequest> params(std::move(_request_buffer));
+::fidl::DecodeResult<TestDevice::AddChildResponse> TestDevice::InPlace::AddChild(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddChildRequest> params, ::fidl::BytePart response_buffer) {
   TestDevice::SetTransactionHeaderFor::AddChildRequest(params);
   auto _encode_request_result = ::fidl::Encode(std::move(params));
   if (_encode_request_result.status != ZX_OK) {
@@ -330,6 +346,68 @@ TestDevice::UnownedResultOf::RemoveChild TestDevice::Call::RemoveChild(::zx::uno
     std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
   if (_call_result.status != ZX_OK) {
     return ::fidl::DecodeResult<TestDevice::RemoveChildResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+template <>
+TestDevice::ResultOf::CompleteChildInit_Impl<TestDevice::CompleteChildInitResponse>::CompleteChildInit_Impl(::zx::unowned_channel _client_end, uint64_t child_id) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CompleteChildInitRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, CompleteChildInitRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<CompleteChildInitRequest*>(_write_bytes);
+  _request.child_id = std::move(child_id);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(CompleteChildInitRequest));
+  ::fidl::DecodedMessage<CompleteChildInitRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      TestDevice::InPlace::CompleteChildInit(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
+}
+
+TestDevice::ResultOf::CompleteChildInit TestDevice::SyncClient::CompleteChildInit(uint64_t child_id) {
+    return ResultOf::CompleteChildInit(::zx::unowned_channel(this->channel_), std::move(child_id));
+}
+
+TestDevice::ResultOf::CompleteChildInit TestDevice::Call::CompleteChildInit(::zx::unowned_channel _client_end, uint64_t child_id) {
+  return ResultOf::CompleteChildInit(std::move(_client_end), std::move(child_id));
+}
+
+template <>
+TestDevice::UnownedResultOf::CompleteChildInit_Impl<TestDevice::CompleteChildInitResponse>::CompleteChildInit_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t child_id, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < CompleteChildInitRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<CompleteChildInitResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  memset(_request_buffer.data(), 0, CompleteChildInitRequest::PrimarySize);
+  auto& _request = *reinterpret_cast<CompleteChildInitRequest*>(_request_buffer.data());
+  _request.child_id = std::move(child_id);
+  _request_buffer.set_actual(sizeof(CompleteChildInitRequest));
+  ::fidl::DecodedMessage<CompleteChildInitRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      TestDevice::InPlace::CompleteChildInit(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
+}
+
+TestDevice::UnownedResultOf::CompleteChildInit TestDevice::SyncClient::CompleteChildInit(::fidl::BytePart _request_buffer, uint64_t child_id, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::CompleteChildInit(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(child_id), std::move(_response_buffer));
+}
+
+TestDevice::UnownedResultOf::CompleteChildInit TestDevice::Call::CompleteChildInit(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t child_id, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::CompleteChildInit(std::move(_client_end), std::move(_request_buffer), std::move(child_id), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<TestDevice::CompleteChildInitResponse> TestDevice::InPlace::CompleteChildInit(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<CompleteChildInitRequest> params, ::fidl::BytePart response_buffer) {
+  TestDevice::SetTransactionHeaderFor::CompleteChildInitRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<TestDevice::CompleteChildInitResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<CompleteChildInitRequest, CompleteChildInitResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<TestDevice::CompleteChildInitResponse>::FromFailure(
         std::move(_call_result));
   }
   return ::fidl::Decode(std::move(_call_result.message));
@@ -419,7 +497,8 @@ bool TestDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
         txn->Close(ZX_ERR_INVALID_ARGS);
         return true;
       }
-      impl->AddChild(
+      auto message = result.message.message();
+      impl->AddChild(std::move(message->init_complete), std::move(message->init_status),
           Interface::AddChildCompleter::Sync(txn));
       return true;
     }
@@ -434,6 +513,19 @@ bool TestDevice::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
       auto message = result.message.message();
       impl->RemoveChild(std::move(message->child_id),
           Interface::RemoveChildCompleter::Sync(txn));
+      return true;
+    }
+    case kTestDevice_CompleteChildInit_Ordinal:
+    case kTestDevice_CompleteChildInit_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<CompleteChildInitRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->CompleteChildInit(std::move(message->child_id),
+          Interface::CompleteChildInitCompleter::Sync(txn));
       return true;
     }
     case kTestDevice_SubscribeToLifecycle_Ordinal:
@@ -583,6 +675,64 @@ void TestDevice::Interface::RemoveChildCompleterBase::Reply(::fidl::DecodedMessa
 }
 
 
+void TestDevice::Interface::CompleteChildInitCompleterBase::Reply(::llcpp::fuchsia::device::lifecycle::test::TestDevice_CompleteChildInit_Result result) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<CompleteChildInitResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
+  CompleteChildInitResponse _response = {};
+  TestDevice::SetTransactionHeaderFor::CompleteChildInitResponse(
+      ::fidl::DecodedMessage<CompleteChildInitResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              CompleteChildInitResponse::PrimarySize,
+              CompleteChildInitResponse::PrimarySize)));
+  _response.result = std::move(result);
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
+}
+void TestDevice::Interface::CompleteChildInitCompleterBase::ReplySuccess() {
+  TestDevice_CompleteChildInit_Response response;
+
+  Reply(TestDevice_CompleteChildInit_Result::WithResponse(&response));
+}
+void TestDevice::Interface::CompleteChildInitCompleterBase::ReplyError(int32_t error) {
+  Reply(TestDevice_CompleteChildInit_Result::WithErr(&error));
+}
+
+void TestDevice::Interface::CompleteChildInitCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::lifecycle::test::TestDevice_CompleteChildInit_Result result) {
+  if (_buffer.capacity() < CompleteChildInitResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleteChildInitResponse _response = {};
+  TestDevice::SetTransactionHeaderFor::CompleteChildInitResponse(
+      ::fidl::DecodedMessage<CompleteChildInitResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              CompleteChildInitResponse::PrimarySize,
+              CompleteChildInitResponse::PrimarySize)));
+  _response.result = std::move(result);
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
+}
+void TestDevice::Interface::CompleteChildInitCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
+  TestDevice_CompleteChildInit_Response response;
+
+  Reply(std::move(_buffer), TestDevice_CompleteChildInit_Result::WithResponse(&response));
+}
+
+void TestDevice::Interface::CompleteChildInitCompleterBase::Reply(::fidl::DecodedMessage<CompleteChildInitResponse> params) {
+  TestDevice::SetTransactionHeaderFor::CompleteChildInitResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
 void TestDevice::Interface::SubscribeToLifecycleCompleterBase::Reply(::llcpp::fuchsia::device::lifecycle::test::TestDevice_SubscribeToLifecycle_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<SubscribeToLifecycleResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
@@ -657,6 +807,15 @@ void TestDevice::SetTransactionHeaderFor::RemoveChildRequest(const ::fidl::Decod
 }
 void TestDevice::SetTransactionHeaderFor::RemoveChildResponse(const ::fidl::DecodedMessage<TestDevice::RemoveChildResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_RemoveChild_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
+
+void TestDevice::SetTransactionHeaderFor::CompleteChildInitRequest(const ::fidl::DecodedMessage<TestDevice::CompleteChildInitRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_CompleteChildInit_GenOrdinal);
+  _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
+}
+void TestDevice::SetTransactionHeaderFor::CompleteChildInitResponse(const ::fidl::DecodedMessage<TestDevice::CompleteChildInitResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_CompleteChildInit_GenOrdinal);
   _msg.message()->_hdr.flags[0] |= FIDL_TXN_HEADER_UNION_FROM_XUNION_FLAG;
 }
 

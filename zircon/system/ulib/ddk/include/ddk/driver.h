@@ -180,6 +180,8 @@ typedef struct device_make_visible_args {
   uint8_t performance_state_count;
 } device_make_visible_args_t;
 
+typedef device_make_visible_args_t device_init_reply_args_t;
+
 struct zx_driver_rec {
   const zx_driver_ops_t* ops;
   zx_driver_t* driver;
@@ -208,6 +210,13 @@ static inline zx_status_t device_add(zx_device_t* parent, device_add_args_t* arg
                                      zx_device_t** out) {
   return device_add_from_driver(__zircon_driver_rec__.driver, parent, args, out);
 }
+
+// This is used to signal completion of the device's |init| hook.
+// This does not necessarily need to be called from within the |init| hook.
+// If |status| is ZX_OK, the driver may provide optional power state information via |args|.
+// If |status| is not ZX_OK, the device will be scheduled to be removed.
+void device_init_reply(zx_device_t* device, zx_status_t status,
+                       const device_init_reply_args_t* args);
 
 // Begins the removal of the given device.  This releases the driver's reference
 // to the device, so it is unsafe to use the zx_device_t object after this call.

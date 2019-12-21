@@ -9,7 +9,8 @@ class InitTestCase : public MultipleDeviceTestCase {};
 TEST_F(InitTestCase, Init) {
   size_t index;
   ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), "device", 0 /* protocol id */, "",
-                                     false /* invisible */, true /* do_init */, &index));
+                                     false /* invisible */, true /* has_init */,
+                                     false /* reply_to_init */,  true /* always_init */, &index));
 
   ASSERT_FALSE(device(index)->device->is_visible());
 
@@ -20,23 +21,54 @@ TEST_F(InitTestCase, Init) {
   ASSERT_EQ(devmgr::Device::State::kActive, device(index)->device->state());
 }
 
-// Tests adding a device as invisible, which also has an implemented init hook.
-TEST_F(InitTestCase, InitThenMakeVisible) {
+// Tests adding a device as invisible, which also has implemented an init hook.
+TEST_F(InitTestCase, InvisibleAndInit) {
   size_t index;
   ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), "device", 0 /* protocol id */, "",
-                                     true /* invisible */, true /* do_init */, &index));
+                                     true /* invisible */, true /* has_init */,
+                                     false /* reply_to_init */,  true /* always_init */, &index));
 
   ASSERT_FALSE(device(index)->device->is_visible());
 
-  zx_txid_t txid;
-  ASSERT_NO_FATAL_FAILURES(CheckInitReceived(device(index)->controller_remote, &txid));
+  ASSERT_NO_FATAL_FAILURES(CheckInitReceivedAndReply(device(index)->controller_remote));
   coordinator_loop()->RunUntilIdle();
 
-  // The device will not become visible until the init task has completed.
+  ASSERT_TRUE(device(index)->device->is_visible());
+  ASSERT_EQ(devmgr::Device::State::kActive, device(index)->device->state());
+}
+
+// Tests adding a device as invisible, which has not also implemented an init hook.
+// We will reply to the default init before calling MakeVisible.
+TEST_F(InitTestCase, MakeVisibleThenDefaultInit) {
+  size_t index;
+  ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), "device", 0 /* protocol id */, "",
+                                     true /* invisible */, false /* has_init */,
+                                     true /* reply_to_init */, true /* always_init */, &index));
+
+  // Not visible until we call MakeVisible.
+  ASSERT_FALSE(device(index)->device->is_visible());
+  ASSERT_EQ(devmgr::Device::State::kActive, device(index)->device->state());
+
+  coordinator_.MakeVisible(device(index)->device);
+  ASSERT_TRUE(device(index)->device->is_visible());
+}
+
+// Tests adding a device as invisible, which has not also implemented an init hook.
+// We will call MakeVisible before replying to the default init.
+TEST_F(InitTestCase, DefaultInitThenMakeVisible) {
+  size_t index;
+  ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), "device", 0 /* protocol id */, "",
+                                     true /* invisible */, false /* has_init */,
+                                     false /* reply_to_init */, true /* always_init */, &index));
+
+  ASSERT_FALSE(device(index)->device->is_visible());
+  ASSERT_EQ(devmgr::Device::State::kInitializing, device(index)->device->state());
+
+  // Not visible until the init hook completes.
   coordinator_.MakeVisible(device(index)->device);
   ASSERT_FALSE(device(index)->device->is_visible());
 
-  ASSERT_NO_FATAL_FAILURES(SendInitReply(device(index)->controller_remote, txid));
+  ASSERT_NO_FATAL_FAILURES(CheckInitReceivedAndReply(device(index)->controller_remote, ZX_OK));
   coordinator_loop()->RunUntilIdle();
 
   ASSERT_TRUE(device(index)->device->is_visible());
@@ -47,7 +79,8 @@ TEST_F(InitTestCase, InitThenMakeVisible) {
 TEST_F(InitTestCase, InitThenUnbind) {
   size_t index;
   ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), "device", 0 /* protocol id */, "",
-                                     false /* invisible */, true /* do_init */, &index));
+                                     false /* invisible */, true /* has_init */,
+                                     false /* reply_to_init */, true /* always_init */, &index));
 
   ASSERT_FALSE(device(index)->device->is_visible());
 
@@ -78,7 +111,8 @@ TEST_F(InitTestCase, InitThenUnbind) {
 TEST_F(InitTestCase, InitThenSuspend) {
   size_t index;
   ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), "device", 0 /* protocol id */, "",
-                                     false /* invisible */, true /* do_init */, &index));
+                                     false /* invisible */, true /* has_init */,
+                                     false /* reply_to_init */, true /* always_init */, &index));
 
   ASSERT_FALSE(device(index)->device->is_visible());
 
@@ -111,7 +145,8 @@ TEST_F(InitTestCase, InitThenSuspend) {
 TEST_F(InitTestCase, ForcedRemovalDuringInit) {
   size_t index;
   ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), "device", 0 /* protocol id */, "",
-                                     false /* invisible */, true /* do_init */, &index));
+                                     false /* invisible */, true /* has_init */,
+                                     false /* reply_to_init */, true /* always_init */, &index));
 
   auto* test_device = device(index);
 
@@ -133,7 +168,8 @@ TEST_F(InitTestCase, ForcedRemovalDuringInit) {
 TEST_F(InitTestCase, FailedInit) {
   size_t index;
   ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), "device", 0 /* protocol id */, "",
-                                     false /* invisible */, true /* do_init */, &index));
+                                     false /* invisible */, true /* has_init */,
+                                     false /* reply_to_init */, true /* always_init */, &index));
 
   ASSERT_FALSE(device(index)->device->is_visible());
 
@@ -158,7 +194,9 @@ TEST_F(InitTestCase, FailedInit) {
 TEST_F(InitTestCase, InitParentThenChild) {
   size_t parent_index;
   ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), "parent-device", 0 /* protocol id */, "",
-                                     false /* invisible */, true /* do_init */, &parent_index));
+                                     false /* invisible */, true /* has_init */,
+                                     false /* reply_to_init */, true /* always_init */,
+                                     &parent_index));
 
   // Don't reply to init yet.
   zx_txid_t txid;
@@ -168,7 +206,8 @@ TEST_F(InitTestCase, InitParentThenChild) {
   size_t child_index;
   ASSERT_NO_FATAL_FAILURES(AddDevice(device(parent_index)->device, "child-device",
                                      0 /* protocol id */, "", false /* invisible */,
-                                     true /* do_init */, &child_index));
+                                     true /* has_init */, false /* reply_to_init */,
+                                     true /* always_init */, &child_index));
 
   // Child init should not run until parent init task completes.
   ASSERT_FALSE(DeviceHasPendingMessages(device(child_index)->controller_remote));
@@ -183,7 +222,9 @@ TEST_F(InitTestCase, InitParentThenChild) {
 TEST_F(InitTestCase, InitParentFail) {
   size_t parent_index;
   ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), "parent-device", 0 /* protocol id */, "",
-                                     false /* invisible */, true /* do_init */, &parent_index));
+                                     false /* invisible */, true /* has_init */,
+                                     false /* reply_to_init */, true /* always_init */,
+                                     &parent_index));
 
   // Don't reply to init yet.
   zx_txid_t txid;
@@ -193,7 +234,8 @@ TEST_F(InitTestCase, InitParentFail) {
   size_t child_index;
   ASSERT_NO_FATAL_FAILURES(AddDevice(device(parent_index)->device, "child-device",
                                      0 /* protocol id */, "", false /* invisible */,
-                                     true /* do_init */, &child_index));
+                                     true /* has_init */, false /* reply_to_init */,
+                                     true /* always_init */, &child_index));
 
   ASSERT_FALSE(DeviceHasPendingMessages(device(child_index)->controller_remote));
 
@@ -219,4 +261,60 @@ TEST_F(InitTestCase, InitParentFail) {
 
   ASSERT_EQ(devmgr::Device::State::kDead, device(parent_index)->device->state());
   ASSERT_EQ(devmgr::Device::State::kDead, device(child_index)->device->state());
+}
+
+// TODO(fxb/43370): these tests can be removed once init tasks can be enabled for all devices.
+TEST_F(InitTestCase, LegacyNoInit) {
+  size_t index;
+  ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), "device", 0 /* protocol id */, "",
+                                     false /* invisible */, false /* has_init */,
+                                     false /* reply_to_init */,  false /* always_init */, &index));
+  ASSERT_TRUE(device(index)->device->is_visible());
+  ASSERT_EQ(devmgr::Device::State::kActive, device(index)->device->state());
+}
+
+TEST_F(InitTestCase, LegacyInit) {
+  size_t index;
+  ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), "device", 0 /* protocol id */, "",
+                                     false /* invisible */, true /* has_init */,
+                                     false /* reply_to_init */,  false /* always_init */, &index));
+
+  ASSERT_FALSE(device(index)->device->is_visible());
+
+  ASSERT_NO_FATAL_FAILURES(CheckInitReceivedAndReply(device(index)->controller_remote));
+  coordinator_loop()->RunUntilIdle();
+
+  ASSERT_TRUE(device(index)->device->is_visible());
+  ASSERT_EQ(devmgr::Device::State::kActive, device(index)->device->state());
+}
+
+// Tests adding a device as invisible, which also has implemented an init hook.
+TEST_F(InitTestCase, LegacyInvisibleAndInit) {
+  size_t index;
+  ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), "device", 0 /* protocol id */, "",
+                                     true /* invisible */, true /* has_init */,
+                                     false /* reply_to_init */,  false /* always_init */, &index));
+
+  ASSERT_FALSE(device(index)->device->is_visible());
+
+  ASSERT_NO_FATAL_FAILURES(CheckInitReceivedAndReply(device(index)->controller_remote));
+  coordinator_loop()->RunUntilIdle();
+
+  ASSERT_TRUE(device(index)->device->is_visible());
+  ASSERT_EQ(devmgr::Device::State::kActive, device(index)->device->state());
+}
+
+// Tests adding a device as invisible, which has not also implemented an init hook.
+TEST_F(InitTestCase, LegacyInvisibleNoInit) {
+  size_t index;
+  ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), "device", 0 /* protocol id */, "",
+                                     true /* invisible */, false /* has_init */,
+                                     false /* reply_to_init */, false /* always_init */, &index));
+
+  // Not visible until we call MakeVisible.
+  ASSERT_FALSE(device(index)->device->is_visible());
+  ASSERT_EQ(devmgr::Device::State::kActive, device(index)->device->state());
+
+  coordinator_.MakeVisible(device(index)->device);
+  ASSERT_TRUE(device(index)->device->is_visible());
 }

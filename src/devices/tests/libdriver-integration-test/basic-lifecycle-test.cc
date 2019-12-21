@@ -59,6 +59,7 @@ TEST_F(BasicLifecycleTest, BindThenOpenRemoveAndClose) {
 
   auto promise =
       CreateFirstChild(&root_mock_device, &mock_child_device)
+          .and_then([&]() { return DoWaitForPath(mock_child_device->path()); })
           .and_then([&]() {
             // Do the open and wait for acknowledgement that it was successful.
             auto wait_for_open = DoOpen(mock_child_device->path(), &client);
@@ -113,6 +114,7 @@ TEST_F(BasicLifecycleTest, BindThenOpenCloseAndRemove) {
 
   auto promise =
       CreateFirstChild(&root_mock_device, &mock_child_device)
+          .and_then([&]() { return DoWaitForPath(mock_child_device->path()); })
           .and_then([&]() {
             // Do the open and wait for acknowledgement that it was successful.
             auto wait_for_open = DoOpen(mock_child_device->path(), &client);
@@ -156,6 +158,7 @@ TEST_F(BasicLifecycleTest, BindThenOpenRemoveThenClose) {
 
   auto promise =
       CreateFirstChild(&root_mock_device, &mock_child_device)
+          .and_then([&]() { return DoWaitForPath(mock_child_device->path()); })
           .and_then([&]() {
             // Do the open and wait for acknowledgement that it was successful.
             auto wait_for_open = DoOpen(mock_child_device->path(), &client);

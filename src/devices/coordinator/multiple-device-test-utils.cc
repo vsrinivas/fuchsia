@@ -133,10 +133,13 @@ void MultipleDeviceTestCase::SetUp() {
     status = coordinator_.AddDevice(
         coordinator_.sys_device()->proxy(), std::move(local), std::move(local2),
         nullptr /* props_data */, 0 /* props_count */, "platform-bus", 0, nullptr /* driver_path */,
-        nullptr /* args */, false /* invisible */, false /* do_init */,
+        nullptr /* args */, false /* invisible */, false /* has_init */, true /* always_init */,
         zx::channel() /* client_remote */, &platform_bus_.device);
     ASSERT_OK(status);
     coordinator_loop_.RunUntilIdle();
+
+    ASSERT_NO_FATAL_FAILURES(CheckInitReceivedAndReply(platform_bus_.controller_remote));
+    coordinator_loop()->RunUntilIdle();
   }
 }
 
@@ -166,7 +169,8 @@ void MultipleDeviceTestCase::TearDown() {
 
 void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<devmgr::Device>& parent, const char* name,
                                        uint32_t protocol_id, fbl::String driver, bool invisible,
-                                       bool do_init, size_t* index) {
+                                       bool has_init, bool reply_to_init, bool always_init,
+                                       size_t* index) {
   DeviceState state;
 
   zx::channel local, local2;
@@ -178,19 +182,25 @@ void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<devmgr::Device>& parent
 
   status = coordinator_.AddDevice(
       parent, std::move(local), std::move(local2), nullptr /* props_data */, 0 /* props_count */,
-      name, protocol_id, driver.data() /* driver_path */, nullptr /* args */, invisible,
-      do_init, zx::channel() /* client_remote */, &state.device);
+      name, protocol_id, driver.data() /* driver_path */, nullptr /* args */, invisible, has_init,
+      always_init, zx::channel() /* client_remote */, &state.device);
   state.device->flags |= DEV_CTX_ALLOW_MULTI_COMPOSITE;
   ASSERT_OK(status);
   coordinator_loop_.RunUntilIdle();
 
   devices_.push_back(std::move(state));
   *index = devices_.size() - 1;
+
+  if (reply_to_init) {
+    ASSERT_NO_FATAL_FAILURES(CheckInitReceivedAndReply(device(*index)->controller_remote));
+    coordinator_loop()->RunUntilIdle();
+  }
 }
 
 void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<devmgr::Device>& parent, const char* name,
                                        uint32_t protocol_id, fbl::String driver, size_t* index) {
-  AddDevice(parent, name, protocol_id, driver, false /* invisible */, false /* do_init */, index);
+  AddDevice(parent, name, protocol_id, driver, false /* invisible */, false /* has_init */,
+            true /* reply_to_init */, true /* always_init */, index);
 }
 
 void MultipleDeviceTestCase::RemoveDevice(size_t device_index) {

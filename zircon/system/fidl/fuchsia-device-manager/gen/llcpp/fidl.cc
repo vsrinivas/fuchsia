@@ -2193,7 +2193,7 @@ extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorRunCompatibili
 
 }  // namespace
 template <>
-Coordinator::ResultOf::AddDevice_Impl<Coordinator::AddDeviceResponse>::AddDevice_Impl(::zx::unowned_channel _client_end, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, ::zx::channel client_remote) {
+Coordinator::ResultOf::AddDevice_Impl<Coordinator::AddDeviceResponse>::AddDevice_Impl(::zx::unowned_channel _client_end, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, bool has_init, ::zx::channel client_remote) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddDeviceRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -2206,6 +2206,7 @@ Coordinator::ResultOf::AddDevice_Impl<Coordinator::AddDeviceResponse>::AddDevice
   _request.driver_path = std::move(driver_path);
   _request.args = std::move(args);
   _request.device_add_config = std::move(device_add_config);
+  _request.has_init = std::move(has_init);
   _request.client_remote = std::move(client_remote);
   auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
   if (_linearize_result.status != ZX_OK) {
@@ -2217,16 +2218,16 @@ Coordinator::ResultOf::AddDevice_Impl<Coordinator::AddDeviceResponse>::AddDevice
       Coordinator::InPlace::AddDevice(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Coordinator::ResultOf::AddDevice Coordinator::SyncClient::AddDevice(::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, ::zx::channel client_remote) {
-    return ResultOf::AddDevice(::zx::unowned_channel(this->channel_), std::move(coordinator), std::move(device_controller), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(device_add_config), std::move(client_remote));
+Coordinator::ResultOf::AddDevice Coordinator::SyncClient::AddDevice(::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, bool has_init, ::zx::channel client_remote) {
+    return ResultOf::AddDevice(::zx::unowned_channel(this->channel_), std::move(coordinator), std::move(device_controller), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(device_add_config), std::move(has_init), std::move(client_remote));
 }
 
-Coordinator::ResultOf::AddDevice Coordinator::Call::AddDevice(::zx::unowned_channel _client_end, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, ::zx::channel client_remote) {
-  return ResultOf::AddDevice(std::move(_client_end), std::move(coordinator), std::move(device_controller), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(device_add_config), std::move(client_remote));
+Coordinator::ResultOf::AddDevice Coordinator::Call::AddDevice(::zx::unowned_channel _client_end, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, bool has_init, ::zx::channel client_remote) {
+  return ResultOf::AddDevice(std::move(_client_end), std::move(coordinator), std::move(device_controller), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(device_add_config), std::move(has_init), std::move(client_remote));
 }
 
 template <>
-Coordinator::UnownedResultOf::AddDevice_Impl<Coordinator::AddDeviceResponse>::AddDevice_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, ::zx::channel client_remote, ::fidl::BytePart _response_buffer) {
+Coordinator::UnownedResultOf::AddDevice_Impl<Coordinator::AddDeviceResponse>::AddDevice_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, bool has_init, ::zx::channel client_remote, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < AddDeviceRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<AddDeviceResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -2240,6 +2241,7 @@ Coordinator::UnownedResultOf::AddDevice_Impl<Coordinator::AddDeviceResponse>::Ad
   _request.driver_path = std::move(driver_path);
   _request.args = std::move(args);
   _request.device_add_config = std::move(device_add_config);
+  _request.has_init = std::move(has_init);
   _request.client_remote = std::move(client_remote);
   auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
   if (_linearize_result.status != ZX_OK) {
@@ -2251,12 +2253,12 @@ Coordinator::UnownedResultOf::AddDevice_Impl<Coordinator::AddDeviceResponse>::Ad
       Coordinator::InPlace::AddDevice(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Coordinator::UnownedResultOf::AddDevice Coordinator::SyncClient::AddDevice(::fidl::BytePart _request_buffer, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, ::zx::channel client_remote, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::AddDevice(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(coordinator), std::move(device_controller), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(device_add_config), std::move(client_remote), std::move(_response_buffer));
+Coordinator::UnownedResultOf::AddDevice Coordinator::SyncClient::AddDevice(::fidl::BytePart _request_buffer, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, bool has_init, ::zx::channel client_remote, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::AddDevice(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(coordinator), std::move(device_controller), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(device_add_config), std::move(has_init), std::move(client_remote), std::move(_response_buffer));
 }
 
-Coordinator::UnownedResultOf::AddDevice Coordinator::Call::AddDevice(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, ::zx::channel client_remote, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::AddDevice(std::move(_client_end), std::move(_request_buffer), std::move(coordinator), std::move(device_controller), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(device_add_config), std::move(client_remote), std::move(_response_buffer));
+Coordinator::UnownedResultOf::AddDevice Coordinator::Call::AddDevice(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, bool has_init, ::zx::channel client_remote, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::AddDevice(std::move(_client_end), std::move(_request_buffer), std::move(coordinator), std::move(device_controller), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(device_add_config), std::move(has_init), std::move(client_remote), std::move(_response_buffer));
 }
 
 ::fidl::DecodeResult<Coordinator::AddDeviceResponse> Coordinator::InPlace::AddDevice(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddDeviceRequest> params, ::fidl::BytePart response_buffer) {
@@ -2276,7 +2278,7 @@ Coordinator::UnownedResultOf::AddDevice Coordinator::Call::AddDevice(::zx::unown
 }
 
 template <>
-Coordinator::ResultOf::AddDeviceInvisible_Impl<Coordinator::AddDeviceInvisibleResponse>::AddDeviceInvisible_Impl(::zx::unowned_channel _client_end, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote) {
+Coordinator::ResultOf::AddDeviceInvisible_Impl<Coordinator::AddDeviceInvisibleResponse>::AddDeviceInvisible_Impl(::zx::unowned_channel _client_end, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, bool has_init, ::zx::channel client_remote) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AddDeviceInvisibleRequest, ::fidl::MessageDirection::kSending>();
   std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
   auto& _write_bytes_array = *_write_bytes_boxed;
@@ -2288,6 +2290,7 @@ Coordinator::ResultOf::AddDeviceInvisible_Impl<Coordinator::AddDeviceInvisibleRe
   _request.protocol_id = std::move(protocol_id);
   _request.driver_path = std::move(driver_path);
   _request.args = std::move(args);
+  _request.has_init = std::move(has_init);
   _request.client_remote = std::move(client_remote);
   auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
   if (_linearize_result.status != ZX_OK) {
@@ -2299,16 +2302,16 @@ Coordinator::ResultOf::AddDeviceInvisible_Impl<Coordinator::AddDeviceInvisibleRe
       Coordinator::InPlace::AddDeviceInvisible(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
 }
 
-Coordinator::ResultOf::AddDeviceInvisible Coordinator::SyncClient::AddDeviceInvisible(::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote) {
-    return ResultOf::AddDeviceInvisible(::zx::unowned_channel(this->channel_), std::move(coordinator), std::move(device_controller), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(client_remote));
+Coordinator::ResultOf::AddDeviceInvisible Coordinator::SyncClient::AddDeviceInvisible(::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, bool has_init, ::zx::channel client_remote) {
+    return ResultOf::AddDeviceInvisible(::zx::unowned_channel(this->channel_), std::move(coordinator), std::move(device_controller), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(has_init), std::move(client_remote));
 }
 
-Coordinator::ResultOf::AddDeviceInvisible Coordinator::Call::AddDeviceInvisible(::zx::unowned_channel _client_end, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote) {
-  return ResultOf::AddDeviceInvisible(std::move(_client_end), std::move(coordinator), std::move(device_controller), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(client_remote));
+Coordinator::ResultOf::AddDeviceInvisible Coordinator::Call::AddDeviceInvisible(::zx::unowned_channel _client_end, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, bool has_init, ::zx::channel client_remote) {
+  return ResultOf::AddDeviceInvisible(std::move(_client_end), std::move(coordinator), std::move(device_controller), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(has_init), std::move(client_remote));
 }
 
 template <>
-Coordinator::UnownedResultOf::AddDeviceInvisible_Impl<Coordinator::AddDeviceInvisibleResponse>::AddDeviceInvisible_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote, ::fidl::BytePart _response_buffer) {
+Coordinator::UnownedResultOf::AddDeviceInvisible_Impl<Coordinator::AddDeviceInvisibleResponse>::AddDeviceInvisible_Impl(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, bool has_init, ::zx::channel client_remote, ::fidl::BytePart _response_buffer) {
   if (_request_buffer.capacity() < AddDeviceInvisibleRequest::PrimarySize) {
     Super::SetFailure(::fidl::DecodeResult<AddDeviceInvisibleResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
     return;
@@ -2321,6 +2324,7 @@ Coordinator::UnownedResultOf::AddDeviceInvisible_Impl<Coordinator::AddDeviceInvi
   _request.protocol_id = std::move(protocol_id);
   _request.driver_path = std::move(driver_path);
   _request.args = std::move(args);
+  _request.has_init = std::move(has_init);
   _request.client_remote = std::move(client_remote);
   auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
   if (_linearize_result.status != ZX_OK) {
@@ -2332,12 +2336,12 @@ Coordinator::UnownedResultOf::AddDeviceInvisible_Impl<Coordinator::AddDeviceInvi
       Coordinator::InPlace::AddDeviceInvisible(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
 }
 
-Coordinator::UnownedResultOf::AddDeviceInvisible Coordinator::SyncClient::AddDeviceInvisible(::fidl::BytePart _request_buffer, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::AddDeviceInvisible(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(coordinator), std::move(device_controller), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(client_remote), std::move(_response_buffer));
+Coordinator::UnownedResultOf::AddDeviceInvisible Coordinator::SyncClient::AddDeviceInvisible(::fidl::BytePart _request_buffer, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, bool has_init, ::zx::channel client_remote, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::AddDeviceInvisible(::zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(coordinator), std::move(device_controller), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(has_init), std::move(client_remote), std::move(_response_buffer));
 }
 
-Coordinator::UnownedResultOf::AddDeviceInvisible Coordinator::Call::AddDeviceInvisible(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::AddDeviceInvisible(std::move(_client_end), std::move(_request_buffer), std::move(coordinator), std::move(device_controller), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(client_remote), std::move(_response_buffer));
+Coordinator::UnownedResultOf::AddDeviceInvisible Coordinator::Call::AddDeviceInvisible(::zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, bool has_init, ::zx::channel client_remote, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::AddDeviceInvisible(std::move(_client_end), std::move(_request_buffer), std::move(coordinator), std::move(device_controller), std::move(props), std::move(name), std::move(protocol_id), std::move(driver_path), std::move(args), std::move(has_init), std::move(client_remote), std::move(_response_buffer));
 }
 
 ::fidl::DecodeResult<Coordinator::AddDeviceInvisibleResponse> Coordinator::InPlace::AddDeviceInvisible(::zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddDeviceInvisibleRequest> params, ::fidl::BytePart response_buffer) {
@@ -3201,7 +3205,7 @@ bool Coordinator::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
         return true;
       }
       auto message = result.message.message();
-      impl->AddDevice(std::move(message->coordinator), std::move(message->device_controller), std::move(message->props), std::move(message->name), std::move(message->protocol_id), std::move(message->driver_path), std::move(message->args), std::move(message->device_add_config), std::move(message->client_remote),
+      impl->AddDevice(std::move(message->coordinator), std::move(message->device_controller), std::move(message->props), std::move(message->name), std::move(message->protocol_id), std::move(message->driver_path), std::move(message->args), std::move(message->device_add_config), std::move(message->has_init), std::move(message->client_remote),
           Interface::AddDeviceCompleter::Sync(txn));
       return true;
     }
@@ -3214,7 +3218,7 @@ bool Coordinator::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
         return true;
       }
       auto message = result.message.message();
-      impl->AddDeviceInvisible(std::move(message->coordinator), std::move(message->device_controller), std::move(message->props), std::move(message->name), std::move(message->protocol_id), std::move(message->driver_path), std::move(message->args), std::move(message->client_remote),
+      impl->AddDeviceInvisible(std::move(message->coordinator), std::move(message->device_controller), std::move(message->props), std::move(message->name), std::move(message->protocol_id), std::move(message->driver_path), std::move(message->args), std::move(message->has_init), std::move(message->client_remote),
           Interface::AddDeviceInvisibleCompleter::Sync(txn));
       return true;
     }

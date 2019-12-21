@@ -41,8 +41,10 @@ class TestLifecycleDriver : public DeviceType, public TestDevice::Interface {
   // Device message ops implementation.
   void SubscribeToLifecycle(zx::channel client,
                             SubscribeToLifecycleCompleter::Sync completer) override;
-  void AddChild(AddChildCompleter::Sync completer) override;
+  void AddChild(bool complete_init, int32_t init_status,
+                AddChildCompleter::Sync completer) override;
   void RemoveChild(uint64_t child_id, RemoveChildCompleter::Sync completer) override;
+  void CompleteChildInit(uint64_t child_id, CompleteChildInitCompleter::Sync completer) override;
 
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
@@ -77,9 +79,11 @@ void TestLifecycleDriver::DdkChildPreRelease(void* child_ctx) {
       children_.end());
 }
 
-void TestLifecycleDriver::AddChild(AddChildCompleter::Sync completer) {
+void TestLifecycleDriver::AddChild(bool complete_init, int32_t init_status,
+                                   AddChildCompleter::Sync completer) {
   fbl::RefPtr<TestLifecycleDriverChild> child;
-  zx_status_t status = TestLifecycleDriverChild::Create(zxdev(), &child);
+  zx_status_t status =
+      TestLifecycleDriverChild::Create(zxdev(), complete_init, init_status, &child);
   if (status != ZX_OK) {
     completer.ReplyError(status);
   } else {
@@ -100,6 +104,21 @@ void TestLifecycleDriver::RemoveChild(uint64_t id, RemoveChildCompleter::Sync co
   }
   if (!found) {
     completer.ReplyError(ZX_ERR_NOT_FOUND);
+  }
+  completer.ReplySuccess();
+}
+
+void TestLifecycleDriver::CompleteChildInit(uint64_t id,
+                                            CompleteChildInitCompleter::Sync completer) {
+  zx_status_t status = ZX_ERR_NOT_FOUND;
+  for (auto& child : children_) {
+    if (zxdev_to_id(child->zxdev()) == id) {
+      status = child->CompleteInit();
+      break;
+    }
+  }
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
   }
   completer.ReplySuccess();
 }

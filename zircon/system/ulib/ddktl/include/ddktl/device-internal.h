@@ -8,6 +8,7 @@
 #include <type_traits>
 
 #include <ddk/device.h>
+#include <ddktl/init-txn.h>
 #include <ddktl/suspend-txn.h>
 #include <ddktl/unbind-txn.h>
 #include <fbl/macros.h>
@@ -156,6 +157,16 @@ constexpr void CheckGetProtocolable() {
       std::is_same<decltype(&D::DdkGetProtocol), zx_status_t (D::*)(uint32_t, void*)>::value,
       "DdkGetProtocol must be a public non-static member function with signature "
       "'zx_status_t DdkGetProtocol(uint32_t, void*)'.");
+}
+
+DECLARE_HAS_MEMBER_FN(has_ddk_init, DdkInit);
+
+template <typename D>
+constexpr void CheckInitializable() {
+  static_assert(has_ddk_init<D>::value, "Init classes must implement DdkInit");
+  static_assert(std::is_same<decltype(&D::DdkInit), void (D::*)(InitTxn txn)>::value,
+                "DdkInit must be a public non-static member function with signature "
+                "'void DdkInit(ddk::InitTxn)'.");
 }
 
 DECLARE_HAS_MEMBER_FN(has_ddk_open, DdkOpen);

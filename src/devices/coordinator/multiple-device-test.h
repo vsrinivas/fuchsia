@@ -40,7 +40,8 @@ class MultipleDeviceTestCase : public zxtest::Test {
   DeviceState* device(size_t index) const { return &devices_[index]; }
 
   void AddDevice(const fbl::RefPtr<devmgr::Device>& parent, const char* name, uint32_t protocol_id,
-                 fbl::String driver, bool invisible, bool do_init, size_t* device_index);
+                 fbl::String driver, bool invisible, bool has_init, bool reply_to_init,
+                 bool always_init, size_t* device_index);
   void AddDevice(const fbl::RefPtr<devmgr::Device>& parent, const char* name, uint32_t protocol_id,
                  fbl::String driver, size_t* device_index);
   void RemoveDevice(size_t device_index);

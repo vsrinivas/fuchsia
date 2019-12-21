@@ -144,6 +144,9 @@ zx_status_t devhost_device_add(const fbl::RefPtr<zx_device_t>& dev,
                                const fbl::RefPtr<zx_device_t>& parent,
                                const zx_device_prop_t* props, uint32_t prop_count,
                                const char* proxy_args, zx::channel client_remote) REQ_DM_LOCK;
+zx_status_t devhost_device_init(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
+void devhost_device_init_reply(const fbl::RefPtr<zx_device_t>& dev, zx_status_t status,
+                               const device_init_reply_args_t* args) REQ_DM_LOCK;
 // TODO(fxb/34574): this should be removed once device_remove() is removed.
 zx_status_t devhost_device_remove_deprecated(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
 zx_status_t devhost_device_remove(const fbl::RefPtr<zx_device_t>& dev,
