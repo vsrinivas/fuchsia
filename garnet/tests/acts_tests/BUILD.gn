@@ -49,6 +49,13 @@ specs = [
     tests = "WlanScanTest WlanPhyComplianceABGTest WlanSecurityComplianceABGTest WlanPhyCompliance11NTest VapeInteropTest BeaconLossTest"
     timeout_minutes = 1070  # 18 hours less 10 minutes for output processing in Dart script
   },
+  {
+    name = "acts_astro_wifi_fiber_test"
+    tags = [ "acts-astro-connectivity-wifi-fiber" ]
+    testbed = "wifi_rf_chamber_fiber_astro"
+    tests = "Sl4fSanityTest WlanScanTest"
+    timeout_minutes = 15
+  },
 ]
 
 test_labels = []
