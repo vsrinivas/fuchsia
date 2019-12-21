@@ -18,7 +18,7 @@ use {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_initial_inspect_state() {
-    let env = TestEnv::new();
+    let env = TestEnvBuilder::new().build();
     // Wait for inspect to be created
     env.proxies
         .rewrite_engine
@@ -64,7 +64,7 @@ async fn test_initial_inspect_state() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_adding_repo_updates_inspect_state() {
-    let env = TestEnv::new();
+    let env = TestEnvBuilder::new().build();
     let config = RepositoryConfigBuilder::new("fuchsia-pkg://example.com".parse().unwrap()).build();
     Status::ok(
         env.proxies.repo_manager.add(config.clone().into()).await.expect("fidl call succeeds"),
@@ -114,7 +114,7 @@ async fn test_adding_repo_updates_inspect_state() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_resolving_package_updates_inspect_state() {
-    let env = TestEnv::new();
+    let env = TestEnvBuilder::new().build();
     env.set_experiment_state(Experiment::RustTuf, true).await;
 
     let pkg = PackageBuilder::new("just_meta_far").build().await.expect("created pkg");

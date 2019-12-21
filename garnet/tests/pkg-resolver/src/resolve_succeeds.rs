@@ -100,7 +100,7 @@ impl TestEnv<PkgfsRamdisk> {
 
 #[fasync::run_singlethreaded(test)]
 async fn package_resolution() {
-    let env = TestEnv::new();
+    let env = TestEnvBuilder::new().build();
 
     let s = "package_resolution";
     let pkg = PackageBuilder::new(s)
@@ -139,7 +139,7 @@ async fn package_resolution() {
 
 #[fasync::run_singlethreaded(test)]
 async fn separate_blobs_url() {
-    let env = TestEnv::new();
+    let env = TestEnvBuilder::new().build();
     let pkg_name = "separate_blobs_url";
     let pkg = make_pkg_with_extra_blobs(pkg_name, 3).await;
     let repo = RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
@@ -184,7 +184,7 @@ async fn verify_resolve_with_altered_env(
     pkg: Package,
     alter_env: impl FnOnce(&TestEnv, &Package),
 ) -> () {
-    let env = TestEnv::new();
+    let env = TestEnvBuilder::new().build();
 
     let repo = RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
         .add_package(&pkg)
@@ -248,7 +248,7 @@ async fn large_blobs() {
 
 #[fasync::run_singlethreaded(test)]
 async fn pinned_merkle_resolution() {
-    let env = TestEnv::new();
+    let env = TestEnvBuilder::new().build();
 
     // Since our test harness doesn't yet include a way to update a package, we generate two
     // separate packages to test resolution with a pinned merkle root.
@@ -290,7 +290,7 @@ async fn pinned_merkle_resolution() {
 
 #[fasync::run_singlethreaded(test)]
 async fn variant_resolution() {
-    let env = TestEnv::new();
+    let env = TestEnvBuilder::new().build();
     let pkg = PackageBuilder::new("variant-foo")
         .add_resource_at("data/foo", "foo".as_bytes())
         .build()
@@ -318,7 +318,7 @@ async fn variant_resolution() {
 
 #[fasync::run_singlethreaded(test)]
 async fn error_codes() {
-    let env = TestEnv::new();
+    let env = TestEnvBuilder::new().build();
     let pkg = PackageBuilder::new("error-foo")
         .add_resource_at("data/foo", "foo".as_bytes())
         .build()
@@ -369,7 +369,7 @@ async fn identity() {
 
 #[fasync::run_singlethreaded(test)]
 async fn identity_hyper() {
-    let env = TestEnv::new();
+    let env = TestEnvBuilder::new().build();
 
     let pkg = Package::identity().await.unwrap();
     let repo = Arc::new(
@@ -392,7 +392,7 @@ async fn identity_hyper() {
 
 #[fasync::run_singlethreaded(test)]
 async fn retries() {
-    let env = TestEnv::new();
+    let env = TestEnvBuilder::new().build();
 
     let pkg = PackageBuilder::new("try-hard")
         .add_resource_at("data/foo", "bar".as_bytes())
@@ -443,7 +443,7 @@ async fn retries() {
 
 #[fasync::run_singlethreaded(test)]
 async fn handles_429_responses() {
-    let env = TestEnv::new();
+    let env = TestEnvBuilder::new().build();
 
     let pkg1 = PackageBuilder::new("rate-limit-far")
         .add_resource_at("data/foo", "foo".as_bytes())
@@ -515,7 +515,7 @@ async fn handles_429_responses() {
 
 #[fasync::run_singlethreaded(test)]
 async fn use_cached_package() {
-    let env = TestEnv::new();
+    let env = TestEnvBuilder::new().build();
 
     let pkg = PackageBuilder::new("resolve-twice")
         .add_resource_at("data/foo", "bar".as_bytes())
@@ -750,7 +750,7 @@ async fn test_concurrent_blob_writes() {
         ));
 
     // Construct the repo
-    let env = TestEnv::new();
+    let env = TestEnvBuilder::new().build();
     let repo = Arc::new(
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
             .add_package(&pkg1)
@@ -869,7 +869,7 @@ impl UriPathHandler for BlockResponseUriPathHandler {
 
 #[fasync::run_singlethreaded(test)]
 async fn dedup_concurrent_content_blob_fetches() {
-    let env = TestEnv::new();
+    let env = TestEnvBuilder::new().build();
 
     // Make a few test packages with no more than 6 blobs.  There is no guarantee what order the
     // package resolver will fetch blobs in other than it will fetch one of the meta FARs first and
@@ -972,7 +972,7 @@ async fn dedup_concurrent_content_blob_fetches() {
 
 #[fasync::run_singlethreaded(test)]
 async fn rust_tuf_experiment_identity() {
-    let env = TestEnv::new_without_amber();
+    let env = TestEnvBuilder::new().include_amber(false).build();
     let pkg = Package::identity().await.unwrap();
     let repo = RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
         .add_package(&pkg)

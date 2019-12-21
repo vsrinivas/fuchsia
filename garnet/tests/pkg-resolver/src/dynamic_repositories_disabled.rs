@@ -52,7 +52,7 @@ async fn load_dynamic_repos() {
     let repo = make_repo();
     mounts.add_dynamic_repositories(&make_repo_config(&repo));
     mounts.add_config(&Config { disable_dynamic_configuration: false });
-    let env = TestEnv::new_with_mounts(mounts);
+    let env = TestEnvBuilder::new().mounts(mounts).build();
 
     assert_eq!(get_repos(&env.proxies.repo_manager).await, vec![repo]);
 
@@ -64,7 +64,7 @@ async fn no_load_dynamic_repos_if_disabled() {
     let mounts = Mounts::new();
     mounts.add_dynamic_repositories(&make_repo_config(&make_repo()));
     mounts.add_config(&Config { disable_dynamic_configuration: true });
-    let env = TestEnv::new_with_mounts(mounts);
+    let env = TestEnvBuilder::new().mounts(mounts).build();
 
     assert_eq!(get_repos(&env.proxies.repo_manager).await, vec![]);
 
@@ -75,7 +75,7 @@ async fn no_load_dynamic_repos_if_disabled() {
 async fn add_succeeds() {
     let mounts = Mounts::new();
     mounts.add_config(&Config { disable_dynamic_configuration: false });
-    let env = TestEnv::new_with_mounts(mounts);
+    let env = TestEnvBuilder::new().mounts(mounts).build();
     let repo = make_repo();
 
     Status::ok(env.proxies.repo_manager.add(repo.clone().into()).await.unwrap()).unwrap();
@@ -88,7 +88,7 @@ async fn add_succeeds() {
 async fn add_fails_if_disabled() {
     let mounts = Mounts::new();
     mounts.add_config(&Config { disable_dynamic_configuration: true });
-    let env = TestEnv::new_with_mounts(mounts);
+    let env = TestEnvBuilder::new().mounts(mounts).build();
     let repo = make_repo();
 
     assert_eq!(
@@ -104,7 +104,7 @@ async fn add_fails_if_disabled() {
 async fn remove_fails_with_not_found() {
     let mounts = Mounts::new();
     mounts.add_config(&Config { disable_dynamic_configuration: false });
-    let env = TestEnv::new_with_mounts(mounts);
+    let env = TestEnvBuilder::new().mounts(mounts).build();
 
     assert_eq!(
         env.proxies.repo_manager.remove("fuchsia-pkg://example.com").await.unwrap(),
@@ -118,7 +118,7 @@ async fn remove_fails_with_not_found() {
 async fn remove_fails_with_access_denied_if_disabled() {
     let mounts = Mounts::new();
     mounts.add_config(&Config { disable_dynamic_configuration: true });
-    let env = TestEnv::new_with_mounts(mounts);
+    let env = TestEnvBuilder::new().mounts(mounts).build();
 
     assert_eq!(
         env.proxies.repo_manager.remove("fuchsia-pkg://example.com").await.unwrap(),
@@ -136,7 +136,7 @@ async fn attempt_to_open_persisted_dynamic_repos() {
         pkg_resolver_config_data: DirOrProxy::Dir(tempfile::tempdir().expect("/tmp to exist")),
     };
     mounts.add_config(&Config { disable_dynamic_configuration: false });
-    let env = TestEnv::new_with_mounts(mounts);
+    let env = TestEnvBuilder::new().mounts(mounts).build();
 
     // Waits for pkg_resolver to be initialized
     get_repos(&env.proxies.repo_manager).await;
@@ -154,7 +154,7 @@ async fn no_attempt_to_open_persisted_dynamic_repos_if_disabled() {
         pkg_resolver_config_data: DirOrProxy::Dir(tempfile::tempdir().expect("/tmp to exist")),
     };
     mounts.add_config(&Config { disable_dynamic_configuration: true });
-    let env = TestEnv::new_with_mounts(mounts);
+    let env = TestEnvBuilder::new().mounts(mounts).build();
 
     // Waits for pkg_resolver to be initialized
     get_repos(&env.proxies.repo_manager).await;

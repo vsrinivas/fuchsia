@@ -116,6 +116,60 @@ impl Mounts {
     }
 }
 
+struct TestEnvBuilder<PkgFsFn, P, MountsFn>
+where
+    PkgFsFn: FnOnce() -> P,
+{
+    include_amber: bool,
+    pkgfs: PkgFsFn,
+    mounts: MountsFn,
+}
+
+impl TestEnvBuilder<fn() -> PkgfsRamdisk, PkgfsRamdisk, fn() -> Mounts> {
+    fn new() -> Self {
+        Self {
+            include_amber: true,
+            pkgfs: || PkgfsRamdisk::start().expect("pkgfs to start"),
+            mounts: || Mounts::new(),
+        }
+    }
+}
+
+impl<PkgFsFn, P, MountsFn> TestEnvBuilder<PkgFsFn, P, MountsFn>
+where
+    PkgFsFn: FnOnce() -> P,
+    P: PkgFs,
+    MountsFn: FnOnce() -> Mounts,
+{
+    fn build(self) -> TestEnv<P> {
+        TestEnv::new_with_pkg_fs_and_mounts((self.pkgfs)(), (self.mounts)(), self.include_amber)
+    }
+    fn include_amber(mut self, include_amber: bool) -> Self {
+        self.include_amber = include_amber;
+        self
+    }
+    fn pkgfs<Pother>(
+        self,
+        pkgfs: Pother,
+    ) -> TestEnvBuilder<impl FnOnce() -> Pother, Pother, MountsFn>
+    where
+        Pother: PkgFs + 'static,
+    {
+        TestEnvBuilder::<_, Pother, MountsFn> {
+            include_amber: self.include_amber,
+            pkgfs: || pkgfs,
+            mounts: self.mounts,
+        }
+    }
+    fn mounts(self, mounts: Mounts) -> TestEnvBuilder<PkgFsFn, P, impl FnOnce() -> Mounts> {
+        TestEnvBuilder::<PkgFsFn, P, _> {
+            include_amber: self.include_amber,
+            pkgfs: self.pkgfs,
+            mounts: || mounts,
+        }
+    }
+}
+
 struct Apps {
     _amber: App,
     _pkg_cache: App,
@@ -139,22 +193,6 @@ struct TestEnv<P = PkgfsRamdisk> {
 }
 
 impl TestEnv<PkgfsRamdisk> {
-    fn new() -> Self {
-        Self::new_with_pkg_fs(PkgfsRamdisk::start().expect("pkgfs to start"), true)
-    }
-
-    fn new_without_amber() -> Self {
-        Self::new_with_pkg_fs(PkgfsRamdisk::start().expect("pkgfs to start"), false)
-    }
-
-    fn new_with_mounts(mounts: Mounts) -> Self {
-        Self::new_with_pkg_fs_and_mounts(
-            PkgfsRamdisk::start().expect("pkgfs to start"),
-            mounts,
-            true,
-        )
-    }
-
     async fn stop(self) {
         // Tear down the environment in reverse order, ending with the storage.
         drop(self.proxies);
@@ -165,10 +203,6 @@ impl TestEnv<PkgfsRamdisk> {
 }
 
 impl<P: PkgFs> TestEnv<P> {
-    fn new_with_pkg_fs(pkgfs: P, include_amber: bool) -> Self {
-        Self::new_with_pkg_fs_and_mounts(pkgfs, Mounts::new(), include_amber)
-    }
-
     fn new_with_pkg_fs_and_mounts(pkgfs: P, mounts: Mounts, include_amber: bool) -> Self {
         let mut amber = AppBuilder::new(
             "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/amber.cmx",

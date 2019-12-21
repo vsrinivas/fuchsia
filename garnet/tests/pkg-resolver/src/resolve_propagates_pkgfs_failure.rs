@@ -341,7 +341,7 @@ async fn assert_resolve_package_with_failing_pkgfs_fails(
     pkg: Package,
     failing_file_call_count: Arc<AtomicU64>,
 ) -> Result<(), Error> {
-    let env = TestEnv::new_with_pkg_fs(pkgfs, true);
+    let env = TestEnvBuilder::new().pkgfs(pkgfs).build();
     let repo =
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH).add_package(&pkg).build().await?;
     let served_repository = repo.serve(env.launcher()).await?;
