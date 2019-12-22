@@ -135,6 +135,17 @@ Mesh::~Mesh() = default;
 void Mesh::BindBuffers(const Buffer& index_buffer, fuchsia::ui::gfx::MeshIndexFormat index_format,
                        uint64_t index_offset, uint32_t index_count, const Buffer& vertex_buffer,
                        fuchsia::ui::gfx::MeshVertexFormat vertex_format, uint64_t vertex_offset,
+                       uint32_t vertex_count, const std::array<float, 3>& bounding_box_min,
+                       const std::array<float, 3>& bounding_box_max) {
+  ZX_DEBUG_ASSERT(session() == index_buffer.session() && session() == vertex_buffer.session());
+  session()->Enqueue(NewBindMeshBuffersCmd(
+      id(), index_buffer.id(), index_format, index_offset, index_count, vertex_buffer.id(),
+      vertex_format, vertex_offset, vertex_count, bounding_box_min, bounding_box_max));
+}
+
+void Mesh::BindBuffers(const Buffer& index_buffer, fuchsia::ui::gfx::MeshIndexFormat index_format,
+                       uint64_t index_offset, uint32_t index_count, const Buffer& vertex_buffer,
+                       fuchsia::ui::gfx::MeshVertexFormat vertex_format, uint64_t vertex_offset,
                        uint32_t vertex_count, const float bounding_box_min[3],
                        const float bounding_box_max[3]) {
   ZX_DEBUG_ASSERT(session() == index_buffer.session() && session() == vertex_buffer.session());
@@ -165,6 +176,10 @@ Node::Node(Node&& moved) noexcept : Resource(std::move(moved)) {}
 
 Node::~Node() = default;
 
+void Node::SetTranslation(const std::array<float, 3>& translation) {
+  session()->Enqueue(NewSetTranslationCmd(id(), translation));
+}
+
 void Node::SetTranslation(const float translation[3]) {
   session()->Enqueue(NewSetTranslationCmd(id(), translation));
 }
@@ -173,10 +188,16 @@ void Node::SetTranslation(uint32_t variable_id) {
   session()->Enqueue(NewSetTranslationCmd(id(), variable_id));
 }
 
+void Node::SetScale(const std::array<float, 3>& scale) {
+  session()->Enqueue(NewSetScaleCmd(id(), scale));
+}
 void Node::SetScale(const float scale[3]) { session()->Enqueue(NewSetScaleCmd(id(), scale)); }
 
 void Node::SetScale(uint32_t variable_id) { session()->Enqueue(NewSetScaleCmd(id(), variable_id)); }
 
+void Node::SetRotation(const std::array<float, 4>& quaternion) {
+  session()->Enqueue(NewSetRotationCmd(id(), quaternion));
+}
 void Node::SetRotation(const float quaternion[4]) {
   session()->Enqueue(NewSetRotationCmd(id(), quaternion));
 }
@@ -185,6 +206,9 @@ void Node::SetRotation(uint32_t variable_id) {
   session()->Enqueue(NewSetRotationCmd(id(), variable_id));
 }
 
+void Node::SetAnchor(const std::array<float, 3>& anchor) {
+  session()->Enqueue(NewSetAnchorCmd(id(), anchor));
+}
 void Node::SetAnchor(const float anchor[3]) { session()->Enqueue(NewSetAnchorCmd(id(), anchor)); }
 
 void Node::SetAnchor(uint32_t variable_id) {
@@ -287,6 +311,13 @@ ViewHolder::ViewHolder(ViewHolder&& moved) noexcept : Node(std::move(moved)) {}
 
 ViewHolder::~ViewHolder() = default;
 
+void ViewHolder::SetViewProperties(const std::array<float, 3>& bounding_box_min,
+                                   const std::array<float, 3>& bounding_box_max,
+                                   const std::array<float, 3>& inset_from_min,
+                                   const std::array<float, 3>& inset_from_max) {
+  session()->Enqueue(NewSetViewPropertiesCmd(id(), bounding_box_min, bounding_box_max,
+                                             inset_from_min, inset_from_max));
+}
 void ViewHolder::SetViewProperties(const float bounding_box_min[3], const float bounding_box_max[3],
                                    const float inset_from_min[3], const float inset_from_max[3]) {
   session()->Enqueue(NewSetViewPropertiesCmd(id(), bounding_box_min, bounding_box_max,
@@ -396,6 +427,12 @@ void CameraBase::SetTransform(const float eye_position[3], const float eye_look_
   session()->Enqueue(NewSetCameraTransformCmd(id(), eye_position, eye_look_at, eye_up));
 }
 
+void CameraBase::SetTransform(const std::array<float, 3>& eye_position,
+                              const std::array<float, 3>& eye_look_at,
+                              const std::array<float, 3>& eye_up) {
+  session()->Enqueue(NewSetCameraTransformCmd(id(), eye_position, eye_look_at, eye_up));
+}
+
 void CameraBase::SetClipSpaceTransform(float x, float y, float scale) {
   session()->Enqueue(NewSetCameraClipSpaceTransformCmd(id(), x, y, scale));
 }
@@ -434,6 +471,11 @@ StereoCamera::StereoCamera(Session* session, uint32_t scene_id) : CameraBase(ses
 StereoCamera::StereoCamera(StereoCamera&& moved) noexcept : CameraBase(std::move(moved)) {}
 
 StereoCamera::~StereoCamera() = default;
+
+void StereoCamera::SetStereoProjection(const std::array<float, 4 * 4>& left_projection,
+                                       const std::array<float, 4 * 4>& right_projection) {
+  session()->Enqueue(NewSetStereoCameraProjectionCmd(id(), left_projection, right_projection));
+}
 
 void StereoCamera::SetStereoProjection(const float left_projection[4 * 4],
                                        const float right_projection[4 * 4]) {
@@ -482,6 +524,9 @@ void Layer::SetRenderer(uint32_t renderer_id) {
   session()->Enqueue(NewSetRendererCmd(id(), renderer_id));
 }
 
+void Layer::SetSize(const std::array<float, 2>& size) {
+  session()->Enqueue(NewSetSizeCmd(id(), size));
+}
 void Layer::SetSize(const float size[2]) { session()->Enqueue(NewSetSizeCmd(id(), size)); }
 
 LayerStack::LayerStack(Session* session) : Resource(session) {
@@ -545,6 +590,9 @@ Light::Light(Light&& moved) noexcept : Resource(std::move(moved)) {}
 
 Light::~Light() = default;
 
+void Light::SetColor(const std::array<float, 3>& rgb) {
+  session()->Enqueue(NewSetLightColorCmd(id(), rgb));
+}
 void Light::SetColor(const float rgb[3]) { session()->Enqueue(NewSetLightColorCmd(id(), rgb)); }
 
 void Light::SetColor(uint32_t variable_id) {
@@ -569,6 +617,10 @@ DirectionalLight::DirectionalLight(DirectionalLight&& moved) noexcept : Light(st
 
 DirectionalLight::~DirectionalLight() = default;
 
+void DirectionalLight::SetDirection(const std::array<float, 3>& direction) {
+  session()->Enqueue(NewSetLightDirectionCmd(id(), direction));
+}
+
 void DirectionalLight::SetDirection(const float direction[3]) {
   session()->Enqueue(NewSetLightDirectionCmd(id(), direction));
 }
@@ -584,6 +636,10 @@ PointLight::PointLight(Session* session) : Light(session) {
 PointLight::PointLight(PointLight&& moved) noexcept : Light(std::move(moved)) {}
 
 PointLight::~PointLight() = default;
+
+void PointLight::SetPosition(const std::array<float, 3>& position) {
+  session()->Enqueue(NewSetPointLightPositionCmd(id(), position));
+}
 
 void PointLight::SetPosition(const float position[3]) {
   session()->Enqueue(NewSetPointLightPositionCmd(id(), position));
