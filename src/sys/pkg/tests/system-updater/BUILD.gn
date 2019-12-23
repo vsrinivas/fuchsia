@@ -1,0 +1,76 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_test.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_test("driver") {
+  name = "system_updater_v2_test"
+  edition = "2018"
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-runtime",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.amber:fuchsia.amber-rustc",
+    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//src/sys/pkg/bin/amber:cobalt_sw_delivery_registry_rustlib",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:hex",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_derive",
+    "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:tempfile",
+    "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
+    "//zircon/system/fidl/fuchsia-device-manager:fuchsia-device-manager-rustc",
+    "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
+    "//zircon/system/fidl/fuchsia-paver:fuchsia-paver-rustc",
+  ]
+}
+
+test_package("systemupdater-tests") {
+  deps = [
+    ":driver",
+    "//garnet/go/src/grand_unified_binary",
+  ]
+
+  binaries = [
+    {
+      name = "system_updater"
+      source = "grand_unified_binary"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("//src/sys/pkg/bin/amber/system_updater/images")
+      dest = "images"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path(
+              "//src/sys/pkg/bin/amber/system_updater/meta/system_updater_isolated.cmx")
+      dest = "system_updater_isolated.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      name = "system_updater_v2_test"
+      environments = basic_envs
+    },
+  ]
+}

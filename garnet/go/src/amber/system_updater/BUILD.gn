@@ -1,58 +1,21 @@
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 import("//build/go/go_library.gni")
-import("//build/go/go_test.gni")
-import("//build/go/toolchain.gni")
-import("//build/package.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+
+# Do not use these targets directly, instead depend on their dependencies directly.
 
 go_library("lib") {
-  name = "system_updater"
-
+  name = "lib_forwarding_target"
   deps = [
-    "//garnet/go/src/amber:metrics_lib",
-    "//src/lib/component/go/src/app",
-    "//garnet/public/lib/syslog/go/src/syslog",
-    "//sdk/fidl/fuchsia.amber($go_toolchain)",
-    "//sdk/fidl/fuchsia.pkg($go_toolchain)",
-    "//sdk/fidl/fuchsia.sys($go_toolchain)",
-    "//zircon/system/fidl/fuchsia-device-manager($go_toolchain)",
-    "//zircon/system/fidl/fuchsia-io($go_toolchain)",
-    "//zircon/system/fidl/fuchsia-mem($go_toolchain)",
-    "//zircon/system/fidl/fuchsia-paver($go_toolchain)",
+    "//src/sys/pkg/bin/amber/system_updater:lib",
   ]
 }
 
-go_test("system_updater_test") {
-  gopackages = [ "system_updater" ]
-  deps = [
-    ":lib",
+group("system_updater_tests") {
+  public_deps = [
+    "//src/sys/pkg/bin/amber/system_updater:system_updater_tests",
   ]
-}
-
-test_package("system_updater_tests") {
-  deps = [
-    ":system_updater_test",
-  ]
-
-  resources = [
-    {
-      path = rebase_path("test_images")
-      dest = "images"
-    },
-    {
-      path = rebase_path("test_packages")
-      dest = "packages"
-    },
-  ]
-
-  tests = [
-    {
-      name = "system_updater_test"
-      environments = basic_envs
-    },
-  ]
+  testonly = true
 }

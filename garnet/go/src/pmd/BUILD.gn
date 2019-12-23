@@ -1,68 +1,21 @@
-# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 import("//build/go/go_library.gni")
-import("//build/go/go_test.gni")
-import("//build/go/toolchain.gni")
-import("//build/package.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+
+# Do not use these targets directly, instead depend on their dependencies directly.
 
 go_library("pmd") {
-  name = "fuchsia.googlesource.com/pmd"
-
+  name = "pmd_forwarding_target"
   deps = [
-    "//garnet/go/src/far",
-    "//garnet/go/src/merkle",
-    "//garnet/go/src/pm:pm_lib",
-    "//garnet/go/src/thinfs:thinfs_lib",
-    "//src/lib/component/go/src/app",
-    "//sdk/fidl/fuchsia.sys($go_toolchain)",
+    "//src/sys/pkg/bin/pkgfs:pmd",
   ]
 }
 
-test_packages = [
-  "pkgfs",
-  "index",
-]
-foreach(testpkg, test_packages) {
-  go_test("pmd_${testpkg}_test") {
-    gopackages = [ "fuchsia.googlesource.com/pmd/${testpkg}" ]
-    deps = [
-      ":pmd",
-    ]
-    non_go_deps = [
-      "//zircon/public/lib/ramdevice-client",
-      "//zircon/public/lib/fdio",
-    ]
-  }
-}
-
-zircon_extras_manifest("blobfs.manifest") {
-  visibility = [ ":*" ]
-  manifest = "image"
-  patterns = [ "bin/blobfs" ]
-}
-
-manifest_outputs = get_target_outputs(":blobfs.manifest")
-manifest_file = manifest_outputs[0]
-
-test_package("pmd_tests") {
-  deps = [
-    ":blobfs.manifest",
+group("pmd_tests") {
+  public_deps = [
+    "//src/sys/pkg/bin/pkgfs:pmd_tests",
   ]
-  tests = []
-
-  extra = [ manifest_file ]
-
-  foreach(testpkg, test_packages) {
-    deps += [ ":pmd_${testpkg}_test" ]
-    tests += [
-      {
-        name = "pmd_${testpkg}_test"
-        environments = basic_envs
-      },
-    ]
-  }
+  testonly = true
 }

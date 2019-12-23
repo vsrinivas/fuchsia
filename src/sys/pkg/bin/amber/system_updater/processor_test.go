@@ -28,7 +28,7 @@ func TestParseRequirements(t *testing.T) {
 		"pkgfs/0": "123456789",
 	}
 	expectedImgs := map[string]struct{}{
-		"dc38ffa1029c3fd44": struct{}{},
+		"dc38ffa1029c3fd44": {},
 	}
 
 	pFile, iFile := openDataSources()

@@ -112,23 +112,23 @@ func TestDeltaSnapshots_same(t *testing.T) {
 		SourceSize:    s.Size(),
 		TargetSize:    s.Size(),
 		Packages: []DeltaPackageStats{
-			DeltaPackageStats{
+			{
 				Name:          "bar/0",
 				UnchangedSize: 1024 * 5,
 			},
-			DeltaPackageStats{
+			{
 				Name:          "foo/0",
 				UnchangedSize: 1024 * 5,
 			},
-			DeltaPackageStats{
+			{
 				Name:          "foobar/0",
 				UnchangedSize: 1024 * 4,
 			},
-			DeltaPackageStats{
+			{
 				Name:          "optional/0",
 				UnchangedSize: 1024 * 4,
 			},
-			DeltaPackageStats{
+			{
 				Name:          "system/0",
 				UnchangedSize: 1024 * 7,
 			},
@@ -159,11 +159,11 @@ func TestDeltaSnapshots_changeBlob(t *testing.T) {
 		SourceSize:    111,
 		TargetSize:    211,
 		AddedBlobs: []DeltaBlobStats{
-			DeltaBlobStats{
+			{
 				Merkle: target.Packages["b"].Files["update"],
 				Size:   200,
 				References: []PackageFileRef{
-					PackageFileRef{
+					{
 						Name: "b",
 						Path: "update",
 					},
@@ -171,13 +171,13 @@ func TestDeltaSnapshots_changeBlob(t *testing.T) {
 			},
 		},
 		Packages: []DeltaPackageStats{
-			DeltaPackageStats{
+			{
 				Name:          "b",
 				DownloadSize:  200,
 				DiscardSize:   100,
 				UnchangedSize: 10,
 			},
-			DeltaPackageStats{
+			{
 				Name:          "a",
 				UnchangedSize: 1,
 			},
@@ -207,21 +207,21 @@ func TestDeltaSnapshots_addBlobs(t *testing.T) {
 		SourceSize:    11,
 		TargetSize:    1111,
 		AddedBlobs: []DeltaBlobStats{
-			DeltaBlobStats{
+			{
 				Merkle: target.Packages["b"].Files["new2"],
 				Size:   1000,
 				References: []PackageFileRef{
-					PackageFileRef{
+					{
 						Name: "b",
 						Path: "new2",
 					},
 				},
 			},
-			DeltaBlobStats{
+			{
 				Merkle: target.Packages["a"].Files["new1"],
 				Size:   100,
 				References: []PackageFileRef{
-					PackageFileRef{
+					{
 						Name: "a",
 						Path: "new1",
 					},
@@ -229,13 +229,13 @@ func TestDeltaSnapshots_addBlobs(t *testing.T) {
 			},
 		},
 		Packages: []DeltaPackageStats{
-			DeltaPackageStats{
+			{
 				Name:          "b",
 				DownloadSize:  1000,
 				DiscardSize:   0,
 				UnchangedSize: 10,
 			},
-			DeltaPackageStats{
+			{
 				Name:          "a",
 				DownloadSize:  100,
 				DiscardSize:   0,
@@ -267,12 +267,12 @@ func TestDeltaSnapshots_removeBlobs(t *testing.T) {
 		SourceSize:    1111,
 		TargetSize:    11,
 		Packages: []DeltaPackageStats{
-			DeltaPackageStats{
+			{
 				Name:          "a",
 				DiscardSize:   100,
 				UnchangedSize: 1,
 			},
-			DeltaPackageStats{
+			{
 				Name:          "b",
 				DiscardSize:   1000,
 				UnchangedSize: 10,
@@ -306,15 +306,15 @@ func TestDeltaSnapshots_updateAliasedBetweenPackages(t *testing.T) {
 		SourceSize:    1,
 		TargetSize:    10,
 		AddedBlobs: []DeltaBlobStats{
-			DeltaBlobStats{
+			{
 				Merkle: target.Packages["a"].Files["blob1"],
 				Size:   10,
 				References: []PackageFileRef{
-					PackageFileRef{
+					{
 						Name: "a",
 						Path: "blob1",
 					},
-					PackageFileRef{
+					{
 						Name: "b",
 						Path: "blob2",
 					},
@@ -322,13 +322,13 @@ func TestDeltaSnapshots_updateAliasedBetweenPackages(t *testing.T) {
 			},
 		},
 		Packages: []DeltaPackageStats{
-			DeltaPackageStats{
+			{
 				Name:          "a",
 				DownloadSize:  10,
 				DiscardSize:   1,
 				UnchangedSize: 0,
 			},
-			DeltaPackageStats{
+			{
 				Name:          "b",
 				DownloadSize:  10,
 				DiscardSize:   1,
@@ -365,15 +365,15 @@ func TestDeltaSnapshots_updateAliasedWithinPackage(t *testing.T) {
 		SourceSize:    1001,
 		TargetSize:    1010,
 		AddedBlobs: []DeltaBlobStats{
-			DeltaBlobStats{
+			{
 				Merkle: target.Packages["a"].Files["file"],
 				Size:   10,
 				References: []PackageFileRef{
-					PackageFileRef{
+					{
 						Name: "a",
 						Path: "file",
 					},
-					PackageFileRef{
+					{
 						Name: "a",
 						Path: "samefile",
 					},
@@ -381,7 +381,7 @@ func TestDeltaSnapshots_updateAliasedWithinPackage(t *testing.T) {
 			},
 		},
 		Packages: []DeltaPackageStats{
-			DeltaPackageStats{
+			{
 				Name:          "a",
 				DownloadSize:  10,
 				DiscardSize:   1,
@@ -415,15 +415,15 @@ func TestDeltaSnapshots_addRemoveAliased(t *testing.T) {
 		SourceSize:    4,
 		TargetSize:    10,
 		AddedBlobs: []DeltaBlobStats{
-			DeltaBlobStats{
+			{
 				Merkle: target.Packages["a"].Files["add"],
 				Size:   10,
 				References: []PackageFileRef{
-					PackageFileRef{
+					{
 						Name: "a",
 						Path: "add",
 					},
-					PackageFileRef{
+					{
 						Name: "b",
 						Path: "add",
 					},
@@ -431,13 +431,13 @@ func TestDeltaSnapshots_addRemoveAliased(t *testing.T) {
 			},
 		},
 		Packages: []DeltaPackageStats{
-			DeltaPackageStats{
+			{
 				Name:          "a",
 				DownloadSize:  10,
 				DiscardSize:   1,
 				UnchangedSize: 0,
 			},
-			DeltaPackageStats{
+			{
 				Name:          "b",
 				DownloadSize:  10,
 				DiscardSize:   3,
@@ -471,11 +471,11 @@ func TestDeltaSnapshots_addPackage(t *testing.T) {
 		SourceSize:    11,
 		TargetSize:    111,
 		AddedBlobs: []DeltaBlobStats{
-			DeltaBlobStats{
+			{
 				Merkle: target.Packages["b"].Files["unique_b"],
 				Size:   100,
 				References: []PackageFileRef{
-					PackageFileRef{
+					{
 						Name: "b",
 						Path: "unique_b",
 					},
@@ -483,13 +483,13 @@ func TestDeltaSnapshots_addPackage(t *testing.T) {
 			},
 		},
 		Packages: []DeltaPackageStats{
-			DeltaPackageStats{
+			{
 				Name:          "b",
 				DownloadSize:  100,
 				DiscardSize:   0,
 				UnchangedSize: 1,
 			},
-			DeltaPackageStats{
+			{
 				Name:          "a",
 				DownloadSize:  0,
 				DiscardSize:   0,
@@ -523,7 +523,7 @@ func TestDeltaSnapshots_removePackage(t *testing.T) {
 		SourceSize:    111,
 		TargetSize:    11,
 		Packages: []DeltaPackageStats{
-			DeltaPackageStats{
+			{
 				Name:          "a",
 				DownloadSize:  0,
 				DiscardSize:   0,

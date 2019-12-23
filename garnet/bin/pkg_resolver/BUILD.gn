@@ -1,132 +1,18 @@
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
-import("//garnet/bin/pkg_resolver/pkg_resolver_config.gni")
+# Do not use these targets directly, instead depend on their dependencies directly.
 
-rustc_binary("bin") {
-  name = "pkg_resolver"
-  with_unit_tests = true
-  edition = "2018"
-  allow_deprecated = true
-
-  deps = [
-    "//garnet/lib/rust/fidl_fuchsia_amber_ext",
-    "//garnet/lib/rust/fidl_fuchsia_pkg_ext",
-    "//garnet/lib/rust/files_async",
-    "//garnet/lib/rust/fuchsia_pkg_testing",
-    "//garnet/lib/rust/io_util",
-    "//garnet/lib/rust/sysconfig-client",
-    "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fdio",
-    "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-component",
-    "//garnet/public/rust/fuchsia-hyper",
-    "//garnet/public/rust/fuchsia-syslog",
-    "//garnet/public/rust/fuchsia-trace",
-    "//garnet/public/rust/fuchsia-trace-provider",
-    "//garnet/public/rust/fuchsia-zircon",
-    "//garnet/public/rust/tuf",
-    "//src/lib/http-sse:http_sse",
-    "//src/lib/inspect/rust/fuchsia-inspect",
-    "//src/lib/inspect/rust/fuchsia-inspect-contrib",
-    "//src/sys/lib/fuchsia_backoff",
-    "//src/sys/lib/fuchsia_url:fuchsia_url",
-    "//src/sys/lib/fuchsia_url_rewrite",
-    "//src/sys/pkg/lib/pkgfs",
-
-    # "//garnet/public/rust/tuf", FIXME re-enable once tuf is on futures alpha 13
-    "//sdk/fidl/fuchsia.amber:fuchsia.amber-rustc",
-    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
-    "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
-    "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:http",
-    "//third_party/rust_crates:hyper",
-    "//third_party/rust_crates:hyper-rustls",
-    "//third_party/rust_crates:log",
-    "//third_party/rust_crates:maplit",
-    "//third_party/rust_crates:matches",
-    "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:pin-utils",
-    "//third_party/rust_crates:rand",
-    "//third_party/rust_crates:serde",
-    "//third_party/rust_crates:serde_derive",
-    "//third_party/rust_crates:serde_json",
-    "//third_party/rust_crates:tempfile",
-    "//third_party/rust_crates:url",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
-  ]
-
-  non_rust_deps = [ "//zircon/public/lib/sysconfig-sync-client-c" ]
-}
-
-# Ensure the contents of this package stay in sync with //garnet/tests/amberctl:amberctl-tests
-package("pkg_resolver") {
-  deps = [
-    ":bin",
-  ]
-  binaries = [
-    {
-      name = "pkg_resolver"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/pkg_resolver.cmx")
-      dest = "pkg_resolver.cmx"
-    },
+group("pkg_resolver") {
+  public_deps = [
+    "//src/sys/pkg/bin/pkg-resolver:pkg_resolver",
   ]
 }
 
-generate_manifest("empty-repo.manifest") {
-  visibility = [ ":*" ]
+group("pkg-resolver-unit-tests") {
+  public_deps = [
+    "//src/sys/pkg/bin/pkg-resolver:pkg-resolver-unit-tests",
+  ]
   testonly = true
-  sources = []
-  args = []
-
-  foreach(path,
-          [
-            "keys/root.json",
-            "keys/snapshot.json",
-            "keys/targets.json",
-            "keys/timestamp.json",
-            "repository/1.root.json",
-            "repository/1.snapshot.json",
-            "repository/1.targets.json",
-            "repository/root.json",
-            "repository/snapshot.json",
-            "repository/targets.json",
-            "repository/timestamp.json",
-          ]) {
-    source = "//garnet/tests/pkg-resolver/template/${path}"
-    sources += [ source ]
-    args += [ "--entry=empty-repo/${path}=" + rebase_path(source) ]
-  }
-}
-empty_repo_manifest_outputs = get_target_outputs(":empty-repo.manifest")
-empty_repo_manifest_file = empty_repo_manifest_outputs[0]
-
-test_package("pkg-resolver-unit-tests") {
-  deps = [
-    ":bin_test",
-    ":empty-repo.manifest",
-  ]
-  extra = [ empty_repo_manifest_file ]
-
-  tests = [
-    {
-      name = "pkg_resolver_bin_test"
-      environments = basic_envs
-    },
-  ]
-}
-
-pkg_resolver_config("disable_dynamic_configuration") {
-  disable_dynamic_configuration = true
 }

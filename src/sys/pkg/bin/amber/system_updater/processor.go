@@ -53,7 +53,7 @@ func ConnectToPaver() (*paver.DataSinkInterface, error) {
 		syslog.Errorf("control interface could not be acquired: %s", err)
 		return nil, err
 	}
-	defer pxy.Close();
+	defer pxy.Close()
 
 	context.ConnectToEnvService(req)
 

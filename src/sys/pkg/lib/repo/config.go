@@ -38,12 +38,9 @@ type KeyConfig struct {
 }
 
 // We replicate the serialization/deserialization logic given in
-// //garnet/lib/rust/fidl_fuchsia_pkg_ext/src/repo.rs;
+// //src/sys/pkg/lib/fidl-fuchsia-pkg-ext/src/repo.rs;
 // Per this logic, we set the BlobURL field in MirrorConfig as omitempty (above),
 // and give custom marshaling logic to the key config.
-//
-// TODO(fxbug.dev/37022): Update the above source reference when the code is
-// moved under //src,
 //
 
 // This alias allows to make use of the default (un)marshalling logic of Config as we redefine it.

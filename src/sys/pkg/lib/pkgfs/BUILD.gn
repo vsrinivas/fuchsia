@@ -18,9 +18,9 @@ rustc_library("pkgfs") {
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
-    "//garnet/public/rust/fuchsia-merkle",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//src/sys/pkg/lib/fuchsia-merkle",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
@@ -31,7 +31,7 @@ rustc_library("pkgfs") {
   deps += [ "//src/storage/ramdevice-client" ]
 
   test_deps = [
-    "//garnet/lib/rust/fuchsia_pkg_testing",
+    "//src/sys/pkg/lib/fuchsia-pkg-testing:fuchsia_pkg_testing",
     "//src/sys/pkg/testing/pkgfs-ramdisk",
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:matches",
@@ -78,6 +78,6 @@ group("tests") {
   testonly = true
   public_deps = [
     ":pkgfs-tests",
-    "//garnet/go/src/pm:pm",
+    "//src/sys/pkg/bin/pm:pm",
   ]
 }

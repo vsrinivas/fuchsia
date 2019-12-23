@@ -1,0 +1,178 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+import("//build/go/toolchain.gni")
+import("//build/host.gni")
+import("//build/images/manifest.gni")
+import("//build/package.gni")
+import("//build/package/component.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+import("//third_party/cobalt/metrics_registry.gni")
+
+go_library("metrics_lib") {
+  name = "metrics"
+  source_dir = "metrics"
+  deps = [
+    "//garnet/public/lib/syslog/go/src/syslog",
+    "//zircon/system/fidl/fuchsia-cobalt($go_toolchain)",
+    "//zircon/system/fidl/fuchsia-mem($go_toolchain)",
+  ]
+}
+
+go_library("lib") {
+  name = "amber"
+  deps = [
+    "//garnet/go/src/merkle",
+    "//garnet/go/src/sse",
+    "//garnet/public/lib/syslog/go/src/syslog",
+    "//sdk/fidl/fuchsia.amber($go_toolchain)",
+    "//sdk/fidl/fuchsia.pkg($go_toolchain)",
+    "//sdk/fidl/fuchsia.pkg.rewrite($go_toolchain)",
+    "//sdk/fidl/fuchsia.space($go_toolchain)",
+    "//sdk/fidl/fuchsia.sys($go_toolchain)",
+    "//sdk/fidl/fuchsia.update($go_toolchain)",
+    "//third_party/golibs:github.com/flynn/go-tuf",
+    "//zircon/system/fidl/fuchsia-cobalt($go_toolchain)",
+    "//zircon/system/fidl/fuchsia-mem($go_toolchain)",
+  ]
+}
+
+metrics_registry("cobalt_sw_delivery_registry") {
+  project_name = "software_delivery"
+  generate_rust = true
+  generate_binarypb = false
+}
+
+package("pkgfs") {
+  deps = [
+    "//garnet/go/src/grand_unified_binary",
+  ]
+
+  binaries = [
+    {
+      name = "pkgsvr"
+      source = "grand_unified_binary"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("//src/sys/pkg/bin/pkgfs/meta/pkgsvr.cmx")
+      dest = "pkgsvr.cmx"
+    },
+  ]
+}
+
+# FIXME: Until fuchsia_component exists again, ensure this and //src/sys/pkg/tests/amberctl:amberctl-tests stay in sync
+package("amber") {
+  deprecated_misc_storage = "//build"
+
+  deps = [
+    "//garnet/go/src/grand_unified_binary",
+  ]
+
+  binaries = [
+    {
+      name = "grand_unified_binary"
+      dest = "system_updater"
+    },
+    {
+      name = "grand_unified_binary"
+      dest = "amber"
+    },
+
+    # TODO(raggi): remove the underscore version of the command name once all
+    # docs and scripts have been updated.
+    # See https://fuchsia-review.googlesource.com/c/fuchsia/+/255274.
+    {
+      name = "amber_ctl"
+      source = "grand_unified_binary"
+      shell = true
+    },
+    {
+      name = "amberctl"
+      source = "grand_unified_binary"
+      shell = true
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/amber.cmx")
+      dest = "amber.cmx"
+    },
+    {
+      path = rebase_path(
+              "//src/sys/pkg/bin/amber/system_updater/meta/system_updater.cmx")
+      dest = "system_updater.cmx"
+    },
+    {
+      path = rebase_path("meta/amberctl.cmx")
+      dest = "amberctl.cmx"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("system_updater/images")
+      dest = "images"
+    },
+  ]
+}
+
+test_targets = [
+  {
+    name = "amber_daemon_test"
+    gopkg = "amber/daemon"
+  },
+  {
+    name = "amber_source_test"
+    gopkg = "amber/source"
+  },
+  {
+    name = "amber_urlscope_test"
+    gopkg = "amber/urlscope"
+  },
+]
+foreach(test, test_targets) {
+  go_test(test.name) {
+    gopackages = [ test.gopkg ]
+
+    deps = [
+      ":lib",
+      "//src/sys/pkg/bin/pkgfs:pmd",
+      "//src/sys/pkg/bin/pm:pm_lib",
+      "//third_party/golibs:github.com/google/go-cmp",
+    ]
+  }
+}
+
+test_package("amber_tests") {
+  deps = []
+  tests = []
+
+  foreach(test, test_targets) {
+    deps += [ ":${test.name}" ]
+    tests += [
+      {
+        name = test.name
+        environments = basic_envs
+      },
+    ]
+  }
+}
+
+config_data("config") {
+  for_pkg = "sysmgr"
+  outputs = [
+    "amber.config",
+  ]
+  sources = [
+    "startup.config",
+  ]
+}

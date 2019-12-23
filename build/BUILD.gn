@@ -24,8 +24,8 @@ group("deprecated_misc_storage_allowlist") {
   # the "deprecated-misc-storage" feature. This is only intended to be used as
   # a temporary hack for OTAs. Do not add to this list.
   visibility = [
-    "//garnet/go/src/amber:amber",
-    "//garnet/bin/system-update-checker",
+    "//src/sys/pkg/bin/amber:amber",
+    "//src/sys/pkg/bin/system-update-checker",
   ]
 }
 
@@ -86,11 +86,11 @@ group("deprecated_shell_allowlist") {
     "//garnet/bin/sl4f:sl4f",
 
     # Needs access to /system/data/static_packages. See fxb/22779 for more details.
-    "//garnet/bin/system-update-checker:system-update-checker",
     "//garnet/bin/sshd-host:sshd-host",
     "//garnet/tests/benchmarks/input_latency:garnet_input_latency_benchmarks",
     "//src/devices/tests/libdriver-integration-test",
     "//src/devices/coordinator:coordinator_tests",
+    "//src/sys/pkg/bin/system-update-checker:system-update-checker",
   ]
 }
 

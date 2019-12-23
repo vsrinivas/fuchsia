@@ -1,0 +1,58 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+import("//build/go/toolchain.gni")
+import("//build/package.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+go_library("lib") {
+  name = "system_updater"
+
+  deps = [
+    "//garnet/public/lib/syslog/go/src/syslog",
+    "//sdk/fidl/fuchsia.amber($go_toolchain)",
+    "//sdk/fidl/fuchsia.pkg($go_toolchain)",
+    "//sdk/fidl/fuchsia.sys($go_toolchain)",
+    "//src/lib/component/go/src/app",
+    "//src/sys/pkg/bin/amber:metrics_lib",
+    "//zircon/system/fidl/fuchsia-device-manager($go_toolchain)",
+    "//zircon/system/fidl/fuchsia-io($go_toolchain)",
+    "//zircon/system/fidl/fuchsia-mem($go_toolchain)",
+    "//zircon/system/fidl/fuchsia-paver($go_toolchain)",
+  ]
+}
+
+go_test("system_updater_test") {
+  gopackages = [ "system_updater" ]
+  deps = [
+    ":lib",
+  ]
+}
+
+test_package("system_updater_tests") {
+  deps = [
+    ":system_updater_test",
+  ]
+
+  resources = [
+    {
+      path = rebase_path("test_images")
+      dest = "images"
+    },
+    {
+      path = rebase_path("test_packages")
+      dest = "packages"
+    },
+  ]
+
+  tests = [
+    {
+      name = "system_updater_test"
+      environments = basic_envs
+    },
+  ]
+}

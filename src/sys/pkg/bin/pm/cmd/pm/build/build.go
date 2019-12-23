@@ -113,7 +113,7 @@ func Run(cfg *build.Config, args []string) error {
 // computedOutputs are files that are produced by the `build` composite command
 // that must be excluded from the depfile
 var computedOutputs = map[string]struct{}{
-	"meta/contents": struct{}{},
+	"meta/contents": {},
 }
 
 // buildDepfile computes and returns the contents of a ninja compatible depfile

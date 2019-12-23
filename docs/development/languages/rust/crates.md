@@ -4,7 +4,7 @@
 
     Wrapper over zircon-fdio library
 
-* [fuchsia-archive/](/garnet/public/rust/fuchsia-archive/)
+* [fuchsia-archive/](/src/sys/pkg/lib/fuchsia-archive/)
 
     Work with Fuchsia Archives (FARs)
 
@@ -20,7 +20,7 @@
 
     Configure, create and use FrameBuffers in Fuchsia
 
-* [fuchsia-merkle/](/garnet/public/rust/fuchsia-merkle/)
+* [fuchsia-merkle/](/src/sys/pkg/lib/fuchsia-merkle/)
 
     Protect and verify data blobs using [Merkle Trees](/docs/concepts/storage/merkleroot.md)
 

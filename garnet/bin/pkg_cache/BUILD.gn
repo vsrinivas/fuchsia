@@ -1,75 +1,24 @@
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config.gni")
-import("//build/package.gni")
-import("//build/package/component.gni")
-import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+# Do not use these targets directly, instead depend on their dependencies directly.
 
-rustc_binary("bin") {
-  name = "pkg_cache"
-  with_unit_tests = true
-  edition = "2018"
-
-  deps = [
-    "//garnet/lib/rust/fidl_fuchsia_pkg_ext",
-    "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fdio",
-    "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-component",
-    "//garnet/public/rust/fuchsia-syslog",
-    "//garnet/public/rust/fuchsia-trace",
-    "//garnet/public/rust/fuchsia-trace-provider",
-    "//garnet/public/rust/fuchsia-zircon",
-    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
-    "//sdk/fidl/fuchsia.space:fuchsia.space-rustc",
-    "//src/sys/pkg/lib/pkgfs",
-    "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+group("pkg_cache") {
+  public_deps = [
+    "//src/sys/pkg/bin/pkg-cache:pkg_cache",
   ]
 }
 
-package("pkg_cache") {
-  deps = [
-    ":bin",
+group("pkg_cache_tests") {
+  public_deps = [
+    "//src/sys/pkg/bin/pkg-cache:pkg_cache_tests",
   ]
-  binaries = [
-    {
-      name = "pkg_cache"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/pkg_cache.cmx")
-      dest = "pkg_cache.cmx"
-    },
-  ]
+  testonly = true
 }
 
-test_package("pkg_cache_tests") {
-  deps = [
-    ":bin_test",
-  ]
-
-  tests = [
-    {
-      name = "pkg_cache_bin_test"
-      environments = basic_envs
-    },
-  ]
-}
-
-config_data("config") {
-  for_pkg = "sysmgr"
-  outputs = [
-    "pkg_cache.config",
-  ]
-  sources = [
-    "sysmgr.config",
+group("config") {
+  public_deps = [
+    "//src/sys/pkg/bin/pkg-cache:config",
   ]
 }

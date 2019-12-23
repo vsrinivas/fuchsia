@@ -11,7 +11,7 @@ Unless otherwise specified, Fuchsia library authors should adhere to all the heu
 ### Terminology
 There are some terms of art that Dart uses which conflict with Fuchsia’s terminology. 
 
-- [Fuchsia package](/garnet/go/src/pm/README.md#structure-of-a-fuchsia-package): A Fuchsia package is one or more collections of files that provide one or more programs, components or services for a Fuchsia system.
+- [Fuchsia package](/src/sys/pkg/bin/pm/README.md#structure-of-a-fuchsia-package): A Fuchsia package is one or more collections of files that provide one or more programs, components or services for a Fuchsia system.
 - Fuchsia library: An informal definition for implementation code used by Fuchsia, usually found in lib or lib/src directories. Libraries are a convention, most policies for libraries are enforced socially or fallback to language specific approaches and tooling.
 - [Dart package](https://dart.dev/guides/packages): The Dart package system is used to share software like libraries and tools within the Dart ecosystem, e.g. via Pub. Often a package is a collection of files with a minimum of a pubspec.yaml file and at least one Dart file, in-tree Dart packages will also have a `BUILD.gn` file.
 - [Dart library](https://dart.dev/tools/pub/package-layout#public-libraries): A collection of Dart code (classes, constants, typedefs, etc.) isolated to a single namespace and corresponding to a single entry point, e.g. `import 'package:enchilada/enchilada.dart';` imports the enchilada library. Note that Dart libraries have a privacy boundary, e.g. private implementation details are not visible or accessible outside of the library. A Dart package can contain multiple Dart Libraries.

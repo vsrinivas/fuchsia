@@ -175,22 +175,22 @@ func makeTestManifest(t *testing.T, entries []manifestEntry) (error, string, str
 
 func TestNewManifest_withManifest_withDuplicates(t *testing.T) {
 	err, tmp, manifestPath, cleanup := makeTestManifest(t, []manifestEntry{
-		manifestEntry{
+		{
 			packagePath: "bin/app1",
 			filePath:    "app1/bin",
 			contents:    "app1's unique binary",
 		},
-		manifestEntry{
+		{
 			packagePath: "bin/app2",
 			filePath:    "app2/bin",
 			contents:    "app2's unique binary",
 		},
-		manifestEntry{
+		{
 			packagePath: "lib/shared.so",
 			filePath:    "app1/lib",
 			contents:    "duplicate shared library",
 		},
-		manifestEntry{
+		{
 			packagePath: "lib/shared.so",
 			filePath:    "app2/lib",
 			contents:    "duplicate shared library",
@@ -214,12 +214,12 @@ func TestNewManifest_withManifest_withDuplicates(t *testing.T) {
 
 func TestNewManifest_withManifest_withDuplicatesWithUnEqualContent(t *testing.T) {
 	err, _, manifestPath, cleanup := makeTestManifest(t, []manifestEntry{
-		manifestEntry{
+		{
 			packagePath: "lib/shared.so",
 			filePath:    "app1/lib",
 			contents:    "duplicate shared library",
 		},
-		manifestEntry{
+		{
 			packagePath: "lib/shared.so",
 			filePath:    "app2/lib",
 			contents:    "duplicate shared library with different content",

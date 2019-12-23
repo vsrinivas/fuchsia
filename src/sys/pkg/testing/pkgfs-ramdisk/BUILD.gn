@@ -13,13 +13,13 @@ rustc_library("pkgfs-ramdisk") {
   with_unit_tests = true
 
   deps = [
-    "//garnet/lib/rust/fuchsia_pkg",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-merkle",
     "//garnet/public/rust/fuchsia-runtime",
     "//garnet/public/rust/fuchsia-zircon",
+    "//src/sys/pkg/lib/fuchsia-merkle",
+    "//src/sys/pkg/lib/fuchsia-pkg:fuchsia_pkg",
     "//src/sys/pkg/testing/blobfs-ramdisk",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",

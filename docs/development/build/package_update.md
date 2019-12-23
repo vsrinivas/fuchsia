@@ -146,7 +146,7 @@ detail in the [Fuchsia package][pkg-struct] documentation. The metadata file is
 added to a TUF file tree and each of the contents are named after their Merkle
 root hash and put in a directory at the root of the TUF file tree called 'blobs'.
 
-[pkg-struct]: /garnet/go/src/pm/README.md#structure-of-a-fuchsia-package "Package structure"
+[pkg-struct]: /src/sys/pkg/bin/pm/README.md#structure-of-a-fuchsia-package "Package structure"
 [TUF-home]: https://theupdateframework.github.io "TUF Homepage"
 [pkg-doc]: /docs/development/build/overview.md "Build overview"
 [flutter-gni]: https://fuchsia.googlesource.com/topaz/+/master/runtime/flutter_runner/flutter_app.gni "Flutter GN build template"

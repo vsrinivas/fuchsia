@@ -1,0 +1,83 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/testing/test_spec.gni")
+
+_default_system_ota_tests =
+    [ "//src/sys/pkg/tests/system-ota-tests:system_ota_tests_upgrade" ]
+
+# The service account that allows the test to download build artifacts.
+_environment_service_account =
+    "internal-artifacts-readers@fuchsia-infra.iam.gserviceaccount.com"
+
+# A template that configures a System OTA test against a given release builder.
+#
+# Parameters
+#
+#   tests
+#   - Optional: The system ota tests to run. If not specified, this will
+#     default to running all the system ota tests.
+#   - Type: list(label)
+#
+#   release_builder
+#   - Required: Builder from which build artifacts will be downloaded. This has
+#     the the form of `project/bucket/builder id`, like
+#     `fuchsia/ci/fuchsia-x64-release`.
+#   - Type: string
+#
+#   environments
+#   - Required: What environments this test should target.
+#   - Type: see //build/testing/test_spec.gni for more details. Note that
+#     any label and service_account in each environment is ignored.
+template("system_ota_test_suite") {
+  assert(is_linux || is_mac, "system_ota_tests are for linux/mac only")
+  assert(defined(invoker.release_builder),
+         "release_builder must be defined for $target_name")
+  assert(defined(invoker.environments),
+         "environments must be defined for $target_name")
+
+  _tests = _default_system_ota_tests
+  if (defined(invoker.tests)) {
+    _tests = invoker.tests
+  }
+
+  _deps = []
+
+  foreach(test, _tests) {
+    _test_name = get_label_info(test, "name")
+    _test_binary = "$root_out_dir/$_test_name"
+
+    _main_target_name = target_name
+    _spec_target_name = "${target_name}_${_test_name}_spec"
+    _deps += [ ":${_spec_target_name}" ]
+
+    test_spec(_spec_target_name) {
+      testonly = true
+      name = test
+      target = _main_target_name
+      path = _test_binary
+      command = [
+        rebase_path(_test_binary, root_build_dir),
+        "-downgrade-builder-name",
+        invoker.release_builder,
+      ]
+      deps = [
+        test,
+      ]
+
+      environments = []
+      foreach(env, invoker.environments) {
+        env.service_account = _environment_service_account
+        environments += [ env ]
+      }
+    }
+  }
+
+  # Finally, group all the generated test specs into a group to make it easy to
+  # reference.
+  group(target_name) {
+    testonly = true
+    deps = _deps
+  }
+}

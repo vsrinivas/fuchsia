@@ -1,0 +1,53 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_test.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_test("driver") {
+  name = "pkg_cache_integration_test"
+  edition = "2018"
+
+  deps = [
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//sdk/fidl/fuchsia.space:fuchsia.space-rustc",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:tempfile",
+  ]
+}
+
+test_package("pkg-cache-integration-tests") {
+  deps = [
+    ":driver",
+    "//src/sys/pkg/bin/pkg-cache:bin",
+  ]
+
+  binaries = [
+    {
+      name = "pkg_cache"
+      dest = "pkg_cache"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path(
+              "//src/sys/pkg/bin/pkg-cache/meta/pkg-cache-without-pkgfs.cmx")
+      dest = "pkg-cache-without-pkgfs.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      name = "pkg_cache_integration_test"
+      dest = "pkg-cache-integration-test"
+      environments = basic_envs
+    },
+  ]
+}

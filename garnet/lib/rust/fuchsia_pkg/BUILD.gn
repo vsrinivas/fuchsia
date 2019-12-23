@@ -2,43 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+# Do not use these targets directly, instead depend on their dependencies directly.
 
-rustc_library("fuchsia_pkg") {
-  version = "0.1.0"
-  edition = "2018"
-  with_unit_tests = true
-
-  deps = [
-    "//garnet/public/rust/fuchsia-archive",
-    "//garnet/public/rust/fuchsia-merkle",
-    "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:lazy_static",
-    "//third_party/rust_crates:maplit",
-    "//third_party/rust_crates:proptest",
-    "//third_party/rust_crates:proptest-derive",
-    "//third_party/rust_crates:rand",
-    "//third_party/rust_crates:regex",
-    "//third_party/rust_crates:serde",
-    "//third_party/rust_crates:serde_derive",
-    "//third_party/rust_crates:serde_json",
-    "//third_party/rust_crates:tempfile",
+group("fuchsia_pkg_tests") {
+  public_deps = [
+    "//src/sys/pkg/lib/fuchsia-pkg:fuchsia_pkg_tests",
   ]
-}
-
-test_package("fuchsia_pkg_tests") {
-  deps = [
-    ":fuchsia_pkg_test",
-  ]
-
-  tests = [
-    {
-      name = "fuchsia_pkg_lib_test"
-      dest = "fuchsia_pkg_tests"
-      environments = basic_envs
-    },
-  ]
+  testonly = true
 }

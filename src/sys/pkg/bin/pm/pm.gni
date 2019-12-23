@@ -1,0 +1,106 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+
+amber_repository_dir = "$root_out_dir/amber-files"
+
+# Directory containing developer signing keys.
+amber_keys_dir = "//src/sys/pkg/bin/amber/keys"
+
+# Directory containing files named by their merkleroot content IDs in
+# ASCII hex.  The //build/image:pm_publish_blobs target populates
+# this with copies of build products, but never removes old files.
+amber_repository_blobs_dir = "$amber_repository_dir/repository/blobs"
+
+template("pm_publish") {
+  # These files are copied from amber_keys_dir into $amber_repository_dir/keys.
+
+  copy("keys") {
+    sources = [
+      "$amber_keys_dir/snapshot.json",
+      "$amber_keys_dir/targets.json",
+      "$amber_keys_dir/timestamp.json",
+    ]
+
+    outputs = [
+      "$amber_repository_dir/keys/{{source_file_part}}",
+    ]
+  }
+
+  # TODO(38262) In order to be TUF-1.0 conformant, we need to have
+  # versioned-prefixed root metadata files. Fow now this just hard-codes
+  # copying the current metadata to the correct place, but long term this
+  # should be computed so we don't forget to copy the file when we rotate the
+  # root metadata.
+  copy("root_manifest") {
+    sources = [
+      "$amber_keys_dir/metadata/6.root.json",
+    ]
+
+    outputs = [
+      "$amber_repository_dir/repository/root.json",
+    ]
+  }
+
+  # TODO(38262) See the comment on `root_manifest`.
+  copy("versioned_root_manifest") {
+    sources = [
+      "$amber_keys_dir/metadata/1.root.json",
+      "$amber_keys_dir/metadata/2.root.json",
+      "$amber_keys_dir/metadata/3.root.json",
+      "$amber_keys_dir/metadata/4.root.json",
+      "$amber_keys_dir/metadata/5.root.json",
+      "$amber_keys_dir/metadata/6.root.json",
+    ]
+
+    outputs = [
+      "$amber_repository_dir/repository/{{source_file_part}}",
+    ]
+  }
+
+  compiled_action(target_name) {
+    tool = "//src/sys/pkg/bin/pm:pm_bin"
+    tool_output_name = "pm"
+
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "data_deps",
+                             "inputs",
+                             "testonly",
+                             "visibility",
+                           ])
+    deps += [
+      ":keys",
+      ":root_manifest",
+      ":versioned_root_manifest",
+    ]
+
+    depfile = "${target_gen_dir}/${target_name}.d"
+
+    assert(inputs == [ inputs[0] ],
+           "pm_publish(\"$target_name\") requires exactly one input")
+
+    outputs = [
+      # Note: the first output is the one that appears in the depfile.
+      "$amber_repository_dir/repository/timestamp.json",
+      "$amber_repository_dir/repository/snapshot.json",
+      "$amber_repository_dir/repository/targets.json",
+    ]
+
+    args = [
+      "publish",
+      "-depfile",
+      rebase_path(depfile, root_build_dir),
+      "-C",
+      "-r",
+      rebase_path(amber_repository_dir, root_build_dir),
+      "-lp",
+      "-f",
+      rebase_path(inputs[0], root_build_dir),
+      "-vt",
+    ]
+  }
+}

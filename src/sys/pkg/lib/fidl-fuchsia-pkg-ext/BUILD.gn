@@ -1,0 +1,42 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_library("fidl_fuchsia_pkg_ext") {
+  version = "0.1.0"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//src/lib/inspect/rust/fuchsia-inspect",
+    "//src/sys/lib/fuchsia_url:fuchsia_url",
+    "//src/sys/pkg/lib/fuchsia-merkle",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:hex",
+    "//third_party/rust_crates:proptest",
+    "//third_party/rust_crates:proptest-derive",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_derive",
+    "//third_party/rust_crates:serde_json",
+  ]
+}
+
+test_package("fidl_fuchsia_pkg_ext_tests") {
+  deps = [
+    ":fidl_fuchsia_pkg_ext_test",
+  ]
+
+  tests = [
+    {
+      name = "fidl_fuchsia_pkg_ext_lib_test"
+      dest = "fidl_fuchsia_pkg_ext_tests"
+      environments = basic_envs
+    },
+  ]
+}

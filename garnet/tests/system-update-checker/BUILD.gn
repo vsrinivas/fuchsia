@@ -2,55 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+# Do not use these targets directly, instead depend on their dependencies directly.
 
-rustc_test("driver") {
-  name = "system_update_checker_integration_test"
-  edition = "2018"
-
-  deps = [
-    "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-component",
-    "//garnet/public/rust/fuchsia-zircon",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
-    "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
-    "//sdk/fidl/fuchsia.update.channel:fuchsia.update.channel-rustc",
-    "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:tempfile",
-    "//zircon/system/fidl/fuchsia-paver:fuchsia-paver-rustc",
+group("system-update-checker-integration-tests") {
+  public_deps = [
+    "//src/sys/pkg/tests/system-update-checker:system-update-checker-integration-tests",
   ]
-}
-
-test_package("system-update-checker-integration-tests") {
-  deps = [
-    ":driver",
-    "//garnet/bin/system-update-checker:bin",
-  ]
-
-  binaries = [
-    {
-      name = "system_update_checker"
-      dest = "system-update-checker"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path(
-              "//garnet/bin/system-update-checker/meta/system-update-checker-for-integration-test.cmx")
-      dest = "system-update-checker-for-integration-test.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      name = "system_update_checker_integration_test"
-      dest = "system-update-checker-integration-test"
-      environments = basic_envs
-    },
-  ]
+  testonly = true
 }

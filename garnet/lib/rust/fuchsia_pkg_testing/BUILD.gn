@@ -2,116 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/rust/rustc_library.gni")
-import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
-
-rustc_library("fuchsia_pkg_testing") {
-  version = "0.1.0"
-  edition = "2018"
-  with_unit_tests = true
-
-  deps = [
-    "//garnet/lib/rust/fidl_fuchsia_pkg_ext",
-    "//garnet/lib/rust/files_async",
-    "//garnet/lib/rust/fuchsia_pkg",
-    "//garnet/lib/rust/io_util",
-    "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fdio",
-    "//garnet/public/rust/fuchsia-archive",
-    "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-component",
-    "//garnet/public/rust/fuchsia-hyper",
-    "//garnet/public/rust/fuchsia-merkle",
-    "//garnet/public/rust/fuchsia-zircon",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
-    "//src/lib/http-sse:http_sse",
-    "//src/sys/lib/fuchsia_backoff",
-    "//src/sys/lib/fuchsia_url",
-    "//third_party/rust_crates:bytes",
-    "//third_party/rust_crates:chrono",
-    "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:hex",
-    "//third_party/rust_crates:hyper",
-    "//third_party/rust_crates:maplit",
-    "//third_party/rust_crates:openat",
-    "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:serde",
-    "//third_party/rust_crates:serde_derive",
-    "//third_party/rust_crates:serde_json",
-    "//third_party/rust_crates:tempfile",
-    "//third_party/rust_crates:walkdir",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
-  ]
-
-  test_deps = [ "//third_party/rust_crates:matches" ]
-}
-
-rustc_test("pkgfs_test") {
-  edition = "2018"
-  source_root = "tests/pkgfs_test.rs"
-  deps = [
-    ":fuchsia_pkg_testing",
-    "//garnet/public/rust/fdio",
-    "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-merkle",
-    "//src/sys/pkg/testing/blobfs-ramdisk",
-    "//src/sys/pkg/testing/pkgfs-ramdisk",
-    "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:matches",
-    "//third_party/rust_crates:openat",
-    "//third_party/rust_crates:serde_json",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
-  ]
-}
-
-# Include blobfs in the build, which comes from Zircon
-generate_manifest("blobfs.manifest") {
-  visibility = [ ":*" ]
-  args = []
-  foreach(pattern, [ "bin/blobfs" ]) {
-    args += [ "--binary=" + pattern ]
-  }
-}
-blobfs_manifest_outputs = get_target_outputs(":blobfs.manifest")
-blobfs_manifest = blobfs_manifest_outputs[0]
-
-test_package("fuchsia_pkg_testing_tests") {
-  extra = [ blobfs_manifest ]
-  deps = [
-    ":blobfs.manifest",
-    ":fuchsia_pkg_testing_test",
-    ":pkgfs_test",
-    "//garnet/go/src/grand_unified_binary",
-  ]
-
-  binaries = [
-    {
-      name = "pkgsvr"
-      source = "grand_unified_binary"
-    },
-  ]
-
-  tests = [
-    {
-      name = "fuchsia_pkg_testing_lib_test"
-      dest = "fuchsia_pkg_testing_tests"
-      environments = basic_envs
-    },
-    {
-      name = "pkgfs_test"
-      environments = basic_envs
-    },
-  ]
-}
+# Do not use these targets directly, instead depend on their dependencies directly.
 
 group("tests") {
-  testonly = true
   public_deps = [
-    ":fuchsia_pkg_testing_tests",
-    "//garnet/go/src/pm:pm",
+    "//src/sys/pkg/lib/fuchsia-pkg-testing:tests",
   ]
+  testonly = true
 }

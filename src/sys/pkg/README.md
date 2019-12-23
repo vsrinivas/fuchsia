@@ -36,7 +36,7 @@ Updated: November 2019
    </td>
    <td>Main entry point for software delivery stack. Coordinates retrieval and installation of packages.
    </td>
-   <td>`//garnet/bin/pkg_resolver`
+   <td>`//src/sys/pkg/bin/pkg-resolver`
    </td>
    <td>Rust
    </td>
@@ -46,7 +46,7 @@ Updated: November 2019
    </td>
    <td>Caches downloaded packages in case they are needed again.
    </td>
-   <td>`//garnet/bin/pkg_cache`
+   <td>`//src/sys/pkg/bin/pkg-cache`
    </td>
    <td>Rust
    </td>
@@ -56,7 +56,7 @@ Updated: November 2019
    </td>
    <td>A filesystem for interacting with packages that are stored on a host. It presents a tree of packages that are locally available and a tree that enables a user to add new packages and / or package content to the host.
    </td>
-   <td>`//garnet/go/src/pmd/pkgfs`
+   <td>`//src/sys/pkg/bin/pkgfs/pkgfs`
    </td>
    <td>Go
    </td>
@@ -66,7 +66,7 @@ Updated: November 2019
    </td>
    <td>CLI for amber. `amberctl` is deprecated, scheduled to be replaced by `pkgctl`
    </td>
-   <td>`//garnet/go/src/amber/amberctl`
+   <td>`//src/sys/pkg/bin/amber/amberctl`
    </td>
    <td>Go
    </td>
@@ -76,7 +76,7 @@ Updated: November 2019
    </td>
    <td>V1 software update system. Deprecated, in the process of being removed.
    </td>
-   <td>`//garnet/go/src/amber`
+   <td>`//src/sys/pkg/bin/amber`
    </td>
    <td>Go
    </td>
@@ -86,7 +86,7 @@ Updated: November 2019
    </td>
    <td>Does what it says on the tin, checks for system updates!
    </td>
-   <td>`//garnet/bin/system-update-checker`
+   <td>`//src/sys/pkg/bin/system-update-checker`
    </td>
    <td>Rust
    </td>
@@ -96,7 +96,7 @@ Updated: November 2019
    </td>
    <td>Actually performs system updates.
    </td>
-   <td>`//garnet/go/src/amber/system_updater\
+   <td>`//src/sys/pkg/bin/amber/system_updater\
    </td>
    <td>Go
    </td>
@@ -128,7 +128,7 @@ Updated: November 2019
    </td>
    <td>An end-to-end test of system over the air updates.
    </td>
-   <td>//garnet/tests/system_ota_tests
+   <td>//src/sys/pkg/tests/system-ota-tests
    </td>
    <td>Go
    </td>

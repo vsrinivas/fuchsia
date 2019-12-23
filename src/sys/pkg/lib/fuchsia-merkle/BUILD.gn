@@ -1,0 +1,19 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+
+rustc_library("fuchsia-merkle") {
+  name = "fuchsia_merkle"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//garnet/public/rust/mundane",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:hex",
+    "//third_party/rust_crates:proptest",
+    "//third_party/rust_crates:serde",
+  ]
+}

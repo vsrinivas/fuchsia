@@ -1,0 +1,114 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+import("//src/sys/pkg/bin/system-update-checker/ota_config.gni")
+
+rustc_binary("bin") {
+  name = "system_update_checker"
+  with_unit_tests = true
+  edition = "2018"
+  deps = [
+    "//garnet/lib/rust/forced_fdr",
+    "//garnet/lib/rust/system-health-check",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
+    "//sdk/fidl/fuchsia.recovery:fuchsia.recovery-rustc",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
+    "//sdk/fidl/fuchsia.update.channel:fuchsia.update.channel-rustc",
+    "//src/lib/inspect/rust/fuchsia-inspect",
+    "//src/lib/inspect/rust/fuchsia-inspect-contrib",
+    "//src/sys/lib/fuchsia_url",
+    "//src/sys/pkg/lib/fuchsia-merkle",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:maplit",
+    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:proptest",
+    "//third_party/rust_crates:proptest-derive",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_derive",
+    "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:tempfile",
+    "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+  ]
+}
+
+package("system-update-checker") {
+  deprecated_misc_storage = "//build"
+  deprecated_shell = "//build"
+
+  deps = [
+    ":bin",
+  ]
+  binaries = [
+    {
+      name = "system_update_checker"
+      dest = "system-update-checker"
+      shell = true
+    },
+  ]
+  meta = [
+    {
+      path = rebase_path("meta/system-update-checker.cmx")
+      dest = "system-update-checker.cmx"
+    },
+  ]
+}
+
+test_package("system-update-checker-tests") {
+  deps = [
+    ":bin_test",
+    "//third_party/sbase:test_bin",
+  ]
+  tests = [
+    {
+      name = "system_update_checker_bin_test"
+      dest = "system-update-checker-bin-test"
+      environments = basic_envs
+    },
+  ]
+  binaries = [
+    {
+      name = "test-shell-command"
+      source = "test"
+    },
+  ]
+  meta = [
+    {
+      path = rebase_path(
+              "//src/sys/pkg/bin/system-update-checker/meta/test-shell-command.cmx")
+      dest = "test-shell-command.cmx"
+    },
+  ]
+}
+
+ota_config("auto_update") {
+  # Check for updates every 60 minutes
+  poll_frequency_minutes = 60
+}
+
+config_data("system-update-checker-config") {
+  for_pkg = "sysmgr"
+  outputs = [
+    "system-update-checker.config",
+  ]
+  sources = [
+    "sysmgr.config",
+  ]
+}

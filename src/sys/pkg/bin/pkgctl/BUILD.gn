@@ -13,7 +13,6 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
-    "//garnet/lib/rust/fidl_fuchsia_pkg_ext",
     "//garnet/lib/rust/files_async",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
@@ -25,6 +24,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
     "//src/lib/argh",
     "//src/sys/lib/fuchsia_url_rewrite",
+    "//src/sys/pkg/lib/fidl-fuchsia-pkg-ext:fidl_fuchsia_pkg_ext",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:matches",

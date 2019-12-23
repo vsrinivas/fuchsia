@@ -253,12 +253,12 @@ func TestSnapshotAddPackage_consistent(t *testing.T) {
 	}
 
 	if err := s.AddPackage("foo/0", []PackageBlobInfo{
-		PackageBlobInfo{
+		{
 			Path:   "a",
 			Size:   100,
 			Merkle: m.Next(),
 		},
-		PackageBlobInfo{
+		{
 			Path:   "b",
 			Size:   100,
 			Merkle: m.Next(),
@@ -284,12 +284,12 @@ func TestSnapshotAddPackage_consistent(t *testing.T) {
 	}
 
 	if err := s.AddPackage("bar/0", []PackageBlobInfo{
-		PackageBlobInfo{
+		{
 			Path:   "a",
 			Size:   200,
 			Merkle: m.Next(),
 		},
-		PackageBlobInfo{
+		{
 			Path:   "b",
 			Size:   200,
 			Merkle: m.Next(),
@@ -339,7 +339,7 @@ func TestSnapshotAddPackage_duplicatePackage(t *testing.T) {
 	}
 
 	if err := s.AddPackage("foo/0", []PackageBlobInfo{
-		PackageBlobInfo{
+		{
 			Path: "differentFileA",
 			Size: 1234,
 		},
@@ -357,7 +357,7 @@ func TestSnapshotAddPackage_inconsistentBlob(t *testing.T) {
 	merkle := s.Packages["foo/0"].Files["fileA"]
 
 	if err := s.AddPackage("bar/0", []PackageBlobInfo{
-		PackageBlobInfo{
+		{
 			Path:   "differentFileA",
 			Size:   s.Blobs[merkle].Size + 1,
 			Merkle: merkle,
