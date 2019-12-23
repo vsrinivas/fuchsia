@@ -15,7 +15,6 @@
             "fuchsia.recovery.FactoryReset",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader",
-            "fuchsia.accessibility.SettingsManager",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.activity.Tracker",
             "fuchsia.ui.policy.accessibility.PointerEventRegistry",

@@ -10,8 +10,6 @@ source_set("fakes") {
     "fake_scenic.h",
     "fake_session.cc",
     "fake_session.h",
-    "fake_settings_service.cc",
-    "fake_settings_service.h",
   ]
 
   deps = [
