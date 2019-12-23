@@ -66,7 +66,13 @@ def main():
         nargs='*',
         default=[])
     parser.add_argument('--binname', help='Output file', required=True)
-    parser.add_argument('--unstripped-binname', help='Unstripped output file')
+    parser.add_argument(
+        '--output-path',
+        help='Where to output the (unstripped) binary',
+        required=True)
+    parser.add_argument(
+        '--stripped-output-path',
+        help='Where to output a stripped binary, if supplied')
     parser.add_argument(
         '--verbose',
         help='Tell the go tool to be verbose about what it is doing',
@@ -103,13 +109,8 @@ def main():
         'win': 'windows',
     }[args.current_os]
 
-    output_name = os.path.join(args.root_out_dir, args.binname)
     build_id_dir = os.path.join(args.root_out_dir, '.build-id')
-    depfile_output = output_name
-    if args.unstripped_binname:
-        stripped_output_name = output_name
-        output_name = os.path.join(
-            args.root_out_dir, 'exe.unstripped', args.binname)
+    depfile_output = args.output_path
 
     # Project path is a package specific gopath, also known as a "project" in go parlance.
     project_path = os.path.join(
@@ -143,25 +144,6 @@ def main():
                     % (dst, tgt, canon_tgt))
             os.symlink(os.path.relpath(src, os.path.dirname(tgt)), tgt)
 
-    gopath = os.path.abspath(project_path)
-    build_goroot = os.path.abspath(args.go_root)
-
-    env = {}
-    env['GOARCH'] = goarch
-    env['GOOS'] = goos
-    env['GOPATH'] = gopath
-    # Some users have GOROOT set in their parent environment, which can break
-    # things, so it is always set explicitly here.
-    env['GOROOT'] = build_goroot
-    env['GOCACHE'] = args.go_cache
-
-    env['CC'] = args.cc
-    if args.target:
-        env['CC_FOR_TARGET'] = args.cc
-    env['CXX'] = args.cxx
-    if args.target:
-        env['CXX_FOR_TARGET'] = args.cxx
-
     cflags = []
     if args.sysroot:
         cflags.append('--sysroot=' + args.sysroot)
@@ -172,16 +154,37 @@ def main():
     cflags += ['-isystem' + dir for dir in args.include_dir]
     ldflags += ['-L' + dir for dir in args.lib_dir]
 
-    env['CGO_CFLAGS'] = env['CGO_CPPFLAGS'] = env['CGO_CXXFLAGS'] = ' '.join(
-        cflags)
-    env['CGO_LDFLAGS'] = ' '.join(ldflags)
-    env['CGO_ENABLED'] = '1'
+    cflags_joined = ' '.join(cflags)
+    ldflags_joined = ' '.join(ldflags)
 
-    # /usr/bin:/bin are required for basic things like bash(1) and env(1). Note
-    # that on Mac, ld is also found from /usr/bin.
-    env['PATH'] = "/usr/bin:/bin"
+    gopath = os.path.abspath(project_path)
+    build_goroot = os.path.abspath(args.go_root)
 
-    go_tool = os.path.join(build_goroot, 'bin/go')
+    env = {
+        # /usr/bin:/bin are required for basic things like bash(1) and env(1). Note
+        # that on Mac, ld is also found from /usr/bin.
+        'PATH': "/usr/bin:/bin",
+        'GOARCH': goarch,
+        'GOOS': goos,
+        'GOPATH': gopath,
+        # Some users have GOROOT set in their parent environment, which can break
+        # things, so it is always set explicitly here.
+        'GOROOT': build_goroot,
+        'GOCACHE': args.go_cache,
+        'CC': args.cc,
+        'CXX': args.cxx,
+        'CGO_CFLAGS': cflags_joined,
+        'CGO_CPPFLAGS': cflags_joined,
+        'CGO_CXXFLAGS': cflags_joined,
+        'CGO_LDFLAGS': ldflags_joined,
+        'CGO_ENABLED': '1',
+    }
+
+    if args.target:
+        env['CC_FOR_TARGET'] = env['CC']
+        env['CXX_FOR_TARGET'] = env['CXX']
+
+    go_tool = os.path.join(build_goroot, 'bin', 'go')
 
     if args.vet:
         retcode = subprocess.call([go_tool, 'vet', args.package], env=env)
@@ -206,34 +209,36 @@ def main():
         cmd += ['-gcflags', args.gcflags]
     cmd += [
         '-pkgdir',
-        os.path.join(project_path, 'pkg'), '-o', output_name, args.package
+        os.path.join(project_path, 'pkg'), '-o', args.output_path, args.package
     ]
     retcode = subprocess.call(cmd, env=env)
 
-    if retcode == 0 and args.unstripped_binname:
+    if retcode == 0 and args.stripped_output_path:
         if args.current_os == 'mac':
             retcode = subprocess.call(
                 [
-                    'xcrun', 'strip', '-x', output_name, '-o',
-                    stripped_output_name
+                    'xcrun', 'strip', '-x', args.output_path, '-o',
+                    args.stripped_output_path
                 ],
                 env=env)
         else:
             retcode = subprocess.call(
                 [
-                    args.objcopy, '--strip-sections', output_name,
-                    stripped_output_name
+                    args.objcopy, '--strip-sections', args.output_path,
+                    args.stripped_output_path
                 ],
                 env=env)
 
-    # If args.current_os == 'linux' then the go linker will be used which
-    # doesn't use the GNU build ID format.
-    if retcode == 0 and args.current_os == 'fuchsia' and args.unstripped_binname:
+    # TODO(fxbug.dev/27215): Also invoke the buildidtool in the case of linux
+    # once buildidtool knows how to deal in Go's native build ID format.
+    supports_build_id = args.current_os == 'fuchsia'
+    if retcode == 0 and supports_build_id:
+        dist = args.stripped_output_path or args.output_path
         retcode = subprocess.call(
             [
                 args.buildidtool, "-build-id-dir", args.build_id_dir, "-stamp",
-                output_name + ".build-id.stamp", "-entry",
-                ".debug=" + args.unstripped_binname, "-entry", "=" + output_name
+                dist + ".build-id.stamp", "-entry",
+                ".debug=" + args.output_path, "-entry", "=" + dist,
             ])
 
     if retcode == 0:
