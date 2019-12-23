@@ -181,5 +181,29 @@ TEST_F(InspectNodeManagerTest, Attempt_Remove_NodesDoNotExist) {
                         ChildrenMatch(ElementsAre(NodeMatches(NameMatches("grandchild1.1"))))))));
 }
 
+TEST_F(InspectNodeManagerTest, Check_SanitizedPath) {
+  constexpr char expected_sanitized_name[] = {
+      'p',  'r',  'o',  'g', 'r',  'a',  'm',  0x07, 'n',  0x07, 0x07, 'a',
+      0x07, 0x07, 0x07, 'm', 0x07, 0x07, 0x07, 0x07, 0x07, 'e',  '\0',
+  };
+
+  std::string name_with_backslashes = "program/n//a///m/////e";
+  auto sanitized_name = InspectNodeManager::SanitizeString(name_with_backslashes);
+
+  EXPECT_EQ(sanitized_name, expected_sanitized_name);
+
+  const std::string full_path = "/child1/" + sanitized_name;
+  inspect_node_manager_->Get(full_path);
+
+  EXPECT_THAT(InspectTree(),
+              ChildrenMatch(ElementsAre(AllOf(
+                  NodeMatches(NameMatches("child1")),
+                  ChildrenMatch(ElementsAre(NodeMatches(NameMatches(name_with_backslashes))))))));
+
+  EXPECT_TRUE(inspect_node_manager_->Remove(full_path));
+  EXPECT_THAT(InspectTree(), ChildrenMatch(ElementsAre(AllOf(NodeMatches(NameMatches("child1")),
+                                                             ChildrenMatch(IsEmpty())))));
+}
+
 }  // namespace
 }  // namespace feedback

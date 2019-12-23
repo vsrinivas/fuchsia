@@ -90,7 +90,7 @@ class InspectManager {
 
   // Inspect node for a single report.
   struct Report {
-    Report(const std::string& path) : path_(path) {}
+    Report(const std::string& program_name, const std::string& local_report_id);
 
     const std::string& Path() { return path_; }
 
@@ -104,8 +104,10 @@ class InspectManager {
    private:
     // A |Report|'s path is its location relative to the root Inspect node in the Inspect tree.
     //
-    // E.g., "/reports/$program_id/$local_report_id"
-    const std::string path_;
+    // E.g., "/reports/$program_name/$local_report_id"
+    //
+    // Backslashes in $program_name are replaced with (char)0x07, the ASCII bell character.
+    std ::string path_;
   };
 
   InspectNodeManager node_manager_;

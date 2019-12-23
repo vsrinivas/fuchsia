@@ -148,6 +148,21 @@ TEST_F(InspectManagerTest, Succeed_AddReport_UniqueReports) {
           }))))));
 }
 
+TEST_F(InspectManagerTest, Succeed_AddReport_ProgramNameHasBackslashes) {
+  const std::string program_name = "fuchsia-pkg://fuchsia.com/foo_bar.cmx";
+  clock_->Set(kTime1);
+  EXPECT_TRUE(inspect_manager_->AddReport(program_name, "local_report_id_1"));
+  EXPECT_THAT(
+      InspectTree(),
+      ChildrenMatch(Contains(
+          AllOf(NodeMatches(NameMatches("reports")),
+                ChildrenMatch(ElementsAre(AllOf(
+                    NodeMatches(NameMatches(program_name)),
+                    ChildrenMatch(ElementsAre(NodeMatches(AllOf(
+                        NameMatches("local_report_id_1"),
+                        PropertyList(ElementsAre(StringIs("creation_time", kTime1Str))))))))))))));
+}
+
 TEST_F(InspectManagerTest, Fail_AddReport_DuplicateReport) {
   clock_->Set(kTime2);
   EXPECT_TRUE(inspect_manager_->AddReport("program", "local_report_id"));

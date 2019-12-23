@@ -10,6 +10,20 @@
 #include "src/lib/fxl/strings/split_string.h"
 
 namespace feedback {
+namespace {
+
+// The ASCII bell character (0x07) will be used to replace all backslashes.
+constexpr uint8_t kBackslashReplacement = 0x07;
+
+void ReplaceCharInString(char to_replace, char replace_with, std::string* str) {
+  for (size_t i = 0; i < str->size(); ++i) {
+    if ((*str)[i] == to_replace) {
+      (*str)[i] = replace_with;
+    }
+  }
+}
+
+}  // namespace
 
 using fxl::kSplitWantNonEmpty;
 using fxl::kTrimWhitespace;
@@ -34,7 +48,10 @@ bool InspectNodeManager::ManagedNodeBase::RemoveChild(const std::string& child) 
 
 Node& InspectNodeManager::Get(const std::string& path) {
   ManagedNodeBase* node = &root_;
-  for (const auto& child : SplitStringCopy(path, "/", kTrimWhitespace, kSplitWantNonEmpty)) {
+
+  const auto split_path = SplitAndDesanitize(path);
+
+  for (auto child : split_path) {
     // Create the child if it doesn't exist, then get the child.
     node = &node->GetChild(child);
   }
@@ -45,8 +62,7 @@ Node& InspectNodeManager::Get(const std::string& path) {
 bool InspectNodeManager::Remove(const std::string& path) {
   ManagedNodeBase* node = &root_;
 
-  const std::vector<std::string> split_path =
-      SplitStringCopy(path, "/", kTrimWhitespace, kSplitWantNonEmpty);
+  const auto split_path = SplitAndDesanitize(path);
 
   // Find the parent node.
   for (size_t i = 0; i < split_path.size() - 1; ++i) {
@@ -58,6 +74,22 @@ bool InspectNodeManager::Remove(const std::string& path) {
   }
 
   return node->RemoveChild(split_path.back());
+}
+
+std::string InspectNodeManager::SanitizeString(std::string str) {
+  ReplaceCharInString('/', kBackslashReplacement, &str);
+  return str;
+}
+
+std::vector<std::string> InspectNodeManager::SplitAndDesanitize(const std::string& path) {
+  std::vector<std::string> split_path =
+      SplitStringCopy(path, "/", kTrimWhitespace, kSplitWantNonEmpty);
+
+  for (auto& part : split_path) {
+    ReplaceCharInString(kBackslashReplacement, '/', &part);
+  }
+
+  return split_path;
 }
 
 }  // namespace feedback

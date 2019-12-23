@@ -30,7 +30,13 @@ class InspectNodeManager {
   // Return false, if any node in the path doesn't exist.
   bool Remove(const std::string& path);
 
+  // Replaces all backslashes in |input| with a character that will later be replaced with a
+  // backslash when the string is written to Inspect.
+  static std::string SanitizeString(std::string str);
+
  private:
+  std::vector<std::string> SplitAndDesanitize(const std::string& path);
+
   class ManagedNode;
 
   class ManagedNodeBase {

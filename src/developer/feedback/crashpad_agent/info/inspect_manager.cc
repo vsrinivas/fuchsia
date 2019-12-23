@@ -35,6 +35,12 @@ std::string CurrentTime(timekeeper::Clock* clock) {
 
 }  // namespace
 
+InspectManager::Report::Report(const std::string& program_name,
+                               const std::string& local_report_id) {
+  path_ = JoinPath("/reports",
+                   JoinPath(InspectNodeManager::SanitizeString(program_name), local_report_id));
+}
+
 InspectManager::InspectManager(inspect::Node* root_node, timekeeper::Clock* clock)
     : node_manager_(root_node), clock_(clock) {
   node_manager_.Get("/config/crash_server");
@@ -51,11 +57,11 @@ bool InspectManager::AddReport(const std::string& program_name,
     return false;
   }
 
-  const std::string report_path = JoinPath("/reports", JoinPath(program_name, local_report_id));
+  reports_.emplace(local_report_id, Report(program_name, local_report_id));
 
-  reports_.emplace(local_report_id, report_path);
-  reports_.at(local_report_id).creation_time_ =
-      node_manager_.Get(report_path).CreateString("creation_time", CurrentTime(clock_));
+  Report& report = reports_.at(local_report_id);
+  inspect::Node& report_node = node_manager_.Get(report.Path());
+  report.creation_time_ = report_node.CreateString("creation_time", CurrentTime(clock_));
 
   return true;
 }
