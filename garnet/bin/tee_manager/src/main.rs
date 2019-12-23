@@ -22,7 +22,8 @@ use {
         future::{abortable, Aborted},
         prelude::*,
     },
-    std::{fs::File, path::PathBuf},
+    io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE},
+    std::path::PathBuf,
 };
 
 const DEV_TEE_PATH: &str = "/dev/class/tee";
@@ -86,7 +87,7 @@ async fn main() -> Result<(), Error> {
 }
 
 async fn create_watcher() -> Result<vfs::Watcher, Error> {
-    let tee_dir = File::open(DEV_TEE_PATH)?;
-    let watcher = vfs::Watcher::new(&tee_dir).await?;
+    let tee_dir = open_directory_in_namespace(DEV_TEE_PATH, OPEN_RIGHT_READABLE)?;
+    let watcher = vfs::Watcher::new(tee_dir).await?;
     Ok(watcher)
 }

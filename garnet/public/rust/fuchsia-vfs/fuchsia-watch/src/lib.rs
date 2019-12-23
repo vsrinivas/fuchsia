@@ -10,7 +10,8 @@
 #![deny(missing_docs)]
 
 use {
-    failure::Error,
+    failure::{format_err, Error},
+    fidl_fuchsia_io::NodeInfo,
     fuchsia_async as fasync,
     fuchsia_vfs_watcher::Watcher,
     futures::{
@@ -19,7 +20,7 @@ use {
         sink::SinkExt,
         stream::{BoxStream, StreamExt, TryStreamExt},
     },
-    std::fs::File,
+    io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE},
     std::path::{Path, PathBuf},
 };
 
@@ -42,30 +43,27 @@ impl NodeType {
     ///
     /// Returns NodeType::Unknown on failure or unknown node type.
     ///
-    /// WARNING: This method uses synchronous I/O to obtain the type.
+    /// This method is non-blocking.
     ///
-    /// TODO(TC-563): Update this to use asynchronous I/O.
+    /// NOTE: Only NodeInfo::File and Vmofile are considered files.
+    /// NOTE: Only NodeInfo::Directory is considered a directory.
+    /// NOTE: Any other NodeInfo types are considered NodeType unknown.
     pub async fn from_path(path: impl AsRef<Path>) -> Result<Self, Error> {
         NodeType::inner_from_path(path.as_ref()).await
     }
 
     async fn inner_from_path(path: &Path) -> Result<Self, Error> {
-        let ret = match File::open(path) {
-            Err(_) => NodeType::Unknown,
-            Ok(f) => match f.metadata() {
-                Err(_) => NodeType::Unknown,
-                Ok(meta) => {
-                    if meta.is_dir() {
-                        NodeType::Directory
-                    } else if meta.is_file() {
-                        NodeType::File
-                    } else {
-                        NodeType::Unknown
-                    }
-                }
-            },
-        };
-        Ok(ret)
+        let path_as_str = path.to_str().ok_or(format_err!(
+            "Path requested for watch is non-utf8 and our
+ non-blocking directory apis require utf8 paths: {:?}.",
+            path
+        ))?;
+        let dir_proxy = open_directory_in_namespace(path_as_str, OPEN_RIGHT_READABLE)?;
+        Ok(match dir_proxy.describe().await {
+            Ok(NodeInfo::Directory(_)) => NodeType::Directory,
+            Ok(NodeInfo::File(_)) | Ok(NodeInfo::Vmofile(_)) => NodeType::File,
+            _ => NodeType::Unknown,
+        })
     }
 }
 
@@ -103,9 +101,15 @@ pub async fn watch(path: impl Into<PathBuf>) -> Result<BoxStream<'static, PathEv
 }
 
 async fn inner_watch(path: PathBuf) -> Result<BoxStream<'static, PathEvent>, Error> {
-    let file = File::open(&path)?;
+    let path_as_str = path.to_str().ok_or(format_err!(
+        "Path requested for watch is non-utf8 and our
+ non-blocking directory apis require utf8 paths: {:?}.",
+        path
+    ))?;
+    let dir_proxy =
+        io_util::open_directory_in_namespace(path_as_str, io_util::OPEN_RIGHT_READABLE)?;
     let (mut tx, rx) = channel(1);
-    let mut watcher = Watcher::new(&file).await?;
+    let mut watcher = Watcher::new(dir_proxy).await?;
 
     let path_future = async move {
         while let Ok(message) = watcher.try_next().await {

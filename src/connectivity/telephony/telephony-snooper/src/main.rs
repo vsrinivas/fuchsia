@@ -6,7 +6,7 @@
 use {
     argh::FromArgs,
     failure::{format_err, Error, ResultExt},
-    fidl::endpoints::{RequestStream, ServerEnd},
+    fidl::endpoints::{Proxy, RequestStream, ServerEnd},
     fidl_fuchsia_telephony_snoop::{
         PublisherMarker as QmiSnoopMarker, PublisherRequest as QmiSnoopRequest,
         PublisherRequestStream as QmiSnoopRequestStream, SnooperControlHandle, SnooperRequest,
@@ -58,8 +58,12 @@ async fn watch_new_devices(
     } else {
         (path_in_dev, File::open(path_in_dev).context("Opening dir in devmgr failed")?)
     };
+
+    let channel = fdio::clone_channel(&dir).unwrap();
+    let async_channel = fasync::Channel::from_channel(channel).unwrap();
+    let directory = fidl_fuchsia_io::DirectoryProxy::from_channel(async_channel);
     let mut watcher =
-        Watcher::new(&dir).await.with_context(|_| format!("could not watch {:?}", &dir))?;
+        Watcher::new(directory).await.with_context(|_| format!("could not watch {:?}", &dir))?;
     while let Some(msg) = watcher.try_next().await? {
         match msg.event {
             WatchEvent::IDLE => {

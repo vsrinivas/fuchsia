@@ -24,6 +24,7 @@ use {
         future::{self, join},
         Future, StreamExt, TryFutureExt, TryStreamExt,
     },
+    io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE},
     parking_lot::RwLock,
     qmi::connect_transport_device,
     std::fs::File,
@@ -146,8 +147,8 @@ impl Manager {
     async fn watch_new_devices(&self) -> Result<(), Error> {
         // TODO(bwb): make more generic to support non-qmi devices
         let path: &Path = Path::new(QMI_TRANSPORT);
-        let dir = File::open(QMI_TRANSPORT).unwrap();
-        let mut watcher = Watcher::new(&dir).await.unwrap();
+        let dir_proxy = open_directory_in_namespace(QMI_TRANSPORT, OPEN_RIGHT_READABLE)?;
+        let mut watcher = Watcher::new(dir_proxy).await.unwrap();
         while let Some(msg) = watcher.try_next().await? {
             match msg.event {
                 WatchEvent::EXISTING | WatchEvent::ADD_FILE => {

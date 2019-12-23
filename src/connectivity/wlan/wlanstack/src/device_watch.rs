@@ -4,7 +4,8 @@
 
 use {
     failure::format_err,
-    fidl_fuchsia_wlan_device as fidl_wlan_dev,
+    fidl::endpoints::Proxy,
+    fidl_fuchsia_wlan_device as fidl_wlan_dev, fuchsia_async as fasync,
     fuchsia_vfs_watcher::{WatchEvent, Watcher},
     fuchsia_zircon::Status as zx_Status,
     futures::prelude::*,
@@ -46,8 +47,11 @@ fn watch_new_devices<P: AsRef<Path>, E: wlan_dev::DeviceEnv>(
     path: P,
 ) -> io::Result<impl Stream<Item = Result<PathBuf, failure::Error>>> {
     let dir = E::open_dir(&path)?;
+    let channel = fdio::clone_channel(&dir)?;
+    let async_channel = fasync::Channel::from_channel(channel)?;
+    let directory = fidl_fuchsia_io::DirectoryProxy::from_channel(async_channel);
     Ok(async move {
-        let watcher = Watcher::new(&dir).await?;
+        let watcher = Watcher::new(directory).await?;
         Ok(watcher
             .try_filter_map(move |msg| {
                 future::ready(Ok(match msg.event {
@@ -85,7 +89,7 @@ mod tests {
         fidl_fuchsia_wlan_common as fidl_common,
         fidl_fuchsia_wlan_device::{self as fidl_wlan_dev, SupportedPhy},
         fidl_fuchsia_wlan_mlme as fidl_mlme, fidl_fuchsia_wlan_tap as fidl_wlantap,
-        fuchsia_async::{self as fasync},
+        fuchsia_async as fasync,
         fuchsia_zircon::prelude::*,
         pin_utils::pin_mut,
         std::convert::TryInto,

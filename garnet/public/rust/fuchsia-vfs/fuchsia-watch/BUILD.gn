@@ -11,6 +11,7 @@ rustc_library("fuchsia-watch") {
   edition = "2018"
 
   deps = [
+    "//garnet/lib/rust/io_util",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-vfs/fuchsia-vfs-watcher",
     "//third_party/rust_crates:failure",

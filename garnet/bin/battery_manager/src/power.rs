@@ -10,6 +10,7 @@ use fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn, fx_vlog};
 use fuchsia_vfs_watcher as vfs_watcher;
 use fuchsia_zircon::{self as zx, Signals};
 use futures::prelude::*;
+use io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE};
 use std::convert::From;
 use std::fs::File;
 use std::io::{self, Result as ioResult};
@@ -199,8 +200,8 @@ async fn process_watch_event(
 }
 
 pub async fn watch_power_device(battery_manager: Arc<BatteryManager>) -> Result<(), Error> {
-    let file = File::open(POWER_DEVICE).context("cannot find power device")?;
-    let mut watcher = vfs_watcher::Watcher::new(&file).await?;
+    let dir_proxy = open_directory_in_namespace(POWER_DEVICE, OPEN_RIGHT_READABLE)?;
+    let mut watcher = vfs_watcher::Watcher::new(dir_proxy).await?;
     let mut adapter_device_found = false;
     let mut battery_device_found = false;
     while let Some(msg) = (watcher.try_next()).await? {

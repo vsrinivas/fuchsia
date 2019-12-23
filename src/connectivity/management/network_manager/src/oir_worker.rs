@@ -4,11 +4,12 @@
 
 use {
     crate::event::Event,
-    failure::Error,
     failure::{self, ResultExt},
+    failure::{format_err, Error},
     fuchsia_async as fasync,
     futures::TryStreamExt,
     futures::{channel::mpsc, TryFutureExt},
+    io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE},
     network_manager_core::oir::OIRInfo,
     std::fs,
     std::os::unix::io::AsRawFd,
@@ -92,10 +93,14 @@ async fn device_removed(
 
 async fn run(event_chan: mpsc::UnboundedSender<Event>) -> Result<(), failure::Error> {
     let path = ethdir_path();
+    let path_as_str = path.to_str().ok_or(format_err!(
+        "Path requested for watch is non-utf8 and our
+ non-blocking directory apis require utf8 paths: {:?}.",
+        path
+    ))?;
     info!("device path: {:?}", path);
-    let ethdir =
-        fs::File::open(ethdir_path()).with_context(|_| format!("could not open {:?}", path))?;
-    let mut watcher = fuchsia_vfs_watcher::Watcher::new(&ethdir)
+    let dir_proxy = open_directory_in_namespace(path_as_str, OPEN_RIGHT_READABLE)?;
+    let mut watcher = fuchsia_vfs_watcher::Watcher::new(dir_proxy)
         .await
         .with_context(|_| format!("could not watch {:?}", path))?;
 

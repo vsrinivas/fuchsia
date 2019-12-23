@@ -10,11 +10,9 @@ use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, assoc_values};
 
 use fdio::fdio_sys;
-use fidl::endpoints::Proxy;
 use fidl_fuchsia_io::WATCH_MASK_ALL;
 use futures::stream::{FusedStream, Stream};
 use std::ffi::OsStr;
-use std::fs::File;
 use std::io;
 use std::marker::Unpin;
 use std::os::unix::ffi::OsStrExt;
@@ -62,13 +60,10 @@ impl Unpin for Watcher {}
 
 impl Watcher {
     /// Creates a new `Watcher` for the directory given by `dir`.
-    pub async fn new(dir: &File) -> Result<Watcher, failure::Error> {
+    pub async fn new(dir: fidl_fuchsia_io::DirectoryProxy) -> Result<Watcher, failure::Error> {
         let (h0, h1) = zx::Channel::create()?;
-        let channel = fdio::clone_channel(dir)?;
-        let async_channel = fasync::Channel::from_channel(channel)?;
-        let directory = fidl_fuchsia_io::DirectoryProxy::from_channel(async_channel);
         let options = 0u32;
-        let status = directory.watch(WATCH_MASK_ALL, options, h1).await?;
+        let status = dir.watch(WATCH_MASK_ALL, options, h1).await?;
         zx::Status::ok(status)?;
         let mut buf = zx::MessageBuf::new();
         buf.ensure_capacity_bytes(fidl_fuchsia_io::MAX_BUF as usize);
@@ -170,11 +165,12 @@ impl<'a> VfsWatchMsg<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
     use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
     use fuchsia_zircon::prelude::*;
     use futures::prelude::*;
+    use io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE};
     use std::fmt::Debug;
+    use std::fs::File;
     use std::path::Path;
     use tempfile::tempdir;
 
@@ -196,8 +192,10 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let _ = File::create(tmp_dir.path().join("file1")).unwrap();
 
-        let dir = File::open(tmp_dir.path()).unwrap();
-        let mut w = Watcher::new(&dir).await.unwrap();
+        let dir =
+            open_directory_in_namespace(tmp_dir.path().to_str().unwrap(), OPEN_RIGHT_READABLE)
+                .unwrap();
+        let mut w = Watcher::new(dir).await.unwrap();
 
         // TODO(tkilbourn): this assumes "." always comes before "file1". If this test ever starts
         // flaking, handle the case of unordered EXISTING files.
@@ -217,8 +215,10 @@ mod tests {
     async fn test_add() {
         let tmp_dir = tempdir().unwrap();
 
-        let dir = File::open(tmp_dir.path()).unwrap();
-        let mut w = Watcher::new(&dir).await.unwrap();
+        let dir =
+            open_directory_in_namespace(tmp_dir.path().to_str().unwrap(), OPEN_RIGHT_READABLE)
+                .unwrap();
+        let mut w = Watcher::new(dir).await.unwrap();
 
         loop {
             let msg = one_step(&mut w).await;
@@ -243,8 +243,10 @@ mod tests {
         let filepath = tmp_dir.path().join(filename);
         let _ = File::create(&filepath).unwrap();
 
-        let dir = File::open(tmp_dir.path()).unwrap();
-        let mut w = Watcher::new(&dir).await.unwrap();
+        let dir =
+            open_directory_in_namespace(tmp_dir.path().to_str().unwrap(), OPEN_RIGHT_READABLE)
+                .unwrap();
+        let mut w = Watcher::new(dir).await.unwrap();
 
         loop {
             let msg = one_step(&mut w).await;
@@ -266,8 +268,10 @@ mod tests {
     async fn test_timeout() {
         let tmp_dir = tempdir().unwrap();
 
-        let dir = File::open(tmp_dir.path()).unwrap();
-        let mut w = Watcher::new(&dir).await.unwrap();
+        let dir =
+            open_directory_in_namespace(tmp_dir.path().to_str().unwrap(), OPEN_RIGHT_READABLE)
+                .unwrap();
+        let mut w = Watcher::new(dir).await.unwrap();
 
         loop {
             let msg = one_step(&mut w).await;

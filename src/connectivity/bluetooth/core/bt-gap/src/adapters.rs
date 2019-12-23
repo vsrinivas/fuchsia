@@ -12,8 +12,8 @@ use {
     fuchsia_syslog::fx_log_warn,
     fuchsia_vfs_watcher::{self as vfs_watcher, WatchEvent, WatchMessage},
     futures::{FutureExt, Stream, TryStreamExt},
+    io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE},
     std::{
-        fs::File,
         io,
         path::{Path, PathBuf},
     },
@@ -28,8 +28,8 @@ pub enum AdapterEvent {
 /// a stream of AdapterEvent messages
 pub fn watch_hosts() -> impl Stream<Item = Result<AdapterEvent, Error>> {
     async {
-        let dev = File::open(&HOST_DEVICE_DIR).unwrap();
-        let watcher = vfs_watcher::Watcher::new(&dev)
+        let directory = open_directory_in_namespace(HOST_DEVICE_DIR, OPEN_RIGHT_READABLE).unwrap();
+        let watcher = vfs_watcher::Watcher::new(directory)
             .await
             .expect("Cannot open vfs watcher for bt-host device path");
         watcher.try_filter_map(as_adapter_msg).err_into()

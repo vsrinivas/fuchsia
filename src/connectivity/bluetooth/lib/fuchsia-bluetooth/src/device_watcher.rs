@@ -10,6 +10,7 @@ use {
     fuchsia_vfs_watcher::{WatchEvent, Watcher as VfsWatcher},
     fuchsia_zircon as zx,
     futures::{Future, TryStreamExt},
+    io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE},
     std::{
         fs::File,
         path::{Path, PathBuf},
@@ -67,8 +68,12 @@ pub enum WatchFilter {
 
 impl DeviceWatcher {
     pub async fn new(dir: &str, timeout: zx::Duration) -> Result<DeviceWatcher, Error> {
-        let f = File::open(dir)?;
-        Ok(DeviceWatcher { dir: PathBuf::from(dir), watcher: VfsWatcher::new(&f).await?, timeout })
+        let dir_proxy = open_directory_in_namespace(dir, OPEN_RIGHT_READABLE)?;
+        Ok(DeviceWatcher {
+            dir: PathBuf::from(dir),
+            watcher: VfsWatcher::new(dir_proxy).await?,
+            timeout,
+        })
     }
 
     /// Functions for watching devices. All of these return a Future that resolves when the desired

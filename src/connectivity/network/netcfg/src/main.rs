@@ -18,6 +18,7 @@ use fuchsia_syslog::fx_log_info;
 use fuchsia_zircon::DurationNum;
 use futures::lock::Mutex;
 use futures::{future::try_join3, FutureExt, StreamExt, TryFutureExt, TryStreamExt};
+use io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE};
 use serde_derive::Deserialize;
 
 mod dns_policy_service;
@@ -211,9 +212,10 @@ fn main() -> Result<(), failure::Error> {
     interface_ids.insert("lo".to_owned(), 1);
     let interface_ids = Arc::new(Mutex::new(interface_ids));
 
-    let ethdir = fs::File::open(ETHDIR).with_context(|_| format!("could not open {}", ETHDIR))?;
+    let dir_proxy = open_directory_in_namespace(ETHDIR, OPEN_RIGHT_READABLE)?;
+
     let ethernet_device = async {
-        let mut watcher = fuchsia_vfs_watcher::Watcher::new(&ethdir)
+        let mut watcher = fuchsia_vfs_watcher::Watcher::new(dir_proxy)
             .await
             .with_context(|_| format!("could not watch {}", ETHDIR))?;
 
