@@ -91,7 +91,9 @@ TEST(LocalhostTest, BindToDevice) {
       << strerror(errno);
 
   // Bind to unknown name should fail.
-  EXPECT_EQ(setsockopt(fd.get(), SOL_SOCKET, SO_BINDTODEVICE, "loblahblahblah", sizeof(set_dev_unknown)), -1);
+  EXPECT_EQ(
+      setsockopt(fd.get(), SOL_SOCKET, SO_BINDTODEVICE, "loblahblahblah", sizeof(set_dev_unknown)),
+      -1);
   EXPECT_EQ(errno, ENODEV) << strerror(errno);
 
   {
@@ -180,13 +182,9 @@ class SocketOptsTest : public ::testing::TestWithParam<SocketKind> {
     return fbl::unique_fd(socket(s.domain, s.type, s.protocol));
   }
 
-  bool IsTCP() const {
-    return GetParam().protocol == IPPROTO_TCP;
-  }
+  bool IsTCP() const { return GetParam().protocol == IPPROTO_TCP; }
 
-  bool IsIPv6() const {
-    return GetParam().domain == AF_INET6;
-  }
+  bool IsIPv6() const { return GetParam().domain == AF_INET6; }
 
   SockOption GetTOSOption() {
     if (IsIPv6()) {
@@ -425,7 +423,7 @@ TEST_P(SocketOptsTest, CheckSkipECN) {
       // This ifdef can be removed when we migrate away from gvisor-netstack.
       && !IsIPv6()
 #endif
-      ) {
+  ) {
     expect &= ~INET_ECN_MASK;
   }
   int get = -1;
@@ -593,7 +591,7 @@ TEST_P(SocketOptsTest, SetMulticastLoop) {
 
   SockOption t = GetMcastLoopOption();
   ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOff, sizeof(kSockOptOff)), 0)
-     << strerror(errno);
+      << strerror(errno);
 
   int get = -1;
   socklen_t get_len = sizeof(get);
@@ -602,7 +600,7 @@ TEST_P(SocketOptsTest, SetMulticastLoop) {
   EXPECT_EQ(get, kSockOptOff);
 
   ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOn, sizeof(kSockOptOn)), 0)
-    << strerror(errno);
+      << strerror(errno);
 
   EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
   EXPECT_EQ(get_len, sizeof(get));
@@ -625,8 +623,8 @@ TEST_P(SocketOptsTest, SetMulticastLoopChar) {
   SockOption t = GetMcastLoopOption();
   int want;
   if (IsIPv6()) {
-    EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOffChar,
-                         sizeof(kSockOptOffChar)), -1);
+    EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOffChar, sizeof(kSockOptOffChar)),
+              -1);
     EXPECT_EQ(errno, EINVAL) << strerror(errno);
     want = kSockOptOnChar;
   } else {
@@ -642,8 +640,7 @@ TEST_P(SocketOptsTest, SetMulticastLoopChar) {
   EXPECT_EQ(get, want);
 
   if (IsIPv6()) {
-    EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOnChar,
-                         sizeof(kSockOptOnChar)), -1);
+    EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOnChar, sizeof(kSockOptOnChar)), -1);
     EXPECT_EQ(errno, EINVAL) << strerror(errno);
   } else {
     EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOnChar, sizeof(kSockOptOnChar)), 0)
@@ -728,11 +725,11 @@ TEST_P(SocketOptsTest, SetUDPMulticastTTLNegativeOne) {
   constexpr int kArbitrary = 6;
   SockOption t = GetMcastTTLOption();
   EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &kArbitrary, sizeof(kArbitrary)), 0)
-    << strerror(errno);
+      << strerror(errno);
 
   constexpr int kNegOne = -1;
   EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &kNegOne, sizeof(kNegOne)), 0)
-    << strerror(errno);
+      << strerror(errno);
 
   int get = -1;
   socklen_t get_len = sizeof(get);
@@ -805,12 +802,12 @@ TEST_P(SocketOptsTest, SetUDPMulticastTTLChar) {
   EXPECT_EQ(close(s.release()), 0) << strerror(errno);
 }
 
-INSTANTIATE_TEST_SUITE_P(LocalhostTest, SocketOptsTest,
-                         ::testing::Values(
-                              SocketKind{"IPv4 UDP", AF_INET, SOCK_DGRAM, IPPROTO_UDP},
-                              SocketKind{"IPv4 TCP", AF_INET, SOCK_STREAM, IPPROTO_TCP},
-                              SocketKind{"IPv6 UDP", AF_INET6, SOCK_DGRAM, IPPROTO_UDP},
-                              SocketKind{"IPv6 TCP", AF_INET6, SOCK_STREAM, IPPROTO_TCP}));
+INSTANTIATE_TEST_SUITE_P(
+    LocalhostTest, SocketOptsTest,
+    ::testing::Values(SocketKind{"IPv4 UDP", AF_INET, SOCK_DGRAM, IPPROTO_UDP},
+                      SocketKind{"IPv4 TCP", AF_INET, SOCK_STREAM, IPPROTO_TCP},
+                      SocketKind{"IPv6 UDP", AF_INET6, SOCK_DGRAM, IPPROTO_UDP},
+                      SocketKind{"IPv6 TCP", AF_INET6, SOCK_STREAM, IPPROTO_TCP}));
 
 TEST(LocalhostTest, IP_MULTICAST_IF_ifindex) {
   int s;
@@ -1895,10 +1892,8 @@ static ssize_t asyncSocketRead(int recvfd, int sendfd, char* buf, ssize_t len, i
                                struct sockaddr_in* addr, socklen_t* addrlen, int socketType,
                                std::chrono::duration<double> timeout) {
   std::future<ssize_t> recv = std::async(std::launch::async, [recvfd, buf, len, flags]() {
-    ssize_t readlen;
-    memset(buf, 0, len);
-    readlen = recvfrom(recvfd, buf, len, flags, nullptr, nullptr);
-    return readlen;
+    memset(buf, 0xdead, len);
+    return recvfrom(recvfd, buf, len, flags, nullptr, nullptr);
   });
 
   if (recv.wait_for(timeout) == std::future_status::ready) {
@@ -1957,11 +1952,11 @@ TEST_P(DatagramSendTest, DatagramSend) {
   EXPECT_EQ(getsockname(recvfd, (struct sockaddr*)&addr, &addrlen), 0) << strerror(errno);
   EXPECT_EQ(addrlen, sizeof(addr));
 
-  const char* msg = "hello";
+  const std::string msg = "hello";
   char recvbuf[32] = {};
   struct iovec iov = {};
-  iov.iov_base = (void*)msg;
-  iov.iov_len = strlen(msg);
+  iov.iov_base = (void*)msg.data();
+  iov.iov_len = msg.size();
   struct msghdr msghdr = {};
   msghdr.msg_iov = &iov;
   msghdr.msg_iovlen = 1;
@@ -1972,13 +1967,13 @@ TEST_P(DatagramSendTest, DatagramSend) {
   EXPECT_GE(sendfd = socket(AF_INET, SOCK_DGRAM, 0), 0) << strerror(errno);
   switch (sendMethod) {
     case SENDTO: {
-      EXPECT_EQ(sendto(sendfd, msg, strlen(msg), 0, (struct sockaddr*)&addr, addrlen),
-                (ssize_t)strlen(msg))
+      EXPECT_EQ(sendto(sendfd, msg.data(), msg.size(), 0, (struct sockaddr*)&addr, addrlen),
+                (ssize_t)msg.size())
           << strerror(errno);
       break;
     }
     case SENDMSG: {
-      EXPECT_EQ(sendmsg(sendfd, &msghdr, 0), (ssize_t)strlen(msg)) << strerror(errno);
+      EXPECT_EQ(sendmsg(sendfd, &msghdr, 0), (ssize_t)msg.size()) << strerror(errno);
       break;
     }
     default: {
@@ -1990,9 +1985,9 @@ TEST_P(DatagramSendTest, DatagramSend) {
   auto start = std::chrono::steady_clock::now();
   EXPECT_EQ(asyncSocketRead(recvfd, sendfd, recvbuf, sizeof(recvbuf), 0, &addr, &addrlen,
                             SOCK_DGRAM, expect_success_timeout),
-            (ssize_t)strlen(msg));
+            (ssize_t)msg.size());
   auto success_rcv_duration = std::chrono::steady_clock::now() - start;
-  EXPECT_STREQ(recvbuf, msg);
+  EXPECT_EQ(std::string(recvbuf, msg.size()), msg);
   EXPECT_EQ(close(sendfd), 0) << strerror(errno);
 
   // sendto/sendmsg on connected sockets does accept sockaddr input argument and
@@ -2001,13 +1996,13 @@ TEST_P(DatagramSendTest, DatagramSend) {
   EXPECT_EQ(connect(sendfd, (struct sockaddr*)&addr, addrlen), 0) << strerror(errno);
   switch (sendMethod) {
     case SENDTO: {
-      EXPECT_EQ(sendto(sendfd, msg, strlen(msg), 0, (struct sockaddr*)&addr, addrlen),
-                (ssize_t)strlen(msg))
+      EXPECT_EQ(sendto(sendfd, msg.data(), msg.size(), 0, (struct sockaddr*)&addr, addrlen),
+                (ssize_t)msg.size())
           << strerror(errno);
       break;
     }
     case SENDMSG: {
-      EXPECT_EQ(sendmsg(sendfd, &msghdr, 0), (ssize_t)strlen(msg)) << strerror(errno);
+      EXPECT_EQ(sendmsg(sendfd, &msghdr, 0), (ssize_t)msg.size()) << strerror(errno);
       break;
     }
     default: {
@@ -2017,20 +2012,20 @@ TEST_P(DatagramSendTest, DatagramSend) {
   }
   EXPECT_EQ(asyncSocketRead(recvfd, sendfd, recvbuf, sizeof(recvbuf), 0, &addr, &addrlen,
                             SOCK_DGRAM, expect_success_timeout),
-            (ssize_t)strlen(msg));
-  EXPECT_STREQ(recvbuf, msg);
+            (ssize_t)msg.size());
+  EXPECT_EQ(std::string(recvbuf, msg.size()), msg);
 
   // Test sending to an address that is different from what we're connected to.
   addr.sin_port = htons(ntohs(addr.sin_port) + 1);
   switch (sendMethod) {
     case SENDTO: {
-      EXPECT_EQ(sendto(sendfd, msg, strlen(msg), 0, (struct sockaddr*)&addr, addrlen),
-                (ssize_t)strlen(msg))
+      EXPECT_EQ(sendto(sendfd, msg.data(), msg.size(), 0, (struct sockaddr*)&addr, addrlen),
+                (ssize_t)msg.size())
           << strerror(errno);
       break;
     }
     case SENDMSG: {
-      EXPECT_EQ(sendmsg(sendfd, &msghdr, 0), (ssize_t)strlen(msg)) << strerror(errno);
+      EXPECT_EQ(sendmsg(sendfd, &msghdr, 0), (ssize_t)msg.size()) << strerror(errno);
       break;
     }
     default: {
@@ -2045,7 +2040,7 @@ TEST_P(DatagramSendTest, DatagramSend) {
   // successful recv.
   EXPECT_EQ(asyncSocketRead(recvfd, sendfd, recvbuf, sizeof(recvbuf), 0, &addr, &addrlen,
                             SOCK_DGRAM, success_rcv_duration * 10),
-            (ssize_t)0);
+            0);
 
   EXPECT_EQ(close(sendfd), 0) << strerror(errno);
   EXPECT_EQ(close(recvfd), 0) << strerror(errno);
@@ -2492,7 +2487,6 @@ TEST_P(NetSocketTest, SocketPeekTest) {
   EXPECT_EQ(asyncSocketRead(recvfd, sendfd, recvbuf, 1, MSG_PEEK, &addr, &addrlen, socketType,
                             success_rcv_duration * 10),
             0);
-  EXPECT_EQ(recvbuf[0], 0);
   EXPECT_EQ(close(recvfd), 0) << strerror(errno);
   EXPECT_EQ(close(sendfd), 0) << strerror(errno);
 }
@@ -2522,13 +2516,15 @@ TEST(NetDatagramTest, PingIpv4LoopbackAddresses) {
         struct sockaddr_in rcv_addr = {};
         rcv_addr.sin_family = AF_INET;
         rcv_addr.sin_addr = loopback_sin_addr;
-        ASSERT_EQ(bind(recvfd.get(),
-                       reinterpret_cast<const struct sockaddr*>(&rcv_addr), sizeof(rcv_addr)), 0)
+        ASSERT_EQ(bind(recvfd.get(), reinterpret_cast<const struct sockaddr*>(&rcv_addr),
+                       sizeof(rcv_addr)),
+                  0)
             << "recvaddr=" << loopback_addrstr << ": " << strerror(errno);
 
         socklen_t rcv_addrlen = sizeof(rcv_addr);
-        ASSERT_EQ(getsockname(recvfd.get(),
-                              reinterpret_cast<struct sockaddr*>(&rcv_addr), &rcv_addrlen), 0)
+        ASSERT_EQ(
+            getsockname(recvfd.get(), reinterpret_cast<struct sockaddr*>(&rcv_addr), &rcv_addrlen),
+            0)
             << strerror(errno);
         ASSERT_EQ(sizeof(rcv_addr), rcv_addrlen);
 
@@ -2539,8 +2535,8 @@ TEST(NetDatagramTest, PingIpv4LoopbackAddresses) {
         struct sockaddr_in src_addr = {};
         socklen_t src_addrlen = sizeof(src_addr);
         std::string out;
-        std::thread thrd(DatagramRead, recvfd.get(), &out, &src_addr, &src_addrlen,
-          ntfyfd[1].get(), kTimeout);
+        std::thread thrd(DatagramRead, recvfd.get(), &out, &src_addr, &src_addrlen, ntfyfd[1].get(),
+                         kTimeout);
 
         fbl::unique_fd sendfd;
         ASSERT_TRUE(sendfd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
