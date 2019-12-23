@@ -11,10 +11,10 @@ use std::path;
 use std::sync::Arc;
 
 use failure::{self, ResultExt};
-use fuchsia_async::{self as fasync, DurationExt};
+use fuchsia_async::DurationExt;
 use fuchsia_component::client::connect_to_service;
 use fuchsia_component::server::ServiceFs;
-use fuchsia_syslog::{fx_log_err, fx_log_info};
+use fuchsia_syslog::fx_log_info;
 use fuchsia_zircon::DurationNum;
 use futures::lock::Mutex;
 use futures::{future::try_join3, FutureExt, StreamExt, TryFutureExt, TryStreamExt};
@@ -23,7 +23,6 @@ use serde_derive::Deserialize;
 mod dns_policy_service;
 mod interface;
 mod matchers;
-mod observer_service;
 
 #[derive(Debug, Deserialize)]
 pub struct DnsConfig {
@@ -396,19 +395,10 @@ fn main() -> Result<(), failure::Error> {
         Ok(())
     };
 
-    let interface_ids = interface_ids.clone();
-
     let mut fs = ServiceFs::new();
-    fs.dir("svc")
-        .add_fidl_service(move |stream| {
-            dns_policy_service::spawn_net_dns_fidl_server(resolver_admin.clone(), stream);
-        })
-        .add_fidl_service(|stream| {
-            fasync::spawn(
-                observer_service::serve_fidl_requests(stack.clone(), stream, interface_ids.clone())
-                    .unwrap_or_else(|e| fx_log_err!("failed to serve_fidl_requests:{}", e)),
-            );
-        });
+    fs.dir("svc").add_fidl_service(move |stream| {
+        dns_policy_service::spawn_net_dns_fidl_server(resolver_admin.clone(), stream);
+    });
     fs.take_and_serve_directory_handle()?;
 
     let ((), (), ()) = executor.run_singlethreaded(try_join3(
