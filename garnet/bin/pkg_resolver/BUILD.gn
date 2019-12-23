@@ -16,3 +16,9 @@ group("pkg-resolver-unit-tests") {
   ]
   testonly = true
 }
+
+group("disable_dynamic_configuration") {
+  public_deps = [
+    "//src/sys/pkg/bin/pkg-resolver:disable_dynamic_configuration",
+  ]
+}
