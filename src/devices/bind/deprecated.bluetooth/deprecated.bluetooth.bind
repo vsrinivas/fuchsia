@@ -1,0 +1,13 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library deprecated.bluetooth;
+
+extend uint deprecated.BIND_PROTOCOL {
+  HCI = 47,
+  EMULATOR = 48,
+  TRANSPORT = 49,
+  HOST = 50,
+  GATT_SVC = 51,
+};
