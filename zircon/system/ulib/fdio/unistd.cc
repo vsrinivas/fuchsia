@@ -2204,7 +2204,8 @@ ssize_t recvmsg(int fd, struct msghdr* msg, int flags) {
     size_t actual;
     int16_t out_code;
     zx_status_t status = fdio_get_ops(io)->recvmsg(io, msg, flags, &actual, &out_code);
-    if (status == ZX_ERR_SHOULD_WAIT && !nonblocking) {
+    if ((status == ZX_ERR_SHOULD_WAIT || (status == ZX_OK && out_code == EWOULDBLOCK)) &&
+        !nonblocking) {
       if (fdio_wait(io, FDIO_EVT_READABLE, deadline, nullptr) != ZX_ERR_TIMED_OUT) {
         continue;
       }
