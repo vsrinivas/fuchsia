@@ -822,7 +822,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:558
+From //build/config/BUILDCONFIG.gn:564
 
 ### fastboot_product
 
@@ -1248,7 +1248,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:471
+From //build/config/BUILDCONFIG.gn:477
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -1756,7 +1756,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:763
+From //build/config/BUILDCONFIG.gn:769
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -1765,7 +1765,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:768
+From //build/config/BUILDCONFIG.gn:774
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -1789,7 +1789,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:604
+From //build/config/BUILDCONFIG.gn:610
 
 ### signed_image
 
@@ -2004,7 +2004,7 @@ From //build/config/BUILDCONFIG.gn:100
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:578
+From //build/config/BUILDCONFIG.gn:584
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
