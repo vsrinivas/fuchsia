@@ -12,7 +12,8 @@ TEST(NullTest, Basic) {
   zxio_null_init(&io);
 
   zxio_signals_t observed = ZXIO_SIGNAL_NONE;
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_wait_one(&io, ZXIO_READABLE, ZX_TIME_INFINITE, &observed));
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED,
+            zxio_wait_one(&io, ZXIO_SIGNAL_READABLE, ZX_TIME_INFINITE, &observed));
 
   zx_handle_t handle = ZX_HANDLE_INVALID;
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_release(&io, &handle));

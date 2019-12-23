@@ -27,7 +27,8 @@ TEST(VmoFileTest, Basic) {
   zxio_t* io = &storage.io;
 
   zxio_signals_t observed = ZXIO_SIGNAL_NONE;
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_wait_one(io, ZXIO_READABLE, ZX_TIME_INFINITE, &observed));
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED,
+            zxio_wait_one(io, ZXIO_SIGNAL_READABLE, ZX_TIME_INFINITE, &observed));
 
   zx::channel clone;
   ASSERT_OK(zxio_clone(io, clone.reset_and_get_address()));

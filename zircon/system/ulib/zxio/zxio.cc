@@ -45,15 +45,6 @@ zxio_dirent_iterator_internal_t* to_internal(zxio_dirent_iterator_t* iterator) {
 
 }  // namespace
 
-static_assert(ZXIO_READABLE == __ZX_OBJECT_READABLE, "ZXIO signal bits should match ZX");
-static_assert(ZXIO_WRITABLE == __ZX_OBJECT_WRITABLE, "ZXIO signal bits should match ZX");
-static_assert(ZXIO_READ_DISABLED == ZX_SOCKET_PEER_WRITE_DISABLED,
-              "ZXIO signal bits should match ZX");
-static_assert(ZXIO_WRITE_DISABLED == ZX_SOCKET_WRITE_DISABLED, "ZXIO signal bits should match ZX");
-static_assert(ZXIO_READ_THRESHOLD == ZX_SOCKET_READ_THRESHOLD, "ZXIO signal bits should match ZX");
-static_assert(ZXIO_WRITE_THRESHOLD == ZX_SOCKET_WRITE_THRESHOLD,
-              "ZXIO signal bits should match ZX");
-
 void zxio_init(zxio_t* io, const zxio_ops_t* ops) {
   zxio_internal_t* zio = to_internal(io);
   memset(zio, 0, sizeof(*zio));

@@ -63,13 +63,13 @@ static void fdio_zxio_wait_begin(fdio_t* io, uint32_t events, zx_handle_t* out_h
   zxio_t* z = fdio_get_zxio(io);
   zxio_signals_t signals = ZXIO_SIGNAL_NONE;
   if (events & POLLIN) {
-    signals |= ZXIO_READABLE | ZXIO_READ_DISABLED;
+    signals |= ZXIO_SIGNAL_READABLE | ZXIO_SIGNAL_READ_DISABLED;
   }
   if (events & POLLOUT) {
-    signals |= ZXIO_WRITABLE | ZXIO_WRITE_DISABLED;
+    signals |= ZXIO_SIGNAL_WRITABLE | ZXIO_SIGNAL_WRITE_DISABLED;
   }
   if (events & POLLRDHUP) {
-    signals |= ZXIO_READ_DISABLED;
+    signals |= ZXIO_SIGNAL_READ_DISABLED;
   }
   zxio_wait_begin(z, signals, out_handle, out_signals);
 }
@@ -80,13 +80,13 @@ static void fdio_zxio_wait_end(fdio_t* io, zx_signals_t signals, uint32_t* out_e
   zxio_wait_end(z, signals, &zxio_signals);
 
   uint32_t events = 0;
-  if (zxio_signals & (ZXIO_READABLE | ZXIO_READ_DISABLED)) {
+  if (zxio_signals & (ZXIO_SIGNAL_READABLE | ZXIO_SIGNAL_READ_DISABLED)) {
     events |= POLLIN;
   }
-  if (zxio_signals & (ZXIO_WRITABLE | ZXIO_WRITE_DISABLED)) {
+  if (zxio_signals & (ZXIO_SIGNAL_WRITABLE | ZXIO_SIGNAL_WRITE_DISABLED)) {
     events |= POLLOUT;
   }
-  if (zxio_signals & ZXIO_READ_DISABLED) {
+  if (zxio_signals & ZXIO_SIGNAL_READ_DISABLED) {
     events |= POLLRDHUP;
   }
   *out_events = events;
@@ -238,36 +238,66 @@ fdio_t* fdio_null_create(void) {
 
 // Remote ----------------------------------------------------------------------
 
-// POLL_MASK and POLL_SHIFT intend to convert the lower five POLL events into
-// ZX_USER_SIGNALs and vice-versa. Other events need to be manually converted to
-// a zx_signals_t, if they are desired.
-#define POLL_SHIFT 24
-#define POLL_MASK 0x1F
+static zxio_signals_t poll_events_to_zxio_signals(uint32_t events) {
+  zxio_signals_t signals = ZXIO_SIGNAL_NONE;
+  if (events & POLLIN) {
+    signals |= ZXIO_SIGNAL_READABLE;
+  }
+  if (events & POLLPRI) {
+    signals |= ZXIO_SIGNAL_OUT_OF_BAND;
+  }
+  if (events & POLLOUT) {
+    signals |= ZXIO_SIGNAL_WRITABLE;
+  }
+  if (events & POLLERR) {
+    signals |= ZXIO_SIGNAL_ERROR;
+  }
+  if (events & POLLHUP) {
+    signals |= ZXIO_SIGNAL_PEER_CLOSED;
+  }
+  if (events & POLLRDHUP) {
+    signals |= ZXIO_SIGNAL_READ_DISABLED;
+  }
+  return signals;
+}
+
+static zxio_signals_t zxio_signals_to_poll_events(zxio_signals_t signals) {
+  uint32_t events = 0;
+  if (signals & ZXIO_SIGNAL_READABLE) {
+    events |= POLLIN;
+  }
+  if (signals & ZXIO_SIGNAL_OUT_OF_BAND) {
+    events |= POLLPRI;
+  }
+  if (signals & ZXIO_SIGNAL_WRITABLE) {
+    events |= POLLOUT;
+  }
+  if (signals & ZXIO_SIGNAL_ERROR) {
+    events |= POLLERR;
+  }
+  if (signals & ZXIO_SIGNAL_PEER_CLOSED) {
+    events |= POLLHUP;
+  }
+  if (signals & ZXIO_SIGNAL_READ_DISABLED) {
+    events |= POLLRDHUP;
+  }
+  return events;
+}
 
 static zxio_remote_t* fdio_get_zxio_remote(fdio_t* io) { return (zxio_remote_t*)fdio_get_zxio(io); }
 
 static void fdio_zxio_remote_wait_begin(fdio_t* io, uint32_t events, zx_handle_t* handle,
-                                        zx_signals_t* _signals) {
-  zxio_remote_t* rio = fdio_get_zxio_remote(io);
-  *handle = rio->event;
-
-  zx_signals_t signals = 0;
-  // Manually add signals that don't fit within POLL_MASK
-  if (events & POLLRDHUP) {
-    signals |= ZX_CHANNEL_PEER_CLOSED;
-  }
-
+                                        zx_signals_t* signals) {
   // POLLERR is always detected
-  *_signals = (((POLLERR | events) & POLL_MASK) << POLL_SHIFT) | signals;
+  events |= POLLERR;
+  zxio_signals_t zxio_signals = poll_events_to_zxio_signals(events);
+  zxio_wait_begin(fdio_get_zxio(io), zxio_signals, handle, signals);
 }
 
-static void fdio_zxio_remote_wait_end(fdio_t* io, zx_signals_t signals, uint32_t* _events) {
-  // Manually add events that don't fit within POLL_MASK
-  uint32_t events = 0;
-  if (signals & ZX_CHANNEL_PEER_CLOSED) {
-    events |= POLLRDHUP;
-  }
-  *_events = ((signals >> POLL_SHIFT) & POLL_MASK) | events;
+static void fdio_zxio_remote_wait_end(fdio_t* io, zx_signals_t signals, uint32_t* events) {
+  zxio_signals_t zxio_signals = 0;
+  zxio_wait_end(fdio_get_zxio(io), signals, &zxio_signals);
+  *events = zxio_signals_to_poll_events(zxio_signals);
 }
 
 static fdio_ops_t fdio_zxio_remote_ops = {

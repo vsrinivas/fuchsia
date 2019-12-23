@@ -45,8 +45,26 @@ static void zxio_pipe_wait_begin(zxio_t* io, zxio_signals_t zxio_signals, zx_han
   auto pipe = reinterpret_cast<zxio_pipe_t*>(io);
   *out_handle = pipe->socket.get();
 
-  auto zx_signals = static_cast<zx_signals_t>(zxio_signals);
-  if (zxio_signals & ZXIO_READ_DISABLED) {
+  zx_signals_t zx_signals = ZX_SIGNAL_NONE;
+  if (zxio_signals & ZXIO_SIGNAL_READABLE) {
+    zx_signals |= ZX_SOCKET_READABLE;
+  }
+  if (zxio_signals & ZXIO_SIGNAL_WRITABLE) {
+    zx_signals |= ZX_SOCKET_WRITABLE;
+  }
+  if (zxio_signals & ZXIO_SIGNAL_READ_DISABLED) {
+    zx_signals |= ZX_SOCKET_PEER_WRITE_DISABLED;
+  }
+  if (zxio_signals & ZXIO_SIGNAL_WRITE_DISABLED) {
+    zx_signals |= ZX_SOCKET_WRITE_DISABLED;
+  }
+  if (zxio_signals & ZXIO_SIGNAL_READ_THRESHOLD) {
+    zx_signals |= ZX_SOCKET_READ_THRESHOLD;
+  }
+  if (zxio_signals & ZXIO_SIGNAL_WRITE_THRESHOLD) {
+    zx_signals |= ZX_SOCKET_WRITE_THRESHOLD;
+  }
+  if (zxio_signals & ZXIO_SIGNAL_READ_DISABLED) {
     zx_signals |= ZX_SOCKET_PEER_CLOSED;
   }
   *out_zx_signals = zx_signals;
@@ -54,9 +72,27 @@ static void zxio_pipe_wait_begin(zxio_t* io, zxio_signals_t zxio_signals, zx_han
 
 static void zxio_pipe_wait_end(zxio_t* io, zx_signals_t zx_signals,
                                zxio_signals_t* out_zxio_signals) {
-  auto zxio_signals = static_cast<zxio_signals_t>(zx_signals) & ZXIO_SIGNAL_ALL;
+  zxio_signals_t zxio_signals = ZXIO_SIGNAL_NONE;
+  if (zx_signals & ZX_SOCKET_READABLE) {
+    zxio_signals |= ZXIO_SIGNAL_READABLE;
+  }
+  if (zx_signals & ZX_SOCKET_WRITABLE) {
+    zxio_signals |= ZXIO_SIGNAL_WRITABLE;
+  }
+  if (zx_signals & ZX_SOCKET_PEER_WRITE_DISABLED) {
+    zxio_signals |= ZXIO_SIGNAL_READ_DISABLED;
+  }
+  if (zx_signals & ZX_SOCKET_WRITE_DISABLED) {
+    zxio_signals |= ZXIO_SIGNAL_WRITE_DISABLED;
+  }
+  if (zx_signals & ZX_SOCKET_READ_THRESHOLD) {
+    zxio_signals |= ZXIO_SIGNAL_READ_THRESHOLD;
+  }
+  if (zx_signals & ZX_SOCKET_WRITE_THRESHOLD) {
+    zxio_signals |= ZXIO_SIGNAL_WRITE_THRESHOLD;
+  }
   if (zx_signals & ZX_SOCKET_PEER_CLOSED) {
-    zxio_signals |= ZXIO_READ_DISABLED;
+    zxio_signals |= ZXIO_SIGNAL_READ_DISABLED;
   }
   *out_zxio_signals = zxio_signals;
 }

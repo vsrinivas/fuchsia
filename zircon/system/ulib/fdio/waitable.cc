@@ -14,10 +14,10 @@ typedef struct fdio_waitable {
   // arbitrary handle
   zx_handle_t handle;
 
-  // signals that cause ZXIO_READABLE
+  // signals that cause ZXIO_SIGNAL_READABLE
   zx_signals_t readable;
 
-  // signals that cause ZXIO_WRITABLE
+  // signals that cause ZXIO_SIGNAL_WRITABLE
   zx_signals_t writable;
 
   // if true, don't close handle on close() op
@@ -41,10 +41,10 @@ static void fdio_waitable_wait_begin(zxio_t* io, zxio_signals_t zxio_signals,
                                      zx_handle_t* out_handle, zx_signals_t* out_zx_signals) {
   fdio_waitable_t* waitable = reinterpret_cast<fdio_waitable_t*>(io);
   zx_signals_t zx_signals = ZX_SIGNAL_NONE;
-  if (zxio_signals & ZXIO_READABLE) {
+  if (zxio_signals & ZXIO_SIGNAL_READABLE) {
     zx_signals |= waitable->readable;
   }
-  if (zxio_signals & ZXIO_WRITABLE) {
+  if (zxio_signals & ZXIO_SIGNAL_WRITABLE) {
     zx_signals |= waitable->writable;
   }
   *out_handle = waitable->handle;
@@ -56,10 +56,10 @@ static void fdio_waitable_wait_end(zxio_t* io, zx_signals_t zx_signals,
   fdio_waitable_t* waitable = reinterpret_cast<fdio_waitable_t*>(io);
   zxio_signals_t zxio_signals = ZXIO_SIGNAL_NONE;
   if (zx_signals & waitable->readable) {
-    zxio_signals |= ZXIO_READABLE;
+    zxio_signals |= ZXIO_SIGNAL_READABLE;
   }
   if (zx_signals & waitable->writable) {
-    zxio_signals |= ZXIO_WRITABLE;
+    zxio_signals |= ZXIO_SIGNAL_WRITABLE;
   }
   *out_zxio_signals = zxio_signals;
 }

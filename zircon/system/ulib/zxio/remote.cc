@@ -22,6 +22,8 @@ class Remote {
 
   [[nodiscard]] zx::unowned_channel control() const { return zx::unowned_channel(rio_->control); }
 
+  [[nodiscard]] zx::unowned_handle event() const { return zx::unowned_handle(rio_->event); }
+
   zx::handle Release() {
     zx::handle control(rio_->control);
     rio_->control = ZX_HANDLE_INVALID;
@@ -87,6 +89,56 @@ zx_status_t zxio_remote_clone(zxio_t* io, zx_handle_t* out_handle) {
   }
   *out_handle = local.release();
   return ZX_OK;
+}
+
+void zxio_remote_wait_begin(zxio_t* io, zxio_signals_t zxio_signals, zx_handle_t* out_handle,
+                            zx_signals_t* out_zx_signals) {
+  Remote rio(io);
+  *out_handle = rio.event()->get();
+
+  zx_signals_t zx_signals = ZX_SIGNAL_NONE;
+  if (zxio_signals & ZXIO_SIGNAL_READABLE) {
+    zx_signals |= fio::DEVICE_SIGNAL_READABLE;
+  }
+  if (zxio_signals & ZXIO_SIGNAL_OUT_OF_BAND) {
+    zx_signals |= fio::DEVICE_SIGNAL_OOB;
+  }
+  if (zxio_signals & ZXIO_SIGNAL_WRITABLE) {
+    zx_signals |= fio::DEVICE_SIGNAL_WRITABLE;
+  }
+  if (zxio_signals & ZXIO_SIGNAL_ERROR) {
+    zx_signals |= fio::DEVICE_SIGNAL_ERROR;
+  }
+  if (zxio_signals & ZXIO_SIGNAL_PEER_CLOSED) {
+    zx_signals |= fio::DEVICE_SIGNAL_HANGUP;
+  }
+  if (zxio_signals & ZXIO_SIGNAL_READ_DISABLED) {
+    zx_signals |= ZX_CHANNEL_PEER_CLOSED;
+  }
+  *out_zx_signals = zx_signals;
+}
+
+void zxio_remote_wait_end(zxio_t* io, zx_signals_t zx_signals, zxio_signals_t* out_zxio_signals) {
+  zxio_signals_t zxio_signals = ZXIO_SIGNAL_NONE;
+  if (zx_signals & fio::DEVICE_SIGNAL_READABLE) {
+    zxio_signals |= ZXIO_SIGNAL_READABLE;
+  }
+  if (zx_signals & fio::DEVICE_SIGNAL_OOB) {
+    zxio_signals |= ZXIO_SIGNAL_OUT_OF_BAND;
+  }
+  if (zx_signals & fio::DEVICE_SIGNAL_WRITABLE) {
+    zxio_signals |= ZXIO_SIGNAL_WRITABLE;
+  }
+  if (zx_signals & fio::DEVICE_SIGNAL_ERROR) {
+    zxio_signals |= ZXIO_SIGNAL_ERROR;
+  }
+  if (zx_signals & fio::DEVICE_SIGNAL_HANGUP) {
+    zxio_signals |= ZXIO_SIGNAL_PEER_CLOSED;
+  }
+  if (zx_signals & ZX_CHANNEL_PEER_CLOSED) {
+    zxio_signals |= ZXIO_SIGNAL_READ_DISABLED;
+  }
+  *out_zxio_signals = zxio_signals;
 }
 
 zx_status_t zxio_remote_sync(zxio_t* io) {
@@ -411,6 +463,8 @@ static constexpr zxio_ops_t zxio_remote_ops = []() {
   ops.close = zxio_remote_close;
   ops.release = zxio_remote_release;
   ops.clone = zxio_remote_clone;
+  ops.wait_begin = zxio_remote_wait_begin;
+  ops.wait_end = zxio_remote_wait_end;
   ops.sync = zxio_remote_sync;
   ops.attr_get = zxio_remote_attr_get;
   ops.attr_set = zxio_remote_attr_set;
@@ -498,11 +552,43 @@ zx_status_t zxio_dir_init(zxio_storage_t* storage, zx_handle_t control) {
   return ZX_OK;
 }
 
+namespace {
+
+void zxio_file_wait_begin(zxio_t* io, zxio_signals_t zxio_signals, zx_handle_t* out_handle,
+                          zx_signals_t* out_zx_signals) {
+  Remote rio(io);
+  *out_handle = rio.event()->get();
+
+  zx_signals_t zx_signals = ZX_SIGNAL_NONE;
+  if (zxio_signals & ZXIO_SIGNAL_READABLE) {
+    zx_signals |= fio::FILE_SIGNAL_READABLE;
+  }
+  if (zxio_signals & ZXIO_SIGNAL_WRITABLE) {
+    zx_signals |= fio::FILE_SIGNAL_WRITABLE;
+  }
+  *out_zx_signals = zx_signals;
+}
+
+void zxio_file_wait_end(zxio_t* io, zx_signals_t zx_signals, zxio_signals_t* out_zxio_signals) {
+  zxio_signals_t zxio_signals = ZXIO_SIGNAL_NONE;
+  if (zx_signals & fio::FILE_SIGNAL_READABLE) {
+    zxio_signals |= ZXIO_SIGNAL_READABLE;
+  }
+  if (zx_signals & fio::FILE_SIGNAL_WRITABLE) {
+    zxio_signals |= ZXIO_SIGNAL_WRITABLE;
+  }
+  *out_zxio_signals = zxio_signals;
+}
+
+}  // namespace
+
 static constexpr zxio_ops_t zxio_file_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
   ops.close = zxio_remote_close;
   ops.release = zxio_remote_release;
   ops.clone = zxio_remote_clone;
+  ops.wait_begin = zxio_file_wait_begin;
+  ops.wait_end = zxio_file_wait_end;
   ops.sync = zxio_remote_sync;
   ops.attr_get = zxio_remote_attr_get;
   ops.attr_set = zxio_remote_attr_set;

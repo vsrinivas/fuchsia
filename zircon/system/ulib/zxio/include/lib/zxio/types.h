@@ -20,20 +20,53 @@ typedef uint32_t zxio_flags_t;
 
 // Signals ---------------------------------------------------------------------
 
+// Signals are single bits of information that reflect some state on the
+// I/O object, i.e. they are level-triggered. Signals are implemented under
+// the hood using Zircon signals, but they are distinct. One may wait for
+// signals using the |zxio_wait_*| set of APIs.
+//
+// The signals defined here are rather generic (e.g. ZXIO_SIGNAL_READABLE
+// applies to both files and sockets); as such, not all I/O objects support
+// all signals. Unsupported signals are ignored during waiting.
 typedef uint32_t zxio_signals_t;
 
-// These values match the corresponding values in zircon/types.h
 #define ZXIO_SIGNAL_NONE ((zxio_signals_t)0u)
-#define ZXIO_READABLE ((zxio_signals_t)1u << 0)
-#define ZXIO_WRITABLE ((zxio_signals_t)1u << 1)
-#define ZXIO_READ_DISABLED ((zxio_signals_t)1u << 4)
-#define ZXIO_WRITE_DISABLED ((zxio_signals_t)1u << 5)
-#define ZXIO_READ_THRESHOLD ((zxio_signals_t)1u << 10)
-#define ZXIO_WRITE_THRESHOLD ((zxio_signals_t)1u << 11)
 
-#define ZXIO_SIGNAL_ALL                                                       \
-  (ZXIO_READABLE | ZXIO_WRITABLE | ZXIO_READ_DISABLED | ZXIO_WRITE_DISABLED | \
-   ZXIO_READ_THRESHOLD | ZXIO_WRITE_THRESHOLD)
+// Indicates the object is ready for reading.
+#define ZXIO_SIGNAL_READABLE ((zxio_signals_t)1u << 0)
+
+// Indicates the object is ready for writing.
+#define ZXIO_SIGNAL_WRITABLE ((zxio_signals_t)1u << 1)
+
+// Indicates writing is disabled permanently for the remote endpoint.
+// Note that reads on the local endpoint may succeed until all unread data
+// have been depleted.
+#define ZXIO_SIGNAL_READ_DISABLED ((zxio_signals_t)1u << 2)
+
+// Indicates writing is disabled permanently for the local endpoint.
+#define ZXIO_SIGNAL_WRITE_DISABLED ((zxio_signals_t)1u << 3)
+
+// Indicates data queued up on the object for reading exceeds the read threshold.
+#define ZXIO_SIGNAL_READ_THRESHOLD ((zxio_signals_t)1u << 4)
+
+// Indicates space available on the object for writing exceeds the write threshold.
+#define ZXIO_SIGNAL_WRITE_THRESHOLD ((zxio_signals_t)1u << 5)
+
+// Indicates an out-of-band state transition has occurred that needs attention.
+// Primarily used for devices with some out-of-band signalling mechanism.
+#define ZXIO_SIGNAL_OUT_OF_BAND ((zxio_signals_t)1u << 6)
+
+// Indicates the object has encountered an error state.
+#define ZXIO_SIGNAL_ERROR ((zxio_signals_t)1u << 7)
+
+// Indicates the object has closed the current connection.
+// Further I/O may not be performed.
+#define ZXIO_SIGNAL_PEER_CLOSED ((zxio_signals_t)1u << 8)
+
+#define ZXIO_SIGNAL_ALL                                                                    \
+  (ZXIO_SIGNAL_READABLE | ZXIO_SIGNAL_WRITABLE | ZXIO_SIGNAL_READ_DISABLED |               \
+   ZXIO_SIGNAL_WRITE_DISABLED | ZXIO_SIGNAL_READ_THRESHOLD | ZXIO_SIGNAL_WRITE_THRESHOLD | \
+   ZXIO_SIGNAL_OUT_OF_BAND | ZXIO_SIGNAL_ERROR | ZXIO_SIGNAL_PEER_CLOSED)
 
 // File and directory access ---------------------------------------------------
 

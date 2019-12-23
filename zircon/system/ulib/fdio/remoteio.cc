@@ -19,24 +19,12 @@ namespace fdevice = ::llcpp::fuchsia::device;
 
 #define ZXDEBUG 0
 
-// POLL_MASK and POLL_SHIFT intend to convert the lower five POLL events into
-// ZX_USER_SIGNALs and vice-versa. Other events need to be manually converted to
-// a zx_signals_t, if they are desired.
-#define POLL_SHIFT 24
-#define POLL_MASK 0x1F
-
 static_assert(FDIO_CHUNK_SIZE >= PATH_MAX, "FDIO_CHUNK_SIZE must be large enough to contain paths");
 
 static_assert(fio::VMO_FLAG_READ == ZX_VM_PERM_READ, "Vmar / Vmo flags should be aligned");
 static_assert(fio::VMO_FLAG_WRITE == ZX_VM_PERM_WRITE, "Vmar / Vmo flags should be aligned");
 static_assert(fio::VMO_FLAG_EXEC == ZX_VM_PERM_EXECUTE, "Vmar / Vmo flags should be aligned");
 
-static_assert(ZX_USER_SIGNAL_0 == (1 << POLL_SHIFT), "");
-static_assert((POLLIN << POLL_SHIFT) == fdevice::DEVICE_SIGNAL_READABLE, "");
-static_assert((POLLPRI << POLL_SHIFT) == fdevice::DEVICE_SIGNAL_OOB, "");
-static_assert((POLLOUT << POLL_SHIFT) == fdevice::DEVICE_SIGNAL_WRITABLE, "");
-static_assert((POLLERR << POLL_SHIFT) == fdevice::DEVICE_SIGNAL_ERROR, "");
-static_assert((POLLHUP << POLL_SHIFT) == fdevice::DEVICE_SIGNAL_HANGUP, "");
 static_assert(fio::DEVICE_SIGNAL_READABLE == fdevice::DEVICE_SIGNAL_READABLE);
 static_assert(fio::DEVICE_SIGNAL_OOB == fdevice::DEVICE_SIGNAL_OOB);
 static_assert(fio::DEVICE_SIGNAL_WRITABLE == fdevice::DEVICE_SIGNAL_WRITABLE);

@@ -14,13 +14,18 @@ zx_test("zxio") {
     "c-compilation-test.c",
     "debuglog-test.cc",
     "dirent-test.cc",
+    "file-test.cc",
     "null-test.cc",
     "vmofile-test.cc",
     "zxio-test.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-boot:c",
+    "$zx/system/fidl/fuchsia-io:llcpp",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/async-loop:async-loop-default.static",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxio",
     "$zx/system/ulib/zxtest",
