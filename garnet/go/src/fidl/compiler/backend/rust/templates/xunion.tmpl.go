@@ -20,6 +20,8 @@ fidl_xunion! {
 		{{ .Name }} {
 			ty: {{ .Type }},
 			ordinal: {{ .Ordinal }},
+			explicit_ordinal: {{ .ExplicitOrdinal }},
+			hashed_ordinal: {{ .HashedOrdinal }},
 		},
 	{{- end }}
 	],

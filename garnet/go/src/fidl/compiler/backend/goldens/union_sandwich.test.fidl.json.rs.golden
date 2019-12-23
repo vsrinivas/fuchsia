@@ -30,6 +30,8 @@ fidl_xunion! {
 		Variant {
 			ty: u32,
 			ordinal: 1,
+			explicit_ordinal: 1,
+			hashed_ordinal: 1,
 		},
 	],
 }
@@ -41,6 +43,8 @@ fidl_xunion! {
 		Variant {
 			ty: [u8; 6],
 			ordinal: 1,
+			explicit_ordinal: 1,
+			hashed_ordinal: 1,
 		},
 	],
 }
@@ -52,6 +56,8 @@ fidl_xunion! {
 		Variant {
 			ty: StructSize16Alignment8,
 			ordinal: 1,
+			explicit_ordinal: 1,
+			hashed_ordinal: 1,
 		},
 	],
 }
@@ -63,6 +69,8 @@ fidl_xunion! {
 		Variant {
 			ty: [u8; 32],
 			ordinal: 1,
+			explicit_ordinal: 1,
+			hashed_ordinal: 1,
 		},
 	],
 }

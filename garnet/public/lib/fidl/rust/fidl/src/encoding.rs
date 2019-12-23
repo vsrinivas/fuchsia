@@ -2104,7 +2104,19 @@ macro_rules! fidl_xunion {
             $(#[$member_docs:meta])*
             $member_name:ident {
                 ty: $member_ty:ty,
+                // ordinal is the field used when encoding the xunion, and the
+                // actual value associated with each variant (i.e. returned by
+                // .ordinal()). It will always be one of explicit_ordinal or
+                // hashed_ordinal
                 ordinal: $member_ordinal:expr,
+                // explicit_ordinal and hashed_ordinal are the two sets of
+                // ordinals that are checked when decoding xunions. They may
+                // both be the same value (explicit) for cases where we we know
+                // only one set needs to be supported (e.g. static unions that
+                // were migrated over to xunions have used explicit ordinals
+                // from the start).
+                explicit_ordinal: $explicit_member_ordinal:expr,
+                hashed_ordinal: $hashed_member_ordinal:expr,
             },
         )*],
         // Flexible xunions only: name of the unknown variant.
@@ -2190,7 +2202,8 @@ macro_rules! fidl_xunion {
                 let (ordinal, num_bytes, num_handles) = $crate::encoding::decode_xunion_inline_portion(decoder)?;
                 let member_inline_size = match ordinal {
                     $(
-                        $member_ordinal => decoder.inline_size_of::<$member_ty>(),
+                        $hashed_member_ordinal | $explicit_member_ordinal =>
+                            decoder.inline_size_of::<$member_ty>(),
                     )*
                     $(
                         _ => {
@@ -2210,7 +2223,7 @@ macro_rules! fidl_xunion {
                     decoder.recurse(|decoder| {
                         match ordinal {
                             $(
-                                $member_ordinal => {
+                                $hashed_member_ordinal | $explicit_member_ordinal => {
                                     if let $name::$member_name(_) = self {
                                         // Do nothing, read the value into the object
                                     } else {
@@ -2604,6 +2617,17 @@ mod test {
         assert_eq!(&**buf, encoded_bytes);
     }
 
+    fn decode_assert_bytes<T: Decodable + PartialEq + fmt::Debug>(
+        ctx: &Context,
+        bytes: &[u8],
+        expected: &T,
+    ) {
+        let handle_buf = &mut Vec::new();
+        let mut actual = T::new_empty();
+        Decoder::decode_with_context(ctx, bytes, handle_buf, &mut actual).expect("Decoding failed");
+        assert_eq!(&actual, expected);
+    }
+
     fn assert_identity<T>(mut x: T, cloned: T)
     where
         T: Encodable + Decodable + PartialEq + fmt::Debug,
@@ -2752,10 +2776,14 @@ mod test {
                 Okay {
                     ty: u64,
                     ordinal: 1,
+                    explicit_ordinal: 1,
+                    hashed_ordinal: 123,
                 },
                 Error {
                     ty: u32,
                     ordinal: 2,
+                    explicit_ordinal: 2,
+                    hashed_ordinal: 456,
                 },
             ],
         };
@@ -2787,10 +2815,14 @@ mod test {
                 Okay {
                     ty: Empty,
                     ordinal: 1,
+                    explicit_ordinal: 1,
+                    hashed_ordinal: 123,
                 },
                 Error {
                     ty: i32,
                     ordinal: 2,
+                    explicit_ordinal: 2,
+                    hashed_ordinal: 456,
                 },
             ],
         };
@@ -3368,6 +3400,8 @@ mod test {
             B {
                 ty: bool,
                 ordinal: 1,
+                explicit_ordinal: 1,
+                hashed_ordinal: 123,
             },
         ],
     }
@@ -3379,10 +3413,14 @@ mod test {
             U {
                 ty: u32,
                 ordinal: 0x29df47a5,
+                explicit_ordinal: 1,
+                hashed_ordinal: 0x29df47a5,
             },
             St {
                 ty: SimpleTable,
                 ordinal: 0x6f317664,
+                explicit_ordinal: 2,
+                hashed_ordinal: 0x6f317664,
             },
         ],
         unknown_member: __UnknownVariant,
@@ -3395,10 +3433,14 @@ mod test {
             U {
                 ty: u32,
                 ordinal: 0x29df47a5,
+                explicit_ordinal: 1,
+                hashed_ordinal: 0x29df47a5,
             },
             St {
                 ty: SimpleTable,
                 ordinal: 0x6f317664,
+                explicit_ordinal: 1,
+                hashed_ordinal: 0x6f317664,
             },
         ],
     }
@@ -3410,6 +3452,8 @@ mod test {
             SomethinElse {
                 ty: Handle,
                 ordinal: 55,
+                explicit_ordinal: 1,
+                hashed_ordinal: 55,
             },
         ],
         unknown_member: __UnknownVariant,
@@ -3439,6 +3483,38 @@ mod test {
                 Some(Box::new(TestSampleXUnionStrict::U(0xdeadbeef))),
                 xunion_u_bytes,
             );
+        }
+    }
+
+    #[test]
+    fn xunion_golden_read_both_ordinals() {
+        let hashed_bytes = &[
+            0xa5, 0x47, 0xdf, 0x29, 0x00, 0x00, 0x00, 0x00, // hashed xunion ordinal
+            0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // num bytes + num handles
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // presence indicator
+            0xef, 0xbe, 0xad, 0xde, 0x00, 0x00, 0x00, 0x00, // content + padding
+        ];
+
+        let explicit_bytes = &[
+            0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // explicit xunion ordinal
+            0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // num bytes + num handles
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // presence indicator
+            0xef, 0xbe, 0xad, 0xde, 0x00, 0x00, 0x00, 0x00, // content + padding
+        ];
+
+        for ctx in CONTEXTS {
+            // Decoding understands both hashed and explicit bytes. Encoding uses only the value
+            // specified in the "ordinal" field, which for this xunion is the hashed ordinal
+            {
+                let xunion_obj = TestSampleXUnion::U(0xdeadbeef);
+                decode_assert_bytes(ctx, hashed_bytes, &xunion_obj);
+                encode_assert_bytes(ctx, xunion_obj, hashed_bytes);
+            }
+            {
+                let xunion_obj = TestSampleXUnion::U(0xdeadbeef);
+                decode_assert_bytes(ctx, explicit_bytes, &xunion_obj);
+                encode_assert_bytes(ctx, xunion_obj, hashed_bytes);
+            }
         }
     }
 
@@ -3505,6 +3581,8 @@ mod test {
                 Variant {
                     ty: Vec<u8>,
                     ordinal: 1,
+                    explicit_ordinal: 1,
+                    hashed_ordinal: 123,
                 },
             ],
             unknown_member: __UnknownVariant,
@@ -3526,6 +3604,8 @@ mod test {
                 B {
                     ty: bool,
                     ordinal: 12345,
+                    explicit_ordinal: 1,
+                    hashed_ordinal: 12345,
                 },
             ],
         }
@@ -3551,6 +3631,8 @@ mod test {
                 X {
                     ty: u64,
                     ordinal: 0xffffffffu64,
+                    explicit_ordinal: 1,
+                    hashed_ordinal: 0xffffffffu64,
                 },
             ],
         };
