@@ -87,14 +87,6 @@ go_test("fidlgen_libfuzzer_test") {
   ]
 }
 
-go_test("fidlgen_golang_ir_test") {
-  gopackages = [ "fidl/compiler/backend/golang/ir" ]
-
-  deps = [
-    ":fidlgen_test_lib",
-  ]
-}
-
 go_test("fidlgen_rust_test") {
   gopackages = [ "fidl/compiler/backend/rust" ]
 
@@ -103,24 +95,8 @@ go_test("fidlgen_rust_test") {
   ]
 }
 
-go_test("fidlgen_rust_ir_test") {
-  gopackages = [ "fidl/compiler/backend/rust/ir" ]
-
-  deps = [
-    ":fidlgen_test_lib",
-  ]
-}
-
 go_test("fidlgen_syzkaller_test") {
   gopackages = [ "fidl/compiler/backend/syzkaller" ]
-
-  deps = [
-    ":fidlgen_test_lib",
-  ]
-}
-
-go_test("fidlgen_syzkaller_ir_test") {
-  gopackages = [ "fidl/compiler/backend/syzkaller/ir" ]
 
   deps = [
     ":fidlgen_test_lib",

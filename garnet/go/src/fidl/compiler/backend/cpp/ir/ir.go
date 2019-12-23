@@ -7,7 +7,6 @@ package ir
 import (
 	"fmt"
 	"log"
-	"math"
 	"sort"
 	"strings"
 
@@ -27,7 +26,6 @@ type interfaceKind struct{}
 type serviceKind struct{}
 type structKind struct{}
 type tableKind struct{}
-type unionKind struct{}
 type xunionKind struct{}
 
 var Kinds = struct {
@@ -38,7 +36,6 @@ var Kinds = struct {
 	Service   serviceKind
 	Struct    structKind
 	Table     tableKind
-	Union     unionKind
 	XUnion    xunionKind
 }{}
 
@@ -111,38 +108,6 @@ type Enum struct {
 type EnumMember struct {
 	Name  string
 	Value string
-}
-
-type Union struct {
-	types.Attributes
-	Namespace          string
-	Name               string
-	TableType          string
-	V1TableType        string
-	Members            []UnionMember
-	Size               int
-	InlineSizeOld      int
-	InlineSizeV1NoEE   int
-	MaxHandles         int
-	MaxOutOfLine       int
-	MaxOutOfLineV1NoEE int
-	IsResult           bool
-	Result             *Result
-	Kind               unionKind
-}
-
-type UnionMember struct {
-	types.Attributes
-	Type          Type
-	Name          string
-	XUnionOrdinal int
-	StorageName   string
-	TagName       string
-	Offset        int
-}
-
-func (um UnionMember) UpperCamelCaseName() string {
-	return common.ToUpperCamelCase(um.Name)
 }
 
 type XUnion struct {
@@ -841,32 +806,6 @@ func (c *compiler) compileParameterArray(val []types.Parameter) []Parameter {
 	return params
 }
 
-// TODO(fxb/38600) Remove these and use the type shape in the JSON ir.
-func (c *compiler) maxHandlesFromParameterArray(val []types.Parameter) int {
-	numHandles := int64(0)
-	for _, v := range val {
-		numHandles += int64(v.MaxHandles)
-	}
-	if numHandles > math.MaxUint32 {
-		return math.MaxUint32
-	} else {
-		return int(numHandles)
-	}
-}
-
-// TODO(fxb/38600) Remove these and use the type shape in the JSON ir.
-func (c *compiler) maxOutOfLineFromParameterArray(val []types.Parameter) int {
-	maxOutOfLine := int64(0)
-	for _, v := range val {
-		maxOutOfLine += int64(v.MaxOutOfLine)
-	}
-	if maxOutOfLine > math.MaxUint32 {
-		return math.MaxUint32
-	} else {
-		return int(maxOutOfLine)
-	}
-}
-
 // LLContext indicates where the request/response is used.
 // The allocation strategies differ for client and server contexts.
 type LLContext int
@@ -1148,71 +1087,6 @@ func (c *compiler) compileTable(val types.Table, appendNamespace string) Table {
 	return r
 }
 
-func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
-	n := changeIfReserved(val.Name, "")
-	return UnionMember{
-		Attributes:    val.Attributes,
-		Type:          c.compileType(val.Type),
-		Name:          n,
-		XUnionOrdinal: val.XUnionOrdinal,
-		StorageName:   changeIfReserved(val.Name, "_"),
-		TagName:       fmt.Sprintf("k%s", common.ToUpperCamelCase(n)),
-		Offset:        val.Offset,
-	}
-}
-
-func (c *compiler) compileUnion(val types.Union) *Union {
-	name := c.compileCompoundIdentifier(val.Name, "", "", false)
-	tableType := c.compileTableType(val.Name)
-	r := Union{
-		Attributes:         val.Attributes,
-		Namespace:          c.namespace,
-		Name:               changeIfReserved(types.Identifier(name), ""),
-		TableType:          tableType,
-		V1TableType:        "v1_" + tableType,
-		Members:            []UnionMember{},
-		Size:               val.Size,
-		InlineSizeOld:      val.TypeShapeOld.InlineSize,
-		InlineSizeV1NoEE:   val.TypeShapeV1NoEE.InlineSize,
-		MaxHandles:         val.MaxHandles,
-		MaxOutOfLine:       val.MaxOutOfLine,
-		MaxOutOfLineV1NoEE: val.TypeShapeV1NoEE.MaxOutOfLine,
-	}
-
-	for _, v := range val.Members {
-		if v.Reserved {
-			continue
-		}
-		r.Members = append(r.Members, c.compileUnionMember(v))
-	}
-
-	if val.Attributes.HasAttribute("Result") {
-		if len(r.Members) != 2 {
-			log.Fatal("A Result union must have two members: ", val.Name)
-		}
-		if val.Members[0].Type.Kind != types.IdentifierType {
-			log.Fatal("Value member of result union must be an identifier", val.Name)
-		}
-		valueStructDeclType, ok := c.decls[val.Members[0].Type.Identifier]
-		if !ok {
-			log.Fatal("Unknown identifier: ", val.Members[0].Type.Identifier)
-		}
-		if valueStructDeclType != "struct" {
-			log.Fatal("First member of result union not a struct: ", val.Name)
-		}
-		result := Result{
-			ResultDecl:      r.Name,
-			ValueStructDecl: r.Members[0].Type.Decl,
-			ErrorDecl:       r.Members[1].Type.Decl,
-		}
-		c.resultForStruct[val.Members[0].Type.Identifier] = &result
-		c.resultForUnion[val.Name] = &result
-		r.Result = &result
-	}
-
-	return &r
-}
-
 func (c *compiler) compileXUnionMember(val types.XUnionMember) XUnionMember {
 	n := changeIfReserved(val.Name, "")
 	return XUnionMember{
@@ -1278,7 +1152,7 @@ func (c *compiler) compileXUnion(val types.XUnion) XUnion {
 	return r
 }
 
-func compile(r types.Root, namespaceFormatter func(types.LibraryIdentifier, string) string, treatUnionAsXUnions bool) Root {
+func compile(r types.Root, namespaceFormatter func(types.LibraryIdentifier, string) string) Root {
 	root := Root{}
 	library := make(types.LibraryIdentifier, 0)
 	raw_library := make(types.LibraryIdentifier, 0)
@@ -1327,12 +1201,8 @@ func compile(r types.Root, namespaceFormatter func(types.LibraryIdentifier, stri
 	// Note: for Result calculation unions must be compiled before structs.
 	for _, v := range r.Unions {
 		var d Decl
-		if treatUnionAsXUnions {
-			vConverted := types.ConvertUnionToXUnion(v)
-			d = c.compileXUnion(vConverted)
-		} else {
-			d = c.compileUnion(v)
-		}
+		vConverted := types.ConvertUnionToXUnion(v)
+		d = c.compileXUnion(vConverted)
 		decls[v.Name] = d
 	}
 
@@ -1397,17 +1267,9 @@ func compile(r types.Root, namespaceFormatter func(types.LibraryIdentifier, stri
 }
 
 func Compile(r types.Root) Root {
-	// TODO(fxb/39159): Flip to treat unions as xunions. We must be fully on
-	// the v1 wire format to activate this, and both APIs must have been
-	// properly aligned.
-	treatUnionAsXUnions := true
-	return compile(r, formatNamespace, treatUnionAsXUnions)
+	return compile(r, formatNamespace)
 }
 
 func CompileLL(r types.Root) Root {
-	// TODO(fxb/39159): Flip to treat unions as xunions. We must be fully on
-	// the v1 wire format to activate this, and both APIs must have been
-	// properly aligned.
-	treatUnionAsXUnions := true
-	return compile(r, formatLLNamespace, treatUnionAsXUnions)
+	return compile(r, formatLLNamespace)
 }

@@ -188,50 +188,6 @@ type StructMember struct {
 	OffsetV1 int
 }
 
-// Union represents a FIDL union as a golang struct.
-type Union struct {
-	types.Attributes
-
-	// Name is the name of the FIDL union as a golang struct.
-	Name string
-
-	// TagName is the name of the golang enum type for the tag of the FIDL enum.
-	TagName string
-
-	// Members is a list of FIDL union members represented as golang struct members.
-	Members []UnionMember
-
-	// InlineSizeOld is the size of the FIDL union on the wire in bytes.
-	InlineSizeOld int
-	// AlignmentOld is the alignment factor of the FIDL union on the wire in bytes.
-	AlignmentOld int
-
-	// InlineSizeV1 is the size of the FIDL union on the wire in bytes.
-	InlineSizeV1 int
-	// AlignmentV1 is the alignment factor of the FIDL union on the wire in bytes.
-	AlignmentV1 int
-}
-
-// UnionMember represents a FIDL union member as a golang struct member.
-type UnionMember struct {
-	types.Attributes
-
-	// The ordinal that the corresponding xunion would use, to assist in union to xunion migration.
-	XUnionOrdinal int
-
-	// Name is the exported name of the FIDL union member.
-	Name string
-
-	// PrivateName is the unexported name of the FIDL union member.
-	PrivateName string
-
-	// Type is the golang type of the union member.
-	Type Type
-
-	// Corresponds to fidl tag in generated go.
-	FidlTag string
-}
-
 type XUnion struct {
 	types.Attributes
 	Name          string
@@ -401,9 +357,6 @@ type Root struct {
 
 	// Structs represents the list of FIDL structs represented as Go structs.
 	Structs []Struct
-
-	// Unions represents the list of FIDL unions represented as Go structs.
-	Unions []Union
 
 	// XUnions represents the list of FIDL xunions represented as Go structs.
 	XUnions []XUnion
@@ -780,38 +733,6 @@ func (c *compiler) compileStruct(val types.Struct) Struct {
 		r.Members = append(r.Members, c.compileStructMember(v))
 	}
 
-	return r
-}
-
-func (c *compiler) compileUnionMember(unionName string, val types.UnionMember) UnionMember {
-	ty, tag := c.compileType(val.Type)
-	tag.reverseOfBounds = append(tag.reverseOfBounds, val.XUnionOrdinal)
-	return UnionMember{
-		Attributes:    val.Attributes,
-		XUnionOrdinal: val.XUnionOrdinal,
-		Type:          ty,
-		Name:          c.compileIdentifier(val.Name, true, ""),
-		PrivateName:   c.compileIdentifier(val.Name, false, ""),
-		FidlTag:       tag.String(),
-	}
-}
-
-func (c *compiler) compileUnion(val types.Union) Union {
-	r := Union{
-		Attributes:    val.Attributes,
-		Name:          c.compileCompoundIdentifier(val.Name, true, ""),
-		TagName:       "I_" + c.compileCompoundIdentifier(val.Name, false, TagSuffix),
-		InlineSizeOld: val.TypeShapeOld.InlineSize,
-		AlignmentOld:  val.TypeShapeOld.Alignment,
-		InlineSizeV1:  val.TypeShapeV1NoEE.InlineSize,
-		AlignmentV1:   val.TypeShapeV1NoEE.Alignment,
-	}
-	for _, member := range val.Members {
-		if member.Reserved {
-			continue
-		}
-		r.Members = append(r.Members, c.compileUnionMember(r.Name, member))
-	}
 	return r
 }
 

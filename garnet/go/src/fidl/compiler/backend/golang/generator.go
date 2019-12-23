@@ -29,7 +29,6 @@ func NewFidlGenerator() *FidlGenerator {
 	template.Must(tmpls.Parse(templates.Interface))
 	template.Must(tmpls.Parse(templates.Library))
 	template.Must(tmpls.Parse(templates.Struct))
-	template.Must(tmpls.Parse(templates.Union))
 	template.Must(tmpls.Parse(templates.XUnion))
 	template.Must(tmpls.Parse(templates.Table))
 	return &FidlGenerator{
