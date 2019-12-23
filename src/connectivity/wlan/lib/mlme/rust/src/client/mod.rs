@@ -7,6 +7,8 @@ mod channel_scheduler;
 mod convert_beacon;
 mod cpp_proxy;
 mod frame_writer;
+#[allow(unused)]
+mod lost_bss;
 mod scanner;
 mod state;
 pub mod temporary_c_binding;
@@ -28,6 +30,7 @@ use {
     frame_writer::*,
     fuchsia_zircon::{self as zx, prelude::DurationNum},
     log::{error, warn},
+    lost_bss::LostBssCounter,
     scanner::Scanner,
     state::States,
     std::convert::TryInto,
@@ -40,6 +43,7 @@ use {
         },
         mac::{self, Aid, Bssid, MacAddr, OptionalField, PowerState, Presence},
         sequence::SequenceManager,
+        time::TimeUnit,
     },
     zerocopy::{AsBytes, ByteSlice},
 };
@@ -49,6 +53,9 @@ pub use {cpp_proxy::CppChannelScheduler, scanner::ScanError};
 /// Maximum size of EAPOL frames forwarded to SME.
 /// TODO(34845): Evaluate whether EAPOL size restriction is needed.
 const MAX_EAPOL_FRAME_LEN: usize = 255;
+
+/// Number of beacon intervals which beacon is not seen before we declare BSS as lost
+const DEFAULT_AUTO_DEAUTH_TIMEOUT_BEACON_COUNT: u32 = 100;
 
 const USE_RUST_CHAN_SCHED: bool = false;
 
@@ -60,6 +67,7 @@ pub enum TimedEvent {
     Associating,
     ChannelScheduler,
     ScannerProbeDelay(banjo_wlan_info::WlanChannel),
+    LostBssCountdown,
 }
 
 /// ClientConfig affects time duration used for different timeouts.
@@ -187,7 +195,7 @@ impl ClientMlme {
             _ => {
                 if let Some(sta) = sta {
                     sta.bind(&mut self.scanner, &mut self.chan_sched, &mut self.channel_state)
-                        .handle_timed_event(&mut self.ctx, event);
+                        .handle_timed_event(&mut self.ctx, event_id, event);
                 }
             }
         }
@@ -199,6 +207,11 @@ impl ClientMlme {
 /// machine or track negotiated capabilities.
 pub struct Client {
     state: Option<States>,
+    /// |lost_bss_counter|, which is started when client is associated. Used to keep track whether
+    /// BSS is still alive nearby.
+    /// This is only here because state handling still lives in C++ MLME.
+    /// TODO(29063): Move this to Associated state when we use Rust MLME state
+    pub(crate) lost_bss_counter: Option<LostBssCounter>,
     pub bssid: Bssid,
     pub iface_mac: MacAddr,
     pub is_rsn: bool,
@@ -211,6 +224,7 @@ impl Client {
             bssid,
             iface_mac,
             state: Some(States::new_initial()),
+            lost_bss_counter: None,
             is_rsn,
             use_rust_chan_sched: USE_RUST_CHAN_SCHED,
         }
@@ -226,19 +240,39 @@ impl Client {
     }
 
     pub fn pre_switch_off_channel(&mut self, ctx: &mut Context) {
-        // TODO(29063): check for associated state first
-        // TODO(29063): reset lost BSS stats
-        if let Err(e) = send_power_state_frame(self, ctx, PowerState::DOZE) {
-            warn!("unable to send doze frame: {:?}", e);
+        // Right now MLME does not use Rust's Associated state yet. If lost_bss_counter is
+        // present, it means that MLME is connected.
+        if self.lost_bss_counter.is_some() {
+            if let Err(e) = send_power_state_frame(self, ctx, PowerState::DOZE) {
+                warn!("unable to send doze frame: {:?}", e);
+            }
+            self.lost_bss_counter.as_mut().unwrap().pause(&mut ctx.timer);
         }
     }
 
     pub fn handle_back_on_channel(&mut self, ctx: &mut Context) {
-        // TODO(29063): check for associated state first
-        // TODO(29063): reset lost BSS stats
-        if let Err(e) = send_power_state_frame(self, ctx, PowerState::AWAKE) {
-            warn!("unable to send awake frame: {:?}", e);
+        // Right now MLME does not use Rust's Associated state yet. If lost_bss_counter is
+        // present, it means that MLME is connected.
+        if self.lost_bss_counter.is_some() {
+            if let Err(e) = send_power_state_frame(self, ctx, PowerState::AWAKE) {
+                warn!("unable to send awake frame: {:?}", e);
+            }
+            // Safe to unwrap because we already checked that lost_bss_counter exists
+            self.lost_bss_counter.as_mut().unwrap().unpause(&mut ctx.timer);
         }
+    }
+
+    pub fn start_lost_bss_counter(&mut self, ctx: &mut Context, beacon_period: TimeUnit) {
+        let lost_bss_counter = LostBssCounter::start(
+            &mut ctx.timer,
+            beacon_period.into(),
+            DEFAULT_AUTO_DEAUTH_TIMEOUT_BEACON_COUNT,
+        );
+        self.lost_bss_counter = Some(lost_bss_counter);
+    }
+
+    pub fn stop_lost_bss_counter(&mut self) {
+        self.lost_bss_counter.take();
     }
 }
 
@@ -627,9 +661,20 @@ impl<'a> BoundClient<'a> {
     }
 
     /// Called when a previously scheduled `TimedEvent` fired.
-    pub fn handle_timed_event(&mut self, ctx: &mut Context, event: TimedEvent) {
-        // Safe: |state| is never None and always replaced with Some(..).
-        self.sta.state = Some(self.sta.state.take().unwrap().on_timed_event(self, ctx, event));
+    pub fn handle_timed_event(&mut self, ctx: &mut Context, event_id: EventId, event: TimedEvent) {
+        match event {
+            TimedEvent::LostBssCountdown => {
+                if let Some(lost_bss_counter) = self.sta.lost_bss_counter.as_mut() {
+                    // TODO: return whether lost BSS is triggered
+                    let _lost_bss = lost_bss_counter.handle_timeout(&mut ctx.timer, event_id);
+                }
+            }
+            _ => {
+                // Safe: |state| is never None and always replaced with Some(..).
+                self.sta.state =
+                    Some(self.sta.state.take().unwrap().on_timed_event(self, ctx, event))
+            }
+        }
     }
 
     /// Called when an arbitrary frame was received over the air.
@@ -963,6 +1008,7 @@ mod tests {
         let mut m = MockObjects::new();
         let mut me = m.make_mlme();
         let mut client = make_client_station();
+        client.start_lost_bss_counter(&mut me.ctx, TimeUnit(100));
 
         let scan_req = fidl_mlme::ScanRequest {
             scan_type: fidl_mlme::ScanTypes::Active,
@@ -1041,6 +1087,27 @@ mod tests {
             6, 6, 6, 6, 6, 6, // addr3
             0x20, 0, // Sequence Control
         ][..]);
+    }
+
+    #[test]
+    fn test_no_power_state_frame_when_client_is_not_connected() {
+        let mut m = MockObjects::new();
+        let mut me = m.make_mlme();
+        let mut client = make_client_station();
+
+        me.handle_mlme_scan_req(scan_req(), Some(&mut client));
+        assert_eq!(me.ctx.device.channel().primary, SCAN_CHANNEL_PRIMARY);
+        // Verify no power state frame is sent
+        assert_eq!(m.fake_device.wlan_queue.len(), 0);
+
+        // There should be one scheduled event for end of channel period
+        assert_eq!(m.fake_scheduler.deadlines.len(), 1);
+        let (id, _deadline) = m.fake_scheduler.next_event().expect("expect scheduled event");
+        me.handle_timed_event(Some(&mut client), id);
+        assert_eq!(me.ctx.device.channel(), MAIN_CHANNEL);
+
+        // Verify no power state frame is sent
+        assert_eq!(m.fake_device.wlan_queue.len(), 0);
     }
 
     #[test]

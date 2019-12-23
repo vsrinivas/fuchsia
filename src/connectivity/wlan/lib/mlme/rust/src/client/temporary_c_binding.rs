@@ -10,9 +10,16 @@ use {
         client::{send_power_state_frame, Client, ClientMlme},
         error::Error,
     },
-    wlan_common::mac::{self, Aid, MacAddr, PowerState},
+    wlan_common::{
+        mac::{self, Aid, MacAddr, PowerState},
+        TimeUnit,
+    },
     zerocopy::ByteSlice,
 };
+
+pub fn c_start_lost_bss_counter(sta: &mut Client, mlme: &mut ClientMlme, beacon_period: TimeUnit) {
+    sta.start_lost_bss_counter(&mut mlme.ctx, beacon_period);
+}
 
 pub fn c_send_open_auth_frame(sta: &mut Client, mlme: &mut ClientMlme) -> Result<(), Error> {
     sta.bind(&mut mlme.scanner, &mut mlme.chan_sched, &mut mlme.channel_state)
