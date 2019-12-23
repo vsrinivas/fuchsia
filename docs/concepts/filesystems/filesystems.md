@@ -62,7 +62,7 @@ namespace. Instead of a typical singular "global" filesystem namespace, Fuchsia
 processes can be provided an arbitrary directory handle to represent "root",
 limiting the scope of their namespace. In order to limit this scope, Fuchsia
 filesystems [intentionally do not allow access to parent directories via
-dotdot](/docs/concepts/storage/dotdot.md).
+dotdot](/docs/concepts/filesystems/dotdot.md).
 
 Fuchsia processes may additionally redirect certain path operations to separate
 filesystem servers. When a client refers to “/bin”, the client may opt to
@@ -170,7 +170,8 @@ handles: One handle to a channel used to communicate with the mounting
 filesystem (referred to as the “mount point” channel -- the “mounting” end of
 this channel is saved as a field named “remote” in the parent Vnode, the other
 end will be connected to the root directory of the new filesystem), and
-(optionally) another to contact the underlying [block device](block_devices.md).
+(optionally) another to contact the underlying [block
+device](/docs/concepts/storage/block_devices.md).
 Once a filesystem has been initialized (reading initial state off the block
 device, finding the root vnode, etc) it flags a signal (`ZX_USER_SIGNAL0`) on
 the mount point channel. This informs the parent (mounting) system that the
@@ -247,7 +248,8 @@ filesystems to a namespace from the command line.
 
 [Blobfs](/zircon/system/uapp/blobfs/)
 is a simple, flat filesystem optimized for “write-once, then read-only” [signed
-data](merkleroot.md), such as [packages](package.md).
+data](/docs/concepts/storage/merkleroot.md), such as
+[packages](/docs/concepts/storage/package.md).
 Other than two small prerequisites (file names which are deterministic, content
 addressable hashes of a file’s Merkle Tree root, for integrity-verification)
 and forward knowledge of file size (identified to Blobfs by a call to

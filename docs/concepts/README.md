@@ -39,7 +39,7 @@ also provides core drivers and Fuchsia's libc implementation.
 ## Storage
 
  - [Block devices](/docs/concepts/storage/block_devices.md)
- - [File systems](/docs/concepts/storage/filesystems.md)
+ - [File systems](/docs/concepts/filesystems/filesystems.md)
  - Directory hierarchy
  - [Ledger][ledger]
  - Document store

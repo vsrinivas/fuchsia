@@ -221,7 +221,7 @@ vnode, and another “/” segment is detected, then the process continues until
 component in a path, or (3) `lookup` finds a **mountpoint vnode**, which is a
 vnode that has an attached “remote” handle. For now, we will ignore mountpoint
 vnodes, although they are discussed in a section on [filesystem
-mounting](/docs/concepts/storage/filesystems.md#Mounting).
+mounting](/docs/concepts/filesystems/filesystems.md#Mounting).
 
 Let’s assume `lookup` successfully found the “foo” Vnode. The filesystem server
 will proceed to call the VFS interface “Open”, verifying that the requested

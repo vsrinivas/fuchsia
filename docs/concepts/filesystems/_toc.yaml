@@ -2,6 +2,10 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
+- title: "File systems"
+  path: /docs/concepts/filesystems/filesystems.md
+- title: "'dot dot' considered harmful"
+  path: /docs/concepts/filesystems/dotdot.md
 - title: "Minfs"
   path: /docs/concepts/filesystems/minfs.md
 - title: "Zxcrypt"

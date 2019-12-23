@@ -44,7 +44,7 @@ This has some interesting implications:
 
 - There is no global "root" namespace.
 - There is no concept of "running in a chroot-ed environment" because every
-  component [effectively has its own private "root"](/docs/concepts/storage/dotdot.md).
+  component [effectively has its own private "root"](/docs/concepts/filesystems/dotdot.md).
 - Components receive namespaces which are tailored to their specific needs.
 - Object paths may not be meaningful across namespace boundaries.
 - A process may have access to several distinct namespaces at once.

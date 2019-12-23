@@ -412,7 +412,7 @@ allocated groups of blocks known as slices into a virtual block address space.
 The FVM partitions provide a block interface enabling filesystems to interact
 with it in a manner largely consistent with a regular block device.
 
--   [Filesystems](/docs/concepts/storage/filesystems.md)
+-   [Filesystems](/docs/concepts/filesystems/filesystems.md)
 
 #### **GN** {#gn}
 
@@ -665,7 +665,7 @@ will be allocated for each individual use. This is different from
 directory is routed to a specific component instance.
 
 Isolation is achieved because Fuchsia does not support
-[dotdot](/docs/concepts/storage/dotdot.md).
+[dotdot](/docs/concepts/filesystems/dotdot.md).
 
 There are three types of storage capabilities:
 

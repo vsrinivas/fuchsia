@@ -8,10 +8,6 @@ toc:
   path: /docs/concepts/storage/block_devices.md
 - title: "Component Manifests"
   path: /docs/concepts/storage/component_manifest.md
-- title: "'Dot dot' considered harmful"
-  path: /docs/concepts/storage/dotdot.md
-- title: "File systems"
-  path: /docs/concepts/storage/filesystems.md
 - title: "Ledger"
   path: https://fuchsia.googlesource.com/fuchsia/+/master/src/ledger/docs/README.md
 - title: "Merkle roots"
