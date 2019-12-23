@@ -186,7 +186,7 @@ more granular control:
   fine grained build argument changes (e.g. by editing `args.gn` directly) can
   run `fx gen` to reconfigure their build.
 
-### Building a specific target {#building-a-specific target}
+### Building a specific target {#building-a-specific-target}
 
 `fx build` can be given the name of a specific target or file to build. For
 example, a target with the label `//examples/hello_world:hello_world` can be built with
