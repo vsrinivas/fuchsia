@@ -34,7 +34,8 @@ namespace {
 
 namespace fio = ::llcpp::fuchsia::io;
 
-class MountTest: public zxtest::Test {
+template <bool repairable>
+class MountTestTemplate : public zxtest::Test {
  public:
   void SetUp() final {
     ASSERT_EQ(ramdisk_create(512, 1 << 16, &ramdisk_), ZX_OK);
@@ -54,12 +55,27 @@ class MountTest: public zxtest::Test {
     ASSERT_OK(loop_.StartThread("minfs test dispatcher"));
   }
 
-  void TearDown() final {
+  void ReadSuperblock(minfs::Superblock* out) {
+    fbl::unique_fd fd(open(ramdisk_path_, O_RDONLY));
+    EXPECT_TRUE(fd);
+
+    EXPECT_EQ(pread(fd.get(), out, sizeof(*out), minfs::kSuperblockStart * minfs::kMinfsBlockSize),
+              sizeof(*out));
+  }
+
+  void Unmount() {
+    if (unmounted_) {
+      return;
+    }
     // Unmount the filesystem, thereby terminating the minfs instance.
     // TODO(fxb/34531): After deprecating the DirectoryAdmin interface, switch to unmount using the
     // admin service found within the export directory.
     EXPECT_OK(fio::DirectoryAdmin::Call::Unmount(zx::unowned_channel(root_client_end())).status());
+    unmounted_ = true;
+  }
 
+  void TearDown() final {
+    Unmount();
     ASSERT_OK(ramdisk_destroy(ramdisk_));
   }
 
@@ -71,14 +87,12 @@ class MountTest: public zxtest::Test {
   std::unique_ptr<minfs::Bcache> bcache() { return std::move(bcache_); }
 
   minfs::MountOptions mount_options() const {
-    return minfs::MountOptions{
-        .readonly_after_initialization = false,
-        .metrics = false,
-        .verbose = true,
-        .repair_filesystem = false,
-        .use_journal = false,
-        .fvm_data_slices = default_mkfs_options.fvm_data_slices
-    };
+    return minfs::MountOptions{.readonly_after_initialization = false,
+                               .metrics = false,
+                               .verbose = true,
+                               .repair_filesystem = repairable,
+                               .use_journal = false,
+                               .fvm_data_slices = default_mkfs_options.fvm_data_slices};
   }
 
   const zx::channel& root_client_end() { return root_client_end_; }
@@ -111,6 +125,7 @@ class MountTest: public zxtest::Test {
   }
 
  private:
+  bool unmounted_ = false;
   ramdisk_client_t* ramdisk_ = nullptr;
   const char* ramdisk_path_ = nullptr;
   std::unique_ptr<minfs::Bcache> bcache_ = nullptr;
@@ -118,6 +133,8 @@ class MountTest: public zxtest::Test {
   zx::channel root_server_end_ = {};
   async::Loop loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 };
+
+using MountTest = MountTestTemplate<false>;
 
 TEST_F(MountTest, ServeDataRootCheckInode) {
   ASSERT_OK(MountAndServe(minfs::ServeLayout::kDataRootOnly));
@@ -186,6 +203,41 @@ TEST_F(MountTest, ServeExportDirectoryAllowFileCreationInDataRoot) {
   // Adding a file in "root/" is allowed, since "root/" is within the mutable minfs filesystem.
   fbl::unique_fd foo_fd(openat(root_fd.get(), "root/foo", O_CREAT|O_EXCL|O_RDWR));
   EXPECT_TRUE(foo_fd.is_valid());
+}
+
+using RepairableMountTest = MountTestTemplate<true>;
+
+// After successful mount, superblock's clean bit should be cleared and
+// persisted to the disk. Reading superblock from raw disk should return cleared
+// clean bit.
+TEST_F(RepairableMountTest, SyncDuringMount) {
+  minfs::Superblock info;
+  ReadSuperblock(&info);
+  ASSERT_EQ(minfs::kMinfsFlagClean & info.flags, minfs::kMinfsFlagClean);
+  ASSERT_OK(MountAndServe(minfs::ServeLayout::kExportDirectory));
+
+  // Reading raw device after mount should get us superblock with clean bit
+  // unset.
+  ReadSuperblock(&info);
+  ASSERT_EQ(minfs::kMinfsFlagClean & info.flags, 0);
+}
+
+// After successful unmount, superblock's clean bit should be set and persisted
+// to the disk. Reading superblock from raw disk should return set clean bit.
+TEST_F(RepairableMountTest, SyncDuringUnmount) {
+  minfs::Superblock info;
+  ASSERT_OK(MountAndServe(minfs::ServeLayout::kExportDirectory));
+
+  // Reading raw device after mount should get us superblock with clean bit
+  // unset.
+  ReadSuperblock(&info);
+  ASSERT_EQ(minfs::kMinfsFlagClean & info.flags, 0);
+  Unmount();
+
+  // Reading raw device after unmount should get us superblock with clean bit
+  // set.
+  ReadSuperblock(&info);
+  ASSERT_EQ(minfs::kMinfsFlagClean & info.flags, minfs::kMinfsFlagClean);
 }
 
 }  // namespace
