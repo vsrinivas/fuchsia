@@ -72,6 +72,8 @@ func toTransProto(typ, protocol int16) (int16, tcpip.TransportProtocolNumber) {
 			return 0, udp.ProtocolNumber
 		case C.IPPROTO_ICMP:
 			return 0, icmp.ProtocolNumber4
+		case C.IPPROTO_ICMPV6:
+			return 0, icmp.ProtocolNumber6
 		}
 	}
 	return C.EPROTONOSUPPORT, 0

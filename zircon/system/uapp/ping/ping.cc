@@ -3,19 +3,21 @@
 // found in the LICENSE file.
 
 #include <arpa/inet.h>
-#include <errno.h>
 #include <fcntl.h>
-#include <limits.h>
 #include <netdb.h>
+#include <netinet/icmp6.h>
 #include <netinet/in.h>
 #include <netinet/ip_icmp.h>
 #include <poll.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
+
+#include <cerrno>
+#include <climits>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
 #define USEC_TO_MSEC(x) (float(x) / 1000.0)
 
@@ -179,9 +181,21 @@ bool ValidateReceivedPacket(const packet_t& sent_packet, size_t sent_packet_size
             received_packet_size, sent_packet_size);
     return false;
   }
-  if (received_packet.hdr.type != ICMP_ECHOREPLY) {
+  uint8_t expected_type;
+  switch (sent_packet.hdr.type) {
+    case ICMP_ECHO:
+      expected_type = ICMP_ECHOREPLY;
+      break;
+    case ICMP6_ECHO_REQUEST:
+      expected_type = ICMP6_ECHO_REPLY;
+      break;
+    default:
+      fprintf(stderr, "Incorrect Header type in sent packet: %d\n", sent_packet.hdr.type);
+      return false;
+  }
+  if (received_packet.hdr.type != expected_type) {
     fprintf(stderr, "Incorrect Header type in received packet: %d expected: %d\n",
-            received_packet.hdr.type, ICMP_ECHOREPLY);
+            received_packet.hdr.type, expected_type);
     return false;
   }
   if (received_packet.hdr.code != 0) {
@@ -224,35 +238,48 @@ int main(int argc, char** argv) {
 
   options.Print();
 
-  int s = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP);
-  if (s < 0) {
-    fprintf(stderr, "Could not acquire ICMP socket: %d\n", errno);
-    return -1;
-  }
-
   struct addrinfo hints;
   memset(&hints, 0, sizeof(hints));
   hints.ai_family = AF_UNSPEC;
   hints.ai_socktype = SOCK_RAW;
   hints.ai_flags = 0;
-  hints.ai_protocol = IPPROTO_ICMP;
   struct addrinfo* info;
   if (getaddrinfo(options.host, NULL, &hints, &info)) {
     fprintf(stderr, "ping: unknown host %s\n", options.host);
     return -1;
   }
 
-  struct sockaddr* saddr = info->ai_addr;
-  char buf[256];
-  if (saddr->sa_family == AF_INET) {
-    struct sockaddr_in* iaddr = reinterpret_cast<struct sockaddr_in*>(saddr);
-    inet_ntop(saddr->sa_family, &iaddr->sin_addr, buf, sizeof(buf));
-  } else {
-    struct sockaddr_in6* iaddr = reinterpret_cast<struct sockaddr_in6*>(saddr);
-    inet_ntop(saddr->sa_family, &iaddr->sin6_addr, buf, sizeof(buf));
+  int proto;
+  uint8_t type;
+  switch (info->ai_family) {
+    case AF_INET: {
+      proto = IPPROTO_ICMP;
+      type = ICMP_ECHO;
+      char buf[INET_ADDRSTRLEN];
+      auto addr = reinterpret_cast<struct sockaddr_in*>(info->ai_addr);
+      printf("PING4 %s (%s)\n", options.host,
+             inet_ntop(info->ai_family, &addr->sin_addr, buf, sizeof(buf)));
+      break;
+    }
+    case AF_INET6: {
+      proto = IPPROTO_ICMPV6;
+      type = ICMP6_ECHO_REQUEST;
+      char buf[INET6_ADDRSTRLEN];
+      auto addr = reinterpret_cast<struct sockaddr_in6*>(info->ai_addr);
+      printf("PING6 %s (%s)\n", options.host,
+             inet_ntop(info->ai_family, &addr->sin6_addr, buf, sizeof(buf)));
+      break;
+    }
+    default:
+      fprintf(stderr, "ping: unknown address family %d\n", info->ai_family);
+      return -1;
   }
 
-  printf("PING %s (%s)\n", options.host, buf);
+  int s = socket(info->ai_family, SOCK_DGRAM, proto);
+  if (s < 0) {
+    fprintf(stderr, "Could not acquire ICMP socket: %s\n", strerror(errno));
+    return -1;
+  }
 
   uint16_t sequence = 1;
   packet_t packet, received_packet;
@@ -262,7 +289,7 @@ int main(int argc, char** argv) {
 
   while (options.count-- > 0) {
     memset(&packet, 0, sizeof(packet));
-    packet.hdr.type = ICMP_ECHO;
+    packet.hdr.type = type;
     packet.hdr.code = 0;
     packet.hdr.un.echo.id = 0;
     packet.hdr.un.echo.sequence = htons(sequence++);
@@ -270,7 +297,7 @@ int main(int argc, char** argv) {
     // Netstack will overwrite the checksum
     zx_ticks_t before = zx_ticks_get();
     sent_packet_size = sizeof(packet.hdr) + options.payload_size_bytes;
-    r = sendto(s, &packet, sent_packet_size, 0, saddr, sizeof(*saddr));
+    r = sendto(s, &packet, sent_packet_size, 0, info->ai_addr, info->ai_addrlen);
     if (r < 0) {
       fprintf(stderr, "ping: Could not send packet\n");
       return -1;

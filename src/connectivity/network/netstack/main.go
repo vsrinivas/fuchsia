@@ -91,6 +91,7 @@ func Main() {
 		},
 		TransportProtocols: []tcpipstack.TransportProtocol{
 			icmp.NewProtocol4(),
+			icmp.NewProtocol6(),
 			tcp.NewProtocol(),
 			udp.NewProtocol(),
 		},
