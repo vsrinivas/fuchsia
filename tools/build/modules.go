@@ -16,6 +16,9 @@ const (
 	// PlatformModuleName is the the name of the build API module of valid
 	// platforms that tests can target.
 	platformModuleName = "platforms.json"
+	// TestDurationsName is the name of the file containing expected test
+	// durations and timeouts.
+	testDurationsName = "test_durations.json"
 	// TestModuleName is the name of the build API module of tests.
 	testModuleName = "tests.json"
 )
@@ -23,10 +26,11 @@ const (
 // Modules is a convenience interface for accessing the various build API
 // modules associated with a build.
 type Modules struct {
-	buildDir  string
-	images    []Image
-	platforms []DimensionSet
-	testSpecs []TestSpec
+	buildDir      string
+	images        []Image
+	platforms     []DimensionSet
+	testSpecs     []TestSpec
+	testDurations []TestDuration
 }
 
 // NewModules returns a Modules associated with a given build directory.
@@ -46,6 +50,11 @@ func NewModules(buildDir string) (*Modules, error) {
 	}
 
 	m.testSpecs, err = LoadTestSpecs(m.TestManifest())
+	if err != nil {
+		errMsgs = append(errMsgs, err.Error())
+	}
+
+	m.testDurations, err = LoadTestDurations(m.TestDurationsManifest())
 	if err != nil {
 		errMsgs = append(errMsgs, err.Error())
 	}
@@ -79,6 +88,16 @@ func (m Modules) Platforms() []DimensionSet {
 // PlatformManifest returns the path to the manifest of available test platforms.
 func (m Modules) PlatformManifest() string {
 	return filepath.Join(m.BuildDir(), platformModuleName)
+}
+
+// TestDurations returns the build API module of test duration data.
+func (m Modules) TestDurations() []TestDuration {
+	return m.testDurations
+}
+
+// TestDurationsManifest returns the path to the durations file.
+func (m Modules) TestDurationsManifest() string {
+	return filepath.Join(m.BuildDir(), testDurationsName)
 }
 
 // TestSpecs returns the build API module of tests.

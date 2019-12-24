@@ -17,10 +17,18 @@ group("tests") {
   testonly = true
 
   deps = [
+    ":build_tests",
     "//tools/build/ninjalog:ninjalog_tests",
   ]
 }
 
 go_library("build") {
   name = "go.fuchsia.dev/fuchsia/tools/build/lib"
+}
+
+go_test("build_tests") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/build/lib" ]
+  deps = [
+    ":build",
+  ]
 }
