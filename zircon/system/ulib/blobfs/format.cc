@@ -10,6 +10,7 @@
 #include <blobfs/format.h>
 #include <blobfs/mkfs.h>
 #include <fbl/ref_ptr.h>
+#include <fs/journal/initializer.h>
 #include <fs/trace.h>
 #include <fs/transaction/block_transaction.h>
 #include <fvm/client.h>
@@ -143,7 +144,7 @@ zx_status_t WriteFilesystemToDisk(BlockDevice* device, const Superblock& superbl
   }
 
   // Write node map.
-  char block[kBlobfsBlockSize];
+  uint8_t block[kBlobfsBlockSize];
   memset(block, 0, sizeof(block));
   for (uint64_t n = 0; n < nodemap_blocks; n++) {
     uint64_t offset = kBlobfsBlockSize * (superblock_blocks + blockmap_blocks + n);
@@ -155,18 +156,18 @@ zx_status_t WriteFilesystemToDisk(BlockDevice* device, const Superblock& superbl
   }
 
   // Write the journal.
-  memset(block, 0, sizeof(block));
-  fs::JournalInfo* journal_info = reinterpret_cast<fs::JournalInfo*>(block);
-  journal_info->magic = fs::kJournalMagic;
-  journal_info->checksum =
-      crc32(0, reinterpret_cast<const uint8_t*>(block), sizeof(fs::JournalInfo));
-  for (uint64_t n = 0; n < journal_blocks; n++) {
-    uint64_t offset = kBlobfsBlockSize * (superblock_blocks + blockmap_blocks + nodemap_blocks + n);
-    uint64_t length = kBlobfsBlockSize;
-    status = vmo.write(block, offset, length);
-    if (status != ZX_OK) {
-      return status;
-    }
+
+  auto base_offset = superblock_blocks + blockmap_blocks + nodemap_blocks;
+  fs::WriteBlockFn write_block_fn = [&vmo, &superblock, base_offset](
+                                        fbl::Span<const uint8_t> buffer, uint64_t block_offset) {
+    ZX_ASSERT(block_offset < JournalBlocks(superblock));
+    ZX_ASSERT(buffer.size() == kBlobfsBlockSize);
+    return vmo.write(buffer.data(), (base_offset + block_offset) * kBlobfsBlockSize,
+                     kBlobfsBlockSize);
+  };
+  status = fs::MakeJournal(journal_blocks, write_block_fn);
+  if (status != ZX_OK) {
+    return status;
   }
 
   auto FsToDeviceBlocks = [disk_block = block_info.block_size](uint64_t block) {

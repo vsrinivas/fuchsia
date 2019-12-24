@@ -10,6 +10,7 @@ zx_host_tool("minfs") {
     "$zx/system/ulib/bitmap",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fs-host",
+    "$zx/system/ulib/fs/journal",
     "$zx/system/ulib/minfs",
   ]
 }

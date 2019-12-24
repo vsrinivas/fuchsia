@@ -19,11 +19,11 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
+#include <fs/journal/initializer.h>
 #include <fs/trace.h>
 #include <fs/transaction/block_transaction.h>
 #include <minfs/minfs.h>
 #include <safemath/checked_math.h>
-
 #ifdef __Fuchsia__
 #include <fuchsia/minfs/llcpp/fidl.h>
 #include <lib/async/cpp/task.h>
@@ -1646,19 +1646,13 @@ zx_status_t Mkfs(const MountOptions& options, Bcache* bc) {
     bc->Writeblk(kFvmSuperblockBackup, &info);
   }
 
-  // Write the journal info block to disk.
-  memset(blk, 0, sizeof(blk));
-  fs::JournalInfo* journal_info = reinterpret_cast<fs::JournalInfo*>(blk);
-  journal_info->magic = fs::kJournalMagic;
-  journal_info->checksum = crc32(0, reinterpret_cast<const uint8_t*>(blk), sizeof(fs::JournalInfo));
-  bc->Writeblk(static_cast<blk_t>(JournalStartBlock(info)), blk);
-
-  // Clear the journal from disk.
-  memset(blk, 0, sizeof(blk));
-
-  for (size_t i = fs::kJournalMetadataBlocks; i < JournalBlocks(info); i++) {
-    bc->Writeblk(static_cast<blk_t>(JournalStartBlock(info) + i), blk);
-  }
+  fs::WriteBlockFn write_block_fn = [bc, info](fbl::Span<const uint8_t> buffer,
+                                               uint64_t block_offset) {
+    ZX_ASSERT(block_offset < JournalBlocks(info));
+    ZX_ASSERT(buffer.size() == kMinfsBlockSize);
+    return bc->Writeblk(static_cast<blk_t>(JournalStartBlock(info) + block_offset), buffer.data());
+  };
+  ZX_ASSERT(fs::MakeJournal(JournalBlocks(info), write_block_fn) == ZX_OK);
 
 #ifdef __Fuchsia__
   fvm_cleanup.cancel();

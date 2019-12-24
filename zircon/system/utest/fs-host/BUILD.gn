@@ -13,6 +13,7 @@ zx_test("fs-host") {
     "util.cc",
   ]
   deps = [
+    "$zx/system/ulib/fs/journal",
     "$zx/system/ulib/minfs",
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon-internal",

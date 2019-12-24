@@ -8,6 +8,7 @@ zx_library("journal") {
   host = true
   sources = [
     "header_view.cc",
+    "initializer.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",
@@ -56,8 +57,8 @@ zx_library("journal") {
 group("test") {
   testonly = true
   deps = [
-    ":journal-fuzzer",
     ":journal-entry-fuzzer",
+    ":journal-fuzzer",
     ":journal-unit",
   ]
 }

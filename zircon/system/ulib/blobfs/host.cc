@@ -26,6 +26,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/macros.h>
 #include <fs-host/common.h>
+#include <fs/journal/initializer.h>
 #include <fs/trace.h>
 #include <fs/transaction/block_transaction.h>
 #include <safemath/checked_math.h>
@@ -288,26 +289,19 @@ int Mkfs(int fd, uint64_t block_count) {
   block_bitmap.Set(0, kStartBlockMinimum);
 
   // All in-memory structures have been created successfully. Dump everything to disk.
-  char block[kBlobfsBlockSize] = {};
+  uint8_t block[kBlobfsBlockSize];
 
-  // Write the journal to disk.
-  // 1) Write the Info block.
-  // 2) Write the rest of the journal as zeros.
-  fs::JournalInfo* journal_info = reinterpret_cast<fs::JournalInfo*>(block);
-  journal_info->magic = fs::kJournalMagic;
-  journal_info->checksum =
-      crc32(0, reinterpret_cast<const uint8_t*>(block), sizeof(fs::JournalInfo));
-  if ((status = WriteBlock(fd, JournalStartBlock(info), block)) != ZX_OK) {
+  // Initialize on-disk journal.
+  fs::WriteBlockFn write_block_fn = [fd, info](fbl::Span<const uint8_t> buffer,
+                                               uint64_t block_offset) {
+    ZX_ASSERT(block_offset < JournalBlocks(info));
+    ZX_ASSERT(buffer.size() == kBlobfsBlockSize);
+    return WriteBlock(fd, JournalStartBlock(info) + block_offset, buffer.data());
+  };
+  status = fs::MakeJournal(JournalBlocks(info), write_block_fn);
+  if (status != ZX_OK) {
     FS_TRACE_ERROR("Failed to write journal block\n");
     return -1;
-  }
-  for (uint64_t n = 1; n < JournalBlocks(info); n++) {
-    memset(block, 0, sizeof(block));
-    status = WriteBlock(fd, JournalStartBlock(info) + n, block);
-    if (status != ZX_OK) {
-      FS_TRACE_ERROR("Failed to write journal block\n");
-      return -1;
-    }
   }
 
   // Write the root block to disk.

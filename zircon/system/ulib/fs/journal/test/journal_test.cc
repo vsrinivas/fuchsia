@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/cksum.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
 
@@ -12,6 +13,7 @@
 
 #include <fs/journal/format.h>
 #include <fs/journal/header_view.h>
+#include <fs/journal/initializer.h>
 #include <fs/journal/journal.h>
 #include <fs/journal/replay.h>
 #include <zxtest/zxtest.h>
@@ -2705,6 +2707,51 @@ TEST_F(JournalTest, PayloadBlocksWithJournalMagicAreEscaped) {
                     kJournalStartBlock);
     journal.schedule_task(journal.WriteMetadata({operation}));
   }
+}
+
+zx_status_t MakeJournalHelper(uint8_t* dest_buffer, uint64_t blocks, uint64_t block_size) {
+  fs::WriteBlockFn write_block_fn = [dest_buffer, blocks, block_size](
+                                        fbl::Span<const uint8_t> buffer, uint64_t block_offset) {
+    EXPECT_EQ(buffer.size(), kJournalBlockSize);
+
+    if ((kJournalBlockSize * (block_offset + 1)) > (blocks * block_size)) {
+      return ZX_ERR_IO_OVERRUN;
+    }
+
+    for (uint64_t i = 0; i < block_size; i++) {
+      dest_buffer[(block_offset * block_size) + i] = buffer[i];
+    }
+
+    return ZX_OK;
+  };
+
+  return fs::MakeJournal(blocks, write_block_fn);
+}
+
+TEST(MakeJournal, ValidArgs) {
+  constexpr uint64_t kBlockCount = 10;
+  uint8_t blocks[kBlockCount * fs::kJournalBlockSize];
+
+  ASSERT_OK(MakeJournalHelper(blocks, kBlockCount, fs::kJournalBlockSize));
+  auto info = reinterpret_cast<JournalInfo*>(blocks);
+  ASSERT_EQ(kJournalMagic, info->magic);
+  ASSERT_EQ(0, info->reserved);
+  ASSERT_EQ(0, info->start_block);
+  ASSERT_EQ(0, info->timestamp);
+
+  auto csum = info->checksum;
+  info->checksum = 0;
+  ASSERT_EQ(csum, crc32(0, blocks, sizeof(JournalInfo)));
+  for (uint64_t i = sizeof(JournalInfo); i < sizeof(blocks); i++) {
+    ASSERT_EQ(0, blocks[i]);
+  }
+}
+
+TEST(MakeJournal, SmallBUffer) {
+  constexpr uint64_t kBlockCount = 1;
+  uint8_t blocks[kBlockCount * (fs::kJournalBlockSize - 1)];
+
+  ASSERT_EQ(ZX_ERR_IO_OVERRUN, MakeJournalHelper(blocks, kBlockCount, fs::kJournalBlockSize - 1));
 }
 
 // TODO(ZX-4775): Test abandoning promises. This may require additional barrier support.
