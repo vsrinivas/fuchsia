@@ -10,6 +10,11 @@ enum FrameStatus : uint8 {
     ERROR_BUFFER_FULL = 2;
 };
 
+enum TaskRemoveStatus : uint8 {
+    OK = 0;
+    ERROR_INVALID = 1;
+};
+
 struct FrameMetadata {
     uint64 timestamp;
     uint32 image_format_index;
@@ -36,4 +41,11 @@ protocol HwAccelResChangeCallback {
     // This is called by the camera HW Accel drivers (gdc, ge2d, ...), every time a
     // change of resolution completes.
     FrameResolutionChanged(FrameAvailableInfo info);
+};
+
+[Layout = "ddk-callback"]
+protocol HwAccelRemoveTaskCallback {
+    // This is called by the camera HW Accel drivers (gdc, ge2d, ...), every time a
+    // task is released.
+    TaskRemoved(TaskRemoveStatus status);
 };

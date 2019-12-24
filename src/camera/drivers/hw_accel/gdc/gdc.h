@@ -77,6 +77,7 @@ class GdcDevice : public GdcDeviceType, public ddk::GdcProtocol<GdcDevice, ddk::
                           const gdc_config_info* config_vmo_list, size_t config_vmos_count,
                           const hw_accel_frame_callback_t* frame_callback,
                           const hw_accel_res_change_callback* res_callback,
+                          const hw_accel_remove_task_callback_t* task_remove_callback,
                           uint32_t* out_task_index);
 
   zx_status_t GdcProcessFrame(uint32_t task_index, uint32_t input_buffer_index);

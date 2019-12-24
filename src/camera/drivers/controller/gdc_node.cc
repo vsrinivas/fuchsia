@@ -115,11 +115,12 @@ fit::result<ProcessNode*, zx_status_t> GdcNode::CreateGdcNode(
 
   // Initialize the GDC to get a unique task index
   uint32_t gdc_task_index;
-  auto status = gdc.InitTask(
-      input_buffer_collection_helper.GetC(), output_buffer_collection_helper.GetC(),
-      &input_image_formats_c, output_image_formats_c.data(), output_image_formats_c.size(),
-      info->image_format_index, config_vmos_info.data(), config_vmos_info.size(),
-      gdc_node->frame_callback(), gdc_node->res_callback(), &gdc_task_index);
+  auto status =
+      gdc.InitTask(input_buffer_collection_helper.GetC(), output_buffer_collection_helper.GetC(),
+                   &input_image_formats_c, output_image_formats_c.data(),
+                   output_image_formats_c.size(), info->image_format_index, config_vmos_info.data(),
+                   config_vmos_info.size(), gdc_node->frame_callback(), gdc_node->res_callback(),
+                   gdc_node->remove_task_callback(), &gdc_task_index);
   if (status != ZX_OK) {
     FX_PLOGST(ERROR, kTag, status) << "Failed to initialize GDC";
     return fit::error(status);

@@ -63,6 +63,12 @@ class TaskTest : public zxtest::Test {
     event_.Signal();
   }
 
+  void RemoveTaskCallback(task_remove_status_t status) {
+    fbl::AutoLock al(&lock_);
+    frame_ready_ = true;
+    event_.Signal();
+  }
+
   void WaitAndReset() {
     fbl::AutoLock al(&lock_);
     while (frame_ready_ == false) {
@@ -139,6 +145,11 @@ class TaskTest : public zxtest::Test {
     };
     res_callback_.ctx = this;
 
+    remove_task_callback_.task_removed = [](void* ctx, task_remove_status_t status) {
+      return static_cast<TaskTest*>(ctx)->RemoveTaskCallback(status);
+    };
+    remove_task_callback_.ctx = this;
+
     EXPECT_OK(zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &irq_));
     EXPECT_OK(port.duplicate(ZX_RIGHT_SAME_RIGHTS, &port_));
 
@@ -163,7 +174,7 @@ class TaskTest : public zxtest::Test {
         &input_buffer_collection_, &output_buffer_collection_, &input_image_format_,
         output_image_format_table_, kImageFormatTableSize, 0,
         reinterpret_cast<gdc_config_info*>(&config_vmo_info_array), kImageFormatTableSize,
-        &frame_callback_, &res_callback_, &task_id);
+        &frame_callback_, &res_callback_, &remove_task_callback_, &task_id);
     EXPECT_OK(status);
     output_image_format_index_ = 0;
 
@@ -208,6 +219,7 @@ class TaskTest : public zxtest::Test {
   zx::interrupt irq_;
   hw_accel_frame_callback_t frame_callback_;
   hw_accel_res_change_callback_t res_callback_;
+  hw_accel_remove_task_callback_t remove_task_callback_;
   buffer_collection_info_2_t input_buffer_collection_;
   buffer_collection_info_2_t output_buffer_collection_;
   image_format_2_t input_image_format_;
@@ -306,10 +318,10 @@ TEST_F(TaskTest, InitTaskTest) {
   std::vector<uint32_t> received_ids;
   for (uint32_t i = 0; i < kMaxTasks; i++) {
     uint32_t task_id;
-    zx_status_t status =
-        gdc_device_->GdcInitTask(&input_buffer_collection_, &output_buffer_collection_,
-                                 &input_image_format_, output_image_format_table_, 1, 0,
-                                 &config_info_, 1, &frame_callback_, &res_callback_, &task_id);
+    zx_status_t status = gdc_device_->GdcInitTask(
+        &input_buffer_collection_, &output_buffer_collection_, &input_image_format_,
+        output_image_format_table_, 1, 0, &config_info_, 1, &frame_callback_, &res_callback_,
+        &remove_task_callback_, &task_id);
     EXPECT_OK(status);
     // Checking to see if we are getting unique task ids.
     auto entry = find(received_ids.begin(), received_ids.end(), task_id);

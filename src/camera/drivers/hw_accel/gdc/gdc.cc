@@ -73,6 +73,7 @@ zx_status_t GdcDevice::GdcInitTask(const buffer_collection_info_2_t* input_buffe
                                    const gdc_config_info* config_vmo_list, size_t config_vmos_count,
                                    const hw_accel_frame_callback_t* frame_callback,
                                    const hw_accel_res_change_callback* res_callback,
+                                   const hw_accel_remove_task_callback_t* remove_task_callback,
                                    uint32_t* out_task_index) {
   fbl::AutoLock al(&interface_lock_);
 

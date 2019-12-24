@@ -76,6 +76,7 @@ class Ge2dDevice : public Ge2dDeviceType, public ddk::Ge2dProtocol<Ge2dDevice, d
                                  uint32_t output_image_format_index,
                                  const hw_accel_frame_callback_t* frame_callback,
                                  const hw_accel_res_change_callback_t* res_callback,
+                                 const hw_accel_remove_task_callback_t* task_remove_callback,
                                  uint32_t* out_task_index);
 
   // See ge2d-task.h for description of args.
@@ -86,6 +87,7 @@ class Ge2dDevice : public Ge2dDeviceType, public ddk::Ge2dProtocol<Ge2dDevice, d
                                     size_t image_format_table_count, uint32_t image_format_index,
                                     const hw_accel_frame_callback_t* frame_callback,
                                     const hw_accel_res_change_callback_t* res_callback,
+                                    const hw_accel_remove_task_callback_t* task_remove_callback,
                                     uint32_t* out_task_index);
 
   zx_status_t Ge2dProcessFrame(uint32_t task_index, uint32_t input_buffer_index);

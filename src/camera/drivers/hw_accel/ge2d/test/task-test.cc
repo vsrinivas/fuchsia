@@ -78,6 +78,12 @@ class TaskTest : public zxtest::Test {
     event_.Signal();
   }
 
+  void RemoveTaskCallback(task_remove_status_t status) {
+    fbl::AutoLock al(&lock_);
+    frame_ready_ = true;
+    event_.Signal();
+  }
+
   void WaitAndReset() {
     fbl::AutoLock al(&lock_);
     while (frame_ready_ == false) {
@@ -163,6 +169,11 @@ class TaskTest : public zxtest::Test {
     };
     res_callback_.ctx = this;
 
+    remove_task_callback_.task_removed = [](void* ctx, task_remove_status_t status) {
+      return static_cast<TaskTest*>(ctx)->RemoveTaskCallback(status);
+    };
+    remove_task_callback_.ctx = this;
+
     EXPECT_OK(zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &irq_));
     EXPECT_OK(port.duplicate(ZX_RIGHT_SAME_RIGHTS, &port_));
 
@@ -179,14 +190,14 @@ class TaskTest : public zxtest::Test {
     zx_status_t status = ge2d_device_->Ge2dInitTaskWaterMark(
         &input_buffer_collection_, &output_buffer_collection_, &watermark_info_,
         std::move(watermark_vmo), output_image_format_table_, kImageFormatTableSize, 0,
-        &frame_callback_, &res_callback_, &task_id);
+        &frame_callback_, &res_callback_, &remove_task_callback_, &task_id);
     EXPECT_OK(status);
     watermark_task = task_id;
 
-    status = ge2d_device_->Ge2dInitTaskResize(&input_buffer_collection_, &output_buffer_collection_,
-                                              &resize_info_, &output_image_format_table_[0],
-                                              output_image_format_table_, kImageFormatTableSize, 0,
-                                              &frame_callback_, &res_callback_, &task_id);
+    status = ge2d_device_->Ge2dInitTaskResize(
+        &input_buffer_collection_, &output_buffer_collection_, &resize_info_,
+        &output_image_format_table_[0], output_image_format_table_, kImageFormatTableSize, 0,
+        &frame_callback_, &res_callback_, &remove_task_callback_, &task_id);
     EXPECT_OK(status);
     resize_task = task_id;
     output_image_format_index_ = 0;
@@ -208,6 +219,7 @@ class TaskTest : public zxtest::Test {
   zx::interrupt irq_;
   hw_accel_frame_callback_t frame_callback_;
   hw_accel_res_change_callback_t res_callback_;
+  hw_accel_remove_task_callback_t remove_task_callback_;
   // Array of output Image formats.
   image_format_2_t output_image_format_table_[kImageFormatTableSize];
   resize_info_t resize_info_;
@@ -375,7 +387,7 @@ TEST_F(TaskTest, InitTaskTest) {
     zx_status_t status = ge2d_device_->Ge2dInitTaskResize(
         &input_buffer_collection_, &output_buffer_collection_, &resize_info_,
         &output_image_format_table_[0], output_image_format_table_, kImageFormatTableSize, 0,
-        &frame_callback_, &res_callback_, &task_id);
+        &frame_callback_, &res_callback_, &remove_task_callback_, &task_id);
     EXPECT_OK(status);
     // Check to see if we are getting unique task ids.
     auto entry = find(received_ids.begin(), received_ids.end(), task_id);
@@ -386,7 +398,7 @@ TEST_F(TaskTest, InitTaskTest) {
     status = ge2d_device_->Ge2dInitTaskWaterMark(
         &input_buffer_collection_, &output_buffer_collection_, &watermark_info_,
         std::move(watermark_vmo), output_image_format_table_, kImageFormatTableSize, 0,
-        &frame_callback_, &res_callback_, &task_id);
+        &frame_callback_, &res_callback_, &remove_task_callback_, &task_id);
     EXPECT_OK(status);
     // Check to see if we are getting unique task ids.
     entry = find(received_ids.begin(), received_ids.end(), task_id);

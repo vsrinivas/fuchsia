@@ -29,7 +29,9 @@ protocol Gdc {
              uint32 output_image_format_index,
              vector<GdcConfigInfo> config_vmos,
              ddk.protocol.camerahwaccel.HwAccelFrameCallback frame_callback,
-	     ddk.protocol.camerahwaccel.HwAccelResChangeCallback res_callback) -> (zx.status s, uint32 task_index);
+             ddk.protocol.camerahwaccel.HwAccelResChangeCallback res_callback,
+             ddk.protocol.camerahwaccel.HwAccelRemoveTaskCallback task_remove_callback)
+             -> (zx.status s, uint32 task_index);
 
     // De-registers the task.
     RemoveTask(uint32 task_index);

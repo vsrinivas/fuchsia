@@ -28,6 +28,14 @@ static void OnGdcFrameAvailable(void* ctx, const frame_available_info_t* info) {
   static_cast<ProcessNode*>(ctx)->OnFrameAvailable(info);
 }
 
+// Invoked by GDC on a Resolution change completion.
+// TODO(41730): Implement this.
+static void OnGdcResChange(void* ctx, const frame_available_info_t* info) {}
+
+// Invoked by GDC when a new frame is available.
+// TODO(braval): Implement OnTaskRemoved() to handle shutdown.
+static void OnGdcTaskRemoved(void* ctx, task_remove_status_t status) {}
+
 class GdcNode : public ProcessNode {
  public:
   GdcNode(async_dispatcher_t* dispatcher, const ddk::GdcProtocolClient& gdc,
@@ -41,7 +49,8 @@ class GdcNode : public ProcessNode {
         dispatcher_(dispatcher),
         gdc_(gdc),
         frame_callback_{OnGdcFrameAvailable, this},
-        res_callback_{OnResChange, this} {}
+        res_callback_{OnGdcResChange, this},
+        remove_task_callback_{OnGdcTaskRemoved, this} {}
 
   ~GdcNode() { OnShutdown(); }
 
@@ -64,6 +73,8 @@ class GdcNode : public ProcessNode {
   const hw_accel_frame_callback_t* frame_callback() { return &frame_callback_; }
   const hw_accel_res_change_callback_t* res_callback() { return &res_callback_; }
 
+  const hw_accel_remove_task_callback_t* remove_task_callback() { return &remove_task_callback_; }
+
   // Notifies that a frame is ready to be sent to the client.
   void OnReadyToProcess(uint32_t buffer_index) override;
 
@@ -74,19 +85,14 @@ class GdcNode : public ProcessNode {
   void OnShutdown() override;
 
  private:
-  // Invoked by GDC on a Resolution change completion.
-  // TODO(41730): Implement this.
-  static void OnResChange(void* ctx, const frame_available_info_t* info) {}
-
   __UNUSED async_dispatcher_t* dispatcher_;
   // Protocol to talk to the GDC driver.
   ddk::GdcProtocolClient gdc_;
   // Task index for this node.
   uint32_t task_index_;
-  //  Frame callback.
   hw_accel_frame_callback_t frame_callback_;
-  //  Resolution change callback.
   hw_accel_res_change_callback_t res_callback_;
+  hw_accel_remove_task_callback_t remove_task_callback_;
 };
 
 }  // namespace camera

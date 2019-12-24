@@ -48,7 +48,9 @@ protocol Ge2d {
     // [input_image_format] : Input Image format
     // [output_image_format_table] : Output Image format
     // [output_image_format_index] : Initialize with this output image format.
-    // |callback| : This function is called when GDC is done processing the task.
+    // |frame_callback| : Called when GE2D is done processing the frame.
+    // |res_callback|   : Called when GE2D is done changing the resoultion.
+    // |task_remove_callback| : Called when GE2D is done removing a task.
     // @Returns: |task_index| : Task ID for this task.
     //
     // The resize task only supports dynamically changing the output resolution
@@ -61,7 +63,8 @@ protocol Ge2d {
                    vector<zircon.device.sysmem.ImageFormat_2> output_image_format_table,
                    uint32 output_image_format_index,
                    ddk.protocol.camerahwaccel.HwAccelFrameCallback frame_callback,
-                   ddk.protocol.camerahwaccel.HwAccelResChangeCallback res_callback)
+                   ddk.protocol.camerahwaccel.HwAccelResChangeCallback res_callback,
+                   ddk.protocol.camerahwaccel.HwAccelRemoveTaskCallback task_remove_callback)
                         -> (zx.status s, uint32 task_index);
 
     // The WaterMark task only supports changing the Input And Output resolution
@@ -76,7 +79,8 @@ protocol Ge2d {
                       vector<zircon.device.sysmem.ImageFormat_2> image_format_table,
                       uint32 image_format_index,
                       ddk.protocol.camerahwaccel.HwAccelFrameCallback frame_callback,
-                      ddk.protocol.camerahwaccel.HwAccelResChangeCallback res_callback)
+                      ddk.protocol.camerahwaccel.HwAccelResChangeCallback res_callback,
+                      ddk.protocol.camerahwaccel.HwAccelRemoveTaskCallback task_remove_callback)
                         -> (zx.status s, uint32 task_index);
 
     // De-registers the task.
@@ -90,7 +94,7 @@ protocol Ge2d {
     ProcessFrame(uint32 task_index, uint32 input_buffer_index) -> (zx.status s);
 
     // Releases the frame |buffer_index| from the |output_buffer_collection| to be
-    // used again by GDC driver again later.
+    // used again by the GE2D driver again.
     ReleaseFrame(uint32 task_index, uint32 buffer_index);
 
     // Set the output resolution. This call sets the resolution on all the output canvas
@@ -100,8 +104,7 @@ protocol Ge2d {
 
     // Similar to SetOutputResolution, this call sets the input and output resolution on all
     // input and output canvas ids.
-    SetInputAndOutputResolution(uint32 task_index,
-                                uint32 new_image_format_index) ->  (zx.status s);
+    SetInputAndOutputResolution(uint32 task_index, uint32 new_image_format_index) ->  (zx.status s);
 
     // Sets/Changes the crop rectangle (on a Resize Task). Typically called when
     // the camera controller is notified by Smart Framing to crop and resize.
