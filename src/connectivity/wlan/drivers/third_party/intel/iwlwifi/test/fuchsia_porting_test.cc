@@ -106,7 +106,7 @@ TEST_F(FuchsiaPortingTest, find_first_bit) {
       0x00000000,
       0x00000000,
   };
-  EXPECT_EQ(1, find_first_bit(test0, 1));  // Not found
+  EXPECT_EQ(1, find_first_bit(test0, 1));    // Not found
   EXPECT_EQ(31, find_first_bit(test0, 31));  // Not found
   EXPECT_EQ(32, find_first_bit(test0, 32));  // Not found
   EXPECT_EQ(64, find_first_bit(test0, 64));  // Not found

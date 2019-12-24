@@ -312,18 +312,18 @@ static inline void eth_broadcast_addr(uint8_t* addr) {
 //   num_bits: No asserted bit found in num_bits.
 //
 static inline size_t find_first_bit(unsigned* bits, const size_t num_bits) {
-    const size_t num_of_ints = DIV_ROUND_UP(num_bits, BITS_PER_INT);
-    size_t ret = num_bits;
+  const size_t num_of_ints = DIV_ROUND_UP(num_bits, BITS_PER_INT);
+  size_t ret = num_bits;
 
-    for (size_t i = 0; i < num_of_ints; ++i) {
-        if (bits[i] == 0) {
-            continue;
-        }
-        ret = (i * BITS_PER_INT) + __builtin_ctz(bits[i]);
-        break;
+  for (size_t i = 0; i < num_of_ints; ++i) {
+    if (bits[i] == 0) {
+      continue;
     }
+    ret = (i * BITS_PER_INT) + __builtin_ctz(bits[i]);
+    break;
+  }
 
-    return MIN(num_bits, ret);
+  return MIN(num_bits, ret);
 }
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FUCHSIA_PORTING_H_

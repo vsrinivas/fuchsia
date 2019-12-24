@@ -682,7 +682,7 @@ uint32_t iwl_pcie_int_cause_ict(struct iwl_trans* trans);
 zx_status_t iwl_pcie_tx_init(struct iwl_trans* trans);
 int iwl_pcie_gen2_tx_init(struct iwl_trans* trans, int txq_id, int queue_size);
 void iwl_pcie_tx_start(struct iwl_trans* trans, uint32_t scd_base_addr);
-int iwl_pcie_tx_stop(struct iwl_trans* trans);
+zx_status_t iwl_pcie_tx_stop(struct iwl_trans* trans);
 void iwl_pcie_tx_free(struct iwl_trans* trans);
 bool iwl_trans_pcie_txq_enable(struct iwl_trans* trans, int queue, uint16_t ssn,
                                const struct iwl_trans_txq_scd_cfg* cfg, zx_duration_t wdg_timeout);
@@ -920,16 +920,16 @@ static inline void iwl_enable_rfkill_int(struct iwl_trans* trans) {
 
 void iwl_pcie_handle_rfkill_irq(struct iwl_trans* trans);
 
-#if 0   // NEEDS_PORTING
 static inline void iwl_wake_queue(struct iwl_trans* trans, struct iwl_txq* txq) {
-    struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
-    if (test_and_clear_bit(txq->id, trans_pcie->queue_stopped)) {
-        IWL_DEBUG_TX_QUEUES(trans, "Wake hwq %d\n", txq->id);
-        iwl_op_mode_queue_not_full(trans->op_mode, txq->id);
-    }
+  if (test_and_clear_bit(txq->id, trans_pcie->queue_stopped)) {
+    IWL_DEBUG_TX_QUEUES(trans, "Wake hwq %d\n", txq->id);
+    iwl_op_mode_queue_not_full(trans->op_mode, txq->id);
+  }
 }
 
+#if 0   // NEEDS_PORTING
 static inline void iwl_stop_queue(struct iwl_trans* trans, struct iwl_txq* txq) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
@@ -1023,6 +1023,7 @@ void iwl_pcie_free_dma_ptr(struct iwl_trans* trans, struct iwl_dma_ptr* ptr);
 int iwl_trans_pcie_power_device_off(struct iwl_trans_pcie* trans_pcie);
 void iwl_pcie_apply_destination(struct iwl_trans* trans);
 void iwl_pcie_free_tso_page(struct iwl_trans_pcie* trans_pcie, struct sk_buff* skb);
+void iwl_pcie_txq_unmap(struct iwl_trans* trans, int txq_id);  // for testing
 #ifdef CONFIG_INET
 struct iwl_tso_hdr_page* get_page_hdr(struct iwl_trans* trans, size_t len);
 #endif

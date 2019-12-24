@@ -220,17 +220,15 @@ void iwl_pcie_alloc_fw_monitor(struct iwl_trans* trans, uint8_t max_power) {
   iwl_pcie_alloc_fw_monitor_block(trans, max_power, 11);
 }
 
-#if 0   // NEEDS_PORTING
 static uint32_t iwl_trans_pcie_read_shr(struct iwl_trans* trans, uint32_t reg) {
-    iwl_write32(trans, HEEP_CTRL_WRD_PCIEX_CTRL_REG, ((reg & 0x0000ffff) | (2 << 28)));
-    return iwl_read32(trans, HEEP_CTRL_WRD_PCIEX_DATA_REG);
+  iwl_write32(trans, HEEP_CTRL_WRD_PCIEX_CTRL_REG, ((reg & 0x0000ffff) | (2 << 28)));
+  return iwl_read32(trans, HEEP_CTRL_WRD_PCIEX_DATA_REG);
 }
 
 static void iwl_trans_pcie_write_shr(struct iwl_trans* trans, uint32_t reg, uint32_t val) {
-    iwl_write32(trans, HEEP_CTRL_WRD_PCIEX_DATA_REG, val);
-    iwl_write32(trans, HEEP_CTRL_WRD_PCIEX_CTRL_REG, ((reg & 0x0000ffff) | (3 << 28)));
+  iwl_write32(trans, HEEP_CTRL_WRD_PCIEX_DATA_REG, val);
+  iwl_write32(trans, HEEP_CTRL_WRD_PCIEX_CTRL_REG, ((reg & 0x0000ffff) | (3 << 28)));
 }
-#endif  // NEEDS_PORTING
 
 static void iwl_pcie_set_pwr(struct iwl_trans* trans, bool vaux) {
   if (trans->cfg->apmg_not_supported) {
@@ -392,7 +390,6 @@ static zx_status_t iwl_pcie_apm_init(struct iwl_trans* trans) {
   return ZX_OK;
 }
 
-#if 0   // NEEDS_PORTING
 /*
  * Enable LP XTAL to avoid HW bug where device may consume much power if
  * FW is not loaded after device reset. LP XTAL is disabled by default
@@ -401,137 +398,140 @@ static zx_status_t iwl_pcie_apm_init(struct iwl_trans* trans) {
  * SHRD_HW_RST occurs in S3.
  */
 static void iwl_pcie_apm_lp_xtal_enable(struct iwl_trans* trans) {
-    int ret;
-    uint32_t apmg_gp1_reg;
-    uint32_t apmg_xtal_cfg_reg;
-    uint32_t dl_cfg_reg;
+  zx_status_t ret;
+  uint32_t apmg_gp1_reg;
+  uint32_t apmg_xtal_cfg_reg;
+  uint32_t dl_cfg_reg;
 
-    /* Force XTAL ON */
-    __iwl_trans_pcie_set_bit(trans, CSR_GP_CNTRL, CSR_GP_CNTRL_REG_FLAG_XTAL_ON);
+  /* Force XTAL ON */
+  __iwl_trans_pcie_set_bit(trans, CSR_GP_CNTRL, CSR_GP_CNTRL_REG_FLAG_XTAL_ON);
 
-    iwl_trans_pcie_sw_reset(trans);
+  iwl_trans_pcie_sw_reset(trans);
 
-    /*
-     * Set "initialization complete" bit to move adapter from
-     * D0U* --> D0A* (powered-up active) state.
-     */
-    iwl_set_bit(trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_init_done));
+  /*
+   * Set "initialization complete" bit to move adapter from
+   * D0U* --> D0A* (powered-up active) state.
+   */
+  iwl_set_bit(trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_init_done));
 
-    /*
-     * Wait for clock stabilization; once stabilized, access to
-     * device-internal resources is possible.
-     */
-    ret = iwl_poll_bit(trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_mac_clock_ready),
-                       BIT(trans->cfg->csr->flag_mac_clock_ready), 25000);
-    if (WARN_ON(ret < 0)) {
-        IWL_ERR(trans, "Access time out - failed to enable LP XTAL\n");
-        /* Release XTAL ON request */
-        __iwl_trans_pcie_clear_bit(trans, CSR_GP_CNTRL, CSR_GP_CNTRL_REG_FLAG_XTAL_ON);
-        return;
-    }
-
-    /*
-     * Clear "disable persistence" to avoid LP XTAL resetting when
-     * SHRD_HW_RST is applied in S3.
-     */
-    iwl_clear_bits_prph(trans, APMG_PCIDEV_STT_REG, APMG_PCIDEV_STT_VAL_PERSIST_DIS);
-
-    /*
-     * Force APMG XTAL to be active to prevent its disabling by HW
-     * caused by APMG idle state.
-     */
-    apmg_xtal_cfg_reg = iwl_trans_pcie_read_shr(trans, SHR_APMG_XTAL_CFG_REG);
-    iwl_trans_pcie_write_shr(trans, SHR_APMG_XTAL_CFG_REG,
-                             apmg_xtal_cfg_reg | SHR_APMG_XTAL_CFG_XTAL_ON_REQ);
-
-    iwl_trans_pcie_sw_reset(trans);
-
-    /* Enable LP XTAL by indirect access through CSR */
-    apmg_gp1_reg = iwl_trans_pcie_read_shr(trans, SHR_APMG_GP1_REG);
-    iwl_trans_pcie_write_shr(
-        trans, SHR_APMG_GP1_REG,
-        apmg_gp1_reg | SHR_APMG_GP1_WF_XTAL_LP_EN | SHR_APMG_GP1_CHICKEN_BIT_SELECT);
-
-    /* Clear delay line clock power up */
-    dl_cfg_reg = iwl_trans_pcie_read_shr(trans, SHR_APMG_DL_CFG_REG);
-    iwl_trans_pcie_write_shr(trans, SHR_APMG_DL_CFG_REG,
-                             dl_cfg_reg & ~SHR_APMG_DL_CFG_DL_CLOCK_POWER_UP);
-
-    /*
-     * Enable persistence mode to avoid LP XTAL resetting when
-     * SHRD_HW_RST is applied in S3.
-     */
-    iwl_set_bit(trans, CSR_HW_IF_CONFIG_REG, CSR_HW_IF_CONFIG_REG_PERSIST_MODE);
-
-    /*
-     * Clear "initialization complete" bit to move adapter from
-     * D0A* (powered-up Active) --> D0U* (Uninitialized) state.
-     */
-    iwl_clear_bit(trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_init_done));
-
-    /* Activates XTAL resources monitor */
-    __iwl_trans_pcie_set_bit(trans, CSR_MONITOR_CFG_REG, CSR_MONITOR_XTAL_RESOURCES);
-
+  /*
+   * Wait for clock stabilization; once stabilized, access to
+   * device-internal resources is possible.
+   */
+  ret = iwl_poll_bit(trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_mac_clock_ready),
+                     BIT(trans->cfg->csr->flag_mac_clock_ready), 25000, NULL);
+  if (WARN_ON(ret != ZX_OK)) {
+    IWL_ERR(trans, "Access time out - failed to enable LP XTAL\n");
     /* Release XTAL ON request */
     __iwl_trans_pcie_clear_bit(trans, CSR_GP_CNTRL, CSR_GP_CNTRL_REG_FLAG_XTAL_ON);
-    zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
+    return;
+  }
 
-    /* Release APMG XTAL */
-    iwl_trans_pcie_write_shr(trans, SHR_APMG_XTAL_CFG_REG,
-                             apmg_xtal_cfg_reg & ~SHR_APMG_XTAL_CFG_XTAL_ON_REQ);
+  /*
+   * Clear "disable persistence" to avoid LP XTAL resetting when
+   * SHRD_HW_RST is applied in S3.
+   */
+  iwl_clear_bits_prph(trans, APMG_PCIDEV_STT_REG, APMG_PCIDEV_STT_VAL_PERSIST_DIS);
+
+  /*
+   * Force APMG XTAL to be active to prevent its disabling by HW
+   * caused by APMG idle state.
+   */
+  apmg_xtal_cfg_reg = iwl_trans_pcie_read_shr(trans, SHR_APMG_XTAL_CFG_REG);
+  iwl_trans_pcie_write_shr(trans, SHR_APMG_XTAL_CFG_REG,
+                           apmg_xtal_cfg_reg | SHR_APMG_XTAL_CFG_XTAL_ON_REQ);
+
+  iwl_trans_pcie_sw_reset(trans);
+
+  /* Enable LP XTAL by indirect access through CSR */
+  apmg_gp1_reg = iwl_trans_pcie_read_shr(trans, SHR_APMG_GP1_REG);
+  iwl_trans_pcie_write_shr(
+      trans, SHR_APMG_GP1_REG,
+      apmg_gp1_reg | SHR_APMG_GP1_WF_XTAL_LP_EN | SHR_APMG_GP1_CHICKEN_BIT_SELECT);
+
+  /* Clear delay line clock power up */
+  dl_cfg_reg = iwl_trans_pcie_read_shr(trans, SHR_APMG_DL_CFG_REG);
+  iwl_trans_pcie_write_shr(trans, SHR_APMG_DL_CFG_REG,
+                           dl_cfg_reg & ~SHR_APMG_DL_CFG_DL_CLOCK_POWER_UP);
+
+  /*
+   * Enable persistence mode to avoid LP XTAL resetting when
+   * SHRD_HW_RST is applied in S3.
+   */
+  iwl_set_bit(trans, CSR_HW_IF_CONFIG_REG, CSR_HW_IF_CONFIG_REG_PERSIST_MODE);
+
+  /*
+   * Clear "initialization complete" bit to move adapter from
+   * D0A* (powered-up Active) --> D0U* (Uninitialized) state.
+   */
+  iwl_clear_bit(trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_init_done));
+
+  /* Activates XTAL resources monitor */
+  __iwl_trans_pcie_set_bit(trans, CSR_MONITOR_CFG_REG, CSR_MONITOR_XTAL_RESOURCES);
+
+  /* Release XTAL ON request */
+  __iwl_trans_pcie_clear_bit(trans, CSR_GP_CNTRL, CSR_GP_CNTRL_REG_FLAG_XTAL_ON);
+  zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
+
+  /* Release APMG XTAL */
+  iwl_trans_pcie_write_shr(trans, SHR_APMG_XTAL_CFG_REG,
+                           apmg_xtal_cfg_reg & ~SHR_APMG_XTAL_CFG_XTAL_ON_REQ);
 }
 
 void iwl_pcie_apm_stop_master(struct iwl_trans* trans) {
-    int ret;
+  zx_status_t ret;
 
-    /* stop device's busmaster DMA activity */
-    iwl_set_bit(trans, trans->cfg->csr->addr_sw_reset, BIT(trans->cfg->csr->flag_stop_master));
+  /* stop device's busmaster DMA activity */
+  iwl_set_bit(trans, trans->cfg->csr->addr_sw_reset, BIT(trans->cfg->csr->flag_stop_master));
 
-    ret = iwl_poll_bit(trans, trans->cfg->csr->addr_sw_reset, BIT(trans->cfg->csr->flag_master_dis),
-                       BIT(trans->cfg->csr->flag_master_dis), 100);
-    if (ret < 0) { IWL_WARN(trans, "Master Disable Timed Out, 100 usec\n"); }
+  ret = iwl_poll_bit(trans, trans->cfg->csr->addr_sw_reset, BIT(trans->cfg->csr->flag_master_dis),
+                     BIT(trans->cfg->csr->flag_master_dis), 100, NULL);
+  if (ret != ZX_OK) {
+    IWL_WARN(trans, "Master Disable Timed Out, 100 usec\n");
+  }
 
-    IWL_DEBUG_INFO(trans, "stop master\n");
+  IWL_DEBUG_INFO(trans, "stop master\n");
 }
 
 static void iwl_pcie_apm_stop(struct iwl_trans* trans, bool op_mode_leave) {
-    IWL_DEBUG_INFO(trans, "Stop card, put in low power state\n");
+  IWL_DEBUG_INFO(trans, "Stop card, put in low power state\n");
 
-    if (op_mode_leave) {
-        if (!test_bit(STATUS_DEVICE_ENABLED, &trans->status)) { iwl_pcie_apm_init(trans); }
-
-        /* inform ME that we are leaving */
-        if (trans->cfg->device_family == IWL_DEVICE_FAMILY_7000) {
-            iwl_set_bits_prph(trans, APMG_PCIDEV_STT_REG, APMG_PCIDEV_STT_VAL_WAKE_ME);
-        } else if (trans->cfg->device_family >= IWL_DEVICE_FAMILY_8000) {
-            iwl_set_bit(trans, CSR_DBG_LINK_PWR_MGMT_REG, CSR_RESET_LINK_PWR_MGMT_DISABLED);
-            iwl_set_bit(trans, CSR_HW_IF_CONFIG_REG,
-                        CSR_HW_IF_CONFIG_REG_PREPARE | CSR_HW_IF_CONFIG_REG_ENABLE_PME);
-            zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
-            iwl_clear_bit(trans, CSR_DBG_LINK_PWR_MGMT_REG, CSR_RESET_LINK_PWR_MGMT_DISABLED);
-        }
-        zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
+  if (op_mode_leave) {
+    if (!test_bit(STATUS_DEVICE_ENABLED, &trans->status)) {
+      iwl_pcie_apm_init(trans);
     }
 
-    clear_bit(STATUS_DEVICE_ENABLED, &trans->status);
-
-    /* Stop device's DMA activity */
-    iwl_pcie_apm_stop_master(trans);
-
-    if (trans->cfg->lp_xtal_workaround) {
-        iwl_pcie_apm_lp_xtal_enable(trans);
-        return;
+    /* inform ME that we are leaving */
+    if (trans->cfg->device_family == IWL_DEVICE_FAMILY_7000) {
+      iwl_set_bits_prph(trans, APMG_PCIDEV_STT_REG, APMG_PCIDEV_STT_VAL_WAKE_ME);
+    } else if (trans->cfg->device_family >= IWL_DEVICE_FAMILY_8000) {
+      iwl_set_bit(trans, CSR_DBG_LINK_PWR_MGMT_REG, CSR_RESET_LINK_PWR_MGMT_DISABLED);
+      iwl_set_bit(trans, CSR_HW_IF_CONFIG_REG,
+                  CSR_HW_IF_CONFIG_REG_PREPARE | CSR_HW_IF_CONFIG_REG_ENABLE_PME);
+      zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
+      iwl_clear_bit(trans, CSR_DBG_LINK_PWR_MGMT_REG, CSR_RESET_LINK_PWR_MGMT_DISABLED);
     }
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
+  }
 
-    iwl_trans_pcie_sw_reset(trans);
+  clear_bit(STATUS_DEVICE_ENABLED, &trans->status);
 
-    /*
-     * Clear "initialization complete" bit to move adapter from
-     * D0A* (powered-up Active) --> D0U* (Uninitialized) state.
-     */
-    iwl_clear_bit(trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_init_done));
+  /* Stop device's DMA activity */
+  iwl_pcie_apm_stop_master(trans);
+
+  if (trans->cfg->lp_xtal_workaround) {
+    iwl_pcie_apm_lp_xtal_enable(trans);
+    return;
+  }
+
+  iwl_trans_pcie_sw_reset(trans);
+
+  /*
+   * Clear "initialization complete" bit to move adapter from
+   * D0A* (powered-up Active) --> D0U* (Uninitialized) state.
+   */
+  iwl_clear_bit(trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_init_done));
 }
-#endif  // NEEDS_PORTING
 
 static zx_status_t iwl_pcie_nic_init(struct iwl_trans* trans) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
@@ -1206,84 +1206,89 @@ static void iwl_pcie_init_msix(struct iwl_trans_pcie* trans_pcie) {
   trans_pcie->hw_mask = trans_pcie->hw_init_mask;
 }
 
-#if 0   // NEEDS_PORTING
 static void _iwl_trans_pcie_stop_device(struct iwl_trans* trans, bool low_power) {
-    struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
-    lockdep_assert_held(&trans_pcie->mutex);
+  lockdep_assert_held(&trans_pcie->mutex);
 
-    if (trans_pcie->is_down) { return; }
+  if (trans_pcie->is_down) {
+    return;
+  }
 
-    trans_pcie->is_down = true;
+  trans_pcie->is_down = true;
 
+#if 0   // NEEDS_PORTING
     /* Stop dbgc before stopping device */
     _iwl_fw_dbg_stop_recording(trans, NULL);
+#endif  // NEEDS_PORTING
 
-    /* tell the device to stop sending interrupts */
-    iwl_disable_interrupts(trans);
+  /* tell the device to stop sending interrupts */
+  iwl_disable_interrupts(trans);
 
-    /* device going down, Stop using ICT table */
-    iwl_pcie_disable_ict(trans);
+  /* device going down, Stop using ICT table */
+  iwl_pcie_disable_ict(trans);
 
-    /*
-     * If a HW restart happens during firmware loading,
-     * then the firmware loading might call this function
-     * and later it might be called again due to the
-     * restart. So don't process again if the device is
-     * already dead.
-     */
-    if (test_and_clear_bit(STATUS_DEVICE_ENABLED, &trans->status)) {
-        IWL_DEBUG_INFO(trans, "DEVICE_ENABLED bit was set and is now cleared\n");
-        iwl_pcie_tx_stop(trans);
-        iwl_pcie_rx_stop(trans);
-        /* Power-down device's busmaster DMA clocks */
-        if (!trans->cfg->apmg_not_supported) {
-            iwl_write_prph(trans, APMG_CLK_DIS_REG, APMG_CLK_VAL_DMA_CLK_RQT);
-            zx_nanosleep(zx_deadline_after(ZX_USEC(5)));
-        }
+  /*
+   * If a HW restart happens during firmware loading,
+   * then the firmware loading might call this function
+   * and later it might be called again due to the
+   * restart. So don't process again if the device is
+   * already dead.
+   */
+  if (test_and_clear_bit(STATUS_DEVICE_ENABLED, &trans->status)) {
+    IWL_DEBUG_INFO(trans, "DEVICE_ENABLED bit was set and is now cleared\n");
+    iwl_pcie_tx_stop(trans);
+    iwl_pcie_rx_stop(trans);
+    /* Power-down device's busmaster DMA clocks */
+    if (!trans->cfg->apmg_not_supported) {
+      iwl_write_prph(trans, APMG_CLK_DIS_REG, APMG_CLK_VAL_DMA_CLK_RQT);
+      zx_nanosleep(zx_deadline_after(ZX_USEC(5)));
     }
+  }
 
-    /* Make sure (redundant) we've released our request to stay awake */
-    iwl_clear_bit(trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_mac_access_req));
+  /* Make sure (redundant) we've released our request to stay awake */
+  iwl_clear_bit(trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_mac_access_req));
 
-    /* Stop the device, and put it in low power state */
-    iwl_pcie_apm_stop(trans, false);
+  /* Stop the device, and put it in low power state */
+  iwl_pcie_apm_stop(trans, false);
 
-    iwl_trans_pcie_sw_reset(trans);
+  iwl_trans_pcie_sw_reset(trans);
 
-    /*
-     * Upon stop, the IVAR table gets erased, so msi-x won't
-     * work. This causes a bug in RF-KILL flows, since the interrupt
-     * that enables radio won't fire on the correct irq, and the
-     * driver won't be able to handle the interrupt.
-     * Configure the IVAR table again after reset.
-     */
-    iwl_pcie_conf_msix_hw(trans_pcie);
+  /*
+   * Upon stop, the IVAR table gets erased, so msi-x won't
+   * work. This causes a bug in RF-KILL flows, since the interrupt
+   * that enables radio won't fire on the correct irq, and the
+   * driver won't be able to handle the interrupt.
+   * Configure the IVAR table again after reset.
+   */
+  iwl_pcie_conf_msix_hw(trans_pcie);
 
-    /*
-     * Upon stop, the APM issues an interrupt if HW RF kill is set.
-     * This is a bug in certain verions of the hardware.
-     * Certain devices also keep sending HW RF kill interrupt all
-     * the time, unless the interrupt is ACKed even if the interrupt
-     * should be masked. Re-ACK all the interrupts here.
-     */
-    iwl_disable_interrupts(trans);
+  /*
+   * Upon stop, the APM issues an interrupt if HW RF kill is set.
+   * This is a bug in certain verions of the hardware.
+   * Certain devices also keep sending HW RF kill interrupt all
+   * the time, unless the interrupt is ACKed even if the interrupt
+   * should be masked. Re-ACK all the interrupts here.
+   */
+  iwl_disable_interrupts(trans);
 
-    /* clear all status bits */
-    clear_bit(STATUS_SYNC_HCMD_ACTIVE, &trans->status);
-    clear_bit(STATUS_INT_ENABLED, &trans->status);
-    clear_bit(STATUS_TPOWER_PMI, &trans->status);
+  /* clear all status bits */
+  clear_bit(STATUS_SYNC_HCMD_ACTIVE, &trans->status);
+  clear_bit(STATUS_INT_ENABLED, &trans->status);
+  clear_bit(STATUS_TPOWER_PMI, &trans->status);
 
-    /*
-     * Even if we stop the HW, we still want the RF kill
-     * interrupt
-     */
-    iwl_enable_rfkill_int(trans);
+  /*
+   * Even if we stop the HW, we still want the RF kill
+   * interrupt
+   */
+  iwl_enable_rfkill_int(trans);
 
-    /* re-take ownership to prevent other users from stealing the device */
-    iwl_pcie_prepare_card_hw(trans);
+  /* re-take ownership to prevent other users from stealing the device */
+  iwl_pcie_prepare_card_hw(trans);
 }
 
+#if 0   // NEEDS_PORTING
+// TODO(43123): implement this function
 void iwl_pcie_synchronize_irqs(struct iwl_trans* trans) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
@@ -1394,65 +1399,62 @@ static void iwl_trans_pcie_fw_alive(struct iwl_trans* trans, uint32_t scd_addr) 
 }
 
 void iwl_trans_pcie_handle_stop_rfkill(struct iwl_trans* trans, bool was_in_rfkill) {
-#if 0   // NEEDS_PORTING
-    bool hw_rfkill;
+  bool hw_rfkill;
 
-    /*
-     * Check again since the RF kill state may have changed while
-     * all the interrupts were disabled, in this case we couldn't
-     * receive the RF kill interrupt and update the state in the
-     * op_mode.
-     * Don't call the op_mode if the rkfill state hasn't changed.
-     * This allows the op_mode to call stop_device from the rfkill
-     * notification without endless recursion. Under very rare
-     * circumstances, we might have a small recursion if the rfkill
-     * state changed exactly now while we were called from stop_device.
-     * This is very unlikely but can happen and is supported.
-     */
-    hw_rfkill = iwl_is_rfkill_set(trans);
-    if (hw_rfkill) {
-        set_bit(STATUS_RFKILL_HW, &trans->status);
-        set_bit(STATUS_RFKILL_OPMODE, &trans->status);
-    } else {
-        clear_bit(STATUS_RFKILL_HW, &trans->status);
-        clear_bit(STATUS_RFKILL_OPMODE, &trans->status);
-    }
-    if (hw_rfkill != was_in_rfkill) { iwl_trans_pcie_rf_kill(trans, hw_rfkill); }
-#endif  // NEEDS_PORTING
-  IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
+  /*
+   * Check again since the RF kill state may have changed while
+   * all the interrupts were disabled, in this case we couldn't
+   * receive the RF kill interrupt and update the state in the
+   * op_mode.
+   * Don't call the op_mode if the rkfill state hasn't changed.
+   * This allows the op_mode to call stop_device from the rfkill
+   * notification without endless recursion. Under very rare
+   * circumstances, we might have a small recursion if the rfkill
+   * state changed exactly now while we were called from stop_device.
+   * This is very unlikely but can happen and is supported.
+   */
+  hw_rfkill = iwl_is_rfkill_set(trans);
+  if (hw_rfkill) {
+    set_bit(STATUS_RFKILL_HW, &trans->status);
+    set_bit(STATUS_RFKILL_OPMODE, &trans->status);
+  } else {
+    clear_bit(STATUS_RFKILL_HW, &trans->status);
+    clear_bit(STATUS_RFKILL_OPMODE, &trans->status);
+  }
+  if (hw_rfkill != was_in_rfkill) {
+    iwl_trans_pcie_rf_kill(trans, hw_rfkill);
+  }
 }
 
 static void iwl_trans_pcie_stop_device(struct iwl_trans* trans, bool low_power) {
-#if 0   // NEEDS_PORTING
-    struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-    bool was_in_rfkill;
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+  bool was_in_rfkill;
 
-    mutex_lock(&trans_pcie->mutex);
-    trans_pcie->opmode_down = true;
-    was_in_rfkill = test_bit(STATUS_RFKILL_OPMODE, &trans->status);
-    _iwl_trans_pcie_stop_device(trans, low_power);
-    iwl_trans_pcie_handle_stop_rfkill(trans, was_in_rfkill);
-    mutex_unlock(&trans_pcie->mutex);
-#endif  // NEEDS_PORTING
-  IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
+  mtx_lock(&trans_pcie->mutex);
+  trans_pcie->opmode_down = true;
+  was_in_rfkill = test_bit(STATUS_RFKILL_OPMODE, &trans->status);
+  _iwl_trans_pcie_stop_device(trans, low_power);
+  iwl_trans_pcie_handle_stop_rfkill(trans, was_in_rfkill);
+  mtx_unlock(&trans_pcie->mutex);
 }
 
 void iwl_trans_pcie_rf_kill(struct iwl_trans* trans, bool state) {
+  __UNUSED struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+
+  lockdep_assert_held(&trans_pcie->mutex);
+
+  IWL_WARN(trans, "reporting RF_KILL (radio %s)\n", state ? "disabled" : "enabled");
+  if (iwl_op_mode_hw_rf_kill(trans->op_mode, state)) {
 #if 0   // NEEDS_PORTING
-    struct iwl_trans_pcie __maybe_unused* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-
-    lockdep_assert_held(&trans_pcie->mutex);
-
-    IWL_WARN(trans, "reporting RF_KILL (radio %s)\n", state ? "disabled" : "enabled");
-    if (iwl_op_mode_hw_rf_kill(trans->op_mode, state)) {
         if (trans->cfg->gen2) {
             _iwl_trans_pcie_gen2_stop_device(trans, true);
         } else {
-            _iwl_trans_pcie_stop_device(trans, true);
-        }
-    }
 #endif  // NEEDS_PORTING
-  IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
+    _iwl_trans_pcie_stop_device(trans, true);
+#if 0   // NEEDS_PORTING
+        }
+#endif  // NEEDS_PORTING
+  }
 }
 
 static void iwl_trans_pcie_d3_suspend(struct iwl_trans* trans, bool test, bool reset) {
