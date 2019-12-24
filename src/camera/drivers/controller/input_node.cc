@@ -12,7 +12,7 @@
 
 namespace camera {
 
-constexpr auto TAG = "camera_controller_input_node";
+constexpr auto kTag = "camera_controller_input_node";
 
 fit::result<std::unique_ptr<InputNode>, zx_status_t> InputNode::CreateInputNode(
     StreamCreationData* info, const ControllerMemoryAllocator& memory_allocator,
@@ -29,7 +29,7 @@ fit::result<std::unique_ptr<InputNode>, zx_status_t> InputNode::CreateInputNode(
 
   auto result = camera::GetBuffers(memory_allocator, info->node, info, nullptr);
   if (result.is_error()) {
-    FX_PLOGST(ERROR, TAG, result.error()) << "Failed to get buffers";
+    FX_PLOGST(ERROR, kTag, result.error()) << "Failed to get buffers";
     return fit::error(result.error());
   }
   auto buffers = std::move(result.value());
@@ -45,14 +45,14 @@ fit::result<std::unique_ptr<InputNode>, zx_status_t> InputNode::CreateInputNode(
       info->node.image_formats, std::move(buffers), info->stream_config->properties.stream_type(),
       info->node.supported_streams, dispatcher, isp);
   if (!processing_node) {
-    FX_LOGST(ERROR, TAG) << "Failed to create Input node";
+    FX_LOGST(ERROR, kTag) << "Failed to create Input node";
     return fit::error(ZX_ERR_NO_MEMORY);
   }
 
   // Create stream with ISP
   auto isp_stream_protocol = std::make_unique<camera::IspStreamProtocol>();
   if (!isp_stream_protocol) {
-    FX_LOGST(ERROR, TAG) << "Failed to create ISP stream protocol";
+    FX_LOGST(ERROR, kTag) << "Failed to create ISP stream protocol";
     return fit::error(ZX_ERR_INTERNAL);
   }
 
@@ -61,7 +61,7 @@ fit::result<std::unique_ptr<InputNode>, zx_status_t> InputNode::CreateInputNode(
       reinterpret_cast<const frame_rate_t*>(&info->node.output_frame_rate), isp_stream_type,
       processing_node->isp_frame_callback(), isp_stream_protocol->protocol());
   if (status != ZX_OK) {
-    FX_PLOGST(ERROR, TAG, status) << "Failed to create output stream on ISP";
+    FX_PLOGST(ERROR, kTag, status) << "Failed to create output stream on ISP";
     return fit::error(status);
   }
 

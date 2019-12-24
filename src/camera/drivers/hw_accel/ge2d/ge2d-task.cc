@@ -15,7 +15,7 @@
 #include <fbl/alloc_checker.h>
 
 constexpr uint32_t kEndianness = 7;
-constexpr auto TAG = "ge2d";
+constexpr auto kTag = "ge2d";
 
 namespace ge2d {
 
@@ -239,7 +239,7 @@ zx_status_t Ge2dTask::Init(const buffer_collection_info_2_t* input_buffer_collec
                   output_image_format_table_list, output_image_format_table_count,
                   output_image_format_index, bti, frame_callback, res_callback);
   if (status != ZX_OK) {
-    FX_LOG(ERROR, TAG, "InitBuffers Failed");
+    FX_LOG(ERROR, kTag, "InitBuffers Failed");
     return status;
   }
 
@@ -266,7 +266,7 @@ zx_status_t Ge2dTask::InitResize(const buffer_collection_info_2_t* input_buffer_
                             1, 0, output_image_format_table_list, output_image_format_table_count,
                             output_image_format_index, frame_callback, res_callback, bti);
   if (status != ZX_OK) {
-    FX_LOG(ERROR, TAG, "Init Failed");
+    FX_LOG(ERROR, kTag, "Init Failed");
     return status;
   }
 
@@ -293,12 +293,12 @@ zx_status_t Ge2dTask::InitWatermark(const buffer_collection_info_2_t* input_buff
            image_format_table_count, image_format_index, image_format_table_list,
            image_format_table_count, image_format_index, frame_callback, res_callback, bti);
   if (status != ZX_OK) {
-    FX_LOG(ERROR, TAG, "Init Failed");
+    FX_LOG(ERROR, kTag, "Init Failed");
     return status;
   }
 
   if (wm_info->wm_image_format.pixel_format.type != fuchsia_sysmem_PixelFormatType_R8G8B8A8) {
-    FX_LOG(ERROR, TAG, "Image format type not supported");
+    FX_LOG(ERROR, kTag, "Image format type not supported");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -316,21 +316,21 @@ zx_status_t Ge2dTask::InitWatermark(const buffer_collection_info_2_t* input_buff
   // copy the contents of the watermark image into it and use that.
   status = zx::vmo::create_contiguous(bti, vmo_size, 0, &watermark_input_vmo_);
   if (status != ZX_OK) {
-    FX_LOG(ERROR, TAG, "Unable to get create contiguous input watermark VMO");
+    FX_LOG(ERROR, kTag, "Unable to get create contiguous input watermark VMO");
     return status;
   }
   // Copy the watermark image over.
   fzl::VmoMapper mapped_watermark_input_vmo;
   status = mapped_watermark_input_vmo.Map(watermark_vmo, 0, vmo_size, ZX_VM_PERM_READ);
   if (status != ZX_OK) {
-    FX_LOG(ERROR, TAG, "Unable to get map for watermark input VMO");
+    FX_LOG(ERROR, kTag, "Unable to get map for watermark input VMO");
     return status;
   }
   fzl::VmoMapper mapped_contig_vmo;
   status =
       mapped_contig_vmo.Map(watermark_input_vmo_, 0, vmo_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
   if (status != ZX_OK) {
-    FX_LOG(ERROR, TAG, "Unable to get map contig watermark VMO");
+    FX_LOG(ERROR, kTag, "Unable to get map contig watermark VMO");
     return status;
   }
   memcpy(mapped_contig_vmo.start(), mapped_watermark_input_vmo.start(), vmo_size);
@@ -350,7 +350,7 @@ zx_status_t Ge2dTask::InitWatermark(const buffer_collection_info_2_t* input_buff
   // Allocate a vmo to hold the blended watermark id, then allocate a canvas id for the same.
   status = zx::vmo::create_contiguous(bti, vmo_size, 0, &watermark_blended_vmo_);
   if (status != ZX_OK) {
-    FX_LOG(ERROR, TAG, "Unable to get create contiguous blended watermark VMO");
+    FX_LOG(ERROR, kTag, "Unable to get create contiguous blended watermark VMO");
     return status;
   }
 
@@ -358,7 +358,7 @@ zx_status_t Ge2dTask::InitWatermark(const buffer_collection_info_2_t* input_buff
   status = amlogic_canvas_config(&canvas_, watermark_blended_vmo_.get(), 0, &info,
                                  &wm_blended_canvas_id_);
   if (status != ZX_OK) {
-    FX_LOG(ERROR, TAG, "Vmo creation for blended watermark image Failed");
+    FX_LOG(ERROR, kTag, "Vmo creation for blended watermark image Failed");
     amlogic_canvas_free(&canvas_, wm_input_canvas_id_);
   }
   return status;

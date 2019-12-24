@@ -21,7 +21,7 @@
 
 namespace camera {
 
-constexpr auto TAG = "FakeBufferCollection";
+constexpr auto kTag = "FakeBufferCollection";
 
 // TODO(41499): Track creation & destruction of buffer collections for programmatic
 //      checks of leaks.
@@ -42,7 +42,7 @@ zx_status_t GetImageFormat(image_format_2_t& image_format, uint32_t pixel_format
   //      more general with the switch to ImageFormat functions.
   if (pixel_format_type != fuchsia_sysmem_PixelFormatType_NV12 &&
       pixel_format_type != fuchsia_sysmem_PixelFormatType_R8G8B8A8) {
-    FX_LOG(ERROR, TAG, "Unsupported pixel format type");
+    FX_LOG(ERROR, kTag, "Unsupported pixel format type");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -94,7 +94,7 @@ zx_status_t CreateContiguousBufferCollectionInfo(buffer_collection_info_2_t& buf
     buffer_collection.buffers[i].vmo_usable_start = 0;
     status = zx_vmo_create_contiguous(bti_handle, vmo_size, 0, &buffer_collection.buffers[i].vmo);
     if (status != ZX_OK) {
-      FX_LOG(ERROR, TAG, "Failed to allocate Buffer Collection");
+      FX_LOG(ERROR, kTag, "Failed to allocate Buffer Collection");
       return status;
     }
   }
@@ -110,7 +110,7 @@ zx_status_t DestroyContiguousBufferCollection(
   for (auto& vmo_buffer : buffer_collection.buffers) {
     auto status = zx_handle_close(vmo_buffer.vmo);
     if (status != ZX_OK) {
-      FX_LOG(ERROR, TAG, "Error destroying a vmo.");
+      FX_LOG(ERROR, kTag, "Error destroying a vmo.");
       result = status;
     }
     vmo_buffer.vmo = ZX_HANDLE_INVALID;

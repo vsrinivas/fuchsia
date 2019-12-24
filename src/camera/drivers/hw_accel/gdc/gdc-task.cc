@@ -13,7 +13,7 @@
 #include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
 
-constexpr auto TAG = "gdc";
+constexpr auto kTag = "gdc";
 
 namespace gdc {
 
@@ -35,28 +35,28 @@ zx_status_t GdcTask::PinConfigVmos(const gdc_config_info* config_vmo_list, size_
     uint64_t size;
     auto status = vmo.get_size(&size);
     if (status != ZX_OK) {
-      FX_LOG(ERROR, TAG, "Unable to get VMO size");
+      FX_LOG(ERROR, kTag, "Unable to get VMO size");
       return status;
     }
 
     zx::vmo contig_vmo;
     status = zx::vmo::create_contiguous(bti, size, 0, &contig_vmo);
     if (status != ZX_OK) {
-      FX_LOG(ERROR, TAG, "Unable to get create contiguous VMO");
+      FX_LOG(ERROR, kTag, "Unable to get create contiguous VMO");
       return status;
     }
 
     fzl::VmoMapper mapped_buffer_vmo;
     status = mapped_buffer_vmo.Map(vmo, 0, 0, ZX_VM_PERM_READ);
     if (status != ZX_OK) {
-      FX_LOG(ERROR, TAG, "Unable to get map VMO");
+      FX_LOG(ERROR, kTag, "Unable to get map VMO");
       return status;
     }
 
     fzl::VmoMapper mapped_buffer_contig_vmo;
     status = mapped_buffer_contig_vmo.Map(contig_vmo, 0, 0, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
     if (status != ZX_OK) {
-      FX_LOG(ERROR, TAG, "Unable to get map contig VMO");
+      FX_LOG(ERROR, kTag, "Unable to get map contig VMO");
       return status;
     }
 
@@ -65,17 +65,17 @@ zx_status_t GdcTask::PinConfigVmos(const gdc_config_info* config_vmo_list, size_
     // Clean and invalidate the contiguous VMO.
     status = contig_vmo.op_range(ZX_VMO_OP_CACHE_CLEAN, 0, size, nullptr, 0);
     if (status != ZX_OK) {
-      FX_LOG(ERROR, TAG, "Unable to clean and invalidate the cache");
+      FX_LOG(ERROR, kTag, "Unable to clean and invalidate the cache");
       return status;
     }
 
     status = pinned_config_vmos_[i].Pin(contig_vmo, bti, ZX_BTI_CONTIGUOUS | ZX_VM_PERM_READ);
     if (status != ZX_OK) {
-      FX_LOG(ERROR, TAG, "Failed to pin config VMO");
+      FX_LOG(ERROR, kTag, "Failed to pin config VMO");
       return status;
     }
     if (pinned_config_vmos_[i].region_count() != 1) {
-      FX_LOG(ERROR, TAG, "Buffer is not contiguous");
+      FX_LOG(ERROR, kTag, "Buffer is not contiguous");
       return ZX_ERR_NO_MEMORY;
     }
 
@@ -108,7 +108,7 @@ zx_status_t GdcTask::Init(const buffer_collection_info_2_t* input_buffer_collect
 
   zx_status_t status = PinConfigVmos(config_vmo_list, config_vmos_count, bti);
   if (status != ZX_OK) {
-    FX_LOG(ERROR, TAG, "PinConfigVmo Failed");
+    FX_LOG(ERROR, kTag, "PinConfigVmo Failed");
     return status;
   }
 
@@ -116,7 +116,7 @@ zx_status_t GdcTask::Init(const buffer_collection_info_2_t* input_buffer_collect
                        output_image_format_table_list, output_image_format_table_count,
                        output_image_format_index, bti, frame_callback, res_callback);
   if (status != ZX_OK) {
-    FX_LOG(ERROR, TAG, "InitBuffers Failed");
+    FX_LOG(ERROR, kTag, "InitBuffers Failed");
     return status;
   }
 

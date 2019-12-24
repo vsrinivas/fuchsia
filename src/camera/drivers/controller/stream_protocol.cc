@@ -13,7 +13,7 @@
 
 namespace camera {
 
-constexpr auto TAG = "camera_controller";
+constexpr auto kTag = "camera_controller";
 
 StreamImpl::StreamImpl(async_dispatcher_t* dispatcher, ProcessNode* output_node)
     : dispatcher_(dispatcher), binding_(this), output_node_(*output_node) {}
@@ -28,7 +28,7 @@ zx_status_t StreamImpl::Attach(zx::channel channel, fit::function<void(void)> di
 
   zx_status_t status = binding_.Bind(std::move(channel));
   if (status != ZX_OK) {
-    FX_PLOGST(ERROR, TAG, status);
+    FX_PLOGST(ERROR, kTag, status);
     return status;
   }
   return ZX_OK;
@@ -83,23 +83,23 @@ void StreamImpl::Start() {
 void StreamImpl::ReleaseFrame(uint32_t buffer_id) { output_node_.OnReleaseFrame(buffer_id); }
 
 void StreamImpl::AcknowledgeFrameError() {
-  FX_LOGST(ERROR, TAG) << __PRETTY_FUNCTION__ << " not implemented";
+  FX_LOGST(ERROR, kTag) << __PRETTY_FUNCTION__ << " not implemented";
   Shutdown(ZX_ERR_UNAVAILABLE);
 }
 
 void StreamImpl::SetRegionOfInterest(float x_min, float y_min, float x_max, float y_max,
                                      SetRegionOfInterestCallback callback) {
-  FX_LOGST(ERROR, TAG) << __PRETTY_FUNCTION__ << " not implemented";
+  FX_LOGST(ERROR, kTag) << __PRETTY_FUNCTION__ << " not implemented";
   Shutdown(ZX_ERR_UNAVAILABLE);
 }
 
 void StreamImpl::SetImageFormat(uint32_t image_format_index, SetImageFormatCallback callback) {
-  FX_LOGST(ERROR, TAG) << __PRETTY_FUNCTION__ << " not implemented";
+  FX_LOGST(ERROR, kTag) << __PRETTY_FUNCTION__ << " not implemented";
   Shutdown(ZX_ERR_UNAVAILABLE);
 }
 
 void StreamImpl::GetImageFormats(GetImageFormatsCallback callback) {
-  FX_LOGST(ERROR, TAG) << __PRETTY_FUNCTION__ << " not implemented";
+  FX_LOGST(ERROR, kTag) << __PRETTY_FUNCTION__ << " not implemented";
   Shutdown(ZX_ERR_UNAVAILABLE);
 }
 

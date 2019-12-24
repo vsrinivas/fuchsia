@@ -16,7 +16,7 @@
 namespace camera {
 
 constexpr uint32_t kIspLineAlignment = 128;
-constexpr auto TAG = "arm-isp";
+constexpr auto kTag = "arm-isp";
 
 uint32_t DmaFormat::GetBytesPerPixel() const {
   switch (base_mode_) {
@@ -53,7 +53,7 @@ DmaFormat::PixelType ImageFormatToPixelType(const fuchsia_sysmem_ImageFormat_2& 
     case fuchsia_sysmem_PixelFormatType_YUY2:
       return DmaFormat::PixelType::YUY2;
   }
-  FX_LOG(ERROR, TAG, "pixel_format is incompatible with the ISP's PixelType\n");
+  FX_LOG(ERROR, kTag, "pixel_format is incompatible with the ISP's PixelType\n");
   return DmaFormat::PixelType::INVALID;
 }
 

@@ -10,7 +10,7 @@
 
 namespace camera {
 
-constexpr auto TAG = "virtual_camera";
+constexpr auto kTag = "virtual_camera";
 
 std::unique_ptr<async::Loop> VirtualCameraDevice::fidl_dispatch_loop_ = nullptr;
 
@@ -62,7 +62,7 @@ zx_status_t VirtualCameraDevice::GetChannel(zx_handle_t handle) {
   static std::unique_ptr<VirtualCameraControlImpl> server_ = nullptr;
 
   if (server_ != nullptr) {
-    FX_LOGST(ERROR, TAG) << "Camera Control already running";
+    FX_LOGST(ERROR, kTag) << "Camera Control already running";
     return ZX_ERR_INTERNAL;
   }
 
@@ -86,7 +86,7 @@ zx_status_t VirtualCameraDevice::GetChannel2(zx_handle_t handle) {
   // CameraStream FIDL interface
   static std::unique_ptr<VirtualCamera2ControllerImpl> server_ = nullptr;
   if (server_ != nullptr) {
-    FX_LOGST(ERROR, TAG) << "Camera2 Controller already running";
+    FX_LOGST(ERROR, kTag) << "Camera2 Controller already running";
     return ZX_ERR_INTERNAL;
   }
 

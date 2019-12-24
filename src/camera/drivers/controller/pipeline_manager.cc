@@ -12,7 +12,7 @@
 
 namespace camera {
 
-constexpr auto TAG = "camera_controller";
+constexpr auto kTag = "camera_controller";
 
 fit::result<OutputNode*, zx_status_t> PipelineManager::CreateGraph(
     StreamCreationData* info, const InternalConfigNode& internal_node, ProcessNode* parent_node) {
@@ -20,14 +20,14 @@ fit::result<OutputNode*, zx_status_t> PipelineManager::CreateGraph(
   auto next_node_internal =
       GetNextNodeInPipeline(info->stream_config->properties.stream_type(), internal_node);
   if (!next_node_internal) {
-    FX_LOGST(ERROR, TAG) << "Failed to get next node";
+    FX_LOGST(ERROR, kTag) << "Failed to get next node";
     return fit::error(ZX_ERR_INTERNAL);
   }
 
   switch (next_node_internal->type) {
     // Input Node
     case NodeType::kInputStream: {
-      FX_LOGST(ERROR, TAG) << "Child node cannot be input node";
+      FX_LOGST(ERROR, kTag) << "Child node cannot be input node";
       return fit::error(ZX_ERR_INVALID_ARGS);
     }
     // GDC
@@ -35,7 +35,7 @@ fit::result<OutputNode*, zx_status_t> PipelineManager::CreateGraph(
       auto gdc_result = camera::GdcNode::CreateGdcNode(
           memory_allocator_, dispatcher_, device_, gdc_, info, parent_node, *next_node_internal);
       if (gdc_result.is_error()) {
-        FX_PLOGST(ERROR, TAG, gdc_result.error()) << "Failed to configure GDC Node";
+        FX_PLOGST(ERROR, kTag, gdc_result.error()) << "Failed to configure GDC Node";
         // TODO(braval): Handle already configured nodes
         return fit::error(gdc_result.error());
       }
@@ -50,7 +50,7 @@ fit::result<OutputNode*, zx_status_t> PipelineManager::CreateGraph(
       result =
           camera::OutputNode::CreateOutputNode(dispatcher_, info, parent_node, *next_node_internal);
       if (result.is_error()) {
-        FX_LOGST(ERROR, TAG) << "Failed to configure Output Node";
+        FX_LOGST(ERROR, kTag) << "Failed to configure Output Node";
         // TODO(braval): Handle already configured nodes
         return result;
       }
@@ -69,7 +69,7 @@ fit::result<std::unique_ptr<InputNode>, zx_status_t> PipelineManager::ConfigureS
   auto input_result =
       camera::InputNode::CreateInputNode(info, memory_allocator_, dispatcher_, isp_);
   if (input_result.is_error()) {
-    FX_PLOGST(ERROR, TAG, input_result.error()) << "Failed to ConfigureInputNode";
+    FX_PLOGST(ERROR, kTag, input_result.error()) << "Failed to ConfigureInputNode";
     return input_result;
   }
 
@@ -78,7 +78,7 @@ fit::result<std::unique_ptr<InputNode>, zx_status_t> PipelineManager::ConfigureS
 
   auto output_node_result = CreateGraph(info, info->node, input_node);
   if (output_node_result.is_error()) {
-    FX_PLOGST(ERROR, TAG, output_node_result.error()) << "Failed to CreateGraph";
+    FX_PLOGST(ERROR, kTag, output_node_result.error()) << "Failed to CreateGraph";
     return fit::error(output_node_result.error());
   }
 
@@ -86,7 +86,7 @@ fit::result<std::unique_ptr<InputNode>, zx_status_t> PipelineManager::ConfigureS
   auto status =
       output_node->Attach(stream.TakeChannel(), [this, info]() { OnClientStreamDisconnect(info); });
   if (status != ZX_OK) {
-    FX_PLOGST(ERROR, TAG, status) << "Failed to bind output stream";
+    FX_PLOGST(ERROR, kTag, status) << "Failed to bind output stream";
     return fit::error(status);
   }
   return fit::ok(std::move(input_processing_node));
@@ -199,7 +199,7 @@ zx_status_t PipelineManager::ConfigureStreamPipeline(
         // We will now append the requested stream to the existing graph.
         auto result = AppendToExistingGraph(info, full_resolution_stream_.get(), stream);
         if (result != ZX_OK) {
-          FX_PLOGST(ERROR, TAG, result) << "AppendToExistingGraph failed";
+          FX_PLOGST(ERROR, kTag, result) << "AppendToExistingGraph failed";
           return result;
         }
         return result;
@@ -218,13 +218,13 @@ zx_status_t PipelineManager::ConfigureStreamPipeline(
         // If the same stream is requested again, we return failure.
         if (HasStreamType(downscaled_resolution_stream_->configured_streams(),
                           info->stream_config->properties.stream_type())) {
-          FX_PLOGST(ERROR, TAG, ZX_ERR_ALREADY_BOUND) << "Stream already bound";
+          FX_PLOGST(ERROR, kTag, ZX_ERR_ALREADY_BOUND) << "Stream already bound";
           return ZX_ERR_ALREADY_BOUND;
         }
         // We will now append the requested stream to the existing graph.
         auto result = AppendToExistingGraph(info, downscaled_resolution_stream_.get(), stream);
         if (result != ZX_OK) {
-          FX_PLOGST(ERROR, TAG, result) << "AppendToExistingGraph failed";
+          FX_PLOGST(ERROR, kTag, result) << "AppendToExistingGraph failed";
           return result;
         }
         return result;
@@ -238,7 +238,7 @@ zx_status_t PipelineManager::ConfigureStreamPipeline(
       break;
     }
     default: {
-      FX_LOGST(ERROR, TAG) << "Invalid input stream type";
+      FX_LOGST(ERROR, kTag) << "Invalid input stream type";
       return ZX_ERR_INVALID_ARGS;
     }
   }

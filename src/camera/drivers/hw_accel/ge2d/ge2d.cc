@@ -28,7 +28,7 @@ namespace ge2d {
 namespace {
 
 constexpr uint32_t kGe2d = 0;
-constexpr auto TAG = "ge2d";
+constexpr auto kTag = "ge2d";
 
 enum {
   COMPONENT_PDEV,
@@ -60,7 +60,7 @@ zx_status_t Ge2dDevice::Ge2dInitTaskResize(
                        output_image_format_table_list, output_image_format_table_count,
                        output_image_format_index, frame_callback, res_callback, bti_, canvas_);
   if (status != ZX_OK) {
-    FX_PLOGST(ERROR, TAG, status) << "Task Creation Failed";
+    FX_PLOGST(ERROR, kTag, status) << "Task Creation Failed";
     return status;
   }
 
@@ -94,7 +94,7 @@ zx_status_t Ge2dDevice::Ge2dInitTaskWaterMark(
                           image_format_table_list, image_format_table_count, image_format_index,
                           frame_callback, res_callback, bti_, canvas_);
   if (status != ZX_OK) {
-    FX_PLOGST(ERROR, TAG, status) << "Task Creation Failed";
+    FX_PLOGST(ERROR, kTag, status) << "Task Creation Failed";
     return status;
   }
 
@@ -259,7 +259,7 @@ void Ge2dDevice::ProcessTask(TaskInfo& info) {
 }
 
 int Ge2dDevice::FrameProcessingThread() {
-  FX_LOG(INFO, TAG, "start");
+  FX_LOG(INFO, kTag, "start");
   for (;;) {
     fbl::AutoLock al(&lock_);
     while (processing_queue_.empty() && !shutdown_) {
@@ -302,7 +302,7 @@ zx_status_t Ge2dDevice::WaitForInterrupt(zx_port_packet_t* packet) {
 zx_status_t Ge2dDevice::Setup(zx_device_t* parent, std::unique_ptr<Ge2dDevice>* out) {
   ddk::CompositeProtocolClient composite(parent);
   if (!composite.is_valid()) {
-    FX_LOG(ERROR, TAG, "could not get composite protocol");
+    FX_LOG(ERROR, kTag, "could not get composite protocol");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -310,53 +310,53 @@ zx_status_t Ge2dDevice::Setup(zx_device_t* parent, std::unique_ptr<Ge2dDevice>* 
   size_t actual;
   composite.GetComponents(components, COMPONENT_COUNT, &actual);
   if (actual != COMPONENT_COUNT) {
-    FX_LOG(ERROR, TAG, "Could not get components");
+    FX_LOG(ERROR, kTag, "Could not get components");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   ddk::PDev pdev(components[COMPONENT_PDEV]);
   if (!pdev.is_valid()) {
-    FX_LOG(ERROR, TAG, "ZX_PROTOCOL_PDEV not available");
+    FX_LOG(ERROR, kTag, "ZX_PROTOCOL_PDEV not available");
     return ZX_ERR_NO_RESOURCES;
   }
 
   std::optional<ddk::MmioBuffer> ge2d_mmio;
   zx_status_t status = pdev.MapMmio(kGe2d, &ge2d_mmio);
   if (status != ZX_OK) {
-    FX_PLOGST(ERROR, TAG, status) << "pdev_.MapMmio failed";
+    FX_PLOGST(ERROR, kTag, status) << "pdev_.MapMmio failed";
     return status;
   }
 
   zx::interrupt ge2d_irq;
   status = pdev.GetInterrupt(0, &ge2d_irq);
   if (status != ZX_OK) {
-    FX_PLOGST(ERROR, TAG, status) << "pdev_.GetInterrupt failed";
+    FX_PLOGST(ERROR, kTag, status) << "pdev_.GetInterrupt failed";
     return status;
   }
 
   zx::port port;
   status = zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port);
   if (status != ZX_OK) {
-    FX_PLOGST(ERROR, TAG, status) << "port create failed";
+    FX_PLOGST(ERROR, kTag, status) << "port create failed";
     return status;
   }
 
   status = ge2d_irq.bind(port, kPortKeyIrqMsg, 0 /*options*/);
   if (status != ZX_OK) {
-    FX_PLOGST(ERROR, TAG, status) << "interrupt bind failed";
+    FX_PLOGST(ERROR, kTag, status) << "interrupt bind failed";
     return status;
   }
 
   zx::bti bti;
   status = pdev.GetBti(0, &bti);
   if (status != ZX_OK) {
-    FX_PLOGST(ERROR, TAG, status) << "could not obtain bti";
+    FX_PLOGST(ERROR, kTag, status) << "could not obtain bti";
     return status;
   }
 
   ddk::AmlogicCanvasProtocolClient canvas(components[COMPONENT_CANVAS]);
   if (!canvas.is_valid()) {
-    FX_LOG(ERROR, TAG, "Could not get Amlogic Canvas protocol");
+    FX_LOG(ERROR, kTag, "Could not get Amlogic Canvas protocol");
     return ZX_ERR_NO_RESOURCES;
   }
   amlogic_canvas_protocol_t c;
@@ -390,7 +390,7 @@ zx_status_t Ge2dBind(void* ctx, zx_device_t* device) {
   std::unique_ptr<Ge2dDevice> ge2d_device;
   zx_status_t status = ge2d::Ge2dDevice::Setup(device, &ge2d_device);
   if (status != ZX_OK) {
-    FX_PLOGST(ERROR, TAG, status) << "Could not setup ge2d device";
+    FX_PLOGST(ERROR, kTag, status) << "Could not setup ge2d device";
     return status;
   }
   zx_device_prop_t props[] = {
@@ -404,18 +404,18 @@ zx_status_t Ge2dBind(void* ctx, zx_device_t* device) {
 #if 0
     status = ge2d::Ge2dDeviceTester::RunTests(ge2d_device.get());
     if (status != ZX_OK) {
-        FX_LOG(ERROR, TAG, "Device Unit Tests Failed");
+        FX_LOG(ERROR, kTag, "Device Unit Tests Failed");
         return status;
     }
 #endif
 
   status = ge2d_device->DdkAdd("ge2d", 0, props, countof(props));
   if (status != ZX_OK) {
-    FX_PLOGST(ERROR, TAG, status) << "Could not add ge2d device";
+    FX_PLOGST(ERROR, kTag, status) << "Could not add ge2d device";
     return status;
   }
 
-  FX_LOG(INFO, TAG, "ge2d driver added");
+  FX_LOG(INFO, kTag, "ge2d driver added");
 
   // ge2d device intentionally leaked as it is now held by DevMgr.
   __UNUSED auto* dev = ge2d_device.release();

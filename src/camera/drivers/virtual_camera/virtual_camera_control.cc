@@ -10,7 +10,7 @@
 
 namespace camera {
 
-constexpr auto TAG = "virtual_camera";
+constexpr auto kTag = "virtual_camera";
 
 static const char* kVirtualCameraVendorName = "Google Inc.";
 static const char* kVirtualCameraProductName = "Fuchsia Virtual Camera";
@@ -60,7 +60,7 @@ void VirtualCameraControlImpl::ProduceFrame() {
   // even if there is an error.
   auto buffer = buffers_.LockBufferForWrite();
   if (!buffer) {
-    FX_LOGST(ERROR, TAG) << "no available frames, dropping frame #" << frame_count_;
+    FX_LOGST(ERROR, kTag) << "no available frames, dropping frame #" << frame_count_;
     event.frame_status = fuchsia::camera::FrameStatus::ERROR_BUFFER_FULL;
   } else {  // Got a buffer.  Fill it with color:
     color_source_.FillARGB(buffer->virtual_address(), buffer->size());

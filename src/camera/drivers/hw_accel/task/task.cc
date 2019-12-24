@@ -14,7 +14,7 @@
 #include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
 
-constexpr auto TAG = "GenericTask";
+constexpr auto kTag = "GenericTask";
 
 namespace generictask {
 
@@ -92,7 +92,7 @@ zx_status_t GenericTask::InitBuffers(const buffer_collection_info_2_t* input_buf
 
   zx_status_t status = output_buffers_.Init(output_vmos, output_buffer_collection->buffer_count);
   if (status != ZX_OK) {
-    FX_LOG(ERROR, TAG, "Unable to Init VmoPool");
+    FX_LOG(ERROR, kTag, "Unable to Init VmoPool");
     return status;
   }
 
@@ -106,7 +106,7 @@ zx_status_t GenericTask::InitBuffers(const buffer_collection_info_2_t* input_buf
   status = output_buffers_.PinVmos(bti, fzl::VmoPool::RequireContig::Yes,
                                    fzl::VmoPool::RequireLowMem::Yes);
   if (status != ZX_OK) {
-    FX_LOG(ERROR, TAG, "Unable to pin buffers");
+    FX_LOG(ERROR, kTag, "Unable to pin buffers");
     return status;
   }
 
@@ -128,11 +128,11 @@ zx_status_t GenericTask::InitBuffers(const buffer_collection_info_2_t* input_buf
     __UNUSED zx_handle_t handle = vmo.release();
 
     if (status != ZX_OK) {
-      FX_LOG(ERROR, TAG, "Unable to pin buffers");
+      FX_LOG(ERROR, kTag, "Unable to pin buffers");
       return status;
     }
     if (input_buffers_[i].region_count() != 1) {
-      FX_LOG(ERROR, TAG, "buffer is not contiguous");
+      FX_LOG(ERROR, kTag, "buffer is not contiguous");
       return ZX_ERR_NO_MEMORY;
     }
   }

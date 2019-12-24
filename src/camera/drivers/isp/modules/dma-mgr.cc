@@ -14,7 +14,7 @@
 
 namespace camera {
 
-constexpr auto TAG = "arm-isp";
+constexpr auto kTag = "arm-isp";
 
 zx_status_t DmaManager::Create(const zx::bti& bti, const ddk::MmioView& isp_mmio_local,
                                DmaManager::Stream stream_type, std::unique_ptr<DmaManager>* out) {
@@ -22,7 +22,7 @@ zx_status_t DmaManager::Create(const zx::bti& bti, const ddk::MmioView& isp_mmio
 
   zx_status_t status = bti.duplicate(ZX_RIGHT_SAME_RIGHTS, &(*out)->bti_);
   if (status != ZX_OK) {
-    FX_LOGF(ERROR, TAG, "%s: Unable to duplicate bti for DmaManager \n", __func__);
+    FX_LOGF(ERROR, kTag, "%s: Unable to duplicate bti for DmaManager \n", __func__);
     return status;
   }
 
@@ -132,7 +132,7 @@ zx_status_t DmaManager::Configure(fuchsia_sysmem_BufferCollectionInfo_2 buffer_c
   write_locked_buffers_.clear();
 
   if (current_format_->GetImageSize() > buffer_collection.settings.buffer_settings.size_bytes) {
-    FX_LOGF(ERROR, TAG, "Buffer size (%lu) is less than image size (%lu)!\n",
+    FX_LOGF(ERROR, kTag, "Buffer size (%lu) is less than image size (%lu)!\n",
             buffer_collection.settings.buffer_settings.size_bytes, current_format_->GetImageSize());
     return ZX_ERR_INTERNAL;
   }
@@ -147,7 +147,7 @@ zx_status_t DmaManager::Configure(fuchsia_sysmem_BufferCollectionInfo_2 buffer_c
   // Pin the buffers
   zx_status_t status = buffers_.Init(vmos, buffer_collection.buffer_count);
   if (status != ZX_OK) {
-    FX_LOG(ERROR, TAG, "Unable to initialize buffers for DmaManager");
+    FX_LOG(ERROR, kTag, "Unable to initialize buffers for DmaManager");
     return status;
   }
   // Release the vmos so that the buffer collection could be reused.
@@ -157,7 +157,7 @@ zx_status_t DmaManager::Configure(fuchsia_sysmem_BufferCollectionInfo_2 buffer_c
   status =
       buffers_.PinVmos(bti_, fzl::VmoPool::RequireContig::Yes, fzl::VmoPool::RequireLowMem::Yes);
   if (status != ZX_OK) {
-    FX_LOG(ERROR, TAG, "Unable to pin buffers for DmaManager");
+    FX_LOG(ERROR, kTag, "Unable to pin buffers for DmaManager");
     return status;
   }
   frame_callback_ = std::move(frame_callback);
@@ -232,7 +232,7 @@ void DmaManager::LoadNewFrame() {
   uint32_t enable_buffer_write = 0;
   if (buffer) {
     if (buffer_underrun_sequential_count_ > 0) {
-      FX_LOGF(INFO, TAG, "DmaManager: buffer underrun recovered - dropped %llu frames",
+      FX_LOGF(INFO, kTag, "DmaManager: buffer underrun recovered - dropped %llu frames",
               buffer_underrun_sequential_count_);
       buffer_underrun_sequential_count_ = 0;
     }
@@ -258,7 +258,7 @@ void DmaManager::LoadNewFrame() {
     // out of buffers:
     constexpr uint32_t kUnderrunReportPeriod = 5 * 30;  // Log every 5 seconds at 30FPS
     if ((buffer_underrun_sequential_count_++ % kUnderrunReportPeriod) == 0) {
-      FX_LOGF(WARNING, TAG, "DmaManager: no free buffers - dropped %llu frames",
+      FX_LOGF(WARNING, kTag, "DmaManager: no free buffers - dropped %llu frames",
               buffer_underrun_sequential_count_);
     }
   }

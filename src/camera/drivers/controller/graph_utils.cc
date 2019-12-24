@@ -11,7 +11,7 @@
 
 namespace camera {
 
-constexpr auto TAG = "camera_controller_graph_helper";
+constexpr auto kTag = "camera_controller_graph_helper";
 
 const InternalConfigNode* GetNextNodeInPipeline(const fuchsia::camera2::CameraStreamType& stream,
                                                 const InternalConfigNode& node) {
@@ -31,7 +31,7 @@ fit::result<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t> GetBuffers(
   fuchsia::sysmem::BufferCollectionInfo_2 buffers;
   auto consumer = GetNextNodeInPipeline(info->stream_config->properties.stream_type(), producer);
   if (!consumer) {
-    FX_LOGST(ERROR, TAG) << "Failed to get next node";
+    FX_LOGST(ERROR, kTag) << "Failed to get next node";
     return fit::error(ZX_ERR_INTERNAL);
   }
 
@@ -48,7 +48,7 @@ fit::result<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t> GetBuffers(
     // so we just need to use that buffer
     auto status = fidl::Clone(producer_graph_node->output_buffer_collection(), &buffers);
     if (status != ZX_OK) {
-      FX_LOGST(ERROR, TAG) << "Failed to allocate shared memory";
+      FX_LOGST(ERROR, kTag) << "Failed to allocate shared memory";
       return fit::error(status);
     }
     return fit::ok(std::move(buffers));

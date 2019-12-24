@@ -10,7 +10,7 @@
 
 namespace camera {
 
-constexpr auto TAG = "virtual_camera";
+constexpr auto kTag = "virtual_camera";
 
 static constexpr uint32_t kBufferCountForCamping = 5;
 static constexpr uint32_t kFakeImageCodedWidth = 640;
@@ -125,7 +125,7 @@ void VirtualCamera2ControllerImpl::ProduceFrame() {
   // even if there is an error.
   auto buffer = buffers_.LockBufferForWrite();
   if (!buffer) {
-    FX_LOGST(ERROR, TAG) << "no available frames, dropping frame #" << frame_count_;
+    FX_LOGST(ERROR, kTag) << "no available frames, dropping frame #" << frame_count_;
     event.frame_status = fuchsia::camera2::FrameStatus::ERROR_BUFFER_FULL;
   } else {  // Got a buffer.  Fill it with color:
     color_source_.FillARGB(buffer->virtual_address(), buffer->size());
@@ -165,12 +165,12 @@ void VirtualCamera2ControllerImpl::CreateStream(
   // If we fail here we return, which drops the stream request, closing the channel.
   zx_status_t status = buffers_.Init(vmos.data(), buffer_collection.buffer_count);
   if (status != ZX_OK) {
-    FX_PLOGST(ERROR, TAG, status) << "Init buffers failed!";
+    FX_PLOGST(ERROR, kTag, status) << "Init buffers failed!";
     return;
   }
   status = buffers_.MapVmos();
   if (status != ZX_OK) {
-    FX_PLOGST(ERROR, TAG, status) << "Map buffers failed!";
+    FX_PLOGST(ERROR, kTag, status) << "Map buffers failed!";
     return;
   }
 
