@@ -11,6 +11,7 @@ import (
 	"crypto/sha512"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -54,6 +55,8 @@ type Repo struct {
 	timeProvider  TimeProvider
 }
 
+var NotCreatingNonExistentRepoError = errors.New("repo does not exist and createIfNotExist is false, so not creating one")
+
 // SystemProvider uses the time pkg to get Unix timestamp.
 type SystemTimeProvider struct{}
 
@@ -96,11 +99,28 @@ func (r *Repo) EncryptWith(path string) error {
 	return nil
 }
 
-// Init initializes a new repository, preparing it for publishing. If a
+// Init initializes a repository, reparing it for publishing. If a
 // repository already exists, either os.ErrExist, or a TUF error are returned.
+// If a repository does not exist at the given location, a repo will be created there.
 func (r *Repo) Init() error {
+	return r.OptionallyInitAtLocation(true)
+}
+
+// OptionallyInitAtLocation initializes a new repository, reparing it
+// for publishing, if a repository does not already exist at its
+// location and createIfNotExists is true.
+// If a repository already exists, either os.ErrExist, or a TUF error are returned.
+func (r *Repo) OptionallyInitAtLocation(createIfNotExists bool) error {
 	if _, err := os.Stat(filepath.Join(r.path, "repository", "root.json")); err == nil {
 		return os.ErrExist
+	}
+
+	// The repo doesn't exist at this location, but the caller may
+	// want to treat this as an error.  The common case here is
+	// that a command line user makes a typo and doesn't
+	// understand why a new repo was silently created.
+	if !createIfNotExists {
+		return NotCreatingNonExistentRepoError
 	}
 
 	// Fuchsia repositories always use consistent snapshots.

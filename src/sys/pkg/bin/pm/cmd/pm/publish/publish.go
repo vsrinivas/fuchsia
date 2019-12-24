@@ -60,6 +60,7 @@ func Run(cfg *build.Config, args []string) error {
 	fs.Var(&filePaths, "f", "Path(s) of the file(s) to publish")
 
 	clean := fs.Bool("C", false, "\"clean\" the repository. only new publications remain.")
+	noCreateRepo := fs.Bool("n", false, "If the specified repository path does not exist, do NOT attempt to create it.")
 
 	depfilePath := fs.String("depfile", "", "Path to a depfile to write to")
 
@@ -120,7 +121,7 @@ func Run(cfg *build.Config, args []string) error {
 		return fmt.Errorf("error initializing repo: %s", err)
 	}
 
-	if err := repo.Init(); err != nil {
+	if err := repo.OptionallyInitAtLocation(!(*noCreateRepo)); err != nil {
 		if !os.IsExist(err) {
 			return err
 		}

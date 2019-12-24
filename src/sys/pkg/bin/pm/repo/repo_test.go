@@ -43,7 +43,7 @@ type targetsFile struct {
 var roleJsons = []string{"root.json", "timestamp.json", "targets.json", "snapshot.json"}
 var merklePat = regexp.MustCompile("^[0-9a-f]{64}$")
 
-func TestInitRepo(t *testing.T) {
+func TestInitRepoWithCreate(t *testing.T) {
 	repoDir, err := ioutil.TempDir("", "publish-test-repo")
 	if err != nil {
 		t.Fatalf("Couldn't create test repo directory.")
@@ -52,9 +52,9 @@ func TestInitRepo(t *testing.T) {
 
 	r, err := New(repoDir)
 	if err != nil {
-		t.Fatalf("Repo init returned error %v", err)
+		t.Fatalf("Repo new returned error %v", err)
 	}
-	if err := r.Init(); err != nil {
+	if err := r.OptionallyInitAtLocation(true); err != nil {
 		t.Fatal(err)
 	}
 	if err := r.GenKeys(); err != nil {
@@ -66,6 +66,32 @@ func TestInitRepo(t *testing.T) {
 		if _, err := os.Stat(path); err != nil {
 			t.Fatal(err)
 		}
+	}
+}
+
+func TestInitRepoNoCreate(t *testing.T) {
+	repoDir, err := ioutil.TempDir("", "publish-test-repo")
+	if err != nil {
+		t.Fatalf("Couldn't create test repo directory.")
+	}
+	defer os.RemoveAll(repoDir)
+
+	r, err := New(repoDir)
+	if err != nil {
+		t.Fatalf("Repo init returned error %v", err)
+	}
+
+	// With the false param, we _don't_ want to create this repository if
+	// it doesn't already exist (which it doesn't, because there isn't a root.json).
+	// Make sure we get the correct error.
+	err = r.OptionallyInitAtLocation(false)
+	if err == nil {
+		// We actually want an error here.
+		t.Fatal("repo did not exist but was possibly created")
+	}
+
+	if err != NotCreatingNonExistentRepoError {
+		t.Fatalf("other init error: %v", err)
 	}
 }
 
