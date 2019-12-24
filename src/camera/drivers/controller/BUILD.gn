@@ -52,6 +52,7 @@ source_set("controller-source") {
     "controller-protocol.cc",
     "gdc_node.cc",
     "graph_utils.cc",
+    "input_node.cc",
     "memory_allocation.cc",
     "output_node.cc",
     "pipeline_manager.cc",

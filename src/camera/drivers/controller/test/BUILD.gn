@@ -97,6 +97,7 @@ executable("controller-allocator-test") {
   sources = [
     "../gdc_node.cc",
     "../graph_utils.cc",
+    "../input_node.cc",
     "../memory_allocation.cc",
     "../output_node.cc",
     "../pipeline_manager.cc",

@@ -26,7 +26,7 @@ const InternalConfigNode* GetNextNodeInPipeline(const fuchsia::camera2::CameraSt
 }
 
 fit::result<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t> GetBuffers(
-    ControllerMemoryAllocator& memory_allocator, const InternalConfigNode& producer,
+    const ControllerMemoryAllocator& memory_allocator, const InternalConfigNode& producer,
     StreamCreationData* info, ProcessNode* producer_graph_node) {
   fuchsia::sysmem::BufferCollectionInfo_2 buffers;
   auto consumer = GetNextNodeInPipeline(info->stream_config->properties.stream_type(), producer);

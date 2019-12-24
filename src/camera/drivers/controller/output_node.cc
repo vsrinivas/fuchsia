@@ -53,11 +53,6 @@ void OutputNode::OnReadyToProcess(uint32_t buffer_index) {
   client_stream_->FrameReady(buffer_index);
 }
 
-void OutputNode::OnFrameAvailable(const frame_available_info_t* /*info*/) {
-  // This API is not in use for |kOutputStream|.
-  ZX_ASSERT(false);
-}
-
 void OutputNode::OnReleaseFrame(uint32_t buffer_index) {
   parent_node_->OnReleaseFrame(buffer_index);
 }

@@ -43,12 +43,11 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     ASSERT_EQ(ZX_OK, loop_.StartThread("camera-controller-loop"));
     ASSERT_EQ(ZX_OK, context_->svc()->Connect(sysmem_allocator1_.NewRequest()));
     ASSERT_EQ(ZX_OK, context_->svc()->Connect(sysmem_allocator2_.NewRequest()));
+    ASSERT_EQ(ZX_OK, context_->svc()->Connect(sysmem_allocator3_.NewRequest()));
     isp_ = fake_isp_.client();
     gdc_ = fake_gdc_.client();
     controller_protocol_device_ = std::make_unique<ControllerImpl>(
         fake_ddk::kFakeParent, isp_, gdc_, std::move(sysmem_allocator1_));
-    controller_memory_allocator_ =
-        std::make_unique<ControllerMemoryAllocator>(std::move(sysmem_allocator3_));
     pipeline_manager_ = std::make_unique<PipelineManager>(fake_ddk::kFakeParent, &dispatcher_, isp_,
                                                           gdc_, std::move(sysmem_allocator2_));
   }
@@ -59,7 +58,6 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     sysmem_allocator1_ = nullptr;
     sysmem_allocator2_ = nullptr;
     sysmem_allocator3_ = nullptr;
-    controller_memory_allocator_ = nullptr;
     controller_protocol_device_ = nullptr;
     loop_.Shutdown();
   }
@@ -143,7 +141,8 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
   }
 
   // This helper API does the basic validation of an Input Node.
-  fit::result<std::unique_ptr<camera::ProcessNode>, zx_status_t> GetInputNode(
+  fit::result<std::unique_ptr<camera::InputNode>, zx_status_t> GetInputNode(
+      const ControllerMemoryAllocator& allocator,
       const fuchsia::camera2::CameraStreamType stream_type, StreamCreationData* info) {
     fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
     buffer_collection.buffer_count = kNumBuffers;
@@ -152,7 +151,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     info->output_buffers = std::move(buffer_collection);
     info->image_format_index = 0;
 
-    auto result = pipeline_manager_->CreateInputNode(info);
+    auto result = camera::InputNode::CreateInputNode(info, allocator, &dispatcher_, isp_);
     EXPECT_TRUE(result.is_ok());
 
     EXPECT_NE(nullptr, result.value()->isp_stream_protocol());
@@ -201,8 +200,10 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     info.stream_config = &stream_config;
     info.node = *stream_config_node;
 
+    ControllerMemoryAllocator allocator(std::move(sysmem_allocator3_));
+
     // Testing successful creation of |OutputNode|.
-    auto input_result = GetInputNode(stream_type, &info);
+    auto input_result = GetInputNode(allocator, stream_type, &info);
     auto output_result =
         OutputNode::CreateOutputNode(&dispatcher_, &info, input_result.value().get(), info.node);
     EXPECT_TRUE(output_result.is_ok());
@@ -231,15 +232,16 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     stream_config.properties.set_stream_type(kStreamTypeDS | kStreamTypeML);
     info.stream_config = &stream_config;
     info.node = *stream_config_node;
+    ControllerMemoryAllocator allocator(std::move(sysmem_allocator3_));
 
-    auto input_result = GetInputNode(kStreamTypeDS | kStreamTypeML, &info);
+    auto input_result = GetInputNode(allocator, kStreamTypeDS | kStreamTypeML, &info);
     // Testing successful creation of |GdcNode|.
     async_dispatcher_t dispatcher;
     auto next_node_internal = GetNextNodeInPipeline(kStreamTypeDS | kStreamTypeML, info.node);
     ASSERT_NE(nullptr, next_node_internal);
-    auto gdc_result = GdcNode::CreateGdcNode(*controller_memory_allocator_.release(), &dispatcher,
-                                             fake_ddk::kFakeParent, gdc_, &info,
-                                             input_result.value().get(), *next_node_internal);
+    auto gdc_result =
+        GdcNode::CreateGdcNode(allocator, &dispatcher, fake_ddk::kFakeParent, gdc_, &info,
+                               input_result.value().get(), *next_node_internal);
     EXPECT_TRUE(gdc_result.is_ok());
     ASSERT_NE(nullptr, gdc_result.value());
     EXPECT_EQ(NodeType::kGdc, gdc_result.value()->type());
@@ -254,8 +256,9 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     stream_config.properties.set_stream_type(stream_type);
     info.stream_config = &stream_config;
     info.node = *stream_config_node;
+    ControllerMemoryAllocator allocator(std::move(sysmem_allocator3_));
 
-    __UNUSED auto result = GetInputNode(stream_type, &info);
+    __UNUSED auto result = GetInputNode(allocator, stream_type, &info);
     __UNUSED auto graph_result = GetGraphNode(&info, result.value().get());
   }
 
@@ -268,8 +271,9 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     stream_config.properties.set_stream_type(stream_type);
     info.stream_config = &stream_config;
     info.node = *stream_config_node;
+    ControllerMemoryAllocator allocator(std::move(sysmem_allocator3_));
 
-    auto result = GetInputNode(stream_type, &info);
+    auto result = GetInputNode(allocator, stream_type, &info);
     auto graph_result = GetGraphNode(&info, result.value().get());
 
     // Check if GDC node was created.
@@ -329,8 +333,9 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     stream_config.properties.set_stream_type(kStreamTypeMonitoring);
     info.stream_config = &stream_config;
     info.node = *stream_config_node;
+    ControllerMemoryAllocator allocator(std::move(sysmem_allocator3_));
 
-    auto result = GetInputNode(kStreamTypeMonitoring, &info);
+    auto result = GetInputNode(allocator, kStreamTypeMonitoring, &info);
     auto graph_result = GetGraphNode(&info, result.value().get());
 
     // Check if GDC node was created.
@@ -361,8 +366,9 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     stream_config.properties.set_stream_type(kStreamTypeFR | kStreamTypeML | kStreamTypeVideo);
     info.stream_config = &stream_config;
     info.node = *stream_config_node;
+    ControllerMemoryAllocator allocator(std::move(sysmem_allocator3_));
 
-    auto result = GetInputNode(kStreamTypeFR | kStreamTypeML | kStreamTypeVideo, &info);
+    auto result = GetInputNode(allocator, kStreamTypeFR | kStreamTypeML | kStreamTypeVideo, &info);
     auto graph_result = GetGraphNode(&info, result.value().get());
 
     // Check if GDC1 & GDC2 node was created.
@@ -425,7 +431,10 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     stream_config.properties.set_stream_type(kStreamTypeFR);
     info.stream_config = &stream_config;
     info.node = *stream_config_node;
-    auto result = GetInputNode(kStreamTypeFR, &info);
+
+    ControllerMemoryAllocator allocator(std::move(sysmem_allocator3_));
+
+    auto result = GetInputNode(allocator, kStreamTypeFR, &info);
     auto graph_result = GetGraphNode(&info, result.value().get());
 
     // Set streaming on.
@@ -495,8 +504,9 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     stream_config.properties.set_stream_type(kStreamTypeFR);
     info.stream_config = &stream_config;
     info.node = *stream_config_node;
+    ControllerMemoryAllocator allocator(std::move(sysmem_allocator3_));
 
-    auto result = GetInputNode(kStreamTypeFR, &info);
+    auto result = GetInputNode(allocator, kStreamTypeFR, &info);
     auto graph_result = GetGraphNode(&info, result.value().get());
 
     // Set streaming on.
@@ -514,7 +524,9 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     stream_config.properties.set_stream_type(kStreamTypeDS | kStreamTypeML);
     info.stream_config = &stream_config;
     info.node = *stream_config_node;
-    auto result = GetInputNode(kStreamTypeDS | kStreamTypeML, &info);
+    ControllerMemoryAllocator allocator(std::move(sysmem_allocator3_));
+
+    auto result = GetInputNode(allocator, kStreamTypeDS | kStreamTypeML, &info);
     __UNUSED auto graph_result = GetGraphNode(&info, result.value().get());
 
     // Change the requested stream type.
@@ -535,7 +547,9 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     stream_config.properties.set_stream_type(kStreamTypeFR | kStreamTypeML);
     info.stream_config = &stream_config;
     info.node = *stream_config_node;
-    auto result = GetInputNode(kStreamTypeFR | kStreamTypeML, &info);
+    ControllerMemoryAllocator allocator(std::move(sysmem_allocator3_));
+
+    auto result = GetInputNode(allocator, kStreamTypeFR | kStreamTypeML, &info);
     auto graph_result = GetGraphNode(&info, result.value().get());
 
     // Change the requested stream type.
@@ -620,7 +634,9 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     stream_config.properties.set_stream_type(kStreamTypeFR | kStreamTypeML);
     info.stream_config = &stream_config;
     info.node = *stream_config_node;
-    auto result = GetInputNode(kStreamTypeFR | kStreamTypeML, &info);
+    ControllerMemoryAllocator allocator(std::move(sysmem_allocator3_));
+
+    auto result = GetInputNode(allocator, kStreamTypeFR | kStreamTypeML, &info);
     auto graph_result = GetGraphNode(&info, result.value().get());
 
     // Change the requested stream type.
@@ -645,7 +661,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
 
     auto ml_fr_output = graph_result.value();
     auto ml_ds_output = output_node_result.value();
-    auto isp_node = ml_fr_output->parent_node();
+    auto isp_node = static_cast<camera::InputNode*>(ml_fr_output->parent_node());
 
     auto isp_stream_protocol = std::make_unique<camera::IspStreamProtocol>();
     fake_isp_.PopulateStreamProtocol(isp_stream_protocol->protocol());
@@ -690,7 +706,6 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
   async::Loop loop_;
   async_dispatcher_t dispatcher_;
   std::unique_ptr<ControllerImpl> controller_protocol_device_;
-  std::unique_ptr<ControllerMemoryAllocator> controller_memory_allocator_;
   fuchsia::camera2::hal::ControllerSyncPtr camera_client_;
   std::unique_ptr<sys::ComponentContext> context_;
   std::unique_ptr<camera::PipelineManager> pipeline_manager_;

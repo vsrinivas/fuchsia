@@ -16,9 +16,7 @@
 
 #include "fbl/macros.h"
 #include "src/camera/drivers/controller/configs/sherlock/internal-config.h"
-#include "src/camera/drivers/controller/isp_stream_protocol.h"
 #include "src/camera/drivers/controller/memory_allocation.h"
-#include "src/camera/drivers/controller/stream_protocol.h"
 namespace camera {
 
 class ProcessNode;
@@ -42,7 +40,6 @@ class ProcessNode {
         parent_node_(nullptr),
         output_buffer_collection_(std::move(output_buffer_collection)),
         output_image_formats_(output_image_formats),
-        hw_accelerator_frame_callback_{OnFrameAvailable, this},
         enabled_(false),
         supported_streams_(supported_streams),
         in_use_buffer_count_(output_buffer_collection.buffer_count, 0) {
@@ -85,13 +82,13 @@ class ProcessNode {
   }
 
   // Notifies that a frame is ready for processing at this node.
-  virtual void OnReadyToProcess(uint32_t buffer_index) { ZX_ASSERT_MSG(false, "NOT SUPPORTED"); }
+  virtual void OnReadyToProcess(uint32_t buffer_index) = 0;
 
   // Notifies that a frame is done processing by this node.
-  virtual void OnFrameAvailable(const frame_available_info_t* info);
+  virtual void OnFrameAvailable(const frame_available_info_t* info) final;
 
   // Notifies that a frame is released.
-  virtual void OnReleaseFrame(uint32_t buffer_index);
+  virtual void OnReleaseFrame(uint32_t buffer_index) = 0;
 
   // Notifies that the client has requested to start streaming.
   virtual void OnStartStreaming();
@@ -100,21 +97,11 @@ class ProcessNode {
   virtual void OnStopStreaming();
 
   // Shut down routine.
-  virtual void OnShutdown();
-
-  // Helper APIs
-  void set_isp_stream_protocol(std::unique_ptr<camera::IspStreamProtocol> isp_stream_protocol) {
-    isp_stream_protocol_ = std::move(isp_stream_protocol);
-  }
+  virtual void OnShutdown() = 0;
 
   void set_enabled(bool enabled) { enabled_ = enabled; }
 
-  std::unique_ptr<camera::IspStreamProtocol>& isp_stream_protocol() { return isp_stream_protocol_; }
   NodeType type() { return type_; }
-
-  const hw_accel_frame_callback_t* hw_accelerator_frame_callback() {
-    return &hw_accelerator_frame_callback_;
-  }
 
   std::vector<fuchsia::sysmem::ImageFormat_2>& output_image_formats() {
     return output_image_formats_;
@@ -149,16 +136,10 @@ class ProcessNode {
   bool enabled() { return enabled_; }
 
  protected:
-  // Invoked by ISP when a new frame is available.
-  static void OnFrameAvailable(void* ctx, const frame_available_info_t* info) {
-    static_cast<ProcessNode*>(ctx)->OnFrameAvailable(info);
-  }
-
   bool AllChildNodesDisabled();
 
   // Lock to guard |in_use_buffer_count_|
   fbl::Mutex in_use_buffer_lock_;
-
   // Type of node.
   NodeType type_;
   // List of all the children for this node.
@@ -169,10 +150,6 @@ class ProcessNode {
   // Ouput Image formats
   // These are needed when we initialize HW accelerators.
   std::vector<fuchsia::sysmem::ImageFormat_2> output_image_formats_;
-  // Valid for input node
-  std::unique_ptr<IspStreamProtocol> isp_stream_protocol_;
-  // ISP Frame callback
-  hw_accel_frame_callback_t hw_accelerator_frame_callback_;
   bool enabled_;
   // The Stream types this node already supports and configured.
   std::vector<fuchsia::camera2::CameraStreamType> configured_streams_;

@@ -10,11 +10,11 @@
 
 #include <vector>
 
-#include "configs/sherlock/internal-config.h"
 #include "fbl/macros.h"
+#include "src/camera/drivers/controller/configs/sherlock/internal-config.h"
 #include "src/camera/drivers/controller/gdc_node.h"
+#include "src/camera/drivers/controller/input_node.h"
 #include "src/camera/drivers/controller/output_node.h"
-#include "src/camera/drivers/controller/processing_node.h"
 #include "src/camera/drivers/controller/stream_pipeline_info.h"
 #include "src/camera/lib/format_conversion/buffer_collection_helper.h"
 #include "src/camera/lib/format_conversion/format_conversion.h"
@@ -47,13 +47,6 @@ class PipelineManager {
   zx_status_t ConfigureStreamPipeline(StreamCreationData* info,
                                       fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream);
 
-  // Configures the input node: Does the following things
-  // 1. Creates the ISP stream protocol
-  // 2. Creates the requested ISP stream
-  // 3. Allocate buffers if needed
-  // 4. Creates the ProcessNode for the input node
-  fit::result<std::unique_ptr<ProcessNode>, zx_status_t> CreateInputNode(StreamCreationData* info);
-
   fit::result<ProcessNode*, zx_status_t> CreateGdcNode(StreamCreationData* info,
                                                        ProcessNode* parent_node,
                                                        const InternalConfigNode& internal_gdc_node);
@@ -78,7 +71,7 @@ class PipelineManager {
       ProcessNode* graph_head);
 
  private:
-  fit::result<std::unique_ptr<ProcessNode>, zx_status_t> ConfigureStreamPipelineHelper(
+  fit::result<std::unique_ptr<InputNode>, zx_status_t> ConfigureStreamPipelineHelper(
       StreamCreationData* info, fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream);
 
   zx_device_t* device_;

@@ -15,7 +15,7 @@ constexpr auto TAG = "camera_controller";
 
 zx_status_t ControllerMemoryAllocator::AllocateSharedMemory(
     std::vector<fuchsia::sysmem::BufferCollectionConstraints> constraints,
-    fuchsia::sysmem::BufferCollectionInfo_2* out_buffer_collection_info) {
+    fuchsia::sysmem::BufferCollectionInfo_2* out_buffer_collection_info) const {
   if (out_buffer_collection_info == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }

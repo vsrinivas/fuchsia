@@ -14,6 +14,7 @@
 namespace camera {
 
 void ProcessNode::OnFrameAvailable(const frame_available_info_t* info) {
+  ZX_ASSERT_MSG(type_ != NodeType::kOutputStream, "Invalid for OuputNode");
   // Free up parent's frame
   if (type_ != kInputStream) {
     parent_node_->OnReleaseFrame(info->metadata.input_buffer_index);
@@ -37,38 +38,9 @@ void ProcessNode::OnFrameAvailable(const frame_available_info_t* info) {
   // TODO(braval): Handle all frame_status errors.
 }
 
-void ProcessNode::OnReleaseFrame(uint32_t buffer_index) {
-  fbl::AutoLock al(&in_use_buffer_lock_);
-  ZX_ASSERT(buffer_index < in_use_buffer_count_.size());
-  in_use_buffer_count_[buffer_index]--;
-  if (in_use_buffer_count_[buffer_index] != 0) {
-    return;
-  }
-
-  // First release this nodes Frames (GDC, GE2D)
-  switch (type_) {
-    case NodeType::kGe2d: {
-      // TODO(braval): Inform the HW accelerator for freeing up the frames
-      break;
-    }
-    case NodeType::kInputStream: {
-      isp_stream_protocol_->ReleaseFrame(buffer_index);
-      return;
-    }
-    default: {
-      ZX_ASSERT_MSG(false, "Unknown NodeType\n");
-      return;
-    }
-  }
-}
-
 void ProcessNode::OnStartStreaming() {
   if (!enabled_) {
     enabled_ = true;
-    if (type_ == NodeType::kInputStream) {
-      isp_stream_protocol_->Start();
-      return;
-    }
     parent_node_->OnStartStreaming();
   }
 }
@@ -86,28 +58,7 @@ bool ProcessNode::AllChildNodesDisabled() {
 void ProcessNode::OnStopStreaming() {
   if (AllChildNodesDisabled()) {
     enabled_ = false;
-    if (type_ == NodeType::kInputStream) {
-      isp_stream_protocol_->Stop();
-    } else {
-      parent_node_->OnStopStreaming();
-    }
-  }
-}
-
-void ProcessNode::OnShutdown() {
-  switch (type_) {
-    case NodeType::kGe2d: {
-      // TODO(braval): Add support for this.
-      break;
-    }
-    case NodeType::kInputStream: {
-      // TODO(braval): Add support for this.
-      break;
-    }
-    default: {
-      ZX_ASSERT_MSG(false, "Unknown NodeType\n");
-      return;
-    }
+    parent_node_->OnStopStreaming();
   }
 }
 

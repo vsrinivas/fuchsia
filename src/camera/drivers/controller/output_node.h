@@ -51,9 +51,6 @@ class OutputNode : public ProcessNode {
   // Notifies that a frame is ready to be sent to the client.
   void OnReadyToProcess(uint32_t buffer_index) override;
 
-  // Asserts when this method is called.
-  void OnFrameAvailable(const frame_available_info_t* info) override;
-
   // Called by the client to release a frame.
   void OnReleaseFrame(uint32_t buffer_index) override;
 

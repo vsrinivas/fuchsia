@@ -14,61 +14,6 @@ namespace camera {
 
 constexpr auto TAG = "camera_controller";
 
-fit::result<std::unique_ptr<ProcessNode>, zx_status_t> PipelineManager::CreateInputNode(
-    StreamCreationData* info) {
-  uint8_t isp_stream_type;
-  if (info->node.input_stream_type == fuchsia::camera2::CameraStreamType::FULL_RESOLUTION) {
-    isp_stream_type = STREAM_TYPE_FULL_RESOLUTION;
-  } else if (info->node.input_stream_type ==
-             fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION) {
-    isp_stream_type = STREAM_TYPE_DOWNSCALED;
-  } else {
-    return fit::error(ZX_ERR_INVALID_ARGS);
-  }
-
-  auto result = GetBuffers(memory_allocator_, info->node, info, nullptr);
-  if (result.is_error()) {
-    FX_PLOGST(ERROR, TAG, result.error()) << "Failed to get buffers";
-    return fit::error(result.error());
-  }
-  auto buffers = std::move(result.value());
-
-  // Use a BufferCollectionHelper to manage the conversion
-  // between buffer collection representations.
-  BufferCollectionHelper buffer_collection_helper(buffers);
-
-  auto image_format = ConvertHlcppImageFormat2toCType(&info->node.image_formats[0]);
-
-  // Create Input Node
-  auto processing_node = std::make_unique<camera::ProcessNode>(
-      info->node.type, info->node.image_formats, std::move(buffers),
-      info->stream_config->properties.stream_type(), info->node.supported_streams);
-  if (!processing_node) {
-    FX_LOGST(ERROR, TAG) << "Failed to create Input node";
-    return fit::error(ZX_ERR_NO_MEMORY);
-  }
-
-  // Create stream with ISP
-  auto isp_stream_protocol = std::make_unique<camera::IspStreamProtocol>();
-  if (!isp_stream_protocol) {
-    FX_LOGST(ERROR, TAG) << "Failed to create ISP stream protocol";
-    return fit::error(ZX_ERR_INTERNAL);
-  }
-
-  auto status = isp_.CreateOutputStream(
-      buffer_collection_helper.GetC(), &image_format,
-      reinterpret_cast<const frame_rate_t*>(&info->node.output_frame_rate), isp_stream_type,
-      processing_node->hw_accelerator_frame_callback(), isp_stream_protocol->protocol());
-  if (status != ZX_OK) {
-    FX_PLOGST(ERROR, TAG, status) << "Failed to create output stream on ISP";
-    return fit::error(ZX_ERR_INTERNAL);
-  }
-
-  // Update the input node with the ISP stream protocol
-  processing_node->set_isp_stream_protocol(std::move(isp_stream_protocol));
-  return fit::ok(std::move(processing_node));
-}
-
 fit::result<OutputNode*, zx_status_t> PipelineManager::CreateGraph(
     StreamCreationData* info, const InternalConfigNode& internal_node, ProcessNode* parent_node) {
   fit::result<OutputNode*, zx_status_t> result;
@@ -118,11 +63,11 @@ fit::result<OutputNode*, zx_status_t> PipelineManager::CreateGraph(
   return result;
 }
 
-fit::result<std::unique_ptr<ProcessNode>, zx_status_t>
-PipelineManager::ConfigureStreamPipelineHelper(
+fit::result<std::unique_ptr<InputNode>, zx_status_t> PipelineManager::ConfigureStreamPipelineHelper(
     StreamCreationData* info, fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream) {
   // Configure Input node
-  auto input_result = CreateInputNode(info);
+  auto input_result =
+      camera::InputNode::CreateInputNode(info, memory_allocator_, dispatcher_, isp_);
   if (input_result.is_error()) {
     FX_PLOGST(ERROR, TAG, input_result.error()) << "Failed to ConfigureInputNode";
     return input_result;

@@ -30,7 +30,7 @@ const InternalConfigNode* GetNextNodeInPipeline(const fuchsia::camera2::CameraSt
 //                         buffer collection of that node. This is needed for streams
 //                         which have one parent.
 fit::result<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t> GetBuffers(
-    ControllerMemoryAllocator& memory_allocator, const InternalConfigNode& producer,
+    const ControllerMemoryAllocator& memory_allocator, const InternalConfigNode& producer,
     StreamCreationData* info, ProcessNode* producer_graph_node);
 
 // Returns |true| if CameraStreamType |type| is present in the

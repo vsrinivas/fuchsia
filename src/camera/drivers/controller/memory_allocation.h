@@ -20,7 +20,7 @@ class ControllerMemoryAllocator {
   // constraints.
   zx_status_t AllocateSharedMemory(
       std::vector<fuchsia::sysmem::BufferCollectionConstraints> constraints,
-      fuchsia::sysmem::BufferCollectionInfo_2* out_buffer_collection_info);
+      fuchsia::sysmem::BufferCollectionInfo_2* out_buffer_collection_info) const;
 
  private:
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
