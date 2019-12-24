@@ -178,8 +178,8 @@ zx_status_t load_kernel(const std::string& kernel_path, const PhysMem& phys_mem,
   }
   size_t kernel_size;
   read_fd(fd.get(), phys_mem, kernel_off, &kernel_size);
-  if (is_within(kRamdiskOffset, kernel_off, kernel_size)) {
-    FXL_LOG(ERROR) << "Kernel location overlaps RAM disk location";
+  if (is_within(kDtbOffset, kernel_off, kernel_size)) {
+    FXL_LOG(ERROR) << "Kernel location overlaps DTB location";
     return ZX_ERR_OUT_OF_RANGE;
   }
   return ZX_OK;
