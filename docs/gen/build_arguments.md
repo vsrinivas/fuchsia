@@ -1524,7 +1524,7 @@ Default app id will always return no update.
 
 **Current value (from the default):** `"fuchsia-test:no-update"`
 
-From //src/sys/pkg/bin/omaha-client/BUILD.gn:106
+From //src/sys/pkg/bin/omaha-client/BUILD.gn:14
 
 ### output_breakpad_syms
 Sets if we should output breakpad symbols for Fuchsia binaries.
