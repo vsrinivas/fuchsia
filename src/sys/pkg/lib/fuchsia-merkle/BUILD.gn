@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 rustc_library("fuchsia-merkle") {
   name = "fuchsia_merkle"
@@ -16,5 +18,25 @@ rustc_library("fuchsia-merkle") {
     "//third_party/rust_crates:proptest",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:thiserror",
+  ]
+}
+
+unittest_package("fuchsia-merkle-tests") {
+  deps = [
+    ":fuchsia-merkle_test",
+  ]
+
+  tests = [
+    {
+      name = "fuchsia_merkle_lib_test"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":fuchsia-merkle-tests",
   ]
 }

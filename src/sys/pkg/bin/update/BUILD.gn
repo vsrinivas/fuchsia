@@ -43,13 +43,6 @@ package("update-bin") {
   ]
 }
 
-group("tests") {
-  testonly = true
-  deps = [
-    ":update-bin-tests",
-  ]
-}
-
 test_package("update-bin-tests") {
   deps = [
     ":bin_test",
@@ -60,5 +53,12 @@ test_package("update-bin-tests") {
       name = "update_bin_test"
       environments = basic_envs
     },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":update-bin-tests",
   ]
 }

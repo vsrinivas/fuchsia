@@ -5,7 +5,12 @@
 group("tests") {
   testonly = true
   public_deps = [
-    "blobfs-ramdisk:tests",
-    "pkgfs-ramdisk:tests",
+    "amberctl:tests",
+    "pkg-cache:tests",
+    "pkg-resolver:tests",
+    "pkgctl:tests",
+    "system-ota-tests:tests",
+    "system-update-checker:tests",
+    "system-updater:tests",
   ]
 }

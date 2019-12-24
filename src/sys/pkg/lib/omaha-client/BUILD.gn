@@ -32,13 +32,6 @@ rustc_library("omaha-client") {
   test_deps = [ "//third_party/rust_crates:matches" ]
 }
 
-group("tests") {
-  testonly = true
-  deps = [
-    ":omaha-client-lib-tests",
-  ]
-}
-
 test_package("omaha-client-lib-tests") {
   deps = [
     ":omaha-client_test",
@@ -49,5 +42,12 @@ test_package("omaha-client-lib-tests") {
       name = "omaha_client_lib_test"
       environments = basic_envs
     },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":omaha-client-lib-tests",
   ]
 }

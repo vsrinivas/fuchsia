@@ -56,3 +56,10 @@ test_package("system_updater_tests") {
     },
   ]
 }
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":system_updater_tests",
+  ]
+}

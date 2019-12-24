@@ -16,5 +16,6 @@ group("tests") {
     "bin:tests",
     "lib:tests",
     "testing:tests",
+    "tests",
   ]
 }

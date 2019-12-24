@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 rustc_library("fuchsia-archive") {
   with_unit_tests = true
@@ -14,5 +16,25 @@ rustc_library("fuchsia-archive") {
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_derive",
     "//third_party/rust_crates:tempfile",
+  ]
+}
+
+unittest_package("fuchsia-archive-tests") {
+  deps = [
+    ":fuchsia-archive_test",
+  ]
+
+  tests = [
+    {
+      name = "fuchsia_archive_lib_test"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":fuchsia-archive-tests",
   ]
 }

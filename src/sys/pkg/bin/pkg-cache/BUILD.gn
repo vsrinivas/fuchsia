@@ -73,3 +73,10 @@ config_data("config") {
     "sysmgr.config",
   ]
 }
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":pkg_cache_tests",
+  ]
+}

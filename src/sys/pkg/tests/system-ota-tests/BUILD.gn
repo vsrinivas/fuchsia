@@ -49,3 +49,10 @@ group("system_ota_tests") {
     ":system_ota_tests_upgrade($host_toolchain)",
   ]
 }
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":system_ota_tests",
+  ]
+}

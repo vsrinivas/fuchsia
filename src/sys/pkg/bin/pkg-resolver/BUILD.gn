@@ -129,3 +129,10 @@ test_package("pkg-resolver-unit-tests") {
 pkg_resolver_config("disable_dynamic_configuration") {
   disable_dynamic_configuration = true
 }
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":pkg-resolver-unit-tests",
+  ]
+}

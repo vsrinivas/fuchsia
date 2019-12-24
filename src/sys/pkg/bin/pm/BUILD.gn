@@ -89,3 +89,10 @@ install_host_tools("host") {
     "pm",
   ]
 }
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":host_tests",
+  ]
+}

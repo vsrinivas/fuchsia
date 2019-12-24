@@ -113,3 +113,10 @@ config_data("system-update-checker-config") {
     "sysmgr.config",
   ]
 }
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":system-update-checker-tests",
+  ]
+}

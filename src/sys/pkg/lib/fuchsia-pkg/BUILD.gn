@@ -43,3 +43,10 @@ test_package("fuchsia_pkg_tests") {
     },
   ]
 }
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":fuchsia_pkg_tests",
+  ]
+}

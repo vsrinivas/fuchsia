@@ -54,3 +54,10 @@ test_package("rust-tuf-tests") {
     },
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":rust-tuf-tests",
+  ]
+}

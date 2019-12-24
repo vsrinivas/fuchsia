@@ -4,7 +4,7 @@
 
 group("bin") {
   testonly = true
-  deps = [
+  public_deps = [
     "omaha-client",
     "pkgctl",
     "update:update-bin",
@@ -13,9 +13,15 @@ group("bin") {
 
 group("tests") {
   testonly = true
-  deps = [
+  public_deps = [
+    "amber:tests",
     "omaha-client:tests",
+    "pkg-cache:tests",
+    "pkg-resolver:tests",
     "pkgctl:tests",
+    "pkgfs:tests",
+    "pm:tests",
+    "system-update-checker:tests",
     "update:tests",
   ]
 }

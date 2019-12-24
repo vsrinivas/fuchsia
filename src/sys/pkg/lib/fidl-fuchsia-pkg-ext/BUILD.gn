@@ -41,3 +41,10 @@ test_package("fidl_fuchsia_pkg_ext_tests") {
     },
   ]
 }
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":fidl_fuchsia_pkg_ext_tests",
+  ]
+}

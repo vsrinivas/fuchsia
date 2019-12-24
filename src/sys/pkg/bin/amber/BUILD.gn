@@ -176,3 +176,11 @@ config_data("config") {
     "startup.config",
   ]
 }
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":amber_tests",
+    "system_updater:tests",
+  ]
+}
