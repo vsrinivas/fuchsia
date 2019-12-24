@@ -34,8 +34,8 @@ rustc_library("breakpoint_system_client") {
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//src/sys/component_manager/tests/fidl:breakpoints-rustc",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
-    "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
   ]
 }
@@ -54,7 +54,7 @@ rustc_library("test_utils") {
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/sys/component_manager/tests/fidl:breakpoints-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:rand",
@@ -69,7 +69,7 @@ rustc_test("shutdown_integration_test_bin") {
   deps = [
     ":test_utils",
     "//garnet/public/rust/fuchsia-async",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
   ]
 }
 
@@ -82,7 +82,7 @@ rustc_binary("system_controller_client") {
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-syslog",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
   ]
 }
 
@@ -94,7 +94,7 @@ rustc_test("component_manager_panic_test_bin") {
     ":test_utils",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
   ]
 }
 

@@ -14,10 +14,11 @@ rustc_library("core") {
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-trace",
     "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
-    "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 

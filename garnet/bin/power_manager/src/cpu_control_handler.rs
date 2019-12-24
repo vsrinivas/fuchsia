@@ -5,8 +5,8 @@
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
 use crate::types::{Farads, Hertz, Volts, Watts};
+use anyhow::{format_err, Error};
 use async_trait::async_trait;
-use failure::{format_err, Error};
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 

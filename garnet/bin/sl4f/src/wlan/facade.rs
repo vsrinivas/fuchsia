@@ -6,8 +6,8 @@ use crate::wlan::types::{
     ClientStateSummary, ConnectionState, DisconnectStatus, NetworkIdentifier, NetworkState,
     SecurityType, WlanClientState,
 };
+use anyhow::{format_err, Context as _, Error};
 use connectivity_testing::wlan_service_util;
-use failure::{Error, ResultExt};
 use fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy};
 use fuchsia_component::client::connect_to_service;
 use fuchsia_syslog::fx_log_err;
@@ -54,7 +54,7 @@ impl WlanFacade {
             .context("Scan: failed to get wlan iface list")?;
 
         if wlan_iface_ids.len() == 0 {
-            bail!("no wlan interfaces found");
+            return Err(format_err!("no wlan interfaces found"));
         }
 
         // pick the first one
@@ -82,7 +82,7 @@ impl WlanFacade {
             .context("Connect: failed to get wlan iface list")?;
 
         if wlan_iface_ids.len() == 0 {
-            bail!("no wlan interfaces found");
+            return Err(format_err!("no wlan interfaces found"));
         }
 
         // pick the first one
@@ -112,7 +112,7 @@ impl WlanFacade {
             .context("Disconnect: failed to get wlan iface list")?;
 
         if wlan_iface_ids.len() == 0 {
-            bail!("no wlan interfaces found");
+            return Err(format_err!("no wlan interfaces found"));
         }
 
         let mut disconnect_error = false;
@@ -132,7 +132,7 @@ impl WlanFacade {
             }
         }
         if disconnect_error {
-            bail!("saw a failure with at least one disconnect call");
+            return Err(format_err!("saw a failure with at least one disconnect call"));
         }
         Ok(())
     }
@@ -144,7 +144,7 @@ impl WlanFacade {
             .context("Status: failed to get wlan iface list")?;
 
         if wlan_iface_ids.len() == 0 {
-            bail!("no wlan interfaces found");
+            return Err(format_err!("no wlan interfaces found"));
         }
 
         // pick the first one

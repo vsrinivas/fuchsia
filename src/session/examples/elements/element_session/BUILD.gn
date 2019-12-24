@@ -17,9 +17,10 @@ rustc_binary("element_session_bin") {
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/session/fidl:session_examples-rustc",
     "//src/session/lib/element_management",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 

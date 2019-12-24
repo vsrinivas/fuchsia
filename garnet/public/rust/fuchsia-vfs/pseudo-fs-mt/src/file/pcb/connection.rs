@@ -14,7 +14,7 @@ use crate::{
 };
 
 use {
-    failure::Error,
+    anyhow::Error,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
         FileMarker, FileObject, FileRequest, FileRequestStream, NodeAttributes, NodeInfo,

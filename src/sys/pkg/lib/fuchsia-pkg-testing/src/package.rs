@@ -5,7 +5,7 @@
 //! Test tools for building Fuchsia packages.
 
 use {
-    failure::{format_err, Error, ResultExt},
+    anyhow::{format_err, Context as _, Error},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{DirectoryProxy, FileMarker, FileObject, NodeInfo},
     fuchsia_component::client::{launcher, AppBuilder},
@@ -162,7 +162,7 @@ impl Package {
             dir: &openat::Dir,
             merkle: &fuchsia_merkle::Hash,
             mut source: impl std::io::Read,
-        ) -> Result<(), failure::Error> {
+        ) -> Result<(), anyhow::Error> {
             let mut bytes = vec![];
             source.read_to_end(&mut bytes)?;
             let mut file = dir.write_file(merkle.to_string(), 0777)?;

@@ -6,7 +6,7 @@ pub mod nonce;
 
 // Used in PRF as specified in IEEE Std 802.11-2016, 12.7.1.2.
 use crate::Error;
-use failure::{self, ensure};
+use anyhow::ensure;
 use mundane::hash::Digest;
 use mundane::hmac::HmacSha256;
 #[allow(deprecated)]
@@ -17,7 +17,7 @@ const VALID_PRF_BIT_SIZES: [usize; 6] = [128, 192, 256, 384, 512, 704];
 // IEEE Std 802.11-2016, 12.7.1.2
 // HMAC-SHA1 is considered insecure but is required to be used in IEEE 802.11's PRF.
 #[allow(deprecated)]
-pub(crate) fn prf(k: &[u8], a: &str, b: &[u8], bits: usize) -> Result<Vec<u8>, failure::Error> {
+pub(crate) fn prf(k: &[u8], a: &str, b: &[u8], bits: usize) -> Result<Vec<u8>, anyhow::Error> {
     ensure!(VALID_PRF_BIT_SIZES.contains(&bits), Error::InvalidBitSize(bits));
 
     let mut result = Vec::with_capacity(bits / 8);

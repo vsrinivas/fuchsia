@@ -8,7 +8,7 @@ use {
         story_context_store::ContextEntity,
         suggestions_manager::SearchSuggestionsProvider,
     },
-    failure::Error,
+    anyhow::Error,
     fidl_fuchsia_sys_index::{ComponentIndexMarker, ComponentIndexProxy},
     fuchsia_component::client::{launch, launcher, App},
     fuchsia_syslog::macros::*,

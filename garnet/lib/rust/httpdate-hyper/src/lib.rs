@@ -216,8 +216,8 @@ mod test {
     // These tests all interpret network errors as being passing results
     // in order to prevent flakiness due to unavoidable network flakiness.
     use super::*;
+    use anyhow::Error;
     use chrono::prelude::*;
-    use failure::Error;
     use fuchsia_async::Executor;
 
     #[ignore]

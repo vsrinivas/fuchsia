@@ -5,9 +5,9 @@
 use std::path::Path;
 use std::{fs, io};
 
+use anyhow::{format_err, Context as _, Error};
 use async_trait::async_trait;
 use byteorder::{ByteOrder, LittleEndian};
-use failure::{self, bail, Error, ResultExt};
 use fidl_fuchsia_hardware_input::{
     DeviceMarker as SensorMarker, DeviceProxy as SensorProxy, ReportType,
 };
@@ -38,7 +38,7 @@ async fn open_sensor() -> Result<SensorProxy, Error> {
         let device = open_input_device(entry.path().to_str().expect("Bad path"))?;
         if let Ok(device_descriptor) = device.get_report_desc().await {
             if device_descriptor.len() < 4 {
-                bail!("Short HID header");
+                return Err(format_err!("Short HID header"));
             }
             let device_header = &device_descriptor[0..4];
             if device_header == HID_SENSOR_DESCRIPTOR {
@@ -54,7 +54,7 @@ async fn read_sensor(sensor: &SensorProxy) -> Result<AmbientLightInputRpt, Error
     let report = sensor.get_report(ReportType::Input, 1).await?;
     let report = report.1;
     if report.len() < 11 {
-        bail!("Sensor HID report too short");
+        return Err(format_err!("Sensor HID report too short"));
     }
     Ok(AmbientLightInputRpt {
         rpt_id: report[0],
@@ -133,7 +133,7 @@ mod tests {
     use fuchsia_async as fasync;
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_open_sensor_fail() {
+    async fn test_open_sensor_error() {
         let sensor = Sensor { proxy: None };
         let ambient_light_input_rpt = sensor.read().await.unwrap();
         assert_eq!(ambient_light_input_rpt.rpt_id, 0);

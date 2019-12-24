@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{format_err, Error},
+    anyhow::{format_err, Error},
     fidl_fuchsia_setui::*,
 };
 
@@ -17,7 +17,7 @@ fn extract_setting_type(s: &str) -> Result<SettingType, Error> {
     match s {
         "unknown" => Ok(SettingType::Unknown),
         "login" => Ok(SettingType::Account),
-        _ => Err(failure::format_err!("unknown type:{}", s)),
+        _ => Err(anyhow::format_err!("unknown type:{}", s)),
     }
 }
 

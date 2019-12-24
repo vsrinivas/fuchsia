@@ -8,12 +8,12 @@ use std::collections::HashSet;
 use std::num::{NonZeroU16, NonZeroUsize};
 use std::ops::RangeInclusive;
 
-use failure::Fail;
 use log::trace;
 use net_types::ip::{Ip, IpAddress, Ipv4, Ipv6};
 use net_types::{SpecifiedAddr, Witness};
 use packet::{BufferMut, ParsablePacket, ParseBuffer, Serializer};
 use specialize_ip_macro::specialize_ip;
+use thiserror::Error;
 
 use crate::algorithm::{PortAlloc, PortAllocImpl, ProtocolFlowId};
 use crate::context::{CounterContext, RngContext, RngContextExt, StateContext};
@@ -932,21 +932,21 @@ pub fn get_udp_listener_info<I: IcmpIpExt, C: UdpContext<I>>(
 }
 
 /// Error type for send errors.
-#[derive(Fail, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq)]
 pub enum SendError {
     // TODO(maufflick): Flesh this type out when the underlying error information becomes
     // available (and probably remove this "unknown" error).
     /// Failed to send for an unknown reason.
-    #[fail(display = "send failed")]
+    #[error("send failed")]
     Unknown,
 
-    #[fail(display = "{}", _0)]
+    #[error("{}", _0)]
     /// Errors related to the local address.
-    Local(#[cause] LocalAddressError),
+    Local(LocalAddressError),
 
-    #[fail(display = "{}", _0)]
+    #[error("{}", _0)]
     /// Errors related to the remote address.
-    Remote(#[cause] RemoteAddressError),
+    Remote(RemoteAddressError),
 }
 
 // This conversion from a non-error type into an error isn't ideal.

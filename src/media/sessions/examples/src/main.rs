@@ -6,7 +6,7 @@
 
 #![recursion_limit = "256"]
 
-use failure::{Error, ResultExt};
+use anyhow::{Context as _, Error};
 use fidl::encoding::Decodable;
 use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_media::{Metadata, Property, TimelineFunction, METADATA_LABEL_ARTIST};

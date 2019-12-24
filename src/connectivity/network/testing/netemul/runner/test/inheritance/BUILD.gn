@@ -24,8 +24,9 @@ rustc_binary("inheritance") {
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/connectivity/network/testing/netemul/lib/fidl:environment-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:structopt",
+    "//third_party/rust_crates:thiserror",
   ]
 }

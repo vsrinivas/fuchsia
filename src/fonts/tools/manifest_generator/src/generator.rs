@@ -7,7 +7,7 @@ use {
         font_catalog::TypefaceInAssetIndex, font_db::FontDb, FontCatalog, FontPackageListing,
         FontSets,
     },
-    failure::Error,
+    anyhow::Error,
     font_info::FontInfoLoader,
     manifest::{v2, FontManifestWrapper},
     std::path::Path,

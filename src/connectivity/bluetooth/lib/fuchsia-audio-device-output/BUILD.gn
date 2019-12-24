@@ -22,14 +22,15 @@ rustc_library("fuchsia-audio-device-output") {
     "//garnet/public/rust/fuchsia-zircon",
     "//garnet/public/rust/zerocopy",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:bitflags",
     "//third_party/rust_crates:byteorder",
-    "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:num-derive",
     "//third_party/rust_crates:num-traits",
     "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 

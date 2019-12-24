@@ -6,7 +6,7 @@ use {
     crate::ast::{self, BanjoAst, Decl},
     crate::backends::util::{to_c_name, ValuedAttributes},
     crate::backends::Backend,
-    failure::{format_err, Error},
+    anyhow::{format_err, Error},
     std::collections::HashMap,
     std::io,
 };

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{Error, ResultExt};
+use anyhow::{Context as _, Error};
 use fidl_fuchsia_update::{
     Initiator, ManagerMarker, ManagerProxy, MonitorEvent, MonitorMarker, MonitorProxy, Options,
     State,

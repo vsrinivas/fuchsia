@@ -4,7 +4,7 @@
 
 use {
     crate::{json::SerializableHierarchyFields, utils::format_parts, *},
-    failure::Error,
+    anyhow::Error,
     serde::ser::{Serialize, SerializeMap, SerializeStruct, Serializer},
     serde_json::{
         json,

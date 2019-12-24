@@ -294,7 +294,7 @@ async fn use_work_scheduler_control_routed() {
 ///
 /// b: uses framework service /svc/fuchsia.sys2.WorkSchedulerControl from framework (not allowed)
 #[fuchsia_async::run_singlethreaded(test)]
-async fn use_work_scheduler_control_fail() {
+async fn use_work_scheduler_control_error() {
     let offer_use_path = CapabilityPath::try_from("/svc/WorkSchedulerControl").unwrap();
     let components = vec![
         (

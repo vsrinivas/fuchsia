@@ -14,7 +14,7 @@ use {
         },
         stream_framer::{StreamDeframer, StreamFramer},
     },
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl::{
         endpoints::{ClientEnd, RequestStream, ServiceMarker},
         AsyncChannel, Channel, Handle, HandleBased,
@@ -112,7 +112,7 @@ impl<'a, Runtime: NodeRuntime + 'static> MessageReceiver<PhysLinkId<Runtime::Lin
         let app_channel = self.make_channel(stream_id)?;
         self.service_map
             .get(service_name)
-            .ok_or_else(|| failure::format_err!("Unknown service {}", service_name))?
+            .ok_or_else(|| anyhow::format_err!("Unknown service {}", service_name))?
             .connect_to_service(app_channel, connection_info)?;
         Ok(())
     }
@@ -131,7 +131,7 @@ impl<'a, Runtime: NodeRuntime + 'static> MessageReceiver<PhysLinkId<Runtime::Lin
         handles: &mut Vec<Self::Handle>,
     ) -> Result<(), Error> {
         let stream = self.streams.get(stream_id).ok_or_else(|| {
-            failure::format_err!("Stream {:?} not found for datagram {:?}", stream_id, bytes)
+            anyhow::format_err!("Stream {:?} not found for datagram {:?}", stream_id, bytes)
         })?;
         match stream {
             StreamBinding::Channel(ref chan) => {
@@ -209,7 +209,7 @@ impl NodeStateCallback for ListPeersResponse {
         match self
             .responder
             .take()
-            .ok_or_else(|| failure::format_err!("State callback called twice"))?
+            .ok_or_else(|| anyhow::format_err!("State callback called twice"))?
             .send(Ok(peers))
         {
             Ok(_) => Ok(()),
@@ -490,7 +490,7 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
         let rx = {
             let this = &mut *self.inner.borrow_mut();
             if this.list_peers_state.borrow().in_query {
-                failure::bail!("Already querying peers");
+                return Err(anyhow::format_err!("Already querying peers"));
             }
             this.list_peers_state.borrow_mut().in_query = true;
             let (tx, rx) = futures::channel::oneshot::channel();
@@ -522,7 +522,7 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
             let services: Vec<String> = this.service_map.keys().cloned().collect();
             if let Err(e) = this.router.publish_node_description(services.clone()) {
                 this.service_map.remove(&service_name);
-                failure::bail!(e)
+                return Err(anyhow::format_err!(e));
             }
             this.node_table.update_node(this.router.node_id(), NodeDescription { services });
             self.clone().need_flush(this);
@@ -548,7 +548,7 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
         if is_local {
             this.service_map
                 .get(service_name)
-                .ok_or_else(|| failure::format_err!("Unknown service {}", service_name))?
+                .ok_or_else(|| anyhow::format_err!("Unknown service {}", service_name))?
                 .connect_to_service(
                     chan,
                     fidl_fuchsia_overnet::ConnectionInfo { peer: Some(node_id.into()) },
@@ -574,7 +574,7 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
                 Duration::from_micros(10),
                 Duration::from_secs(1)
                     .checked_div(n)
-                    .ok_or_else(|| failure::format_err!("Division failed: 1 second / {}", n))?,
+                    .ok_or_else(|| anyhow::format_err!("Division failed: 1 second / {}", n))?,
             ))
         } else {
             None
@@ -701,21 +701,25 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
             }
         });
         let mut greeting_bytes =
-            rx_frames.next().await.ok_or(failure::format_err!("No greeting received on socket"))?;
+            rx_frames.next().await.ok_or(anyhow::format_err!("No greeting received on socket"))?;
         let greeting = decode_fidl::<StreamSocketGreeting>(greeting_bytes.as_mut())?;
         let node_id = match greeting {
-            StreamSocketGreeting { magic_string: None, .. } => failure::bail!(
-                "Required magic string '{}' not present in greeting",
-                GREETING_STRING
-            ),
+            StreamSocketGreeting { magic_string: None, .. } => {
+                return Err(anyhow::format_err!(
+                    "Required magic string '{}' not present in greeting",
+                    GREETING_STRING
+                ))
+            }
             StreamSocketGreeting { magic_string: Some(ref x), .. } if x != GREETING_STRING => {
-                failure::bail!(
+                return Err(anyhow::format_err!(
                     "Expected magic string '{}' in greeting, got '{}'",
                     GREETING_STRING,
                     x
-                )
+                ))
             }
-            StreamSocketGreeting { node_id: None, .. } => failure::bail!("No node id in greeting"),
+            StreamSocketGreeting { node_id: None, .. } => {
+                return Err(anyhow::format_err!("No node id in greeting"))
+            }
             StreamSocketGreeting { node_id: Some(n), .. } => n.id,
         };
 
@@ -734,7 +738,7 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
             ) {
                 Err(e) => {
                     this.socket_links.remove(id);
-                    failure::bail!(e);
+                    return Err(anyhow::format_err!(e));
                 }
                 Ok(x) => {
                     this.socket_links.get_mut(id).unwrap().router_id = x;
@@ -855,7 +859,7 @@ impl<Runtime: NodeRuntime + 'static> Node<Runtime> {
             PhysLinkId::SocketLink(link_id) => {
                 let link = socket_links
                     .get_mut(*link_id)
-                    .ok_or_else(|| failure::format_err!("Link {:?} not found", link_id))?;
+                    .ok_or_else(|| anyhow::format_err!("Link {:?} not found", link_id))?;
                 link.framer.queue_send(data)?;
                 if let Some(tx) = link.writes.take() {
                     runtime.spawn_local(self.clone().flush_sends_to_socket_link(

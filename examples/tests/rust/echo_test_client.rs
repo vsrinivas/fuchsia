@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{Error, ResultExt},
+    anyhow::{Context, Error},
     fidl_fidl_examples_routing_echo as fecho, fidl_fuchsia_test as ftest, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     fuchsia_component::server::ServiceFs,

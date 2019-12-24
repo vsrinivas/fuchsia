@@ -51,22 +51,22 @@ impl<'de> serde::Deserialize<'de> for MacAddress {
 }
 
 impl std::str::FromStr for MacAddress {
-    type Err = failure::Error;
+    type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        use failure::ResultExt;
+        use anyhow::Context as _;
 
         let mut octets = [0; 6];
         let mut iter = s.split(':');
         for (i, octet) in octets.iter_mut().enumerate() {
             let next_octet = iter.next().ok_or_else(|| {
-                failure::format_err!("MAC address [{}] only specifies {} out of 6 octets", s, i)
+                anyhow::format_err!("MAC address [{}] only specifies {} out of 6 octets", s, i)
             })?;
             *octet = u8::from_str_radix(next_octet, 16)
-                .with_context(|_| format!("could not parse hex integer from {}", next_octet))?;
+                .with_context(|| format!("could not parse hex integer from {}", next_octet))?;
         }
         if iter.next().is_some() {
-            return Err(failure::format_err!("MAC address has more than six octets: {}", s));
+            return Err(anyhow::format_err!("MAC address has more than six octets: {}", s));
         }
         Ok(MacAddress { octets })
     }
@@ -94,14 +94,14 @@ impl EthernetFeatures {
 }
 
 impl std::str::FromStr for EthernetFeatures {
-    type Err = failure::Error;
+    type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.as_ref() {
             "synthetic" => Ok(Self::SYNTHETIC),
             "loopback" => Ok(Self::LOOPBACK),
             "wireless" => Ok(Self::WLAN),
-            s => Err(failure::format_err!("unknown network interface feature \"{}\"", s)),
+            s => Err(anyhow::format_err!("unknown network interface feature \"{}\"", s)),
         }
     }
 }

@@ -54,8 +54,9 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//sdk/fidl/fuchsia.media.sounds:fuchsia.media.sounds-rustc",
     "//src/lib/fidl_table_validation",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]
 }

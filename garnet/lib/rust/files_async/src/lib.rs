@@ -6,38 +6,38 @@
 
 ///! Safe wrappers for enumerating `fuchsia.io.Directory` contents.
 use {
-    failure::{self, Fail},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, MAX_BUF, MODE_TYPE_DIRECTORY},
     fuchsia_zircon as zx,
     futures::future::BoxFuture,
     std::{collections::VecDeque, mem, str::Utf8Error},
+    thiserror::{self, Error},
 };
 
 /// Error returned by files_async library.
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum Error {
-    #[fail(display = "a directory entry could not be decoded: {:?}", _0)]
-    DecodeDirent(#[cause] DecodeDirentError),
+    #[error("a directory entry could not be decoded: {:?}", _0)]
+    DecodeDirent(DecodeDirentError),
 
-    #[fail(display = "fidl error during {}: {:?}", _0, _1)]
-    Fidl(&'static str, #[cause] fidl::Error),
+    #[error("fidl error during {}: {:?}", _0, _1)]
+    Fidl(&'static str, fidl::Error),
 
-    #[fail(display = "`read_dirents` failed with status {:?}", _0)]
-    ReadDir(#[cause] zx::Status),
+    #[error("`read_dirents` failed with status {:?}", _0)]
+    ReadDir(zx::Status),
 
-    #[fail(display = "`unlink` failed with status {:?}", _0)]
-    Unlink(#[cause] zx::Status),
+    #[error("`unlink` failed with status {:?}", _0)]
+    Unlink(zx::Status),
 }
 
 /// An error encountered while decoding a single directory entry.
-#[derive(Debug, PartialEq, Eq, Fail)]
+#[derive(Debug, PartialEq, Eq, Error)]
 pub enum DecodeDirentError {
-    #[fail(display = "an entry extended past the end of the buffer")]
+    #[error("an entry extended past the end of the buffer")]
     BufferOverrun,
 
-    #[fail(display = "name is not valid utf-8")]
-    InvalidUtf8(#[cause] Utf8Error),
+    #[error("name is not valid utf-8")]
+    InvalidUtf8(Utf8Error),
 }
 
 /// The type of a node.
@@ -86,7 +86,7 @@ impl DirEntry {
 
 /// Returns a Vec of all non-directory nodes and all empty directory nodes in the given directory
 /// proxy. The returned entries will not include ".".
-pub async fn readdir_recursive(dir: &DirectoryProxy) -> Result<Vec<DirEntry>, failure::Error> {
+pub async fn readdir_recursive(dir: &DirectoryProxy) -> Result<Vec<DirEntry>, anyhow::Error> {
     let mut directories: VecDeque<DirEntry> = VecDeque::new();
     let mut entries: Vec<DirEntry> = Vec::new();
 

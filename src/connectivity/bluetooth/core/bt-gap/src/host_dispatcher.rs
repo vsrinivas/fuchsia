@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{err_msg, Error, ResultExt},
+    anyhow::{format_err, Context as _, Error},
     fidl::endpoints::{self, ServerEnd},
     fidl_fuchsia_bluetooth::{
         Appearance, DeviceClass, Error as FidlError, ErrorCode, PeerId as FidlPeerId,
@@ -465,11 +465,11 @@ impl HostDispatcher {
         }
 
         if let Err(_) = self.stash().rm_peer(peer_id).await {
-            return Err(err_msg("Couldn't remove peer").into());
+            return Err(format_err!("Couldn't remove peer").into());
         }
 
         if adapters_removed == 0 {
-            return Err(err_msg("No adapters had peer").into());
+            return Err(format_err!("No adapters had peer").into());
         }
         Ok(())
     }
@@ -702,11 +702,11 @@ impl HostDispatcher {
             .read()
             .set_connectable(true)
             .await
-            .map_err(|_| err_msg("failed to set connectable"))?;
+            .map_err(|_| format_err!("failed to set connectable"))?;
         host_device
             .read()
             .enable_background_scan(true)
-            .map_err(|_| err_msg("failed to enable background scan"))?;
+            .map_err(|_| format_err!("failed to enable background scan"))?;
 
         // Initialize bt-gap as this host's pairing delegate.
         start_pairing_delegate(self.clone(), host_device.clone())?;
@@ -766,7 +766,7 @@ impl HostListener for HostDispatcher {
     fn on_peer_removed(&mut self, id: PeerId) {
         self.on_device_removed(id)
     }
-    type HostBondFut = futures::future::BoxFuture<'static, Result<(), failure::Error>>;
+    type HostBondFut = futures::future::BoxFuture<'static, Result<(), anyhow::Error>>;
     fn on_new_host_bond(&mut self, data: BondingData) -> Self::HostBondFut {
         self.store_bond(data).boxed()
     }
@@ -833,7 +833,7 @@ impl Future for WhenHostsFound {
 /// Initialize a HostDevice
 async fn init_host(path: &Path, node: inspect::Node) -> Result<Arc<RwLock<HostDevice>>, Error> {
     // Connect to the host device.
-    let host = File::open(path).map_err(|_| err_msg("failed to open bt-host device"))?;
+    let host = File::open(path).map_err(|_| format_err!("failed to open bt-host device"))?;
     let handle = bt::host::open_host_channel(&host)?;
     let handle = fasync::Channel::from_channel(handle.into())?;
     let host = HostProxy::new(handle);

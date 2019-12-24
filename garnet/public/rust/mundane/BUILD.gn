@@ -12,7 +12,8 @@ rustc_library("mundane") {
 
   deps = [
     "//third_party/boringssl/rust/boringssl-sys",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:thiserror",
   ]
 
   features = [

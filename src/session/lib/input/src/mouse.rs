@@ -5,8 +5,8 @@
 use {
     crate::input_device,
     crate::input_device::InputDeviceBinding,
+    anyhow::{format_err, Error},
     async_trait::async_trait,
-    failure::{self, format_err, Error},
     fidl_fuchsia_input_report::{InputDeviceProxy, InputReport},
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_info,

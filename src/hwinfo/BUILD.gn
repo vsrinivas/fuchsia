@@ -26,13 +26,14 @@ rustc_binary("hwinfo_bin") {
     "//sdk/fidl/fuchsia.factory:fuchsia.factory-rustc",
     "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo-rustc",
     "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:openat",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_derive",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:structopt",
+    "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
@@ -103,8 +104,9 @@ rustc_test("hwinfo_positive_test") {
     "//garnet/public/rust/fuchsia-component",
     "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo-rustc",
     "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 
@@ -118,8 +120,9 @@ rustc_test("hwinfo_negative_test") {
     "//garnet/public/rust/fuchsia-component",
     "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo-rustc",
     "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 

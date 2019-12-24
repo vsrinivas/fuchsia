@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{format_err, Error};
+use anyhow::{format_err, Error};
 use fidl_fuchsia_devicesettings::{
     DeviceSettingsManagerRequest, DeviceSettingsManagerRequestStream, DeviceSettingsWatcherProxy,
     Status, ValueType,
@@ -187,7 +187,7 @@ async fn main() -> Result<(), Error> {
 
 #[cfg(test)]
 mod test {
-    use failure::ResultExt;
+    use anyhow::Context as _;
     use fidl_fuchsia_devicesettings::{
         DeviceSettingsManagerMarker, DeviceSettingsWatcherMarker, DeviceSettingsWatcherRequest,
         Status,

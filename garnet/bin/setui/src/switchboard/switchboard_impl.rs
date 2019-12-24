@@ -4,7 +4,7 @@
 
 use crate::switchboard::base::*;
 
-use failure::{format_err, Error};
+use anyhow::{format_err, Error};
 
 use futures::channel::mpsc::UnboundedSender;
 

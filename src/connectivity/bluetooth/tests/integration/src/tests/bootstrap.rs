@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{bail, format_err, Error, ResultExt},
+    anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_bluetooth_sys as sys,
     fuchsia_bluetooth::expectation::{asynchronous::ExpectableStateExt, Predicate as P},
     fuchsia_bluetooth::types::{Address, BondingData, Identity, LeData, OneOrBoth, PeerId},
@@ -67,7 +67,10 @@ async fn test_add_and_commit_identities(
     // graceful failure case
     let initial_devices = control_proxy.get_known_remote_devices().await.ok();
     if initial_devices != Some(vec![]) {
-        bail!("Failed: Initial devices not empty! Expected empty, found: {:?}", initial_devices);
+        return Err(format_err!(
+            "Failed: Initial devices not empty! Expected empty, found: {:?}",
+            initial_devices
+        ));
     }
 
     let identity = example_emulator_identity();

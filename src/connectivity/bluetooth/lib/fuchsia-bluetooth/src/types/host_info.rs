@@ -7,7 +7,7 @@ use {
         inspect::{DebugExt, InspectData, Inspectable, IsInspectable, ToProperty},
         types::Address,
     },
-    failure::{format_err, Error},
+    anyhow::{format_err, Error},
     fidl_fuchsia_bluetooth::{Bool, Id},
     fidl_fuchsia_bluetooth_control as fctrl, fidl_fuchsia_bluetooth_sys as fsys,
     fuchsia_inspect::{self as inspect, Property},

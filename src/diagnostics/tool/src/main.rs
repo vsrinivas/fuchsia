@@ -3,7 +3,7 @@
 // // found in the LICENSE file.
 
 #![allow(dead_code)]
-use failure::{format_err, Error};
+use anyhow::{format_err, Error};
 //use termion;
 use difference::{
     self,

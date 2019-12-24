@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::{ResultExt as TokenManagerResultExt, TokenManagerError};
-use failure::{format_err, ResultExt};
+use anyhow::{format_err, Context as _};
 use fidl::endpoints::{create_endpoints, ClientEnd, DiscoverableService, ServerEnd};
 use fidl_fuchsia_auth::AuthProviderMarker;
 use fidl_fuchsia_auth::{AuthProviderConfig, Status};

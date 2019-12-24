@@ -5,7 +5,7 @@
 use {
     super::{validate::ROOT_ID, Data, Metrics, Node, Payload, Property, ROOT_NAME},
     crate::metrics::{BlockMetrics, BlockStatus},
-    failure::{bail, format_err, Error},
+    anyhow::{bail, format_err, Error},
     fuchsia_inspect::{
         self,
         format::{
@@ -102,7 +102,7 @@ fn check_zero_bits(
     end: usize,
 ) -> Result<(), Error> {
     if end < start {
-        bail!("End must be >= start");
+        return Err(format_err!("End must be >= start"));
     }
     let bits_in_block = order_to_size(block.order()) * BITS_PER_BYTE;
     if start > bits_in_block - 1 {
@@ -181,7 +181,9 @@ impl Scanner {
                 Ok(BlockType::Extent) => ret.process_extent(block, buffer)?,
                 Ok(BlockType::Name) => ret.process_name(block, buffer)?,
                 Ok(BlockType::Tombstone) => ret.process_tombstone(block)?,
-                Ok(BlockType::LinkValue) => bail!("LinkValue isn't supported yet."),
+                Ok(BlockType::LinkValue) => {
+                    return Err(format_err!("LinkValue isn't supported yet."))
+                }
                 Err(error) => return Err(error),
             }
         }
@@ -253,7 +255,7 @@ impl Scanner {
         match node.metrics {
             None => {
                 if node_id != 0 {
-                    bail!("Invalid node (no metrics) at index {}", node_id)
+                    return Err(format_err!("Invalid node (no metrics) at index {}", node_id));
                 }
             }
             Some(metrics) => {
@@ -425,11 +427,16 @@ impl Scanner {
                         ScannedPayload::DoubleArray(numbers?, array_format)
                     }
                     illegal_type => {
-                        bail!("No way I should see {:?} for ArrayEntryType", illegal_type)
+                        return Err(format_err!(
+                            "No way I should see {:?} for ArrayEntryType",
+                            illegal_type
+                        ))
                     }
                 }
             }
-            illegal_type => bail!("No way I should see {:?} for BlockType", illegal_type),
+            illegal_type => {
+                return Err(format_err!("No way I should see {:?} for BlockType", illegal_type))
+            }
         })
     }
 
@@ -460,7 +467,7 @@ impl Scanner {
     ) -> Result<(Vec<(Node, u32)>, Vec<(Property, u32)>), Error> {
         let scanned_node = self.use_node(id)?;
         if !scanned_node.validated {
-            bail!("No node at {}", id)
+            return Err(format_err!("No node at {}", id));
         }
         let mut nodes_in_tree = vec![];
         let mut properties_under = vec![];

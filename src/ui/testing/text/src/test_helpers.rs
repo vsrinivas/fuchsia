@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{bail, err_msg, Error, ResultExt};
+use anyhow::{bail, format_err, Context as _, Error};
 use fidl_fuchsia_ui_text as txt;
 use fuchsia_async::TimeoutExt;
 use futures::prelude::*;
@@ -53,7 +53,7 @@ impl TextFieldWrapper {
             &self.defunct_point_ids | &all_point_ids_for_state(&self.last_state);
         self.last_state = match get_update(&self.proxy).await {
             Ok(v) => v,
-            Err(e) => bail!(format!("{}", e)),
+            Err(e) => return Err(format_err!(format!("{}", e))),
         };
         self.current_point_ids = all_point_ids_for_state(&self.last_state);
         self.validate_point_ids()
@@ -88,7 +88,7 @@ impl TextFieldWrapper {
         self.proxy.begin_edit(rev)?;
         self.proxy.replace(&mut self.last_state.selection.range, contents)?;
         if self.proxy.commit_edit().await? != txt::Error::Ok {
-            bail!("Expected commit_edit to succeed");
+            return Err(format_err!("Expected commit_edit to succeed"));
         }
         self.wait_for_update().await?;
         Ok(())
@@ -107,7 +107,10 @@ impl TextFieldWrapper {
         let (new_point, err) =
             self.proxy.position_offset(&mut point, offset, self.last_state.revision).await?;
         if err != txt::Error::Ok {
-            bail!(format!("Expected point_offset request to succeed, returned {:?} instead", err));
+            return Err(format_err!(format!(
+                "Expected point_offset request to succeed, returned {:?} instead",
+                err
+            )));
         }
         self.current_point_ids.insert(new_point.id);
         if let Err(e) = self.validate_point_ids() {
@@ -124,7 +127,10 @@ impl TextFieldWrapper {
         let (contents, actual_start, err) =
             self.proxy.contents(range, self.last_state.revision).await?;
         if err != txt::Error::Ok {
-            bail!(format!("Expected contents request to succeed, returned {:?} instead", err));
+            return Err(format_err!(format!(
+                "Expected contents request to succeed, returned {:?} instead",
+                err
+            )));
         }
         Ok((contents, actual_start))
     }
@@ -133,7 +139,10 @@ impl TextFieldWrapper {
     pub async fn distance<'a>(&'a mut self, range: &'a mut txt::Range) -> Result<i64, Error> {
         let (length, err) = self.proxy.distance(range, self.last_state.revision).await?;
         if err != txt::Error::Ok {
-            bail!(format!("Expected length request to succeed, returned {:?} instead", err));
+            return Err(format_err!(format!(
+                "Expected length request to succeed, returned {:?} instead",
+                err
+            )));
         }
         Ok(length)
     }
@@ -212,9 +221,11 @@ async fn get_update(text_field: &txt::TextFieldProxy) -> Result<TextFieldState, 
     let mut stream = text_field.take_event_stream();
     let msg_future = stream
         .try_next()
-        .map_err(|e| err_msg(format!("{}", e)))
-        .on_timeout(*crate::TEST_TIMEOUT, || Err(err_msg("Waiting for on_update event timed out")));
-    let msg = msg_future.await?.ok_or(err_msg("TextMgr event stream unexpectedly closed"))?;
+        .map_err(|e| format_err!(format!("{}", e)))
+        .on_timeout(*crate::TEST_TIMEOUT, || {
+            Err(format_err!("Waiting for on_update event timed out"))
+        });
+    let msg = msg_future.await?.ok_or(format_err!("TextMgr event stream unexpectedly closed"))?;
     match msg {
         txt::TextFieldEvent::OnUpdate { state, .. } => Ok(state.try_into()?),
     }

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{format_err, Error, ResultExt},
+    anyhow::{format_err, Context, Error},
     fidl_fuchsia_cobalt::{LoggerFactoryMarker, LoggerProxy},
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,

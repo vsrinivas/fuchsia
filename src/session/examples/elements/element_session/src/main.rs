@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::{Context as _, Error},
     element_management::{ElementManager, ElementManagerError, SimpleElementManager},
-    failure::{Error, ResultExt},
     fidl_fuchsia_session::{
         ElementManagerRequest, ElementManagerRequestStream, ProposeElementError,
     },

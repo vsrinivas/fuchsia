@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::{format_err, Error},
     ethernet,
-    failure::{bail, format_err, Error},
     fidl_fuchsia_netemul_network::{
         EndpointManagerMarker, FakeEndpointEvent, FakeEndpointMarker, NetworkContextMarker,
         NetworkManagerMarker,
@@ -114,7 +114,7 @@ async fn run_echo_server(ep_name: String) -> Result<(), Error> {
 
     let ep = match ep {
         Some(ep) => ep.into_proxy().unwrap(),
-        None => bail!(format_err!("Can't find endpoint {}", &ep_name)),
+        None => return Err(format_err!("Can't find endpoint {}", &ep_name)),
     };
 
     // Create an EthernetClient to wrap around the Endpoint's ethernet device.
@@ -123,7 +123,7 @@ async fn run_echo_server(ep_name: String) -> Result<(), Error> {
     let eth_dev = ep.get_ethernet_device().await?;
     let eth_proxy = match eth_dev.into_proxy() {
         Ok(proxy) => proxy,
-        _ => bail!("Could not get ethernet proxy"),
+        _ => return Err(format_err!("Could not get ethernet proxy")),
     };
 
     let mut eth_client =
@@ -177,7 +177,9 @@ async fn main() -> Result<(), Error> {
 
     if opt.is_mock_guest {
         if opt.network_name == None || opt.endpoint_name == None || opt.server_name == None {
-            bail!("Must provide network_name, endpoint_name, and server_name for mock guests");
+            return Err(format_err!(
+                "Must provide network_name, endpoint_name, and server_name for mock guests"
+            ));
         }
         run_mock_guest(
             opt.network_name.unwrap(),
@@ -191,7 +193,7 @@ async fn main() -> Result<(), Error> {
                 run_echo_server(endpoint_name).await?;
             }
             None => {
-                bail!("Must provide endpoint_name for server");
+                return Err(format_err!("Must provide endpoint_name for server"));
             }
         }
     }

@@ -33,11 +33,12 @@ rustc_test("test") {
     "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
     "//src/identity/fidl:account-prototype-rustc",
     "//src/identity/lib/account_common",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 

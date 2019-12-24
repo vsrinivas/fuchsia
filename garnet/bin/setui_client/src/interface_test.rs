@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl_fuchsia_intl::{LocaleId, TemperatureUnit, TimeZoneId},
     fidl_fuchsia_settings::*,
     fuchsia_async as fasync,
@@ -216,7 +216,7 @@ macro_rules! create_service  {
                 match connection {
                     $setting_type(stream) => {
                         stream
-                            .err_into::<failure::Error>()
+                            .err_into::<anyhow::Error>()
                             .try_for_each(|req| async move {
                                 match req {
                                     $($request => $callback)*
@@ -224,7 +224,7 @@ macro_rules! create_service  {
                                 }
                                 Ok(())
                             })
-                            .unwrap_or_else(|e: failure::Error| panic!(
+                            .unwrap_or_else(|e: anyhow::Error| panic!(
                                 "error running setui server: {:?}",
                                 e
                             )).await;
@@ -772,7 +772,7 @@ fn serve_check_login_override_mutate(
     expected_override: fidl_fuchsia_setui::LoginOverride,
 ) -> impl Future<Output = ()> {
     stream
-        .err_into::<failure::Error>()
+        .err_into::<anyhow::Error>()
         .try_for_each(move |req| async move {
             match req {
                 fidl_fuchsia_setui::SetUiServiceRequest::Mutate {
@@ -808,5 +808,5 @@ fn serve_check_login_override_mutate(
             };
             Ok(())
         })
-        .unwrap_or_else(|e: failure::Error| panic!("error running setui server: {:?}", e))
+        .unwrap_or_else(|e: anyhow::Error| panic!("error running setui server: {:?}", e))
 }

@@ -7,7 +7,7 @@
 use {
     crate::event::Event,
     crate::fidl_worker::FidlWorker,
-    failure::Error,
+    anyhow::Error,
     fidl::endpoints::{create_request_stream, RequestStream, ServiceMarker},
     fidl_fuchsia_overnet::{
         ServiceProviderMarker, ServiceProviderRequest, ServicePublisherMarker,

@@ -4,9 +4,8 @@
 
 #![cfg(test)]
 use {
-    cobalt_sw_delivery_registry as metrics,
-    failure::Error,
-    fidl_fuchsia_paver as paver,
+    anyhow::Error,
+    cobalt_sw_delivery_registry as metrics, fidl_fuchsia_paver as paver,
     fidl_fuchsia_pkg::PackageResolverRequestStream,
     fidl_fuchsia_sys::{LauncherProxy, TerminationReason},
     fuchsia_async as fasync,

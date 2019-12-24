@@ -19,7 +19,7 @@ mod auth_provider_supplier;
 mod token_manager_factory;
 
 use crate::token_manager_factory::TokenManagerFactory;
-use failure::{Error, ResultExt};
+use anyhow::{Context as _, Error};
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use futures::StreamExt;

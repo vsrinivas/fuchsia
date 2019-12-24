@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{Error, Fail, ResultExt},
+    anyhow::{Context as _, Error},
     fidl_fuchsia_bluetooth_le::{CentralMarker, CentralProxy, ScanFilter},
     fuchsia_async::{
         self as fasync,
@@ -120,17 +120,12 @@ fn do_scan(
         None
     };
 
-    let fut = Right(
-        central
-            .start_scan(filter.as_mut())
-            .map_err(|e| e.context("failed to initiate scan").into())
-            .and_then(|status| {
-                future::ready(match status.error {
-                    None => Ok(()),
-                    Some(e) => Err(BTError::from(*e).into()),
-                })
-            }),
-    );
+    let fut = Right(central.start_scan(filter.as_mut()).map_err(|e| e.into()).and_then(|status| {
+        future::ready(match status.error {
+            None => Ok(()),
+            Some(e) => Err(BTError::from(*e).into()),
+        })
+    }));
 
     (remaining_scan_results, connect, fut)
 }

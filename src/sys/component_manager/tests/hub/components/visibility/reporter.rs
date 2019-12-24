@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {failure::Error, fuchsia_async as fasync, hub_report::HubReport};
+use {anyhow::Error, fuchsia_async as fasync, hub_report::HubReport};
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {

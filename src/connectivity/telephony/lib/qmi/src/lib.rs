@@ -12,7 +12,7 @@ use std::fs::File;
 /// Connect to transport driver, and pass a channel handle for snoop Qmi messages
 pub async fn connect_snoop_channel(
     device: &File,
-) -> Result<ServerEnd<QmiSnoopMarker>, failure::Error> {
+) -> Result<ServerEnd<QmiSnoopMarker>, anyhow::Error> {
     let qmi_channel: fasync::Channel = fasync::Channel::from_channel(fdio::clone_channel(device)?)?;
     let interface = QmiProxy::new(qmi_channel);
     let (client_side, server_side) = create_endpoints::<QmiSnoopMarker>()?;
@@ -24,7 +24,7 @@ pub async fn connect_snoop_channel(
 
 /// Connect to transport driver, and pass a channel handle for Tx/Rx Qmi messages
 /// to/from ril-qmi
-pub async fn connect_transport_device(device: &File) -> Result<zx::Channel, failure::Error> {
+pub async fn connect_transport_device(device: &File) -> Result<zx::Channel, anyhow::Error> {
     let qmi_channel: fasync::Channel = fasync::Channel::from_channel(fdio::clone_channel(device)?)?;
     let interface = QmiProxy::new(qmi_channel);
     // create a new channel
@@ -35,7 +35,7 @@ pub async fn connect_transport_device(device: &File) -> Result<zx::Channel, fail
     }
 }
 
-pub async fn set_network_status(device: &File, state: bool) -> Result<(), failure::Error> {
+pub async fn set_network_status(device: &File, state: bool) -> Result<(), anyhow::Error> {
     let qmi_channel: fasync::Channel = fasync::Channel::from_channel(fdio::clone_channel(device)?)?;
     let interface = QmiProxy::new(qmi_channel);
     interface.set_network(state).await.map_err(Into::into)

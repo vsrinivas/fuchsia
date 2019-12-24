@@ -34,8 +34,8 @@
 
 use {
     crate::{addr, port},
+    anyhow::format_err,
     crossbeam,
-    failure::{err_msg, Fail},
     fidl::endpoints,
     fidl_fuchsia_hardware_vsock::{
         CallbacksMarker, CallbacksRequest, CallbacksRequestStream, DeviceProxy,
@@ -59,6 +59,7 @@ use {
         sync::Arc,
         task::{Context, Poll},
     },
+    thiserror::Error,
     void::Void,
 };
 
@@ -82,21 +83,21 @@ enum Deregister {
     Port(u32),
 }
 
-#[derive(Fail, Debug)]
+#[derive(Error, Debug)]
 enum Error {
-    #[fail(display = "Driver returned failure status {}", _0)]
-    Driver(#[fail(cause)] zx::Status),
-    #[fail(display = "All ephemeral ports are allocated")]
+    #[error("Driver returned failure status {}", _0)]
+    Driver(#[source] zx::Status),
+    #[error("All ephemeral ports are allocated")]
     OutOfPorts,
-    #[fail(display = "Addr has already been bound")]
+    #[error("Addr has already been bound")]
     AlreadyBound,
-    #[fail(display = "Connection refused by remote")]
+    #[error("Connection refused by remote")]
     ConnectionRefused,
-    #[fail(display = "Error whilst communication with client")]
-    ClientCommunication(#[fail(cause)] failure::Error),
-    #[fail(display = "Error whilst communication with client")]
-    DriverCommunication(#[fail(cause)] failure::Error),
-    #[fail(display = "Driver reset the connection")]
+    #[error("Error whilst communication with client")]
+    ClientCommunication(#[source] anyhow::Error),
+    #[error("Error whilst communication with client")]
+    DriverCommunication(#[source] anyhow::Error),
+    #[error("Driver reset the connection")]
     ConnectionReset,
 }
 
@@ -176,7 +177,7 @@ impl Vsock {
     /// a fatal error occurs the future will never yield a result and will execute infinitely.
     pub async fn new(
         device: DeviceProxy,
-    ) -> Result<(Self, impl Future<Output = Result<Void, failure::Error>>), failure::Error> {
+    ) -> Result<(Self, impl Future<Output = Result<Void, anyhow::Error>>), anyhow::Error> {
         let (callbacks_client, callbacks_server) =
             endpoints::create_endpoints::<CallbacksMarker>()?;
         let server_stream = callbacks_server.into_stream()?;
@@ -184,7 +185,7 @@ impl Vsock {
         device
             .start(callbacks_client)
             .map(|x| map_driver_result(x))
-            .err_into::<failure::Error>()
+            .err_into::<anyhow::Error>()
             .await?;
 
         let service = State {
@@ -203,13 +204,13 @@ impl Vsock {
     async fn run_callbacks(
         self,
         mut callbacks: CallbacksRequestStream,
-    ) -> Result<Void, failure::Error> {
+    ) -> Result<Void, anyhow::Error> {
         while let Some(Ok(cb)) = callbacks.next().await {
             self.lock().do_callback(cb);
         }
         // The only way to get here is if our callbacks stream ended, since our notifications
         // cannot disconnect as we are holding a reference to them in |service|.
-        Err(err_msg("Driver disconnected"))
+        Err(format_err!("Driver disconnected"))
     }
 
     // Spawns a new asynchronous thread for listening for incoming connections on a port.
@@ -249,7 +250,7 @@ impl Vsock {
     pub async fn run_client_connection(
         self,
         request: ConnectorRequestStream,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), anyhow::Error> {
         let self_ref = &self;
         let fut = request
             .map_err(|err| Error::ClientCommunication(err.into()))

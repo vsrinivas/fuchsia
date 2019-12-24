@@ -6,7 +6,7 @@
 #[allow(unused)]
 use crate::crypto_utils::prf;
 use crate::Error;
-use failure::{self, ensure};
+use anyhow::ensure;
 use mundane::bytes;
 use std::hash::{Hash, Hasher};
 use wlan_common::ie::rsn::cipher::Cipher;
@@ -25,12 +25,12 @@ fn generate_random_gtk(len: usize) -> Box<[u8]> {
 }
 
 impl GtkProvider {
-    pub fn new(cipher: Cipher) -> Result<GtkProvider, failure::Error> {
+    pub fn new(cipher: Cipher) -> Result<GtkProvider, anyhow::Error> {
         let tk_bytes = cipher.tk_bytes().ok_or(Error::GtkHierarchyUnsupportedCipherError)?;
         Ok(GtkProvider { cipher, key: generate_random_gtk(tk_bytes) })
     }
 
-    pub fn get_gtk(&self) -> Result<Gtk, failure::Error> {
+    pub fn get_gtk(&self) -> Result<Gtk, anyhow::Error> {
         Gtk::from_gtk(self.key.to_vec(), 0, self.cipher.clone(), 0)
     }
 }
@@ -59,7 +59,7 @@ impl Gtk {
         key_id: u8,
         cipher: Cipher,
         rsc: u64,
-    ) -> Result<Gtk, failure::Error> {
+    ) -> Result<Gtk, anyhow::Error> {
         let tk_bits = cipher.tk_bits().ok_or(Error::GtkHierarchyUnsupportedCipherError)?;
         let tk_len = (tk_bits / 8) as usize;
         ensure!(gtk.len() >= tk_len, "GTK must be larger than the resulting TK");
@@ -75,7 +75,7 @@ impl Gtk {
         gnonce: &[u8; 32],
         cipher: Cipher,
         rsc: u64,
-    ) -> Result<Gtk, failure::Error> {
+    ) -> Result<Gtk, anyhow::Error> {
         let tk_bits = cipher.tk_bits().ok_or(Error::GtkHierarchyUnsupportedCipherError)?;
 
         // data length = 6 (aa) + 32 (gnonce)

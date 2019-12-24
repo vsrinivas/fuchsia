@@ -8,7 +8,7 @@ mod oauth_open_id_connect;
 
 use crate::dev_auth_provider::AuthProvider;
 use crate::oauth_open_id_connect::OauthOpenIdConnect;
-use failure::{Error, ResultExt};
+use anyhow::{Context as _, Error};
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use futures::StreamExt;

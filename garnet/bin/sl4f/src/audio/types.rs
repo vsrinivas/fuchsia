@@ -14,7 +14,7 @@ pub enum AudioMethod {
 }
 
 impl std::str::FromStr for AudioMethod {
-    type Err = failure::Error;
+    type Err = anyhow::Error;
 
     fn from_str(method: &str) -> Result<Self, Self::Err> {
         match method {
@@ -25,7 +25,7 @@ impl std::str::FromStr for AudioMethod {
             "StartOutputSave" => Ok(AudioMethod::StartOutputSave),
             "StopOutputSave" => Ok(AudioMethod::StopOutputSave),
             "GetOutputAudio" => Ok(AudioMethod::GetOutputAudio),
-            _ => bail!("invalid Audio Facade method: {}", method),
+            _ => return Err(format_err!("invalid Audio Facade method: {}", method)),
         }
     }
 }

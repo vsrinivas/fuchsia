@@ -41,7 +41,7 @@ rustc_binary("bin") {
     "//src/sys/pkg/lib/fuchsia-pkg-testing:fuchsia_pkg_testing",
     "//src/sys/pkg/lib/pkgfs",
     "//src/sys/pkg/lib/tuf",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:http",
     "//third_party/rust_crates:hyper",
@@ -56,6 +56,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:serde_derive",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
+    "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:url",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]

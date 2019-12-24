@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::Error,
+    anyhow::Error,
     fidl_fuchsia_update::ManagerState,
     fuchsia_inspect_contrib::inspectable::{InspectableDebugString, InspectableVectorSize},
 };

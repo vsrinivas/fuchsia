@@ -4,9 +4,9 @@
 
 use crate::account_handler_context::AccountHandlerContext;
 use account_common::{AccountManagerError, LocalAccountId, ResultExt as AccountResultExt};
+use anyhow::Context as _;
 use async_trait::async_trait;
 use core::fmt::Debug;
-use failure::ResultExt;
 use fidl_fuchsia_identity_account::{Error as ApiError, Lifetime};
 use fidl_fuchsia_identity_internal::{AccountHandlerControlMarker, AccountHandlerControlProxy};
 use fidl_fuchsia_sys::EnvironmentControllerProxy;

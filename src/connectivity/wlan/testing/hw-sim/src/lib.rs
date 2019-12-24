@@ -77,7 +77,7 @@ pub fn send_beacon(
     protection: &Protection,
     proxy: &WlantapPhyProxy,
     rssi_dbm: i8,
-) -> Result<(), failure::Error> {
+) -> Result<(), anyhow::Error> {
     frame_buf.clear();
 
     let frame_ctrl = mac::FrameControl(0)
@@ -121,7 +121,7 @@ fn send_authentication(
     channel: &WlanChan,
     bss_id: &mac::Bssid,
     proxy: &WlantapPhyProxy,
-) -> Result<(), failure::Error> {
+) -> Result<(), anyhow::Error> {
     frame_buf.clear();
 
     let frame_ctrl = mac::FrameControl(0)
@@ -149,7 +149,7 @@ fn send_association_response(
     channel: &WlanChan,
     bss_id: &mac::Bssid,
     proxy: &WlantapPhyProxy,
-) -> Result<(), failure::Error> {
+) -> Result<(), anyhow::Error> {
     frame_buf.clear();
 
     let frame_ctrl = mac::FrameControl(0)
@@ -233,7 +233,7 @@ fn process_auth_update(
     channel: &WlanChan,
     bssid: &mac::Bssid,
     phy: &WlantapPhyProxy,
-) -> Result<(), failure::Error> {
+) -> Result<(), anyhow::Error> {
     for update in updates {
         if let SecAssocUpdate::TxEapolKeyFrame(frame) = update {
             rx_wlan_data_frame(
@@ -372,7 +372,7 @@ pub fn rx_wlan_data_frame(
     payload: &[u8],
     ether_type: u16,
     phy: &WlantapPhyProxy,
-) -> Result<(), failure::Error> {
+) -> Result<(), anyhow::Error> {
     let buf: &mut Vec<u8> = &mut vec![];
 
     let frame_ctrl = mac::FrameControl(0)

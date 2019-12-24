@@ -5,7 +5,7 @@
 use crate::net_settings_types::*;
 
 use {
-    failure::{bail, Error},
+    anyhow::{format_err, Error},
     fuchsia_syslog::{fx_log_err, fx_log_info},
     rouille,
     rouille::{router, Request, Response},
@@ -95,7 +95,7 @@ pub fn start_server(address: String, webpage: String) -> ! {
 fn parse_request<T: DeserializeOwned>(request: &Request) -> Result<T, Error> {
     let data = match request.data() {
         Some(d) => d,
-        None => bail!("Failed to parse request: no data"),
+        None => return Err(format_err!("Failed to parse request: no data")),
     };
 
     Ok(serde_json::from_reader(data)?)

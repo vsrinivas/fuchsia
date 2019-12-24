@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{bail, Error},
+    anyhow::{format_err, Error},
     fdio, fidl,
     fidl_fuchsia_inspect_deprecated::{InspectMarker, InspectProxy, MetricValue, PropertyValue},
     fidl_fuchsia_io::NodeInfo,
@@ -54,7 +54,7 @@ pub async fn load_hierarchy(proxy: InspectProxy) -> Result<NodeHierarchy, Error>
                     parent.hierarchy.children.push(current_node.hierarchy);
                     pending_nodes.push(parent);
                 }
-                None => bail!("failed to load hierarchy"),
+                None => return Err(format_err!("failed to load hierarchy")),
             }
         } else {
             let next_child = current_node.pending_children.pop().unwrap();
@@ -69,7 +69,7 @@ pub async fn load_hierarchy(proxy: InspectProxy) -> Result<NodeHierarchy, Error>
             pending_nodes.push(child_node);
         }
     }
-    bail!("failed to load hierarchy")
+    return Err(format_err!("failed to load hierarchy"));
 }
 
 struct PartialNodeHierarchy {

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{format_err, Error, ResultExt},
+    anyhow::{format_err, Context as _, Error},
     fidl::endpoints,
     fidl_fuchsia_vsock::{
         AcceptorMarker, AcceptorRequest, ConnectionMarker, ConnectionProxy, ConnectionTransport,
@@ -69,7 +69,7 @@ async fn test_read_write<'a>(
     Ok(())
 }
 
-fn make_con() -> Result<(fasync::Socket, ConnectionProxy, ConnectionTransport), failure::Error> {
+fn make_con() -> Result<(fasync::Socket, ConnectionProxy, ConnectionTransport), anyhow::Error> {
     let (data_stream, server_socket) = make_socket_pair()?;
     let (client_end, server_end) = endpoints::create_endpoints::<ConnectionMarker>()?;
     let client_end = client_end.into_proxy().unwrap();

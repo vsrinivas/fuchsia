@@ -18,7 +18,7 @@ impl AccountManagerPeer {
     pub async fn handle_requests_from_stream(
         &self,
         mut stream: AccountManagerPeerRequestStream,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), anyhow::Error> {
         while let Some(req) = stream.try_next().await? {
             self.handle_request(req).await?;
         }
@@ -45,7 +45,7 @@ mod test {
     use fuchsia_async as fasync;
     use futures::future::join;
 
-    type TestResult = Result<(), failure::Error>;
+    type TestResult = Result<(), anyhow::Error>;
 
     /// Creates an `AccountManagerPeerProxy` and a future which serves requests
     /// from the proxy when polled to completion.

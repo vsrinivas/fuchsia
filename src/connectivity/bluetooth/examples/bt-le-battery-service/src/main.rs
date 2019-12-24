@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::{format_err, Context as _, Error},
     argh::FromArgs,
-    failure::{bail, Error, ResultExt},
     fidl_fuchsia_bluetooth_gatt as gatt, fidl_fuchsia_power as fpower,
     fuchsia_async::{
         self as fasync,
@@ -161,7 +161,7 @@ async fn main() -> Result<(), Error> {
             authentication_required: true,
             authorization_required: false,
         },
-        Some(s) => bail!("invalid security value: {}", s),
+        Some(s) => return Err(format_err!("invalid security value: {}", s)),
     });
 
     // Create endpoints for the required services.
@@ -204,7 +204,7 @@ async fn main() -> Result<(), Error> {
     let status =
         gatt_server.publish_service(&mut service_info, delegate_client, service_server).await?;
     if let Some(error) = status.error {
-        bail!("Failed to publish battery service to gatt server: {:?}", error);
+        return Err(format_err!("Failed to publish battery service to gatt server: {:?}", error));
     }
     println!("Published Battery Service to local device database.");
 

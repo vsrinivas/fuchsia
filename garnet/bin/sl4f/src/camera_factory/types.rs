@@ -8,6 +8,7 @@ use fidl_fuchsia_mem::Buffer;
 use fuchsia_zircon::Vmo;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_derive::{Deserialize, Serialize};
+use thiserror::Error;
 
 // FIDL request/response definitions.
 
@@ -42,13 +43,13 @@ pub struct WriteCalibrationDataRequest {
     pub file_path: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Fail)]
+#[derive(Serialize, Deserialize, Debug, Error)]
 pub enum Sl4fCameraFactoryError {
-    #[fail(display = "SL4F Error: No camera.")]
+    #[error("SL4F Error: No camera.")]
     NoCamera = 1,
-    #[fail(display = "SL4F Error: Streaming not started.")]
+    #[error("SL4F Error: Streaming not started.")]
     Streaming = 2,
-    #[fail(display = "SL4F Error: Unable to de/serialize.")]
+    #[error("SL4F Error: Unable to de/serialize.")]
     Serialization = 3,
 }
 

@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow::Error;
 use carnelian::{
     make_app_assistant, make_message, AnimationMode, App, AppAssistant, Canvas, Color, Coord,
     MappingPixelSink, Point, Rect, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr,
     ViewKey, ViewMessages, ViewMode,
 };
 use euclid::rect;
-use failure::Error;
 use fidl_fuchsia_ui_input::{KeyboardEvent, KeyboardEventPhase};
 use fuchsia_zircon::{AsHandleRef, ClockId, Signals, Time};
 use std::{

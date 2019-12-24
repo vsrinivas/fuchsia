@@ -16,7 +16,7 @@ use {
         suggestions_manager::SuggestionsManager,
         suggestions_service::SuggestionsService,
     },
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl_fuchsia_app_discover::{
         DiscoverRegistryRequestStream, SessionDiscoverContextRequestStream,
         SuggestionsRequestStream,

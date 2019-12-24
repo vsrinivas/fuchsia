@@ -1,6 +1,6 @@
 use std::{fmt, os::raw};
 
-use failure::Fail;
+use thiserror::Error;
 use vk_sys as vk;
 
 #[repr(C)]
@@ -157,7 +157,7 @@ pub struct SpnVkRenderSubmitExtImagePostBarrier {
 
 macro_rules! spinel_errors {
     ( @Error, $success:ident, $( $errors:ident ),* ) => {
-        #[derive(Clone, Debug, Eq, Fail, Hash, PartialEq)]
+        #[derive(Clone, Debug, Eq, Error, Hash, PartialEq)]
         pub enum SpnError {
             $($errors),*
         }

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    breakpoint_system_client::*, failure::Error, fidl_fidl_examples_echo as fidl_echo,
+    anyhow::Error, breakpoint_system_client::*, fidl_fidl_examples_echo as fidl_echo,
     fuchsia_async as fasync, fuchsia_component::client::*, io_util, test_utils::*,
 };
 

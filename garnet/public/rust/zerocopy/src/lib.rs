@@ -1425,7 +1425,7 @@ mod tests {
 
     #[test]
     #[allow(clippy::cyclomatic_complexity)]
-    fn test_new_fail() {
+    fn test_new_error() {
         // fail because the buffer is too large
 
         // a buffer with an alignment of 8

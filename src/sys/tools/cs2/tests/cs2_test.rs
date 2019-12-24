@@ -1,6 +1,6 @@
+use anyhow::Error;
 use breakpoint_system_client::*;
 use cs2::Component;
-use failure::Error;
 use std::path::PathBuf;
 use test_utils::*;
 

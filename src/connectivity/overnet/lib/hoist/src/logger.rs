@@ -4,7 +4,7 @@
 
 #![cfg(not(target_os = "fuchsia"))]
 
-use failure::Error;
+use anyhow::Error;
 use log::{Level, LevelFilter, Metadata, Record};
 
 struct Logger;
@@ -50,7 +50,7 @@ lazy_static::lazy_static! {
 
 pub fn init() -> Result<(), Error> {
     if let Err(e) = &*START_RESULT {
-        failure::bail!("{}", e);
+        return Err(anyhow::format_err!("{}", e));
     }
     Ok(())
 }

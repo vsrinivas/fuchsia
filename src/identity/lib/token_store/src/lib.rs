@@ -10,30 +10,31 @@ mod serializer;
 /// FIXME remove when https://github.com/rust-lang/rust/issues/57264 is fixed
 pub use self::serializer::JsonSerializer;
 
-use failure::{format_err, Error, Fail};
+use anyhow::{format_err, Error};
 use std::result;
+use thiserror::Error;
 
 pub type Result<T> = result::Result<T, AuthDbError>;
 
 /// Errors that may result from operations on an AuthDb.
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum AuthDbError {
     /// An illegal input argument was supplied, such as an invalid path.
-    #[fail(display = "invalid argument")]
+    #[error("invalid argument")]
     InvalidArguments,
     /// A lower level failure occurred while serializing and writing the data.
     /// See logs for more information.
-    #[fail(display = "unexpected error serializing or deserializing the database")]
+    #[error("unexpected error serializing or deserializing the database")]
     SerializationError,
     /// A lower level failure occurred while reading and deserializing the data.
-    #[fail(display = "unexpected IO error accessing the database: {}", _0)]
-    IoError(#[cause] std::io::Error),
+    #[error("unexpected IO error accessing the database: {}", _0)]
+    IoError(#[from] std::io::Error),
     /// The existing contents of the DB are not valid. This could be caused by a change in file
     /// format or by data corruption.
-    #[fail(display = "database contents could not be parsed")]
+    #[error("database contents could not be parsed")]
     DbInvalid,
     /// The requested credential is not present in the DB.
-    #[fail(display = "credential not found")]
+    #[error("credential not found")]
     CredentialNotFound,
 }
 

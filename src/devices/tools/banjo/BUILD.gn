@@ -24,7 +24,7 @@ group("tests") {
 rustc_binary("banjo_bin") {
   edition = "2018"
   deps = [
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:heck",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:pest",
@@ -34,6 +34,7 @@ rustc_binary("banjo_bin") {
     "//third_party/rust_crates:serde_derive",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:structopt",
+    "//third_party/rust_crates:thiserror",
   ]
   source_root = "src/main.rs"
 }
@@ -41,7 +42,7 @@ rustc_binary("banjo_bin") {
 rustc_library("banjo_lib") {
   edition = "2018"
   deps = [
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:heck",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:pest",
@@ -51,6 +52,7 @@ rustc_library("banjo_lib") {
     "//third_party/rust_crates:serde_derive",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:structopt",
+    "//third_party/rust_crates:thiserror",
   ]
   source_root = "src/lib.rs"
 }

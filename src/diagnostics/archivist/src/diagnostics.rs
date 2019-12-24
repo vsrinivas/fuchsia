@@ -1,6 +1,6 @@
 use {
     crate::archive::EventFileGroupStatsMap,
-    failure::Error,
+    anyhow::Error,
     fuchsia_component::server::{ServiceFs, ServiceObjTrait},
     fuchsia_inspect::{component, Node, UintProperty},
     lazy_static::lazy_static,

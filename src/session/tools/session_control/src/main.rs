@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::{format_err, Error},
     argh::FromArgs,
-    failure::{format_err, Error},
     fidl_fuchsia_session::{LauncherMarker, LauncherProxy, SessionConfiguration},
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,

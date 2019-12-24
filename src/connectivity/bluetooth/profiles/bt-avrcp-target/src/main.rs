@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {failure::Error, fuchsia_async as fasync, futures::try_join, std::sync::Arc};
+use {anyhow::Error, fuchsia_async as fasync, futures::try_join, std::sync::Arc};
 
 mod avrcp_handler;
 mod media;

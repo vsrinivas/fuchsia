@@ -33,7 +33,7 @@ impl<A: AmberConnect> RepositoryService<A> {
     pub async fn run(
         &mut self,
         mut stream: RepositoryManagerRequestStream,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), anyhow::Error> {
         while let Some(event) = stream.try_next().await? {
             match event {
                 RepositoryManagerRequest::Add { repo, responder } => {
@@ -131,9 +131,7 @@ impl<A: AmberConnect> RepositoryService<A> {
                 }
                 Ok(())
             }
-            .unwrap_or_else(|e: failure::Error| {
-                fx_log_err!("error running list protocol: {:?}", e)
-            }),
+            .unwrap_or_else(|e: anyhow::Error| fx_log_err!("error running list protocol: {:?}", e)),
         );
     }
 }

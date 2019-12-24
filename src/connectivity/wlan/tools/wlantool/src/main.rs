@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{bail, format_err, Error, ResultExt};
+use anyhow::{format_err, Context as _, Error};
 use fidl::endpoints;
 use fidl_fuchsia_wlan_device_service::{
     self as wlan_service, DeviceServiceMarker, DeviceServiceProxy, QueryIfaceResponse,
@@ -80,7 +80,10 @@ async fn do_phy(cmd: opts::PhyCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
         }
         opts::PhyCmd::SetCountry { phy_id, country } => {
             if !is_valid_country_str(&country) {
-                bail!("Country string [{}] looks invalid: Should be 2 ASCII characters", country);
+                return Err(format_err!(
+                    "Country string [{}] looks invalid: Should be 2 ASCII characters",
+                    country
+                ));
             }
 
             let mut alpha2 = [0u8; 2];
@@ -196,7 +199,11 @@ async fn do_iface(cmd: opts::IfaceCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
 async fn do_client_connect(cmd: opts::ClientConnectCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
     let opts::ClientConnectCmd { iface_id, ssid, password, psk, phy, cbw, scan_type } = cmd;
     if ssid.len() > SSID_MAX_LEN {
-        bail!("SSID is too long ({} bytes). Max is {}", ssid.len(), SSID_MAX_LEN);
+        return Err(format_err!(
+            "SSID is too long ({} bytes). Max is {}",
+            ssid.len(),
+            SSID_MAX_LEN
+        ));
     }
     let credential = match make_credential(password, psk) {
         Ok(c) => c,
@@ -380,7 +387,7 @@ fn generate_psk(passphrase: &str, ssid: &str) -> Result<String, Error> {
 fn make_credential(
     password: Option<String>,
     psk: Option<String>,
-) -> Result<fidl_sme::Credential, failure::Error> {
+) -> Result<fidl_sme::Credential, anyhow::Error> {
     match (password, psk) {
         (Some(password), None) => Ok(fidl_sme::Credential::Password(password.as_bytes().to_vec())),
         (None, Some(psk)) => {
@@ -388,7 +395,7 @@ fn make_credential(
             Ok(fidl_sme::Credential::Psk(psk))
         }
         (None, None) => Ok(fidl_sme::Credential::None(fidl_sme::Empty)),
-        _ => bail!("cannot use password and PSK at once"),
+        _ => return Err(format_err!("cannot use password and PSK at once")),
     }
 }
 
@@ -414,14 +421,14 @@ impl FromStr for MacAddr {
 
         for octet in s.split(|c| c == ':' || c == '-') {
             if index == 6 {
-                bail!("Too many octets");
+                return Err(format_err!("Too many octets"));
             }
             bytes[index] = u8::from_str_radix(octet, 16)?;
             index += 1;
         }
 
         if index != 6 {
-            bail!("Too few octets");
+            return Err(format_err!("Too few octets"));
         }
         Ok(MacAddr(bytes))
     }

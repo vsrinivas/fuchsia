@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::Error,
     carnelian::{
         make_app_assistant, AnimationMode, App, AppAssistant, FrameBufferPtr, Point, Size,
         ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
     },
     chrono::{Local, Timelike},
     euclid::{Angle, Transform2D, Vector2D},
-    failure::Error,
     fidl::endpoints::create_endpoints,
     fidl_fuchsia_sysmem::BufferCollectionTokenMarker,
     std::{cell::RefCell, collections::BTreeMap, env, f32, rc::Rc},

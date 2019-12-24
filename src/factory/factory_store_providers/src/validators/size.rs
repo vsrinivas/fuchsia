@@ -5,7 +5,7 @@
 use {
     crate::config::ValidatorFileArgsMap,
     crate::validators::{Validator, ValidatorError},
-    failure::{format_err, Error},
+    anyhow::{format_err, Error},
     fuchsia_syslog as syslog,
     serde_json::{map::Map, value::Value},
     std::collections::HashMap,

@@ -5,7 +5,7 @@
 #![allow(dead_code)]
 
 use {
-    failure::Error,
+    anyhow::Error,
     json5,
     serde_derive::Deserialize,
     std::path::PathBuf,

@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{Error, Fail};
+use anyhow::Error;
 use std::fmt::{self, Debug, Display};
 use std::io;
 use std::marker::PhantomData;
+use thiserror::Error;
 
 mod fixed;
 pub use crate::fixed::*;
@@ -29,7 +30,7 @@ pub trait MessageType {
 
 /// Trait to be implemented by any type used as an interface 'event'.
 pub trait IntoMessage: Sized + MessageType {
-    type Error: Fail;
+    type Error: std::error::Error + std::marker::Sync;
     /// Consumes |self| and serializes into a |Message|.
     fn into_message(self, id: u32) -> Result<Message, Self::Error>;
 }
@@ -70,14 +71,14 @@ pub trait Interface {
     type Event: IntoMessage;
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum DecodeError {
-    #[fail(display = "invalid message opcode: {}", _0)]
+    #[error("invalid message opcode: {}", _0)]
     InvalidOpcode(u16),
-    #[fail(display = "end of argument list occurred while decoding")]
+    #[error("end of argument list occurred while decoding")]
     InsufficientArgs,
-    #[fail(display = "{}", _0)]
-    IoError(#[cause] io::Error),
+    #[error("{}", _0)]
+    IoError(io::Error),
 }
 
 impl From<io::Error> for DecodeError {
@@ -86,10 +87,10 @@ impl From<io::Error> for DecodeError {
     }
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum EncodeError {
-    #[fail(display = "{}", _0)]
-    IoError(#[cause] io::Error),
+    #[error("{}", _0)]
+    IoError(io::Error),
 }
 
 impl From<io::Error> for EncodeError {
@@ -98,8 +99,8 @@ impl From<io::Error> for EncodeError {
     }
 }
 
-#[derive(Debug, Fail)]
-#[fail(display = "Unknown enum value {}", _0)]
+#[derive(Debug, Error)]
+#[error("Unknown enum value {}", _0)]
 pub struct UnknownEnumValue(u32);
 
 impl UnknownEnumValue {

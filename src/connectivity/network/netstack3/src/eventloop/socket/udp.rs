@@ -10,7 +10,7 @@ use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll};
 
-use failure::{format_err, Error};
+use anyhow::{format_err, Error};
 use fidl_fuchsia_posix_socket as psocket;
 use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, prelude::HandleBased};

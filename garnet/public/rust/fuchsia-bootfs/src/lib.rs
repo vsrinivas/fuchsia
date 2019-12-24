@@ -10,9 +10,9 @@ use {
         ZBI_BOOTFS_PAGE_SIZE,
     },
     byteorder::{ByteOrder, LittleEndian},
-    failure::Fail,
     fuchsia_zircon as zx,
     std::{ffi::CStr, mem::size_of, str::Utf8Error},
+    thiserror::Error,
     zerocopy::{ByteSlice, LayoutVerified},
 };
 
@@ -29,38 +29,40 @@ fn zbi_bootfs_page_align(size: u32) -> u32 {
     size.wrapping_add(ZBI_BOOTFS_PAGE_SIZE - 1) & !(ZBI_BOOTFS_PAGE_SIZE - 1)
 }
 
-#[derive(Debug, Fail, Eq, PartialEq)]
+#[derive(Debug, Error, Eq, PartialEq)]
 pub enum BootfsParserError {
-    #[fail(display = "Invalid magic for bootfs payload")]
+    #[error("Invalid magic for bootfs payload")]
     BadMagic,
 
-    #[fail(display = "Directory entry {} exceeds expected dirsize of {}", entry_index, dirsize)]
+    #[error("Directory entry {} exceeds expected dirsize of {}", entry_index, dirsize)]
     DirEntryTooBig { entry_index: u32, dirsize: u32 },
 
-    #[fail(display = "Failed to read payload: {}", status)]
+    #[error("Failed to read payload: {}", status)]
     FailedToReadPayload { status: zx::Status },
 
-    #[fail(display = "Failed to parse bootfs header")]
+    #[error("Failed to parse bootfs header")]
     FailedToParseHeader,
 
-    #[fail(display = "Failed to parse directory entry")]
+    #[error("Failed to parse directory entry")]
     FailedToParseDirEntry,
 
-    #[fail(display = "Failed to read name as UTF-8: {}", cause)]
+    #[error("Failed to read name as UTF-8: {}", cause)]
     InvalidNameFormat {
-        #[cause]
+        #[source]
         cause: Utf8Error,
     },
 
-    #[fail(display = "Failed to find null terminated string for name: {}", cause)]
+    #[error("Failed to find null terminated string for name: {}", cause)]
     InvalidNameString {
-        #[cause]
+        #[source]
         cause: std::ffi::FromBytesWithNulError,
     },
 
-    #[fail(
-        display = "name_len must be between 1 and {}, found {} for directory entry {}",
-        max_name_len, name_len, entry_index
+    #[error(
+        "name_len must be between 1 and {}, found {} for directory entry {}",
+        max_name_len,
+        name_len,
+        entry_index
     )]
     InvalidNameLength { name_len: u32, max_name_len: u32, entry_index: u32 },
 }
@@ -229,7 +231,7 @@ impl<'parser> Iterator for BootfsParserIterator<'parser> {
 mod tests {
     use {
         super::*,
-        failure::Error,
+        anyhow::Error,
         lazy_static::lazy_static,
         std::{collections::HashMap, fs::File, io::prelude::*},
     };

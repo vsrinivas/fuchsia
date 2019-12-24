@@ -2,17 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    failure::{self, err_msg},
-    fidl_fuchsia_bluetooth as bt,
-    fuchsia_bluetooth::bt_fidl_status,
-};
+use {anyhow::format_err, fidl_fuchsia_bluetooth as bt, fuchsia_bluetooth::bt_fidl_status};
 
 /// Type representing Possible errors raised in the operation of BT-GAP
 #[derive(Debug)]
 pub enum Error {
     // Internal bt-gap Error
-    InternalError(failure::Error),
+    InternalError(anyhow::Error),
     // Host Error
     HostError(bt::Error),
 }
@@ -43,19 +39,19 @@ impl Error {
         })
     }
 
-    pub fn as_failure(self) -> failure::Error {
+    pub fn as_failure(self) -> anyhow::Error {
         match self {
             Error::InternalError(err) => err,
-            Error::HostError(err) => err_msg(format!(
+            Error::HostError(err) => format_err!(
                 "Host Error: {}",
                 err.description.unwrap_or("Unknown Host Error".to_string())
-            )),
+            ),
         }
     }
 }
 
-impl Into<failure::Error> for Error {
-    fn into(self) -> failure::Error {
+impl Into<anyhow::Error> for Error {
+    fn into(self) -> anyhow::Error {
         self.as_failure()
     }
 }
@@ -66,14 +62,14 @@ impl From<bt::Error> for Error {
     }
 }
 
-impl From<failure::Error> for Error {
-    fn from(err: failure::Error) -> Error {
+impl From<anyhow::Error> for Error {
+    fn from(err: anyhow::Error) -> Error {
         Error::InternalError(err)
     }
 }
 impl From<fidl::Error> for Error {
     fn from(err: fidl::Error) -> Error {
-        Error::InternalError(err_msg(format!("Internal FIDL error: {}", err)))
+        Error::InternalError(format_err!(format!("Internal FIDL error: {}", err)))
     }
 }
 

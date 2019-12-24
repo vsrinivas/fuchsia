@@ -11,7 +11,8 @@ rustc_library("spinel-rs") {
   version = "0.1.0"
   edition = "2018"
   deps = [
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:thiserror",
   ]
   non_rust_deps = [
     # TODO: Currently we're using a stubbed out version

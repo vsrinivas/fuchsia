@@ -31,8 +31,8 @@ rustc_binary("bin") {
     "//src/lib/inspect/rust/fuchsia-inspect",
     "//src/sys/lib/fuchsia_url:fuchsia_url",
     "//src/sys/pkg/lib/omaha-client",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:chrono",
-    "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:hyper",
     "//third_party/rust_crates:hyper-rustls",
@@ -40,6 +40,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_derive",
     "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-boot:fuchsia-boot-rustc",
     "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
   ]

@@ -10,7 +10,7 @@ use {
         policy::client::sme_credential_from_policy,
         state_machine::{self, IntoStateExt},
     },
-    failure::{bail, format_err},
+    anyhow::format_err,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_policy as fidl_policy,
     fidl_fuchsia_wlan_sme as fidl_sme,
@@ -37,16 +37,16 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn connect(&self, request: ConnectRequest) -> Result<(), failure::Error> {
+    pub fn connect(&self, request: ConnectRequest) -> Result<(), anyhow::Error> {
         handle_send_err(self.req_sender.unbounded_send(ManualRequest::Connect(request)))
     }
 
-    pub fn disconnect(&self, responder: oneshot::Sender<()>) -> Result<(), failure::Error> {
+    pub fn disconnect(&self, responder: oneshot::Sender<()>) -> Result<(), anyhow::Error> {
         handle_send_err(self.req_sender.unbounded_send(ManualRequest::Disconnect(responder)))
     }
 }
 
-fn handle_send_err(r: Result<(), mpsc::TrySendError<ManualRequest>>) -> Result<(), failure::Error> {
+fn handle_send_err(r: Result<(), mpsc::TrySendError<ManualRequest>>) -> Result<(), anyhow::Error> {
     r.map_err(|_| format_err!("Station does not exist anymore"))
 }
 
@@ -82,7 +82,7 @@ pub fn new_client(
     (client, fut)
 }
 
-type State = state_machine::State<failure::Error>;
+type State = state_machine::State<anyhow::Error>;
 type NextReqFut = stream::StreamFuture<mpsc::UnboundedReceiver<ManualRequest>>;
 
 #[derive(Clone)]
@@ -115,7 +115,7 @@ async fn serve(
 async fn auto_connect_state(
     services: Services,
     mut next_req: NextReqFut,
-) -> Result<State, failure::Error> {
+) -> Result<State, anyhow::Error> {
     println!(
         "wlancfg: Starting auto-connect loop with {} saved networks",
         services.saved_networks.known_network_count()
@@ -137,7 +137,7 @@ fn handle_manual_request(
     services: Services,
     req: Option<ManualRequest>,
     req_stream: mpsc::UnboundedReceiver<ManualRequest>,
-) -> Result<State, failure::Error> {
+) -> Result<State, anyhow::Error> {
     match req {
         Some(ManualRequest::Connect(req)) => {
             Ok(manual_connect_state(services, req_stream.into_future(), req).into_state())
@@ -145,11 +145,11 @@ fn handle_manual_request(
         Some(ManualRequest::Disconnect(responder)) => {
             Ok(disconnected_state(responder, services, req_stream.into_future()).into_state())
         }
-        None => bail!("The stream of user requests ended unexpectedly"),
+        None => return Err(format_err!("The stream of user requests ended unexpectedly")),
     }
 }
 
-async fn auto_connect(services: &Services) -> Result<Vec<u8>, failure::Error> {
+async fn auto_connect(services: &Services) -> Result<Vec<u8>, anyhow::Error> {
     loop {
         if let Some(ssid) = attempt_auto_connect(services).await? {
             return Ok(ssid);
@@ -158,7 +158,7 @@ async fn auto_connect(services: &Services) -> Result<Vec<u8>, failure::Error> {
     }
 }
 
-async fn attempt_auto_connect(services: &Services) -> Result<Option<Vec<u8>>, failure::Error> {
+async fn attempt_auto_connect(services: &Services) -> Result<Option<Vec<u8>>, anyhow::Error> {
     // first check if we have saved networks
     if services.saved_networks.known_network_count() < 1 {
         return Ok(None);
@@ -204,7 +204,7 @@ async fn connect_to_known_network(
     sme: &fidl_sme::ClientSmeProxy,
     ssid: Vec<u8>,
     credential: fidl_policy::Credential,
-) -> Result<bool, failure::Error> {
+) -> Result<bool, anyhow::Error> {
     let ssid_str = String::from_utf8_lossy(&ssid).into_owned();
     println!("wlancfg: Auto-connecting to '{}'", ssid_str);
     let txn = start_connect_txn(sme, &ssid, &credential)?;
@@ -224,7 +224,7 @@ async fn manual_connect_state(
     services: Services,
     mut next_req: NextReqFut,
     req: ConnectRequest,
-) -> Result<State, failure::Error> {
+) -> Result<State, anyhow::Error> {
     println!(
         "wlancfg: Connecting to '{}' because of a manual request from the user",
         String::from_utf8_lossy(&req.ssid)
@@ -284,7 +284,7 @@ fn go_to_auto_connect_state(services: Services, next_req: NextReqFut) -> State {
 async fn connected_state(
     services: Services,
     mut next_req: NextReqFut,
-) -> Result<State, failure::Error> {
+) -> Result<State, anyhow::Error> {
     let disconnected = wait_for_disconnection(services.clone());
     pin_mut!(disconnected);
     select! {
@@ -298,7 +298,7 @@ async fn connected_state(
     }
 }
 
-async fn wait_for_disconnection(services: Services) -> Result<(), failure::Error> {
+async fn wait_for_disconnection(services: Services) -> Result<(), anyhow::Error> {
     loop {
         let status = services.sme.status().await?;
         if status.connected_to.is_none() && status.connecting_to_ssid.is_empty() {
@@ -312,7 +312,7 @@ async fn disconnected_state(
     responder: oneshot::Sender<()>,
     services: Services,
     mut next_req: NextReqFut,
-) -> Result<State, failure::Error> {
+) -> Result<State, anyhow::Error> {
     // First, ask the SME to disconnect and wait for its response.
     // In the meantime, also listen to user requests.
     let mut responders = vec![responder];
@@ -363,7 +363,7 @@ async fn disconnected_state(
 
 fn start_scan_txn(
     sme: &fidl_sme::ClientSmeProxy,
-) -> Result<fidl_sme::ScanTransactionProxy, failure::Error> {
+) -> Result<fidl_sme::ScanTransactionProxy, anyhow::Error> {
     let (scan_txn, remote) = create_proxy()?;
     let mut req = fidl_sme::ScanRequest {
         timeout: AUTO_CONNECT_SCAN_TIMEOUT_SECONDS,
@@ -379,7 +379,7 @@ fn start_connect_txn(
     sme: &fidl_sme::ClientSmeProxy,
     ssid: &[u8],
     credential: &fidl_policy::Credential,
-) -> Result<fidl_sme::ConnectTransactionProxy, failure::Error> {
+) -> Result<fidl_sme::ConnectTransactionProxy, anyhow::Error> {
     let (connect_txn, remote) = create_proxy()?;
     let credential = sme_credential_from_policy(credential);
     let mut req = fidl_sme::ConnectRequest {
@@ -401,7 +401,7 @@ fn start_connect_txn(
 
 async fn wait_until_connected(
     txn: fidl_sme::ConnectTransactionProxy,
-) -> Result<fidl_sme::ConnectResultCode, failure::Error> {
+) -> Result<fidl_sme::ConnectResultCode, anyhow::Error> {
     let mut stream = txn.take_event_stream();
     while let Some(event) = stream.try_next().await? {
         match event {
@@ -413,7 +413,7 @@ async fn wait_until_connected(
 
 async fn fetch_scan_results(
     txn: fidl_sme::ScanTransactionProxy,
-) -> Result<Vec<fidl_sme::BssInfo>, failure::Error> {
+) -> Result<Vec<fidl_sme::BssInfo>, anyhow::Error> {
     let mut stream = txn.take_event_stream();
     let mut all_aps = vec![];
     while let Some(event) = stream.next().await {

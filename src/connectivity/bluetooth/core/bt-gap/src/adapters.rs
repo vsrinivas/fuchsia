@@ -7,7 +7,7 @@
 //! the system
 
 use {
-    failure::Error,
+    anyhow::Error,
     fuchsia_bluetooth::constants::HOST_DEVICE_DIR,
     fuchsia_syslog::fx_log_warn,
     fuchsia_vfs_watcher::{self as vfs_watcher, WatchEvent, WatchMessage},

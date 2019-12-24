@@ -4,7 +4,7 @@
 
 use {
     crate::eventloop::Event,
-    failure::Error,
+    anyhow::Error,
     fidl_fuchsia_net_stack as stack, fidl_fuchsia_netstack as netstack, fuchsia_async as fasync,
     futures::{channel::mpsc, StreamExt, TryFutureExt},
 };

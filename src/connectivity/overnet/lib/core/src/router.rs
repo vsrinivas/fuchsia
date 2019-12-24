@@ -24,7 +24,7 @@ use crate::{
     node_table::{LinkDescription, NodeDescription},
     ping_tracker::{PingTracker, PingTrackerResult, PongTracker},
 };
-use failure::{Error, ResultExt};
+use anyhow::{Context as _, Error};
 use fidl_fuchsia_overnet_protocol::{
     ChannelHandle, ConfigRequest, ConfigResponse, ConnectToService, ConnectToServiceOptions,
     LinkDiagnosticInfo, LinkMetrics, LinkStatus, PeerConnectionDiagnosticInfo, PeerDescription,
@@ -599,7 +599,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Endpoints<LinkData, Time> {
         let id = peer
             .next_stream
             .checked_shl(2)
-            .ok_or_else(|| failure::format_err!("Too many streams"))?;
+            .ok_or_else(|| anyhow::format_err!("Too many streams"))?;
         peer.next_stream += 1;
         let connection_stream_id = peer.connection_stream_id;
         let stream_id = self.streams.insert(Stream {
@@ -616,7 +616,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Endpoints<LinkData, Time> {
             }),
             |mut bytes: &mut Vec<u8>, handles: &mut Vec<fidl::Handle>| {
                 if handles.len() > 0 {
-                    failure::bail!("Expected no handles");
+                    return Err(anyhow::format_err!("Expected no handles"));
                 }
                 self.queue_send_bytes(
                     connection_stream_id,
@@ -681,12 +681,12 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Endpoints<LinkData, Time> {
         let stream = self
             .streams
             .get(stream_id)
-            .ok_or_else(|| failure::format_err!("Stream not found {:?}", stream_id))?;
+            .ok_or_else(|| anyhow::format_err!("Stream not found {:?}", stream_id))?;
         let peer_id = stream.peer_id;
         let peer = self
             .peers
             .get_mut(peer_id)
-            .ok_or_else(|| failure::format_err!("Peer not found {:?}", peer_id))?;
+            .ok_or_else(|| anyhow::format_err!("Peer not found {:?}", peer_id))?;
         let streams = &mut self.streams;
         let (handles, stream_ids): (Vec<_>, Vec<_>) = handles
             .into_iter()
@@ -712,7 +712,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Endpoints<LinkData, Time> {
             &mut ZirconChannelMessage { bytes, handles },
             |bytes, handles| {
                 if handles.len() != 0 {
-                    failure::bail!("Unexpected handles in encoding");
+                    return Err(anyhow::format_err!("Unexpected handles in encoding"));
                 }
                 self.queue_send_bytes(stream_id, Some(FrameType::Data), bytes, false, update_stats)
             },
@@ -739,13 +739,13 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Endpoints<LinkData, Time> {
         let stream = self
             .streams
             .get(stream_id)
-            .ok_or_else(|| failure::format_err!("Stream not found {:?}", stream_id))?;
+            .ok_or_else(|| anyhow::format_err!("Stream not found {:?}", stream_id))?;
         log::trace!("  peer_id={:?} stream_index={}", stream.peer_id, stream.id);
         let peer_id = stream.peer_id;
         let peer = self
             .peers
             .get_mut(peer_id)
-            .ok_or_else(|| failure::format_err!("Peer not found {:?}", peer_id))?;
+            .ok_or_else(|| anyhow::format_err!("Peer not found {:?}", peer_id))?;
         log::trace!("  node_id={:?}", peer.node_id);
         if let Some(frame_type) = frame_type {
             let frame_len = bytes.len();
@@ -754,13 +754,13 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Endpoints<LinkData, Time> {
             peer.conn
                 .0
                 .stream_send(stream.id, &header, false)
-                .with_context(|_| format!("Sending to stream {:?} peer {:?}", stream, peer))?;
+                .with_context(|| format!("Sending to stream {:?} peer {:?}", stream, peer))?;
             update_stats(peer, 1u64, header.len() as u64);
         }
         peer.conn
             .0
             .stream_send(stream.id, bytes, fin)
-            .with_context(|_| format!("Sending to stream {:?} peer {:?}", stream, peer))?;
+            .with_context(|| format!("Sending to stream {:?} peer {:?}", stream, peer))?;
         update_stats(peer, 0u64, bytes.len() as u64);
         if !peer.pending_writes {
             log::trace!("Mark writable: {:?}", stream.peer_id);
@@ -782,13 +782,13 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Endpoints<LinkData, Time> {
             .as_ref()
             .as_ref()
             .to_str()
-            .ok_or_else(|| failure::format_err!("Cannot convert path to string"))?;
+            .ok_or_else(|| anyhow::format_err!("Cannot convert path to string"))?;
         let key_file = self
             .server_key_file
             .as_ref()
             .as_ref()
             .to_str()
-            .ok_or_else(|| failure::format_err!("Cannot convert path to string"))?;
+            .ok_or_else(|| anyhow::format_err!("Cannot convert path to string"))?;
         config
             .load_cert_chain_from_pem_file(cert_file)
             .context(format!("Loading server certificate '{}'", cert_file))?;
@@ -835,7 +835,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Endpoints<LinkData, Time> {
                     .context("Decoding quic header")?;
 
                 if hdr.ty == quiche::Type::VersionNegotiation {
-                    failure::bail!("Version negotiation invalid on the server");
+                    return Err(anyhow::format_err!("Version negotiation invalid on the server"));
                 }
 
                 // If we're asked for a server connection, we should create a client connection
@@ -892,7 +892,10 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Endpoints<LinkData, Time> {
                     self.write_peers.push(peer_id);
                     (peer_id, false)
                 } else {
-                    failure::bail!("No server for link {:?}, and not an Initial packet", link_id);
+                    return Err(anyhow::format_err!(
+                        "No server for link {:?}, and not an Initial packet",
+                        link_id
+                    ));
                 }
             }
             (true, true) => (self.client_peer_id(routing_label.src, Some(link_id))?, false),
@@ -901,7 +904,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Endpoints<LinkData, Time> {
                 self.ensure_client_peer_id(routing_label.src, Some(link_id))?;
                 self.ensure_client_peer_id(routing_label.dst, None)?;
                 let peer_id = self.server_peer_id(routing_label.dst).ok_or_else(|| {
-                    failure::format_err!("Node server peer not found for {:?}", routing_label.dst)
+                    anyhow::format_err!("Node server peer not found for {:?}", routing_label.dst)
                 })?;
                 (peer_id, true)
             }
@@ -976,7 +979,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Endpoints<LinkData, Time> {
         let mut peer = self
             .peers
             .get_mut(peer_id)
-            .ok_or_else(|| failure::format_err!("Peer not found {:?}", peer_id))?;
+            .ok_or_else(|| anyhow::format_err!("Peer not found {:?}", peer_id))?;
         assert!(peer.pending_reads);
         peer.pending_reads = false;
         // TODO(ctiller): We currently copy out the readable streams here just to satisfy the
@@ -1003,7 +1006,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Endpoints<LinkData, Time> {
             let mut rs = self
                 .streams
                 .get_mut(stream_id.unwrap())
-                .ok_or_else(|| failure::format_err!("Stream not found {:?}", stream_id))?
+                .ok_or_else(|| anyhow::format_err!("Stream not found {:?}", stream_id))?
                 .read_state
                 .take();
             let remove = loop {
@@ -1042,7 +1045,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Endpoints<LinkData, Time> {
             };
             self.streams
                 .get_mut(stream_id.unwrap())
-                .ok_or_else(|| failure::format_err!("Stream not found {:?}", stream_id))?
+                .ok_or_else(|| anyhow::format_err!("Stream not found {:?}", stream_id))?
                 .read_state = rs;
             if remove {
                 unimplemented!();
@@ -1237,10 +1240,10 @@ where
 
         match (stream_type, message) {
             (StreamType::PeerClientEnd(_), None) => {
-                failure::bail!("Peer control stream closed on client")
+                return Err(anyhow::format_err!("Peer control stream closed on client"))
             }
             (StreamType::PeerServerEnd(_), None) => {
-                failure::bail!("Peer control stream closed on server")
+                return Err(anyhow::format_err!("Peer control stream closed on server"))
             }
             (_, None) => {
                 self.got.close(self.stream_id);
@@ -1266,28 +1269,28 @@ where
             (StreamType::PeerServerEnd(PeerState::Initial), Some((FrameType::Data, bytes))) => {
                 assert_eq!(bytes.len(), 4);
                 if bytes[3] != fidl::encoding::MAGIC_NUMBER_INITIAL {
-                    failure::bail!(
+                    anyhow::bail!(
                         "Invalid fidl magic number: {} vs {}",
                         bytes[3],
                         fidl::encoding::MAGIC_NUMBER_INITIAL
                     );
                 }
                 if bytes[0] != 0 || bytes[1] != 0 || bytes[2] != 0 {
-                    failure::bail!("Expected all zeros for flags");
+                    return Err(anyhow::format_err!("Expected all zeros for flags"));
                 }
                 Ok(())
             }
             (StreamType::PeerClientEnd(PeerState::Initial), Some((FrameType::Data, bytes))) => {
                 assert_eq!(bytes.len(), 4);
                 if bytes[3] != fidl::encoding::MAGIC_NUMBER_INITIAL {
-                    failure::bail!(
+                    anyhow::bail!(
                         "Invalid fidl magic number: {} vs {}",
                         bytes[3],
                         fidl::encoding::MAGIC_NUMBER_INITIAL
                     );
                 }
                 if bytes[0] != 0 || bytes[1] != 0 || bytes[2] != 0 {
-                    failure::bail!("Expected all zeros for flags");
+                    return Err(anyhow::format_err!("Expected all zeros for flags"));
                 }
                 Ok(())
             }
@@ -1360,7 +1363,7 @@ where
                         Ok(())
                     }
                     x => {
-                        failure::bail!("Unknown variant: {:?}", x);
+                        return Err(anyhow::format_err!("Unknown variant: {:?}", x));
                     }
                 }
             }
@@ -1371,7 +1374,7 @@ where
                     PeerReply::UpdateLinkStatusAck { .. } => {
                         let new_status = match self.peer.link_status_update_state {
                             Some(PeerLinkStatusUpdateState::Unscheduled) => {
-                                failure::bail!("Unexpected unscheduled status")
+                                return Err(anyhow::format_err!("Unexpected unscheduled status"))
                             }
                             Some(PeerLinkStatusUpdateState::Sent) => {
                                 Some(PeerLinkStatusUpdateState::Unscheduled)
@@ -1386,7 +1389,7 @@ where
                         Ok(())
                     }
                     x => {
-                        failure::bail!("Unknown variant: {:?}", x);
+                        return Err(anyhow::format_err!("Unknown variant: {:?}", x));
                     }
                 }
             }
@@ -1401,7 +1404,7 @@ where
         mut app_bind: impl FnMut(StreamId<LinkData>, &mut Got) -> Result<R, Error>,
     ) -> Result<R, Error> {
         if stream_index == 0 {
-            failure::bail!("Cannot connect stream 0");
+            return Err(anyhow::format_err!("Cannot connect stream 0"));
         }
         let bind_stream_id = match self.peer.streams.entry(stream_index) {
             btree_map::Entry::Occupied(stream_id) => *stream_id.get(),
@@ -1420,7 +1423,7 @@ where
         let mut rs = self
             .streams
             .get_mut(bind_stream_id)
-            .ok_or_else(|| failure::format_err!("Stream not found for bind {:?}", bind_stream_id))?
+            .ok_or_else(|| anyhow::format_err!("Stream not found for bind {:?}", bind_stream_id))?
             .read_state
             .take();
         log::trace!("Bind stream stream_index={} read_state={:?}", stream_index, rs);
@@ -1447,7 +1450,7 @@ where
         );
         self.streams
             .get_mut(bind_stream_id)
-            .ok_or_else(|| failure::format_err!("Stream not found for bind {:?}", bind_stream_id))?
+            .ok_or_else(|| anyhow::format_err!("Stream not found for bind {:?}", bind_stream_id))?
             .read_state = rs;
         Ok(result)
     }
@@ -1509,7 +1512,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Links<LinkData, Time> {
         packet: &'a mut [u8],
     ) -> Result<(RoutingLabel, &'a mut [u8]), Error> {
         let link =
-            self.links.get_mut(link_id).ok_or_else(|| failure::format_err!("Link not found"))?;
+            self.links.get_mut(link_id).ok_or_else(|| anyhow::format_err!("Link not found"))?;
         log::trace!(
             "Decode routing label from id={:?}[peer={:?}, id={:?}, up={:?}]",
             link_id,
@@ -1574,7 +1577,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Links<LinkData, Time> {
         let link = self
             .links
             .get_mut(link_id)
-            .ok_or_else(|| failure::format_err!("Link {:?} expired before pong", link_id))?;
+            .ok_or_else(|| anyhow::format_err!("Link {:?} expired before pong", link_id))?;
         let src = self.node_id;
         let dst = link.peer;
         if let Some(id) = link.pong_tracker.maybe_send_pong() {
@@ -1612,7 +1615,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Links<LinkData, Time> {
         let link = self
             .links
             .get_mut(link_id)
-            .ok_or_else(|| failure::format_err!("Link {:?} expired before pong", link_id))?;
+            .ok_or_else(|| anyhow::format_err!("Link {:?} expired before pong", link_id))?;
         let src = self.node_id;
         let dst = link.peer;
         let (ping, r) = link.ping_tracker.maybe_send_ping(Instant::now(), true);
@@ -1681,7 +1684,7 @@ fn make_desc_packet(services: Vec<String>) -> Result<Vec<u8>, Error> {
         &mut PeerMessage::UpdateNodeDescription(PeerDescription { services: Some(services) }),
         |bytes, handles| {
             if handles.len() != 0 {
-                failure::bail!("Unexpected handles in encoding");
+                return Err(anyhow::format_err!("Unexpected handles in encoding"));
             }
             Ok(bytes.clone())
         },
@@ -1705,18 +1708,18 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
         )?;
         let server_cert_file = options
             .quic_server_cert_file
-            .ok_or_else(|| failure::format_err!("No server cert file"))?;
+            .ok_or_else(|| anyhow::format_err!("No server cert file"))?;
         if !server_cert_file.as_ref().as_ref().exists() {
-            failure::bail!(
+            anyhow::bail!(
                 "Server cert file does not exist: {}",
                 server_cert_file.as_ref().as_ref().display()
             );
         }
         let server_key_file = options
             .quic_server_key_file
-            .ok_or_else(|| failure::format_err!("No server key file"))?;
+            .ok_or_else(|| anyhow::format_err!("No server key file"))?;
         if !server_key_file.as_ref().as_ref().exists() {
-            failure::bail!(
+            anyhow::bail!(
                 "Server key file does not exist: {}",
                 server_key_file.as_ref().as_ref().display()
             );
@@ -1906,11 +1909,11 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
             .endpoints
             .peers
             .get_mut(peer_id)
-            .ok_or_else(|| failure::format_err!("Peer {:?} not found for sending", peer_id))?;
+            .ok_or_else(|| anyhow::format_err!("Peer {:?} not found for sending", peer_id))?;
         assert!(peer.pending_writes);
         peer.pending_writes = false;
         let current_link = peer.current_link.ok_or_else(|| {
-            failure::format_err!(
+            anyhow::format_err!(
                 "No current link for peer {:?}; node={:?} client={}",
                 peer_id,
                 peer.node_id,
@@ -1918,7 +1921,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
             )
         })?;
         let link = self.links.links.get_mut(current_link).ok_or_else(|| {
-            failure::format_err!("Current link {:?} for peer {:?} not found", current_link, peer_id)
+            anyhow::format_err!("Current link {:?} for peer {:?} not found", current_link, peer_id)
         })?;
         let peer_node_id = peer.node_id;
         let link_dst_id = link.peer;
@@ -2041,7 +2044,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
                 &mut response,
                 |mut bytes: &mut Vec<u8>, handles: &mut Vec<fidl::Handle>| {
                     if handles.len() > 0 {
-                        failure::bail!("Expected no handles");
+                        return Err(anyhow::format_err!("Expected no handles"));
                     }
                     self.endpoints.queue_send_bytes(
                         stream_id,
@@ -2074,7 +2077,7 @@ impl<LinkData: Copy + Debug, Time: RouterTime> Router<LinkData, Time> {
                 &mut config,
                 |mut bytes: &mut Vec<u8>, handles: &mut Vec<fidl::Handle>| {
                     if handles.len() > 0 {
-                        failure::bail!("Expected no handles");
+                        return Err(anyhow::format_err!("Expected no handles"));
                     }
                     self.endpoints.queue_send_bytes(
                         stream_id,

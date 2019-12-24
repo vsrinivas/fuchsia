@@ -4,8 +4,8 @@
 
 use {
     core::cmp::{self, Ord, Ordering},
-    failure::Fail,
     std::fmt,
+    thiserror::Error,
 };
 
 /// A child moniker locally identifies a child component instance using the name assigned by
@@ -392,9 +392,9 @@ impl fmt::Display for RelativeMoniker {
 }
 
 /// Errors produced by `MonikerEnvironment`.
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum MonikerError {
-    #[fail(display = "invalid moniker: {}", rep)]
+    #[error("invalid moniker: {}", rep)]
     InvalidMoniker { rep: String },
 }
 

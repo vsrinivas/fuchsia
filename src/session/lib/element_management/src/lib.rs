@@ -9,27 +9,26 @@
 //! calling component.
 
 use {
-    async_trait::async_trait, failure::Fail, fidl_fuchsia_session::ElementSpec,
-    fidl_fuchsia_sys::LauncherProxy, fidl_fuchsia_sys2 as fsys, fuchsia_component,
-    realm_management,
+    async_trait::async_trait, fidl_fuchsia_session::ElementSpec, fidl_fuchsia_sys::LauncherProxy,
+    fidl_fuchsia_sys2 as fsys, fuchsia_component, realm_management, thiserror::Error,
 };
 
 /// Errors returned by calls to [`ElementManager`].
-#[derive(Debug, Fail, Clone, PartialEq)]
+#[derive(Debug, Error, Clone, PartialEq)]
 pub enum ElementManagerError {
     /// Returned when the element manager fails to created the component instance associated with
     /// a given element.
-    #[fail(display = "Element spec for \"{}/{}\" missing url.", name, collection)]
+    #[error("Element spec for \"{}/{}\" missing url.", name, collection)]
     UrlMissing { name: String, collection: String },
 
     /// Returned when the element manager fails to created the component instance associated with
     /// a given element.
-    #[fail(display = "Element {} not created at \"{}/{}\": {:?}", url, collection, name, err)]
+    #[error("Element {} not created at \"{}/{}\": {:?}", url, collection, name, err)]
     NotCreated { name: String, collection: String, url: String, err: fsys::Error },
 
     /// Returned when the element manager fails to bind to the component instance associated with
     /// a given element.
-    #[fail(display = "Element {} not bound at \"{}/{}\": {:?}", url, collection, name, err)]
+    #[error("Element {} not bound at \"{}/{}\": {:?}", url, collection, name, err)]
     NotBound { name: String, collection: String, url: String, err: fsys::Error },
 }
 
@@ -135,7 +134,7 @@ fn is_cmx(component_url: &str) -> bool {
 fn add_cmx_element(
     child_url: &str,
     launcher: &LauncherProxy,
-) -> Result<fuchsia_component::client::App, failure::Error> {
+) -> Result<fuchsia_component::client::App, anyhow::Error> {
     fuchsia_component::client::launch(launcher, child_url.to_string(), None)
 }
 

@@ -14,7 +14,7 @@
 
 use {
     crate::commands::{Cmd, ReplControl},
-    failure::{format_err, Error, ResultExt},
+    anyhow::{format_err, Context as _, Error},
     fidl::endpoints,
     fidl_fuchsia_net::{IpAddress, Ipv4Address, Subnet},
     fidl_fuchsia_net_stack::{

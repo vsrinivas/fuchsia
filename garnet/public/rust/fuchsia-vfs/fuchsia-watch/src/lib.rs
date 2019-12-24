@@ -10,8 +10,8 @@
 #![deny(missing_docs)]
 
 use {
-    failure::{format_err, Error},
     fidl_fuchsia_io::NodeInfo,
+    anyhow::{format_err, Error},
     fuchsia_async as fasync,
     fuchsia_vfs_watcher::Watcher,
     futures::{

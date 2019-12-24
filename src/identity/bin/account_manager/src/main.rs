@@ -24,7 +24,7 @@ mod stored_account_list;
 
 use crate::account_handler_connection::AccountHandlerConnectionImpl;
 use crate::account_manager::AccountManager;
-use failure::{Error, ResultExt};
+use anyhow::{Context as _, Error};
 use fidl_fuchsia_auth::AuthProviderConfig;
 use fuchsia_async as fasync;
 use fuchsia_component::fuchsia_single_component_package_url;

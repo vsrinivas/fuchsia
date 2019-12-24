@@ -15,11 +15,12 @@ rustc_binary("triage_test") {
   edition = "2018"
 
   deps = [
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:clap",
-    "//third_party/rust_crates:failure",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:structopt",
+    "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:valico",
   ]
 }

@@ -2,29 +2,29 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Fail;
+use thiserror::Error;
 
 #[allow(missing_docs)]
-#[derive(Fail, Debug, PartialEq, Eq)]
+#[derive(Error, Debug, PartialEq, Eq)]
 pub enum RuleParseError {
-    #[fail(display = "invalid hostname")]
+    #[error("invalid hostname")]
     InvalidHost,
 
-    #[fail(display = "paths must start with '/'")]
+    #[error("paths must start with '/'")]
     InvalidPath,
 
-    #[fail(display = "paths should both be a prefix match or both be a literal match")]
+    #[error("paths should both be a prefix match or both be a literal match")]
     InconsistentPaths,
 }
 
 #[allow(missing_docs)]
-#[derive(Fail, Debug, PartialEq, Eq)]
+#[derive(Error, Debug, PartialEq, Eq)]
 pub enum RuleDecodeError {
-    #[fail(display = "unknown variant")]
+    #[error("unknown variant")]
     UnknownVariant,
 
-    #[fail(display = "parse error: {}", _0)]
-    ParseError(#[cause] RuleParseError),
+    #[error("parse error: {}", _0)]
+    ParseError(RuleParseError),
 }
 
 impl From<RuleParseError> for RuleDecodeError {

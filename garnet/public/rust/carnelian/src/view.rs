@@ -9,8 +9,8 @@ use crate::{
     message::Message,
     scenic_utils::PresentationTime,
 };
+use anyhow::{Context, Error};
 use async_trait::async_trait;
-use failure::{Error, ResultExt};
 use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_images::{ImagePipe2Marker, ImagePipe2Proxy};
 use fidl_fuchsia_sysmem::ImageFormat2;

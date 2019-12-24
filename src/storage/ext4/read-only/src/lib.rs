@@ -7,6 +7,4 @@ pub mod readers;
 pub mod structs;
 
 #[macro_use]
-extern crate failure;
-#[macro_use]
 extern crate static_assertions;

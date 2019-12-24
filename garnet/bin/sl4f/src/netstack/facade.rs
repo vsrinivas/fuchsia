@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{Error, ResultExt};
+use anyhow::{Context as _, Error};
 use fidl_fuchsia_net_stack::{StackMarker, StackProxy};
 use fuchsia_component as app;
 use fuchsia_syslog::{self, fx_log_err, fx_log_info};

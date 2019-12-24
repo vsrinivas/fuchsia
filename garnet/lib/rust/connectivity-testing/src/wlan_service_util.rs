@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{bail, format_err, Error, ResultExt};
+use anyhow::{format_err, Context as _, Error};
 use fidl::endpoints;
 use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_device_service::DeviceServiceProxy;
@@ -146,11 +146,11 @@ pub async fn disconnect_from_network(
     // check the status and ensure we are not connected to or connecting to anything
     let rsp = iface_sme_proxy.status().await.context("failed to check status from sme_proxy")?;
     if rsp.connected_to.is_some() || !rsp.connecting_to_ssid.is_empty() {
-        bail!(
+        return Err(format_err!(
             "Disconnect confirmation failed: connected_to[{:?}] connecting_to_ssid:[{:?}]",
             rsp.connected_to,
             rsp.connecting_to_ssid
-        );
+        ));
     }
     Ok(())
 }
@@ -191,12 +191,12 @@ async fn get_scan_results(
             fidl_sme::ScanTransactionEvent::OnFinished {} => return Ok(scan_results),
             fidl_sme::ScanTransactionEvent::OnError { error } => {
                 // error while waiting for scan results
-                bail!("error when retrieving scan results {:?}", error);
+                return Err(format_err!("error when retrieving scan results {:?}", error));
             }
         }
     }
 
-    bail!("ScanTransaction channel closed before scan finished");
+    return Err(format_err!("ScanTransaction channel closed before scan finished"));
 }
 
 fn credential_from_password(pwd: Vec<u8>) -> fidl_sme::Credential {
@@ -221,7 +221,7 @@ pub async fn destroy_iface(wlan_svc: &DeviceServiceProxy, iface_id: u16) -> Resu
     let response = wlan_svc.destroy_iface(&mut req).await.context("Error destroying iface")?;
     match zx::Status::ok(response) {
         Ok(()) => fx_log_info!("Destroyed iface {:?}", iface_id),
-        Err(s) => bail!("Error destroying iface: {:?}", s),
+        Err(s) => return Err(format_err!("Error destroying iface: {:?}", s)),
     };
     Ok(())
 }

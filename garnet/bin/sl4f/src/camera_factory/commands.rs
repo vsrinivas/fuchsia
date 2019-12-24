@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Error;
+use anyhow::Error;
 use futures::future::{FutureExt, LocalBoxFuture};
 use serde_json::{from_value, Value};
 
@@ -40,7 +40,7 @@ pub async fn camera_factory_method_to_fidl(
             let mut req: WriteCalibrationDataRequest = from_value(args)?;
             facade.write_calibration_data(&mut req.calibration_data, req.file_path).await
         }
-        _ => bail!("invalid FIDL method: {}", method_name),
+        _ => return Err(format_err!("invalid FIDL method: {}", method_name)),
     }?;
     Ok(result)
 }

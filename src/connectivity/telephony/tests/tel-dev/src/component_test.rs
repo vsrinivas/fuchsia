@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 use {
     crate::isolated_devmgr,
-    failure::{err_msg, format_err, Error, ResultExt},
+    anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_device::ControllerSynchronousProxy,
     fuchsia_async::{DurationExt, TimeoutExt, Timer},
     fuchsia_zircon::{self as zx, AsHandleRef, MessageBuf},
@@ -18,11 +18,11 @@ pub const DEVICE_UNBIND_TIMEOUT_IN_NANOS: i64 = 100_000_000;
 // TODO (jiamingw): get message from driver without padding (fxb/39128)
 pub fn qmi_vec_resize(qmi_vec: &mut Vec<u8>) -> Result<(), Error> {
     if qmi_vec.len() <= 1 {
-        return Err(err_msg("qmi_vec_resize: QMI msg too short"));
+        return Err(format_err!("qmi_vec_resize: QMI msg too short"));
     }
     let qmi_len = (qmi_vec[1] + 1) as usize;
     if qmi_vec.len() < qmi_len {
-        return Err(err_msg("qmi_vec_resize: truncated QMI msg"));
+        return Err(format_err!("qmi_vec_resize: truncated QMI msg"));
     }
     qmi_vec.resize(qmi_len, 0);
     Ok(())
@@ -70,7 +70,7 @@ pub async fn validate_removal_of_fake_device(
         }
         Ok::<(), Error>(())
     };
-    let timeout_err = Err(err_msg("validate_removal_of_fake_device: time out"));
+    let timeout_err = Err(format_err!("validate_removal_of_fake_device: time out"));
     fut.on_timeout(zx::Duration::from_nanos(time_in_nanos).after_now(), move || timeout_err)
         .await?;
     Ok(())
@@ -91,9 +91,9 @@ pub fn read_next_msg_from_channel(channel: &zx::Channel, time: zx::Time) -> Resu
     let channel_signals = channel
         .wait_handle(zx::Signals::CHANNEL_READABLE | zx::Signals::CHANNEL_PEER_CLOSED, time)?;
     if channel_signals.contains(zx::Signals::CHANNEL_PEER_CLOSED) {
-        return Err(err_msg("read_next_msg_from_channel: peer closed"));
+        return Err(format_err!("read_next_msg_from_channel: peer closed"));
     } else if !channel_signals.contains(zx::Signals::CHANNEL_READABLE) {
-        return Err(err_msg("read_next_msg_from_channel: channel not readable"));
+        return Err(format_err!("read_next_msg_from_channel: channel not readable"));
     }
     channel.read(&mut received_msg)?;
     Ok(received_msg.bytes().to_vec())

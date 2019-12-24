@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl::endpoints::RequestStream,
     fidl_fuchsia_examples_intl_manager::{PropertyManagerRequest, PropertyManagerRequestStream},
     fidl_fuchsia_intl::{
@@ -299,7 +299,7 @@ async fn main() -> Result<(), Error> {
 #[cfg(test)]
 mod test {
     use {
-        failure::{Error, ResultExt},
+        anyhow::{Context as _, Error},
         fidl_fuchsia_examples_intl_manager::{PropertyManagerMarker, PropertyManagerProxy},
         fidl_fuchsia_intl::{
             CalendarId, LocaleId, Profile, PropertyProviderEventStream, PropertyProviderMarker,

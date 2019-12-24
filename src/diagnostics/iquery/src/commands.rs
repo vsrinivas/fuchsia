@@ -7,7 +7,7 @@ use {
         location::{all_locations, InspectLocation},
         result::IqueryResult,
     },
-    failure::Error,
+    anyhow::Error,
     futures::future::join_all,
     std::str::FromStr,
 };

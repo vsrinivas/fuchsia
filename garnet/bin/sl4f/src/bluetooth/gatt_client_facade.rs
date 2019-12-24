@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{bail, Error, ResultExt};
+use anyhow::{format_err, Context as _, Error};
 use fidl;
 use fidl::endpoints;
 use fidl_fuchsia_bluetooth_gatt::{Characteristic, RemoteServiceProxy};
@@ -74,11 +74,13 @@ impl GattClientFacade {
             Some(c) => {
                 let status = c.start_scan(filter.as_mut()).await?;
                 match status.error {
-                    Some(e) => bail!("Failed to start scan: {}", Sl4fError::from(*e)),
+                    Some(e) => {
+                        return Err(format_err!("Failed to start scan: {}", Sl4fError::from(*e)))
+                    }
                     None => Ok(()),
                 }
             }
-            None => bail!("No central proxy created."),
+            None => return Err(format_err!("No central proxy created.")),
         }
     }
 
@@ -103,7 +105,7 @@ impl GattClientFacade {
             }
             None => {
                 fx_log_err!(tag: &with_line!(tag), "Unable to connect to service.");
-                bail!("No peripheral proxy created.")
+                return Err(format_err!("No peripheral proxy created."));
             }
         }
     }

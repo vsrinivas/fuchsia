@@ -4,16 +4,16 @@
 
 //! Typesafe wrappers around the /pkgfs/ctl filesystem.
 
-use {crate::iou, failure::Fail, fidl_fuchsia_io::DirectoryProxy, fuchsia_zircon::Status};
+use {crate::iou, fidl_fuchsia_io::DirectoryProxy, fuchsia_zircon::Status, thiserror::Error};
 
 /// An error encountered while garbage collecting blobs
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 #[allow(missing_docs)]
 pub enum GcError {
-    #[fail(display = "while sending request: {}", _0)]
-    Fidl(#[cause] fidl::Error),
+    #[error("while sending request: {}", _0)]
+    Fidl(fidl::Error),
 
-    #[fail(display = "unlink failed with status: {}", _0)]
+    #[error("unlink failed with status: {}", _0)]
     UnlinkError(Status),
 }
 
@@ -25,13 +25,13 @@ pub struct Client {
 
 impl Client {
     /// Returns an client connected to pkgfs from the current component's namespace
-    pub fn open_from_namespace() -> Result<Self, failure::Error> {
+    pub fn open_from_namespace() -> Result<Self, anyhow::Error> {
         let proxy = iou::open_directory_from_namespace("/pkgfs/ctl")?;
         Ok(Client { proxy })
     }
 
     /// Returns an client connected to pkgfs from the given pkgfs root dir.
-    pub fn open_from_pkgfs_root(pkgfs: &DirectoryProxy) -> Result<Self, failure::Error> {
+    pub fn open_from_pkgfs_root(pkgfs: &DirectoryProxy) -> Result<Self, anyhow::Error> {
         Ok(Client {
             proxy: iou::open_directory_no_describe(
                 pkgfs,

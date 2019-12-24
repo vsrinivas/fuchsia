@@ -5,7 +5,7 @@
 use crate::server::start_server;
 
 use {
-    failure::Error,
+    anyhow::Error,
     fuchsia_syslog::{self as syslog, fx_log_info},
     std::fs,
 };

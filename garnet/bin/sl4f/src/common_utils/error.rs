@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Fail;
 use fidl_fuchsia_bluetooth as bt;
+use thiserror::Error;
 
-#[derive(Debug, Fail)]
-#[fail(display = "{}", message)]
+#[derive(Debug, Error)]
+#[error("{}", message)]
 pub struct Sl4fError {
     message: String,
 }

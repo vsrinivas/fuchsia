@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{self, bail, format_err};
+use anyhow::format_err;
 use log::error;
 use parking_lot::{Mutex, MutexGuard};
 use serde_derive::{Deserialize, Serialize};
@@ -44,7 +44,7 @@ struct EssJsonWrite<'a> {
 }
 
 impl KnownEssStore {
-    pub fn new() -> Result<Self, failure::Error> {
+    pub fn new() -> Result<Self, anyhow::Error> {
         Self::new_with_paths(
             PathBuf::from(KNOWN_NETWORKS_PATH),
             PathBuf::from(TMP_KNOWN_NETWORKS_PATH),
@@ -54,7 +54,7 @@ impl KnownEssStore {
     pub fn new_with_paths(
         storage_path: PathBuf,
         tmp_storage_path: PathBuf,
-    ) -> Result<Self, failure::Error> {
+    ) -> Result<Self, anyhow::Error> {
         let ess_list: Vec<EssJsonRead> = match fs::File::open(&storage_path) {
             Ok(file) => match serde_json::from_reader(io::BufReader::new(file)) {
                 Ok(list) => list,
@@ -73,7 +73,7 @@ impl KnownEssStore {
             },
             Err(e) => match e.kind() {
                 io::ErrorKind::NotFound => Vec::new(),
-                _ => bail!("Failed to open {}: {}", storage_path.display(), e),
+                _ => return Err(format_err!("Failed to open {}: {}", storage_path.display(), e)),
             },
         };
         let mut ess_by_ssid = HashMap::with_capacity(ess_list.len());
@@ -90,7 +90,7 @@ impl KnownEssStore {
         self.ess_by_ssid.lock().get(ssid).map(Clone::clone)
     }
 
-    pub fn store(&self, ssid: Vec<u8>, ess: KnownEss) -> Result<(), failure::Error> {
+    pub fn store(&self, ssid: Vec<u8>, ess: KnownEss) -> Result<(), anyhow::Error> {
         let mut guard = self.ess_by_ssid.lock();
         // Even if writing into the file fails, it is still okay
         // to modify the in-memory map. We are not too worried about consistency here.
@@ -98,7 +98,7 @@ impl KnownEssStore {
         self.write(guard)
     }
 
-    pub fn clear(&self) -> Result<(), failure::Error> {
+    pub fn clear(&self) -> Result<(), anyhow::Error> {
         let mut guard = self.ess_by_ssid.lock();
         guard.clear();
         self.write(guard)
@@ -110,7 +110,7 @@ impl KnownEssStore {
         self.ess_by_ssid.lock().len()
     }
 
-    fn write(&self, guard: MutexGuard<'_, EssMap>) -> Result<(), failure::Error> {
+    fn write(&self, guard: MutexGuard<'_, EssMap>) -> Result<(), anyhow::Error> {
         let temp_file = TempFile::create(&self.tmp_storage_path)?;
         let mut list = Vec::with_capacity(guard.len());
         for (ssid, ess) in guard.iter() {
@@ -151,14 +151,14 @@ struct TempFile<'a> {
 }
 
 impl<'a> TempFile<'a> {
-    pub fn create(path: &'a Path) -> Result<Self, failure::Error> {
+    pub fn create(path: &'a Path) -> Result<Self, anyhow::Error> {
         let file = fs::File::create(path)
             .map_err(|e| format_err!("Failed to open {} for writing: {}", path.display(), e))?;
         let path = TempPath { path };
         Ok(TempFile { path, file })
     }
 
-    pub fn close_and_rename(self, new_name: &Path) -> Result<(), failure::Error> {
+    pub fn close_and_rename(self, new_name: &Path) -> Result<(), anyhow::Error> {
         mem::drop(self.file);
         fs::rename(&self.path.path, new_name)?;
         mem::forget(self.path);

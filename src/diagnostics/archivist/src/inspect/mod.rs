@@ -6,7 +6,7 @@ use {
         collection::{DataCollector, DataMap},
         component_events::Data,
     },
-    failure::{self, bail, format_err, Error},
+    anyhow::{format_err, Error},
     fidl::endpoints::DiscoverableService,
     fidl::endpoints::{RequestStream, ServerEnd},
     fidl_fuchsia_diagnostics::{self, Selector},
@@ -196,7 +196,7 @@ impl DataCollector for InspectDataCollector {
             let inspect_proxy = match InspectDataCollector::find_directory_proxy(&path).await {
                 Ok(proxy) => proxy,
                 Err(e) => {
-                    bail!("Failed to open out directory at {:?}: {}", path, e);
+                    return Err(format_err!("Failed to open out directory at {:?}: {}", path, e));
                 }
             };
 
@@ -750,7 +750,7 @@ impl ReaderServer {
                 }
                 Ok(())
             }
-            .unwrap_or_else(|e: failure::Error| {
+            .unwrap_or_else(|e: anyhow::Error| {
                 eprintln!("running inspect reader: {:?}", e);
             }),
         );

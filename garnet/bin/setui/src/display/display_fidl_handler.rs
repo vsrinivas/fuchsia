@@ -69,7 +69,7 @@ pub fn spawn_display_fidl_handler(
         let mut processor = FidlProcessor::<DisplayMarker>::new(stream, switchboard_handle.clone());
         processor.register::<DisplaySettings, DisplayWatchResponder>(
             SettingType::Display,
-            Box::new(move |context, req| -> LocalBoxFuture<'_, Result<Option<DisplayRequest>, failure::Error>> {
+            Box::new(move |context, req| -> LocalBoxFuture<'_, Result<Option<DisplayRequest>, anyhow::Error>> {
                 async move {
                     // Support future expansion of FIDL
                     #[allow(unreachable_patterns)]
@@ -110,7 +110,7 @@ pub fn spawn_display_fidl_handler(
 
         processor.register::<LightSensorData, DisplayWatchLightSensorResponder>(
             SettingType::LightSensor,
-            Box::new(move |context, req| -> LocalBoxFuture<'_, Result<Option<DisplayRequest>, failure::Error>> {
+            Box::new(move |context, req| -> LocalBoxFuture<'_, Result<Option<DisplayRequest>, anyhow::Error>> {
                 async move {
                     // Support future expansion of FIDL
                     #[allow(unreachable_patterns)]

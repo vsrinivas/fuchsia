@@ -15,8 +15,9 @@ rustc_test("rate_selection") {
     "//sdk/fidl/fuchsia.wlan.service:fuchsia.wlan.service-rustc",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
     "//src/connectivity/wlan/testing/hw-sim:wlan-hw-sim",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:pin-utils",
+    "//third_party/rust_crates:thiserror",
   ]
 }

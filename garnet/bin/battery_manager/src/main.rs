@@ -6,7 +6,7 @@ mod battery_manager;
 mod power;
 
 use crate::battery_manager::BatteryManager;
-use failure::{Error, ResultExt};
+use anyhow::{Context as _, Error};
 use fidl_fuchsia_power as fpower;
 use fidl_fuchsia_power_ext::CloneExt;
 use fuchsia_async as fasync;
@@ -73,7 +73,7 @@ fn spawn_battery_manager_async(
             }
             Ok(())
         }
-        .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
+        .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
     );
 }
 

@@ -4,7 +4,7 @@
 
 use crate::tokens::{AccessTokenKey, IdTokenKey, OAuthToken};
 use crate::{AuthProviderSupplier, ResultExt, TokenManagerContext, TokenManagerError};
-use failure::format_err;
+use anyhow::format_err;
 use fidl;
 use fidl::endpoints::{create_endpoints, ClientEnd};
 use fidl_fuchsia_auth::{
@@ -52,7 +52,7 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
         db_path: &Path,
         auth_provider_supplier: T,
         task_group: TaskGroup,
-    ) -> Result<Self, failure::Error> {
+    ) -> Result<Self, anyhow::Error> {
         let token_store = AuthDbFile::new(db_path)
             .map_err(|err| format_err!("Error creating AuthDb at {:?}, {:?}", db_path, err))?;
         let token_cache = TokenCache::new(CACHE_SIZE);
@@ -90,7 +90,7 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
         context: &'a TokenManagerContext,
         mut stream: TokenManagerRequestStream,
         cancel: TaskGroupCancel,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), anyhow::Error> {
         // TODO(dnordstrom): Allow cancellation within long running requests
         while let Some(result) = cancel_or(&cancel, stream.try_next()).await {
             match result? {
@@ -107,7 +107,7 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
         &'a self,
         context: &'a TokenManagerContext,
         req: TokenManagerRequest,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), anyhow::Error> {
         // TODO(jsankey): Determine how best to enforce the application_url in context.
         match req {
             TokenManagerRequest::Authorize {
@@ -424,7 +424,7 @@ trait Responder: Sized {
     fn send_result(
         self,
         result: Result<Self::Data, TokenManagerError>,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), anyhow::Error> {
         match result {
             Ok(val) => {
                 if let Err(err) = self.send_raw(Status::Ok, Some(val)) {
@@ -438,7 +438,7 @@ trait Responder: Sized {
                 }
                 if err.fatal {
                     error!("Fatal error during {}: {:?}", Self::METHOD_NAME, &err);
-                    Err(failure::Error::from(err))
+                    Err(anyhow::Error::from(err))
                 } else {
                     warn!("Error during {}: {:?}", Self::METHOD_NAME, &err);
                     Ok(())
@@ -549,7 +549,7 @@ mod tests {
     async fn create_and_serve_token_manager(
         stream: TokenManagerRequestStream,
         auth_provider_supplier: FakeAuthProviderSupplier,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), anyhow::Error> {
         let tmp_dir = TempDir::new().unwrap();
         let db_path = tmp_dir.path().join("tokens.json");
         create_and_serve_token_manager_with_db_path(&db_path, stream, auth_provider_supplier).await
@@ -559,7 +559,7 @@ mod tests {
     async fn create_and_serve_in_memory_token_manager(
         stream: TokenManagerRequestStream,
         auth_provider_supplier: FakeAuthProviderSupplier,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), anyhow::Error> {
         let task_group = TaskGroup::new();
         let token_manager = TokenManager::new_in_memory(auth_provider_supplier, task_group.clone());
         let context = create_token_manager_context();
@@ -572,7 +572,7 @@ mod tests {
         db_path: &Path,
         stream: TokenManagerRequestStream,
         auth_provider_supplier: FakeAuthProviderSupplier,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), anyhow::Error> {
         let task_group = TaskGroup::new();
 
         let token_manager = TokenManager::new(&db_path, auth_provider_supplier, task_group.clone())

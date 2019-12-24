@@ -7,8 +7,8 @@ use {
         client::{protection::Protection, InvalidPasswordArgError},
         DeviceInfo,
     },
+    anyhow::{ensure, format_err},
     eapol,
-    failure::{bail, ensure, format_err},
     fidl_fuchsia_wlan_mlme::BssDescription,
     fidl_fuchsia_wlan_sme as fidl_sme,
     std::boxed::Box,
@@ -35,17 +35,17 @@ impl PartialEq for Rsna {
 }
 
 pub trait Supplicant: std::fmt::Debug + std::marker::Send {
-    fn start(&mut self) -> Result<(), failure::Error>;
+    fn start(&mut self) -> Result<(), anyhow::Error>;
     fn reset(&mut self);
     fn on_eapol_frame(
         &mut self,
         update_sink: &mut UpdateSink,
         frame: eapol::Frame<&[u8]>,
-    ) -> Result<(), failure::Error>;
+    ) -> Result<(), anyhow::Error>;
 }
 
 impl Supplicant for wlan_rsn::Supplicant {
-    fn start(&mut self) -> Result<(), failure::Error> {
+    fn start(&mut self) -> Result<(), anyhow::Error> {
         wlan_rsn::Supplicant::start(self)
     }
 
@@ -57,7 +57,7 @@ impl Supplicant for wlan_rsn::Supplicant {
         &mut self,
         update_sink: &mut UpdateSink,
         frame: eapol::Frame<&[u8]>,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), anyhow::Error> {
         wlan_rsn::Supplicant::on_eapol_frame(self, update_sink, frame)
     }
 }
@@ -96,9 +96,9 @@ pub fn get_rsna(
     device_info: &DeviceInfo,
     credential: &fidl_sme::Credential,
     bss: &BssDescription,
-) -> Result<Protection, failure::Error> {
+) -> Result<Protection, anyhow::Error> {
     let a_rsne_bytes = match bss.rsne.as_ref() {
-        None => bail!("RSNE not present in BSS"),
+        None => return Err(format_err!("RSNE not present in BSS")),
         Some(rsne) => &rsne[..],
     };
 
@@ -125,7 +125,7 @@ pub fn get_rsna(
 pub fn compute_psk(
     credential: &fidl_sme::Credential,
     ssid: &[u8],
-) -> Result<psk::Psk, failure::Error> {
+) -> Result<psk::Psk, anyhow::Error> {
     match credential {
         fidl_sme::Credential::Password(password) => psk::compute(&password[..], ssid),
         fidl_sme::Credential::Psk(psk) => {
@@ -146,9 +146,9 @@ pub fn compute_psk(
 /// Group Data Cipher: same as A-RSNE (CCMP-128 or TKIP)
 /// Pairwise Cipher: CCMP-128
 /// AKM: PSK
-fn derive_s_rsne(a_rsne: &Rsne) -> Result<Rsne, failure::Error> {
+fn derive_s_rsne(a_rsne: &Rsne) -> Result<Rsne, anyhow::Error> {
     if !is_rsn_compatible(&a_rsne) {
-        bail!("incompatible RSNE {:?}", a_rsne);
+        return Err(format_err!("incompatible RSNE {:?}", a_rsne));
     }
 
     // If Authenticator's RSNE is supported, construct Supplicant's RSNE.

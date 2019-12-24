@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{err_msg, Error, Fail, ResultExt},
+    anyhow::{format_err, Error},
     fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_bluetooth::{
         error::Error as BTError, expectation::asynchronous::ExpectableStateExt, types::Address,
@@ -67,9 +67,9 @@ async fn start_scan(central: &CentralHarness) -> Result<(), Error> {
         .aux()
         .proxy()
         .start_scan(None)
-        .map_err(|e| e.context("FIDL error sending command").into())
-        .on_timeout(scan_timeout().after_now(), move || Err(err_msg("Timed out")));
-    let status = fut.await.context("Could not initialize scan")?;
+        .map_err(|e| e.into())
+        .on_timeout(scan_timeout().after_now(), move || Err(format_err!("Timed out")));
+    let status = fut.await?;
     if let Some(e) = status.error {
         return Err(BTError::from(*e).into());
     }

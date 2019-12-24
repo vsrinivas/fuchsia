@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl_fuchsia_sys::{ComponentControllerEvent, TerminationReason},
     fidl_fuchsia_test_echos::{
         EchoExposedByParentRequest, EchoExposedByParentRequestStream, EchoExposedBySiblingMarker,
@@ -18,22 +18,22 @@ use {
 
 fn echo_exposed_server(stream: EchoExposedByParentRequestStream) -> impl Future<Output = ()> {
     stream
-        .err_into::<failure::Error>()
+        .err_into::<anyhow::Error>()
         .try_for_each(|EchoExposedByParentRequest::Echo { value, responder }| async move {
             responder.send(value).context("sending response")?;
             Ok(())
         })
-        .unwrap_or_else(|e: failure::Error| panic!("error running echo server: {:?}", e))
+        .unwrap_or_else(|e: anyhow::Error| panic!("error running echo server: {:?}", e))
 }
 
 fn echo_hidden_server(stream: EchoHiddenByParentRequestStream) -> impl Future<Output = ()> {
     stream
-        .err_into::<failure::Error>()
+        .err_into::<anyhow::Error>()
         .try_for_each(|EchoHiddenByParentRequest::Echo { value, responder }| async move {
             responder.send(value).context("sending response")?;
             Ok(())
         })
-        .unwrap_or_else(|e: failure::Error| panic!("error running echo server: {:?}", e))
+        .unwrap_or_else(|e: anyhow::Error| panic!("error running echo server: {:?}", e))
 }
 
 const CHILD_SIBLING_URL: &str =

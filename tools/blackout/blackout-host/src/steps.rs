@@ -5,7 +5,7 @@
 //! test steps
 
 use {
-    crate::{Error, RebootError, Seed},
+    crate::{BlackoutError, RebootError, Seed},
     std::{
         fs::OpenOptions,
         io::Write,
@@ -55,9 +55,9 @@ fn soft_reboot(target: &str) -> Result<(), RebootError> {
 }
 
 trait Runner {
-    fn run_spawn(&self, subc: &str) -> Result<Child, Error>;
-    fn run_output(&self, subc: &str) -> Result<Output, Error>;
-    fn run(&self, subc: &str) -> Result<(), Error>;
+    fn run_spawn(&self, subc: &str) -> Result<Child, BlackoutError>;
+    fn run_output(&self, subc: &str) -> Result<Output, BlackoutError>;
+    fn run(&self, subc: &str) -> Result<(), BlackoutError>;
 }
 
 /// run a target binary on a target device over ssh.
@@ -89,7 +89,7 @@ impl Runner for CmdRunner {
     /// Run a subcommand of the originally provided binary on the target. The command is spawned as a
     /// separate process, and a reference to the child process is returned. stdout and stderr are
     /// piped (see [`std::process::Stdio::piped()`] for details).
-    fn run_spawn(&self, subc: &str) -> Result<Child, Error> {
+    fn run_spawn(&self, subc: &str) -> Result<Child, BlackoutError> {
         let child =
             self.run_bin().arg(subc).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn()?;
 
@@ -97,18 +97,18 @@ impl Runner for CmdRunner {
     }
 
     /// Run a subcommand to completion and collect the output from the process.
-    fn run_output(&self, subc: &str) -> Result<Output, Error> {
+    fn run_output(&self, subc: &str) -> Result<Output, BlackoutError> {
         let out = self.run_bin().arg(subc).output()?;
         if out.status.success() {
             Ok(out)
         } else if out.status.code().unwrap() == 255 {
-            Err(Error::Ssh(self.target.clone(), out.into()))
+            Err(BlackoutError::Ssh(self.target.clone(), out.into()))
         } else {
-            Err(Error::TargetCommand(out.into()))
+            Err(BlackoutError::TargetCommand(out.into()))
         }
     }
 
-    fn run(&self, subc: &str) -> Result<(), Error> {
+    fn run(&self, subc: &str) -> Result<(), BlackoutError> {
         self.run_output(subc).map(|_| ())
     }
 }
@@ -117,7 +117,7 @@ impl Runner for CmdRunner {
 /// library.
 pub trait TestStep {
     /// Execute this test step.
-    fn execute(&self) -> Result<(), Error>;
+    fn execute(&self) -> Result<(), BlackoutError>;
 }
 
 /// A test step for setting up the filesystem in the way we want it for the test. This executes the
@@ -134,7 +134,7 @@ impl SetupStep {
 }
 
 impl TestStep for SetupStep {
-    fn execute(&self) -> Result<(), Error> {
+    fn execute(&self) -> Result<(), BlackoutError> {
         println!("setting up test...");
         self.runner.run("setup")
     }
@@ -161,7 +161,7 @@ impl LoadStep {
 }
 
 impl TestStep for LoadStep {
-    fn execute(&self) -> Result<(), Error> {
+    fn execute(&self) -> Result<(), BlackoutError> {
         println!("generating filesystem load...");
         let mut child = self.runner.run_spawn("test")?;
 
@@ -170,7 +170,7 @@ impl TestStep for LoadStep {
         // make sure child process is still running
         if let Some(_) = child.try_wait()? {
             let out = child.wait_with_output()?;
-            return Err(Error::TargetCommand(out.into()));
+            return Err(BlackoutError::TargetCommand(out.into()));
         }
 
         Ok(())
@@ -191,7 +191,7 @@ impl OperationStep {
 }
 
 impl TestStep for OperationStep {
-    fn execute(&self) -> Result<(), Error> {
+    fn execute(&self) -> Result<(), BlackoutError> {
         println!("running filesystem operation...");
         self.runner.run("test")
     }
@@ -214,7 +214,7 @@ impl RebootStep {
 }
 
 impl TestStep for RebootStep {
-    fn execute(&self) -> Result<(), Error> {
+    fn execute(&self) -> Result<(), BlackoutError> {
         println!("rebooting device...");
         match &self.reboot_type {
             RebootType::Software => soft_reboot(&self.target)?,
@@ -249,7 +249,7 @@ impl VerifyStep {
 }
 
 impl TestStep for VerifyStep {
-    fn execute(&self) -> Result<(), Error> {
+    fn execute(&self) -> Result<(), BlackoutError> {
         let mut last_ssh_error = Ok(());
         for i in 1..self.num_retries + 1 {
             println!("verifying device...(attempt #{})", i);
@@ -258,7 +258,7 @@ impl TestStep for VerifyStep {
                     println!("verification successful.");
                     return Ok(());
                 }
-                Err(ssh_error @ Error::Ssh(..)) => {
+                Err(ssh_error @ BlackoutError::Ssh(..)) => {
                     // always print out the ssh error so it doesn't get buried to help with debugging.
                     println!("{}", ssh_error);
                     last_ssh_error = Err(ssh_error);
@@ -266,7 +266,7 @@ impl TestStep for VerifyStep {
                 }
                 // during the verification stage, we expect that any time the target command fails,
                 // it's a verification failure.
-                Err(Error::TargetCommand(e)) => return Err(Error::Verification(e)),
+                Err(BlackoutError::TargetCommand(e)) => return Err(BlackoutError::Verification(e)),
                 Err(e) => return Err(e),
             }
         }
@@ -278,7 +278,7 @@ impl TestStep for VerifyStep {
 #[cfg(test)]
 mod tests {
     use super::{OperationStep, Runner, SetupStep, TestStep, VerifyStep};
-    use crate::{CommandError, Error};
+    use crate::{BlackoutError, CommandError};
     use std::{
         cell::Cell,
         os::unix::process::ExitStatusExt,
@@ -289,14 +289,14 @@ mod tests {
 
     struct FakeRunner<F>
     where
-        F: Fn() -> Result<(), Error>,
+        F: Fn() -> Result<(), BlackoutError>,
     {
         command: &'static str,
         res: F,
     }
     impl<F> FakeRunner<F>
     where
-        F: Fn() -> Result<(), Error>,
+        F: Fn() -> Result<(), BlackoutError>,
     {
         pub fn new(command: &'static str, res: F) -> FakeRunner<F> {
             FakeRunner { command, res }
@@ -304,15 +304,15 @@ mod tests {
     }
     impl<F> Runner for FakeRunner<F>
     where
-        F: Fn() -> Result<(), Error>,
+        F: Fn() -> Result<(), BlackoutError>,
     {
-        fn run_spawn(&self, _subc: &str) -> Result<Child, Error> {
+        fn run_spawn(&self, _subc: &str) -> Result<Child, BlackoutError> {
             unimplemented!()
         }
-        fn run_output(&self, _subc: &str) -> Result<Output, Error> {
+        fn run_output(&self, _subc: &str) -> Result<Output, BlackoutError> {
             unimplemented!()
         }
-        fn run(&self, subc: &str) -> Result<(), Error> {
+        fn run(&self, subc: &str) -> Result<(), BlackoutError> {
             assert_eq!(subc, self.command);
             (self.res)()
         }
@@ -330,7 +330,7 @@ mod tests {
     #[test]
     fn setup_error() {
         let error = || {
-            Err(Error::TargetCommand(CommandError(
+            Err(BlackoutError::TargetCommand(CommandError(
                 ExitStatus::from_raw(1),
                 "(fake stdout)".into(),
                 "(fake stderr)".into(),
@@ -338,7 +338,7 @@ mod tests {
         };
         let step = SetupStep { runner: Box::new(FakeRunner::new("setup", error)) };
         match step.execute() {
-            Err(Error::TargetCommand(_)) => (),
+            Err(BlackoutError::TargetCommand(_)) => (),
             Ok(()) => panic!("setup step returned success when runner failed"),
             _ => panic!("setup step returned an unexpected error"),
         }
@@ -356,7 +356,7 @@ mod tests {
     #[test]
     fn operation_error() {
         let error = || {
-            Err(Error::TargetCommand(CommandError(
+            Err(BlackoutError::TargetCommand(CommandError(
                 ExitStatus::from_raw(1),
                 "(fake stdout)".into(),
                 "(fake stderr)".into(),
@@ -364,7 +364,7 @@ mod tests {
         };
         let step = OperationStep { runner: Box::new(FakeRunner::new("test", error)) };
         match step.execute() {
-            Err(Error::TargetCommand(_)) => (),
+            Err(BlackoutError::TargetCommand(_)) => (),
             Ok(()) => panic!("operation step returned success when runner failed"),
             _ => panic!("operation step returned an unexpected error"),
         }
@@ -386,7 +386,7 @@ mod tests {
     #[test]
     fn verify_target_command_error() {
         let error = || {
-            Err(Error::TargetCommand(CommandError(
+            Err(BlackoutError::TargetCommand(CommandError(
                 ExitStatus::from_raw(1),
                 "(fake stdout)".into(),
                 "(fake stderr)".into(),
@@ -399,8 +399,8 @@ mod tests {
         };
         match step.execute() {
             // verify step is expected to tranform target command errors into verification errors.
-            Err(Error::Verification(_)) => (),
-            Err(Error::TargetCommand(_)) => {
+            Err(BlackoutError::Verification(_)) => (),
+            Err(BlackoutError::TargetCommand(_)) => {
                 panic!("verify step returned target command error instead of verification error")
             }
             Ok(()) => panic!("verify step returned success when runner failed"),
@@ -414,7 +414,7 @@ mod tests {
         let attempts = outer_attempts.clone();
         let error = move || {
             attempts.set(attempts.get() + 1);
-            Err(Error::Ssh(
+            Err(BlackoutError::Ssh(
                 "fake target".into(),
                 CommandError(
                     ExitStatus::from_raw(255),
@@ -429,7 +429,7 @@ mod tests {
             retry_timeout: Duration::from_secs(0),
         };
         match step.execute() {
-            Err(Error::Ssh(..)) => (),
+            Err(BlackoutError::Ssh(..)) => (),
             Ok(()) => panic!("verify step returned success when runner failed"),
             _ => panic!("verify step returned an unexpected error"),
         }
@@ -443,7 +443,7 @@ mod tests {
         let error = move || {
             attempts.set(attempts.get() + 1);
             if attempts.get() <= 5 {
-                Err(Error::Ssh(
+                Err(BlackoutError::Ssh(
                     "fake target".into(),
                     CommandError(
                         ExitStatus::from_raw(255),
@@ -462,7 +462,9 @@ mod tests {
         };
         match step.execute() {
             Ok(()) => (),
-            Err(Error::Ssh(..)) => panic!("verify step returned error when runner succeeded"),
+            Err(BlackoutError::Ssh(..)) => {
+                panic!("verify step returned error when runner succeeded")
+            }
             _ => panic!("verify step returned an unexpected error"),
         }
         assert_eq!(outer_attempts.get(), 6);

@@ -4,7 +4,7 @@
 
 use {
     crate::models::ActionDisplayInfo,
-    failure::{err_msg, Error, ResultExt},
+    anyhow::{format_err, Context as _, Error},
     fidl::endpoints::Proxy,
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_sys as fsys, fuchsia_async as fasync,
@@ -143,7 +143,7 @@ pub async fn load_module_facet(component_url: &str) -> Result<ModuleFacet, Error
         .context(format!("Could not load package: {:?}", component_url))?;
 
     let package: fsys::Package = *loader_result.ok_or_else(|| {
-        err_msg(format!("Loader result did not contain package: {:?}", component_url))
+        format_err!(format!("Loader result did not contain package: {:?}", component_url))
     })?;
 
     let cmx_file_contents: String = read_cmx_file(package).await?;
@@ -182,7 +182,7 @@ async fn read_cmx_file(package: fsys::Package) -> Result<String, Error> {
     };
 
     let package_directory =
-        package.directory.ok_or_else(|| err_msg("Package does not contain directory."))?;
+        package.directory.ok_or_else(|| format_err!("Package does not contain directory."))?;
     let channel = fasync::Channel::from_channel(package_directory)
         .context("Could not create channel from package directory")?;
 

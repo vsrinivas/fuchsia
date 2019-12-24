@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{format_err, Error},
+    anyhow::{format_err, Error},
     fidl_fuchsia_factory::{
         CastCredentialsFactoryStoreProviderRequest,
         CastCredentialsFactoryStoreProviderRequestStream, MiscFactoryStoreProviderRequest,

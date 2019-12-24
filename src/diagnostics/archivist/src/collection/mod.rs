@@ -16,7 +16,7 @@ use {
         component_events::{ComponentEvent, ComponentEventData, Data, InspectReaderData},
         inspect,
     },
-    failure::{self, format_err, Error},
+    anyhow::{format_err, Error},
     fuchsia_async as fasync,
     fuchsia_watch::{self, NodeType, PathEvent},
     futures::future::{join_all, BoxFuture},

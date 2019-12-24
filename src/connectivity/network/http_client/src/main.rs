@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Error;
+use anyhow::Error;
 use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_net_oldhttp as oldhttp;
 use fuchsia_async as fasync;
@@ -159,7 +159,7 @@ fn spawn_old_url_loader(server: ServerEnd<oldhttp::UrlLoaderMarker>) {
                 })
                 .await
         }
-        .unwrap_or_else(|e: failure::Error| eprintln!("{:?}", e)),
+        .unwrap_or_else(|e: anyhow::Error| eprintln!("{:?}", e)),
     );
 }
 
@@ -175,7 +175,7 @@ fn spawn_old_server(stream: oldhttp::HttpServiceRequestStream) {
                 })
                 .await
         }
-        .unwrap_or_else(|e: failure::Error| eprintln!("{:?}", e)),
+        .unwrap_or_else(|e: anyhow::Error| eprintln!("{:?}", e)),
     );
 }
 

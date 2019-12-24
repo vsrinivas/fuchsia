@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{err_msg, Error};
+use anyhow::{format_err, Error};
 use fdio;
 use fidl_fuchsia_device::ControllerSynchronousProxy;
 use fidl_fuchsia_device_test::{DeviceSynchronousProxy, RootDeviceSynchronousProxy};
@@ -17,7 +17,7 @@ pub fn create_test_device(test_path: &str, dev_name: &str) -> Result<String, Err
 
     let (status, devpath) = interface.create_device(dev_name, fuchsia_zircon::Time::INFINITE)?;
     fuchsia_zircon::Status::ok(status)?;
-    devpath.ok_or(err_msg("RootDevice.CreateDevice received no devpath?"))
+    devpath.ok_or(format_err!("RootDevice.CreateDevice received no devpath?"))
 }
 
 pub fn bind_test_device(device: &File, driver_name: &str) -> Result<(), Error> {

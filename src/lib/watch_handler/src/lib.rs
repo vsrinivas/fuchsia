@@ -6,7 +6,7 @@
 
 //! A common handler for hanging_gets
 
-use failure::{err_msg, Error};
+use anyhow::{format_err, Error};
 
 /// Function used to determine whether a change should cause any parked watchers to return.
 type ChangeFunction<T> = Box<dyn Fn(&T, &T) -> bool + Send + Sync + 'static>;
@@ -77,7 +77,7 @@ where
             self.send_if_needed();
             Ok(())
         } else {
-            Err(err_msg("Inconsistent state; existing handler in state"))
+            Err(format_err!("Inconsistent state; existing handler in state"))
         }
     }
 

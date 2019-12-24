@@ -4,8 +4,8 @@
 
 use {
     crate::model::resolver::{Resolver, ResolverError, ResolverFut},
+    anyhow::format_err,
     cm_fidl_translator,
-    failure::format_err,
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_sys::LoaderProxy,

@@ -10,7 +10,7 @@ use {
         RuleListCommand, RuleReplaceCommand, RuleReplaceFileCommand, RuleReplaceJsonCommand,
         RuleReplaceSubCommand, RuleSubCommand, UpdateCommand,
     },
-    failure::{self, format_err, Fail, ResultExt},
+    anyhow::{format_err, Context as _},
     fidl_fuchsia_pkg::{
         PackageCacheMarker, PackageResolverAdminMarker, PackageResolverMarker,
         RepositoryManagerMarker, RepositoryManagerProxy, UpdatePolicy,
@@ -28,12 +28,13 @@ use {
         future::Future,
         io,
     },
+    thiserror::Error,
 };
 
 mod args;
 mod error;
 
-fn main() -> Result<(), failure::Error> {
+fn main() -> Result<(), anyhow::Error> {
     let Args { command } = argh::from_env();
 
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
@@ -237,12 +238,12 @@ fn main() -> Result<(), failure::Error> {
     executor.run_singlethreaded(fut)
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 enum EditTransactionError {
-    #[fail(display = "internal fidl error: {}", _0)]
-    Fidl(#[cause] fidl::Error),
+    #[error("internal fidl error: {}", _0)]
+    Fidl(fidl::Error),
 
-    #[fail(display = "commit error: {}", _0)]
+    #[error("commit error: {}", _0)]
     CommitError(zx::Status),
 }
 
@@ -287,7 +288,7 @@ where
 
 async fn fetch_repos(
     repo_manager: RepositoryManagerProxy,
-) -> Result<Vec<RepositoryConfig>, failure::Error> {
+) -> Result<Vec<RepositoryConfig>, anyhow::Error> {
     let (iter, server_end) = fidl::endpoints::create_proxy()?;
     repo_manager.list(server_end)?;
     let mut repos = vec![];
@@ -302,6 +303,6 @@ async fn fetch_repos(
 
     repos
         .into_iter()
-        .map(|repo| RepositoryConfig::try_from(repo).map_err(|e| failure::Error::from(e)))
+        .map(|repo| RepositoryConfig::try_from(repo).map_err(|e| anyhow::Error::from(e)))
         .collect()
 }

@@ -5,7 +5,7 @@
 use {
     crate::ast::{self, BanjoAst, Decl, Ty},
     crate::backends::Backend,
-    failure::Error,
+    anyhow::Error,
     heck::CamelCase,
     std::io,
 };

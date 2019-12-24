@@ -2,61 +2,55 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Fail;
+use thiserror::Error;
 
-#[derive(Clone, Debug, PartialEq, Eq, Fail)]
+#[derive(Clone, Debug, PartialEq, Eq, Error)]
 pub enum ParseError {
-    #[fail(display = "invalid scheme")]
+    #[error("invalid scheme")]
     InvalidScheme,
 
-    #[fail(display = "invalid host")]
+    #[error("invalid host")]
     InvalidHost,
 
-    #[fail(display = "host must be empty to imply absolute path")]
+    #[error("host must be empty to imply absolute path")]
     HostMustBeEmpty,
 
-    #[fail(display = "invalid path")]
+    #[error("invalid path")]
     InvalidPath,
 
-    #[fail(display = "invalid name")]
+    #[error("invalid name")]
     InvalidName,
 
-    #[fail(display = "invalid variant")]
+    #[error("invalid variant")]
     InvalidVariant,
 
-    #[fail(display = "invalid hash")]
+    #[error("invalid hash")]
     InvalidHash,
 
-    #[fail(display = "invalid resource path")]
+    #[error("invalid resource path")]
     InvalidResourcePath,
 
-    #[fail(display = "extra path segments")]
+    #[error("extra path segments")]
     ExtraPathSegments,
 
-    #[fail(display = "extra query parameters")]
+    #[error("extra query parameters")]
     ExtraQueryParameters,
 
-    #[fail(display = "cannot contain port")]
+    #[error("cannot contain port")]
     CannotContainPort,
 
-    #[fail(display = "cannot contain username")]
+    #[error("cannot contain username")]
     CannotContainUsername,
 
-    #[fail(display = "cannot contain password")]
+    #[error("cannot contain password")]
     CannotContainPassword,
 
-    #[fail(display = "cannot contain query parameters")]
+    #[error("cannot contain query parameters")]
     CannotContainQueryParameters,
 
-    #[fail(display = "invalid repository URI")]
+    #[error("invalid repository URI")]
     InvalidRepository,
 
-    #[fail(display = "parse error: {}", _0)]
-    UrlParseError(#[cause] url::ParseError),
-}
-
-impl From<url::ParseError> for ParseError {
-    fn from(err: url::ParseError) -> Self {
-        ParseError::UrlParseError(err)
-    }
+    #[error("parse error: {}", _0)]
+    UrlParseError(#[from] url::ParseError),
 }

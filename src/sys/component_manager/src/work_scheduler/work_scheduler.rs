@@ -740,7 +740,7 @@ mod connect_tests {
                 testing::mocks::FakeBinder,
             },
         },
-        failure::Error,
+        anyhow::Error,
         fidl::endpoints::ClientEnd,
         fidl_fuchsia_sys2::WorkSchedulerControlMarker,
         fuchsia_async as fasync, fuchsia_zircon as zx,

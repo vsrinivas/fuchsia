@@ -6,7 +6,7 @@
 
 #![deny(missing_docs)]
 
-use failure::{Error, ResultExt};
+use anyhow::{Context as _, Error};
 
 use fuchsia_component::client::connect_to_service;
 use futures::TryStreamExt;

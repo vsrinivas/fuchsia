@@ -5,7 +5,7 @@
 //! Handles negotiating buffer sets with the codec server and sysmem.
 
 use crate::{buffer_collection_constraints::*, Result};
-use failure::{self, Fail, ResultExt};
+use anyhow::Context as _;
 use fidl::endpoints::{create_endpoints, ClientEnd};
 use fidl_fuchsia_media::*;
 use fidl_fuchsia_sysmem::*;
@@ -18,8 +18,9 @@ use std::{
     iter::{IntoIterator, StepBy},
     ops::RangeFrom,
 };
+use thiserror::Error;
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum Error {
     ReclaimClientTokenChannel,
     ServerOmittedBufferVmo,
@@ -32,8 +33,6 @@ impl fmt::Display for Error {
         fmt::Debug::fmt(&self, w)
     }
 }
-
-impl Fail for Error {}
 
 /// The pattern to use when advancing ordinals.
 #[derive(Debug, Clone, Copy)]
@@ -212,7 +211,7 @@ pub struct BufferSet {
 }
 
 impl TryFrom<BufferSetSpec> for BufferSet {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
     fn try_from(mut src: BufferSetSpec) -> std::result::Result<Self, Self::Error> {
         let mut buffers = vec![];
         for (i, buffer) in src.collection_info.buffers

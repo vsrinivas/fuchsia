@@ -14,7 +14,7 @@
 //! ```
 
 use {
-    failure::Error,
+    anyhow::Error,
     rand::{distributions, Rng},
     std::{fmt, fs::File, io::Write},
 };

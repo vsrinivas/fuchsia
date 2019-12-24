@@ -11,7 +11,7 @@ use {
         story_context_store::{ContextReader, ContextWriter, Contributor},
         story_manager::StoryManager,
     },
-    failure::{bail, Error},
+    anyhow::Error,
     fidl_fuchsia_modular::{
         ExecuteStatus, FocusMod, PuppetMasterProxy, SetFocusState, StoryCommand,
         StoryPuppetMasterMarker,
@@ -203,7 +203,7 @@ impl<T: ContextReader + ContextWriter> ModManager<T> {
         story_puppet_master.enqueue(&mut commands.iter_mut())?;
         let result = story_puppet_master.execute().await?;
         if result.status != ExecuteStatus::Ok {
-            bail!(
+            anyhow::bail!(
                 "Modular error status:{:?} message:{}",
                 result.status,
                 result.error_message.unwrap_or("none".to_string())
@@ -222,7 +222,7 @@ mod tests {
             models::{DisplayInfo, Intent},
             testing::{init_state, puppet_master_fake::PuppetMasterFake},
         },
-        failure::ResultExt,
+        anyhow::Context as _,
         fidl_fuchsia_modular::{
             EntityResolverMarker, IntentParameter, IntentParameterData, PuppetMasterMarker,
         },

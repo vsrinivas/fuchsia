@@ -17,8 +17,8 @@ rustc_binary("cmc") {
 
   deps = [
     "//garnet/lib/rust/cm_json",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:clap",
-    "//third_party/rust_crates:failure",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serde",
@@ -26,6 +26,7 @@ rustc_binary("cmc") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:structopt",
     "//third_party/rust_crates:tempfile",
+    "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:valico",
   ]
 
@@ -52,7 +53,8 @@ rustc_binary("cmc_integration_test_bin") {
     "//garnet/lib/rust/cm_fidl_translator",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-io2:fuchsia-io2-rustc",
   ]
 }

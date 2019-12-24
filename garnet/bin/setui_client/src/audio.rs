@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::Error,
+    anyhow::Error,
     fidl_fuchsia_media::AudioRenderUsage,
     fidl_fuchsia_settings::{
         AudioInput, AudioProxy, AudioSettings, AudioStreamSettingSource, AudioStreamSettings,

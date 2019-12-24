@@ -13,9 +13,10 @@ rustc_library("fuchsia-bootfs") {
   deps = [
     "//garnet/public/rust/fuchsia-zircon",
     "//garnet/public/rust/zerocopy",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
-    "//third_party/rust_crates:failure",
     "//third_party/rust_crates:num",
+    "//third_party/rust_crates:thiserror",
   ]
 
   test_deps = [ "//third_party/rust_crates:lazy_static" ]

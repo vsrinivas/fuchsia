@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow;
 use fidl_fuchsia_net as fidl;
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
@@ -38,7 +39,7 @@ impl Into<fidl::IpAddress> for IpAddress {
 }
 
 impl std::str::FromStr for IpAddress {
-    type Err = failure::Error;
+    type Err = anyhow::Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(IpAddress(s.parse()?))
     }
@@ -58,7 +59,7 @@ impl std::fmt::Display for Subnet {
 }
 
 impl std::str::FromStr for Subnet {
-    type Err = failure::Error;
+    type Err = anyhow::Error;
 
     // Parse a Subnet from a CIDR-notated IP address.
     //
@@ -79,7 +80,7 @@ impl std::str::FromStr for Subnet {
             Some(p) => {
                 let parsed_len = p.parse::<u8>()?;
                 if parsed_len > addr_len {
-                    Err(failure::format_err!(
+                    Err(anyhow::format_err!(
                         "prefix length provided ({} bits) too large. address {} is only {} bits long",
                         parsed_len,
                         addr,
@@ -93,7 +94,7 @@ impl std::str::FromStr for Subnet {
         };
 
         let () = match pieces.next() {
-            Some(_) => Err(failure::format_err!(
+            Some(_) => Err(anyhow::format_err!(
                 "more than one '/' separator found while attempting to parse CIDR string {}",
                 s
             )),
@@ -165,22 +166,22 @@ impl<'de> serde::Deserialize<'de> for MacAddress {
 }
 
 impl std::str::FromStr for MacAddress {
-    type Err = failure::Error;
+    type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        use failure::ResultExt;
+        use anyhow::Context;
 
         let mut octets = [0; 6];
         let mut iter = s.split(':');
         for (i, octet) in octets.iter_mut().enumerate() {
             let next_octet = iter.next().ok_or_else(|| {
-                failure::format_err!("MAC address [{}] only specifies {} out of 6 octets", s, i)
+                anyhow::format_err!("MAC address [{}] only specifies {} out of 6 octets", s, i)
             })?;
             *octet = u8::from_str_radix(next_octet, 16)
-                .with_context(|_| format!("could not parse hex integer from {}", next_octet))?;
+                .with_context(|| format!("could not parse hex integer from {}", next_octet))?;
         }
         if iter.next().is_some() {
-            return Err(failure::format_err!("MAC address has more than six octets: {}", s));
+            return Err(anyhow::format_err!("MAC address has more than six octets: {}", s));
         }
         Ok(MacAddress { octets })
     }

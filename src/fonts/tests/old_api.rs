@@ -4,7 +4,7 @@
 
 use {
     crate::FONTS_CMX,
-    failure::{format_err, Error, ResultExt},
+    anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_fonts as fonts, fuchsia_async as fasync,
     fuchsia_component::client::{launch, launch_with_options, launcher, App, LaunchOptions},
     fuchsia_zircon as zx,

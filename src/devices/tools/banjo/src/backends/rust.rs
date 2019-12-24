@@ -6,7 +6,7 @@ use {
     crate::ast::{self, BanjoAst, Constant},
     crate::backends::util::to_c_name,
     crate::backends::Backend,
-    failure::{bail, format_err, Error},
+    anyhow::{format_err, Error},
     std::collections::HashSet,
     std::io,
 };
@@ -190,7 +190,7 @@ fn resolve_constant_uint(ast: &ast::BanjoAst, constant: &ast::Constant) -> Resul
         Ok(uint) => Ok(uint),
         Err(_) => match ast.id_to_decl(&ast::Ident::new_raw(&constant.0)) {
             Ok(ast::Decl::Constant { value, .. }) => resolve_constant_uint(ast, &value),
-            _ => bail!("Cannot resolve name {:?} to a uint", constant.0),
+            _ => return Err(format_err!("Cannot resolve name {:?} to a uint", constant.0)),
         },
     }
 }

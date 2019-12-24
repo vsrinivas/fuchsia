@@ -7,7 +7,7 @@ use {
         known_ess_store::EssJsonRead,
         network_config::{NetworkConfig, NetworkIdentifier},
     },
-    failure::{self, bail, format_err},
+    anyhow::format_err,
     fidl_fuchsia_wlan_policy as fidl_policy,
     log::{error, info},
     parking_lot::Mutex,
@@ -36,7 +36,7 @@ const MAX_CONFIGS_PER_SSID: usize = 1;
 
 impl SavedNetworksManager {
     /// initializes a new Saved Network Manager by reading saved networks from a set file location
-    pub fn new() -> Result<Self, failure::Error> {
+    pub fn new() -> Result<Self, anyhow::Error> {
         Self::new_with_paths(PathBuf::from(KNOWN_NETWORKS_PATH))
     }
 
@@ -44,14 +44,14 @@ impl SavedNetworksManager {
     /// Saved network manager reads from these paths but does not write to them.
     /// During migration we will continue to read from both new and old storage locations, then
     /// remove load_ess_store once migration is done.
-    pub fn new_with_paths(legacy_storage_path: PathBuf) -> Result<Self, failure::Error> {
+    pub fn new_with_paths(legacy_storage_path: PathBuf) -> Result<Self, anyhow::Error> {
         let legacy_saved_networks = Self::load_ess_store(legacy_storage_path)?;
         Ok(Self { saved_networks: Mutex::new(legacy_saved_networks) })
     }
 
     /// Handles reading persisted networks saved by KnownEssStor into our new store.
     /// Remove this when migration to new persistent storage location is over.
-    fn load_ess_store(storage_path: PathBuf) -> Result<NetworkConfigMap, failure::Error> {
+    fn load_ess_store(storage_path: PathBuf) -> Result<NetworkConfigMap, anyhow::Error> {
         // Temporarily read from memory the same way EssStore does.
         let config_list: Vec<EssJsonRead> = match fs::File::open(&storage_path) {
             Ok(file) => match serde_json::from_reader(io::BufReader::new(file)) {
@@ -71,7 +71,7 @@ impl SavedNetworksManager {
             },
             Err(e) => match e.kind() {
                 io::ErrorKind::NotFound => Vec::new(),
-                _ => bail!("Failed to open {}: {}", storage_path.display(), e),
+                _ => return Err(format_err!("Failed to open {}: {}", storage_path.display(), e)),
             },
         };
 
@@ -102,7 +102,7 @@ impl SavedNetworksManager {
     }
 
     /// For now, simply clears in memory storage of networks. Later must clear persistent storage
-    pub fn clear(&self) -> Result<(), failure::Error> {
+    pub fn clear(&self) -> Result<(), anyhow::Error> {
         self.saved_networks.lock().clear();
         Ok(())
     }
@@ -123,7 +123,7 @@ impl SavedNetworksManager {
         &self,
         ssid: Vec<u8>,
         credential: fidl_policy::Credential,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), anyhow::Error> {
         let mut guard = self.saved_networks.lock();
         let network_entry = guard.entry((ssid.clone(), derive_security_type(&credential)));
         if let Entry::Occupied(network_configs) = &network_entry {

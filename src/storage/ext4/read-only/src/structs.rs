@@ -36,6 +36,7 @@ use {
     crate::readers::{Reader, ReaderError},
     byteorder::LittleEndian,
     std::{collections::HashMap, mem::size_of, str, sync::Arc},
+    thiserror::Error,
     zerocopy::{FromBytes, LayoutVerified, Unaligned, U16, U32, U64},
 };
 
@@ -442,58 +443,58 @@ assert_eq_size!(inode_size; INode, [u8; 128]);
 // https://ext4.wiki.kernel.org/index.php/Ext4_Disk_Layout
 // assert_eq_size!(INodeExtra, [u8; 160]);
 
-#[derive(Fail, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq)]
 pub enum ParsingError {
-    #[fail(display = "Unable to parse Super Block at 0x{:X}", _0)]
+    #[error("Unable to parse Super Block at 0x{:X}", _0)]
     InvalidSuperBlock(usize),
-    #[fail(display = "Invalid Super Block magic number {} should be 0xEF53", _0)]
+    #[error("Invalid Super Block magic number {} should be 0xEF53", _0)]
     InvalidSuperBlockMagic(u16),
-    #[fail(display = "Block number {} out of bounds.", _0)]
+    #[error("Block number {} out of bounds.", _0)]
     BlockNumberOutOfBounds(u64),
-    #[fail(display = "SuperBlock e2fs_log_bsize value invalid: {}", _0)]
+    #[error("SuperBlock e2fs_log_bsize value invalid: {}", _0)]
     BlockSizeInvalid(u32),
 
-    #[fail(display = "Unable to parse Block Group Description at 0x{:X}", _0)]
+    #[error("Unable to parse Block Group Description at 0x{:X}", _0)]
     InvalidBlockGroupDesc(usize),
-    #[fail(display = "Unable to parse INode {}", _0)]
+    #[error("Unable to parse INode {}", _0)]
     InvalidInode(u32),
 
     // TODO(vfcc): A followup change will add the ability to include an address here.
-    #[fail(display = "Unable to parse ExtentHeader from INode")]
+    #[error("Unable to parse ExtentHeader from INode")]
     InvalidExtentHeader,
-    #[fail(display = "Invalid Extent Header magic number {} should be 0xF30A", _0)]
+    #[error("Invalid Extent Header magic number {} should be 0xF30A", _0)]
     InvalidExtentHeaderMagic(u16),
-    #[fail(display = "Unable to parse Extent at 0x{:X}", _0)]
+    #[error("Unable to parse Extent at 0x{:X}", _0)]
     InvalidExtent(usize),
-    #[fail(display = "Extent has more data {} than expected {}", _0, _1)]
+    #[error("Extent has more data {} than expected {}", _0, _1)]
     ExtentUnexpectedLength(usize, usize),
 
-    #[fail(display = "Invalid Directory Entry at 0x{:X}", _0)]
+    #[error("Invalid Directory Entry at 0x{:X}", _0)]
     InvalidDirEntry2(usize),
-    #[fail(display = "Directory Entry has invalid string in name field: {:?}", _0)]
+    #[error("Directory Entry has invalid string in name field: {:?}", _0)]
     DirEntry2NonUtf8(Vec<u8>),
-    #[fail(display = "Requested path contains invalid string")]
+    #[error("Requested path contains invalid string")]
     InvalidInputPath,
-    #[fail(display = "Non-existent path: {}", _0)]
+    #[error("Non-existent path: {}", _0)]
     PathNotFound(String),
-    #[fail(display = "Entry Type {} unknown", _0)]
+    #[error("Entry Type {} unknown", _0)]
     BadEntryType(u8),
 
     /// Feature Incompatible flags
-    #[fail(display = "Incompatible feature flags (feature_incompat): 0x{:X}", _0)]
+    #[error("Incompatible feature flags (feature_incompat): 0x{:X}", _0)]
     BannedFeatureIncompat(u32),
-    #[fail(display = "Required feature flags (feature_incompat): 0x{:X}", _0)]
+    #[error("Required feature flags (feature_incompat): 0x{:X}", _0)]
     RequiredFeatureIncompat(u32),
 
     /// Message including what ext filesystem feature was found that we do not support
-    #[fail(display = "{}", _0)]
+    #[error("{}", _0)]
     Incompatible(String),
-    #[fail(display = "Bad file at {}", _0)]
+    #[error("Bad file at {}", _0)]
     BadFile(String),
-    #[fail(display = "Bad directory at {}", _0)]
+    #[error("Bad directory at {}", _0)]
     BadDirectory(String),
 
-    #[fail(display = "Reader failed: {}", _0)]
+    #[error("Reader failed: {}", _0)]
     SourceError(ReaderError),
 }
 

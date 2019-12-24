@@ -6,7 +6,7 @@
 //! v2 component.
 
 use {
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl::endpoints::RequestStream,
     fidl_fuchsia_test as ftest, fidl_fuchsia_test_manager as ftest_manager,
     ftest_manager::Outcome,
@@ -35,7 +35,7 @@ thread_local! {
 
 impl LoggerStream {
     /// Creates a new `LoggerStream` for given `socket`.
-    pub fn new(socket: zx::Socket) -> Result<LoggerStream, failure::Error> {
+    pub fn new(socket: zx::Socket) -> Result<LoggerStream, anyhow::Error> {
         let l = LoggerStream {
             socket: fasync::Socket::from_socket(socket).context("Invalid zircon socket")?,
         };

@@ -19,9 +19,10 @@ rustc_binary("guest") {
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization-rustc",
     "//src/virtualization/lib/guest_interaction:fuchsia.netemul.guest-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
@@ -34,8 +35,9 @@ rustc_library("lib") {
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-zircon",
     "//src/virtualization/lib/guest_interaction:fuchsia.netemul.guest-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }

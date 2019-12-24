@@ -22,7 +22,7 @@ use {
         timer::{self, EventId, TimedEvent, Timer},
         DeviceInfo, MacAddr, MlmeRequest, Ssid,
     },
-    failure::bail,
+    anyhow::format_err,
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent},
     futures::channel::{mpsc, oneshot},
     log::{debug, error, info, warn},
@@ -239,17 +239,17 @@ impl ApSme {
 fn adapt_operation(
     device_info: &DeviceInfo,
     usr_cfg: &RadioConfig,
-) -> Result<OpRadioConfig, failure::Error> {
+) -> Result<OpRadioConfig, anyhow::Error> {
     // TODO(porce): .expect() may go way, if wlantool absorbs the default value,
     // eg. CBW20 in HT. But doing so would hinder later control from WLANCFG.
     if usr_cfg.phy.is_none() || usr_cfg.cbw.is_none() || usr_cfg.primary_chan.is_none() {
-        bail!("Incomplete user config: {:?}", usr_cfg);
+        return Err(format_err!("Incomplete user config: {:?}", usr_cfg));
     }
 
     let phy = usr_cfg.phy.unwrap();
     let chan = Channel::new(usr_cfg.primary_chan.unwrap(), usr_cfg.cbw.unwrap());
     if !chan.is_valid() {
-        bail!("Invalid channel: {:?}", usr_cfg);
+        return Err(format_err!("Invalid channel: {:?}", usr_cfg));
     }
 
     let (phy_adapted, cbw_adapted) = derive_phy_cbw_for_ap(device_info, &phy, &chan);
@@ -566,7 +566,7 @@ impl InfraBss {
     }
 }
 
-fn create_rsn_cfg(ssid: &[u8], password: &[u8]) -> Result<Option<RsnCfg>, failure::Error> {
+fn create_rsn_cfg(ssid: &[u8], password: &[u8]) -> Result<Option<RsnCfg>, anyhow::Error> {
     if password.is_empty() {
         Ok(None)
     } else {

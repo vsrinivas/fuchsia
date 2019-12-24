@@ -4,9 +4,9 @@
 
 //! Custom error types for the netstack.
 
-use failure::Fail;
 use net_types::ip::{Ip, IpAddress};
 use net_types::MulticastAddress;
+use thiserror::Error;
 
 use crate::device::AddressError;
 use crate::wire::icmp::IcmpIpTypes;
@@ -21,34 +21,34 @@ pub(crate) type ParseResult<T> = std::result::Result<T, ParseError>;
 pub(crate) type IpParseResult<I, T> = std::result::Result<T, IpParseError<I>>;
 
 /// Top-level error type the netstack.
-#[derive(Fail, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq)]
 pub enum NetstackError {
-    #[fail(display = "{}", _0)]
+    #[error("{}", _0)]
     /// Errors related to packet parsing.
-    Parse(#[cause] ParseError),
+    Parse(ParseError),
 
     /// Error when item already exists.
-    #[fail(display = "Item already exists")]
+    #[error("Item already exists")]
     Exists,
 
     /// Error when item is not found.
-    #[fail(display = "Item not found")]
+    #[error("Item not found")]
     NotFound,
 
     /// Errors related to sending UDP frames/packets.
-    #[fail(display = "{}", _0)]
-    SendUdp(#[cause] crate::transport::udp::SendError),
+    #[error("{}", _0)]
+    SendUdp(crate::transport::udp::SendError),
 
     /// Errors related to connections.
-    #[fail(display = "{}", _0)]
-    Connect(#[cause] SocketError),
+    #[error("{}", _0)]
+    Connect(SocketError),
 
     /// Error when there is no route to an address.
-    #[fail(display = "No route to address")]
+    #[error("No route to address")]
     NoRoute,
 
     /// Error when a maximum transmission unit (MTU) is exceeded.
-    #[fail(display = "MTU exceeded")]
+    #[error("MTU exceeded")]
     Mtu,
     // Add error types here as we add more to the stack
 }
@@ -63,19 +63,19 @@ impl From<AddressError> for NetstackError {
 }
 
 /// Error type for packet parsing.
-#[derive(Fail, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq)]
 pub enum ParseError {
     /// Operation is not supported.
-    #[fail(display = "Operation is not supported")]
+    #[error("Operation is not supported")]
     NotSupported,
     /// Operation is not expected in this context.
-    #[fail(display = "Operation is not expected in this context")]
+    #[error("Operation is not expected in this context")]
     NotExpected,
     /// Checksum is invalid.
-    #[fail(display = "Invalid checksum")]
+    #[error("Invalid checksum")]
     Checksum,
     /// Packet is not formatted properly.
-    #[fail(display = "Packet is not formatted properly")]
+    #[error("Packet is not formatted properly")]
     Format,
 }
 
@@ -121,9 +121,9 @@ impl IpParseErrorAction {
 }
 
 /// Error type for IP packet parsing.
-#[derive(Fail, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq)]
 pub(crate) enum IpParseError<I: IcmpIpTypes> {
-    #[fail(display = "Parsing Error")]
+    #[error("Parsing Error")]
     Parse { error: ParseError },
     /// For errors where an ICMP Parameter Problem error needs to be
     /// sent to the source of a packet.
@@ -138,7 +138,7 @@ pub(crate) enum IpParseError<I: IcmpIpTypes> {
     /// problem code that provides more granular information about the parameter
     /// problem encountered. `pointer` is the offset of the erroneous value within
     /// the IP packet, calculated from the beginning of the IP packet.
-    #[fail(display = "Parameter Problem")]
+    #[error("Parameter Problem")]
     ParameterProblem {
         src_ip: I::Addr,
         dst_ip: I::Addr,
@@ -185,22 +185,22 @@ impl From<NotFoundError> for NetstackError {
 }
 
 /// Error type for errors common to local addresses.
-#[derive(Fail, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq)]
 pub enum LocalAddressError {
     /// Cannot bind to address.
-    #[fail(display = "can't bind to address")]
+    #[error("can't bind to address")]
     CannotBindToAddress,
 
     /// Failed to allocate local port.
-    #[fail(display = "failed to allocate local port")]
+    #[error("failed to allocate local port")]
     FailedToAllocateLocalPort,
 
     /// Specified local address does not match any expected address.
-    #[fail(display = "specified local address does not match any expected address")]
+    #[error("specified local address does not match any expected address")]
     AddressMismatch,
 
     /// The requested address/socket pair is in use.
-    #[fail(display = "Address in use")]
+    #[error("Address in use")]
     AddressInUse,
 }
 
@@ -209,23 +209,23 @@ pub enum LocalAddressError {
 // specialized ListenerError which does not contain the NoRoute variant.
 
 /// An error encountered when attempting to create a UDP, TCP, or ICMP connection.
-#[derive(Fail, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq)]
 pub enum RemoteAddressError {
     /// No route to host.
-    #[fail(display = "no route to host")]
+    #[error("no route to host")]
     NoRoute,
 }
 
 /// Error type for connection errors.
-#[derive(Fail, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq)]
 pub enum SocketError {
-    #[fail(display = "{}", _0)]
+    #[error("{}", _0)]
     /// Errors related to the local address.
-    Local(#[cause] LocalAddressError),
+    Local(LocalAddressError),
 
-    #[fail(display = "{}", _0)]
+    #[error("{}", _0)]
     /// Errors related to the remote address.
-    Remote(#[cause] RemoteAddressError),
+    Remote(RemoteAddressError),
 }
 
 /// Error when no route exists to a remote address.

@@ -7,8 +7,8 @@ mod opts;
 use crate::opts::Opt;
 
 use {
+    anyhow::{bail, format_err, Context as _, Error},
     connectivity_testing::wlan_service_util,
-    failure::{bail, Error, ResultExt},
     fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy},
     fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
@@ -31,10 +31,10 @@ fn main() -> Result<(), Error> {
     fx_log_info!("{:?}", opt);
 
     if opt.connect_test_enabled && opt.target_ssid.is_empty() {
-        bail!("A target_ssid must be provided for connect tests");
+        return Err(format_err!("A target_ssid must be provided for connect tests"));
     }
     if !opt.scan_test_enabled && !opt.connect_test_enabled && !opt.disconnect_test_enabled {
-        bail!("At least one api must be selected for testing");
+        return Err(format_err!("At least one api must be selected for testing"));
     }
 
     // create objects to hold test objects and results
@@ -77,7 +77,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
             .context("Failed to query wlan_service iface list")?;
 
         if wlan_iface_ids.is_empty() {
-            bail!("Did not find wlan interfaces");
+            return Err(format_err!("Did not find wlan interfaces"));
         };
 
         for iface in wlan_iface_ids {

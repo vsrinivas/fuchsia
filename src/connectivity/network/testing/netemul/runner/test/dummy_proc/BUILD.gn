@@ -16,8 +16,9 @@ rustc_binary("dummy_proc") {
     "//garnet/public/rust/fuchsia-zircon",
     "//src/connectivity/network/testing/netemul/lib/fidl:environment-rustc",
     "//src/connectivity/network/testing/netemul/lib/fidl:sync-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:structopt",
+    "//third_party/rust_crates:thiserror",
   ]
 }

@@ -33,7 +33,7 @@ impl From<SessionsWatcherProxy> for FlowControlledProxySink {
 }
 
 impl Sink<(u64, SessionsWatcherEvent)> for FlowControlledProxySink {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
     fn poll_ready(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<()>> {
         if self.acks.len() < MAX_EVENTS_SENT_WITHOUT_ACK {
             return Poll::Ready(Ok(()));

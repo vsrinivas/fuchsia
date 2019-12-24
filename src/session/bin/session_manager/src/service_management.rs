@@ -4,7 +4,7 @@
 
 use {
     crate::startup,
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl_fuchsia_session::{LaunchSessionError, LauncherRequest, LauncherRequestStream},
     fidl_fuchsia_sys2 as fsys,
     fuchsia_component::server::ServiceFs,

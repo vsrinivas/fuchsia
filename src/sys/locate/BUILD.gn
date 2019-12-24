@@ -18,8 +18,9 @@ rustc_binary("locate_bin") {
     "//garnet/public/rust/fuchsia-runtime",
     "//garnet/public/rust/fuchsia-zircon",
     "//src/sys/component_index/fidl:index-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 
@@ -55,7 +56,8 @@ rustc_binary("locate_integration_test_bin") {
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 

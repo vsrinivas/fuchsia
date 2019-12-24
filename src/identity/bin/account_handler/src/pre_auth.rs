@@ -8,8 +8,8 @@
 //! and one in-memory fake store, for use with tests.
 
 use account_common::{AccountManagerError, ResultExt};
+use anyhow::format_err;
 use async_trait::async_trait;
-use failure::format_err;
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_identity_account::Error as ApiError;
 use fidl_fuchsia_mem::Buffer;

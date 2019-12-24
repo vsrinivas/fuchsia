@@ -5,33 +5,33 @@
 use {
     crate::elf_parse as elf,
     crate::util,
-    failure::Fail,
     fuchsia_zircon::{self as zx, AsHandleRef},
     std::ffi::{CStr, CString},
+    thiserror::Error,
 };
 
 /// Possible errors that can occur during ELF loading.
 #[allow(missing_docs)] // No docs on individual error variants.
-#[derive(Fail, Debug)]
+#[derive(Error, Debug)]
 pub enum ElfLoadError {
-    #[fail(display = "ELF load segments were empty")]
+    #[error("ELF load segments were empty")]
     NothingToLoad,
-    #[fail(display = "Failed to allocate VMAR for ELF: {}", _0)]
-    VmarAllocate(#[cause] zx::Status),
-    #[fail(display = "Failed to map VMAR: {}", _0)]
-    VmarMap(#[cause] zx::Status),
-    #[fail(display = "Failed to create CoW VMO clone: {}", _0)]
-    VmoCowClone(#[cause] zx::Status),
-    #[fail(display = "Failed to create VMO: {}", _0)]
-    VmoCreate(#[cause] zx::Status),
-    #[fail(display = "Failed to read from VMO: {}", _0)]
-    VmoRead(#[cause] zx::Status),
-    #[fail(display = "Failed to write to VMO: {}", _0)]
-    VmoWrite(#[cause] zx::Status),
-    #[fail(display = "Failed to get VMO name: {}", _0)]
-    GetVmoName(#[cause] zx::Status),
-    #[fail(display = "Failed to set VMO name: {}", _0)]
-    SetVmoName(#[cause] zx::Status),
+    #[error("Failed to allocate VMAR for ELF: {}", _0)]
+    VmarAllocate(zx::Status),
+    #[error("Failed to map VMAR: {}", _0)]
+    VmarMap(zx::Status),
+    #[error("Failed to create CoW VMO clone: {}", _0)]
+    VmoCowClone(zx::Status),
+    #[error("Failed to create VMO: {}", _0)]
+    VmoCreate(zx::Status),
+    #[error("Failed to read from VMO: {}", _0)]
+    VmoRead(zx::Status),
+    #[error("Failed to write to VMO: {}", _0)]
+    VmoWrite(zx::Status),
+    #[error("Failed to get VMO name: {}", _0)]
+    GetVmoName(zx::Status),
+    #[error("Failed to set VMO name: {}", _0)]
+    SetVmoName(zx::Status),
 }
 
 impl ElfLoadError {
@@ -284,7 +284,7 @@ fn elf_to_vmar_perm_flags(elf_flags: &elf::SegmentFlags) -> zx::VmarFlags {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, failure::Error};
+    use {super::*, anyhow::Error};
 
     #[test]
     fn test_vmo_name_with_prefix() -> Result<(), Error> {

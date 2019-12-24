@@ -9,7 +9,7 @@ use {
         options::PathFormat,
         result::IqueryResult,
     },
-    failure::{bail, Error},
+    anyhow::{format_err, Error},
     fuchsia_inspect::reader::{ArrayValue, NodeHierarchy, Property},
     nom::HexDisplay,
     num_traits::Bounded,
@@ -37,7 +37,7 @@ impl Formatter for TextFormatter {
         let mut outputs = vec![];
         for result in results.into_iter() {
             let mut hierarchy = match result.get_query_hierarchy() {
-                None => bail!("No node hierachy found"),
+                None => return Err(format_err!("No node hierachy found")),
                 Some(h) => h.clone(),
             };
             if self.max_depth.is_none() {

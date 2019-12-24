@@ -15,7 +15,8 @@ rustc_test("cs2_test_bin") {
     "//src/sys/component_manager/tests:breakpoint_system_client",
     "//src/sys/component_manager/tests:test_utils",
     "//src/sys/tools/cs2:lib",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 

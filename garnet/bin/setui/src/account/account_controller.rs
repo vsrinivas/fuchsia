@@ -6,7 +6,7 @@ use {
     crate::registry::base::Command,
     crate::service_context::ServiceContext,
     crate::switchboard::base::*,
-    failure::{format_err, Error},
+    anyhow::{format_err, Error},
     fuchsia_async as fasync,
     futures::StreamExt,
     parking_lot::RwLock,

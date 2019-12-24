@@ -25,13 +25,14 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
     "//src/connectivity/bluetooth/lib/bt-avctp",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:bitflags",
-    "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:slab",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 

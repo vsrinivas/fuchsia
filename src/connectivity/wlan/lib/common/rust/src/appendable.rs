@@ -1,11 +1,11 @@
 use {
-    failure::{self, Fail},
     std::mem::size_of,
+    thiserror::Error,
     zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned},
 };
 
-#[derive(Fail, Debug)]
-#[fail(display = "Buffer is too small for the written data")]
+#[derive(Error, Debug)]
+#[error("Buffer is too small for the written data")]
 pub struct BufferTooSmall;
 
 pub trait Appendable {

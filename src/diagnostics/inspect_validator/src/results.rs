@@ -214,7 +214,7 @@ mod tests {
     }
 
     #[test]
-    fn unimplemented_does_not_fail() {
+    fn unimplemented_does_not_error() {
         let mut results = Results::new();
         results.unimplemented("foo", &delete_node!(id:17));
         assert!(!results.failed());

@@ -6,8 +6,8 @@ mod config;
 mod fake_factory_items_server;
 
 use {
+    anyhow::Error,
     config::Config,
-    failure::Error,
     fake_factory_items_server::{spawn_fake_factory_items_server, FakeFactoryItemsServer},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,

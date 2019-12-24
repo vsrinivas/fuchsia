@@ -5,8 +5,8 @@
 #![cfg(test)]
 
 use {
+    anyhow::{format_err, Error},
     char_set::CharSet,
-    failure::{format_err, Error},
     font_info::{FontAssetSource, FontInfo, FontInfoLoaderImpl},
     std::path::Path,
 };

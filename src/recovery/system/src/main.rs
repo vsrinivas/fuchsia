@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow::{format_err, Context as _, Error};
 use carnelian::{
     measure_text, Canvas, Color, FontDescription, FontFace, IntSize, MappingPixelSink, Paint,
     PixelSink, Point, Rect, Size,
 };
-use failure::{bail, Error, ResultExt};
 use fuchsia_async as fasync;
 use fuchsia_framebuffer::{Config, FrameBuffer, FrameUsage, PixelFormat};
 use futures::StreamExt;
@@ -105,7 +105,7 @@ fn main() -> Result<(), Error> {
             && config.format != PixelFormat::Rgb565
             && config.format != PixelFormat::RgbX888
         {
-            bail!("Unsupported pixel format {:#?}", config.format);
+            return Err(format_err!("Unsupported pixel format {:#?}", config.format));
         }
 
         let display_size = IntSize::new(config.width as i32, config.height as i32);

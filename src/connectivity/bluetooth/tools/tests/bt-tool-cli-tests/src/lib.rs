@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{format_err, Error};
+use anyhow::{format_err, Error};
 use fdio::{SpawnAction, SpawnOptions};
 use fuchsia_zircon::{self as zx, AsHandleRef, Signals, Socket, Status, Time};
 use std::ffi::{CStr, CString};

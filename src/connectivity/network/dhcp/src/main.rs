@@ -5,13 +5,13 @@
 #![deny(warnings)]
 
 use {
+    anyhow::{Context as _, Error},
     argh::FromArgs,
     dhcp::{
         configuration,
         protocol::{Message, SERVER_PORT},
         server::{Server, ServerAction, ServerDispatcher, DEFAULT_STASH_ID, DEFAULT_STASH_PREFIX},
     },
-    failure::{Error, ResultExt},
     fuchsia_async::{self as fasync, net::UdpSocket, Interval},
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{self as fx_syslog, fx_log_err, fx_log_info},

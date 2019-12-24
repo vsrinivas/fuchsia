@@ -6,8 +6,8 @@
 
 use {
     crate::repo::{get, Repository},
+    anyhow::Error,
     chrono::Utc,
-    failure::Error,
     fidl_fuchsia_pkg_ext::RepositoryConfig,
     fuchsia_async::{self as fasync, net::TcpListener, EHandle},
     fuchsia_url::pkg_url::RepoUrl,

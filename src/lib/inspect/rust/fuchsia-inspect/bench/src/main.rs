@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::Error,
     argh::FromArgs,
-    failure::Error,
     fuchsia_async as fasync,
     fuchsia_inspect::{
         heap::Heap, ArrayProperty, ExponentialHistogramParams, HistogramProperty, Inspector,

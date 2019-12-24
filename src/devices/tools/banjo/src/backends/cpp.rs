@@ -7,7 +7,7 @@ use {
     crate::backends::c::{array_bounds, get_doc_comment, name_buffer, name_size, not_callback},
     crate::backends::util::to_c_name,
     crate::backends::Backend,
-    failure::{format_err, Error},
+    anyhow::{format_err, Error},
     std::collections::HashSet,
     std::io,
     std::iter,

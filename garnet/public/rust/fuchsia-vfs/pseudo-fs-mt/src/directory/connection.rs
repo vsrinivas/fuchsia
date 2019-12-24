@@ -15,7 +15,7 @@ use crate::{
 };
 
 use {
-    failure::Error,
+    anyhow::Error,
     fidl::{endpoints::ServerEnd, Handle},
     fidl_fuchsia_io::{
         DirectoryCloseResponder, DirectoryControlHandle, DirectoryDescribeResponder,

@@ -6,7 +6,7 @@
 #![allow(elided_lifetimes_in_paths)]
 
 use {
-    failure::Error,
+    anyhow::Error,
     fuchsia_async as fasync, fuchsia_syslog,
     futures::{channel::mpsc, try_join},
 };

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::scenic::types::ScreenshotDataDef;
-use failure::{Error, ResultExt};
+use anyhow::{Context as _, Error};
 use fidl_fuchsia_ui_app::{ViewConfig, ViewMarker, ViewProviderMarker};
 use fidl_fuchsia_ui_policy::PresenterMarker;
 use fidl_fuchsia_ui_scenic::ScenicMarker;
@@ -36,7 +36,7 @@ impl ScenicFacade {
         if success {
             Ok(to_value(ScreenshotDataDef::new(screenshot))?)
         } else {
-            bail!("TakeScreenshot failed")
+            return Err(format_err!("TakeScreenshot failed"));
         }
     }
 

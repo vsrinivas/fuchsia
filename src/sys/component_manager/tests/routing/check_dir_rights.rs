@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {failure::Error, fidl_fuchsia_io as fio, fuchsia_async as fasync, fuchsia_zircon as zx};
+use {anyhow::Error, fidl_fuchsia_io as fio, fuchsia_async as fasync, fuchsia_zircon as zx};
 
 const SUPPORTED_RIGHTS: u32 =
     fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_RIGHT_EXECUTABLE;

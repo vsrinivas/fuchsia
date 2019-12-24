@@ -5,33 +5,34 @@
 use {
     crate::fidl,
     crate::Rule,
-    failure::{format_err, Error, Fail},
+    anyhow::{format_err, Error},
     pest::iterators::{Pair, Pairs},
     serde_derive::Serialize,
     std::collections::{BTreeMap, HashSet, VecDeque},
     std::fmt,
     std::str::FromStr,
+    thiserror::Error,
 };
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ParseError {
-    #[fail(display = "The primary namespace was already set")]
+    #[error("The primary namespace was already set")]
     AlreadyPrimaryNamespace,
-    #[fail(display = "{} is not yet support", 0)]
+    #[error("{} is not yet support", 0)]
     NotYetSupported(String),
-    #[fail(display = "{:?} is not expected in this location", 0)]
+    #[error("{:?} is not expected in this location", 0)]
     UnexpectedToken(Rule),
-    #[fail(display = "{} was not included in the input libraries", 0)]
+    #[error("{} was not included in the input libraries", 0)]
     UnImported(String),
-    #[fail(display = "{:?} is an unknown type", 0)]
+    #[error("{:?} is an unknown type", 0)]
     UnrecognizedType(String),
-    #[fail(display = "Failed to parse because {:?} is not an integer", 0)]
+    #[error("Failed to parse because {:?} is not an integer", 0)]
     NotAnInteger(Rule),
-    #[fail(display = "Invalid dependencies: {}", 0)]
+    #[error("Invalid dependencies: {}", 0)]
     InvalidDeps(String),
-    #[fail(display = "Expected {:?} to resolve to a {:?}.", 0, 1)]
+    #[error("Expected {:?} to resolve to a {:?}.", 0, 1)]
     InvalidConstType(Constant, Ty),
-    #[fail(display = "Declaration not found in namespace")]
+    #[error("Declaration not found in namespace")]
     UnknownDecl,
 }
 

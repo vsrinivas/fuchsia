@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{self, ResultExt},
+    anyhow::Context as _,
     fidl_fuchsia_hardware_ethernet_ext::MacAddress,
     serde_derive::{Deserialize, Serialize},
     std::{fs, io, path},
@@ -21,7 +21,7 @@ struct Config {
 }
 
 impl Config {
-    fn load<R: io::Read>(reader: R) -> Result<Self, failure::Error> {
+    fn load<R: io::Read>(reader: R) -> Result<Self, anyhow::Error> {
         serde_json::from_reader(reader).map_err(Into::into)
     }
 
@@ -81,11 +81,7 @@ impl Config {
     // "/dev/sys/platform/04:02:7/aml-ethernet/Designware MAC/ethernet"
     // Though it is not a sdio device, it has the vid:pid:did info following "/platform/",
     // it's handled the same way as a sdio device.
-    fn generate_name_from_mac(
-        &self,
-        octets: [u8; 6],
-        wlan: bool,
-    ) -> Result<String, failure::Error> {
+    fn generate_name_from_mac(&self, octets: [u8; 6], wlan: bool) -> Result<String, anyhow::Error> {
         let prefix = if wlan { "wlanx" } else { "ethx" };
         let last_byte = octets[octets.len() - 1];
         for i in 0u8..255u8 {
@@ -99,7 +95,7 @@ impl Config {
                 return Ok(format!("{}{:x}", prefix, candidate));
             }
         }
-        Err(failure::format_err!(
+        Err(anyhow::format_err!(
             "could not find unique name for mac={}, wlan={}",
             MacAddress { octets: octets },
             wlan
@@ -110,20 +106,20 @@ impl Config {
         &self,
         topological_path: &str,
         wlan: bool,
-    ) -> Result<String, failure::Error> {
+    ) -> Result<String, anyhow::Error> {
         let (prefix, pat) = if topological_path.contains("/pci/") {
             (if wlan { "wlanp" } else { "ethp" }, "/pci/")
         } else {
             (if wlan { "wlans" } else { "eths" }, "/platform/")
         };
 
-        let index = topological_path.find(pat).ok_or(failure::format_err!(
+        let index = topological_path.find(pat).ok_or(anyhow::format_err!(
             "unexpected topological path {}: {} is not found",
             topological_path,
             pat
         ))?;
         let topological_path = &topological_path[index + pat.len()..];
-        let index = topological_path.find('/').ok_or(failure::format_err!(
+        let index = topological_path.find('/').ok_or(anyhow::format_err!(
             "unexpected topological path suffix {}: '/' is not found after {}",
             topological_path,
             pat
@@ -143,7 +139,7 @@ impl Config {
         &self,
         persistent_id: &PersistentIdentifier,
         wlan: bool,
-    ) -> Result<String, failure::Error> {
+    ) -> Result<String, anyhow::Error> {
         match persistent_id {
             PersistentIdentifier::MacAddress(mac_addr) => {
                 self.generate_name_from_mac(mac_addr.octets, wlan)
@@ -162,27 +158,27 @@ pub struct FileBackedConfig<'a> {
 }
 
 impl<'a> FileBackedConfig<'a> {
-    pub fn load<P: AsRef<path::Path>>(path: &'a P) -> Result<Self, failure::Error> {
+    pub fn load<P: AsRef<path::Path>>(path: &'a P) -> Result<Self, anyhow::Error> {
         let path = path.as_ref();
         let config = match fs::File::open(path) {
             Ok(file) => Config::load(file)
-                .with_context(|_| format!("could not deserialize config file {}", path.display())),
+                .with_context(|| format!("could not deserialize config file {}", path.display())),
             Err(error) => {
                 if error.kind() == io::ErrorKind::NotFound {
                     Ok(Config { names: vec![] })
                 } else {
                     Err(error)
-                        .with_context(|_| format!("could not open config file {}", path.display()))
+                        .with_context(|| format!("could not open config file {}", path.display()))
                 }
             }
         }?;
         Ok(Self { path, config })
     }
 
-    pub fn store(&self) -> Result<(), failure::Error> {
+    pub fn store(&self) -> Result<(), anyhow::Error> {
         let Self { path, config } = self;
         let temp_file_path = match path.file_name() {
-            None => Err(failure::format_err!("unexpected non-file path {}", path.display())),
+            None => Err(anyhow::format_err!("unexpected non-file path {}", path.display())),
             Some(file_name) => {
                 let mut file_name = file_name.to_os_string();
                 file_name.push(".tmp");
@@ -190,10 +186,10 @@ impl<'a> FileBackedConfig<'a> {
             }
         }?;
         {
-            let temp_file = fs::File::create(&temp_file_path).with_context(|_| {
+            let temp_file = fs::File::create(&temp_file_path).with_context(|| {
                 format!("could not create temporary file {}", temp_file_path.display())
             })?;
-            serde_json::to_writer_pretty(temp_file, &config).with_context(|_| {
+            serde_json::to_writer_pretty(temp_file, &config).with_context(|| {
                 format!(
                     "could not serialize config into temporary file {}",
                     temp_file_path.display()
@@ -201,7 +197,7 @@ impl<'a> FileBackedConfig<'a> {
             })?;
         }
 
-        fs::rename(&temp_file_path, path).with_context(|_| {
+        fs::rename(&temp_file_path, path).with_context(|| {
             format!(
                 "could not rename temporary file {} to {}",
                 temp_file_path.display(),
@@ -216,7 +212,7 @@ impl<'a> FileBackedConfig<'a> {
         topological_path: &str,
         mac_address: MacAddress,
         wlan: bool,
-    ) -> Result<&str, failure::Error> {
+    ) -> Result<&str, anyhow::Error> {
         let persistent_id = self.config.generate_identifier(topological_path, mac_address);
 
         let index = if let Some(index) = self.config.lookup_by_identifier(&persistent_id) {
@@ -388,7 +384,6 @@ mod tests {
         assert_eq!(
             FileBackedConfig::load(&path)
                 .unwrap_err()
-                .find_root_cause()
                 .downcast_ref::<serde_json::error::Error>()
                 .unwrap()
                 .classify(),
@@ -401,13 +396,7 @@ mod tests {
         let interface_config = FileBackedConfig::load(&"not/a/real/path")
             .expect("failed to load the interface config");
         assert_eq!(
-            interface_config
-                .store()
-                .unwrap_err()
-                .find_root_cause()
-                .downcast_ref::<io::Error>()
-                .unwrap()
-                .kind(),
+            interface_config.store().unwrap_err().downcast_ref::<io::Error>().unwrap().kind(),
             io::ErrorKind::NotFound
         );
     }

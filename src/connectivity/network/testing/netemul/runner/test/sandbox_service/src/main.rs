@@ -10,7 +10,7 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use {
-        failure::{format_err, Error, ResultExt},
+        anyhow::{format_err, Context as _, Error},
         fidl::endpoints::ServiceMarker,
         fidl_fuchsia_netemul_environment::{
             EnvironmentOptions, LaunchService, LoggerOptions, ManagedEnvironmentMarker,

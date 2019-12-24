@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow::{format_err, Context as _, Error};
 use cstr::cstr;
-use failure::{format_err, Error, ResultExt};
 use fidl_fuchsia_hardware_pty::{DeviceMarker, DeviceProxy, WindowSize};
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_service;

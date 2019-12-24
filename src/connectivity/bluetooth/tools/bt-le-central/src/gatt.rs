@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::Error,
+    anyhow::Error,
     fidl::endpoints,
     fidl_fuchsia_bluetooth_gatt::{
         Characteristic as FidlCharacteristic, ClientProxy, RemoteServiceEvent, RemoteServiceProxy,

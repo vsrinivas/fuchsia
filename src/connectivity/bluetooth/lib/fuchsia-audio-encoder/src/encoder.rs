@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{format_err, Error, ResultExt},
+    anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_media::*,
     fidl_fuchsia_mediacodec::*,
     fuchsia_stream_processors::*,

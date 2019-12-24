@@ -4,14 +4,14 @@
 
 use {
     crate::appendable,
-    failure::{self, Fail},
+    thiserror::{self, Error},
 };
 
-#[derive(Fail, Debug, PartialEq, Eq)]
+#[derive(Error, Debug, PartialEq, Eq)]
 pub enum FrameWriteError {
-    #[fail(display = "Buffer is too small")]
+    #[error("Buffer is too small")]
     BufferTooSmall,
-    #[fail(display = "Attempted to write an invalid frame: {}", debug_message)]
+    #[error("Attempted to write an invalid frame: {}", debug_message)]
     InvalidData { debug_message: String },
 }
 
@@ -27,8 +27,8 @@ impl From<appendable::BufferTooSmall> for FrameWriteError {
     }
 }
 
-#[derive(Fail, Debug, PartialEq, Eq)]
-#[fail(display = "Error parsing frame: {}", debug_message)]
+#[derive(Error, Debug, PartialEq, Eq)]
+#[error("Error parsing frame: {}", debug_message)]
 pub struct FrameParseError {
     debug_message: &'static str,
 }

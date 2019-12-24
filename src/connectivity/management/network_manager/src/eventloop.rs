@@ -34,7 +34,7 @@
 //! * Updates local state.
 
 use crate::event::Event;
-use failure::{bail, Error, ResultExt};
+use anyhow::{Context as _, Error};
 use fidl_fuchsia_router_config::{
     Id, Lif, Port, RouterAdminRequest, RouterStateGetPortsResponder, RouterStateRequest,
     SecurityFeatures,
@@ -119,7 +119,7 @@ impl EventLoop {
                 Some(Event::StackEvent(event)) => self.handle_stack_event(event).await,
                 Some(Event::NetstackEvent(event)) => self.handle_netstack_event(event).await,
                 Some(Event::OIR(event)) => self.handle_oir_event(event).await,
-                None => bail!("Stream of events ended unexpectedly"),
+                None => return Err(anyhow::format_err!("Stream of events ended unexpectedly")),
             }
         }
     }

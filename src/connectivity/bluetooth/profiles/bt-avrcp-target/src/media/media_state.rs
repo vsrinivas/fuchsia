@@ -262,7 +262,7 @@ impl SessionInfo {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use failure::{format_err, Error};
+    use anyhow::{format_err, Error};
     use fidl::encoding::Decodable as FidlDecodable;
     use fidl::endpoints::{create_proxy, create_proxy_and_stream};
     use fidl_fuchsia_media::{self as fidl_media_types};

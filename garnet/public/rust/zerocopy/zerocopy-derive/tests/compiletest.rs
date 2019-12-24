@@ -40,6 +40,6 @@ fn ui() {
 // }
 
 // #[test]
-// fn compile_fail() {
+// fn compile_error() {
 //     run_mode("compile-fail");
 // }

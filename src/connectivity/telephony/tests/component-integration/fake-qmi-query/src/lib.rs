@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl_fuchsia_device::ControllerSynchronousProxy,
     fidl_fuchsia_io,
     fidl_fuchsia_telephony_ril::{RadioInterfaceLayerMarker, SetupMarker},

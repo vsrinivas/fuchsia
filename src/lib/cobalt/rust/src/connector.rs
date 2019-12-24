@@ -7,7 +7,7 @@
 
 use {
     crate::sender::CobaltSender,
-    failure::{bail, Error, ResultExt},
+    anyhow::{format_err, Context as _, Error},
     fdio, fidl,
     fidl_fuchsia_cobalt::{
         CobaltEvent, LoggerFactoryMarker, LoggerProxy, ProjectProfile, ReleaseStage, Status,
@@ -135,11 +135,11 @@ impl CobaltConnector {
     fn handle_cobalt_factory_result(
         r: Result<Status, fidl::Error>,
         context: &str,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), anyhow::Error> {
         match r {
             Ok(Status::Ok) => Ok(()),
-            Ok(other) => bail!("{}: {:?}", context, other),
-            Err(e) => bail!("{}: {}", context, e),
+            Ok(other) => return Err(format_err!("{}: {:?}", context, other)),
+            Err(e) => return Err(format_err!("{}: {}", context, e)),
         }
     }
 

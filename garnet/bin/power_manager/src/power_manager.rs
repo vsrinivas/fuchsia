@@ -4,7 +4,7 @@
 
 use crate::node::Node;
 use crate::types::{Celsius, Farads, Hertz, Seconds, Volts, Watts};
-use failure::{format_err, Error};
+use anyhow::{format_err, Error};
 use fuchsia_syslog::fx_log_info;
 use std::rc::Rc;
 

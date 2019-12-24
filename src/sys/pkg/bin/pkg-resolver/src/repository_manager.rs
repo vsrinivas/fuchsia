@@ -10,7 +10,6 @@ use {
         inspect_util::{self, InspectableRepoUrl, InspectableRepositoryConfig},
         repository::Repository,
     },
-    failure::Fail,
     fidl_fuchsia_amber::{
         self, ControlProxy as AmberProxy, OpenedRepositoryMarker, OpenedRepositoryProxy,
     },
@@ -28,6 +27,7 @@ use {
         path::{Path, PathBuf},
         sync::Arc,
     },
+    thiserror::Error,
 };
 
 /// [RepositoryManager] controls access to all the repository configs used by the package resolver.
@@ -695,21 +695,13 @@ fn load_configs_file<T: AsRef<Path>>(path: T) -> Result<Vec<RepositoryConfig>, L
 
 /// [LoadError] describes all the recoverable error conditions that can be encountered when
 /// parsing a [RepositoryConfigs] struct from a directory.
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum LoadError {
     /// This [std::io::Error] error occurred while reading the file.
-    Io {
-        path: PathBuf,
-        #[cause]
-        error: io::Error,
-    },
+    Io { path: PathBuf, error: io::Error },
 
     /// This file failed to parse into a valid [RepositoryConfigs].
-    Parse {
-        path: PathBuf,
-        #[cause]
-        error: serde_json::Error,
-    },
+    Parse { path: PathBuf, error: serde_json::Error },
 
     /// This [RepositoryManager] already contains a config for this repo_url.
     Overridden { replaced_config: RepositoryConfig },
@@ -751,17 +743,17 @@ impl<'a, A: AmberConnect> Iterator for List<'a, A> {
     }
 }
 
-#[derive(Clone, Debug, Fail, PartialEq, Eq)]
+#[derive(Clone, Debug, Error, PartialEq, Eq)]
 pub enum InsertError {
-    #[fail(display = "editing repository configs is permanently disabled")]
+    #[error("editing repository configs is permanently disabled")]
     DynamicConfigurationDisabled,
 }
 
-#[derive(Clone, Debug, Fail, PartialEq, Eq)]
+#[derive(Clone, Debug, Error, PartialEq, Eq)]
 pub enum RemoveError {
-    #[fail(display = "cannot remove static repositories")]
+    #[error("cannot remove static repositories")]
     CannotRemoveStaticRepositories,
-    #[fail(display = "editing repository configs is permanently disabled")]
+    #[error("editing repository configs is permanently disabled")]
     DynamicConfigurationDisabled,
 }
 

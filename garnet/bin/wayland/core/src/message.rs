@@ -5,7 +5,7 @@
 use std::io::{self, Read, Write};
 
 use byteorder::{NativeEndian, ReadBytesExt, WriteBytesExt};
-use failure::Fail;
+use thiserror::Error;
 
 use fuchsia_trace as ftrace;
 use fuchsia_zircon as zx;
@@ -76,11 +76,8 @@ impl Arg {
     impl_unwrap_arg!(unwrap_handle, zx::Handle, Handle);
 }
 
-#[derive(Debug, Fail)]
-#[fail(
-    display = "Argument is not of the required type: expected {:?}, found {:?}",
-    expected, found
-)]
+#[derive(Debug, Error)]
+#[error("Argument is not of the required type: expected {:?}, found {:?}", expected, found)]
 pub struct MismatchedArgKind {
     pub expected: ArgKind,
     pub found: ArgKind,
@@ -415,7 +412,7 @@ impl From<Vec<u8>> for Array {
 mod tests {
     use super::*;
 
-    use failure::Error;
+    use anyhow::Error;
 
     /// Helper to assist asserting a single match branch.
     ///

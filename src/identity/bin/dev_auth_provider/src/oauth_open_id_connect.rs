@@ -76,7 +76,7 @@ mod test {
     async fn run_proxy_test<F, Fut>(test_fn: F)
     where
         F: FnOnce(OauthOpenIdConnectProxy) -> Fut,
-        Fut: Future<Output = Result<(), failure::Error>>,
+        Fut: Future<Output = Result<(), anyhow::Error>>,
     {
         let (proxy, stream) = create_proxy_and_stream::<OauthOpenIdConnectMarker>().unwrap();
         let server_fut = OauthOpenIdConnect::handle_requests_for_stream(stream);

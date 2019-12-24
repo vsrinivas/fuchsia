@@ -5,8 +5,8 @@
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
 use crate::types::Celsius;
+use anyhow::{format_err, Error};
 use async_trait::async_trait;
-use failure::{format_err, Error};
 use fidl_fuchsia_hardware_thermal as fthermal;
 use fuchsia_zircon as zx;
 use std::rc::Rc;

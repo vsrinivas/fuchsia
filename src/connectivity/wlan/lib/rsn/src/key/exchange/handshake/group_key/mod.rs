@@ -4,9 +4,9 @@
 
 use crate::key::exchange::{self, handshake::group_key::supplicant::Supplicant};
 use crate::rsna::{Dot11VerifiedKeyFrame, NegotiatedProtection, Role, UpdateSink};
+use anyhow::{ensure, format_err};
 use bytes::Bytes;
 use eapol;
-use failure::{self, bail, ensure};
 use zerocopy::ByteSlice;
 
 mod supplicant;
@@ -26,7 +26,7 @@ impl<B: ByteSlice> GroupKeyHandshakeFrame<B> {
     pub fn from_verified(
         frame: Dot11VerifiedKeyFrame<B>,
         role: Role,
-    ) -> Result<Self, failure::Error> {
+    ) -> Result<Self, anyhow::Error> {
         // Safe since the frame will be wrapped again in a `Dot11VerifiedKeyFrame` when being accessed.
         let raw_frame = frame.unsafe_get_raw();
 
@@ -122,14 +122,14 @@ pub struct Config {
 pub struct GroupKey(RoleHandler);
 
 impl GroupKey {
-    pub fn new(cfg: Config, kck: &[u8], kek: &[u8]) -> Result<GroupKey, failure::Error> {
+    pub fn new(cfg: Config, kck: &[u8], kek: &[u8]) -> Result<GroupKey, anyhow::Error> {
         let handler = match &cfg.role {
             Role::Supplicant => RoleHandler::Supplicant(Supplicant {
                 cfg,
                 kck: Bytes::from(kck),
                 kek: Bytes::from(kek),
             }),
-            _ => bail!("Authenticator not yet support in Group-Key Handshake"),
+            _ => return Err(format_err!("Authenticator not yet support in Group-Key Handshake")),
         };
 
         Ok(GroupKey(handler))
@@ -146,7 +146,7 @@ impl GroupKey {
         update_sink: &mut UpdateSink,
         _key_replay_counter: u64,
         frame: Dot11VerifiedKeyFrame<B>,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), anyhow::Error> {
         match &mut self.0 {
             RoleHandler::Supplicant(s) => {
                 let frame = GroupKeyHandshakeFrame::from_verified(frame, Role::Supplicant)?;

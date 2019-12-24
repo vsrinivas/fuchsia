@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{Error, ResultExt};
+use anyhow::{Context as _, Error};
 use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_ui_input2 as ui_input;
 use fidl_fuchsia_ui_shortcut as ui_shortcut;
@@ -33,7 +33,7 @@ fn main() -> Result<(), Error> {
             move |stream| {
                 fasync::spawn(
                     registry_server(stream, store.clone())
-                        .unwrap_or_else(|e: failure::Error| fx_log_err!("couldn't run: {:?}", e)),
+                        .unwrap_or_else(|e: anyhow::Error| fx_log_err!("couldn't run: {:?}", e)),
                 );
             }
         })
@@ -44,7 +44,7 @@ fn main() -> Result<(), Error> {
             move |stream| {
                 fasync::spawn(
                     manager_server(stream, store.clone())
-                        .unwrap_or_else(|e: failure::Error| fx_log_err!("couldn't run: {:?}", e)),
+                        .unwrap_or_else(|e: anyhow::Error| fx_log_err!("couldn't run: {:?}", e)),
                 );
             }
         });

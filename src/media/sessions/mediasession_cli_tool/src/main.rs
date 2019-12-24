@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow;
 use argh::FromArgs;
-use failure;
 use fidl::encoding::Decodable;
 use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_media_sessions2::*;
@@ -75,7 +75,7 @@ struct Pause {}
 struct Stop {}
 
 #[fasync::run_singlethreaded]
-async fn main() -> Result<(), failure::Error> {
+async fn main() -> Result<(), anyhow::Error> {
     let invocation: Invocation = argh::from_env();
     let discovery = client::connect_to_service::<DiscoveryMarker>()?;
     let (watcher_client, watcher_server) = create_endpoints()?;

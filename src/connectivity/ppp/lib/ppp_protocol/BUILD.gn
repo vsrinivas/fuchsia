@@ -15,7 +15,8 @@ rustc_library("ppp_protocol") {
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/packet",
     "//src/connectivity/ppp/lib/ppp_packet",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 
@@ -27,7 +28,8 @@ rustc_test("ppp_protocol_test_bin") {
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/packet",
     "//src/connectivity/ppp/lib/ppp_packet",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 

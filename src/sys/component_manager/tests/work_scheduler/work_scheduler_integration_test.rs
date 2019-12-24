@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::Error,
     breakpoint_system_client::*,
-    failure::{self, Error},
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_test_workscheduler as fws,
     test_utils::*,

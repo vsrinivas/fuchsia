@@ -28,7 +28,8 @@ rustc_binary("dash_test_bin") {
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 

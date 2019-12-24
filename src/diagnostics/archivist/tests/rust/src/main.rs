@@ -7,7 +7,7 @@ fn main() {}
 
 #[cfg(test)]
 mod tests {
-    use failure::Error;
+    use anyhow::Error;
     use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMessage};
     use fuchsia_async::{self as fasync, DurationExt};
     use fuchsia_syslog::{self as syslog, fx_log_info};

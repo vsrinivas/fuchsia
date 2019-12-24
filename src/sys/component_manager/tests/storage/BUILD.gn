@@ -21,7 +21,7 @@ rustc_test("storage_integration_test_bin") {
     "//src/sys/component_manager/tests:test_utils",
     "//src/sys/component_manager/tests/fidl:breakpoints-rustc",
     "//src/sys/component_manager/tests/fidl:components-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
@@ -38,7 +38,7 @@ rustc_binary("storage_realm_coll_bin") {
     "//garnet/public/rust/fuchsia-component",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/sys/component_manager/tests/fidl:components-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
@@ -56,7 +56,7 @@ rustc_binary("storage_user_bin") {
     "//garnet/public/rust/fuchsia-vfs/pseudo-fs-mt",
     "//garnet/public/rust/fuchsia-zircon",
     "//src/sys/lib/directory_broker",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }

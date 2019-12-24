@@ -6,8 +6,8 @@
 
 //! `cs` performs a Component Search on the current system.
 
+use anyhow::{format_err, Error};
 use cs::inspect::{generate_inspect_object_tree, InspectObject};
-use failure::{err_msg, Error};
 use fidl_fuchsia_inspect_deprecated::{InspectMarker, MetricValue, PropertyValue};
 use std::{
     fmt, fs,
@@ -121,7 +121,7 @@ fn find_id_directories(dir: &Path) -> DirEntryResult {
         let entry = entry?;
         let path = entry.path();
         let id = {
-            let name = path.file_name().ok_or_else(|| err_msg("no filename"))?;
+            let name = path.file_name().ok_or_else(|| format_err!("no filename"))?;
             name.to_string_lossy()
         };
 
@@ -132,7 +132,7 @@ fn find_id_directories(dir: &Path) -> DirEntryResult {
     }
     match !vec.is_empty() {
         true => Ok(vec),
-        false => Err(err_msg("Directory not found")),
+        false => Err(format_err!("Directory not found")),
     }
 }
 

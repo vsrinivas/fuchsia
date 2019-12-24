@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Error;
+use anyhow::Error;
 use fidl_fuchsia_ui_input2 as ui_input;
 use fidl_fuchsia_ui_shortcut as ui_shortcut;
 use fidl_fuchsia_ui_views as ui_views;
@@ -202,7 +202,7 @@ impl RegistryStore {
                         physical_key: None,
                     };
                     let handled = handle(registry, event, matched_modifiers).await.unwrap_or_else(
-                        |e: failure::Error| {
+                        |e: anyhow::Error| {
                             fx_log_err!("shortcut handle error: {:?}", e);
                             false
                         },

@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Fail;
 use futures::future::BoxFuture;
 
 mod memory;
@@ -35,7 +34,7 @@ pub use memory::MemStorage;
 /// let value: String = storage.get_string("key").unwrap_or("default");
 /// ```
 pub trait Storage {
-    type Error: Fail;
+    type Error: std::error::Error;
 
     /// Get a string from the backing store.  Returns None if there is no value for the given key,
     /// or if the value for the key has a different type.

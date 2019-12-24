@@ -5,7 +5,6 @@
 //! Provides a generic implementation of a PPP control protocol.
 
 use {
-    failure::Fail,
     fuchsia_async::futures::future::BoxFuture,
     packet::{Buf, BufferMut, BufferSerializer, Serializer},
     ppp_packet::{
@@ -13,6 +12,7 @@ use {
         PppPacketBuilder, TerminationPacketBuilder,
     },
     std::fmt::Debug,
+    thiserror::Error,
 };
 
 /// The protocol byte pattern used in IPCP packets.
@@ -72,39 +72,39 @@ pub trait FrameTransmitter: Send + Sync + Debug + 'static {
 }
 
 /// Possible failures that can result from transitions in the control protocol state machine.
-#[derive(Clone, Debug, Fail)]
+#[derive(Clone, Debug, Error)]
 pub enum ProtocolError<P: ControlProtocol> {
     /// Link was terminated.
-    #[fail(display = "Link was terminated.")]
+    #[error("Link was terminated.")]
     Terminated,
     /// Link configuration timed out.
-    #[fail(display = "Link configuration timed out.")]
+    #[error("Link configuration timed out.")]
     Timeout,
     /// Fatal frame error.
-    #[fail(display = "Fatal frame error: {:?}.", _0)]
+    #[error("Fatal frame error: {:?}.", _0)]
     FatalFrameError(FrameError),
     /// Peer rejected options.
-    #[fail(display = "Peer rejected options: {:?}.", _0)]
+    #[error("Peer rejected options: {:?}.", _0)]
     FatalConfigureRej(Vec<<P as ControlProtocol>::Option>),
     /// Peer rejected code.
-    #[fail(display = "Peer rejected code in packet: {:x?}.", _0)]
+    #[error("Peer rejected code in packet: {:x?}.", _0)]
     FatalCodeRej(Vec<u8>),
     /// Peer rejected protocol.
-    #[fail(display = "Peer rejected protocol: {:x}.", _0)]
+    #[error("Peer rejected protocol: {:x}.", _0)]
     FatalProtocolRej(u16),
     /// Peer sent an invalid configure acknowledge.
-    #[fail(display = "Peer sent an invalid configure acknowledge.")]
+    #[error("Peer sent an invalid configure acknowledge.")]
     InvalidAck(ProtocolState<P>),
     /// Peer sent an unacceptable configure request.
-    #[fail(display = "Peer sent an unacceptable configure request.")]
+    #[error("Peer sent an unacceptable configure request.")]
     UnacceptableReq(ProtocolState<P>),
 }
 
 /// Possible failures that can result from sending or receiving frames.
-#[derive(Clone, Copy, Debug, Fail)]
+#[derive(Clone, Copy, Debug, Error)]
 pub enum FrameError {
     /// Device was down.
-    #[fail(display = "Device was down.")]
+    #[error("Device was down.")]
     DeviceDown,
 }
 

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{format_err, Error},
+    anyhow::{format_err, Error},
     fidl::{
         encoding::Decodable as FidlDecodable,
         endpoints::{RequestStream, ServiceMarker},
@@ -300,7 +300,7 @@ pub fn spawn_avrcp_client_controller(controller: Controller, fidl_stream: Contro
             Ok(())
         }
         .boxed()
-        .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
+        .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
     );
 }
 
@@ -316,7 +316,7 @@ pub fn spawn_test_avrcp_client_controller(
             Ok(())
         }
         .boxed()
-        .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
+        .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
     );
 }
 
@@ -328,7 +328,7 @@ fn spawn_avrcp_client(
     fx_log_info!("Spawning avrcp client handler");
     fasync::spawn(
         avrcp_client_stream_handler(stream, sender, &spawn_avrcp_client_controller)
-            .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
+            .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
     );
 }
 
@@ -337,7 +337,7 @@ pub async fn avrcp_client_stream_handler<F>(
     mut stream: PeerManagerRequestStream,
     mut sender: mpsc::Sender<PeerControllerRequest>,
     spawn_fn: F,
-) -> Result<(), failure::Error>
+) -> Result<(), anyhow::Error>
 where
     F: Fn(Controller, ControllerRequestStream),
 {
@@ -373,7 +373,7 @@ fn spawn_test_avrcp_client(
     fx_log_info!("Spawning test avrcp client handler");
     fasync::spawn(
         test_avrcp_client_stream_handler(stream, sender, &spawn_test_avrcp_client_controller)
-            .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
+            .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
     );
 }
 
@@ -382,7 +382,7 @@ pub async fn test_avrcp_client_stream_handler<F>(
     mut stream: PeerManagerExtRequestStream,
     mut sender: mpsc::Sender<PeerControllerRequest>,
     spawn_fn: F,
-) -> Result<(), failure::Error>
+) -> Result<(), anyhow::Error>
 where
     F: Fn(Controller, ControllerExtRequestStream),
 {
@@ -436,7 +436,7 @@ mod tests {
     use super::*;
     use crate::peer::PeerManager;
     use crate::tests::{create_fidl_endpoints, MockProfileService};
-    use failure::format_err;
+    use anyhow::format_err;
     use fidl::endpoints::create_endpoints;
     use futures::{future, future::FutureExt};
     use parking_lot::Mutex;

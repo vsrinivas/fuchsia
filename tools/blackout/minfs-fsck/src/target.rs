@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::{Context as _, Error},
     blackout_target::{
         static_tree::{DirectoryEntry, EntryDistribution},
         CommonCommand, CommonOpts,
     },
-    failure::{Error, ResultExt},
     fs_management::{Filesystem, Minfs},
     rand::{rngs::StdRng, Rng, SeedableRng},
     structopt::StructOpt,

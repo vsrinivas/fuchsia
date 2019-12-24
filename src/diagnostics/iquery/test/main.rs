@@ -5,8 +5,8 @@
 #![cfg(test)]
 
 use {
+    anyhow::{bail, format_err, Error},
     difference::assert_diff,
-    failure::{bail, format_err, Error},
     fdio::{SpawnAction, SpawnOptions},
     fidl_fuchsia_sys::ComponentControllerEvent,
     fuchsia_async as fasync,
@@ -46,7 +46,7 @@ impl Golden {
                 return Ok(Self { command_line, lines: lines.collect() });
             }
         }
-        bail!("Bad golden file {}", filename)
+        return Err(format_err!("Bad golden file {}", filename));
     }
 }
 
@@ -145,7 +145,10 @@ impl GoldenTest {
             .expect("Wait for iquery process termination failed");
         let info = process.info().expect("failed to get iquery process info");
         if !info.exited || info.return_code != 0 {
-            bail!("iquery process returned non-zero exit code ({})", info.return_code);
+            return Err(format_err!(
+                "iquery process returned non-zero exit code ({})",
+                info.return_code
+            ));
         }
         Ok(())
     }
@@ -157,7 +160,7 @@ fn get_hub_path() -> Result<String, Error> {
         Some(found_path_result) => found_path_result
             .map(|p| p.to_string_lossy().to_string())
             .map_err(|e| format_err!("Failed reading out dir: {}", e)),
-        None => bail!("Out dir not found"),
+        None => return Err(format_err!("Out dir not found")),
     }
 }
 

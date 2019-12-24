@@ -5,9 +5,8 @@
 #![recursion_limit = "512"]
 
 use {
-    directory_broker,
-    failure::{format_err, Error},
-    fdio,
+    anyhow::{format_err, Error},
+    directory_broker, fdio,
     fidl::endpoints::{create_endpoints, create_proxy, Proxy},
     fidl_fidl_examples_echo as fidl_echo, fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_runtime::{job_default, HandleInfo, HandleType},

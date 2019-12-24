@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use crate::message::{Message, MessageReturn};
+use anyhow::Error;
 use async_trait::async_trait;
-use failure::Error;
 use fuchsia_syslog::{fx_log_err, fx_vlog};
 use std::rc::Rc;
 

@@ -16,10 +16,11 @@ rustc_binary("bt-le-central") {
     "//sdk/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt-rustc",
     "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le-rustc",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:getopts",
     "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates/transitional/rustyline",
   ]
 }

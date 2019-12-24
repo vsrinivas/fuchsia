@@ -17,7 +17,7 @@ mod thermal_limiter;
 mod thermal_policy;
 
 use crate::power_manager::PowerManager;
-use failure::{err_msg, Error, ResultExt};
+use anyhow::{format_err, Context, Error};
 use fdio;
 use fidl_fuchsia_sysinfo as fsysinfo;
 use fuchsia_async as fasync;
@@ -31,7 +31,7 @@ async fn get_board_name() -> Result<String, Error> {
     let svc = fsysinfo::DeviceProxy::new(fasync::Channel::from_channel(client)?);
     let (status, name_opt) = svc.get_board_name().await.context("get_board_name failed")?;
     zx::Status::ok(status).context("get_board_name returned error status")?;
-    name_opt.ok_or(err_msg("Failed to get board name"))
+    name_opt.ok_or(format_err!("Failed to get board name"))
 }
 
 #[fasync::run_singlethreaded]

@@ -5,7 +5,7 @@
 use crate::ast::ServiceSet;
 #[cfg(test)]
 use crate::tests;
-use failure::Error;
+use anyhow::Error;
 use std::env;
 use std::fs;
 

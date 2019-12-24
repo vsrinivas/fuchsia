@@ -2,25 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Fail;
 use fuchsia_pkg::{BuildError, CreationManifestError, MetaPackageError};
 use std::io;
+use thiserror::Error;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum PmBuildError {
-    #[fail(display = "io error: {}", _0)]
-    IoError(#[cause] io::Error),
+    #[error("io error: {}", _0)]
+    IoError(io::Error),
 
-    #[fail(display = "creation manifest error: {}", _0)]
-    CreationManifest(#[cause] CreationManifestError),
+    #[error("creation manifest error: {}", _0)]
+    CreationManifest(CreationManifestError),
 
-    #[fail(display = "meta package error: {}", _0)]
-    MetaPackage(#[cause] MetaPackageError),
+    #[error("meta package error: {}", _0)]
+    MetaPackage(MetaPackageError),
 
-    #[fail(display = "build error: {}", _0)]
-    Build(#[cause] BuildError),
+    #[error("build error: {}", _0)]
+    Build(BuildError),
 
-    #[fail(display = "signing key file should be 64 bytes but was: {}", actual_size)]
+    #[error("signing key file should be 64 bytes but was: {}", actual_size)]
     WrongSizeSigningKey { actual_size: u64 },
 }
 

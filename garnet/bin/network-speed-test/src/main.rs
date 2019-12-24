@@ -6,7 +6,7 @@ mod opts;
 
 use {
     crate::opts::Opt,
-    failure::{bail, Error, ResultExt},
+    anyhow::{format_err, Context, Error},
     fidl_fuchsia_net_oldhttp::{self as http, HttpServiceProxy},
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
@@ -102,7 +102,7 @@ fn create_url_request<T: Into<String>>(url_string: T) -> http::UrlRequest {
 async fn fetch_and_discard_url(
     http_service: HttpServiceProxy,
     mut url_request: http::UrlRequest,
-) -> Result<IndividualDownload, failure::Error> {
+) -> Result<IndividualDownload, anyhow::Error> {
     // Create a UrlLoader instance
     let (s, p) = zx::Channel::create().context("failed to create zx channel")?;
     let proxy = fasync::Channel::from_channel(p).context("failed to make async channel")?;
@@ -115,13 +115,20 @@ async fn fetch_and_discard_url(
     let response = loader_proxy.start(&mut url_request).await?;
 
     if let Some(e) = response.error {
-        bail!("UrlLoaderProxy error - code:{} ({})", e.code, e.description.unwrap_or("".into()))
+        return Err(format_err!(
+            "UrlLoaderProxy error - code:{} ({})",
+            e.code,
+            e.description.unwrap_or("".into())
+        ));
     }
 
     let socket = match response.body.map(|x| *x) {
         Some(http::UrlBody::Stream(s)) => fasync::Socket::from_socket(s)?,
         _ => {
-            bail!("failed to read UrlBody from the stream - error: {}", zx::Status::BAD_STATE);
+            return Err(format_err!(
+                "failed to read UrlBody from the stream - error: {}",
+                zx::Status::BAD_STATE
+            ));
         }
     };
 
@@ -138,7 +145,10 @@ async fn fetch_and_discard_url(
     fx_log_info!("Received {} bytes in {:.3} seconds", bytes_received, time_seconds);
 
     if bytes_received < 1 {
-        bail!("Failed to download data from url! bytes_received = {}", bytes_received);
+        return Err(format_err!(
+            "Failed to download data from url! bytes_received = {}",
+            bytes_received
+        ));
     }
 
     let megabits_per_sec = bits_received * 1e-6 / time_seconds;

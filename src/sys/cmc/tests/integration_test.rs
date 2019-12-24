@@ -1,5 +1,5 @@
+use anyhow::Error;
 use cm_fidl_translator;
-use failure::Error;
 use fidl_fuchsia_data as fd;
 use fidl_fuchsia_io2 as fio2;
 use fidl_fuchsia_sys2::{

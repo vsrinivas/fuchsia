@@ -15,8 +15,9 @@ rustc_binary("bt-snoop-cli") {
     "//sdk/fidl/fuchsia.bluetooth.snoop:fuchsia.bluetooth.snoop-rustc",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/lib/argh",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
-    "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:thiserror",
   ]
 }

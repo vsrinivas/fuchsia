@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use super::Error;
+use anyhow::ensure;
 use bytes::Bytes;
-use failure::{self, ensure};
 
 pub type Pmkid = Bytes;
 
-pub fn new(pmkid: Bytes) -> Result<Pmkid, failure::Error> {
+pub fn new(pmkid: Bytes) -> Result<Pmkid, anyhow::Error> {
     ensure!(pmkid.len() == 16, Error::InvalidPmkidLength(pmkid.len()));
     Ok(pmkid)
 }

@@ -44,7 +44,7 @@
 //!
 //! ```
 //! #[fuchsia_async::run_singlethreaded]
-//! async fn main() -> Result<(), failure::Error> {
+//! async fn main() -> Result<(), anyhow::Error> {
 //!     // Actual main code
 //!     Ok(())
 //! }
@@ -169,7 +169,7 @@ fn common(
 ///
 /// ```
 /// #[fuchsia_async::run_until_stalled]
-/// async fn this_will_fail_and_not_block() -> Result<(), failure::Error> {
+/// async fn this_will_fail_and_not_block() -> Result<(), anyhow::Error> {
 ///     let () = future::empty().await;
 ///     Ok(())
 /// }

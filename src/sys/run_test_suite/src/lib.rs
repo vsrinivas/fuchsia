@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{format_err, Error},
+    anyhow::{format_err, Error},
     fuchsia_async as fasync,
     futures::{channel::mpsc, prelude::*},
     std::collections::HashSet,

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{err_msg, Error},
+    anyhow::{format_err, Error},
     fidl::endpoints::RequestStream,
     fidl_fuchsia_bluetooth_host::{HostControlHandle, HostMarker, HostRequest, HostRequestStream},
     fidl_fuchsia_bluetooth_sys::{HostInfo as FidlHostInfo, TechnologyType},
@@ -27,7 +27,7 @@ use crate::{
 impl HostListener for () {
     fn on_peer_updated(&mut self, _peer: Peer) {}
     fn on_peer_removed(&mut self, _id: PeerId) {}
-    type HostBondFut = future::Ready<Result<(), failure::Error>>;
+    type HostBondFut = future::Ready<Result<(), anyhow::Error>>;
     fn on_new_host_bond(&mut self, _data: BondingData) -> Self::HostBondFut {
         future::ok(())
     }
@@ -65,7 +65,7 @@ async fn host_device_set_local_name() -> Result<(), Error> {
             responder.send(&mut bt_fidl_status!())?;
             Ok(())
         }
-        _ => Err(err_msg("Unexpected!")),
+        _ => Err(format_err!("Unexpected!")),
     });
     let (set_name_result, expect_result) = join!(set_name, expect_fidl);
     let _ = set_name_result.expect("failed to set name");
@@ -77,7 +77,7 @@ async fn host_device_set_local_name() -> Result<(), Error> {
             responder.send(FidlHostInfo::from(info.read().clone()))?;
             Ok(())
         }
-        _ => Err(err_msg("Unexpected!")),
+        _ => Err(format_err!("Unexpected!")),
     });
     let (refresh_result, expect_result) = join!(refresh, expect_fidl);
     let _ = refresh_result.expect("did not receive HostInfo update");
@@ -100,6 +100,6 @@ where
         let event = event?;
         f(control_handle, event)
     } else {
-        Err(err_msg("No event received"))
+        Err(format_err!("No event received"))
     }
 }

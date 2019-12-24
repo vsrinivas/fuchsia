@@ -14,9 +14,9 @@
 //! filesystem, which in turn exercises the spawning functionality of this runner.
 
 use {
+    anyhow::{format_err, Context, Error},
     blackout_target::{CommonCommand, CommonOpts},
     cstr::cstr,
-    failure::{bail, Error, ResultExt},
     fdio,
     fs_management::{Blobfs, Filesystem},
     fuchsia_zircon::{self as zx, AsHandleRef},
@@ -110,11 +110,11 @@ fn launch_generator_process(seed: u64, root: &str, num_ops: u64) -> Result<zx::P
     ) {
         Ok(process) => Ok(process),
         Err((status, message)) => {
-            bail!(
+            return Err(format_err!(
                 "failed to spawn blobfs-load-generator process: status: {}, message: {}",
                 status,
                 message
-            );
+            ));
         }
     }
 }

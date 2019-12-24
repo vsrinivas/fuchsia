@@ -5,7 +5,7 @@
 //! Helper library for integration testing netdump.
 
 use {
-    failure::{format_err, Error},
+    anyhow::{format_err, Error},
     fdio::{self, WatchEvent},
     fidl_fuchsia_netemul_environment::ManagedEnvironmentMarker,
     fidl_fuchsia_netemul_network::{

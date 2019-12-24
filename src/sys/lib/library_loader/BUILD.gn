@@ -19,9 +19,10 @@ rustc_library("library_loader") {
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-vfs/pseudo-fs",
     "//garnet/public/rust/fuchsia-zircon",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
+    "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-ldsvc:fuchsia-ldsvc-rustc",
   ]

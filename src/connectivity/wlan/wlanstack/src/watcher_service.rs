@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::format_err;
+use anyhow::format_err;
 use fidl::endpoints::{RequestStream, ServerEnd};
 use fidl_fuchsia_wlan_device_service::{
     self as fidl_svc, DeviceWatcherControlHandle, DeviceWatcherRequestStream,
@@ -25,7 +25,7 @@ pub fn serve_watchers<P, I>(
     ifaces: Arc<WatchableMap<u16, I>>,
     phy_events: UnboundedReceiver<MapEvent<u16, P>>,
     iface_events: UnboundedReceiver<MapEvent<u16, I>>,
-) -> (WatcherService<P, I>, impl Future<Output = Result<Void, failure::Error>>)
+) -> (WatcherService<P, I>, impl Future<Output = Result<Void, anyhow::Error>>)
 where
     P: 'static,
     I: 'static,
@@ -146,7 +146,7 @@ fn handle_send_result(handle: &DeviceWatcherControlHandle, r: Result<(), fidl::E
 async fn notify_phy_watchers<P, I>(
     mut events: UnboundedReceiver<MapEvent<u16, P>>,
     inner: &Mutex<Inner<P, I>>,
-) -> Result<Void, failure::Error> {
+) -> Result<Void, anyhow::Error> {
     while let Some(e) = events.next().await {
         match e {
             MapEvent::KeyInserted(id) => {
@@ -168,7 +168,7 @@ async fn notify_phy_watchers<P, I>(
 async fn notify_iface_watchers<P, I>(
     mut events: UnboundedReceiver<MapEvent<u16, I>>,
     inner: &Mutex<Inner<P, I>>,
-) -> Result<Void, failure::Error> {
+) -> Result<Void, anyhow::Error> {
     while let Some(e) = events.next().await {
         match e {
             MapEvent::KeyInserted(id) => inner
@@ -199,7 +199,7 @@ struct ReaperTask {
 async fn reap_watchers<P, I>(
     inner: &Mutex<Inner<P, I>>,
     watchers: UnboundedReceiver<ReaperTask>,
-) -> Result<Void, failure::Error> {
+) -> Result<Void, anyhow::Error> {
     const REAP_CONCURRENT_LIMIT: usize = 10000;
     watchers
         .for_each_concurrent(REAP_CONCURRENT_LIMIT, move |w| {
@@ -440,7 +440,7 @@ mod tests {
         service: WatcherService<i32, i32>,
     }
 
-    fn setup() -> (Helper, impl Future<Output = Result<Void, failure::Error>>) {
+    fn setup() -> (Helper, impl Future<Output = Result<Void, anyhow::Error>>) {
         let (phys, phy_events) = WatchableMap::new();
         let (ifaces, iface_events) = WatchableMap::new();
         let phys = Arc::new(phys);

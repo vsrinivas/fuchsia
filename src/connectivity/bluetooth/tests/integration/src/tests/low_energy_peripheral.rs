@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{err_msg, format_err, Error, Fail},
+    anyhow::{format_err, Error},
     fidl::endpoints::{create_endpoints, ServerEnd},
     fidl_fuchsia_bluetooth::{ConnectionRole, Uuid},
     fidl_fuchsia_bluetooth_le::{
@@ -69,8 +69,8 @@ async fn start_advertising(
         .aux()
         .proxy()
         .start_advertising(params, handle)
-        .map_err(|e| e.context("FIDL error sending command").into())
-        .on_timeout(test_timeout().after_now(), move || Err(err_msg("timed out")));
+        .map_err(|e| e.into())
+        .on_timeout(test_timeout().after_now(), move || Err(format_err!("timed out")));
     fut.await.map_err(|e| e.context("Could not start advertising").into())
 }
 
@@ -432,7 +432,7 @@ where
         while events.try_next().await?.is_some() {}
         Ok(())
     };
-    f.on_timeout(test_timeout().after_now(), || Err(err_msg("Timed out before handle closed")))
+    f.on_timeout(test_timeout().after_now(), || Err(format_err!("Timed out before handle closed")))
 }
 
 async fn test_receive_connection(harness: PeripheralHarness) -> Result<(), Error> {

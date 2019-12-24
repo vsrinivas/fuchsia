@@ -13,7 +13,7 @@ rustc_test("collections_integration_test_bin") {
   deps = [
     "//garnet/public/rust/fuchsia-async",
     "//src/sys/component_manager/tests:test_utils",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
   ]
 }
 
@@ -29,7 +29,7 @@ rustc_binary("collection_realm_bin") {
     "//garnet/public/rust/fuchsia-syslog",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/sys/component_manager/tests/fidl:components-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:log",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
@@ -44,7 +44,7 @@ rustc_binary("trigger_bin") {
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//src/sys/component_manager/tests/fidl:components-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
 }

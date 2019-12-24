@@ -4,12 +4,12 @@
 
 use omaha_client::storage::Storage;
 
-use failure::Fail;
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_stash::{StoreAccessorMarker, StoreAccessorProxy, StoreMarker, Value};
 use futures::future::BoxFuture;
 use futures::prelude::*;
 use log::{error, warn};
+use thiserror::Error;
 
 /// This is an implementation of the [`omaha_client::storage::Storage`] trait that uses the Stash
 /// service on Fuchsia to store its data.
@@ -18,12 +18,12 @@ use log::{error, warn};
 
 type Result<T> = std::result::Result<T, StashError>;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum StashError {
-    #[fail(display = "generic error: {}", 0)]
-    Failure(failure::Error),
+    #[error("generic error: {}", 0)]
+    Failure(anyhow::Error),
 
-    #[fail(display = "FIDL error: {}", 0)]
+    #[error("FIDL error: {}", 0)]
     FIDL(fidl::Error),
 }
 
@@ -33,8 +33,8 @@ impl From<fidl::Error> for StashError {
     }
 }
 
-impl From<failure::Error> for StashError {
-    fn from(e: failure::Error) -> StashError {
+impl From<anyhow::Error> for StashError {
+    fn from(e: anyhow::Error) -> StashError {
         StashError::Failure(e)
     }
 }

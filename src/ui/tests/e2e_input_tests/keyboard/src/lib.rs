@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #![cfg(test)]
-use failure::{Error, ResultExt};
+use anyhow::{Context as _, Error};
 use fidl::endpoints::create_request_stream;
 use fidl_fuchsia_ui_input2 as ui_input;
 use fidl_fuchsia_ui_views as ui_views;

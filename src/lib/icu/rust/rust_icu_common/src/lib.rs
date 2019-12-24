@@ -6,13 +6,13 @@
 //!
 //! At the moment, this crate contains the declaration of various errors
 
-use {failure::Fail, rust_icu_sys as sys, std::ffi, std::os};
+use {rust_icu_sys as sys, std::ffi, std::os, thiserror::Error};
 
 /// Represents a Unicode error, resulting from operations of low-level ICU libraries.
 ///
 /// This is modeled after absl::Status in the Abseil library, which provides ways
 /// for users to avoid dealing with all the numerous error codes directly.
-#[derive(Fail, Debug)]
+#[derive(Error, Debug)]
 pub enum Error {
     /// The error originating in the underlying sys library.
     ///
@@ -20,12 +20,12 @@ pub enum Error {
     /// error), because it makes it unnecessary for users to deal with error codes directly.  It
     /// does make for a bit weird API, so we may turn it around a bit.  Ideally, it should not be
     /// possible to have an Error that isn't really an error.
-    #[fail(display = "ICU error code: {}", _0)]
+    #[error("ICU error code: {}", _0)]
     Sys(sys::UErrorCode),
 
     /// Errors originating from the wrapper code.  For example when pre-converting input into
     /// UTF8 for input that happens to be malformed.
-    #[fail(display = "wrapper error: {}", _0)]
+    #[error("wrapper error: {}", _0)]
     Wrapper(&'static str),
 }
 

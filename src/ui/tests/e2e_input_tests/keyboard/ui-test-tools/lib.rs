@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{Error, ResultExt};
+use anyhow::{Context as _, Error};
 use fidl::endpoints::{create_proxy, create_request_stream};
 use fidl_fuchsia_ui_gfx as ui_gfx;
 use fidl_fuchsia_ui_policy as ui_policy;

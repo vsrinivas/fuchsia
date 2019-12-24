@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{format_err, Error, ResultExt};
+use anyhow::{format_err, Context as _, Error};
 use fidl::endpoints;
 use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_device_service::DeviceServiceProxy;

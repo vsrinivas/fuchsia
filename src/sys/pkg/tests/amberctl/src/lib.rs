@@ -5,7 +5,7 @@
 #![cfg(test)]
 
 use {
-    failure::Error,
+    anyhow::Error,
     fidl_fuchsia_amber::{ControlMarker as AmberMarker, ControlProxy as AmberProxy},
     fidl_fuchsia_amber_ext::{self as types, SourceConfigBuilder},
     fidl_fuchsia_pkg::{RepositoryManagerMarker, RepositoryManagerProxy},

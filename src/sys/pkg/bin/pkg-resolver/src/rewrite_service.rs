@@ -4,7 +4,7 @@
 
 use {
     crate::rewrite_manager::{CommitError, RewriteManager},
-    failure::Error,
+    anyhow::Error,
     fidl_fuchsia_pkg_rewrite::{
         EditTransactionRequest, EditTransactionRequestStream, EngineRequest, EngineRequestStream,
         RuleIteratorRequest, RuleIteratorRequestStream,

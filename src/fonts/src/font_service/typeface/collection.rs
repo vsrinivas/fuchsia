@@ -8,8 +8,8 @@ use {
         matcher::select_best_match,
         typeface::{Typeface, TypefaceAndLangScore},
     },
+    anyhow::{format_err, Error},
     char_set::CharSet,
-    failure::{format_err, Error},
     fidl_fuchsia_fonts::{Style2, TypefaceQuery, TypefaceRequest},
     std::sync::Arc,
 };

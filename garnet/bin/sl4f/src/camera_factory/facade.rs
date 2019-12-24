@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Error;
+use anyhow::Error;
 use fidl_fuchsia_factory_camera::{CameraFactoryError, CameraFactoryMarker, CameraFactoryProxy};
 use fidl_fuchsia_mem::Buffer;
 use fuchsia_component::client::connect_to_service;

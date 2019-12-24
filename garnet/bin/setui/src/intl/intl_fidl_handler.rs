@@ -71,9 +71,7 @@ pub fn spawn_intl_fidl_handler(switchboard: SwitchboardHandle, stream: IntlReque
         switchboard,
         SettingType::Intl,
         Box::new(
-            move |context,
-                  req|
-                  -> LocalBoxFuture<'_, Result<Option<IntlRequest>, failure::Error>> {
+            move |context, req| -> LocalBoxFuture<'_, Result<Option<IntlRequest>, anyhow::Error>> {
                 async move {
                     // Support future expansion of FIDL
                     #[allow(unreachable_patterns)]

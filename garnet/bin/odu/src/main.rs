@@ -18,7 +18,7 @@ use {
     crate::generator::{run_load, GeneratorArgs},
     crate::log::{log_init, Stats},
     ::log::{debug, log_enabled, Level::Debug},
-    failure::Error,
+    anyhow::Error,
     std::{
         fs::{metadata, File, OpenOptions},
         io::prelude::*,

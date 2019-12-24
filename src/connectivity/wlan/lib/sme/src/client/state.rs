@@ -1148,7 +1148,7 @@ fn handle_supplicant_start_failure(
     responder: Option<Responder<ConnectResult>>,
     bss: &BssDescription,
     context: &mut Context,
-    e: failure::Error,
+    e: anyhow::Error,
 ) {
     error!("deauthenticating; could not start Supplicant: {}", e);
     send_deauthenticate_request(bss, &context.mlme_sink);
@@ -1169,7 +1169,7 @@ fn now() -> zx::Time {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use failure::format_err;
+    use anyhow::format_err;
     use fuchsia_inspect::Inspector;
     use futures::channel::{mpsc, oneshot};
     use std::sync::Arc;

@@ -3,7 +3,7 @@ use {
     crate::registry::base::{Command, Notifier, State},
     crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible},
     crate::switchboard::base::{DoNotDisturbInfo, SettingRequest, SettingResponse, SettingType},
-    failure::{format_err, Error},
+    anyhow::{format_err, Error},
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
     futures::lock::Mutex,
@@ -101,7 +101,7 @@ async fn write_value(
         return;
     }
     let _ = responder.send(Ok(None));
-    notify(notifier_lock.clone()).unwrap_or_else(|e: failure::Error| {
+    notify(notifier_lock.clone()).unwrap_or_else(|e: anyhow::Error| {
         fx_log_err!("Error notifying do not disturb changes: {:#?}", e);
     });
 }

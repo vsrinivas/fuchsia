@@ -67,12 +67,13 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.deprecatedtimezone:fuchsia.deprecatedtimezone-rustc",
     "//src/lib/inspect/rust/fuchsia-inspect",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:chrono",
-    "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
   ]
 }

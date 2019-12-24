@@ -55,7 +55,7 @@ pub enum Rejection {
     Client(MacAddr, ClientRejection),
 
     /// Some general error occurred.
-    Error(failure::Error),
+    Error(anyhow::Error),
 }
 
 impl Rejection {
@@ -77,8 +77,8 @@ impl fmt::Display for Rejection {
     }
 }
 
-impl From<failure::Error> for Rejection {
-    fn from(e: failure::Error) -> Rejection {
+impl From<anyhow::Error> for Rejection {
+    fn from(e: anyhow::Error) -> Rejection {
         Self::Error(e)
     }
 }

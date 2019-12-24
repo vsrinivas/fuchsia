@@ -7,7 +7,7 @@ use {
         reader::{MissingValueReason, NodeHierarchy, PartialNodeHierarchy, ReadableTree, Snapshot},
         LinkNodeDisposition,
     },
-    failure,
+    anyhow,
     fidl_fuchsia_inspect::TreeProxy,
     futures::{
         future::{self, BoxFuture},
@@ -27,15 +27,15 @@ pub struct SnapshotTree {
 
 impl SnapshotTree {
     /// Loads a snapshot tree from the given inspect tree.
-    pub async fn try_from(tree: &TreeProxy) -> Result<Self, failure::Error> {
+    pub async fn try_from(tree: &TreeProxy) -> Result<Self, anyhow::Error> {
         load_snapshot_tree(tree).await
     }
 }
 
-type SnapshotTreeMap = BTreeMap<String, Result<SnapshotTree, failure::Error>>;
+type SnapshotTreeMap = BTreeMap<String, Result<SnapshotTree, anyhow::Error>>;
 
 impl TryInto<NodeHierarchy> for SnapshotTree {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
     fn try_into(mut self) -> Result<NodeHierarchy, Self::Error> {
         let partial = PartialNodeHierarchy::try_from(self.snapshot)?;
@@ -55,7 +55,7 @@ fn expand(partial: PartialNodeHierarchy, snapshot_children: &mut SnapshotTreeMap
             continue;
         }
         // TODO(miguelfrde): remove recursion or limit depth.
-        let result: Result<NodeHierarchy, failure::Error> =
+        let result: Result<NodeHierarchy, anyhow::Error> =
             result.unwrap().and_then(|snapshot_tree| snapshot_tree.try_into());
         match result {
             Err(_) => {
@@ -77,14 +77,14 @@ fn expand(partial: PartialNodeHierarchy, snapshot_children: &mut SnapshotTreeMap
     hierarchy
 }
 
-pub async fn read<T>(tree: &T) -> Result<NodeHierarchy, failure::Error>
+pub async fn read<T>(tree: &T) -> Result<NodeHierarchy, anyhow::Error>
 where
     T: ReadableTree + Send + Sync,
 {
     load_snapshot_tree(tree).await?.try_into()
 }
 
-fn load_snapshot_tree<'a, T>(tree: &T) -> BoxFuture<Result<SnapshotTree, failure::Error>>
+fn load_snapshot_tree<'a, T>(tree: &T) -> BoxFuture<Result<SnapshotTree, anyhow::Error>>
 where
     T: ReadableTree + Send + Sync,
 {
@@ -103,7 +103,7 @@ where
     .boxed()
 }
 
-async fn load<'a, T>(tree: T) -> Result<SnapshotTree, failure::Error>
+async fn load<'a, T>(tree: T) -> Result<SnapshotTree, anyhow::Error>
 where
     T: ReadableTree + Send + Sync,
 {
@@ -119,7 +119,7 @@ mod tests {
     };
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_read() -> Result<(), failure::Error> {
+    async fn test_read() -> Result<(), anyhow::Error> {
         let inspector = test_inspector();
         let hierarchy = read(&inspector).await?;
         assert_inspect_tree!(hierarchy, root: {
@@ -135,7 +135,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_load_snapshot_tree() -> Result<(), failure::Error> {
+    async fn test_load_snapshot_tree() -> Result<(), anyhow::Error> {
         let inspector = test_inspector();
         let mut snapshot_tree = load_snapshot_tree(&inspector).await?;
 
@@ -166,7 +166,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn missing_value_parse_failure() -> Result<(), failure::Error> {
+    async fn missing_value_parse_failure() -> Result<(), anyhow::Error> {
         let inspector = Inspector::new();
         let _lazy_child = inspector.root().create_lazy_child("lazy", || {
             async move {
@@ -183,7 +183,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn missing_value_not_found() -> Result<(), failure::Error> {
+    async fn missing_value_not_found() -> Result<(), anyhow::Error> {
         let inspector = Inspector::new();
         inspector.state().map(|state| {
             let mut state = state.lock();

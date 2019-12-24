@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::protocol::{FidlCompatible, FromFidlExt, IntoFidlExt};
-use failure::{Fail, ResultExt};
+use anyhow::Context;
 use serde_derive::{Deserialize, Serialize};
 use serde_json;
 use std::collections::HashMap;
@@ -11,6 +11,7 @@ use std::convert::TryFrom;
 use std::fs;
 use std::io;
 use std::net::Ipv4Addr;
+use thiserror::Error;
 
 /// Attempts to load a `ServerParameters` from the json file at the provided path.
 pub fn load_server_config_from_file(path: String) -> Result<ServerParameters, ConfigError> {
@@ -51,7 +52,7 @@ pub struct LeaseLength {
 }
 
 impl FidlCompatible<fidl_fuchsia_net_dhcp::LeaseLength> for LeaseLength {
-    type FromError = failure::Error;
+    type FromError = anyhow::Error;
     type IntoError = never::Never;
 
     fn try_from_fidl(fidl: fidl_fuchsia_net_dhcp::LeaseLength) -> Result<Self, Self::FromError> {
@@ -62,7 +63,7 @@ impl FidlCompatible<fidl_fuchsia_net_dhcp::LeaseLength> for LeaseLength {
                 max_seconds: max.unwrap_or(default_seconds),
             })
         } else {
-            Err(failure::format_err!(
+            Err(anyhow::format_err!(
                 "fuchsia.net.dhcp.LeaseLength missing required field: {:?}",
                 fidl
             ))
@@ -104,7 +105,7 @@ impl ManagedAddresses {
 }
 
 impl FidlCompatible<fidl_fuchsia_net_dhcp::AddressPool> for ManagedAddresses {
-    type FromError = failure::Error;
+    type FromError = anyhow::Error;
     type IntoError = never::Never;
 
     fn try_from_fidl(fidl: fidl_fuchsia_net_dhcp::AddressPool) -> Result<Self, Self::FromError> {
@@ -123,24 +124,24 @@ impl FidlCompatible<fidl_fuchsia_net_dhcp::AddressPool> for ManagedAddresses {
             let pool_range_start = Ipv4Addr::from_fidl(pool_range_start);
             let pool_range_stop = Ipv4Addr::from_fidl(pool_range_stop);
             if mask.apply_to(network_id) != network_id {
-                Err(failure::format_err!(
+                Err(anyhow::format_err!(
                     "fuchsia.net.dhcp.AddressPool contained wrong mask (/{}) for network_id ({})",
                     mask.ones(),
                     network_id
                 ))
             } else if mask.apply_to(broadcast) != network_id {
-                Err(failure::format_err!("fuchsia.net.dhcp.AddressPool contained broadcast ({}) outside of network_id ({})", broadcast, network_id))
+                Err(anyhow::format_err!("fuchsia.net.dhcp.AddressPool contained broadcast ({}) outside of network_id ({})", broadcast, network_id))
             } else if mask.apply_to(pool_range_start) != network_id {
-                Err(failure::format_err!("fuchsia.net.dhcp.AddressPool contained pool_range_start ({}) outside of network_id ({})", pool_range_start, network_id))
+                Err(anyhow::format_err!("fuchsia.net.dhcp.AddressPool contained pool_range_start ({}) outside of network_id ({})", pool_range_start, network_id))
             } else if mask.apply_to(pool_range_stop) != network_id {
-                Err(failure::format_err!("fuchsia.net.dhcp.AddressPool contained pool_range_stop ({}) outside of network_id ({})", pool_range_stop, network_id))
+                Err(anyhow::format_err!("fuchsia.net.dhcp.AddressPool contained pool_range_stop ({}) outside of network_id ({})", pool_range_stop, network_id))
             } else if pool_range_start > pool_range_stop {
-                Err(failure::format_err!("fuchsia.net.dhpc.AddressPool contained pool_range_start ({}) > pool_range_stop ({})", pool_range_start, pool_range_stop))
+                Err(anyhow::format_err!("fuchsia.net.dhpc.AddressPool contained pool_range_start ({}) > pool_range_stop ({})", pool_range_start, pool_range_stop))
             } else {
                 Ok(Self { network_id, broadcast, mask, pool_range_start, pool_range_stop })
             }
         } else {
-            Err(failure::format_err!("fuchsia.net.dhcp.AddressPool missing fields: {:?}", fidl))
+            Err(anyhow::format_err!("fuchsia.net.dhcp.AddressPool missing fields: {:?}", fidl))
         }
     }
 
@@ -180,7 +181,7 @@ impl FidlCompatible<Vec<fidl_fuchsia_net::MacAddress>> for PermittedMacs {
 pub struct StaticAssignments(pub HashMap<fidl_fuchsia_net_ext::MacAddress, Ipv4Addr>);
 
 impl FidlCompatible<Vec<fidl_fuchsia_net_dhcp::StaticAssignment>> for StaticAssignments {
-    type FromError = failure::Error;
+    type FromError = anyhow::Error;
     type IntoError = never::Never;
 
     fn try_from_fidl(
@@ -190,14 +191,14 @@ impl FidlCompatible<Vec<fidl_fuchsia_net_dhcp::StaticAssignment>> for StaticAssi
             if let (Some(host), Some(assigned_addr)) = (assignment.host, assignment.assigned_addr) {
                 let mac = fidl_fuchsia_net_ext::MacAddress::from(host);
                 match acc.insert(mac, Ipv4Addr::from_fidl(assigned_addr)) {
-                    Some(_ip) => Err(failure::format_err!(
+                    Some(_ip) => Err(anyhow::format_err!(
                         "fuchsia.net.dhcp.StaticAssignment contained multiple entries for {}",
                         mac
                     )),
                     None => Ok(acc),
                 }
             } else {
-                Err(failure::format_err!(
+                Err(anyhow::format_err!(
                     "fuchsia.net.dhcp.StaticAssignment contained entry with missing fields: {:?}",
                     assignment
                 ))
@@ -224,11 +225,11 @@ impl FidlCompatible<Vec<fidl_fuchsia_net_dhcp::StaticAssignment>> for StaticAssi
 
 /// A wrapper around the error types which can be returned when loading a
 /// `ServerConfig` from file with `load_server_config_from_file()`.
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ConfigError {
-    #[fail(display = "io error: {}", _0)]
+    #[error("io error: {}", _0)]
     IoError(io::Error),
-    #[fail(display = "json deserialization error: {}", _0)]
+    #[error("json deserialization error: {}", _0)]
     JsonError(serde_json::Error),
 }
 
@@ -287,12 +288,12 @@ impl SubnetMask {
 }
 
 impl TryFrom<u8> for SubnetMask {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
     /// Returns a `Ok(SubnetMask)` with the `ones` high-order bits set if `ones` < 32, else `Err`.
     fn try_from(ones: u8) -> Result<Self, Self::Error> {
         if ones >= U32_BITS {
-            Err(failure::err_msg(
+            Err(anyhow::format_err!(
                 "failed precondition: argument must be < 32 (bit length of an IPv4 address)",
             ))
         } else {
@@ -302,13 +303,13 @@ impl TryFrom<u8> for SubnetMask {
 }
 
 impl TryFrom<Ipv4Addr> for SubnetMask {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
     fn try_from(mask: Ipv4Addr) -> Result<Self, Self::Error> {
         let mask: u32 = mask.into();
         let ones = mask.count_ones();
         if ones + mask.trailing_zeros() != 32 {
-            Err(failure::format_err!("mask did not have consecutive ones {:b}", mask))
+            Err(anyhow::format_err!("mask did not have consecutive ones {:b}", mask))
         } else {
             Ok(SubnetMask { ones: ones as u8 })
         }
@@ -316,7 +317,7 @@ impl TryFrom<Ipv4Addr> for SubnetMask {
 }
 
 impl FidlCompatible<fidl_fuchsia_net::Ipv4Address> for SubnetMask {
-    type FromError = failure::Error;
+    type FromError = anyhow::Error;
     type IntoError = never::Never;
 
     fn try_from_fidl(fidl: fidl_fuchsia_net::Ipv4Address) -> Result<Self, Self::FromError> {
@@ -342,19 +343,19 @@ mod tests {
     use crate::server::tests::{random_ipv4_generator, random_mac_generator};
 
     #[test]
-    fn test_try_from_ipv4addr_with_consecutive_ones_returns_mask() -> Result<(), failure::Error> {
+    fn test_try_from_ipv4addr_with_consecutive_ones_returns_mask() -> Result<(), anyhow::Error> {
         assert_eq!(SubnetMask::try_from(Ipv4Addr::new(255, 255, 255, 0))?, SubnetMask { ones: 24 });
         Ok(())
     }
 
     #[test]
-    fn test_try_from_ipv4addr_with_nonconsecutive_ones_returns_err() -> Result<(), failure::Error> {
+    fn test_try_from_ipv4addr_with_nonconsecutive_ones_returns_err() -> Result<(), anyhow::Error> {
         assert!(SubnetMask::try_from(Ipv4Addr::new(255, 255, 255, 1)).is_err());
         Ok(())
     }
 
     #[test]
-    fn test_into_ipv4addr_returns_ipv4addr() -> Result<(), failure::Error> {
+    fn test_into_ipv4addr_returns_ipv4addr() -> Result<(), anyhow::Error> {
         let v1: Ipv4Addr = SubnetMask { ones: 24 }.into();
         let v2: Ipv4Addr = SubnetMask { ones: 0 }.into();
         let v3: Ipv4Addr = SubnetMask { ones: 32 }.into();
@@ -384,7 +385,7 @@ mod tests {
     }
 
     #[test]
-    fn test_managed_addresses_try_from_fidl() -> Result<(), failure::Error> {
+    fn test_managed_addresses_try_from_fidl() -> Result<(), anyhow::Error> {
         let good_mask = fidl_fuchsia_net_dhcp::AddressPool {
             network_id: Some(fidl_fuchsia_net::Ipv4Address { addr: [192, 168, 0, 0] }),
             broadcast: Some(fidl_fuchsia_net::Ipv4Address { addr: [192, 168, 0, 255] }),
@@ -464,7 +465,7 @@ mod tests {
     }
 
     #[test]
-    fn test_static_assignments_try_from_fidl() -> Result<(), failure::Error> {
+    fn test_static_assignments_try_from_fidl() -> Result<(), anyhow::Error> {
         use std::iter::FromIterator;
 
         let fidl_fuchsia_hardware_ethernet_ext::MacAddress { octets: mac } = random_mac_generator();

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::game::{Game, PlayerState};
-use failure::ResultExt;
+use anyhow::Context;
 use fidl_fuchsia_game_tennis as fidl_tennis;
 use fuchsia_async::{self as fasync, DurationExt};
 use fuchsia_syslog::{fx_log_err, fx_log_info};
@@ -48,7 +48,7 @@ impl TennisService {
                 }
                 Ok(())
             }
-                .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
+            .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
         );
     }
 
@@ -79,7 +79,7 @@ impl TennisService {
                 *player_state.lock() = PlayerState::Disconnected;
                 Ok(())
             }
-                .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
+            .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
         );
         if game.players_ready() {
             fx_log_info!("game is beginning");

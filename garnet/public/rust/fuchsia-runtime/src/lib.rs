@@ -13,7 +13,6 @@
 #![deny(missing_docs)]
 
 use {
-    failure::Fail,
     fuchsia_zircon::{
         sys::{zx_handle_t, ZX_HANDLE_INVALID}, // handle type (primitive, non-owning)
         Handle,
@@ -26,6 +25,7 @@ use {
     num_derive::FromPrimitive,
     num_traits::cast::FromPrimitive,
     std::convert::TryFrom,
+    thiserror::Error,
 };
 
 extern "C" {
@@ -204,14 +204,14 @@ impl From<HandleType> for HandleInfo {
 
 /// Possible errors when converting a raw u32 to a HandleInfo with the  TryFrom<u32> impl on
 /// HandleInfo.
-#[derive(Fail, Debug)]
+#[derive(Error, Debug)]
 pub enum HandleInfoError {
     /// Unknown handle type.
-    #[fail(display = "Unknown handle type for HandleInfo: {:#x?}", _0)]
+    #[error("Unknown handle type for HandleInfo: {:#x?}", _0)]
     UnknownHandleType(u32),
 
     /// Otherwise invalid raw value, like reserved bytes being non-zero.
-    #[fail(display = "Invalid value for HandleInfo: {:#x?}", _0)]
+    #[error("Invalid value for HandleInfo: {:#x?}", _0)]
     InvalidHandleInfo(u32),
 }
 

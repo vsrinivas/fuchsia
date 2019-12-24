@@ -5,10 +5,10 @@
 use {
     crate::cobalt,
     argh::FromArgs,
-    failure::{self, Fail},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon as zx, realm_management,
+    thiserror::{self, Error},
 };
 
 #[derive(FromArgs)]
@@ -20,18 +20,18 @@ pub struct SessionManagerArgs {
 }
 
 /// Errors returned by calls startup functions.
-#[derive(Debug, Fail, Clone, PartialEq)]
+#[derive(Debug, Error, Clone, PartialEq)]
 pub enum StartupError {
-    #[fail(display = "Could not connect to Realm.")]
+    #[error("Could not connect to Realm.")]
     RealmConnection,
 
-    #[fail(display = "Existing session not destroyed at \"{}/{}\": {:?}", collection, name, err)]
+    #[error("Existing session not destroyed at \"{}/{}\": {:?}", collection, name, err)]
     NotDestroyed { name: String, collection: String, err: fsys::Error },
 
-    #[fail(display = "Session {} not created at \"{}/{}\": {:?}", url, collection, name, err)]
+    #[error("Session {} not created at \"{}/{}\": {:?}", url, collection, name, err)]
     NotCreated { name: String, collection: String, url: String, err: fsys::Error },
 
-    #[fail(display = "Session {} not bound at \"{}/{}\": {:?}", url, collection, name, err)]
+    #[error("Session {} not bound at \"{}/{}\": {:?}", url, collection, name, err)]
     NotBound { name: String, collection: String, url: String, err: fsys::Error },
 }
 

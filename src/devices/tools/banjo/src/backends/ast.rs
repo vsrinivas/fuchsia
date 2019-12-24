@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {crate::ast::BanjoAst, crate::backends::Backend, failure::Error, std::io};
+use {crate::ast::BanjoAst, crate::backends::Backend, anyhow::Error, std::io};
 
 pub struct AstBackend<'a, W: io::Write> {
     w: &'a mut W,

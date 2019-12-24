@@ -5,7 +5,7 @@
 #![cfg(not(target_os = "fuchsia"))]
 
 use {
-    failure::{Error, ResultExt},
+    anyhow::{format_err, Context as _, Error},
     fidl::endpoints::ClientEnd,
     fidl::Handle,
     fidl_fuchsia_overnet::{Peer, ServiceProviderMarker},
@@ -125,7 +125,7 @@ impl NodeRuntime for OvernetRuntime {
         Ok(match hdl.handle_type() {
             fidl::FidlHdlType::Channel => SendHandle::Channel,
             fidl::FidlHdlType::Socket => unimplemented!(),
-            fidl::FidlHdlType::Invalid => failure::bail!("Invalid handle"),
+            fidl::FidlHdlType::Invalid => return Err(format_err!("Invalid handle")),
         })
     }
 
@@ -319,7 +319,7 @@ async fn run_overnet_prelude() -> Result<Node<OvernetRuntime>, Error> {
     log::trace!("Wait for greeting & first frame write");
     let first_frame = rx_frames
         .next()
-        .map(|r| r.ok_or_else(|| failure::format_err!("Stream closed before greeting received")));
+        .map(|r| r.ok_or_else(|| anyhow::format_err!("Stream closed before greeting received")));
     let (mut frame, (tx_bytes, _)) = futures::try_join!(first_frame, wr)?;
 
     let mut greeting = StreamSocketGreeting::empty();
@@ -331,20 +331,24 @@ async fn run_overnet_prelude() -> Result<Node<OvernetRuntime>, Error> {
 
     log::trace!("Got greeting: {:?}", greeting);
     let ascendd_node_id = match greeting {
-        StreamSocketGreeting { magic_string: None, .. } => failure::bail!(
-            "Required magic string '{}' not present in greeting",
-            ASCENDD_SERVER_CONNECTION_STRING
-        ),
+        StreamSocketGreeting { magic_string: None, .. } => {
+            return Err(anyhow::format_err!(
+                "Required magic string '{}' not present in greeting",
+                ASCENDD_SERVER_CONNECTION_STRING
+            ))
+        }
         StreamSocketGreeting { magic_string: Some(ref x), .. }
             if x != ASCENDD_SERVER_CONNECTION_STRING =>
         {
-            failure::bail!(
+            return Err(anyhow::format_err!(
                 "Expected magic string '{}' in greeting, got '{}'",
                 ASCENDD_SERVER_CONNECTION_STRING,
                 x
-            )
+            ));
         }
-        StreamSocketGreeting { node_id: None, .. } => failure::bail!("No node id in greeting"),
+        StreamSocketGreeting { node_id: None, .. } => {
+            return Err(format_err!("No node id in greeting"))
+        }
         StreamSocketGreeting { node_id: Some(n), .. } => n.id,
     };
 

@@ -12,13 +12,14 @@ rustc_library("inspect-formatter") {
 
   deps = [
     "//src/lib/inspect/rust/fuchsia-inspect",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:base64",
-    "//third_party/rust_crates:failure",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:paste",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 

@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    failure, fidl_fuchsia_sys2 as fuchsia_sys2, fuchsia_async as fasync,
+    anyhow, fidl_fuchsia_sys2 as fuchsia_sys2, fuchsia_async as fasync,
     fuchsia_component::client as component_client, fuchsia_syslog::fx_log_err,
 };
 
 #[fasync::run_singlethreaded]
-async fn main() -> Result<(), failure::Error> {
+async fn main() -> Result<(), anyhow::Error> {
     let _ = fuchsia_syslog::init_with_tags(&["system_controller_consumer"]);
 
     let shutdown = component_client::connect_to_service::<fuchsia_sys2::SystemControllerMarker>()

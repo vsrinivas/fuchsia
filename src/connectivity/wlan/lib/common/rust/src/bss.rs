@@ -7,7 +7,7 @@ use {
         ie::{self, rsn::suite_filter},
         mac::CapabilityInfo,
     },
-    failure::format_err,
+    anyhow::format_err,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fidl_fuchsia_wlan_sme as fidl_sme,
     std::{collections::HashMap, fmt, hash::Hash},
 };
@@ -95,7 +95,7 @@ pub trait BssDescriptionExt {
     fn find_wpa_ie(&self) -> Option<&[u8]>;
     /// Search for WPA Info Element and parse it. If no WPA Info Element is found, or a WPA Info
     /// Element is found but is not valid, return an error.
-    fn get_wpa_ie(&self) -> Result<ie::wpa::WpaIe, failure::Error>;
+    fn get_wpa_ie(&self) -> Result<ie::wpa::WpaIe, anyhow::Error>;
 }
 
 impl BssDescriptionExt for fidl_mlme::BssDescription {
@@ -189,7 +189,7 @@ impl BssDescriptionExt for fidl_mlme::BssDescription {
             .next()
     }
 
-    fn get_wpa_ie(&self) -> Result<ie::wpa::WpaIe, failure::Error> {
+    fn get_wpa_ie(&self) -> Result<ie::wpa::WpaIe, anyhow::Error> {
         ie::parse_wpa_ie(self.find_wpa_ie().ok_or(format_err!("no wpa ie found"))?)
             .map_err(|e| e.into())
     }

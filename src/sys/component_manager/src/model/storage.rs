@@ -8,9 +8,9 @@ use {
         model::Model,
         moniker::{AbsoluteMoniker, RelativeMoniker},
     },
+    anyhow::Error,
     clonable_error::ClonableError,
     cm_rust::CapabilityPath,
-    failure::{Error, Fail},
     fidl::endpoints,
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,
@@ -18,38 +18,45 @@ use {
     },
     fidl_fuchsia_sys2 as fsys,
     std::path::PathBuf,
+    thiserror::Error,
 };
 
 const FLAGS: u32 = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
 
 /// Errors related to isolated storage.
-#[derive(Debug, Fail, Clone)]
+#[derive(Debug, Error, Clone)]
 pub enum StorageError {
-    #[fail(
-        display = "failed to open isolated storage from {}'s directory {} for {}: {} ",
-        dir_source_moniker, dir_source_path, relative_moniker, err
+    #[error(
+        "failed to open isolated storage from {}'s directory {} for {}: {} ",
+        dir_source_moniker,
+        dir_source_path,
+        relative_moniker,
+        err
     )]
     Open {
         dir_source_moniker: AbsoluteMoniker,
         dir_source_path: CapabilityPath,
         relative_moniker: RelativeMoniker,
-        #[fail(cause)]
+        #[source]
         err: ClonableError,
     },
-    #[fail(
-        display = "failed to remove isolated storage from {}'s directory {} for {}: {} ",
-        dir_source_moniker, dir_source_path, relative_moniker, err
+    #[error(
+        "failed to remove isolated storage from {}'s directory {} for {}: {} ",
+        dir_source_moniker,
+        dir_source_path,
+        relative_moniker,
+        err
     )]
     Remove {
         dir_source_moniker: AbsoluteMoniker,
         dir_source_path: CapabilityPath,
         relative_moniker: RelativeMoniker,
-        #[fail(cause)]
+        #[source]
         err: ClonableError,
     },
-    #[fail(display = "storage path for {} was invalid", relative_moniker)]
+    #[error("storage path for {} was invalid", relative_moniker)]
     InvalidStoragePath { relative_moniker: RelativeMoniker },
-    #[fail(display = "invalid utf8")]
+    #[error("invalid utf8")]
     InvalidUtf8,
 }
 

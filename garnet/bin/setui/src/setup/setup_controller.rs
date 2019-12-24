@@ -8,7 +8,7 @@ use crate::switchboard::base::{
     ConfigurationInterfaceFlags, SettingRequest, SettingRequestResponder, SettingResponse,
     SettingType, SetupInfo,
 };
-use failure::{format_err, Error};
+use anyhow::{format_err, Error};
 use fuchsia_async as fasync;
 use futures::lock::Mutex;
 use futures::StreamExt;

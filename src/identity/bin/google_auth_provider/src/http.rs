@@ -163,7 +163,7 @@ impl HttpClient for UrlLoaderHttpClient {
 #[cfg(test)]
 mod test {
     use super::*;
-    use failure::Error;
+    use anyhow::Error;
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_net_oldhttp::{HttpError, UrlLoaderMarker, UrlLoaderRequest};
     use futures::prelude::*;

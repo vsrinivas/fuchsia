@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Error;
+use anyhow::Error;
 use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_bluetooth_avdtp::{
     PeerControllerMarker, PeerControllerProxy, PeerManagerEvent, PeerManagerMarker,

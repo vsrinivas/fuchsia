@@ -7,7 +7,7 @@
 
 use {
     crate::{cache::MerkleForError, clock, inspect_util},
-    failure::format_err,
+    anyhow::format_err,
     fidl_fuchsia_pkg_ext::{BlobId, MirrorConfig, RepositoryConfig, RepositoryKey},
     fuchsia_hyper::HyperConnector,
     fuchsia_inspect::{self as inspect, Property},
@@ -64,7 +64,7 @@ impl Repository {
     pub async fn new(
         config: &RepositoryConfig,
         node: inspect::Node,
-    ) -> Result<Self, failure::Error> {
+    ) -> Result<Self, anyhow::Error> {
         let local = EphemeralRepository::<Json>::new();
         let mirror_config = config
             .mirrors()
@@ -88,7 +88,7 @@ impl Repository {
         config: &RepositoryConfig,
         mirror_config: &MirrorConfig,
         node: inspect::Node,
-    ) -> Result<Self, failure::Error> {
+    ) -> Result<Self, anyhow::Error> {
         let root_keys = config
             .root_keys()
             .iter()
@@ -198,7 +198,7 @@ mod tests {
     const EMPTY_REPO_PATH: &str = "/pkg/empty-repo";
 
     impl Repository {
-        pub async fn new_no_inspect(config: &RepositoryConfig) -> Result<Self, failure::Error> {
+        pub async fn new_no_inspect(config: &RepositoryConfig) -> Result<Self, anyhow::Error> {
             Repository::new(config, inspect::Inspector::new().root().create_child("inner-node"))
                 .await
         }

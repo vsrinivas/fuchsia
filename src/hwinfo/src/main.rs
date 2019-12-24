@@ -6,8 +6,8 @@ mod config;
 mod hwinfo_server;
 
 use {
+    anyhow::Error,
     config::{BoardInfo, DeviceInfo, ProductInfo},
-    failure::Error,
     fidl_fuchsia_factory::MiscFactoryStoreProviderMarker,
     fidl_fuchsia_hwinfo::{BoardRequestStream, DeviceRequestStream, ProductRequestStream},
     fuchsia_async as fasync,

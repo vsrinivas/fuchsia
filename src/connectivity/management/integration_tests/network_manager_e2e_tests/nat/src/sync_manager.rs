@@ -4,7 +4,7 @@
 
 //! Coordinate status between different devices in the current netemul test.
 
-use failure::{format_err, Error, ResultExt};
+use anyhow::{format_err, Context as _, Error};
 use futures::StreamExt;
 use log::error;
 

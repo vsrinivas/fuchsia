@@ -16,15 +16,16 @@ use {
         error::Error,
         timer::EventId,
     },
+    anyhow::format_err,
     banjo_ddk_hw_wlan_wlaninfo as banjo_hw_wlaninfo,
     banjo_ddk_protocol_wlan_info as banjo_wlan_info, banjo_ddk_protocol_wlan_mac as banjo_wlan_mac,
-    failure::{format_err, Fail},
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     log::{error, warn},
     std::{
         collections::{hash_map, HashMap},
         hash::{Hash, Hasher},
     },
+    thiserror::Error,
     wlan_common::{
         buffer_writer::BufferWriter,
         frame_len,
@@ -36,21 +37,21 @@ use {
 
 type BeaconHash = u64;
 
-#[derive(Fail, Debug, PartialEq, Eq)]
+#[derive(Error, Debug, PartialEq, Eq)]
 pub enum ScanError {
-    #[fail(display = "scanner is busy")]
+    #[error("scanner is busy")]
     Busy,
-    #[fail(display = "invalid arg: empty channel list")]
+    #[error("invalid arg: empty channel list")]
     EmptyChannelList,
-    #[fail(display = "invalid arg: channel list too large")]
+    #[error("invalid arg: channel list too large")]
     ChannelListTooLarge,
-    #[fail(display = "invalid arg: max_channel_time < min_channel_time")]
+    #[error("invalid arg: max_channel_time < min_channel_time")]
     MaxChannelTimeLtMin,
-    #[fail(display = "invalid arg: SSID too long")]
+    #[error("invalid arg: SSID too long")]
     SsidTooLong,
-    #[fail(display = "fail starting hw scan: {}", _0)]
-    StartHwScanFails(#[cause] zx::Status),
-    #[fail(display = "hw scan aborted")]
+    #[error("fail starting hw scan: {}", _0)]
+    StartHwScanFails(zx::Status),
+    #[error("hw scan aborted")]
     HwScanAborted,
 }
 

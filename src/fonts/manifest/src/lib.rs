@@ -11,9 +11,9 @@ pub mod v2;
 
 use {
     crate::{serde_ext::*, v2::FontsManifest as FontsManifestV2},
+    anyhow::Error,
     char_set::CharSet,
     clonable_error::ClonableError,
-    failure::{self, Error, Fail},
     fidl_fuchsia_fonts::{GenericFontFamily, Slant, Width, WEIGHT_NORMAL},
     fuchsia_url::pkg_url::PkgUrl,
     offset_string::OffsetString,
@@ -30,6 +30,7 @@ use {
         io::BufReader,
         path::{Path, PathBuf},
     },
+    thiserror::Error,
 };
 
 /// The various possible versions of the fonts manifest.
@@ -241,7 +242,7 @@ impl FontsManifest {
     /// Tries to deserialize a v1 or v2 manifest from a JSON file.
     ///
     /// (Also performs some file path cleanup in v1 manifests.)
-    pub fn load_from_file(path: &Path) -> Result<FontManifestWrapper, failure::Error> {
+    pub fn load_from_file(path: &Path) -> Result<FontManifestWrapper, anyhow::Error> {
         let path = fs::canonicalize(path)?;
         let base_dir =
             path.parent().ok_or_else(|| ManifestLoadError::InvalidPath { path: path.clone() })?;
@@ -271,39 +272,39 @@ impl FontsManifest {
 }
 
 /// Errors when loading manifest
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ManifestLoadError {
     /// Invalid manifest path
-    #[fail(display = "Invalid manifest path: {:?}", path)]
+    #[error("Invalid manifest path: {:?}", path)]
     InvalidPath {
         /// Manifest file path
         path: PathBuf,
     },
 
     /// IO error when reading the manifest
-    #[fail(display = "Failed to read {:?}: {:?}", path, cause)]
+    #[error("Failed to read {:?}: {:?}", path, cause)]
     ReadError {
         /// Manifest file path
         path: PathBuf,
         /// Root cause of error
-        #[fail(cause)]
+        #[source]
         cause: std::io::Error,
     },
 
     /// Invalid syntax in the manifest file
-    #[fail(display = "Failed to parse {:?}: {:?}", path, cause)]
+    #[error("Failed to parse {:?}: {:?}", path, cause)]
     ParseError {
         /// Manifest file path
         path: PathBuf,
         /// Root cause of error
-        #[fail(cause)]
+        #[source]
         cause: ClonableError,
     },
 }
 
 #[cfg(test)]
 mod tests {
-    use {super::*, failure::Error, matches::assert_matches};
+    use {super::*, anyhow::Error, matches::assert_matches};
 
     #[test]
     fn test_deserialize_manifest_version_v1_implicit() -> Result<(), Error> {

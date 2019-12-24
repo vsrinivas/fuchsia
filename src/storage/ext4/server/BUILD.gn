@@ -21,8 +21,9 @@ rustc_binary("bin") {
     "//src/storage/ext4/lib:parser",
     "//src/storage/ext4/read-only:ext4-read-only",
     "//src/storage/ext4/server/fidl:ext4_server-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]

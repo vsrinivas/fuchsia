@@ -5,7 +5,7 @@
 mod gtest_adapter;
 
 use {
-    failure::{format_err, Error, ResultExt},
+    anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_test as ftest, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::fx_log_info,

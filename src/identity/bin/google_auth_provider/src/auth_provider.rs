@@ -19,7 +19,7 @@ use crate::oauth_open_id_connect::{
     parse_user_info_response, IdToken,
 };
 use crate::web::StandaloneWebFrame;
-use failure::Error;
+use anyhow::Error;
 use fidl;
 use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_auth::{

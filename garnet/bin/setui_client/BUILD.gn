@@ -16,8 +16,9 @@ rustc_binary("bin") {
     ":lib",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-syslog",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:structopt",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 
@@ -38,11 +39,12 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
     "//sdk/fidl/fuchsia.setui:fuchsia.setui-rustc",
     "//sdk/fidl/fuchsia.ui.types:fuchsia.ui.types-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:structopt",
+    "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-device-manager:fuchsia-device-manager-rustc",
   ]
 }
@@ -87,9 +89,10 @@ rustc_binary("setui_client_interface_test_bin") {
     "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
     "//sdk/fidl/fuchsia.setui:fuchsia.setui-rustc",
     "//sdk/fidl/fuchsia.ui.types:fuchsia.ui.types-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:thiserror",
   ]
   source_root = "src/interface_test.rs"
 }

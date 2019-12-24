@@ -161,7 +161,7 @@ impl<'entries> Simple<'entries> {
         &mut self,
         req: DirectoryRequest,
         connection: &mut SimpleDirectoryConnection,
-    ) -> Result<HandleRequestResult, failure::Error> {
+    ) -> Result<HandleRequestResult, anyhow::Error> {
         let mut may_affect_children = false;
 
         match req {

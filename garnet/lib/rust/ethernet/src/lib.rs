@@ -69,7 +69,7 @@ impl Client {
         buf: zx::Vmo,
         buf_size: usize,
         name: &str,
-    ) -> Result<Self, failure::Error> {
+    ) -> Result<Self, anyhow::Error> {
         zx::Status::ok(dev.set_client_name(name).await?)?;
         let (status, fifos) = dev.get_fifos().await?;
         zx::Status::ok(status)?;
@@ -96,7 +96,7 @@ impl Client {
         buf: zx::Vmo,
         buf_size: usize,
         name: &str,
-    ) -> Result<Self, failure::Error> {
+    ) -> Result<Self, anyhow::Error> {
         let dev = dev.as_raw_fd();
         let mut client = 0;
         // Safe because we're passing a valid fd.
@@ -126,7 +126,7 @@ impl Client {
     /// Start transferring packets.
     ///
     /// Before this is called, no packets will be transferred.
-    pub async fn start(&self) -> Result<(), failure::Error> {
+    pub async fn start(&self) -> Result<(), anyhow::Error> {
         let raw = self.inner.dev.start().await?;
         Ok(zx::Status::ok(raw)?)
     }
@@ -141,7 +141,7 @@ impl Client {
     /// Start receiving all packets transmitted by this host.
     ///
     /// Such packets will have the `EthernetQueueFlags::TX_ECHO` bit set.
-    pub async fn tx_listen_start(&self) -> Result<(), failure::Error> {
+    pub async fn tx_listen_start(&self) -> Result<(), anyhow::Error> {
         let raw = self.inner.dev.listen_start().await?;
         Ok(zx::Status::ok(raw)?)
     }

@@ -23,8 +23,7 @@
 //! ```
 
 use {
-    failure::format_err,
-    failure::Fail,
+    anyhow::format_err,
     fuchsia_zircon as zx,
     lazy_static::lazy_static,
     rust_icu_common as icu, rust_icu_udata as udata,
@@ -34,6 +33,7 @@ use {
     std::io,
     std::sync::Mutex,
     std::sync::{Arc, Weak},
+    thiserror::Error,
 };
 
 lazy_static! {
@@ -46,19 +46,19 @@ const ICU_DATA_PATH_DEFAULT: &str = "/pkg/data/icudtl.dat";
 
 /// Error type returned by `icu_udata`. The individual enum values encode
 /// classes of possible errors returned.
-#[derive(Fail, Debug)]
+#[derive(Error, Debug)]
 pub enum Error {
-    #[fail(display = "[icu_data]: {}", _0)]
-    Fail(#[cause] failure::Error),
+    #[error("[icu_data]: {}", _0)]
+    Fail(anyhow::Error),
     /// The operation failed due to an underlying Zircon error.
-    #[fail(display = "[icu_data]: generic error: {}", _0)]
-    Status(#[cause] zx::Status),
+    #[error("[icu_data]: generic error: {}", _0)]
+    Status(zx::Status),
     /// The operation failed due to an IO error.
-    #[fail(display = "[icu_data]: IO error: {}", _0)]
-    IO(#[cause] io::Error),
+    #[error("[icu_data]: IO error: {}", _0)]
+    IO(io::Error),
     /// The operation failed due to an ICU library error.
-    #[fail(display = "[icu_data]: ICU error: {}", _0)]
-    ICU(#[cause] icu::Error),
+    #[error("[icu_data]: ICU error: {}", _0)]
+    ICU(icu::Error),
 }
 impl From<zx::Status> for Error {
     fn from(status: zx::Status) -> Self {
@@ -70,8 +70,8 @@ impl From<io::Error> for Error {
         Error::IO(err)
     }
 }
-impl From<failure::Error> for Error {
-    fn from(err: failure::Error) -> Self {
+impl From<anyhow::Error> for Error {
+    fn from(err: anyhow::Error) -> Self {
         Error::Fail(err)
     }
 }

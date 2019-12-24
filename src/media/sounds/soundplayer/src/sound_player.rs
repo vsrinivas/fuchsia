@@ -5,7 +5,7 @@
 mod wav_reader;
 
 use crate::Result;
-use failure::ResultExt;
+use anyhow::Context as _;
 use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_media::*;
 use fidl_fuchsia_media_sounds::*;
@@ -37,7 +37,7 @@ impl SoundPlayer {
                                 Ok(sound) => {
                                     if self.sounds_by_id.insert(id, sound).is_some() {
                                         fuchsia_syslog::fx_log_err!("AddSound called with id already in use {}", id);
-                                        return Err(failure::format_err!("Client error, disconnecting"));
+                                        return Err(anyhow::format_err!("Client error, disconnecting"));
                                     } else {
                                         responder.send(&mut Ok(())).unwrap_or(());
                                     }
@@ -51,7 +51,7 @@ impl SoundPlayer {
                         PlayerRequest::AddSoundBuffer { id, buffer, stream_type, control_handle} => {
                             if self.sounds_by_id.insert(id, Sound::new(id, buffer, stream_type)).is_some() {
                                 fuchsia_syslog::fx_log_err!("AddSound called with id already in use {}", id);
-                                return Err(failure::format_err!("Client error, disconnecting"));
+                                return Err(anyhow::format_err!("Client error, disconnecting"));
                             }
                         }
                         PlayerRequest::RemoveSound { id, control_handle } => {
@@ -174,7 +174,7 @@ impl Renderer {
             return Err(e);
         }
         if let Err(e) = results.1 {
-            return Err(failure::format_err!("AudioRenderer.Play failed: {}", e));
+            return Err(anyhow::format_err!("AudioRenderer.Play failed: {}", e));
         }
 
         Ok(self)

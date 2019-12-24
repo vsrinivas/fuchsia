@@ -14,8 +14,9 @@ rustc_library("fidl_fuchsia_net_stack_ext") {
     "//garnet/lib/rust/fidl_fuchsia_net_ext",
     "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:bitflags",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
   ]
 }

@@ -23,10 +23,11 @@ rustc_library("fuchsia-audio-encoder") {
     "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec-rustc",
     "//src/lib/fidl_table_validation",
     "//src/media/stream_processors/fuchsia-stream-processors",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
-    "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:thiserror",
   ]
 
   test_deps = [

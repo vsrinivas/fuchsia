@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{format_err, Error},
+    anyhow::{format_err, Error},
     fidl_fuchsia_bluetooth as fidl,
     std::{fmt, str::FromStr},
 };
@@ -41,7 +41,7 @@ impl fmt::Display for PeerId {
 }
 
 impl FromStr for PeerId {
-    type Err = failure::Error;
+    type Err = anyhow::Error;
 
     fn from_str(src: &str) -> Result<Self, Self::Err> {
         parse_hex_identifier(src).map(|n| PeerId(n))
@@ -73,7 +73,7 @@ impl fmt::Display for Id {
 }
 
 impl FromStr for Id {
-    type Err = failure::Error;
+    type Err = anyhow::Error;
 
     /// Valid id strings have only Hex characters (0-9, a-f) and are 16 chars long
     /// to match the 64 bit representation of a Id.

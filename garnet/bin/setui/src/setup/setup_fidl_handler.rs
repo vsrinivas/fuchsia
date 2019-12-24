@@ -153,7 +153,7 @@ pub fn spawn_setup_fidl_handler(switchboard: SwitchboardHandle, stream: SetupReq
         Box::new(
             move |context,
                   req|
-                  -> LocalBoxFuture<'_, Result<Option<SetupRequest>, failure::Error>> {
+                  -> LocalBoxFuture<'_, Result<Option<SetupRequest>, anyhow::Error>> {
                 async move {
                     // Support future expansion of FIDL
                     #[allow(unreachable_patterns)]

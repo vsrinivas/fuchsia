@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{Error, ResultExt};
+use anyhow::{Context as _, Error};
 
 use async_trait::async_trait;
 use fidl_fuchsia_hardware_backlight::State as BacklightState;
@@ -60,7 +60,7 @@ impl Backlight {
     async fn get(&self) -> Result<f64, Error> {
         let result = self.proxy.get_state_normalized().await?;
         let backlight_info =
-            result.map_err(|e| failure::format_err!("Failed to get state: {:?}", e))?;
+            result.map_err(|e| anyhow::format_err!("Failed to get state: {:?}", e))?;
         Ok(backlight_info.brightness)
     }
 

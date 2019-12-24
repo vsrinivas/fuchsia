@@ -6,22 +6,22 @@
 
 use {
     crate::iou,
-    failure::Fail,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
     fuchsia_merkle::Hash,
     fuchsia_zircon::Status,
+    thiserror::Error,
 };
 
 /// An error encountered while opening a package
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 #[allow(missing_docs)]
 pub enum PackageOpenError {
-    #[fail(display = "the package does not exist")]
+    #[error("the package does not exist")]
     NotFound,
 
-    #[fail(display = "while opening the package: {}", _0)]
-    Io(#[cause] iou::OpenError),
+    #[error("while opening the package: {}", _0)]
+    Io(iou::OpenError),
 }
 
 /// An open handle to /pkgfs/versions
@@ -32,13 +32,13 @@ pub struct Client {
 
 impl Client {
     /// Returns an client connected to pkgfs from the current component's namespace
-    pub fn open_from_namespace() -> Result<Self, failure::Error> {
+    pub fn open_from_namespace() -> Result<Self, anyhow::Error> {
         let proxy = iou::open_directory_from_namespace("/pkgfs/versions")?;
         Ok(Client { proxy })
     }
 
     /// Returns an client connected to pkgfs from the given pkgfs root dir.
-    pub fn open_from_pkgfs_root(pkgfs: &DirectoryProxy) -> Result<Self, failure::Error> {
+    pub fn open_from_pkgfs_root(pkgfs: &DirectoryProxy) -> Result<Self, anyhow::Error> {
         Ok(Client {
             proxy: iou::open_directory_no_describe(
                 pkgfs,

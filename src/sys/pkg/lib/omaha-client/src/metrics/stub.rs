@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::metrics::{Metrics, MetricsReporter};
-use failure::Error;
+use anyhow::Error;
 use log::info;
 
 /// A stub implementation of MetricsReporter which only log metrics.

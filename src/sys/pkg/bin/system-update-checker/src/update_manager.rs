@@ -8,7 +8,7 @@ use crate::check::{check_for_system_update, SystemUpdateStatus};
 use crate::connect::ServiceConnect;
 use crate::last_update_storage::{LastUpdateStorage, LastUpdateStorageFile};
 use crate::update_monitor::{State, StateChangeCallback, UpdateMonitor};
-use failure::{Error, ResultExt};
+use anyhow::{Context as _, Error};
 use fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxyInterface};
 use fidl_fuchsia_update::{CheckStartedResult, ManagerState};
 use fuchsia_async as fasync;
@@ -178,7 +178,7 @@ where
 async fn load_last_update_package(
     last_update_storage: &(dyn LastUpdateStorage + Send + Sync),
     pkgfs_path: &Path,
-    package_resolver: Result<impl PackageResolverProxyInterface, failure::Error>,
+    package_resolver: Result<impl PackageResolverProxyInterface, anyhow::Error>,
 ) -> Option<Hash> {
     if let Some(update) = last_update_storage.load() {
         return Some(update);
@@ -192,9 +192,9 @@ async fn load_last_update_package(
 
 async fn discover_last_update_package(
     pkgfs_path: &Path,
-    package_resolver: Result<impl PackageResolverProxyInterface, failure::Error>,
+    package_resolver: Result<impl PackageResolverProxyInterface, anyhow::Error>,
 ) -> Option<Hash> {
-    fn check_dynamic_index(pkgfs_path: &Path) -> Result<Hash, failure::Error> {
+    fn check_dynamic_index(pkgfs_path: &Path) -> Result<Hash, anyhow::Error> {
         let bytes = fs::read(pkgfs_path.join("packages/update/0/meta"))?;
         let hex_str = std::str::from_utf8(&bytes)?;
         Ok(hex_str.parse()?)
@@ -205,8 +205,8 @@ async fn discover_last_update_package(
     }
 
     async fn fetch_update_merkle(
-        package_resolver: Result<impl PackageResolverProxyInterface, failure::Error>,
-    ) -> Result<Hash, failure::Error> {
+        package_resolver: Result<impl PackageResolverProxyInterface, anyhow::Error>,
+    ) -> Result<Hash, anyhow::Error> {
         let package_resolver = package_resolver?;
         Ok(crate::check::latest_update_merkle(&package_resolver).await?)
     }
@@ -405,7 +405,7 @@ pub trait UpdateApplier: Send + Sync + 'static {
         current_system_image: Hash,
         latest_system_image: Hash,
         initiator: Initiator,
-    ) -> BoxFuture<'_, Result<(), crate::errors::Error>>;
+    ) -> BoxFuture<'_, Result<(), anyhow::Error>>;
 }
 
 pub struct RealUpdateApplier;
@@ -416,7 +416,7 @@ impl UpdateApplier for RealUpdateApplier {
         current_system_image: Hash,
         latest_system_image: Hash,
         initiator: Initiator,
-    ) -> BoxFuture<'_, Result<(), crate::errors::Error>> {
+    ) -> BoxFuture<'_, Result<(), anyhow::Error>> {
         apply_system_update(current_system_image, latest_system_image, initiator).boxed()
     }
 }
@@ -441,13 +441,13 @@ pub(crate) mod tests {
 
     #[derive(Clone)]
     pub struct FakeUpdateChecker {
-        result: Result<SystemUpdateStatus, crate::errors::ErrorKind>,
+        result: Result<SystemUpdateStatus, crate::errors::Error>,
         call_count: Arc<AtomicU64>,
         // Taking this mutex blocks update checker.
         check_blocked: Arc<AsyncMutex<()>>,
     }
     impl FakeUpdateChecker {
-        fn new(result: Result<SystemUpdateStatus, crate::errors::ErrorKind>) -> Self {
+        fn new(result: Result<SystemUpdateStatus, crate::errors::Error>) -> Self {
             Self {
                 result,
                 call_count: Arc::new(AtomicU64::new(0)),
@@ -468,7 +468,7 @@ pub(crate) mod tests {
             }))
         }
         pub fn new_error() -> Self {
-            Self::new(Err(crate::errors::ErrorKind::ResolveUpdatePackage))
+            Self::new(Err(crate::errors::Error::ResolveUpdatePackage))
         }
         pub fn block(&self) -> Option<futures::lock::MutexGuard<'_, ()>> {
             self.check_blocked.try_lock()
@@ -545,14 +545,14 @@ pub(crate) mod tests {
             _current_system_image: Hash,
             _latest_system_image: Hash,
             _initiator: Initiator,
-        ) -> BoxFuture<'_, Result<(), crate::errors::Error>> {
+        ) -> BoxFuture<'_, Result<(), anyhow::Error>> {
             unreachable!();
         }
     }
 
     #[derive(Clone)]
     pub struct FakeUpdateApplier {
-        result: Result<(), crate::errors::ErrorKind>,
+        result: Result<(), crate::errors::Error>,
         call_count: Arc<AtomicU64>,
     }
     impl FakeUpdateApplier {
@@ -561,7 +561,7 @@ pub(crate) mod tests {
         }
         pub fn new_error() -> Self {
             Self {
-                result: Err(crate::errors::ErrorKind::SystemUpdaterFailed),
+                result: Err(crate::errors::Error::SystemUpdaterFailed),
                 call_count: Arc::new(AtomicU64::new(0)),
             }
         }
@@ -575,7 +575,7 @@ pub(crate) mod tests {
             _current_system_image: Hash,
             _latest_system_image: Hash,
             _initiator: Initiator,
-        ) -> BoxFuture<'_, Result<(), crate::errors::Error>> {
+        ) -> BoxFuture<'_, Result<(), anyhow::Error>> {
             self.call_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             future::ready(self.result.clone().map_err(|e| e.into())).boxed()
         }

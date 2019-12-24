@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{format_err, Error, ResultExt},
+    anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_netemul_example::{CounterMarker, CounterRequest, CounterRequestStream},
     fidl_fuchsia_sys::{
         ComponentControllerEvent, ComponentControllerMarker, ComponentControllerProxy,
@@ -169,7 +169,7 @@ fn spawn_counter_server(mut stream: CounterRequestStream, data: Arc<Mutex<Counte
             }
             Ok(())
         }
-        .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
+        .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
     )
 }
 

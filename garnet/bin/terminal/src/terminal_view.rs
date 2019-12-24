@@ -6,11 +6,11 @@ use {
     crate::key_util::get_input_sequence_for_key_event,
     crate::pty::Pty,
     crate::ui::TerminalScene,
+    anyhow::{Context as _, Error},
     carnelian::{
         make_message, AnimationMode, AppContext, Message, Size, ViewAssistant,
         ViewAssistantContext, ViewKey,
     },
-    failure::{Error, ResultExt},
     fidl_fuchsia_hardware_pty::WindowSize,
     fidl_fuchsia_ui_input::KeyboardEvent,
     fuchsia_async as fasync,
@@ -189,7 +189,7 @@ impl TerminalViewAssistant {
                             PtyOutgoingMessages::Resize(size) => {
                                 let pty = pty_clone.borrow_mut();
                                 let window_size = WindowSize { width: size.width as u32, height: size.height as u32 };
-                                pty.resize(window_size).await.unwrap_or_else(|e: failure::Error| {
+                                pty.resize(window_size).await.unwrap_or_else(|e: anyhow::Error| {
                                     eprintln!("failed to send resize message to pty: {:?}", e)
                                 });
                             }

@@ -29,11 +29,12 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.devicesettings:fuchsia.devicesettings-rustc",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:bytes",
-    "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:tempfile",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 

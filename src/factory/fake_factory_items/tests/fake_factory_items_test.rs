@@ -4,7 +4,7 @@
 
 #![cfg(test)]
 
-use failure::Error;
+use anyhow::Error;
 use fidl_fuchsia_boot::FactoryItemsMarker;
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_service;

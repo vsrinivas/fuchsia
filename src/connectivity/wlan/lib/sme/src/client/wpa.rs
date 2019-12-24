@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{bail, format_err};
+use anyhow::format_err;
 use fidl_fuchsia_wlan_mlme::BssDescription;
 
 use fidl_fuchsia_wlan_sme as fidl_sme;
@@ -36,10 +36,10 @@ pub fn get_legacy_wpa_association(
     device_info: &DeviceInfo,
     credential: &fidl_sme::Credential,
     bss: &BssDescription,
-) -> Result<Protection, failure::Error> {
+) -> Result<Protection, anyhow::Error> {
     let a_wpa = bss.get_wpa_ie()?;
     if !is_legacy_wpa_compatible(&a_wpa) {
-        bail!("incompatible legacy WPA {:?}", a_wpa);
+        return Err(format_err!("incompatible legacy WPA {:?}", a_wpa));
     }
     let s_wpa = construct_s_wpa(&a_wpa);
     let negotiated_protection = NegotiatedProtection::from_legacy_wpa(&s_wpa)?;

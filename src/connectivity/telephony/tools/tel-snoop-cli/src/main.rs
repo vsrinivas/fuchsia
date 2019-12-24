@@ -5,7 +5,7 @@
 //! tel-snoop-cli is used for snooping Qmi messages sent/received by transport driver
 
 use {
-    failure::{format_err, Error},
+    anyhow::{format_err, Error},
     fidl_fuchsia_telephony_snoop::{
         Message as SnoopMessage, SnooperEvent, SnooperMarker, SnooperProxy,
     },

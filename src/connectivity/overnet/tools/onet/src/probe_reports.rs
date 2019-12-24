@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_overnet::ServiceConsumerProxyInterface,
     fidl_fuchsia_overnet_protocol::{
@@ -34,7 +34,7 @@ async fn timeout_after<R>(
     match select(fut, rx).await {
         Either::Left((r, _)) => r,
         Either::Right((Ok(r), _)) => Err(r),
-        Either::Right((_, _)) => Err(failure::format_err!("Canceled timeout")),
+        Either::Right((_, _)) => Err(anyhow::format_err!("Canceled timeout")),
     }
 }
 
@@ -59,7 +59,7 @@ async fn probe_node(
         }
         .boxed(),
         PROBE_TIMEOUT,
-        failure::format_err!("Probe timed out"),
+        anyhow::format_err!("Probe timed out"),
     )
     .await
 }
@@ -74,7 +74,7 @@ async fn list_peers() -> Result<(NodeId, Vec<NodeId>), Error> {
         match timeout_after(
             async { Ok(svc.list_peers().await?) }.boxed(),
             LIST_PEERS_TIMEOUT,
-            failure::format_err!("Timeout"),
+            anyhow::format_err!("Timeout"),
         )
         .await
         {
@@ -88,7 +88,7 @@ async fn list_peers() -> Result<(NodeId, Vec<NodeId>), Error> {
                 return Ok(peer.id);
             }
         }
-        failure::bail!("Cannot find myself");
+        return Err(anyhow::format_err!("Cannot find myself"));
     })()?;
     let peers = peers.into_iter().map(|peer| peer.id).collect();
     Ok((own_id, peers))
@@ -120,13 +120,17 @@ async fn probe(
             for peer_connection in node_peer_connections.iter() {
                 if let Some(source) = peer_connection.source {
                     if node_id != source {
-                        failure::bail!("Invalid source node id {:?} from {:?}", source, node_id);
+                        return Err(anyhow::format_err!(
+                            "Invalid source node id {:?} from {:?}",
+                            source,
+                            node_id
+                        ));
                     }
                 } else {
-                    failure::bail!("No source node id from {:?}", node_id);
+                    return Err(anyhow::format_err!("No source node id from {:?}", node_id));
                 }
                 if peer_connection.destination.is_none() {
-                    failure::bail!("No destination node id from {:?}", node_id);
+                    return Err(anyhow::format_err!("No destination node id from {:?}", node_id));
                 }
             }
             if let Some(ref mut peer_connections) = peer_connections {
@@ -137,13 +141,17 @@ async fn probe(
             for link in node_links.iter() {
                 if let Some(source) = link.source {
                     if node_id != source {
-                        failure::bail!("Invalid source node id {:?} from {:?}", source, node_id);
+                        return Err(anyhow::format_err!(
+                            "Invalid source node id {:?} from {:?}",
+                            source,
+                            node_id
+                        ));
                     }
                 } else {
-                    failure::bail!("No source node id from {:?}", node_id);
+                    return Err(anyhow::format_err!("No source node id from {:?}", node_id));
                 }
                 if link.destination.is_none() {
-                    failure::bail!("No destination node id from {:?}", node_id);
+                    return Err(anyhow::format_err!("No destination node id from {:?}", node_id));
                 }
             }
             if let Some(ref mut links) = links {

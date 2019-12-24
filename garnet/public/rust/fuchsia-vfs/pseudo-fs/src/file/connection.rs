@@ -7,7 +7,7 @@
 use crate::{common::send_on_open_with_error, file::common::new_connection_validate_flags};
 
 use {
-    failure::Error,
+    anyhow::Error,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
         FileMarker, FileObject, FileRequest, FileRequestStream, NodeAttributes, NodeInfo,

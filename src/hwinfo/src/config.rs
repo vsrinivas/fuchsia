@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{self, Error},
+    anyhow::Error,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_factory::MiscFactoryStoreProviderProxy,
     fidl_fuchsia_hwinfo,

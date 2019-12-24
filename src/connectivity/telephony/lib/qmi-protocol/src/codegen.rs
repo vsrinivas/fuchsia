@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::ast::{Message, QmiType, Service, ServiceSet, Structure, SubParam, TLV};
-use failure::{format_err, Error};
+use anyhow::{format_err, Error};
 use std::io;
 
 pub struct Codegen<'a, W: io::Write> {
@@ -523,7 +523,7 @@ impl<'a, W: io::Write> Codegen<'a, W> {
 // found in the LICENSE file.
 
 #![allow(unused_mut, non_snake_case)]
-use failure::Fail;
+use thiserror::Error;
 use bytes::{{Bytes, Buf}};
 use std::fmt::Debug;
 use std::result;
@@ -547,13 +547,13 @@ pub trait Decodable {{
 "
         )?;
         // codegen error types
-        writeln_indent!(self, "#[derive(Debug, Fail)]");
+        writeln_indent!(self, "#[derive(Debug, Error)]");
         writeln_indent!(self, "pub enum QmiError {{");
         indent!(self);
         for (error_type, error_set) in &svc_set.results {
             writeln_indent!(self, "// {} error types", error_type);
             for (name, code) in error_set {
-                writeln_indent!(self, "#[fail(display = \"Qmi Result Error Code: {:#X}\")]", code);
+                writeln_indent!(self, "#[error( \"Qmi Result Error Code: {:#X}\")]", code);
                 writeln_indent!(self, "{},", name);
             }
         }

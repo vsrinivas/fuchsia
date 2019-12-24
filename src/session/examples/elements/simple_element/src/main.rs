@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Error;
+use anyhow::Error;
 
 use {
-    failure::ResultExt, fidl_fuchsia_session_examples::ElementPingMarker, fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
+    anyhow::Context as _, fidl_fuchsia_session_examples::ElementPingMarker,
+    fuchsia_async as fasync, fuchsia_component::client::connect_to_service,
 };
 
 #[fasync::run_singlethreaded]

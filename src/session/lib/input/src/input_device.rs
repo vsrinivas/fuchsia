@@ -4,8 +4,8 @@
 
 use {
     crate::{keyboard, mouse, touch},
+    anyhow::{format_err, Context, Error},
     async_trait::async_trait,
-    failure::{self, format_err, Error, ResultExt},
     fdio,
     fidl_fuchsia_input_report::{InputDeviceMarker, InputDeviceProxy, InputReport},
     fuchsia_async as fasync, fuchsia_zircon as zx,
@@ -235,7 +235,7 @@ pub async fn all_devices(
 ) -> Result<Vec<fidl_fuchsia_input_report::InputDeviceProxy>, Error> {
     let input_report_dir = Path::new(INPUT_REPORT_PATH);
     let entries: ReadDir = read_dir(input_report_dir)
-        .with_context(|_| format!("Failed to read input report directory {}", INPUT_REPORT_PATH))?;
+        .with_context(|| format!("Failed to read input report directory {}", INPUT_REPORT_PATH))?;
 
     let mut devices: Vec<fidl_fuchsia_input_report::InputDeviceProxy> = vec![];
     for entry in entries.filter_map(Result::ok) {

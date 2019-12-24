@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{err_msg, Error},
+    anyhow::{format_err, Error},
     fidl_fuchsia_bluetooth::Status,
     fidl_fuchsia_bluetooth_control::{
         AddressType, BondingData, LeData, Ltk, RemoteKey, SecurityProperties, TechnologyType,

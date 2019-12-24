@@ -6,7 +6,7 @@
 
 use {
     crate::{v2, Family as FamilyV1, Font as FontV1, FontsManifest as FontsManifestV1},
-    failure::{format_err, Error},
+    anyhow::{format_err, Error},
     itertools::Itertools,
     std::{
         convert::{From, TryFrom},

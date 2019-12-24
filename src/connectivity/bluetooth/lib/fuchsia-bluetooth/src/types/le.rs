@@ -20,7 +20,7 @@
 
 use crate::types::{id::PeerId, uuid::Uuid};
 use {
-    failure::{format_err, Error},
+    anyhow::{format_err, Error},
     fidl_fuchsia_bluetooth::Appearance,
     fidl_fuchsia_bluetooth_le as fidl,
     std::{

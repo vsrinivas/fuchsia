@@ -14,9 +14,10 @@ rustc_library("netfilter") {
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.net.filter:fuchsia.net.filter-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:pest",
     "//third_party/rust_crates:pest_derive",
+    "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
   ]
 }

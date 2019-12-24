@@ -3,14 +3,15 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::Error,
     bt_avctp::Error as AvctpError,
-    failure::{Error, Fail},
     futures::{sink::Sink, stream::FusedStream, Stream},
     pin_utils::unsafe_pinned,
     std::{
         pin::Pin,
         task::{Context, Poll},
     },
+    thiserror::Error,
 };
 
 use crate::packets::Error as PacketError;
@@ -19,37 +20,37 @@ use crate::packets::Error as PacketError;
 pub type PeerId = String;
 
 /// The error types for peer management.
-#[derive(Fail, Debug)]
+#[derive(Error, Debug)]
 pub enum PeerError {
     /// Error encoding/decoding packet
-    #[fail(display = "Packet encoding/decoding error: {:?}", _0)]
+    #[error("Packet encoding/decoding error: {:?}", _0)]
     PacketError(PacketError),
 
     /// Error in protocol layer
-    #[fail(display = "Protocol layer error: {:?}", _0)]
+    #[error("Protocol layer error: {:?}", _0)]
     #[allow(dead_code)]
     AvctpError(AvctpError),
 
-    #[fail(display = "Remote device was not connected")]
+    #[error("Remote device was not connected")]
     RemoteNotFound,
 
-    #[fail(display = "Remote command is unsupported")]
+    #[error("Remote command is unsupported")]
     CommandNotSupported,
 
-    #[fail(display = "Remote command rejected")]
+    #[error("Remote command rejected")]
     CommandFailed,
 
-    #[fail(display = "Unable to connect")]
-    ConnectionFailure(#[cause] Error),
+    #[error("Unable to connect")]
+    ConnectionFailure(Error),
 
-    #[fail(display = "Unexpected response to command")]
+    #[error("Unexpected response to command")]
     UnexpectedResponse,
 
-    #[fail(display = "Generic errors")]
-    GenericError(#[cause] Error),
+    #[error("Generic errors")]
+    GenericError(Error),
 
     #[doc(hidden)]
-    #[fail(display = "__Nonexhaustive error should never be created.")]
+    #[error("__Nonexhaustive error should never be created.")]
     __Nonexhaustive,
 }
 

@@ -8,7 +8,7 @@ use {
     crate::font_package_manager::FontPackageManager,
     crate::repository_manager::RepositoryManager,
     crate::rewrite_manager::RewriteManager,
-    failure::Error,
+    anyhow::Error,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{self, DirectoryMarker},
     fidl_fuchsia_pkg::{

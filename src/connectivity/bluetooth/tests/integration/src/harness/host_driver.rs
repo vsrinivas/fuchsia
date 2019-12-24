@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{err_msg, Error},
+    anyhow::{format_err, Error},
     fidl_fuchsia_bluetooth_control::RemoteDevice,
     fidl_fuchsia_bluetooth_host::{HostEvent, HostProxy},
     fidl_fuchsia_bluetooth_test::HciEmulatorProxy,

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::Error,
+    anyhow::Error,
     fidl::endpoints::{Proxy, RequestStream, ServiceMarker},
     fuchsia_async as fasync, fuchsia_zircon as zx,
 };

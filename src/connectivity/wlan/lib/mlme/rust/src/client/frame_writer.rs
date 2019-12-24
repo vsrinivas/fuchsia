@@ -4,7 +4,7 @@
 
 use {
     crate::{auth, error::Error, RatesWriter},
-    failure::format_err,
+    anyhow::format_err,
     wlan_common::{
         appendable::Appendable,
         data_writer,

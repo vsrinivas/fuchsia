@@ -6,7 +6,7 @@
 #![allow(unreachable_code)]
 
 use {
-    failure::Error,
+    anyhow::Error,
     fidl::endpoints,
     fidl_fuchsia_bluetooth_le::{CentralEvent, CentralProxy},
     fuchsia_bluetooth::{error::Error as BTError, types::le::RemoteDevice},

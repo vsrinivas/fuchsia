@@ -6,7 +6,7 @@ use crate::common::AccountLifetime;
 use crate::inspect;
 use crate::TokenManager;
 use account_common::LocalPersonaId;
-use failure::Error;
+use anyhow::Error;
 use fidl::endpoints::{ClientEnd, ServerEnd};
 use fidl_fuchsia_auth::{AuthenticationContextProviderProxy, TokenManagerMarker};
 use fidl_fuchsia_identity_account::{

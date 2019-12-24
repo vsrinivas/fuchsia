@@ -4,8 +4,8 @@
 
 use {
     crate::{models::OutputConsumer, story_graph::Module, utils},
+    anyhow::Error,
     derivative::*,
-    failure::Error,
     fidl_fuchsia_modular::{EntityMarker, EntityProxy, EntityResolverProxy},
     fuchsia_syslog::macros::*,
     futures::future::LocalFutureObj,

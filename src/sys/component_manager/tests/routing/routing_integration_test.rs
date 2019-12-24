@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{format_err, Error},
+    anyhow::{format_err, Error},
     fdio::{SpawnAction, SpawnOptions},
     fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_runtime::{HandleInfo, HandleType},

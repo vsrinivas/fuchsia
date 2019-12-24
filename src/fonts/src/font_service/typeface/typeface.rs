@@ -4,8 +4,8 @@
 
 use {
     crate::font_service::AssetId,
+    anyhow::{format_err, Error},
     char_set::CharSet,
-    failure::{format_err, Error},
     fidl_fuchsia_fonts::{FamilyName, GenericFontFamily, Slant, Style2, TypefaceRequest, Width},
     fidl_fuchsia_fonts_experimental::TypefaceInfo,
     fidl_fuchsia_intl::LocaleId,

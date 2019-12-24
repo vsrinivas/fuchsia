@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    crate::models::Action, failure::Error, fidl_fuchsia_net_oldhttp as http,
+    crate::models::Action, anyhow::Error, fidl_fuchsia_net_oldhttp as http,
     fuchsia_async as fasync, fuchsia_component as component, fuchsia_syslog::macros::*,
     fuchsia_zircon as zx, futures::io::AsyncReadExt, serde_derive::Deserialize,
 };
@@ -59,7 +59,7 @@ async fn http_get(url: &str, headers: Vec<http::HttpHeader>) -> Result<String, E
 
     let resp = loader_proxy.start(&mut req).await?;
     if let Some(e) = resp.error {
-        return Err(failure::err_msg(e.description.unwrap_or("".into())));
+        return Err(anyhow::format_err!(e.description.unwrap_or("".into())));
     }
 
     let mut socket = match resp.body.map(|x| *x) {
@@ -92,12 +92,12 @@ async fn get_actions_http(url: &str) -> Result<Vec<Action>, Error> {
         .await
         .or_else(|_| {
             fx_log_err!("Unable to fetch actions from cloud - ({})", url);
-            Err(failure::err_msg(format!("Unable to fetch actions from cloud ({})", url)))
+            Err(anyhow::format_err!(format!("Unable to fetch actions from cloud ({})", url)))
         })
         .and_then(|body| serde_from_str(body.as_str()))
         .or_else(|e: Error| {
             fx_log_err!("Unable to parse cloud actions - {:?}", e);
-            Err(failure::err_msg(format!("Unable to parse cloud actions - ({:?})", e)))
+            Err(anyhow::format_err!(format!("Unable to parse cloud actions - ({:?})", e)))
         })
 }
 

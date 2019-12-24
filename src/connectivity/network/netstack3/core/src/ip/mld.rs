@@ -11,7 +11,6 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
-use failure::Fail;
 use log::{debug, error};
 use net_types::ip::{Ip, Ipv6, Ipv6Addr};
 use net_types::{LinkLocalAddr, MulticastAddr, SpecifiedAddr, SpecifiedAddress, Witness};
@@ -21,6 +20,7 @@ use packet::{EmptyBuf, InnerPacketBuilder};
 #[cfg(test)]
 use rand::Rng;
 use rand_xorshift::XorShiftRng;
+use thiserror::Error;
 use zerocopy::ByteSlice;
 
 use crate::context::{
@@ -157,13 +157,13 @@ where
     }
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub(crate) enum MldError {
     /// The host is trying to operate on an group address of which the host is not a member.
-    #[fail(display = "the host has not already been a member of the address: {}", addr)]
+    #[error("the host has not already been a member of the address: {}", addr)]
     NotAMember { addr: Ipv6Addr },
     /// Failed to send an IGMP packet.
-    #[fail(display = "failed to send out an IGMP packet to address: {}", addr)]
+    #[error("failed to send out an IGMP packet to address: {}", addr)]
     SendFailure { addr: Ipv6Addr },
 }
 

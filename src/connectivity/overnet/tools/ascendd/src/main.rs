@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    argh::FromArgs, ascendd_lib::run_ascendd, failure::Error, futures::prelude::*,
+    anyhow::Error, argh::FromArgs, ascendd_lib::run_ascendd, futures::prelude::*,
     tokio::runtime::current_thread,
 };
 

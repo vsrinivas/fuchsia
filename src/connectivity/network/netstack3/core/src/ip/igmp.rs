@@ -11,7 +11,6 @@ use std::collections::HashMap;
 use std::fmt::{Debug, Display};
 use std::time::Duration;
 
-use failure::Fail;
 use log::{debug, error};
 use net_types::ip::{AddrSubnet, Ipv4Addr};
 use net_types::{MulticastAddr, SpecifiedAddr, SpecifiedAddress, Witness};
@@ -19,6 +18,7 @@ use never::Never;
 use packet::{BufferMut, EmptyBuf, InnerPacketBuilder, Serializer};
 use rand::Rng;
 use rand_xorshift::XorShiftRng;
+use thiserror::Error;
 use zerocopy::ByteSlice;
 
 use crate::context::{
@@ -154,16 +154,16 @@ where
     }
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub(crate) enum IgmpError<D: Display + Debug + Send + Sync + 'static> {
     /// The host is trying to operate on an group address of which the host is not a member.
-    #[fail(display = "the host has not already been a member of the address: {}", addr)]
+    #[error("the host has not already been a member of the address: {}", addr)]
     NotAMember { addr: Ipv4Addr },
     /// Failed to send an IGMP packet.
-    #[fail(display = "failed to send out an IGMP packet to address: {}", addr)]
+    #[error("failed to send out an IGMP packet to address: {}", addr)]
     SendFailure { addr: Ipv4Addr },
     /// The given device does not have an assigned IP address.
-    #[fail(display = "no ip address is associated with the device: {}", device)]
+    #[error("no ip address is associated with the device: {}", device)]
     NoIpAddress { device: D },
 }
 

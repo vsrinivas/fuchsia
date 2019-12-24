@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Error;
+use anyhow::Error;
 use fidl::endpoints::RequestStream;
 use fidl_fuchsia_bluetooth_control::{
     ControlMarker, ControlProxy, PairingDelegateMarker, PairingDelegateRequest,
@@ -83,7 +83,7 @@ impl BluetoothControlFacade {
                         "Failed to create control interface proxy: {:?}",
                         err
                     );
-                    bail!("Failed to create control interface proxy: {:?}", err);
+                    return Err(format_err!("Failed to create control interface proxy: {:?}", err));
                 }
                 control_interface_proxy
             }
@@ -173,7 +173,7 @@ impl BluetoothControlFacade {
                         );
                     }
                 },
-                Err(r) => bail!("Error during handling request stream: {:?}", r),
+                Err(r) => return Err(format_err!("Error during handling request stream: {:?}", r)),
             };
         }
         Ok(())
@@ -191,7 +191,7 @@ impl BluetoothControlFacade {
             None => {
                 let err_str = "No Bluetooth Control Interface Proxy Set.";
                 fx_log_err!(tag: &with_line!(tag), "{:?}", err_str);
-                bail!("{:?}", err_str)
+                return Err(format_err!("{:?}", err_str));
             }
         };
         let delegate_request_stream = PairingDelegateRequestStream::from_channel(delegate_local);
@@ -259,12 +259,12 @@ impl BluetoothControlFacade {
             Some(receiever) => match receiever.try_next() {
                 Ok(value) => match value {
                     Some(v) => v,
-                    None => bail!("Error getting pin from pairing delegate."),
+                    None => return Err(format_err!("Error getting pin from pairing delegate.")),
                 },
                 Err(_e) => {
                     let err_str = "No pairing pin sent from the pairing delegate.".to_string();
                     fx_log_err!(tag: &with_line!(tag), "{}", err_str);
-                    bail!("No pairing pin sent from the pairing delegate.")
+                    return Err(format_err!("No pairing pin sent from the pairing delegate."));
                 }
             },
             None => {
@@ -474,7 +474,7 @@ impl BluetoothControlFacade {
                 if let Some(adapter) = proxy.get_active_adapter_info().await? {
                     adapter.address
                 } else {
-                    bail!("No Active Adapter")
+                    return Err(format_err!("No Active Adapter"));
                 }
             }
             None => bail!(ERR_NO_CONTROL_PROXY_DETECTED.to_string()),

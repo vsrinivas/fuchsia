@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::server::Facade;
-use failure::{format_err, Error};
+use anyhow::{format_err, Error};
 use fuchsia_syslog::macros::*;
 use futures::future::{FutureExt, LocalBoxFuture};
 use serde_json::{to_value, Value};
@@ -44,12 +44,12 @@ async fn wlan_method_to_fidl(
                     let ssid = match ssid.as_str() {
                         Some(ssid) => ssid.as_bytes().to_vec(),
                         None => {
-                            bail!("Please provide a target ssid");
+                            return Err(format_err!("Please provide a target ssid"));
                         }
                     };
                     ssid
                 }
-                None => bail!("Please provide a target ssid"),
+                None => return Err(format_err!("Please provide a target ssid")),
             };
 
             let target_pwd = match args.get("target_pwd") {

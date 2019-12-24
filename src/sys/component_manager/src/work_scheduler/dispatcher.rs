@@ -7,7 +7,6 @@ use {
         model::{binding::Binder, error::ModelError, moniker::AbsoluteMoniker},
         work_scheduler::{work_item::WorkItem, work_scheduler::WORKER_CAPABILITY_PATH},
     },
-    failure::Fail,
     fidl_fuchsia_io::{MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
     fidl_fuchsia_sys2 as fsys,
     fuchsia_async::Channel,
@@ -18,26 +17,27 @@ use {
         io,
         sync::{Arc, Weak},
     },
+    thiserror::Error,
 };
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum Error {
-    #[fail(display = "fuchsia.sys2 fidl protocol error: {:?}", 0)]
+    #[error("fuchsia.sys2 fidl protocol error: {:?}", 0)]
     API(fsys::Error),
     /// Used in tests to indicate dispatchers that cannot connect to real component instances.
     #[cfg(test)]
-    #[fail(display = "component is not running")]
+    #[error("component is not running")]
     ComponentNotRunning,
 
-    #[fail(display = "fidl error: {:?}", 0)]
+    #[error("fidl error: {:?}", 0)]
     FIDL(fidl::Error),
-    #[fail(display = "syscall failed with status {:?}", 0)]
+    #[error("syscall failed with status {:?}", 0)]
     Internal(zx::Status),
-    #[fail(display = "io errror: {:?}", 0)]
+    #[error("io errror: {:?}", 0)]
     IO(io::Error),
-    #[fail(display = "component model error: {:?}", 0)]
+    #[error("component model error: {:?}", 0)]
     Model(ModelError),
-    #[fail(display = "model has been dropped")]
+    #[error("model has been dropped")]
     ModelNotFound,
 }
 

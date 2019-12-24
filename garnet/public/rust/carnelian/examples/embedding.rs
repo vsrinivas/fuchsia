@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow::Error;
 use carnelian::{
     make_app_assistant, set_node_color, App, AppAssistant, Color, Coord, Size, ViewAssistant,
     ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
-use failure::Error;
 use fidl_fuchsia_math::RectF;
 use fidl_fuchsia_ui_app::ViewProviderMarker;
 use fidl_fuchsia_ui_gfx::{BoundingBox, Vec3, ViewProperties};

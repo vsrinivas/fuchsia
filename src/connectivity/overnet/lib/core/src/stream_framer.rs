@@ -4,7 +4,7 @@
 
 //! Handles framing/deframing of stream links
 
-use {byteorder::WriteBytesExt, crc::crc32, failure::Error, std::collections::VecDeque};
+use {anyhow::Error, byteorder::WriteBytesExt, crc::crc32, std::collections::VecDeque};
 
 /// Manages framing of messages into a byte stream.
 #[derive(Debug)]
@@ -24,7 +24,10 @@ impl StreamFramer {
             return Ok(());
         }
         if bytes.len() > (std::u16::MAX as usize) + 1 {
-            failure::bail!("Packet length ({}) too long for stream framing", bytes.len());
+            return Err(anyhow::format_err!(
+                "Packet length ({}) too long for stream framing",
+                bytes.len()
+            ));
         }
         self.outgoing.write_u8(0u8)?; // '\0'
         self.outgoing.write_u16::<byteorder::LittleEndian>((bytes.len() - 1) as u16)?;

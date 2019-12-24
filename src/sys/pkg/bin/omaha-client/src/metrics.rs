@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Error;
+use anyhow::Error;
 #[cfg(test)]
 use fidl_fuchsia_cobalt::CobaltEvent;
 use fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType};

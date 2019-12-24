@@ -4,7 +4,7 @@
 
 use crate::crypto_utils::prf;
 use crate::Error;
-use failure::{self, ensure};
+use anyhow::ensure;
 use std::cmp::{max, min};
 use wlan_common::ie::rsn::{akm::Akm, cipher::Cipher};
 
@@ -22,7 +22,7 @@ pub struct Ptk {
 }
 
 impl Ptk {
-    pub fn from_ptk(ptk: Vec<u8>, akm: &Akm, cipher: Cipher) -> Result<Self, failure::Error> {
+    pub fn from_ptk(ptk: Vec<u8>, akm: &Akm, cipher: Cipher) -> Result<Self, anyhow::Error> {
         let kck_len = akm.kck_bytes().ok_or(Error::PtkHierarchyUnsupportedAkmError)? as usize;
         let kek_len = akm.kek_bytes().ok_or(Error::PtkHierarchyUnsupportedAkmError)? as usize;
         let tk_len = cipher.tk_bytes().ok_or(Error::PtkHierarchyUnsupportedCipherError)?;
@@ -39,7 +39,7 @@ impl Ptk {
         snonce: &[u8],
         akm: &Akm,
         cipher: Cipher,
-    ) -> Result<Ptk, failure::Error> {
+    ) -> Result<Ptk, anyhow::Error> {
         ensure!(anonce.len() == 32 && snonce.len() == 32, Error::InvalidNonceSize(anonce.len()));
 
         let pmk_len = akm
@@ -121,7 +121,7 @@ mod tests {
         TestData { pmk, aa, spa, anonce, snonce }
     }
 
-    fn new_ptk(data: &TestData, akm_suite: u8, cipher_suite: u8) -> Result<Ptk, failure::Error> {
+    fn new_ptk(data: &TestData, akm_suite: u8, cipher_suite: u8) -> Result<Ptk, anyhow::Error> {
         let akm = Akm::new_dot11(akm_suite);
         let cipher = Cipher::new_dot11(cipher_suite);
         Ptk::new(&data.pmk[..], &data.aa, &data.spa, &data.anonce, &data.snonce, &akm, cipher)

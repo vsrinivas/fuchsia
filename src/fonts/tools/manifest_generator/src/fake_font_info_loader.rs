@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::{format_err, Error},
     char_set::CharSet,
-    failure::{format_err, Error},
     font_info::{FontAssetSource, FontInfo, FontInfoLoader},
     std::{collections::BTreeSet, convert::TryInto},
 };

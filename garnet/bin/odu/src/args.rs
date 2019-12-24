@@ -6,14 +6,14 @@ use {
     crate::common_operations::allowed_ops,
     crate::target::{AvailableTargets, TargetOps},
     clap::{App, Arg},
-    failure::Fail,
     log::error,
     std::ops::RangeInclusive,
+    thiserror::Error,
 };
 
-#[derive(Debug, Fail, PartialEq)]
+#[derive(Debug, Error, PartialEq)]
 pub enum Error {
-    #[fail(display = "Operation not supported for the target.")]
+    #[error("Operation not supported for the target.")]
     OperationNotSupported,
 }
 

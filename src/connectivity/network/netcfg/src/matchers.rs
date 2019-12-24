@@ -58,7 +58,7 @@ pub enum InterfaceMatcher {
 }
 
 impl InterfaceMatcher {
-    fn parse_as_tuple(matcher: (&str, &str)) -> Result<Self, failure::Error> {
+    fn parse_as_tuple(matcher: (&str, &str)) -> Result<Self, anyhow::Error> {
         match matcher {
             ("all", _) => Ok(InterfaceMatcher::All),
             ("topological_path", p) => Ok(InterfaceMatcher::TopoPath(p.to_string())),
@@ -69,7 +69,7 @@ impl InterfaceMatcher {
                 feature.parse::<fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures>()?,
             )),
             (unknown, _) => {
-                Err(failure::format_err!("invalid matcher option for interface: {}", unknown))
+                Err(anyhow::format_err!("invalid matcher option for interface: {}", unknown))
             }
         }
     }
@@ -81,7 +81,7 @@ pub enum ConfigOption {
 }
 
 impl ConfigOption {
-    fn parse_as_tuple(config: (&str, &str)) -> Result<Self, failure::Error> {
+    fn parse_as_tuple(config: (&str, &str)) -> Result<Self, anyhow::Error> {
         match config {
             ("ip_address", "dhcp") => {
                 Ok(ConfigOption::IpConfig(fidl_fuchsia_netstack_ext::IpAddressConfig::Dhcp))
@@ -94,7 +94,7 @@ impl ConfigOption {
                 )))
             }
             (unknown, _) => {
-                Err(failure::format_err!("invalid config option for interface: {}", unknown))
+                Err(anyhow::format_err!("invalid config option for interface: {}", unknown))
             }
         }
     }
@@ -103,9 +103,9 @@ impl ConfigOption {
 type InterfaceSpecSyntax = ((String, String), (String, String));
 
 impl std::convert::TryInto<InterfaceSpec> for InterfaceSpecSyntax {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
-    fn try_into(self) -> Result<InterfaceSpec, failure::Error> {
+    fn try_into(self) -> Result<InterfaceSpec, anyhow::Error> {
         let ((matcher_type, matcher_value), (config_type, config_value)) = self;
         Ok(InterfaceSpec {
             matcher: InterfaceMatcher::parse_as_tuple((&matcher_type, &matcher_value))?,

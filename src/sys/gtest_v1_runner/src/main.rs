@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::{format_err, Context as _, Error},
     by_addr::ByAddr,
-    failure::{format_err, Error, ResultExt},
     fdio::fdio_sys,
     fidl::endpoints::{ClientEnd, ServerEnd, ServiceMarker},
     fidl_fuchsia_io::{DirectoryProxy, OPEN_RIGHT_READABLE},
@@ -281,7 +281,7 @@ fn main() -> Result<(), Error> {
                 run_runner_server(stream, state).await?;
                 Ok(())
             }
-            .unwrap_or_else(|e: failure::Error| fx_log_err!("runner failed: {:?}", e)),
+            .unwrap_or_else(|e: anyhow::Error| fx_log_err!("runner failed: {:?}", e)),
         );
     });
     fs.take_and_serve_directory_handle()?;

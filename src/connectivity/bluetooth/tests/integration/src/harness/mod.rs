@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fuchsia_async as fasync,
     futures::future::BoxFuture,
     futures::{future, select, Future, FutureExt},

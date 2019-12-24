@@ -4,7 +4,7 @@
 
 pub use fidl_fuchsia_pkg::ExperimentToggle as Experiment;
 use {
-    failure::Error,
+    anyhow::Error,
     fidl_fuchsia_pkg::{PackageResolverAdminRequest, PackageResolverAdminRequestStream},
     fuchsia_inspect as inspect,
     futures::prelude::*,

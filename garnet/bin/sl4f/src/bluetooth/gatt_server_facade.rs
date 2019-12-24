@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{bail, Error};
+use anyhow::{format_err, Error};
 use fidl_fuchsia_bluetooth_gatt::{
     self as gatt, AttributePermissions, Characteristic, Descriptor,
     LocalServiceDelegateControlHandle, LocalServiceDelegateMarker,
@@ -96,7 +96,7 @@ impl GattServerFacade {
                 let service = app::client::connect_to_service::<Server_Marker>();
                 if let Err(err) = service {
                     fx_log_err!(tag: &[tag, &line!().to_string()].join(""), "Failed to create server proxy: {:?}", err);
-                    bail!("Failed to create server proxy: {:?}", err);
+                    return Err(format_err!("Failed to create server proxy: {:?}", err));
                 }
                 service
             }
@@ -432,13 +432,13 @@ impl GattServerFacade {
 
         let descriptor_list = match descriptor_list_json.as_array() {
             Some(d) => d,
-            None => bail!("Attribute 'descriptors' is not a parseable list."),
+            None => return Err(format_err!("Attribute 'descriptors' is not a parseable list.")),
         };
 
         for descriptor in descriptor_list.into_iter() {
             let descriptor_uuid = match descriptor["uuid"].as_str() {
                 Some(uuid) => uuid.to_string(),
-                None => bail!("Descriptor uuid was unable to cast to str."),
+                None => return Err(format_err!("Descriptor uuid was unable to cast to str.")),
             };
             let descriptor_value = self.parse_attribute_value_to_byte_array(&descriptor["value"]);
 
@@ -454,7 +454,9 @@ impl GattServerFacade {
 
             let raw_descriptor_permissions = match descriptor["permissions"].as_u64() {
                 Some(permissions) => permissions as u32,
-                None => bail!("Descriptor permissions was unable to cast to u64."),
+                None => {
+                    return Err(format_err!("Descriptor permissions was unable to cast to u64."))
+                }
             };
 
             let desc_permission_attributes = self
@@ -487,23 +489,31 @@ impl GattServerFacade {
 
         let characteristic_list = match characteristic_list_json.as_array() {
             Some(c) => c,
-            None => bail!("Attribute 'characteristics' is not a parseable list."),
+            None => {
+                return Err(format_err!("Attribute 'characteristics' is not a parseable list."))
+            }
         };
 
         for characteristic in characteristic_list.into_iter() {
             let characteristic_uuid = match characteristic["uuid"].as_str() {
                 Some(uuid) => uuid.to_string(),
-                None => bail!("Characteristic uuid was unable to cast to str."),
+                None => return Err(format_err!("Characteristic uuid was unable to cast to str.")),
             };
 
             let characteristic_properties = match characteristic["properties"].as_u64() {
                 Some(properties) => properties as u32,
-                None => bail!("Characteristic properties was unable to cast to u64."),
+                None => {
+                    return Err(format_err!("Characteristic properties was unable to cast to u64."))
+                }
             };
 
             let raw_characteristic_permissions = match characteristic["permissions"].as_u64() {
                 Some(permissions) => permissions as u32,
-                None => bail!("Characteristic permissions was unable to cast to u64."),
+                None => {
+                    return Err(format_err!(
+                        "Characteristic permissions was unable to cast to u64."
+                    ))
+                }
             };
 
             let characteristic_value =
@@ -546,15 +556,15 @@ impl GattServerFacade {
             Some(val) => match val {
                 0 => true,
                 1 => false,
-                _ => bail!("Invalid Service type. Expected 0 or 1."),
+                _ => return Err(format_err!("Invalid Service type. Expected 0 or 1.")),
             },
-            None => bail!("Service type was unable to cast to i64."),
+            None => return Err(format_err!("Service type was unable to cast to i64.")),
         };
 
         // Get the service UUID.
         let service_uuid = match service_json["uuid"].as_str() {
             Some(s) => s,
-            None => bail!("Service uuid was unable to cast to str."),
+            None => return Err(format_err!("Service uuid was unable to cast to str.")),
         };
 
         //Get the Characteristics from the service.
@@ -599,10 +609,15 @@ impl GattServerFacade {
                         "Successfully published GATT service with uuid {:?}",
                         service_uuid
                     ),
-                    Some(e) => bail!("Failed to create GATT Service: {}", Sl4fError::from(*e)),
+                    Some(e) => {
+                        return Err(format_err!(
+                            "Failed to create GATT Service: {}",
+                            Sl4fError::from(*e)
+                        ))
+                    }
                 }
             }
-            None => bail!("No Server Proxy created."),
+            None => return Err(format_err!("No Server Proxy created.")),
         }
         let monitor_delegate_fut = GattServerFacade::monitor_delegate_request_stream(
             delegate_request_stream,
@@ -695,14 +710,16 @@ impl GattServerFacade {
         let services = match database {
             Some(d) => match d.get("services") {
                 Some(s) => s,
-                None => bail!("No services found."),
+                None => return Err(format_err!("No services found.")),
             },
-            None => bail!("Could not find the 'services' key in the json database."),
+            None => {
+                return Err(format_err!("Could not find the 'services' key in the json database."))
+            }
         };
 
         let service_list = match services.as_array() {
             Some(s) => s,
-            None => bail!("Attribute 'service' is not a parseable list."),
+            None => return Err(format_err!("Attribute 'service' is not a parseable list.")),
         };
 
         for service in service_list.into_iter() {

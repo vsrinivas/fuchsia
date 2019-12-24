@@ -5,10 +5,10 @@
 use crate::hid::connection::{Connection, FidlConnection};
 use crate::hid::message::{Command, Packet};
 use crate::CtapDevice;
+use anyhow::{format_err, Context as _, Error};
 use async_trait::async_trait;
 use bitfield::bitfield;
 use bytes::{Buf, Bytes, IntoBuf};
-use failure::{format_err, Error, ResultExt};
 use fdio::service_connect;
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_hardware_input::DeviceMarker;
@@ -299,7 +299,7 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_fidl_error() -> Result<(), Error> {
         let mut con = FakeConnection::new(&BAD_REPORT_DESCRIPTOR);
-        con.fail();
+        con.error();
         Device::new_from_connection(TEST_PATH.to_string(), con, FIXED_SEED_RNG.clone())
             .await
             .expect_err("Should have failed to create device");

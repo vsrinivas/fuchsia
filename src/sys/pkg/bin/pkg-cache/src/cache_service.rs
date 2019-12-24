@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::Error,
+    anyhow::Error,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_pkg::{NeededBlobsMarker, PackageCacheRequest, PackageCacheRequestStream},

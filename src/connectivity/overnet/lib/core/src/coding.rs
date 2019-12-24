@@ -4,7 +4,7 @@
 
 //! Message encode/decode helpers
 
-use failure::Error;
+use anyhow::Error;
 use std::convert::TryInto;
 
 pub fn decode_fidl<T: fidl::encoding::Decodable>(bytes: &mut [u8]) -> Result<T, Error> {
@@ -36,7 +36,7 @@ impl FrameHeader {
     pub(crate) fn to_bytes(&self) -> Result<[u8; FRAME_HEADER_LENGTH], Error> {
         let length = self.length;
         if length > std::u32::MAX as usize {
-            failure::bail!("Message too long: {}", length);
+            return Err(anyhow::format_err!("Message too long: {}", length));
         }
         let length = length as u32;
         let hdr: u64 = (length as u64)
@@ -52,7 +52,7 @@ impl FrameHeader {
         let length = (hdr & 0xffff_ffff) as usize;
         let frame_type = match hdr >> 32 {
             0 => FrameType::Data,
-            _ => failure::bail!("Unknown frame type {}", hdr >> 32),
+            _ => return Err(anyhow::format_err!("Unknown frame type {}", hdr >> 32)),
         };
         Ok(FrameHeader { frame_type, length })
     }

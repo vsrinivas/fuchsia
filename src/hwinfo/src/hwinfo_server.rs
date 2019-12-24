@@ -4,7 +4,7 @@
 
 use {
     crate::config::{BoardInfo, DeviceInfo, ProductInfo},
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl_fuchsia_hwinfo::{
         BoardRequest, BoardRequestStream, DeviceRequest, DeviceRequestStream, ProductRequest,
         ProductRequestStream,

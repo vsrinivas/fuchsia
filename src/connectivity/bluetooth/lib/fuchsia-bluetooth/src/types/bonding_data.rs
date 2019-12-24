@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{bail, err_msg},
+    anyhow::format_err,
     fidl_fuchsia_bluetooth as bt, fidl_fuchsia_bluetooth_control as control,
     fidl_fuchsia_bluetooth_sys as sys, fuchsia_inspect as inspect,
     std::{
@@ -262,12 +262,12 @@ mod compat {
 }
 
 impl TryFrom<control::LeData> for LeData {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
     fn try_from(src: control::LeData) -> Result<LeData, Self::Error> {
         let address = match src.address_type {
             LE_PUBLIC => Address::public_from_str(&src.address)?,
             LE_RANDOM => Address::random_from_str(&src.address)?,
-            _ => bail!("Invalid address type, expected LE_PUBLIC or LE_RANDOM"),
+            _ => return Err(format_err!("Invalid address type, expected LE_PUBLIC or LE_RANDOM")),
         };
         let services: Result<Vec<Uuid>, uuid::parser::ParseError> =
             src.services.iter().map(|s| s.parse::<Uuid>()).collect();
@@ -284,10 +284,10 @@ impl TryFrom<control::LeData> for LeData {
     }
 }
 impl TryFrom<sys::LeData> for LeData {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
     fn try_from(src: sys::LeData) -> Result<LeData, Self::Error> {
         Ok(LeData {
-            address: src.address.ok_or(err_msg("No address"))?.into(),
+            address: src.address.ok_or(format_err!("No address"))?.into(),
             connection_parameters: src.connection_parameters,
             services: src.services.unwrap_or(vec![]).iter().map(|uuid| uuid.into()).collect(),
             ltk: src.ltk,
@@ -298,7 +298,7 @@ impl TryFrom<sys::LeData> for LeData {
 }
 
 impl TryFrom<control::BredrData> for BredrData {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
     fn try_from(src: control::BredrData) -> Result<BredrData, Self::Error> {
         let address = Address::public_from_str(&src.address)?;
         let role_preference = Some(if src.piconet_leader {
@@ -312,10 +312,10 @@ impl TryFrom<control::BredrData> for BredrData {
     }
 }
 impl TryFrom<sys::BredrData> for BredrData {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
     fn try_from(src: sys::BredrData) -> Result<BredrData, Self::Error> {
         Ok(BredrData {
-            address: src.address.ok_or(err_msg("No address"))?.into(),
+            address: src.address.ok_or(format_err!("No address"))?.into(),
             role_preference: src.role_preference,
             services: src.services.unwrap_or(vec![]).iter().map(|uuid| uuid.into()).collect(),
             link_key: src.link_key,
@@ -407,7 +407,7 @@ impl BondingData {
 }
 
 impl TryFrom<control::BondingData> for BondingData {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
     fn try_from(fidl: control::BondingData) -> Result<BondingData, Self::Error> {
         let le = fidl.le.map(|le| *le);
         let bredr = fidl.bredr.map(|bredr| *bredr);
@@ -415,7 +415,9 @@ impl TryFrom<control::BondingData> for BondingData {
             (Some(le), Some(bredr)) => OneOrBoth::Both(le.try_into()?, bredr.try_into()?),
             (Some(le), None) => OneOrBoth::Left(le.try_into()?),
             (None, Some(bredr)) => OneOrBoth::Right(bredr.try_into()?),
-            (None, None) => bail!("Cannot store bond with neither LE nor Classic data"),
+            (None, None) => {
+                return Err(format_err!("Cannot store bond with neither LE nor Classic data"))
+            }
         };
         Ok(BondingData {
             identifier: fidl.identifier.parse::<PeerId>()?,
@@ -444,7 +446,7 @@ impl From<BondingData> for control::BondingData {
 /// fuchsia PeerId to be used if the external source is missing one (for instance, it is being
 /// migrated from a previous, non-Fuchsia system)
 impl TryFrom<(sys::BondingData, PeerId)> for BondingData {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
     fn try_from(from: (sys::BondingData, PeerId)) -> Result<BondingData, Self::Error> {
         let bond = from.0;
         let ident = from.1;
@@ -452,7 +454,9 @@ impl TryFrom<(sys::BondingData, PeerId)> for BondingData {
             (Some(le), Some(bredr)) => OneOrBoth::Both(le.try_into()?, bredr.try_into()?),
             (Some(le), None) => OneOrBoth::Left(le.try_into()?),
             (None, Some(bredr)) => OneOrBoth::Right(bredr.try_into()?),
-            (None, None) => bail!("Cannot store bond with neither LE nor Classic data"),
+            (None, None) => {
+                return Err(format_err!("Cannot store bond with neither LE nor Classic data"))
+            }
         };
         match bond.local_address {
             Some(local_address) => Ok(BondingData {
@@ -461,7 +465,7 @@ impl TryFrom<(sys::BondingData, PeerId)> for BondingData {
                 name: bond.name,
                 data,
             }),
-            _ => Err(err_msg("No local address")),
+            _ => Err(format_err!("No local address")),
         }
     }
 }
@@ -647,34 +651,34 @@ mod tests {
         #[test]
         fn bredr_data_sys_roundtrip(data in any_bredr_data()) {
             let sys_bredr_data: sys::BredrData = data.clone().into();
-            assert_eq!(Ok(data), sys_bredr_data.try_into().map_err(|e: failure::Error| e.to_string()));
+            assert_eq!(Ok(data), sys_bredr_data.try_into().map_err(|e: anyhow::Error| e.to_string()));
         }
         #[test]
         fn bredr_data_control_roundtrip(data in any_bredr_data()) {
             let control_bredr_data: control::BredrData = data.clone().into();
-            assert_eq!(Ok(data), control_bredr_data.try_into().map_err(|e: failure::Error| e.to_string()));
+            assert_eq!(Ok(data), control_bredr_data.try_into().map_err(|e: anyhow::Error| e.to_string()));
         }
 
         #[test]
         fn le_data_sys_roundtrip(data in any_le_data()) {
             let sys_le_data: sys::LeData = data.clone().into();
-            assert_eq!(Ok(data), sys_le_data.try_into().map_err(|e: failure::Error| e.to_string()));
+            assert_eq!(Ok(data), sys_le_data.try_into().map_err(|e: anyhow::Error| e.to_string()));
         }
         #[test]
         fn le_data_control_roundtrip(data in any_le_data()) {
             let control_le_data: control::LeData = data.clone().into();
-            assert_eq!(Ok(data), control_le_data.try_into().map_err(|e: failure::Error| e.to_string()));
+            assert_eq!(Ok(data), control_le_data.try_into().map_err(|e: anyhow::Error| e.to_string()));
         }
         #[test]
         fn bonding_data_sys_roundtrip(data in any_bonding_data()) {
             let peer_id = data.identifier;
             let sys_bonding_data: sys::BondingData = data.clone().into();
-            assert_eq!(Ok(data), (sys_bonding_data, peer_id).try_into().map_err(|e: failure::Error| e.to_string()));
+            assert_eq!(Ok(data), (sys_bonding_data, peer_id).try_into().map_err(|e: anyhow::Error| e.to_string()));
         }
         #[test]
         fn bonding_data_control_roundtrip(data in any_bonding_data()) {
             let control_bonding_data: control::BondingData = data.clone().into();
-            assert_eq!(Ok(data), control_bonding_data.try_into().map_err(|e: failure::Error| e.to_string()));
+            assert_eq!(Ok(data), control_bonding_data.try_into().map_err(|e: anyhow::Error| e.to_string()));
         }
     }
 }

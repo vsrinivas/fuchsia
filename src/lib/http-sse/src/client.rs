@@ -4,7 +4,6 @@
 
 use {
     crate::{Event, EventSource},
-    failure::Fail,
     futures::{
         compat::{Compat01As03, Future01CompatExt, Stream01CompatExt},
         stream::Stream,
@@ -12,6 +11,7 @@ use {
     },
     hyper::{Body, Request, StatusCode},
     std::pin::Pin,
+    thiserror::Error,
 };
 
 /// An http SSE client.
@@ -45,15 +45,15 @@ impl Client {
     }
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ClientConnectError {
-    #[fail(display = "error creating http request: {}", _0)]
+    #[error("error creating http request: {}", _0)]
     CreateRequest(hyper::http::Error),
 
-    #[fail(display = "error making http request: {}", _0)]
+    #[error("error making http request: {}", _0)]
     MakeRequest(hyper::error::Error),
 
-    #[fail(display = "http server responded with status other than OK: {}", _0)]
+    #[error("http server responded with status other than OK: {}", _0)]
     HttpStatus(hyper::StatusCode),
 }
 
@@ -83,9 +83,9 @@ impl Stream for Client {
     }
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ClientPollError {
-    #[fail(display = "error downloading next chunk: {}", _0)]
+    #[error("error downloading next chunk: {}", _0)]
     NextChunk(hyper::error::Error),
 }
 

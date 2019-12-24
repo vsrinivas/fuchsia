@@ -79,20 +79,23 @@ pub fn spawn_privacy_fidl_handler(switchboard: SwitchboardHandle, stream: Privac
         stream,
         switchboard,
         SettingType::Privacy,
-        Box::new(move |context, req|-> LocalBoxFuture<'_, Result<Option<PrivacyRequest>, failure::Error>> {
+        Box::new(
+            move |context,
+                  req|
+                  -> LocalBoxFuture<'_, Result<Option<PrivacyRequest>, anyhow::Error>> {
                 async move {
-                        #[allow(unreachable_patterns)]
-                match req {
-                    PrivacyRequest::Set { settings, responder } => {
-                        set(context.switchboard, settings, responder).await;
-                    }
-                    PrivacyRequest::Watch { responder } => {
-                        context.watch(responder).await;
-                    }
-                    _ => {
+                    #[allow(unreachable_patterns)]
+                    match req {
+                        PrivacyRequest::Set { settings, responder } => {
+                            set(context.switchboard, settings, responder).await;
+                        }
+                        PrivacyRequest::Watch { responder } => {
+                            context.watch(responder).await;
+                        }
+                        _ => {
                             return Ok(Some(req));
+                        }
                     }
-                }
 
                     return Ok(None);
                 }

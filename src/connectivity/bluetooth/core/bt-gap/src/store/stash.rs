@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{bail, format_err, Error},
+    anyhow::{format_err, Error},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_bluetooth_control::HostData,
     fidl_fuchsia_stash::{
@@ -127,7 +127,9 @@ impl Stash {
         async {
             match sent {
                 Ok(_) => match recv.await {
-                    Err(oneshot::Canceled) => bail!("Response future was canceled"),
+                    Err(oneshot::Canceled) => {
+                        return Err(format_err!("Response future was canceled"))
+                    }
                     Ok(r) => Ok(r),
                 },
                 Err(e) => Err(format_err!("Error communicating with bt-gap store: {}", e)),
@@ -154,31 +156,31 @@ async fn run_stash(mut inbox: mpsc::Receiver<Request>, mut stash: StashInner) ->
             Request::StoreBonds(bonds, signal) => {
                 let response = stash.store_bonds(bonds).await;
                 if let Err(_) = signal.send(response) {
-                    bail!("Failed to send response")
+                    return Err(format_err!("Failed to send response"));
                 }
             }
             Request::RmPeer(peer, signal) => {
                 let response = stash.rm_peer(peer).await;
                 if let Err(_) = signal.send(response) {
-                    bail!("Failed to send response")
+                    return Err(format_err!("Failed to send response"));
                 }
             }
             Request::StoreHostData(address, data, signal) => {
                 let response = stash.store_host_data(&address, data).await;
                 if let Err(_) = signal.send(response) {
-                    bail!("Failed to send response")
+                    return Err(format_err!("Failed to send response"));
                 }
             }
             Request::ListBonds(address, signal) => {
                 let response = stash.list_bonds(&address);
                 if let Err(_) = signal.send(response) {
-                    bail!("Failed to send response")
+                    return Err(format_err!("Failed to send response"));
                 };
             }
             Request::GetHostData(address, signal) => {
                 let response = stash.get_host_data(&address);
                 if let Err(_) = signal.send(response) {
-                    bail!("Failed to send response")
+                    return Err(format_err!("Failed to send response"));
                 };
             }
         }
@@ -823,7 +825,7 @@ mod tests {
         select! {
             result = run_fn.fuse() => result,
             run = run_stash.fuse() => match run {
-                Ok(_) => bail!("Stash receiver stopped unexpectedly"),
+                Ok(_) => return Err(format_err!("Stash receiver stopped unexpectedly")),
                 Err(e) => Err(e)
             }
         }

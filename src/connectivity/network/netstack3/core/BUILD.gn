@@ -19,10 +19,11 @@ rustc_library("netstack3-core") {
     "//src/connectivity/lib/net-types",
     "//src/connectivity/lib/packet",
     "//src/connectivity/network/netstack3/core/specialize-ip-macro",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
-    "//third_party/rust_crates:failure",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:rand_xorshift",
+    "//third_party/rust_crates:thiserror",
   ]
 }

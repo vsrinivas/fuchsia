@@ -4,7 +4,7 @@
 
 //! Spinel SPI Driver for Fuchsia
 
-use failure::{Error, ResultExt};
+use anyhow::{Context as _, Error};
 use fuchsia_async as fasync;
 
 #[fasync::run_singlethreaded]

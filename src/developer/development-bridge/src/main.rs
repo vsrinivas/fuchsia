@@ -4,7 +4,7 @@
 
 use {
     crate::args::{Fdb, Subcommand},
-    failure::{self, Error, ResultExt},
+    anyhow::{Context, Error},
     fidl::endpoints::ServiceMarker,
     fidl_fidl_developer_bridge as bridge,
     fidl_fuchsia_overnet::ServiceConsumerProxyInterface,

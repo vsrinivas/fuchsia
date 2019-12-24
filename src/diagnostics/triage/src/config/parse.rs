@@ -4,7 +4,7 @@
 
 use {
     crate::metrics::{Expression, MetricValue},
-    failure::{bail, Error},
+    anyhow::{format_err, Error},
     nom::{
         branch::alt,
         bytes::complete::{tag, take_while, take_while_m_n},
@@ -314,10 +314,12 @@ pub fn parse_expression(i: &str) -> Result<Expression, Error> {
     let match_whole = all_consuming(terminated(expression_top, whitespace));
     match match_whole(i) {
         Err(Err::Error(e)) | Err(Err::Failure(e)) => {
-            bail!("Expression Error: \n{}", convert_error(i, e))
+            return Err(format_err!("Expression Error: \n{}", convert_error(i, e)))
         }
         Ok((_, result)) => Ok(result),
-        Err(Incomplete(what)) => bail!("Why did I get an incomplete? {:?}", what),
+        Err(Incomplete(what)) => {
+            return Err(format_err!("Why did I get an incomplete? {:?}", what))
+        }
     }
 }
 

@@ -13,9 +13,9 @@ use {
         key::KeyConfig,
         timer::EventId,
     },
+    anyhow::format_err,
     banjo_ddk_hw_wlan_wlaninfo::WlanInfoDriverFeature,
     banjo_ddk_protocol_wlan_info::{WlanChannel, WlanChannelBandwidth},
-    failure::format_err,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     std::collections::HashMap,
     wlan_common::{
@@ -58,7 +58,7 @@ fn get_client_mut(
 /// Prepends the client's MAC address to an error::Error.
 ///
 /// This will discard any more specific error information (e.g. if it was a FIDL error or a
-/// failure::Error error), but will still preserve the underlying zx::Status code.
+/// anyhow::Error error), but will still preserve the underlying zx::Status code.
 fn make_client_error(addr: MacAddr, e: Error) -> Error {
     Error::Status(format!("client {:02X?}: {}", addr, e), e.into())
 }

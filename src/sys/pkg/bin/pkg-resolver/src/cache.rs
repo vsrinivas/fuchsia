@@ -4,7 +4,6 @@
 
 use {
     crate::{queue, repository::Repository, repository_manager::Stats},
-    failure::Fail,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_amber::OpenedRepositoryProxy,
     fidl_fuchsia_io::DirectoryMarker,
@@ -34,6 +33,7 @@ use {
             Arc,
         },
     },
+    thiserror::Error,
     tuf::metadata::TargetPath,
 };
 
@@ -122,16 +122,16 @@ impl PackageCache {
     }
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum PackageOpenError {
-    #[fail(display = "fidl error: {}", _0)]
-    Fidl(#[cause] fidl::Error),
+    #[error("fidl error: {}", _0)]
+    Fidl(fidl::Error),
 
-    #[fail(display = "package not found")]
+    #[error("package not found")]
     NotFound,
 
-    #[fail(display = "package cache returned unexpected status: {}", _0)]
-    UnexpectedStatus(#[cause] Status),
+    #[error("package cache returned unexpected status: {}", _0)]
+    UnexpectedStatus(Status),
 }
 
 impl From<fidl::Error> for PackageOpenError {
@@ -241,18 +241,18 @@ pub async fn cache_package<'a>(
     Ok(merkle)
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum CacheError {
-    #[fail(display = "fidl error: {}", _0)]
-    Fidl(#[cause] fidl::Error),
+    #[error("fidl error: {}", _0)]
+    Fidl(fidl::Error),
 
-    #[fail(display = "while looking up merkle root for package: {}", _0)]
-    MerkleFor(#[cause] MerkleForError),
+    #[error("while looking up merkle root for package: {}", _0)]
+    MerkleFor(MerkleForError),
 
-    #[fail(display = "while listing needed blobs for package: {}", _0)]
-    ListNeeds(#[cause] pkgfs::needs::ListNeedsError),
+    #[error("while listing needed blobs for package: {}", _0)]
+    ListNeeds(pkgfs::needs::ListNeedsError),
 
-    #[fail(display = "while fetching blobs for package: {}", _0)]
+    #[error("while fetching blobs for package: {}", _0)]
     Fetch(Arc<FetchError>),
 }
 
@@ -390,34 +390,34 @@ async fn merkle_for_url_using_amber<'a>(
     Ok((merkle, size))
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum MerkleForError {
-    #[fail(display = "failed to query amber for merkle: {}", _0)]
-    Fidl(#[cause] fidl::Error),
+    #[error("failed to query amber for merkle: {}", _0)]
+    Fidl(fidl::Error),
 
-    #[fail(display = "the package was not found in the repository")]
+    #[error("the package was not found in the repository")]
     NotFound,
 
-    #[fail(display = "amber returned an unexpected status: {}", _0)]
-    UnexpectedStatus(#[cause] Status),
+    #[error("amber returned an unexpected status: {}", _0)]
+    UnexpectedStatus(Status),
 
-    #[fail(display = "tuf returned an unexpected error: {}", _0)]
-    TufError(#[cause] tuf::error::Error),
+    #[error("tuf returned an unexpected error: {}", _0)]
+    TufError(tuf::error::Error),
 
-    #[fail(display = "amber returned an invalid merkle root: {}", _0)]
-    ParseError(#[cause] BlobIdParseError),
+    #[error("amber returned an invalid merkle root: {}", _0)]
+    ParseError(BlobIdParseError),
 
-    #[fail(display = "amber returned a blob size that was too large: {}", _0)]
-    BlobTooLarge(#[cause] TryFromIntError),
+    #[error("amber returned a blob size that was too large: {}", _0)]
+    BlobTooLarge(TryFromIntError),
 
-    #[fail(display = "the target path is not safe: {}", _0)]
-    InvalidTargetPath(#[cause] tuf::error::Error),
+    #[error("the target path is not safe: {}", _0)]
+    InvalidTargetPath(tuf::error::Error),
 
-    #[fail(display = "the target description does not have custom metadata")]
+    #[error("the target description does not have custom metadata")]
     NoCustomMetadata,
 
-    #[fail(display = "serde value could not be converted: {}", _0)]
-    SerdeError(#[cause] serde_json::Error),
+    #[error("serde value could not be converted: {}", _0)]
+    SerdeError(serde_json::Error),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -549,19 +549,19 @@ async fn fetch_blob(
     .await
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum BlobUrlError {
-    #[fail(display = "mirror URI doesn't have a path")]
+    #[error("mirror URI doesn't have a path")]
     UriWithoutPath,
 
-    #[fail(display = "HTTP error: {}", _0)]
-    Http(#[cause] http::Error),
+    #[error("HTTP error: {}", _0)]
+    Http(http::Error),
 
-    #[fail(display = "invalid URI: {}", _0)]
-    InvalidUri(#[cause] http::uri::InvalidUri),
+    #[error("invalid URI: {}", _0)]
+    InvalidUri(http::uri::InvalidUri),
 
-    #[fail(display = "invalid URI parts: {}", _0)]
-    InvalidUriParts(#[cause] http::uri::InvalidUriParts),
+    #[error("invalid URI parts: {}", _0)]
+    InvalidUriParts(http::uri::InvalidUriParts),
 }
 
 impl From<http::Error> for BlobUrlError {
@@ -664,43 +664,43 @@ async fn download_blob(
     Ok(())
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum FetchError {
-    #[fail(display = "could not create blob: {}", _0)]
-    CreateBlob(#[cause] pkgfs::install::BlobCreateError),
+    #[error("could not create blob: {}", _0)]
+    CreateBlob(pkgfs::install::BlobCreateError),
 
-    #[fail(display = "http request expected 200, got {}", _0)]
+    #[error("http request expected 200, got {}", _0)]
     BadHttpStatus(hyper::StatusCode),
 
-    #[fail(display = "repository has no configured mirrors")]
+    #[error("repository has no configured mirrors")]
     NoMirrors,
 
-    #[fail(display = "expected blob length of {}, got {}", expected, actual)]
+    #[error("expected blob length of {}, got {}", expected, actual)]
     ContentLengthMismatch { expected: u64, actual: u64 },
 
-    #[fail(display = "blob length not known or provided by server")]
+    #[error("blob length not known or provided by server")]
     UnknownLength,
 
-    #[fail(display = "downloaded blob was too small")]
+    #[error("downloaded blob was too small")]
     BlobTooSmall,
 
-    #[fail(display = "downloaded blob was too large")]
+    #[error("downloaded blob was too large")]
     BlobTooLarge,
 
-    #[fail(display = "failed to truncate blob: {}", _0)]
-    Truncate(#[cause] pkgfs::install::BlobTruncateError),
+    #[error("failed to truncate blob: {}", _0)]
+    Truncate(pkgfs::install::BlobTruncateError),
 
-    #[fail(display = "failed to write blob data: {}", _0)]
-    Write(#[cause] pkgfs::install::BlobWriteError),
+    #[error("failed to write blob data: {}", _0)]
+    Write(pkgfs::install::BlobWriteError),
 
-    #[fail(display = "hyper error: {}", _0)]
-    Hyper(#[cause] hyper::Error),
+    #[error("hyper error: {}", _0)]
+    Hyper(hyper::Error),
 
-    #[fail(display = "http error: {}", _0)]
-    Http(#[cause] hyper::http::Error),
+    #[error("http error: {}", _0)]
+    Http(hyper::http::Error),
 
-    #[fail(display = "blob url error: {}", _0)]
-    BlobUrl(#[cause] BlobUrlError),
+    #[error("blob url error: {}", _0)]
+    BlobUrl(BlobUrlError),
 }
 
 impl From<hyper::Error> for FetchError {

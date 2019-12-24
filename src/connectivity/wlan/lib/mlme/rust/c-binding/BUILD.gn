@@ -20,9 +20,10 @@ rustc_staticlib("wlan-mlme-c") {
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
     "//src/connectivity/wlan/lib/mlme/rust:wlan-mlme",
     "//src/connectivity/wlan/lib/span:wlan-span",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:num-traits",
+    "//third_party/rust_crates:thiserror",
   ]
   non_rust_deps = [
     "//garnet/lib/wlan/protocol",

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{bail, Error},
+    anyhow::{format_err, Error},
     fidl_fuchsia_netemul_guest::{
         CommandListenerMarker, GuestDiscoveryMarker, GuestInteractionMarker,
     },
@@ -67,10 +67,10 @@ pub async fn verify_addr_present(addr: IpAddr, timeout: Duration) -> Result<(), 
                         ifs = interfaces;
                     },
                     Some(Err(e)) => {
-                        bail!("failed to get network interfaces with {}", e)
+                        return Err(format_err!("failed to get network interfaces with {}", e))
                     },
                     None => {
-                        bail!("could not get event from netstack")
+                        return Err(format_err!("could not get event from netstack"))
                     }
                 }
             },
@@ -85,5 +85,5 @@ pub async fn verify_addr_present(addr: IpAddr, timeout: Duration) -> Result<(), 
         bail_string = format!("{} {:?}: {:?}", bail_string, interface.name, interface.addr);
     }
     bail_string = format!("{} address missing: {:?}", bail_string, addr);
-    bail!("{}", bail_string)
+    return Err(format_err!("{}", bail_string));
 }

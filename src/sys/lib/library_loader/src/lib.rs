@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{format_err, Error},
+    anyhow::{format_err, Error},
     fidl::endpoints::RequestStream,
     fidl_fuchsia_io::{DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, VMO_FLAG_READ},
     fidl_fuchsia_ldsvc::{LoaderRequest, LoaderRequestStream},

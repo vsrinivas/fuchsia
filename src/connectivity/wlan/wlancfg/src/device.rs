@@ -7,7 +7,7 @@ use crate::{
     shim,
 };
 
-use failure::{bail, format_err};
+use anyhow::format_err;
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_wlan_device as wlan;
 use fidl_fuchsia_wlan_device_service::{
@@ -52,7 +52,7 @@ pub async fn handle_event(
     }
 }
 
-async fn on_phy_added(listener: &Listener, phy_id: u16) -> Result<(), failure::Error> {
+async fn on_phy_added(listener: &Listener, phy_id: u16) -> Result<(), anyhow::Error> {
     println!("wlancfg: phy {} added", phy_id);
     let info = query_phy(listener, phy_id).await?;
     let path = info.dev_path.unwrap_or("*".into());
@@ -79,7 +79,7 @@ async fn on_phy_added(listener: &Listener, phy_id: u16) -> Result<(), failure::E
     Ok(())
 }
 
-async fn query_phy(listener: &Listener, phy_id: u16) -> Result<wlan::PhyInfo, failure::Error> {
+async fn query_phy(listener: &Listener, phy_id: u16) -> Result<wlan::PhyInfo, anyhow::Error> {
     let req = &mut wlan_service::QueryPhyRequest { phy_id };
     let (status, query_resp) = listener
         .proxy
@@ -87,7 +87,7 @@ async fn query_phy(listener: &Listener, phy_id: u16) -> Result<wlan::PhyInfo, fa
         .await
         .map_err(|e| format_err!("failed to send a query request: {:?}", e))?;
     if let Err(e) = zx::Status::ok(status) {
-        bail!("query_phy returned an error: {:?}", e);
+        return Err(format_err!("query_phy returned an error: {:?}", e));
     }
     let info = query_resp
         .ok_or_else(|| format_err!("query_phy failed to return a PhyInfo in the QueryPhyResponse"))?
@@ -100,7 +100,7 @@ async fn on_iface_added(
     iface_id: u16,
     ess_store: Arc<KnownEssStore>,
     saved_networks: Arc<SavedNetworksManager>,
-) -> Result<(), failure::Error> {
+) -> Result<(), anyhow::Error> {
     let service = listener.proxy.clone();
     let legacy_client = listener.legacy_client.clone();
     let (sme, remote) =

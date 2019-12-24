@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{ensure, Error},
+    anyhow::{ensure, Error},
     wlan_common::mac,
 };
 

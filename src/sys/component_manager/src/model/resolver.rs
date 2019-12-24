@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::Error,
     clonable_error::ClonableError,
-    failure::{Error, Fail},
     fidl_fuchsia_sys2 as fsys,
     futures::future::{self, BoxFuture},
     std::collections::HashMap,
+    thiserror::Error,
     url::Url,
 };
 
@@ -55,37 +56,37 @@ impl Resolver for ResolverRegistry {
 }
 
 /// Errors produced by `Resolver`.
-#[derive(Debug, Fail, Clone)]
+#[derive(Debug, Error, Clone)]
 pub enum ResolverError {
-    #[fail(display = "component not available with url \"{}\": {}", url, err)]
+    #[error("component not available with url \"{}\": {}", url, err)]
     ComponentNotAvailable {
         url: String,
-        #[fail(cause)]
+        #[source]
         err: ClonableError,
     },
-    #[fail(display = "component manifest not available for url \"{}\": {}", url, err)]
+    #[error("component manifest not available for url \"{}\": {}", url, err)]
     ManifestNotAvailable {
         url: String,
-        #[fail(cause)]
+        #[source]
         err: ClonableError,
     },
-    #[fail(display = "component manifest invalid for url \"{}\": {}", url, err)]
+    #[error("component manifest invalid for url \"{}\": {}", url, err)]
     ManifestInvalid {
         url: String,
-        #[fail(cause)]
+        #[source]
         err: ClonableError,
     },
-    #[fail(display = "Model not available.")]
+    #[error("Model not available.")]
     ModelAccessError,
-    #[fail(display = "scheme not registered")]
+    #[error("scheme not registered")]
     SchemeNotRegistered,
-    #[fail(display = "failed to parse url \"{}\": {}", url, err)]
+    #[error("failed to parse url \"{}\": {}", url, err)]
     UrlParseError {
         url: String,
-        #[fail(cause)]
+        #[source]
         err: ClonableError,
     },
-    #[fail(display = "url missing resource \"{}\"", url)]
+    #[error("url missing resource \"{}\"", url)]
     UrlMissingResourceError { url: String },
 }
 
@@ -117,7 +118,7 @@ impl ResolverError {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, failure::format_err};
+    use {super::*, anyhow::format_err};
 
     struct MockOkResolver {
         pub expected_url: String,

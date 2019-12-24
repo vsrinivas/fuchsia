@@ -9,8 +9,8 @@ use {
         typeface::{Collection as TypefaceCollection, Typeface},
         FontService,
     },
+    anyhow::{format_err, Error},
     clonable_error::ClonableError,
-    failure::{self, format_err, Error, Fail},
     font_info::FontInfoLoaderImpl,
     fuchsia_syslog::fx_vlog,
     manifest::{v2, FontManifestWrapper, FontsManifest},
@@ -20,6 +20,7 @@ use {
         path::{Path, PathBuf},
         sync::Arc,
     },
+    thiserror::Error,
     unicase::UniCase,
 };
 
@@ -243,19 +244,23 @@ enum ManifestOrPath {
 }
 
 /// Errors arising from the use of [`FontServiceBuilder`].
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum FontServiceBuilderError {
     /// A name was used as both a canonical family name and a font family alias.
-    #[fail(
-        display = "Conflict in {:?}: {} cannot be both a canonical family name and an alias",
-        manifest_path, conflicting_name
+    #[error(
+        "Conflict in {:?}: {} cannot be both a canonical family name and an alias",
+        manifest_path,
+        conflicting_name
     )]
     AliasFamilyConflict { conflicting_name: String, manifest_path: Option<PathBuf> },
 
     /// One string was used as an alias for two different font families.
-    #[fail(
-        display = "Conflict in {:?}: {} cannot be an alias for both {} and {}",
-        manifest_path, alias, canonical_1, canonical_2
+    #[error(
+        "Conflict in {:?}: {} cannot be an alias for both {} and {}",
+        manifest_path,
+        alias,
+        canonical_1,
+        canonical_2
     )]
     AmbiguousAlias {
         alias: String,
@@ -265,21 +270,18 @@ pub enum FontServiceBuilderError {
     },
 
     /// Something went wrong when converting a manifest from v1 to v2.
-    #[fail(display = "Conversion from manifest v1 failed in {:?}: {:?}", manifest_path, cause)]
+    #[error("Conversion from manifest v1 failed in {:?}: {:?}", manifest_path, cause)]
     ConversionFromV1 {
         manifest_path: Option<PathBuf>,
-        #[fail(cause)]
+        #[source]
         cause: ClonableError,
     },
 
     /// None of the loaded manifests contained any families designated as `fallback: true`.
-    #[fail(display = "Need at least one fallback font family")]
+    #[error("Need at least one fallback font family")]
     NoFallbackCollection,
 
     /// The manifest did not have defined code points for a particular typeface.
-    #[fail(
-        display = "Missing code points for \"{}\"[{}] in {:?}",
-        asset_name, typeface_idx, manifest_path
-    )]
+    #[error("Missing code points for \"{}\"[{}] in {:?}", asset_name, typeface_idx, manifest_path)]
     NoCodePoints { asset_name: String, typeface_idx: u32, manifest_path: Option<PathBuf> },
 }

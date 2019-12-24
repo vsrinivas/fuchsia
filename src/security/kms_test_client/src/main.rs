@@ -4,7 +4,7 @@
 #![allow(dead_code)]
 use rand::Rng;
 
-use failure::{self, format_err, ResultExt};
+use anyhow::{format_err, Context as _};
 use fidl::{self, endpoints::ServerEnd};
 use fidl_fuchsia_kms::{
     AsymmetricKeyAlgorithm, AsymmetricPrivateKeyProxy, Error, KeyManagerMarker, KeyManagerProxy,
@@ -37,7 +37,7 @@ fn map_err_to_string<T>(result: Result<Result<T, Error>, fidl::Error>) -> Result
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn test() -> Result<(), failure::Error> {
+async fn test() -> Result<(), anyhow::Error> {
     syslog::init_with_tags(&["kms_test_client"]).expect("syslog init should not fail");
     test_asymmetric_key(AsymmetricKeyAlgorithm::EcdsaSha256P256).await?;
     test_asymmetric_key(AsymmetricKeyAlgorithm::EcdsaSha512P384).await?;
@@ -51,7 +51,7 @@ pub struct Config<'a> {
     pub crypto_provider: &'a str,
 }
 
-fn get_provider_from_config() -> Result<KeyProvider, failure::Error> {
+fn get_provider_from_config() -> Result<KeyProvider, anyhow::Error> {
     let json = fs::read_to_string(CONFIG_PATH)?;
     let config: Config<'_> = serde_json::from_str(&json)?;
     match config.crypto_provider {
@@ -62,7 +62,7 @@ fn get_provider_from_config() -> Result<KeyProvider, failure::Error> {
     }
 }
 
-async fn test_asymmetric_key(algorithm: AsymmetricKeyAlgorithm) -> Result<(), failure::Error> {
+async fn test_asymmetric_key(algorithm: AsymmetricKeyAlgorithm) -> Result<(), anyhow::Error> {
     info!("Begin asymmetric key tests for algorithm: {:?}", algorithm);
     let key_manager = connect_to_service::<KeyManagerMarker>()
         .context("Failed to connect to key manager service")?;
@@ -175,7 +175,7 @@ async fn test_asymmetric_key(algorithm: AsymmetricKeyAlgorithm) -> Result<(), fa
 async fn test_sign_verify_data(
     algorithm: AsymmetricKeyAlgorithm,
     key_manager: &KeyManagerProxy,
-) -> Result<(), failure::Error> {
+) -> Result<(), anyhow::Error> {
     // Read the key.
     let asymmetric_key_proxy = get_asymmetric_key(&key_manager, TEST_KEY_NAME).await?;
     let public_key = test_export_public_key(&asymmetric_key_proxy).await?;
@@ -189,7 +189,7 @@ async fn test_sign_verify_data(
     Ok(())
 }
 
-async fn test_seal_unseal_data() -> Result<(), failure::Error> {
+async fn test_seal_unseal_data() -> Result<(), anyhow::Error> {
     info!("Begin sealing and unsealing data test");
     let key_manager = connect_to_service::<KeyManagerMarker>()
         .context("Failed to connect to key manager service")?;
@@ -221,7 +221,7 @@ async fn generate_asymmetric_key<'a>(
     key_manager: &'a KeyManagerProxy,
     key_name: &'static str,
     key_algorithm: AsymmetricKeyAlgorithm,
-) -> Result<AsymmetricPrivateKeyProxy, failure::Error> {
+) -> Result<AsymmetricPrivateKeyProxy, anyhow::Error> {
     let (server_chan, client_chan) = zx::Channel::create()?;
     let result = key_manager
         .generate_asymmetric_key_with_algorithm(
@@ -242,7 +242,7 @@ async fn test_generate_asymmetric_key_exists<'a>(
     key_manager: &'a KeyManagerProxy,
     key_name: &'static str,
     key_algorithm: AsymmetricKeyAlgorithm,
-) -> Result<(), failure::Error> {
+) -> Result<(), anyhow::Error> {
     let (server_chan, _) = zx::Channel::create()?;
     let result = key_manager
         .generate_asymmetric_key_with_algorithm(
@@ -265,7 +265,7 @@ async fn test_generate_asymmetric_key_exists<'a>(
 async fn get_asymmetric_key<'a>(
     key_manager: &'a KeyManagerProxy,
     key_name: &'static str,
-) -> Result<AsymmetricPrivateKeyProxy, failure::Error> {
+) -> Result<AsymmetricPrivateKeyProxy, anyhow::Error> {
     let (server_chan, client_chan) = zx::Channel::create()?;
     let result =
         key_manager.get_asymmetric_private_key(key_name, ServerEnd::new(server_chan)).await;
@@ -277,7 +277,7 @@ async fn get_asymmetric_key<'a>(
     Ok(asymmetric_key_proxy)
 }
 
-async fn test_sign_key_not_exists(key: &AsymmetricPrivateKeyProxy) -> Result<(), failure::Error> {
+async fn test_sign_key_not_exists(key: &AsymmetricPrivateKeyProxy) -> Result<(), anyhow::Error> {
     let test_data = generate_test_data();
     let vmo = zx::Vmo::create(test_data.len() as u64)?;
     vmo.write(&test_data, 0)?;
@@ -298,7 +298,7 @@ async fn test_sign_key_not_exists(key: &AsymmetricPrivateKeyProxy) -> Result<(),
 async fn check_key_not_exist<'a>(
     key_manager: &'a KeyManagerProxy,
     key_name: &'static str,
-) -> Result<(), failure::Error> {
+) -> Result<(), anyhow::Error> {
     let (server_chan, _client_chan) = zx::Channel::create()?;
     let result = key_manager
         .get_asymmetric_private_key(key_name, ServerEnd::new(server_chan))
@@ -317,7 +317,7 @@ async fn check_key_not_exist<'a>(
 async fn test_sign<'a>(
     key: &'a AsymmetricPrivateKeyProxy,
     test_data: &'a Vec<u8>,
-) -> Result<Vec<u8>, failure::Error> {
+) -> Result<Vec<u8>, anyhow::Error> {
     let vmo = zx::Vmo::create(test_data.len() as u64)?;
     vmo.write(test_data, 0)?;
     let result = key.sign(&mut Buffer { vmo, size: test_data.len() as u64 }).await;
@@ -328,9 +328,7 @@ async fn test_sign<'a>(
     Ok(signature_data)
 }
 
-async fn test_export_public_key(
-    key: &AsymmetricPrivateKeyProxy,
-) -> Result<Vec<u8>, failure::Error> {
+async fn test_export_public_key(key: &AsymmetricPrivateKeyProxy) -> Result<Vec<u8>, anyhow::Error> {
     let result = key.get_public_key().await;
     let public_key = map_err_to_string(result)
         .map_err(|err| format_err!("Error exporting public key: {:?}", err))?;
@@ -342,7 +340,7 @@ async fn test_export_public_key(
 async fn test_delete_key<'a>(
     key_manager: &'a KeyManagerProxy,
     key_name: &'static str,
-) -> Result<(), failure::Error> {
+) -> Result<(), anyhow::Error> {
     let result = key_manager.delete_key(key_name).await;
     map_err_to_string(result).map_err(|err| format_err!("Error deleting key: {:?}", err))?;
     info!("Key successfully deleted.");
@@ -352,7 +350,7 @@ async fn test_delete_key<'a>(
 async fn test_delete_key_not_exist<'a>(
     key_manager: &'a KeyManagerProxy,
     key_name: &'static str,
-) -> Result<(), failure::Error> {
+) -> Result<(), anyhow::Error> {
     let result = key_manager
         .delete_key(key_name)
         .await
@@ -371,21 +369,21 @@ async fn test_delete_key_not_exist<'a>(
 
 async fn get_asymmetric_key_algorithm(
     key: &AsymmetricPrivateKeyProxy,
-) -> Result<AsymmetricKeyAlgorithm, failure::Error> {
+) -> Result<AsymmetricKeyAlgorithm, anyhow::Error> {
     let result = key.get_key_algorithm().await;
     map_err_to_string(result).map_err(|err| format_err!("Error exporting public key: {:?}", err))
 }
 
 async fn get_asymmetric_key_origin(
     key: &AsymmetricPrivateKeyProxy,
-) -> Result<KeyOrigin, failure::Error> {
+) -> Result<KeyOrigin, anyhow::Error> {
     let result = key.get_key_origin().await;
     map_err_to_string(result).map_err(|err| format_err!("Error getting key origin: {:?}", err))
 }
 
 async fn get_asymmetric_key_provider(
     key: &AsymmetricPrivateKeyProxy,
-) -> Result<KeyProvider, failure::Error> {
+) -> Result<KeyProvider, anyhow::Error> {
     let result = key.get_key_provider().await;
     map_err_to_string(result)
         .map_err(|err| format_err!("Error getting crypto provider name: {:?}", err))
@@ -396,7 +394,7 @@ async fn import_asymmetric_key<'a>(
     private_key_data: Vec<u8>,
     key_name: &'static str,
     key_algorithm: AsymmetricKeyAlgorithm,
-) -> Result<AsymmetricPrivateKeyProxy, failure::Error> {
+) -> Result<AsymmetricPrivateKeyProxy, anyhow::Error> {
     let (server_chan, client_chan) = zx::Channel::create()?;
     let result = key_manager
         .import_asymmetric_private_key(
@@ -428,7 +426,7 @@ fn verify_signature<'a>(
     signature: &'a Vec<u8>,
     public_key: &'a Vec<u8>,
     test_data: &'a Vec<u8>,
-) -> Result<(), failure::Error> {
+) -> Result<(), anyhow::Error> {
     match algorithm {
         AsymmetricKeyAlgorithm::EcdsaSha256P256 => {
             verify_sig::<P256, Sha256>(&signature, &public_key, &test_data)?;
@@ -448,7 +446,7 @@ fn verify_sig<'a, C: PCurve, H: Hasher + EcdsaHash<C>>(
     signature: &'a Vec<u8>,
     public_key: &'a Vec<u8>,
     test_data: &'a Vec<u8>,
-) -> Result<(), failure::Error> {
+) -> Result<(), anyhow::Error> {
     let ec_key = EcPubKey::<C>::parse_from_der(public_key)
         .map_err(|_| format_err!("Failed to parse public key!"))?;
     let result = ecdsa::EcdsaSignature::<C, H>::from_bytes(signature).is_valid(&ec_key, test_data);

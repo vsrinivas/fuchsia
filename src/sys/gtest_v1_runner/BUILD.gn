@@ -23,10 +23,11 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/by_addr:by_addr",
     "//src/sys/lib/library_loader:library_loader",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-process:fuchsia-process-rustc",
   ]

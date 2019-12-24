@@ -488,11 +488,11 @@ mod tests {
     use {
         super::*,
         crate::model::testing::test_helpers::default_component_decl,
+        anyhow::Error,
         cm_rust::{
             CapabilityPath, ChildDecl, ExposeDecl, ExposeServiceProtocolDecl, ExposeSource,
             ExposeTarget, OfferServiceProtocolDecl, OfferServiceSource, OfferTarget,
         },
-        failure::Error,
         fidl_fuchsia_sys2 as fsys,
         std::collections::HashMap,
         std::convert::TryFrom,

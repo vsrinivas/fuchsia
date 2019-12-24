@@ -6,7 +6,7 @@ use {
     crate::generator::ActiveCommands,
     crate::io_packet::{InternalCommand, IoPacketType},
     crate::operations::PipelineStages,
-    failure::Error,
+    anyhow::Error,
     log::{debug, error, warn},
     std::sync::mpsc::TryRecvError,
     std::{

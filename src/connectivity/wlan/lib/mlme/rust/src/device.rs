@@ -4,9 +4,9 @@
 
 use {
     crate::{buffer::OutBuf, error::Error, key},
+    anyhow::format_err,
     banjo_ddk_protocol_wlan_info::*,
     banjo_ddk_protocol_wlan_mac::{WlanHwScanConfig, WlanmacInfo},
-    failure::format_err,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     std::ffi::c_void,
     wlan_common::{mac::MacAddr, TimeUnit},

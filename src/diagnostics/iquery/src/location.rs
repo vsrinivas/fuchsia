@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{bail, Error},
+    anyhow::{format_err, Error},
     fidl::endpoints::DiscoverableService,
     fidl_fuchsia_inspect::TreeMarker,
     fidl_fuchsia_inspect_deprecated::InspectMarker,
@@ -82,12 +82,12 @@ impl InspectLocation {
 }
 
 impl FromStr for InspectLocation {
-    type Err = failure::Error;
+    type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let parts = s.split("#").collect::<Vec<&str>>();
         if parts.len() > 2 {
-            bail!("Path contains more than one #");
+            return Err(format_err!("Path contains more than one #"));
         }
 
         let mut inspect_parts = vec![];
@@ -126,11 +126,11 @@ impl ToString for InspectLocation {
 }
 
 impl TryFrom<PathBuf> for InspectLocation {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
     fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
         match path.file_name() {
-            None => bail!("Failed to get filename"),
+            None => return Err(format_err!("Failed to get filename")),
             Some(filename) => {
                 if filename == InspectMarker::SERVICE_NAME && path.exists() {
                     Ok(InspectLocation {
@@ -143,7 +143,7 @@ impl TryFrom<PathBuf> for InspectLocation {
                 } else if filename.to_string_lossy().ends_with(".inspect") {
                     Ok(InspectLocation { inspect_type: InspectType::Vmo, path, parts: vec![] })
                 } else {
-                    bail!("Not an inspect file")
+                    return Err(format_err!("Not an inspect file"));
                 }
             }
         }

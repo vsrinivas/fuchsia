@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::Error,
+    anyhow::Error,
     fuchsia_async as fasync,
     fuchsia_criterion::{criterion::Criterion, FuchsiaCriterion},
     fuchsia_syslog as flog,

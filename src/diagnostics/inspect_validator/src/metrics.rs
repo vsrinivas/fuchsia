@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::Error,
+    anyhow::Error,
     fuchsia_inspect::{
         self,
         format::{
@@ -199,7 +199,7 @@ mod tests {
     use {
         super::*,
         crate::{data, puppet, results::Results},
-        failure::bail,
+        anyhow::{bail, format_err},
         fuchsia_async as fasync,
         fuchsia_inspect::format::{
             bitfields::{BlockHeader, Payload},
@@ -243,7 +243,11 @@ mod tests {
             BlockStatistics { count, header_bytes, data_bytes, total_bytes, data_percent };
         match metrics.block_statistics.get(description) {
             None => {
-                bail!("block {} not found in {:?}", description, metrics.block_statistics.keys())
+                return Err(format_err!(
+                    "block {} not found in {:?}",
+                    description,
+                    metrics.block_statistics.keys()
+                ))
             }
             Some(statistics) if statistics == &correct_statistics => {}
             Some(unexpected) => bail!(

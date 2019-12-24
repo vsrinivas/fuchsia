@@ -6,7 +6,7 @@
 //! index against the stored index
 
 use {
-    failure::{bail, format_err, Error, ResultExt},
+    anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_recovery::{FactoryResetMarker, FactoryResetProxy},
     fidl_fuchsia_update_channel::{ProviderMarker, ProviderProxy},
     fuchsia_component::client::connect_to_service,
@@ -105,7 +105,7 @@ async fn run(fdr: ForcedFDR) -> Result<(), Error> {
     let channel_indices = get_channel_indices(&fdr).context("Channel indices not available")?;
 
     if !is_channel_in_whitelist(&channel_indices, &current_channel) {
-        bail!("Not in whitelist");
+        return Err(format_err!("Not in whitelist"));
     }
 
     let channel_index = get_channel_index(&channel_indices, &current_channel)
@@ -125,7 +125,7 @@ async fn run(fdr: ForcedFDR) -> Result<(), Error> {
     };
 
     if device_index >= channel_index {
-        bail!("FDR not required");
+        return Err(format_err!("FDR not required"));
     }
 
     trigger_fdr(&fdr).await.context("Failed to trigger FDR")?;

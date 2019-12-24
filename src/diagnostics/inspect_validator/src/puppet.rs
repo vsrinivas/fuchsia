@@ -7,7 +7,7 @@ use {
         data::{self, Data},
         metrics::Metrics,
     },
-    failure::{bail, err_msg, Error, ResultExt},
+    anyhow::{format_err, Context as _, Error},
     fidl_test_inspect_validate as validate,
     fuchsia_component::client as fclient,
     fuchsia_url::pkg_url::PkgUrl,
@@ -40,14 +40,14 @@ impl Puppet {
     // Extracts the .cmx file basename for output to the user.
     fn derive_my_name(url: &str) -> Result<String, Error> {
         let url_parse = PkgUrl::from_str(url)?;
-        let cmx_name = url_parse.resource().ok_or(err_msg("URL parse"))?;
+        let cmx_name = url_parse.resource().ok_or(format_err!("URL parse"))?;
         let cmx_path = Path::new(cmx_name);
         if let Some(s) = cmx_path.file_stem() {
             if let Some(s) = s.to_str() {
                 return Ok(s.to_owned());
             }
         }
-        bail!("Bad path {} from url {}", cmx_name, url);
+        return Err(format_err!("Bad path {} from url {}", cmx_name, url));
     }
 
     pub async fn connect(server_url: &str) -> Result<Self, Error> {
@@ -114,12 +114,12 @@ impl Connection {
         if let (Some(out_handle), _) = out {
             handle = Some(out_handle);
         } else {
-            bail!("Didn't get a VMO handle");
+            return Err(format_err!("Didn't get a VMO handle"));
         }
         match handle {
             Some(unwrapped_handle) => Ok(Vmo::from(unwrapped_handle)),
             None => {
-                bail!("Failed to unwrap handle");
+                return Err(format_err!("Failed to unwrap handle"));
             }
         }
     }
@@ -130,7 +130,7 @@ pub(crate) mod tests {
     use {
         super::*,
         crate::{create_node, DiffType},
-        //failure::format_err,
+        //anyhow::format_err,
         fidl::endpoints::{create_proxy, RequestStream, ServerEnd},
         fidl_test_inspect_validate::*,
         fuchsia_async as fasync,
@@ -243,7 +243,7 @@ pub(crate) mod tests {
                 }
                 Ok(())
             }
-            .unwrap_or_else(|e: failure::Error| info!("error running validate interface: {:?}", e)),
+            .unwrap_or_else(|e: anyhow::Error| info!("error running validate interface: {:?}", e)),
         );
     }
 }

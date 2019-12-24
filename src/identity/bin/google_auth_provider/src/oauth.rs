@@ -11,7 +11,7 @@ use crate::constants::{
 use crate::error::{ResultExt, TokenProviderError};
 use crate::http::{HttpRequest, HttpRequestBuilder};
 
-use failure::format_err;
+use anyhow::format_err;
 use fidl_fuchsia_identity_external::Error as ApiError;
 use fuchsia_zircon::Duration;
 use hyper::StatusCode;

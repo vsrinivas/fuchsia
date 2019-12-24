@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::Error,
+    anyhow::Error,
     fidl_fuchsia_space::{
         ErrorCode as SpaceErrorCode, ManagerRequest as SpaceManagerRequest,
         ManagerRequestStream as SpaceManagerRequestStream,

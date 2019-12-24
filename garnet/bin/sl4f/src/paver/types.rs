@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Error;
+use anyhow::Error;
 use fidl_fuchsia_paver as paver;
 use serde_derive::{Deserialize, Serialize};
 
@@ -22,7 +22,7 @@ impl std::str::FromStr for Method {
             "QueryActiveConfiguration" => Ok(Method::QueryActiveConfiguration),
             "QueryConfigurationStatus" => Ok(Method::QueryConfigurationStatus),
             "ReadAsset" => Ok(Method::ReadAsset),
-            _ => bail!("Invalid paver facade method: {}", method),
+            _ => return Err(format_err!("Invalid paver facade method: {}", method)),
         }
     }
 }

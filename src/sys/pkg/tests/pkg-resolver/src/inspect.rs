@@ -4,7 +4,7 @@
 
 use {
     super::*,
-    failure::{bail, format_err},
+    anyhow::format_err,
     fidl_fuchsia_pkg_ext::RepositoryConfigBuilder,
     fuchsia_async as fasync,
     fuchsia_inspect::{
@@ -209,24 +209,33 @@ impl<I> PropertyAssertion for OptionDebugStringProperty<I>
 where
     I: PropertyAssertion,
 {
-    fn run(&self, actual: &Property) -> Result<(), failure::Error> {
+    fn run(&self, actual: &Property) -> Result<(), anyhow::Error> {
         match actual {
             Property::String(name, value) => match self {
                 OptionDebugStringProperty::Some(inner) => {
                     const PREFIX: &str = "Some(";
                     const SUFFIX: &str = ")";
                     if !value.starts_with(PREFIX) {
-                        bail!(r#"expected property to be "Some(...", actual {:?}"#, actual);
+                        return Err(format_err!(
+                            r#"expected property to be "Some(...", actual {:?}"#,
+                            actual
+                        ));
                     }
                     if !value.ends_with(SUFFIX) {
-                        bail!(r#"expected property to be "...)", actual {:?}"#, actual);
+                        return Err(format_err!(
+                            r#"expected property to be "...)", actual {:?}"#,
+                            actual
+                        ));
                     }
                     let inner_value = &value[PREFIX.len()..(value.len() - SUFFIX.len())];
                     inner.run(&Property::String(name.clone(), inner_value.to_owned()))
                 }
                 OptionDebugStringProperty::None => {
                     if value != "None" {
-                        bail!(r#"expected property string to be "None", got {:?}"#, actual);
+                        return Err(format_err!(
+                            r#"expected property string to be "None", got {:?}"#,
+                            actual
+                        ));
                     }
                     Ok(())
                 }

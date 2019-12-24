@@ -1,5 +1,5 @@
 use {
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl_fuchsia_device_manager::*,
     fidl_fuchsia_devicesettings::*,
     fidl_fuchsia_settings::ConfigurationInterfaces,
@@ -326,17 +326,17 @@ fn describe_setting(setting: SettingsObject) -> Result<String, Error> {
             if let SettingData::StringValue(data) = setting.data {
                 Ok(data)
             } else {
-                Err(failure::err_msg("malformed data for SettingType::Unknown"))
+                Err(anyhow::format_err!("malformed data for SettingType::Unknown"))
             }
         }
         SettingType::Account => {
             if let SettingData::Account(data) = setting.data {
                 Ok(describe_login_override(data.mode)?)
             } else {
-                Err(failure::err_msg("malformed data for SettingType::Account"))
+                Err(anyhow::format_err!("malformed data for SettingType::Account"))
             }
         }
-        _ => Err(failure::err_msg("unhandled type")),
+        _ => Err(anyhow::format_err!("unhandled type")),
     }
 }
 

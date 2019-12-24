@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::bail;
+use anyhow::format_err;
 use fidl_fuchsia_wlan_mlme::{MlmeEventStream, MlmeProxy};
 use fidl_fuchsia_wlan_sme as fidl_sme;
 use futures::channel::mpsc;
@@ -28,7 +28,7 @@ pub async fn serve<S>(
     event_stream: MlmeEventStream,
     new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
     stats_requests: S,
-) -> Result<(), failure::Error>
+) -> Result<(), anyhow::Error>
 where
     S: Stream<Item = StatsRequest> + Send + Unpin,
 {
@@ -55,14 +55,14 @@ where
 async fn serve_fidl(
     sme: &Mutex<Sme>,
     new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
-) -> Result<Void, failure::Error> {
+) -> Result<Void, anyhow::Error> {
     let mut new_fidl_clients = new_fidl_clients.fuse();
     let mut fidl_clients = FuturesUnordered::new();
     loop {
         select! {
             new_fidl_client = new_fidl_clients.next() => match new_fidl_client {
                 Some(c) => fidl_clients.push(serve_fidl_endpoint(sme, c)),
-                None => bail!("New FIDL client stream unexpectedly ended"),
+                None => return Err(format_err!("New FIDL client stream unexpectedly ended")),
             },
             _ = fidl_clients.next() => {},
         }

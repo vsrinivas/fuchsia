@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl_fuchsia_net_oldhttp as http, fuchsia_async as fasync, fuchsia_component as component,
     fuchsia_zircon as zx,
     futures::io::AllowStdIo,

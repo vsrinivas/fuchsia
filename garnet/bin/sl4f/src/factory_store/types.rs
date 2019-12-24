@@ -11,13 +11,13 @@ pub enum FactoryStoreMethod {
 }
 
 impl std::str::FromStr for FactoryStoreMethod {
-    type Err = failure::Error;
+    type Err = anyhow::Error;
 
     fn from_str(method: &str) -> Result<Self, Self::Err> {
         match method {
             "ListFiles" => Ok(FactoryStoreMethod::ListFiles),
             "ReadFile" => Ok(FactoryStoreMethod::ReadFile),
-            _ => bail!("invalid Factory FIDL method: {}", method),
+            _ => return Err(format_err!("invalid Factory FIDL method: {}", method)),
         }
     }
 }

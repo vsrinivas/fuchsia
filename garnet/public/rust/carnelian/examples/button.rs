@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow::Error;
 use carnelian::{
     make_app_assistant, make_message, set_node_color, App, AppAssistant, Color, Label, Message,
     Paint, Point, Rect, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
     ViewMessages,
 };
-use failure::Error;
 use fidl_fuchsia_ui_input::{FocusEvent, PointerEvent, PointerEventPhase};
 use fuchsia_scenic::{EntityNode, Rectangle, SessionPtr, ShapeNode};
 use fuchsia_zircon::{ClockId, Time};

@@ -6,7 +6,7 @@
 
 //! Searches the local component index for matching programs.
 
-use failure::{err_msg, format_err, Error, ResultExt};
+use anyhow::{format_err, Context as _, Error};
 use fidl_fuchsia_sys_index::{ComponentIndexMarker, FuzzySearchError};
 use fuchsia_async as fasync;
 use fuchsia_component::client::{launch, launcher};
@@ -79,7 +79,7 @@ fn fuzzy_search_error(e: FuzzySearchError, cfg: LocateConfig) -> Result<(), Erro
             cfg.search_keyword
         ));
     }
-    Err(err_msg("fuchsia.sys.index.FuzzySearch could not serve the input query."))
+    Err(format_err!("fuchsia.sys.index.FuzzySearch could not serve the input query."))
 }
 
 struct LocateConfig {
@@ -116,7 +116,7 @@ impl TryFrom<env::Args> for LocateConfig {
             return Ok(LocateConfig { list, help: show_help, search_keyword });
         } else {
             help();
-            return Err(err_msg("Unable to parse args."));
+            return Err(format_err!("Unable to parse args."));
         }
     }
 }

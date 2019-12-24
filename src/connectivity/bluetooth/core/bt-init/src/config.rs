@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::Error,
+    anyhow::Error,
     fidl_fuchsia_bluetooth_control::{ControlMarker, InputCapabilityType, OutputCapabilityType},
     fuchsia_component::client::connect_to_service,
     serde_derive::{Deserialize, Serialize},

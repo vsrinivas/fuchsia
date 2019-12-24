@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{format_err, Error};
+use anyhow::{format_err, Error};
 use fidl::endpoints::{DiscoverableService, Proxy, ServiceMarker};
 
 use fuchsia_async as fasync;

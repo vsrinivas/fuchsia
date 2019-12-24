@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {failure::Error, fidl_fuchsia_overnet::ServiceConsumerProxyInterface, structopt::StructOpt};
+use {anyhow::Error, fidl_fuchsia_overnet::ServiceConsumerProxyInterface, structopt::StructOpt};
 
 mod host_pipe;
 mod probe_reports;

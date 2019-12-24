@@ -4,7 +4,7 @@
 
 use crate::fidl_clone::FIDLClone;
 use crate::tests::fakes::base::Service;
-use failure::{format_err, Error};
+use anyhow::{format_err, Error};
 use fidl::endpoints::{ServerEnd, ServiceMarker};
 use fidl_fuchsia_ui_input::MediaButtonsEvent;
 use fidl_fuchsia_ui_policy::MediaButtonsListenerProxy;

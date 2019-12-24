@@ -9,9 +9,9 @@ use {
         process_launcher::ProcessLauncher,
         startup::Arguments,
     },
+    anyhow::{format_err, Context as _, Error},
     clonable_error::ClonableError,
     cm_rust::data::DictionaryExt,
-    failure::{err_msg, format_err, Error, Fail, ResultExt},
     fdio::fdio_sys,
     fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fuchsia_data as fdata,
@@ -33,29 +33,27 @@ use {
     library_loader,
     log::warn,
     std::{path::Path, sync::Arc},
+    thiserror::Error,
 };
 
 type Directory = Arc<pfs::Simple>;
 
 /// Errors produced by `ElfRunner`.
-#[derive(Debug, Clone, Fail)]
+#[derive(Debug, Clone, Error)]
 pub enum ElfRunnerError {
-    #[fail(
-        display = "failed to retrieve process koid for component with url \"{}\": {}",
-        url, err
-    )]
+    #[error("failed to retrieve process koid for component with url \"{}\": {}", url, err)]
     ComponentProcessIdError {
         url: String,
-        #[fail(cause)]
+        #[source]
         err: ClonableError,
     },
-    #[fail(display = "failed to retrieve job koid for component with url \"{}\": {}", url, err)]
+    #[error("failed to retrieve job koid for component with url \"{}\": {}", url, err)]
     ComponentJobIdError {
         url: String,
-        #[fail(cause)]
+        #[source]
         err: ClonableError,
     },
-    #[fail(display = "failed to add runtime/elf directory for component with url \"{}\".", url)]
+    #[error("failed to add runtime/elf directory for component with url \"{}\".", url)]
     ComponentElfDirectoryError { url: String },
 }
 
@@ -90,7 +88,7 @@ pub struct ElfRunner {
 fn get_resolved_url(start_info: &fsys::ComponentStartInfo) -> Result<String, Error> {
     match &start_info.resolved_url {
         Some(url) => Ok(url.to_string()),
-        _ => Err(err_msg("missing url")),
+        _ => Err(format_err!("missing url")),
     }
 }
 
@@ -101,16 +99,16 @@ fn get_program_binary(start_info: &fsys::ComponentStartInfo) -> Result<String, E
                 if !Path::new(bin).is_absolute() {
                     Ok(bin.to_string())
                 } else {
-                    Err(err_msg("the value of \"program.binary\" must be a relative path"))
+                    Err(format_err!("the value of \"program.binary\" must be a relative path"))
                 }
             } else {
-                Err(err_msg("the value of \"program.binary\" must be a string"))
+                Err(format_err!("the value of \"program.binary\" must be a string"))
             }
         } else {
-            Err(err_msg("\"program.binary\" must be specified"))
+            Err(format_err!("\"program.binary\" must be specified"))
         }
     } else {
-        Err(err_msg("\"program\" must be specified"))
+        Err(format_err!("\"program\" must be specified"))
     }
 }
 
@@ -125,7 +123,7 @@ fn get_program_args(start_info: &fsys::ComponentStartInfo) -> Result<Vec<String>
                         if let Some(fdata::Value::Str(a)) = v.as_ref().map(|x| &**x) {
                             Ok(a.clone())
                         } else {
-                            Err(err_msg("invalid type in arguments"))
+                            Err(format_err!("invalid type in arguments"))
                         }
                     })
                     .collect();
@@ -213,15 +211,15 @@ impl ElfRunner {
         let bin_path =
             get_program_binary(&start_info).map_err(|e| RunnerError::invalid_args(url, e))?;
         let bin_arg = &[String::from(
-            PKG_PATH.join(&bin_path).to_str().ok_or(err_msg("invalid binary path"))?,
+            PKG_PATH.join(&bin_path).to_str().ok_or(format_err!("invalid binary path"))?,
         )];
         let args = get_program_args(&start_info)?;
 
         let name = Path::new(url)
             .file_name()
-            .ok_or(err_msg("invalid url"))?
+            .ok_or(format_err!("invalid url"))?
             .to_str()
-            .ok_or(err_msg("invalid url"))?;
+            .ok_or(format_err!("invalid url"))?;
 
         // Convert the directories into proxies, so we can find "/pkg" and open "lib" and bin_path
         let ns = start_info
@@ -239,7 +237,7 @@ impl ElfRunner {
             .iter()
             .zip(directories.iter())
             .find(|(p, _)| p.as_str() == pkg_str)
-            .ok_or(err_msg("/pkg missing from namespace"))?;
+            .ok_or(format_err!("/pkg missing from namespace"))?;
 
         let lib_proxy = io_util::open_directory(pkg_proxy, &Path::new("lib"), OPEN_RIGHT_READABLE)?;
 
@@ -292,7 +290,7 @@ impl ElfRunner {
                 let directory = ClientEnd::new(
                     directory
                         .into_channel()
-                        .map_err(|_| err_msg("into_channel failed"))?
+                        .map_err(|_| format_err!("into_channel failed"))?
                         .into_zx_channel(),
                 );
                 name_infos.push(fproc::NameInfo { path, directory });
@@ -675,14 +673,14 @@ mod tests {
             get_program_binary(&new_start_info(Some("bin/myexecutable"))).unwrap(),
         );
         assert_eq!(
-            format!("{:?}", err_msg("the value of \"program.binary\" must be a relative path")),
+            format!("{:?}", format_err!("the value of \"program.binary\" must be a relative path")),
             format!(
                 "{:?}",
                 get_program_binary(&new_start_info(Some("/bin/myexecutable"))).unwrap_err()
             ),
         );
         assert_eq!(
-            format!("{:?}", err_msg("\"program.binary\" must be specified")),
+            format!("{:?}", format_err!("\"program.binary\" must be specified")),
             format!("{:?}", get_program_binary(&new_start_info(None)).unwrap_err()),
         );
     }
@@ -738,7 +736,7 @@ mod tests {
         );
 
         assert_eq!(
-            format!("{:?}", err_msg("invalid type in arguments")),
+            format!("{:?}", format_err!("invalid type in arguments")),
             format!(
                 "{:?}",
                 get_program_args(&new_args_set(vec![
@@ -750,7 +748,7 @@ mod tests {
         );
 
         assert_eq!(
-            format!("{:?}", err_msg("invalid type in arguments")),
+            format!("{:?}", format_err!("invalid type in arguments")),
             format!(
                 "{:?}",
                 get_program_args(&new_args_set(vec![Some(Box::new(fdata::Value::Inum(1))),]))

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{bail, format_err, Error, ResultExt};
+use anyhow::{format_err, Context as _, Error};
 use fidl_fuchsia_ui_input as uii;
 use fidl_fuchsia_ui_input2 as ui_input;
 use fidl_fuchsia_ui_text as txt;
@@ -104,7 +104,10 @@ impl DefaultHardwareIme {
                     lock.process_input_queue().await;
                 }
                 Err(e) => {
-                    bail!("error when receiving message from TextFieldEventStream: {}", e);
+                    return Err(format_err!(
+                        "error when receiving message from TextFieldEventStream: {}",
+                        e
+                    ));
                 }
             }
         }
@@ -269,16 +272,16 @@ fn get_key_mapping(legacy_layout: &Value, event: &uii::KeyboardEvent) -> Result<
     current_modifiers.insert("super", (event.modifiers & uii::MODIFIER_SUPER) != 0);
     let tables = match legacy_layout["tables"].as_array() {
         Some(v) => v,
-        None => bail!("expected legacy_layout.tables to be a JSON array"),
+        None => return Err(format_err!("expected legacy_layout.tables to be a JSON array")),
     };
     for table in tables {
         let modifiers = match table["modifiers"].as_object() {
             Some(v) => v,
-            None => bail!("expected table.modifiers to be a JSON object"),
+            None => return Err(format_err!("expected table.modifiers to be a JSON object")),
         };
         let map = match table["map"].as_object() {
             Some(v) => v,
-            None => bail!("expected table.map to be a JSON object"),
+            None => return Err(format_err!("expected table.map to be a JSON object")),
         };
         if modifiers_match(&current_modifiers, modifiers) && map.contains_key(key) {
             let key_obj = map[key].as_object();
@@ -289,11 +292,13 @@ fn get_key_mapping(legacy_layout: &Value, event: &uii::KeyboardEvent) -> Result<
             } else if let Some(_) = key_obj.and_then(|m| m["unicode"].as_str()) {
                 return Ok(Keymapping::UnicodeMode);
             } else {
-                bail!("expected object to either contain 'deadkey', 'output', or 'unicode' keys");
+                return Err(format_err!(
+                    "expected object to either contain 'deadkey', 'output', or 'unicode' keys"
+                ));
             }
         }
     }
-    bail!("couldn't find matching key in keymap");
+    return Err(format_err!("couldn't find matching key in keymap"));
 }
 
 #[allow(dead_code)]
@@ -318,7 +323,7 @@ async fn main() -> Result<(), Error> {
         let ime = DefaultHardwareIme::new()?;
         fasync::spawn(
             serve_textfield(ime.clone())
-                .unwrap_or_else(|e: failure::Error| fx_log_err!("couldn't run: {:?}", e)),
+                .unwrap_or_else(|e: anyhow::Error| fx_log_err!("couldn't run: {:?}", e)),
         );
     }
 
@@ -363,7 +368,7 @@ async fn serve_keymap(keymap_service: keymap::KeymapService) -> Result<(), Error
         let keymap_service = keymap_service.clone();
         fuchsia_async::spawn(
             keymap::handle_watch_keymap(stream, keymap_service)
-                .unwrap_or_else(|e: failure::Error| fx_log_err!("couldn't run: {:?}", e)),
+                .unwrap_or_else(|e: anyhow::Error| fx_log_err!("couldn't run: {:?}", e)),
         );
     });
     fs.take_and_serve_directory_handle()?;

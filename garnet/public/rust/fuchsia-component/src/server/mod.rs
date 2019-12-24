@@ -6,8 +6,8 @@
 
 use {
     crate::DEFAULT_SERVICE_INSTANCE,
+    anyhow::{format_err, Context as _, Error},
     byteorder::{LittleEndian, WriteBytesExt as _},
-    failure::{bail, Error, Fail, ResultExt},
     fidl::endpoints::{
         DiscoverableService, Proxy as _, RequestStream, ServerEnd, UnifiedServiceMarker,
         UnifiedServiceRequest,
@@ -38,6 +38,7 @@ use {
         sync::Arc,
         task::{Context, Poll},
     },
+    thiserror::Error,
 };
 
 mod service;
@@ -850,8 +851,8 @@ struct NodeConnectionData {
 
 /// An error indicating the startup handle on which the FIDL server
 /// attempted to start was missing.
-#[derive(Debug, Fail)]
-#[fail(display = "The startup handle on which the FIDL server attempted to start was missing.")]
+#[derive(Debug, Error)]
+#[error("The startup handle on which the FIDL server attempted to start was missing.")]
 pub struct MissingStartupHandle;
 
 fn send_failed_on_open(
@@ -884,7 +885,7 @@ fn handle_potentially_unsupported_flags(
     let unsupported_flags = flags & !supported_flags_bitmask;
     if unsupported_flags != 0 {
         maybe_send_error(object, flags, zx::sys::ZX_ERR_NOT_SUPPORTED)?;
-        bail!("unsupported flags: {:b}", unsupported_flags);
+        return Err(format_err!("unsupported flags: {:b}", unsupported_flags));
     } else {
         Ok(object)
     }
@@ -1366,7 +1367,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 let children = self.children_for_dir(pos)?;
                 match children.get(segment) {
                     Some(next_pos) => pos = *next_pos,
-                    _ => bail!("segment not found: {}", segment),
+                    _ => return Err(format_err!("segment not found: {}", segment)),
                 }
                 match self.nodes.get(pos).expect(&format!("missing node {}", pos)) {
                     ServiceFsNode::Directory(Directory::Remote(proxy)) => {
@@ -1389,7 +1390,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
         let node = self.nodes.get(pos).expect(&format!("missing node {}", pos));
         match node {
             ServiceFsNode::Directory(Directory::Local { children }) => Ok(children),
-            _ => bail!("node not a directory: {}", pos),
+            _ => return Err(format_err!("node not a directory: {}", pos)),
         }
     }
 

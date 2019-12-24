@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::labels::{NodeId, NodeLinkId};
-use failure::Error;
+use anyhow::Error;
 use std::collections::{BTreeMap, BinaryHeap};
 use std::time::Duration;
 

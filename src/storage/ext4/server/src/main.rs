@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::{Context as _, Error},
     ext4_parser::{construct_fs, ConstructFsError},
     ext4_read_only::{readers::ReaderError, structs::ParsingError},
-    failure::{Error, ResultExt},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_mem::Buffer,

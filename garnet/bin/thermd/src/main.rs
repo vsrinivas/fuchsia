@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{err_msg, Error, ResultExt};
+use anyhow::{format_err, Context as _, Error};
 use fdio;
 use fidl_fuchsia_hardware_gpu_clock as fidl_gpu;
 use fidl_fuchsia_hardware_thermal as fidl_thermal;
@@ -18,8 +18,8 @@ static CPU_THERMAL_DRIVER_PATH: &str = "/dev/class/thermal/000";
 static GPU_CLOCK_DRIVER_PATH: &str = "/dev/class/gpu-thermal/000";
 
 fn match_driver(path: &Path) -> Result<File, Error> {
-    let dir = path.parent().ok_or(err_msg("Invalid driver path"))?;
-    let name = path.file_name().ok_or(err_msg("Invalid driver name"))?;
+    let dir = path.parent().ok_or(format_err!("Invalid driver path"))?;
+    let name = path.file_name().ok_or(format_err!("Invalid driver name"))?;
 
     let dir_fd = File::open(&dir).context("Failed to open driver path")?;
     let st = fdio::watch_directory(&dir_fd, zx::sys::ZX_TIME_INFINITE, |event, matched| {
@@ -33,7 +33,7 @@ fn match_driver(path: &Path) -> Result<File, Error> {
     if st == zx::Status::STOP {
         Ok(File::open(&path).context("Failed to open file")?)
     } else {
-        Err(err_msg("Watcher terminated without finding sensor"))
+        Err(format_err!("Watcher terminated without finding sensor"))
     }
 }
 
@@ -66,12 +66,12 @@ async fn get_thermal_info(
     let (status, info) = proxy.get_device_info().await?;
     zx::Status::ok(status)
         .context(format!("get_device_info failed for CPU thermal device: {}", status))?;
-    let info = *info.ok_or(err_msg("get_device_info returned mising info"))?;
+    let info = *info.ok_or(format_err!("get_device_info returned mising info"))?;
 
     if info.num_trip_points == 0 {
-        Err(err_msg("Trip points not supported"))
+        Err(format_err!("Trip points not supported"))
     } else if !info.active_cooling && !info.passive_cooling {
-        Err(err_msg("No active or passive cooling present on device"))
+        Err(format_err!("No active or passive cooling present on device"))
     } else {
         Ok(info)
     }
@@ -81,7 +81,7 @@ async fn get_notify_port(proxy: &fidl_thermal::DeviceProxy) -> Result<zx::Port, 
     let (status, port) = proxy.get_state_change_port().await?;
     zx::Status::ok(status)
         .context(format!("get_state_change_port failed for CPU thermal device: {}", status))?;
-    let port = port.ok_or(err_msg("get_state_change_port returned missing info"))?;
+    let port = port.ok_or(format_err!("get_state_change_port returned missing info"))?;
     Ok(port)
 }
 
@@ -90,7 +90,7 @@ fn get_trip_idx(packet: &zx::Packet, info: &fidl_thermal::ThermalDeviceInfo) -> 
     if trip_idx < info.num_trip_points {
         Ok(trip_idx)
     } else {
-        Err(err_msg("Invalid trip index: terminating thermd"))
+        Err(format_err!("Invalid trip index: terminating thermd"))
     }
 }
 

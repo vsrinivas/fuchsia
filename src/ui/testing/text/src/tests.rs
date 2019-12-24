@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::test_helpers::TextFieldWrapper;
-use failure::{bail, Error};
+use anyhow::{bail, format_err, Error};
 use fidl_fuchsia_ui_text as txt;
 
 // TextField::OnUpdate() tests
@@ -15,7 +15,7 @@ pub async fn test_noop_causes_state_update(text_field: &mut TextFieldWrapper) ->
 
     text_field.proxy().begin_edit(rev)?;
     if text_field.proxy().commit_edit().await? != txt::Error::Ok {
-        bail!("Expected commit_edit to succeed");
+        return Err(format_err!("Expected commit_edit to succeed"));
     }
     text_field.wait_for_update().await?;
 

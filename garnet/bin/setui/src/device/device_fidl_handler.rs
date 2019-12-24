@@ -42,7 +42,7 @@ pub fn spawn_device_fidl_handler(
         Box::new(
             move |context,
                   req|
-                  -> LocalBoxFuture<'_, Result<Option<DeviceRequest>, failure::Error>> {
+                  -> LocalBoxFuture<'_, Result<Option<DeviceRequest>, anyhow::Error>> {
                 async move {
                     // Support future expansion of FIDL
                     #[allow(unreachable_patterns)]

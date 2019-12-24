@@ -14,7 +14,8 @@ rustc_binary("element_proposer_bin") {
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//sdk/fidl/fuchsia.session:fuchsia.session-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 

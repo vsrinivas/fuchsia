@@ -6,8 +6,8 @@
 //!
 //! This module defines all the commands and subcommands that are implemented
 //! for the CLI. This is done using the `structopt` crate.
+use anyhow::{format_err, Error};
 use eui48::MacAddress;
-use failure::{format_err, Error};
 use fidl_fuchsia_router_config::{CidrAddress, Id};
 use std::convert::TryInto;
 use std::net::IpAddr;
@@ -60,8 +60,8 @@ impl FromStr for Ipv4AddrPrefix {
 
 /// Converts an `Ipv4AddrPrefix` to a `router_config::CidrAddress`.
 impl TryInto<CidrAddress> for Ipv4AddrPrefix {
-    type Error = failure::Error;
-    fn try_into(self) -> Result<CidrAddress, failure::Error> {
+    type Error = anyhow::Error;
+    fn try_into(self) -> Result<CidrAddress, anyhow::Error> {
         let (ipv4_address, prefix_length) =
             (fidl_fuchsia_net::Ipv4Address { addr: self.address.octets() }, self.prefix);
         Ok(CidrAddress {

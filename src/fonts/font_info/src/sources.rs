@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::Error,
+    anyhow::Error,
     freetype_ffi::{FT_Open_Args, FT_Stream, FT_OPEN_PATHNAME, FT_OPEN_STREAM},
     std::{convert::TryFrom, ffi::CString, fmt, ptr},
 };

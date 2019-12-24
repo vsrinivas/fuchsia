@@ -18,10 +18,11 @@ rustc_library("ext4-read-only") {
     "//garnet/public/rust/fuchsia-vfs/pseudo-fs-mt",
     "//garnet/public/rust/fuchsia-vfs/pseudo-fs-mt/macros",
     "//garnet/public/rust/zerocopy",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
-    "//third_party/rust_crates:failure",
     "//third_party/rust_crates:rust-crypto",
     "//third_party/rust_crates:static_assertions",
+    "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]

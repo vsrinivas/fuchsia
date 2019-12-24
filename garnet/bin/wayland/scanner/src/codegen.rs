@@ -36,7 +36,7 @@ impl<W: io::Write> Codegen<W> {
             "
 #![allow(warnings)]
 use bitflags::*;
-use failure;
+use anyhow;
 use fuchsia_trace;
 use fuchsia_wayland_core::{{ArgKind, Arg, Array, Enum, Fixed, FromArgs, IntoMessage, Message,
                             MessageGroupSpec, MessageHeader, MessageSpec, MessageType,
@@ -315,7 +315,7 @@ impl IntoMessage for Event {{
             self.w,
             "\
 impl FromArgs for Request {{
-    fn from_args(op: u16, mut args: Vec<Arg>) -> Result<Self, failure::Error> {{
+    fn from_args(op: u16, mut args: Vec<Arg>) -> Result<Self, anyhow::Error> {{
         match op {{",
         )?;
 

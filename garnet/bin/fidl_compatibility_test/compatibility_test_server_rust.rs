@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{format_err, Error, ResultExt},
+    anyhow::{format_err, Context as _, Error},
     fidl_fidl_test_compatibility::{
         EchoEchoArraysWithErrorResult, EchoEchoStructWithErrorResult, EchoEchoTableWithErrorResult,
         EchoEchoVectorsWithErrorResult, EchoEchoXunionsWithErrorResult, EchoEvent, EchoMarker,
@@ -251,7 +251,7 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
     };
 
     let handle_requests_fut = stream
-        .err_into() // change error type from fidl::Error to failure::Error
+        .err_into() // change error type from fidl::Error to anyhow::Error
         .try_for_each_concurrent(None /* max concurrent requests per connection */, handler);
 
     handle_requests_fut.await

@@ -5,7 +5,7 @@
 //! Test a connection across a fuchsia router configured with NAT by network manager by passing
 //! data between two devices.
 
-use failure::{format_err, Error, ResultExt};
+use anyhow::{format_err, Context as _, Error};
 use futures::{
     io::{AsyncReadExt, AsyncWriteExt},
     StreamExt,

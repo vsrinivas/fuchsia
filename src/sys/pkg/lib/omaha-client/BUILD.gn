@@ -13,8 +13,8 @@ rustc_library("omaha-client") {
   with_unit_tests = true
 
   deps = [
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:chrono",
-    "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:http",
     "//third_party/rust_crates:hyper",
@@ -26,6 +26,7 @@ rustc_library("omaha-client") {
     "//third_party/rust_crates:serde_derive",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:serde_repr",
+    "//third_party/rust_crates:thiserror",
   ]
 
   test_deps = [ "//third_party/rust_crates:matches" ]

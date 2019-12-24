@@ -8,7 +8,7 @@
 
 mod mdns;
 
-use failure::{Error, ResultExt};
+use anyhow::{Context as _, Error};
 use fidl_fuchsia_overnet::{
     MeshControllerRequest, MeshControllerRequestStream, OvernetListPeersResponder, OvernetRequest,
     OvernetRequestStream, ServiceConsumerListPeersResponder, ServiceConsumerRequest,
@@ -60,7 +60,12 @@ impl NodeRuntime for AppRuntime {
     fn handle_type(handle: &zx::Handle) -> Result<SendHandle, Error> {
         match handle.basic_info()?.object_type {
             zx::ObjectType::CHANNEL => Ok(SendHandle::Channel),
-            _ => failure::bail!("Handle type not proxyable {:?}", handle.basic_info()?.object_type),
+            _ => {
+                return Err(anyhow::format_err!(
+                    "Handle type not proxyable {:?}",
+                    handle.basic_info()?.object_type
+                ))
+            }
         }
     }
 
@@ -91,7 +96,7 @@ impl NodeRuntime for AppRuntime {
                     Ok(app
                         .udp_socket
                         .as_ref()
-                        .ok_or_else(|| failure::format_err!("no udp socket"))?
+                        .ok_or_else(|| anyhow::format_err!("no udp socket"))?
                         .sock
                         .clone())
                 })?;
@@ -196,7 +201,7 @@ async fn read_udp_inner() -> Result<(), Error> {
             Ok(app
                 .udp_socket
                 .as_ref()
-                .ok_or_else(|| failure::format_err!("No udp socket to read from"))?
+                .ok_or_else(|| anyhow::format_err!("No udp socket to read from"))?
                 .sock
                 .clone())
         })?;

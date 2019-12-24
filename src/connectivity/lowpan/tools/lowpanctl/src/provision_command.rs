@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use crate::context::LowpanCtlContext;
+use anyhow::Error;
 use argh::FromArgs;
-use failure::Error;
 
 /// Contains the arguments decoded for the `provision` command.
 #[derive(FromArgs, PartialEq, Debug)]

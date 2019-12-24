@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow::Context as _;
 use core::sync::atomic::AtomicUsize;
-use failure::ResultExt;
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_wlan_common::DriverFeature;
 use fidl_fuchsia_wlan_device as fidl_wlan_dev;
@@ -52,7 +52,7 @@ pub async fn serve_device_requests(
     mut req_stream: fidl_svc::DeviceServiceRequestStream,
     inspect_tree: Arc<inspect::WlanstackTree>,
     cobalt_sender: CobaltSender,
-) -> Result<(), failure::Error> {
+) -> Result<(), anyhow::Error> {
     while let Some(req) = req_stream.try_next().await.context("error running DeviceService")? {
         // Note that errors from responder.send() are propagated intentionally.
         // If we fail to send a response, the only way to recover is to stop serving the

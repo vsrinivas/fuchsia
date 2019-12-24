@@ -4,12 +4,12 @@
 
 #![cfg(test)]
 
-use failure::ResultExt;
+use anyhow::Context as _;
 use std::convert::TryInto;
 
 use fidl_fuchsia_net_stack_ext::{exec_fidl, FidlReturn};
 
-type Result = std::result::Result<(), failure::Error>;
+type Result = std::result::Result<(), anyhow::Error>;
 
 // TODO(gongt) Use an attribute macro to reduce the boilerplate of running the
 // same test for both N2 and N3.
@@ -39,7 +39,7 @@ impl Netstack for Netstack3 {
 
 fn connect_to_service<S: fidl::endpoints::ServiceMarker + fidl::endpoints::DiscoverableService>(
     managed_environment: &fidl_fuchsia_netemul_environment::ManagedEnvironmentProxy,
-) -> std::result::Result<S::Proxy, failure::Error> {
+) -> std::result::Result<S::Proxy, anyhow::Error> {
     let (proxy, server) = fuchsia_zircon::Channel::create()?;
     let () = managed_environment.connect_to_service(S::SERVICE_NAME, server)?;
     let proxy = fuchsia_async::Channel::from_channel(proxy)?;
@@ -48,7 +48,7 @@ fn connect_to_service<S: fidl::endpoints::ServiceMarker + fidl::endpoints::Disco
 
 fn get_network_context(
     sandbox: &fidl_fuchsia_netemul_sandbox::SandboxProxy,
-) -> std::result::Result<fidl_fuchsia_netemul_network::NetworkContextProxy, failure::Error> {
+) -> std::result::Result<fidl_fuchsia_netemul_network::NetworkContextProxy, anyhow::Error> {
     let (client, server) =
         fidl::endpoints::create_proxy::<fidl_fuchsia_netemul_network::NetworkContextMarker>()
             .context("failed to create network context proxy")?;
@@ -58,7 +58,7 @@ fn get_network_context(
 
 fn get_endpoint_manager(
     network_context: &fidl_fuchsia_netemul_network::NetworkContextProxy,
-) -> std::result::Result<fidl_fuchsia_netemul_network::EndpointManagerProxy, failure::Error> {
+) -> std::result::Result<fidl_fuchsia_netemul_network::EndpointManagerProxy, anyhow::Error> {
     let (client, server) =
         fidl::endpoints::create_proxy::<fidl_fuchsia_netemul_network::EndpointManagerMarker>()
             .context("failed to create endpoint manager proxy")?;
@@ -70,7 +70,7 @@ fn get_endpoint_manager(
 async fn create_endpoint(
     name: &'static str,
     endpoint_manager: &fidl_fuchsia_netemul_network::EndpointManagerProxy,
-) -> std::result::Result<fidl_fuchsia_netemul_network::EndpointProxy, failure::Error> {
+) -> std::result::Result<fidl_fuchsia_netemul_network::EndpointProxy, anyhow::Error> {
     let (status, endpoint) = endpoint_manager
         .create_endpoint(
             name,
@@ -84,7 +84,7 @@ async fn create_endpoint(
         .context("failed to create endpoint")?;
     let () = fuchsia_zircon::Status::ok(status).context("failed to create endpoint")?;
     let endpoint = endpoint
-        .ok_or(failure::err_msg("failed to create endpoint"))?
+        .ok_or(anyhow::format_err!("failed to create endpoint"))?
         .into_proxy()
         .context("failed to get endpoint proxy")?;
     Ok(endpoint)
@@ -93,8 +93,7 @@ async fn create_endpoint(
 fn create_netstack_environment<N: Netstack>(
     sandbox: &fidl_fuchsia_netemul_sandbox::SandboxProxy,
     name: String,
-) -> std::result::Result<fidl_fuchsia_netemul_environment::ManagedEnvironmentProxy, failure::Error>
-{
+) -> std::result::Result<fidl_fuchsia_netemul_environment::ManagedEnvironmentProxy, anyhow::Error> {
     let (client, server) = fidl::endpoints::create_proxy::<
         fidl_fuchsia_netemul_environment::ManagedEnvironmentMarker,
     >()
@@ -209,7 +208,7 @@ async fn inspect_objects() -> Result {
             let path = format!("diagnostics/{}/inspect", path);
             let () = netstack
                 .pass_to_named_service(&path, server.into_channel())
-                .with_context(|_| format!("failed to connect to {}", path))?;
+                .with_context(|| format!("failed to connect to {}", path))?;
 
             let _object = client.read_data().await.context("failed to call ReadData")?;
         }
@@ -243,13 +242,13 @@ async fn add_ethernet_device() -> Result {
                 .context("failed to get interfaces")?
                 .into_iter()
                 .find(|interface| interface.id == id)
-                .ok_or(failure::err_msg("failed to find added ethernet device"))?;
+                .ok_or(anyhow::format_err!("failed to find added ethernet device"))?;
             assert_eq!(
                 interface.features & fidl_fuchsia_hardware_ethernet::INFO_FEATURE_LOOPBACK,
                 0
             );
             assert_eq!(interface.flags & fidl_fuchsia_netstack::NET_INTERFACE_FLAG_UP, 0);
-            Ok::<(), failure::Error>(())
+            Ok::<(), anyhow::Error>(())
         },
     )
     .await
@@ -269,7 +268,7 @@ async fn add_ethernet_interface<N: Netstack>(name: &'static str) -> Result {
                 .context("failed to list interfaces")?
                 .into_iter()
                 .find(|interface| interface.id == id)
-                .ok_or(failure::err_msg("failed to find added ethernet interface"))?;
+                .ok_or(anyhow::format_err!("failed to find added ethernet interface"))?;
             assert_eq!(
                 interface.properties.features
                     & fidl_fuchsia_hardware_ethernet::INFO_FEATURE_LOOPBACK,
@@ -315,7 +314,7 @@ async fn add_del_interface_address() -> Result {
             interface.properties.features & fidl_fuchsia_hardware_ethernet::INFO_FEATURE_LOOPBACK
                 != 0
         })
-        .ok_or(failure::err_msg("failed to find loopback"))?;
+        .ok_or(anyhow::format_err!("failed to find loopback"))?;
     let mut interface_address = fidl_fuchsia_net_stack::InterfaceAddress {
         ip_address: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
             addr: [1, 1, 1, 1],
@@ -479,7 +478,7 @@ async fn disable_interface_loopback() -> Result {
             interface.properties.features & fidl_fuchsia_hardware_ethernet::INFO_FEATURE_LOOPBACK
                 != 0
         })
-        .ok_or(failure::err_msg("failed to find loopback interface"))?;
+        .ok_or(anyhow::format_err!("failed to find loopback interface"))?;
     assert_eq!(
         localhost.properties.administrative_status,
         fidl_fuchsia_net_stack::AdministrativeStatus::Enabled
@@ -582,7 +581,7 @@ async fn acquire_dhcp() -> Result {
         .await
         .context("failed to create network")?;
     let network = network
-        .ok_or(failure::err_msg("failed to create network"))?
+        .ok_or(anyhow::format_err!("failed to create network"))?
         .into_proxy()
         .context("failed to get network proxy")?;
     let () = fuchsia_zircon::Status::ok(status).context("failed to create network")?;
@@ -666,7 +665,7 @@ async fn acquire_dhcp() -> Result {
         );
         let (addr, netmask) = address_change
             .await
-            .ok_or(failure::err_msg("failed to observe DHCP acquisition"))?
+            .ok_or(anyhow::format_err!("failed to observe DHCP acquisition"))?
             .context("failed to observe DHCP acquisition")?;
         assert_eq!(
             addr,

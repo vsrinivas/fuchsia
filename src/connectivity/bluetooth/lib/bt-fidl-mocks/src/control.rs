@@ -4,7 +4,7 @@
 
 use {
     crate::expect::{expect_call, Status},
-    failure::Error,
+    anyhow::Error,
     fidl_fuchsia_bluetooth::{PeerId as FidlPeerId, Status as FidlStatus},
     fidl_fuchsia_bluetooth_control::{
         ControlMarker, ControlProxy, ControlRequest, ControlRequestStream, PairingOptions,

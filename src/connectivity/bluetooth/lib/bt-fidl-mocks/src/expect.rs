@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{err_msg, Error},
+    anyhow::{format_err, Error},
     fidl::endpoints::RequestStream,
     fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_zircon::Duration,
@@ -36,9 +36,11 @@ where
                 Status::Pending => (),
             }
         }
-        Err(err_msg("Stream closed before expectation was satisifed"))
+        Err(format_err!("Stream closed before expectation was satisifed"))
     }
-    .on_timeout(timeout.after_now(), || Err(err_msg("timed out before expectation was satisfied")))
+    .on_timeout(timeout.after_now(), || {
+        Err(format_err!("timed out before expectation was satisfied"))
+    })
     .await
 }
 
@@ -66,7 +68,7 @@ mod tests {
                 if name == expected_name {
                     Ok(Status::Satisfied(()))
                 } else {
-                    Err(err_msg("received incorrect name"))
+                    Err(format_err!("received incorrect name"))
                 }
             }
             _ => Ok(Status::Pending),

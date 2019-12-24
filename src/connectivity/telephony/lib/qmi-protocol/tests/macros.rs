@@ -5,7 +5,7 @@
 #[macro_export]
 macro_rules! consume_empty_err {
     ($data:expr) => {{
-        let header = r#"#[derive(Debug, Fail)]
+        let header = r#"#[derive(Debug, Error)]
 pub enum QmiError {
 }
 impl QmiError {
@@ -30,7 +30,7 @@ macro_rules! consume_header {
 // found in the LICENSE file.
 
 #![allow(unused_mut, non_snake_case)]
-use failure::Fail;
+use thiserror::Error;
 use bytes::{Bytes, Buf};
 use std::fmt::Debug;
 use std::result;

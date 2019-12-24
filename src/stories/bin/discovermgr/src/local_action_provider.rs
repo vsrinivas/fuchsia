@@ -6,7 +6,7 @@
 
 use crate::indexing::load_module_facet;
 use crate::models::{Action, FuchsiaFulfillment, Parameter};
-use failure::Error;
+use anyhow::Error;
 use fidl_fuchsia_sys_index::{ComponentIndexMarker, ComponentIndexProxy};
 use fuchsia_component::client::{launch, launcher, App};
 use fuchsia_syslog::macros::*;

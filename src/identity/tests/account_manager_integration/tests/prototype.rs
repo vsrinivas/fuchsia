@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Error;
+use anyhow::Error;
 use fidl::endpoints::{create_proxy, ServiceMarker};
 use fidl_fuchsia_identity_account::{
     AccountManagerMarker, AccountManagerProxy, Error as ApiError, Lifetime,

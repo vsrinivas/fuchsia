@@ -8,7 +8,7 @@ use crate::switchboard::base::{
     SettingType,
 };
 
-use failure::{format_err, Error, ResultExt};
+use anyhow::{format_err, Context as _, Error};
 use fuchsia_async as fasync;
 
 use futures::channel::mpsc::UnboundedReceiver;
@@ -64,7 +64,7 @@ impl RegistryImpl {
                     }
                     Ok(())
                 }
-                .unwrap_or_else(|_e: failure::Error| {}),
+                .unwrap_or_else(|_e: anyhow::Error| {}),
             );
         }
 
@@ -79,7 +79,7 @@ impl RegistryImpl {
                     }
                     Ok(())
                 }
-                .unwrap_or_else(|_e: failure::Error| {}),
+                .unwrap_or_else(|_e: anyhow::Error| {}),
             );
         }
 
@@ -166,7 +166,7 @@ impl RegistryImpl {
 
                         Ok(())
                     }
-                    .unwrap_or_else(move |e: failure::Error| {
+                    .unwrap_or_else(move |e: anyhow::Error| {
                         error_sender_clone.unbounded_send(SettingEvent::Response(id, Err(e))).ok();
                     }),
                 );

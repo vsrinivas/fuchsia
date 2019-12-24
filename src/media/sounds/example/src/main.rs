@@ -4,7 +4,7 @@
 
 #![recursion_limit = "512"]
 
-use failure::{Error, ResultExt};
+use anyhow::{Context as _, Error};
 use fidl_fuchsia_media::*;
 use fidl_fuchsia_media_sounds::*;
 use fuchsia_async as fasync;
@@ -24,7 +24,7 @@ async fn main() -> Result<()> {
     player_proxy
         .add_sound_from_file(0, resource_file_channel("sfx.wav")?)
         .await?
-        .map_err(|status| failure::format_err!("AddSoundFromFile failed {}", status))?;
+        .map_err(|status| anyhow::format_err!("AddSoundFromFile failed {}", status))?;
 
     let duration = std::time::Duration::from_secs(1);
 
@@ -41,21 +41,21 @@ async fn main() -> Result<()> {
     player_proxy
         .play_sound(0, AudioRenderUsage::Media)
         .await?
-        .map_err(|err| failure::format_err!("PlaySound failed: {:?}", err))?;
+        .map_err(|err| anyhow::format_err!("PlaySound failed: {:?}", err))?;
 
     // Play the VMO-based sounds in sequence.
     player_proxy
         .play_sound(1, AudioRenderUsage::Media)
         .await?
-        .map_err(|err| failure::format_err!("PlaySound failed: {:?}", err))?;
+        .map_err(|err| anyhow::format_err!("PlaySound failed: {:?}", err))?;
     player_proxy
         .play_sound(2, AudioRenderUsage::Media)
         .await?
-        .map_err(|err| failure::format_err!("PlaySound failed: {:?}", err))?;
+        .map_err(|err| anyhow::format_err!("PlaySound failed: {:?}", err))?;
     player_proxy
         .play_sound(3, AudioRenderUsage::Media)
         .await?
-        .map_err(|err| failure::format_err!("PlaySound failed: {:?}", err))?;
+        .map_err(|err| anyhow::format_err!("PlaySound failed: {:?}", err))?;
 
     // Play the VMO-based sounds all at once.
     join!(

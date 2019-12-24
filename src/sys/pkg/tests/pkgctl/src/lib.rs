@@ -4,7 +4,7 @@
 
 #![cfg(test)]
 use {
-    failure::Error,
+    anyhow::Error,
     fidl_fuchsia_pkg::{
         ExperimentToggle as Experiment, PackageCacheRequestStream, PackageResolverAdminRequest,
         PackageResolverAdminRequestStream, PackageResolverRequestStream, RepositoryIteratorRequest,
@@ -625,7 +625,7 @@ async fn test_update_throttled_is_error() {
 
     let output = env.run_pkgctl(vec!["update"]).await;
 
-    assert_stderr(&output, "Error: ErrorMessage { msg: \"Update check was throttled.\" }\n");
+    assert_stderr(&output, "Error: Update check was throttled.\n");
     env.assert_only_update_manager_called_with(vec![CapturedUpdateManagerRequest::CheckNow {
         options: fidl_update::Options { initiator: Some(fidl_update::Initiator::User) },
     }]);
@@ -641,7 +641,7 @@ async fn test_gc_success() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_gc_fail() {
+async fn test_gc_error() {
     let env = TestEnv::new();
     *env.space_manager.gc_err.lock() = Some(fidl_space::ErrorCode::Internal);
     let output = env.run_pkgctl(vec!["gc"]).await;

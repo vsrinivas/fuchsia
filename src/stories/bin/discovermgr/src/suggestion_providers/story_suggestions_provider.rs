@@ -10,7 +10,7 @@ use {
         story_manager::StoryManager,
         suggestions_manager::SearchSuggestionsProvider,
     },
-    failure::Error,
+    anyhow::Error,
     futures::future::LocalFutureObj,
     parking_lot::Mutex,
     std::sync::Arc,

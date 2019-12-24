@@ -6,7 +6,7 @@
 
 //! `component_index` provides a fuzzy search for locally-known component URLs.
 
-use failure::{Error, ResultExt};
+use anyhow::{Context as _, Error};
 use fidl_fuchsia_sys_index::{
     ComponentIndexRequest, ComponentIndexRequestStream, FuzzySearchError,
 };

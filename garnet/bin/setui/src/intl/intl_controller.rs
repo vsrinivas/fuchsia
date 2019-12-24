@@ -5,7 +5,7 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use failure::{format_err, Error};
+use anyhow::{format_err, Error};
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
 use futures::lock::Mutex;
@@ -218,8 +218,9 @@ impl IntlController {
             let write_request = storage_lock.write(&info, false).await;
             let _ = match write_request {
                 Ok(_) => responder.send(Ok(None)),
-                Err(err) => responder
-                    .send(Err(failure::format_err!("failed to persist intl_info: {}", err))),
+                Err(err) => {
+                    responder.send(Err(anyhow::format_err!("failed to persist intl_info: {}", err)))
+                }
             };
         });
     }

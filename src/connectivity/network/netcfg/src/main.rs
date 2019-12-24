@@ -10,7 +10,7 @@ use std::os::unix::io::AsRawFd;
 use std::path;
 use std::sync::Arc;
 
-use failure::{self, ResultExt};
+use anyhow::Context as _;
 use fuchsia_async::DurationExt;
 use fuchsia_component::client::connect_to_service;
 use fuchsia_component::server::ServiceFs;
@@ -54,13 +54,12 @@ struct Config {
 }
 
 impl Config {
-    pub fn load<P: AsRef<path::Path>>(path: P) -> Result<Self, failure::Error> {
+    pub fn load<P: AsRef<path::Path>>(path: P) -> Result<Self, anyhow::Error> {
         let path = path.as_ref();
         let file = fs::File::open(path)
-            .with_context(|_| format!("could not open the config file {}", path.display()))?;
-        let config = serde_json::from_reader(io::BufReader::new(file)).with_context(|_| {
-            format!("could not deserialize the config file {}", path.display())
-        })?;
+            .with_context(|| format!("could not open the config file {}", path.display()))?;
+        let config = serde_json::from_reader(io::BufReader::new(file))
+            .with_context(|| format!("could not deserialize the config file {}", path.display()))?;
         Ok(config)
     }
 }
@@ -79,7 +78,7 @@ macro_rules! cas_filter_rules {
             let (_, generation, status) = $filter.$get_rules().await?;
             if status != fidl_fuchsia_net_filter::Status::Ok {
                 let () =
-                    Err(failure::format_err!("{} failed: {:?}", stringify!($get_rules), status))?;
+                    Err(anyhow::format_err!("{} failed: {:?}", stringify!($get_rules), status))?;
             }
             let status = $filter
                 .$update_rules(&mut $rules.iter_mut(), generation)
@@ -98,7 +97,7 @@ macro_rules! cas_filter_rules {
                     .await;
                 }
                 _ => {
-                    let () = Err(failure::format_err!(
+                    let () = Err(anyhow::format_err!(
                         "{} failed: {:?}",
                         stringify!($update_rules),
                         status
@@ -132,7 +131,7 @@ fn should_enable_filter(
     }
 }
 
-fn main() -> Result<(), failure::Error> {
+fn main() -> Result<(), anyhow::Error> {
     fuchsia_syslog::init_with_tags(&["netcfg"])?;
     fx_log_info!("Started");
 
@@ -149,7 +148,7 @@ fn main() -> Result<(), failure::Error> {
         &InterfaceType::UNKNOWN(_) => true,
         _ => false,
     }) {
-        return Err(failure::format_err!(
+        return Err(anyhow::format_err!(
             "failed to parse filter_enabled_interface_types: {:?}",
             parse_result
         ));
@@ -171,22 +170,22 @@ fn main() -> Result<(), failure::Error> {
     let filter_setup = async {
         if !filter_config.rules.is_empty() {
             let mut rules = netfilter::parser::parse_str_to_rules(&filter_config.rules.join(""))
-                .map_err(|e| failure::format_err!("could not parse filter rules: {:?}", e))?;
+                .map_err(|e| anyhow::format_err!("could not parse filter rules: {:?}", e))?;
             cas_filter_rules!(filter, get_rules, update_rules, rules);
         }
         if !filter_config.nat_rules.is_empty() {
             let mut nat_rules =
                 netfilter::parser::parse_str_to_nat_rules(&filter_config.nat_rules.join(""))
-                    .map_err(|e| failure::format_err!("could not parse nat rules: {:?}", e))?;
+                    .map_err(|e| anyhow::format_err!("could not parse nat rules: {:?}", e))?;
             cas_filter_rules!(filter, get_nat_rules, update_nat_rules, nat_rules);
         }
         if !filter_config.rdr_rules.is_empty() {
             let mut rdr_rules =
                 netfilter::parser::parse_str_to_rdr_rules(&filter_config.rdr_rules.join(""))
-                    .map_err(|e| failure::format_err!("could not parse nat rules: {:?}", e))?;
+                    .map_err(|e| anyhow::format_err!("could not parse nat rules: {:?}", e))?;
             cas_filter_rules!(filter, get_rdr_rules, update_rdr_rules, rdr_rules);
         }
-        Ok::<(), failure::Error>(())
+        Ok::<(), anyhow::Error>(())
     };
 
     let mut servers = servers
@@ -213,23 +212,22 @@ fn main() -> Result<(), failure::Error> {
     let interface_ids = Arc::new(Mutex::new(interface_ids));
 
     let dir_proxy = open_directory_in_namespace(ETHDIR, OPEN_RIGHT_READABLE)?;
-
     let ethernet_device = async {
         let mut watcher = fuchsia_vfs_watcher::Watcher::new(dir_proxy)
             .await
-            .with_context(|_| format!("could not watch {}", ETHDIR))?;
+            .with_context(|| format!("could not watch {}", ETHDIR))?;
 
         while let Some(fuchsia_vfs_watcher::WatchMessage { event, filename }) =
-            watcher.try_next().await.with_context(|_| format!("watching {}", ETHDIR))?
+            watcher.try_next().await.with_context(|| format!("watching {}", ETHDIR))?
         {
             match event {
                 fuchsia_vfs_watcher::WatchEvent::ADD_FILE
                 | fuchsia_vfs_watcher::WatchEvent::EXISTING => {
                     let filepath = path::Path::new(ETHDIR).join(filename);
                     let device = fs::File::open(&filepath)
-                        .with_context(|_| format!("could not open {}", filepath.display()))?;
+                        .with_context(|| format!("could not open {}", filepath.display()))?;
                     let topological_path =
-                        fdio::device_get_topo_path(&device).with_context(|_| {
+                        fdio::device_get_topo_path(&device).with_context(|| {
                             format!("fdio::device_get_topo_path({})", filepath.display())
                         })?;
                     let device = device.as_raw_fd();
@@ -238,7 +236,7 @@ fn main() -> Result<(), failure::Error> {
                     let () = fuchsia_zircon::Status::ok(unsafe {
                         fdio::fdio_sys::fdio_get_service_handle(device, &mut client)
                     })
-                    .with_context(|_| {
+                    .with_context(|| {
                         format!(
                             "fuchsia_zircon::sys::fdio_get_service_handle({})",
                             filepath.display()
@@ -263,7 +261,7 @@ fn main() -> Result<(), failure::Error> {
                                 .into_channel()
                                 .map_err(
                                     |fidl_fuchsia_hardware_ethernet::DeviceProxy { .. }| {
-                                        failure::err_msg(
+                                        anyhow::format_err!(
                                             "failed to convert device proxy into channel",
                                         )
                                     },
@@ -304,7 +302,7 @@ fn main() -> Result<(), failure::Error> {
                                     >::new(client),
                                 )
                                 .await
-                                .with_context(|_| {
+                                .with_context(|| {
                                     format!(
                                         "fidl_netstack::Netstack::add_ethernet_device({})",
                                         filepath.display()
@@ -321,7 +319,7 @@ fn main() -> Result<(), failure::Error> {
                                     .await
                                     .context("couldn't call enable_packet_filter")?;
                                 let () = result.map_err(|e| {
-                                    failure::format_err!("failed to enable packet filter: {:?}", e)
+                                    anyhow::format_err!("failed to enable packet filter: {:?}", e)
                                 })?;
                             } else {
                                 fx_log_info!("disable filter for nic {}", nic_id);
@@ -330,7 +328,7 @@ fn main() -> Result<(), failure::Error> {
                                     .await
                                     .context("couldn't call disable_packet_filter")?;
                                 let () = result.map_err(|e| {
-                                    failure::format_err!("failed to disable packet filter: {:?}", e)
+                                    anyhow::format_err!("failed to disable packet filter: {:?}", e)
                                 })?;
                             };
 
@@ -390,7 +388,7 @@ fn main() -> Result<(), failure::Error> {
                 fuchsia_vfs_watcher::WatchEvent::IDLE
                 | fuchsia_vfs_watcher::WatchEvent::REMOVE_FILE => {}
                 event => {
-                    let () = Err(failure::format_err!("unknown WatchEvent {:?}", event))?;
+                    let () = Err(anyhow::format_err!("unknown WatchEvent {:?}", event))?;
                 }
             }
         }
@@ -417,9 +415,9 @@ mod tests {
     use matchers::{ConfigOption, InterfaceMatcher, InterfaceSpec};
 
     impl Config {
-        pub fn load_str(s: &str) -> Result<Self, failure::Error> {
+        pub fn load_str(s: &str) -> Result<Self, anyhow::Error> {
             let config = serde_json::from_str(s)
-                .with_context(|_| format!("could not deserialize the config data {}", s))?;
+                .with_context(|| format!("could not deserialize the config data {}", s))?;
             Ok(config)
         }
     }

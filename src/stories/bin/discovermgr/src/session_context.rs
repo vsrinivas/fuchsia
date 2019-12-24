@@ -4,7 +4,7 @@
 
 use {
     crate::{story_manager::StoryManager, utils},
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl_fuchsia_app_discover::{
         SessionDiscoverContextRequest, SessionDiscoverContextRequestStream,
         StoryDiscoverContextRequest, StoryDiscoverContextRequestStream, StoryDiscoverError,

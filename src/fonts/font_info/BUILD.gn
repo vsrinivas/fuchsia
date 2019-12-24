@@ -14,8 +14,9 @@ rustc_library("font_info") {
   deps = [
     "//src/fonts/char_set",
     "//src/fonts/freetype_ffi",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:libc",
+    "//third_party/rust_crates:thiserror",
   ]
 
   if (is_fuchsia) {
@@ -33,7 +34,8 @@ rustc_test("font_info_test_bin") {
   deps = [
     ":font_info",
     "//src/fonts/char_set",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:thiserror",
   ]
   source_root = "tests/tests.rs"
   non_rust_deps = [ ":test_data" ]

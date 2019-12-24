@@ -37,7 +37,7 @@ fn get_contents_of_cache_file() -> String {
 mod tests {
     use {
         super::*,
-        failure::{Error, ResultExt},
+        anyhow::{Context, Error},
         fidl_fuchsia_sys_test as systest, fuchsia_async as fasync,
         fuchsia_component::client::connect_to_service,
         std::path::{Path, PathBuf},

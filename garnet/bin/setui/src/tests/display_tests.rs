@@ -8,7 +8,7 @@ use {
     crate::registry::device_storage::testing::*,
     crate::service_context::ServiceContext,
     crate::switchboard::base::SettingType,
-    failure::format_err,
+    anyhow::format_err,
     fidl::endpoints::{ServerEnd, ServiceMarker},
     fidl_fuchsia_settings::*,
     fuchsia_async as fasync,

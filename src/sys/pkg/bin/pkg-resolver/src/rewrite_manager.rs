@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    failure::Fail,
     fuchsia_inspect::{self as inspect, Property},
     fuchsia_syslog::fx_log_err,
     fuchsia_url::pkg_url::PkgUrl,
@@ -14,6 +13,7 @@ use {
         io,
         path::{Path, PathBuf},
     },
+    thiserror::Error,
 };
 
 /// [RewriteManager] controls access to all static and dynamic rewrite rules used by the package
@@ -42,11 +42,11 @@ struct RewriteManagerInspectState {
     node: inspect::Node,
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum CommitError {
-    #[fail(display = "the provided rule set is based on an older generation")]
+    #[error("the provided rule set is based on an older generation")]
     TooLate,
-    #[fail(display = "editing rewrite rules is permanently disabled")]
+    #[error("editing rewrite rules is permanently disabled")]
     DynamicConfigurationDisabled,
 }
 
@@ -328,7 +328,7 @@ impl RewriteManagerBuilder<inspect::Node> {
 #[cfg(test)]
 pub(crate) mod tests {
     use {
-        super::*, failure::Error, fuchsia_inspect::assert_inspect_tree, matches::assert_matches,
+        super::*, anyhow::Error, fuchsia_inspect::assert_inspect_tree, matches::assert_matches,
         serde_json::json,
     };
 

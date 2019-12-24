@@ -9,8 +9,9 @@ import("//build/rust/rustc_library.gni")
 rustc_library("unicode_blocks") {
   edition = "2018"
   deps = [
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:unic-char-range",
     "//third_party/rust_crates:unic-ucd-block",
   ]
@@ -30,9 +31,10 @@ compiled_action("generate_unicode_blocks_source") {
 rustc_binary("unicode_block_generator") {
   edition = "2018"
   deps = [
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:regex",
+    "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:unic-ucd-block",
   ]
   source_root = "src/unicode_block_generator.rs"

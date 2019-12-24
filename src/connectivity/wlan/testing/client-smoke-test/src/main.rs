@@ -6,10 +6,10 @@ mod opts;
 
 use {
     crate::opts::Opt,
+    anyhow::{format_err, Context as _, Error},
     connectivity_testing::{
         http_service_util, net_stack_util::netstack_did_get_dhcp, wlan_service_util,
     },
-    failure::{bail, format_err, Error, ResultExt},
     fidl_fuchsia_net_oldhttp::{HttpServiceMarker, HttpServiceProxy},
     fidl_fuchsia_net_stack::StackMarker,
     fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy},
@@ -74,7 +74,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
         test_results.query_wlan_service_iface_list = true;
 
         if wlan_iface_ids.is_empty() {
-            bail!("Did not find wlan interfaces");
+            return Err(format_err!("Did not find wlan interfaces"));
         };
         test_results.wlan_discovered = true;
         // note: interface discovery is marked false at the time of failure
@@ -233,7 +233,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
     exec.run_singlethreaded(fut)?;
 
     if !test_pass {
-        bail!("Saw a failure on at least one interface");
+        return Err(format_err!("Saw a failure on at least one interface"));
     }
 
     Ok(())
@@ -449,7 +449,7 @@ mod tests {
     /// Test verifying that an error returned for the download fails the download check.
     #[test]
     fn test_error_download_fails_download_check() {
-        let error = Err(failure::format_err!("this is a failure"));
+        let error = Err(anyhow::format_err!("this is a failure"));
         assert_eq!(is_successful_download(&error), false);
     }
 }

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::Error,
+    anyhow::Error,
     fuchsia_bluetooth::{
         error::Error as BtError,
         types::{Address, PeerId},

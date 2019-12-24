@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::Error,
+    anyhow::Error,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
         DirectoryMarker, MODE_TYPE_DIRECTORY, OPEN_FLAG_DIRECTORY, OPEN_RIGHT_READABLE,

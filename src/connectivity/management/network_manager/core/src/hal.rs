@@ -8,7 +8,7 @@ use crate::error;
 use crate::lifmgr::{self, subnet_mask_to_prefix_length, to_ip_addr, LIFProperties, LifIpAddr};
 use crate::oir;
 use crate::DnsPolicy;
-use failure::{Error, ResultExt};
+use anyhow::{Context as _, Error};
 use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_stack::{
     self as stack, ForwardingDestination, ForwardingEntry, InterfaceInfo, StackMarker, StackProxy,
@@ -387,7 +387,7 @@ impl NetCfg {
         .await;
 
         r.squash_result()
-            .with_context(|e| format!("failed setting interface state: {:?}", e))
+            .with_context(|| format!("failed setting interface state"))
             .map_err(|_| error::NetworkManager::HAL(error::Hal::OperationFailed))
     }
 
@@ -517,7 +517,7 @@ impl NetCfg {
     ) -> error::Result<()> {
         self.resolver_admin
             .set_name_servers(&mut servers.iter_mut())
-            .with_context(|e| format!("failed setting interface state: {:?}", e))
+            .with_context(|| format!("failed setting interface state"))
             .map_err(|e| {
                 error!("set_dns_resolver error {:?}", e);
                 error::NetworkManager::HAL(error::Hal::OperationFailed)

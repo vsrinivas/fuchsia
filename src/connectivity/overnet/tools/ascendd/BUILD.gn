@@ -18,10 +18,11 @@ if (!is_fuchsia) {
       "//src/connectivity/overnet/lib/core",
       "//src/connectivity/overnet/lib/hoist",
       "//src/connectivity/overnet/lib/salt_slab",
+      "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:clap",
-      "//third_party/rust_crates:failure",
       "//third_party/rust_crates:futures",
       "//third_party/rust_crates:log",
+      "//third_party/rust_crates:thiserror",
       "//third_party/rust_crates:tokio",
     ]
 
@@ -35,7 +36,7 @@ if (!is_fuchsia) {
     deps = [
       ":lib",
       "//src/lib/argh",
-      "//third_party/rust_crates:failure",
+      "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:futures",
       "//third_party/rust_crates:log",
       "//third_party/rust_crates:tokio",

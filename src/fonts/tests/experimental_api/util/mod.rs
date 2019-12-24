@@ -4,7 +4,7 @@
 
 pub use {
     crate::FONTS_CMX,
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_fonts as fonts, fidl_fuchsia_fonts_experimental as fonts_exp,
     fidl_fuchsia_intl::LocaleId,

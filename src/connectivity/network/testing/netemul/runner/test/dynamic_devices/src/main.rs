@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{format_err, Error},
+    anyhow::{format_err, Error},
     fdio::{watch_directory, WatchEvent},
     fidl_fuchsia_netemul_environment::{ManagedEnvironmentMarker, VirtualDevice},
     fidl_fuchsia_netemul_network::{

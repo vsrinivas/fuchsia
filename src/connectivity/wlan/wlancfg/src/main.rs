@@ -17,7 +17,7 @@ mod state_machine;
 
 use {
     crate::{config::Config, config_manager::SavedNetworksManager, known_ess_store::KnownEssStore},
-    failure::{format_err, Error, ResultExt},
+    anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_wlan_device_service::DeviceServiceMarker,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,

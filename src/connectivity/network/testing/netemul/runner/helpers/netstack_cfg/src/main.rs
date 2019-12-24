@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{format_err, Error, ResultExt},
+    anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_net,
     fidl_fuchsia_net_stack::StackMarker,
     fidl_fuchsia_net_stack_ext::FidlReturn,

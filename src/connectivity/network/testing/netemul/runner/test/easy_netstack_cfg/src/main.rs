@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::{format_err, Context as _, Error},
     argh::FromArgs,
-    failure::{format_err, Error, ResultExt},
     fidl_fuchsia_net_stack::StackMarker,
     fidl_fuchsia_netemul_sync::{BusMarker, BusProxy, SyncManagerMarker},
     fuchsia_async as fasync,

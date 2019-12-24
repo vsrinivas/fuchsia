@@ -4,12 +4,13 @@
 
 use fidl_fuchsia_mem::Buffer;
 use std::sync::Arc;
+use thiserror::Error;
 
-#[derive(Fail, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq)]
 pub enum ReaderError {
-    #[fail(display = "Read error at: 0x{:X}", _0)]
+    #[error("Read error at: 0x{:X}", _0)]
     Read(usize),
-    #[fail(display = "Out of bound read 0x{:X} when size is 0x{:X}", _0, _1)]
+    #[error("Out of bound read 0x{:X} when size is 0x{:X}", _0, _1)]
     OutOfBounds(usize, usize),
 }
 

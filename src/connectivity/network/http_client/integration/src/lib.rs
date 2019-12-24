@@ -5,7 +5,7 @@
 #![cfg(test)]
 
 use {
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_net_oldhttp as oldhttp, fuchsia_async as fasync,
     fuchsia_component::client::{launch, launcher},

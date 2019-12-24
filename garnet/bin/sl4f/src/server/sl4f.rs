@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Error;
+use anyhow::Error;
 use fuchsia_syslog::macros::*;
 use futures::channel::mpsc;
 use maplit::{convert_args, hashmap};

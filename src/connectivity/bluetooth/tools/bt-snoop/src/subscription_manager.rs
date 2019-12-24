@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{bail, Error},
+    anyhow::{format_err, Error},
     fidl_fuchsia_bluetooth_snoop::{SnoopControlHandle, SnoopPacket},
     fuchsia_syslog::{fx_log_warn, fx_vlog},
     std::{collections::HashMap, iter},
@@ -41,7 +41,7 @@ impl SubscriptionManager {
         device: Option<DeviceId>,
     ) -> Result<(), Error> {
         if self.is_registered(&id) {
-            bail!("Client already registered.");
+            return Err(format_err!("Client already registered."));
         }
         match device {
             Some(device) => {

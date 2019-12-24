@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use crate::hid::message::Packet;
+use anyhow::Error;
 use async_trait::async_trait;
 use bytes::Bytes;
-use failure::Error;
 use std::fmt::Debug;
 
 #[cfg(test)]
@@ -32,9 +32,9 @@ pub trait Connection: Sized + Debug {
 pub mod fidl {
     use crate::hid::connection::Connection;
     use crate::hid::message::Packet;
+    use anyhow::{format_err, Error};
     use async_trait::async_trait;
     use bytes::Bytes;
-    use failure::{format_err, Error};
     use fidl_fuchsia_hardware_input::{DeviceProxy, ReportType};
     use fuchsia_zircon as zx;
     use std::convert::TryFrom;
@@ -219,9 +219,9 @@ pub mod fidl {
 pub mod fake {
     use crate::hid::connection::Connection;
     use crate::hid::message::Packet;
+    use anyhow::{format_err, Error};
     use async_trait::async_trait;
     use bytes::Bytes;
-    use failure::{format_err, Error};
     use fuchsia_async::futures::lock::Mutex;
     use std::collections::VecDeque;
     use std::thread;
@@ -281,7 +281,7 @@ pub mod fake {
 
         /// Sets all further calls on this FakeConnection to return errors.
         /// This simulates the behavior of a connection to a device that has been removed.
-        pub fn fail(&mut self) {
+        pub fn error(&mut self) {
             self.expect_complete();
             self.mode = Mode::Invalid;
         }
@@ -307,7 +307,7 @@ pub mod fake {
         /// Enqueues an expectation that write will be called on this connection with the supplied
         /// packet. The connection will return a failure when this write operation occurs.
         /// Panics if called on a connection that has been set to fail.
-        pub fn expect_write_fail(&self, packet: Packet) {
+        pub fn expect_write_error(&self, packet: Packet) {
             &self.enqueue(Operation::WriteFail(packet));
         }
 
@@ -321,7 +321,7 @@ pub mod fake {
         /// Enqueues an expectation that read will be called on this connection. The connection
         /// will return a failure when this write operation occurs.
         /// Panics if called on a connection that has been set to fail.
-        pub fn expect_read_fail(&self) {
+        pub fn expect_read_error(&self) {
             &self.enqueue(Operation::ReadFail());
         }
 
@@ -436,9 +436,9 @@ pub mod fake {
         async fn test_read_write() -> Result<(), Error> {
             // Declare expected operations.
             let connection = FakeConnection::new(&TEST_REPORT_DESCRIPTOR);
-            connection.expect_write_fail(TEST_PACKET_1.clone());
+            connection.expect_write_error(TEST_PACKET_1.clone());
             connection.expect_write(TEST_PACKET_1.clone());
-            connection.expect_read_fail();
+            connection.expect_read_error();
             connection.expect_read(TEST_PACKET_2.clone());
             connection.expect_write(TEST_PACKET_3.clone());
             // Perform operations.
@@ -500,7 +500,7 @@ pub mod fake {
         async fn test_invalid() -> Result<(), Error> {
             let mut connection = FakeConnection::new(&TEST_REPORT_DESCRIPTOR);
             connection.report_descriptor().await.expect("Should have initially suceeded");
-            connection.fail();
+            connection.error();
             connection.report_descriptor().await.expect_err("Should have failed to get descriptor");
             connection.max_packet_length().await.expect_err("Should have failed to get packet len");
             connection.read_packet().await.expect_err("Should have failed to read packet");

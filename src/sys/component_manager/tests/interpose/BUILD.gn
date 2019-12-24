@@ -16,8 +16,8 @@ rustc_test("interpose_integration_test_bin") {
     "//garnet/public/rust/fuchsia-async",
     "//src/sys/component_manager/tests:breakpoint_system_client",
     "//src/sys/component_manager/tests:test_utils",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
-    "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
   ]
 }
@@ -31,7 +31,7 @@ rustc_binary("echo_looper_bin") {
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
   ]
 }
 

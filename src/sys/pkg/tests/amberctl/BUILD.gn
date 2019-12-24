@@ -26,7 +26,7 @@ rustc_test("driver") {
     "//src/sys/lib/fuchsia_url_rewrite",
     "//src/sys/pkg/lib/fidl-fuchsia-amber-ext:fidl_fuchsia_amber_ext",
     "//src/sys/pkg/lib/fidl-fuchsia-pkg-ext:fidl_fuchsia_pkg_ext",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:hex",
     "//third_party/rust_crates:log",

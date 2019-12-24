@@ -4,8 +4,8 @@
 
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
+use anyhow::{format_err, Error};
 use async_trait::async_trait;
-use failure::{format_err, Error};
 use fidl_fuchsia_device_manager as fdevmgr;
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_info;

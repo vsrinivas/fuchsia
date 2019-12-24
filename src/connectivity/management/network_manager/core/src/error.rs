@@ -4,38 +4,38 @@
 
 //! Custom error types for the network manager.
 
-use core::fmt::{self, Display};
-use failure::{Context, Fail};
+use anyhow::Error;
+use thiserror::Error;
 
 pub type Result<T> = std::result::Result<T, NetworkManager>;
 
 /// Top-level error type the network manager.
-#[derive(Fail, Debug)]
+#[derive(Error, Debug)]
 pub enum NetworkManager {
     /// Errors related to LIF and LIFManager
-    #[fail(display = "{}", _0)]
-    LIF(#[cause] Lif),
+    #[error("{}", _0)]
+    LIF(Lif),
     /// Errors related to Port and PortManager
-    #[fail(display = "{}", _0)]
-    PORT(#[cause] Port),
+    #[error("{}", _0)]
+    PORT(Port),
     /// Errors related to Services.
-    #[fail(display = "{}", _0)]
-    SERVICE(#[cause] Service),
+    #[error("{}", _0)]
+    SERVICE(Service),
     /// Errors related to Config Persistence.
-    #[fail(display = "{}", _0)]
-    Config(#[cause] Config),
+    #[error("{}", _0)]
+    Config(Config),
     /// Errors related to HAL layer.
-    #[fail(display = "{}", _0)]
-    HAL(#[cause] Hal),
+    #[error("{}", _0)]
+    HAL(Hal),
     /// Errors related to OIR.
-    #[fail(display = "{}", _0)]
-    OIR(#[cause] Oir),
+    #[error("{}", _0)]
+    OIR(Oir),
     /// Internal errors with an attached context.
-    #[fail(display = "An error occurred.")]
-    INTERNAL(ErrorWithContext),
+    #[error("An error occurred.")]
+    INTERNAL,
     /// Config errors.
-    #[fail(display = "{}", _0)]
-    CONFIG(#[cause] Config),
+    #[error("{}", _0)]
+    CONFIG(Config),
     // Add error types here.
 }
 
@@ -65,138 +65,128 @@ impl From<Service> for NetworkManager {
     }
 }
 impl From<std::io::Error> for NetworkManager {
-    fn from(e: std::io::Error) -> Self {
-        NetworkManager::INTERNAL(ErrorWithContext { inner: Context::new(e.to_string()) })
+    fn from(_: std::io::Error) -> Self {
+        NetworkManager::INTERNAL
+    }
+}
+// TODO(bwb): fix error types
+impl From<Error> for NetworkManager {
+    fn from(_: anyhow::Error) -> Self {
+        NetworkManager::INTERNAL
     }
 }
 impl From<serde_json::error::Error> for NetworkManager {
-    fn from(e: serde_json::error::Error) -> Self {
-        NetworkManager::INTERNAL(ErrorWithContext { inner: Context::new(e.to_string()) })
-    }
-}
-// Allows adding more context via a &str
-impl From<Context<&'static str>> for NetworkManager {
-    fn from(inner: Context<&'static str>) -> Self {
-        NetworkManager::INTERNAL(ErrorWithContext { inner: Context::new(inner.to_string()) })
-    }
-}
-
-#[derive(Fail, Debug)]
-pub struct ErrorWithContext {
-    inner: Context<String>,
-}
-impl Display for ErrorWithContext {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        Display::fmt(&self.inner, f)
+    fn from(_: serde_json::error::Error) -> Self {
+        NetworkManager::INTERNAL
     }
 }
 
 /// Error type for packet LIFManager.
-#[derive(Fail, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq)]
 pub enum Lif {
-    #[fail(display = "Invalid number of ports")]
+    #[error("Invalid number of ports")]
     InvalidNumberOfPorts,
-    #[fail(display = "Invalid port")]
+    #[error("Invalid port")]
     InvalidPort,
-    #[fail(display = "Name in use")]
+    #[error("Name in use")]
     InvalidName,
-    #[fail(display = "Operation not supported for lif type")]
+    #[error("Operation not supported for lif type")]
     TypeNotSupported,
-    #[fail(display = "Vlan not supported for lif type")]
+    #[error("Vlan not supported for lif type")]
     InvalidVlan,
-    #[fail(display = "LIF with same id already exists")]
+    #[error("LIF with same id already exists")]
     DuplicateLIF,
-    #[fail(display = "LIF not found")]
+    #[error("LIF not found")]
     NotFound,
-    #[fail(display = "Operation is not supported")]
+    #[error("Operation is not supported")]
     NotSupported,
 }
 
 /// Error type for packet PortManager.
-#[derive(Fail, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq)]
 pub enum Port {
-    #[fail(display = "Port not found")]
+    #[error("Port not found")]
     NotFound,
-    #[fail(display = "Operation is not supported")]
+    #[error("Operation is not supported")]
     NotSupported,
 }
 
 /// Error type for Services.
-#[derive(Fail, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq)]
 pub enum Service {
-    #[fail(display = "Could not enable service")]
+    #[error("Could not enable service")]
     NotEnabled,
-    #[fail(display = "Could not disable service")]
+    #[error("Could not disable service")]
     NotDisabled,
-    #[fail(display = "Failed to add new packet filter rules")]
+    #[error("Failed to add new packet filter rules")]
     ErrorAddingPacketFilterRules,
-    #[fail(display = "Failed to get packet filter rules")]
+    #[error("Failed to get packet filter rules")]
     ErrorGettingPacketFilterRules,
-    #[fail(display = "Failed to enable IP forwarding")]
+    #[error("Failed to enable IP forwarding")]
     ErrorEnableIpForwardingFailed,
-    #[fail(display = "Failed to disable IP forwarding")]
+    #[error("Failed to disable IP forwarding")]
     ErrorDisableIpForwardingFailed,
-    #[fail(display = "Failed to update NAT rules")]
+    #[error("Failed to update NAT rules")]
     ErrorUpdateNatFailed,
-    #[fail(display = "Pending further config to update NAT rules")]
+    #[error("Pending further config to update NAT rules")]
     UpdateNatPendingConfig,
-    #[fail(display = "NAT is already enabled")]
+    #[error("NAT is already enabled")]
     NatAlreadyEnabled,
-    #[fail(display = "NAT is not enabled")]
+    #[error("NAT is not enabled")]
     NatNotEnabled,
-    #[fail(display = "Service is not supported")]
+    #[error("Service is not supported")]
     NotSupported,
 }
 
 /// Error type for packet HAL.
-#[derive(Fail, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq)]
 pub enum Hal {
-    #[fail(display = "Could not create bridge")]
+    #[error("Could not create bridge")]
     BridgeNotCreated,
-    #[fail(display = "Could not find bridge")]
+    #[error("Could not find bridge")]
     BridgeNotFound,
-    #[fail(display = "Operation failed")]
+    #[error("Operation failed")]
     OperationFailed,
 }
 
 /// Error type for config persistence.
-#[derive(Fail, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq)]
 pub enum Config {
-    #[fail(display = "No config has been loaded yet")]
+    #[error("No config has been loaded yet")]
     NoConfigLoaded,
-    #[fail(display = "Device config paths have not been set up yet")]
+    #[error("Device config paths have not been set up yet")]
     ConfigPathsNotSet,
-    #[fail(display = "The requested config file was not found: {}", path)]
+    #[error("The requested config file was not found: {}", path)]
     ConfigNotFound { path: String },
-    #[fail(display = "Could not load the requested config: {}, because: {}", path, error)]
+    #[error("Could not load the requested config: {}, because: {}", path, error)]
     ConfigNotLoaded { path: String, error: String },
-    #[fail(display = "Could not load the device schema: {}", path)]
+    #[error("Could not load the device schema: {}", path)]
     SchemaNotLoaded { path: String },
-    #[fail(display = "Failed to deserialize config: {}, because: {}", path, error)]
+    #[error("Failed to deserialize config: {}, because: {}", path, error)]
     FailedToDeserializeConfig { path: String, error: String },
-    #[fail(display = "Failed to load device schema: {}, because {}", path, error)]
+    #[error("Failed to load device schema: {}, because {}", path, error)]
     FailedToLoadDeviceSchema { path: String, error: String },
-    #[fail(display = "Failed to validate device config: {}, because: {}", path, error)]
+    #[error("Failed to validate device config: {}, because: {}", path, error)]
     FailedToValidateConfig { path: String, error: String },
-    #[fail(display = "The requested config section does not exist: {}", msg)]
+    #[error("The requested config section does not exist: {}", msg)]
     NotFound { msg: String },
-    #[fail(display = "Config is malformed: {}", msg)]
+    #[error("Config is malformed: {}", msg)]
     Malformed { msg: String },
-    #[fail(display = "Operation not supported: {}", msg)]
+    #[error("Operation not supported: {}", msg)]
     NotSupported { msg: String },
 }
 
 /// Error type for OIR.
-#[derive(Fail, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq)]
 pub enum Oir {
-    #[fail(display = "Unsupported port type")]
+    #[error("Unsupported port type")]
     UnsupportedPort,
-    #[fail(display = "Information missing")]
+    #[error("Information missing")]
     MissingInformation,
-    #[fail(display = "Invalid device path")]
+    #[error("Invalid device path")]
     InvalidPath,
-    #[fail(display = "Inconsistent state")]
+    #[error("Inconsistent state")]
     InconsistentState,
-    #[fail(display = "Operation failed")]
+    #[error("Operation failed")]
     OperationFailed,
 }

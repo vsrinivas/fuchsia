@@ -61,7 +61,7 @@ pub fn fetch(inspect_data: &Vec<serde_json::Value>, selector: &String) -> Metric
 
 #[cfg(test)]
 mod test {
-    use {super::*, crate::config::parse_inspect, failure::Error};
+    use {super::*, crate::config::parse_inspect, anyhow::Error};
 
     #[test]
     fn test_fetch() -> Result<(), Error> {

@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use crate::crypto_utils::prf;
+use anyhow;
 use bytes::{BufMut, BytesMut};
-use failure;
 use num::bigint::{BigUint, RandBigInt};
 use parking_lot::Mutex;
 use rand::OsRng;
@@ -22,7 +22,7 @@ pub struct NonceReader {
 }
 
 impl NonceReader {
-    pub fn new(sta_addr: &[u8]) -> Result<Arc<NonceReader>, failure::Error> {
+    pub fn new(sta_addr: &[u8]) -> Result<Arc<NonceReader>, anyhow::Error> {
         // Write time and STA's address to buffer for PRF-256.
         // It's unclear whether or not using PRF has any significant cryptographic advantage.
         // For the time being, follow IEEE's recommendation for nonce generation.

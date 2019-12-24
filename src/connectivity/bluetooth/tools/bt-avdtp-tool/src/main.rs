@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::{format_err, Context as _, Error},
     argh::FromArgs,
-    failure::{err_msg, Error, ResultExt},
     fidl::endpoints::create_endpoints,
     fidl_fuchsia_bluetooth_avdtp::*,
     fuchsia_async as fasync,
@@ -303,7 +303,7 @@ async fn main() -> Result<(), Error> {
     } else if args.profile == "sink".to_string() {
         fuchsia_single_component_package_url!("bt-a2dp-sink").to_string()
     } else {
-        return Err(err_msg("Invalid A2DP profile. Exiting tool.").into());
+        return Err(format_err!("Invalid A2DP profile. Exiting tool.").into());
     };
 
     let bt_a2dp = client::launch(&launcher, profile, None)?;

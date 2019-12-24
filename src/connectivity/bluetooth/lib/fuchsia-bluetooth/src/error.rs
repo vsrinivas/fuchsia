@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {failure::Fail, fidl_fuchsia_bluetooth as bt};
+use {fidl_fuchsia_bluetooth as bt, thiserror::Error};
 
 /// Error type that can be constructed from a Bluetooth FIDL Error or from on its own.
-#[derive(Debug, Fail)]
-#[fail(display = "{}", message)]
+#[derive(Debug, Error)]
+#[error("{}", message)]
 pub struct Error {
     message: String,
 }

@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::Error,
     dhcp_validity_lib::{configure_dhcp_server, verify_addr_present},
-    failure::Error,
     fuchsia_async as fasync,
     std::net::{IpAddr, Ipv4Addr},
     std::time::Duration,

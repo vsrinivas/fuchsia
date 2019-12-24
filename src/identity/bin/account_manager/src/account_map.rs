@@ -6,7 +6,7 @@
 //! It caches AccountHandlerConnectionImpls for accounts for repeat access.
 
 use account_common::{AccountManagerError, LocalAccountId, ResultExt};
-use failure::format_err;
+use anyhow::format_err;
 use fidl_fuchsia_identity_account::{Error as ApiError, Lifetime};
 use fuchsia_inspect::{Node, Property};
 use std::collections::BTreeMap;

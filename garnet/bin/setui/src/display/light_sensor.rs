@@ -8,8 +8,8 @@
 use std::path::Path;
 use std::{fs, io};
 
+use anyhow::{format_err, Context as _, Error};
 use byteorder::{ByteOrder, LittleEndian};
-use failure::{self, bail, Error, ResultExt};
 use fidl_fuchsia_hardware_input::{
     DeviceMarker as SensorMarker, DeviceProxy as SensorProxy, ReportType,
 };
@@ -40,7 +40,7 @@ pub async fn open_sensor() -> Result<SensorProxy, Error> {
         let device = open_input_device(entry.path().to_str().expect("Bad path"))?;
         if let Ok(device_descriptor) = device.get_report_desc().await {
             if device_descriptor.len() < 4 {
-                bail!("Short HID header");
+                return Err(format_err!("Short HID header"));
             }
             let device_header = &device_descriptor[0..4];
             if device_header == HID_SENSOR_DESCRIPTOR {
@@ -65,7 +65,7 @@ pub async fn read_sensor(sensor: &SensorProxy) -> Result<AmbientLightInputRpt, E
     let report = sensor.get_report(ReportType::Input, 1).await?;
     let report = report.1;
     if report.len() < 11 {
-        bail!("Sensor HID report too short");
+        return Err(format_err!("Sensor HID report too short"));
     }
     Ok(AmbientLightInputRpt {
         rpt_id: report[0],

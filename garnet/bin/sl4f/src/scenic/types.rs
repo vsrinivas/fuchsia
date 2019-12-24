@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow::format_err;
 use base64;
 use fidl_fuchsia_images::{AlphaFormat, ColorSpace, ImageInfo, PixelFormat, Tiling, Transform};
 use fidl_fuchsia_intl::{CalendarId, LocaleId, Profile, TemperatureUnit, TimeZoneId};
@@ -18,13 +19,13 @@ pub enum ScenicMethod {
 }
 
 impl std::str::FromStr for ScenicMethod {
-    type Err = failure::Error;
+    type Err = anyhow::Error;
 
     fn from_str(method: &str) -> Result<Self, Self::Err> {
         match method {
             "TakeScreenshot" => Ok(ScenicMethod::TakeScreenshot),
             "PresentView" => Ok(ScenicMethod::PresentView),
-            _ => bail!("invalid Scenic FIDL method: {}", method),
+            _ => return Err(format_err!("invalid Scenic FIDL method: {}", method)),
         }
     }
 }

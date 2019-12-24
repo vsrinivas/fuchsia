@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow::{format_err, Error};
 use bytes::{buf::Iter, Buf, BufMut, Bytes, BytesMut, IntoBuf};
-use failure::{format_err, Error};
 use std::convert::{TryFrom, TryInto};
 use std::fmt;
 use std::io::Cursor;
@@ -38,7 +38,7 @@ pub enum Command {
 }
 
 impl TryFrom<u8> for Command {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
     fn try_from(value: u8) -> Result<Self, Error> {
         match value {
@@ -249,7 +249,7 @@ impl IntoIterator for Packet {
 }
 
 impl TryFrom<Vec<u8>> for Packet {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
     fn try_from(value: Vec<u8>) -> Result<Self, Error> {
         Packet::new(value)

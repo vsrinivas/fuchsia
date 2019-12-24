@@ -6,8 +6,8 @@
 
 use {
     crate::{package::Package, serve::ServedRepositoryBuilder},
+    anyhow::{format_err, Context as _, Error},
     bytes::Buf,
-    failure::{bail, format_err, Error, ResultExt},
     fidl_fuchsia_pkg_ext::{
         MirrorConfigBuilder, RepositoryBlobKey, RepositoryConfig, RepositoryConfigBuilder,
         RepositoryKey,
@@ -385,7 +385,7 @@ impl Repository {
             }
         })
         .on_timeout(20.seconds().after_now(), || {
-            bail!("timed out waiting for 'pm serve' to create port file")
+            return Err(format_err!("timed out waiting for 'pm serve' to create port file"));
         })
         .boxed();
 
@@ -454,7 +454,7 @@ pub(crate) async fn get(url: impl AsRef<str>) -> Result<Vec<u8>, Error> {
     let response = client.request(request).compat().await?;
 
     if response.status() != StatusCode::OK {
-        bail!("unexpected status code: {:?}", response.status());
+        return Err(format_err!("unexpected status code: {:?}", response.status()));
     }
 
     let body = response.into_body().compat().try_concat().await?.collect();

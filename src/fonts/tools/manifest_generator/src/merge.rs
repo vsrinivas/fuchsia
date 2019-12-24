@@ -5,9 +5,10 @@
 //! Traits for mergeable structs and collections of font metadata.
 
 use {
-    failure::{Error, Fail},
+    anyhow::Error,
     itertools::Itertools,
     std::{fmt::Debug, hash::Hash},
+    thiserror::Error,
 };
 
 /// Indicates that multiple items that implement this trait should be merged if they all have the
@@ -108,13 +109,13 @@ where
 }
 
 /// Errors while merging a group of items.
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub(crate) enum MergeError<V>
 where
     V: Debug + Send + Sync + 'static,
 {
-    #[fail(display = "Conflict when attempting to merge {:?}", _0)]
+    #[error("Conflict when attempting to merge {:?}", _0)]
     Conflict(Vec<V>),
-    #[fail(display = "Post validation failed with [{}] on list {:?}", _0, _1)]
+    #[error("Post validation failed with [{}] on list {:?}", _0, _1)]
     PostInvalid(String, Vec<V>),
 }

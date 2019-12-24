@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::Error,
     breakpoint_system_client::*,
-    failure::Error,
     fuchsia_async as fasync,
     io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE},
     test_utils::*,

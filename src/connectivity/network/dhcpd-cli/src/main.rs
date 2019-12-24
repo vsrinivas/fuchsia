@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_net_dhcp::{Server_Marker, Server_Proxy},
     fuchsia_async as fasync,
@@ -15,7 +15,7 @@ use crate::args::*;
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     let server = fuchsia_component::client::connect_to_service::<Server_Marker>()
-        .with_context(|_| format!("failed to connect to {} service", Server_Marker::DEBUG_NAME))?;
+        .with_context(|| format!("failed to connect to {} service", Server_Marker::DEBUG_NAME))?;
     let () = match argh::from_env() {
         Cli { cmd: Command::Get(get_arg) } => do_get(get_arg, server).await?,
         Cli { cmd: Command::Set(set_arg) } => do_set(set_arg, server).await?,
@@ -32,7 +32,7 @@ async fn do_get(get_arg: Get, server: Server_Proxy) -> Result<(), Error> {
                 .get_option(name.clone().into())
                 .await?
                 .map_err(|e| fuchsia_zircon::Status::from_raw(e))
-                .with_context(|_| format!("get_option({:?}) failed", name))?;
+                .with_context(|| format!("get_option({:?}) failed", name))?;
             println!("{:?}", res);
         }
         GetArg::Parameter(ParameterArg { name }) => {
@@ -40,7 +40,7 @@ async fn do_get(get_arg: Get, server: Server_Proxy) -> Result<(), Error> {
                 .get_parameter(name.clone().into())
                 .await?
                 .map_err(|e| fuchsia_zircon::Status::from_raw(e))
-                .with_context(|_| format!("get_parameter({:?}) failed", name))?;
+                .with_context(|| format!("get_parameter({:?}) failed", name))?;
             println!("{:?}", res);
         }
     };
@@ -54,14 +54,14 @@ async fn do_set(set_arg: Set, server: Server_Proxy) -> Result<(), Error> {
                 .set_option(&mut name.clone().into())
                 .await?
                 .map_err(|e| fuchsia_zircon::Status::from_raw(e))
-                .with_context(|_| format!("set_option({:?}) failed", name))?;
+                .with_context(|| format!("set_option({:?}) failed", name))?;
         }
         SetArg::Parameter(ParameterArg { name }) => {
             let () = server
                 .set_parameter(&mut name.clone().into())
                 .await?
                 .map_err(|e| fuchsia_zircon::Status::from_raw(e))
-                .with_context(|_| format!("set_parameter({:?}) failed", name))?;
+                .with_context(|| format!("set_parameter({:?}) failed", name))?;
         }
     };
     Ok(())
@@ -74,7 +74,7 @@ async fn do_list(list_arg: List, server: Server_Proxy) -> Result<(), Error> {
                 .list_options()
                 .await?
                 .map_err(|e| fuchsia_zircon::Status::from_raw(e))
-                .with_context(|_| "list_options() failed")?;
+                .with_context(|| "list_options() failed")?;
 
             println!("{:?}", res);
         }
@@ -83,7 +83,7 @@ async fn do_list(list_arg: List, server: Server_Proxy) -> Result<(), Error> {
                 .list_parameters()
                 .await?
                 .map_err(|e| fuchsia_zircon::Status::from_raw(e))
-                .with_context(|_| "list_parameters() failed")?;
+                .with_context(|| "list_parameters() failed")?;
             println!("{:?}", res);
         }
     };

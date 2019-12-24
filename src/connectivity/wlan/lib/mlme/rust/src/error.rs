@@ -4,32 +4,32 @@
 
 use {
     crate::client::ScanError,
-    failure::{self, Fail},
     fuchsia_zircon as zx,
+    thiserror::{self, Error},
     wlan_common::{
         appendable::BufferTooSmall,
         error::{FrameParseError, FrameWriteError},
     },
 };
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum Error {
-    #[fail(display = "out of buffers; requested {} bytes", _0)]
+    #[error("out of buffers; requested {} bytes", _0)]
     NoResources(usize),
-    #[fail(display = "provided buffer to small")]
+    #[error("provided buffer to small")]
     BufferTooSmall,
-    #[fail(display = "error parsing frame: {}", _0)]
-    ParsingFrame(#[cause] FrameParseError),
-    #[fail(display = "error writing frame: {}", _0)]
-    WritingFrame(#[cause] FrameWriteError),
-    #[fail(display = "scan error: {}", _0)]
-    ScanError(#[cause] ScanError),
-    #[fail(display = "{}", _0)]
-    Internal(#[cause] failure::Error),
-    #[fail(display = "{}", _0)]
-    Fidl(#[cause] fidl::Error),
-    #[fail(display = "{}; {}", _0, _1)]
-    Status(String, #[cause] zx::Status),
+    #[error("error parsing frame: {}", _0)]
+    ParsingFrame(FrameParseError),
+    #[error("error writing frame: {}", _0)]
+    WritingFrame(FrameWriteError),
+    #[error("scan error: {}", _0)]
+    ScanError(ScanError),
+    #[error("{}", _0)]
+    Internal(anyhow::Error),
+    #[error("{}", _0)]
+    Fidl(fidl::Error),
+    #[error("{}; {}", _0, _1)]
+    Status(String, zx::Status),
 }
 
 impl From<Error> for zx::Status {
@@ -72,8 +72,8 @@ impl ResultExt for Result<(), Error> {
     }
 }
 
-impl From<failure::Error> for Error {
-    fn from(e: failure::Error) -> Self {
+impl From<anyhow::Error> for Error {
+    fn from(e: anyhow::Error) -> Self {
         Error::Internal(e)
     }
 }
@@ -110,7 +110,7 @@ impl From<fidl::Error> for Error {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, failure::format_err};
+    use {super::*, anyhow::format_err};
 
     #[test]
     fn test_error_into_status() {

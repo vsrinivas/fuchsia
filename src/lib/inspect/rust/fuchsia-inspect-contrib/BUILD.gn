@@ -14,9 +14,10 @@ rustc_library("fuchsia-inspect-contrib") {
   deps = [
     "//garnet/public/rust/fuchsia-zircon",
     "//src/lib/inspect/rust/fuchsia-inspect",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:derivative",
-    "//third_party/rust_crates:failure",
     "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 

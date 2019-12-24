@@ -8,7 +8,7 @@ use {
         story_context_store::{ContextEntity, Contributor},
         suggestions_manager::SearchSuggestionsProvider,
     },
-    failure::Error,
+    anyhow::Error,
     futures::future::{join_all, LocalFutureObj},
     itertools::Itertools,
     std::collections::{HashMap, HashSet},

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{self, Error},
+    anyhow::Error,
     serde_derive::{Deserialize, Serialize},
     std::fs::File,
     std::io,

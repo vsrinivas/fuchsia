@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::{Context as _, Error},
     argh::FromArgs,
     byteorder::{BigEndian, WriteBytesExt},
-    failure::{Error, ResultExt},
     fidl_fuchsia_bluetooth_snoop::{PacketType, SnoopEvent, SnoopMarker, SnoopPacket},
     fuchsia_async as fasync,
     fuchsia_bluetooth::error::Error as BTError,

@@ -12,7 +12,7 @@ pub mod multiplex;
 pub mod integration_tests;
 
 mod keyboard;
-use failure::{Error, ResultExt};
+use anyhow::{Context as _, Error};
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_syslog;

@@ -5,10 +5,10 @@
 #![recursion_limit = "256"]
 
 use {
+    anyhow::{format_err, Context as _, Error},
     argh::FromArgs,
     bt_a2dp::media_types::*,
     bt_avdtp::{self as avdtp, AvdtpControllerPool},
-    failure::{format_err, Error, ResultExt},
     fidl_fuchsia_bluetooth_bredr::*,
     fidl_fuchsia_media::{AudioChannelId, AudioPcmMode, PcmFormat},
     fuchsia_async as fasync,
@@ -203,7 +203,7 @@ const FRAMES_PER_SBC_PACKET: u8 = 5;
 async fn start_streaming(
     peer: &DetachableWeak<PeerId, Peer>,
     source_type: AudioSourceType,
-) -> Result<(), failure::Error> {
+) -> Result<(), anyhow::Error> {
     let streams_fut = {
         let strong = peer.upgrade().ok_or(format_err!("Disconnected"))?;
         strong.collect_capabilities()

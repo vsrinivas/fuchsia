@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 use crate::audio::default_audio_info;
 use crate::tests::fakes::base::Service;
-use failure::{format_err, Error};
+use anyhow::{format_err, Error};
 use fidl::endpoints::{ServerEnd, ServiceMarker};
 use fidl_fuchsia_media::{AudioRenderUsage, Usage};
 use fuchsia_async as fasync;

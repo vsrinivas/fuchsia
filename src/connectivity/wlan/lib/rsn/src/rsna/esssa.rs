@@ -13,8 +13,8 @@ use crate::rsna::{
     Dot11VerifiedKeyFrame, NegotiatedProtection, Role, SecAssocStatus, SecAssocUpdate, UpdateSink,
 };
 use crate::Error;
+use anyhow::{bail, format_err};
 use eapol;
-use failure::{self, bail};
 use log::{error, info};
 use std::collections::HashSet;
 use wlan_statemachine::StateMachine;
@@ -166,7 +166,7 @@ impl EssSa {
         auth_cfg: auth::Config,
         ptk_exch_cfg: exchange::Config,
         gtk_exch_cfg: Option<exchange::Config>,
-    ) -> Result<EssSa, failure::Error> {
+    ) -> Result<EssSa, anyhow::Error> {
         info!("spawned ESSSA for: {:?}", role);
 
         let auth_method = auth::Method::from_config(auth_cfg)?;
@@ -181,7 +181,7 @@ impl EssSa {
         Ok(rsna)
     }
 
-    pub fn initiate(&mut self, update_sink: &mut UpdateSink) -> Result<(), failure::Error> {
+    pub fn initiate(&mut self, update_sink: &mut UpdateSink) -> Result<(), anyhow::Error> {
         self.reset();
         info!("establishing ESSSA...");
 
@@ -190,7 +190,7 @@ impl EssSa {
             Pmksa::Initialized { method } => match method {
                 auth::Method::Psk(psk) => psk.to_vec(),
             },
-            _ => bail!("cannot initiate PMK more than once"),
+            _ => return Err(format_err!("cannot initiate PMK more than once")),
         };
         self.on_key_confirmed(update_sink, Key::Pmk(pmk))?;
 
@@ -218,7 +218,7 @@ impl EssSa {
         &mut self,
         update_sink: &mut UpdateSink,
         key: Key,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), anyhow::Error> {
         let was_esssa_established = self.is_established();
         match key {
             Key::Pmk(pmk) => {
@@ -238,7 +238,7 @@ impl EssSa {
                 if let Ptksa::Initialized { method } = self.ptksa.as_mut() {
                     method.initiate(update_sink, self.key_replay_counter)?;
                 } else {
-                    bail!("PTKSA not initialized");
+                    return Err(format_err!("PTKSA not initialized"));
                 }
             }
             Key::Ptk(ptk) => {
@@ -305,7 +305,7 @@ impl EssSa {
         &mut self,
         update_sink: &mut UpdateSink,
         frame: eapol::Frame<B>,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), anyhow::Error> {
         // Only processes EAPOL Key frames. Drop all other frames silently.
         let updates = match frame {
             eapol::Frame::Key(key_frame) => {
@@ -364,7 +364,7 @@ impl EssSa {
         &mut self,
         update_sink: &mut UpdateSink,
         frame: eapol::KeyFrameRx<B>,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), anyhow::Error> {
         // Verify the frame complies with IEEE Std 802.11-2016, 12.7.2.
         let result = Dot11VerifiedKeyFrame::from_frame(
             frame,
@@ -374,7 +374,7 @@ impl EssSa {
         );
         // TODO(hahnr): The status should not be pushed as an update but instead as a Result.
         let verified_frame = match result {
-            Err(e) => match e.as_fail().downcast_ref::<Error>() {
+            Err(e) => match e.downcast_ref::<Error>() {
                 Some(Error::WrongAesKeywrapKey) => {
                     update_sink.push(SecAssocUpdate::Status(SecAssocStatus::WrongPassword));
                     return Ok(());
@@ -927,7 +927,7 @@ mod tests {
     fn send_msg1<F>(
         supplicant: &mut Supplicant,
         msg_modifier: F,
-    ) -> (Result<(), failure::Error>, UpdateSink)
+    ) -> (Result<(), anyhow::Error>, UpdateSink)
     where
         F: Fn(&mut eapol::KeyFrameTx),
     {
@@ -941,7 +941,7 @@ mod tests {
         supplicant: &mut Supplicant,
         ptk: &Ptk,
         msg_modifier: F,
-    ) -> (Result<(), failure::Error>, UpdateSink)
+    ) -> (Result<(), anyhow::Error>, UpdateSink)
     where
         F: Fn(&mut eapol::KeyFrameTx),
     {
@@ -957,7 +957,7 @@ mod tests {
         gtk: [u8; 16],
         key_id: u8,
         key_replay_counter: u64,
-    ) -> (Result<(), failure::Error>, UpdateSink) {
+    ) -> (Result<(), anyhow::Error>, UpdateSink) {
         let msg = test_util::get_group_key_hs_msg1(ptk, &gtk[..], key_id, key_replay_counter);
         let mut update_sink = UpdateSink::default();
         let result = supplicant.on_eapol_frame(&mut update_sink, eapol::Frame::Key(msg.keyframe()));

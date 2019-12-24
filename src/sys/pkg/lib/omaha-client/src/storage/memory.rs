@@ -6,6 +6,7 @@ use super::*;
 use futures::future::BoxFuture;
 use futures::prelude::*;
 use std::collections::HashMap;
+use thiserror::Error;
 
 /// The MemStorage struct is an in-memory-only implementation of the Storage trait, to be used in
 /// testing scenarios.
@@ -27,9 +28,9 @@ enum Value {
 }
 
 /// The stub implementation doesn't return errors, so this is just a placeholder.
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum StorageErrors {
-    #[fail(display = "Unknown error occurred")]
+    #[error("Unknown error occurred")]
     Unknown,
 }
 

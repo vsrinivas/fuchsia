@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::Error,
     component_manager_lib::{
         builtin_environment::BuiltinEnvironment,
         model::{
@@ -11,7 +12,6 @@ use {
         },
         startup,
     },
-    failure::{self, Error},
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fidl_fuchsia_test::SuiteMarker,

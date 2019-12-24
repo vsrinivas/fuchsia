@@ -67,7 +67,7 @@ pub fn spawn_setui_fidl_handler(switchboard: SwitchboardHandle, stream: SetUiSer
     Box::new(
       move |context,
             req|
-            -> LocalBoxFuture<'_, Result<Option<SetUiServiceRequest>, failure::Error>> {
+            -> LocalBoxFuture<'_, Result<Option<SetUiServiceRequest>, anyhow::Error>> {
         async move {
           #[allow(unreachable_patterns)]
           match req {

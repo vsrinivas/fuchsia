@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::Error,
+    anyhow::Error,
     fidl_fuchsia_test_echos::{EchoExposedByParentMarker, EchoHiddenByParentMarker},
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,

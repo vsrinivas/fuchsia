@@ -4,7 +4,7 @@
 
 use {
     crate::validators::{Validator, ValidatorError},
-    failure::Error,
+    anyhow::Error,
     fuchsia_syslog as syslog,
     std::str::from_utf8,
 };

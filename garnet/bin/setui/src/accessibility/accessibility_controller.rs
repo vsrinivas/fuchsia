@@ -96,7 +96,7 @@ pub fn spawn_accessibility_controller(
             }
             Ok(())
         }
-        .unwrap_or_else(|e: failure::Error| {
+        .unwrap_or_else(|e: anyhow::Error| {
             fx_log_err!("Error processing accessibility command: {:?}", e)
         }),
     );
@@ -112,7 +112,8 @@ async fn persist_accessibility_info(
     let write_request = storage_lock.write(&info, false).await;
     let _ = match write_request {
         Ok(_) => responder.send(Ok(None)),
-        Err(err) => responder
-            .send(Err(failure::format_err!("failed to persist accessibility_info:{}", err))),
+        Err(err) => {
+            responder.send(Err(anyhow::format_err!("failed to persist accessibility_info:{}", err)))
+        }
     };
 }

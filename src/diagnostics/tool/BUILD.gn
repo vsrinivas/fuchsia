@@ -19,10 +19,10 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//src/connectivity/overnet/lib/hoist",
     "//src/diagnostics/lib/selectors",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:clap",
     "//third_party/rust_crates:difference",
-    "//third_party/rust_crates:failure",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:libc",
     "//third_party/rust_crates:log",
@@ -32,6 +32,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:structopt",
     "//third_party/rust_crates:termion",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 

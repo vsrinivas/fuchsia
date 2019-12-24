@@ -9,16 +9,16 @@ use {
     },
     async_trait::async_trait,
     cm_rust::*,
-    failure::Fail,
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
     std::collections::HashSet,
+    thiserror::Error,
 };
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum Error {
-    #[fail(display = "Invalid scoped framework capability.")]
+    #[error("Invalid scoped framework capability.")]
     InvalidScopedFrameworkCapability {},
-    #[fail(display = "Invalid framework capability.")]
+    #[error("Invalid framework capability.")]
     InvalidFrameworkCapability {},
 }
 

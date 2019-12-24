@@ -29,9 +29,10 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
     "//sdk/fidl/fuchsia.router.config:fuchsia.router.config-rustc",
     "//src/lib/argh",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
+    "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet-rustc",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
   ]

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{self, Error, ResultExt},
+    anyhow::{Context, Error},
     fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker},
     fidl_fidl_developer_bridge::{DaemonMarker, DaemonRequest, DaemonRequestStream},
     fidl_fuchsia_overnet::{ServiceProviderRequest, ServiceProviderRequestStream},
@@ -99,7 +99,7 @@ fn spawn_daemon_server(stream: DaemonRequestStream, quiet: bool) {
                 .unwrap_or_else(|err| panic!("Fatal error handling request: {:?}", err));
             Ok(())
         }
-        .unwrap_or_else(|e: failure::Error| log::trace!("{:?}", e)),
+        .unwrap_or_else(|e: anyhow::Error| log::trace!("{:?}", e)),
     );
 }
 

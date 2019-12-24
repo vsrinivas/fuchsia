@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl_fuchsia_hardware_tee::DeviceConnectorProxy,
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,

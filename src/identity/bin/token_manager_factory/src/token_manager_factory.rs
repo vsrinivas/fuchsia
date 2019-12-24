@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::auth_provider_supplier::AuthProviderSupplier;
-use failure::{Error, ResultExt};
+use anyhow::{Context as _, Error};
 use fidl_fuchsia_auth::{
     AuthProviderConfig, TokenManagerFactoryRequest, TokenManagerFactoryRequestStream,
 };

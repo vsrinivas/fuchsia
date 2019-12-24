@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::Error,
+    anyhow::Error,
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_info,
     futures::channel::mpsc::Receiver,

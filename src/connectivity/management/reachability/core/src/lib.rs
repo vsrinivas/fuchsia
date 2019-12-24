@@ -6,7 +6,7 @@ pub mod ping;
 
 #[macro_use]
 extern crate log;
-use failure::Error;
+use anyhow::Error;
 use fidl_fuchsia_net_stack as stack;
 use fidl_fuchsia_netstack as netstack;
 use fuchsia_zircon as zx;

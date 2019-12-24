@@ -16,23 +16,23 @@ use crate::{
         PROTOCOL_V3,
     },
 };
-use failure::Fail;
 use http;
 use log::*;
 use std::fmt::Display;
 use std::result;
+use thiserror::Error;
 
 type ProtocolApp = crate::protocol::request::App;
 
 /// Building a request can fail for multiple reasons, this enum consolidates them into a single
 /// type that can be used to express those reasons.
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum Error {
-    #[fail(display = "Unexpected JSON error constructing update check: {}", _0)]
-    Json(#[cause] serde_json::Error),
+    #[error("Unexpected JSON error constructing update check: {}", _0)]
+    Json(serde_json::Error),
 
-    #[fail(display = "Http error performing update check: {}", _0)]
-    Http(#[cause] http::Error),
+    #[error("Http error performing update check: {}", _0)]
+    Http(http::Error),
 }
 
 impl From<serde_json::Error> for Error {

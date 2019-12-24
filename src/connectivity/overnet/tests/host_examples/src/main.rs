@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow::{Context as _, Error};
 use argh::FromArgs;
-use failure::{Error, ResultExt};
 use parking_lot::{Condvar, Mutex};
 use rand::Rng;
 use std::env::current_exe;
@@ -145,8 +145,8 @@ impl Ascendd {
         cmd.arg("host-pipe").stdin(Stdio::piped()).stdout(Stdio::piped());
         let name = format!("{:?}", cmd);
         let mut child = cmd.spawn().context(format!("spawning command {}", name))?;
-        let input = Box::new(child.stdout.take().ok_or(failure::format_err!("no stdout"))?);
-        let output = Box::new(child.stdin.take().ok_or(failure::format_err!("no stdin"))?);
+        let input = Box::new(child.stdout.take().ok_or(anyhow::format_err!("no stdout"))?);
+        let output = Box::new(child.stdin.take().ok_or(anyhow::format_err!("no stdin"))?);
         self.daemons.push(Daemon::new_from_child(name, child));
         Ok((input, output))
     }
@@ -250,7 +250,7 @@ fn main() -> Result<(), Error> {
         "echo" => tests::echo_test,
         "multiple_ascendd_echo" => tests::multiple_ascendd_echo_test,
         "interface_passing" => tests::interface_passing_test,
-        x => failure::bail!("Unknown test {}", x),
+        x => return Err(anyhow::format_err!("Unknown test {}", x)),
     };
     let errors = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
     let concurrency = args.concurrency.unwrap_or(1);

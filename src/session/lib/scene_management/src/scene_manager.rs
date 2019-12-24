@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    async_trait::async_trait, failure::Error, fidl_fuchsia_ui_app as ui_app,
+    anyhow::Error, async_trait::async_trait, fidl_fuchsia_ui_app as ui_app,
     fidl_fuchsia_ui_scenic as ui_scenic, fuchsia_scenic as scenic, fuchsia_scenic,
 };
 

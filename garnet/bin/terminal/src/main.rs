@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::Error,
     carnelian::{App, AppAssistantPtr, AppContext, AssistantCreatorFunc, LocalBoxFuture},
-    failure::Error,
     std::env,
     terminal_lib::TerminalAssistant,
 };

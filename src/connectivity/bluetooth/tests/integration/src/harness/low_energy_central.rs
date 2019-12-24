@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl_fuchsia_bluetooth_le::{CentralEvent, CentralMarker, CentralProxy},
     fuchsia_bluetooth::{
         expectation::asynchronous::{ExpectableState, ExpectationHarness},

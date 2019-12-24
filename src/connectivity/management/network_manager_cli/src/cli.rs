@@ -4,7 +4,7 @@
 
 use crate::opts::*;
 use crate::printer::Printer;
-use failure::{format_err, Error, ResultExt};
+use anyhow::{format_err, Context as _, Error};
 use fidl::endpoints::{Proxy, ServiceMarker};
 use fidl_fuchsia_net::{Ipv4Address, Ipv6Address, MacAddress};
 use fidl_fuchsia_overnet::{Peer, ServiceConsumerMarker, ServiceConsumerProxy};

@@ -14,7 +14,8 @@ rustc_library("spinel-rs-sys") {
   version = "0.1.0"
   edition = "2018"
   deps = [
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:vk-sys",
   ]
   non_rust_deps = [

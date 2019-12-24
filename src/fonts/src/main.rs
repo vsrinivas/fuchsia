@@ -10,7 +10,7 @@ mod font_service;
 
 use {
     self::font_service::{FontServiceBuilder, ProviderRequestStream},
-    failure::Error,
+    anyhow::Error,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{self as syslog, *},

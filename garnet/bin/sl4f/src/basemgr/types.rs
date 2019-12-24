@@ -9,12 +9,12 @@ pub enum BaseManagerMethod {
 }
 
 impl std::str::FromStr for BaseManagerMethod {
-    type Err = failure::Error;
+    type Err = anyhow::Error;
 
     fn from_str(method: &str) -> Result<Self, Self::Err> {
         match method {
             "RestartSession" => Ok(BaseManagerMethod::RestartSession),
-            _ => bail!("invalid BaseManager Facade method: {}", method),
+            _ => return Err(format_err!("invalid BaseManager Facade method: {}", method)),
         }
     }
 }

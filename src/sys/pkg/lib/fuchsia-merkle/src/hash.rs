@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use crate::util::HASH_SIZE;
-use failure::Fail;
 use hex::{FromHex, FromHexError, ToHex};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
 use std::str;
+use thiserror::Error;
 
 /// A SHA-256 hash.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -72,8 +72,8 @@ impl fmt::Debug for Hash {
 }
 
 /// An error encountered while parsing a [`Hash`].
-#[derive(Copy, Clone, Debug, Fail, PartialEq)]
-pub struct ParseHashError(#[cause] FromHexError);
+#[derive(Copy, Clone, Debug, Error, PartialEq)]
+pub struct ParseHashError(FromHexError);
 
 impl fmt::Display for ParseHashError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

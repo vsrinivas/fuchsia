@@ -17,7 +17,8 @@ rustc_library("wlantap-client") {
     "//garnet/public/rust/fuchsia-zircon",
     "//src/connectivity/wlan/lib/wlan_dev",
     "//src/connectivity/wlan/testing/wlan-devmgr/fidl:devmgr-rustc",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:thiserror",
   ]
 }

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fuchsia_async::{self as fasync, futures::StreamExt},
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect::{self as inspect, Property},

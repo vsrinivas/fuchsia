@@ -4,7 +4,7 @@
 
 use crate::server::Facade;
 use crate::traceutil::{facade::TraceutilFacade, types::TraceutilMethod};
-use failure::Error;
+use anyhow::Error;
 use futures::future::{FutureExt, LocalBoxFuture};
 use serde_json::Value;
 

@@ -14,7 +14,8 @@ rustc_library("lib") {
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-zircon",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-inspect-deprecated:fuchsia-inspect-deprecated-rustc",
   ]
 }
@@ -26,8 +27,9 @@ rustc_binary("bin") {
   deps = [
     ":lib",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:structopt",
+    "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-inspect-deprecated:fuchsia-inspect-deprecated-rustc",
   ]
 }

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl_fuchsia_pkg::PackageCacheMarker,
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,

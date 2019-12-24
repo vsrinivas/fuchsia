@@ -10,7 +10,7 @@ use {
         },
         timer::EventId,
     },
-    failure::{bail, ensure, format_err},
+    anyhow::{ensure, format_err},
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fuchsia_zircon::{self as zx, DurationNum},
     log::error,
@@ -55,10 +55,10 @@ impl Authenticating {
         r_sta: &mut RemoteClient,
         ctx: &mut Context,
         auth_type: fidl_mlme::AuthenticationTypes,
-    ) -> Result<EventId, failure::Error> {
+    ) -> Result<EventId, anyhow::Error> {
         // We only support open system authentication today.
         if auth_type != fidl_mlme::AuthenticationTypes::OpenSystem {
-            bail!("unsupported authentication type: {:?}", auth_type);
+            return Err(format_err!("unsupported authentication type: {:?}", auth_type));
         }
 
         let event = ClientEvent::AssociationTimeout;
@@ -75,7 +75,7 @@ fn new_authenticator_from_rsne(
     client_addr: MacAddr,
     s_rsne_bytes: &[u8],
     a_rsn: &RsnCfg,
-) -> Result<Box<dyn Authenticator>, failure::Error> {
+) -> Result<Box<dyn Authenticator>, anyhow::Error> {
     let (_, s_rsne) =
         rsne::from_bytes(s_rsne_bytes).map_err(|e| format_err!("failed to parse RSNE: {:?}", e))?;
     ensure!(is_valid_rsne_subset(&s_rsne, &a_rsn.rsne)?, "incompatible client RSNE");
@@ -108,7 +108,7 @@ pub struct Authenticated {
 /// AssociationError holds an error to log and the result code to send to the MLME for the
 /// association rejection.
 struct AssociationError {
-    error: failure::Error,
+    error: anyhow::Error,
     result_code: fidl_mlme::AssociateResultCodes,
     reason_code: fidl_mlme::ReasonCode,
 }
@@ -281,13 +281,13 @@ impl RsnaLinkState {
         &mut self,
         r_sta: &mut RemoteClient,
         ctx: &mut Context,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), anyhow::Error> {
         let mut update_sink = vec![];
         self.authenticator.initiate(&mut update_sink)?;
         self.process_authenticator_updates(r_sta, ctx, &update_sink);
 
         if self.last_key_frame.is_none() {
-            bail!("no key frame was produced on authenticator initiation");
+            return Err(format_err!("no key frame was produced on authenticator initiation"));
         }
 
         self.negotiation_timeout_event_id.replace(r_sta.schedule_at(
@@ -399,7 +399,7 @@ impl RsnaLinkState {
         r_sta: &mut RemoteClient,
         ctx: &mut Context,
         data: &[u8],
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), anyhow::Error> {
         self.request_attempts = 0;
 
         let authenticator = self.authenticator.as_mut();
@@ -423,7 +423,7 @@ pub struct Associated {
 }
 
 enum RsnaNegotiationError {
-    Error(failure::Error),
+    Error(anyhow::Error),
     Timeout,
 }
 
@@ -456,11 +456,11 @@ impl Associated {
         r_sta: &mut RemoteClient,
         ctx: &mut Context,
         data: &[u8],
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), anyhow::Error> {
         match self.rsna_link_state.as_mut() {
             Some(rsna_link_state) => rsna_link_state.handle_eapol_frame(r_sta, ctx, data),
             None => {
-                bail!("received EAPoL indication without RSNA link state");
+                return Err(format_err!("received EAPoL indication without RSNA link state"));
             }
         }
     }

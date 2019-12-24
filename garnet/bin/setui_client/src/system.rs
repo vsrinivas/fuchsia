@@ -5,7 +5,7 @@
 #![allow(dead_code)]
 
 use {
-    failure::{format_err, Error},
+    anyhow::{format_err, Error},
     fidl_fuchsia_settings::*,
 };
 

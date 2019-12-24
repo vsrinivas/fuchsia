@@ -9,8 +9,8 @@ use {
         font_catalog::{AssetInFamilyIndex, FamilyIndex, TypefaceInAssetIndex},
         FontCatalog, FontPackageListing, FontSet, FontSets,
     },
+    anyhow::{format_err, Error},
     char_set::CharSet,
-    failure::{format_err, Error, Fail},
     font_info::{FontAssetSource, FontInfo, FontInfoLoader},
     fuchsia_url::pkg_url::PkgUrl,
     itertools::{Either, Itertools},
@@ -19,6 +19,7 @@ use {
         collections::{BTreeMap, BTreeSet},
         path::{Path, PathBuf},
     },
+    thiserror::Error,
 };
 
 type AssetKey = (FamilyIndex, AssetInFamilyIndex);
@@ -279,34 +280,27 @@ impl FontDb {
 }
 
 /// Collection of errors from loading / building `FontDb`.
-#[derive(Debug, Fail)]
-#[fail(display = "Errors occurred while building FontDb: {:#?}", _0)]
+#[derive(Debug, Error)]
+#[error("Errors occurred while building FontDb: {:#?}", _0)]
 pub(crate) struct FontDbErrors(Vec<FontDbError>);
 
 /// An error in a single `FontDb` operation.
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub(crate) enum FontDbError {
-    #[fail(display = "Asset {} has no typefaces", asset_name)]
+    #[error("Asset {} has no typefaces", asset_name)]
     FontCatalogNoTypeFaces { asset_name: String },
 
-    #[fail(display = "Asset {} is not listed in *.font_pkgs.json", asset_name)]
+    #[error("Asset {} is not listed in *.font_pkgs.json", asset_name)]
     FontPkgsMissingEntry { asset_name: String },
 
-    #[fail(display = "Asset {} is not listed in *.font_catalog.json", asset_name)]
+    #[error("Asset {} is not listed in *.font_catalog.json", asset_name)]
     FontCatalogMissingEntry { asset_name: String },
 
-    #[fail(display = "PkgUrl error: {:?}", error)]
-    PkgUrl {
-        #[cause]
-        error: Error,
-    },
+    #[error("PkgUrl error: {:?}", error)]
+    PkgUrl { error: Error },
 
-    #[fail(display = "Failed to load font info for {:?}: {:?}", request, error)]
-    FontInfo {
-        request: FontInfoRequest,
-        #[cause]
-        error: Error,
-    },
+    #[error("Failed to load font info for {:?}: {:?}", request, error)]
+    FontInfo { request: FontInfoRequest, error: Error },
 }
 
 /// Metadata needed for [`FontInfoLoader::load_font_info`].

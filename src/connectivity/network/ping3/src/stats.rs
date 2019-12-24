@@ -1,4 +1,4 @@
-use failure::{format_err, Error};
+use anyhow::{format_err, Error};
 use fuchsia_zircon as zx;
 use std::fmt;
 use std::sync::Mutex;

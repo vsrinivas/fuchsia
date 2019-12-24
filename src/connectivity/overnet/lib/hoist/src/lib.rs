@@ -15,7 +15,7 @@ pub use not_fuchsia::*;
 
 #[cfg(target_os = "fuchsia")]
 pub mod logger {
-    pub fn init() -> Result<(), failure::Error> {
+    pub fn init() -> Result<(), anyhow::Error> {
         Ok(())
     }
 }
@@ -24,7 +24,7 @@ pub mod logger {
 pub fn publish_service(
     service_name: &str,
     provider: fidl::endpoints::ClientEnd<fidl_fuchsia_overnet::ServiceProviderMarker>,
-) -> Result<(), failure::Error> {
+) -> Result<(), anyhow::Error> {
     connect_as_service_publisher()?.publish_service(service_name, provider)?;
     Ok(())
 }

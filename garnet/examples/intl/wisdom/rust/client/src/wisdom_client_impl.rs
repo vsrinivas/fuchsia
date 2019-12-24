@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::Error,
+    anyhow::Error,
     //fidl_fuchsia_examples_intl_wisdom as fwisdom,
     fidl_fuchsia_examples_intl_wisdom as fwisdom,
     fidl_fuchsia_intl as fintl,

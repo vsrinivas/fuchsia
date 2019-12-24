@@ -11,8 +11,8 @@ if (host_toolchain == current_toolchain) {
     name = "fidldoc"
     edition = "2018"
     deps = [
+      "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:clap",
-      "//third_party/rust_crates:failure",
       "//third_party/rust_crates:handlebars",
       "//third_party/rust_crates:lazy_static",
       "//third_party/rust_crates:log",

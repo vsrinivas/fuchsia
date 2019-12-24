@@ -5,20 +5,20 @@
 use {
     crate::io_packet::{IoPacket, IoPacketType},
     crate::operations::OperationType,
-    failure::Fail,
     serde_derive::{Deserialize, Serialize},
     std::{io::ErrorKind, ops::Range, result::Result, sync::Arc, time::Instant},
+    thiserror::Error,
 };
 
-#[derive(Debug, Clone, Fail, PartialEq)]
+#[derive(Debug, Clone, Error, PartialEq)]
 pub enum Error {
-    #[fail(display = "Offset provided is out of range for the target.")]
+    #[error("Offset provided is out of range for the target.")]
     OffsetOutOfRange,
 
-    #[fail(display = "Wrote less bytes than requested")]
+    #[error("Wrote less bytes than requested")]
     ShortWrite,
 
-    #[fail(display = "System error while performing IO.")]
+    #[error("System error while performing IO.")]
     DoIoError(ErrorKind),
 }
 

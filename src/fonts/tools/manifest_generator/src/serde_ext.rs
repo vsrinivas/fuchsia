@@ -5,13 +5,13 @@
 //! Useful utilities for Serde JSON deserialization.
 
 use {
-    failure::Fail,
     serde::de::DeserializeOwned,
     serde_json,
     std::{
         fs, io,
         path::{Path, PathBuf},
     },
+    thiserror::Error,
 };
 
 /// Loads and deserializes a JSON-serialized value of type `T` from a file path.
@@ -39,19 +39,11 @@ pub(crate) fn load_from_reader<T: DeserializeOwned, R: io::Read, P: AsRef<Path>>
 }
 
 /// Serde JSON load/deserialization errors.
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub(crate) enum LoadError {
-    #[fail(display = "File {:?} failed to load: {:?}", path, error)]
-    Io {
-        path: PathBuf,
-        #[cause]
-        error: io::Error,
-    },
+    #[error("File {:?} failed to load: {:?}", path, error)]
+    Io { path: PathBuf, error: io::Error },
 
-    #[fail(display = "File {:?} failed to parse: {:?}", path, error)]
-    Parse {
-        path: PathBuf,
-        #[cause]
-        error: serde_json::Error,
-    },
+    #[error("File {:?} failed to parse: {:?}", path, error)]
+    Parse { path: PathBuf, error: serde_json::Error },
 }

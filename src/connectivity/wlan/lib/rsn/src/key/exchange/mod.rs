@@ -12,7 +12,7 @@ use crate::key::gtk::Gtk;
 use crate::key::ptk::Ptk;
 use crate::rsna::{Dot11VerifiedKeyFrame, NegotiatedProtection, UpdateSink};
 use crate::Error;
-use failure;
+use anyhow;
 use zerocopy::ByteSlice;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -54,7 +54,7 @@ impl Method {
         update_sink: &mut UpdateSink,
         key_replay_counter: u64,
         frame: Dot11VerifiedKeyFrame<B>,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), anyhow::Error> {
         match self {
             Method::FourWayHandshake(hs) => {
                 hs.on_eapol_key_frame(update_sink, key_replay_counter, frame)
@@ -68,7 +68,7 @@ impl Method {
         &mut self,
         update_sink: &mut UpdateSink,
         key_replay_counter: u64,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), anyhow::Error> {
         match self {
             Method::FourWayHandshake(hs) => hs.initiate(update_sink, key_replay_counter),
             // Only 4-Way Handshake supports initiation so far.

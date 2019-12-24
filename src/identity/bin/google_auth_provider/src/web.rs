@@ -188,7 +188,7 @@ impl DefaultStandaloneWebFrame {
 #[cfg(test)]
 mod test {
     use super::*;
-    use failure::Error;
+    use anyhow::Error;
     use fidl::endpoints::ClientEnd;
     use fidl_fuchsia_web::{
         ContextMarker, FrameMarker, FrameRequest, FrameRequestStream, NavigationState,

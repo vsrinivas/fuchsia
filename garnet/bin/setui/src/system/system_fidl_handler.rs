@@ -5,7 +5,7 @@ use {
     crate::fidl_processor::{process_stream, RequestContext},
     crate::switchboard::base::*,
     crate::switchboard::hanging_get_handler::Sender,
-    failure::format_err,
+    anyhow::format_err,
     fidl_fuchsia_settings::*,
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
@@ -43,7 +43,7 @@ pub fn spawn_system_fidl_handler(
         Box::new(
             move |context,
                   req|
-                  -> LocalBoxFuture<'_, Result<Option<SystemRequest>, failure::Error>> {
+                  -> LocalBoxFuture<'_, Result<Option<SystemRequest>, anyhow::Error>> {
                 async move {
                     #[allow(unreachable_patterns)]
                     match req {

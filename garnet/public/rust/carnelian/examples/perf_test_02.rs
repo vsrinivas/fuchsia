@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow::Error;
 use carnelian::{
     make_app_assistant, set_node_color, AnimationMode, App, AppAssistant, Color, Label, Paint,
     Point, Rect, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
 use euclid::Vector2D;
-use failure::Error;
 use fuchsia_scenic::{EntityNode, Rectangle, SessionPtr, ShapeNode};
 
 fn make_bounds(context: &ViewAssistantContext<'_>) -> Rect {

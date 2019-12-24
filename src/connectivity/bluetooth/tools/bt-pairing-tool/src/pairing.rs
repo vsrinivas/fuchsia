@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::Error,
+    anyhow::Error,
     fidl::endpoints::RequestStream,
     fidl_fuchsia_bluetooth_control::{
         PairingDelegateRequest, PairingDelegateRequestStream, PairingMethod,

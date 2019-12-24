@@ -7,7 +7,7 @@
 //! Test utilities for starting a blobfs server.
 
 use {
-    failure::{bail, Error, ResultExt},
+    anyhow::{format_err, Context as _, Error},
     fdio::{SpawnAction, SpawnOptions},
     fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fuchsia_io::{
@@ -103,7 +103,7 @@ impl BlobfsRamdisk {
             .context("waiting for 'blobfs mount' to exit")?;
         let ret = self.process.info().context("getting 'blobfs mount' process info")?.return_code;
         if ret != 0 {
-            bail!("'blobfs mount' returned nonzero exit code {}", ret)
+            return Err(format_err!("'blobfs mount' returned nonzero exit code {}", ret));
         }
 
         self.backing_ramdisk.stop()
@@ -117,7 +117,7 @@ impl BlobfsRamdisk {
                 Ok(entry?
                     .file_name()
                     .to_str()
-                    .ok_or_else(|| failure::format_err!("expected valid utf-8"))?
+                    .ok_or_else(|| anyhow::format_err!("expected valid utf-8"))?
                     .parse()?)
             })
             .collect()
@@ -180,7 +180,7 @@ fn mkblobfs_block(block_device: zx::Handle) -> Result<(), Error> {
         .context("waiting for 'blobfs mkfs' to terminate")?;
     let ret = p.info().context("getting 'blobfs mkfs' process info")?.return_code;
     if ret != 0 {
-        bail!("'blobfs mkfs' returned nonzero exit code {}", ret)
+        return Err(format_err!("'blobfs mkfs' returned nonzero exit code {}", ret));
     }
     Ok(())
 }

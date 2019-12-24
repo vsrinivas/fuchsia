@@ -8,7 +8,7 @@ use {
         test_utils::{self, *},
         InfoEvent, InfoStream, Ssid,
     },
-    failure::{bail, format_err},
+    anyhow::format_err,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_mlme as fidl_mlme,
     futures::channel::mpsc,
     std::{
@@ -204,15 +204,15 @@ type Cb = dyn Fn() + Send + 'static;
 
 pub struct MockSupplicant {
     started: Arc<AtomicBool>,
-    start_failure: Arc<Mutex<Option<failure::Error>>>,
-    on_eapol_frame: Arc<Mutex<Result<UpdateSink, failure::Error>>>,
+    start_failure: Arc<Mutex<Option<anyhow::Error>>>,
+    on_eapol_frame: Arc<Mutex<Result<UpdateSink, anyhow::Error>>>,
     on_eapol_frame_cb: Arc<Mutex<Option<Box<Cb>>>>,
 }
 
 impl Supplicant for MockSupplicant {
-    fn start(&mut self) -> Result<(), failure::Error> {
+    fn start(&mut self) -> Result<(), anyhow::Error> {
         match &*self.start_failure.lock().unwrap() {
-            Some(error) => bail!("{:?}", error),
+            Some(error) => return Err(format_err!("{:?}", error)),
             None => {
                 self.started.store(true, Ordering::SeqCst);
                 Ok(())
@@ -228,7 +228,7 @@ impl Supplicant for MockSupplicant {
         &mut self,
         update_sink: &mut UpdateSink,
         _frame: eapol::Frame<&[u8]>,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), anyhow::Error> {
         if let Some(cb) = self.on_eapol_frame_cb.lock().unwrap().as_mut() {
             cb();
         }
@@ -251,13 +251,13 @@ impl std::fmt::Debug for MockSupplicant {
 
 pub struct MockSupplicantController {
     started: Arc<AtomicBool>,
-    start_failure: Arc<Mutex<Option<failure::Error>>>,
-    mock_on_eapol_frame: Arc<Mutex<Result<UpdateSink, failure::Error>>>,
+    start_failure: Arc<Mutex<Option<anyhow::Error>>>,
+    mock_on_eapol_frame: Arc<Mutex<Result<UpdateSink, anyhow::Error>>>,
     on_eapol_frame_cb: Arc<Mutex<Option<Box<Cb>>>>,
 }
 
 impl MockSupplicantController {
-    pub fn set_start_failure(&self, error: failure::Error) {
+    pub fn set_start_failure(&self, error: anyhow::Error) {
         self.start_failure.lock().unwrap().replace(error);
     }
 
@@ -276,7 +276,7 @@ impl MockSupplicantController {
         *self.on_eapol_frame_cb.lock().unwrap() = Some(Box::new(cb));
     }
 
-    pub fn set_on_eapol_frame_failure(&self, error: failure::Error) {
+    pub fn set_on_eapol_frame_failure(&self, error: anyhow::Error) {
         *self.mock_on_eapol_frame.lock().unwrap() = Err(error);
     }
 }

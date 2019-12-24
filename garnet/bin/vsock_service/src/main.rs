@@ -5,7 +5,7 @@
 #![recursion_limit = "256"]
 
 use {
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fdio,
     fidl_fuchsia_hardware_vsock::DeviceMarker,
     fuchsia_async as fasync,

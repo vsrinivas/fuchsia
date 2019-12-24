@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Error;
+use anyhow::{format_err, Error};
 use serde_json::{to_value, Value};
 use std::{fs, io, path::Path};
 

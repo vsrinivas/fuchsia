@@ -31,9 +31,10 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/connectivity/overnet/lib/hoist",
     "//src/developer/remote-control/service:remote-control-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 
@@ -52,9 +53,10 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/connectivity/overnet/lib/hoist",
     "//src/developer/remote-control/service:remote-control-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
+    "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-device-manager:fuchsia-device-manager-rustc",
   ]
 }

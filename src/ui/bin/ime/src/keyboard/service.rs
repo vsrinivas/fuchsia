@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{Error, ResultExt};
+use anyhow::{Context as _, Error};
 use fidl_fuchsia_ui_input as uii;
 use fidl_fuchsia_ui_input2 as ui_input;
 use fidl_fuchsia_ui_views as ui_views;
@@ -93,7 +93,7 @@ impl Store {
                         .on_key_event(event)
                         .await
                         .map_err(Into::into)
-                        .unwrap_or_else(|e: failure::Error| {
+                        .unwrap_or_else(|e: anyhow::Error| {
                             fx_log_err!("key listener handle error: {:?}", e);
                             ui_input::Status::NotHandled
                         });
@@ -121,7 +121,7 @@ impl Service {
 
         fuchsia_async::spawn(
             Service::spawn_layout_watcher(layout_state, layout.clone())
-                .unwrap_or_else(|e: failure::Error| fx_log_err!("couldn't run: {:?}", e)),
+                .unwrap_or_else(|e: anyhow::Error| fx_log_err!("couldn't run: {:?}", e)),
         );
 
         Ok(Service {
@@ -227,7 +227,7 @@ impl Service {
                 }
                 Ok(())
             }
-            .unwrap_or_else(|e: failure::Error| fx_log_err!("couldn't run: {:?}", e)),
+            .unwrap_or_else(|e: anyhow::Error| fx_log_err!("couldn't run: {:?}", e)),
         );
     }
 
@@ -261,7 +261,7 @@ impl Service {
                 subscriber_ids.iter().for_each(|&i| store.remove_subscriber(i));
                 Ok(())
             }
-            .unwrap_or_else(|e: failure::Error| fx_log_err!("couldn't run: {:?}", e)),
+            .unwrap_or_else(|e: anyhow::Error| fx_log_err!("couldn't run: {:?}", e)),
         );
     }
 }

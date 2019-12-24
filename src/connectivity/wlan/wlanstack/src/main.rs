@@ -20,7 +20,7 @@ mod telemetry;
 mod watchable_map;
 mod watcher_service;
 
-use failure::Error;
+use anyhow::Error;
 use fidl_fuchsia_wlan_device_service::DeviceServiceRequestStream;
 use fuchsia_async as fasync;
 use fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType};

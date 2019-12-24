@@ -1,4 +1,4 @@
-use failure::{format_err, Error};
+use anyhow::{format_err, Error};
 
 /// Runge-Kutta Fehlberg 4(5) parameters
 ///

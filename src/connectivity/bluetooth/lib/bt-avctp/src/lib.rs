@@ -4,7 +4,7 @@
 
 #![recursion_limit = "128"]
 
-use {failure::Fail, fuchsia_zircon as zx, std::result};
+use {fuchsia_zircon as zx, std::result, thiserror::Error};
 
 mod avc;
 mod avctp;
@@ -21,63 +21,63 @@ pub use crate::avc::{
 };
 
 /// The error type of the AVCTP library.
-#[derive(Fail, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq)]
 pub enum Error {
     /// The value that was sent on the wire was out of range.
-    #[fail(display = "Value was out of range")]
+    #[error("Value was out of range")]
     OutOfRange,
 
     /// The profile identifier sent was returned as invalid by the peer.
-    #[fail(display = "Invalid profile id")]
+    #[error("Invalid profile id")]
     InvalidProfileId,
 
     /// The header was invalid when parsing a message from the peer.
-    #[fail(display = "Invalid Header for a AVCTP message")]
+    #[error("Invalid Header for a AVCTP message")]
     InvalidHeader,
 
     /// The body format was invalid when parsing a message from the peer.
-    #[fail(display = "Failed to parse AVCTP message contents")]
+    #[error("Failed to parse AVCTP message contents")]
     InvalidMessage,
 
     /// The remote end failed to respond to this command in time.
-    #[fail(display = "Command timed out")]
+    #[error("Command timed out")]
     Timeout,
 
     /// The distant peer has disconnected.
-    #[fail(display = "Peer has disconnected")]
+    #[error("Peer has disconnected")]
     PeerDisconnected,
 
     /// Sent if a Command Future is polled after it's already completed
-    #[fail(display = "Command Response has already been received")]
+    #[error("Command Response has already been received")]
     AlreadyReceived,
 
     /// Encountered an IO error reading from the peer.
-    #[fail(display = "Encountered an IO error reading from the peer: {}", _0)]
-    PeerRead(#[cause] zx::Status),
+    #[error("Encountered an IO error reading from the peer: {}", _0)]
+    PeerRead(zx::Status),
 
     /// Encountered an IO error reading from the peer.
-    #[fail(display = "Encountered an IO error writing to the peer: {}", _0)]
-    PeerWrite(#[cause] zx::Status),
+    #[error("Encountered an IO error writing to the peer: {}", _0)]
+    PeerWrite(zx::Status),
 
     /// A message couldn't be encoded.
-    #[fail(display = "Encountered an error encoding a message")]
+    #[error("Encountered an error encoding a message")]
     Encoding,
 
     /// An error has been detected, and the request that is being handled
     /// should be rejected with the error code given.
-    #[fail(display = "Invalid request detected")]
+    #[error("Invalid request detected")]
     RequestInvalid,
 
     /// The response command type is not valid.
-    #[fail(display = "Command type is not a response")]
+    #[error("Command type is not a response")]
     ResponseTypeInvalid,
 
     /// The response command was unexpected
-    #[fail(display = "Response command type is unexpected")]
+    #[error("Response command type is unexpected")]
     UnexpectedResponse,
 
     #[doc(hidden)]
-    #[fail(display = "__Nonexhaustive error should never be created.")]
+    #[error("__Nonexhaustive error should never be created.")]
     __Nonexhaustive,
 }
 

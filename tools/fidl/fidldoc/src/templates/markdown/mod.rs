@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{Error, ResultExt};
+use anyhow::{Context as _, Error};
 use handlebars::Handlebars;
 use log::info;
 use serde_json::Value;
@@ -121,12 +121,11 @@ impl FidldocTemplate for MarkdownTemplate {
         info!("Generating main page documentation {}", main_page_path.display());
 
         let mut main_page_file = File::create(&main_page_path)
-            .with_context(|e| format!("Can't create {}: {}", main_page_path.display(), e))?;
+            .with_context(|| format!("Can't create {}", main_page_path.display()))?;
 
         let main_page_content =
-            render_template(&self.handlebars, "main".to_string(), &main_fidl_json).with_context(
-                |e| format!("Can't render main page {}: {}", main_page_path.display(), e),
-            )?;
+            render_template(&self.handlebars, "main".to_string(), &main_fidl_json)
+                .with_context(|| format!("Can't render main page {}", main_page_path.display()))?;
         main_page_file.write_all(main_page_content.as_bytes())?;
 
         // Render TOC
@@ -134,10 +133,10 @@ impl FidldocTemplate for MarkdownTemplate {
         info!("Generating TOC {}", toc_path.display());
 
         let mut toc_file = File::create(&toc_path)
-            .with_context(|e| format!("Can't create TOC {}: {}", toc_path.display(), e))?;
+            .with_context(|| format!("Can't create TOC {}", toc_path.display()))?;
 
         let toc_content = render_template(&self.handlebars, "toc".to_string(), &main_fidl_json)
-            .with_context(|e| format!("Can't render TOC {}: {}", toc_path.display(), e))?;
+            .with_context(|| format!("Can't render TOC {}", toc_path.display()))?;
         toc_file.write_all(toc_content.as_bytes())?;
 
         Ok(())
@@ -153,12 +152,12 @@ impl FidldocTemplate for MarkdownTemplate {
         info!("Generating package documentation {}", package_index.display());
 
         let mut output_file = File::create(&package_index)
-            .with_context(|e| format!("Can't create {}: {}", package_index.display(), e))?;
+            .with_context(|| format!("Can't create {}", package_index.display()))?;
 
         // Render files
         let package_content =
             render_template(&self.handlebars, "interface".to_string(), &fidl_json)
-                .with_context(|e| format!("Can't render interface {}: {}", package, e))?;
+                .with_context(|| format!("Can't render interface {}", package))?;
         output_file.write_all(package_content.as_bytes())?;
 
         Ok(())
@@ -176,7 +175,7 @@ fn render_template(
 ) -> Result<String, Error> {
     let content = handlebars
         .render(&template_name, &fidl_json)
-        .with_context(|e| format!("Unable to render template '{}': {}", template_name, e))?;
+        .with_context(|| format!("Unable to render template '{}'", template_name))?;
     Ok(content)
 }
 
@@ -268,14 +267,14 @@ mod test {
             ),
         ] {
             let declarations: Value = serde_json::from_str(testdata)
-                .with_context(|e| format!("Unable to parse testdata for {}: {}", template_name, e))
+                .with_context(|| format!("Unable to parse testdata for {}", template_name))
                 .unwrap();
 
             let template = MarkdownTemplate::new(&PathBuf::new());
 
             let result =
                 render_template(&template.handlebars, template_name.to_string(), &declarations)
-                    .with_context(|e| format!("Unable to render {} template: {}", template_name, e))
+                    .with_context(|| format!("Unable to render {} template", template_name))
                     .unwrap();
             assert_eq!(
                 result, source,

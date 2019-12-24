@@ -4,13 +4,13 @@
 
 //! Implementation of fuchsia.net.icmp.EchoSocket.
 
-use failure::Fail;
 use futures::channel::mpsc;
 use futures::{select, StreamExt};
 use log::{error, trace};
 use std::collections::VecDeque;
 use std::fmt;
 use std::sync::{Arc, Mutex};
+use thiserror::Error;
 
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
@@ -153,11 +153,11 @@ impl EchoSocketWorker {
 }
 
 /// Error type for working with ICMP echo sockets.
-#[derive(Fail, Debug)]
+#[derive(Error, Debug)]
 pub enum ResponderError {
-    #[fail(display = "FIDL failure: {}", _0)]
+    #[error("FIDL failure: {}", _0)]
     Fidl(fidl::Error),
-    #[fail(display = "Reached reply buffer capacity")]
+    #[error("Reached reply buffer capacity")]
     ReachedCapacity,
 }
 

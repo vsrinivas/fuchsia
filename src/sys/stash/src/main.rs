@@ -6,7 +6,7 @@
 
 //! `stash` provides key/value storage to components.
 
-use failure::{Error, ResultExt};
+use anyhow::{Context as _, Error};
 use fidl::endpoints::ServiceMarker;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
@@ -140,6 +140,6 @@ fn stash_server(
             }
             Ok(())
         }
-        .unwrap_or_else(|e: failure::Error| fx_log_err!("couldn't run stash service: {:?}", e)),
+        .unwrap_or_else(|e: anyhow::Error| fx_log_err!("couldn't run stash service: {:?}", e)),
     );
 }

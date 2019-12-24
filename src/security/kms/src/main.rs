@@ -12,7 +12,7 @@ mod tee;
 
 use crate::key_manager::KeyManager;
 
-use failure::{format_err, Error, ResultExt};
+use anyhow::{format_err, Context as _, Error};
 use fidl_fuchsia_kms::{KeyManagerRequestStream, KeyProvider};
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;

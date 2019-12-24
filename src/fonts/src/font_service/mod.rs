@@ -15,7 +15,7 @@ use {
         family::{FamilyOrAlias, FontFamily, TypefaceQueryOverrides},
         typeface::{Collection as TypefaceCollection, TypefaceInfoAndCharSet},
     },
-    failure::{self, format_err, AsFail, Error, ResultExt},
+    anyhow::{format_err, Context as _, Error},
     fidl::{self, encoding::Decodable, endpoints::ServerEnd},
     fidl_fuchsia_fonts::{self as fonts, CacheMissPolicy},
     fidl_fuchsia_fonts_experimental as fonts_exp,
@@ -35,7 +35,7 @@ use {
 pub use {asset::AssetId, builder::FontServiceBuilder};
 
 /// Get a field out of a `TypefaceRequest`'s `query` field as a reference, or returns early with a
-/// `failure::Error` if the query is missing.
+/// `anyhow::Error` if the query is missing.
 macro_rules! query_field {
     ($request:ident, $field:ident) => {
         $request.query.as_ref().ok_or(format_err!("Missing query"))?.$field.as_ref()
@@ -228,7 +228,7 @@ impl FontService {
                 Ok(response)
             }
             Err(e) => {
-                let msg = e.as_fail().to_string();
+                let msg = e.to_string();
                 if msg.starts_with("No asset found") {
                     return Err(fonts_exp::Error::NotFound);
                 }

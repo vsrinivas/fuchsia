@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{format_err, Error},
+    anyhow::{format_err, Error},
     serde_derive::{Deserialize, Serialize},
     std::{iter::Iterator, ops::RangeInclusive},
 };

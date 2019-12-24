@@ -10,7 +10,7 @@
 
 use {
     crate::{capabilities::JoinCapabilities, phy_selection::get_device_band_info},
-    failure::{bail, format_err, Error, ResultExt},
+    anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_wlan_mlme as fidl_mlme,
     log::warn,
     wlan_common::{
@@ -125,7 +125,7 @@ fn override_ht_vht(
     cbw: Cbw,
 ) -> Result<(Option<HtCapabilities>, Option<VhtCapabilities>), Error> {
     if fidl_ht_cap.is_none() && fidl_vht_cap.is_some() {
-        bail!("VHT Cap without HT Cap is invalid.")
+        return Err(format_err!("VHT Cap without HT Cap is invalid."));
     }
 
     let ht_cap = match fidl_ht_cap {

@@ -9,7 +9,6 @@
 // directly, or maybe a new Tricium linter like IfThisThenThat.
 
 use {
-    failure::Fail,
     fuchsia_runtime::HandleInfo,
     fuchsia_zircon as zx,
     std::convert::TryFrom,
@@ -17,14 +16,15 @@ use {
     std::fmt,
     std::mem,
     std::num,
+    thiserror::Error,
     zerocopy::{AsBytes, FromBytes},
 };
 
 /// Possible errors that can occur during processargs startup message construction
 #[allow(missing_docs)] // No docs on individual error variants.
-#[derive(Fail, Debug)]
+#[derive(Error, Debug)]
 pub enum ProcessargsError {
-    TryFromInt(#[cause] num::TryFromIntError),
+    TryFromInt(num::TryFromIntError),
     SizeTooLarge(usize),
     TooManyHandles(usize),
 }
@@ -242,7 +242,7 @@ impl Message {
 mod tests {
     use {
         super::*,
-        failure::Error,
+        anyhow::Error,
         fuchsia_runtime::HandleType,
         fuchsia_zircon::{AsHandleRef, HandleBased},
         std::iter,

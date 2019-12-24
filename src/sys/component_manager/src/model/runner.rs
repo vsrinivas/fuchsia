@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::Error,
     clonable_error::ClonableError,
-    failure::{Error, Fail},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     futures::{future::BoxFuture, stream::TryStreamExt},
+    thiserror::Error,
 };
 
 /// Executes a component instance.
@@ -25,37 +26,37 @@ pub trait Runner {
 }
 
 /// Errors produced by `Runner`.
-#[derive(Debug, Fail, Clone)]
+#[derive(Debug, Error, Clone)]
 pub enum RunnerError {
-    #[fail(display = "invalid arguments provided for component with url \"{}\": {}", url, err)]
+    #[error("invalid arguments provided for component with url \"{}\": {}", url, err)]
     InvalidArgs {
         url: String,
-        #[fail(cause)]
+        #[source]
         err: ClonableError,
     },
-    #[fail(display = "unable to load component with url \"{}\": {}", url, err)]
+    #[error("unable to load component with url \"{}\": {}", url, err)]
     ComponentLoadError {
         url: String,
-        #[fail(cause)]
+        #[source]
         err: ClonableError,
     },
-    #[fail(display = "runner failed to launch component with url \"{}\": {}", url, err)]
+    #[error("runner failed to launch component with url \"{}\": {}", url, err)]
     ComponentLaunchError {
         url: String,
-        #[fail(cause)]
+        #[source]
         err: ClonableError,
     },
-    #[fail(display = "failed to populate the runtime directory: {}", err)]
+    #[error("failed to populate the runtime directory: {}", err)]
     ComponentRuntimeDirectoryError {
-        #[fail(cause)]
+        #[source]
         err: ClonableError,
     },
-    #[fail(display = "failed to connect to the runner: {}", err)]
+    #[error("failed to connect to the runner: {}", err)]
     RunnerConnectionError {
-        #[fail(cause)]
+        #[source]
         err: ClonableError,
     },
-    #[fail(display = "remote runners unsupported")]
+    #[error("remote runners unsupported")]
     Unsupported,
 }
 
@@ -137,8 +138,8 @@ fn spawn_null_controller_server(mut request_stream: fsys::ComponentControllerReq
     });
 }
 
-/// Wrapper for converting fsys::Error into the failure::Error type.
-#[derive(Debug, Clone, Fail)]
+/// Wrapper for converting fsys::Error into the anyhow::Error type.
+#[derive(Debug, Clone, Error)]
 pub struct RemoteRunnerError(pub fsys::Error);
 
 impl std::fmt::Display for RemoteRunnerError {

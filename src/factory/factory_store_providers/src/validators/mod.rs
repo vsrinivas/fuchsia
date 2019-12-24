@@ -8,28 +8,22 @@ mod text;
 
 use {
     crate::config::{ValidatorContext, ValidatorFileArgsMap},
-    failure::{Error, Fail},
+    anyhow::Error,
     pass::PassValidator,
     size::SizeValidator,
     std::fmt::Debug,
     text::TextValidator,
+    thiserror::Error,
 };
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ValidatorError {
-    #[fail(display = "No matching validator for name {}", name)]
+    #[error("No matching validator for name {}", name)]
     NoMatchingValidator { name: String },
-    #[fail(display = "Invalid args for validator: {}", cause)]
-    InvalidValidatorArgs {
-        #[cause]
-        cause: Error,
-    },
-    #[fail(display = "Failed to validate contents for file {}: {}", file_name, cause)]
-    FailedToValidate {
-        #[cause]
-        cause: Error,
-        file_name: String,
-    },
+    #[error("Invalid args for validator: {}", cause)]
+    InvalidValidatorArgs { cause: Error },
+    #[error("Failed to validate contents for file {}: {}", file_name, cause)]
+    FailedToValidate { cause: Error, file_name: String },
 }
 
 /// Trait for factory file validators.

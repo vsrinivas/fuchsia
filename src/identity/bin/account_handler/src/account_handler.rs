@@ -6,7 +6,7 @@ use crate::account::{Account, AccountContext};
 use crate::common::AccountLifetime;
 use crate::inspect;
 use account_common::{AccountManagerError, LocalAccountId};
-use failure::format_err;
+use anyhow::format_err;
 use fidl::endpoints::{ClientEnd, ServerEnd};
 use fidl_fuchsia_auth::AuthenticationContextProviderMarker;
 use fidl_fuchsia_identity_account::{AccountMarker, Error as ApiError};
@@ -80,7 +80,7 @@ impl AccountHandler {
     pub async fn handle_requests_from_stream(
         &self,
         mut stream: AccountHandlerControlRequestStream,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), anyhow::Error> {
         while let Some(req) = stream.try_next().await? {
             self.handle_request(req).await?;
         }

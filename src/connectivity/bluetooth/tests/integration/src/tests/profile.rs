@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{format_err, Error},
+    anyhow::{format_err, Error},
     fidl_fuchsia_bluetooth_bredr::{
         DataElement, DataElementData, DataElementType, ProtocolDescriptor, ProtocolIdentifier,
         SecurityLevel, ServiceDefinition, PSM_AVDTP,
@@ -32,7 +32,7 @@ fn service_definition_for_testing() -> ServiceDefinition {
     }
 }
 
-async fn add_service(profile: &ProfileHarness) -> Result<u64, failure::Error> {
+async fn add_service(profile: &ProfileHarness) -> Result<u64, anyhow::Error> {
     let mut service_def = service_definition_for_testing();
     let fut = profile.aux().add_service(&mut service_def, SecurityLevel::EncryptionOptional, false);
     let (status, id) = fut.await?;

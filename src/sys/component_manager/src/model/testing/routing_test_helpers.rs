@@ -569,7 +569,7 @@ impl RoutingTest {
     /// Atempt to bind the instance associated with the given moniker.
     ///
     /// On success, returns the short name of the component.
-    pub async fn bind_instance(&self, moniker: &AbsoluteMoniker) -> Result<String, failure::Error> {
+    pub async fn bind_instance(&self, moniker: &AbsoluteMoniker) -> Result<String, anyhow::Error> {
         self.model.bind(moniker).await?;
         Ok(match moniker.path().last() {
             Some(part) => part.name().to_string(),
@@ -965,7 +965,7 @@ async fn create_static_file(
     root: &DirectoryProxy,
     path: &Path,
     contents: &str,
-) -> Result<(), failure::Error> {
+) -> Result<(), anyhow::Error> {
     // Create subdirectories if required.
     if let Some(directory) = path.parent() {
         let _ = io_util::create_sub_directories(root, directory)?;
@@ -1016,7 +1016,7 @@ impl OutDir {
     }
 
     /// Build the output directory.
-    fn build_out_dir(&self) -> Result<Arc<pfs::Simple>, failure::Error> {
+    fn build_out_dir(&self) -> Result<Arc<pfs::Simple>, anyhow::Error> {
         let mut tree = TreeBuilder::empty_dir();
         // Add any external files.
         for (path, entry) in self.paths.iter() {

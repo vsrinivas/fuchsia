@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Error;
+use anyhow::Error;
 use fidl_fuchsia_inspect_deprecated::Object;
 use fuchsia_zircon as zx;
 use std::path::Path;

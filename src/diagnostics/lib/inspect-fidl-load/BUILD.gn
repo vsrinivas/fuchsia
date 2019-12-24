@@ -17,10 +17,11 @@ rustc_library("inspect-fidl-load") {
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-zircon",
     "//src/lib/inspect/rust/fuchsia-inspect",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:maplit",
+    "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-inspect-deprecated:fuchsia-inspect-deprecated-rustc",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]

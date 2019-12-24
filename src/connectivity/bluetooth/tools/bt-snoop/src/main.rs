@@ -5,8 +5,8 @@
 #![recursion_limit = "256"]
 
 use {
+    anyhow::{format_err, Context as _, Error},
     argh::FromArgs,
-    failure::{err_msg, Error, ResultExt},
     fidl::endpoints::Proxy,
     fidl::Error as FidlError,
     fidl_fuchsia_bluetooth_snoop::{SnoopPacket, SnoopRequest, SnoopRequestStream},
@@ -341,7 +341,7 @@ async fn run(
             // A new filesystem event in the hci device watch directory has been received.
             event = hci_device_events.next() => {
                 let message = event
-                    .ok_or(err_msg("Cannot reach watch server"))
+                    .ok_or(format_err!("Cannot reach watch server"))
                     .and_then(|r| Ok(r?));
                 match message {
                     Ok(message) => {

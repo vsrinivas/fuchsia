@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure, json5, serde_json,
+    anyhow, json5, serde_json,
     serde_json::Value,
     std::borrow::Cow,
     std::error,
@@ -54,7 +54,7 @@ pub enum Error {
     Io(io::Error),
     Parse(String),
     Validate { schema_name: Option<String>, err: String },
-    ValidateFidl(failure::Error),
+    ValidateFidl(anyhow::Error),
     Internal(String),
     Utf8(Utf8Error),
 }
@@ -78,7 +78,7 @@ impl Error {
         Error::Validate { schema_name: Some(schema.name.to_string()), err: err.into() }
     }
 
-    pub fn validate_fidl(err: impl Into<failure::Error>) -> Self {
+    pub fn validate_fidl(err: impl Into<anyhow::Error>) -> Self {
         Error::ValidateFidl(err.into())
     }
 

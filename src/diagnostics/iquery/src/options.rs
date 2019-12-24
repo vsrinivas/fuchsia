@@ -4,7 +4,7 @@
 
 use {
     crate::{formatting::*, location::all_locations},
-    failure::{bail, format_err, Error},
+    anyhow::{format_err, Error},
     std::{env, str::FromStr},
 };
 
@@ -51,7 +51,7 @@ pub enum PathFormat {
 }
 
 impl FromStr for Format {
-    type Err = failure::Error;
+    type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
@@ -141,7 +141,7 @@ impl Options {
                 match values[1] {
                     "json" => opts.formatting.format = Format::Json,
                     "text" => opts.formatting.format = Format::Text,
-                    value => bail!("Unexpected format: {}", value),
+                    value => return Err(format_err!("Unexpected format: {}", value)),
                 };
             } else {
                 match flag_str {
@@ -153,7 +153,7 @@ impl Options {
                     "--find" => opts.mode = ModeCommand::Find,
                     "--ls" => opts.mode = ModeCommand::Ls,
                     "--report" => opts.mode = ModeCommand::Report,
-                    flag => bail!("Unknown flag: {}", flag),
+                    flag => return Err(format_err!("Unknown flag: {}", flag)),
                 }
             }
         }

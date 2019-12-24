@@ -7,10 +7,22 @@ import("//build/test/test_package.gni")
 
 rustc_library("clonable_error") {
   with_unit_tests = true
+
+  # Please do not add new usages of ClonableError
+  # Please ask bwb@ or geb@ for context before adding
+  # to this list.
+  visibility = [
+    ":*",
+    ":tests",
+    "//src/fonts/manifest:*",
+    "//src/sys/component_manager:*",
+  ]
+
   edition = "2018"
 
   deps = [
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 

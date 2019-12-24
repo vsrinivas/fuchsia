@@ -9,7 +9,7 @@ use {
         merge::{MergeError, TryMerge, TryMergeGroups},
         serde_ext::{self, LoadError},
     },
-    failure::Error,
+    anyhow::Error,
     fidl_fuchsia_fonts::GenericFontFamily,
     itertools::Itertools,
     manifest::{

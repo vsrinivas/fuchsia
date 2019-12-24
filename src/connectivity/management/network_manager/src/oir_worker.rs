@@ -4,8 +4,7 @@
 
 use {
     crate::event::Event,
-    failure::{self, ResultExt},
-    failure::{format_err, Error},
+    anyhow::{Context as _, Error, format_err},
     fuchsia_async as fasync,
     futures::TryStreamExt,
     futures::{channel::mpsc, TryFutureExt},
@@ -26,19 +25,19 @@ fn ethdir_path() -> std::path::PathBuf {
 async fn device_found(
     event_chan: &mpsc::UnboundedSender<Event>,
     filename: &std::path::PathBuf,
-) -> Result<(), failure::Error> {
+) -> Result<(), anyhow::Error> {
     let file_path = ethdir_path().join(filename);
     let device = fs::File::open(&file_path)
-        .with_context(|_| format!("could not open {}", file_path.display()))?;
+        .with_context(|| format!("could not open {}", file_path.display()))?;
     let topological_path = fdio::device_get_topo_path(&device)
-        .with_context(|_| format!("fdio::device_get_topo_path({})", file_path.display()))?;
+        .with_context(|| format!("fdio::device_get_topo_path({})", file_path.display()))?;
     let device_fd = device.as_raw_fd();
     let mut client = 0;
     // Safe because we're passing a valid fd.
     fuchsia_zircon::Status::ok(unsafe {
         fdio::fdio_sys::fdio_get_service_handle(device_fd, &mut client)
     })
-    .with_context(|_| {
+    .with_context(|| {
         format!("fuchsia_zircon::sys::fdio_get_service_handle({})", file_path.display())
     })?;
     // Safe because we checked the return status above.
@@ -54,7 +53,7 @@ async fn device_found(
         let device_channel = ethernet_device
             .into_channel()
             .map_err(|fidl_fuchsia_hardware_ethernet::DeviceProxy { .. }| {
-                failure::err_msg("failed to convert device proxy into channel")
+                anyhow::format_err!("failed to convert device proxy into channel")
             })?
             .into_zx_channel();
 
@@ -79,7 +78,7 @@ async fn device_found(
 async fn device_removed(
     event_chan: &mpsc::UnboundedSender<Event>,
     topological_path: &std::path::PathBuf,
-) -> Result<(), failure::Error> {
+) -> Result<(), anyhow::Error> {
     info!("removing device topo path {:?}", topological_path);
     event_chan.unbounded_send(Event::OIR(OIRInfo {
         action: network_manager_core::oir::Action::REMOVE,
@@ -91,7 +90,7 @@ async fn device_removed(
     Ok(())
 }
 
-async fn run(event_chan: mpsc::UnboundedSender<Event>) -> Result<(), failure::Error> {
+async fn run(event_chan: mpsc::UnboundedSender<Event>) -> Result<(), anyhow::Error> {
     let path = ethdir_path();
     let path_as_str = path.to_str().ok_or(format_err!(
         "Path requested for watch is non-utf8 and our
@@ -102,10 +101,10 @@ async fn run(event_chan: mpsc::UnboundedSender<Event>) -> Result<(), failure::Er
     let dir_proxy = open_directory_in_namespace(path_as_str, OPEN_RIGHT_READABLE)?;
     let mut watcher = fuchsia_vfs_watcher::Watcher::new(dir_proxy)
         .await
-        .with_context(|_| format!("could not watch {:?}", path))?;
+        .with_context(|| format!("could not watch {:?}", path))?;
 
     while let Some(fuchsia_vfs_watcher::WatchMessage { event, filename }) =
-        watcher.try_next().await.with_context(|_| format!("watching {:?}", path))?
+        watcher.try_next().await.with_context(|| format!("watching {:?}", path))?
     {
         match event {
             fuchsia_vfs_watcher::WatchEvent::ADD_FILE => {

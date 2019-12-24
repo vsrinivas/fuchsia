@@ -9,8 +9,8 @@
 //! serialization, but this implementation is much less likely to cause security concerns due to the
 //! reduced functionality of the code.
 
+use anyhow::{format_err, Error};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use failure::{err_msg, Error};
 use fidl_fuchsia_mem;
 use fidl_fuchsia_stash::{KeyValue, ListItem, Value, ValueType};
 use fuchsia_syslog::fx_log_info;
@@ -41,7 +41,7 @@ pub fn clone_buffer(b: &fidl_fuchsia_mem::Buffer) -> Result<fidl_fuchsia_mem::Bu
     let new_vmo = b
         .vmo
         .create_child(zx::VmoChildOptions::COPY_ON_WRITE, 0, b.size)
-        .map_err(|s| err_msg(format!("error cloning buffer, zx status: {}", s)))?;
+        .map_err(|s| format_err!(format!("error cloning buffer, zx status: {}", s)))?;
     Ok(fidl_fuchsia_mem::Buffer { vmo: new_vmo, size: b.size })
 }
 
@@ -73,7 +73,7 @@ fn value_into_bytes(v: &Value) -> Result<Vec<u8>, Error> {
             let mut buf = vec![0; b.size as usize];
             b.vmo
                 .read(&mut buf, 0)
-                .map_err(|s| err_msg(format!("error reading buffer, zx status: {}", s)))?;
+                .map_err(|s| format_err!(format!("error reading buffer, zx status: {}", s)))?;
             wrt.append(&mut buf);
         }
     }
@@ -86,17 +86,17 @@ fn value_from_bytes(typ: u8, bytes: Vec<u8>) -> Result<Value, Error> {
         0x02 => match Cursor::new(bytes).read_u8()? {
             0x00 => Ok(Value::Boolval(false)),
             0x01 => Ok(Value::Boolval(true)),
-            b => Err(err_msg(format!("unknown bool value: {}", b))),
+            b => Err(format_err!(format!("unknown bool value: {}", b))),
         },
         0x03 => Ok(Value::Stringval(String::from_utf8(bytes)?)),
         0x04 => {
             let vmo = zx::Vmo::create(bytes.len() as u64)
-                .map_err(|s| err_msg(format!("error creating buffer, zx status: {}", s)))?;
+                .map_err(|s| format_err!(format!("error creating buffer, zx status: {}", s)))?;
             vmo.write(&bytes, 0)
-                .map_err(|s| err_msg(format!("error writing buffer, zx status: {}", s)))?;
+                .map_err(|s| format_err!(format!("error writing buffer, zx status: {}", s)))?;
             Ok(Value::Bytesval(fidl_fuchsia_mem::Buffer { vmo: vmo, size: bytes.len() as u64 }))
         }
-        t => Err(err_msg(format!("unknown type: {}", t))),
+        t => Err(format_err!(format!("unknown type: {}", t))),
     }
 }
 
@@ -200,7 +200,7 @@ impl StoreManager {
             }
             Err(e) => {
                 if e.kind() != ErrorKind::NotFound {
-                    return Err(err_msg(format!("{}", e)));
+                    return Err(format_err!(format!("{}", e)));
                 }
                 fx_log_info!("store file doesn't exist, using empty store");
                 Store::default()

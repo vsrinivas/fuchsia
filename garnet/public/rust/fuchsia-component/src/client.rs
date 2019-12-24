@@ -6,7 +6,7 @@
 
 use {
     crate::DEFAULT_SERVICE_INSTANCE,
-    failure::{Error, Fail, ResultExt},
+    anyhow::{Context as _, Error},
     fidl::endpoints::{
         DiscoverableService, MemberOpener, Proxy, ServerEnd, UnifiedServiceMarker,
         UnifiedServiceProxy,
@@ -26,6 +26,7 @@ use {
         Future,
     },
     std::{fmt, fs::File, sync::Arc},
+    thiserror::Error,
 };
 
 /// Connect to a FIDL service using the provided channel and namespace prefix.
@@ -35,7 +36,7 @@ pub fn connect_channel_to_service_at<S: DiscoverableService>(
 ) -> Result<(), Error> {
     let service_path = format!("{}/{}", service_prefix, S::SERVICE_NAME);
     fdio::service_connect(&service_path, server_end)
-        .with_context(|_| format!("Error connecting to service path: {}", service_path))?;
+        .with_context(|| format!("Error connecting to service path: {}", service_path))?;
     Ok(())
 }
 
@@ -85,7 +86,8 @@ pub fn connect_to_unified_service_instance_at<US: UnifiedServiceMarker>(
     let directory_proxy = io_util::open_directory_in_namespace(
         &service_path,
         io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
-    )?;
+    )
+    .unwrap();
     Ok(US::Proxy::from_member_opener(Box::new(DirectoryProtocolImpl(directory_proxy))))
 }
 
@@ -517,7 +519,7 @@ impl<T: Into<zx::Handle>> From<T> for Stdio {
 }
 
 /// Describes the result of a component after it has terminated.
-#[derive(Debug, Clone, Fail)]
+#[derive(Debug, Clone, Error)]
 pub struct ExitStatus {
     return_code: i64,
     termination_reason: TerminationReason,
@@ -607,10 +609,10 @@ pub struct Output {
 }
 
 /// The output of a component that terminated with a failure.
-#[derive(Clone, Fail)]
-#[fail(display = "{}", exit_status)]
+#[derive(Clone, Error)]
+#[error("{}", exit_status)]
 pub struct OutputError {
-    #[cause]
+    #[source]
     exit_status: ExitStatus,
     stdout: String,
     stderr: String,

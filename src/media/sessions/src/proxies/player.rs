@@ -6,7 +6,7 @@ use crate::{
     services::discovery::{filter::*, player_event::PlayerEvent},
     Result,
 };
-use failure::Error as FError;
+use anyhow::Error as FError;
 use fidl::endpoints::ClientEnd;
 use fidl::{self, client::QueryResponseFut};
 use fidl_fuchsia_media::*;

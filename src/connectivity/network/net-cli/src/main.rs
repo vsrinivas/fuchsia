@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{format_err, Error, ResultExt};
+use anyhow::{format_err, Context as _, Error};
 use fidl_fuchsia_hardware_ethernet as zx_eth;
 use fidl_fuchsia_inspect_deprecated as inspect;
 use fidl_fuchsia_net as net;

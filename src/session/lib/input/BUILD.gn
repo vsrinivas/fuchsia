@@ -19,9 +19,10 @@ rustc_library("input") {
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//sdk/fidl/fuchsia.ui.input2:fuchsia.ui.input2-rustc",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
-    "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }

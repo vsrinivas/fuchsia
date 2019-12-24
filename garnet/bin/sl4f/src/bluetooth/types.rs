@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{bail, Error};
+use anyhow::{format_err, Error};
 use fidl_fuchsia_bluetooth_avdtp::PeerControllerProxy;
 use fidl_fuchsia_bluetooth_control::RemoteDevice;
 use fidl_fuchsia_bluetooth_gatt::{
@@ -91,7 +91,7 @@ impl AttributePermissionsContainer {
                     update: SecurityRequirementsContainer::new(perm.update),
                 })
             }
-            None => bail!("Unable to get information of AttributePermissions."),
+            None => return Err(format_err!("Unable to get information of AttributePermissions.")),
         }
     }
 }

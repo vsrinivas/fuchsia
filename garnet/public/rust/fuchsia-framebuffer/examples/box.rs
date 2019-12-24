@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{Error, ResultExt};
+use anyhow::{Context as _, Error};
 use fuchsia_async::{self as fasync, DurationExt, Timer};
 use fuchsia_framebuffer::{
     to_565, Config, Frame, FrameBuffer, FrameSet, FrameUsage, ImageId, PixelFormat, VSyncMessage,
@@ -212,7 +212,7 @@ fn main() -> Result<(), Error> {
                 }
                 Ok(())
             }
-            .unwrap_or_else(|e: failure::Error| {
+            .unwrap_or_else(|e: anyhow::Error| {
                 println!("error {:#?}", e);
             }),
         );
@@ -240,7 +240,7 @@ fn main() -> Result<(), Error> {
                 }
                 Ok(())
             }
-            .unwrap_or_else(|e: failure::Error| {
+            .unwrap_or_else(|e: anyhow::Error| {
                 println!("error {:#?}", e);
             }),
         );

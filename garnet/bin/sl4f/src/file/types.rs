@@ -13,7 +13,7 @@ pub enum FileMethod {
 }
 
 impl std::str::FromStr for FileMethod {
-    type Err = failure::Error;
+    type Err = anyhow::Error;
 
     fn from_str(method: &str) -> Result<Self, Self::Err> {
         match method {
@@ -22,7 +22,7 @@ impl std::str::FromStr for FileMethod {
             "ReadFile" => Ok(FileMethod::ReadFile),
             "WriteFile" => Ok(FileMethod::WriteFile),
             "Stat" => Ok(FileMethod::Stat),
-            _ => bail!("Invalid File Facade method: {}", method),
+            _ => return Err(format_err!("Invalid File Facade method: {}", method)),
         }
     }
 }

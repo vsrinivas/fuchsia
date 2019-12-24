@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use account_common::{AccountManagerError, FidlLocalAccountId, LocalAccountId, ResultExt};
-use failure::{format_err, Error};
+use anyhow::{format_err, Error};
 use fidl::endpoints::{create_endpoints, ClientEnd, ServerEnd};
 use fidl_fuchsia_auth::{AppConfig, AuthenticationContextProviderMarker, Status as AuthStatus};
 use fidl_fuchsia_auth::{AuthProviderConfig, UserProfileInfo};

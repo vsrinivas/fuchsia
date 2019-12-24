@@ -64,9 +64,9 @@ rustc_library("lib") {
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/lib/mapped-vmo",
     "//src/lib/test_executor/rust:test_executor",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:base64",
     "//third_party/rust_crates:byteorder",
-    "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:glob",
     "//third_party/rust_crates:hex",
@@ -81,6 +81,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:slab",
     "//third_party/rust_crates:tempfile",
+    "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:uuid",
     "//third_party/rust_crates:void",
     "//zircon/system/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet-rustc",
@@ -107,10 +108,11 @@ rustc_binary("bin") {
     ":lib",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-syslog",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:rouille",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 

@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::{format_err, Context as _, Error},
     base64,
-    failure::{bail, format_err, Error, ResultExt},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_bluetooth::Appearance,
     fidl_fuchsia_bluetooth_le::{
@@ -107,7 +107,7 @@ fn parse_mode_hint(raw: &str) -> Result<AdvertisingModeHint, Error> {
 fn parse_data(raw: &str) -> Result<(&str, Vec<u8>), Error> {
     let elements: Vec<_> = raw.split(":").collect();
     if elements.len() != 2 {
-        bail!("Argument must be a ':' delimited pair.")
+        return Err(format_err!("Argument must be a ':' delimited pair."));
     }
     let id = elements[0];
     let payload = elements[1].to_string().into_bytes();
@@ -119,7 +119,7 @@ fn parse_data(raw: &str) -> Result<(&str, Vec<u8>), Error> {
 fn parse_binary_data(raw: &str) -> Result<(&str, Vec<u8>), Error> {
     let elements: Vec<_> = raw.split(":").collect();
     if elements.len() != 2 {
-        bail!("Argument must be a ':' delimited pair.")
+        return Err(format_err!("Argument must be a ':' delimited pair."));
     }
     let id = elements[0];
     let payload = base64::decode(elements[1])?;
@@ -175,7 +175,7 @@ async fn start_advertising(
     };
     let result = peripheral.start_advertising(parameters, handle_remote).await?;
     if let Err(e) = result {
-        bail!("Failed to initiate advertisement: {:?}", e);
+        return Err(format_err!("Failed to initiate advertisement: {:?}", e));
     }
     eprintln!("Advertising with name \"{:?}\" and services: {}", name, service_names.join(", "),);
     Ok(proxy)
@@ -441,7 +441,7 @@ mod tests {
             let (mock_data, connection) =
                 emulate_peripheral(stream).await.expect("le.Peripheral emulation failed");
             drop(connection);
-            Ok(mock_data) as Result<MockPeripheral, failure::Error>
+            Ok(mock_data) as Result<MockPeripheral, anyhow::Error>
         };
         let (mock_data, listen) = join!(emulate_task, listen_task);
 

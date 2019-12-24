@@ -6,7 +6,7 @@
 
 use {
     core::mem,
-    failure::{self, Fail},
+    thiserror::{self, Error},
     wlan_bitfield::bitfield,
     wlan_common::{
         appendable::{Appendable, BufferTooSmall},
@@ -16,25 +16,25 @@ use {
     zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned},
 };
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum Error {
-    #[fail(display = "unexpected end of buffer while parsing frame")]
+    #[error("unexpected end of buffer while parsing frame")]
     FrameTruncated,
-    #[fail(display = "bytes remaining after parsing frame")]
+    #[error("bytes remaining after parsing frame")]
     FramePadded,
-    #[fail(display = "buffer too short to write frame")]
+    #[error("buffer too short to write frame")]
     BufferTooShort,
-    #[fail(display = "attempted to parse the wrong frame type")]
+    #[error("attempted to parse the wrong frame type")]
     WrongEapolFrame,
-    #[fail(display = "packet body length is {} but {} bytes are available", _0, _1)]
+    #[error("packet body length is {} but {} bytes are available", _0, _1)]
     WrongPacketBodyLength(u16, u16),
-    #[fail(display = "failed to calculate mic: {}", _0)]
-    MicFunctionFailed(failure::Error),
-    #[fail(display = "expected mic length of {} but got a mic of length {}", _0, _1)]
+    #[error("failed to calculate mic: {}", _0)]
+    MicFunctionFailed(anyhow::Error),
+    #[error("expected mic length of {} but got a mic of length {}", _0, _1)]
     WrongMicLen(usize, usize),
-    #[fail(display = "called finalize with a mic, but key_mic is false")]
+    #[error("called finalize with a mic, but key_mic is false")]
     UnexpectedMic,
-    #[fail(display = "called finalize without a mic, but key_mic is true")]
+    #[error("called finalize without a mic, but key_mic is true")]
     ExpectedMic,
 }
 

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::ResultExt,
+    anyhow::Context as _,
     fuchsia_zircon as zx,
     lazy_static::lazy_static,
     std::fmt,

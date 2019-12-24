@@ -15,7 +15,7 @@ mod worker;
 
 use crate::eventloop::EventLoop;
 
-fn main() -> Result<(), failure::Error> {
+fn main() -> Result<(), anyhow::Error> {
     syslog::init_with_tags(&["reachability"]).expect("failed to initialize logger");
     // TODO(dpradilla): use a `StructOpt` to pass in a log level option where the user can control
     // how verbose logs should be.

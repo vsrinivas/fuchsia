@@ -24,8 +24,9 @@ rustc_binary("fuchsia_component_test_outer_bin") {
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:thiserror",
   ]
   source_root = "outer.rs"
 }
@@ -53,9 +54,10 @@ rustc_binary("fuchsia_component_test_middle_bin") {
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:tempfile",
+    "//third_party/rust_crates:thiserror",
   ]
   source_root = "middle.rs"
 }
@@ -85,8 +87,9 @@ rustc_binary("fuchsia_component_test_middle_sibling_bin") {
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:thiserror",
   ]
   source_root = "middle_sibling.rs"
 }
@@ -115,7 +118,8 @@ rustc_binary("fuchsia_component_test_inner_bin") {
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-zircon",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:thiserror",
   ]
   source_root = "inner.rs"
 }

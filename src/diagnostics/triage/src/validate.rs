@@ -7,7 +7,7 @@ use {
         act::Actions,
         metrics::{MetricState, MetricValue, Metrics},
     },
-    failure::{bail, Error},
+    anyhow::{format_err, Error},
     serde_derive::Deserialize,
     serde_json as json,
     std::collections::HashMap,
@@ -42,7 +42,7 @@ pub fn validate(metrics: &Metrics, actions: &Actions, trials: &Trials) -> Result
         }
     }
     if failed {
-        bail!("Validation failed");
+        return Err(format_err!("Validation failed"));
     } else {
         Ok(())
     }
@@ -86,7 +86,7 @@ fn check_failure(
 
 #[cfg(test)]
 mod test {
-    use {super::*, crate::act::Action, crate::metrics::Metric, failure::Error};
+    use {super::*, crate::act::Action, crate::metrics::Metric, anyhow::Error};
 
     macro_rules! build_map {($($tuple:expr),*) => ({
         let mut map = HashMap::new();

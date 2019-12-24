@@ -9,7 +9,7 @@
 
 use {
     crate::worker::{EventWorker, TimerWorker},
-    failure::Error,
+    anyhow::Error,
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::channel::mpsc,
     futures::prelude::*,

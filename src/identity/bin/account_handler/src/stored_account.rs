@@ -106,7 +106,7 @@ mod tests {
     use tempfile::TempDir;
 
     #[test]
-    fn load_fail() {
+    fn load_error() {
         let tmp_dir = TempDir::new().unwrap();
         let err = StoredAccount::load(&tmp_dir.path()).err().expect("load unexpectedly succeeded");
         assert_eq!(err.api_error, ApiError::NotFound);

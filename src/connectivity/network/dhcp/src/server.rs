@@ -8,7 +8,7 @@ use crate::protocol::{
     ProtocolError,
 };
 use crate::stash::Stash;
-use failure::{Error, Fail, ResultExt};
+use anyhow::{Context as _, Error};
 use fidl_fuchsia_hardware_ethernet_ext::MacAddress as MacAddr;
 use fuchsia_zircon::Status;
 use serde_derive::{Deserialize, Serialize};
@@ -16,6 +16,7 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 use std::convert::TryFrom;
 use std::fmt;
 use std::net::Ipv4Addr;
+use thiserror::Error;
 
 /// A minimal DHCP server.
 ///
@@ -52,54 +53,54 @@ pub enum ServerAction {
 /// A wrapper around the error types which can be returned by DHCP Server
 /// in response to client requests.
 /// Implements `PartialEq` for test assertions.
-#[derive(Debug, Fail, PartialEq)]
+#[derive(Debug, Error, PartialEq)]
 pub enum ServerError {
-    #[fail(display = "unexpected client message type: {}", _0)]
+    #[error("unexpected client message type: {}", _0)]
     UnexpectedClientMessageType(MessageType),
 
-    #[fail(display = "requested ip parsing failure: {}", _0)]
+    #[error("requested ip parsing failure: {}", _0)]
     BadRequestedIpv4Addr(String),
 
-    #[fail(display = "local address pool manipulation error: {}", _0)]
+    #[error("local address pool manipulation error: {}", _0)]
     ServerAddressPoolFailure(AddressPoolError),
 
-    #[fail(display = "incorrect server ip in client message: {}", _0)]
+    #[error("incorrect server ip in client message: {}", _0)]
     IncorrectDHCPServer(Ipv4Addr),
 
-    #[fail(display = "requested ip mismatch with offered ip: {} {}", _0, _1)]
+    #[error("requested ip mismatch with offered ip: {} {}", _0, _1)]
     RequestedIpOfferIpMismatch(Ipv4Addr, Ipv4Addr),
 
-    #[fail(display = "expired client config")]
+    #[error("expired client config")]
     ExpiredClientConfig,
 
-    #[fail(display = "requested ip absent from server pool: {}", _0)]
+    #[error("requested ip absent from server pool: {}", _0)]
     UnidentifiedRequestedIp(Ipv4Addr),
 
-    #[fail(display = "unknown client mac: {}", _0)]
+    #[error("unknown client mac: {}", _0)]
     UnknownClientMac(MacAddr),
 
-    #[fail(display = "init reboot request did not include ip")]
+    #[error("init reboot request did not include ip")]
     NoRequestedAddrAtInitReboot,
 
-    #[fail(display = "unidentified client state during request")]
+    #[error("unidentified client state during request")]
     UnknownClientStateDuringRequest,
 
-    #[fail(display = "decline request did not include ip")]
+    #[error("decline request did not include ip")]
     NoRequestedAddrForDecline,
 
-    #[fail(display = "client request error: {}", _0)]
+    #[error("client request error: {}", _0)]
     ClientMessageError(ProtocolError),
 
-    #[fail(display = "error manipulating server cache: {}", _0)]
+    #[error("error manipulating server cache: {}", _0)]
     ServerCacheUpdateFailure(StashError),
 
-    #[fail(display = "server not configured with an ip address")]
+    #[error("server not configured with an ip address")]
     ServerMissingIpAddr,
 
-    #[fail(display = "missing required dhcp option: {:?}", _0)]
+    #[error("missing required dhcp option: {:?}", _0)]
     MissingRequiredDhcpOption(OptionCode),
 
-    #[fail(display = "unable to get system time")]
+    #[error("unable to get system time")]
     // The underlying error is not provided to this variant as it (std::time::SystemTimeError) does
     // not implement PartialEq.
     ServerTimeError,
@@ -111,7 +112,7 @@ impl From<AddressPoolError> for ServerError {
     }
 }
 
-/// This struct is used to hold the `failure::Error` returned by the server's
+/// This struct is used to hold the `anyhow::Error` returned by the server's
 /// Stash manipulation methods. We manually implement `PartialEq` so this
 /// struct could be included in the `ServerError` enum,
 /// which are asserted for equality in tests.
@@ -913,15 +914,15 @@ struct AddressPool {
 
 //This is a wrapper around different errors that could be returned by
 // the DHCP server address pool during address allocation/de-allocation.
-#[derive(Debug, Fail, PartialEq)]
+#[derive(Debug, Error, PartialEq)]
 pub enum AddressPoolError {
-    #[fail(display = "address pool does not have any available ip to hand out")]
+    #[error("address pool does not have any available ip to hand out")]
     Ipv4AddrExhaustion,
 
-    #[fail(display = "attempted to allocate unavailable ip: {}", _0)]
+    #[error("attempted to allocate unavailable ip: {}", _0)]
     UnavailableIpv4AddrAllocation(Ipv4Addr),
 
-    #[fail(display = " attempted to release unallocated ip: {}", _0)]
+    #[error(" attempted to release unallocated ip: {}", _0)]
     UnallocatedIpv4AddrRelease(Ipv4Addr),
 }
 
@@ -1462,10 +1463,10 @@ pub mod tests {
             .get_value(&format!("{}-{}", DEFAULT_STASH_PREFIX, client_mac))
             .await
             .context("failed to get value from stash")?;
-        let value = value.ok_or(failure::err_msg("value not contained in stash"))?;
+        let value = value.ok_or(anyhow::format_err!("value not contained in stash"))?;
         let serialized_config = match value.as_ref() {
             fidl_fuchsia_stash::Value::Stringval(s) => Ok(s),
-            val => Err(failure::format_err!("unexpected value in stash: {:?}", val)),
+            val => Err(anyhow::format_err!("unexpected value in stash: {:?}", val)),
         }?;
         let deserialized_config = serde_json::from_str::<CachedConfig>(serialized_config)
             .context("failed to deserialize config")?;

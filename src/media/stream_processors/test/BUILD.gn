@@ -36,10 +36,11 @@ rustc_library("stream_processor_test_lib") {
     "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec-rustc",
     "//src/lib/fidl_table_validation",
     "//src/media/stream_processors/fuchsia-stream-processors",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:hex",
     "//third_party/rust_crates:log",
+    "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem-rustc",
   ]
 }
@@ -69,8 +70,9 @@ rustc_library("stream_processor_decoder_factory_lib") {
     "//garnet/public/rust/fuchsia-component",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 
@@ -86,8 +88,9 @@ rustc_library("stream_processor_encoder_factory_lib") {
     "//garnet/public/rust/fuchsia-component",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 
@@ -104,12 +107,13 @@ rustc_test("audio_encoder_test_bin") {
     "//garnet/public/rust/fuchsia-zircon",
     "//garnet/public/rust/mundane",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
-    "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:hex",
     "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem-rustc",
   ]
 }
@@ -140,9 +144,10 @@ rustc_library("video_frame_hasher_lib") {
     "//garnet/public/rust/mundane",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//src/media/stream_processors/fuchsia-stream-processors",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:hex",
     "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem-rustc",
   ]
 }
@@ -173,10 +178,11 @@ rustc_test("h264_decoder_test_bin") {
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-syslog",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
-    "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 

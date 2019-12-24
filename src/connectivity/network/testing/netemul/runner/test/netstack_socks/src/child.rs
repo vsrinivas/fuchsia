@@ -4,7 +4,7 @@
 
 use {
     crate::common::{BusConnection, SERVER_READY},
-    failure::{format_err, Error, ResultExt},
+    anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_net,
     fidl_fuchsia_netemul_network::{EndpointManagerMarker, NetworkContextMarker},
     fidl_fuchsia_netstack::{InterfaceConfig, IpAddressConfig, NetstackMarker},

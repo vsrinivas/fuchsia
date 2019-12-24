@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{err_msg, Error};
+use anyhow::{format_err, Error};
 use fidl::endpoints::{RequestStream, ServerEnd};
 use fidl_fuchsia_stash::{
     FlushError, GetIteratorMarker, GetIteratorRequest, GetIteratorRequestStream, KeyValue,
@@ -70,7 +70,7 @@ impl Accessor {
             match (self.enable_bytes, o_val) {
                 (false, Some(Value::Bytesval(_))) => {
                     // Bytes are disabled. Return an error instead.
-                    return Err(err_msg(
+                    return Err(format_err!(
                         "client attempted to access bytes when the type is disabled",
                     ));
                 }
@@ -86,7 +86,7 @@ impl Accessor {
         match res {
             None => Ok(None),
             Some(Value::Bytesval(_)) if !self.enable_bytes => {
-                Err(err_msg("client attempted to access bytes when the type is disabled"))
+                Err(format_err!("client attempted to access bytes when the type is disabled"))
             }
             Some(val) => Ok(Some(store::clone_value(val)?)),
         }
@@ -95,11 +95,11 @@ impl Accessor {
     /// Sets a value in the store. commit() must be called for this to take effect.
     pub async fn set_value(&mut self, key: String, val: Value) -> Result<(), Error> {
         if self.read_only {
-            return Err(err_msg("client attempted to set a value with a read-only accessor"));
+            return Err(format_err!("client attempted to set a value with a read-only accessor"));
         }
         if !self.enable_bytes {
             if let Value::Bytesval(_) = val {
-                return Err(err_msg("client attempted to set bytes when the type is disabled"));
+                return Err(format_err!("client attempted to set bytes when the type is disabled"));
             }
         }
 
@@ -111,7 +111,9 @@ impl Accessor {
     /// Deletes a value from the store. commit() must be called for this to take effect.
     pub async fn delete_value(&mut self, key: String) -> Result<(), Error> {
         if self.read_only {
-            return Err(err_msg("client attempted to delete a value with a read-only accessor"));
+            return Err(format_err!(
+                "client attempted to delete a value with a read-only accessor"
+            ));
         }
 
         self.fields_updated.lock().await.insert(key, None);
@@ -164,7 +166,7 @@ impl Accessor {
                 }
                 Ok(())
             }
-            .unwrap_or_else(|e: failure::Error| {
+            .unwrap_or_else(|e: anyhow::Error| {
                 fx_log_err!("error running list prefix interface: {:?}", e)
             }),
         );
@@ -220,7 +222,7 @@ impl Accessor {
                     if !enable_bytes {
                         for item in chunk.iter() {
                             if let Value::Bytesval(_) = item.val {
-                                Err(err_msg(
+                                Err(format_err!(
                                     "client attempted to access bytes when the type is disabled",
                                 ))?;
                             }
@@ -230,7 +232,7 @@ impl Accessor {
                 }
                 Ok(())
             }
-            .unwrap_or_else(|e: failure::Error| {
+            .unwrap_or_else(|e: anyhow::Error| {
                 fx_log_err!("error running get prefix interface: {:?}", e)
             }),
         );
@@ -240,7 +242,9 @@ impl Accessor {
     /// Deletes all keys under a given prefix. commit() must be called for this to take effect.
     pub async fn delete_prefix(&mut self, prefix: String) -> Result<(), Error> {
         if self.read_only {
-            return Err(err_msg("client attempted to delete a prefix with a read-only accessor"));
+            return Err(format_err!(
+                "client attempted to delete a prefix with a read-only accessor"
+            ));
         }
 
         let sm = self.store_manager.lock().await;
@@ -262,7 +266,7 @@ impl Accessor {
     /// Causes all state modifications to take effect and be written to disk atomically.
     pub async fn commit(&mut self) -> Result<(), Error> {
         if self.read_only {
-            return Err(err_msg("client attempted to commit with a read-only accessor"));
+            return Err(format_err!("client attempted to commit with a read-only accessor"));
         }
 
         let mut store_manager = self.store_manager.lock().await;

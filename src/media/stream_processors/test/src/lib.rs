@@ -19,10 +19,11 @@ pub use crate::elementary_stream::*;
 pub use crate::output_validator::*;
 pub use crate::stream::*;
 pub use crate::test_spec::*;
-use failure::{Error, Fail};
+use anyhow::Error;
+use thiserror::Error;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-#[derive(Fail, Debug)]
-#[fail(display = "FatalError: {}", _0)]
+#[derive(Error, Debug)]
+#[error("FatalError: {}", _0)]
 pub struct FatalError(pub String);

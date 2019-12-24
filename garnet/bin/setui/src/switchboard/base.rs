@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 use crate::switchboard::accessibility_types::AccessibilityInfo;
 use crate::switchboard::intl_types::IntlInfo;
+use anyhow::Error;
 use bitflags::bitflags;
-use failure::Error;
 use fuchsia_syslog::fx_log_warn;
 use futures::channel::oneshot::Sender;
 use futures::lock::Mutex;

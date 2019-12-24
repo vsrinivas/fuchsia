@@ -10,7 +10,7 @@ use crate::update_manager::{
     UpdateApplier, UpdateChecker, UpdateManager,
 };
 use crate::update_monitor::{State, StateChangeCallback};
-use failure::{bail, Error, ResultExt};
+use anyhow::{format_err, Context as _, Error};
 use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_update::{
     ManagerCheckNowResponder, ManagerControlHandle, ManagerGetStateResponder, ManagerRequest,
@@ -148,7 +148,7 @@ fn extract_initiator(options: &fidl_fuchsia_update::Options) -> Result<Initiator
             fidl_fuchsia_update::Initiator::Service => Ok(Initiator::Automatic),
         }
     } else {
-        bail!("CheckNow options must specify initiator");
+        return Err(format_err!("CheckNow options must specify initiator"));
     }
 }
 

@@ -1,14 +1,14 @@
 //! Hashes video frames.
 
-use failure::{self, Fail};
 use fidl_fuchsia_media::*;
 use fidl_fuchsia_sysmem as sysmem;
 use hex::encode;
 use mundane::hash::{Digest, Hasher, Sha256};
 use std::{convert::*, fmt};
 use stream_processor_test::{ExpectedDigest, FatalError, Output, OutputPacket, OutputValidator};
+use thiserror::Error;
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum Error {
     DataTooSmallToBeFrame { expected_size: usize, actual_size: usize },
     FormatDetailsNotUncompressedVideo,
@@ -21,8 +21,6 @@ impl fmt::Display for Error {
         fmt::Debug::fmt(&self, w)
     }
 }
-
-impl Fail for Error {}
 
 struct Frame<'a> {
     data: &'a [u8],
@@ -174,7 +172,7 @@ pub struct VideoFrameHasher {
 }
 
 impl OutputValidator for VideoFrameHasher {
-    fn validate(&self, output: &[Output]) -> Result<(), failure::Error> {
+    fn validate(&self, output: &[Output]) -> Result<(), anyhow::Error> {
         let mut hasher = Sha256::default();
 
         output

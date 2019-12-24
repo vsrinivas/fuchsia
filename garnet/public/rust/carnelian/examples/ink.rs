@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::Error,
     carnelian::{
         make_app_assistant, AnimationMode, App, AppAssistant, FrameBufferPtr, Point, Rect, Size,
         ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
     },
     euclid::{Angle, Transform2D, Vector2D},
-    failure::Error,
     fidl::endpoints::create_endpoints,
     fidl_fuchsia_hardware_input as hid, fidl_fuchsia_input_report as hid_input_report,
     fidl_fuchsia_sysmem::BufferCollectionTokenMarker,

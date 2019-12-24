@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Error;
+use anyhow::{format_err, Error};
 use serde_json::Value;
 
 pub mod macros {
@@ -39,21 +39,21 @@ macro_rules! with_line {
 macro_rules! fx_err_and_bail {
     ($tag:expr, $msg:expr) => {{
         fx_log_err!(tag: $tag, "{}", $msg);
-        bail!($msg)
+        return Err(format_err!($msg));
     }};
 }
 
 pub fn parse_identifier(args_raw: Value) -> Result<String, Error> {
     let id_raw = match args_raw.get("identifier") {
         Some(id) => id,
-        None => bail!("Connect peripheral identifier missing"),
+        None => return Err(format_err!("Connect peripheral identifier missing")),
     };
 
     let id = id_raw.as_str().map(String::from);
 
     match id {
         Some(id) => Ok(id),
-        None => bail!("Identifier missing"),
+        None => return Err(format_err!("Identifier missing")),
     }
 }
 

@@ -33,7 +33,7 @@ rustc_test("hub_integration_test_bin") {
     "//src/sys/component_manager/tests:test_utils",
     "//src/sys/component_manager/tests/fidl:breakpoints-rustc",
     "//src/sys/component_manager/tests/fidl:hub-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
   ]
 }
 

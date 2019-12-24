@@ -6,8 +6,8 @@
 
 use {
     crate::serde_ext::*,
+    anyhow::{ensure, Error},
     char_set::CharSet,
-    failure::{ensure, Error},
     fidl_fuchsia_fonts::{GenericFontFamily, Slant, Width, WEIGHT_NORMAL},
     fuchsia_url::pkg_url::PkgUrl,
     itertools::Itertools,

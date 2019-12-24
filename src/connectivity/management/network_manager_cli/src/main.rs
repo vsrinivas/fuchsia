@@ -4,7 +4,7 @@
 
 extern crate network_manager_cli_lib as network_manager_cli;
 
-use failure::{format_err, Error, ResultExt};
+use anyhow::{format_err, Context as _, Error};
 use fidl::endpoints::{Proxy, ServiceMarker};
 use fidl_fuchsia_overnet::{Peer, ServiceConsumerMarker, ServiceConsumerProxy};
 use fidl_fuchsia_overnet_protocol::NodeId;

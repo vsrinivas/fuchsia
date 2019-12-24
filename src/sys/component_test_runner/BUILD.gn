@@ -22,9 +22,10 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/sys/lib/fuchsia_url:fuchsia_url",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }

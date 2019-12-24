@@ -7,9 +7,9 @@
 #![warn(missing_docs)]
 
 use {
+    anyhow::Error,
     archivist_lib::{archive, archive_accessor, configs, data_stats, diagnostics, inspect, logs},
     argh::FromArgs,
-    failure::Error,
     fidl_fuchsia_io::DirectoryProxy,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,

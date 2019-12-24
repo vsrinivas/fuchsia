@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::Error,
+    anyhow::Error,
     fidl_fuchsia_bluetooth::{self, Int8},
     fidl_fuchsia_bluetooth_control::{AdapterInfo, AdapterState, RemoteDevice},
     std::{

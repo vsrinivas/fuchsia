@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::FatalError;
-use failure::Error;
+use anyhow::Error;
 use fidl_fuchsia_media::{FormatDetails, StreamOutputFormat};
 use fidl_table_validation::*;
 use fuchsia_stream_processors::*;

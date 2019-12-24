@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::Result;
-use failure::ResultExt;
+use anyhow::Context as _;
 use fidl::encoding::Decodable;
 use fidl::endpoints::{create_endpoints, create_proxy};
 use fidl_fuchsia_media_sessions2::*;

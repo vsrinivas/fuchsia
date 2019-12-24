@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::Error,
+    anyhow::Error,
     fidl_fuchsia_images as images,
     fidl_fuchsia_ui_gfx::{ColorRgb, ColorRgba, DisplayInfo, Vec3},
     fuchsia_scenic::{

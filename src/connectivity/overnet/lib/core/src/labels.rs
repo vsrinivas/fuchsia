@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use crate::ping_tracker::Pong;
+use anyhow::Error;
 use byteorder::{ReadBytesExt, WriteBytesExt};
-use failure::Error;
 use rand::Rng;
 
 /// Labels a node with a mesh-unique address
@@ -164,7 +164,11 @@ impl<'a> ReverseReader<'a> {
     fn take(&mut self, amt: usize) -> Result<&[u8], Error> {
         let len = self.0.len();
         if len < amt {
-            failure::bail!("Tried to read {} bytes from {} byte buffer", amt, len);
+            return Err(anyhow::format_err!(
+                "Tried to read {} bytes from {} byte buffer",
+                amt,
+                len
+            ));
         }
         let (head, tail) = self.0.split_at(len - amt);
         self.0 = head;

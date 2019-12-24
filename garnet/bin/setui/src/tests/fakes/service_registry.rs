@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 use crate::service_context::GenerateService;
 use crate::tests::fakes::base::Service;
-use failure::{format_err, Error};
+use anyhow::{format_err, Error};
 use fuchsia_zircon as zx;
 use {parking_lot::RwLock, std::sync::Arc};
 

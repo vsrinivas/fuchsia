@@ -4,7 +4,6 @@
 
 use {
     bitflags::bitflags,
-    failure::Fail,
     fuchsia_zircon as zx,
     num_derive::FromPrimitive,
     num_traits::cast::FromPrimitive,
@@ -12,22 +11,23 @@ use {
     static_assertions::assert_eq_size,
     std::fmt,
     std::mem,
+    thiserror::Error,
     zerocopy::{FromBytes, LayoutVerified},
 };
 
 /// Possible errors that can occur during ELF parsing.
 #[allow(missing_docs)] // No docs on individual error variants.
-#[derive(Fail, Debug)]
+#[derive(Error, Debug)]
 pub enum ElfParseError {
-    #[fail(display = "Failed to read ELF from VMO: {}", _0)]
-    ReadError(#[cause] zx::Status),
-    #[fail(display = "Parse error: {}", _0)]
+    #[error("Failed to read ELF from VMO: {}", _0)]
+    ReadError(zx::Status),
+    #[error("Parse error: {}", _0)]
     ParseError(&'static str),
-    #[fail(display = "Invalid ELF file header: {}", _0)]
+    #[error("Invalid ELF file header: {}", _0)]
     InvalidFileHeader(&'static str),
-    #[fail(display = "Invalid ELF program header: {}", _0)]
+    #[error("Invalid ELF program header: {}", _0)]
     InvalidProgramHeader(&'static str),
-    #[fail(display = "Multiple ELF program headers of type {} present", _0)]
+    #[error("Multiple ELF program headers of type {} present", _0)]
     MultipleHeaders(SegmentType),
 }
 
@@ -374,7 +374,7 @@ impl Elf64Headers {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, failure::Error, fdio, std::fs::File};
+    use {super::*, anyhow::Error, fdio, std::fs::File};
 
     // These are specially crafted files that just contain a valid ELF64 file header but
     // nothing else.

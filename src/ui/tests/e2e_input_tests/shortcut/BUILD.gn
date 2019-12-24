@@ -31,8 +31,10 @@ rustc_library("driver") {
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
     "//src/lib/ui/input-synthesis",
     "//src/ui/tests/e2e_input_tests/keyboard:ui-test-tools",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 

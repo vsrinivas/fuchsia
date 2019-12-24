@@ -15,7 +15,7 @@ rustc_test("destruction_integration_test_bin") {
     "//garnet/public/rust/fuchsia-async",
     "//src/sys/component_manager/tests:breakpoint_system_client",
     "//src/sys/component_manager/tests:test_utils",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
   ]
 }
 
@@ -31,7 +31,7 @@ rustc_binary("destruction_collection_realm_bin") {
     "//garnet/public/rust/fuchsia-syslog",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/sys/component_manager/tests/fidl:components-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:log",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
@@ -45,7 +45,7 @@ rustc_binary("destruction_trigger_bin") {
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//src/sys/component_manager/tests/fidl:components-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
 }

@@ -5,7 +5,7 @@
 pub(crate) mod wisdom_server_impl;
 
 use {
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl_fuchsia_examples_intl_wisdom as fwisdom, fuchsia_async as fasync,
     fuchsia_component::server,
     futures::{StreamExt, TryStreamExt},

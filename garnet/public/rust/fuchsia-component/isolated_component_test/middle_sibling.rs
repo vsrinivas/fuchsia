@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl_fuchsia_test_echos::{EchoExposedBySiblingRequest, EchoExposedBySiblingRequestStream},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
@@ -12,12 +12,12 @@ use {
 
 fn echo_sibling_server(stream: EchoExposedBySiblingRequestStream) -> impl Future<Output = ()> {
     stream
-        .err_into::<failure::Error>()
+        .err_into::<anyhow::Error>()
         .try_for_each(|EchoExposedBySiblingRequest::Echo { value, responder }| async move {
             responder.send(value * 2).context("sending response")?;
             Ok(())
         })
-        .unwrap_or_else(|e: failure::Error| panic!("error running echo server: {:?}", e))
+        .unwrap_or_else(|e: anyhow::Error| panic!("error running echo server: {:?}", e))
 }
 
 #[fasync::run_singlethreaded]

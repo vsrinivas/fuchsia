@@ -5,7 +5,6 @@
 //! AuthCache manages an in-memory cache of recently used short-lived authentication tokens.
 #![deny(missing_docs)]
 
-use failure::Fail;
 use fuchsia_zircon::{ClockId, Duration, Time};
 use log::{info, warn};
 use std::any::Any;
@@ -13,6 +12,7 @@ use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
+use thiserror::Error;
 
 /// Constant offset for the cache expiry. Tokens will only be returned from
 /// the cache if they have at least this much life remaining.
@@ -23,13 +23,13 @@ const PADDING_FOR_TOKEN_EXPIRY: Duration = Duration::from_seconds(600);
 const INVALID_ENTRY_FLUSH_THRESHOLD: f32 = 0.5;
 
 /// An enumeration of the possible failure modes for operations on a `TokenCache`.
-#[derive(Debug, PartialEq, Eq, Fail)]
+#[derive(Debug, PartialEq, Eq, Error)]
 pub enum AuthCacheError {
     /// One or more inputs were not valid.
-    #[fail(display = "invalid argument")]
+    #[error("invalid argument")]
     InvalidArguments,
     /// The supplied key could not be found in the cache.
-    #[fail(display = "supplied key not found in cache")]
+    #[error("supplied key not found in cache")]
     KeyNotFound,
 }
 

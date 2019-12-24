@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{bail, Error, ResultExt};
+use anyhow::{format_err, Context as _, Error};
 use fidl::endpoints::RequestStream;
 use fidl_fuchsia_ui_text as txt;
 use fuchsia_async as fasync;
@@ -61,7 +61,7 @@ impl TextFieldMultiplexer {
                 }
                 Ok(())
             }
-            .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
+            .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
         );
 
         multiplexer
@@ -79,7 +79,7 @@ impl TextFieldMultiplexer {
                         // state to new TextField
                         let ok = handle.send_on_update(textfield_state.clone().into()).is_ok();
                         if !ok {
-                            bail!("Channel was closed")
+                            return Err(format_err!("Channel was closed"));
                         }
                     }
                     multiplex_state.control_handles.push(handle);
@@ -97,7 +97,7 @@ impl TextFieldMultiplexer {
                 }
                 Ok(())
             }
-            .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
+            .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
         );
     }
 

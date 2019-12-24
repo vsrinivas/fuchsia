@@ -19,9 +19,10 @@ rustc_library("ethernet") {
     "//garnet/public/rust/fuchsia-runtime",
     "//garnet/public/rust/fuchsia-zircon",
     "//src/lib/shared-buffer",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:bitflags",
-    "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet-rustc",
   ]
 }

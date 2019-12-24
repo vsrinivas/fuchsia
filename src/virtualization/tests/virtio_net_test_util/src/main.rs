@@ -21,7 +21,7 @@ struct Config {
     mac: String,
 }
 
-async fn find_ethernet_device(mac: MacAddress) -> Result<eth::Client, failure::Error> {
+async fn find_ethernet_device(mac: MacAddress) -> Result<eth::Client, anyhow::Error> {
     let eth_devices = fs::read_dir(ETH_DIRECTORY)?;
 
     for device in eth_devices {
@@ -38,11 +38,11 @@ async fn find_ethernet_device(mac: MacAddress) -> Result<eth::Client, failure::E
         }
     }
 
-    failure::bail!("Could not find {}", mac);
+    return Err(anyhow::format_err!("Could not find {}", mac));
 }
 
 #[fasync::run_singlethreaded]
-async fn main() -> Result<(), failure::Error> {
+async fn main() -> Result<(), anyhow::Error> {
     fuchsia_syslog::init()?;
     fuchsia_syslog::set_severity(-1);
 

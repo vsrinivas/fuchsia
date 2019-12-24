@@ -5,7 +5,7 @@
 use std::convert::TryInto;
 use std::os::unix::io::AsRawFd;
 
-use failure::ResultExt;
+use anyhow::Context as _;
 use fuchsia_zircon as zx;
 use futures::io::{AsyncReadExt, AsyncWriteExt};
 use futures::stream::{StreamExt, TryStreamExt};
@@ -52,26 +52,26 @@ fn bus_subscribe(
 
 async fn verify_broken_pipe(
     mut stream: fuchsia_async::net::TcpStream,
-) -> Result<(), failure::Error> {
+) -> Result<(), anyhow::Error> {
     let mut buf = [0xad; 1];
     let n = stream.read(&mut buf).await?;
     if n != 0 {
-        let () = Err(failure::format_err!("read {}/{} bytes", n, 0))?;
+        let () = Err(anyhow::format_err!("read {}/{} bytes", n, 0))?;
     }
     match stream.write(&buf).await {
-        Ok(n) => Err(failure::format_err!("unexpectedly wrote {} bytes", n)),
+        Ok(n) => Err(anyhow::format_err!("unexpectedly wrote {} bytes", n)),
         Err(io_error) => {
             if io_error.kind() == std::io::ErrorKind::BrokenPipe {
                 Ok(())
             } else {
-                Err(failure::format_err!("unexpected error {}", io_error))
+                Err(anyhow::format_err!("unexpected error {}", io_error))
             }
         }
     }
 }
 
 #[fuchsia_async::run_singlethreaded]
-async fn main() -> Result<(), failure::Error> {
+async fn main() -> Result<(), anyhow::Error> {
     const CLIENT_NAME: &str = "client";
     const SERVER_NAME: &str = "server";
     const PORT: u16 = 80;
@@ -123,7 +123,7 @@ async fn main() -> Result<(), failure::Error> {
                 let network = network_manager
                     .get_network("net")
                     .await?
-                    .ok_or(failure::err_msg("failed to get network"))?
+                    .ok_or(anyhow::format_err!("failed to get network"))?
                     .into_proxy()?;
                 let status = network
                     .set_config(fidl_fuchsia_netemul_network::NetworkConfig {
@@ -141,12 +141,12 @@ async fn main() -> Result<(), failure::Error> {
             let connect_timeout = fuchsia_async::net::TcpStream::connect(sockaddr)?;
             let connect_timeout = async {
                 match connect_timeout.await {
-                    Ok(_stream) => Err(failure::err_msg("unexpectedly connected")),
+                    Ok(_stream) => Err(anyhow::format_err!("unexpectedly connected")),
                     Err(io_error) => {
                         if io_error.kind() == std::io::ErrorKind::TimedOut {
                             Ok(())
                         } else {
-                            Err(failure::format_err!("unexpected error {}", io_error))
+                            Err(anyhow::format_err!("unexpected error {}", io_error))
                         }
                     }
                 }
@@ -181,7 +181,7 @@ async fn main() -> Result<(), failure::Error> {
             let payload = [0xde; 1];
             let n = retransmit_timeout.write(&payload).await?;
             if n != payload.len() {
-                let () = Err(failure::format_err!("wrote {}/{} bytes", n, payload.len()))?;
+                let () = Err(anyhow::format_err!("wrote {}/{} bytes", n, payload.len()))?;
             }
 
             let keepalive_timeout = verify_broken_pipe(keepalive_timeout);
@@ -208,7 +208,7 @@ async fn main() -> Result<(), failure::Error> {
                     let ((), (), ()) = timeouts?;
                 }
                 futures::future::Either::Right(((), _timeouts)) => {
-                    let () = Err(failure::err_msg("periodic logger completed unexpectedly"))?;
+                    let () = Err(anyhow::format_err!("periodic logger completed unexpectedly"))?;
                 }
             };
 
@@ -239,7 +239,7 @@ async fn main() -> Result<(), failure::Error> {
             let () = stream
                 .next()
                 .await
-                .ok_or(failure::err_msg("stream ended before client detached"))??;
+                .ok_or(anyhow::format_err!("stream ended before client detached"))??;
             Ok(())
         }
     }

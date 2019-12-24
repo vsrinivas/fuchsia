@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Error;
+use anyhow::Error;
 use fidl_fuchsia_boot::{ArgumentsMarker, ArgumentsProxy};
 use log::{error, info, warn};
 use omaha_client::{
@@ -222,7 +222,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_get_appid_and_channel_from_vbmeta_fail() {
+    async fn test_get_appid_and_channel_from_vbmeta_error() {
         let (proxy, mut stream) = create_proxy_and_stream::<ArgumentsMarker>().unwrap();
         let fut = async move {
             assert!(get_appid_and_channel_from_vbmeta_impl(proxy).await.is_err());

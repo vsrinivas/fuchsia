@@ -12,8 +12,8 @@ use {
         trie::*,
         utils, Inspector,
     },
+    anyhow::{format_err, Error},
     core::marker::PhantomData,
-    failure::{bail, format_err, Error},
     fidl_fuchsia_inspect::TreeProxy,
     fuchsia_zircon::Vmo,
     maplit::btreemap,
@@ -490,7 +490,7 @@ impl Property {
 }
 
 impl TryFrom<Snapshot> for PartialNodeHierarchy {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
     fn try_from(snapshot: Snapshot) -> Result<Self, Self::Error> {
         read(&snapshot)
@@ -498,7 +498,7 @@ impl TryFrom<Snapshot> for PartialNodeHierarchy {
 }
 
 impl TryFrom<&Vmo> for PartialNodeHierarchy {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
     fn try_from(vmo: &Vmo) -> Result<Self, Self::Error> {
         let snapshot = Snapshot::try_from(vmo)?;
@@ -507,7 +507,7 @@ impl TryFrom<&Vmo> for PartialNodeHierarchy {
 }
 
 impl TryFrom<Vec<u8>> for PartialNodeHierarchy {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
     fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
         let snapshot = Snapshot::try_from(&bytes[..])?;
@@ -525,7 +525,7 @@ fn scan_blocks<'a>(snapshot: &'a Snapshot) -> Result<ScanResult<'a>, Error> {
     let mut result = ScanResult::new(snapshot);
     for block in snapshot.scan() {
         if block.index() == 0 && block.block_type() != BlockType::Header {
-            bail!("expected header block on index 0");
+            return Err(format_err!("expected header block on index 0"));
         }
         match block.block_type() {
             BlockType::NodeValue => {
@@ -654,7 +654,7 @@ impl<'a> ScanResult<'a> {
             }
         }
 
-        bail!("Malformed tree, no complete node with parent=0");
+        return Err(format_err!("Malformed tree, no complete node with parent=0"));
     }
 
     fn get_name(&self, index: u32) -> Option<String> {
@@ -698,7 +698,7 @@ impl<'a> ScanResult<'a> {
         let parent = get_or_create_scanned_node!(self.parsed_nodes, block.parent_index()?);
         let array_slots = block.array_slots()?;
         if utils::array_capacity(block.order()) < array_slots {
-            bail!("Tried to read more slots than available");
+            return Err(format_err!("Tried to read more slots than available"));
         }
         let value_indexes = 0..array_slots;
         match block.array_entry_type()? {
@@ -729,7 +729,7 @@ impl<'a> ScanResult<'a> {
                     ArrayValue::new(values, block.array_format().unwrap()),
                 ));
             }
-            _ => bail!("Unexpected array entry type format"),
+            _ => return Err(format_err!("Unexpected array entry type format")),
         }
         Ok(())
     }

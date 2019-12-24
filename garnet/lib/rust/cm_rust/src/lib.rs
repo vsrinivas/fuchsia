@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    cm_fidl_validator,
-    failure::Fail,
-    fidl_fuchsia_data as fdata, fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys,
+    cm_fidl_validator, fidl_fuchsia_data as fdata, fidl_fuchsia_io2 as fio2,
+    fidl_fuchsia_sys2 as fsys,
     std::collections::HashMap,
     std::convert::{From, TryFrom, TryInto},
     std::fmt,
+    thiserror::Error,
 };
 
 pub mod data;
@@ -1159,14 +1159,14 @@ impl TryFrom<ComponentDecl> for fsys::ComponentDecl {
 }
 
 /// Errors produced by cm_rust.
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum Error {
-    #[fail(display = "Fidl validation failed: {}", err)]
+    #[error("Fidl validation failed: {}", err)]
     Validate {
-        #[fail(cause)]
+        #[source]
         err: cm_fidl_validator::ErrorList,
     },
-    #[fail(display = "Invalid capability path: {}", raw)]
+    #[error("Invalid capability path: {}", raw)]
     InvalidCapabilityPath { raw: String },
 }
 

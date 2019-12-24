@@ -9,7 +9,6 @@ use {
         controllable::Controllable,
         entry::{DirectoryEntry, EntryInfo},
     },
-    failure::Fail,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::NodeMarker,
     fuchsia_zircon::Status,
@@ -29,22 +28,23 @@ use {
         pin::Pin,
         task::{Context, Poll},
     },
+    thiserror::Error,
     void::{unreachable, Void},
 };
 
 /// Type of errors returned by the [`Controller::open`] future.
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum OpenError {
     /// Controlled directory has been destroyed.
-    #[fail(display = "Controlled directory has been destroyed.")]
+    #[error("Controlled directory has been destroyed.")]
     Terminated,
 }
 
 /// Type of errors returned by the [`Controller::add_entry`] future.
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum AddEntryError {
     /// Controlled directory has been destroyed.
-    #[fail(display = "Controlled directory has been destroyed.")]
+    #[error("Controlled directory has been destroyed.")]
     Terminated,
 }
 
@@ -74,21 +74,21 @@ impl<'entries> fmt::Debug for AddEntryResError<'entries> {
 }
 
 /// Type of errors returned by the [`Controller::remove_entry`] future.
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum RemoveEntryError {
     /// Controlled directory has been destroyed.
-    #[fail(display = "Controlled directory has been destroyed.")]
+    #[error("Controlled directory has been destroyed.")]
     Terminated,
 }
 
 /// Type of errors returned by the [`Controller::remove_entry_res`] future.
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum RemoveEntryResError {
     /// Controlled directory has been destroyed.
-    #[fail(display = "Controlled directory has been destroyed.")]
+    #[error("Controlled directory has been destroyed.")]
     Terminated,
     /// [`Controlled::remove_entry`] has returned an error.
-    #[fail(display = "`Controlled::remove_entry` has returned an error")]
+    #[error("`Controlled::remove_entry` has returned an error")]
     RemoveFailed(Status),
 }
 

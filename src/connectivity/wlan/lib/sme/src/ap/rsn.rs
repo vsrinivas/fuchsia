@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::bail;
+use anyhow::format_err;
 use wlan_common::ie::rsn::{
     akm, cipher,
     rsne::{RsnCapabilities, Rsne},
@@ -29,7 +29,7 @@ fn make_rsne(data: Option<u8>, pairwise: Vec<u8>, akms: Vec<u8>) -> Rsne {
 
 /// Verify that Supplicant RSNE is a valid NegotiatedProtection, and is a subset of Authenticator
 /// RSNE
-pub fn is_valid_rsne_subset(s_rsne: &Rsne, a_rsne: &Rsne) -> Result<bool, failure::Error> {
+pub fn is_valid_rsne_subset(s_rsne: &Rsne, a_rsne: &Rsne) -> Result<bool, anyhow::Error> {
     let s_caps = s_rsne.rsn_capabilities.as_ref().unwrap_or(&RsnCapabilities(0));
     let s_mgmt_req = s_caps.mgmt_frame_protection_req();
     let s_mgmt_cap = s_caps.mgmt_frame_protection_cap();
@@ -39,8 +39,12 @@ pub fn is_valid_rsne_subset(s_rsne: &Rsne, a_rsne: &Rsne) -> Result<bool, failur
 
     // IEEE Std 802.11-2016, 12.6.3, Table 12-2
     match (a_mgmt_cap, a_mgmt_req, s_mgmt_cap, s_mgmt_req) {
-        (true, _, false, true) => bail!("supplicant RSNE has invalid mgmt frame protection"),
-        (false, true, true, _) => bail!("authenticator RSNE has invalid mgmt frame protection"),
+        (true, _, false, true) => {
+            return Err(format_err!("supplicant RSNE has invalid mgmt frame protection"))
+        }
+        (false, true, true, _) => {
+            return Err(format_err!("authenticator RSNE has invalid mgmt frame protection"))
+        }
         (true, true, false, false) => return Ok(false),
         (false, false, true, true) => return Ok(false),
         // the remaining cases fall into either of these buckets:
@@ -97,7 +101,7 @@ mod tests {
             make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::EAP, akm::PSK]);
         let result = is_valid_rsne_subset(&s_rsne, &a_rsne);
         assert!(result.is_err());
-        assert!(format!("{:?}", result.unwrap_err()).contains("InvalidNegotiatedProtection"));
+        assert!(format!("{:?}", result.unwrap_err()).contains("negotiated protection is invalid"));
     }
 
     #[test]

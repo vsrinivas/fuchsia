@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{bail, format_err, Error},
+    anyhow::{format_err, Error},
     fidl_fuchsia_wlan_common::DriverFeature,
     fidl_fuchsia_wlan_device as fidl_wlan_dev,
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, DeviceInfo},
@@ -94,8 +94,8 @@ pub async fn serve_phys(
             // OK to fuse directly in the `select!` since we bail immediately
             // when a `None` is encountered.
             new_phy = new_phys.next().fuse() => match new_phy {
-                None => bail!("new phy stream unexpectedly finished"),
-                Some(Err(e)) => bail!("new phy stream returned an error: {}", e),
+                None => return Err(format_err!("new phy stream unexpectedly finished")),
+                Some(Err(e)) => return Err(format_err!("new phy stream returned an error: {}", e)),
                 Some(Ok(new_phy)) => {
                     let fut = serve_phy(&phys, new_phy, inspect_tree.clone());
                     active_phys.push(fut);
@@ -137,7 +137,7 @@ pub async fn query_and_serve_iface(
     inspect_tree: Arc<inspect::WlanstackTree>,
     iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
     cobalt_sender: CobaltSender,
-) -> Result<(), failure::Error> {
+) -> Result<(), anyhow::Error> {
     let event_stream = mlme_proxy.take_event_stream();
     let (stats_sched, stats_reqs) = stats_scheduler::create_scheduler();
 
@@ -164,7 +164,7 @@ pub async fn query_and_serve_iface(
     let is_softmac = device_info.driver_features.contains(&DriverFeature::TempSoftmac);
     // For testing only: All synthetic devices are softmac devices.
     if device_info.driver_features.contains(&DriverFeature::Synth) && !is_softmac {
-        bail!("Synthetic devices must be SoftMAC");
+        return Err(format_err!("Synthetic devices must be SoftMAC"));
     }
     ifaces.insert(
         id,

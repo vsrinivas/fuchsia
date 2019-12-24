@@ -6,7 +6,6 @@
 //! delete this and switch to the one in mod installer once the FIDL API is ready.
 
 use crate::install_plan::FuchsiaInstallPlan;
-use failure::Fail;
 use fidl_fuchsia_sys::LauncherProxy;
 use fuchsia_component::client::{launcher, AppBuilder, ExitStatus};
 use futures::future::BoxFuture;
@@ -15,20 +14,21 @@ use omaha_client::{
     installer::{Installer, ProgressObserver},
     protocol::request::InstallSource,
 };
+use thiserror::Error;
 
 type Result<T> = std::result::Result<T, FuchsiaInstallError>;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum FuchsiaInstallError {
-    #[fail(display = "generic error: {}", _0)]
-    Failure(#[cause] failure::Error),
+    #[error("generic error: {}", _0)]
+    Failure(anyhow::Error),
 
-    #[fail(display = "System update installer failed: {}", _0)]
-    Installer(#[cause] ExitStatus),
+    #[error("System update installer failed: {}", _0)]
+    Installer(ExitStatus),
 }
 
-impl From<failure::Error> for FuchsiaInstallError {
-    fn from(e: failure::Error) -> FuchsiaInstallError {
+impl From<anyhow::Error> for FuchsiaInstallError {
+    fn from(e: anyhow::Error) -> FuchsiaInstallError {
         FuchsiaInstallError::Failure(e)
     }
 }
@@ -127,7 +127,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_install_fail() {
+    async fn test_install_error() {
         let (mut installer, mut stream) = FuchsiaInstaller::new_mock();
         let plan = FuchsiaInstallPlan {
             url: TEST_URL.parse().unwrap(),

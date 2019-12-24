@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    failure::{format_err, Error, ResultExt},
+    anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_media::AudioRenderUsage,
     fidl_fuchsia_media_sounds::PlayerProxy,
     fuchsia_syslog::{fx_log_err, fx_log_info},

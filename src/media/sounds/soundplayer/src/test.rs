@@ -4,7 +4,7 @@
 
 use crate::spawn_log_error;
 use crate::Result;
-use failure::ResultExt;
+use anyhow::Context as _;
 use fidl_fuchsia_media::*;
 use fidl_fuchsia_media_sounds::*;
 use fuchsia_async as fasync;
@@ -50,10 +50,10 @@ async fn integration() -> Result<()> {
         .play_sound(0, USAGE)
         .await
         .context("Calling play_sound")?
-        .map_err(|err| failure::format_err!("Error playing sound: {:?}", err))?;
+        .map_err(|err| anyhow::format_err!("Error playing sound: {:?}", err))?;
     service.sound_player.remove_sound(0).expect("Calling remove_sound");
 
-    receiver.await.map_err(|_| failure::format_err!("Error awaiting test completion"))
+    receiver.await.map_err(|_| anyhow::format_err!("Error awaiting test completion"))
 }
 
 struct TestService {
@@ -139,7 +139,7 @@ impl FakeAudio {
                     );
                 }
                 _ => {
-                    return Err(failure::format_err!("Unexpected Audio request received"));
+                    return Err(anyhow::format_err!("Unexpected Audio request received"));
                 }
             }
         }
@@ -238,7 +238,7 @@ impl FakeAudioRenderer {
                     assert!(usage == self.renderer_expectations.usage);
                 }
                 _ => {
-                    return Err(failure::format_err!("Unexpected AudioRenderer request received"));
+                    return Err(anyhow::format_err!("Unexpected AudioRenderer request received"));
                 }
             }
         }

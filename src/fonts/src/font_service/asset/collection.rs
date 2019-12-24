@@ -8,8 +8,8 @@ use {
         asset::{Asset, AssetId},
         cache::Cache,
     },
+    anyhow::{format_err, Error},
     clonable_error::ClonableError,
-    failure::{format_err, Error, Fail},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_fonts::CacheMissPolicy,
     fidl_fuchsia_io as io, fidl_fuchsia_mem as mem,
@@ -24,6 +24,7 @@ use {
         fs::File,
         path::{Path, PathBuf},
     },
+    thiserror::Error,
 };
 
 /// A complete asset location, including the file name. (`AssetLocation` only includes the
@@ -287,42 +288,39 @@ impl AssetCollection {
 }
 
 /// Possible errors when trying to retrieve an asset `Buffer` from the collection.
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum AssetCollectionError {
     /// Unknown `AssetId`
-    #[fail(display = "No asset found with id {:?}", _0)]
+    #[error("No asset found with id {:?}", _0)]
     UnknownId(AssetId),
 
     /// A file within the font service's namespace could not be accessed
-    #[fail(display = "Local file not accessible: {:?}", _0)]
-    LocalFileNotAccessible(PathBuf, #[fail(cause)] ClonableError),
+    #[error("Local file not accessible: {:?}", _0)]
+    LocalFileNotAccessible(PathBuf, #[source] ClonableError),
 
     /// Failed to connect to the Font Resolver service
-    #[fail(display = "Service connection error: {:?}", _0)]
-    ServiceConnectionError(#[fail(cause)] ClonableError),
+    #[error("Service connection error: {:?}", _0)]
+    ServiceConnectionError(#[source] ClonableError),
 
     /// The Font Resolver could not resolve the requested package
-    #[fail(display = "Package resolver error when resolving {:?}: {:?}", _0, _1)]
-    PackageResolverError(PackageLocator, #[fail(cause)] ClonableError),
+    #[error("Package resolver error when resolving {:?}: {:?}", _0, _1)]
+    PackageResolverError(PackageLocator, #[source] ClonableError),
 
     /// The requested package was resolved, but its font file could not be read
-    #[fail(
-        display = "Error when reading file {:?} from {:?}: {:?}",
-        file_name, package_locator, cause
-    )]
+    #[error("Error when reading file {:?} from {:?}: {:?}", file_name, package_locator, cause)]
     PackagedFileError {
         /// Name of the file
         file_name: String,
         /// Package that we're trying to read
         package_locator: PackageLocator,
-        #[fail(cause)]
+        #[source]
         cause: ClonableError,
     },
 
     /// The client requested an empty response if the asset wasn't cached, and the asset is indeed
     /// not cached
     #[allow(dead_code)]
-    #[fail(display = "Requested asset needs to be loaded ephemerally but is not yet cached")]
+    #[error("Requested asset needs to be loaded ephemerally but is not yet cached")]
     UncachedEphemeral {
         /// Name of the file
         file_name: String,

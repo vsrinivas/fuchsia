@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::Error,
+    anyhow::Error,
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_io::FileMarker,
     fidl_fuchsia_netemul_guest::{CommandListenerEvent, CommandListenerEventStream},

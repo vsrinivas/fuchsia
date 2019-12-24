@@ -9,7 +9,7 @@ use {
         story_context_store::ContextEntity,
         suggestions_manager::SearchSuggestionsProvider,
     },
-    failure::Error,
+    anyhow::Error,
     futures::future::LocalFutureObj,
     std::sync::Arc,
 };

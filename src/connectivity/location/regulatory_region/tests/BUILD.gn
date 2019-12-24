@@ -15,7 +15,8 @@ rustc_test("test") {
     "//garnet/public/rust/fuchsia-component",
     "//sdk/fidl/fuchsia.location.namedplace:fuchsia.location.namedplace-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 

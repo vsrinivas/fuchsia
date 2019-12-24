@@ -3,41 +3,35 @@
 // found in the LICENSE file.
 
 //! Qmux Errors, the transport layer for QMI-based modems
-use {failure::Fail, fuchsia_zircon as zx};
+use {fuchsia_zircon as zx, thiserror::Error};
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum QmuxError {
     /// An endpoint encountered an IO error reading a response from a channel.
-    #[fail(
-        display = "A FIDL client encountered an IO error reading a response from a channel: {}",
-        _0
-    )]
-    ClientRead(#[cause] zx::Status),
+    #[error("A FIDL client encountered an IO error reading a response from a channel: {}", _0)]
+    ClientRead(zx::Status),
 
     /// A endpoint encountered an IO error writing a request to a channel.
-    #[fail(
-        display = "A FIDL client encountered an IO error writing a request into a channel: {}",
-        _0
-    )]
-    ClientWrite(#[cause] zx::Status),
+    #[error("A FIDL client encountered an IO error writing a request into a channel: {}", _0)]
+    ClientWrite(zx::Status),
 
     /// Invalid buffer.
-    #[fail(display = "Invalid QMI buffer contents")]
+    #[error("Invalid QMI buffer contents")]
     Invalid,
 
     /// A future was polled after it had already completed.
-    #[fail(display = "A QMI future was polled after it had already completed.")]
+    #[error("A QMI future was polled after it had already completed.")]
     PollAfterCompletion,
 
     /// A Service or Client has not been initialized, but a transaction for it exists
-    #[fail(display = "A Transaction for an non-existent Service/Client pair")]
+    #[error("A Transaction for an non-existent Service/Client pair")]
     InvalidSvcOrClient,
 
     /// No Client.
-    #[fail(display = "Failed to negotiate creating a client with the modem")]
+    #[error("Failed to negotiate creating a client with the modem")]
     NoClient,
 
     /// No Transport.
-    #[fail(display = "No channel to communicate with transport layer")]
+    #[error("No channel to communicate with transport layer")]
     NoTransport,
 }

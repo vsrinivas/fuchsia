@@ -37,7 +37,7 @@ pub(crate) struct Opt {
     severity: i32,
 }
 
-fn main() -> Result<(), failure::Error> {
+fn main() -> Result<(), anyhow::Error> {
     let options: Opt = argh::from_env();
 
     syslog::init().expect("failed to initialize logger");

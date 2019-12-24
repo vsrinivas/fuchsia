@@ -10,9 +10,9 @@ use {
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
         },
     },
+    anyhow::Error,
     async_trait::async_trait,
     cm_rust::CapabilityPath,
-    failure::{Error, Fail},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_process as fproc, fuchsia_async as fasync,
     fuchsia_runtime::{HandleInfo, HandleInfoError},
@@ -28,6 +28,7 @@ use {
         ffi::CString,
         sync::{Arc, Weak},
     },
+    thiserror::Error,
 };
 
 lazy_static! {
@@ -38,14 +39,14 @@ lazy_static! {
 /// Internal error type for ProcessLauncher which conveniently wraps errors that might
 /// result during process launching and allows for mapping them to an equivalent zx::Status, which
 /// is what actually gets returned through the protocol.
-#[derive(Fail, Debug)]
+#[derive(Error, Debug)]
 enum LauncherError {
-    #[fail(display = "Invalid arg: {}", _0)]
+    #[error("Invalid arg: {}", _0)]
     InvalidArg(&'static str),
-    #[fail(display = "Failed to build new process: {}", _0)]
-    BuilderError(#[cause] ProcessBuilderError),
-    #[fail(display = "Invalid handle info: {}", _0)]
-    HandleInfoError(#[cause] HandleInfoError),
+    #[error("Failed to build new process: {}", _0)]
+    BuilderError(ProcessBuilderError),
+    #[error("Invalid handle info: {}", _0)]
+    HandleInfoError(HandleInfoError),
 }
 
 impl LauncherError {
@@ -329,7 +330,7 @@ mod tests {
     use {
         super::*,
         crate::model::{hooks::Hooks, moniker::AbsoluteMoniker},
-        failure::ResultExt,
+        anyhow::Context as _,
         fidl::endpoints::{ClientEnd, Proxy, ServerEnd, ServiceMarker},
         fidl_fuchsia_io as fio,
         fidl_test_processbuilder::{UtilMarker, UtilProxy},

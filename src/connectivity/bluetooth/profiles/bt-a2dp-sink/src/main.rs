@@ -5,10 +5,10 @@
 #![recursion_limit = "512"]
 
 use {
+    anyhow::{format_err, Context as _, Error},
     bt_a2dp::media_types::*,
     bt_a2dp_sink_metrics as metrics,
     bt_avdtp::{self as avdtp, AvdtpControllerPool},
-    failure::{format_err, Error, ResultExt},
     fidl_fuchsia_bluetooth_bredr::*,
     fidl_fuchsia_media::{AUDIO_ENCODING_AACLATM, AUDIO_ENCODING_SBC},
     fuchsia_async as fasync,

@@ -5,8 +5,8 @@
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
 use crate::types::Nanoseconds;
+use anyhow::{format_err, Error};
 use async_trait::async_trait;
-use failure::{format_err, Error};
 use fidl_fuchsia_kernel as fstats;
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;

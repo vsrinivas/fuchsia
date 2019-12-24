@@ -18,7 +18,7 @@ rustc_test("base_resolver_test_bin") {
     "//garnet/public/rust/fuchsia-component",
     "//src/sys/component_manager/tests:breakpoint_system_client",
     "//src/sys/component_manager/tests:test_utils",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
   ]
 }
 
@@ -37,7 +37,7 @@ rustc_binary("root_component_bin") {
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/sys/lib/directory_broker",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }

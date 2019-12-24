@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow::{Context as _, Error};
 use carnelian::{
     make_app_assistant, make_message, set_node_color, AnimationMode, App, AppAssistant, Color,
     ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMessages,
 };
-use failure::{Error, ResultExt};
 use fidl::endpoints::{RequestStream, ServiceMarker};
 use fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream};
 use fidl_fuchsia_ui_input::{KeyboardEvent, KeyboardEventPhase};
@@ -76,7 +76,7 @@ impl SpinningSquareAppAssistant {
                 }
                 Ok(())
             }
-            .unwrap_or_else(|e: failure::Error| eprintln!("{:?}", e)),
+            .unwrap_or_else(|e: anyhow::Error| eprintln!("{:?}", e)),
         );
     }
 }

@@ -12,7 +12,7 @@ use self::{
     watcher::*,
 };
 use crate::{proxies::player::Player, Result, CHANNEL_BUFFER_SIZE};
-use failure::Error;
+use anyhow::Error;
 use fidl::encoding::Decodable;
 use fidl_fuchsia_media_sessions2::*;
 use fuchsia_syslog::fx_log_warn;

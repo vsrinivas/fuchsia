@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{format_err, Error},
+    anyhow::{format_err, Error},
     std::{
         clone::Clone,
         cmp::Ordering,
@@ -462,7 +462,7 @@ fn format_range(range: &CharRange) -> String {
 mod tests {
     use {
         super::{are_chars_adjacent, CharCollection},
-        failure::Error,
+        anyhow::Error,
         std::char,
         unic_char_range::{chars, CharRange},
     };

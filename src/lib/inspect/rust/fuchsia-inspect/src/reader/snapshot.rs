@@ -7,7 +7,7 @@ use {
         format::{block::Block, block_type::BlockType, constants},
         utils, Inspector,
     },
-    failure::{self, bail, format_err, Error},
+    anyhow::{format_err, Error},
     fuchsia_zircon::Vmo,
     std::{
         convert::TryFrom,
@@ -79,7 +79,7 @@ impl Snapshot {
                 }
             }
         }
-        bail!("Failed to read snapshot from vmo");
+        return Err(format_err!("Failed to read snapshot from vmo"));
     }
 
     // Used for snapshot tests.
@@ -109,20 +109,20 @@ fn header_generation_count(bytes: &[u8]) -> Option<u64> {
 
 /// Construct a snapshot from a byte array.
 impl TryFrom<&[u8]> for Snapshot {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
     fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
         if header_generation_count(&bytes).is_some() {
             Ok(Snapshot { buffer: bytes.to_vec() })
         } else {
-            bail!("expected block with at least a header");
+            return Err(format_err!("expected block with at least a header"));
         }
     }
 }
 
 /// Construct a snapshot from a byte vector.
 impl TryFrom<Vec<u8>> for Snapshot {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
     fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
         Snapshot::try_from(&bytes[..])
@@ -131,7 +131,7 @@ impl TryFrom<Vec<u8>> for Snapshot {
 
 /// Construct a snapshot from a VMO.
 impl TryFrom<&Vmo> for Snapshot {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
     fn try_from(vmo: &Vmo) -> Result<Self, Self::Error> {
         Snapshot::try_from_with_callback(vmo, || {})
@@ -139,7 +139,7 @@ impl TryFrom<&Vmo> for Snapshot {
 }
 
 impl TryFrom<&Inspector> for Snapshot {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
     fn try_from(inspector: &Inspector) -> Result<Self, Self::Error> {
         inspector

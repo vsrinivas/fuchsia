@@ -31,7 +31,7 @@ rustc_test("driver") {
     "//src/sys/pkg/lib/fuchsia-merkle",
     "//src/sys/pkg/lib/fuchsia-pkg-testing:fuchsia_pkg_testing",
     "//src/sys/pkg/testing/pkgfs-ramdisk",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:glob",
     "//third_party/rust_crates:hex",

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl_fuchsia_sys::{ComponentControllerEvent, TerminationReason},
     fidl_fuchsia_test_echos::{
         EchoExposedByParentMarker, EchoExposedByParentRequest, EchoExposedByParentRequestStream,
@@ -22,12 +22,12 @@ use {
 
 fn echo_exposed_server(stream: EchoExposedByParentRequestStream) -> impl Future<Output = ()> {
     stream
-        .err_into::<failure::Error>()
+        .err_into::<anyhow::Error>()
         .try_for_each(|EchoExposedByParentRequest::Echo { value: _, responder }| async move {
             responder.send(42).context("sending response")?;
             Ok(())
         })
-        .unwrap_or_else(|e: failure::Error| panic!("error running echo server: {:?}", e))
+        .unwrap_or_else(|e: anyhow::Error| panic!("error running echo server: {:?}", e))
 }
 
 const CHILD_URL: &str = fuchsia_single_component_package_url!("fuchsia_component_test_inner");

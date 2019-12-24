@@ -17,11 +17,12 @@ rustc_binary("bt-le-peripheral") {
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
     "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le-rustc",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:base64",
-    "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:structopt",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 

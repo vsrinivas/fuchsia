@@ -9,7 +9,7 @@ use {
         story_context_store::{ContextReader, ContextWriter, Contributor},
         utils,
     },
-    failure::{format_err, Error, ResultExt},
+    anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_app_discover::{
         ModuleIdentifier, StoryDiscoverError, StoryModuleRequest, StoryModuleRequestStream,
     },

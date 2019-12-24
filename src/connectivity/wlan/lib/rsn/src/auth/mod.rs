@@ -6,7 +6,7 @@ pub mod psk;
 pub mod sae;
 
 use crate::rsna::{Dot11VerifiedKeyFrame, UpdateSink};
-use failure;
+use anyhow;
 use zerocopy::ByteSlice;
 
 #[derive(Debug, PartialEq)]
@@ -15,7 +15,7 @@ pub enum Method {
 }
 
 impl Method {
-    pub fn from_config(cfg: Config) -> Result<Method, failure::Error> {
+    pub fn from_config(cfg: Config) -> Result<Method, anyhow::Error> {
         match cfg {
             Config::ComputedPsk(psk) => Ok(Method::Psk(psk)),
         }
@@ -26,7 +26,7 @@ impl Method {
         &self,
         _update_sink: &mut UpdateSink,
         _frame: Dot11VerifiedKeyFrame<B>,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), anyhow::Error> {
         Ok(())
     }
 }

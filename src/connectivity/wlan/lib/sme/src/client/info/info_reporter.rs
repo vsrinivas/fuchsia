@@ -116,7 +116,7 @@ impl InfoReporter {
         warn_if_err!(self.stats_collector.report_supplicant_updates(update_sink));
     }
 
-    pub fn report_supplicant_error(&mut self, error: failure::Error) {
+    pub fn report_supplicant_error(&mut self, error: anyhow::Error) {
         warn_if_err!(self.stats_collector.report_supplicant_error(error));
     }
 

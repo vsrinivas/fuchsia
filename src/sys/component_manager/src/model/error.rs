@@ -9,73 +9,74 @@ use {
         runner::RunnerError,
         storage::StorageError,
     },
+    anyhow::Error,
     clonable_error::ClonableError,
-    failure::{Error, Fail},
+    thiserror::Error,
 };
 
 /// Errors produced by `Model`.
-#[derive(Debug, Fail, Clone)]
+#[derive(Debug, Error, Clone)]
 pub enum ModelError {
-    #[fail(display = "component instance {} not found in realm {}", child, moniker)]
+    #[error("component instance {} not found in realm {}", child, moniker)]
     InstanceNotFoundInRealm { moniker: AbsoluteMoniker, child: PartialMoniker },
-    #[fail(display = "component instance {} in realm {} already exists", child, moniker)]
+    #[error("component instance {} in realm {} already exists", child, moniker)]
     InstanceAlreadyExists { moniker: AbsoluteMoniker, child: PartialMoniker },
-    #[fail(display = "component instance with moniker {} has shut down", moniker)]
+    #[error("component instance with moniker {} has shut down", moniker)]
     InstanceShutDown { moniker: AbsoluteMoniker },
-    #[fail(display = "component instance {} not found", moniker)]
+    #[error("component instance {} not found", moniker)]
     InstanceNotFound { moniker: AbsoluteMoniker },
-    #[fail(display = "component collection not found with name {}", name)]
+    #[error("component collection not found with name {}", name)]
     CollectionNotFound { name: String },
-    #[fail(display = "{} is not supported", feature)]
+    #[error("{} is not supported", feature)]
     Unsupported { feature: String },
-    #[fail(display = "component declaration invalid")]
+    #[error("component declaration invalid")]
     ComponentInvalid,
-    #[fail(display = "component manifest invalid")]
+    #[error("component manifest invalid")]
     ManifestInvalid {
         url: String,
-        #[fail(cause)]
+        #[source]
         err: ClonableError,
     },
-    #[fail(display = "The model is not available")]
+    #[error("The model is not available")]
     ModelNotAvailable,
-    #[fail(display = "namespace creation failed: {}", err)]
+    #[error("namespace creation failed: {}", err)]
     NamespaceCreationFailed {
-        #[fail(cause)]
+        #[source]
         err: ClonableError,
     },
-    #[fail(display = "resolver error")]
+    #[error("resolver error")]
     ResolverError {
-        #[fail(cause)]
+        #[source]
         err: ResolverError,
     },
-    #[fail(display = "runner error: {}", err)]
+    #[error("runner error: {}", err)]
     RunnerError {
-        #[fail(cause)]
+        #[source]
         err: RunnerError,
     },
-    #[fail(display = "capability discovery error")]
+    #[error("capability discovery error")]
     CapabilityDiscoveryError {
-        #[fail(cause)]
+        #[source]
         err: ClonableError,
     },
-    #[fail(display = "storage error")]
+    #[error("storage error")]
     StorageError {
-        #[fail(cause)]
+        #[source]
         err: StorageError,
     },
-    #[fail(display = "failed to add entry {} to {}", entry_name, moniker)]
+    #[error("failed to add entry {} to {}", entry_name, moniker)]
     AddEntryError { moniker: AbsoluteMoniker, entry_name: String },
-    #[fail(display = "failed to remove entry {}", entry_name)]
+    #[error("failed to remove entry {}", entry_name)]
     RemoveEntryError { entry_name: String },
-    #[fail(display = "open directory error")]
+    #[error("open directory error")]
     OpenDirectoryError { moniker: AbsoluteMoniker, relative_path: String },
-    #[fail(display = "insufficient resources to complete operation")]
+    #[error("insufficient resources to complete operation")]
     InsufficientResources,
-    #[fail(display = "failed to send {} to runner for component {}", operation, moniker)]
+    #[error("failed to send {} to runner for component {}", operation, moniker)]
     RunnerCommunicationError {
         moniker: AbsoluteMoniker,
         operation: String,
-        #[fail(cause)]
+        #[source]
         err: ClonableError,
     },
 }

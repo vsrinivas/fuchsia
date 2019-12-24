@@ -10,7 +10,8 @@ rustc_library("rust_icu_common") {
 
   deps = [
     "../rust_icu_sys",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 

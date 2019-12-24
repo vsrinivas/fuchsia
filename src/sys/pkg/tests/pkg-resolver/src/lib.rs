@@ -5,7 +5,7 @@
 #![cfg(test)]
 
 use {
-    failure::Error,
+    anyhow::Error,
     fdio,
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_amber::ControlMarker as AmberMarker,

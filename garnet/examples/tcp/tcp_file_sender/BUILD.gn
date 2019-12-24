@@ -11,8 +11,9 @@ rustc_binary("bin") {
 
   deps = [
     "//garnet/public/rust/fuchsia-syslog",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:structopt",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 

@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use crate::geometry::{Coord, IntCoord, IntPoint, IntRect, IntSize, Point, Rect, Size};
+use anyhow::Error;
 use core::ops::Range;
 use euclid::rect;
-use failure::Error;
 use fidl_fuchsia_ui_gfx::ColorRgba;
 use mapped_vmo::Mapping;
 use rusttype::{Font, FontCollection, Scale};

@@ -23,7 +23,7 @@ mod test_util;
 use crate::account_handler::AccountHandler;
 use crate::common::AccountLifetime;
 use account_common::LocalAccountId;
-use failure::{Error, ResultExt};
+use anyhow::{Context as _, Error};
 use fidl_fuchsia_identity_internal::AccountHandlerContextMarker;
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_service;

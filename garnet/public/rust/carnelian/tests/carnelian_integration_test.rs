@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow::Error;
 use carnelian::{
     AnimationMode, App, AppAssistant, Color, Point, Rect, ViewAssistant, ViewAssistantContext,
     ViewAssistantPtr, ViewKey, ViewMode,
 };
-use failure::Error;
 use fuchsia_zircon::Duration;
 
 struct IntegrationTestAppAssistant;
@@ -61,7 +61,7 @@ mod test {
     use carnelian::App;
 
     #[test]
-    fn carnelain_integration_test() -> std::result::Result<(), failure::Error> {
+    fn carnelain_integration_test() -> std::result::Result<(), anyhow::Error> {
         println!("carnelian_integration_test");
         let assistant = IntegrationTestAppAssistant {};
         App::test(Box::new(assistant))

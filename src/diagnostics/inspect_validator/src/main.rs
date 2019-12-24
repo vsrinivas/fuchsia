@@ -10,8 +10,8 @@ mod runner; // Coordinates testing operations
 mod trials; // Defines the trials to run
 
 use {
+    anyhow::{format_err, Error},
     argh::FromArgs,
-    failure::{bail, Error},
     fidl_test_inspect_validate as validate, fuchsia_async as fasync, fuchsia_syslog as syslog,
     log::*,
     serde_derive::Serialize,
@@ -66,7 +66,7 @@ impl FromStr for OutputType {
         Ok(match s {
             "text" => OutputType::Text,
             "json" => OutputType::Json,
-            _ => bail!("Output type must be 'text' or 'json'"),
+            _ => return Err(format_err!("Output type must be 'text' or 'json'")),
         })
     }
 }
@@ -89,7 +89,7 @@ impl FromStr for DiffType {
             "full" => DiffType::Full,
             "diff" => DiffType::Diff,
             "both" => DiffType::Both,
-            _ => bail!("Diff type must be 'full' or 'diff' or 'both'"),
+            _ => return Err(format_err!("Diff type must be 'full' or 'diff' or 'both'")),
         })
     }
 }
@@ -110,7 +110,7 @@ async fn main() -> Result<(), Error> {
         OutputType::Json => println!("{}", results.to_json()),
     }
     if results.failed() {
-        bail!("A test failed")
+        return Err(format_err!("A test failed"));
     } else {
         Ok(())
     }

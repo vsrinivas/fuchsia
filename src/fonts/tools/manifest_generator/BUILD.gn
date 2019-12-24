@@ -20,13 +20,14 @@ rustc_binary("font_manifest_generator") {
     "//src/fonts/manifest",
     "//src/fonts/offset_string",
     "//src/sys/lib/fuchsia_url",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:rayon",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_derive",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:structopt",
+    "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:unicase",
   ]
 
@@ -41,11 +42,12 @@ rustc_binary("font_manifest_generator") {
 rustc_test("font_manifest_generator_integration_tests") {
   edition = "2018"
   deps = [
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:pretty_assertions",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
+    "//third_party/rust_crates:thiserror",
   ]
   source_root = "tests/tests.rs"
 

@@ -26,9 +26,10 @@ rustc_test("test") {
     "//garnet/public/rust/fuchsia-runtime",
     "//sdk/fidl/fuchsia.net.oldhttp:fuchsia.net.oldhttp-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:rouille",
+    "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]
 }

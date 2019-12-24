@@ -25,9 +25,10 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
     "//src/connectivity/overnet/examples/interface_passing/service:interface_passing-rustc",
     "//src/connectivity/overnet/lib/hoist",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:clap",
-    "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:thiserror",
   ]
   non_rust_deps = [ "//third_party/boringssl" ]
 }

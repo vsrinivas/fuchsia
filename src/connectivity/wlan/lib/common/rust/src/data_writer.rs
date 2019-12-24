@@ -12,7 +12,7 @@ use {
             SequenceControl,
         },
     },
-    failure::Error,
+    anyhow::Error,
 };
 
 pub fn data_hdr_client_to_ap(

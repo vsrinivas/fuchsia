@@ -20,7 +20,7 @@ use crate::{
 };
 
 use {
-    failure::Error,
+    anyhow::Error,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryObject, DirectoryRequest, NodeInfo, NodeMarker, OPEN_FLAG_CREATE,

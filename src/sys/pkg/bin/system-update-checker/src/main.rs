@@ -24,7 +24,7 @@ use {
         provider_handler::ProviderHandler,
         update_service::{RealUpdateManager, RealUpdateService},
     },
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl_fuchsia_update::ManagerRequestStream,
     fidl_fuchsia_update_channel::ProviderRequestStream,
     forced_fdr::perform_fdr_if_necessary,

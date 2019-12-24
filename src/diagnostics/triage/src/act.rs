@@ -7,7 +7,7 @@ use {
         config::InspectData,
         metrics::{MetricState, MetricValue, Metrics},
     },
-    failure::Error,
+    anyhow::Error,
     log::*,
     serde_derive::Deserialize,
     std::collections::HashMap,

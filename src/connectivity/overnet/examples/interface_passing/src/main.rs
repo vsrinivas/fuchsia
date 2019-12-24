@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::{Context as _, Error},
     clap::{App, Arg, SubCommand},
-    failure::{Error, ResultExt},
     fidl::endpoints::{ClientEnd, RequestStream, ServerEnd, ServiceMarker},
     fidl_fidl_examples_echo as echo,
     fidl_fuchsia_overnet::{
@@ -93,7 +93,7 @@ fn spawn_echo_server(chan: ServerEnd<echo::EchoMarker>, quiet: bool) {
             }
             Ok(())
         }
-        .unwrap_or_else(|e: failure::Error| eprintln!("{:?}", e)),
+        .unwrap_or_else(|e: anyhow::Error| eprintln!("{:?}", e)),
     );
 }
 
@@ -115,7 +115,7 @@ fn spawn_example_server(chan: fidl::AsyncChannel, quiet: bool) {
             }
             Ok(())
         }
-        .unwrap_or_else(|e: failure::Error| eprintln!("{:?}", e)),
+        .unwrap_or_else(|e: anyhow::Error| eprintln!("{:?}", e)),
     );
 }
 

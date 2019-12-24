@@ -5,7 +5,6 @@
 use {
     bitflags::bitflags,
     byteorder::NativeEndian,
-    failure::Fail,
     fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, MessageBuf},
     futures::{
@@ -15,6 +14,7 @@ use {
     },
     parking_lot::Mutex,
     std::{collections::VecDeque, convert::TryFrom, pin::Pin, result, sync::Arc},
+    thiserror::Error,
     zerocopy::{AsBytes, FromBytes, Unaligned, U32},
 };
 
@@ -22,46 +22,46 @@ use {
 pub type Result<T> = result::Result<T, Error>;
 
 /// The Error type of the fuchsia-media library
-#[derive(Fail, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq)]
 pub enum Error {
     /// The value that was received was out of range
-    #[fail(display = "Value was out of range")]
+    #[error("Value was out of range")]
     OutOfRange,
 
     /// The header was invalid when parsing a message.
-    #[fail(display = "Invalid Header for a message")]
+    #[error("Invalid Header for a message")]
     InvalidHeader,
 
     /// Can't encode into a buffer
-    #[fail(display = "Encoding error")]
+    #[error("Encoding error")]
     Encoding,
 
     /// Encountered an IO error reading
-    #[fail(display = "Encountered an IO error reading from the channel: {}", _0)]
-    PeerRead(#[cause] zx::Status),
+    #[error("Encountered an IO error reading from the channel: {}", _0)]
+    PeerRead(zx::Status),
 
     /// Encountered an IO error writing
-    #[fail(display = "Encountered an IO error writing to the channel: {}", _0)]
-    PeerWrite(#[cause] zx::Status),
+    #[error("Encountered an IO error writing to the channel: {}", _0)]
+    PeerWrite(zx::Status),
 
     /// Other IO Error
-    #[fail(display = "Encountered an IO error: {}", _0)]
-    IOError(#[cause] zx::Status),
+    #[error("Encountered an IO error: {}", _0)]
+    IOError(zx::Status),
 
     /// Action tried in an invalid state
-    #[fail(display = "Tried to do an action in an invalid state")]
+    #[error("Tried to do an action in an invalid state")]
     InvalidState,
 
     /// Responder doesn't have a channel
-    #[fail(display = "No channel found for reply")]
+    #[error("No channel found for reply")]
     NoChannel,
 
     /// When a message hasn't been implemented yet, the parser will return this.
-    #[fail(display = "Message has not been implemented yet")]
+    #[error("Message has not been implemented yet")]
     UnimplementedMessage,
 
     #[doc(hidden)]
-    #[fail(display = "__Nonexhaustive error should never be created.")]
+    #[error("__Nonexhaustive error should never be created.")]
     __Nonexhaustive,
 }
 

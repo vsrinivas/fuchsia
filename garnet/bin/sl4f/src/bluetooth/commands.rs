@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::server::Facade;
-use failure::{bail, Error};
+use anyhow::{format_err, Error};
 use fidl_fuchsia_bluetooth_gatt::ServiceInfo;
 use fidl_fuchsia_bluetooth_le::{AdvertisingData, AdvertisingParameters, ScanFilter};
 use fuchsia_syslog::macros::*;
@@ -35,7 +35,7 @@ use crate::common_utils::common::macros::parse_arg;
 fn ble_advertise_args_to_fidl(args_raw: Value) -> Result<AdvertisingParameters, Error> {
     let adv_data_raw = match args_raw.get("advertising_data") {
         Some(adr) => adr.clone(),
-        None => bail!("Advertising data missing."),
+        None => return Err(format_err!("Advertising data missing.")),
     };
 
     let conn_raw = args_raw.get("connectable").ok_or(format_err!("Connectable missing"))?;
@@ -70,7 +70,7 @@ fn ble_advertise_args_to_fidl(args_raw: Value) -> Result<AdvertisingParameters, 
 fn ble_scan_to_fidl(args_raw: Value) -> Result<Option<ScanFilter>, Error> {
     let scan_filter_raw = match args_raw.get("filter") {
         Some(f) => Some(f).unwrap().clone(),
-        None => bail!("Scan filter missing."),
+        None => return Err(format_err!("Scan filter missing.")),
     };
 
     let name_substring: Option<String> =
@@ -143,7 +143,7 @@ async fn ble_advertise_method_to_fidl(
             facade.stop_adv();
             Ok(id)
         }
-        _ => bail!("Invalid BleAdvertise FIDL method: {:?}", method_name),
+        _ => return Err(format_err!("Invalid BleAdvertise FIDL method: {:?}", method_name)),
     }
 }
 
@@ -177,7 +177,7 @@ async fn ble_method_to_fidl(
             let (service_info, local_service_id) = ble_publish_service_to_fidl(args)?;
             publish_service_async(&facade, service_info, local_service_id).await
         }
-        _ => bail!("Invalid BLE FIDL method: {:?}", method_name),
+        _ => return Err(format_err!("Invalid BLE FIDL method: {:?}", method_name)),
     }
 }
 
@@ -260,7 +260,7 @@ async fn bt_control_method_to_fidl(
             let result = facade.get_active_adapter_address().await?;
             Ok(to_value(result)?)
         }
-        _ => bail!("Invalid Bluetooth control FIDL method: {:?}", method_name),
+        _ => return Err(format_err!("Invalid Bluetooth control FIDL method: {:?}", method_name)),
     }
 }
 
@@ -376,7 +376,7 @@ async fn gatt_client_method_to_fidl(
             let id = parse_identifier(args)?;
             list_services_async(&facade, id).await
         }
-        _ => bail!("Invalid Gatt Client FIDL method: {:?}", method_name),
+        _ => return Err(format_err!("Invalid Gatt Client FIDL method: {:?}", method_name)),
     }
 }
 
@@ -412,7 +412,7 @@ async fn gatt_server_method_to_fidl(
             let result = facade.close_server().await;
             Ok(to_value(result)?)
         }
-        _ => bail!("Invalid Gatt Server FIDL method: {:?}", method_name),
+        _ => return Err(format_err!("Invalid Gatt Server FIDL method: {:?}", method_name)),
     }
 }
 
@@ -453,7 +453,7 @@ async fn profile_server_method_to_fidl(
             let result = facade.remove_service(service_id).await?;
             Ok(to_value(result)?)
         }
-        _ => bail!("Invalid Profile Server FIDL method: {:?}", method_name),
+        _ => return Err(format_err!("Invalid Profile Server FIDL method: {:?}", method_name)),
     }
 }
 
@@ -546,7 +546,7 @@ async fn start_scan_async(
 async fn stop_scan_async(facade: &GattClientFacade) -> Result<Value, Error> {
     let central = facade.get_central_proxy().clone().expect("No central proxy.");
     if let Err(e) = central.stop_scan() {
-        bail!("Error stopping scan: {}", e)
+        return Err(format_err!("Error stopping scan: {}", e));
     } else {
         // Get the list of devices discovered by the scan.
         let devices = facade.get_devices();

@@ -16,9 +16,10 @@ rustc_library("fuchsia-cobalt") {
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-zircon",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
+    "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]

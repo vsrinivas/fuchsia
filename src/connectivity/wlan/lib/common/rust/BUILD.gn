@@ -20,9 +20,9 @@ rustc_library("wlan-common") {
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
     "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme-rustc",
     "//src/connectivity/wlan/lib/bitfield:wlan-bitfield",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:bytes",
-    "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:hex",
     "//third_party/rust_crates:nom",
@@ -30,6 +30,7 @@ rustc_library("wlan-common") {
     "//third_party/rust_crates:num-derive",
     "//third_party/rust_crates:num-traits",
     "//third_party/rust_crates:paste",
+    "//third_party/rust_crates:thiserror",
     "//zircon/system/banjo/ddk.hw.wlan.ieee80211:ddk.hw.wlan.ieee80211-rustc",
     "//zircon/system/banjo/ddk.protocol.wlan.info:ddk.protocol.wlan.info-rustc",
   ]

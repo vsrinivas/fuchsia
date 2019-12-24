@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 use std::sync::Arc;
 
-use failure::Error;
+use anyhow::Error;
 use fidl::endpoints::{Request, ServiceMarker};
 use fuchsia_async as fasync;
 use futures::future::LocalBoxFuture;

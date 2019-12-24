@@ -6,10 +6,10 @@
 
 use {
     crate::iou,
-    failure::Fail,
     fidl_fuchsia_io::{DirectoryProxy, FileProxy},
     fuchsia_merkle::Hash,
     fuchsia_zircon::Status,
+    thiserror::Error,
 };
 
 /// The kind of blob to be installed.
@@ -33,17 +33,17 @@ impl BlobKind {
 }
 
 /// An error encountered while creating a blob
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 #[allow(missing_docs)]
 pub enum BlobCreateError {
-    #[fail(display = "the blob already exists and is readable")]
+    #[error("the blob already exists and is readable")]
     AlreadyExists,
 
-    #[fail(display = "the blob is in the process of being written")]
+    #[error("the blob is in the process of being written")]
     ConcurrentWrite,
 
-    #[fail(display = "while creating the blob: {}", _0)]
-    Io(#[cause] iou::OpenError),
+    #[error("while creating the blob: {}", _0)]
+    Io(iou::OpenError),
 }
 
 /// An open handle to /pkgfs/install
@@ -54,13 +54,13 @@ pub struct Client {
 
 impl Client {
     /// Returns an client connected to pkgfs from the current component's namespace
-    pub fn open_from_namespace() -> Result<Self, failure::Error> {
+    pub fn open_from_namespace() -> Result<Self, anyhow::Error> {
         let proxy = iou::open_directory_from_namespace("/pkgfs/install")?;
         Ok(Client { proxy })
     }
 
     /// Returns an client connected to pkgfs from the given pkgfs root dir.
-    pub fn open_from_pkgfs_root(pkgfs: &DirectoryProxy) -> Result<Self, failure::Error> {
+    pub fn open_from_pkgfs_root(pkgfs: &DirectoryProxy) -> Result<Self, anyhow::Error> {
         Ok(Client {
             proxy: iou::open_directory_no_describe(
                 pkgfs,
@@ -101,27 +101,27 @@ impl Client {
 }
 
 /// An error encountered while truncating a blob
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 #[allow(missing_docs)]
 pub enum BlobTruncateError {
-    #[fail(display = "fidl error: {}", _0)]
-    Fidl(#[cause] fidl::Error),
+    #[error("fidl error: {}", _0)]
+    Fidl(fidl::Error),
 
-    #[fail(display = "received unexpected failure status: {}", _0)]
+    #[error("received unexpected failure status: {}", _0)]
     UnexpectedResponse(Status),
 }
 
 /// An error encountered while truncating a blob
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 #[allow(missing_docs)]
 pub enum BlobWriteError {
-    #[fail(display = "fidl error: {}", _0)]
-    Fidl(#[cause] fidl::Error),
+    #[error("fidl error: {}", _0)]
+    Fidl(fidl::Error),
 
-    #[fail(display = "file endpoint reported more bytes written than were provided")]
+    #[error("file endpoint reported more bytes written than were provided")]
     Overwrite,
 
-    #[fail(display = "received unexpected failure status: {}", _0)]
+    #[error("received unexpected failure status: {}", _0)]
     UnexpectedResponse(Status),
 }
 

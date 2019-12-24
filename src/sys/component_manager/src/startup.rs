@@ -13,7 +13,7 @@ use {
             resolver::ResolverRegistry,
         },
     },
-    failure::{format_err, Error, ResultExt},
+    anyhow::{format_err, Context as _, Error},
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_sys::{LoaderMarker, LoaderProxy},
     fuchsia_component::client,

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow::{format_err, Error};
 use core::convert::TryFrom;
-use failure::{err_msg, Error};
 use fidl_fuchsia_ui_text as txt;
 
 /// A version of txt::TextFieldState that does not have mandatory fields wrapped in Options.
@@ -48,13 +48,15 @@ impl TryFrom<txt::TextFieldState> for TextFieldState {
         let document = match document {
             Some(v) => v,
             None => {
-                return Err(err_msg(format!("Expected document field to be set on TextFieldState")))
+                return Err(format_err!(format!(
+                    "Expected document field to be set on TextFieldState"
+                )))
             }
         };
         let selection = match selection {
             Some(v) => v,
             None => {
-                return Err(err_msg(format!(
+                return Err(format_err!(format!(
                     "Expected selection field to be set on TextFieldState"
                 )))
             }
@@ -62,7 +64,9 @@ impl TryFrom<txt::TextFieldState> for TextFieldState {
         let revision = match revision {
             Some(v) => v,
             None => {
-                return Err(err_msg(format!("Expected revision field to be set on TextFieldState")))
+                return Err(format_err!(format!(
+                    "Expected revision field to be set on TextFieldState"
+                )))
             }
         };
         Ok(TextFieldState {

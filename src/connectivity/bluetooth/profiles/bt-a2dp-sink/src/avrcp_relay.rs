@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{format_err, Error, ResultExt},
+    anyhow::{format_err, Context as _, Error},
     fidl::encoding::Decodable,
     fidl::endpoints,
     fidl_fuchsia_bluetooth_avrcp as avrcp, fidl_fuchsia_media as media,

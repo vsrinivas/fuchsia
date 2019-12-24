@@ -84,7 +84,7 @@ pub struct AdapterInfo {
 }
 
 impl TryFrom<control::AdapterInfo> for AdapterInfo {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
     fn try_from(a: control::AdapterInfo) -> Result<AdapterInfo, Self::Error> {
         Ok(AdapterInfo {
             identifier: a.identifier,

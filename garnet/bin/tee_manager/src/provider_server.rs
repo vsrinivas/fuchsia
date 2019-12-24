@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{format_err, Error, ResultExt},
+    anyhow::{format_err, Context as _, Error},
     fdio,
     fidl::endpoints::RequestStream,
     fidl_fuchsia_tee_manager::{ProviderRequest, ProviderRequestStream},
@@ -35,11 +35,8 @@ impl ProviderServer {
 
             let storage_dir_str =
                 self.storage_dir.to_str().ok_or_else(|| format_err!("Invalid storage path"))?;
-            fdio::service_connect(storage_dir_str, dir.into_channel()).with_context(|e| {
-                format!(
-                    "Failed to connect to storage directory ({}) service: {}",
-                    storage_dir_str, e
-                )
+            fdio::service_connect(storage_dir_str, dir.into_channel()).with_context(|| {
+                format!("Failed to connect to storage directory ({}) service", storage_dir_str)
             })?;
         }
 

@@ -9,7 +9,7 @@ mod services;
 #[cfg(test)]
 mod test;
 
-use failure::Error;
+use anyhow::Error;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use futures::{channel::mpsc, prelude::*};

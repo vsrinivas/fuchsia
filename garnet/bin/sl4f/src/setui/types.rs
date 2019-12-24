@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 //use serde::{Deserialize, Deserializer};
+use anyhow::format_err;
 use serde_derive::{Deserialize, Serialize};
 
 /// Supported setUi commands.
@@ -11,12 +12,12 @@ pub enum SetUiMethod {
 }
 
 impl std::str::FromStr for SetUiMethod {
-    type Err = failure::Error;
+    type Err = anyhow::Error;
 
     fn from_str(method: &str) -> Result<Self, Self::Err> {
         match method {
             "Mutate" => Ok(SetUiMethod::Mutate),
-            _ => bail!("invalid SetUi FIDL method: {}", method),
+            _ => return Err(format_err!("invalid SetUi FIDL method: {}", method)),
         }
     }
 }

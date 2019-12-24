@@ -4,17 +4,17 @@
 
 use super::*;
 use crate::{protocol::response::Response, request_builder::RequestParams};
-use failure::Fail;
 use futures::future::BoxFuture;
 use futures::prelude::*;
+use thiserror::Error;
 
 /// This is the collection of Errors that can occur during the installation of an update.
 ///
 /// This is a placeholder stub implementation.
 ///
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum StubInstallErrors {
-    #[fail(display = "Stub Installer Failure")]
+    #[error("Stub Installer Failure")]
     Failed,
 }
 
@@ -23,9 +23,9 @@ pub enum StubInstallErrors {
 ///
 /// This is a placeholder stub implementation.
 ///
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum StubPlanErrors {
-    #[fail(display = "Stub Plan Creation Failure")]
+    #[error("Stub Plan Creation Failure")]
     Failed,
 }
 

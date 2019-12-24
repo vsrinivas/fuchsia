@@ -1,5 +1,5 @@
 use {
-    failure::Error,
+    anyhow::Error,
     fidl::endpoints::{create_proxy, ServerEnd},
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, NodeMarker, OPEN_RIGHT_READABLE},
     fuchsia_async as fasync,

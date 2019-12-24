@@ -5,7 +5,7 @@
 #![cfg(test)]
 
 use {
-    failure::Error,
+    anyhow::Error,
     fidl_fuchsia_factory::{
         CastCredentialsFactoryStoreProviderMarker, MiscFactoryStoreProviderMarker,
         PlayReadyFactoryStoreProviderMarker, WidevineFactoryStoreProviderMarker,

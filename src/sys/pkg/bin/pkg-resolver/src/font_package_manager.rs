@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    failure::Fail,
     fuchsia_url::pkg_url::PkgUrl,
     std::{
         collections::BTreeSet,
         fmt, fs, io,
         path::{Path, PathBuf},
     },
+    thiserror::Error,
 };
 
 /// Tracks set of packages that contain single font files. Construct using
@@ -143,13 +143,12 @@ fn validate_package_urls<P: AsRef<Path>>(
 
 /// Describes the recoverable error conditions that can be encountered when building a
 /// [FontPackageManager].
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum LoadError {
     /// Error in reading a font package registry file.
     Io {
         /// The problematic file path.
         path: PathBuf,
-        #[cause]
         error: io::Error,
     },
 
@@ -157,7 +156,6 @@ pub enum LoadError {
     Parse {
         /// The problematic file path.
         path: PathBuf,
-        #[cause]
         error: serde_json::Error,
     },
 
@@ -206,7 +204,7 @@ impl fmt::Display for LoadError {
 pub mod tests {
     use {
         super::*,
-        failure::Error,
+        anyhow::Error,
         serde::Serialize,
         serde_json,
         std::fs::File,

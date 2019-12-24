@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    failure::Fail,
     std::io::{self, Write},
+    thiserror::Error,
 };
 
 /// An Event from an http sse stream
@@ -65,18 +65,18 @@ impl Event {
     }
 }
 
-#[derive(Debug, Fail, PartialEq, Eq)]
+#[derive(Debug, Error, PartialEq, Eq)]
 pub enum EventError {
-    #[fail(display = "event type cannot contain carriage returns")]
+    #[error("event type cannot contain carriage returns")]
     TypeHasCarriageReturn,
 
-    #[fail(display = "event type cannot contain newlines")]
+    #[error("event type cannot contain newlines")]
     TypeHasNewline,
 
-    #[fail(display = "event data cannot be empty")]
+    #[error("event data cannot be empty")]
     DataIsEmpty,
 
-    #[fail(display = "event data cannot contain carriage returns")]
+    #[error("event data cannot contain carriage returns")]
     DataHasCarriageReturn,
 }
 

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::Error,
+    anyhow::Error,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_ui_scenic::{ScenicMarker, ScenicProxy},
     fuchsia_async::{self as fasync},

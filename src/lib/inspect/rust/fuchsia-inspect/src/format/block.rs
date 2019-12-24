@@ -11,8 +11,8 @@ use {
         },
         utils,
     },
+    anyhow::{format_err, Error},
     byteorder::{ByteOrder, LittleEndian},
-    failure::{bail, format_err, Error},
     mapped_vmo::Mapping,
     num_derive::{FromPrimitive, ToPrimitive},
     num_traits::{FromPrimitive, ToPrimitive},
@@ -243,7 +243,7 @@ impl<T: ReadableBlockContainer> Block<T> {
             format_err!("Array entry type isn't a block type: {}", array_type_raw)
         })?;
         if !array_type.is_numeric_value() {
-            bail!("Array type is non-numeric {:?}", array_type);
+            return Err(format_err!("Array type is non-numeric {:?}", array_type));
         }
         Ok(array_type)
     }
@@ -302,7 +302,11 @@ impl<T: ReadableBlockContainer> Block<T> {
             if actual == expected {
                 return Ok(());
             } else {
-                bail!("Invalid array entry type. Expected: {}, got: {}", expected, actual);
+                return Err(format_err!(
+                    "Invalid array entry type. Expected: {}, got: {}",
+                    expected,
+                    actual
+                ));
             }
         }
         Ok(())
@@ -311,7 +315,7 @@ impl<T: ReadableBlockContainer> Block<T> {
     /// Ensure that the index is within the array bounds.
     fn check_array_index(&self, slot_index: usize) -> Result<(), Error> {
         if slot_index >= self.array_slots()? {
-            bail!("Index out of bounds: {}", slot_index);
+            return Err(format_err!("Index out of bounds: {}", slot_index));
         }
         Ok(())
     }
@@ -373,7 +377,7 @@ impl<T: ReadableBlockContainer> Block<T> {
         if cfg!(debug_assertions) {
             let actual = BlockType::from_u8(actual).ok_or(format_err!("Invalid block type"))?;
             if actual != expected {
-                bail!("Expected type {}, got type {}", expected, actual);
+                return Err(format_err!("Expected type {}, got type {}", expected, actual));
             }
         }
         Ok(())
@@ -407,7 +411,7 @@ impl<T: ReadableBlockContainer> Block<T> {
     pub(in crate) fn check_locked(&self, value: bool) -> Result<(), Error> {
         let payload = self.read_payload();
         if (payload.header_generation_count() & 1 == 1) != value {
-            bail!("Expected locked={}, actual={}", value, !value);
+            return Err(format_err!("Expected locked={}, actual={}", value, !value));
         }
         Ok(())
     }
@@ -418,7 +422,7 @@ impl<T: ReadableBlockContainer> Block<T> {
             if self.block_type().is_node_or_tombstone() {
                 return Ok(());
             }
-            bail!("Expected NODE|TOMBSTONE, got: {}", self.block_type())
+            return Err(format_err!("Expected NODE|TOMBSTONE, got: {}", self.block_type()));
         }
         Ok(())
     }
@@ -429,7 +433,7 @@ impl<T: ReadableBlockContainer> Block<T> {
             if self.block_type().is_any_value() {
                 return Ok(());
             }
-            bail!("Block type {} is not *_VALUE", self.block_type())
+            return Err(format_err!("Block type {} is not *_VALUE", self.block_type()));
         }
         Ok(())
     }
@@ -439,7 +443,7 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
     /// Initializes an empty free block.
     pub fn new_free(container: T, index: u32, order: usize, next_free: u32) -> Result<Self, Error> {
         if order >= constants::NUM_ORDERS {
-            bail!("Order {} must be less than {}", order, constants::NUM_ORDERS);
+            return Err(format_err!("Order {} must be less than {}", order, constants::NUM_ORDERS));
         }
         let mut header = BlockHeader(0);
         header.set_order(order.to_u8().unwrap());
@@ -453,7 +457,7 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
     /// Swaps two blocks if they are the same order.
     pub fn swap(&mut self, other: &mut Block<T>) -> Result<(), Error> {
         if self.order() != other.order() || !self.container.ptr_eq(&other.container) {
-            bail!("cannot swap blocks of different order or container");
+            return Err(format_err!("cannot swap blocks of different order or container"));
         }
         std::mem::swap(&mut self.index, &mut other.index);
         Ok(())
@@ -462,7 +466,11 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
     /// Set the order of the block.
     pub fn set_order(&self, order: usize) -> Result<(), Error> {
         if order >= constants::NUM_ORDERS {
-            bail!("Order {} must be less than max {}", order, constants::NUM_ORDERS);
+            return Err(format_err!(
+                "Order {} must be less than max {}",
+                order,
+                constants::NUM_ORDERS
+            ));
         }
         let mut header = self.read_header();
         header.set_order(order.to_u8().unwrap());
@@ -557,17 +565,17 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
         parent_index: u32,
     ) -> Result<(), Error> {
         if !entry_type.is_numeric_value() {
-            bail!("Invalid entry type");
+            return Err(format_err!("Invalid entry type"));
         }
         let order = self.order();
         let max_capacity = utils::array_capacity(order);
         if slots > max_capacity {
-            bail!(
+            return Err(format_err!(
                 "{} exceeds the maximum number of slots for order {}: {}",
                 slots,
                 order,
                 max_capacity
-            );
+            ));
         }
         self.write_value_header(BlockType::ArrayValue, name_index, parent_index)?;
         let mut payload = Payload(0);
@@ -801,7 +809,7 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
         parent_index: u32,
     ) -> Result<(), Error> {
         if !block_type.is_any_value() {
-            bail!("Block type {} is not *_VALUE", block_type);
+            return Err(format_err!("Block type {} is not *_VALUE", block_type));
         }
         let header = self.read_header();
         self.check_type_eq(header.block_type(), BlockType::Reserved)?;

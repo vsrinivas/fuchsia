@@ -4,8 +4,8 @@
 
 use {
     super::Algorithm,
+    anyhow::Error,
     crypto::{rc4, symmetriccipher::SynchronousStreamCipher},
-    failure::Error,
 };
 
 #[allow(unused, dead_code)]

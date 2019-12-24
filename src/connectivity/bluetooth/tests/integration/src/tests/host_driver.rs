@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{err_msg, Error, ResultExt},
+    anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_bluetooth::{DeviceClass, MAJOR_DEVICE_CLASS_TOY},
     fidl_fuchsia_bluetooth_control::TechnologyType,
     fidl_fuchsia_bluetooth_host::HostProxy,
@@ -236,11 +236,11 @@ async fn test_connect(test_state: HostDriverHarness) -> Result<(), Error> {
     let success_dev = devices
         .iter()
         .find(|x| x.address == address1.to_string())
-        .ok_or(err_msg("success peer not found"))?;
+        .ok_or(format_err!("success peer not found"))?;
     let failure_dev = devices
         .iter()
         .find(|x| x.address == address2.to_string())
-        .ok_or(err_msg("error peer not found"))?;
+        .ok_or(format_err!("error peer not found"))?;
 
     // Connecting to the failure peer should result in an error.
     let fut = test_state.aux().proxy().connect(&failure_dev.identifier);
@@ -277,7 +277,7 @@ async fn wait_for_test_device(
     let success_dev = devices
         .iter()
         .find(|x| x.address == address.to_string())
-        .ok_or(err_msg("success peer not found"))?;
+        .ok_or(format_err!("success peer not found"))?;
 
     Ok((success_dev.identifier.clone(), peer))
 }

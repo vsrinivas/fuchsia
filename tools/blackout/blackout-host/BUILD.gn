@@ -9,9 +9,10 @@ if (host_toolchain == current_toolchain) {
     edition = "2018"
     with_unit_tests = true
     deps = [
-      "//third_party/rust_crates:failure",
+      "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:rand",
       "//third_party/rust_crates:structopt",
+      "//third_party/rust_crates:thiserror",
     ]
   }
 }

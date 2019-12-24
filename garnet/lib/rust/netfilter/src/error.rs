@@ -1,4 +1,4 @@
-use failure::{format_err, Error, ResultExt};
+use anyhow::{format_err, Context as _, Error};
 use fidl_fuchsia_net_filter as filter;
 
 /// Helper trait to transform the Result types returned by FIDL methods into

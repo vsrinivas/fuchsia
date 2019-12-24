@@ -4,8 +4,8 @@
 
 use {
     crate::{HierarchyDeserializer, HierarchySerializer},
+    anyhow::{bail, format_err, Error},
     base64,
-    failure::{bail, format_err, Error},
     fuchsia_inspect::format::block::ArrayFormat,
     fuchsia_inspect::reader::{ArrayBucket, ArrayValue, NodeHierarchy, Property},
     lazy_static::lazy_static,
@@ -36,9 +36,9 @@ impl HierarchySerializer for RawJsonNodeHierarchySerializer {
 
 /// Implements serialization of a `NodeHierarchy` into a String.
 impl HierarchySerializer for JsonNodeHierarchySerializer {
-    type Type = Result<String, failure::Error>;
+    type Type = Result<String, anyhow::Error>;
 
-    fn serialize(hierarchy: NodeHierarchy) -> Result<String, failure::Error> {
+    fn serialize(hierarchy: NodeHierarchy) -> Result<String, anyhow::Error> {
         let mut bytes = vec![];
         let mut serializer =
             JsonSerializer::with_formatter(&mut bytes, PrettyFormatter::with_indent(b"    "));
@@ -203,7 +203,7 @@ fn deserialize_json(root_node: serde_json::Value) -> Result<NodeHierarchy, Error
     match root_node {
         serde_json::Value::Object(v) => {
             if v.len() > 1 {
-                bail!("We expect there to be only one root to the tree.");
+                return Err(format_err!("We expect there to be only one root to the tree."));
             }
             let (name, value) = v.iter().next().unwrap();
 
@@ -214,7 +214,7 @@ fn deserialize_json(root_node: serde_json::Value) -> Result<NodeHierarchy, Error
                     .ok_or(format_err!("The first `value` in the tree must be a node."))?,
             )
         }
-        _ => bail!("The first entry in a NodeHierarchy Json must be a node."),
+        _ => return Err(format_err!("The first entry in a NodeHierarchy Json must be a node.")),
     }
 }
 
@@ -292,7 +292,7 @@ macro_rules! parse_array_fns {
             fn [<extract_ $type _floor>](histogram: &Vec<serde_json::Value>, index: usize)
                                          -> Result<$type, Error> {
                 if index == 0 {
-                    bail!("Getting a floor from an underflow bucket is meaningless.");
+                    return Err(format_err!("Getting a floor from an underflow bucket is meaningless."));
                 }
                 // The first legitimate floor is the upper bound of the underflow bucket.
                 histogram.get(index)
@@ -311,7 +311,7 @@ macro_rules! parse_array_fns {
             fn [<extract_ $type _step_multiplier>](histogram: &Vec<serde_json::Value>)
                                          -> Result<$type, Error> {
                 if histogram.len() < 4 {
-                    bail!("Getting a step multiplier with only 1 non-overflow bucket is meaningless.");
+                    return Err(format_err!("Getting a step multiplier with only 1 non-overflow bucket is meaningless."));
                 }
                 // Get the upper bound of the first and second non-overflow bucket. We cannot use floors
                 // and we cannot use relative bucket size because the algorithm used to generate histograms
@@ -360,7 +360,7 @@ macro_rules! parse_array_fns {
                                              -> Result<$type, Error> {
 
                 if index == 0 || index == histogram.len()-1 {
-                    bail!("Cannot extract step sizes from overflow buckets.")
+                    return Err(format_err!("Cannot extract step sizes from overflow buckets."))
                 }
 
                 let non_edge_bucket = histogram.get(index)
@@ -565,7 +565,10 @@ ormed."
         return Ok(Property::UintArray(name.to_string(), parse_u64_histogram(histogram)?));
     }
 
-    bail!("Histograms must be one of i64, u64, or f64. Property name: {:?}", name);
+    return Err(format_err!(
+        "Histograms must be one of i64, u64, or f64. Property name: {:?}",
+        name
+    ));
 }
 
 /// Parses a JSON array into its numerical Inspect ArrayValue.
@@ -593,7 +596,7 @@ fn parse_array(name: &String, vec: &Vec<serde_json::Value>) -> Result<Property, 
         ));
     }
 
-    bail!("Arrays must be one of i64, u64, or f64. Property name: {:?}", name);
+    return Err(format_err!("Arrays must be one of i64, u64, or f64. Property name: {:?}", name));
 }
 
 /// Parses a serde_json Number into an Inspect number Property.
@@ -605,7 +608,7 @@ fn parse_number(name: &String, num: &serde_json::Number) -> Result<Property, Err
     } else if num.is_f64() {
         Ok(Property::Double(name.to_string(), num.as_f64().unwrap()))
     } else {
-        bail!("Diagnostics numbers must fit within 64 bits.")
+        return Err(format_err!("Diagnostics numbers must fit within 64 bits."));
     }
 }
 
@@ -631,7 +634,7 @@ fn parse_node_object(
             },
             serde_json::Value::Bool(_) => {
                 // TODO(37140): Deserialize booleans when supported.
-                bail!("Booleans are not part of the diagnostics schema.");
+                return Err(format_err!("Booleans are not part of the diagnostics schema."));
             }
             serde_json::Value::Number(num) => {
                 properties.push(parse_number(name, num)?);
@@ -644,7 +647,7 @@ fn parse_node_object(
                 properties.push(parse_array(name, vec)?);
             }
             serde_json::Value::Null => {
-                bail!("Null isn't an existing part of the diagnostics schema.");
+                return Err(format_err!("Null isn't an existing part of the diagnostics schema."));
             }
         }
     }

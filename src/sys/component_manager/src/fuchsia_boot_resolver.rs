@@ -4,8 +4,8 @@
 
 use {
     crate::model::resolver::{Resolver, ResolverError, ResolverFut},
+    anyhow::Error,
     cm_fidl_translator::translate,
-    failure::Error,
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_sys2 as fsys,

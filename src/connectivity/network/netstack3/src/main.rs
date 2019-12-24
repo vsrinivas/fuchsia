@@ -17,7 +17,7 @@ mod fidl_worker;
 
 use crate::eventloop::EventLoop;
 
-fn main() -> Result<(), failure::Error> {
+fn main() -> Result<(), anyhow::Error> {
     fuchsia_syslog::init()?;
     // Severity is set to debug during development.
     fuchsia_syslog::set_severity(-1);

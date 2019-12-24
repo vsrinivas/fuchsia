@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    failure::format_err,
     fidl::endpoints::Proxy,
     fidl_fuchsia_wlan_device as fidl_wlan_dev, fuchsia_async as fasync,
+    anyhow::format_err,
     fuchsia_vfs_watcher::{WatchEvent, Watcher},
     fuchsia_zircon::Status as zx_Status,
     futures::prelude::*,
@@ -22,7 +22,7 @@ pub struct NewPhyDevice {
 }
 
 pub fn watch_phy_devices<E: wlan_dev::DeviceEnv>(
-) -> io::Result<impl Stream<Item = Result<NewPhyDevice, failure::Error>>> {
+) -> io::Result<impl Stream<Item = Result<NewPhyDevice, anyhow::Error>>> {
     Ok(watch_new_devices::<_, E>(E::PHY_PATH)?.try_filter_map(|path| {
         future::ready(Ok(handle_open_error(&path, new_phy::<E>(&path), "phy")))
     }))
@@ -30,11 +30,11 @@ pub fn watch_phy_devices<E: wlan_dev::DeviceEnv>(
 
 fn handle_open_error<T>(
     path: &PathBuf,
-    r: Result<T, failure::Error>,
+    r: Result<T, anyhow::Error>,
     context: &'static str,
 ) -> Option<T> {
     if let Err(ref e) = &r {
-        if let Some(&zx_Status::ALREADY_BOUND) = e.as_fail().downcast_ref::<zx_Status>() {
+        if let Some(&zx_Status::ALREADY_BOUND) = e.downcast_ref::<zx_Status>() {
             info!("{} '{}' already open, deferring", context, path.display())
         } else {
             error!("Error opening {} '{}': {}", context, path.display(), e)
@@ -45,7 +45,7 @@ fn handle_open_error<T>(
 
 fn watch_new_devices<P: AsRef<Path>, E: wlan_dev::DeviceEnv>(
     path: P,
-) -> io::Result<impl Stream<Item = Result<PathBuf, failure::Error>>> {
+) -> io::Result<impl Stream<Item = Result<PathBuf, anyhow::Error>>> {
     let dir = E::open_dir(&path)?;
     let channel = fdio::clone_channel(&dir)?;
     let async_channel = fasync::Channel::from_channel(channel)?;
@@ -66,14 +66,14 @@ fn watch_new_devices<P: AsRef<Path>, E: wlan_dev::DeviceEnv>(
     .try_flatten_stream())
 }
 
-fn new_phy<E: wlan_dev::DeviceEnv>(path: &PathBuf) -> Result<NewPhyDevice, failure::Error> {
+fn new_phy<E: wlan_dev::DeviceEnv>(path: &PathBuf) -> Result<NewPhyDevice, anyhow::Error> {
     let id = id_from_path(path)?;
     let device = E::device_from_path(path)?;
     let proxy = wlan_dev::connect_wlan_phy(&device)?;
     Ok(NewPhyDevice { id, proxy, device })
 }
 
-fn id_from_path(path: &PathBuf) -> Result<u16, failure::Error> {
+fn id_from_path(path: &PathBuf) -> Result<u16, anyhow::Error> {
     let file_name = path.file_name().ok_or_else(|| format_err!("Invalid device path"))?;
     let file_name_str =
         file_name.to_str().ok_or_else(|| format_err!("Filename is not valid UTF-8"))?;

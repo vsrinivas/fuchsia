@@ -4,7 +4,7 @@
 
 use {
     crate::{device::TeeDeviceConnection, provider_server::ProviderServer},
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl::endpoints::{ClientEnd, ServerEnd},
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,

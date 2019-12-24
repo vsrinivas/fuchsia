@@ -14,7 +14,7 @@ use {
     crate::sequential_io_generator::SequentialIoGenerator,
     crate::target::{AvailableTargets, TargetOps},
     crate::verifier::{run_verifier, VerifierArgs},
-    failure::Error,
+    anyhow::Error,
     log::debug,
     serde_derive::{Deserialize, Serialize},
     std::{

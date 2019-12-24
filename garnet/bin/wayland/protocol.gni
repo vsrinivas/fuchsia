@@ -65,8 +65,8 @@ template("wayland_protocol") {
       "//garnet/bin/wayland/core",
       "//garnet/public/rust/fuchsia-trace",
       "//garnet/public/rust/fuchsia-zircon",
+      "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:bitflags",
-      "//third_party/rust_crates:failure",
     ]
     deps += protocol_deps
     source_root = target_crate_root

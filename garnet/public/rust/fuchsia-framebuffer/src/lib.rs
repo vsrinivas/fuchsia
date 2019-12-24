@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{bail, format_err, Error, ResultExt};
+use anyhow::{format_err, Context as _, Error};
 use fdio::watch_directory;
 use fidl::{
     endpoints,
@@ -320,7 +320,11 @@ impl Frame {
             .context("controller import_image")?;
 
         if status != 0 {
-            bail!("import_image error {} ({})", Status::from_raw(status), status);
+            return Err(format_err!(
+                "import_image error {} ({})",
+                Status::from_raw(status),
+                status
+            ));
         }
 
         Ok(image_id)
@@ -453,7 +457,9 @@ impl FrameBuffer {
                     break;
                 }
             } else {
-                bail!("Timed out waiting for display controller to send a DisplaysChanged event");
+                return Err(format_err!(
+                    "Timed out waiting for display controller to send a DisplaysChanged event"
+                ));
             }
         }
         Ok(Config {
@@ -647,7 +653,7 @@ impl FrameBuffer {
         }
 
         if !buffers.settings.has_image_format_constraints {
-            bail!("No image format constraints");
+            return Err(format_err!("No image format constraints"));
         }
 
         let image_type =
@@ -784,7 +790,7 @@ mod test {
     use fuchsia_async as fasync;
 
     #[test]
-    fn test_async_new() -> std::result::Result<(), failure::Error> {
+    fn test_async_new() -> std::result::Result<(), anyhow::Error> {
         let mut executor = fasync::Executor::new()?;
         let fb_future = FrameBuffer::new(FrameUsage::Cpu, None, None);
         executor.run_singlethreaded(fb_future)?;

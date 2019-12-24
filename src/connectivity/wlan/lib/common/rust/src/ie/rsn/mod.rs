@@ -11,15 +11,15 @@ pub mod suite_selector;
 
 pub use suite_selector::OUI;
 
-use failure::Fail;
+use thiserror::Error;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum Error {
-    #[fail(display = "unexpected IO error: {}", _0)]
-    UnexpectedIoError(#[cause] std::io::Error),
-    #[fail(display = "invalid OUI length; expected 3 bytes but received {}", _0)]
+    #[error("unexpected IO error: {}", _0)]
+    UnexpectedIoError(std::io::Error),
+    #[error("invalid OUI length; expected 3 bytes but received {}", _0)]
     InvalidOuiLength(usize),
-    #[fail(display = "invalid PMKID length; expected 16 bytes but received {}", _0)]
+    #[error("invalid PMKID length; expected 16 bytes but received {}", _0)]
     InvalidPmkidLength(usize),
 }
 

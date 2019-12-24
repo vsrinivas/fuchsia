@@ -9,7 +9,7 @@ import("//build/test/test_package.gni")
 rustc_library("blackout-target") {
   edition = "2018"
   deps = [
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:structopt",
   ]
@@ -20,7 +20,7 @@ rustc_test("blackout-target-lib-test") {
   deps = [
     "//src/storage/fs-management",
     "//src/storage/ramdevice-client",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:structopt",
   ]

@@ -9,7 +9,7 @@ use {
         merge::{TryMerge, TryMergeGroups},
         serde_ext::{self, LoadError},
     },
-    failure::Error,
+    anyhow::Error,
     rayon::prelude::*,
     serde_derive::Deserialize,
     std::{

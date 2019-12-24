@@ -7,8 +7,8 @@
 //! `log_listener` listens to messages from `fuchsia.logger.Log` and prints them to stdout and/or
 //! writes them to disk.
 
+use anyhow::{Context as _, Error};
 use chrono::TimeZone;
-use failure::{Error, ResultExt};
 use fuchsia_async as fasync;
 use fuchsia_syslog_listener as syslog_listener;
 use fuchsia_syslog_listener::LogProcessor;
@@ -1281,7 +1281,7 @@ mod tests {
         }
 
         #[test]
-        fn only_fail() {
+        fn only_error() {
             let args = vec!["--only".to_string()];
             parse_flag_test_helper(&args, None);
         }
@@ -1296,7 +1296,7 @@ mod tests {
         }
 
         #[test]
-        fn pid_fail() {
+        fn pid_error() {
             let args = vec!["--pid".to_string(), "123a".to_string()];
             parse_flag_test_helper(&args, None);
         }
@@ -1310,7 +1310,7 @@ mod tests {
         }
 
         #[test]
-        fn pretty_fail() {
+        fn pretty_error() {
             let args = vec!["--pretty".to_string(), "123".to_string()];
             let mut expected = LogListenerOptions::default();
             expected.local.is_pretty = false;
@@ -1326,7 +1326,7 @@ mod tests {
         }
 
         #[test]
-        fn dump_logs_fail() {
+        fn dump_logs_error() {
             let args = vec!["--dump_logs".to_string(), "123".to_string()];
             let mut expected = LogListenerOptions::default();
             expected.local.dump_logs = false;
@@ -1343,7 +1343,7 @@ mod tests {
         }
 
         #[test]
-        fn tid_fail() {
+        fn tid_error() {
             let args = vec!["--tid".to_string(), "123a".to_string()];
             parse_flag_test_helper(&args, None);
         }
@@ -1357,7 +1357,7 @@ mod tests {
         }
 
         #[test]
-        fn suppress_fail() {
+        fn suppress_error() {
             let args = vec!["--suppress".to_string()];
             parse_flag_test_helper(&args, None);
         }
@@ -1377,7 +1377,7 @@ mod tests {
         }
 
         #[test]
-        fn severity_fail() {
+        fn severity_error() {
             let args = vec!["--severity".to_string(), "DEBUG".to_string()];
             parse_flag_test_helper(&args, None);
         }
@@ -1411,7 +1411,7 @@ mod tests {
         }
 
         #[test]
-        fn verbosity_fail() {
+        fn verbosity_error() {
             let mut args = vec!["--verbosity".to_string(), "-2".to_string()];
             parse_flag_test_helper(&args, None);
 
@@ -1446,7 +1446,7 @@ mod tests {
         }
 
         #[test]
-        fn clock_fail() {
+        fn clock_error() {
             let args = vec!["--clock".to_string(), "CLUCK!!".to_string()];
             parse_flag_test_helper(&args, None);
         }
@@ -1482,7 +1482,7 @@ mod tests {
         }
 
         #[test]
-        fn tag_fail() {
+        fn tag_error() {
             let mut args = vec!["--tag".to_string()];
             let mut tag = "a".to_string();
             for _ in 0..MAX_TAG_LEN_BYTES {

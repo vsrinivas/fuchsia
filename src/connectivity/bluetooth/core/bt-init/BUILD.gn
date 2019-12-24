@@ -22,11 +22,12 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le-rustc",
     "//sdk/fidl/fuchsia.bluetooth.snoop:fuchsia.bluetooth.snoop-rustc",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_derive",
     "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 

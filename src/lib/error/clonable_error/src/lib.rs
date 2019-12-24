@@ -3,20 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    failure::{self, AsFail, Error, Fail},
+    anyhow::Error,
     std::{fmt, sync::Arc},
+    thiserror::Error,
 };
 
 /// A wrapper for `Error` that implements `Clone`.
-#[derive(Clone)]
+#[derive(Clone, Error)]
 pub struct ClonableError {
     err: Arc<Error>,
-}
-
-impl AsFail for ClonableError {
-    fn as_fail(&self) -> &dyn Fail {
-        self.err.as_fail()
-    }
 }
 
 impl From<Error> for ClonableError {
@@ -40,13 +35,14 @@ impl fmt::Debug for ClonableError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use failure::format_err;
+    use anyhow::format_err;
+    use thiserror::Error;
 
-    #[derive(Debug, Fail, Clone)]
-    #[fail(display = "\"{}\" happened: {}", msg, cause)]
+    #[derive(Debug, Error, Clone)]
+    #[error("\"{}\" happened: {}", msg, cause)]
     struct FooError {
         msg: String,
-        #[fail(cause)]
+        #[source]
         cause: ClonableError,
     }
 

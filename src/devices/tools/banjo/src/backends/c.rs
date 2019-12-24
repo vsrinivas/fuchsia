@@ -8,7 +8,7 @@ use {
     },
     crate::backends::util::to_c_name,
     crate::backends::Backend,
-    failure::{format_err, Error},
+    anyhow::{format_err, Error},
     std::io,
     std::iter,
 };

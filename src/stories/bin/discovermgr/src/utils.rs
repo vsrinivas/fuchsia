@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {failure::Error, fidl_fuchsia_mem::Buffer, fuchsia_zircon as zx};
+use {anyhow::Error, fidl_fuchsia_mem::Buffer, fuchsia_zircon as zx};
 
 /// Converts a module_path into a string.
 /// Example: ["abc", "1:2"] -> "abc:1\:2"

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::*;
-use failure;
+use anyhow;
 use fuchsia_async as fasync;
 use futures::{
     self,
@@ -18,7 +18,7 @@ use test_util::assert_matches;
 
 #[fasync::run_until_stalled]
 #[test]
-async fn ready_items_are_yielded() -> Result<(), failure::Error> {
+async fn ready_items_are_yielded() -> Result<(), anyhow::Error> {
     let mut stream_map = StreamMap::new();
     let mut expected_output = HashSet::new();
 
@@ -40,7 +40,7 @@ async fn ready_items_are_yielded() -> Result<(), failure::Error> {
 
 #[fasync::run(4)]
 #[test]
-async fn concurrently_ready_items_are_yielded() -> Result<(), failure::Error> {
+async fn concurrently_ready_items_are_yielded() -> Result<(), anyhow::Error> {
     let mut stream_map = StreamMap::new();
     let mut expected_output = HashSet::new();
 
@@ -66,7 +66,7 @@ async fn concurrently_ready_items_are_yielded() -> Result<(), failure::Error> {
 
 #[fasync::run_until_stalled]
 #[test]
-async fn removed_streams_are_terminated() -> Result<(), failure::Error> {
+async fn removed_streams_are_terminated() -> Result<(), anyhow::Error> {
     let mut stream_map = StreamMap::new();
     let (mut sender1, receiver1) = mpsc::channel(1);
     let (mut sender2, receiver2) = mpsc::channel(1);
@@ -91,7 +91,7 @@ async fn removed_streams_are_terminated() -> Result<(), failure::Error> {
 
 #[fasync::run_until_stalled]
 #[test]
-async fn with_elem_has_effect() -> Result<(), failure::Error> {
+async fn with_elem_has_effect() -> Result<(), anyhow::Error> {
     let mut stream_map = StreamMap::new();
     let (_sender, receiver) = mpsc::channel::<u32>(1);
 
@@ -121,7 +121,7 @@ async fn with_elem_has_effect() -> Result<(), failure::Error> {
 }
 
 #[test]
-fn awoken_for_mutex_guard() -> Result<(), failure::Error> {
+fn awoken_for_mutex_guard() -> Result<(), anyhow::Error> {
     let mut stream_map = StreamMap::new();
 
     let (_sender1, receiver1) = mpsc::channel::<usize>(1);
@@ -149,7 +149,7 @@ fn awoken_for_mutex_guard() -> Result<(), failure::Error> {
 
 #[fasync::run_singlethreaded]
 #[test]
-async fn ended_stream_is_removed_from_map() -> Result<(), failure::Error> {
+async fn ended_stream_is_removed_from_map() -> Result<(), anyhow::Error> {
     let mut stream_map = StreamMap::new();
 
     let (sender, receiver) = mpsc::channel::<usize>(1);

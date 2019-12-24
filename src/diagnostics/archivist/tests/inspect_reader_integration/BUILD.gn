@@ -24,7 +24,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.update.installer:fuchsia.update.installer-rustc",
     "//src/lib/cobalt/rust:fuchsia-cobalt",
     "//src/sys/lib/fuchsia_url:fuchsia_url",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:hyper",
     "//third_party/rust_crates:hyper-rustls",
@@ -33,6 +33,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:serde_derive",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
+    "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:timebomb",
     "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
   ]

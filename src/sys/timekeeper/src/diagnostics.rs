@@ -1,5 +1,5 @@
 use {
-    failure::ResultExt,
+    anyhow::Context as _,
     fuchsia_inspect::{Inspector, IntProperty, Property},
     fuchsia_zircon as zx,
     lazy_static::lazy_static,

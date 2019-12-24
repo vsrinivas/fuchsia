@@ -4,7 +4,7 @@
 
 use {
     crate::inspect::{self, InspectDataRepository},
-    failure::{self, Error},
+    anyhow::Error,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_diagnostics::{
         AccessorError, ArchiveRequest, ArchiveRequestStream, Selector, SelectorArgument,
@@ -101,7 +101,7 @@ impl ArchiveAccessor {
                 }
                 Ok(())
             }
-            .unwrap_or_else(|e: failure::Error| {
+            .unwrap_or_else(|e: anyhow::Error| {
                 eprintln!("couldn't run archive accessor service: {:?}", e)
             }),
         );

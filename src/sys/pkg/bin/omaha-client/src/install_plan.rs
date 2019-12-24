@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Fail;
 use fuchsia_url::pkg_url::PkgUrl;
 use log::{error, warn};
 use omaha_client::installer::Plan;
@@ -13,6 +12,7 @@ use omaha_client::{
     },
     request_builder::RequestParams,
 };
+use thiserror::Error;
 
 #[derive(Debug, PartialEq)]
 pub struct FuchsiaInstallPlan {
@@ -21,9 +21,9 @@ pub struct FuchsiaInstallPlan {
     pub install_source: InstallSource,
 }
 
-#[derive(Debug, Fail, PartialEq)]
+#[derive(Debug, Error, PartialEq)]
 pub enum InstallPlanErrors {
-    #[fail(display = "Fuchsia Install Plan could not be created from response")]
+    #[error("Fuchsia Install Plan could not be created from response")]
     Failed,
 }
 

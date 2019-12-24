@@ -7,7 +7,7 @@
 extern crate serde_derive;
 
 use {
-    failure::{format_err, Error, ResultExt},
+    anyhow::{format_err, Context as _, Error},
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_bluetooth::Appearance,
     fidl_fuchsia_bluetooth_bredr::ProfileMarker,

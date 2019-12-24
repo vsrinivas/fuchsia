@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::bail,
+    anyhow::format_err,
     wlan_common::mac::{Aid, MAX_AID},
 };
 
@@ -23,7 +23,7 @@ pub struct Map {
 impl Map {
     const ELEM_BITS: u16 = 64;
 
-    pub fn assign_aid(&mut self) -> Result<Aid, failure::Error> {
+    pub fn assign_aid(&mut self) -> Result<Aid, anyhow::Error> {
         for (i, bitmap) in self.aids.iter_mut().enumerate() {
             if bitmap.count_zeros() > 0 {
                 let first_unset_bit_pos = (!*bitmap).trailing_zeros() as u16;
@@ -32,7 +32,7 @@ impl Map {
                     *bitmap |= 1 << first_unset_bit_pos;
                     return Ok(aid);
                 } else {
-                    bail!("no available association ID")
+                    return Err(format_err!("no available association ID"));
                 }
             }
         }

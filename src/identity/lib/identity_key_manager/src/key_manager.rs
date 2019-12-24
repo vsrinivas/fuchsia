@@ -33,7 +33,7 @@ impl KeyManager {
         context: &KeyManagerContext,
         mut request_stream: KeyManagerRequestStream,
         cancel: TaskGroupCancel,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), anyhow::Error> {
         while let Some(result) = cancel_or(&cancel, request_stream.try_next()).await {
             match result? {
                 Some(request) => self.handle_fidl_request(request, context)?,
@@ -93,7 +93,7 @@ mod test {
     fn run_key_manager_test<F, Fut>(test_fn: F)
     where
         F: FnOnce(KeyManagerProxy) -> Fut,
-        Fut: Future<Output = Result<(), failure::Error>>,
+        Fut: Future<Output = Result<(), anyhow::Error>>,
     {
         let mut executor = fasync::Executor::new().expect("Failed to create executor");
         let (key_manager_proxy, manager_request_stream) =
@@ -155,7 +155,7 @@ mod test {
                 Err(fidl::Error::ClientChannelClosed(zx::Status::PEER_CLOSED))
             );
 
-            Result::<(), failure::Error>::Ok(())
+            Result::<(), anyhow::Error>::Ok(())
         };
 
         let (test_res, server_res) = join(test_fut, server_fut).await;

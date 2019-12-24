@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::Error,
+    anyhow::Error,
     fidl_fuchsia_wlan_service::WlanMarker,
     fidl_fuchsia_wlan_tap::{
         WlanTxStatusEntry, WlantapPhyConfig, WlantapPhyEvent, WlantapPhyProxy,

@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{format_err, Error, Fail};
+use anyhow::{format_err, Error};
 use fidl_fuchsia_auth::{AuthProviderStatus, Status};
+use thiserror::Error;
 use token_cache::AuthCacheError;
 use token_store::AuthDbError;
 
@@ -26,8 +27,8 @@ where
 /// An Error type for problems encountered in the token manager. Each error contains the
 /// `fuchsia.auth.Status` that should be reported back to the client and an indication of whether
 /// it is fatal.
-#[derive(Debug, Fail)]
-#[fail(display = "TokenManager error, returning {:?}. ({:?})", status, cause)]
+#[derive(Debug, Error)]
+#[error("TokenManager error, returning {:?}. ({:?})", status, cause)]
 pub struct TokenManagerError {
     /// The most appropriate `fuchsia.auth.Status` to describe this problem.
     pub status: Status,
@@ -107,7 +108,7 @@ impl From<AuthProviderStatus> for TokenManagerError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use failure::format_err;
+    use anyhow::format_err;
 
     const TEST_STATUS: Status = Status::UnknownError;
 
@@ -149,11 +150,11 @@ mod tests {
         let err_fatal = TokenManagerError::from(AuthDbError::DbInvalid);
         assert_eq!(
             (format!("{:?}", err.cause.as_ref().unwrap()), err.fatal, err.status),
-            (format!("{:?}", &AuthDbError::CredentialNotFound), false, Status::UserNotFound)
+            ("credential not found".to_string(), false, Status::UserNotFound)
         );
         assert_eq!(
             (format!("{:?}", err_fatal.cause.as_ref().unwrap()), err_fatal.fatal, err_fatal.status),
-            (format!("{:?}", &AuthDbError::DbInvalid), true, Status::InternalError)
+            ("database contents could not be parsed".to_string(), true, Status::InternalError)
         );
     }
 
@@ -162,7 +163,7 @@ mod tests {
         let err = TokenManagerError::from(AuthCacheError::InvalidArguments);
         assert_eq!(
             (format!("{:?}", err.cause.as_ref().unwrap()), err.fatal, err.status),
-            (format!("{:?}", &AuthCacheError::InvalidArguments), false, Status::InvalidRequest)
+            ("invalid argument".to_string(), false, Status::InvalidRequest)
         );
     }
 

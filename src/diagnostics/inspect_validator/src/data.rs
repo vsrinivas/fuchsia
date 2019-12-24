@@ -8,8 +8,8 @@ use {
         validate::{self, Number, ROOT_ID},
         DiffType,
     },
+    anyhow::{bail, format_err, Error},
     difference,
-    failure::{bail, Error},
     fuchsia_inspect::{self, format::block::ArrayFormat},
     num_derive::{FromPrimitive, ToPrimitive},
     std::{
@@ -212,7 +212,7 @@ impl Data {
                     validate::Number::IntT(value) => Payload::Int(*value),
                     validate::Number::UintT(value) => Payload::Uint(*value),
                     validate::Number::DoubleT(value) => Payload::Double(*value),
-                    unknown => bail!("Unknown number type {:?}", unknown),
+                    unknown => return Err(format_err!("Unknown number type {:?}", unknown)),
                 },
             ),
             validate::Action::CreateBytesProperty(validate::CreateBytesProperty {
@@ -306,7 +306,12 @@ impl Data {
                         data[1] = *step_size;
                         Payload::DoubleArray(data, ArrayFormat::LinearHistogram)
                     }
-                    unexpected => bail!("Bad types in CreateLinearHistogram: {:?}", unexpected),
+                    unexpected => {
+                        return Err(format_err!(
+                            "Bad types in CreateLinearHistogram: {:?}",
+                            unexpected
+                        ))
+                    }
                 },
             ),
             validate::Action::CreateExponentialHistogram(
@@ -358,7 +363,10 @@ impl Data {
                         Payload::DoubleArray(data, ArrayFormat::ExponentialHistogram)
                     }
                     unexpected => {
-                        bail!("Bad types in CreateExponentialHistogram: {:?}", unexpected)
+                        return Err(format_err!(
+                            "Bad types in CreateExponentialHistogram: {:?}",
+                            unexpected
+                        ))
                     }
                 },
             ),
@@ -410,10 +418,18 @@ impl Data {
                             },
                             Number::DoubleT(value),
                         ) => insert_exponential_d(numbers, *value, 1),
-                        unexpected => bail!("Type mismatch {:?} trying to insert", unexpected),
+                        unexpected => {
+                            return Err(format_err!(
+                                "Type mismatch {:?} trying to insert",
+                                unexpected
+                            ))
+                        }
                     }
                 } else {
-                    bail!("Tried to insert number on nonexistent property {}", id);
+                    return Err(format_err!(
+                        "Tried to insert number on nonexistent property {}",
+                        id
+                    ));
                 }
             }
             validate::Action::InsertMultiple(validate::InsertMultiple { id, value, count }) => {
@@ -465,14 +481,20 @@ impl Data {
                             Number::DoubleT(value),
                         ) => insert_exponential_d(numbers, *value, *count),
                         unexpected => {
-                            bail!("Type mismatch {:?} trying to insert multiple", unexpected)
+                            return Err(format_err!(
+                                "Type mismatch {:?} trying to insert multiple",
+                                unexpected
+                            ))
                         }
                     }
                 } else {
-                    bail!("Tried to insert_multiple number on nonexistent property {}", id);
+                    return Err(format_err!(
+                        "Tried to insert_multiple number on nonexistent property {}",
+                        id
+                    ));
                 }
             }
-            _ => bail!("Unknown action {:?}", action),
+            _ => return Err(format_err!("Unknown action {:?}", action)),
         }
     }
 
@@ -484,22 +506,22 @@ impl Data {
             properties: HashSet::new(),
         };
         if self.tombstone_nodes.contains(&id) {
-            bail!("Tried to create implicitly deleted node {}", id);
+            return Err(format_err!("Tried to create implicitly deleted node {}", id));
         }
         if let Some(_) = self.nodes.insert(id, node) {
-            bail!("Create called when node already existed at {}", id);
+            return Err(format_err!("Create called when node already existed at {}", id));
         }
         if let Some(parent_node) = self.nodes.get_mut(&parent) {
             parent_node.children.insert(id);
         } else {
-            bail!("Parent {} of created node {} doesn't exist", parent, id);
+            return Err(format_err!("Parent {} of created node {} doesn't exist", parent, id));
         }
         Ok(())
     }
 
     fn delete_node(&mut self, id: u32) -> Result<(), Error> {
         if id == 0 {
-            bail!("Do not try to delete node 0");
+            return Err(format_err!("Do not try to delete node 0"));
         }
         if self.tombstone_nodes.remove(&id) {
             return Ok(());
@@ -528,14 +550,14 @@ impl Data {
                 }
             }
         } else {
-            bail!("Delete of nonexistent node {}", id);
+            return Err(format_err!("Delete of nonexistent node {}", id));
         }
         Ok(())
     }
 
     fn make_tombstone_node(&mut self, id: u32) -> Result<(), Error> {
         if id == 0 {
-            bail!("Internal error! Do not try to delete node 0.");
+            return Err(format_err!("Internal error! Do not try to delete node 0."));
         }
         if let Some(node) = self.nodes.remove(&id) {
             for child in node.children.clone().iter() {
@@ -545,7 +567,7 @@ impl Data {
                 self.make_tombstone_property(*property)?;
             }
         } else {
-            bail!("Internal error! Tried to tombstone nonexistent node {}", id);
+            return Err(format_err!("Internal error! Tried to tombstone nonexistent node {}", id));
         }
         self.tombstone_nodes.insert(id);
         Ok(())
@@ -553,7 +575,10 @@ impl Data {
 
     fn make_tombstone_property(&mut self, id: u32) -> Result<(), Error> {
         if let None = self.properties.remove(&id) {
-            bail!("Internal error! Tried to tombstone nonexistent property {}", id);
+            return Err(format_err!(
+                "Internal error! Tried to tombstone nonexistent property {}",
+                id
+            ));
         }
         self.tombstone_properties.insert(id);
         Ok(())
@@ -569,14 +594,14 @@ impl Data {
         if let Some(node) = self.nodes.get_mut(&parent) {
             node.properties.insert(id);
         } else {
-            bail!("Parent {} of property {} not found", parent, id);
+            return Err(format_err!("Parent {} of property {} not found", parent, id));
         }
         if self.tombstone_properties.contains(&id) {
-            bail!("Tried to create implicitly deleted property {}", id);
+            return Err(format_err!("Tried to create implicitly deleted property {}", id));
         }
         let property = Property { parent, id, name: name.into(), payload };
         if let Some(_) = self.properties.insert(id, property) {
-            bail!("Property insert called on existing id {}", id);
+            return Err(format_err!("Property insert called on existing id {}", id));
         }
         Ok(())
     }
@@ -602,7 +627,7 @@ impl Data {
                 );
             }
         } else {
-            bail!("Delete of nonexistent property {}", id);
+            return Err(format_err!("Delete of nonexistent property {}", id));
         }
         Ok(())
     }
@@ -619,17 +644,19 @@ impl Data {
                 (Property { payload: Payload::Double(old), .. }, Number::DoubleT(value)) => {
                     property.payload = Payload::Double((op.double)(*old, *value));
                 }
-                unexpected => bail!("Bad types {:?} trying to set number", unexpected),
+                unexpected => {
+                    return Err(format_err!("Bad types {:?} trying to set number", unexpected))
+                }
             }
         } else {
-            bail!("Tried to {} number on nonexistent property {}", op.name, id);
+            return Err(format_err!("Tried to {} number on nonexistent property {}", op.name, id));
         }
         Ok(())
     }
 
     fn check_index<T>(numbers: &Vec<T>, index: usize) -> Result<(), Error> {
         if index >= numbers.len() as usize {
-            bail!("Index {} too big for vector length {}", index, numbers.len());
+            return Err(format_err!("Index {} too big for vector length {}", index, numbers.len()));
         }
         Ok(())
     }
@@ -654,7 +681,9 @@ impl Data {
                 Property {
                     payload: Payload::DoubleArray(numbers, ArrayFormat::Default), ..
                 } => numbers.len(),
-                unexpected => bail!("Bad types {:?} trying to set number", unexpected),
+                unexpected => {
+                    return Err(format_err!("Bad types {:?} trying to set number", unexpected))
+                }
             };
             if index >= number_len {
                 return Ok(());
@@ -678,10 +707,12 @@ impl Data {
                     Self::check_index(numbers, index)?;
                     numbers[index] = (op.double)(numbers[index], *value);
                 }
-                unexpected => bail!("Type mismatch {:?} trying to set number", unexpected),
+                unexpected => {
+                    return Err(format_err!("Type mismatch {:?} trying to set number", unexpected))
+                }
             }
         } else {
-            bail!("Tried to {} number on nonexistent property {}", op.name, id);
+            return Err(format_err!("Tried to {} number on nonexistent property {}", op.name, id));
         }
         Ok(())
     }
@@ -692,10 +723,12 @@ impl Data {
                 Property { payload: Payload::String(_), .. } => {
                     property.payload = Payload::String(value.to_owned())
                 }
-                unexpected => bail!("Bad type {:?} trying to set string", unexpected),
+                unexpected => {
+                    return Err(format_err!("Bad type {:?} trying to set string", unexpected))
+                }
             }
         } else {
-            bail!("Tried to set string on nonexistent property {}", id);
+            return Err(format_err!("Tried to set string on nonexistent property {}", id));
         }
         Ok(())
     }
@@ -706,10 +739,12 @@ impl Data {
                 Property { payload: Payload::Bytes(_), .. } => {
                     property.payload = Payload::Bytes(value.to_owned())
                 }
-                unexpected => bail!("Bad type {:?} trying to set bytes", unexpected),
+                unexpected => {
+                    return Err(format_err!("Bad type {:?} trying to set bytes", unexpected))
+                }
             }
         } else {
-            bail!("Tried to set bytes on nonexistent property {}", id);
+            return Err(format_err!("Tried to set bytes on nonexistent property {}", id));
         }
         Ok(())
     }
@@ -756,7 +791,7 @@ impl Data {
                     format!("-- DIFF --\n{}\n", Self::diff_string(&self_string, &other_string))
                 }
             };
-            bail!("Trees differ:{}{}", full_string, diff_string);
+            return Err(format_err!("Trees differ:{}{}", full_string, diff_string));
         }
     }
 
@@ -1559,19 +1594,19 @@ mod tests {
         local.apply(&create_string_property!(parent: 1, id: 2, name: "prop1", value: "foo"))?;
         remote.apply(&create_node!(parent: 0, id: 1, name: "node"))?;
         remote.apply(&create_string_property!(parent: 1, id: 2, name: "prop1", value: "bar"))?;
-        let diff_string = "-- DIFF --\\n\\nSame:3 lines\\nLocal: > >  prop1: \
-             String(\\\"foo\\\")\\nOther: > >  prop1: String(\\\"bar\\\")\\nSame:3 lines\\n\\n\"";
+        let diff_string = "-- DIFF --\n\nSame:3 lines\nLocal: > >  prop1: \
+             String(\"foo\")\nOther: > >  prop1: String(\"bar\")\nSame:3 lines\n\n";
         let full_string =
-            "-- LOCAL --\\n root ->\\n\\n>  node ->\\n> >  prop1: String(\\\"foo\\\")\
-             \\n\\n\\n\\n-- OTHER --\\n root ->\\n\\n>  node ->\\n> >  prop1: \
-             String(\\\"bar\\\")\\n\\n\\n\\n";
+            "-- LOCAL --\n root ->\n\n>  node ->\n> >  prop1: String(\"foo\")\
+             \n\n\n\n-- OTHER --\n root ->\n\n>  node ->\n> >  prop1: \
+             String(\"bar\")\n\n\n\n";
         match local.compare(&mut remote, DiffType::Diff) {
             Err(error) => {
                 let error_string = format!("{:?}", error);
                 assert!(error_string.contains(diff_string));
                 assert!(!error_string.contains(full_string));
             }
-            _ => bail!("Didn't get failure"),
+            _ => return Err(format_err!("Didn't get failure")),
         }
         match local.compare(&mut remote, DiffType::Full) {
             Err(error) => {
@@ -1580,17 +1615,19 @@ mod tests {
                     error_string.contains(full_string),
                     format!("\n{}\n{}\n", error_string, full_string)
                 );
-                assert!(!error_string.contains(diff_string));
+                assert!(!error_string.contains(&diff_string));
             }
-            _ => bail!("Didn't get failure"),
+            _ => return Err(format_err!("Didn't get failure")),
         }
         match local.compare(&mut remote, DiffType::Both) {
             Err(error) => {
                 let error_string = format!("{:?}", error);
                 assert!(error_string.contains(full_string), full_string);
-                assert!(error_string.contains(diff_string));
+                eprintln!("e2: {}", error_string);
+                eprintln!("d2: {}", diff_string);
+                assert!(error_string.contains(&diff_string));
             }
-            _ => bail!("Didn't get failure"),
+            _ => return Err(format_err!("Didn't get failure")),
         }
         Ok(())
     }

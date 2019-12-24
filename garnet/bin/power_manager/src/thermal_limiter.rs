@@ -5,8 +5,8 @@
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
 use crate::types::ThermalLoad;
+use anyhow::{format_err, Error};
 use async_trait::async_trait;
-use failure::{format_err, Error};
 use fidl_fuchsia_thermal as fthermal;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
@@ -136,7 +136,7 @@ impl ThermalLimiter {
                 }
                 Ok(())
             }
-            .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
+            .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
         );
     }
 

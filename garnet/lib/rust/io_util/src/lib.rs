@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{err_msg, format_err, Error},
+    anyhow::{format_err, Error},
     fdio,
     fidl::endpoints::Proxy,
     fidl::endpoints::{create_proxy, ServerEnd},
@@ -29,11 +29,11 @@ pub fn open_node<'a>(
     mode: u32,
 ) -> Result<NodeProxy, Error> {
     if path.is_absolute() {
-        return Err(err_msg("path must be relative"));
+        return Err(format_err!("path must be relative"));
     }
-    let path = path.to_str().ok_or(err_msg("path contains invalid UTF-8"))?;
+    let path = path.to_str().ok_or(format_err!("path contains invalid UTF-8"))?;
     if path.is_empty() {
-        return Err(err_msg("path must not be empty"));
+        return Err(format_err!("path must not be empty"));
     }
 
     let (new_node, server_end) = create_proxy()?;
@@ -66,7 +66,7 @@ pub fn create_sub_directories(
     path: &Path,
 ) -> Result<DirectoryProxy, Error> {
     if path.components().next().is_none() {
-        return Err(err_msg("path must not be empty"));
+        return Err(format_err!("path must not be empty"));
     }
     let mut dir = None;
     for part in path.components() {

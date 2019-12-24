@@ -29,7 +29,7 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//sdk/fidl/fuchsia.sys.test:fuchsia.sys.test-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
   ]
 }
 

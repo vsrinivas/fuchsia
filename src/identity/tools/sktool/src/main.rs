@@ -11,7 +11,7 @@ mod hid;
 
 pub use crate::ctap_device::CtapDevice;
 pub use crate::hid::HidCtapDevice;
-use failure::Error;
+use anyhow::Error;
 use fuchsia_async as fasync;
 use log::info;
 

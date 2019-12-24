@@ -6,7 +6,7 @@
 
 use std::fs::File;
 use {
-    failure::{ensure, format_err, Error},
+    anyhow::{ensure, format_err, Error},
     pretty_assertions::assert_eq,
     std::{env, path::PathBuf, process::Command},
     tempfile::NamedTempFile,

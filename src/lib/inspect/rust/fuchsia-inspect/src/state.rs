@@ -12,8 +12,8 @@ use {
         heap::Heap,
         utils, Inspector,
     },
+    anyhow::{format_err, Error},
     derivative::Derivative,
-    failure::{bail, Error},
     futures::future::BoxFuture,
     mapped_vmo::Mapping,
     num_traits::ToPrimitive,
@@ -156,7 +156,7 @@ macro_rules! array_fns {
                 let block_size =
                     slots as usize * std::mem::size_of::<$type>() + constants::MIN_ORDER_SIZE;
                 if block_size > constants::MAX_ORDER_SIZE {
-                    bail!("cannot allocate block of size {}", block_size);
+                    return Err(format_err!("cannot allocate block of size {}", block_size));
                 }
                 with_header_lock!(self, {
                     let (block, name_block) = self.allocate_reserved_value(
@@ -291,7 +291,7 @@ impl State {
             Ok(()) => Ok(value_block),
             Err(e) => {
                 self.delete_value(value_block)?;
-                bail!("Failed to create link: {:?}", e);
+                return Err(format_err!("Failed to create link: {:?}", e));
             }
         }
     }
@@ -375,14 +375,14 @@ impl State {
                 parent_block.set_child_count(parent_block.child_count().unwrap() + 1)
             }
             BlockType::Header => Ok(()),
-            _ => bail!("Invalid block type:{}", parent_block.block_type()),
+            _ => return Err(format_err!("Invalid block type:{}", parent_block.block_type())),
         });
         match result {
             Ok(()) => Ok((block, name_block)),
             Err(e) => {
                 self.heap.free_block(name_block).expect("Failed to free name block");
                 self.heap.free_block(block).expect("Failed to free block");
-                bail!("Invalid parent index {}: {}", parent_index, e)
+                return Err(format_err!("Invalid parent index {}: {}", parent_index, e));
             }
         }
     }
@@ -481,7 +481,6 @@ mod tests {
             reader::{snapshot::Snapshot, PartialNodeHierarchy},
             Inspector,
         },
-        failure::bail,
         fuchsia_async as fasync,
         futures::prelude::*,
         std::convert::TryFrom,
@@ -940,7 +939,8 @@ mod tests {
     #[test]
     fn test_with_header_lock() {
         let state = get_state(4096);
-        let result: Result<(), Error> = (|| with_header_lock!(state, { bail!("some error") }))();
+        let result: Result<(), Error> =
+            (|| with_header_lock!(state, { return Err(format_err!("some error")) }))();
         assert!(result.is_err());
         assert!(state.header.check_locked(false).is_ok());
     }

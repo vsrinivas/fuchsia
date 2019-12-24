@@ -9,7 +9,7 @@
 
 use {
     super::*,
-    failure::Error,
+    anyhow::Error,
     fidl_fuchsia_netemul_network::{EndpointManagerMarker, NetworkContextMarker},
     fuchsia_async::{self as fasync, Executor},
     net_types::ip::IpVersion,

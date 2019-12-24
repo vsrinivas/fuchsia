@@ -13,10 +13,11 @@ rustc_library("eapol") {
     "//garnet/public/rust/zerocopy",
     "//src/connectivity/wlan/lib/bitfield:wlan-bitfield",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:bitfield",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:bytes",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 

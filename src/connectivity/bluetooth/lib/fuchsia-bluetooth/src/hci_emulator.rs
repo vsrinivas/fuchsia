@@ -8,7 +8,7 @@ use {
         device_watcher::{DeviceFile, DeviceWatcher, WatchFilter},
         util::open_rdwr,
     },
-    failure::{bail, format_err, Error},
+    anyhow::{format_err, Error},
     fidl_fuchsia_bluetooth_test::{EmulatorSettings, HciEmulatorProxy},
     fidl_fuchsia_device::ControllerProxy,
     fidl_fuchsia_device_test::{DeviceProxy, RootDeviceProxy, CONTROL_DEVICE, MAX_DEVICE_NAME_LEN},
@@ -127,11 +127,11 @@ impl TestDevice {
     // path, for example "/dev/test/test/{name}".
     async fn create(name: &str) -> Result<TestDevice, Error> {
         if name.len() > (MAX_DEVICE_NAME_LEN as usize) {
-            bail!(
+            return Err(format_err!(
                 "Device name '{}' too long (must be {} or fewer chars)",
                 name,
                 MAX_DEVICE_NAME_LEN
-            );
+            ));
         }
 
         // Connect to the test control device and obtain a channel to the RootDevice capability.

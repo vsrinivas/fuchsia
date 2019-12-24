@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Fail;
 use fidl_fuchsia_pkg_ext::BlobIdParseError;
 use serde_json;
+use thiserror::Error;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum Error {
-    #[fail(display = "{}", _0)]
-    Json(#[cause] serde_json::Error),
+    #[error("{}", _0)]
+    Json(serde_json::Error),
 
-    #[fail(display = "{}", _0)]
-    BlobId(#[cause] BlobIdParseError),
+    #[error("{}", _0)]
+    BlobId(BlobIdParseError),
 
-    #[fail(display = "invalid experiment id {}", _0)]
+    #[error("invalid experiment id {}", _0)]
     ExperimentId(String),
 }
 

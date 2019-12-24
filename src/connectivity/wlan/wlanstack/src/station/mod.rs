@@ -6,7 +6,7 @@ pub mod ap;
 pub mod client;
 pub mod mesh;
 
-use failure::{bail, format_err};
+use anyhow::format_err;
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent, MlmeEventStream, MlmeProxy};
 use fidl_fuchsia_wlan_stats::IfaceStats;
 use fuchsia_async as fasync;
@@ -33,7 +33,7 @@ async fn serve_mlme_sme<STA, SRS, TS>(
     mut mlme_stream: MlmeStream,
     stats_requests: SRS,
     time_stream: TS,
-) -> Result<(), failure::Error>
+) -> Result<(), anyhow::Error>
 where
     STA: Station,
     SRS: Stream<Item = StatsRequest> + Unpin,
@@ -57,19 +57,19 @@ where
                 Some(Ok(other)) => station.lock().unwrap().on_mlme_event(other),
                 Some(Err(ref e)) if e.is_closed() => return Ok(()),
                 None => return Ok(()),
-                Some(Err(e)) => bail!("Error reading an event from MLME channel: {}", e),
+                Some(Err(e)) => return Err(format_err!("Error reading an event from MLME channel: {}", e)),
             },
             mlme_req = mlme_stream.next().fuse() => match mlme_req {
                 Some(req) => match forward_mlme_request(req, &proxy) {
                     Ok(()) => {},
                     Err(ref e) if e.is_closed() => return Ok(()),
-                    Err(e) => bail!("Error forwarding a request from SME to MLME: {}", e),
+                    Err(e) => return Err(format_err!("Error forwarding a request from SME to MLME: {}", e)),
                 },
-                None => bail!("Stream of requests from SME to MLME has ended unexpectedly"),
+                None => return Err(format_err!("Stream of requests from SME to MLME has ended unexpectedly")),
             },
             timeout = timeout_stream.next() => match timeout {
                 Some(timed_event) => station.lock().unwrap().on_timeout(timed_event),
-                None => bail!("SME timer stream has ended unexpectedly"),
+                None => return Err(format_err!("SME timer stream has ended unexpectedly")),
             },
             stats = stats_fut => match stats? {},
         }
@@ -109,7 +109,7 @@ fn forward_mlme_request(req: MlmeRequest, proxy: &MlmeProxy) -> Result<(), fidl:
 fn handle_stats_resp(
     stats_sender: &mut mpsc::Sender<IfaceStats>,
     resp: fidl_mlme::StatsQueryResponse,
-) -> Result<(), failure::Error> {
+) -> Result<(), anyhow::Error> {
     stats_sender.try_send(resp.stats).or_else(|e| {
         if e.is_full() {
             // We only expect one response from MLME per each request, so the bounded
@@ -126,7 +126,7 @@ async fn serve_stats<S>(
     proxy: MlmeProxy,
     mut stats_requests: S,
     mut responses: mpsc::Receiver<IfaceStats>,
-) -> Result<Void, failure::Error>
+) -> Result<Void, anyhow::Error>
 where
     S: Stream<Item = StatsRequest> + Unpin,
 {
@@ -136,7 +136,7 @@ where
             .map_err(|e| format_err!("Failed to send a StatsReq to MLME: {}", e))?;
         match responses.next().await {
             Some(response) => req.reply(response),
-            None => bail!("Stream of stats responses has ended unexpectedly"),
+            None => return Err(format_err!("Stream of stats responses has ended unexpectedly")),
         };
     }
     Err(format_err!("Stream of stats requests has ended unexpectedly"))

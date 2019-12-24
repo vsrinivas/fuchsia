@@ -5,7 +5,7 @@
 //! Test utilities for starting a pkgfs server.
 
 use {
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fdio::{SpawnAction, SpawnOptions},
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},

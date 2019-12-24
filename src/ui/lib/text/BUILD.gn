@@ -17,12 +17,13 @@ rustc_library("text") {
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//sdk/fidl/fuchsia.ui.text:fuchsia.ui.text-rustc",
     "//sdk/fidl/fuchsia.ui.text.testing:fuchsia.ui.text.testing-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:regex",
+    "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:unicode-segmentation",
   ]
 }

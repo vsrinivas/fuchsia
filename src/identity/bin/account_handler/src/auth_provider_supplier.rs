@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow::format_err;
 use async_trait::async_trait;
-use failure::format_err;
 use fidl::endpoints::{create_endpoints, ClientEnd};
 use fidl_fuchsia_auth::{AuthProviderMarker, Status};
 use fidl_fuchsia_identity_external::{OauthMarker, OauthOpenIdConnectMarker, OpenIdConnectMarker};

@@ -11,7 +11,7 @@ use crate::TokenManager;
 use account_common::{
     AccountManagerError, FidlLocalPersonaId, GlobalAccountId, LocalPersonaId, ResultExt,
 };
-use failure::Error;
+use anyhow::Error;
 use fidl::endpoints::{ClientEnd, ServerEnd};
 use fidl_fuchsia_auth::{AuthenticationContextProviderProxy, ServiceProviderAccount};
 use fidl_fuchsia_identity_account::{

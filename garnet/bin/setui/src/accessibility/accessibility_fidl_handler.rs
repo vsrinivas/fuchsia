@@ -74,7 +74,7 @@ pub fn spawn_accessibility_fidl_handler(
         switchboard_handle,
         SettingType::Accessibility,
         Box::new(
-            move |context, req| -> LocalBoxFuture<'_, Result<Option<AccessibilityRequest>, failure::Error>> {
+            move |context, req| -> LocalBoxFuture<'_, Result<Option<AccessibilityRequest>, anyhow::Error>> {
                 async move {
                     // Support future expansion of FIDL.
                     #[allow(unreachable_patterns)]

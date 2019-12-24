@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::{AccessibilityOptions, CaptionCommands};
-use failure::Error;
+use anyhow::Error;
 use fidl_fuchsia_settings::{
     AccessibilityProxy, AccessibilitySettings, CaptionFontStyle, CaptionsSettings,
 };

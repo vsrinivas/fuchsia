@@ -7,7 +7,7 @@ pub mod prelude {
     pub use fidl;
     pub use fidl_fuchsia_virtualaudio::*;
     pub use fuchsia_async as fasync;
-    pub type Result<T> = std::result::Result<T, failure::Error>;
+    pub type Result<T> = std::result::Result<T, anyhow::Error>;
     pub use crate::Environment;
     pub use fidl_fuchsia_media::*;
     pub use fuchsia_component::client;

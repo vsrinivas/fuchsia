@@ -4,7 +4,7 @@
 
 use {
     crate::table::*,
-    failure::Error,
+    anyhow::Error,
     fidl_fuchsia_inspect_deprecated::{self as fidl_inspect, InspectRequest, InspectRequestStream},
     fuchsia_async as fasync,
     futures::{TryFutureExt, TryStreamExt},

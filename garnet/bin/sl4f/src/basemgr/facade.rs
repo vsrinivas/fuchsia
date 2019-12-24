@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Error;
+use anyhow::Error;
 use fuchsia_zircon as zx;
 use glob::glob;
 use std::path::PathBuf;
@@ -27,7 +27,7 @@ impl BaseManagerFacade {
         }
         let mut basemgr_proxy = match self.discover_basemgr_service()? {
             Some(proxy) => proxy,
-            None => bail!("Unable to connect to Base Manager Service"),
+            None => return Err(format_err!("Unable to connect to Base Manager Service")),
         };
         basemgr_proxy.restart_session(zx::Time::after(zx::Duration::from_seconds(120)))?;
         Ok(RestartSessionResult::Success)

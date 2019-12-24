@@ -13,8 +13,9 @@ rustc_library("hoist") {
     "//garnet/public/lib/fidl/rust/fidl",
     "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
     "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:thiserror",
   ]
   non_rust_deps = [ "//third_party/boringssl" ]
   if (is_fuchsia) {

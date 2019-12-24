@@ -7,7 +7,7 @@ use {
         options::{usage, ModeCommand, Options},
         result::IqueryResult,
     },
-    failure::Error,
+    anyhow::Error,
     fuchsia_async as fasync,
     std::{env, path::Path},
 };

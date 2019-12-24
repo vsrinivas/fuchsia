@@ -7,7 +7,6 @@
 //! Also, IOU a more complete set of typesafe wrappers around fuchsia.io.
 
 use {
-    failure::Fail,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
         self as fio, DirectoryEvent, DirectoryMarker, DirectoryProxy, FileEvent, FileMarker,
@@ -15,34 +14,35 @@ use {
     },
     fuchsia_zircon::Status,
     futures::prelude::*,
+    thiserror::Error,
 };
 
 /// An error encountered while opening a node
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 #[allow(missing_docs)]
 pub enum OpenError {
-    #[fail(display = "while making a fidl proxy: {}", _0)]
-    CreateProxy(#[cause] fidl::Error),
+    #[error("while making a fidl proxy: {}", _0)]
+    CreateProxy(fidl::Error),
 
-    #[fail(display = "while sending open request: {}", _0)]
-    SendOpenRequest(#[cause] fidl::Error),
+    #[error("while sending open request: {}", _0)]
+    SendOpenRequest(fidl::Error),
 
-    #[fail(display = "while sending clone request: {}", _0)]
-    SendCloneRequest(#[cause] fidl::Error),
+    #[error("while sending clone request: {}", _0)]
+    SendCloneRequest(fidl::Error),
 
-    #[fail(display = "node event stream closed prematurely")]
+    #[error("node event stream closed prematurely")]
     OnOpenEventStreamClosed,
 
-    #[fail(display = "while reading OnOpen event: {}", _0)]
-    OnOpenDecode(#[cause] fidl::Error),
+    #[error("while reading OnOpen event: {}", _0)]
+    OnOpenDecode(fidl::Error),
 
-    #[fail(display = "open failed with status: {}", _0)]
+    #[error("open failed with status: {}", _0)]
     OpenError(Status),
 
-    #[fail(display = "remote responded with success but provided no node info")]
+    #[error("remote responded with success but provided no node info")]
     MissingOnOpenInfo,
 
-    #[fail(display = "expected node to be a {:?}, but got a {:?}", expected, actual)]
+    #[error("expected node to be a {:?}, but got a {:?}", expected, actual)]
     UnexpectedNodeKind { expected: NodeKind, actual: NodeKind },
 }
 
@@ -89,7 +89,7 @@ impl NodeKind {
     }
 }
 
-pub(crate) fn open_directory_from_namespace(path: &str) -> Result<DirectoryProxy, failure::Error> {
+pub(crate) fn open_directory_from_namespace(path: &str) -> Result<DirectoryProxy, anyhow::Error> {
     io_util::open_directory_in_namespace(
         path,
         io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
@@ -100,7 +100,7 @@ pub(crate) fn open_directory_no_describe(
     parent: &DirectoryProxy,
     path: &str,
     flags: u32,
-) -> Result<DirectoryProxy, failure::Error> {
+) -> Result<DirectoryProxy, anyhow::Error> {
     let (dir, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>()?;
 
     let flags = flags | fidl_fuchsia_io::OPEN_FLAG_DIRECTORY;

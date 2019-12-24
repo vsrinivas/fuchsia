@@ -6,7 +6,7 @@ use crate::fidl_helpers::clone_keyboard_event;
 use crate::legacy_ime::ImeState;
 use crate::legacy_ime::LegacyIme;
 use crate::multiplex::TextFieldMultiplexer;
-use failure::{Error, ResultExt};
+use anyhow::{Context as _, Error};
 use fidl::endpoints::{ClientEnd, RequestStream, ServerEnd};
 use fidl_fuchsia_ui_input as uii;
 use fidl_fuchsia_ui_text as txt;
@@ -184,7 +184,7 @@ impl ImeService {
                 }
                 Ok(())
             }
-            .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
+            .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
         );
     }
 
@@ -238,7 +238,7 @@ impl ImeService {
                 }
                 Ok(())
             }
-            .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
+            .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
         );
     }
 
@@ -268,7 +268,7 @@ impl ImeService {
                 }
                 Ok(())
             }
-                .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
+                .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
         );
     }
 }

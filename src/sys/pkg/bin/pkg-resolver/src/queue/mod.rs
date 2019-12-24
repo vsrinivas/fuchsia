@@ -7,7 +7,6 @@
 //! Concurrent work queue helpers
 
 use {
-    failure::Fail,
     futures::{
         channel::mpsc,
         future::{BoxFuture, Shared},
@@ -24,14 +23,15 @@ use {
         pin::Pin,
         sync::{Arc, Weak},
     },
+    thiserror::Error,
 };
 
 mod state;
 use state::{make_canceled_receiver, TaskFuture, TaskVariants};
 
 /// Error type indicating a task failed because the queue was dropped before completing the task.
-#[derive(Debug, PartialEq, Eq, Clone, Fail)]
-#[fail(display = "The queue was dropped before processing this task")]
+#[derive(Debug, PartialEq, Eq, Clone, Error)]
+#[error("The queue was dropped before processing this task")]
 pub struct Closed;
 
 /// Trait for merging context for work tasks with the same key.

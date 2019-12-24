@@ -4,7 +4,7 @@
 
 use {
     crate::{deprecated_fidl_server::*, table::*},
-    failure::{format_err, Error},
+    anyhow::{format_err, Error},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect::*,

@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::{format_err, Context as _, Error},
     bitflags::bitflags,
-    failure::{format_err, Error, ResultExt},
     fidl_fuchsia_bluetooth as bt,
     fidl_fuchsia_bluetooth_bredr::*,
     fuchsia_syslog::{fx_log_err, fx_log_info},

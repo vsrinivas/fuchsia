@@ -4,7 +4,7 @@
 
 use {
     crate::constants::HOST_DEVICE_DIR,
-    failure::Error,
+    anyhow::Error,
     fidl_fuchsia_hardware_bluetooth::HostSynchronousProxy,
     fuchsia_zircon as zx,
     std::{

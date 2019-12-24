@@ -27,7 +27,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.space:fuchsia.space-rustc",
     "//src/sys/pkg/lib/fidl-fuchsia-pkg-ext:fidl_fuchsia_pkg_ext",
     "//src/sys/pkg/lib/pkgfs",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]

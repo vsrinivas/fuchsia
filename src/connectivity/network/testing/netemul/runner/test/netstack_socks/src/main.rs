@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{format_err, Error, ResultExt};
+use anyhow::{format_err, Context as _, Error};
 use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_netemul_environment::{
     EnvironmentOptions, LaunchService, LoggerOptions, ManagedEnvironmentMarker, VirtualDevice,

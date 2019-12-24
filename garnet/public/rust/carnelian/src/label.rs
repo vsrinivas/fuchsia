@@ -6,7 +6,7 @@ use crate::{
     canvas::{measure_text, Canvas, FontDescription, FontFace, MappingPixelSink, Paint},
     geometry::{Coord, IntSize, Point, Rect, Size},
 };
-use failure::{Error, ResultExt};
+use anyhow::{Context as _, Error};
 use fidl_fuchsia_images as images;
 use fuchsia_scenic::{EntityNode, HostImageCycler, SessionPtr};
 use lazy_static::lazy_static;

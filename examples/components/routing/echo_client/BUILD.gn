@@ -7,10 +7,10 @@ import("//build/rust/rustc_binary.gni")
 rustc_binary("echo_client") {
   edition = "2018"
   deps = [
+    "//examples/components/routing/fidl:echo-rustc",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
-    "//examples/components/routing/fidl:echo-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
 }

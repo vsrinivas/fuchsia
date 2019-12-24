@@ -72,7 +72,7 @@ impl<'a> IntoIterator for &'a FontSets {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, failure::Error, pretty_assertions::assert_eq, serde_json::json, std::io::Write,
+        super::*, anyhow::Error, pretty_assertions::assert_eq, serde_json::json, std::io::Write,
         tempfile::NamedTempFile,
     };
 

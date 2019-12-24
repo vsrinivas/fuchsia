@@ -44,11 +44,12 @@ rustc_binary("bin") {
     "//src/lib/mpmc",
     "//src/lib/streammap",
     "//src/lib/waitgroup",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:crossbeam",
-    "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]
 

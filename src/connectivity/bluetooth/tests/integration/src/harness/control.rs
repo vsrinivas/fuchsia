@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl_fuchsia_bluetooth_control::{
         AdapterInfo, ControlEvent, ControlMarker, ControlProxy, RemoteDevice,
     },

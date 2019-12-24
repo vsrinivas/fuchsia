@@ -7,8 +7,8 @@ use crate::{
     message::Message,
     view::{ViewAssistantPtr, ViewController, ViewKey},
 };
+use anyhow::{format_err, Context as _, Error};
 use async_trait::async_trait;
-use failure::{bail, format_err, Error, ResultExt};
 use fidl::endpoints::{create_endpoints, create_proxy};
 use fidl_fuchsia_ui_app::{ViewProviderRequest, ViewProviderRequestStream};
 use fidl_fuchsia_ui_policy::PresenterMarker;
@@ -91,15 +91,13 @@ pub trait AppAssistant {
         _: ViewKey,
         _: &SessionPtr,
     ) -> Result<ViewAssistantPtr, Error> {
-        failure::bail!(
-            "Assistant has ViewMode::Scenic but doesn't implement create_view_assistant."
-        )
+        anyhow::bail!("Assistant has ViewMode::Scenic but doesn't implement create_view_assistant.")
     }
 
     /// Called when the Fuchsia view system requests that a view be created for
     /// apps running in ViewMode::Canvas.
     fn create_view_assistant_canvas(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
-        failure::bail!(
+        anyhow::bail!(
             "Assistant has ViewMode::Canvas but doesn't implement create_view_assistant_canvas."
         )
     }
@@ -111,7 +109,7 @@ pub trait AppAssistant {
         _: ViewKey,
         _fb: FrameBufferPtr,
     ) -> Result<ViewAssistantPtr, Error> {
-        failure::bail!(
+        anyhow::bail!(
             "Assistant has ViewMode::ImagePipe but doesn't implement create_view_assistant_image_pipe."
         )
     }
@@ -127,7 +125,7 @@ pub trait AppAssistant {
         _service_name: &str,
         _channel: fasync::Channel,
     ) -> Result<(), Error> {
-        bail!("handle_service_connection_request not implemented")
+        return Err(format_err!("handle_service_connection_request not implemented"));
     }
 
     /// Mode for all views created by this app
@@ -247,7 +245,7 @@ async fn create_app_strategy(
                 }
                 Ok(())
             }
-            .unwrap_or_else(|e: failure::Error| {
+            .unwrap_or_else(|e: anyhow::Error| {
                 println!("error {:#?}", e);
             }),
         );
@@ -399,7 +397,9 @@ impl App {
         let strat = create_app_strategy(&assistant, self.sender.as_ref().expect("sender")).await?;
         let supports_scenic = strat.supports_scenic();
         if assistant.get_mode() == ViewMode::Scenic && !supports_scenic {
-            bail!("This application requires Scenic but this Fuchsia system doesn't have it.");
+            return Err(format_err!(
+                "This application requires Scenic but this Fuchsia system doesn't have it."
+            ));
         }
         self.strategy.replace(strat);
         self.set_assistant(assistant);
@@ -555,7 +555,9 @@ impl App {
         let view_assistant = match view_mode {
             ViewMode::Scenic => self.create_view_assistant(&session)?,
             ViewMode::Canvas => self.create_view_assistant_canvas()?,
-            ViewMode::ImagePipe => bail!("ImagePipe mode is not yet supported with Scenic."),
+            ViewMode::ImagePipe => {
+                return Err(format_err!("ImagePipe mode is not yet supported with Scenic."))
+            }
         };
         let mut view_controller = ViewController::new(
             self.next_key,

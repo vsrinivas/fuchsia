@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow::Error;
 use async_trait::async_trait;
-use failure::Error;
 
 /// Common trait implemented by the different transport mechanisms for CTAP devices.
 /// Note: the ?Send is necessary to allow implementations to make FIDL calls becasuse the auto

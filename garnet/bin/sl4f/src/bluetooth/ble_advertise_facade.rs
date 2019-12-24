@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{bail, Error, ResultExt};
+use anyhow::{format_err, Context as _, Error};
 use fidl::endpoints::{create_endpoints, ClientEnd};
 use fidl_fuchsia_bluetooth_le::{
     AdvertisingHandleMarker, AdvertisingParameters, PeripheralMarker, PeripheralProxy,
@@ -101,7 +101,7 @@ impl BleAdvertiseFacade {
             }
             None => {
                 fx_log_err!(tag: "start_adv", "No peripheral created.");
-                bail!("No peripheral proxy created.")
+                return Err(format_err!("No peripheral proxy created."));
             }
         }
     }

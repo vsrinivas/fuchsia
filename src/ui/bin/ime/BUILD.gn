@@ -33,13 +33,14 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.ui.text.testing:fuchsia.ui.text.testing-rustc",
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
     "//src/ui/lib/text",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_derive",
     "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:unicode-normalization",
     "//third_party/rust_crates:unicode-segmentation",
   ]
@@ -106,11 +107,12 @@ rustc_test("keyboard_test_bin") {
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//sdk/fidl/fuchsia.ui.input2:fuchsia.ui.input2-rustc",
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_derive",
     "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:thiserror",
   ]
   source_root = "tests/keyboard.rs"
 }

@@ -4,7 +4,7 @@ use crate::sensor::SensorControl;
 use async_trait::async_trait;
 use std::sync::Arc;
 
-use failure::Error;
+use anyhow::Error;
 use fidl_fuchsia_ui_brightness::{
     BrightnessPoint, BrightnessTable, ControlRequest as BrightnessControlRequest,
     ControlWatchAutoBrightnessOffsetResponder, ControlWatchAutoBrightnessResponder,
@@ -527,8 +527,8 @@ mod tests {
 
     use crate::sender_channel::SenderChannel;
     use crate::sensor::AmbientLightInputRpt;
+    use anyhow::Error;
     use async_trait::async_trait;
-    use failure::Error;
 
     struct MockSensor {
         illuminence: u16,

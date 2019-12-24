@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{Error, ResultExt};
+use anyhow::{Context as _, Error};
 use fuchsia_async::{self as fasync, DurationExt, Timer};
 use fuchsia_framebuffer::{FrameBuffer, FrameUsage, ImageId, PixelFormat, VSyncMessage};
 use fuchsia_zircon::DurationNum;
@@ -103,7 +103,7 @@ mod test {
     use crate::test_main;
 
     #[test]
-    fn fb_integration_test() -> std::result::Result<(), failure::Error> {
+    fn fb_integration_test() -> std::result::Result<(), anyhow::Error> {
         test_main()
     }
 }

@@ -23,7 +23,7 @@ use crate::http::UrlLoaderHttpClient;
 use crate::oauth_open_id_connect::OauthOpenIdConnect;
 use crate::time::UtcClock;
 use crate::web::DefaultStandaloneWebFrame;
-use failure::{Error, ResultExt};
+use anyhow::{Context as _, Error};
 use fidl::endpoints::{create_proxy, ClientEnd};
 use fidl_fuchsia_net_oldhttp::{HttpServiceMarker, UrlLoaderMarker};
 use fidl_fuchsia_web::{ContextMarker, ContextProviderMarker, CreateContextParams, FrameMarker};
@@ -89,7 +89,7 @@ impl WebFrameSupplier {
 
 impl auth_provider::WebFrameSupplier for WebFrameSupplier {
     type Frame = DefaultStandaloneWebFrame;
-    fn new_standalone_frame(&self) -> Result<DefaultStandaloneWebFrame, failure::Error> {
+    fn new_standalone_frame(&self) -> Result<DefaultStandaloneWebFrame, anyhow::Error> {
         let context_provider = connect_to_service::<ContextProviderMarker>()?;
         let (context_proxy, context_server_end) = create_proxy::<ContextMarker>()?;
 

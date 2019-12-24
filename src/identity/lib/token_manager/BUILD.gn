@@ -19,11 +19,12 @@ rustc_library("token_manager") {
     "//src/identity/lib/identity_common",
     "//src/identity/lib/token_cache",
     "//src/identity/lib/token_store",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
-    "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:tempfile",
+    "//third_party/rust_crates:thiserror",
   ]
 }

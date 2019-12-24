@@ -5,7 +5,6 @@
 //! Module providing the TaskGroup type, which manages the life cycle of a group of asynchronous
 //! tasks on a multi-threaded Fuchsia executor.
 
-use failure::Fail;
 use fuchsia_async as fasync;
 use futures::channel::oneshot;
 use futures::future::{BoxFuture, FusedFuture, RemoteHandle, Shared};
@@ -14,12 +13,13 @@ use futures::prelude::*;
 use futures::select;
 use futures::stream::FuturesUnordered;
 use std::sync::Arc;
+use thiserror::Error;
 
 /// TaskGroupError is the failure type for this module.
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum TaskGroupError {
     /// AlreadyCancelled is returned when cancellation is in progress or cancellation is complete.
-    #[fail(display = "task group is already cancelled")]
+    #[error("task group is already cancelled")]
     AlreadyCancelled,
 }
 

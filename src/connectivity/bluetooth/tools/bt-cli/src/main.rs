@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{bail, Error, ResultExt},
+    anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_bluetooth::PeerId as FidlPeerId,
     fidl_fuchsia_bluetooth_control::{
         ControlEvent, ControlEventStream, ControlMarker, ControlProxy, PairingOptions,
@@ -61,7 +61,7 @@ async fn set_active_adapter<'a>(
     control_svc: &'a ControlProxy,
 ) -> Result<String, Error> {
     if args.len() != 1 {
-        bail!("usage: {}", Cmd::SetActiveAdapter.cmd_help());
+        return Err(format_err!("usage: {}", Cmd::SetActiveAdapter.cmd_help()));
     }
     println!("Setting active adapter");
     // `args[0]` is the identifier of the adapter to make active
@@ -78,7 +78,7 @@ async fn set_adapter_name<'a>(
     control_svc: &'a ControlProxy,
 ) -> Result<String, Error> {
     if args.len() > 1 {
-        bail!("usage: {}", Cmd::SetAdapterName.cmd_help());
+        return Err(format_err!("usage: {}", Cmd::SetAdapterName.cmd_help()));
     }
     println!("Setting local name of the active adapter");
     // `args[0]` is the value to set as the name of the adapter
@@ -588,8 +588,8 @@ async fn main() -> Result<(), Error> {
 mod tests {
     use super::*;
     use {
+        anyhow::format_err,
         bt_fidl_mocks::control::ControlMock,
-        failure::err_msg,
         fidl_fuchsia_bluetooth as fbt, fidl_fuchsia_bluetooth_sys as fsys,
         fuchsia_bluetooth::{
             bt_fidl_status,
@@ -920,8 +920,8 @@ mod tests {
 
         let error_msg = "oopsy daisy";
         let cmd = disconnect(args.as_slice(), &state, &proxy);
-        let mock_expect =
-            mock.expect_disconnect(peer_id.clone(), bt_fidl_status!(Failed, err_msg(error_msg)));
+        let mock_expect = mock
+            .expect_disconnect(peer_id.clone(), bt_fidl_status!(Failed, format_err!(error_msg)));
         let (result, mock_result) = join!(cmd, mock_expect);
 
         let _ = mock_result.expect("mock FIDL expectation not satisfied");
@@ -957,7 +957,7 @@ mod tests {
         let error_msg = "oopsy daisy";
         let cmd = forget(args.as_slice(), &state, &proxy);
         let mock_expect =
-            mock.expect_forget(peer_id.clone(), bt_fidl_status!(Failed, err_msg(error_msg)));
+            mock.expect_forget(peer_id.clone(), bt_fidl_status!(Failed, format_err!(error_msg)));
         let (result, mock_result) = join!(cmd, mock_expect);
 
         assert!(mock_result.is_ok());
@@ -1004,8 +1004,11 @@ mod tests {
 
         let error_msg = "oopsy daisy";
         let cmd = pair(args.as_slice(), &state, &proxy);
-        let mock_expect =
-            mock.expect_pair(peer_id, pairing_options, bt_fidl_status!(Failed, err_msg(error_msg)));
+        let mock_expect = mock.expect_pair(
+            peer_id,
+            pairing_options,
+            bt_fidl_status!(Failed, format_err!(error_msg)),
+        );
         let (result, mock_result) = join!(cmd, mock_expect);
 
         assert!(mock_result.is_ok());

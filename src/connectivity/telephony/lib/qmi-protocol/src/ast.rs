@@ -4,7 +4,7 @@
 
 // Derived from https://www.telit.com/wp-content/uploads/2017/09/Telit_LM940_QMI_Command_Reference_Guide_r1.pdf
 
-use failure::{format_err, Error};
+use anyhow::{format_err, Error};
 use serde::de::{self, Deserialize, Deserializer};
 use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;

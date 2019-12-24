@@ -7,7 +7,6 @@
 #![allow(dead_code)]
 
 use crate::install_plan::FuchsiaInstallPlan;
-use failure::Fail;
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_update_installer::{
     Initiator, InstallerMarker, InstallerProxy, MonitorEvent, MonitorMarker, MonitorOptions,
@@ -20,21 +19,22 @@ use omaha_client::{
     installer::{Installer, ProgressObserver},
     protocol::request::InstallSource,
 };
+use thiserror::Error;
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum FuchsiaInstallError {
-    #[fail(display = "generic error: {}", _0)]
-    Failure(#[cause] failure::Error),
+    #[error("generic error: {}", _0)]
+    Failure(anyhow::Error),
 
-    #[fail(display = "FIDL error: {}", _0)]
-    FIDL(#[cause] fidl::Error),
+    #[error("FIDL error: {}", _0)]
+    FIDL(fidl::Error),
 
-    #[fail(display = "System update installer failed")]
+    #[error("System update installer failed")]
     Installer,
 }
 
-impl From<failure::Error> for FuchsiaInstallError {
-    fn from(e: failure::Error) -> FuchsiaInstallError {
+impl From<anyhow::Error> for FuchsiaInstallError {
+    fn from(e: anyhow::Error) -> FuchsiaInstallError {
         FuchsiaInstallError::Failure(e)
     }
 }
@@ -51,7 +51,7 @@ pub struct FuchsiaInstaller {
 }
 
 impl FuchsiaInstaller {
-    pub fn new() -> Result<Self, failure::Error> {
+    pub fn new() -> Result<Self, anyhow::Error> {
         let proxy = fuchsia_component::client::connect_to_service::<InstallerMarker>()?;
         Ok(FuchsiaInstaller { proxy })
     }
@@ -167,7 +167,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_install_fail() {
+    async fn test_install_error() {
         let (mut installer, mut stream) = FuchsiaInstaller::new_mock();
         let plan = FuchsiaInstallPlan {
             url: TEST_URL.parse().unwrap(),
@@ -193,7 +193,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_fidl_fail() {
+    async fn test_fidl_error() {
         let (mut installer, mut stream) = FuchsiaInstaller::new_mock();
         let plan = FuchsiaInstallPlan {
             url: TEST_URL.parse().unwrap(),

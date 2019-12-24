@@ -5,7 +5,7 @@
 #![cfg(test)]
 
 use {
-    failure::Error,
+    anyhow::Error,
     fidl_fuchsia_hwinfo::{BoardMarker, DeviceMarker, ProductMarker},
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,

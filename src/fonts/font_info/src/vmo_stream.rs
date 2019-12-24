@@ -6,7 +6,7 @@
 
 use {
     crate::sources::FTStreamProvider,
-    failure::Error,
+    anyhow::Error,
     freetype_ffi::{FT_Stream, FT_StreamRec},
     fuchsia_zircon as zx,
     libc::{c_uchar, c_ulong, c_void},

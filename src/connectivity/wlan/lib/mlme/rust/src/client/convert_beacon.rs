@@ -3,9 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    banjo_ddk_protocol_wlan_mac as banjo_wlan_mac,
-    failure::{bail, format_err, Error},
-    fidl_fuchsia_wlan_mlme as fidl_mlme,
+    anyhow::{format_err, Error},
+    banjo_ddk_protocol_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_mlme as fidl_mlme,
     std::convert::TryInto,
     wlan_common::{
         channel::derive_channel,
@@ -63,7 +62,7 @@ pub fn construct_bss_description(
             }
             ie::Id::HT_CAPABILITIES => {
                 if body.len() != fidl_mlme::HT_CAP_LEN as usize {
-                    bail!("Invalid HT capabilities IE");
+                    return Err(format_err!("Invalid HT capabilities IE"));
                 }
                 // Safe to unwrap because length was already checked above
                 let bytes: [u8; fidl_mlme::HT_CAP_LEN as usize] = body.try_into().unwrap();
@@ -72,7 +71,7 @@ pub fn construct_bss_description(
             ie::Id::HT_OPERATION => {
                 parsed_ht_op = Some(*ie::parse_ht_operation(body)?);
                 if body.len() != fidl_mlme::HT_OP_LEN as usize {
-                    bail!("Invalid HT operation IE");
+                    return Err(format_err!("Invalid HT operation IE"));
                 }
                 // Safe to unwrap because length was already checked above
                 let bytes: [u8; fidl_mlme::HT_OP_LEN as usize] = body.try_into().unwrap();
@@ -80,7 +79,7 @@ pub fn construct_bss_description(
             }
             ie::Id::VHT_CAPABILITIES => {
                 if body.len() != fidl_mlme::VHT_CAP_LEN as usize {
-                    bail!("Invalid VHT capabilities IE");
+                    return Err(format_err!("Invalid VHT capabilities IE"));
                 }
                 // Safe to unwrap because length was already checked above
                 let bytes: [u8; fidl_mlme::VHT_CAP_LEN as usize] = body.try_into().unwrap();
@@ -89,7 +88,7 @@ pub fn construct_bss_description(
             ie::Id::VHT_OPERATION => {
                 parsed_vht_op = Some(*ie::parse_vht_operation(body)?);
                 if body.len() != fidl_mlme::VHT_OP_LEN as usize {
-                    bail!("Invalid VHT operation IE");
+                    return Err(format_err!("Invalid VHT operation IE"));
                 }
                 // Safe to unwrap because length was already checked above
                 let bytes: [u8; fidl_mlme::VHT_OP_LEN as usize] = body.try_into().unwrap();

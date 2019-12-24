@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Fail;
 use fuchsia_zircon as zx;
+use thiserror::Error;
 
 /// Coordinates access of all available ICMP sequence numbers for an ICMP connection.
 #[derive(Clone)]
@@ -21,25 +21,25 @@ pub struct SequenceStore {
 
 /// All ICMP sequence numbers have been used. Create a new ICMP connection to refresh the pool of
 /// sequence numbers.
-#[derive(Fail, Debug)]
-#[fail(display = "No sequence numbers available")]
+#[derive(Error, Debug)]
+#[error("No sequence numbers available")]
 pub struct OutOfSequencesError;
 
-#[derive(Fail, Debug)]
+#[derive(Error, Debug)]
 pub enum GiveError {
     /// Received an ICMP echo reply with a sequence number that has not been sent out yet. Most
     /// likely indicates a misbehaving host.
-    #[fail(display = "Sequence number received that has not been sent out yet")]
+    #[error("Sequence number received that has not been sent out yet")]
     DoesNotExist(Option<zx::Duration>),
 
     /// Received an ICMP echo reply with a sequence number below the expected sequence number.
     /// Most likely indicates a misbehaving host or network malfunction.
-    #[fail(display = "Duplicate sequence number received")]
+    #[error("Duplicate sequence number received")]
     Duplicate(Option<zx::Duration>),
 
     /// Received an ICMP echo reply with a sequence number above the expected sequence number.
     /// Most likely indicates a network misconfiguration or malfunction.
-    #[fail(display = "Out-of-order sequence number received")]
+    #[error("Out-of-order sequence number received")]
     OutOfOrder(Option<zx::Duration>),
 }
 

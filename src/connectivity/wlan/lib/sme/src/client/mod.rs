@@ -34,7 +34,7 @@ use {
         timer::{self, TimedEvent},
         DeviceInfo, InfoStream, MlmeRequest, MlmeStream, Ssid,
     },
-    failure::{bail, format_err, Fail},
+    anyhow::format_err,
     fidl_fuchsia_wlan_common as fidl_common,
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, BssDescription, MlmeEvent, ScanRequest},
     fidl_fuchsia_wlan_sme as fidl_sme,
@@ -42,6 +42,7 @@ use {
     futures::channel::{mpsc, oneshot},
     log::error,
     std::sync::Arc,
+    thiserror::Error,
     wep_deprecated,
     wlan_common::{self, bss::BssDescriptionExt, format::MacFmt, RadioConfig},
     wlan_inspect::wrappers::InspectWlanChan,
@@ -463,15 +464,15 @@ fn report_connect_finished(
     }
 }
 
-#[derive(Fail, Debug)]
-#[fail(display = "{}", _0)]
+#[derive(Error, Debug)]
+#[error("{}", _0)]
 pub(crate) struct InvalidPasswordArgError(&'static str);
 
 pub fn get_protection(
     device_info: &DeviceInfo,
     credential: &fidl_sme::Credential,
     bss: &BssDescription,
-) -> Result<Protection, failure::Error> {
+) -> Result<Protection, anyhow::Error> {
     match bss.get_protection() {
         wlan_common::bss::Protection::Open => match credential {
             fidl_sme::Credential::None(_) => Ok(Protection::Open),
@@ -492,8 +493,10 @@ pub fn get_protection(
         wlan_common::bss::Protection::Wpa1Wpa2Personal
         | wlan_common::bss::Protection::Wpa2Personal
         | wlan_common::bss::Protection::Wpa2Wpa3Personal => get_rsna(device_info, credential, bss),
-        wlan_common::bss::Protection::Unknown => bail!("unable to deduce protection type of BSS"),
-        other => bail!("unsupported BSS protection type {:?}", other),
+        wlan_common::bss::Protection::Unknown => {
+            return Err(format_err!("unable to deduce protection type of BSS"))
+        }
+        other => return Err(format_err!("unsupported BSS protection type {:?}", other)),
     }
 }
 

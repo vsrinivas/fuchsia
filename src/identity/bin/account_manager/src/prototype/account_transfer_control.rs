@@ -22,7 +22,7 @@ impl AccountTransferControl {
     pub async fn handle_requests_from_stream(
         &self,
         mut stream: PrototypeAccountTransferControlRequestStream,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), anyhow::Error> {
         while let Some(req) = stream.try_next().await? {
             self.handle_request(req).await?;
         }
@@ -50,7 +50,7 @@ mod test {
     use fuchsia_async as fasync;
     use futures::future::join;
 
-    type TestResult = Result<(), failure::Error>;
+    type TestResult = Result<(), anyhow::Error>;
 
     const TEST_ACCOUNT_ID: u64 = 0xee1u64;
     const TEST_NODE_ID: NodeId = NodeId { id: 0xbeefu64 };

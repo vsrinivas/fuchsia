@@ -9,7 +9,7 @@ use {
         validate::{validate, TestsSchema},
         Options,
     },
-    failure::{bail, Error},
+    anyhow::{format_err, Error},
     serde_derive::Deserialize,
     serde_json as json,
     std::{collections::HashMap, fs, path::Path},
@@ -37,7 +37,7 @@ impl ConfigFileSchema {
     pub fn parse(s: String) -> Result<ConfigFileSchema, Error> {
         match serde_json::from_str::<ConfigFileSchema>(&s) {
             Ok(config) => Ok(config),
-            Err(e) => bail!("Error {}", e),
+            Err(e) => return Err(format_err!("Error {}", e)),
         }
     }
 }
@@ -58,12 +58,12 @@ pub fn initialize(options: Options) -> Result<StateHolder, Error> {
     let Options { inspect, config_files, .. } = options;
     let inspect_text = match fs::read_to_string(inspect.clone()) {
         Ok(data) => data,
-        Err(_) => bail!("Couldn't read Inspect file '{}' to string", inspect),
+        Err(_) => return Err(format_err!("Couldn't read Inspect file '{}' to string", inspect)),
     };
     let inspect_data = parse_inspect(inspect_text)?;
 
     if config_files.len() == 0 {
-        bail!("Need at least one config file; use --config");
+        return Err(format_err!("Need at least one config file; use --config"));
     }
     let mut actions = HashMap::new();
     let mut metrics = HashMap::new();
@@ -72,11 +72,13 @@ pub fn initialize(options: Options) -> Result<StateHolder, Error> {
         let namespace = base_name(&file_name)?;
         let file_data = match fs::read_to_string(file_name.clone()) {
             Ok(data) => data,
-            Err(_) => bail!("Couldn't read config file '{}' to string", file_name),
+            Err(_) => {
+                return Err(format_err!("Couldn't read config file '{}' to string", file_name))
+            }
         };
         let file_config = match ConfigFileSchema::parse(file_data) {
             Ok(c) => c,
-            Err(e) => bail!("Parsing file '{}': {}", file_name, e),
+            Err(e) => return Err(format_err!("Parsing file '{}': {}", file_name, e)),
         };
         let ConfigFileSchema { actions: file_actions, metrics: file_metrics, tests: file_tests } =
             file_config;
@@ -92,11 +94,11 @@ pub fn initialize(options: Options) -> Result<StateHolder, Error> {
 pub(crate) fn parse_inspect(data: String) -> Result<Vec<json::Value>, Error> {
     let raw_json = match data.parse::<json::Value>() {
         Ok(data) => data,
-        Err(_) => bail!("Couldn't parse Inspect file '{}' as JSON", data),
+        Err(_) => return Err(format_err!("Couldn't parse Inspect file '{}' as JSON", data)),
     };
     match raw_json {
         json::Value::Array(entries) => Ok(entries),
-        _ => bail!("Array expected in inspect.json format"),
+        _ => return Err(format_err!("Array expected in inspect.json format")),
     }
 }
 
@@ -107,12 +109,12 @@ fn base_name(path: &String) -> Result<String, Error> {
             return Ok(s.to_owned());
         }
     }
-    bail!("Bad path {} - can't find file_stem", path);
+    return Err(format_err!("Bad path {} - can't find file_stem", path));
 }
 
 #[cfg(test)]
 mod test {
-    use {super::*, failure::Error};
+    use {super::*, anyhow::Error};
 
     // initialize() will be tested in the integration test: "fx triage --test"
     // TODO(cphoenix) - set up dirs under test/ and test initialize() here.

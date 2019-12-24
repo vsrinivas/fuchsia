@@ -5,7 +5,7 @@
 //! PCAPNG block definitions.
 
 use {
-    failure::{format_err, Error},
+    anyhow::{format_err, Error},
     zerocopy::{AsBytes, FromBytes, Unaligned},
 };
 

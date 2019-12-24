@@ -3,11 +3,11 @@ use crate::{buffer_set::*, elementary_stream::*};
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Fail;
 use fidl_fuchsia_media::*;
 use fuchsia_stream_processors::*;
 use fuchsia_zircon as zx;
 use std::{collections::HashMap, fmt};
+use thiserror::Error;
 
 type PacketIdx = u32;
 type BufferIdx = u32;
@@ -27,7 +27,7 @@ enum UsageStatus {
     InUse,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum Error {
     PacketRefersToInvalidBuffer,
     BufferTooSmall { buffer_size: usize, stream_chunk_size: usize },
@@ -39,8 +39,6 @@ impl fmt::Display for Error {
         fmt::Debug::fmt(&self, w)
     }
 }
-
-impl Fail for Error {}
 
 pub enum PacketPoll {
     Ready(Packet),

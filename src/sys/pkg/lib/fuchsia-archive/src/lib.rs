@@ -10,7 +10,7 @@
 //! extern crate fuchsia_archive;
 //! extern crate tempfile;
 //!
-//! use failure::Error;
+//! use anyhow::Error;
 //! use fuchsia_archive::write;
 //! use std::collections::BTreeMap;
 //! use std::fs;
@@ -47,8 +47,8 @@
 //!
 //! ```
 
+use anyhow::{format_err, Error};
 use bincode::{deserialize_from, serialize_into};
-use failure::{format_err, Error};
 use serde_derive::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::io::{copy, Read, Seek, SeekFrom, Write};

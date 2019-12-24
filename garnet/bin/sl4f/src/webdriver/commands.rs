@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::server::Facade;
-use failure::{bail, Error};
+use anyhow::{format_err, Error};
 use futures::future::{FutureExt, LocalBoxFuture};
 use serde_json::{to_value, Value};
 
@@ -34,6 +34,6 @@ async fn webdriver_method_to_fidl(
             let result = facade.get_dev_tools_ports().await?;
             Ok(to_value(result)?)
         }
-        _ => bail!("Invalid WebDriver facade method: {:?}", method_name),
+        _ => return Err(format_err!("Invalid WebDriver facade method: {:?}", method_name)),
     }
 }

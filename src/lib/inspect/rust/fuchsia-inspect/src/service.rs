@@ -4,7 +4,7 @@
 
 use {
     crate::{reader::ReadableTree, Inspector},
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl_fuchsia_inspect::{
         TreeContent, TreeNameIteratorRequest, TreeNameIteratorRequestStream, TreeRequest,
         TreeRequestStream, MAX_TREE_NAME_LIST_SIZE,

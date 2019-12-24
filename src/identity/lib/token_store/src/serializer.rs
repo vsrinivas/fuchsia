@@ -4,7 +4,7 @@
 
 use crate::{AuthDbError, CredentialValue};
 
-use failure::{format_err, Error};
+use anyhow::{format_err, Error};
 use log::warn;
 use serde_derive::Serialize;
 use serde_json::Value;

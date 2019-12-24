@@ -5,7 +5,7 @@
 //! System service for managing cellular modems
 
 use {
-    failure::{Error, Fail, ResultExt},
+    anyhow::{Context as _, Error},
     fidl_fuchsia_telephony_manager::{ManagerRequest, ManagerRequestStream},
     fidl_fuchsia_telephony_ril::{
         RadioInterfaceLayerMarker, RadioInterfaceLayerProxy, SetupMarker,
@@ -30,6 +30,7 @@ use {
     std::fs::File,
     std::path::{Path, PathBuf},
     std::sync::Arc,
+    thiserror::Error,
 };
 
 const QMI_TRANSPORT: &str = "/dev/class/qmi-transport";
@@ -42,13 +43,13 @@ pub enum ModemType {
     At, // Ex: Mbim, AT, etc...
 }
 
-#[derive(Fail, Debug)]
+#[derive(Error, Debug)]
 pub enum TelError {
-    #[fail(display = "telephony svc does not know how to work with {:?} yet", 0)]
+    #[error("telephony svc does not know how to work with {:?} yet", 0)]
     UnknownTransport(ModemType),
-    #[fail(display = "Connection to a radio has failed")]
+    #[error("Connection to a radio has failed")]
     FailedConnection(),
-    #[fail(display = "The Radio Interface Layer has returned a error: {:?}", 0)]
+    #[error("The Radio Interface Layer has returned a error: {:?}", 0)]
     RilError(fidl_fuchsia_telephony_ril::RilError),
 }
 

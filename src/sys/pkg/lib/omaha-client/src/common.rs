@@ -62,7 +62,7 @@ impl fmt::Debug for Version {
     }
 }
 
-#[derive(Debug, failure::Fail)]
+#[derive(Debug, thiserror::Error)]
 struct TooManyNumbersError;
 
 impl fmt::Display for TooManyNumbersError {
@@ -72,7 +72,7 @@ impl fmt::Display for TooManyNumbersError {
 }
 
 impl FromStr for Version {
-    type Err = failure::Error;
+    type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let nums = s.split('.').map(|s| s.parse::<u32>()).collect::<Result<Vec<u32>, _>>()?;

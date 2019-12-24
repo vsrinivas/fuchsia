@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::{Context as _, Error},
     argh::FromArgs,
-    failure::{Error, ResultExt},
     fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker},
     fidl_fidl_examples_echo as echo,
     fidl_fuchsia_overnet::{
@@ -111,7 +111,7 @@ fn spawn_echo_server(chan: fidl::AsyncChannel, quiet: bool) {
             }
             Ok(())
         }
-        .unwrap_or_else(|e: failure::Error| log::trace!("ERROR: {:?}", e)),
+        .unwrap_or_else(|e: anyhow::Error| log::trace!("ERROR: {:?}", e)),
     );
 }
 

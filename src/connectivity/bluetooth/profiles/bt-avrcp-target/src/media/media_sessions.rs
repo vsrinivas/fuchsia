@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{format_err, Error},
+    anyhow::{format_err, Error},
     fidl::encoding::Decodable as FidlDecodable,
     fidl::endpoints::{create_proxy, create_request_stream},
     fidl_fuchsia_bluetooth_avrcp::{self as fidl_avrcp},
@@ -36,7 +36,7 @@ impl MediaSessions {
     }
 
     // Returns a future that watches MediaPlayer for updates.
-    pub fn watch(&self) -> impl Future<Output = Result<(), failure::Error>> {
+    pub fn watch(&self) -> impl Future<Output = Result<(), anyhow::Error>> {
         // MediaSession Service Setup
         // Set up the MediaSession Discovery service. Connect to the session watcher.
         let discovery = connect_to_service::<DiscoveryMarker>()
@@ -81,7 +81,7 @@ impl MediaSessions {
         discovery: DiscoveryProxy,
         mut watcher_requests: SessionsWatcherRequestStream,
         sessions_inner: Arc<RwLock<MediaSessionsInner>>,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), anyhow::Error> {
         while let Some(req) =
             watcher_requests.try_next().await.expect("Failed to serve Watcher service")
         {

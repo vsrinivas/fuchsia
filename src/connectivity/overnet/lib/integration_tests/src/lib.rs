@@ -8,7 +8,7 @@
 mod echo;
 
 use {
-    failure::Error,
+    anyhow::Error,
     fidl::endpoints::ClientEnd,
     fidl::Handle,
     fidl_fuchsia_overnet::{Peer, ServiceProviderMarker},
@@ -111,7 +111,12 @@ impl NodeRuntime for OvernetRuntime {
     fn handle_type(hdl: &Handle) -> Result<SendHandle, Error> {
         match hdl.basic_info()?.object_type {
             zx::ObjectType::CHANNEL => Ok(SendHandle::Channel),
-            _ => failure::bail!("Handle type not proxyable {:?}", hdl.basic_info()?.object_type),
+            _ => {
+                return Err(anyhow::format_err!(
+                    "Handle type not proxyable {:?}",
+                    hdl.basic_info()?.object_type
+                ))
+            }
         }
     }
 
@@ -120,7 +125,7 @@ impl NodeRuntime for OvernetRuntime {
         Ok(match hdl.handle_type() {
             fidl::FidlHdlType::Channel => SendHandle::Channel,
             fidl::FidlHdlType::Socket => unimplemented!(),
-            fidl::FidlHdlType::Invalid => failure::bail!("Invalid handle"),
+            fidl::FidlHdlType::Invalid => return Err(anyhow::format_err!("Invalid handle")),
         })
     }
 
@@ -431,7 +436,7 @@ fn run_async_test_wrapper(
 
 #[cfg(target_os = "fuchsia")]
 mod fuchsia_runner {
-    use failure::Error;
+    use anyhow::Error;
     use fuchsia_async as fasync;
     use futures::prelude::*;
 
@@ -457,7 +462,7 @@ mod fuchsia_runner {
 
 #[cfg(not(target_os = "fuchsia"))]
 mod not_fuchsia_runner {
-    use failure::Error;
+    use anyhow::Error;
     use futures::prelude::*;
     use futures::task::LocalSpawnExt;
 

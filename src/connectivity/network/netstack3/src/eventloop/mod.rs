@@ -92,7 +92,7 @@ use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::time::Duration;
 
-use failure::{bail, Error};
+use anyhow::Error;
 use fidl_fuchsia_hardware_ethernet as fidl_ethernet;
 use fidl_fuchsia_hardware_ethernet_ext::{EthernetInfo, EthernetStatus};
 use fidl_fuchsia_net as fidl_net;
@@ -398,7 +398,7 @@ impl EventLoop {
                     handle_timeout(&mut self.ctx, id);
                 }
             }
-            None => bail!("Stream of events ended unexpectedly"),
+            None => return Err(anyhow::format_err!("Stream of events ended unexpectedly")),
         }
         Ok(())
     }

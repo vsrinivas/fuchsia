@@ -8,7 +8,7 @@ use {
         models::Suggestion,
         story_context_store::{ContextEntity, StoryContextStore},
     },
-    failure::Error,
+    anyhow::Error,
     fuchsia_syslog::macros::*,
     futures::future::{join_all, LocalFutureObj},
     parking_lot::Mutex,
@@ -116,7 +116,7 @@ mod tests {
                 suggestion_providers::TestSuggestionsProvider,
             },
         },
-        failure::ResultExt,
+        anyhow::Context as _,
         fidl_fuchsia_modular::{
             EntityResolverMarker, IntentParameter, IntentParameterData, PuppetMasterMarker,
             StoryCommand,

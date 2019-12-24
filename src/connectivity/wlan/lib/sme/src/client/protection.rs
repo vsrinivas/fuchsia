@@ -4,7 +4,7 @@
 
 use {
     crate::client::rsn::Rsna,
-    failure::{bail, Error},
+    anyhow::{format_err, Error},
     wlan_common::ie::write_wpa1_ie,
     wlan_rsn::ProtectionInfo,
 };
@@ -37,7 +37,7 @@ pub(crate) fn build_protection_ie(protection: &Protection) -> Result<Option<Prot
             let s_protection = rsna.negotiated_protection.to_full_protection();
             let s_wpa = match s_protection {
                 ProtectionInfo::Rsne(_) => {
-                    bail!("found RSNE protection inside a WPA1 association...");
+                    return Err(format_err!("found RSNE protection inside a WPA1 association..."));
                 }
                 ProtectionInfo::LegacyWpa(wpa) => wpa,
             };
@@ -53,7 +53,7 @@ pub(crate) fn build_protection_ie(protection: &Protection) -> Result<Option<Prot
             let s_rsne = match s_protection {
                 ProtectionInfo::Rsne(rsne) => rsne,
                 ProtectionInfo::LegacyWpa(_) => {
-                    bail!("found WPA protection inside an RSNA...");
+                    return Err(format_err!("found WPA protection inside an RSNA..."));
                 }
             };
             let mut buf = Vec::with_capacity(s_rsne.len());

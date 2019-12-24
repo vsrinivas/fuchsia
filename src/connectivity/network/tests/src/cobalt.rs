@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::ResultExt;
+use anyhow::Context as _;
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn cobalt_metrics() -> Result<(), failure::Error> {
+async fn cobalt_metrics() -> Result<(), anyhow::Error> {
     // NB: netstack aggregates observations and logs them to cobalt once per minute.  We wait for
     // calls to LogCobaltEvents to be made, so this test takes about 180 seconds to run at the time
     // of writing. If you're modifying this test and have the ability to change the netstack
@@ -27,8 +27,8 @@ async fn cobalt_metrics() -> Result<(), failure::Error> {
         )
         .await
         .context("failed to call query_logger")?
-        // fidl_fuchsia_cobalt::QueryError doesn't implement failure::Fail.
-        .map_err(|e| failure::format_err!("queryerror: {:?}", e))?;
+        // fidl_fuchsia_cobalt::QueryError doesn't implement thiserror::Error.
+        .map_err(|e| anyhow::format_err!("queryerror: {:?}", e))?;
 
     let socket_count_max_events =
         events_with_id(&events, networking_metrics::SOCKET_COUNT_MAX_METRIC_ID);
@@ -54,7 +54,7 @@ async fn cobalt_metrics() -> Result<(), failure::Error> {
         )
         .await
         .context("failed to call query_logger")?
-        .map_err(|e| failure::format_err!("queryerror: {:?}", e))?;
+        .map_err(|e| anyhow::format_err!("queryerror: {:?}", e))?;
 
     assert_eq!(
         // We think this i64 suffix is necessary because rustc assigns this constant a type before unifying
@@ -80,7 +80,7 @@ async fn cobalt_metrics() -> Result<(), failure::Error> {
         )
         .await
         .context("failed to call query_logger")?
-        .map_err(|e| failure::format_err!("queryerror: {:?}", e))?;
+        .map_err(|e| anyhow::format_err!("queryerror: {:?}", e))?;
 
     assert_eq!(
         // https://github.com/rust-lang/rust/issues/57009
@@ -161,7 +161,7 @@ async fn cobalt_metrics() -> Result<(), failure::Error> {
         )
         .await
         .context("failed to call query_logger")?
-        .map_err(|e| failure::format_err!("queryerror: {:?}", e))?;
+        .map_err(|e| anyhow::format_err!("queryerror: {:?}", e))?;
 
     assert_eq!(
         // https://github.com/rust-lang/rust/issues/57009

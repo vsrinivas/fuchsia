@@ -4,7 +4,7 @@
 
 use fuchsia_async as fasync;
 
-use failure::{err_msg, Error};
+use anyhow::{format_err, Error};
 use fidl::endpoints::{RequestStream, ServerEnd};
 use fidl_fuchsia_stash::{
     FlushError, StoreAccessorMarker, StoreAccessorRequest, StoreAccessorRequestStream,
@@ -33,7 +33,7 @@ impl Instance {
     /// this function call.
     pub fn identify(&mut self, name: String) -> Result<(), Error> {
         if let Some(name) = self.client_name.as_ref() {
-            return Err(err_msg(format!("client attempted to identify twice: {}", name)));
+            return Err(format_err!(format!("client attempted to identify twice: {}", name)));
         }
         self.client_name = Some(name);
         Ok(())
@@ -49,7 +49,7 @@ impl Instance {
             self.store_manager.clone(),
             self.enable_bytes,
             read_only,
-            self.client_name.clone().ok_or(err_msg("identify has not been called"))?,
+            self.client_name.clone().ok_or(format_err!("identify has not been called"))?,
         );
 
         let server_chan = fasync::Channel::from_channel(server_end.into_channel())?;
@@ -90,7 +90,7 @@ impl Instance {
                 }
                 Ok(())
             }
-            .unwrap_or_else(|e: failure::Error| {
+            .unwrap_or_else(|e: anyhow::Error| {
                 fx_log_err!("error running accessor interface: {:?}", e)
             }),
         );

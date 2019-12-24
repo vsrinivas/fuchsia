@@ -8,12 +8,12 @@ pub enum TraceutilMethod {
 }
 
 impl std::str::FromStr for TraceutilMethod {
-    type Err = failure::Error;
+    type Err = anyhow::Error;
 
     fn from_str(method: &str) -> Result<Self, Self::Err> {
         match method {
             "GetTraceFile" => Ok(TraceutilMethod::GetTraceFile),
-            _ => bail!("invalid Traceutil Facade method: {}", method),
+            _ => return Err(format_err!("invalid Traceutil Facade method: {}", method)),
         }
     }
 }

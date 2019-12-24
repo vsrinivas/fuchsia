@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use crate::service_context::ServiceContext;
-use failure::{format_err, Error};
+use anyhow::{format_err, Error};
 use futures::channel::mpsc::UnboundedSender;
 use futures::channel::oneshot::Sender;
 use futures::lock::Mutex;
@@ -22,34 +22,34 @@ pub type InvocationSender = UnboundedSender<Invocation>;
 /// initialization and run for the duration of the service.
 #[derive(PartialEq, Debug, Eq, Hash, Clone, Copy)]
 pub enum Lifespan {
-  Initialization,
-  Service,
+    Initialization,
+    Service,
 }
 
 /// Struct of information passed to the agent during each invocation.
 #[derive(Clone)]
 pub struct Invocation {
-  pub lifespan: Lifespan,
-  pub service_context: Arc<RwLock<ServiceContext>>,
-  pub ack_sender: Arc<Mutex<Option<Sender<InvocationAck>>>>,
+    pub lifespan: Lifespan,
+    pub service_context: Arc<RwLock<ServiceContext>>,
+    pub ack_sender: Arc<Mutex<Option<Sender<InvocationAck>>>>,
 }
 
 impl Invocation {
-  pub async fn acknowledge(self, ack: InvocationAck) -> Result<(), Error> {
-    match self.ack_sender.lock().await.take() {
-      None => {
-        return Err(format_err!("invocation already acknowledged"));
-      }
-      Some(sender) => {
-        sender.send(ack).ok();
-        return Ok(());
-      }
+    pub async fn acknowledge(self, ack: InvocationAck) -> Result<(), Error> {
+        match self.ack_sender.lock().await.take() {
+            None => {
+                return Err(format_err!("invocation already acknowledged"));
+            }
+            Some(sender) => {
+                sender.send(ack).ok();
+                return Ok(());
+            }
+        }
     }
-  }
 }
 
 /// Entity for registering agents. It is responsible for signaling
 /// Stages based on the specified lifespan.
 pub trait Authority {
-  fn register(&mut self, lifespan: Lifespan, invoker: InvocationSender) -> Result<(), Error>;
+    fn register(&mut self, lifespan: Lifespan, invoker: InvocationSender) -> Result<(), Error>;
 }

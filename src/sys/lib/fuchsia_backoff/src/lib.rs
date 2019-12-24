@@ -338,7 +338,7 @@ mod tests {
     }
 
     #[test]
-    fn test_should_fail() {
+    fn test_should_error() {
         for i in 0..10 {
             assert_eq!(run(retry_or_first_error(backoff(i), Counter::never_ok()), i), Err(0));
             assert_eq!(run(retry_or_last_error(backoff(i), Counter::never_ok()), i), Err(i));

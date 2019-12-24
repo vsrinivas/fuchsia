@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {blackout_host::Test, failure::Error, std::time::Duration};
+use {anyhow::Error, blackout_host::Test, std::time::Duration};
 
 fn main() -> Result<(), Error> {
     Test::new("blobfs-fsck-soft-target")

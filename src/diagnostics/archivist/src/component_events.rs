@@ -4,7 +4,7 @@
 
 use {
     crate::collection::RealmPath,
-    failure::{format_err, Error, ResultExt},
+    anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_inspect::TreeProxy,
     fidl_fuchsia_inspect_deprecated::InspectProxy,
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},

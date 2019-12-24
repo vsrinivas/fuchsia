@@ -119,11 +119,11 @@ mod tests {
             runner::RemoteRunnerError,
             testing::{mocks::MockRunner, routing_test_helpers::*, test_helpers::*},
         },
+        anyhow::Error,
         cm_rust::{
             self, CapabilityName, ChildDecl, ComponentDecl, OfferDecl, OfferRunnerDecl,
             OfferRunnerSource, OfferTarget, UseDecl, UseRunnerDecl,
         },
-        failure::Error,
         futures::lock::Mutex,
         matches::assert_matches,
     };

@@ -11,7 +11,7 @@ if (host_toolchain == current_toolchain) {
     testonly = true
     edition = "2018"
     deps = [
-      "//third_party/rust_crates:failure",
+      "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:structopt",
       "//tools/blackout/blackout-host",
     ]
@@ -39,7 +39,7 @@ rustc_binary("blobfs-fsck-soft-target-bin") {
     "//src/lib/cstr",
     "//src/storage/fs-management",
     "//src/storage/ramdevice-client",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:structopt",
     "//tools/blackout/blackout-target",
   ]

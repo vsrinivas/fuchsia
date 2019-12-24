@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use crate::{protocol::response::Response, request_builder::RequestParams};
-use failure::Fail;
 use futures::future::BoxFuture;
 
 pub mod stub;
@@ -11,7 +10,7 @@ pub mod stub;
 /// The trait for the Install Plan that can be acted on by an Installer implementation.
 ///
 pub trait Plan: std::marker::Sized {
-    type Error: Fail;
+    type Error: std::error::Error + std::marker::Send + std::marker::Sync + 'static;
 
     /// Try to create a new Plan from the given response, returning a PlanError if unable to do
     /// so.
@@ -32,11 +31,11 @@ pub trait Plan: std::marker::Sized {
 /// InstallPlan - This is the type that implements the Plan trait, and represents the platform-
 ///               specific installation plan (the data used to define what an update is).
 ///
-/// Error - This the type that implements the failure::Fail trait and is used to collect all of
+/// Error - This the type that implements the thiserror::Error trait and is used to collect all of
 ///         the errors that can occur during the installation of an update.
 pub trait Installer {
     type InstallPlan: Plan;
-    type Error: Fail;
+    type Error: std::error::Error + std::marker::Send + std::marker::Sync + 'static;
 
     /// Perform the installation as given by the install plan (as parsed form the Omaha server
     /// response).  If given, provide progress via the observer, and a final finished or Error

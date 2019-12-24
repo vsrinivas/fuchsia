@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {failure::Error, fuchsia_async as fasync, test_utils::BlackBoxTest};
+use {anyhow::Error, fuchsia_async as fasync, test_utils::BlackBoxTest};
 
 #[fasync::run_singlethreaded(test)]
 async fn test() -> Result<(), Error> {

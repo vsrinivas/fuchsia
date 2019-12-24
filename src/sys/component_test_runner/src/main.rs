@@ -4,7 +4,7 @@
 
 #![warn(missing_docs)]
 
-use failure::{bail, format_err, Error, ResultExt};
+use anyhow::{format_err, Context as _, Error};
 use fidl::endpoints::{create_proxy, ServerEnd};
 use fidl_fuchsia_io::{DirectoryProxy, FileMarker, NodeMarker};
 use fidl_fuchsia_sys::{FlatNamespace, RunnerRequest, RunnerRequestStream};
@@ -21,7 +21,7 @@ fn manifest_path_from_url(url: &str) -> Result<String, Error> {
     match PkgUrl::parse(url) {
         Ok(url) => match url.resource() {
             Some(r) => Ok(r.to_string()),
-            None => bail!("no resource"),
+            None => return Err(format_err!("no resource")),
         },
         Err(e) => Err(e),
     }
@@ -65,18 +65,20 @@ struct TestFacet {
 fn test_facet(meta: &serde_json::Value) -> Result<TestFacet, Error> {
     let facets = meta.get("facets").ok_or_else(|| format_err!("no facets"))?;
     if !facets.is_object() {
-        bail!("facet not an object");
+        return Err(format_err!("facet not an object"));
     }
     let fuchsia_test_facet = match facets.get("fuchsia.test") {
         Some(v) => v,
-        None => bail!("no fuchsia.test facet"),
+        None => return Err(format_err!("no fuchsia.test facet")),
     };
     if !fuchsia_test_facet.is_object() {
-        bail!("fuchsia.test facet not an object");
+        return Err(format_err!("fuchsia.test facet not an object"));
     }
     let component_under_test = match fuchsia_test_facet.get("component_under_test") {
         Some(v) => v,
-        None => bail!("no component_under_test definition in fuchsia.test facet"),
+        None => {
+            return Err(format_err!("no component_under_test definition in fuchsia.test facet"))
+        }
     };
     let component_under_test = component_under_test
         .as_str()

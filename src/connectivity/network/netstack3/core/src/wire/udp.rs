@@ -574,7 +574,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_fail() {
+    fn test_parse_error() {
         // Test that while a given byte pattern optionally succeeds, zeroing out
         // certain bytes causes failure. `zero` is a list of byte indices to
         // zero out that should cause failure.

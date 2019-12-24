@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use crate::{read_partition, write_partition, SysconfigPartition};
-use failure::Fail;
 use serde_derive::{Deserialize, Serialize};
+use thiserror::Error;
 use zerocopy::{AsBytes, FromBytes, LayoutVerified};
 
 const MAGIC: u32 = 0x5A799EA4;
@@ -74,36 +74,36 @@ impl OtaUpdateChannelConfig {
     }
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum ChannelConfigError {
-    #[fail(display = "IO error: {:?}", _0)]
-    IO(#[cause] std::io::Error),
+    #[error("IO error: {:?}", _0)]
+    IO(std::io::Error),
 
-    #[fail(display = "JSON error: {:?}", _0)]
-    JSON(#[cause] serde_json::Error),
+    #[error("JSON error: {:?}", _0)]
+    JSON(serde_json::Error),
 
-    #[fail(display = "Failed to parse header")]
+    #[error("Failed to parse header")]
     ParseHeader,
 
-    #[fail(display = "Magic does not match: 0x{:x}", _0)]
+    #[error("Magic does not match: 0x{:x}", _0)]
     Magic(u32),
 
-    #[fail(display = "Version does not match: {}", _0)]
+    #[error("Version does not match: {}", _0)]
     Version(u16),
 
-    #[fail(display = "Header checksum does not match: 0x{:x}", _0)]
+    #[error("Header checksum does not match: 0x{:x}", _0)]
     HeaderChecksum(u32),
 
-    #[fail(display = "Data length too large: {}", _0)]
+    #[error("Data length too large: {}", _0)]
     DataLength(u16),
 
-    #[fail(display = "Data checksum does not match: 0x{:x}", _0)]
+    #[error("Data checksum does not match: 0x{:x}", _0)]
     DataChecksum(u32),
 
-    #[fail(display = "Channel name too long: {} > 1024", _0)]
+    #[error("Channel name too long: {} > 1024", _0)]
     ChannelNameLength(usize),
 
-    #[fail(display = "Channel name contains invalid characters: {}", _0)]
+    #[error("Channel name contains invalid characters: {}", _0)]
     ChannelNameInvalid(String),
 }
 

@@ -10,7 +10,7 @@
 /// local ("data::Data") implementation before sending them to the puppets.
 use fuchsia_inspect::Property as UsablePropertyTrait;
 use {
-    failure::{bail, format_err, Error, ResultExt},
+    anyhow::{format_err, Context as _, Error},
     fidl_test_inspect_validate::*,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
@@ -73,7 +73,7 @@ impl Actor {
                         Number::DoubleT(n) => {
                             Property::Double(self.find_parent(parent)?.create_double(name, n))
                         }
-                        unknown => bail!("Unknown number type {:?}", unknown),
+                        unknown => return Err(format_err!("Unknown number type {:?}", unknown)),
                     },
                 );
             }
@@ -97,7 +97,9 @@ impl Actor {
                     (Property::Int(p), Number::IntT(v)) => p.set(v),
                     (Property::Uint(p), Number::UintT(v)) => p.set(v),
                     (Property::Double(p), Number::DoubleT(v)) => p.set(v),
-                    unexpected => bail!("Illegal types {:?} for SetNumber", unexpected),
+                    unexpected => {
+                        return Err(format_err!("Illegal types {:?} for SetNumber", unexpected))
+                    }
                 };
             }
             Action::AddNumber(AddNumber { id, value }) => {
@@ -105,7 +107,9 @@ impl Actor {
                     (Property::Int(p), Number::IntT(v)) => p.add(v),
                     (Property::Uint(p), Number::UintT(v)) => p.add(v),
                     (Property::Double(p), Number::DoubleT(v)) => p.add(v),
-                    unexpected => bail!("Illegal types {:?} for AddNumber", unexpected),
+                    unexpected => {
+                        return Err(format_err!("Illegal types {:?} for AddNumber", unexpected))
+                    }
                 };
             }
             Action::SubtractNumber(SubtractNumber { id, value }) => {
@@ -113,16 +117,25 @@ impl Actor {
                     (Property::Int(p), Number::IntT(v)) => p.subtract(v),
                     (Property::Uint(p), Number::UintT(v)) => p.subtract(v),
                     (Property::Double(p), Number::DoubleT(v)) => p.subtract(v),
-                    unexpected => bail!("Illegal types {:?} for SubtractNumber", unexpected),
+                    unexpected => {
+                        return Err(format_err!(
+                            "Illegal types {:?} for SubtractNumber",
+                            unexpected
+                        ))
+                    }
                 };
             }
             Action::SetString(SetString { id, value }) => match self.find_property(id)? {
                 Property::String(p) => p.set(&value),
-                unexpected => bail!("Illegal property {:?} for SetString", unexpected),
+                unexpected => {
+                    return Err(format_err!("Illegal property {:?} for SetString", unexpected))
+                }
             },
             Action::SetBytes(SetBytes { id, value }) => match self.find_property(id)? {
                 Property::Bytes(p) => p.set(&value),
-                unexpected => bail!("Illegal property {:?} for SetBytes", unexpected),
+                unexpected => {
+                    return Err(format_err!("Illegal property {:?} for SetBytes", unexpected))
+                }
             },
             Action::CreateArrayProperty(CreateArrayProperty {
                 parent,
@@ -151,7 +164,9 @@ impl Actor {
                     (Property::IntArray(p), Number::IntT(v)) => p.set(index as usize, v),
                     (Property::UintArray(p), Number::UintT(v)) => p.set(index as usize, v),
                     (Property::DoubleArray(p), Number::DoubleT(v)) => p.set(index as usize, v),
-                    unexpected => bail!("Illegal types {:?} for ArraySet", unexpected),
+                    unexpected => {
+                        return Err(format_err!("Illegal types {:?} for ArraySet", unexpected))
+                    }
                 };
             }
             Action::ArrayAdd(ArrayAdd { id, index, value }) => {
@@ -159,7 +174,9 @@ impl Actor {
                     (Property::IntArray(p), Number::IntT(v)) => p.add(index as usize, v),
                     (Property::UintArray(p), Number::UintT(v)) => p.add(index as usize, v),
                     (Property::DoubleArray(p), Number::DoubleT(v)) => p.add(index as usize, v),
-                    unexpected => bail!("Illegal types {:?} for ArrayAdd", unexpected),
+                    unexpected => {
+                        return Err(format_err!("Illegal types {:?} for ArrayAdd", unexpected))
+                    }
                 };
             }
             Action::ArraySubtract(ArraySubtract { id, index, value }) => {
@@ -167,7 +184,9 @@ impl Actor {
                     (Property::IntArray(p), Number::IntT(v)) => p.subtract(index as usize, v),
                     (Property::UintArray(p), Number::UintT(v)) => p.subtract(index as usize, v),
                     (Property::DoubleArray(p), Number::DoubleT(v)) => p.subtract(index as usize, v),
-                    unexpected => bail!("Illegal types {:?} for ArraySubtract", unexpected),
+                    unexpected => {
+                        return Err(format_err!("Illegal types {:?} for ArraySubtract", unexpected))
+                    }
                 };
             }
             Action::CreateLinearHistogram(CreateLinearHistogram {
@@ -207,7 +226,10 @@ impl Actor {
                             )
                         }
                         unexpected => {
-                            bail!("Illegal types {:?} for CreateLinearHistogram", unexpected)
+                            return Err(format_err!(
+                                "Illegal types {:?} for CreateLinearHistogram",
+                                unexpected
+                            ))
                         }
                     },
                 );
@@ -271,7 +293,10 @@ impl Actor {
                             ),
                         ),
                         unexpected => {
-                            bail!("Illegal types {:?} for CreateExponentialHistogram", unexpected)
+                            return Err(format_err!(
+                                "Illegal types {:?} for CreateExponentialHistogram",
+                                unexpected
+                            ))
                         }
                     },
                 );
@@ -284,7 +309,9 @@ impl Actor {
                     (Property::IntExponentialHistogram(p), Number::IntT(v)) => p.insert(v),
                     (Property::UintExponentialHistogram(p), Number::UintT(v)) => p.insert(v),
                     (Property::DoubleExponentialHistogram(p), Number::DoubleT(v)) => p.insert(v),
-                    unexpected => bail!("Illegal types {:?} for Insert", unexpected),
+                    unexpected => {
+                        return Err(format_err!("Illegal types {:?} for Insert", unexpected))
+                    }
                 };
             }
             Action::InsertMultiple(InsertMultiple { id, value, count }) => {
@@ -307,13 +334,18 @@ impl Actor {
                     (Property::DoubleExponentialHistogram(p), Number::DoubleT(v)) => {
                         p.insert_multiple(v, count as usize)
                     }
-                    unexpected => bail!("Illegal types {:?} for InsertMultiple", unexpected),
+                    unexpected => {
+                        return Err(format_err!(
+                            "Illegal types {:?} for InsertMultiple",
+                            unexpected
+                        ))
+                    }
                 };
             }
             unexpected => {
                 // "Illegal" is the appropriate response here, not "Unimplemented".
                 // Known-Unimplemented actions should be matched explicitly.
-                bail!("Unexpected action {:?}", unexpected);
+                return Err(format_err!("Unexpected action {:?}", unexpected));
             }
         };
         Ok(())

@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::{Context as _, Error},
     breakpoint_system_client::*,
-    failure::{Error, ResultExt},
     fidl_fidl_examples_routing_echo as fecho, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     hub_report::HubReport,

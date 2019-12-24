@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // [START import_declarations]
-use failure::{Error, ResultExt};
+use anyhow::{Context as _, Error};
 use fidl_fidl_examples_echo::{EchoRequest, EchoRequestStream, EchoServiceRequest};
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;

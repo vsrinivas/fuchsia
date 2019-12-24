@@ -119,7 +119,7 @@ pub fn spawn_audio_fidl_handler(switchboard_handle: SwitchboardHandle, stream: A
         Box::new(
             move |context,
                   req|
-                  -> LocalBoxFuture<'_, Result<Option<AudioRequest>, failure::Error>> {
+                  -> LocalBoxFuture<'_, Result<Option<AudioRequest>, anyhow::Error>> {
                 async move {
                     // Support future expansion of FIDL
                     #[allow(unreachable_patterns)]

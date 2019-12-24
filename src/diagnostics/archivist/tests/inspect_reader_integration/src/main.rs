@@ -7,7 +7,7 @@ fn main() {}
 
 #[cfg(test)]
 mod tests {
-    use failure::ResultExt;
+    use anyhow::Context as _;
     use fidl::endpoints::create_proxy;
     use fidl_fuchsia_diagnostics;
     use fuchsia_async as fasync;

@@ -8,7 +8,7 @@ use {
         // TODO finish repling!
         PROMPT,
     },
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl_fuchsia_telephony_ril::RadioInterfaceLayerProxy,
     fuchsia_async as fasync,
     futures::{

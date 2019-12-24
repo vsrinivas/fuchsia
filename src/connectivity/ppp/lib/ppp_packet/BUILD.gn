@@ -15,8 +15,9 @@ rustc_library("ppp_packet") {
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/packet",
     "//garnet/public/rust/zerocopy",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 
@@ -27,8 +28,9 @@ rustc_test("ppp_packet_test_bin") {
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/packet",
     "//garnet/public/rust/zerocopy",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 

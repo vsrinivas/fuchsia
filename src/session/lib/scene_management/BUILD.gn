@@ -23,9 +23,10 @@ rustc_library("scene_management") {
     "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy-rustc",
     "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
-    "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 

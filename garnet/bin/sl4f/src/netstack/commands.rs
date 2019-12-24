@@ -4,7 +4,7 @@
 
 use crate::netstack::types::NetstackMethod;
 use crate::server::Facade;
-use failure::Error;
+use anyhow::Error;
 use futures::future::{FutureExt, LocalBoxFuture};
 use serde_json::{to_value, Value};
 
@@ -52,6 +52,6 @@ async fn netstack_method_to_fidl(
             let result = facade.disable_interface(identifier).await?;
             Ok(to_value(result)?)
         }
-        _ => bail!("Invalid Netstack FIDL method: {:?}", method_name),
+        _ => return Err(format_err!("Invalid Netstack FIDL method: {:?}", method_name)),
     }
 }

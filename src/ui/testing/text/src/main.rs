@@ -7,7 +7,7 @@ mod tests;
 
 use crate::test_helpers::TextFieldWrapper;
 use crate::tests::*;
-use failure::{Error, ResultExt};
+use anyhow::{Context as _, Error};
 use fidl_fuchsia_ui_text as txt;
 use fidl_fuchsia_ui_text_testing as txt_testing;
 use fuchsia_async::{self as fasync, DurationExt};

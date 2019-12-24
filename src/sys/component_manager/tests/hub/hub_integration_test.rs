@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::Error,
     breakpoint_system_client::*,
-    failure::{self, Error},
     fidl_fidl_examples_routing_echo as fecho,
     fidl_fuchsia_io::{OPEN_FLAG_DIRECTORY, OPEN_FLAG_POSIX},
     fidl_fuchsia_test_breakpoints as fbreak, fidl_fuchsia_test_hub as fhub,

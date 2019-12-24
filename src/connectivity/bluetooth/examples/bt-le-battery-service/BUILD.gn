@@ -16,9 +16,10 @@ rustc_binary("bt-le-battery-service") {
     "//sdk/fidl/fuchsia.power:fuchsia.power-rustc",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/lib/argh",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:pin-utils",
+    "//third_party/rust_crates:thiserror",
   ]
 }

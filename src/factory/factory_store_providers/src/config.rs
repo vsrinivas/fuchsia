@@ -4,7 +4,7 @@
 
 use {
     crate::validators::{new_validator_context_by_name, Validator},
-    failure::Error,
+    anyhow::Error,
     fidl::endpoints::DiscoverableService,
     fuchsia_syslog as syslog,
     serde_derive::Deserialize,

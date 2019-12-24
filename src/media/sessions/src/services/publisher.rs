@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::{proxies::player::Player, Result};
-use failure::ResultExt;
+use anyhow::Context as _;
 use fidl_fuchsia_media_sessions2::*;
 use futures::{channel::mpsc, prelude::*};
 

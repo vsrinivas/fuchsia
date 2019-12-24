@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::Error;
+use anyhow::Error;
 
 /// Future resolves once it has determined the system's health state.
 /// Returns Ok(()) on healthy and Err(reason) on unhealthy.

@@ -691,7 +691,7 @@ mod tests {
     use {
         crate::encoding::MAGIC_NUMBER_INITIAL,
         crate::epitaph::{self, ChannelEpitaphExt},
-        failure::{Error, ResultExt},
+        anyhow::{Context as _, Error},
         fuchsia_async as fasync,
         fuchsia_async::{DurationExt, TimeoutExt},
         fuchsia_zircon as zx,

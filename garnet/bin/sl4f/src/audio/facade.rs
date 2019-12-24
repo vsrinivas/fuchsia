@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow::Error;
 use base64;
 use byteorder::{LittleEndian, WriteBytesExt};
-use failure::Error;
 use fidl_fuchsia_media::*;
 use fidl_fuchsia_virtualaudio::*;
 use fuchsia_async as fasync;
@@ -40,7 +40,7 @@ fn get_sample_size(format: u32) -> Result<usize, Error> {
         AUDIO_SAMPLE_FORMAT_16BIT => 2,
         AUDIO_SAMPLE_FORMAT_24BIT_IN32 => 4,
         AUDIO_SAMPLE_FORMAT_32BIT_FLOAT => 4,
-        _ => bail!("Cannot handle sample_format: {:?}", format),
+        _ => return Err(format_err!("Cannot handle sample_format: {:?}", format)),
     })
 }
 
@@ -186,7 +186,7 @@ impl OutputWorker {
                 rx_msg = rx.next() => {
                     match rx_msg {
                         None => {
-                            bail!("Got None ExtractMsg Event, exiting worker");
+                            return Err(format_err!("Got None ExtractMsg Event, exiting worker"));
                         },
                         Some(ExtractMsg::Stop { mut out_sender }) => {
                             self.capturing = false;
@@ -205,7 +205,7 @@ impl OutputWorker {
                 output_msg = output_events.try_next() => {
                     match output_msg? {
                         None => {
-                            bail!("Got None OutputEvent Message, exiting worker");
+                            return Err(format_err!("Got None OutputEvent Message, exiting worker"));
                         },
                         Some(OutputEvent::OnSetFormat { frames_per_second, sample_format,
                                                         num_channels, external_delay}) => {
@@ -572,7 +572,7 @@ impl InputWorker {
                 rx_msg = rx.next() => {
                     match rx_msg {
                         None => {
-                            bail!("Got None InjectMsg Event, exiting worker");
+                            return Err(format_err!("Got None InjectMsg Event, exiting worker"));
                         },
                         Some(InjectMsg::Flush) => {
                             let active = active.lock().await;
@@ -588,7 +588,7 @@ impl InputWorker {
                 input_msg = input_events.try_next() => {
                     match input_msg? {
                         None => {
-                            bail!("Got None InputEvent Message, exiting worker");
+                            return Err(format_err!("Got None InputEvent Message, exiting worker"));
                         },
                         Some(InputEvent::OnSetFormat { frames_per_second, sample_format,
                                                        num_channels, external_delay}) => {
@@ -852,7 +852,7 @@ impl AudioFacade {
 
             Ok(to_value(true)?)
         } else {
-            bail!("Cannot StartOutputSave, already started.")
+            return Err(format_err!("Cannot StartOutputSave, already started."));
         }
     }
 
@@ -883,7 +883,7 @@ impl AudioFacade {
             *(capturing) = false;
             Ok(to_value(true)?)
         } else {
-            bail!("Cannot StopOutputSave, not started.")
+            return Err(format_err!("Cannot StopOutputSave, not started."));
         }
     }
 
@@ -894,7 +894,7 @@ impl AudioFacade {
         if !*capturing {
             Ok(to_value(base64::encode(&self.audio_output.read().extracted_data))?)
         } else {
-            bail!("GetOutputAudio failed, still saving.")
+            return Err(format_err!("GetOutputAudio failed, still saving."));
         }
     }
 
@@ -913,7 +913,7 @@ impl AudioFacade {
             let active = self.audio_input.read().active.clone();
             let active = active.lock().await;
             if *active {
-                bail!("PutInputAudio failed, currently injecting audio.")
+                return Err(format_err!("PutInputAudio failed, currently injecting audio."));
             }
 
             {
@@ -940,9 +940,9 @@ impl AudioFacade {
             let active = self.audio_input.read().active.clone();
             let active = active.lock().await;
             if *active {
-                bail!("StartInputInjection failed, already active.")
+                return Err(format_err!("StartInputInjection failed, already active."));
             } else if !self.audio_input.read().have_data {
-                bail!("StartInputInjection failed, no Audio data to inject.")
+                return Err(format_err!("StartInputInjection failed, no Audio data to inject."));
             }
             self.audio_input.write().play(sample_index)?;
         }
@@ -955,7 +955,7 @@ impl AudioFacade {
             let active = self.audio_input.read().active.clone();
             let active = active.lock().await;
             if !*active {
-                bail!("StopInputInjection failed, not active.")
+                return Err(format_err!("StopInputInjection failed, not active."));
             }
             self.audio_input.write().stop()?;
         }

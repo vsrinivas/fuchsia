@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{format_err, Error};
+use anyhow::{format_err, Error};
 use fuchsia_zircon::{ClockId, Duration, Time};
 use std::ops::Deref;
 use token_cache::{CacheKey, CacheToken, KeyFor};

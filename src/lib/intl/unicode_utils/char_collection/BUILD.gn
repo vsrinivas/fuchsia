@@ -13,8 +13,9 @@ rustc_library("char_collection") {
 
   deps = [
     "//src/lib/intl/unicode_utils/unicode_blocks",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:paste",
+    "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:unic-char-range",
     "//third_party/rust_crates:unic-ucd-block",
   ]

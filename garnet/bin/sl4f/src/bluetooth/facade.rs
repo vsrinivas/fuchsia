@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{Error, Fail, ResultExt};
+use anyhow::{Context as _, Error};
 use fidl;
 use fidl_fuchsia_bluetooth_gatt::ServiceInfo;
 use fidl_fuchsia_bluetooth_gatt::{
@@ -136,7 +136,7 @@ impl BluetoothFacade {
             Some(server) => {
                 let pub_fut = server
                     .publish_service(&mut service_info, delegate_ptr, service_server)
-                    .map_err(|e| Error::from(e.context("Publishing service error")))
+                    .map_err(|e| Error::from(e).context("Publishing service error"))
                     .and_then(|status| match status.error {
                         None => fready(Ok(())),
                         Some(e) => fready(Err(Sl4fError::from(*e).into())),

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::switchboard::base::*, failure::Error, fuchsia_async as fasync, futures::lock::Mutex,
+    crate::switchboard::base::*, anyhow::Error, fuchsia_async as fasync, futures::lock::Mutex,
     futures::stream::StreamExt, std::marker::PhantomData, std::sync::Arc,
 };
 
@@ -225,7 +225,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use failure::Error;
+    use anyhow::Error;
     use fuchsia_async::DurationExt;
     use fuchsia_zircon as zx;
     use futures::channel::mpsc::UnboundedSender;

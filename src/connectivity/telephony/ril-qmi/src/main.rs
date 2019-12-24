@@ -6,7 +6,7 @@ use {
     crate::client::QmiClient,
     crate::errors::QmuxError,
     crate::transport::QmiTransport,
-    failure::Error,
+    anyhow::Error,
     fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fuchsia_telephony_ril::*,
     fuchsia_async as fasync,

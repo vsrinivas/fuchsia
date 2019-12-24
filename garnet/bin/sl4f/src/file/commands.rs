@@ -4,7 +4,7 @@
 
 use crate::file::{facade::FileFacade, types::FileMethod};
 use crate::server::Facade;
-use failure::Error;
+use anyhow::Error;
 use futures::future::{FutureExt, LocalBoxFuture};
 use serde_json::{to_value, Value};
 

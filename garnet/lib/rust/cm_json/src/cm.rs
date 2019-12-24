@@ -1,4 +1,3 @@
-use failure::Fail;
 use fidl_fuchsia_io2 as fio2;
 use serde::de;
 use serde_derive::{Deserialize, Serialize};
@@ -6,6 +5,7 @@ use serde_json::{Map, Value};
 use std::collections::HashSet;
 use std::fmt;
 use std::iter::IntoIterator;
+use thiserror::Error;
 use url;
 
 /// The in-memory representation of a binary Component Manifest JSON file.
@@ -452,13 +452,13 @@ pub struct StorageRef {
 pub struct FrameworkRef {}
 
 /// The error representing a failed validation of a `Name` string.
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum NameValidationError {
     /// The name string is empty or greater than 100 characters in length.
-    #[fail(display = "name must be non-empty and no more than 100 characters in length")]
+    #[error("name must be non-empty and no more than 100 characters in length")]
     InvalidLength,
     /// The name string contains illegal characters. See [`Name::new`].
-    #[fail(display = "name must only contain alpha-numeric characters or _-.")]
+    #[error("name must only contain alpha-numeric characters or _-.")]
     MalformedName,
 }
 
@@ -531,13 +531,13 @@ impl<'de> de::Deserialize<'de> for Name {
 }
 
 /// The error representing a failed validation of a `Path` string.
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum PathValidationError {
     /// The path string is empty or greater than 1024 characters in length.
-    #[fail(display = "path must be non-empty and no more than 1024 characters in length")]
+    #[error("path must be non-empty and no more than 1024 characters in length")]
     InvalidLength,
     /// The path string is malformed. See [`Path::new`].
-    #[fail(display = "path is malformed")]
+    #[error("path is malformed")]
     MalformedPath,
 }
 
@@ -611,13 +611,13 @@ impl<'de> de::Deserialize<'de> for Path {
 }
 
 /// The error representing a failed validation of a `Url` string.
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum UrlValidationError {
     /// The URL string is empty or greater than 4096 characters in length.
-    #[fail(display = "url must be non-empty and no more than 4096 characters")]
+    #[error("url must be non-empty and no more than 4096 characters")]
     InvalidLength,
     /// The URL string is not a valid URL. See the [`Url::new`].
-    #[fail(display = "url is malformed")]
+    #[error("url is malformed")]
     MalformedUrl,
 }
 
@@ -683,16 +683,16 @@ impl<'de> de::Deserialize<'de> for Url {
 }
 
 /// The error representing a failed validation of a `Path` string.
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum RightsValidationError {
     /// A right property was provided but was empty. See [`Rights::new`].
-    #[fail(display = "A right property was provided but was empty.")]
+    #[error("A right property was provided but was empty.")]
     EmptyRight,
     /// A right was provided which isn't known. See [`Rights::from`].
-    #[fail(display = "A right was provided which isn't known.")]
+    #[error("A right was provided which isn't known.")]
     UnknownRight,
     /// A right was provided twice. See [`Rights::new`].
-    #[fail(display = "A right was duplicated.")]
+    #[error("A right was duplicated.")]
     DuplicateRight,
 }
 

@@ -6,13 +6,13 @@ use super::Algorithm;
 
 use crate::Error;
 
+use anyhow::{ensure, format_err};
 use byteorder::{BigEndian, ByteOrder};
 use crypto::aes::KeySize;
 use crypto::aessafe;
 use crypto::blockmodes::{self, EcbDecryptor, EcbEncryptor, PaddingProcessor};
 use crypto::buffer;
 use crypto::symmetriccipher::{Decryptor, Encryptor};
-use failure::{self, bail, ensure, format_err};
 
 // Implementation of RFC 3394 - Advanced Encryption Standard (AES) Key Wrap Algorithm
 // RFC 3394, 2.2.3
@@ -22,12 +22,12 @@ const BLOCK_SIZE: usize = 16;
 pub struct NistAes;
 
 impl NistAes {
-    fn keysize(key_len: usize) -> Result<KeySize, failure::Error> {
+    fn keysize(key_len: usize) -> Result<KeySize, anyhow::Error> {
         match key_len {
             16 => Ok(KeySize::KeySize128),
             24 => Ok(KeySize::KeySize192),
             32 => Ok(KeySize::KeySize256),
-            _ => bail!(Error::InvalidAesKeywrapKeySize(key_len)),
+            _ => return Err(Error::InvalidAesKeywrapKeySize(key_len).into()),
         }
     }
 }
@@ -82,7 +82,7 @@ pub fn ecb_decryptor<X: PaddingProcessor + Send + 'static>(
 
 impl Algorithm for NistAes {
     // RFC 3394, 2.2.1 - Uses index based wrapping
-    fn wrap_key(&self, key: &[u8], _iv: &[u8; 16], p: &[u8]) -> Result<Vec<u8>, failure::Error> {
+    fn wrap_key(&self, key: &[u8], _iv: &[u8; 16], p: &[u8]) -> Result<Vec<u8>, anyhow::Error> {
         let n = p.len() / 8;
         ensure!(p.len() % 8 == 0 && n >= 2, Error::InvalidAesKeywrapDataLength(p.len()));
 
@@ -127,7 +127,7 @@ impl Algorithm for NistAes {
     }
 
     // RFC 3394, 2.2.2 - uses index based unwrapping
-    fn unwrap_key(&self, key: &[u8], _iv: &[u8; 16], c: &[u8]) -> Result<Vec<u8>, failure::Error> {
+    fn unwrap_key(&self, key: &[u8], _iv: &[u8; 16], c: &[u8]) -> Result<Vec<u8>, anyhow::Error> {
         let n = c.len() / 8 - 1;
         ensure!(c.len() % 8 == 0 && n >= 2, Error::InvalidAesKeywrapDataLength(c.len()));
 

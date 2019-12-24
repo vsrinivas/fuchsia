@@ -8,7 +8,7 @@ use {
     crate::registry::device_storage::DeviceStorage,
     crate::service_context::ServiceContext,
     crate::switchboard::base::*,
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl_fuchsia_media_sounds::{PlayerMarker, PlayerProxy},
     fidl_fuchsia_ui_input::MediaButtonsEvent,
     fuchsia_async as fasync, fuchsia_component as component,

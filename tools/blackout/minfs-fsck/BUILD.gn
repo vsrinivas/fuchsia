@@ -10,7 +10,7 @@ if (host_toolchain == current_toolchain) {
     testonly = true
     edition = "2018"
     deps = [
-      "//third_party/rust_crates:failure",
+      "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:structopt",
       "//tools/blackout/blackout-host",
     ]
@@ -25,7 +25,7 @@ rustc_binary("minfs-fsck-target-bin") {
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-zircon",
     "//src/storage/fs-management",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:structopt",
     "//tools/blackout/blackout-target",

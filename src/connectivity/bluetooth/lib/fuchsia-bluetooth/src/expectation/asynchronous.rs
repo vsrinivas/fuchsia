@@ -28,7 +28,7 @@
 //!   ```
 
 use {
-    failure::{format_err, Error},
+    anyhow::{format_err, Error},
     fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_zircon as zx,
     futures::{future::FutureObj, FutureExt},

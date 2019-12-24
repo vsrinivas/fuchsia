@@ -7,7 +7,7 @@ use std::{
     time::{Duration, SystemTime},
 };
 
-use failure::Error;
+use anyhow::Error;
 
 use fidl::endpoints::{self, ServerEnd};
 
@@ -255,7 +255,7 @@ fn text(input: String, duration: Duration, consumer: impl ServerConsumer) -> Res
     let input_device = register_keyboard(consumer)?;
     let key_sequence = InverseKeymap::new(keymaps::QWERTY_MAP)
         .derive_key_sequence(&input)
-        .ok_or_else(|| failure::err_msg("Cannot translate text to key sequence"))?;
+        .ok_or_else(|| anyhow::format_err!("Cannot translate text to key sequence"))?;
 
     let stroke_duration = duration / (key_sequence.len() - 1) as u32;
     let mut key_iter = key_sequence.into_iter().peekable();

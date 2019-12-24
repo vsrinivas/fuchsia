@@ -4,7 +4,7 @@
 
 #![allow(dead_code)]
 
-use failure::{Error, ResultExt};
+use anyhow::{Context as _, Error};
 use fidl::endpoints::ClientEnd;
 use fuchsia_async as fasync;
 use futures::{TryFutureExt, TryStreamExt};

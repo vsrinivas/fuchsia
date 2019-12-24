@@ -60,7 +60,7 @@ impl Unpin for Watcher {}
 
 impl Watcher {
     /// Creates a new `Watcher` for the directory given by `dir`.
-    pub async fn new(dir: fidl_fuchsia_io::DirectoryProxy) -> Result<Watcher, failure::Error> {
+    pub async fn new(dir: fidl_fuchsia_io::DirectoryProxy) -> Result<Watcher, anyhow::Error> {
         let (h0, h1) = zx::Channel::create()?;
         let options = 0u32;
         let status = dir.watch(WATCH_MASK_ALL, options, h1).await?;

@@ -4,7 +4,7 @@
 
 use {
     crate::{constants::TITLE_KEY, utils},
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl_fuchsia_app_discover::StoryDiscoverError,
     fidl_fuchsia_ledger::{
         Entry, Error as LedgerError, LedgerMarker, PageMarker, PageProxy, PageSnapshotMarker,
@@ -312,7 +312,7 @@ mod tests {
             story_graph::StoryGraph,
             story_manager::StoryManager,
         },
-        failure::Error,
+        anyhow::Error,
         fuchsia_async as fasync,
     };
 

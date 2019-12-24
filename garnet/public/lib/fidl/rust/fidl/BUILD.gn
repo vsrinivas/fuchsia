@@ -13,12 +13,13 @@ rustc_library("fidl") {
   edition = "2018"
   deps = [
     "//garnet/public/rust/fuchsia-zircon/fuchsia-zircon-status",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:bitflags",
     "//third_party/rust_crates:byteorder",
-    "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:slab",
+    "//third_party/rust_crates:thiserror",
   ]
   if (is_fuchsia) {
     deps += [

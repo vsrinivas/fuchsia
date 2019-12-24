@@ -5,7 +5,7 @@
 mod game;
 mod tennis_service;
 
-use failure::{Error, ResultExt};
+use anyhow::{Context, Error};
 use fuchsia_component::server::ServiceFs;
 use fuchsia_syslog::{fx_log_info, init_with_tags};
 use futures::StreamExt;

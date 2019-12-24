@@ -11,7 +11,7 @@
 //! program that makes use of the Unicode support within ICU.
 
 use {
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl_fuchsia_examples_intl_wisdom as fwisdom, fuchsia_async as fasync,
     fuchsia_component::client::{launch, launcher},
     icu_data, rust_icu_sys as usys, rust_icu_udat as udat, rust_icu_uloc as uloc,

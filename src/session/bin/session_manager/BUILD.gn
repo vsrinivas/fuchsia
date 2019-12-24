@@ -39,8 +39,9 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/argh",
     "//src/session/lib/realm_management",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
@@ -54,7 +55,8 @@ rustc_binary("bin") {
     ":lib",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-syslog",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 

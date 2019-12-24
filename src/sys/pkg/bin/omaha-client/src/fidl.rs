@@ -7,7 +7,7 @@ use crate::{
     inspect::{AppsNode, LastResultsNode, ProtocolStateNode, ScheduleNode, StateNode},
     observer::FuchsiaObserver,
 };
-use failure::{bail, Error, ResultExt};
+use anyhow::{format_err, Context as _, Error};
 use fidl_fuchsia_update::{
     CheckStartedResult, Initiator, ManagerRequest, ManagerRequestStream, ManagerState,
     MonitorControlHandle, State,
@@ -205,7 +205,7 @@ where
                             source: match options.initiator {
                                 Some(Initiator::User) => InstallSource::OnDemand,
                                 Some(Initiator::Service) => InstallSource::ScheduledTask,
-                                None => bail!("Options.Initiator is required"),
+                                None => return Err(format_err!("Options.Initiator is required")),
                             },
                         };
                         let state_machine_ref = server.state_machine_ref.clone();

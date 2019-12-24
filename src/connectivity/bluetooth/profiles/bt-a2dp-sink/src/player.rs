@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::{format_err, Context as _, Error},
     bitfield::bitfield,
     bt_avdtp::RtpHeader,
-    failure::{bail, format_err, Error, ResultExt},
     fidl_fuchsia_media::{
         AudioConsumerProxy, AudioConsumerStartFlags, AudioConsumerStatus, AudioSampleFormat,
         AudioStreamType, Compression, SessionAudioConsumerFactoryMarker,
@@ -269,7 +269,7 @@ impl Player {
 
         if full_frame_len > self.buffer_len {
             self.stream_sink.end_of_stream()?;
-            bail!("frame is too large for buffer");
+            return Err(format_err!("frame is too large for buffer"));
         }
         if self.current_offset + full_frame_len > self.buffer_len {
             self.current_offset = 0;

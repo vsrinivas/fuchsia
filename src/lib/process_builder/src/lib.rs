@@ -73,7 +73,6 @@ mod processargs;
 mod util;
 
 use {
-    failure::Fail,
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_io as fio, fidl_fuchsia_ldsvc as fldsvc,
     fuchsia_async::{self as fasync, TimeoutExt},
@@ -87,6 +86,7 @@ use {
     std::ffi::{CStr, CString},
     std::iter,
     std::mem,
+    thiserror::Error,
 };
 
 /// A container for a single namespace entry, containing a path and a directory handle. Used as an
@@ -838,40 +838,38 @@ impl Drop for ReservationVmar {
 
 /// Error type returned by ProcessBuilder methods.
 #[allow(missing_docs)] // No docs on individual error variants.
-#[derive(Fail, Debug)]
+#[derive(Error, Debug)]
 pub enum ProcessBuilderError {
-    #[fail(display = "{}", _0)]
+    #[error("{}", _0)]
     InvalidArg(String),
-    #[fail(display = "{}", _0)]
+    #[error("{}", _0)]
     BadHandle(&'static str),
-    #[fail(display = "Failed to create process: {}", _0)]
-    CreateProcess(#[cause] zx::Status),
-    #[fail(display = "Failed to create thread: {}", _0)]
-    CreateThread(#[cause] zx::Status),
-    #[fail(display = "Failed to start process: {}", _0)]
-    ProcessStart(#[cause] zx::Status),
-    #[fail(display = "Failed to parse ELF: {}", _0)]
-    ElfParse(#[cause] elf_parse::ElfParseError),
-    #[fail(display = "Failed to load ELF: {}", _0)]
-    ElfLoad(#[cause] elf_load::ElfLoadError),
-    #[fail(display = "{}", _0)]
-    Processargs(#[cause] processargs::ProcessargsError),
-    #[fail(display = "{}: {}", _0, _1)]
-    GenericStatus(&'static str, #[cause] zx::Status),
-    #[fail(display = "{}: {}", _0, _1)]
-    Internal(&'static str, #[cause] failure::Error),
-    #[fail(
-        display = "Failed to build process with dynamic ELF, missing fuchsia.ldsvc.Loader handle"
-    )]
+    #[error("Failed to create process: {}", _0)]
+    CreateProcess(zx::Status),
+    #[error("Failed to create thread: {}", _0)]
+    CreateThread(zx::Status),
+    #[error("Failed to start process: {}", _0)]
+    ProcessStart(zx::Status),
+    #[error("Failed to parse ELF: {}", _0)]
+    ElfParse(elf_parse::ElfParseError),
+    #[error("Failed to load ELF: {}", _0)]
+    ElfLoad(elf_load::ElfLoadError),
+    #[error("{}", _0)]
+    Processargs(processargs::ProcessargsError),
+    #[error("{}: {}", _0, _1)]
+    GenericStatus(&'static str, zx::Status),
+    #[error("{}: {}", _0, _1)]
+    Internal(&'static str, anyhow::Error),
+    #[error("Failed to build process with dynamic ELF, missing fuchsia.ldsvc.Loader handle")]
     LoaderMissing(),
-    #[fail(display = "Failed to load dynamic linker from fuchsia.ldsvc.Loader: {}", _0)]
-    LoadDynamicLinker(#[cause] fidl::Error),
-    #[fail(display = "Timed out loading dynamic linker from fuchsia.ldsvc.Loader")]
+    #[error("Failed to load dynamic linker from fuchsia.ldsvc.Loader: {}", _0)]
+    LoadDynamicLinker(fidl::Error),
+    #[error("Timed out loading dynamic linker from fuchsia.ldsvc.Loader")]
     LoadDynamicLinkerTimeout(),
-    #[fail(display = "Failed to write bootstrap message to channel: {}", _0)]
-    WriteBootstrapMessage(#[cause] zx::Status),
-    #[fail(display = "Failed to destroy reservation VMAR: {}", _0)]
-    DestroyReservationVMAR(#[cause] zx::Status),
+    #[error("Failed to write bootstrap message to channel: {}", _0)]
+    WriteBootstrapMessage(zx::Status),
+    #[error("Failed to destroy reservation VMAR: {}", _0)]
+    DestroyReservationVMAR(zx::Status),
 }
 
 impl ProcessBuilderError {
@@ -919,7 +917,7 @@ impl From<processargs::ProcessargsError> for ProcessBuilderError {
 mod tests {
     use {
         super::*,
-        failure::{err_msg, Error, ResultExt},
+        anyhow::{format_err, Context as _, Error},
         fidl::endpoints::{Proxy, ServerEnd, ServiceMarker},
         fidl_fuchsia_io as fio,
         fidl_test_processbuilder::{UtilMarker, UtilProxy},
@@ -1276,14 +1274,14 @@ mod tests {
     fn parse_handle_info_from_message(message: &zx::MessageBuf) -> Result<Vec<HandleInfo>, Error> {
         let bytes = message.bytes();
         let header = LayoutVerified::<&[u8], processargs::MessageHeader>::new_from_prefix(bytes)
-            .ok_or(err_msg("Failed to parse processargs header"))?
+            .ok_or(format_err!("Failed to parse processargs header"))?
             .0;
 
         let offset = header.handle_info_off as usize;
         let len = mem::size_of::<u32>() * message.n_handles();
         let info_bytes = &bytes[offset..offset + len];
         let raw_info = LayoutVerified::<&[u8], [u32]>::new_slice(info_bytes)
-            .ok_or(err_msg("Failed to parse raw handle info"))?;
+            .ok_or(format_err!("Failed to parse raw handle info"))?;
 
         Ok(raw_info.iter().map(|raw| HandleInfo::try_from(*raw)).collect::<Result<_, _>>()?)
     }

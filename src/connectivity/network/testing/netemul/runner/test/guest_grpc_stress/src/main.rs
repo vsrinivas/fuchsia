@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{bail, Error, ResultExt},
+    anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_netemul_guest::{GuestDiscoveryMarker, GuestInteractionMarker},
     fuchsia_async as fasync,
     fuchsia_component::client,
@@ -32,8 +32,10 @@ async fn grpc_client_stress() -> Result<(), Error> {
 
         match get_status {
             sys::ZX_ERR_NOT_FOUND => {}
-            sys::ZX_OK => bail!("File transfer erroneously succeeded"),
-            error => bail!("Failed to transfer file with unexpected error: {}", error),
+            sys::ZX_OK => return Err(format_err!("File transfer erroneously succeeded")),
+            error => {
+                return Err(format_err!("Failed to transfer file with unexpected error: {}", error))
+            }
         }
     }
 

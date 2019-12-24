@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Error;
+use anyhow::Error;
 use fidl::endpoints::DiscoverableService;
 use fuchsia_component::client::connect_to_service;
 
@@ -22,7 +22,7 @@ impl ServiceConnect for ServiceConnector {
 #[cfg(test)]
 mod test {
     use super::*;
-    use failure::{bail, ResultExt};
+    use anyhow::{format_err, Context};
     use fuchsia_component::client::connect_to_service_at;
     use fuchsia_zircon as zx;
 
@@ -52,7 +52,7 @@ mod test {
 
     impl ServiceConnect for FailServiceConnector {
         fn connect_to_service<S: DiscoverableService>(&self) -> Result<S::Proxy, Error> {
-            bail!("no services here")
+            return Err(format_err!("no services here"));
         }
     }
 }

@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{format_err, Error, Fail};
+use anyhow::{format_err, Error};
 use fidl_fuchsia_auth::AuthProviderStatus;
 use fidl_fuchsia_identity_external::Error as ApiError;
 use fidl_fuchsia_web::NavigationControllerError;
+use thiserror::Error;
 
 /// An extension trait to simplify conversion of results based on general errors to
 /// AuthProviderErrors.  Usage of this should be removed once the `AuthProvider`
@@ -28,8 +29,8 @@ where
 /// error contains the `fuchsia.auth.AuthProviderStatus` that should be
 /// reported back to the client. Usage of this should be removed once the
 /// `AuthProvider` protocol is removed.
-#[derive(Debug, Fail)]
-#[fail(display = "AuthProvider error, returning {:?}. ({:?})", status, cause)]
+#[derive(Debug, Error)]
+#[error("AuthProvider error, returning {:?}. ({:?})", status, cause)]
 pub struct AuthProviderError {
     /// The most appropriate `fuchsia.auth.AuthProviderStatus` to describe this problem.
     pub status: AuthProviderStatus,
@@ -68,8 +69,8 @@ where
 
 /// An Error type for problems encountered in the token provider. Each error
 /// contains the ApiError that should be reported back to the client.
-#[derive(Debug, Fail)]
-#[fail(display = "TokenProvider error, returning {:?}. ({:?})", api_error, cause)]
+#[derive(Debug, Error)]
+#[error("TokenProvider error, returning {:?}. ({:?})", api_error, cause)]
 pub struct TokenProviderError {
     /// The most appropriate `fuchsia.identity.external.Error` to describe the problem.
     pub api_error: ApiError,
@@ -124,7 +125,7 @@ impl From<TokenProviderError> for AuthProviderError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use failure::format_err;
+    use anyhow::format_err;
 
     #[test]
     fn test_create_auth_provider_error() {

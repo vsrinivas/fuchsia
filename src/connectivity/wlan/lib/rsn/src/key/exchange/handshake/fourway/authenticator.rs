@@ -13,7 +13,7 @@ use crate::rsna::{
     UnverifiedKeyData, UpdateSink,
 };
 use crate::Error;
-use failure::{self, bail, ensure};
+use anyhow::{ensure, format_err};
 use log::error;
 use zerocopy::ByteSlice;
 
@@ -116,7 +116,7 @@ fn initiate_internal(
     cfg: &Config,
     krc: u64,
     anonce: &[u8],
-) -> Result<(), failure::Error> {
+) -> Result<(), anyhow::Error> {
     let protection = NegotiatedProtection::from_protection(&cfg.s_protection)?;
     let krc = krc + 1;
     let msg1 = create_message_1(anonce, &protection, krc)?;
@@ -132,7 +132,7 @@ fn process_message_2<B: ByteSlice>(
     last_krc: u64,
     next_krc: u64,
     frame: FourwayHandshakeFrame<B>,
-) -> Result<(Ptk, Gtk), failure::Error> {
+) -> Result<(Ptk, Gtk), anyhow::Error> {
     let ptk = handle_message_2(&pmk[..], &cfg, &anonce[..], last_krc, frame)?;
 
     let gtk =
@@ -152,7 +152,7 @@ fn process_message_4<B: ByteSlice>(
     gtk: &Gtk,
     last_krc: u64,
     frame: FourwayHandshakeFrame<B>,
-) -> Result<(), failure::Error> {
+) -> Result<(), anyhow::Error> {
     handle_message_4(cfg, ptk.kck(), last_krc, frame)?;
     update_sink.push(SecAssocUpdate::Key(Key::Ptk(ptk.clone())));
     update_sink.push(SecAssocUpdate::Key(Key::Gtk(gtk.clone())));
@@ -164,7 +164,7 @@ fn create_message_1<B: ByteSlice>(
     anonce: B,
     protection: &NegotiatedProtection,
     krc: u64,
-) -> Result<eapol::KeyFrameBuf, failure::Error> {
+) -> Result<eapol::KeyFrameBuf, anyhow::Error> {
     let version = derive_key_descriptor_version(eapol::KeyDescriptor::IEEE802DOT11, protection);
     let key_info = eapol::KeyInformation(0)
         .with_key_descriptor_version(version)
@@ -172,7 +172,12 @@ fn create_message_1<B: ByteSlice>(
         .with_key_ack(true);
 
     let key_len = match protection.pairwise.tk_bits() {
-        None => bail!("unknown cipher used for pairwise key: {:?}", protection.pairwise),
+        None => {
+            return Err(format_err!(
+                "unknown cipher used for pairwise key: {:?}",
+                protection.pairwise
+            ))
+        }
         Some(tk_bits) => tk_bits / 8,
     };
     eapol::KeyFrameTx::new(
@@ -201,7 +206,7 @@ pub fn handle_message_2<B: ByteSlice>(
     anonce: &[u8],
     krc: u64,
     frame: FourwayHandshakeFrame<B>,
-) -> Result<Ptk, failure::Error> {
+) -> Result<Ptk, anyhow::Error> {
     // Safe: The nonce must be accessed to compute the PTK. The frame will still be fully verified
     // before accessing any of its fields.
     let snonce = &frame.unsafe_get_raw().key_frame_fields.key_nonce[..];
@@ -222,12 +227,14 @@ pub fn handle_message_2<B: ByteSlice>(
         Dot11VerifiedKeyFrame::WithUnverifiedMic(unverified_mic) => {
             match unverified_mic.verify_mic(ptk.kck(), &protection)? {
                 UnverifiedKeyData::Encrypted(_) => {
-                    bail!("msg2 of 4-Way Handshake must not be encrypted")
+                    return Err(format_err!("msg2 of 4-Way Handshake must not be encrypted"))
                 }
                 UnverifiedKeyData::NotEncrypted(frame) => frame,
             }
         }
-        Dot11VerifiedKeyFrame::WithoutMic(_) => bail!("msg2 of 4-Way Handshake must carry a MIC"),
+        Dot11VerifiedKeyFrame::WithoutMic(_) => {
+            return Err(format_err!("msg2 of 4-Way Handshake must carry a MIC"))
+        }
     };
     ensure!(
         frame.key_frame_fields.key_replay_counter.to_native() == krc,
@@ -250,7 +257,7 @@ fn create_message_3(
     anonce: &[u8],
     protection: &NegotiatedProtection,
     krc: u64,
-) -> Result<eapol::KeyFrameBuf, failure::Error> {
+) -> Result<eapol::KeyFrameBuf, anyhow::Error> {
     // Construct key data which contains the Beacon's RSNE and a GTK KDE.
     let mut w = kde::Writer::new(vec![]);
     w.write_protection(&cfg.a_protection)?;
@@ -272,7 +279,12 @@ fn create_message_3(
         .with_encrypted_key_data(true);
 
     let key_len = match protection.pairwise.tk_bits() {
-        None => bail!("unknown cipher used for pairwise key: {:?}", protection.pairwise),
+        None => {
+            return Err(format_err!(
+                "unknown cipher used for pairwise key: {:?}",
+                protection.pairwise
+            ))
+        }
         Some(tk_bits) => tk_bits / 8,
     };
 
@@ -293,7 +305,7 @@ fn create_message_3(
     .serialize();
 
     let mic = compute_mic_from_buf(kck, &protection, msg3.unfinalized_buf())
-        .map_err(|e| failure::Error::from(e))?;
+        .map_err(|e| anyhow::Error::from(e))?;
     msg3.finalize_with_mic(&mic[..]).map_err(|e| e.into())
 }
 
@@ -303,18 +315,20 @@ pub fn handle_message_4<B: ByteSlice>(
     kck: &[u8],
     krc: u64,
     frame: FourwayHandshakeFrame<B>,
-) -> Result<(), failure::Error> {
+) -> Result<(), anyhow::Error> {
     let protection = NegotiatedProtection::from_protection(&cfg.s_protection)?;
     let frame = match frame.get() {
         Dot11VerifiedKeyFrame::WithUnverifiedMic(unverified_mic) => {
             match unverified_mic.verify_mic(kck, &protection)? {
                 UnverifiedKeyData::Encrypted(_) => {
-                    bail!("msg4 of 4-Way Handshake must not be encrypted")
+                    return Err(format_err!("msg4 of 4-Way Handshake must not be encrypted"))
                 }
                 UnverifiedKeyData::NotEncrypted(frame) => frame,
             }
         }
-        Dot11VerifiedKeyFrame::WithoutMic(_) => bail!("msg4 of 4-Way Handshake must carry a MIC"),
+        Dot11VerifiedKeyFrame::WithoutMic(_) => {
+            return Err(format_err!("msg4 of 4-Way Handshake must carry a MIC"))
+        }
     };
     ensure!(
         frame.key_frame_fields.key_replay_counter.to_native() == krc,

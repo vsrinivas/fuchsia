@@ -4,8 +4,8 @@
 
 //! System service for snoop cellular modems
 use {
+    anyhow::{format_err, Context as _, Error},
     argh::FromArgs,
-    failure::{format_err, Error, ResultExt},
     fidl::endpoints::{Proxy, RequestStream, ServerEnd},
     fidl_fuchsia_telephony_snoop::{
         PublisherMarker as QmiSnoopMarker, PublisherRequest as QmiSnoopRequest,
@@ -63,7 +63,7 @@ async fn watch_new_devices(
     let async_channel = fasync::Channel::from_channel(channel).unwrap();
     let directory = fidl_fuchsia_io::DirectoryProxy::from_channel(async_channel);
     let mut watcher =
-        Watcher::new(directory).await.with_context(|_| format!("could not watch {:?}", &dir))?;
+        Watcher::new(directory).await.with_context(|| format!("could not watch {:?}", &dir))?;
     while let Some(msg) = watcher.try_next().await? {
         match msg.event {
             WatchEvent::IDLE => {
@@ -159,7 +159,7 @@ async fn main() {
                 }
                 Ok(())
             }
-            .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
+            .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
         );
     });
     fs.take_and_serve_directory_handle().expect("ServiceFs failed to serve directory");

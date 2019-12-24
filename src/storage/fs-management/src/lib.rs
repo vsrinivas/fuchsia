@@ -48,8 +48,8 @@
 #![deny(missing_docs)]
 
 use {
+    anyhow::{format_err, Context as _, Error},
     cstr::cstr,
-    failure::{bail, format_err, Error, ResultExt},
     fdio::{
         clone_channel, create_fd, spawn_etc, transfer_fd, Namespace, SpawnAction, SpawnOptions,
     },
@@ -236,7 +236,7 @@ where
             .context("failed to wait on root handle when mounting")?;
 
         if signals.contains(zx::Signals::CHANNEL_PEER_CLOSED) {
-            bail!("failed to mount: CHANNEL_PEER_CLOSED");
+            return Err(format_err!("failed to mount: CHANNEL_PEER_CLOSED"));
         }
 
         Ok(client_chan)
@@ -256,7 +256,11 @@ where
     pub fn format(&mut self) -> Result<(), Error> {
         if let Some(mount_point) = &self.mount_point {
             // shouldn't be mounted if we are going to format it
-            bail!("failed to format {}: mounted at {}", FSType::name(), mount_point);
+            return Err(format_err!(
+                "failed to format {}: mounted at {}",
+                FSType::name(),
+                mount_point
+            ));
         }
 
         let device = self.get_channel()?;
@@ -275,7 +279,11 @@ where
     pub fn mount(&mut self, mount_point: &str) -> Result<(), Error> {
         if let Some(mount_point) = &self.mount_point {
             // already mounted?
-            bail!("failed to mount {}: already mounted at {}", FSType::name(), mount_point);
+            return Err(format_err!(
+                "failed to mount {}: already mounted at {}",
+                FSType::name(),
+                mount_point
+            ));
         }
 
         let channel = self.get_channel()?;
@@ -312,7 +320,7 @@ where
     /// error if it doesn't. Will fail if run on a mounted partition.
     pub fn fsck(&mut self) -> Result<(), Error> {
         if let Some(mount_point) = &self.mount_point {
-            bail!("failed to fsck: mounted at {}", mount_point);
+            return Err(format_err!("failed to fsck: mounted at {}", mount_point));
         }
 
         let device = self.get_channel()?;
@@ -345,12 +353,12 @@ impl Launcher for ProcLauncher {
         ) {
             Ok(process) => process,
             Err((status, message)) => {
-                bail!(
+                return Err(format_err!(
                     "failed to spawn process. launched with: {:?}, status: {}, message: {}",
                     args,
                     status,
                     message
-                );
+                ));
             }
         };
 
@@ -395,7 +403,7 @@ where
 
         let info = process.info().context("failed to get process info")?;
         if !info.exited || info.return_code != 0 {
-            bail!("process returned non-zero exit code ({})", info.return_code);
+            return Err(format_err!("process returned non-zero exit code ({})", info.return_code));
         }
 
         Ok(())
@@ -429,26 +437,26 @@ where
 mod tests {
     use {
         super::{Blobfs, FSLauncher, FSOptions, Filesystem, Launcher, Minfs},
+        anyhow::Error,
         cstr::cstr,
-        failure::Error,
         fdio::SpawnAction,
         fuchsia_zircon::{self as zx, HandleBased},
         ramdevice_client::RamdiskClient,
         std::ffi::CStr,
         std::io::{Read, Seek, Write},
+        thiserror::Error,
     };
 
     /// the only way to really move info out of the launch_process function is through the return
     /// value. we want to confirm that the correct one was called, so we return something only a
     /// test impl can return - something defined in the test mod - through the error type.
-    #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+    #[derive(Debug, Copy, Clone, PartialEq, Eq, Error)]
     struct ExpectedError;
     impl std::fmt::Display for ExpectedError {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             write!(f, "test passed")
         }
     }
-    impl failure::Fail for ExpectedError {}
 
     #[test]
     fn fs_launcher_no_args() {
@@ -470,10 +478,7 @@ mod tests {
             metrics: false,
         });
         let res = launcher.run_command(cstr!("mount"), vec![]);
-        assert_eq!(
-            res.unwrap_err().as_fail().downcast_ref::<ExpectedError>().unwrap(),
-            &ExpectedError
-        );
+        assert_eq!(res.unwrap_err().downcast_ref::<ExpectedError>().unwrap(), &ExpectedError);
     }
 
     #[test]
@@ -506,10 +511,7 @@ mod tests {
             metrics: true,
         });
         let res = launcher.run_command(cstr!("mount"), vec![]);
-        assert_eq!(
-            res.unwrap_err().as_fail().downcast_ref::<ExpectedError>().unwrap(),
-            &ExpectedError
-        );
+        assert_eq!(res.unwrap_err().downcast_ref::<ExpectedError>().unwrap(), &ExpectedError);
     }
 
     fn ramdisk_blobfs(block_size: u64) -> (RamdiskClient, Filesystem<Blobfs>) {
@@ -547,7 +549,7 @@ mod tests {
     }
 
     #[test]
-    fn blobfs_format_fsck_fail() {
+    fn blobfs_format_fsck_error() {
         let block_size = 512;
         let (ramdisk, mut blobfs) = ramdisk_blobfs(block_size);
 
@@ -637,7 +639,7 @@ mod tests {
     }
 
     #[test]
-    fn minfs_format_fsck_fail() {
+    fn minfs_format_fsck_error() {
         let block_size = 8192;
         let (ramdisk, mut minfs) = ramdisk_minfs(block_size);
 

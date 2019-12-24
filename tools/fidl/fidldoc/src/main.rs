@@ -5,7 +5,7 @@
 // TODO Follow 2018 idioms
 #![allow(elided_lifetimes_in_paths)]
 
-use failure::{format_err, Error, ResultExt};
+use anyhow::{format_err, Context, Error};
 use log::{error, info, LevelFilter};
 use std::collections::{HashMap, HashSet};
 use std::fs;
@@ -96,7 +96,7 @@ fn run(opt: Opt) -> Result<(), Error> {
 
     let template_type = &opt.template;
     let template = select_template(template_type, &output_path)
-        .with_context(|e| format!("Unable to instantiate template {}: {}", template_type, e))?;
+        .with_context(|| format!("Unable to instantiate template {}", template_type))?;
 
     match opt.verbose {
         0 => log::set_max_level(LevelFilter::Error),
@@ -108,15 +108,14 @@ fn run(opt: Opt) -> Result<(), Error> {
     let fidl_config_file = match opt.config {
         Some(filepath) => filepath,
         None => get_fidldoc_config_default_path()
-            .with_context(|e| format!("Unable to retrieve default config file location: {}", e))?,
+            .with_context(|| format!("Unable to retrieve default config file location"))?,
     };
     info!("Using config file from {}", fidl_config_file.display());
     let fidl_config = read_fidldoc_config(&fidl_config_file)
-        .with_context(|e| format!("Error parsing {}: {}", &fidl_config_file.display(), e))?;
+        .with_context(|| format!("Error parsing {}", &fidl_config_file.display()))?;
 
-    create_output_dir(&output_path).with_context(|e| {
-        format!("Unable to create output directory {}: {}", output_path.display(), e)
-    })?;
+    create_output_dir(&output_path)
+        .with_context(|| format!("Unable to create output directory {}", output_path.display()))?;
 
     // Parse input files to get declarations, package set and fidl json map
     let FidlJsonPackageData { declarations, fidl_json_map } =
@@ -197,7 +196,7 @@ fn render_fidl_interface(
     });
 
     let template = select_template(&template_type, &output_path)
-        .with_context(|e| format!("Unable to instantiate template {}: {}", template_type, e));
+        .with_context(|| format!("Unable to instantiate template {}", template_type));
     match template?.render_interface(&package, &fidl_doc) {
         Err(why) => error!("Unable to render interface {}: {:?}", &package, why),
         Ok(()) => info!("Generated interface documentation for {}", &package),
@@ -236,7 +235,7 @@ fn get_fidldoc_config_default_path() -> Result<PathBuf, Error> {
 
 fn read_fidldoc_config(config_path: &Path) -> Result<Value, Error> {
     let fidl_config_str = fs::read_to_string(config_path)
-        .with_context(|e| format!("Couldn't open file {}: {}", config_path.display(), e))?;
+        .with_context(|| format!("Couldn't open file {}", config_path.display()))?;
     Ok(serde_json::from_str(&fidl_config_str)?)
 }
 
@@ -332,15 +331,14 @@ fn create_output_dir(path: &PathBuf) -> Result<(), Error> {
     if path.exists() {
         info!("Directory {} already exists", path.display());
         // Clear out the output folder
-        fs::remove_dir_all(path).with_context(|e| {
-            format!("Unable to remove output directory {}: {}", path.display(), e)
-        })?;
+        fs::remove_dir_all(path)
+            .with_context(|| format!("Unable to remove output directory {}", path.display()))?;
         info!("Removed directory {}", path.display());
     }
 
     // Re-create output folder
     fs::create_dir_all(path)
-        .with_context(|e| format!("Unable to create output directory {}: {}", path.display(), e))?;
+        .with_context(|| format!("Unable to create output directory {}", path.display()))?;
     info!("Created directory {}", path.display());
 
     Ok(())

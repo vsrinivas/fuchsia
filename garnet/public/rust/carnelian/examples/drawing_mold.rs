@@ -5,12 +5,12 @@
 #![allow(dead_code)]
 #![allow(unused_imports)]
 
+use anyhow::Error;
 use carnelian::{
     make_app_assistant, make_font_description, AnimationMode, App, AppAssistant, AppAssistantPtr,
     AppContext, Canvas, LocalBoxFuture, MappingPixelSink, PixelSink, Point, Size, ViewAssistant,
     ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
 };
-use failure::Error;
 use fuchsia_zircon::{ClockId, Time};
 use mold::{
     tile::{Map, Op},

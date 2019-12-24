@@ -2,11 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::Error,
-    failure::{self, ensure},
-    std::num::NonZeroU32,
-};
+use {crate::Error, anyhow::ensure, std::num::NonZeroU32};
 
 // PBKDF2-HMAC-SHA1 is considered insecure but required for PSK computation.
 #[allow(deprecated)]
@@ -17,7 +13,7 @@ use mundane::insecure::insecure_pbkdf2_hmac_sha1;
 /// are unlikely to prevent attacks.
 pub type Psk = Box<[u8]>;
 
-pub fn compute(passphrase: &[u8], ssid: &[u8]) -> Result<Psk, failure::Error> {
+pub fn compute(passphrase: &[u8], ssid: &[u8]) -> Result<Psk, anyhow::Error> {
     // IEEE Std 802.11-2016, 9.4.2.2
     ensure!(ssid.len() <= 32, Error::InvalidSsidLen(ssid.len()));
 

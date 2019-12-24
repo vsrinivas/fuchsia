@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow::Error;
 use argh::FromArgs;
-use failure::Error;
 
 use crate::context::LowpanCtlContext;
 pub use crate::leave_command::*;

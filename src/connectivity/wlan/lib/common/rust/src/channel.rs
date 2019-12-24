@@ -3,12 +3,7 @@
 // found in the LICENSE file.
 
 #![allow(dead_code)]
-use {
-    crate::ie,
-    failure::{self, bail},
-    fidl_fuchsia_wlan_common as fidl_common,
-    std::fmt,
-};
+use {crate::ie, anyhow::format_err, fidl_fuchsia_wlan_common as fidl_common, std::fmt};
 
 // IEEE Std 802.11-2016, Annex E
 // Note the distinction of index for primary20 and index for center frequency.
@@ -149,21 +144,24 @@ impl Channel {
         self.is_primary_2ghz() || self.is_primary_5ghz()
     }
 
-    fn get_band_start_freq(&self) -> Result<MHz, failure::Error> {
+    fn get_band_start_freq(&self) -> Result<MHz, anyhow::Error> {
         if self.is_primary_2ghz() {
             Ok(BASE_FREQ_2GHZ)
         } else if self.is_primary_5ghz() {
             Ok(BASE_FREQ_5GHZ)
         } else {
-            bail!("cannot get band start freq for channel {}", self)
+            return Err(format_err!("cannot get band start freq for channel {}", self));
         }
     }
 
     // Note get_center_chan_idx() is to assist channel validity test.
     // Return of Ok() does not imply the channel under test is valid.
-    fn get_center_chan_idx(&self) -> Result<u8, failure::Error> {
+    fn get_center_chan_idx(&self) -> Result<u8, anyhow::Error> {
         if !self.is_primary_valid() {
-            bail!("cannot get center channel index for an invalid primary channel {}", self);
+            return Err(format_err!(
+                "cannot get center channel index for an invalid primary channel {}",
+                self
+            ));
         }
 
         let p = self.primary;
@@ -178,7 +176,12 @@ impl Channel {
                 116..=128 => Ok(122),
                 132..=144 => Ok(138),
                 148..=161_ => Ok(155),
-                _ => bail!("cannot get center channel index for invalid channel {}", self),
+                _ => {
+                    return Err(format_err!(
+                        "cannot get center channel index for invalid channel {}",
+                        self
+                    ))
+                }
             },
             Cbw::Cbw160 => {
                 // See IEEE Std 802.11-2016 Table 9-252 and 9-253.
@@ -187,7 +190,12 @@ impl Channel {
                 match p {
                     36..=64 => Ok(50),
                     100..=128 => Ok(114),
-                    _ => bail!("cannot get center channel index for invalid channel {}", self),
+                    _ => {
+                        return Err(format_err!(
+                            "cannot get center channel index for invalid channel {}",
+                            self
+                        ))
+                    }
                 }
             }
         }
@@ -195,7 +203,7 @@ impl Channel {
 
     /// Returns the center frequency of the first consecutive frequency segment of the channel
     /// in MHz if the channel is valid, Err(String) otherwise.
-    pub fn get_center_freq(&self) -> Result<MHz, failure::Error> {
+    pub fn get_center_freq(&self) -> Result<MHz, anyhow::Error> {
         // IEEE Std 802.11-2016, 21.3.14
         let start_freq = self.get_band_start_freq()?;
         let center_chan_idx = self.get_center_chan_idx()?;

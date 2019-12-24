@@ -6,8 +6,8 @@ mod config;
 mod validators;
 
 use {
+    anyhow::{format_err, Error},
     config::{Config, ConfigContext},
-    failure::{format_err, Error},
     fidl::endpoints::{create_proxy, Request, RequestStream, ServerEnd, ServiceMarker},
     fidl_fuchsia_boot::FactoryItemsMarker,
     fidl_fuchsia_factory::{

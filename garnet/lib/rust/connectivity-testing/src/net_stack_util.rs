@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::Error,
+    anyhow::Error,
     fidl_fuchsia_net::{
         IpAddress::{Ipv4, Ipv6},
         Ipv4Address, Ipv6Address,

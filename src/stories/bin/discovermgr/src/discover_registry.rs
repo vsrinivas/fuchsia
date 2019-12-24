@@ -7,7 +7,7 @@ use {
         mod_manager::ModManager, story_context_store::StoryContextStore,
         story_module::StoryModuleService,
     },
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl_fuchsia_app_discover::{DiscoverRegistryRequest, DiscoverRegistryRequestStream},
     futures::prelude::*,
     parking_lot::Mutex,

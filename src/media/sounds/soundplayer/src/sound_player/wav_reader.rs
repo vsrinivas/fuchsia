@@ -55,8 +55,8 @@ impl WavReader<'_> {
             }
         }
 
-        let vmo = vmo.ok_or_else(|| failure::format_err!("No data chunk found"))?;
-        let stream_type = stream_type.ok_or_else(|| failure::format_err!("No fmt chunk found"))?;
+        let vmo = vmo.ok_or_else(|| anyhow::format_err!("No data chunk found"))?;
+        let stream_type = stream_type.ok_or_else(|| anyhow::format_err!("No fmt chunk found"))?;
 
         Ok(Wav { vmo, size, stream_type })
     }
@@ -65,29 +65,29 @@ impl WavReader<'_> {
         let s = self
             .slice
             .get(0..4)
-            .ok_or_else(|| failure::format_err!("Expected fourcc {}", fourcc))?;
+            .ok_or_else(|| anyhow::format_err!("Expected fourcc {}", fourcc))?;
         if fourcc.bytes().eq(s.iter().copied()) {
             self.slice = &self.slice[4..];
             Ok(())
         } else {
-            Err(failure::format_err!("Expected fourcc {}", fourcc))
+            Err(anyhow::format_err!("Expected fourcc {}", fourcc))
         }
     }
 
     fn parse_any_fourcc(&mut self) -> Result<String> {
-        let s = self.slice.get(0..4).ok_or_else(|| failure::format_err!("Expected fourcc"))?;
+        let s = self.slice.get(0..4).ok_or_else(|| anyhow::format_err!("Expected fourcc"))?;
         self.slice = &self.slice[4..];
         return Ok(String::from_utf8_lossy(s).into_owned());
     }
 
     fn parse_u16(&mut self) -> Result<u16> {
-        let s = self.slice.get(0..2).ok_or_else(|| failure::format_err!("Expected u16"))?;
+        let s = self.slice.get(0..2).ok_or_else(|| anyhow::format_err!("Expected u16"))?;
         self.slice = &self.slice[2..];
         Ok(LittleEndian::read_u16(s))
     }
 
     fn parse_u32(&mut self) -> Result<u32> {
-        let s = self.slice.get(0..4).ok_or_else(|| failure::format_err!("Expected u32"))?;
+        let s = self.slice.get(0..4).ok_or_else(|| anyhow::format_err!("Expected u32"))?;
         self.slice = &self.slice[4..];
         Ok(LittleEndian::read_u32(s))
     }
@@ -98,18 +98,18 @@ impl WavReader<'_> {
                 8 => Ok(AudioSampleFormat::Unsigned8),
                 16 => Ok(AudioSampleFormat::Signed16),
                 32 => Ok(AudioSampleFormat::Signed24In32),
-                _ => Err(failure::format_err!("Invalid bits per sample {}", bits_per_sample)),
+                _ => Err(anyhow::format_err!("Invalid bits per sample {}", bits_per_sample)),
             }
         }
 
         let chunk_size = self.parse_u32()?;
         if chunk_size < 16 {
-            return Err(failure::format_err!("Invalid fmt chunk size {}", chunk_size));
+            return Err(anyhow::format_err!("Invalid fmt chunk size {}", chunk_size));
         }
 
         let encoding = self.parse_u16()?;
         if encoding != PCM_ENCODING {
-            return Err(failure::format_err!("Unrecognized audio encoding {}", encoding));
+            return Err(anyhow::format_err!("Unrecognized audio encoding {}", encoding));
         }
 
         let channel_count = self.parse_u16()?;
@@ -119,13 +119,13 @@ impl WavReader<'_> {
         let bits_per_sample = self.parse_u16()?;
 
         if channel_count < 1 || channel_count > 2 {
-            return Err(failure::format_err!("Invalid channel count {}", channel_count));
+            return Err(anyhow::format_err!("Invalid channel count {}", channel_count));
         }
 
         if chunk_size > MIN_FMT_CHUNK_SIZE {
             self.slice =
                 &self.slice.get((chunk_size - MIN_FMT_CHUNK_SIZE) as usize..).ok_or_else(|| {
-                    failure::format_err!("End of file in fmt chunk, size {}", chunk_size)
+                    anyhow::format_err!("End of file in fmt chunk, size {}", chunk_size)
                 })?;
         }
 
@@ -139,7 +139,7 @@ impl WavReader<'_> {
     fn parse_data(&mut self) -> Result<(u64, zx::Vmo)> {
         let chunk_size = self.parse_u32()?;
         if chunk_size == 0 {
-            return Err(failure::format_err!("Invalid data chunk size {}", chunk_size));
+            return Err(anyhow::format_err!("Invalid data chunk size {}", chunk_size));
         }
 
         let vmo = zx::Vmo::create(chunk_size as u64)?;
@@ -147,7 +147,7 @@ impl WavReader<'_> {
             &self
                 .slice
                 .get(..chunk_size as usize)
-                .ok_or_else(|| failure::format_err!("End of file in data chunk"))?,
+                .ok_or_else(|| anyhow::format_err!("End of file in data chunk"))?,
             0,
         )?;
 
@@ -163,7 +163,7 @@ impl WavReader<'_> {
         }
 
         self.slice = &self.slice.get(chunk_size as usize..).ok_or_else(|| {
-            failure::format_err!("End of file in ignored chunk, size {}", chunk_size)
+            anyhow::format_err!("End of file in ignored chunk, size {}", chunk_size)
         })?;
 
         Ok(())

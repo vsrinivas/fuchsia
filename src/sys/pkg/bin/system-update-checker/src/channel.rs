@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use crate::connect::*;
-use failure::Fail;
 use fidl_fuchsia_cobalt::{
     Status as CobaltStatus, SystemDataUpdaterMarker, SystemDataUpdaterProxy,
 };
@@ -24,6 +23,7 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
+use thiserror::Error;
 
 static CURRENT_CHANNEL: &'static str = "current_channel.json";
 static TARGET_CHANNEL: &'static str = "target_channel.json";
@@ -31,7 +31,7 @@ static TARGET_CHANNEL: &'static str = "target_channel.json";
 pub fn build_current_channel_manager_and_notifier<S: ServiceConnect>(
     service_connector: S,
     dir: impl Into<PathBuf>,
-) -> Result<(CurrentChannelManager, CurrentChannelNotifier<S>), failure::Error> {
+) -> Result<(CurrentChannelManager, CurrentChannelNotifier<S>), anyhow::Error> {
     let path = dir.into();
     let current_channel = read_current_channel(path.as_ref()).unwrap_or_else(|err| {
             fx_log_err!(
@@ -160,7 +160,7 @@ impl CurrentChannelManager {
         CurrentChannelManager { path, channel_sender }
     }
 
-    pub async fn update(&mut self) -> Result<(), failure::Error> {
+    pub async fn update(&mut self) -> Result<(), anyhow::Error> {
         let target_channel = read_channel(&self.path.join(TARGET_CHANNEL))?;
         if target_channel != read_current_channel(&self.path).ok().unwrap_or_else(String::new) {
             write_channel(&self.path.join(CURRENT_CHANNEL), &target_channel)?;
@@ -185,7 +185,7 @@ impl<S: ServiceConnect> TargetChannelManager<S> {
         Self { service_connector, path, target_channel }
     }
 
-    pub async fn update(&mut self) -> Result<(), failure::Error> {
+    pub async fn update(&mut self) -> Result<(), anyhow::Error> {
         let target_channel = self.lookup_target_channel().await?;
         if self.target_channel.as_ref().map_or(false, |c| c == &target_channel) {
             return Ok(());
@@ -196,7 +196,7 @@ impl<S: ServiceConnect> TargetChannelManager<S> {
         Ok(())
     }
 
-    async fn lookup_target_channel(&self) -> Result<String, failure::Error> {
+    async fn lookup_target_channel(&self) -> Result<String, anyhow::Error> {
         let rewrite_engine = self.service_connector.connect_to_service::<EngineMarker>()?;
         let rewritten: PkgUrl = rewrite_engine
             .test_apply("fuchsia-pkg://fuchsia.com/update/0")
@@ -244,13 +244,13 @@ fn write_channel(path: impl AsRef<Path>, channel: impl Into<String>) -> Result<(
     fs::rename(temp_path, path)
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 enum Error {
-    #[fail(display = "io error: {}", _0)]
-    Io(#[cause] io::Error),
+    #[error("io error: {}", _0)]
+    Io(io::Error),
 
-    #[fail(display = "json error: {}", _0)]
-    Json(#[cause] serde_json::Error),
+    #[error("json error: {}", _0)]
+    Json(serde_json::Error),
 }
 
 impl From<io::Error> for Error {
@@ -474,11 +474,13 @@ mod tests {
         impl ServiceConnect for FlakeyServiceConnector {
             fn connect_to_service<S: DiscoverableService>(
                 &self,
-            ) -> Result<S::Proxy, failure::Error> {
+            ) -> Result<S::Proxy, anyhow::Error> {
                 assert_eq!(S::SERVICE_NAME, SystemDataUpdaterMarker::SERVICE_NAME);
                 self.state.lock().connect_count += 1;
                 match self.state.lock().mode {
-                    Some(FlakeMode::ErrorOnConnect) => failure::bail!("test error on connect"),
+                    Some(FlakeMode::ErrorOnConnect) => {
+                        return Err(anyhow::format_err!("test error on connect"))
+                    }
                     Some(FlakeMode::DropConnection) => {
                         let (proxy, _stream) = fidl::endpoints::create_proxy::<S>().unwrap();
                         Ok(proxy)
@@ -703,7 +705,7 @@ mod tests {
     }
 
     impl ServiceConnect for RewriteServiceConnector {
-        fn connect_to_service<S: DiscoverableService>(&self) -> Result<S::Proxy, failure::Error> {
+        fn connect_to_service<S: DiscoverableService>(&self) -> Result<S::Proxy, anyhow::Error> {
             let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<S>().unwrap();
             assert_eq!(S::SERVICE_NAME, EngineMarker::SERVICE_NAME);
             let mut stream: EngineRequestStream = stream.cast_stream();

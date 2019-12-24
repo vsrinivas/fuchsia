@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{format_err, Error, ResultExt},
+    anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_session::{ElementManagerMarker, ElementSpec},
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,

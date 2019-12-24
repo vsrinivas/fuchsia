@@ -37,7 +37,7 @@ pub struct PrivacyController {
 impl PrivacyController {
     pub fn spawn(
         storage: PrivacyStorage,
-    ) -> Result<futures::channel::mpsc::UnboundedSender<Command>, failure::Error> {
+    ) -> Result<futures::channel::mpsc::UnboundedSender<Command>, anyhow::Error> {
         let (ctrl_tx, mut ctrl_rx) = futures::channel::mpsc::unbounded::<Command>();
 
         fasync::spawn(
@@ -60,7 +60,7 @@ impl PrivacyController {
                 }
                 Ok(())
             }
-            .unwrap_or_else(|e: failure::Error| {
+            .unwrap_or_else(|e: anyhow::Error| {
                 fx_log_err!("Error processing privacy command: {:?}", e);
             }),
         );
@@ -68,7 +68,7 @@ impl PrivacyController {
         return Ok(ctrl_tx);
     }
 
-    fn process_command(&mut self, command: Command) -> Result<(), failure::Error> {
+    fn process_command(&mut self, command: Command) -> Result<(), anyhow::Error> {
         match command {
             Command::ChangeState(state) => match state {
                 State::Listen(notifier) => {
@@ -103,7 +103,7 @@ impl PrivacyController {
         &mut self,
         user_data_sharing_consent: Option<bool>,
         responder: SettingRequestResponder,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), anyhow::Error> {
         let old_value = self.stored_value.clone();
 
         // Save the value locally.
@@ -134,7 +134,7 @@ impl PrivacyController {
             let _ = match write_request {
                 Ok(_) => responder.send(Ok(None)),
                 Err(err) => responder
-                    .send(Err(failure::format_err!("failed to persist privacy_info: {}", err))),
+                    .send(Err(anyhow::format_err!("failed to persist privacy_info: {}", err))),
             };
         });
     }

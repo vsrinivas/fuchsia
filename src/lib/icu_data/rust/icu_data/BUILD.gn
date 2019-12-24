@@ -18,8 +18,9 @@ rustc_library("icu_data") {
     "//src/lib/icu/rust/rust_icu_sys",
     "//src/lib/icu/rust/rust_icu_udata",
     "//src/lib/icu/rust/rust_icu_uenum",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:thiserror",
   ]
 
   non_rust_deps = [

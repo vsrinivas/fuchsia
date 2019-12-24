@@ -7,7 +7,6 @@
 #![deny(missing_docs)]
 
 use {
-    failure::{self, Fail},
     rand::random,
     std::{
         cell::Cell,
@@ -18,6 +17,7 @@ use {
         time::Duration,
     },
     structopt::StructOpt,
+    thiserror::Error,
 };
 
 pub mod steps;
@@ -37,14 +37,16 @@ fn box_message(message: String) -> String {
 
 /// An error occured running a command on the target system. Contains the exit status, stdout, and
 /// stderr of the command.
-#[derive(Debug, Fail)]
-#[fail(
-    display = "failed to run command: {}\n\
+#[derive(Debug, Error)]
+#[error(
+    "failed to run command: {}\n\
                stdout:\n\
                {}\n\
                stderr:\n\
                {}",
-    _0, _1, _2
+    _0,
+    _1,
+    _2
 )]
 pub struct CommandError(ExitStatus, String, String);
 
@@ -59,70 +61,46 @@ impl From<Output> for CommandError {
 }
 
 /// An error occured while attempting to reboot the system.
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum RebootError {
     /// The path to the relay device required for hard-rebooting the target doesn't exist.
-    #[fail(display = "device does not exist: {:?}", _0)]
+    #[error("device does not exist: {:?}", _0)]
     MissingDevice(PathBuf),
 
     /// An io error occured during rebooting. Maybe we failed to write to the device.
-    #[fail(display = "io error: {:?}", _0)]
-    IoError(#[cause] std::io::Error),
+    #[error("io error: {:?}", _0)]
+    IoError(#[from] std::io::Error),
 
     /// The command we executed on the target failed.
-    #[fail(display = "command error: {:?}", _0)]
-    Command(#[cause] CommandError),
-}
-
-impl From<std::io::Error> for RebootError {
-    fn from(error: std::io::Error) -> Self {
-        RebootError::IoError(error)
-    }
-}
-
-impl From<CommandError> for RebootError {
-    fn from(error: CommandError) -> Self {
-        RebootError::Command(error)
-    }
+    #[error("command error: {:?}", _0)]
+    Command(#[from] CommandError),
 }
 
 /// Error used for the host-side of the blackout library.
-#[derive(Debug, Fail)]
-pub enum Error {
+#[derive(Debug, Error)]
+pub enum BlackoutError {
     /// We got an error when trying to reboot.
-    #[fail(display = "failed to reboot: {:?}", _0)]
-    Reboot(#[cause] RebootError),
+    #[error("failed to reboot: {:?}", _0)]
+    Reboot(#[from] RebootError),
 
     /// We failed to run the command on the host. Specifically, when the spawm or something fails,
     /// not when the command itself returns a non-zero exit code.
-    #[fail(display = "host command failed: {:?}", _0)]
-    HostCommand(#[cause] std::io::Error),
+    #[error("host command failed: {:?}", _0)]
+    HostCommand(#[from] std::io::Error),
 
     /// We got an ssh failure. We know it's an ssh failure because it returned 255.
-    #[fail(display = "failed to ssh into '{}': {:?}", _0, _1)]
-    Ssh(String, #[cause] CommandError),
+    #[error("failed to ssh into '{}': {:?}", _0, _1)]
+    Ssh(String, CommandError),
 
     /// The command run on the target device failed to run. Either it returned a non-zero exit code
     /// or it exited when it shouldn't have.
-    #[fail(display = "target command failed: {}", _0)]
-    TargetCommand(#[cause] CommandError),
+    #[error("target command failed: {}", _0)]
+    TargetCommand(CommandError),
 
     /// Specifically the verification step failed. This indicates an actual test failure as opposed
     /// to a failure of the test framework or environmental failure.
-    #[fail(display = "verification failed: {}", _0)]
-    Verification(#[cause] CommandError),
-}
-
-impl From<RebootError> for Error {
-    fn from(error: RebootError) -> Self {
-        Error::Reboot(error)
-    }
-}
-
-impl From<std::io::Error> for Error {
-    fn from(error: std::io::Error) -> Self {
-        Error::HostCommand(error)
-    }
+    #[error("verification failed: {}", _0)]
+    Verification(CommandError),
 }
 
 /// Blackout is a power-failure testing framework for the filesystems. This host-side harness runs
@@ -349,7 +327,7 @@ impl Test {
 
     /// Run the defined test steps. Prints the test definition before execution. Attempts to re-roll
     /// the random seed before the test run.
-    fn run_test(&self) -> Result<(), Error> {
+    fn run_test(&self) -> Result<(), BlackoutError> {
         self.seed.reroll();
 
         println!("{}", self);
@@ -370,7 +348,7 @@ impl Test {
     /// test implementations to figure it out on their own, our implementation pretty-prints out any
     /// errors we find for you! We continue to return the result so that the exit code is properly
     /// set.
-    fn run_once(&self) -> Result<(), Error> {
+    fn run_once(&self) -> Result<(), BlackoutError> {
         match self.run_test() {
             r @ Ok(..) => r,
             Err(e) => {
@@ -380,7 +358,7 @@ impl Test {
         }
     }
 
-    fn run_iterations(&self, iterations: u64) -> Result<(), Error> {
+    fn run_iterations(&self, iterations: u64) -> Result<(), BlackoutError> {
         let mut failures = 0u64;
         let mut flukes = 0u64;
 
@@ -389,7 +367,7 @@ impl Test {
 
             match self.run_once() {
                 Ok(()) => (),
-                Err(Error::Verification(_)) => failures += 1,
+                Err(BlackoutError::Verification(_)) => failures += 1,
                 Err(_) => flukes += 1,
             }
 
@@ -405,12 +383,12 @@ impl Test {
         Ok(())
     }
 
-    fn run_iterations_until_failure(&self, iterations: u64) -> Result<(), Error> {
+    fn run_iterations_until_failure(&self, iterations: u64) -> Result<(), BlackoutError> {
         for runs in 1..iterations + 1 {
             println!("{}", box_message(format!("test run #{}", runs)));
             match self.run_once() {
                 Ok(()) => (),
-                Err(e @ Error::Verification(_)) => return Err(e),
+                Err(e @ BlackoutError::Verification(_)) => return Err(e),
                 Err(_) => (),
             }
         }
@@ -433,7 +411,7 @@ impl Test {
     ///    (iterations == Some(N) && run_until_failure == true)
     ///    if both flags are present, we combine the functionality. only run a certain number of
     ///    iterations, but quit early if there is a failure instead of aggregating the results.
-    pub fn run(self) -> Result<(), Error> {
+    pub fn run(self) -> Result<(), BlackoutError> {
         match self.run_mode {
             RunMode::Once => self.run_once(),
             RunMode::Iterations(iterations) => self.run_iterations(iterations),
@@ -446,7 +424,8 @@ impl Test {
 
 #[cfg(test)]
 mod tests {
-    use super::{CommandError, CommonOpts, Error, Test, TestStep};
+    use super::BlackoutError as Error;
+    use super::{BlackoutError, CommandError, CommonOpts, Test, TestStep};
     use std::{cell::Cell, os::unix::process::ExitStatusExt, process::ExitStatus, rc::Rc};
 
     struct FakeStep<F>
@@ -469,7 +448,7 @@ mod tests {
     where
         F: Fn(u64) -> Result<(), Error>,
     {
-        fn execute(&self) -> Result<(), Error> {
+        fn execute(&self) -> Result<(), BlackoutError> {
             self.runs.set(self.runs.get() + 1);
             (self.res)(self.runs.get())
         }
@@ -520,7 +499,7 @@ mod tests {
     fn run_once_exits_on_failure() {
         let (step1, step1_runs) = FakeStep::new(|_| Ok(()));
         let (step2, step2_runs) = FakeStep::new(|_| {
-            Err(Error::Verification(CommandError(
+            Err(BlackoutError::Verification(CommandError(
                 ExitStatus::from_raw(1),
                 "(fake stdout)".into(),
                 "(fake stderr)".into(),
@@ -532,7 +511,7 @@ mod tests {
             .add_step(Box::new(step2))
             .add_step(Box::new(step3));
         match test.run() {
-            Err(Error::Verification(..)) => (),
+            Err(BlackoutError::Verification(..)) => (),
             Ok(..) => panic!("test returned Ok on an error"),
             Err(..) => panic!("test returned an unexpected error"),
         }
@@ -557,7 +536,7 @@ mod tests {
     fn run_n_executes_steps_n_times_verify_failure() {
         let iterations = 10;
         let (step, runs) = FakeStep::new(|_| {
-            Err(Error::Verification(CommandError(
+            Err(BlackoutError::Verification(CommandError(
                 ExitStatus::from_raw(1),
                 "(fake stdout)".into(),
                 "(fake stderr)".into(),
@@ -572,7 +551,7 @@ mod tests {
     fn run_n_executes_steps_n_times_other_error() {
         let iterations = 10;
         let (step, runs) = FakeStep::new(|_| {
-            Err(Error::Ssh(
+            Err(BlackoutError::Ssh(
                 "(fake target)".into(),
                 CommandError(
                     ExitStatus::from_raw(1),

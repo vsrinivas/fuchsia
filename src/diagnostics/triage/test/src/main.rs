@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{bail, Error},
+    anyhow::{bail, Error},
     lazy_static::lazy_static,
     std::process::{Command, Output},
     structopt::StructOpt,
@@ -33,7 +33,7 @@ lazy_static! {
 
 fn main() -> Result<(), Error> {
     if look_for_error() {
-        bail!("A test failed.");
+        return Err(format_err!("A test failed."));
     } else {
         println!("All tests passed.");
     }
@@ -58,7 +58,7 @@ fn run_command(inspect: &str, configs: &Vec<&str>) -> Result<Output, Error> {
     }
     match Command::new(COMMAND.to_string()).args(args).output() {
         Ok(o) => Ok(o),
-        Err(err) => bail!("Command didn't run: {:?}", err.kind()),
+        Err(err) => return Err(format_err!("Command didn't run: {:?}", err.kind())),
     }
 }
 

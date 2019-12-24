@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::metrics::{Metrics, MetricsReporter};
-use failure::{err_msg, Error};
+use anyhow::{format_err, Error};
 
 /// A mock implementation of MetricsReporter save the metrics into a vector.
 #[derive(Debug)]
@@ -22,7 +22,7 @@ impl MetricsReporter for MockMetricsReporter {
     fn report_metrics(&mut self, metrics: Metrics) -> Result<(), Error> {
         self.metrics.push(metrics);
         if self.should_fail {
-            Err(err_msg("should_fail is true"))
+            Err(format_err!("should_fail is true"))
         } else {
             Ok(())
         }
@@ -41,7 +41,7 @@ mod tests {
     }
 
     #[test]
-    fn test_mock_metrics_reporter_fail() {
+    fn test_mock_metrics_reporter_error() {
         let mut mock = MockMetricsReporter::new(true);
         let result = mock.report_metrics(Metrics::UpdateCheckResponseTime(Duration::from_secs(5)));
         assert!(result.is_err());

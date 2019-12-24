@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    failure::{bail, Error},
+    anyhow::{format_err, Error},
     fidl::endpoints::{create_endpoints, create_request_stream, ClientEnd},
     fidl_fuchsia_bluetooth_gatt::{
         self as gatt, LocalServiceDelegateOnReadValueResponder,
@@ -100,7 +100,10 @@ impl GasProxy {
             gatt_server.publish_service(&mut service_info, delegate_client, service_server).await?;
 
         if let Some(error) = status.error {
-            bail!("Failed to publish Generic Access Service to GATT server: {:?}", error)
+            return Err(format_err!(
+                "Failed to publish Generic Access Service to GATT server: {:?}",
+                error
+            ));
         }
         fx_log_info!("Published Generic Access Service to local device database.");
         Ok(GasProxy {

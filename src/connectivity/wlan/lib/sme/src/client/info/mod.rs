@@ -113,7 +113,7 @@ pub struct ConnectStats {
 
     /// Possible detailed error from supplicant. May be downcast to wlan_rsn::Error.
     #[derivative(PartialEq(compare_with = "cmp_supplicant_error"))]
-    pub supplicant_error: Option<failure::Error>,
+    pub supplicant_error: Option<anyhow::Error>,
     pub supplicant_progress: Option<SupplicantProgress>,
 
     /// Total number of times timeout triggers during all RSNA key frame exchanges for this
@@ -147,7 +147,7 @@ pub struct SupplicantProgress {
     pub esssa_established: bool,
 }
 
-fn cmp_supplicant_error(left: &Option<failure::Error>, right: &Option<failure::Error>) -> bool {
+fn cmp_supplicant_error(left: &Option<anyhow::Error>, right: &Option<anyhow::Error>) -> bool {
     match (left, right) {
         (Some(e1), Some(e2)) => format!("{:?}", e1) == format!("{:?}", e2),
         (None, None) => true,

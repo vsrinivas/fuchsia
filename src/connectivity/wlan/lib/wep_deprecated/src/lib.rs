@@ -3,18 +3,18 @@
 // found in the LICENSE file.
 
 use {
-    failure::Fail,
     fidl_fuchsia_wlan_mlme as fidl_mlme,
     hex::FromHex,
     std::ops::Deref,
+    thiserror::Error,
     wlan_common::ie::rsn::{cipher, suite_selector::OUI},
 };
 
-#[derive(Debug, Fail, PartialEq)]
+#[derive(Debug, Error, PartialEq)]
 pub enum Error {
-    #[fail(display = "error deriving WEP key from given hex input: {}", _0)]
-    InvalidHexInput(#[cause] hex::FromHexError),
-    #[fail(display = "expected ASCII or hex format for WEP-40 or WEP-104 keys")]
+    #[error("error deriving WEP key from given hex input: {}", _0)]
+    InvalidHexInput(hex::FromHexError),
+    #[error("expected ASCII or hex format for WEP-40 or WEP-104 keys")]
     InvalidInputLength,
 }
 

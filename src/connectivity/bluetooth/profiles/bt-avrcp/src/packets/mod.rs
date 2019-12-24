@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 use {
     bt_avctp::{pub_decodable_enum, AvcCommandType},
-    failure::Fail,
     fidl_fuchsia_bluetooth_avrcp as fidl_avrcp,
     std::{convert::TryFrom, result},
+    thiserror::Error,
 };
 
 mod continuation;
@@ -24,30 +24,30 @@ pub use {
 };
 
 /// The error types for packet parsing.
-#[derive(Fail, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq)]
 pub enum Error {
     /// The value that was sent on the wire was out of range.
-    #[fail(display = "Value was out of range")]
+    #[error("Value was out of range")]
     OutOfRange,
 
     /// The header was invalid.
-    #[fail(display = "Invalid header for a message")]
+    #[error("Invalid header for a message")]
     InvalidHeader,
 
     /// The body format was invalid.
-    #[fail(display = "Failed to parse message contents")]
+    #[error("Failed to parse message contents")]
     InvalidMessage,
 
     /// The packet is unhandled but not necessarily invalid.
-    #[fail(display = "Message is unsupported but not necessarily invalid")]
+    #[error("Message is unsupported but not necessarily invalid")]
     UnsupportedMessage,
 
     /// A message couldn't be encoded.
-    #[fail(display = "Encountered an error encoding a message")]
+    #[error("Encountered an error encoding a message")]
     Encoding,
 
     #[doc(hidden)]
-    #[fail(display = "__Nonexhaustive error should never be created.")]
+    #[error("__Nonexhaustive error should never be created.")]
     __Nonexhaustive,
 }
 

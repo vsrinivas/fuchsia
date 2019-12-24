@@ -4,8 +4,8 @@
 
 use {
     crate::terminal_view::TerminalViewAssistant,
+    anyhow::Error,
     carnelian::{AppAssistant, AppContext, ViewAssistantPtr, ViewKey, ViewMode},
-    failure::Error,
 };
 
 pub struct TerminalAssistant {

@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::{format_err, Context, Error},
     async_trait::async_trait,
-    failure::{err_msg, Error, ResultExt},
     fidl::endpoints::{create_proxy, create_request_stream, ClientEnd, ServerEnd, ServiceMarker},
     fidl::Channel,
     fidl_fuchsia_test_breakpoints as fbreak, fuchsia_async as fasync,
@@ -92,7 +92,7 @@ impl InvocationReceiverClient {
         if expected_moniker == invocation.target_moniker() {
             Ok(invocation)
         } else {
-            Err(err_msg("Incorrect moniker"))
+            Err(format_err!("Incorrect moniker"))
         }
     }
 
@@ -431,37 +431,37 @@ macro_rules! create_event {
             fn from_fidl(inv: fbreak::Invocation) -> Result<Self, Error> {
                 // Event type in invocation must match what is expected
                 let event_type = inv.event_type.ok_or(
-                    err_msg("Missing event_type from Invocation object")
+                    format_err!("Missing event_type from Invocation object")
                 )?;
                 if event_type != Self::TYPE {
-                    return Err(err_msg("Incorrect event type"));
+                    return Err(format_err!("Incorrect event type"));
                 }
                 let target_moniker = inv.target_moniker.ok_or(
-                    err_msg("Missing target_moniker from Invocation object")
+                    format_err!("Missing target_moniker from Invocation object")
                 )?;
                 let handler = inv.handler.ok_or(
-                    err_msg("Missing handler from Invocation object")
+                    format_err!("Missing handler from Invocation object")
                 )?.into_proxy()?;
 
                 // Extract the payload from the Invocation object.
                 let event_payload = inv.event_payload.ok_or(
-                    err_msg("Missing event_payload from Invocation object")
+                    format_err!("Missing event_payload from Invocation object")
                 )?;
                 let $payload_name = event_payload.$payload_name.ok_or(
-                    err_msg("Missing $payload_name from EventPayload object")
+                    format_err!("Missing $payload_name from EventPayload object")
                 )?;
 
                 // Extract the additional data from the Payload object.
                 $(
                     let $data_name: $data_ty = $payload_name.$data_name.ok_or(
-                        err_msg("Missing $data_name from $payload_name object")
+                        format_err!("Missing $data_name from $payload_name object")
                     )?;
                 )*
 
                 // Extract the additional protocols from the Payload object.
                 $(
                     let $protocol_name: $protocol_ty = $payload_name.$protocol_name.ok_or(
-                        err_msg("Missing $protocol_name from $payload_name object")
+                        format_err!("Missing $protocol_name from $payload_name object")
                     )?.into_proxy()?;
                 )*
 
@@ -499,21 +499,21 @@ macro_rules! create_event {
             fn from_fidl(inv: fbreak::Invocation) -> Result<Self, Error> {
                 // Event type in invocation must match what is expected
                 let event_type = inv.event_type.ok_or(
-                    err_msg("Missing event_type from Invocation object")
+                    format_err!("Missing event_type from Invocation object")
                 )?;
                 if event_type != Self::TYPE {
-                    return Err(err_msg("Incorrect event type"));
+                    return Err(format_err!("Incorrect event type"));
                 }
                 let target_moniker = inv.target_moniker.ok_or(
-                    err_msg("Missing target_moniker from Invocation object")
+                    format_err!("Missing target_moniker from Invocation object")
                 )?;
                 let handler = inv.handler.ok_or(
-                    err_msg("Missing handler from Invocation object")
+                    format_err!("Missing handler from Invocation object")
                 )?.into_proxy()?;
 
                 // There should be no payload for this event
                 if inv.event_payload.is_some() {
-                    return Err(err_msg("Unexpected event payload"));
+                    return Err(format_err!("Unexpected event payload"));
                 }
 
                 Ok($event_type { target_moniker, handler, })

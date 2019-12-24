@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{format_err, Error, ResultExt},
+    anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_test::{Outcome, RunListenerProxy, Status},
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,

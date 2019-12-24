@@ -19,7 +19,6 @@ use crate::{
     storage::{MemStorage, Storage},
 };
 use chrono::{DateTime, Utc};
-use failure::Fail;
 use futures::{compat::Stream01CompatExt, lock::Mutex, prelude::*};
 use http::response::Parts;
 use log::{error, info, warn};
@@ -27,6 +26,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::str::Utf8Error;
 use std::time::{Duration, Instant, SystemTime};
+use thiserror::Error;
 
 mod time;
 pub mod update_check;
@@ -98,18 +98,18 @@ pub enum State {
 
 /// This is the set of errors that can occur when making a request to Omaha.  This is an internal
 /// collection of error types.
-#[derive(Fail, Debug)]
+#[derive(Error, Debug)]
 pub enum OmahaRequestError {
-    #[fail(display = "Unexpected JSON error constructing update check: {}", _0)]
-    Json(#[cause] serde_json::Error),
+    #[error("Unexpected JSON error constructing update check: {}", _0)]
+    Json(serde_json::Error),
 
-    #[fail(display = "Error building update check HTTP request: {}", _0)]
-    HttpBuilder(#[cause] http::Error),
+    #[error("Error building update check HTTP request: {}", _0)]
+    HttpBuilder(http::Error),
 
-    #[fail(display = "Hyper error performing update check: {}", _0)]
-    Hyper(#[cause] hyper::Error),
+    #[error("Hyper error performing update check: {}", _0)]
+    Hyper(hyper::Error),
 
-    #[fail(display = "HTTP error performing update check: {}", _0)]
+    #[error("HTTP error performing update check: {}", _0)]
     HttpStatus(hyper::StatusCode),
 }
 
@@ -148,29 +148,29 @@ impl From<http::StatusCode> for OmahaRequestError {
 
 /// This is the set of errors that can occur when parsing the response body from Omaha.  This is an
 /// internal collection of error types.
-#[derive(Fail, Debug)]
+#[derive(Error, Debug)]
 #[allow(dead_code)]
 pub enum ResponseParseError {
-    #[fail(display = "Response was not valid UTF-8")]
-    Utf8(#[cause] Utf8Error),
+    #[error("Response was not valid UTF-8")]
+    Utf8(Utf8Error),
 
-    #[fail(display = "Unexpected JSON error parsing update check response: {}", _0)]
-    Json(#[cause] serde_json::Error),
+    #[error("Unexpected JSON error parsing update check response: {}", _0)]
+    Json(serde_json::Error),
 }
 
-#[derive(Fail, Debug)]
+#[derive(Error, Debug)]
 pub enum UpdateCheckError {
-    #[fail(display = "Check not performed per policy: {:?}", _0)]
+    #[error("Check not performed per policy: {:?}", _0)]
     Policy(CheckDecision),
 
-    #[fail(display = "Error checking with Omaha: {:?}", _0)]
+    #[error("Error checking with Omaha: {:?}", _0)]
     OmahaRequest(OmahaRequestError),
 
-    #[fail(display = "Error parsing Omaha response: {:?}", _0)]
+    #[error("Error parsing Omaha response: {:?}", _0)]
     ResponseParser(ResponseParseError),
 
-    #[fail(display = "Unable to create an install plan: {:?}", _0)]
-    InstallPlan(failure::Error),
+    #[error("Unable to create an install plan: {:?}", _0)]
+    InstallPlan(anyhow::Error),
 }
 
 impl<PE, HR, IN, TM, MR, ST> StateMachine<PE, HR, IN, TM, MR, ST>

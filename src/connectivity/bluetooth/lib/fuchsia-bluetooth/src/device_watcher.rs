@@ -4,7 +4,7 @@
 
 use {
     crate::util::open_rdwr,
-    failure::{format_err, Error},
+    anyhow::{format_err, Error},
     fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_syslog::fx_log_info,
     fuchsia_vfs_watcher::{WatchEvent, Watcher as VfsWatcher},

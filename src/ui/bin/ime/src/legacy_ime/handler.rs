@@ -11,7 +11,7 @@ use super::{
 };
 use crate::ime_service::ImeService;
 use crate::index_convert as idx;
-use failure::ResultExt;
+use anyhow::Context as _;
 use fidl::endpoints::RequestStream;
 use fidl_fuchsia_ui_input as uii;
 use fidl_fuchsia_ui_input::InputMethodEditorRequest as ImeReq;
@@ -95,7 +95,7 @@ impl LegacyIme {
                 }
                 Ok(())
             }
-            .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
+            .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e)),
         );
     }
 
@@ -114,7 +114,7 @@ impl LegacyIme {
                 }
                 Ok(())
             }
-            .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e))
+            .unwrap_or_else(|e: anyhow::Error| fx_log_err!("{:?}", e))
             .then(|()| {
                 async move {
                     // this runs when IME stream closes

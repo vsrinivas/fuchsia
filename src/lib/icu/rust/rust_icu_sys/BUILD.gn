@@ -9,9 +9,10 @@ rustc_library("rust_icu_sys") {
   with_unit_tests = true
 
   deps = [
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:libc",
     "//third_party/rust_crates:paste",
+    "//third_party/rust_crates:thiserror",
   ]
 
   non_rust_deps = [ "//third_party/icu" ]

@@ -11,10 +11,10 @@
 use crate::directory::{self, entry::DirectoryEntry};
 
 use {
-    failure::Fail,
     fidl_fuchsia_io::MAX_FILENAME,
     itertools::Itertools,
     std::{collections::HashMap, fmt, marker::PhantomData, slice::Iter},
+    thiserror::Error,
 };
 
 /// Represents a paths provided to [`TreeBuilder::add_entry()`].  See [`TreeBuilder`] for details.
@@ -243,46 +243,51 @@ impl<'entries> TreeBuilder<'entries> {
     }
 }
 
-#[derive(Debug, Fail, PartialEq, Eq)]
+#[derive(Debug, Error, PartialEq, Eq)]
 pub enum Error {
-    #[fail(display = "`add_entry` requires a non-empty path")]
+    #[error("`add_entry` requires a non-empty path")]
     EmptyPath,
 
-    #[fail(
-        display = "Path compoent contains a forward slash.\n\
+    #[error(
+        "Path compoent contains a forward slash.\n\
                    Path: {}\n\
                    Component: '{}'",
-        path, component
+        path,
+        component
     )]
     SlashInComponent { path: String, component: String },
 
-    #[fail(
-        display = "Path component name is too long - {} characters.  Maximum is {}.\n\
+    #[error(
+        "Path component name is too long - {} characters.  Maximum is {}.\n\
                    Path: {}\n\
                    Component: '{}'",
-        component_len, max_len, path, component
+        component_len,
+        max_len,
+        path,
+        component
     )]
     ComponentNameTooLong { path: String, component: String, component_len: usize, max_len: usize },
 
-    #[fail(
-        display = "Trying to insert a leaf over an existing directory.\n\
+    #[error(
+        "Trying to insert a leaf over an existing directory.\n\
                    Path: {}",
         path
     )]
     LeafOverDirectory { path: String },
 
-    #[fail(
-        display = "Trying to overwrite one leaf with another.\n\
+    #[error(
+        "Trying to overwrite one leaf with another.\n\
                    Path: {}",
         path
     )]
     LeafOverLeaf { path: String },
 
-    #[fail(
-        display = "Trying to insert an entry inside a leaf.\n\
+    #[error(
+        "Trying to insert an entry inside a leaf.\n\
                    Leaf path: {}\n\
                    Path been inserted: {}",
-        path, traversed
+        path,
+        traversed
     )]
     EntryInsideLeaf { path: String, traversed: String },
 }

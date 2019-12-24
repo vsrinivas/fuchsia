@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::display_metrics::DisplayMetrics, crate::scene_manager::SceneManager,
-    async_trait::async_trait, failure::Error, fidl, fidl_fuchsia_ui_app as ui_app,
-    fidl_fuchsia_ui_gfx as ui_gfx, fidl_fuchsia_ui_scenic as ui_scenic,
-    fidl_fuchsia_ui_views as ui_views, fuchsia_async as fasync, fuchsia_scenic as scenic,
-    fuchsia_scenic, fuchsia_syslog as syslog, futures::future::TryFutureExt,
+    crate::display_metrics::DisplayMetrics, crate::scene_manager::SceneManager, anyhow::Error,
+    async_trait::async_trait, fidl, fidl_fuchsia_ui_app as ui_app, fidl_fuchsia_ui_gfx as ui_gfx,
+    fidl_fuchsia_ui_scenic as ui_scenic, fidl_fuchsia_ui_views as ui_views,
+    fuchsia_async as fasync, fuchsia_scenic as scenic, fuchsia_scenic, fuchsia_syslog as syslog,
+    futures::future::TryFutureExt,
 };
 
 /// The [`FlatSceneManager`] constructs an empty scene with a single white ambient light.

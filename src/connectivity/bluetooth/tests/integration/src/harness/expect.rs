@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{err_msg, format_err, Error};
+use anyhow::{format_err, Error};
 
 pub fn expect_eq<T>(expected: &T, actual: &T) -> Result<(), Error>
 where
@@ -11,7 +11,7 @@ where
     if *expected == *actual {
         Ok(())
     } else {
-        Err(err_msg(format!("failed - expected '{:#?}', found: '{:#?}'", expected, actual)))
+        Err(format_err!(format!("failed - expected '{:#?}', found: '{:#?}'", expected, actual)))
     }
 }
 
@@ -35,7 +35,7 @@ macro_rules! expect_true {
         if $condition {
             Ok(())
         } else {
-            Err(err_msg(format!("condition is not true: {}", stringify!($condition))))
+            Err(format_err!(format!("condition is not true: {}", stringify!($condition))))
         } as Result<(), Error>
     }
 }

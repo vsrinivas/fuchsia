@@ -47,7 +47,7 @@ mod tests {
         }
     }
 
-    async fn common_setup() -> Result<(MockDriver, Vsock), failure::Error> {
+    async fn common_setup() -> Result<(MockDriver, Vsock), anyhow::Error> {
         let (driver_client, driver_server) = endpoints::create_endpoints::<DeviceMarker>()?;
         let mut driver_server = driver_server.into_stream()?;
 
@@ -72,7 +72,7 @@ mod tests {
         Ok((driver, service))
     }
 
-    fn make_con() -> Result<(zx::Socket, ConnectionProxy, ConnectionTransport), failure::Error> {
+    fn make_con() -> Result<(zx::Socket, ConnectionProxy, ConnectionTransport), anyhow::Error> {
         let (client_socket, server_socket) = zx::Socket::create(zx::SocketOpts::STREAM)?;
         let (client_end, server_end) = endpoints::create_endpoints::<ConnectionMarker>()?;
         let client_end = client_end.into_proxy()?;
@@ -80,7 +80,7 @@ mod tests {
         Ok((client_socket, client_end, con))
     }
 
-    fn make_client(service: &Vsock) -> Result<ConnectorProxy, failure::Error> {
+    fn make_client(service: &Vsock) -> Result<ConnectorProxy, anyhow::Error> {
         let (app_client, app_remote) = endpoints::create_endpoints::<ConnectorMarker>()?;
         let app_client = app_client.into_proxy()?;
         // Run the client
@@ -92,7 +92,7 @@ mod tests {
     }
 
     #[fasync::run_until_stalled(test)]
-    async fn basic_listen() -> Result<(), failure::Error> {
+    async fn basic_listen() -> Result<(), anyhow::Error> {
         let (mut driver, service) = common_setup().await?;
 
         let app_client = make_client(&service)?;
@@ -139,7 +139,7 @@ mod tests {
     }
 
     #[fasync::run_until_stalled(test)]
-    async fn reject_connection() -> Result<(), failure::Error> {
+    async fn reject_connection() -> Result<(), anyhow::Error> {
         let (mut driver, service) = common_setup().await?;
 
         let app_client = make_client(&service)?;
@@ -164,7 +164,7 @@ mod tests {
     }
 
     #[fasync::run_until_stalled(test)]
-    async fn transport_reset() -> Result<(), failure::Error> {
+    async fn transport_reset() -> Result<(), anyhow::Error> {
         let (mut driver, service) = common_setup().await?;
 
         let app_client = make_client(&service)?;

@@ -17,7 +17,7 @@ pub(crate) use crate::font_pkgs::FontPackageListing;
 pub(crate) use crate::font_sets::{FontSet, FontSets};
 
 use {
-    failure::Error,
+    anyhow::Error,
     fake_font_info_loader::FakeFontInfoLoaderImpl,
     font_info::{FontAssetSource, FontInfo, FontInfoLoader, FontInfoLoaderImpl},
     manifest::{v2::FontsManifest, FontManifestWrapper},

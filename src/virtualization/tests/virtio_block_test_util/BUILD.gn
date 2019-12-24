@@ -12,9 +12,10 @@ rustc_binary("virtio_block_test_util") {
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-zircon",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:libc",
     "//third_party/rust_crates:structopt",
+    "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-device:fuchsia-device-rustc",
     "//zircon/system/fidl/fuchsia-hardware-block:fuchsia-hardware-block-rustc",
   ]

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 use {
     crate::service_context::ServiceContext,
-    failure::Error,
+    anyhow::Error,
     fidl::endpoints::create_request_stream,
     fidl_fuchsia_ui_input::MediaButtonsEvent,
     fidl_fuchsia_ui_policy::{

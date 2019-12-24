@@ -6,6 +6,7 @@
 // for these types. All calls into BoringSSL are unsafe.
 
 use {
+    anyhow::{format_err, Error},
     boringssl_sys::{
         BN_CTX_free, BN_CTX_new, BN_add, BN_asc2bn, BN_bin2bn, BN_bn2bin, BN_bn2dec, BN_cmp,
         BN_copy, BN_equal_consttime, BN_free, BN_is_odd, BN_is_one, BN_is_zero, BN_mod_add,
@@ -17,14 +18,13 @@ use {
         ERR_get_error, ERR_reason_error_string, NID_X9_62_prime256v1, OPENSSL_free, BIGNUM, BN_CTX,
         EC_GROUP, EC_POINT,
     },
-    failure::{bail, Error},
     std::{cmp::Ordering, ffi::CString, fmt, ptr::NonNull},
 };
 
 fn ptr_or_error<T>(ptr: *mut T) -> Result<NonNull<T>, Error> {
     match NonNull::new(ptr) {
         Some(non_null) => Ok(non_null),
-        None => bail!("Found null pointer from BoringSSL"),
+        None => return Err(format_err!("Found null pointer from BoringSSL")),
     }
 }
 
@@ -35,10 +35,10 @@ fn one_or_error(res: std::os::raw::c_int) -> Result<(), Error> {
             let error_code = ERR_get_error();
             let error_reason_ptr = ERR_reason_error_string(error_code);
             if error_reason_ptr.is_null() {
-                bail!("BoringSSL failed to perform an operation.");
+                return Err(format_err!("BoringSSL failed to perform an operation."));
             }
             let error_reason = std::ffi::CStr::from_ptr(error_reason_ptr).to_string_lossy();
-            bail!("BoringSSL failed to perform an operation: {}", error_reason);
+            return Err(format_err!("BoringSSL failed to perform an operation: {}", error_reason));
             // ERR_reason_error_string returns a static ptr, so we don't need to free anything.
         },
     }

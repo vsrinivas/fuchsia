@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Fail;
 use fidl_fuchsia_hardware_ethernet_ext::MacAddress as MacAddr;
 use num_derive::FromPrimitive;
 use serde_derive::{Deserialize, Serialize};
@@ -10,6 +9,7 @@ use std::convert::{TryFrom, TryInto};
 use std::fmt;
 use std::iter::Iterator;
 use std::net::Ipv4Addr;
+use thiserror::Error;
 
 pub const SERVER_PORT: u16 = 67;
 pub const CLIENT_PORT: u16 = 68;
@@ -45,29 +45,29 @@ const ONE_BYTE_LEN: usize = 8;
 const TWO_BYTE_LEN: usize = 16;
 const THREE_BYTE_LEN: usize = 24;
 
-#[derive(Debug, Fail, PartialEq)]
+#[derive(Debug, Error, PartialEq)]
 pub enum ProtocolError {
-    #[fail(display = "invalid buffer length: {}", _0)]
+    #[error("invalid buffer length: {}", _0)]
     InvalidBufferLength(usize),
-    #[fail(display = "option not supported in fuchsia.net.dhcp: {:?}", _0)]
+    #[error("option not supported in fuchsia.net.dhcp: {:?}", _0)]
     InvalidFidlOption(DhcpOption),
-    #[fail(display = "invalid message type: {}", _0)]
+    #[error("invalid message type: {}", _0)]
     InvalidMessageType(u8),
-    #[fail(display = "invalid netbios over tcpip node type: {}", _0)]
+    #[error("invalid netbios over tcpip node type: {}", _0)]
     InvalidNodeType(u8),
-    #[fail(display = "invalid bootp op code: {}", _0)]
+    #[error("invalid bootp op code: {}", _0)]
     InvalidOpCode(u8),
-    #[fail(display = "invalid option code: {}", _0)]
+    #[error("invalid option code: {}", _0)]
     InvalidOptionCode(u8),
-    #[fail(display = "invalid option overload: {}", _0)]
+    #[error("invalid option overload: {}", _0)]
     InvalidOverload(u8),
-    #[fail(display = "missing opcode")]
+    #[error("missing opcode")]
     MissingOpCode,
-    #[fail(display = "missing expected option: {}", _0)]
+    #[error("missing expected option: {}", _0)]
     MissingOption(OptionCode),
-    #[fail(display = "received unknown fidl option variant")]
+    #[error("received unknown fidl option variant")]
     UnknownFidlOption,
-    #[fail(display = "invalid utf-8 after buffer index: {}", _0)]
+    #[error("invalid utf-8 after buffer index: {}", _0)]
     Utf8(usize),
 }
 

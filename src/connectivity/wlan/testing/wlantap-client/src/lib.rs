@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::Error,
+    anyhow::Error,
     fidl::endpoints,
     fidl_fuchsia_wlan_tap as wlantap, fuchsia_zircon as zx,
     std::{

@@ -6,11 +6,11 @@
 
 use std::fmt;
 
-use failure::Fail;
+use thiserror::Error;
 
 macro_rules! spinel_errors {
     ( @Error, $success:ident, $( $errors:ident ),* ) => {
-        #[derive(Clone, Debug, Eq, Fail, Hash, PartialEq)]
+        #[derive(Clone, Debug, Eq, Error, Hash, PartialEq)]
         pub enum SpnError {
             $($errors),*
         }

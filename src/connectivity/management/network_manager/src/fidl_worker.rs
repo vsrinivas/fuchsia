@@ -6,7 +6,7 @@
 
 use {
     crate::event::Event,
-    failure::Error,
+    anyhow::Error,
     fidl_fuchsia_router_config::{RouterAdminRequestStream, RouterStateRequestStream},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,

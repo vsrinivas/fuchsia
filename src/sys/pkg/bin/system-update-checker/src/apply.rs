@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::errors::{Error, ErrorKind};
-use failure::ResultExt;
+use crate::errors::Error as ErrorKind;
+use anyhow::{Context as _, Error};
 use fidl_fuchsia_io;
 use fidl_fuchsia_sys::{LauncherMarker, LauncherProxy};
 use fuchsia_async::{
@@ -41,8 +41,9 @@ pub async fn apply_system_update(
     current_system_image: Hash,
     latest_system_image: Hash,
     initiator: Initiator,
-) -> Result<(), Error> {
-    let launcher = connect_to_service::<LauncherMarker>().context(ErrorKind::ConnectToLauncher)?;
+) -> Result<(), anyhow::Error> {
+    let launcher =
+        connect_to_service::<LauncherMarker>().map_err(|_| ErrorKind::ConnectToLauncher)?;
     let mut component_runner = RealComponentRunner { launcher_proxy: launcher };
     apply_system_update_impl(
         current_system_image,
@@ -125,11 +126,13 @@ impl FileSystem for RealFileSystem {
 }
 
 // TODO(fxb/22779): Undo this once we do this for all base packages by default.
-fn get_system_updater_resource_url(file_system: &impl FileSystem) -> Result<String, Error> {
+fn get_system_updater_resource_url(
+    file_system: &impl FileSystem,
+) -> Result<String, crate::errors::Error> {
     // Attempt to find pinned version.
     let file = file_system
         .read_to_string("/system/data/static_packages")
-        .context(ErrorKind::ReadStaticPackages)?;
+        .map_err(|_| ErrorKind::ReadStaticPackages)?;
 
     for line in file.lines() {
         let line = line.trim();
@@ -177,7 +180,7 @@ async fn apply_system_update_impl<'a>(
     initiator: Initiator,
     time_source: &'a impl TimeSource,
     file_system: &'a impl FileSystem,
-) -> Result<(), Error> {
+) -> Result<(), anyhow::Error> {
     if let Err(err) = pkgfs_gc(service_connector).await {
         fx_log_err!("failed to garbage collect pkgfs, will still attempt system update: {}", err);
     }
@@ -215,7 +218,6 @@ async fn pkgfs_gc(service_connector: &impl ServiceConnector) -> Result<(), Error
 mod test_apply_system_update_impl {
     use super::*;
     use fuchsia_async::futures::future;
-    use matches::assert_matches;
     use proptest::prelude::*;
     use std::fs;
 
@@ -333,7 +335,10 @@ mod test_apply_system_update_impl {
         )
         .await;
 
-        assert_matches!(result.map_err(|e| e.kind()), Err(ErrorKind::SystemUpdaterFinished));
+        assert_eq!(
+            result.unwrap_err().downcast::<ErrorKind>().unwrap(),
+            ErrorKind::SystemUpdaterFinished
+        );
         assert!(!service_connector.has_garbage_file());
     }
 
@@ -355,7 +360,10 @@ mod test_apply_system_update_impl {
         )
         .await;
 
-        assert_matches!(result.map_err(|e| e.kind()), Err(ErrorKind::SystemUpdaterFinished));
+        assert_eq!(
+            result.unwrap_err().downcast::<ErrorKind>().unwrap(),
+            ErrorKind::SystemUpdaterFinished
+        );
         assert!(component_runner.was_called);
     }
 
@@ -377,7 +385,10 @@ mod test_apply_system_update_impl {
         )
         .await;
 
-        assert_matches!(result.map_err(|e| e.kind()), Err(ErrorKind::SystemUpdaterFinished));
+        assert_eq!(
+            result.unwrap_err().downcast::<ErrorKind>().unwrap(),
+            ErrorKind::SystemUpdaterFinished
+        );
         assert!(component_runner.was_called);
     }
 
@@ -423,7 +434,10 @@ mod test_apply_system_update_impl {
                             #meta/system_updater.cmx"
             .to_string();
 
-        assert_matches!(result.map_err(|e| e.kind()), Err(ErrorKind::SystemUpdaterFinished));
+        assert_eq!(
+            result.unwrap_err().downcast::<ErrorKind>().unwrap(),
+            ErrorKind::SystemUpdaterFinished
+        );
         assert_eq!(
             component_runner.captured_args,
             vec![Args {
@@ -466,10 +480,7 @@ mod test_apply_system_update_impl {
             ));
 
             prop_assert!(result.is_err());
-            prop_assert_eq!(
-                result.err().unwrap().kind(),
-                ErrorKind::SystemUpdaterFinished
-            );
+            prop_assert_eq!(result.unwrap_err().downcast::<ErrorKind>().unwrap(), ErrorKind::SystemUpdaterFinished);
             prop_assert_eq!(
                 component_runner.captured_args,
                 vec![Args {
@@ -570,6 +581,9 @@ mod test_real_component_runner {
         let mut runner = RealComponentRunner { launcher_proxy };
         let run_res =
             runner.run_until_exit(TEST_SHELL_COMMAND_RESOURCE_URL.to_string(), Some(vec![])).await;
-        assert_eq!(run_res.err().expect("run should fail").kind(), ErrorKind::SystemUpdaterFailed);
+        assert_eq!(
+            run_res.err().expect("run should fail").downcast::<ErrorKind>().unwrap(),
+            ErrorKind::SystemUpdaterFailed
+        );
     }
 }

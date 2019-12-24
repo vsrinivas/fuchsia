@@ -5,7 +5,7 @@
 #![cfg(target_os = "fuchsia")]
 
 use {
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl_fuchsia_overnet::{MeshControllerMarker, ServiceConsumerMarker, ServicePublisherMarker},
     fuchsia_component,
     futures::prelude::*,

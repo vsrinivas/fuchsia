@@ -6,7 +6,7 @@
 
 use {
     crate::eventloop::Event,
-    failure::Error,
+    anyhow::Error,
     fidl_fuchsia_net_icmp::ProviderRequestStream as IcmpProviderRequestStream,
     fidl_fuchsia_net_stack::StackRequestStream,
     fidl_fuchsia_posix_socket::ProviderRequestStream as SocketProviderRequestStream,

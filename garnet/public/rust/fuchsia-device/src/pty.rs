@@ -7,8 +7,8 @@ pub struct Size {
     pub height: u32,
 }
 
-pub fn get_window_size() -> Result<Size, failure::Error> {
-    Err(failure::err_msg(
+pub fn get_window_size() -> Result<Size, anyhow::Error> {
+    Err(anyhow::format_err!(
         "fuchsia-device is deprecated; please use fuchsia.hardware.pty.Device instead",
     ))
 }

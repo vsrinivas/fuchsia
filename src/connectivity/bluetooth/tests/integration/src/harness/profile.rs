@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl_fuchsia_bluetooth_bredr::{self as bredr, ProfileEvent, ProfileMarker, ProfileProxy},
     fuchsia_bluetooth::expectation::asynchronous::{ExpectableState, ExpectationHarness},
     fuchsia_zircon as zx,

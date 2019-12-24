@@ -9,7 +9,7 @@ use {
         hooks::{Event, EventType, Hook, HooksRegistration},
         moniker::AbsoluteMoniker,
     },
-    failure::Error,
+    anyhow::Error,
     fuchsia_trace as trace,
     futures::{channel::*, future::BoxFuture, lock::Mutex, sink::SinkExt, StreamExt},
     log::*,

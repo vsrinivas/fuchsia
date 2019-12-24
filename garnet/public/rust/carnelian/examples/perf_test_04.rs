@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow::Error;
 use carnelian::{
     make_app_assistant, set_node_color, AnimationMode, App, AppAssistant, Color, ViewAssistant,
     ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
-use failure::Error;
 use fuchsia_scenic::{Rectangle, SessionPtr, ShapeNode};
 
 const COLOR_CODES: &[&str] = &[

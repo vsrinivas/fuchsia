@@ -6,8 +6,8 @@ mod sources;
 mod vmo_stream;
 
 use {
+    anyhow::{format_err, Error},
     char_set::CharSet,
-    failure::{format_err, Error},
     freetype_ffi::{
         FT_Add_Default_Modules, FT_Done_Face, FT_Done_Library, FT_Get_First_Char, FT_Get_Next_Char,
         FT_Library, FT_New_Library, FT_Open_Face, FT_MEMORY,

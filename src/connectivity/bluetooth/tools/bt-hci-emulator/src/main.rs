@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::Error,
+    anyhow::Error,
     fuchsia_bluetooth::hci_emulator::Emulator,
     futures::future::pending,
     rand::{self, Rng},

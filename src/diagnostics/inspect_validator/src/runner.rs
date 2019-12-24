@@ -9,7 +9,7 @@ use {
         trials::{self, Step},
         validate, DiffType,
     },
-    failure::{bail, Error},
+    anyhow::{bail, Error},
 };
 
 pub async fn run_all_trials(url: &str, results: &mut results::Results) {

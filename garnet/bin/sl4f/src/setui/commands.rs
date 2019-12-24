@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::server::Facade;
-use failure::Error;
+use anyhow::Error;
 use futures::future::{FutureExt, LocalBoxFuture};
 use serde_json::Value;
 

@@ -13,7 +13,7 @@ mod nat_tester;
 mod sync_manager;
 
 #[fasync::run_singlethreaded]
-async fn main() -> Result<(), failure::Error> {
+async fn main() -> Result<(), anyhow::Error> {
     let device = device::Type::from_args();
     syslog::init().expect("initialising logging");
     let sync = sync_manager::SyncManager::attach(device).await?;

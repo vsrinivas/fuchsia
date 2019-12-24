@@ -4,7 +4,7 @@
 
 use {
     crate::rate_limiter::RateLimiterMonotonic,
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl_fuchsia_update_channel::{ProviderRequest, ProviderRequestStream},
     fuchsia_syslog::fx_log_warn,
     fuchsia_zircon as zx,

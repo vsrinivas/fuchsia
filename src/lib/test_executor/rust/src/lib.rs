@@ -5,7 +5,7 @@
 //! This crate runs and collects results from a test which implements fuchsia.test.Suite protocol.
 
 use {
-    failure::{format_err, ResultExt},
+    anyhow::{format_err, Context as _},
     fidl_fuchsia_sys::LauncherProxy,
     fidl_fuchsia_test::{
         Invocation,
@@ -62,7 +62,7 @@ thread_local! {
 
 impl LoggerStream {
     /// Creates a new `LoggerStream` for given `socket`.
-    pub fn new(socket: zx::Socket) -> Result<LoggerStream, failure::Error> {
+    pub fn new(socket: zx::Socket) -> Result<LoggerStream, anyhow::Error> {
         let l = LoggerStream {
             socket: fasync::Socket::from_socket(socket).context("Invalid zircon socket")?,
         };
@@ -93,7 +93,7 @@ impl Stream for LoggerStream {
 
 struct LogProcessor {
     name: String,
-    f: Option<BoxFuture<'static, Result<(), failure::Error>>>,
+    f: Option<BoxFuture<'static, Result<(), anyhow::Error>>>,
 }
 
 impl LogProcessor {
@@ -145,7 +145,7 @@ impl LogProcessor {
     }
 
     /// This will wait for all the logs to be collected.
-    pub async fn await_logs(&mut self) -> Result<(), failure::Error> {
+    pub async fn await_logs(&mut self) -> Result<(), anyhow::Error> {
         if let Some(ref mut f) = self.f.take().as_mut() {
             return Ok(f.await?);
         }
@@ -158,7 +158,7 @@ pub async fn run_and_collect_results(
     suite: fidl_fuchsia_test::SuiteProxy,
     mut sender: mpsc::Sender<TestEvent>,
     test_url: String,
-) -> Result<(), failure::Error> {
+) -> Result<(), anyhow::Error> {
     fx_vlog!(1, "enumerating tests");
     let cases =
         suite.get_tests().await.map_err(|e| format_err!("Error getting test steps: {}", e))?;
@@ -227,7 +227,7 @@ pub async fn run_test_component(
     launcher: LauncherProxy,
     test_url: String,
     sender: mpsc::Sender<TestEvent>,
-) -> Result<(), failure::Error> {
+) -> Result<(), anyhow::Error> {
     let component_manager_for_test = "fuchsia-pkg://fuchsia.com/component_manager_for_test#\
                                       meta/component_manager_for_test.cmx";
 

@@ -15,7 +15,8 @@ rustc_binary("filter_integration") {
     "//src/connectivity/network/netdump/integration/helper",
     "//src/connectivity/network/testing/netemul/lib/fidl:environment-rustc",
     "//src/connectivity/network/testing/netemul/lib/fidl:network-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:thiserror",
   ]
 }

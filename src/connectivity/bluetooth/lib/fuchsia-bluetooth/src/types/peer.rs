@@ -8,7 +8,7 @@ use {
         inspect::*,
         types::{Address, PeerId, Uuid},
     },
-    failure::{err_msg, format_err, Error},
+    anyhow::{format_err, Error},
     fidl_fuchsia_bluetooth::{Appearance, DeviceClass},
     fidl_fuchsia_bluetooth_control as fctrl, fidl_fuchsia_bluetooth_sys as fsys,
     fuchsia_inspect as inspect,
@@ -125,14 +125,14 @@ fn appearance_from_deprecated(src: fctrl::Appearance) -> Result<Option<Appearanc
         fctrl::Appearance::Unknown => None,
         src => Some(
             Appearance::from_primitive(src.into_primitive())
-                .ok_or(err_msg("failed to construct appearance"))?,
+                .ok_or(format_err!("failed to construct appearance"))?,
         ),
     })
 }
 
 fn appearance_into_deprecated(src: Appearance) -> Result<fctrl::Appearance, Error> {
     fctrl::Appearance::from_primitive(src.into_primitive())
-        .ok_or(err_msg("failed to construct appearance"))
+        .ok_or(format_err!("failed to construct appearance"))
 }
 
 fn address_from_deprecated(src: &str) -> Result<Address, Error> {
@@ -212,9 +212,9 @@ impl TryFrom<fsys::Peer> for Peer {
     type Error = Error;
     fn try_from(src: fsys::Peer) -> Result<Peer, Self::Error> {
         Ok(Peer {
-            id: src.id.ok_or(err_msg("`Peer.id` is mandatory"))?.into(),
-            address: src.address.ok_or(err_msg("`Peer.address` is mandatory"))?.into(),
-            technology: src.technology.ok_or(err_msg("`Peer.technology` is mandatory!"))?,
+            id: src.id.ok_or(format_err!("`Peer.id` is mandatory"))?.into(),
+            address: src.address.ok_or(format_err!("`Peer.address` is mandatory"))?.into(),
+            technology: src.technology.ok_or(format_err!("`Peer.technology` is mandatory!"))?,
             connected: src.connected.unwrap_or(false),
             bonded: src.bonded.unwrap_or(false),
             name: src.name.clone(),
@@ -425,14 +425,14 @@ mod tests {
             peer.device_class = None;
 
             let control = fctrl::RemoteDevice::from(&peer);
-            assert_eq!(Ok(peer), control.try_into().map_err(|e: failure::Error| e.to_string()));
+            assert_eq!(Ok(peer), control.try_into().map_err(|e: anyhow::Error| e.to_string()));
         }
 
         fn peer_sys_roundtrip(peer in any_peer()) {
             use std::convert::TryInto;
 
             let sys = fsys::Peer::from(&peer);
-            assert_eq!(Ok(peer), sys.try_into().map_err(|e: failure::Error| e.to_string()));
+            assert_eq!(Ok(peer), sys.try_into().map_err(|e: anyhow::Error| e.to_string()));
         }
     }
 }

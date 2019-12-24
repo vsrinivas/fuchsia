@@ -72,7 +72,7 @@ macro_rules! assert_opened {
 static START: Once = Once::new();
 
 #[fasync::run_singlethreaded(test)]
-async fn test_link_open_ack_received() -> Result<(), failure::Error> {
+async fn test_link_open_ack_received() -> Result<(), anyhow::Error> {
     START.call_once(|| {
         fuchsia_syslog::init().unwrap();
     });
@@ -117,7 +117,7 @@ async fn test_link_open_ack_received() -> Result<(), failure::Error> {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_link_open_ack_sent() -> Result<(), failure::Error> {
+async fn test_link_open_ack_sent() -> Result<(), anyhow::Error> {
     START.call_once(|| {
         fuchsia_syslog::init().unwrap();
     });
@@ -162,7 +162,7 @@ async fn test_link_open_ack_sent() -> Result<(), failure::Error> {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_restart() -> Result<(), failure::Error> {
+async fn test_restart() -> Result<(), anyhow::Error> {
     START.call_once(|| {
         fuchsia_syslog::init().unwrap();
     });
@@ -201,7 +201,7 @@ async fn test_restart() -> Result<(), failure::Error> {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn test_full_ipv4_ipv6() -> Result<(), failure::Error> {
+async fn test_full_ipv4_ipv6() -> Result<(), anyhow::Error> {
     START.call_once(|| {
         fuchsia_syslog::init().unwrap();
     });

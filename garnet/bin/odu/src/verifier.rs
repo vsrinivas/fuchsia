@@ -17,7 +17,7 @@ use {
     crate::io_packet::{InternalCommand, IoPacketType},
     crate::log::Stats,
     crate::operations::PipelineStages,
-    failure::Error,
+    anyhow::Error,
     log::{debug, error, warn},
     std::{
         collections::HashMap,

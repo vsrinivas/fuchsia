@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{Error, ResultExt};
+use anyhow::{Context as _, Error};
 use handlebars::{Context, Handlebars, Helper, JsonRender, Output, RenderContext, RenderError};
 use lazy_static::lazy_static;
 use log::info;
@@ -57,7 +57,7 @@ impl FidldocTemplate for HtmlTemplate {
         info!("Generating main page documentation {}", main_page_path.display());
 
         let mut main_page_file = File::create(&main_page_path)
-            .with_context(|e| format!("Can't create {}: {}", main_page_path.display(), e))?;
+            .with_context(|| format!("Can't create {}", main_page_path.display()))?;
 
         // Render main page
         self.handlebars
@@ -77,7 +77,7 @@ impl FidldocTemplate for HtmlTemplate {
         info!("Generating package documentation {}", package_index.display());
 
         let mut output_file = File::create(&package_index)
-            .with_context(|e| format!("Can't create {}: {}", package_index.display(), e))?;
+            .with_context(|| format!("Can't create {}", package_index.display()))?;
 
         // Render files
         self.handlebars

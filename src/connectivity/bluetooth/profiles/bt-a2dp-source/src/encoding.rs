@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow::Error;
 use bitfield::bitfield;
 use bt_avdtp as avdtp;
-use failure::Error;
 use fidl_fuchsia_media::{
     AudioFormat, AudioUncompressedFormat, DomainFormat, EncoderSettings, PcmFormat, SbcAllocation,
     SbcBlockCount, SbcChannelMode, SbcEncoderSettings, SbcSubBands,

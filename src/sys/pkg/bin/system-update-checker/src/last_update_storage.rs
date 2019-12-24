@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::ResultExt,
+    anyhow::Context as _,
     fuchsia_merkle::Hash,
     fuchsia_syslog::fx_log_err,
     serde_derive::{Deserialize, Serialize},
@@ -40,7 +40,7 @@ impl LastUpdateStorage for LastUpdateStorageFile {
     }
 }
 impl LastUpdateStorageFile {
-    fn load_impl(&self) -> Result<Option<Hash>, failure::Error> {
+    fn load_impl(&self) -> Result<Option<Hash>, anyhow::Error> {
         let open_result = File::open(self.data_dir.join(LAST_UPDATE_FILENAME));
         if let Err(e) = &open_result {
             if e.kind() == io::ErrorKind::NotFound {
@@ -55,7 +55,7 @@ impl LastUpdateStorageFile {
             v1.update_package_merkle.parse::<Hash>().context("parsing update_package_merkle")?;
         Ok(Some(hash))
     }
-    fn store_impl(&self, update: &Hash) -> Result<(), failure::Error> {
+    fn store_impl(&self, update: &Hash) -> Result<(), anyhow::Error> {
         let wrapped =
             StorageFormat::Version1(StorageFormatV1 { update_package_merkle: update.to_string() });
         let part_filename = self.data_dir.join(LAST_UPDATE_FILENAME_PART);

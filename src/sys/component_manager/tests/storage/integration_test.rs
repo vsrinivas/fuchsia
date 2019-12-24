@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::{Context as _, Error},
     breakpoint_system_client::*,
-    failure::{Error, ResultExt},
     fidl::endpoints::ServerEnd,
     fidl::Channel,
     fidl_fidl_test_components as ftest, fidl_fuchsia_io as fio, fuchsia_async as fasync,

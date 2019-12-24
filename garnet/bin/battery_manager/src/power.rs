@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{Error, ResultExt};
+use anyhow::{Context as _, Error};
 use fdio::{self, clone_channel};
 use fidl_fuchsia_hardware_power as hpower;
 use fuchsia_async as fasync;
@@ -120,7 +120,7 @@ where
                 callback(power_info, battery_info);
             }
         }
-        .unwrap_or_else(|e: failure::Error| {
+        .unwrap_or_else(|e: anyhow::Error| {
             fx_log_err!("not able to apply listener to power device, wait failed: {:?}", e)
         }),
     );
@@ -133,7 +133,7 @@ async fn process_watch_event(
     battery_manager: Arc<BatteryManager>,
     battery_device_found: &mut bool,
     adapter_device_found: &mut bool,
-) -> Result<WatchSuccess, failure::Error> {
+) -> Result<WatchSuccess, anyhow::Error> {
     fx_vlog!(LOG_VERBOSITY, "::power:: process_watch_event for {:#?}", &filepath);
 
     let file = File::open(&filepath)?;

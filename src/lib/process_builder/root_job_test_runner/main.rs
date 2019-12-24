@@ -15,7 +15,7 @@
 //! TODO: Figure out a better way to run these tests.
 
 use {
-    failure::{err_msg, format_err, Error, ResultExt},
+    anyhow::{format_err, Context as _, Error},
     fidl::endpoints::ServiceMarker,
     fidl_fidl_examples_echo::EchoMarker,
     fidl_fuchsia_boot as fboot, fuchsia_async as fasync,
@@ -57,7 +57,7 @@ fn serve_proxy_svc_dir() -> Result<zx::Channel, Error> {
 async fn main() -> Result<(), Error> {
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
-        return Err(err_msg("Usage: root_job_test_runner <test binary> [extra args]"));
+        return Err(format_err!("Usage: root_job_test_runner <test binary> [extra args]"));
     }
 
     let path = &args[1];

@@ -2,21 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {bitfield::bitfield, bitflags::bitflags, failure::Fail};
+use {bitfield::bitfield, bitflags::bitflags, thiserror::Error};
 
 /// The error types for packet parsing.
-#[derive(Fail, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq)]
 pub enum Error {
     /// The value that was sent was out of range.
-    #[fail(display = "Value was out of range.")]
+    #[error("Value was out of range.")]
     OutOfRange,
 
     /// The value that was provided is invalid.
-    #[fail(display = "Invalid value.")]
+    #[error("Invalid value.")]
     InvalidValue,
 
     #[doc(hidden)]
-    #[fail(display = "__Nonexhaustive error should never be created.")]
+    #[error("__Nonexhaustive error should never be created.")]
     __Nonexhaustive,
 }
 

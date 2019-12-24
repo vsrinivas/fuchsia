@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Error;
+use anyhow::Error;
 use fidl::endpoints::RequestStream;
 use fidl_fuchsia_net_mdns::{
     Publication, PublicationResponder_Request, PublicationResponder_RequestStream, PublisherMarker,

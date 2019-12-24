@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::{format_err, Error},
     bt_avctp::{AvcCommand, AvcPeer, AvcResponseType},
-    failure::{format_err, Error},
     fidl::encoding::Decodable as FidlDecodable,
     fidl::endpoints::{create_endpoints, Proxy, RequestStream, ServiceMarker},
     fidl_fuchsia_bluetooth_avrcp::{self as fidl_avrcp, *},

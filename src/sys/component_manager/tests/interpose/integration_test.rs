@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    async_trait::async_trait, breakpoint_system_client::*, failure::Error,
+    anyhow::Error, async_trait::async_trait, breakpoint_system_client::*,
     fidl_fidl_examples_routing_echo as fecho, fuchsia_async as fasync, futures::channel::mpsc,
     futures::lock::Mutex, futures::SinkExt, futures::StreamExt, std::sync::Arc, test_utils::*,
 };

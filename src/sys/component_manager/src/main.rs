@@ -6,6 +6,7 @@
 #![allow(elided_lifetimes_in_paths)]
 
 use {
+    anyhow::{Context as _, Error},
     component_manager_lib::{
         builtin_environment::BuiltinEnvironment,
         klog,
@@ -16,7 +17,6 @@ use {
         },
         startup,
     },
-    failure::{Error, ResultExt},
     fuchsia_async as fasync, fuchsia_trace_provider as trace_provider,
     log::*,
     std::{panic, process, sync::Arc},

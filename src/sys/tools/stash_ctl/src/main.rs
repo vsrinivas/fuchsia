@@ -6,7 +6,7 @@
 
 //! `stash_ctl` provides a terminal interface to the contents of stash.
 
-use failure::{err_msg, Error, ResultExt};
+use anyhow::{format_err, Context as _, Error};
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_mem;
 use fuchsia_async as fasync;
@@ -153,7 +153,7 @@ impl TryFrom<env::Args> for StashCtlConfig {
 
             _ => {
                 help();
-                return Err(err_msg("unable to parse args"));
+                return Err(format_err!("unable to parse args"));
             }
         };
         Ok(StashCtlConfig { secure, op })
@@ -168,13 +168,15 @@ fn to_val(typ: &str, input: &str) -> Result<Value, Error> {
         "bool" => Ok(Value::Boolval(input.parse()?)),
         "bytes" => {
             let bytes = input.as_bytes();
-            let vmo = zx::Vmo::create(bytes.len() as u64)
-                .map_err(|s| err_msg(format!("error creating bytes buffer, zx status: {}", s)))?;
-            vmo.write(&bytes, 0)
-                .map_err(|s| err_msg(format!("error writing bytes buffer, zx status: {}", s)))?;
+            let vmo = zx::Vmo::create(bytes.len() as u64).map_err(|s| {
+                format_err!(format!("error creating bytes buffer, zx status: {}", s))
+            })?;
+            vmo.write(&bytes, 0).map_err(|s| {
+                format_err!(format!("error writing bytes buffer, zx status: {}", s))
+            })?;
             Ok(Value::Bytesval(fidl_fuchsia_mem::Buffer { vmo: vmo, size: bytes.len() as u64 }))
         }
-        _ => Err(err_msg(format!("unknown type: {}", typ))),
+        _ => Err(format_err!(format!("unknown type: {}", typ))),
     }
 }
 

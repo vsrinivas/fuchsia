@@ -8,7 +8,7 @@ use {
         options::PathFormat,
         result::IqueryResult,
     },
-    failure::{bail, format_err, Error},
+    anyhow::{format_err, Error},
     inspect_formatter::{self, DeprecatedHierarchyFormatter},
     serde::ser::Serialize,
     serde_json::{
@@ -37,7 +37,10 @@ impl Formatter for JsonFormatter {
                     result.sort_hierarchy();
                 }
                 if !result.is_loaded() {
-                    bail!("Failed to format result at {}", result.location.to_string());
+                    return Err(format_err!(
+                        "Failed to format result at {}",
+                        result.location.to_string()
+                    ));
                 }
                 Ok(inspect_formatter::HierarchyData {
                     hierarchy: result.hierarchy.unwrap(),

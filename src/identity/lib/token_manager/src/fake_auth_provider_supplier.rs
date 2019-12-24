@@ -5,7 +5,6 @@
 
 use crate::{AuthProviderSupplier, TokenManagerError};
 use async_trait::async_trait;
-use failure::Fail;
 use fidl::endpoints::{create_request_stream, ClientEnd};
 use fidl_fuchsia_auth::{
     AuthProviderMarker, AuthProviderRequest, AuthProviderRequestStream, AuthProviderStatus, Status,
@@ -24,6 +23,7 @@ use futures::stream::FuturesUnordered;
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::sync::Arc;
+use thiserror::Error;
 
 /// FakeAuthProviderSupplier implements AuthProviderSupplier, which is needed by TokenManager
 /// during instantiation. This fake has a bit of logic: (1) auth provider clients can be
@@ -49,9 +49,9 @@ pub struct FakeAuthProviderSupplier {
     servers: Mutex<FuturesUnordered<BoxFuture<'static, Result<(), fidl::Error>>>>,
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum FakeAuthProviderError {
-    #[fail(display = "FakeAuthProvider error: A server error occurred: {:?}", _0)]
+    #[error("FakeAuthProvider error: A server error occurred: {:?}", _0)]
     ServerError(fidl::Error),
 }
 

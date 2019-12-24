@@ -8,7 +8,7 @@ use {
         backends::*,
         parser::{BanjoParser, Rule},
     },
-    failure::Error,
+    anyhow::Error,
     pest::Parser,
     std::{fs::File, io, io::Read, path::PathBuf, str::FromStr},
     structopt::StructOpt,

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    failure::Fail,
     fdio::fdio_sys,
     fuchsia_async as fasync, fuchsia_runtime as runtime, fuchsia_zircon as zx,
     futures::{
@@ -19,45 +18,46 @@ use {
         path::Path,
         pin::Pin,
     },
+    thiserror::Error,
     zx::{HandleBased, Process},
 };
 
 /// An error encountered while calling fdio operations.
-#[derive(Debug, PartialEq, Eq, Fail)]
+#[derive(Debug, PartialEq, Eq, Error)]
 pub enum FdioError {
-    #[fail(display = "Cannot create file descriptor: {:?}", _0)]
-    Create(#[cause] zx::Status),
+    #[error("Cannot create file descriptor: {:?}", _0)]
+    Create(zx::Status),
 
-    #[fail(display = "Cannot clone file descriptor: {:?}", _0)]
-    Clone(#[cause] zx::Status),
+    #[error("Cannot clone file descriptor: {:?}", _0)]
+    Clone(zx::Status),
 
-    #[fail(display = "Cannot transfer file descriptor: {:?}", _0)]
-    Transfer(#[cause] zx::Status),
+    #[error("Cannot transfer file descriptor: {:?}", _0)]
+    Transfer(zx::Status),
 
-    #[fail(display = "Cannot create process: {:?}, {}", _0, _1)]
-    ProcessCreation(#[cause] zx::Status, String),
+    #[error("Cannot create process: {:?}, {}", _0, _1)]
+    ProcessCreation(zx::Status, String),
 }
 
 /// Error returned by this library.
-#[derive(Debug, PartialEq, Eq, Fail)]
+#[derive(Debug, PartialEq, Eq, Error)]
 pub enum Error {
-    #[fail(display = "Path {} does not exist.", _0)]
+    #[error("Path {} does not exist.", _0)]
     PathDoesNotExist(String),
 
-    #[fail(display = "Failed to parse file name from {}", _0)]
+    #[error("Failed to parse file name from {}", _0)]
     NoFileName(String),
 
-    #[fail(display = "fdio error: {:?}", _0)]
-    Fdio(#[cause] FdioError),
+    #[error("fdio error: {:?}", _0)]
+    Fdio(FdioError),
 
-    #[fail(display = "cannot create socket: {:?}", _0)]
-    CreateSocket(#[cause] zx::Status),
+    #[error("cannot create socket: {:?}", _0)]
+    CreateSocket(zx::Status),
 
-    #[fail(display = "invalid socket: {:?}", _0)]
-    InvalidSocket(#[cause] zx::Status),
+    #[error("invalid socket: {:?}", _0)]
+    InvalidSocket(zx::Status),
 
-    #[fail(display = "cannot create job: {:?}", _0)]
-    JobCreation(#[cause] zx::Status),
+    #[error("cannot create job: {:?}", _0)]
+    JobCreation(zx::Status),
 }
 
 impl From<FdioError> for Error {

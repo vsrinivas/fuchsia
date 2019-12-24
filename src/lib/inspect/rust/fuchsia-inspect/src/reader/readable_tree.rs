@@ -4,8 +4,8 @@
 
 use {
     crate::Inspector,
+    anyhow::{format_err, Error},
     async_trait::async_trait,
-    failure::{bail, format_err, Error},
     fidl_fuchsia_inspect::{TreeMarker, TreeNameIteratorMarker, TreeProxy},
     fuchsia_zircon as zx,
 };
@@ -39,7 +39,7 @@ impl ReadableTree for Inspector {
         });
         match result {
             Some(cb_result) => cb_result.await,
-            None => bail!("failed to load tree name = {:?}", name),
+            None => return Err(format_err!("failed to load tree name = {:?}", name)),
         }
     }
 }

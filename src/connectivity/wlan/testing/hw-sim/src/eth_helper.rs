@@ -19,7 +19,7 @@ const ETH_BUF_FRAME_COUNT: u64 = 256;
 /// loop through all ethernet interface and return the one with matching MAC addresss.
 /// Returns Ok(None) if no matching interface is found,
 /// Returns Err(e) if there is an error.
-pub async fn create_eth_client(mac: &[u8; 6]) -> Result<Option<ethernet::Client>, failure::Error> {
+pub async fn create_eth_client(mac: &[u8; 6]) -> Result<Option<ethernet::Client>, anyhow::Error> {
     const ETH_PATH: &str = "class/ethernet";
     let eth_dir = IsolatedDeviceEnv::open_dir(ETH_PATH).expect("opening ethernet dir");
     let directory_proxy = fidl_fuchsia_io::DirectoryProxy::new(

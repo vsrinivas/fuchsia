@@ -7,7 +7,7 @@ mod config; // Read the config file(s) for metric and action specs.
 mod metrics; // Retrieve and calculate the metrics.
 mod validate; // Check config - including that metrics/triggers work correctly.
 
-use {failure::Error, structopt::StructOpt};
+use {anyhow::Error, structopt::StructOpt};
 
 #[derive(StructOpt, Debug)]
 pub struct Options {

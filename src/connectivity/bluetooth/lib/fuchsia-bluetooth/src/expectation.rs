@@ -188,7 +188,7 @@ mod test {
         assert!(predicate.satisfied(&test_peer()));
     }
     #[test]
-    fn simple_incorrect_predicate_fail() {
+    fn simple_incorrect_predicate_error() {
         let predicate = Predicate::<RemoteDevice>::new(
             move |peer| peer.name == Some("INCORRECT_NAME".into()),
             None,

@@ -12,7 +12,7 @@
 ///!
 use {
     crate::{config_manager::SavedNetworksManager, fuse_pending::FusePending},
-    failure::{format_err, Error},
+    anyhow::{format_err, Error},
     fidl::epitaph::ChannelEpitaphExt,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_policy as fidl_policy,
     fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_async as fasync, fuchsia_zircon as zx,

@@ -16,8 +16,9 @@ rustc_library("wep_deprecated") {
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
     "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme-rustc",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:hex",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 

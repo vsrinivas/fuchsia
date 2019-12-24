@@ -4,7 +4,7 @@
 
 mod integration_tests;
 
-use failure::{format_err, Error, ResultExt};
+use anyhow::{format_err, Context as _, Error};
 use fidl::endpoints::DiscoverableService;
 use fidl_fuchsia_net::{IpAddress, Subnet};
 use fidl_fuchsia_net_icmp::ProviderMarker;

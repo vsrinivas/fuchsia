@@ -10,7 +10,7 @@ use {
         story_graph::{Module, StoryGraph},
         story_storage::{StoryName, StoryStorage},
     },
-    failure::{format_err, Error},
+    anyhow::{format_err, Error},
     fidl_fuchsia_app_discover::StoryDiscoverError,
     std::{
         collections::HashMap,
@@ -258,7 +258,7 @@ mod tests {
             models::{DisplayInfo, Intent, SuggestedAction, Suggestion},
             story_storage::MemoryStorage,
         },
-        failure::Error,
+        anyhow::Error,
         fuchsia_async as fasync,
     };
 

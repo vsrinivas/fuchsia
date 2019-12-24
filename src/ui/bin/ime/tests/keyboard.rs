@@ -4,7 +4,7 @@
 
 #![cfg(test)]
 
-use failure::{Error, ResultExt};
+use anyhow::{Context as _, Error};
 use fidl::client::QueryResponseFut;
 use fidl_fuchsia_ui_input as ui_input;
 use fidl_fuchsia_ui_input2 as ui_input2;

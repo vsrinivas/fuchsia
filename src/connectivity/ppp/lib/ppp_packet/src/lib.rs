@@ -16,25 +16,25 @@ pub mod records;
 
 use {
     byteorder::NetworkEndian,
-    failure::Fail,
     packet::{
         BufferView, BufferViewMut, PacketBuilder, ParsablePacket, ParseMetadata, SerializeBuffer,
     },
     std::convert::TryInto,
+    thiserror::Error,
     zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned, U16, U32},
 };
 
 /// The type of error that occurred while attempting to parse a packet.
-#[derive(Fail, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq)]
 pub enum ParseError {
     /// Too few bytes for header.
-    #[fail(display = "Too few bytes for header.")]
+    #[error("Too few bytes for header.")]
     InsufficientHeaderBytes,
     /// Too few bytes for body (per header).
-    #[fail(display = "Too few bytes for body (per header).")]
+    #[error("Too few bytes for body (per header).")]
     InsufficientBodyBytes,
     /// Too many bytes for body (per header).
-    #[fail(display = "Too many bytes for body (per header).")]
+    #[error("Too many bytes for body (per header).")]
     ExcessBodyBytes,
 }
 

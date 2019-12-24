@@ -6,7 +6,7 @@
 
 use crate::error;
 use crate::servicemgr::NatConfig;
-use failure::{format_err, Error};
+use anyhow::{format_err, Error};
 use fidl_fuchsia_net_filter::{self as netfilter, Direction, FilterMarker, FilterProxy, Status};
 use fidl_fuchsia_router_config as router_config;
 use fuchsia_component::client::connect_to_service;

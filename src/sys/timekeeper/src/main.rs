@@ -7,8 +7,8 @@
 //! `timekeeper` is responsible for external time synchronization in Fuchsia.
 
 use {
+    anyhow::{Context as _, Error},
     chrono::prelude::*,
-    failure::{Error, ResultExt},
     fidl_fuchsia_deprecatedtimezone as ftz, fidl_fuchsia_net as fnet, fidl_fuchsia_time as ftime,
     fuchsia_async::{self as fasync, DurationExt},
     fuchsia_component::server::ServiceFs,

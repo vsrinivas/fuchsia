@@ -4,7 +4,7 @@
 
 #![allow(dead_code)]
 use {
-    failure::{format_err, Error},
+    anyhow::{format_err, Error},
     fidl_fuchsia_diagnostics::{self, ComponentSelector, Selector, StringSelector, TreeSelector},
     lazy_static::lazy_static,
     regex::{Regex, RegexSet},

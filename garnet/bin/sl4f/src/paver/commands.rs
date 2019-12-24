@@ -4,7 +4,7 @@
 
 use super::{facade::PaverFacade, types::Method};
 use crate::server::Facade;
-use failure::Error;
+use anyhow::Error;
 use futures::future::{FutureExt, LocalBoxFuture};
 use serde_json::{from_value, to_value, Value};
 

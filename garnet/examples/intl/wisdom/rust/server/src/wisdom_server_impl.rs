@@ -3,16 +3,16 @@
 // found in the LICENSE file.
 
 use {
-    failure::Fail, fidl_fuchsia_intl as fintl, rust_icu_common as ucommon, rust_icu_sys as usys,
+    fidl_fuchsia_intl as fintl, rust_icu_common as ucommon, rust_icu_sys as usys,
     rust_icu_ucal as ucal, rust_icu_udat as udat, rust_icu_uloc as uloc,
-    rust_icu_ustring as ustring, std::convert::TryFrom,
+    rust_icu_ustring as ustring, std::convert::TryFrom, thiserror::Error,
 };
 
 /// All error classes produced in this module.
-#[derive(Fail, Debug)]
+#[derive(Error, Debug)]
 pub enum Error {
     /// There was an error in the underlying ICU library.
-    #[fail(display = "ICU common error: {}", _0)]
+    #[error("ICU common error: {}", _0)]
     Common(ucommon::Error),
 }
 impl From<ucommon::Error> for Error {

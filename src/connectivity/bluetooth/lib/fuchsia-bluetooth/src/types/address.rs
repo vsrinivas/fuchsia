@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{bail, Error},
+    anyhow::{format_err, Error},
     fidl_fuchsia_bluetooth as fidl,
     std::fmt,
 };
@@ -79,14 +79,14 @@ fn le_bytes_from_be_str(s: &str) -> Result<AddressBytes, Error> {
 
     for octet in s.split(|c| c == ':') {
         if insert_cursor == 0 {
-            bail!("Too many octets");
+            return Err(format_err!("Too many octets"));
         }
         bytes[insert_cursor - 1] = u8::from_str_radix(octet, 16)?;
         insert_cursor -= 1;
     }
 
     if insert_cursor != 0 {
-        bail!("Too few octets")
+        return Err(format_err!("Too few octets"));
     }
     Ok(bytes)
 }

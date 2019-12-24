@@ -4,7 +4,7 @@
 
 #![cfg(test)]
 use {
-    failure::Error,
+    anyhow::Error,
     fidl_fuchsia_paver::{
         BootManagerRequest, BootManagerRequestStream, PaverRequest, PaverRequestStream,
     },

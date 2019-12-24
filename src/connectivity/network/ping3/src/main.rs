@@ -8,7 +8,7 @@ mod store;
 #[cfg(test)]
 mod tests;
 
-use failure::{bail, format_err, Error};
+use anyhow::{format_err, Error};
 use futures::future::try_join;
 use futures::prelude::*;
 use log::{debug, error, info, Level, LevelFilter, Metadata, Record};
@@ -179,7 +179,7 @@ fn get_config() -> Result<EchoSocketConfig, Error> {
     );
 
     if interval < 200 {
-        bail!("Cannot flood; minimum interval allowed is 200ms.");
+        return Err(format_err!("Cannot flood; minimum interval allowed is 200ms."));
     }
 
     if let Some(l) = local {
@@ -187,13 +187,15 @@ fn get_config() -> Result<EchoSocketConfig, Error> {
     }
     if let Some(d) = deadline {
         if d == 0 {
-            bail!("Bad deadline for packets to transmit; deadline cannot be zero.");
+            return Err(format_err!(
+                "Bad deadline for packets to transmit; deadline cannot be zero."
+            ));
         }
         debug!("Timeout set to {} seconds", d);
     }
     if let Some(c) = count {
         if c == 0 {
-            bail!("Bad number of packets to transmit; count cannot be zero.");
+            return Err(format_err!("Bad number of packets to transmit; count cannot be zero."));
         }
         debug!("Will send {} ICMP echo requests", c);
     }
@@ -233,13 +235,18 @@ async fn open_socket(config: EchoSocketConfig) -> Result<EchoSocketProxy, Error>
                 match status {
                     zx::Status::OK => debug!("ICMP echo socket successfully opened"),
                     zx::Status::INVALID_ARGS => {
-                        bail!("Passed invalid arguments to ICMP echo socket")
+                        return Err(format_err!("Passed invalid arguments to ICMP echo socket"))
                     }
-                    _ => bail!("Received unknown status code from `EchoSocket.OnOpen`: {}", status),
+                    _ => {
+                        return Err(format_err!(
+                            "Received unknown status code from `EchoSocket.OnOpen`: {}",
+                            status
+                        ))
+                    }
                 }
                 break;
             }
-            Err(e) => bail!("Socket error: {:?}", e),
+            Err(e) => return Err(format_err!("Socket error: {:?}", e)),
         }
     }
 
@@ -298,13 +305,13 @@ async fn watch_replies(
             Ok(Ok(packet)) => packet,
             Ok(Err(e)) => {
                 let status = zx::Status::from_raw(e);
-                bail!("Error sending ICMP echo request: {}", status);
+                return Err(format_err!("Error sending ICMP echo request: {}", status));
             }
-            Err(e) => bail!("FIDL error during watch: {:?}", e),
+            Err(e) => return Err(format_err!("FIDL error during watch: {:?}", e)),
         };
 
         if payload.len() != packet_size as usize {
-            bail!("Validation error: ICMP payload sizes do not match");
+            return Err(format_err!("Validation error: ICMP payload sizes do not match"));
         }
 
         let time = if payload.len() >= 8 {

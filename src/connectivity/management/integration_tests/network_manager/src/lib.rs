@@ -5,7 +5,7 @@
 
 extern crate network_manager_cli_lib as network_manager_cli;
 
-use failure::{Error, ResultExt};
+use anyhow::{Context as _, Error};
 use fidl::endpoints::{create_proxy, ServiceMarker};
 use fidl_fuchsia_netemul_environment::{
     EnvironmentOptions, LaunchService, LoggerOptions, ManagedEnvironmentMarker,
@@ -93,7 +93,7 @@ fn get_network_context(sandbox: &SandboxProxy) -> Result<NetworkContextProxy, Er
 
 fn get_endpoint_manager(
     network_context: &NetworkContextProxy,
-) -> Result<EndpointManagerProxy, failure::Error> {
+) -> Result<EndpointManagerProxy, anyhow::Error> {
     let (client, server) = fidl::endpoints::create_proxy::<EndpointManagerMarker>()
         .context("failed to create endpoint manager proxy")?;
     let () =
@@ -104,7 +104,7 @@ fn get_endpoint_manager(
 async fn create_endpoint<'a>(
     name: &'static str,
     endpoint_manager: &'a EndpointManagerProxy,
-) -> std::result::Result<EndpointProxy, failure::Error> {
+) -> std::result::Result<EndpointProxy, anyhow::Error> {
     let (status, endpoint) = endpoint_manager
         .create_endpoint(
             name,
@@ -118,7 +118,7 @@ async fn create_endpoint<'a>(
         .context("failed to create endpoint")?;
     let () = fuchsia_zircon::Status::ok(status).context("failed to create endpoint")?;
     let endpoint = endpoint
-        .ok_or(failure::err_msg("failed to create endpoint"))?
+        .ok_or(anyhow::format_err!("failed to create endpoint"))?
         .into_proxy()
         .context("failed to get endpoint proxy")?;
     endpoint.set_link_up(true).await?;
@@ -148,7 +148,7 @@ fn create_managed_env(sandbox: &SandboxProxy) -> Result<ManagedEnvironmentProxy,
 
 fn connect_to_sandbox_service<S: fidl::endpoints::ServiceMarker>(
     managed_environment: &ManagedEnvironmentProxy,
-) -> Result<S::Proxy, failure::Error> {
+) -> Result<S::Proxy, anyhow::Error> {
     let (proxy, server) = fuchsia_zircon::Channel::create()?;
     let () = managed_environment.connect_to_service(S::NAME, server)?;
     let proxy = fuchsia_async::Channel::from_channel(proxy)?;
@@ -195,7 +195,7 @@ async fn add_ethernet_device(
         .expect("failed to get interfaces")
         .into_iter()
         .find(|interface| interface.id == id)
-        .ok_or(failure::err_msg("failed to find added ethernet device"))
+        .ok_or(anyhow::format_err!("failed to find added ethernet device"))
         .unwrap();
     assert_eq!(interface.features & fidl_fuchsia_hardware_ethernet::INFO_FEATURE_LOOPBACK, 0);
     assert_eq!(interface.flags & fidl_fuchsia_netstack::NET_INTERFACE_FLAG_UP, 0);
@@ -866,7 +866,7 @@ async fn test_security_config() {
          "nat: Some\\(false\\),",
          "NAT should be disabled."),
         ("set security-config xxx",
-         "kind: ValueValidation",
+         "error: Invalid value for \'<feature>\': Invalid security feature: \'xxx\'",
          "cannot set an unknown security-config setting"),
         ("show wans",
          "Response: \\[Lif \\{ element: Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 2 \\}\\), type_: Some\\(Wan\\), name: Some\\(\"wan1\"\\), port_ids: Some\\(\\[2\\]\\), vlan: Some\\(0\\), properties: Some\\(Wan\\(WanProperties \\{ connection_type: Some\\(Direct\\), connection_parameters: None, address_method: Some\\(Manual\\), address_v4: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[192, 168, 0, 2\\] \\}\\)\\), prefix_length: Some\\(24\\) \\}\\), gateway_v4: None, connection_v6_mode: Some\\(Passthrough\\), address_v6: None, gateway_v6: None, hostname: None, clone_mac: None, mtu: None, enable: Some\\(false\\), metric: None \\}\\)\\) \\}\\]\n",

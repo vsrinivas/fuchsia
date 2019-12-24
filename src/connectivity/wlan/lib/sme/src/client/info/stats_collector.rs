@@ -8,9 +8,9 @@ use {
         client::{ConnectFailure, ConnectResult},
         Ssid,
     },
-    failure::Fail,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     std::collections::{HashSet, VecDeque},
+    thiserror::Error,
     wlan_common::bss::{get_channel_map, get_phy_standard_map},
     wlan_rsn::{
         key::exchange::Key,
@@ -170,7 +170,7 @@ impl StatsCollector {
         Ok(())
     }
 
-    pub fn report_supplicant_error(&mut self, error: failure::Error) -> Result<(), StatsError> {
+    pub fn report_supplicant_error(&mut self, error: anyhow::Error) -> Result<(), StatsError> {
         self.connect_stats()?.supplicant_error.replace(error);
         Ok(())
     }
@@ -332,11 +332,11 @@ impl ConnectAttempts {
     }
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub(crate) enum StatsError {
-    #[fail(display = "no current pending connect")]
+    #[error("no current pending connect")]
     NoPendingConnect,
-    #[fail(display = "no current pending scan")]
+    #[error("no current pending scan")]
     NoPendingScan,
 }
 
@@ -357,7 +357,7 @@ pub(crate) struct PendingConnectStats {
     rsna_start_at: Option<zx::Time>,
     rsna_end_at: Option<zx::Time>,
     candidate_network: Option<fidl_mlme::BssDescription>,
-    supplicant_error: Option<failure::Error>,
+    supplicant_error: Option<anyhow::Error>,
     supplicant_progress: Option<SupplicantProgress>,
     num_rsna_key_frame_exchange_timeout: u32,
 }
@@ -393,7 +393,7 @@ mod tests {
             },
             EstablishRsnaFailure, SelectNetworkFailure,
         },
-        failure::format_err,
+        anyhow::format_err,
         maplit::hashmap,
         wlan_common::assert_variant,
     };

@@ -5,7 +5,7 @@
 use crate::{
     elementary_stream::*, output_validator::*, stream::*, stream_runner::*, FatalError, Result,
 };
-use failure::ResultExt;
+use anyhow::Context as _;
 use fidl_fuchsia_media::StreamProcessorProxy;
 use futures::{future::BoxFuture, stream::FuturesUnordered, TryStreamExt};
 use std::rc::Rc;

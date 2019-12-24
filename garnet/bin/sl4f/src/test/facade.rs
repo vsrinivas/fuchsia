@@ -6,6 +6,7 @@ use {
     crate::test::types::{
         StepResult, StepResultItem, TestPlan, TestPlanTest, TestResult, TestResultItem, TestResults,
     },
+    anyhow::format_err,
     fidl_fuchsia_sys, fuchsia_async as fasync,
     fuchsia_syslog::macros::*,
     futures::{channel::mpsc, prelude::*},
@@ -45,7 +46,7 @@ impl TestFacade {
         TestFacade {}
     }
 
-    pub async fn run_plan(&self, plan: TestPlan) -> Result<Value, failure::Error> {
+    pub async fn run_plan(&self, plan: TestPlan) -> Result<Value, anyhow::Error> {
         let mut results = TestResults::default();
         for test in plan.tests.iter() {
             match test {
@@ -58,13 +59,13 @@ impl TestFacade {
         serde_json::to_value(results).map_err(|e| format_err!("Not able to format results: {}", e))
     }
 
-    pub async fn run_test(&self, url: String) -> Result<Value, failure::Error> {
+    pub async fn run_test(&self, url: String) -> Result<Value, anyhow::Error> {
         let test_results = self.run_test_component(url).await?;
         serde_json::to_value(test_results)
             .map_err(|e| format_err!("Not able to format test results: {}", e))
     }
 
-    async fn run_test_component(&self, url: String) -> Result<TestResult, failure::Error> {
+    async fn run_test_component(&self, url: String) -> Result<TestResult, anyhow::Error> {
         let launcher = match fuchsia_component::client::connect_to_service::<
             fidl_fuchsia_sys::LauncherMarker,
         >() {

@@ -15,7 +15,8 @@ rustc_binary("bt-pairing-tool") {
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.bluetooth.control:fuchsia.bluetooth.control-rustc",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:thiserror",
   ]
 }

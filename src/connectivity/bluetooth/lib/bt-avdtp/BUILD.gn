@@ -21,13 +21,14 @@ rustc_library("bt-avdtp") {
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
     "//sdk/fidl/fuchsia.bluetooth.avdtp:fuchsia.bluetooth.avdtp-rustc",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:bitfield",
-    "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:slab",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 

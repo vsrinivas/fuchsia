@@ -7,7 +7,7 @@
 
 use {
     crate::selectors,
-    failure::{format_err, Error},
+    anyhow::{format_err, Error},
     fidl_fuchsia_diagnostics::{Selector, StringSelector},
     std::collections::HashSet,
     std::path::PathBuf,

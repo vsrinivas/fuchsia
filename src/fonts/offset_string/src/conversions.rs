@@ -4,15 +4,15 @@
 
 use {
     crate::OffsetString,
+    anyhow::{format_err, Error},
     char_collection::{CharCollection, MultiCharRange},
     char_set::CharSet,
-    failure::{format_err, Error},
     std::{convert::TryFrom, iter::Iterator},
     unic_char_range::{chars, CharRange},
 };
 
 impl TryFrom<String> for OffsetString {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
     fn try_from(source: String) -> Result<OffsetString, Error> {
         OffsetString::new(source)
@@ -20,7 +20,7 @@ impl TryFrom<String> for OffsetString {
 }
 
 impl TryFrom<&str> for OffsetString {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
     fn try_from(source: &str) -> Result<OffsetString, Error> {
         OffsetString::new(source)
@@ -59,7 +59,7 @@ impl From<&CharCollection> for OffsetString {
 }
 
 impl TryFrom<OffsetString> for CharCollection {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
     fn try_from(value: OffsetString) -> Result<Self, Self::Error> {
         CharCollection::try_from(&value)
@@ -67,7 +67,7 @@ impl TryFrom<OffsetString> for CharCollection {
 }
 
 impl TryFrom<&OffsetString> for CharCollection {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
     fn try_from(value: &OffsetString) -> Result<Self, Self::Error> {
         let ranges: Result<Vec<CharRange>, Error> = value
@@ -100,7 +100,7 @@ impl From<&CharSet> for OffsetString {
 }
 
 impl TryFrom<OffsetString> for CharSet {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
     fn try_from(value: OffsetString) -> Result<Self, Self::Error> {
         CharSet::try_from(&value)
@@ -108,7 +108,7 @@ impl TryFrom<OffsetString> for CharSet {
 }
 
 impl TryFrom<&OffsetString> for CharSet {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
     fn try_from(value: &OffsetString) -> Result<Self, Self::Error> {
         Ok(CharSet::new(value.iter().collect()))

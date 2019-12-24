@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    failure::Fail,
     fuchsia_syslog::{fx_log_err, fx_log_info},
     serde_derive::Deserialize,
     std::{
         fs::File,
         io::{BufReader, Read},
     },
+    thiserror::Error,
 };
 
 /// Static service configuration options.
@@ -51,10 +51,10 @@ impl Config {
     }
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 enum ConfigLoadError {
-    #[fail(display = "parse error: {}", _0)]
-    Parse(#[cause] serde_json::Error),
+    #[error("parse error: {}", _0)]
+    Parse(serde_json::Error),
 }
 
 impl From<serde_json::Error> for ConfigLoadError {

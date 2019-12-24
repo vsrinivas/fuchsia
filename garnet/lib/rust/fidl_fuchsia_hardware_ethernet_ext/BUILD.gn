@@ -10,10 +10,11 @@ rustc_library("fidl_fuchsia_hardware_ethernet_ext") {
   with_unit_tests = true
   edition = "2018"
   deps = [
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:bitflags",
-    "//third_party/rust_crates:failure",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet-rustc",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
   ]

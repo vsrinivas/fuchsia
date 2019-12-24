@@ -43,7 +43,7 @@ pub fn spawn_do_not_disturb_fidl_handler(
     stream: DoNotDisturbRequestStream,
 ) {
     process_stream::<DoNotDisturbMarker, DoNotDisturbSettings, DoNotDisturbWatchResponder>(stream, switchboard_handle, SettingType::DoNotDisturb, Box::new(
-                move |context, req| -> LocalBoxFuture<'_, Result<Option<DoNotDisturbRequest>, failure::Error>> {
+                move |context, req| -> LocalBoxFuture<'_, Result<Option<DoNotDisturbRequest>, anyhow::Error>> {
                     async move {
                         // Support future expansion of FIDL
                         #[allow(unreachable_patterns)]

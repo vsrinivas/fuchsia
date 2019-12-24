@@ -11,9 +11,10 @@ rustc_library("fuchsia-merkle") {
 
   deps = [
     "//garnet/public/rust/mundane",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:hex",
     "//third_party/rust_crates:proptest",
     "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:thiserror",
   ]
 }

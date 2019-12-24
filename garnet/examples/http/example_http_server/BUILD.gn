@@ -10,8 +10,9 @@ rustc_binary("bin") {
   edition = "2018"
   deps = [
     "//garnet/public/rust/fuchsia-syslog",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:rouille",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 

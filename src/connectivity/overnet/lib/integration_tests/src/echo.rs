@@ -9,7 +9,7 @@
 
 use {
     crate::{Overnet, TestSpawner},
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker},
     fidl_fidl_examples_echo as echo,
     fidl_fuchsia_overnet::{
@@ -117,7 +117,7 @@ async fn exec_server(spawner: TestSpawner, overnet: Arc<Overnet>) -> Result<(), 
                 }
                 Ok(())
             }
-            .unwrap_or_else(|e: failure::Error| log::trace!("{:?}", e)),
+            .unwrap_or_else(|e: anyhow::Error| log::trace!("{:?}", e)),
         )?;
     }
     Ok(())

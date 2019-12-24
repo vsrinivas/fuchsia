@@ -19,8 +19,9 @@ rustc_library("bt-fidl-mocks") {
     "//sdk/fidl/fuchsia.bluetooth.control:fuchsia.bluetooth.control-rustc",
     "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys-rustc",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 

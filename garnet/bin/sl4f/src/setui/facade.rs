@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Error;
+use anyhow::{format_err, Error};
 
 use serde_json::{from_value, to_value, Value};
 
@@ -47,8 +47,8 @@ impl SetUiFacade {
         }
         match self.setui_svc.mutate(setting_type, &mut mutation).await?.return_code {
             ReturnCode::Ok => Ok(to_value(SetUiResult::Success)?),
-            ReturnCode::Failed => bail!("Update settings failed"),
-            ReturnCode::Unsupported => bail!("Update settings unsupported"),
+            ReturnCode::Failed => return Err(format_err!("Update settings failed")),
+            ReturnCode::Unsupported => return Err(format_err!("Update settings unsupported")),
         }
     }
 }

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::ensure,
+    anyhow::ensure,
     fidl_fuchsia_wlan_service::WlanMarker,
     fuchsia_component::client::connect_to_service,
     fuchsia_zircon::DurationNum,
@@ -20,7 +20,7 @@ const PAYLOAD: &[u8] = &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 async fn send_and_receive<'a>(
     client: &'a mut ethernet::Client,
     buf: &'a Vec<u8>,
-) -> Result<(mac::EthernetIIHdr, Vec<u8>), failure::Error> {
+) -> Result<(mac::EthernetIIHdr, Vec<u8>), anyhow::Error> {
     let mut client_stream = client.get_stream();
     client.send(&buf);
     loop {

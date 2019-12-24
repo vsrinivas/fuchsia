@@ -123,7 +123,7 @@ impl FontFamily {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, failure::Error, fidl_fuchsia_fonts::Width, maplit::btreemap,
+        super::*, anyhow::Error, fidl_fuchsia_fonts::Width, maplit::btreemap,
         pretty_assertions::assert_eq,
     };
 

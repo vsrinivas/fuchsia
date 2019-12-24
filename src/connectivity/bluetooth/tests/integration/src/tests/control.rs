@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{format_err, Error},
+    anyhow::{format_err, Error},
     fidl_fuchsia_bluetooth_test::{AdvertisingData, LowEnergyPeerParameters},
     fuchsia_bluetooth::{
         expectation::{

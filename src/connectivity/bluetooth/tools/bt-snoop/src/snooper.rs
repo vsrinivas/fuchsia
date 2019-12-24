@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{err_msg, Error},
+    anyhow::{format_err, Error},
     fidl_fuchsia_bluetooth_snoop::{PacketType, SnoopPacket, Timestamp},
     fidl_fuchsia_hardware_bluetooth::HciSynchronousProxy,
     fuchsia_async as fasync,
@@ -69,7 +69,7 @@ impl Snooper {
 
         let device_name = device_path
             .file_name()
-            .ok_or(err_msg("A device has no name"))?
+            .ok_or(format_err!("A device has no name"))?
             .to_string_lossy()
             .into_owned();
         Ok(Snooper { device_name, device_path, chan })

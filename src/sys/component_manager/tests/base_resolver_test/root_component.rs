@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::Error,
     directory_broker,
-    failure::Error,
     fidl::endpoints::*,
     fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::client::*,

@@ -4,7 +4,7 @@
 
 use {
     crate::{location::InspectLocation, options::PathFormat, result::IqueryResult},
-    failure::Error,
+    anyhow::Error,
     fuchsia_inspect::reader::NodeHierarchy,
 };
 

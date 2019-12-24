@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Error;
+use anyhow::Error;
 use fidl_fuchsia_sys::FileDescriptor;
 use fuchsia_async as fasync;
 use fuchsia_component::client::{launch_with_options, launcher, LaunchOptions};

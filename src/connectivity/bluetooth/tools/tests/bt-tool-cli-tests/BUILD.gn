@@ -16,7 +16,8 @@ rustc_library("lib") {
     "//garnet/public/rust/fuchsia-runtime",
     "//garnet/public/rust/fuchsia-zircon",
     "//garnet/public/rust/fuchsia-zircon/fuchsia-zircon-sys",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 

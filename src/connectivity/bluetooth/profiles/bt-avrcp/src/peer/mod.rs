@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::{format_err, Error as FailureError},
     bt_avctp::{
         AvcCommand, AvcCommandResponse, AvcCommandStream, AvcCommandType, AvcOpCode, AvcPacketType,
         AvcPeer, AvcResponseType, Error as AvctpError,
     },
-    failure::{format_err, Error as FailureError},
     fidl::encoding::Decodable as FidlDecodable,
     fidl_fuchsia_bluetooth_avrcp::{AvcPanelCommand, MediaAttributes, PlayStatus},
     fidl_fuchsia_bluetooth_bredr::PSM_AVCTP,
@@ -385,7 +385,7 @@ impl<'a> PeerManager<'a> {
     /// requests from the FIDL frontend, and all the event streams for all control channels
     /// connected. The future returned by this function should only complete if there is an
     /// unrecoverable error in the peer manager.
-    pub async fn run(&mut self) -> Result<(), failure::Error> {
+    pub async fn run(&mut self) -> Result<(), anyhow::Error> {
         let inner = self.inner.clone();
         let mut profile_evt = inner.profile_svc.take_event_stream().fuse();
         loop {

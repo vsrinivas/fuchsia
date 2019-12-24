@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::errors::{Error, ErrorKind};
-use failure::ResultExt;
+use crate::errors::Error as ErrorKind;
 use fidl_fuchsia_io;
 use fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxyInterface, UpdatePolicy};
 use fuchsia_component::client::connect_to_service;
@@ -28,10 +27,10 @@ pub enum SystemUpdateStatus {
 
 pub async fn check_for_system_update(
     last_known_update_merkle: Option<&Hash>,
-) -> Result<SystemUpdateStatus, Error> {
+) -> Result<SystemUpdateStatus, crate::errors::Error> {
     let mut file_system = RealFileSystem;
-    let package_resolver =
-        connect_to_service::<PackageResolverMarker>().context(ErrorKind::ConnectPackageResolver)?;
+    let package_resolver = connect_to_service::<PackageResolverMarker>()
+        .map_err(|_| ErrorKind::ConnectPackageResolver)?;
     check_for_system_update_impl(&mut file_system, &package_resolver, last_known_update_merkle)
         .await
 }
@@ -57,7 +56,7 @@ async fn check_for_system_update_impl(
     file_system: &mut impl FileSystem,
     package_resolver: &impl PackageResolverProxyInterface,
     last_known_update_merkle: Option<&Hash>,
-) -> Result<SystemUpdateStatus, Error> {
+) -> Result<SystemUpdateStatus, crate::errors::Error> {
     let update = latest_update_package(package_resolver).await?;
     let latest_update_merkle = update_package_merkle(&update).await?;
     let current = current_system_image_merkle(file_system)?;
@@ -87,35 +86,37 @@ async fn check_for_system_update_impl(
     }
 }
 
-fn current_system_image_merkle(file_system: &impl FileSystem) -> Result<Hash, Error> {
+fn current_system_image_merkle(
+    file_system: &impl FileSystem,
+) -> Result<Hash, crate::errors::Error> {
     Ok(file_system
         .read_to_string("/system/meta")
-        .context(ErrorKind::ReadSystemMeta)?
+        .map_err(|_| ErrorKind::ReadSystemMeta)?
         .parse::<Hash>()
-        .context(ErrorKind::ParseSystemMeta)?)
+        .map_err(|_| ErrorKind::ParseSystemMeta)?)
 }
 
 async fn latest_update_package(
     package_resolver: &impl PackageResolverProxyInterface,
-) -> Result<fidl_fuchsia_io::DirectoryProxy, Error> {
-    let (dir_proxy, dir_server_end) =
-        fidl::endpoints::create_proxy().context(ErrorKind::CreateUpdatePackageDirectoryProxy)?;
+) -> Result<fidl_fuchsia_io::DirectoryProxy, crate::errors::Error> {
+    let (dir_proxy, dir_server_end) = fidl::endpoints::create_proxy()
+        .map_err(|_| ErrorKind::CreateUpdatePackageDirectoryProxy)?;
     let fut = package_resolver.resolve(
         &UPDATE_PACKAGE_URL,
         &mut vec![].into_iter(),
         &mut UpdatePolicy { fetch_if_absent: true, allow_old_versions: false },
         dir_server_end,
     );
-    let status = fut.await.context(ErrorKind::ResolveUpdatePackageFidl)?;
-    zx::Status::ok(status).context(ErrorKind::ResolveUpdatePackage)?;
+    let status = fut.await.map_err(|_| ErrorKind::ResolveUpdatePackageFidl)?;
+    zx::Status::ok(status).map_err(|_| ErrorKind::ResolveUpdatePackage)?;
     Ok(dir_proxy)
 }
 
 async fn update_package_merkle(
     update_package: &fidl_fuchsia_io::DirectoryProxy,
-) -> Result<Hash, Error> {
+) -> Result<Hash, crate::errors::Error> {
     let (file_end, file_server_end) = fidl::endpoints::create_endpoints()
-        .context(ErrorKind::CreateUpdatePackagePackagesEndpoint)?;
+        .map_err(|_| ErrorKind::CreateUpdatePackagePackagesEndpoint)?;
     update_package
         .open(
             fidl_fuchsia_io::OPEN_FLAG_NOT_DIRECTORY | fidl_fuchsia_io::OPEN_RIGHT_READABLE,
@@ -123,28 +124,28 @@ async fn update_package_merkle(
             "meta",
             file_server_end,
         )
-        .context(ErrorKind::OpenUpdatePackageMeta)?;
+        .map_err(|_| ErrorKind::OpenUpdatePackageMeta)?;
 
     // danger: synchronous io in async
     let mut meta_file =
-        fdio::create_fd(file_end.into_channel().into()).context(ErrorKind::ReadUpdateMeta)?;
+        fdio::create_fd(file_end.into_channel().into()).map_err(|_| ErrorKind::ReadUpdateMeta)?;
     let mut contents = String::new();
-    meta_file.read_to_string(&mut contents).context(ErrorKind::ReadUpdateMeta)?;
-    Ok(contents.parse::<Hash>().context(ErrorKind::ParseUpdateMeta)?)
+    meta_file.read_to_string(&mut contents).map_err(|_| ErrorKind::ReadUpdateMeta)?;
+    Ok(contents.parse::<Hash>().map_err(|_| ErrorKind::ParseUpdateMeta)?)
 }
 
 pub async fn latest_update_merkle(
     package_resolver: &impl PackageResolverProxyInterface,
-) -> Result<Hash, Error> {
+) -> Result<Hash, crate::errors::Error> {
     let update = latest_update_package(package_resolver).await?;
     update_package_merkle(&update).await
 }
 
 async fn latest_system_image_merkle(
     update_package: &fidl_fuchsia_io::DirectoryProxy,
-) -> Result<Hash, Error> {
+) -> Result<Hash, crate::errors::Error> {
     let (file_end, file_server_end) = fidl::endpoints::create_endpoints()
-        .context(ErrorKind::CreateUpdatePackagePackagesEndpoint)?;
+        .map_err(|_| ErrorKind::CreateUpdatePackagePackagesEndpoint)?;
     update_package
         .open(
             fidl_fuchsia_io::OPEN_FLAG_NOT_DIRECTORY | fidl_fuchsia_io::OPEN_RIGHT_READABLE,
@@ -152,23 +153,25 @@ async fn latest_system_image_merkle(
             "packages",
             file_server_end,
         )
-        .context(ErrorKind::OpenUpdatePackagePackages)?;
+        .map_err(|_| ErrorKind::OpenUpdatePackagePackages)?;
 
     // danger: synchronous io in async
     let packages_file =
-        fdio::create_fd(file_end.into_channel().into()).context(ErrorKind::CreatePackagesFd)?;
+        fdio::create_fd(file_end.into_channel().into()).map_err(|_| ErrorKind::CreatePackagesFd)?;
     extract_system_image_merkle_from_update_packages(packages_file)
 }
 
-fn extract_system_image_merkle_from_update_packages(reader: impl io::Read) -> Result<Hash, Error> {
+fn extract_system_image_merkle_from_update_packages(
+    reader: impl io::Read,
+) -> Result<Hash, crate::errors::Error> {
     for line in io::BufReader::new(reader).lines() {
-        let line = line.context(ErrorKind::ReadPackages)?;
+        let line = line.map_err(|_| ErrorKind::ReadPackages)?;
         if let Some(i) = line.rfind('=') {
             let (key, value) = line.split_at(i + 1);
             if key == "system_image/0=" {
-                return Ok(value
-                    .parse::<Hash>()
-                    .context(ErrorKind::ParseLatestSystemImageMerkle { packages_entry: line })?);
+                return Ok(value.parse::<Hash>().map_err(|_| {
+                    ErrorKind::ParseLatestSystemImageMerkle { packages_entry: line }
+                })?);
             }
         }
     }
@@ -178,6 +181,7 @@ fn extract_system_image_merkle_from_update_packages(reader: impl io::Read) -> Re
 #[cfg(test)]
 pub mod test_check_for_system_update_impl {
     use super::*;
+    use crate::errors::Error as ErrorKind;
     use fuchsia_async::{self as fasync, futures::future};
     use lazy_static::lazy_static;
     use maplit::hashmap;
@@ -296,7 +300,7 @@ pub mod test_check_for_system_update_impl {
 
         let result = check_for_system_update_impl(&mut file_system, &package_resolver, None).await;
 
-        assert_matches!(result.map_err(|e| e.kind()), Err(ErrorKind::ReadSystemMeta));
+        assert_eq!(result.unwrap_err(), ErrorKind::ReadSystemMeta);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -310,7 +314,7 @@ pub mod test_check_for_system_update_impl {
 
         let result = check_for_system_update_impl(&mut file_system, &package_resolver, None).await;
 
-        assert_matches!(result.map_err(|e| e.kind()), Err(ErrorKind::ParseSystemMeta));
+        assert_eq!(result.unwrap_err(), ErrorKind::ParseSystemMeta);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -334,7 +338,7 @@ pub mod test_check_for_system_update_impl {
 
         let result = check_for_system_update_impl(&mut file_system, &package_resolver, None).await;
 
-        assert_matches!(result.map_err(|e| e.kind()), Err(ErrorKind::ResolveUpdatePackageFidl));
+        assert_eq!(result.unwrap_err(), ErrorKind::ResolveUpdatePackageFidl);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -358,7 +362,7 @@ pub mod test_check_for_system_update_impl {
 
         let result = check_for_system_update_impl(&mut file_system, &package_resolver, None).await;
 
-        assert_matches!(result.map_err(|e| e.kind()), Err(ErrorKind::ResolveUpdatePackage));
+        assert_eq!(result.unwrap_err(), ErrorKind::ResolveUpdatePackage);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -382,7 +386,7 @@ pub mod test_check_for_system_update_impl {
 
         let result = check_for_system_update_impl(&mut file_system, &package_resolver, None).await;
 
-        assert_matches!(result.map_err(|e| e.kind()), Err(ErrorKind::OpenUpdatePackageMeta));
+        assert_eq!(result.unwrap_err(), ErrorKind::OpenUpdatePackageMeta);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -392,7 +396,7 @@ pub mod test_check_for_system_update_impl {
 
         let result = check_for_system_update_impl(&mut file_system, &package_resolver, None).await;
 
-        assert_matches!(result.map_err(|e| e.kind()), Err(ErrorKind::CreatePackagesFd));
+        assert_eq!(result.unwrap_err(), ErrorKind::CreatePackagesFd);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -402,10 +406,7 @@ pub mod test_check_for_system_update_impl {
 
         let result = check_for_system_update_impl(&mut file_system, &package_resolver, None).await;
 
-        assert_matches!(
-            result.map_err(|e| e.kind()),
-            Err(ErrorKind::MissingLatestSystemImageMerkle)
-        );
+        assert_eq!(result.unwrap_err(), ErrorKind::MissingLatestSystemImageMerkle);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -415,13 +416,11 @@ pub mod test_check_for_system_update_impl {
             PackageResolverProxyTempDir::new_with_latest_system_image_merkle("bad-merkle");
 
         let result = check_for_system_update_impl(&mut file_system, &package_resolver, None).await;
-
-        assert_matches!(
-            result.map_err(|e| e.kind()),
-            Err(ErrorKind::ParseLatestSystemImageMerkle {
-                ref packages_entry
-            })
-            if packages_entry == "system_image/0=bad-merkle"
+        assert_eq!(
+            result.unwrap_err(),
+            ErrorKind::ParseLatestSystemImageMerkle {
+                packages_entry: String::from("system_image/0=bad-merkle")
+            }
         );
     }
 

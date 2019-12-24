@@ -7,8 +7,8 @@ use crate::key::exchange::Key;
 use crate::keywrap::{self, keywrap_algorithm};
 use crate::Error;
 use crate::ProtectionInfo;
+use anyhow::ensure;
 use eapol;
-use failure::{self, bail, ensure};
 use wlan_common::ie::rsn::{
     akm::Akm,
     cipher::{Cipher, GROUP_CIPHER_SUITE, TKIP},
@@ -40,7 +40,7 @@ pub struct NegotiatedProtection {
 }
 
 impl NegotiatedProtection {
-    pub fn from_protection(protection: &ProtectionInfo) -> Result<Self, failure::Error> {
+    pub fn from_protection(protection: &ProtectionInfo) -> Result<Self, anyhow::Error> {
         match protection {
             ProtectionInfo::Rsne(rsne) => Self::from_rsne(rsne),
             ProtectionInfo::LegacyWpa(wpa) => Self::from_legacy_wpa(wpa),
@@ -65,7 +65,7 @@ impl NegotiatedProtection {
 
     /// Validates that this RSNE contains only one of each cipher type and one AKM, and produces
     /// a corresponding negotiated protection scheme.
-    pub fn from_rsne(rsne: &Rsne) -> Result<Self, failure::Error> {
+    pub fn from_rsne(rsne: &Rsne) -> Result<Self, anyhow::Error> {
         let group_data =
             rsne.group_data_cipher_suite.as_ref().ok_or(Error::InvalidNegotiatedProtection)?;
 
@@ -91,7 +91,7 @@ impl NegotiatedProtection {
 
     /// Validates that this WPA1 element contains only one of each cipher type and one AKM, and
     /// produces a corresponding negotiated protection scheme.
-    pub fn from_legacy_wpa(wpa: &WpaIe) -> Result<Self, failure::Error> {
+    pub fn from_legacy_wpa(wpa: &WpaIe) -> Result<Self, anyhow::Error> {
         ensure!(wpa.unicast_cipher_list.len() == 1, Error::InvalidNegotiatedProtection);
         ensure!(wpa.akm_list.len() == 1, Error::InvalidNegotiatedProtection);
         let akm = wpa.akm_list[0].clone();
@@ -139,7 +139,7 @@ impl<B: ByteSlice> EncryptedKeyData<B> {
         self,
         kek: &[u8],
         protection: &NegotiatedProtection,
-    ) -> Result<(eapol::KeyFrameRx<B>, Vec<u8>), failure::Error> {
+    ) -> Result<(eapol::KeyFrameRx<B>, Vec<u8>), anyhow::Error> {
         let key_data = protection.keywrap_algorithm()?.unwrap_key(
             kek,
             &self.0.key_frame_fields.key_iv,
@@ -161,7 +161,7 @@ impl<B: ByteSlice> WithUnverifiedMic<B> {
         self,
         kck: &[u8],
         protection: &NegotiatedProtection,
-    ) -> Result<UnverifiedKeyData<B>, failure::Error> {
+    ) -> Result<UnverifiedKeyData<B>, anyhow::Error> {
         // IEEE Std 802.11-2016, 12.7.2 h)
         // IEEE Std 802.11-2016, 12.7.2 b.6)
         let mic_bytes = protection.akm.mic_bytes().ok_or(Error::UnsupportedAkmSuite)?;
@@ -203,7 +203,7 @@ impl<B: ByteSlice> Dot11VerifiedKeyFrame<B> {
         role: &Role,
         protection: &NegotiatedProtection,
         key_replay_counter: u64,
-    ) -> Result<Dot11VerifiedKeyFrame<B>, failure::Error> {
+    ) -> Result<Dot11VerifiedKeyFrame<B>, anyhow::Error> {
         let sender = match role {
             Role::Supplicant => Role::Authenticator,
             Role::Authenticator => Role::Supplicant,
@@ -218,12 +218,19 @@ impl<B: ByteSlice> Dot11VerifiedKeyFrame<B> {
             {
                 eapol::KeyDescriptor::LEGACY_WPA1
             }
-            eapol::KeyDescriptor::RC4 => bail!(Error::InvalidKeyDescriptor(
-                frame.key_frame_fields.descriptor_type,
-                eapol::KeyDescriptor::IEEE802DOT11,
-            )),
+            eapol::KeyDescriptor::RC4 => {
+                return Err(Error::InvalidKeyDescriptor(
+                    frame.key_frame_fields.descriptor_type,
+                    eapol::KeyDescriptor::IEEE802DOT11,
+                )
+                .into())
+            }
             // Invalid value.
-            _ => bail!(Error::UnsupportedKeyDescriptor(frame.key_frame_fields.descriptor_type)),
+            _ => {
+                return Err(
+                    Error::UnsupportedKeyDescriptor(frame.key_frame_fields.descriptor_type).into()
+                )
+            }
         };
 
         // IEEE Std 802.11-2016, 12.7.2 b.1)

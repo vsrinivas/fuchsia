@@ -63,7 +63,7 @@ impl BatteryManager {
         &self,
         power_info: hpower::SourceInfo,
         battery_info: Option<hpower::BatteryInfo>,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), anyhow::Error> {
         fx_vlog!(
             LOG_VERBOSITY,
             "update_status with power info: {:#?} and battery info: {:#?}",
@@ -117,7 +117,7 @@ impl BatteryManager {
         &self,
         power_info: hpower::SourceInfo,
         battery_info: Option<hpower::BatteryInfo>,
-    ) -> Result<StatusUpdateResult, failure::Error> {
+    ) -> Result<StatusUpdateResult, anyhow::Error> {
         let now = get_current_time();
         let old_battery_info = self.get_battery_info_copy();
         fx_vlog!(LOG_VERBOSITY, "::battery_manager:: old battery info: {:?}", &old_battery_info);

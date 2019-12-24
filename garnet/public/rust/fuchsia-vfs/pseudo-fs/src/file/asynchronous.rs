@@ -38,7 +38,7 @@ use crate::{
 };
 
 use {
-    failure::Error,
+    anyhow::Error,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
         FileCloseResponder, FileRequest, NodeMarker, DIRENT_TYPE_FILE, INO_UNKNOWN,

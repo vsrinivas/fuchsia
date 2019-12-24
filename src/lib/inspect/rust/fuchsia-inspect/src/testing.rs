@@ -7,7 +7,7 @@ use {
         reader::{NodeHierarchy, PartialNodeHierarchy, Property},
         Inspector,
     },
-    failure::{bail, Error},
+    anyhow::{bail, format_err, Error},
     futures,
     std::{borrow::Cow, collections::HashSet},
 };
@@ -209,12 +209,12 @@ impl NodeHierarchyGetter for Inspector {
 macro_rules! eq_or_bail {
     ($expected:expr, $actual:expr) => {{
         if $expected != $actual {
-            bail!("\n Expected: {:?}\n      Got: {:?}", $expected, $actual);
+            return Err(format_err!("\n Expected: {:?}\n      Got: {:?}", $expected, $actual));
         }
     }};
     ($expected:expr, $actual:expr, $($args:tt)+) => {{
         if $expected != $actual {
-            bail!("{}:\n Expected: {:?}\n      Got: {:?}", format!($($args)+), $expected, $actual);
+            return Err(format_err!("{}:\n Expected: {:?}\n      Got: {:?}", format!($($args)+), $expected, $actual));
         }
     }}
 }
@@ -287,13 +287,21 @@ impl TreeAssertion {
                         );
                     }
                 }
-                None => bail!("node `{}` - no property named `{}`", self.path, name),
+                None => {
+                    return Err(format_err!("node `{}` - no property named `{}`", self.path, name))
+                }
             }
         }
         for assertion in self.children.iter() {
             match actual.children.iter().find(|c| c.name == assertion.name) {
                 Some(child) => assertion.run(&child)?,
-                None => bail!("node `{}` - no child named `{}`", self.path, assertion.name),
+                None => {
+                    return Err(format_err!(
+                        "node `{}` - no child named `{}`",
+                        self.path,
+                        assertion.name
+                    ))
+                }
             }
         }
         Ok(())
@@ -315,7 +323,7 @@ macro_rules! impl_property_assertion {
                     if let Property::$prop_variant(_key, value, ..) = actual {
                         eq_or_bail!(self, value);
                     } else {
-                        bail!("expected {}, found {}", stringify!($prop_variant), property_type_name(actual));
+                        return Err(format_err!("expected {}, found {}", stringify!($prop_variant), property_type_name(actual)));
                     }
                     Ok(())
                 }
@@ -332,7 +340,7 @@ macro_rules! impl_array_property_assertion {
                     if let Property::$prop_variant(_key, value, ..) = actual {
                         eq_or_bail!(self, &value.values);
                     } else {
-                        bail!("expected {}, found {}", stringify!($prop_variant), property_type_name(actual));
+                        return Err(format_err!("expected {}, found {}", stringify!($prop_variant), property_type_name(actual)));
                     }
                     Ok(())
                 }

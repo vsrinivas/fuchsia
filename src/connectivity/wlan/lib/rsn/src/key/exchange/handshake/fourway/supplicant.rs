@@ -15,10 +15,10 @@ use crate::rsna::{
 };
 use crate::Error;
 use crate::ProtectionInfo;
+use anyhow::{ensure, format_err};
 use crypto::util::fixed_time_eq;
 use eapol;
 use eapol::KeyFrameBuf;
-use failure::{self, bail, ensure};
 use log::error;
 use zerocopy::ByteSlice;
 
@@ -28,11 +28,11 @@ fn handle_message_1<B: ByteSlice>(
     pmk: &[u8],
     snonce: &[u8],
     msg1: FourwayHandshakeFrame<B>,
-) -> Result<(KeyFrameBuf, Ptk, Nonce), failure::Error> {
+) -> Result<(KeyFrameBuf, Ptk, Nonce), anyhow::Error> {
     let frame = match msg1.get() {
         // Note: This is only true if PTK re-keying is not supported.
         Dot11VerifiedKeyFrame::WithUnverifiedMic(_) => {
-            bail!("msg1 of 4-Way Handshake cannot carry a MIC")
+            return Err(format_err!("msg1 of 4-Way Handshake cannot carry a MIC"))
         }
         Dot11VerifiedKeyFrame::WithoutMic(frame) => frame,
     };
@@ -54,7 +54,7 @@ fn create_message_2<B: ByteSlice>(
     protection: &NegotiatedProtection,
     msg1: &eapol::KeyFrameRx<B>,
     snonce: &[u8],
-) -> Result<KeyFrameBuf, failure::Error> {
+) -> Result<KeyFrameBuf, anyhow::Error> {
     let key_info = eapol::KeyInformation(0)
         .with_key_descriptor_version(msg1.key_frame_fields.key_info().key_descriptor_version())
         .with_key_type(msg1.key_frame_fields.key_info().key_type())
@@ -81,7 +81,7 @@ fn create_message_2<B: ByteSlice>(
     .serialize();
 
     let mic = compute_mic_from_buf(kck, &protection, msg2.unfinalized_buf())
-        .map_err(|e| failure::Error::from(e))?;
+        .map_err(|e| anyhow::Error::from(e))?;
     msg2.finalize_with_mic(&mic[..]).map_err(|e| e.into())
 }
 
@@ -93,7 +93,7 @@ fn handle_message_3<B: ByteSlice>(
     kck: &[u8],
     kek: &[u8],
     msg3: FourwayHandshakeFrame<B>,
-) -> Result<(KeyFrameBuf, Option<Gtk>), failure::Error> {
+) -> Result<(KeyFrameBuf, Option<Gtk>), anyhow::Error> {
     let negotiated_protection = NegotiatedProtection::from_protection(&cfg.s_protection)?;
     let (frame, key_data_elements) = match msg3.get() {
         Dot11VerifiedKeyFrame::WithUnverifiedMic(unverified_mic) => {
@@ -110,12 +110,18 @@ fn handle_message_3<B: ByteSlice>(
                             let elements = key_data::extract_elements(&keyframe.key_data[..])?;
                             (keyframe, elements)
                         }
-                        _ => bail!("msg3 of 4-Way Handshake must carry encrypted key data"),
+                        _ => {
+                            return Err(format_err!(
+                                "msg3 of 4-Way Handshake must carry encrypted key data"
+                            ))
+                        }
                     }
                 }
             }
         }
-        Dot11VerifiedKeyFrame::WithoutMic(_) => bail!("msg3 of 4-Way Handshake must carry a MIC"),
+        Dot11VerifiedKeyFrame::WithoutMic(_) => {
+            return Err(format_err!("msg3 of 4-Way Handshake must carry a MIC"))
+        }
     };
     let mut gtk: Option<key_data::kde::Gtk> = None;
     let mut protection: Option<ProtectionInfo> = None;
@@ -140,7 +146,7 @@ fn handle_message_3<B: ByteSlice>(
             ensure!(&protection == &cfg.a_protection, Error::InvalidKeyDataProtection);
             create_message_4(&negotiated_protection, kck, &frame)?
         }
-        None => bail!(Error::InvalidKeyDataContent),
+        None => return Err(format_err!(Error::InvalidKeyDataContent)),
     };
     match gtk {
         Some(gtk) => {
@@ -159,7 +165,7 @@ fn handle_message_3<B: ByteSlice>(
         None if negotiated_protection.protection_type == ProtectionType::LegacyWpa1 => {
             Ok((msg4, None))
         }
-        None => bail!(Error::InvalidKeyDataContent),
+        None => return Err(format_err!(Error::InvalidKeyDataContent)),
     }
 }
 
@@ -168,7 +174,7 @@ fn create_message_4<B: ByteSlice>(
     protection: &NegotiatedProtection,
     kck: &[u8],
     msg3: &eapol::KeyFrameRx<B>,
-) -> Result<KeyFrameBuf, failure::Error> {
+) -> Result<KeyFrameBuf, anyhow::Error> {
     // WFA, WPA1 Spec. 3.1, Chapter 2 seems to imply that the secure bit should not be set for WPA1
     // supplicant messages, and in practice this seems to be the case.
     let secure_bit = msg3.key_frame_fields.descriptor_type != eapol::KeyDescriptor::LEGACY_WPA1;
@@ -195,7 +201,7 @@ fn create_message_4<B: ByteSlice>(
     .serialize();
 
     let mic = compute_mic_from_buf(kck, &protection, msg4.unfinalized_buf())
-        .map_err(|e| failure::Error::from(e))?;
+        .map_err(|e| anyhow::Error::from(e))?;
     msg4.finalize_with_mic(&mic[..]).map_err(|e| e.into())
 }
 

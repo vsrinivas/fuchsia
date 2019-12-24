@@ -12,7 +12,7 @@
 mod h264;
 
 use crate::h264::*;
-use failure;
+use anyhow;
 use lazy_static::lazy_static;
 use std::{fs::File, io::Read, rc::Rc, result::Result};
 use stream_processor_decoder_factory::*;
@@ -31,7 +31,7 @@ lazy_static! {
 // TODO(turnage): Add hash validator for NV12 and YV12.
 
 #[test]
-fn test_serial_bear_on_same_codec() -> std::result::Result<(), ::failure::Error> {
+fn test_serial_bear_on_same_codec() -> std::result::Result<(), ::anyhow::Error> {
     with_large_stack(|| {
         *LOGGER;
 
@@ -85,7 +85,7 @@ fn test_serial_bear_on_same_codec() -> std::result::Result<(), ::failure::Error>
 }
 
 #[test]
-fn bear_with_sei_itu_t35() -> Result<(), failure::Error> {
+fn bear_with_sei_itu_t35() -> Result<(), anyhow::Error> {
     with_large_stack(|| {
         *LOGGER;
 

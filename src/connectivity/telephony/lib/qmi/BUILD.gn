@@ -12,7 +12,8 @@ rustc_library("qmi") {
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-zircon",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-hardware-telephony-transport:fuchsia-hardware-telephony-transport-rustc",
     "//zircon/system/fidl/fuchsia-telephony-snoop:fuchsia-telephony-snoop-rustc",
   ]

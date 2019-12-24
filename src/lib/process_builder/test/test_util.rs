@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl_test_processbuilder::{EnvVar, UtilRequest, UtilRequestStream},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,

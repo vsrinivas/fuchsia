@@ -5,9 +5,9 @@
 mod opts;
 
 use crate::opts::Opt;
+use anyhow::{format_err, Context as _, Error};
 use connectivity_testing::wlan_ap_service_util;
 use connectivity_testing::wlan_service_util;
-use failure::{bail, Error, ResultExt};
 use fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy};
 use fidl_fuchsia_wlan_sme as fidl_sme;
 use fuchsia_async as fasync;
@@ -63,7 +63,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
         test_results.query_wlan_service_iface_list = true;
 
         if wlan_iface_ids.is_empty() {
-            bail!("Did not find wlan interfaces");
+            return Err(format_err!("Did not find wlan interfaces"));
         };
 
         test_results.wlan_client_discovered = false;
@@ -114,7 +114,10 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                             test_pass = true;
                         }
                         Err(_) => {
-                            bail!("Expected a valid ap_sme_proxy for interface {:?}", iface);
+                            return Err(format_err!(
+                                "Expected a valid ap_sme_proxy for interface {:?}",
+                                iface
+                            ));
                         }
                     }
                 }
@@ -240,7 +243,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
     exec.run_singlethreaded(fut)?;
 
     if !test_pass {
-        bail!("Saw a failure on at least one interface");
+        return Err(format_err!("Saw a failure on at least one interface"));
     }
 
     Ok(())

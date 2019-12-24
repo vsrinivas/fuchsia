@@ -5,7 +5,7 @@
 #![cfg(test)]
 
 use {
-    failure::Error,
+    anyhow::Error,
     fidl_fuchsia_factory::{
         CastCredentialsFactoryStoreProviderMarker, MiscFactoryStoreProviderMarker,
         PlayReadyFactoryStoreProviderMarker, WeaveFactoryStoreProviderMarker,
@@ -156,7 +156,7 @@ async fn read_factory_files_from_widevine_store() -> Result<(), Error> {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn read_factory_files_from_widevine_store_missing_files_fail() -> Result<(), Error> {
+async fn read_factory_files_from_widevine_store_missing_files_error() -> Result<(), Error> {
     let dir_proxy = connect_to_factory_store_provider!(WidevineFactoryStoreProviderMarker);
     read_file_from_proxy(&dir_proxy, "cast.blk").await.unwrap_err();
     read_file_from_proxy(&dir_proxy, "cast.dat").await.unwrap_err();

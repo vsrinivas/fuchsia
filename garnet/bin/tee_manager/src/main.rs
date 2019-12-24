@@ -11,7 +11,7 @@ mod provider_server;
 use {
     crate::device::TeeDeviceConnection,
     crate::device_server::serve_passthrough,
-    failure::{format_err, Error},
+    anyhow::{format_err, Error},
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_tee::DeviceMarker,
     fuchsia_async as fasync,

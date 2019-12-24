@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{bail, Error},
+    anyhow::{format_err, Error},
     fidl_fuchsia_bluetooth_control as fidl_control,
 };
 
@@ -42,7 +42,7 @@ impl TryInto<MajorClass> for &str {
             "TOY" => MajorClass::Toy,
             "HEALTH" => MajorClass::Health,
             "UNCATEGORIZED" => MajorClass::Uncategorized,
-            v => bail!("Invalid Major Class value provided: '{}'", v),
+            v => return Err(format_err!("Invalid Major Class value provided: '{}'", v)),
         })
     }
 }
@@ -62,7 +62,7 @@ impl TryInto<MinorClass> for &str {
     fn try_into(self) -> Result<MinorClass, Error> {
         let value = self.parse()?;
         if value > 0b11_1111 {
-            bail!("Invalid Minor Class value (number too large)")
+            return Err(format_err!("Invalid Minor Class value (number too large)"));
         }
         Ok(MinorClass(value))
     }
@@ -111,7 +111,10 @@ where
             class_value |= value;
         }
         if !invalid_inputs.is_empty() {
-            bail!("Invalid Service Class value(s) provided: {:?}", invalid_inputs);
+            return Err(format_err!(
+                "Invalid Service Class value(s) provided: {:?}",
+                invalid_inputs
+            ));
         }
         Ok(ServiceClass(class_value))
     }

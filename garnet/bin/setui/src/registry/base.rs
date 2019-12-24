@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::switchboard::base::{SettingRequest, SettingRequestResponder, SettingType};
-use failure::Error;
+use anyhow::Error;
 
 use futures::channel::mpsc::UnboundedSender;
 pub type Notifier = UnboundedSender<SettingType>;

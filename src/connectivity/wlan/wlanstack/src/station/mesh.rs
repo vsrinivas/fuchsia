@@ -4,7 +4,7 @@
 
 use {
     crate::stats_scheduler::StatsRequest,
-    failure::bail,
+    anyhow::format_err,
     fidl_fuchsia_wlan_mesh as fidl_mesh, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fidl_fuchsia_wlan_mlme::{MlmeEventStream, MlmeProxy},
     fidl_fuchsia_wlan_sme as fidl_sme,
@@ -34,7 +34,7 @@ pub async fn serve<S>(
     event_stream: MlmeEventStream,
     new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
     stats_requests: S,
-) -> Result<(), failure::Error>
+) -> Result<(), anyhow::Error>
 where
     S: Stream<Item = StatsRequest> + Send + Unpin,
 {
@@ -63,14 +63,14 @@ async fn serve_fidl<'a>(
     sme: &'a Mutex<Sme>,
     new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
     proxy: &'a MlmeProxy,
-) -> Result<Void, failure::Error> {
+) -> Result<Void, anyhow::Error> {
     let mut fidl_clients = FuturesUnordered::new();
     let mut new_fidl_clients = new_fidl_clients.fuse();
     loop {
         select! {
             new_fidl_client = new_fidl_clients.next() => match new_fidl_client {
                 Some(c) => fidl_clients.push(serve_fidl_endpoint(proxy, sme, c)),
-                None => bail!("New FIDL client stream unexpectedly ended"),
+                None => return Err(format_err!("New FIDL client stream unexpectedly ended")),
             },
             // Drive clients towards completion
             _ = fidl_clients.next() => {},

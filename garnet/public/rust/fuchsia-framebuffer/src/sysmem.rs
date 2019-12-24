@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::FrameUsage;
-use failure::{bail, format_err, Error, ResultExt};
+use anyhow::{format_err, Context, Error};
 use fidl::endpoints::{create_endpoints, ClientEnd};
 use fidl_fuchsia_sysmem::{
     BufferCollectionConstraints, BufferMemoryConstraints, BufferUsage, ColorSpace, ColorSpaceType,
@@ -117,7 +117,7 @@ pub fn stride_bytes_per_width_pixel(pixel_type: PixelFormatType) -> Result<u32, 
         PixelFormatType::Rgb332 => Ok(1),
         PixelFormatType::Rgb2220 => Ok(1),
         PixelFormatType::L8 => Ok(1),
-        _ => bail!("Unsupported format"),
+        _ => return Err(format_err!("Unsupported format")),
     }
 }
 
@@ -132,7 +132,7 @@ fn round_up_to_align(x: u32, align: u32) -> u32 {
 // See ImageFormatMinimumRowBytes
 pub fn minimum_row_bytes(constraints: ImageFormatConstraints, width: u32) -> Result<u32, Error> {
     if width < constraints.min_coded_width || width > constraints.max_coded_width {
-        bail!("Invalid width for constraints");
+        return Err(format_err!("Invalid width for constraints"));
     }
 
     let bytes_per_pixel = stride_bytes_per_width_pixel(constraints.pixel_format.type_)?;
@@ -240,7 +240,7 @@ mod test {
     const BUFFER_COUNT: usize = 3;
 
     #[test]
-    fn test_buffer_collection_allocator() -> std::result::Result<(), failure::Error> {
+    fn test_buffer_collection_allocator() -> std::result::Result<(), anyhow::Error> {
         let mut executor = fasync::Executor::new()?;
         let mut bca = BufferCollectionAllocator::new(
             200,

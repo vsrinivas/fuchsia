@@ -6,25 +6,25 @@
 
 use {
     crate::iou,
-    failure::Fail,
     fidl_fuchsia_io::DirectoryProxy,
     fuchsia_merkle::{Hash, ParseHashError},
     fuchsia_zircon::Status,
     futures::prelude::*,
     std::collections::HashSet,
+    thiserror::Error,
 };
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 #[allow(missing_docs)]
 pub enum ListNeedsError {
-    #[fail(display = "while opening needs dir: {}", _0)]
-    OpenDir(#[cause] iou::OpenError),
+    #[error("while opening needs dir: {}", _0)]
+    OpenDir(iou::OpenError),
 
-    #[fail(display = "while listing needs dir: {}", _0)]
-    ReadDir(#[cause] files_async::Error),
+    #[error("while listing needs dir: {}", _0)]
+    ReadDir(files_async::Error),
 
-    #[fail(display = "unable to parse a need blob id: {}", _0)]
-    ParseError(#[cause] ParseHashError),
+    #[error("unable to parse a need blob id: {}", _0)]
+    ParseError(ParseHashError),
 }
 
 /// An open handle to /pkgfs/needs
@@ -35,13 +35,13 @@ pub struct Client {
 
 impl Client {
     /// Returns an client connected to pkgfs from the current component's namespace
-    pub fn open_from_namespace() -> Result<Self, failure::Error> {
+    pub fn open_from_namespace() -> Result<Self, anyhow::Error> {
         let proxy = iou::open_directory_from_namespace("/pkgfs/needs")?;
         Ok(Client { proxy })
     }
 
     /// Returns an client connected to pkgfs from the given pkgfs root dir.
-    pub fn open_from_pkgfs_root(pkgfs: &DirectoryProxy) -> Result<Self, failure::Error> {
+    pub fn open_from_pkgfs_root(pkgfs: &DirectoryProxy) -> Result<Self, anyhow::Error> {
         Ok(Client {
             proxy: iou::open_directory_no_describe(
                 pkgfs,

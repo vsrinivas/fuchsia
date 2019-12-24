@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::ResultExt;
+use anyhow::Context as _;
 use fidl_fidl_examples_echo::{EchoRequest, EchoRequestStream};
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
@@ -11,7 +11,7 @@ use futures::prelude::*;
 
 fn echo_server((send, stream): (mpsc::Sender<()>, EchoRequestStream)) -> impl Future<Output = ()> {
     stream
-        .err_into::<failure::Error>()
+        .err_into::<anyhow::Error>()
         .try_for_each(move |EchoRequest::EchoString { value, responder }| {
             let mut send = send.clone();
             async move {
@@ -20,7 +20,7 @@ fn echo_server((send, stream): (mpsc::Sender<()>, EchoRequestStream)) -> impl Fu
                 Ok(())
             }
         })
-        .unwrap_or_else(|e: failure::Error| panic!("error running echo server: {:?}", e))
+        .unwrap_or_else(|e: anyhow::Error| panic!("error running echo server: {:?}", e))
 }
 
 #[fuchsia_async::run_singlethreaded(test)]

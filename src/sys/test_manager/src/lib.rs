@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{format_err, Error, ResultExt},
+    anyhow::{format_err, Context as _, Error},
     fidl::endpoints,
     fidl_fuchsia_io::{DirectoryMarker, MODE_TYPE_SERVICE},
     fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test_manager as ftest_manager,

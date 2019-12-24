@@ -216,7 +216,7 @@ impl AvdtpController {
         mut stream: PeerControllerRequestStream,
         peer: Arc<Peer>,
         peer_id: PeerId,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), anyhow::Error> {
         let mut streams = None;
         while let Some(req) = stream.try_next().await? {
             if streams.is_none() {
@@ -251,7 +251,7 @@ impl AvdtpController {
 async fn start_control_service(
     mut stream: PeerManagerRequestStream,
     peers: Arc<Mutex<HashMap<PeerId, Arc<Peer>>>>,
-) -> Result<(), failure::Error> {
+) -> Result<(), anyhow::Error> {
     while let Some(req) = stream.try_next().await? {
         match req {
             PeerManagerRequest::GetPeer { peer_id, handle, .. } => {

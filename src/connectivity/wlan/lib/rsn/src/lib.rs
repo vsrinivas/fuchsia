@@ -6,7 +6,7 @@
 // Remove once Cipher and AKM *_bits() were replaced with *_len() calls.
 #![allow(deprecated)]
 
-use failure::{self, Fail};
+use thiserror::{self, Error};
 
 // TODO(hahnr): Limit exports and rearrange modules.
 
@@ -57,7 +57,7 @@ impl Supplicant {
         s_protection: ProtectionInfo,
         a_addr: [u8; 6],
         a_protection: ProtectionInfo,
-    ) -> Result<Supplicant, failure::Error> {
+    ) -> Result<Supplicant, anyhow::Error> {
         let negotiated_protection = NegotiatedProtection::from_protection(&s_protection)?;
         let gtk_exch_cfg = Some(exchange::Config::GroupKeyHandshake(group_key::Config {
             role: Role::Supplicant,
@@ -84,7 +84,7 @@ impl Supplicant {
 
     /// Starts the Supplicant. A Supplicant must be started after its creation and everytime it was
     /// reset.
-    pub fn start(&mut self) -> Result<(), failure::Error> {
+    pub fn start(&mut self) -> Result<(), anyhow::Error> {
         // The Supplicant always waits for Authenticator to initiate and does not yet support EAPOL
         // request frames. Thus, all updates can be ignored.
         let mut dead_update_sink = vec![];
@@ -105,7 +105,7 @@ impl Supplicant {
         &mut self,
         update_sink: &mut UpdateSink,
         frame: eapol::Frame<B>,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), anyhow::Error> {
         self.esssa.on_eapol_frame(update_sink, frame)
     }
 }
@@ -126,7 +126,7 @@ impl Authenticator {
         s_protection: ProtectionInfo,
         a_addr: [u8; 6],
         a_protection: ProtectionInfo,
-    ) -> Result<Authenticator, failure::Error> {
+    ) -> Result<Authenticator, anyhow::Error> {
         let negotiated_protection = NegotiatedProtection::from_protection(&s_protection)?;
         let esssa = EssSa::new(
             Role::Authenticator,
@@ -166,7 +166,7 @@ impl Authenticator {
     /// This method can be called multiple times to re-initiate the security association, however,
     /// calling this method will invalidate all established security associations and their derived
     /// keys.
-    pub fn initiate(&mut self, update_sink: &mut UpdateSink) -> Result<(), failure::Error> {
+    pub fn initiate(&mut self, update_sink: &mut UpdateSink) -> Result<(), anyhow::Error> {
         self.esssa.initiate(update_sink)
     }
 
@@ -178,150 +178,144 @@ impl Authenticator {
         &mut self,
         update_sink: &mut UpdateSink,
         frame: eapol::Frame<B>,
-    ) -> Result<(), failure::Error> {
+    ) -> Result<(), anyhow::Error> {
         self.esssa.on_eapol_frame(update_sink, frame)
     }
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum Error {
-    #[fail(display = "unexpected IO error: {}", _0)]
-    UnexpectedIoError(#[cause] std::io::Error),
-    #[fail(display = "invalid OUI length; expected 3 bytes but received {}", _0)]
+    #[error("unexpected IO error: {}", _0)]
+    UnexpectedIoError(std::io::Error),
+    #[error("invalid OUI length; expected 3 bytes but received {}", _0)]
     InvalidOuiLength(usize),
-    #[fail(display = "invalid PMKID length; expected 16 bytes but received {}", _0)]
+    #[error("invalid PMKID length; expected 16 bytes but received {}", _0)]
     InvalidPmkidLength(usize),
-    #[fail(display = "invalid ssid length: {}", _0)]
+    #[error("invalid ssid length: {}", _0)]
     InvalidSsidLen(usize),
-    #[fail(display = "invalid passphrase length: {}", _0)]
+    #[error("invalid passphrase length: {}", _0)]
     InvalidPassphraseLen(usize),
-    #[fail(display = "passphrase contains invalid character: {:x}", _0)]
+    #[error("passphrase contains invalid character: {:x}", _0)]
     InvalidPassphraseChar(u8),
-    #[fail(display = "the config `{:?}` is incompatible with the auth method `{:?}`", _0, _1)]
+    #[error("the config `{:?}` is incompatible with the auth method `{:?}`", _0, _1)]
     IncompatibleConfig(auth::Config, String),
-    #[fail(display = "invalid bit size; must be a multiple of 8 but was {}", _0)]
+    #[error("invalid bit size; must be a multiple of 8 but was {}", _0)]
     InvalidBitSize(usize),
-    #[fail(display = "nonce could not be generated")]
+    #[error("nonce could not be generated")]
     NonceError,
-    #[fail(display = "error deriving PTK; invalid PMK")]
+    #[error("error deriving PTK; invalid PMK")]
     PtkHierarchyInvalidPmkError,
-    #[fail(display = "error deriving PTK; unsupported AKM suite")]
+    #[error("error deriving PTK; unsupported AKM suite")]
     PtkHierarchyUnsupportedAkmError,
-    #[fail(display = "error deriving PTK; unsupported cipher suite")]
+    #[error("error deriving PTK; unsupported cipher suite")]
     PtkHierarchyUnsupportedCipherError,
-    #[fail(display = "error deriving GTK; unsupported cipher suite")]
+    #[error("error deriving GTK; unsupported cipher suite")]
     GtkHierarchyUnsupportedCipherError,
-    #[fail(display = "error invalid key size for AES keywrap: {}", _0)]
+    #[error("error invalid key size for AES keywrap: {}", _0)]
     InvalidAesKeywrapKeySize(usize),
-    #[fail(
-        display = "error data must be a multiple of 64-bit blocks and at least 128 bits: {}",
-        _0
-    )]
+    #[error("error data must be a multiple of 64-bit blocks and at least 128 bits: {}", _0)]
     InvalidAesKeywrapDataLength(usize),
-    #[fail(display = "error wrong key for AES Keywrap unwrapping")]
+    #[error("error wrong key for AES Keywrap unwrapping")]
     WrongAesKeywrapKey,
-    #[fail(
-        display = "invalid key data length; must be at least 16 bytes and a multiple of 8: {}",
-        _0
-    )]
+    #[error("invalid key data length; must be at least 16 bytes and a multiple of 8: {}", _0)]
     InvaidKeyDataLength(usize),
-    #[fail(display = "invalid key data; error code: {:?}", _0)]
+    #[error("invalid key data; error code: {:?}", _0)]
     InvalidKeyData(nom::error::ErrorKind),
-    #[fail(display = "unknown authentication method")]
+    #[error("unknown authentication method")]
     UnknownAuthenticationMethod,
-    #[fail(display = "no AKM negotiated")]
+    #[error("no AKM negotiated")]
     InvalidNegotiatedAkm,
-    #[fail(display = "unknown key exchange method")]
+    #[error("unknown key exchange method")]
     UnknownKeyExchange,
-    #[fail(display = "cannot initiate Fourway Handshake as Supplicant")]
+    #[error("cannot initiate Fourway Handshake as Supplicant")]
     UnexpectedInitiationRequest,
-    #[fail(display = "unsupported Key Descriptor Type: {:?}", _0)]
+    #[error("unsupported Key Descriptor Type: {:?}", _0)]
     UnsupportedKeyDescriptor(eapol::KeyDescriptor),
-    #[fail(display = "unexpected Key Descriptor Type {:?}; expected {:?}", _0, _1)]
+    #[error("unexpected Key Descriptor Type {:?}; expected {:?}", _0, _1)]
     InvalidKeyDescriptor(eapol::KeyDescriptor, eapol::KeyDescriptor),
-    #[fail(display = "unsupported Key Descriptor Version: {:?}", _0)]
+    #[error("unsupported Key Descriptor Version: {:?}", _0)]
     UnsupportedKeyDescriptorVersion(u16),
-    #[fail(display = "only PTK and GTK derivation is supported")]
+    #[error("only PTK and GTK derivation is supported")]
     UnsupportedKeyDerivation,
-    #[fail(display = "unexpected message: {:?}", _0)]
+    #[error("unexpected message: {:?}", _0)]
     Unexpected4WayHandshakeMessage(MessageNumber),
-    #[fail(display = "invalid install bit value; message: {:?}", _0)]
+    #[error("invalid install bit value; message: {:?}", _0)]
     InvalidInstallBitValue(MessageNumber),
-    #[fail(display = "error, install bit set for Group-/SMK-Handshake")]
+    #[error("error, install bit set for Group-/SMK-Handshake")]
     InvalidInstallBitGroupSmkHandshake,
-    #[fail(display = "invalid key_ack bit value; message: {:?}", _0)]
+    #[error("invalid key_ack bit value; message: {:?}", _0)]
     InvalidKeyAckBitValue(MessageNumber),
-    #[fail(display = "invalid key_mic bit value; message: {:?}", _0)]
+    #[error("invalid key_mic bit value; message: {:?}", _0)]
     InvalidKeyMicBitValue(MessageNumber),
-    #[fail(display = "invalid secure bit value; message: {:?}", _0)]
+    #[error("invalid secure bit value; message: {:?}", _0)]
     InvalidSecureBitValue(MessageNumber),
-    #[fail(display = "error, secure bit set by Authenticator before PTK is known")]
+    #[error("error, secure bit set by Authenticator before PTK is known")]
     SecureBitWithUnknownPtk,
-    #[fail(display = "error, secure bit set must be set by Supplicant once PTK and GTK are known")]
+    #[error("error, secure bit set must be set by Supplicant once PTK and GTK are known")]
     SecureBitNotSetWithKnownPtkGtk,
-    #[fail(display = "invalid error bit value; message: {:?}", _0)]
+    #[error("invalid error bit value; message: {:?}", _0)]
     InvalidErrorBitValue(MessageNumber),
-    #[fail(display = "invalid request bit value; message: {:?}", _0)]
+    #[error("invalid request bit value; message: {:?}", _0)]
     InvalidRequestBitValue(MessageNumber),
-    #[fail(display = "error, Authenticator set request bit")]
+    #[error("error, Authenticator set request bit")]
     InvalidRequestBitAuthenticator,
-    #[fail(display = "error, Authenticator set error bit")]
+    #[error("error, Authenticator set error bit")]
     InvalidErrorBitAuthenticator,
-    #[fail(display = "error, Supplicant set key_ack bit")]
+    #[error("error, Supplicant set key_ack bit")]
     InvalidKeyAckBitSupplicant,
-    #[fail(display = "invalid encrypted_key_data bit value")]
+    #[error("invalid encrypted_key_data bit value")]
     InvalidEncryptedKeyDataBitValue(MessageNumber),
-    #[fail(display = "encrypted_key_data bit requires MIC bit to be set")]
+    #[error("encrypted_key_data bit requires MIC bit to be set")]
     InvalidMicBitForEncryptedKeyData,
-    #[fail(display = "invalid key length {:?}; expected {:?}", _0, _1)]
+    #[error("invalid key length {:?}; expected {:?}", _0, _1)]
     InvalidKeyLength(u16, u16),
-    #[fail(display = "unsupported cipher suite")]
+    #[error("unsupported cipher suite")]
     UnsupportedCipherSuite,
-    #[fail(display = "unsupported AKM suite")]
+    #[error("unsupported AKM suite")]
     UnsupportedAkmSuite,
-    #[fail(display = "cannot compute MIC for key frames which haven't set their MIC bit")]
+    #[error("cannot compute MIC for key frames which haven't set their MIC bit")]
     ComputingMicForUnprotectedFrame,
-    #[fail(display = "the key frame's MIC size ({}) differes from the expected size: {}", _0, _1)]
+    #[error("the key frame's MIC size ({}) differes from the expected size: {}", _0, _1)]
     MicSizesDiffer(usize, usize),
-    #[fail(display = "invalid MIC size")]
+    #[error("invalid MIC size")]
     InvalidMicSize,
-    #[fail(display = "invalid Nonce; expected to be non-zero")]
+    #[error("invalid Nonce; expected to be non-zero")]
     InvalidNonce(MessageNumber),
-    #[fail(display = "invalid RSC; expected to be zero")]
+    #[error("invalid RSC; expected to be zero")]
     InvalidRsc(MessageNumber),
-    #[fail(display = "invalid key data; must not be zero")]
+    #[error("invalid key data; must not be zero")]
     EmptyKeyData(MessageNumber),
-    #[fail(display = "invalid key data")]
+    #[error("invalid key data")]
     InvalidKeyDataContent,
-    #[fail(display = "invalid key data length; doesn't match with key data")]
+    #[error("invalid key data length; doesn't match with key data")]
     InvalidKeyDataLength,
-    #[fail(display = "cannot validate MIC; PTK not yet derived")]
+    #[error("cannot validate MIC; PTK not yet derived")]
     UnexpectedMic,
-    #[fail(display = "invalid MIC")]
+    #[error("invalid MIC")]
     InvalidMic,
-    #[fail(display = "cannot decrypt key data; PTK not yet derived")]
+    #[error("cannot decrypt key data; PTK not yet derived")]
     UnexpectedEncryptedKeyData,
-    #[fail(display = "invalid key replay counter {:?}; expected counter to be > {:?}", _0, _1)]
+    #[error("invalid key replay counter {:?}; expected counter to be > {:?}", _0, _1)]
     InvalidKeyReplayCounter(u64, u64),
-    #[fail(display = "invalid nonce; nonce must match nonce from 1st message")]
+    #[error("invalid nonce; nonce must match nonce from 1st message")]
     ErrorNonceDoesntMatch,
-    #[fail(display = "invalid IV; EAPOL protocol version: {:?}; message: {:?}", _0, _1)]
+    #[error("invalid IV; EAPOL protocol version: {:?}; message: {:?}", _0, _1)]
     InvalidIv(eapol::ProtocolVersion, MessageNumber),
-    #[fail(display = "PMKSA was not yet established")]
+    #[error("PMKSA was not yet established")]
     PmksaNotEstablished,
-    #[fail(display = "invalid nonce size; expected 32 bytes, found: {:?}", _0)]
+    #[error("invalid nonce size; expected 32 bytes, found: {:?}", _0)]
     InvalidNonceSize(usize),
-    #[fail(display = "invalid key data; expected negotiated protection")]
+    #[error("invalid key data; expected negotiated protection")]
     InvalidKeyDataProtection,
-    #[fail(display = "buffer too small; required: {}, available: {}", _0, _1)]
+    #[error("buffer too small; required: {}, available: {}", _0, _1)]
     BufferTooSmall(usize, usize),
-    #[fail(display = "error, SMK-Handshake is not supported")]
+    #[error("error, SMK-Handshake is not supported")]
     SmkHandshakeNotSupported,
-    #[fail(display = "error, negotiated protection is invalid")]
+    #[error("error, negotiated protection is invalid")]
     InvalidNegotiatedProtection,
-    #[fail(display = "unknown integrity algorithm for negotiated protection")]
+    #[error("unknown integrity algorithm for negotiated protection")]
     UnknownIntegrityAlgorithm,
-    #[fail(display = "unknown keywrap algorithm for negotiated protection")]
+    #[error("unknown keywrap algorithm for negotiated protection")]
     UnknownKeywrapAlgorithm,
 }
 

@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{format_err, Error, Fail};
+use anyhow::{format_err, Error};
 use fidl_fuchsia_auth::Status::{self as TokenManagerStatus, *};
 use fidl_fuchsia_identity_account::Error as ApiError;
+use thiserror::Error;
 
 /// An extension trait to simplify conversion of results based on general errors to
 /// AccountManagerErrors.
@@ -25,8 +26,8 @@ where
 /// An Error type for problems encountered in the account manager and account handler. Each error
 /// contains the fuchsia.identity.account.Error that should be reported back to the client and an
 /// indication of whether it is fatal.
-#[derive(Debug, Fail)]
-#[fail(display = "AccountManager error, returning {:?}. ({:?})", api_error, cause)]
+#[derive(Debug, Error)]
+#[error("AccountManager error, returning {:?}. ({:?})", api_error, cause)]
 pub struct AccountManagerError {
     /// The most appropriate `fuchsia.identity.account.Error` to describe this problem.
     pub api_error: ApiError,
@@ -95,7 +96,7 @@ impl Into<ApiError> for AccountManagerError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use failure::format_err;
+    use anyhow::format_err;
 
     const TEST_API_ERROR: ApiError = ApiError::Unknown;
 
@@ -119,9 +120,10 @@ mod tests {
         assert_eq!(error.api_error, ApiError::Resource);
         assert!(!error.fatal);
         assert_eq!(
-            format!("{:?}", error.cause.unwrap()),
+            format!("{:?}", error.cause.unwrap().downcast::<fidl::Error>().unwrap()),
             format!("{:?}", fidl::Error::UnexpectedSyncResponse),
         );
+
     }
 
     #[test]

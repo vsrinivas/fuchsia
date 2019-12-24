@@ -8,8 +8,8 @@ use crate::crypto_provider::{
 };
 use crate::kms_asymmetric_key::KmsAsymmetricKey;
 use crate::kms_sealing_key::{KmsSealingKey, SEALING_KEY_NAME};
+use anyhow::format_err;
 use base64;
-use failure::{self, err_msg};
 use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_kms::{
     AsymmetricKeyAlgorithm, AsymmetricPrivateKeyMarker, Error, KeyManagerRequest, KeyOrigin,
@@ -81,9 +81,9 @@ impl KeyManager {
         key_manager
     }
 
-    pub fn set_provider(&mut self, crypto_provider: KeyProvider) -> Result<(), failure::Error> {
+    pub fn set_provider(&mut self, crypto_provider: KeyProvider) -> Result<(), anyhow::Error> {
         if !self.crypto_provider_map.read().unwrap().contains_key(&crypto_provider) {
-            return Err(err_msg("Invalid crypto provider name"));
+            return Err(format_err!("Invalid crypto provider name"));
         }
         self.provider = crypto_provider;
         Ok(())

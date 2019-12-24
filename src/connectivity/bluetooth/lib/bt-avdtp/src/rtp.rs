@@ -2,25 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {bitfield::bitfield, failure::Fail};
+use {bitfield::bitfield, thiserror::Error};
 
 /// The error types for rtp header parsing.
-#[derive(Fail, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq)]
 pub enum RtpError {
     /// The buffer used to create the header was too short
-    #[fail(display = "The buffer is too short.")]
+    #[error("The buffer is too short.")]
     BufferTooShort,
 
     /// The RTP version of this packet is not supported
-    #[fail(display = "Unsupported RTP Version.")]
+    #[error("Unsupported RTP Version.")]
     UnsupportedVersion,
 
     /// The value that was provided is invalid.
-    #[fail(display = "Unsupported flags or fields were found in the header.")]
+    #[error("Unsupported flags or fields were found in the header.")]
     UnsupportedFeature,
 
     #[doc(hidden)]
-    #[fail(display = "__Nonexhaustive error should never be created.")]
+    #[error("__Nonexhaustive error should never be created.")]
     __Nonexhaustive,
 }
 

@@ -19,9 +19,10 @@ rustc_binary("netstack_intermediary") {
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//src/connectivity/network/testing/netemul/lib/fidl:network-rustc",
     "//src/connectivity/network/testing/netemul/lib/fidl:sync-rustc",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:structopt",
+    "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet-rustc",
     "//zircon/system/fidl/fuchsia-hardware-ethertap:fuchsia-hardware-ethertap-rustc",
   ]

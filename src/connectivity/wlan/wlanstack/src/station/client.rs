@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::bail;
+use anyhow::format_err;
 use fidl::{endpoints::RequestStream, endpoints::ServerEnd};
 use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEventStream, MlmeProxy};
@@ -46,7 +46,7 @@ pub async fn serve<S>(
     stats_requests: S,
     cobalt_sender: CobaltSender,
     iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
-) -> Result<(), failure::Error>
+) -> Result<(), anyhow::Error>
 where
     S: Stream<Item = StatsRequest> + Unpin,
 {
@@ -77,7 +77,7 @@ async fn serve_fidl(
     new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
     info_stream: InfoStream,
     mut cobalt_sender: CobaltSender,
-) -> Result<Void, failure::Error> {
+) -> Result<Void, anyhow::Error> {
     let mut new_fidl_clients = new_fidl_clients.fuse();
     let mut info_stream = info_stream.fuse();
     let mut fidl_clients = FuturesUnordered::new();
@@ -93,11 +93,11 @@ async fn serve_fidl(
         select! {
             info_event = info_stream.next() => match info_event {
                 Some(e) => handle_info_event(e, &mut cobalt_sender, &mut connection_times),
-                None => bail!("Info Event stream unexpectedly ended"),
+                None => return Err(format_err!("Info Event stream unexpectedly ended")),
             },
             new_fidl_client = new_fidl_clients.next() => match new_fidl_client {
                 Some(c) => fidl_clients.push(serve_fidl_endpoint(&sme, c)),
-                None => bail!("New FIDL client stream unexpectedly ended"),
+                None => return Err(format_err!("New FIDL client stream unexpectedly ended")),
             },
             () = fidl_clients.select_next_some() => {},
         }
@@ -147,7 +147,7 @@ async fn scan(
     sme: &Mutex<Sme>,
     txn: ServerEnd<fidl_sme::ScanTransactionMarker>,
     scan_type: fidl_common::ScanType,
-) -> Result<(), failure::Error> {
+) -> Result<(), anyhow::Error> {
     let handle = txn.into_stream()?.control_handle();
     let receiver = sme.lock().unwrap().on_scan_command(scan_type);
     let result = receiver.await.unwrap_or(Err(fidl_mlme::ScanResultCodes::InternalError));
@@ -160,7 +160,7 @@ async fn connect(
     sme: &Mutex<Sme>,
     txn: Option<ServerEnd<fidl_sme::ConnectTransactionMarker>>,
     req: fidl_sme::ConnectRequest,
-) -> Result<(), failure::Error> {
+) -> Result<(), anyhow::Error> {
     let handle = match txn {
         None => None,
         Some(txn) => Some(txn.into_stream()?.control_handle()),

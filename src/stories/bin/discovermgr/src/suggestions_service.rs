@@ -7,7 +7,7 @@ use {
         story_context_store::{ContextEntity, ContextReader},
         suggestions_manager::SuggestionsManager,
     },
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl_fuchsia_app_discover::{
         InteractionType, Suggestion, SuggestionsIteratorRequest, SuggestionsIteratorRequestStream,
         SuggestionsRequest, SuggestionsRequestStream,

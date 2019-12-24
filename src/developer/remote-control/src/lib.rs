@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{format_err, Error, ResultExt},
+    anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_developer_remotecontrol as rcs, fidl_fuchsia_device_manager as fdevmgr,
     fuchsia_component::client::{launcher, AppBuilder},
     futures::prelude::*,

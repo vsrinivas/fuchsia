@@ -5,8 +5,8 @@
 #![recursion_limit = "128"]
 
 use {
+    anyhow::{format_err, Error},
     directory_broker,
-    failure::{format_err, Error},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fuchsia_async as fasync, fuchsia_runtime,

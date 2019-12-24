@@ -44,7 +44,7 @@ mod tests {
         assert_eq!(IcmpPinger {}.ping("1.2.3.4"), true);
     }
     #[test]
-    fn test_ping_fail() {
+    fn test_ping_error() {
         assert_eq!(IcmpPinger {}.ping("8.8.8.8"), false);
     }
 }

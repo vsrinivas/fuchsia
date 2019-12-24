@@ -62,7 +62,7 @@ fn copy_file_with_len(
     d: &openat::Dir,
     path: &std::path::Path,
     source: &mut std::fs::File,
-) -> Result<(), failure::Error> {
+) -> Result<(), anyhow::Error> {
     use std::convert::TryInto;
     let mut bytes = vec![];
     source.read_to_end(&mut bytes)?;

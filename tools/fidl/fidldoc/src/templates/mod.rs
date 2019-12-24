@@ -5,7 +5,7 @@
 pub mod html;
 pub mod markdown;
 
-use failure::Error;
+use anyhow::Error;
 use handlebars::{Context, Handlebars, Helper, JsonRender, Output, RenderContext, RenderError};
 use lazy_static::lazy_static;
 use log::debug;

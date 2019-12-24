@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{err_msg, Error},
+    anyhow::{format_err, Error},
     fidl_fuchsia_bluetooth_sys::{self as sys, BootstrapRequest, BootstrapRequestStream},
     fuchsia_bluetooth::{
         types::{BondingData, Identity, PeerId},
@@ -69,7 +69,7 @@ pub async fn run(hd: HostDispatcher, mut stream: BootstrapRequestStream) -> Resu
 /// Fuchsia Bluetooth assigned unique PeerIds, we provide a generator of random ids here as a
 /// backup source. This is because internally all Peers must have a unique fuchsia-assigned PeerId.
 fn validate(src: sys::Identity) -> Result<Identity, Error> {
-    let host = src.host.ok_or(err_msg("Identity is missing the .host field"))?;
+    let host = src.host.ok_or(format_err!("Identity is missing the .host field"))?;
     // A generated sequence of PeerIds to be used if any bonding data are missing Fuchsia
     // Identifiers
     let generate_random_ids = iter::repeat_with(PeerId::random);

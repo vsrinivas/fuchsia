@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::Error, fuchsia_async as fasync, fuchsia_component::server::ServiceFs,
+    anyhow::Error, fuchsia_async as fasync, fuchsia_component::server::ServiceFs,
     fuchsia_inspect::*, futures::prelude::*,
 };
 

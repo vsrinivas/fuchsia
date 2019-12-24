@@ -20,9 +20,10 @@ rustc_library("blobfs-ramdisk") {
     "//garnet/public/rust/fuchsia-zircon",
     "//src/storage/ramdevice-client",
     "//src/sys/pkg/lib/fuchsia-merkle",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:openat",
+    "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::bail,
+    anyhow::format_err,
     fidl_fuchsia_paver::{Configuration, PaverMarker},
     fuchsia_component::client::connect_to_service,
     fuchsia_syslog::{fx_log_err, fx_log_info},
@@ -18,7 +18,7 @@ pub async fn set_active_configuration_healthy() {
     }
 }
 
-async fn set_active_configuration_healthy_impl() -> Result<(), failure::Error> {
+async fn set_active_configuration_healthy_impl() -> Result<(), anyhow::Error> {
     let paver = connect_to_service::<PaverMarker>()?;
 
     let (boot_manager, boot_manager_server_end) = fidl::endpoints::create_proxy()?;
@@ -28,14 +28,20 @@ async fn set_active_configuration_healthy_impl() -> Result<(), failure::Error> {
     match boot_manager.set_active_configuration_healthy().await.map(Status::from_raw) {
         Ok(Status::OK) => (),
         Ok(status) => {
-            bail!("set_active_configuration_healthy failed with status {:?}", status);
+            return Err(format_err!(
+                "set_active_configuration_healthy failed with status {:?}",
+                status
+            ));
         }
         Err(fidl::Error::ClientChannelClosed(Status::NOT_SUPPORTED)) => {
             fx_log_info!("ABR not supported");
             return Ok(());
         }
         Err(status) => {
-            bail!("set_active_configuration_healthy failed with transport status {:?}", status);
+            return Err(format_err!(
+                "set_active_configuration_healthy failed with transport status {:?}",
+                status
+            ));
         }
     };
 
@@ -48,7 +54,7 @@ async fn set_active_configuration_healthy_impl() -> Result<(), failure::Error> {
     let inactive_config = match active_config {
         Configuration::A => Configuration::B,
         Configuration::B => Configuration::A,
-        Configuration::Recovery => bail!("Recovery should not be active"),
+        Configuration::Recovery => return Err(format_err!("Recovery should not be active")),
     };
     Status::ok(boot_manager.set_configuration_unbootable(inactive_config).await?)?;
     Ok(())

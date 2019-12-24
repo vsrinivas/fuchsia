@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl_fuchsia_netemul_guest::{
         CommandListenerMarker, GuestDiscoveryMarker, GuestInteractionMarker,
     },

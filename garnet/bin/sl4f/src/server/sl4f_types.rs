@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{Error, Fail};
+use anyhow::Error;
 use futures::future::LocalBoxFuture;
 use serde_derive::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{fmt::Debug, str::FromStr, sync::mpsc};
+use thiserror::Error;
 
 use crate::server::constants::{COMMAND_DELIMITER, COMMAND_SIZE};
 
@@ -113,8 +114,8 @@ impl FromStr for MethodId {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Fail)]
-#[fail(display = "invalid method id: {}", _0)]
+#[derive(Debug, PartialEq, Eq, Clone, Error)]
+#[error("invalid method id: {}", _0)]
 pub struct MethodIdParseError(String);
 
 /// Required fields for making a request

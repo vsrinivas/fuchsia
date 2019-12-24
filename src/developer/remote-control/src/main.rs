@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{Error, ResultExt},
+    anyhow::{Context as _, Error},
     fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker},
     fidl_fuchsia_developer_remotecontrol as rcs,
     fidl_fuchsia_overnet::{ServiceProviderRequest, ServiceProviderRequestStream},

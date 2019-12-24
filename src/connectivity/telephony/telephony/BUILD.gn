@@ -23,10 +23,11 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.telephony.ril:fuchsia.telephony.ril-rustc",
     "//src/connectivity/telephony/lib/qmi",
     "//src/lib/inspect/rust/fuchsia-inspect",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:thiserror",
   ]
 }
 

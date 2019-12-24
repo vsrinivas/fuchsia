@@ -17,10 +17,11 @@ rustc_library("integration_tests") {
     "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
     "//src/connectivity/overnet/lib/core",
     "//src/connectivity/overnet/lib/hoist",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:timebomb",
   ]
   non_rust_deps = [ "//third_party/boringssl" ]

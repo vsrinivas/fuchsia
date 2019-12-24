@@ -118,7 +118,7 @@ async fn handle_target_request(
 pub(crate) async fn handle_target_requests(
     mut target_request_stream: TargetHandlerRequestStream,
     media_sessions: Arc<MediaSessions>,
-) -> Result<(), failure::Error> {
+) -> Result<(), anyhow::Error> {
     while let Some(req) = target_request_stream.try_next().await? {
         let fut = handle_target_request(req, media_sessions.clone());
         if let Err(e) = fut.await {
@@ -134,7 +134,7 @@ pub(crate) async fn handle_target_requests(
 /// Spin up task for handling incoming TargetHandler requests.
 pub(crate) async fn process_avrcp_requests(
     media_sessions: Arc<MediaSessions>,
-) -> Result<(), failure::Error> {
+) -> Result<(), anyhow::Error> {
     // AVRCP Service Setup
     // Register this target handler with the AVRCP component.
     let avrcp_svc = connect_to_service::<PeerManagerMarker>()

@@ -4,7 +4,7 @@
 
 use {
     crate::location::{InspectLocation, InspectType},
-    failure::{format_err, Error},
+    anyhow::{format_err, Error},
     fidl_fuchsia_inspect::TreeMarker,
     fidl_fuchsia_io::NodeInfo,
     fuchsia_inspect::reader::{NodeHierarchy, PartialNodeHierarchy},

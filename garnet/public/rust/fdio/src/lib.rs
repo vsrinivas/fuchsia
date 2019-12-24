@@ -717,7 +717,7 @@ mod tests {
     }
 
     #[test]
-    fn namespace_double_bind_fail() {
+    fn namespace_double_bind_error() {
         let namespace = Namespace::installed().unwrap();
         let (ns_client1, _server1) = zx::Channel::create().unwrap();
         let (ns_client2, _server2) = zx::Channel::create().unwrap();
@@ -729,7 +729,7 @@ mod tests {
     }
 
     #[test]
-    fn namespace_connect_fail() {
+    fn namespace_connect_error() {
         let namespace = Namespace::installed().unwrap();
         let (_client, ns_server) = zx::Channel::create().unwrap();
         let path = "/test_path3";
@@ -738,7 +738,7 @@ mod tests {
     }
 
     #[test]
-    fn namespace_unbind_fail() {
+    fn namespace_unbind_error() {
         let namespace = Namespace::installed().unwrap();
         let path = "/test_path4";
 

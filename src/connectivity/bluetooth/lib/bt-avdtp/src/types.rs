@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    failure::Fail,
     fuchsia_syslog::fx_log_warn,
     fuchsia_zircon as zx,
     std::{
@@ -12,93 +11,94 @@ use {
         io::{Cursor, Write},
         result,
     },
+    thiserror::Error,
 };
 
 /// Result type for AVDTP, using avdtp::Error
 pub type Result<T> = result::Result<T, Error>;
 
 /// The error type of the AVDTP library.
-#[derive(Fail, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq)]
 pub enum Error {
     /// The value that was sent on the wire was out of range.
-    #[fail(display = "Value was out of range")]
+    #[error("Value was out of range")]
     OutOfRange,
 
     /// The signal identifier was invalid when parsing a message.
-    #[fail(display = "Invalid signal id for {:?}: {:X?}", _0, _1)]
+    #[error("Invalid signal id for {:?}: {:X?}", _0, _1)]
     InvalidSignalId(TxLabel, u8),
 
     /// The header was invalid when parsing a message from the peer.
-    #[fail(display = "Invalid Header for a AVDTP message")]
+    #[error("Invalid Header for a AVDTP message")]
     InvalidHeader,
 
     /// The body format was invalid when parsing a message from the peer.
-    #[fail(display = "Failed to parse AVDTP message contents")]
+    #[error("Failed to parse AVDTP message contents")]
     InvalidMessage,
 
     /// The remote end failed to respond to this command in time.
-    #[fail(display = "Command timed out")]
+    #[error("Command timed out")]
     Timeout,
 
     /// The Remote end rejected a command we sent (with this error code)
-    #[fail(display = "Remote end rejected the command (code = {:}", _0)]
+    #[error("Remote end rejected the command (code = {:}", _0)]
     RemoteRejected(u8),
 
     /// The Remote end rejected a set configuration or reconfigure command we sent,
     /// indicating this ServiceCategory (code).
     /// The indicated ServiceCategory can be retrieved using `ServiceCategory::try_from`
-    #[fail(display = "Remote end rejected the command (Category = {:}, code = {:}", _0, _1)]
+    #[error("Remote end rejected the command (Category = {:}, code = {:}", _0, _1)]
     RemoteConfigRejected(u8, u8),
 
     /// The Remote end rejected a start or suspend command we sent, indicating this SEID and error
     /// code.
-    #[fail(display = "Remote end rejected the command (SEID = {:}, code = {:}", _0, _1)]
+    #[error("Remote end rejected the command (SEID = {:}, code = {:}", _0, _1)]
     RemoteStreamRejected(u8, u8),
 
     /// When a message hasn't been implemented yet, the parser will return this.
-    #[fail(display = "Message has not been implemented yet")]
+    #[error("Message has not been implemented yet")]
     UnimplementedMessage,
 
     /// The distant peer has disconnected.
-    #[fail(display = "Peer has disconnected")]
+    #[error("Peer has disconnected")]
     PeerDisconnected,
 
     /// Sent if a Command Future is polled after it's already completed
-    #[fail(display = "Command Response has already been received")]
+    #[error("Command Response has already been received")]
     AlreadyReceived,
 
     /// Encountered an IO error setting up the channel
-    #[fail(display = "Encountered an IO error reading from the peer: {}", _0)]
-    ChannelSetup(#[cause] zx::Status),
+    #[error("Encountered an IO error reading from the peer: {}", _0)]
+    ChannelSetup(zx::Status),
 
     /// Encountered an IO error reading from the peer.
-    #[fail(display = "Encountered an IO error reading from the peer: {}", _0)]
-    PeerRead(#[cause] zx::Status),
+    #[error("Encountered an IO error reading from the peer: {}", _0)]
+    PeerRead(zx::Status),
 
     /// Encountered an IO error reading from the peer.
-    #[fail(display = "Encountered an IO error writing to the peer: {}", _0)]
-    PeerWrite(#[cause] zx::Status),
+    #[error("Encountered an IO error writing to the peer: {}", _0)]
+    PeerWrite(zx::Status),
 
     /// A message couldn't be encoded.
-    #[fail(display = "Encountered an error encoding a message")]
+    #[error("Encountered an error encoding a message")]
     Encoding,
 
     /// An error has been detected, and the request that is being handled
     /// should be rejected with the error code given.
-    #[fail(display = "Invalid request detected: {:?}", _0)]
+    #[error("Invalid request detected: {:?}", _0)]
     RequestInvalid(ErrorCode),
 
     /// Same as RequestInvalid, but an extra byte is included, which is used
     /// in Stream and Configure responses
-    #[fail(display = "Invalid request detected: {:?} (extra: {:?})", _0, _1)]
+    #[error("Invalid request detected: {:?} (extra: {:?})", _0, _1)]
     RequestInvalidExtra(ErrorCode, u8),
 
     /// An operation was attempted in an Invalid State
-    #[fail(display = "Invalid State")]
+    #[error("Invalid State")]
     InvalidState,
 
     #[doc(hidden)]
-    #[fail(display = "__Nonexhaustive error should never be created.")]
+    #[error("__Nonexhaustive error should never be created.")]
     __Nonexhaustive,
 }
 
@@ -685,17 +685,17 @@ impl Decodable for ServiceCapability {
                 }
             }
             Ok(ServiceCategory::ContentProtection) => {
-                let cp_format_err = Err(Error::RequestInvalid(ErrorCode::BadCpFormat));
+                let cp_err = Err(Error::RequestInvalid(ErrorCode::BadCpFormat));
                 if from.len() < 4
                     || length_of_capability < 2
                     || from.len() < length_of_capability + 2
                 {
-                    return cp_format_err;
+                    return cp_err;
                 }
                 let cp_type: u16 = ((from[3] as u16) << 8) + from[2] as u16;
                 let protection_type = match ContentProtectionType::try_from(cp_type) {
                     Ok(val) => val,
-                    Err(_) => return cp_format_err,
+                    Err(_) => return cp_err,
                 };
                 let extra_len = length_of_capability - 2;
                 let mut extra = vec![0; extra_len];
@@ -703,16 +703,16 @@ impl Decodable for ServiceCapability {
                 ServiceCapability::ContentProtection { protection_type, extra }
             }
             Ok(ServiceCategory::MediaCodec) => {
-                let format_err = Err(Error::RequestInvalid(ErrorCode::BadPayloadFormat));
+                let err = Err(Error::RequestInvalid(ErrorCode::BadPayloadFormat));
                 if from.len() < 4
                     || length_of_capability < 2
                     || from.len() < length_of_capability + 2
                 {
-                    return format_err;
+                    return err;
                 }
                 let media_type = match MediaType::try_from(from[2] >> 4) {
                     Ok(media) => media,
-                    Err(_) => return format_err,
+                    Err(_) => return err,
                 };
                 let codec_type = MediaCodecType::new(from[3]);
                 let extra_len = length_of_capability - 2;

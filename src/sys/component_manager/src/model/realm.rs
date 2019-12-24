@@ -15,8 +15,8 @@ use {
         routing,
         runner::{NullRunner, RemoteRunner, Runner},
     },
+    anyhow::format_err,
     cm_rust::{self, CapabilityPath, ChildDecl, ComponentDecl, UseDecl, UseStorageDecl},
-    failure::format_err,
     fidl::endpoints::{create_endpoints, Proxy, ServerEnd},
     fidl_fuchsia_io::{self as fio, DirectoryProxy, MODE_TYPE_DIRECTORY},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
@@ -344,7 +344,7 @@ impl Realm {
                                 return Err(ModelError::RunnerCommunicationError {
                                     moniker: realm.abs_moniker.clone(),
                                     operation: "stop".to_string(),
-                                    err: clonable_error::ClonableError::from(failure::Error::from(
+                                    err: clonable_error::ClonableError::from(anyhow::Error::from(
                                         e,
                                     )),
                                 });
