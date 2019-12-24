@@ -90,7 +90,11 @@ class GdcDevice : public GdcDeviceType, public ddk::GdcProtocol<GdcDevice, ddk::
   zx_status_t StopThread();
 
  protected:
-  enum GdcOp { GDC_OP_FRAME, GDC_OP_SETOUTPUTRES };
+  enum GdcOp {
+    GDC_OP_FRAME,
+    GDC_OP_SETOUTPUTRES,
+    GDC_OP_REMOVE_TASK,
+  };
 
   struct TaskInfo {
     GdcOp op;
@@ -116,6 +120,9 @@ class GdcDevice : public GdcDeviceType, public ddk::GdcProtocol<GdcDevice, ddk::
   void Stop();
 
   void ProcessTask(TaskInfo& info);
+  void ChangeOutputResoultion(TaskInfo& info);
+  void ProcessFrame(TaskInfo& info);
+  void RemoveTask(TaskInfo& info);
   zx_status_t WaitForInterrupt(zx_port_packet_t* packet);
 
   // Used to access the processing queue.

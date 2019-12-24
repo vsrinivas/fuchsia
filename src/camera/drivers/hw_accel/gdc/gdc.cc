@@ -126,28 +126,13 @@ void GdcDevice::Stop() {
   // clang-format on
 }
 
-void GdcDevice::ProcessTask(TaskInfo& info) {
+void GdcDevice::ProcessFrame(TaskInfo& info) {
   auto task = info.task;
   // The way we have our SW instrumented, GDC should never be busy
   // proccessing at this point. Doing a sanity check here to ensure
   // that its not busy processing an image.
   ZX_ASSERT(!Status::Get().ReadFrom(gdc_mmio()).busy());
 
-  if (info.op == GDC_OP_SETOUTPUTRES) {
-    // TODO: GDC needs an array of config vmos, one corresponding to
-    // an output resolution. Pass an array of config vmos via init,
-    // and add a method to get the config vmo corresponding to the
-    // new format. For now, all we do is switch to the new imageformat.
-    task->set_output_format_index(info.index);
-    // Invoke the callback function and tell about the output buffer index
-    // which is ready to be used.
-    frame_available_info f_info;
-    f_info.frame_status = FRAME_STATUS_OK;
-    f_info.metadata.timestamp = static_cast<uint64_t>(zx_clock_get_monotonic());
-    f_info.metadata.image_format_index = task->output_format_index();
-    task->ResolutionChangeCallback(&f_info);
-    return;
-  }
   auto input_buffer_index = info.index;
 
   Stop();
@@ -289,6 +274,44 @@ void GdcDevice::ProcessTask(TaskInfo& info) {
     info.metadata.timestamp = static_cast<uint64_t>(zx_clock_get_monotonic());
     info.metadata.image_format_index = task->output_format_index();
     task->FrameReadyCallback(&info);
+  }
+}
+
+void GdcDevice::ChangeOutputResoultion(TaskInfo& info) {
+  auto task = info.task;
+  // TODO: GDC needs an array of config vmos, one corresponding to
+  // an output resolution. Pass an array of config vmos via init,
+  // and add a method to get the config vmo corresponding to the
+  // new format. For now, all we do is switch to the new imageformat.
+  task->set_output_format_index(info.index);
+  // Invoke the callback function and tell about the output buffer index
+  // which is ready to be used.
+  frame_available_info f_info;
+  f_info.frame_status = FRAME_STATUS_OK;
+  f_info.metadata.timestamp = static_cast<uint64_t>(zx_clock_get_monotonic());
+  f_info.metadata.image_format_index = task->output_format_index();
+  task->ResolutionChangeCallback(&f_info);
+}
+
+void GdcDevice::RemoveTask(TaskInfo& info) {
+  // TODO(braval): Implement this functionality.
+}
+
+void GdcDevice::ProcessTask(TaskInfo& info) {
+  switch (info.op) {
+    case GDC_OP_FRAME: {
+      return ProcessFrame(info);
+    }
+    case GDC_OP_SETOUTPUTRES: {
+      return ChangeOutputResoultion(info);
+    }
+    case GDC_OP_REMOVE_TASK: {
+      return RemoveTask(info);
+    }
+    default: {
+      ZX_ASSERT_MSG(false, "Unknown GDC Op\n");
+      return;
+    }
   }
 }
 
