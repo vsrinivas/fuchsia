@@ -17,8 +17,8 @@ type EncodeSuccess struct {
 	Name              string
 	Value             interface{}
 	Encodings         []Encoding
-	BindingsAllowlist *[]string
-	BindingsDenylist  *[]string
+	BindingsAllowlist *LanguageList
+	BindingsDenylist  *LanguageList
 	// Handles
 }
 
@@ -26,8 +26,8 @@ type DecodeSuccess struct {
 	Name              string
 	Value             interface{}
 	Encodings         []Encoding
-	BindingsAllowlist *[]string
-	BindingsDenylist  *[]string
+	BindingsAllowlist *LanguageList
+	BindingsDenylist  *LanguageList
 	// Handles
 }
 
@@ -36,8 +36,8 @@ type EncodeFailure struct {
 	Value             interface{}
 	WireFormats       []WireFormat
 	Err               ErrorCode
-	BindingsAllowlist *[]string
-	BindingsDenylist  *[]string
+	BindingsAllowlist *LanguageList
+	BindingsDenylist  *LanguageList
 }
 
 type DecodeFailure struct {
@@ -45,8 +45,19 @@ type DecodeFailure struct {
 	Type              string
 	Encodings         []Encoding
 	Err               ErrorCode
-	BindingsAllowlist *[]string
-	BindingsDenylist  *[]string
+	BindingsAllowlist *LanguageList
+	BindingsDenylist  *LanguageList
+}
+
+type LanguageList []string
+
+func (list LanguageList) Includes(targetLanguage string) bool {
+	for _, language := range list {
+		if language == targetLanguage {
+			return true
+		}
+	}
+	return false
 }
 
 type Encoding struct {

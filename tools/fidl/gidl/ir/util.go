@@ -24,21 +24,12 @@ func Merge(input []All) All {
 }
 
 func FilterByBinding(input All, binding string) All {
-	shouldKeep := func(binding string, allowlist *[]string, denylist *[]string) bool {
-		if denylist != nil {
-			for _, item := range *denylist {
-				if binding == item {
-					return false
-				}
-			}
+	shouldKeep := func(binding string, allowlist *LanguageList, denylist *LanguageList) bool {
+		if denylist != nil && denylist.Includes(binding) {
+			return false
 		}
 		if allowlist != nil {
-			for _, item := range *allowlist {
-				if binding == item {
-					return true
-				}
-			}
-			return false
+			return allowlist.Includes(binding)
 		}
 		return true
 	}

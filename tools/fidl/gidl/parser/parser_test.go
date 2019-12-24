@@ -110,7 +110,7 @@ func TestParseValues(t *testing.T) {
 		{gidl: `[null,]`, expectedValue: []interface{}{nil}},
 	}
 	for _, tc := range testCases {
-		p := NewParser("", strings.NewReader(tc.gidl))
+		p := NewParser("", strings.NewReader(tc.gidl), []string{})
 		value, err := p.parseValue()
 		t.Run(tc.gidl, func(t *testing.T) {
 			checkMatch(t, value, tc.expectedValue, err)
@@ -266,7 +266,7 @@ func TestParseBytes(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		p := NewParser("", strings.NewReader(tc.gidl))
+		p := NewParser("", strings.NewReader(tc.gidl), []string{})
 		value, err := p.parseByteSection()
 		t.Run(tc.gidl, func(t *testing.T) {
 			checkMatch(t, value, tc.expectedValue, err)
@@ -298,7 +298,7 @@ func TestParseBytesFailures(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		p := NewParser("", strings.NewReader(tc.gidl))
+		p := NewParser("", strings.NewReader(tc.gidl), []string{})
 		_, err := p.parseByteSection()
 		t.Run(tc.gidl, func(t *testing.T) {
 			if err == nil {
@@ -522,10 +522,12 @@ func TestParseSucceedsBindingsAllowlistAndDenylist(t *testing.T) {
 				255, 255, 255, 255, 255, 255, 255, 255, // alloc present
 			),
 		],
-		bindings_allowlist = [go, rust,],
-		bindings_denylist = [go,],
+		bindings_allowlist = [go, rust],
+		bindings_denylist = [dart],
 	}`
-	all, err := parse(gidl)
+	p := NewParser("", strings.NewReader(gidl), []string{"go", "rust", "dart"})
+	var all ir.All
+	err := p.parseSection(&all)
 	expectedAll := ir.All{
 		EncodeSuccess: []ir.EncodeSuccess{
 			{
@@ -548,8 +550,8 @@ func TestParseSucceedsBindingsAllowlistAndDenylist(t *testing.T) {
 						255, 255, 255, 255, 255, 255, 255, 255, // alloc present
 					},
 				}},
-				BindingsAllowlist: &[]string{"go", "rust"},
-				BindingsDenylist:  &[]string{"go"},
+				BindingsAllowlist: &ir.LanguageList{"go", "rust"},
+				BindingsDenylist:  &ir.LanguageList{"dart"},
 			},
 		},
 		DecodeSuccess: []ir.DecodeSuccess{
@@ -573,12 +575,54 @@ func TestParseSucceedsBindingsAllowlistAndDenylist(t *testing.T) {
 						255, 255, 255, 255, 255, 255, 255, 255, // alloc present
 					},
 				}},
-				BindingsAllowlist: &[]string{"go", "rust"},
-				BindingsDenylist:  &[]string{"go"},
+				BindingsAllowlist: &ir.LanguageList{"go", "rust"},
+				BindingsDenylist:  &ir.LanguageList{"dart"},
 			},
 		},
 	}
 	checkMatch(t, all, expectedAll, err)
+}
+
+func TestParseFailsBindingsAllowlist(t *testing.T) {
+	gidl := `
+	success("OneStringOfMaxLengthFive-empty") {
+		value = OneStringOfMaxLengthFive {
+			first: "four",
+		},
+		bytes = [
+			16:raw(
+				0, 0, 0, 0, 0, 0, 0, 0, // length
+				255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+			),
+		],
+		bindings_allowlist = [go, rust],
+		bindings_denylist = [dart],
+	}`
+	p := NewParser("", strings.NewReader(gidl), []string{"rust", "dart"})
+	var all ir.All
+	err := p.parseSection(&all)
+	checkFailure(t, err, "invalid language 'go'")
+}
+
+func TestParseFailsBindingsDenylist(t *testing.T) {
+	gidl := `
+	success("OneStringOfMaxLengthFive-empty") {
+		value = OneStringOfMaxLengthFive {
+			first: "four",
+		},
+		bytes = [
+			16:raw(
+				0, 0, 0, 0, 0, 0, 0, 0, // length
+				255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+			),
+		],
+		bindings_allowlist = [go, rust],
+		bindings_denylist = [dart],
+	}`
+	p := NewParser("", strings.NewReader(gidl), []string{"rust", "go"})
+	var all ir.All
+	err := p.parseSection(&all)
+	checkFailure(t, err, "invalid language 'dart'")
 }
 
 func TestParseSucceedsMultipleWireFormats(t *testing.T) {
@@ -665,7 +709,7 @@ func TestParseFailsUnknownErrorCode(t *testing.T) {
 		},
 		err = UNKNOWN_ERROR_CODE,
 	}`
-	p := NewParser("", strings.NewReader(input))
+	p := NewParser("", strings.NewReader(input), []string{})
 	var all ir.All
 	if err := p.parseSection(&all); err == nil || !strings.Contains(err.Error(), "unknown error code") {
 		t.Errorf("expected 'unknown error code' error, but got %v", err)
@@ -678,7 +722,7 @@ func TestParseFailsNoBytes(t *testing.T) {
 		value = NoBytes {},
 		bytes = {},
 	}`
-	p := NewParser("", strings.NewReader(input))
+	p := NewParser("", strings.NewReader(input), []string{})
 	var all ir.All
 	if err := p.parseSection(&all); err == nil || !strings.Contains(err.Error(), "no bytes") {
 		t.Errorf("expected 'no bytes' error, but got %v", err)
@@ -694,7 +738,7 @@ func TestParseFailsDuplicateWireFormat(t *testing.T) {
 			old = [],
 		}
 	}`
-	p := NewParser("", strings.NewReader(input))
+	p := NewParser("", strings.NewReader(input), []string{})
 	var all ir.All
 	if err := p.parseSection(&all); err == nil || !strings.Contains(err.Error(), "duplicate wire format") {
 		t.Errorf("expected 'duplicate wire format' error, but got %v", err)
@@ -702,7 +746,7 @@ func TestParseFailsDuplicateWireFormat(t *testing.T) {
 }
 
 func parse(gidlInput string) (ir.All, error) {
-	p := NewParser("", strings.NewReader(gidlInput))
+	p := NewParser("", strings.NewReader(gidlInput), []string{})
 	var all ir.All
 	err := p.parseSection(&all)
 	return all, err
@@ -746,7 +790,7 @@ func TestTokenizationSuccess(t *testing.T) {
 	}
 	for input, expecteds := range cases {
 		t.Run(input, func(t *testing.T) {
-			p := NewParser("", strings.NewReader(input))
+			p := NewParser("", strings.NewReader(input), []string{})
 			for index, expected := range expecteds {
 				actual := p.nextToken()
 				if actual != expected {

@@ -9,8 +9,10 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
+	"sort"
 	"strings"
 
 	fidlir "fidl/compiler/backend/types"
@@ -24,11 +26,29 @@ import (
 	gidltransformer "gidl/transformer"
 )
 
-// GIDLFlags for GIDL backends.
-//
-// --json <path>  path to the JSON IR
-// --gidl <path>  path to the GIDL file
-// --language (dart|go|cpp|llcpp|rust|transformer)  language to output
+// Generator is a function that generates conformance tests for a particular
+// backend and writes them to the io.Writer.
+type Generator func(io.Writer, gidlir.All, fidlir.Root) error
+
+var generators = map[string]Generator{
+	"go":          gidlgolang.Generate,
+	"cpp":         gidlcpp.Generate,
+	"llcpp":       gidlllcpp.Generate,
+	"dart":        gidldart.Generate,
+	"rust":        gidlrust.Generate,
+	"transformer": gidltransformer.Generate,
+}
+
+var allLanguages = func() []string {
+	var list []string
+	for language := range generators {
+		list = append(list, language)
+	}
+	sort.Strings(list)
+	return list
+}()
+
+// GIDLFlags stores the command-line flags for the GIDL program.
 type GIDLFlags struct {
 	JSONPath *string
 	Language *string
@@ -39,20 +59,19 @@ func (gidlFlags GIDLFlags) Valid() bool {
 	return len(*gidlFlags.JSONPath) != 0 && flag.NArg() != 0
 }
 
-var flags = func() GIDLFlags {
-	return GIDLFlags{
-		JSONPath: flag.String("json", "",
-			"relative path to the FIDL intermediate representation."),
-		Language: flag.String("language", "", "target language (go/cpp)"),
-	}
-}()
+var flags = GIDLFlags{
+	JSONPath: flag.String("json", "",
+		"relative path to the FIDL intermediate representation."),
+	Language: flag.String("language", "",
+		fmt.Sprintf("target language (%s)", strings.Join(allLanguages, "/"))),
+}
 
 func parseGidlIr(filename string) gidlir.All {
 	f, err := os.Open(filename)
 	if err != nil {
 		panic(err)
 	}
-	result, err := gidlparser.NewParser(filename, f).Parse()
+	result, err := gidlparser.NewParser(filename, f, allLanguages).Parse()
 	if err != nil {
 		panic(err)
 	}
@@ -100,46 +119,21 @@ func main() {
 			strings.Join(libs, ",")))
 	}
 
-	buf := new(bytes.Buffer)
-
-	switch language := *flags.Language; language {
-	case "go":
-		err := gidlgolang.Generate(buf, gidl, fidl)
-		if err != nil {
-			panic(err)
-		}
-	case "cpp":
-		err := gidlcpp.Generate(buf, gidl, fidl)
-		if err != nil {
-			panic(err)
-		}
-	case "llcpp":
-		err := gidlllcpp.Generate(buf, gidl, fidl)
-		if err != nil {
-			panic(err)
-		}
-	case "dart":
-		err := gidldart.Generate(buf, gidl, fidl)
-		if err != nil {
-			panic(err)
-		}
-	case "rust":
-		err := gidlrust.Generate(buf, gidl, fidl)
-		if err != nil {
-			panic(err)
-		}
-	case "transformer":
-		err := gidltransformer.Generate(buf, gidl, fidl)
-		if err != nil {
-			panic(err)
-		}
-	case "":
+	language := *flags.Language
+	if language == "" {
 		panic("must specify --language")
-	default:
+	}
+	buf := new(bytes.Buffer)
+	generator, ok := generators[language]
+	if !ok {
 		panic(fmt.Sprintf("unknown language: %s", language))
 	}
 
-	_, err := os.Stdout.Write(buf.Bytes())
+	err := generator(buf, gidl, fidl)
+	if err != nil {
+		panic(err)
+	}
+	_, err = os.Stdout.Write(buf.Bytes())
 	if err != nil {
 		panic(err)
 	}

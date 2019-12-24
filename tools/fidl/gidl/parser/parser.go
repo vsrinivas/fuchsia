@@ -19,12 +19,15 @@ import (
 type Parser struct {
 	scanner    scanner.Scanner
 	lookaheads []token
+	// All supported languages, used to validate bindings allowlist/denylist.
+	allLanguages ir.LanguageList
 }
 
-func NewParser(name string, input io.Reader) *Parser {
+func NewParser(name string, input io.Reader, allLanguages []string) *Parser {
 	var p Parser
 	p.scanner.Position.Filename = name
 	p.scanner.Init(input)
+	p.allLanguages = allLanguages
 	return &p
 }
 
@@ -148,8 +151,8 @@ type body struct {
 	Value             ir.Value
 	Encodings         []ir.Encoding
 	Err               ir.ErrorCode
-	BindingsAllowlist *[]string
-	BindingsDenylist  *[]string
+	BindingsAllowlist *ir.LanguageList
+	BindingsDenylist  *ir.LanguageList
 }
 
 type sectionMetadata struct {
@@ -346,14 +349,14 @@ func (p *Parser) parseSingleBodyElement(result *body, all map[bodyElement]bool) 
 		result.Err = errorCode
 		kind = isErr
 	case "bindings_allowlist":
-		languages, err := p.parseTextSlice()
+		languages, err := p.parseLanguageList()
 		if err != nil {
 			return err
 		}
 		result.BindingsAllowlist = &languages
 		kind = isBindingsAllowlist
 	case "bindings_denylist":
-		languages, err := p.parseTextSlice()
+		languages, err := p.parseLanguageList()
 		if err != nil {
 			return err
 		}
@@ -490,6 +493,25 @@ func (p *Parser) parseTextSlice() ([]string, error) {
 	err := p.parseCommaSeparated(tLsquare, tRsquare, func() error {
 		if tok, ok := p.consumeToken(tText); !ok {
 			return p.failExpectedToken(tText, tok)
+		} else {
+			result = append(result, tok.value)
+			return nil
+		}
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func (p *Parser) parseLanguageList() (ir.LanguageList, error) {
+	var result ir.LanguageList
+	err := p.parseCommaSeparated(tLsquare, tRsquare, func() error {
+		if tok, ok := p.consumeToken(tText); !ok {
+			return p.failExpectedToken(tText, tok)
+		} else if !p.allLanguages.Includes(tok.value) {
+			return p.newParseError(tok, "invalid language '%s'; must be one of: %s",
+				tok.value, strings.Join(p.allLanguages, ", "))
 		} else {
 			result = append(result, tok.value)
 			return nil
