@@ -5,15 +5,19 @@
 package testsharder
 
 import (
+	"container/heap"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/build/lib"
 )
+
+const maxShardsPerEnvironment = 8
 
 func ExtractDeps(shards []*Shard, fuchsiaBuildDir string) error {
 	for _, shard := range shards {
@@ -101,32 +105,105 @@ func divRoundUp(a, b int) int {
 	return (a / b) + 1
 }
 
-// WithMaxSize returns a list of shards such that each shard contains fewer than maxShardSize tests.
-// If maxShardSize <= 0, just returns its input.
-func WithMaxSize(shards []*Shard, maxShardSize int) []*Shard {
-	if maxShardSize <= 0 {
+// WithSize returns a list of shards such that each shard contains "roughly"
+// targetSize tests.
+// If targetSize <= 0, just returns its input.
+func WithSize(shards []*Shard, targetSize int, testDurations TestDurationsMap) []*Shard {
+	if targetSize <= 0 {
 		return shards
 	}
 	output := make([]*Shard, 0, len(shards))
 	for _, shard := range shards {
-		numNewShards := divRoundUp(len(shard.Tests), maxShardSize)
-		// Evenly distribute the tests between the new shards.
-		maxTestsPerNewShard := divRoundUp(len(shard.Tests), numNewShards)
-		for i := 0; i < numNewShards; i++ {
-			sliceStart := i * maxTestsPerNewShard
-			sliceLimit := min((i+1)*maxTestsPerNewShard, len(shard.Tests))
-			newName := shard.Name
-			if numNewShards > 1 {
-				newName = fmt.Sprintf("%s-(%d)", shard.Name, i+1)
-			}
-			output = append(output, &Shard{
-				Name:  newName,
-				Tests: shard.Tests[sliceStart:sliceLimit],
-				Env:   shard.Env,
-			})
-		}
+		numNewShards := min(
+			divRoundUp(len(shard.Tests), targetSize),
+			maxShardsPerEnvironment,
+		)
+		newShards := shardByTime(shard, testDurations, numNewShards)
+		output = append(output, newShards...)
 	}
 	return output
+}
+
+type subshard struct {
+	duration time.Duration
+	tests    []build.Test
+}
+
+// A subshardHeap is a min heap of subshards, using subshard duration as the key
+// to sort by.
+// It implements heap.Interface.
+type subshardHeap []subshard
+
+func (h subshardHeap) Len() int {
+	return len(h)
+}
+
+func (h subshardHeap) Less(i, j int) bool {
+	return h[i].duration < h[j].duration
+}
+
+func (h subshardHeap) Swap(i, j int) {
+	h[i], h[j] = h[j], h[i]
+}
+
+func (h *subshardHeap) Push(s interface{}) {
+	*h = append(*h, s.(subshard))
+}
+
+func (h *subshardHeap) Pop() interface{} {
+	old := *h
+	n := len(old)
+	s := old[n-1]
+	*h = old[0 : n-1]
+	return s
+}
+
+// shardByTime breaks a sigle original shard into numNewShards subshards such
+// that each subshard has approximately the same expected total duration.
+//
+// It does this using a greedy approximation algorithm for static multiprocessor
+// scheduling (https://en.wikipedia.org/wiki/Multiprocessor_scheduling). It
+// first sorts the tests in descending order by expected duration and then
+// successively allocates each test to the subshard with the lowest total
+// expected duration so far.
+func shardByTime(shard *Shard, testDurations TestDurationsMap, numNewShards int) []*Shard {
+	// Use a stable sort so that tests with the same duration stay in the same
+	// order.
+	// TODO(olivernewman): a stable sort will no longer be necessary after we
+	// start using real durations since very few tests share the same expected
+	// duration anyway.
+	sort.SliceStable(shard.Tests, func(index1, index2 int) bool {
+		test1, test2 := shard.Tests[index1], shard.Tests[index2]
+		duration1 := testDurations.Get(test1).MedianDuration
+		duration2 := testDurations.Get(test2).MedianDuration
+		// "greater than" instead of "less than" to achieve descending ordering
+		return duration1 > duration2
+	})
+
+	h := (subshardHeap)(make([]subshard, numNewShards))
+
+	for _, test := range shard.Tests {
+		// Assign this test to the subshard with the lowest total expected
+		// duration at this iteration of the for loop.
+		ss := heap.Pop(&h).(subshard)
+		ss.duration += testDurations.Get(test).MedianDuration
+		ss.tests = append(ss.tests, test)
+		heap.Push(&h, ss)
+	}
+
+	newShards := make([]*Shard, 0, numNewShards)
+	for i, subshard := range h {
+		name := shard.Name
+		if numNewShards > 1 {
+			name = fmt.Sprintf("%s-(%d)", shard.Name, i+1)
+		}
+		newShards = append(newShards, &Shard{
+			Name:  name,
+			Tests: subshard.tests,
+			Env:   shard.Env,
+		})
+	}
+	return newShards
 }
 
 // Removes leading slashes and replaces all other `/` with `_`. This allows the

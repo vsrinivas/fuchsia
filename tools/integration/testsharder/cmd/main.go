@@ -32,7 +32,7 @@ var (
 	multipliersPath string
 
 	// Maximum number of tests per shard.
-	maxShardSize int
+	targetShardSize int
 )
 
 func usage() {
@@ -50,7 +50,9 @@ func init() {
 	flag.Var(&mode, "mode", "mode in which to run the testsharder (e.g., normal or restricted).")
 	flag.Var(&tags, "tag", "environment tags on which to filter; only the tests that match all tags will be sharded")
 	flag.StringVar(&multipliersPath, "multipliers", "", "path to the json manifest containing tests to multiply")
-	flag.IntVar(&maxShardSize, "max-shard-size", 0, "maximum number of tests per shard. If <= 0, will be ignored. Otherwise, tests will be placed into more, smaller shards")
+	// TODO(olivernewman): Rename or replace this flag once it's no longer set
+	// by the recipes, to reflect the fact that it is no longer a hard maximum.
+	flag.IntVar(&targetShardSize, "max-shard-size", 0, "target number of tests per shard. If <= 0, will be ignored. Otherwise, tests will be placed into more, smaller shards")
 	flag.Usage = usage
 }
 
@@ -67,12 +69,12 @@ func execute() error {
 		return fmt.Errorf("must specify a Fuchsia build output directory")
 	}
 
-	modCtx, err := build.NewModules(buildDir)
+	m, err := build.NewModules(buildDir)
 	if err != nil {
 		return err
 	}
 
-	if err = testsharder.ValidateTests(modCtx.TestSpecs(), modCtx.Platforms()); err != nil {
+	if err = testsharder.ValidateTests(m.TestSpecs(), m.Platforms()); err != nil {
 		return err
 	}
 
@@ -80,7 +82,7 @@ func execute() error {
 		Mode: mode,
 		Tags: tags,
 	}
-	shards := testsharder.MakeShards(modCtx.TestSpecs(), opts)
+	shards := testsharder.MakeShards(m.TestSpecs(), opts)
 
 	if multipliersPath != "" {
 		multipliers, err := testsharder.LoadTestModifiers(multipliersPath)
@@ -90,9 +92,10 @@ func execute() error {
 		shards = testsharder.MultiplyShards(shards, multipliers)
 	}
 
-	shards = testsharder.WithMaxSize(shards, maxShardSize)
+	testDurations := testsharder.NewTestDurationsMap(m.TestDurations())
+	shards = testsharder.WithSize(shards, targetShardSize, testDurations)
 
-	if err := testsharder.ExtractDeps(shards, modCtx.BuildDir()); err != nil {
+	if err := testsharder.ExtractDeps(shards, m.BuildDir()); err != nil {
 		return err
 	}
 

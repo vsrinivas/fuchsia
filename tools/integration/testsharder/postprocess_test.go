@@ -103,7 +103,42 @@ func max(a, b int) int {
 	return b
 }
 
-func TestWithMaxSize(t *testing.T) {
+// assertShardsContainTests checks that the input shards are the same as
+// expectedShards, ignoring the relative ordering of the shards and the ordering
+// of tests within each shard.
+func assertShardsContainTests(t *testing.T, shards []*Shard, expectedShards [][]string) {
+	if len(shards) != len(expectedShards) {
+		t.Fatalf("shard count (%d) != expected shard count (%d)", len(shards), len(expectedShards))
+	}
+	for _, shard := range shards {
+		actualTestNames := []string{}
+		for _, test := range shard.Tests {
+			name := test.Path
+			if test.OS == "fuchsia" {
+				name = test.PackageURL
+			}
+			actualTestNames = append(actualTestNames, name)
+		}
+
+		// Check that we're expecting a shard that contains this exact set of
+		// tests.
+		foundMatch := false
+		for i, expectedTestNames := range expectedShards {
+			if stringSlicesEq(actualTestNames, expectedTestNames) {
+				// Remove this expected shard so other actual shards don't get
+				// matched with it.
+				expectedShards = append(expectedShards[:i], expectedShards[i+1:]...)
+				foundMatch = true
+				break
+			}
+		}
+		if !foundMatch {
+			t.Fatalf("unexpected shard with tests %v", actualTestNames)
+		}
+	}
+}
+
+func TestWithSize(t *testing.T) {
 	env1 := build.Environment{
 		Tags: []string{"env1"},
 	}
@@ -111,45 +146,78 @@ func TestWithMaxSize(t *testing.T) {
 		Dimensions: build.DimensionSet{DeviceType: "env2"},
 		Tags:       []string{"env2"},
 	}
-	input := []*Shard{namedShard(env1, "env1", 1, 2, 3, 4, 5), namedShard(env2, "env2", 6, 7, 8)}
-	t.Run("does nothing if max is 0", func(t *testing.T) {
-		assertEqual(t, input, WithMaxSize(input, 0))
-	})
-	t.Run("does nothing if max is < 0", func(t *testing.T) {
-		assertEqual(t, input, WithMaxSize(input, -7))
-	})
-	assertShardsLessThanSize := func(t *testing.T, actual []*Shard, maxSize int) {
-		for _, s := range actual {
-			if len(s.Tests) > maxSize {
-				t.Errorf("Shard %s has %d tests, expected at most %d", s.Name, len(s.Tests), maxSize)
-			}
-		}
+	defaultInput := []*Shard{namedShard(env1, "env1", 1, 2, 3, 4, 5, 6)}
+	defaultDurations := TestDurationsMap{
+		"*": {MedianDuration: 1},
 	}
-	t.Run("max is larger greater or equal to all shards", func(t *testing.T) {
-		maxSize := max(len(input[0].Tests), len(input[1].Tests))
-		actual := WithMaxSize(input, maxSize)
-		assertEqual(t, input, actual)
-		assertShardsLessThanSize(t, actual, maxSize)
+
+	t.Run("does nothing if size is 0", func(t *testing.T) {
+		assertEqual(t, defaultInput, WithSize(defaultInput, 0, defaultDurations))
 	})
 
-	t.Run("applies max", func(t *testing.T) {
-		maxSize := 2
-		actual := WithMaxSize(input, maxSize)
-		assertEqual(t, []*Shard{
-			namedShard(env1, "env1-(1)", 1, 2), namedShard(env1, "env1-(2)", 3, 4),
-			namedShard(env1, "env1-(3)", 5),
-			namedShard(env2, "env2-(1)", 6, 7), namedShard(env2, "env2-(2)", 8)},
-			actual)
-		assertShardsLessThanSize(t, actual, maxSize)
+	t.Run("does nothing if size is < 0", func(t *testing.T) {
+		assertEqual(t, defaultInput, WithSize(defaultInput, -7, defaultDurations))
 	})
-	t.Run("evenly distributes tests", func(t *testing.T) {
-		maxSize := 4
-		actual := WithMaxSize(input, maxSize)
-		assertEqual(t, []*Shard{
-			namedShard(env1, "env1-(1)", 1, 2, 3), namedShard(env1, "env1-(2)", 4, 5),
-			namedShard(env2, "env2", 6, 7, 8)},
-			actual)
-		assertShardsLessThanSize(t, actual, maxSize)
+
+	t.Run("returns one shard if target size is greater than test count", func(t *testing.T) {
+		actual := WithSize(defaultInput, 20, defaultDurations)
+		expectedTests := [][]string{
+			{"test1", "test2", "test3", "test4", "test5", "test6"},
+		}
+		assertShardsContainTests(t, actual, expectedTests)
+	})
+
+	t.Run("evenly distributes equal-duration tests", func(t *testing.T) {
+		actual := WithSize(defaultInput, 4, defaultDurations)
+		expectedTests := [][]string{
+			{"test1", "test3", "test5"},
+			{"test2", "test4", "test6"},
+		}
+		assertShardsContainTests(t, actual, expectedTests)
+	})
+
+	t.Run("puts long tests on their own shards", func(t *testing.T) {
+		durations := TestDurationsMap{
+			"*":     {MedianDuration: 1},
+			"test1": {MedianDuration: 10},
+		}
+		actual := WithSize(defaultInput, 4, durations)
+		expectedTests := [][]string{
+			{"test1"},
+			{"test2", "test3", "test4", "test5", "test6"},
+		}
+		assertShardsContainTests(t, actual, expectedTests)
+	})
+
+	t.Run("produces shards of similar expected durations", func(t *testing.T) {
+		input := []*Shard{namedShard(env1, "env1", 1, 2, 3, 4, 5)}
+		durations := TestDurationsMap{
+			"test1": {MedianDuration: 1},
+			"test2": {MedianDuration: 2},
+			"test3": {MedianDuration: 2},
+			"test4": {MedianDuration: 2},
+			"test5": {MedianDuration: 5},
+		}
+		actual := WithSize(input, 4, durations)
+		expectedTests := [][]string{
+			{"test1", "test5"},          // total duration: 1 + 5 = 6
+			{"test2", "test3", "test4"}, // total duration: 2 + 2 + 2 = 6
+		}
+		assertShardsContainTests(t, actual, expectedTests)
+	})
+
+	t.Run("keeps different environments separate", func(t *testing.T) {
+		input := []*Shard{
+			namedShard(env1, "env1", 1),
+			namedShard(env2, "env2", 2, 3, 4, 5, 6, 7),
+		}
+		actual := WithSize(input, 4, defaultDurations)
+		expectedTests := [][]string{
+			{"test1"},
+			{"test2", "test4", "test6"},
+			{"test3", "test5", "test7"},
+		}
+		assertShardsContainTests(t, actual, expectedTests)
 	})
 }
 
