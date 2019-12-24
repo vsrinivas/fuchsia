@@ -24,7 +24,8 @@ extern "C" {
 namespace wlan::testing {
 namespace {
 
-typedef mock_function::MockFunction<void, void*, uint32_t, const void*, size_t, const wlan_rx_info_t*>
+typedef mock_function::MockFunction<void, void*, uint32_t, const void*, size_t,
+                                    const wlan_rx_info_t*>
     recv_cb_t;
 
 // The wrapper used by wlanmac_ifc_t.recv() to call mock-up.
@@ -38,6 +39,7 @@ class WlanDeviceTest : public SingleApTest {
  public:
   WlanDeviceTest()
       : mvmvif_sta_{
+            .mvm = iwl_trans_get_mvm(sim_trans_.iwl_trans()),
             .mac_role = WLAN_INFO_MAC_ROLE_CLIENT,
         } {}
   ~WlanDeviceTest() {}

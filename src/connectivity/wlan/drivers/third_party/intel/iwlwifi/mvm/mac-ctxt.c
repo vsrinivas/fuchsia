@@ -34,14 +34,11 @@
  *
  *****************************************************************************/
 
-#include <linux/etherdevice.h>
-#include <net/mac80211.h>
-
-#include "fw-api.h"
-#include "iwl-io.h"
-#include "iwl-prph.h"
-#include "mvm.h"
-#include "time-event.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-io.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-prph.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/fw-api.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/time-event.h"
 
 const uint8_t iwl_mvm_ac_to_tx_fifo[] = {
     IWL_MVM_TX_FIFO_VO,
@@ -59,12 +56,13 @@ const uint8_t iwl_mvm_ac_to_gen2_tx_fifo[] = {
 struct iwl_mvm_mac_iface_iterator_data {
   struct iwl_mvm* mvm;
   struct ieee80211_vif* vif;
-  unsigned long available_mac_ids[BITS_TO_LONGS(NUM_MAC_INDEX_DRIVER)];
-  unsigned long available_tsf_ids[BITS_TO_LONGS(NUM_TSF_IDS)];
+  unsigned available_mac_ids[BITS_TO_INTS(NUM_MAC_INDEX_DRIVER)];
+  unsigned available_tsf_ids[BITS_TO_INTS(NUM_TSF_IDS)];
   enum iwl_tsf_id preferred_tsf;
   bool found_vif;
 };
 
+#if 0   // NEEDS_PORTING
 static void iwl_mvm_mac_tsf_id_iter(void* _data, uint8_t* mac, struct ieee80211_vif* vif) {
   struct iwl_mvm_mac_iface_iterator_data* data = _data;
   struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
@@ -210,23 +208,29 @@ void iwl_mvm_mac_ctxt_recalc_tsf_id(struct iwl_mvm* mvm, struct ieee80211_vif* v
     mvmvif->tsf_id = find_first_bit(data.available_tsf_ids, NUM_TSF_IDS);
   }
 }
+#endif  // NEEDS_PORTING
 
-int iwl_mvm_mac_ctxt_init(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
+zx_status_t iwl_mvm_mac_ctxt_init(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
   struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
   struct iwl_mvm_mac_iface_iterator_data data = {
       .mvm = mvm,
       .vif = vif,
-      .available_mac_ids = {(1 << NUM_MAC_INDEX_DRIVER) - 1},
-      .available_tsf_ids = {(1 << NUM_TSF_IDS) - 1},
+      .available_mac_ids = {(1 << NUM_MAC_INDEX_DRIVER) - 1},  // 1 means available
+      .available_tsf_ids = {(1 << NUM_TSF_IDS) - 1},           // 1 means available
       /* no preference yet */
       .preferred_tsf = NUM_TSF_IDS,
       .found_vif = false,
   };
-  uint32_t ac;
-  int ret, i, queue_limit;
+  zx_status_t ret;
+#if 0   // NEEDS_PORTING
   unsigned long used_hw_queues;
+#endif  // NEEDS_PORTING
 
   lockdep_assert_held(&mvm->mutex);
+
+#if 0   // NEEDS_PORTING
+  // TODO(43218): Support multiple interfaces simultaneously.
+  //              The current code doesn't clear bits so that always use the first interface.
 
   /*
    * Allocate a MAC ID and a TSF for this MAC, along with the queues
@@ -259,6 +263,7 @@ int iwl_mvm_mac_ctxt_init(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
 
   ieee80211_iterate_active_interfaces_atomic(mvm->hw, IEEE80211_IFACE_ITER_RESUME_ALL,
                                              iwl_mvm_mac_iface_iterator, &data);
+#endif  // NEEDS_PORTING
 
   /*
    * In the case we're getting here during resume, it's similar to
@@ -271,18 +276,18 @@ int iwl_mvm_mac_ctxt_init(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
    * recovery.
    */
   if (data.found_vif) {
-    return 0;
+    return ZX_OK;
   }
 
   /* Therefore, in recovery, we can't get here */
   if (WARN_ON_ONCE(test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status))) {
-    return -EBUSY;
+    return ZX_ERR_BAD_STATE;
   }
 
   mvmvif->id = find_first_bit(data.available_mac_ids, NUM_MAC_INDEX_DRIVER);
   if (mvmvif->id == NUM_MAC_INDEX_DRIVER) {
     IWL_ERR(mvm, "Failed to init MAC context - no free ID!\n");
-    ret = -EIO;
+    ret = ZX_ERR_IO;
     goto exit_fail;
   }
 
@@ -293,15 +298,16 @@ int iwl_mvm_mac_ctxt_init(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
   }
   if (mvmvif->tsf_id == NUM_TSF_IDS) {
     IWL_ERR(mvm, "Failed to init MAC context - no free TSF!\n");
-    ret = -EIO;
+    ret = ZX_ERR_IO;
     goto exit_fail;
   }
 
   mvmvif->color = 0;
 
-  INIT_LIST_HEAD(&mvmvif->time_event_data.list);
+  list_initialize(&mvmvif->time_event_data.list);
   mvmvif->time_event_data.id = TE_MAX;
 
+#if 0   // NEEDS_PORTING
   /* No need to allocate data queues to P2P Device MAC and NAN.*/
   if (vif->type == NL80211_IFTYPE_P2P_DEVICE || vif->type == NL80211_IFTYPE_NAN) {
     for (ac = 0; ac < IEEE80211_NUM_ACS; ac++) {
@@ -315,19 +321,20 @@ int iwl_mvm_mac_ctxt_init(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
    * queues in mac80211 almost entirely independent of
    * the ones here - no real limit
    */
-  queue_limit = IEEE80211_MAX_QUEUES;
+  int queue_limit = IEEE80211_MAX_QUEUES;
 
   /*
    * Find available queues, and allocate them to the ACs. When in
    * DQA-mode they aren't really used, and this is done only so the
    * mac80211 ieee80211_check_queues() function won't fail
    */
+  uint32_t ac;
   for (ac = 0; ac < IEEE80211_NUM_ACS; ac++) {
     uint8_t queue = find_first_zero_bit(&used_hw_queues, queue_limit);
 
     if (queue >= queue_limit) {
       IWL_ERR(mvm, "Failed to allocate queue\n");
-      ret = -EIO;
+      ret = ZX_ERR_IO;
       goto exit_fail;
     }
 
@@ -343,24 +350,31 @@ int iwl_mvm_mac_ctxt_init(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
      */
     mvmvif->cab_queue = IWL_MVM_DQA_GCAST_QUEUE;
   }
+#endif  // NEEDS_PORTING
 
   mvmvif->bcast_sta.sta_id = IWL_MVM_INVALID_STA;
   mvmvif->mcast_sta.sta_id = IWL_MVM_INVALID_STA;
   mvmvif->ap_sta_id = IWL_MVM_INVALID_STA;
 
-  for (i = 0; i < NUM_IWL_MVM_SMPS_REQ; i++) {
+  for (int i = 0; i < NUM_IWL_MVM_SMPS_REQ; i++) {
     mvmvif->smps_requests[i] = IEEE80211_SMPS_AUTOMATIC;
   }
 
-  return 0;
+  return ZX_OK;
 
 exit_fail:
   memset(mvmvif, 0, sizeof(struct iwl_mvm_vif));
   return ret;
 }
 
-static void iwl_mvm_ack_rates(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
-                              enum nl80211_band band, uint8_t* cck_rates, uint8_t* ofdm_rates) {
+static void iwl_mvm_ack_rates(struct iwl_mvm* mvm, struct ieee80211_vif* vif, wlan_info_band_t band,
+                              uint8_t* cck_rates, uint8_t* ofdm_rates) {
+  // Since the 'iwl_cfg80211_rates' table is fixed, seems we can always return fixed values.
+  *cck_rates = 0xf;    // 1 Mbps, 2 Mbps, 5.5 Mbps, 11 Mbps
+  *ofdm_rates = 0xff;  // 6 Mbps, 9 Mbps, 12 Mbps, 18 Mbps, 24 Mbps, 36 Mbps, 48 Mbps, 54 Mbps
+
+#if 0   // NEEDS_PORTING
+  // TODO(43217): come back and review if we need the following code.
   struct ieee80211_supported_band* sband;
   unsigned long basic = vif->bss_conf.basic_rates;
   int lowest_present_ofdm = 100;
@@ -447,10 +461,16 @@ static void iwl_mvm_ack_rates(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
 
   *cck_rates = cck;
   *ofdm_rates = ofdm;
+#endif  // NEEDS_PORTING
 }
 
 static void iwl_mvm_mac_ctxt_set_ht_flags(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
                                           struct iwl_mac_ctx_cmd* cmd) {
+  // Use conservative value for better compatibility.
+  // TODO(43248): optimize this.
+  cmd->protection_flags |= cpu_to_le32(MAC_PROT_FLG_HT_PROT | MAC_PROT_FLG_FAT_PROT);
+
+#if 0   // NEEDS_PORTING
   /* for both sta and ap, ht_operation_mode hold the protection_mode */
   uint8_t protection_mode = vif->bss_conf.ht_operation_mode & IEEE80211_HT_OP_MODE_PROTECTION;
   /* The fw does not distinguish between ht and fat */
@@ -478,32 +498,28 @@ static void iwl_mvm_mac_ctxt_set_ht_flags(struct iwl_mvm* mvm, struct ieee80211_
       IWL_ERR(mvm, "Illegal protection mode %d\n", protection_mode);
       break;
   }
+#endif  // NEEDS_PORTING
 }
 
 static void iwl_mvm_mac_ctxt_cmd_common(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
+                                        wlan_info_band_t band, bool ht_enabled,
                                         struct iwl_mac_ctx_cmd* cmd, const uint8_t* bssid_override,
                                         uint32_t action) {
   struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
-  struct ieee80211_chanctx_conf* chanctx;
-  bool ht_enabled = !!(vif->bss_conf.ht_operation_mode & IEEE80211_HT_OP_MODE_PROTECTION);
   uint8_t cck_ack_rates, ofdm_ack_rates;
   const uint8_t* bssid = bssid_override ?: vif->bss_conf.bssid;
-  int i;
 
   cmd->id_and_color = cpu_to_le32(FW_CMD_ID_AND_COLOR(mvmvif->id, mvmvif->color));
   cmd->action = cpu_to_le32(action);
 
   switch (vif->type) {
-    case NL80211_IFTYPE_STATION:
-      if (vif->p2p) {
-        cmd->mac_type = cpu_to_le32(FW_MAC_TYPE_P2P_STA);
-      } else {
-        cmd->mac_type = cpu_to_le32(FW_MAC_TYPE_BSS_STA);
-      }
+    case WLAN_INFO_MAC_ROLE_CLIENT:
+      cmd->mac_type = cpu_to_le32(FW_MAC_TYPE_BSS_STA);
       break;
-    case NL80211_IFTYPE_AP:
+    case WLAN_INFO_MAC_ROLE_AP:
       cmd->mac_type = cpu_to_le32(FW_MAC_TYPE_GO);
       break;
+#if 0   // NEEDS_PORTING
     case NL80211_IFTYPE_MONITOR:
       cmd->mac_type = cpu_to_le32(FW_MAC_TYPE_LISTENER);
       break;
@@ -513,8 +529,9 @@ static void iwl_mvm_mac_ctxt_cmd_common(struct iwl_mvm* mvm, struct ieee80211_vi
     case NL80211_IFTYPE_ADHOC:
       cmd->mac_type = cpu_to_le32(FW_MAC_TYPE_IBSS);
       break;
+#endif  // NEEDS_PORTING
     default:
-      WARN_ON_ONCE(1);
+      IWL_ERR(mvm, "%s(): unknown vif->type: %d\n", __func__, vif->type);
   }
 
   cmd->tsf_id = cpu_to_le32(mvmvif->tsf_id);
@@ -528,9 +545,7 @@ static void iwl_mvm_mac_ctxt_cmd_common(struct iwl_mvm* mvm, struct ieee80211_vi
   }
 
   rcu_read_lock();
-  chanctx = rcu_dereference(vif->chanctx_conf);
-  iwl_mvm_ack_rates(mvm, vif, chanctx ? chanctx->def.chan->band : NL80211_BAND_2GHZ, &cck_ack_rates,
-                    &ofdm_ack_rates);
+  iwl_mvm_ack_rates(mvm, vif, band, &cck_ack_rates, &ofdm_ack_rates);
   rcu_read_unlock();
 
   cmd->cck_rates = cpu_to_le32((uint32_t)cck_ack_rates);
@@ -542,7 +557,7 @@ static void iwl_mvm_mac_ctxt_cmd_common(struct iwl_mvm* mvm, struct ieee80211_vi
 
   cmd->filter_flags = cpu_to_le32(MAC_FILTER_ACCEPT_GRP);
 
-  for (i = 0; i < IEEE80211_NUM_ACS; i++) {
+  for (int i = 0; i < IEEE80211_NUM_ACS; i++) {
     uint8_t txf = iwl_mvm_mac_ac_to_tx_fifo(mvm, i);
 
     cmd->ac[txf].cw_min = cpu_to_le16(mvmvif->queue_params[i].cw_min);
@@ -562,7 +577,7 @@ static void iwl_mvm_mac_ctxt_cmd_common(struct iwl_mvm* mvm, struct ieee80211_vi
 
   IWL_DEBUG_RATE(mvm, "use_cts_prot %d, ht_operation_mode %d\n", vif->bss_conf.use_cts_prot,
                  vif->bss_conf.ht_operation_mode);
-  if (vif->bss_conf.chandef.width != NL80211_CHAN_WIDTH_20_NOHT) {
+  if (vif->bss_conf.chandef.cbw != WLAN_CHANNEL_BANDWIDTH__20) {
     cmd->qos_flags |= cpu_to_le32(MAC_QOS_FLG_TGN);
   }
   if (ht_enabled) {
@@ -570,24 +585,37 @@ static void iwl_mvm_mac_ctxt_cmd_common(struct iwl_mvm* mvm, struct ieee80211_vi
   }
 }
 
-static int iwl_mvm_mac_ctxt_send_cmd(struct iwl_mvm* mvm, struct iwl_mac_ctx_cmd* cmd) {
-  int ret = iwl_mvm_send_cmd_pdu(mvm, MAC_CONTEXT_CMD, 0, sizeof(*cmd), cmd);
+static zx_status_t iwl_mvm_mac_ctxt_send_cmd(struct iwl_mvm* mvm, struct iwl_mac_ctx_cmd* cmd) {
+  zx_status_t ret = iwl_mvm_send_cmd_pdu(mvm, MAC_CONTEXT_CMD, 0, sizeof(*cmd), cmd);
   if (ret) {
     IWL_ERR(mvm, "Failed to send MAC context (action:%d): %d\n", le32_to_cpu(cmd->action), ret);
   }
   return ret;
 }
 
-static int iwl_mvm_mac_ctxt_cmd_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif, uint32_t action,
-                                    bool force_assoc_off, const uint8_t* bssid_override) {
+static zx_status_t iwl_mvm_mac_ctxt_cmd_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
+                                            uint32_t action, bool force_assoc_off,
+                                            const uint8_t* bssid_override) {
   struct iwl_mac_ctx_cmd cmd = {};
   struct iwl_mac_data_sta* ctxt_sta;
 
-  WARN_ON(vif->type != NL80211_IFTYPE_STATION);
+  WARN_ON(vif->type != WLAN_INFO_MAC_ROLE_CLIENT);
 
   /* Fill the common data for all mac context types */
-  iwl_mvm_mac_ctxt_cmd_common(mvm, vif, &cmd, bssid_override, action);
+  iwl_mvm_mac_ctxt_cmd_common(mvm, vif, WLAN_INFO_BAND_2GHZ,  // Use default value.
+                              vif->ht_enabled, &cmd, bssid_override, action);
 
+  // Fill in dummy values to add interface for scanning.
+  // TODO(37593): Re-write the NEEDS_PORTING section below for association.
+  cmd.filter_flags |= cpu_to_le32(MAC_FILTER_IN_BEACON);
+  ctxt_sta = &cmd.sta;
+  ctxt_sta->is_assoc = cpu_to_le32(0);
+  ctxt_sta->bi = cpu_to_le32(100);
+  ctxt_sta->dtim_interval = cpu_to_le32(300);
+  ctxt_sta->listen_interval = cpu_to_le32(8);
+  ctxt_sta->assoc_id = cpu_to_le32(0);
+
+#if 0  // NEEDS_PORTING
   if (vif->p2p) {
     struct ieee80211_p2p_noa_attr* noa = &vif->bss_conf.p2p_noa_attr;
 #ifdef CPTCFG_IWLMVM_P2P_OPPPS_TEST_WA
@@ -662,10 +690,12 @@ static int iwl_mvm_mac_ctxt_cmd_sta(struct iwl_mvm* mvm, struct ieee80211_vif* v
       ctxt_sta->data_policy |= cpu_to_le32(TWT_SUPPORTED);
     }
   }
+#endif  // NEEDS_PORTING
 
   return iwl_mvm_mac_ctxt_send_cmd(mvm, &cmd);
 }
 
+#if 0  // NEEDS_PORTING
 static int iwl_mvm_mac_ctxt_cmd_listener(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
                                          uint32_t action) {
   struct iwl_mac_ctx_cmd cmd = {};
@@ -1087,13 +1117,16 @@ static int iwl_mvm_mac_ctxt_cmd_go(struct iwl_mvm* mvm, struct ieee80211_vif* vi
 
   return iwl_mvm_mac_ctxt_send_cmd(mvm, &cmd);
 }
+#endif  // NEEDS_PORTING
 
-static int iwl_mvm_mac_ctx_send(struct iwl_mvm* mvm, struct ieee80211_vif* vif, uint32_t action,
-                                bool force_assoc_off, const uint8_t* bssid_override) {
+static zx_status_t iwl_mvm_mac_ctx_send(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
+                                        uint32_t action, bool force_assoc_off,
+                                        const uint8_t* bssid_override) {
   switch (vif->type) {
-    case NL80211_IFTYPE_STATION:
+    case WLAN_INFO_MAC_ROLE_CLIENT:
       return iwl_mvm_mac_ctxt_cmd_sta(mvm, vif, action, force_assoc_off, bssid_override);
       break;
+#if 0   // NEEDS_PORTING
     case NL80211_IFTYPE_AP:
       if (!vif->p2p) {
         return iwl_mvm_mac_ctxt_cmd_ap(mvm, vif, action);
@@ -1107,28 +1140,31 @@ static int iwl_mvm_mac_ctx_send(struct iwl_mvm* mvm, struct ieee80211_vif* vif, 
       return iwl_mvm_mac_ctxt_cmd_p2p_device(mvm, vif, action);
     case NL80211_IFTYPE_ADHOC:
       return iwl_mvm_mac_ctxt_cmd_ibss(mvm, vif, action);
+#endif  // NEEDS_PORTING
     default:
       break;
   }
 
-  return -EOPNOTSUPP;
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
-int iwl_mvm_mac_ctxt_add(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
+zx_status_t iwl_mvm_mac_ctxt_add(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
   struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
-  int ret;
+  zx_status_t ret;
 
+#if 0   // NEEDS_PORTING
   if (WARN_ON_ONCE(vif->type == NL80211_IFTYPE_NAN)) {
-    return -EOPNOTSUPP;
+    return ZX_ERR_NOT_SUPPORTED;
   }
+#endif  // NEEDS_PORTING
 
-  if (WARN_ONCE(mvmvif->uploaded, "Adding active MAC %pM/%d\n", vif->addr,
-                ieee80211_vif_type_p2p(vif))) {
-    return -EIO;
+  if (mvmvif->uploaded) {
+    IWL_ERR(mvm, "Adding active MAC\n");
+    return ZX_ERR_IO;
   }
 
   ret = iwl_mvm_mac_ctx_send(mvm, vif, FW_CTXT_ACTION_ADD, true, NULL);
-  if (ret) {
+  if (ret != ZX_OK) {
     return ret;
   }
 
@@ -1136,37 +1172,41 @@ int iwl_mvm_mac_ctxt_add(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
   iwl_mvm_set_last_nonqos_seq(mvm, vif);
 
   mvmvif->uploaded = true;
-  return 0;
+  return ZX_OK;
 }
 
-int iwl_mvm_mac_ctxt_changed(struct iwl_mvm* mvm, struct ieee80211_vif* vif, bool force_assoc_off,
-                             const uint8_t* bssid_override) {
+zx_status_t iwl_mvm_mac_ctxt_changed(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
+                                     bool force_assoc_off, const uint8_t* bssid_override) {
   struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
 
+#if 0   // NEEDS_PORTING
   if (WARN_ON_ONCE(vif->type == NL80211_IFTYPE_NAN)) {
     return -EOPNOTSUPP;
   }
+#endif  // NEEDS_PORTING
 
-  if (WARN_ONCE(!mvmvif->uploaded, "Changing inactive MAC %pM/%d\n", vif->addr,
-                ieee80211_vif_type_p2p(vif))) {
-    return -EIO;
+  if (!mvmvif->uploaded) {
+    IWL_ERR(mvm, "Changing inactive MAC\n");
+    return ZX_ERR_IO;
   }
 
   return iwl_mvm_mac_ctx_send(mvm, vif, FW_CTXT_ACTION_MODIFY, force_assoc_off, bssid_override);
 }
 
-int iwl_mvm_mac_ctxt_remove(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
+zx_status_t iwl_mvm_mac_ctxt_remove(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
   struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
   struct iwl_mac_ctx_cmd cmd;
-  int ret;
+  zx_status_t ret;
 
+#if 0   // NEEDS_PORTING
   if (WARN_ON_ONCE(vif->type == NL80211_IFTYPE_NAN)) {
     return -EOPNOTSUPP;
   }
+#endif  // NEEDS_PORTING
 
-  if (WARN_ONCE(!mvmvif->uploaded, "Removing inactive MAC %pM/%d\n", vif->addr,
-                ieee80211_vif_type_p2p(vif))) {
-    return -EIO;
+  if (!mvmvif->uploaded) {
+    IWL_ERR(mvm, "Removing inactive MAC\n");
+    return ZX_ERR_IO;
   }
 
   memset(&cmd, 0, sizeof(cmd));
@@ -1182,14 +1222,17 @@ int iwl_mvm_mac_ctxt_remove(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
 
   mvmvif->uploaded = false;
 
+#if 0   // NEEDS_PORTING
   if (vif->type == NL80211_IFTYPE_MONITOR) {
     __clear_bit(IEEE80211_HW_RX_INCLUDES_FCS, mvm->hw->flags);
     iwl_mvm_dealloc_snif_sta(mvm);
   }
+#endif  // NEEDS_PORTING
 
-  return 0;
+  return ZX_OK;
 }
 
+#if 0   // NEEDS_PORTING
 static void iwl_mvm_csa_count_down(struct iwl_mvm* mvm, struct ieee80211_vif* csa_vif, uint32_t gp2,
                                    bool tx_success) {
   struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(csa_vif);
@@ -1459,3 +1502,4 @@ void iwl_mvm_channel_switch_noa_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buf
 out_unlock:
   rcu_read_unlock();
 }
+#endif  // NEEDS_PORTING

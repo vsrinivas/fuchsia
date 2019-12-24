@@ -294,6 +294,7 @@ static zx_status_t phy_create_iface(void* ctx, const wlanphy_impl_create_iface_r
   // Add this MAC device into the tree. The parent device is the PHY device.
   ret = device_add(iwl_trans->zxdev, &mac_args, &mvmvif->zxdev);
   if (ret == ZX_OK) {
+    mvmvif->mvm = mvm;
     mvmvif->mac_role = req->role;
     mvmvif->sme_channel = req->sme_channel;
     mvm->mvmvif[id] = mvmvif;

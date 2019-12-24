@@ -92,6 +92,18 @@ executable("iwl-phy-db_test") {
   deps = testing_deps
 }
 
+executable("mac-ctxt_test") {
+  output_name = "mac-ctxt_test"
+  testonly = true
+
+  sources = [
+    "mac-ctxt_test.cc",
+  ]
+
+  defines = testing_defines
+  deps = testing_deps
+}
+
 # Test code for MVM features.
 executable("mvm_test") {
   output_name = "mvm_test"
@@ -139,6 +151,7 @@ executable("pcie_test") {
 
   defines = testing_defines
   deps = [
+    "//garnet/lib/wlan/protocol:protocol",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:pcie",
     "//zircon/public/lib/async-loop",
@@ -192,6 +205,7 @@ unittest_package("iwlwifi_test") {
     ":dummy_test",
     ":fuchsia_porting_test",
     ":iwl-phy-db_test",
+    ":mac-ctxt_test",
     ":mvm_test",
     ":notif-wait_test",
     ":nvm_test",
@@ -212,6 +226,10 @@ unittest_package("iwlwifi_test") {
     },
     {
       name = "iwl-phy-db_test"
+      environments = basic_envs
+    },
+    {
+      name = "mac-ctxt_test"
       environments = basic_envs
     },
     {

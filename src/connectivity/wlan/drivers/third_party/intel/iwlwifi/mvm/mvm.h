@@ -465,7 +465,7 @@ struct iwl_mvm_vif {
   /* TCP Checksum Offload */
   netdev_features_t features;
 
-  struct iwl_probe_resp_data __rcu* probe_resp_data;
+  struct iwl_probe_resp_data* probe_resp_data;
   struct ieee80211_key_conf* ap_wep_key;
 
   /* Zircon objects */
@@ -1660,8 +1660,8 @@ uint8_t iwl_mvm_get_channel_width(wlan_channel_t* chandef);
 uint8_t iwl_mvm_get_ctrl_pos(wlan_channel_t* chandef);
 
 /* MAC (virtual interface) programming */
-int iwl_mvm_mac_ctxt_init(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
-int iwl_mvm_mac_ctxt_add(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
+zx_status_t iwl_mvm_mac_ctxt_init(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
+zx_status_t iwl_mvm_mac_ctxt_add(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
 int iwl_mvm_mac_ctxt_changed(struct iwl_mvm* mvm, struct ieee80211_vif* vif, bool force_assoc_off,
                              const uint8_t* bssid_override);
 int iwl_mvm_mac_ctxt_remove(struct iwl_mvm* mvm, struct ieee80211_vif* vif);

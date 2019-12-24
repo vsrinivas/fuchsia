@@ -41,6 +41,7 @@ source_set("core") {
     "iwl-trans.h",
     "mvm/coex.c",
     "mvm/fw.c",
+    "mvm/mac-ctxt.c",
     "mvm/mac80211.c",
     "mvm/nvm.c",
     "mvm/ops.c",

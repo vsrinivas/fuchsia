@@ -19,10 +19,12 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IEEE80211_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IEEE80211_H_
 
+#include <netinet/if_ether.h>
 #include <stddef.h>
 #include <stdint.h>
 
 #include <ddk/hw/wlan/wlaninfo.h>
+#include <ddk/protocol/wlan/info.h>
 
 #define IEEE80211_CCMP_PN_LEN 6
 
@@ -133,7 +135,10 @@ struct ieee80211_supported_band {
 };
 
 struct ieee80211_tx_queue_params {
-  char dummy;
+  uint16_t txop;
+  uint16_t cw_min;
+  uint16_t cw_max;
+  uint8_t aifs;
 };
 
 struct ieee80211_tx_rate {
@@ -155,6 +160,21 @@ struct ieee80211_txq {
 };
 
 struct ieee80211_vif {
+  wlan_info_mac_role_t type;
+  struct {
+    uint8_t dtim_period;
+    uint8_t bssid[ETH_ALEN];
+    wlan_channel_t chandef;
+
+    bool qos;
+    bool use_cts_prot;
+    bool use_short_preamble;
+    bool use_short_slot;
+    bool ht_operation_mode;
+  } bss_conf;
+  uint8_t addr[ETH_ALEN];
+
+  bool ht_enabled;
   void* drv_priv;
 };
 
