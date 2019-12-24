@@ -66,13 +66,6 @@ template("go_build") {
 
   is_test = defined(invoker.test) && invoker.test
   carchive = defined(invoker.carchive) && invoker.carchive
-  assert(!(is_test && carchive),
-         "cannot specify both test=true and carchive=true")
-  define_sdk_target = defined(invoker.sdk_category) &&
-                      invoker.sdk_category != "excluded" && !is_test
-
-# Strip target binaries and binaries that are included in the SDK.
-  use_strip = (is_fuchsia || define_sdk_target) && !carchive
 
   output_name = target_name
   if (defined(invoker.output_name)) {
@@ -81,11 +74,17 @@ template("go_build") {
   if (carchive) {
     output_name = "${output_name}.a"
   }
-
   output_path = "${root_out_dir}/${output_name}"
+
+  assert(!(is_test && carchive),
+         "cannot specify both test=true and carchive=true")
+  define_sdk_target = defined(invoker.sdk_category) &&
+                      invoker.sdk_category != "excluded" && !is_test
+
+  # Strip target binaries and binaries that are included in the SDK.
+  use_strip = (is_fuchsia || define_sdk_target) && !carchive
   if (use_strip) {
-    output_path = "${root_out_dir}/exe.unstripped/${output_name}"
-    stripped_output_path = "${root_out_dir}/${output_name}"
+    unstripped_output_path = "${root_out_dir}/exe.unstripped/${output_name}"
   }
 
   # Detect whether we're building with a fuzzer toolchain config. For
@@ -106,18 +105,12 @@ template("go_build") {
 
     pool = "//build/go:pool($default_toolchain)"
 
+    outputs = [
+      output_path,
+    ]
+
     if (use_strip) {
-      # Ensure that the 'canonical' output path of $root_out_dir/$output_name
-      # always first among outputs, as this path has to be reconstructed within
-      # go_test.gni and it can canonically compare that with outputs[0].
-      outputs = [
-        stripped_output_path,
-        output_path,
-      ]
-    } else {
-      outputs = [
-        output_path,
-      ]
+      outputs += [ unstripped_output_path ]
     }
 
     script = "//build/go/build.py"
@@ -145,8 +138,6 @@ template("go_build") {
       current_os,
       "--binname",
       output_name,
-      "--output-path",
-      rebase_path(output_path, root_build_dir),
       "--lib-dir",
       rebase_path(get_label_info(":any($shlib_toolchain)", "root_out_dir")),
       "--go-cache",
@@ -162,13 +153,6 @@ template("go_build") {
       "--target",
       clang_target,
     ]
-
-    if (use_strip) {
-      args += [
-        "--stripped-output-path",
-        rebase_path(stripped_output_path, root_build_dir),
-      ]
-    }
 
     if (defined(invoker.skip_vet) && !invoker.skip_vet && go_vet_enabled) {
       args += [ "--vet" ]
@@ -257,6 +241,13 @@ template("go_build") {
       ]
     }
 
+    if (use_strip) {
+      args += [
+        "--unstripped-binname",
+        rebase_path(unstripped_output_path, root_build_dir),
+      ]
+    }
+
     # Add needed arguments for the buildidtool. We should add the stamp file
     # output by buildidtool to the list of outputs for this action but because
     # Ninja (and by consequence GN) limits us to one depfile where that depfile
@@ -315,20 +306,16 @@ template("go_build") {
           label = get_label_info(":$target_name", "label_with_toolchain")
           cpu = current_cpu
           os = current_os
-          debug = rebase_path(output_path, root_build_dir)
           if (use_strip) {
-            dist = rebase_path(stripped_output_path, root_build_dir)
-          } else {
-            dist = debug
+            debug = rebase_path(unstripped_output_path, root_build_dir)
           }
-
-          # TODO(fxbug.dev/27215): Update when we add linux go binaries
-          # to .build-id.
-          if (is_fuchsia) {
-            elf_build_id = "$debug.build-id.stamp"
+          dist = rebase_path(output_path, root_build_dir)
+          if (current_os != "mac" && current_os != "win") {
+            elf_build_id =
+                rebase_path("$output_path.build-id.stamp", root_build_dir)
           }
-          if (output_breakpad_syms && is_fuchsia) {
-            breakpad = "$debug.sym"
+          if (output_breakpad_syms && current_os == "fuchsia") {
+            breakpad = rebase_path("$output_path.sym", root_build_dir)
           }
         },
       ]

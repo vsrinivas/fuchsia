@@ -258,10 +258,6 @@ if (toolchain_variant.with_shared) {
         ]
         forward_variables_from(invoker,
                                [
-                                 "output_name",
-                                 "output_dir",
-                                 "output_extension",
-                                 "metadata",
                                  "testonly",
                                  "visibility",
                                ])
@@ -278,17 +274,15 @@ if (toolchain_variant.with_shared) {
         if (!defined(output_dir)) {
           output_dir = shared_out_dir
         }
-
         if (!defined(output_name)) {
-          output_name = target_name
+          # Remove any "lib" prefix.
+          _prefixless = string_replace("###$target_name", "###lib", "")
+          if (_prefixless == "###$target_name") {
+            output_name = target_name
+          } else {
+            output_name = _prefixless
+          }
         }
-
-        # Remove any "lib" prefix.
-        _prefixless = string_replace("###$output_name", "###lib", "")
-        if (_prefixless != "###$output_name") {
-          output_name = _prefixless
-        }
-
         if (!defined(output_extension)) {
           if (current_os == "mac") {
             output_extension = "dylib"
