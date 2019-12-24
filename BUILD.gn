@@ -347,12 +347,12 @@ build_api_module("tests") {
 #     the test package URL; for host-side tests, the installation path.
 #     Type: string
 #
-#   median_duration_millis
+#   median_duration_ms
 #     Required: The median historical duration for this test over some period of
 #     time, in milliseconds.
 #     Type: int
 #
-#   timeout_millis
+#   timeout_ms
 #     Required: The timeout to set for this test.
 #     Type: int
 #
