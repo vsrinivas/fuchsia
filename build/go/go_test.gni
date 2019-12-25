@@ -52,7 +52,7 @@ template("go_test") {
     test_spec(_test_spec_target_name) {
       # TODO(BLD-493): testonly should be automatic here
       testonly = true
-      name = _main_target_name
+      name = _output_name
       target = _main_target_name
       path = _output_path
       command = [ rebase_path(_output_path, root_build_dir) ]

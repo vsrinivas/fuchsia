@@ -214,17 +214,23 @@ template("clang_toolchain") {
       #if (outfile != unstripped_outfile) {
       #  outputs += [ unstripped_outfile ]
       #}
+      #if (output_breakpad_syms && current_os == "fuchsia") {
+      #  outputs += [ "$outfile.sym" ]
+      #  command += " && $dump_syms -r -o Fuchsia \"$unstripped_outfile\" > \"$outfile.sym\""
+      #}
       if (use_strip) {
         if (invoker.toolchain_os == "mac") {
           command += " && $strip \"$unstripped_outfile\" -o \"$outfile\""
         } else {
           command +=
               " && $strip --strip-sections \"$unstripped_outfile\" \"$outfile\""
-          command +=
-              " && $buildidtool -build-id-dir .build-id" +
-              " -stamp \"$outfile.build-id.stamp\"" + " -entry \"=$outfile\"" +
-              " -entry \".debug=$unstripped_outfile\""
         }
+      }
+      if (invoker.toolchain_os != "mac" && invoker.toolchain_os != "win") {
+        command +=
+            " && $buildidtool -build-id-dir .build-id" +
+            " -stamp \"$outfile.build-id.stamp\"" + " -entry \"=$outfile\"" +
+            " -entry \".debug=$unstripped_outfile\""
       }
     }
 
@@ -283,17 +289,23 @@ template("clang_toolchain") {
       #if (outfile != unstripped_outfile) {
       #  outputs += [ unstripped_outfile ]
       #}
+      #if (output_breakpad_syms && current_os == "fuchsia") {
+      #  outputs += [ "$outfile.sym" ]
+      #  command += " && $dump_syms -r -o Fuchsia \"$unstripped_outfile\" > \"$outfile.sym\""
+      #}
       if (use_strip) {
         if (invoker.toolchain_os == "mac") {
           command += " && $strip -x \"$unstripped_outfile\" -o \"$outfile\""
         } else {
           command +=
               " && $strip --strip-all \"$unstripped_outfile\" \"$outfile\""
-          command +=
-              " && $buildidtool -build-id-dir .build-id" +
-              " -stamp \"$outfile.build-id.stamp\"" + " -entry \"=$outfile\"" +
-              " -entry \".debug=$unstripped_outfile\""
         }
+      }
+      if (invoker.toolchain_os != "mac" && invoker.toolchain_os != "win") {
+        command +=
+            " && $buildidtool -build-id-dir .build-id" +
+            " -stamp \"$outfile.build-id.stamp\"" + " -entry \"=$outfile\"" +
+            " -entry \".debug=$unstripped_outfile\""
       }
     }
 
