@@ -142,7 +142,7 @@ template("prebuilt_package") {
 
     deps = [
       ":$unpack_action_name($default_toolchain)",
-      "//garnet/go/src/pm:pm_bin($host_toolchain)",
+      "//src/sys/pkg/bin/pm:pm_bin($host_toolchain)",
     ]
     if (defined(invoker.deps)) {
       deps += invoker.deps

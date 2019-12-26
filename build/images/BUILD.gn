@@ -23,7 +23,7 @@ import("//build/images/vbmeta.gni")
 import("//build/images/zxcrypt.gni")
 import("//build/info/info.gni")
 import("//build/package.gni")
-import("//garnet/go/src/pm/pm.gni")
+import("//src/sys/pkg/bin/pm/pm.gni")
 
 declare_args() {
   # Path to manifest file containing data to place into the initial /data
@@ -2104,7 +2104,7 @@ action("system_index") {
 }
 
 compiled_action("system_snapshot") {
-  tool = "//garnet/go/src/pm:pm_bin"
+  tool = "//src/sys/pkg/bin/pm:pm_bin"
   tool_output_name = "pm"
 
   visibility = [ ":updates" ]

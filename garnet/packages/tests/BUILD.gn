@@ -69,13 +69,6 @@ group("sse") {
   ]
 }
 
-group("system_ota_tests") {
-  testonly = true
-  public_deps = [
-    "//garnet/tests/system_ota_tests",
-  ]
-}
-
 group("acts_tests") {
   testonly = true
   public_deps = [
@@ -277,7 +270,6 @@ group("all") {
   public_deps = [
     ":a11y",
     ":acts_tests",
-    ":amber",
     ":asio",
     ":ath10k",
     ":battery_manager",
@@ -343,11 +335,7 @@ group("all") {
     ":network_time",
     ":odu_host_tests",
     ":odu_tests",
-    ":pkg_cache",
-    ":pkg_ctl",
-    ":pkg_resolver",
     ":pkg_url",
-    ":pmd",
     ":power_manager",
     ":process",
     ":profiler",
@@ -373,8 +361,6 @@ group("all") {
     ":system-health-check",
     ":system_monitor_fuchsia",
     ":system_monitor_host",
-    ":system_ota_tests",
-    ":system_update_checker",
     ":telephony",
     ":terminal",
     ":thermd",
@@ -395,19 +381,11 @@ group("all") {
     "//garnet/bin/sl4f:tests",
     "//garnet/bin/sshd-host:sshd-host-tests",
     "//garnet/examples/fidl/echo_server_cpp/fuzzer:echo_fuzzers",
-    "//garnet/go/src/pm:host_tests",
     "//garnet/public/rust/fuchsia-vfs/pseudo-fs-mt/macros:tests",
     "//src/connectivity/network/dhcp:dhcp_tests",
     "//src/connectivity/network/dhcp:dhcpd_tests",
     "//src/connectivity/network/mdns/bundles:tests",
     "//src/connectivity/network/netstack:tests",
-  ]
-}
-
-group("pmd") {
-  testonly = true
-  public_deps = [
-    "//garnet/go/src/pmd:pmd_tests",
   ]
 }
 
@@ -612,15 +590,6 @@ group("guest") {
   ]
 }
 
-group("pkg_ctl") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/pkg_ctl:pkg_ctl_tests",
-    "//garnet/packages/prod:pkg_ctl",
-    "//garnet/tests/pkgctl:pkgctl-integration-tests",
-  ]
-}
-
 group("scpi") {
   testonly = true
   public_deps = [
@@ -718,15 +687,6 @@ group("ath10k") {
   testonly = true
   public_deps = [
     "//src/connectivity/wlan/drivers/third_party/atheros/ath10k:ath10k_test",
-  ]
-}
-
-group("pkg_cache") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/pkg_cache:pkg_cache_tests",
-    "//garnet/packages/prod:pkg_cache",
-    "//garnet/tests/pkg-cache:pkg-cache-integration-tests",
   ]
 }
 
@@ -883,22 +843,6 @@ group("json") {
   ]
 }
 
-group("pkg_resolver") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/pkg_resolver:pkg-resolver-unit-tests",
-    "//garnet/packages/prod:pkg_resolver",
-  ]
-}
-
-group("system_update_checker") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/system-update-checker:system-update-checker-tests",
-    "//garnet/tests/system-update-checker:system-update-checker-integration-tests",
-  ]
-}
-
 group("system-health-check") {
   testonly = true
   public_deps = [
@@ -913,18 +857,6 @@ group("chrealm") {
     "//garnet/bin/chrealm/integration_tests:chrealm_integrationtests",
     "//garnet/bin/chrealm/integration_tests:chrealm_test_get_message",
     "//garnet/packages/prod:chrealm",
-  ]
-}
-
-group("amber") {
-  testonly = true
-  public_deps = [
-    "//garnet/go/src/amber:amber_tests",
-    "//garnet/go/src/amber/system_updater:system_updater_tests",
-    "//garnet/packages/prod:amber",
-    "//garnet/tests/amberctl:amberctl-tests",
-    "//garnet/tests/pkg-resolver:tests",
-    "//garnet/tests/system_updater:systemupdater-tests",
   ]
 }
 
@@ -1041,10 +973,6 @@ group("rust_crates") {
     "//garnet/lib/rust/connectivity-testing:connectivity-testing-tests",
     "//garnet/lib/rust/escaped-cstring:escaped-cstring-tests",
     "//garnet/lib/rust/ethernet:ethernet-tests",
-    "//garnet/lib/rust/fidl_fuchsia_amber_ext:fidl_fuchsia_amber_ext_tests",
-    "//garnet/lib/rust/fidl_fuchsia_pkg_ext:fidl_fuchsia_pkg_ext_tests",
-    "//garnet/lib/rust/fuchsia_pkg:fuchsia_pkg_tests",
-    "//garnet/lib/rust/fuchsia_pkg_testing:tests",
     "//garnet/lib/rust/io_util:io_util_tests",
     "//garnet/public/rust:rust-crates-tests",
     "//garnet/public/rust/fdio:tests",
@@ -1054,7 +982,6 @@ group("rust_crates") {
     "//garnet/public/rust/fuchsia-syslog:fuchsia-syslog-tests",
     "//garnet/public/rust/fuchsia-vfs:fuchsia-vfs-tests",
     "//garnet/public/rust/fuchsia-zircon:fuchsia-zircon-tests",
-    "//garnet/public/rust/tuf:rust-tuf-tests",
   ]
 }
 

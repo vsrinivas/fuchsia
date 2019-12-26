@@ -39,8 +39,8 @@ group("router") {
 group("amber") {
   testonly = true
   public_deps = [
-    "//garnet/go/src/amber:config",
     "//garnet/packages/config:network",
+    "//src/sys/pkg/bin/amber:config",
   ]
 }
 
@@ -55,7 +55,7 @@ group("sl4f") {
 group("amber_auto_ota") {
   testonly = true
   public_deps = [
-    "//garnet/bin/system-update-checker:auto_update",
+    "//src/sys/pkg/bin/system-update-checker:auto_update",
   ]
 }
 

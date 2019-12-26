@@ -19,3 +19,19 @@ group("tests") {
     "tests",
   ]
 }
+
+# Targets to include in the base package set for the core product.
+group("core") {
+  public_deps = [
+    "bin/amber",
+    "bin/amber:config",
+    "bin/amber:pkgfs",
+    "bin/pkg-cache:config",
+    "bin/pkg-cache:pkg_cache",
+    "bin/pkg-resolver:pkg_resolver",
+    "bin/pkgctl",
+    "bin/system-update-checker",
+    "bin/system-update-checker:system-update-checker-config",
+    "bin/update:update-bin",
+  ]
+}

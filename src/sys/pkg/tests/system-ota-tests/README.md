@@ -13,7 +13,7 @@ into the system image. You can do this by running:
 
 ```
 % fx set core.x64 \
-  --with //garnet/packages/tests:system_ota_tests
+  --with //src/sys/pkg/tests/system-ota-tests:system_ota_tests
 % fx build
 ```
 
@@ -82,7 +82,7 @@ output to the terminal:
 
 ```
 % fx set core.x64 \
-  --with //garnet/packages/tests:system_ota_tests \
+  --with //src/sys/pkg/tests/system-ota-tests:system_ota_tests \
   --args 'kernel_cmdline_args=["kernel.serial=legacy"]'
 % fx build
 ```

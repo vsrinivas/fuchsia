@@ -142,7 +142,7 @@ template("component_index_metadata_list") {
 
 template("pm_build_package") {
   compiled_action(target_name) {
-    tool = "//garnet/go/src/pm:pm_bin"
+    tool = "//src/sys/pkg/bin/pm:pm_bin"
     tool_output_name = "pm"
 
     forward_variables_from(invoker,

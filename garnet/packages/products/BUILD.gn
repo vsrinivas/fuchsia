@@ -57,7 +57,6 @@ group("base") {
   testonly = true
   public_deps = [
     "//build/info:build-info",
-    "//garnet/go/src/amber:pkgfs",
     "//garnet/packages/config:amber",
     "//garnet/packages/config:network",
     "//garnet/packages/config:openssh_keys",
@@ -83,6 +82,7 @@ group("base") {
     "//garnet/packages/prod:stash",
     "//garnet/packages/prod:thermd",
     "//garnet/packages/prod:timezone",
+    "//src/sys/pkg/bin/amber:pkgfs",
   ]
 }
 

@@ -71,7 +71,7 @@ template("go_build") {
   define_sdk_target = defined(invoker.sdk_category) &&
                       invoker.sdk_category != "excluded" && !is_test
 
-# Strip target binaries and binaries that are included in the SDK.
+  # Strip target binaries and binaries that are included in the SDK.
   use_strip = (is_fuchsia || define_sdk_target) && !carchive
 
   output_name = target_name
@@ -222,7 +222,7 @@ template("go_build") {
         rebase_path("$host_tools_dir/goroot"),
       ]
       args += [
-        # For garnet/go/src/pmd/ramdisk
+        # For src/sys/pkg/bin/pkgfs/ramdisk
         "--include-dir",
         rebase_path("//zircon/system/ulib/ramdevice-client/include"),
         "--lib-dir",

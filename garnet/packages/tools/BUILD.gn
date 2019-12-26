@@ -57,7 +57,6 @@ group("all") {
     ":system_monitor",
     ":tiles",
     ":whereiscl",
-    "//garnet/bin/pkg_ctl",
     "//src/connectivity/network/dhcpd-cli",
     "//src/connectivity/network/netstack:tools",
     "//src/connectivity/wlan:tools",

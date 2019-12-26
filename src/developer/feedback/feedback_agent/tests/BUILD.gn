@@ -17,11 +17,11 @@ group("tests") {
 
     # Packages for the components that we are injecting in the integration tests.
     "//garnet/bin/sysmem_connector",
-    "//garnet/bin/system-update-checker",
     "//garnet/bin/vulkan_loader",
     "//src/developer/feedback/feedback_agent",
     "//src/diagnostics/archivist",
     "//src/hwinfo:tests",
+    "//src/sys/pkg/bin/system-update-checker",
   ]
 }
 

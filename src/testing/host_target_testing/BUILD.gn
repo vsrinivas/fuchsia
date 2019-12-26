@@ -9,7 +9,7 @@ go_library("host_target_testing") {
   name = "fuchsia.googlesource.com/host_target_testing"
   deps = [
     "//garnet/go/src/far:far",
-    "//garnet/go/src/pm:pm_lib",
+    "//src/sys/pkg/bin/pm:pm_lib",
     "//src/sys/pkg/lib/repo",
     "//third_party/golibs:github.com/flynn/go-tuf",
     "//third_party/golibs:golang.org/x/crypto",

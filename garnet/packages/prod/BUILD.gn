@@ -163,7 +163,6 @@ group("all") {
   public_deps = [
     ":drivers",
     ":netcfg",
-    "//garnet/go/src/amber:pkgfs",
     "//garnet/packages/prod:amber",
     "//garnet/packages/prod:appmgr",
     "//garnet/packages/prod:atheros",
@@ -250,6 +249,7 @@ group("all") {
     "//src/connectivity/wlan:tools",
     "//src/developer/memory/mem",
     "//src/fonts",
+    "//src/sys/pkg/bin/amber:pkgfs",
     "//src/ui/a11y:a11y",
   ]
 }
@@ -284,8 +284,8 @@ group("realtek") {
 group("pm") {
   testonly = true
   public_deps = [
-    "//garnet/go/src/pm",
-    "//garnet/go/src/pm:host",
+    "//src/sys/pkg/bin/pm",
+    "//src/sys/pkg/bin/pm:host",
   ]
 }
 
@@ -409,7 +409,7 @@ group("cmdutils") {
 group("pkg_ctl") {
   testonly = true
   public_deps = [
-    "//garnet/bin/pkg_ctl",
+    "//src/sys/pkg/bin/pkgctl",
   ]
 }
 
@@ -482,7 +482,7 @@ group("scenic_tools") {
 group("pkg_cache") {
   testonly = true
   public_deps = [
-    "//garnet/bin/pkg_cache",
+    "//src/sys/pkg/bin/pkg-cache:pkg_cache",
   ]
 }
 
@@ -558,7 +558,7 @@ group("run") {
 group("pkg_resolver") {
   testonly = true
   public_deps = [
-    "//garnet/bin/pkg_resolver",
+    "//src/sys/pkg/bin/pkg-resolver:pkg_resolver",
   ]
 }
 
@@ -586,7 +586,7 @@ group("bluetooth_a2dp") {
 group("amber") {
   testonly = true
   public_deps = [
-    "//garnet/go/src/amber",
+    "//src/sys/pkg/bin/amber",
   ]
 }
 
