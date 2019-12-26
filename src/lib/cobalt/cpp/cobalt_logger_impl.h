@@ -288,6 +288,7 @@ class BaseCobaltLoggerImpl : public CobaltLogger {
 
  private:
   fuchsia::cobalt::ProjectProfile CloneProjectProfile();
+  std::function<void(fuchsia::cobalt::Status)> CreateLoggerCallback(const std::string& method_name);
   void OnConnectionError();
   void LogEventOnMainThread(std::unique_ptr<BaseEvent> event);
   void SendEvents();
@@ -297,7 +298,12 @@ class BaseCobaltLoggerImpl : public CobaltLogger {
 
   backoff::ExponentialBackoff backoff_;
   async_dispatcher_t* const dispatcher_;
+  fuchsia::cobalt::LoggerFactoryPtr logger_factory_;
   fuchsia::cobalt::LoggerPtr logger_;
+
+  // Because logger_ is bound in the contructor we need to keep track of whether or not the remote
+  // server is ready.
+  bool logger_ready_ = false;
 
   // This object is in one of two modes depending on which constructor was used.
   //

@@ -13,6 +13,8 @@
 #include <lib/zx/clock.h>
 #include <lib/zx/time.h>
 
+#include <memory>
+
 #include "src/lib/cobalt/cpp/cobalt_logger_impl.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/macros.h"
@@ -232,6 +234,10 @@ class FakeLoggerImpl : public fuchsia::cobalt::Logger {
         ASSERT_TRUE(false);
     }
   }
+  const std::vector<std::unique_ptr<BaseEvent>>& GetEvents(EventType type) const {
+    FXL_CHECK(calls_.find(type) != calls_.end());
+    return calls_.at(type);
+  }
 
  private:
   void RecordCall(EventType type, std::unique_ptr<BaseEvent> event) {
@@ -297,6 +303,14 @@ class CobaltLoggerTest : public gtest::TestLoopFixture {
 
   CobaltLogger* cobalt_logger() { return cobalt_logger_.get(); }
 
+  fuchsia::cobalt::ProjectProfile CreateProjectProfile() {
+    fsl::SizedVmo fake_cobalt_config;
+    FXL_CHECK(fsl::VmoFromString(kFakeCobaltConfig, &fake_cobalt_config));
+    fuchsia::cobalt::ProjectProfile profile;
+    profile.config = std::move(fake_cobalt_config).ToTransport();
+    return profile;
+  }
+
  private:
   virtual void SetUp() override {
     factory_impl_.reset(new FakeLoggerFactoryImpl());
@@ -313,12 +327,8 @@ class CobaltLoggerTest : public gtest::TestLoopFixture {
           launcher_request_ = std::move(request);
         });
 
-    fsl::SizedVmo fake_cobalt_config;
-    ASSERT_TRUE(fsl::VmoFromString(kFakeCobaltConfig, &fake_cobalt_config));
-    fuchsia::cobalt::ProjectProfile profile;
-    profile.config = std::move(fake_cobalt_config).ToTransport();
-    cobalt_logger_ =
-        NewCobaltLogger(async_get_default_dispatcher(), service_directory(), std::move(profile));
+    cobalt_logger_ = NewCobaltLogger(async_get_default_dispatcher(), service_directory(),
+                                     CreateProjectProfile());
     RunLoopUntilIdle();
   }
 
@@ -338,6 +348,38 @@ TEST_F(CobaltLoggerTest, InitializeCobalt) {
   NewCobaltLoggerFromProjectId(async_get_default_dispatcher(), service_directory(), 1234);
   RunLoopUntilIdle();
   EXPECT_EQ(1234u, logger_factory()->received_project_id());
+}
+
+TEST_F(CobaltLoggerTest, LogMultipleEvent_BeforeCreateLoggerCallbackExecutes) {
+  constexpr size_t num_events = 5u;
+
+  CobaltLoggerImpl cobalt_logger(async_get_default_dispatcher(), service_directory(),
+                                 CreateProjectProfile());
+  OccurrenceEvent event(kFakeCobaltMetricId, 123);
+
+  // Send multiple events before the FakeLoggerImpl is ready.
+  for (size_t i = 0; i < num_events; ++i) {
+    cobalt_logger.LogEvent(event.metric_id(), event.event_code());
+  }
+  RunLoopUntilIdle();
+
+  const auto& first_events = logger()->GetEvents(EventType::EVENT_OCCURRED);
+  EXPECT_EQ(first_events.size(), num_events);
+  for (size_t i = 0; i < num_events; ++i) {
+    EXPECT_TRUE(Equals(static_cast<const OccurrenceEvent*>(&event),
+                       static_cast<OccurrenceEvent*>(first_events[i].get())));
+  }
+
+  // Log an additional event to make sure the logger is in a good state.
+  cobalt_logger.LogEvent(event.metric_id(), event.event_code());
+  RunLoopUntilIdle();
+
+  const auto& all_events = logger()->GetEvents(EventType::EVENT_OCCURRED);
+  EXPECT_EQ(all_events.size(), num_events + 1);
+  for (size_t i = 0; i < num_events + 1; ++i) {
+    EXPECT_TRUE(Equals(static_cast<const OccurrenceEvent*>(&event),
+                       static_cast<OccurrenceEvent*>(all_events[i].get())));
+  }
 }
 
 TEST_F(CobaltLoggerTest, LogEvent) {

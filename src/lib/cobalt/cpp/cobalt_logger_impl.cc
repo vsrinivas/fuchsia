@@ -26,9 +26,7 @@ namespace cobalt {
 
 BaseCobaltLoggerImpl::BaseCobaltLoggerImpl(async_dispatcher_t* dispatcher, uint32_t project_id,
                                            ProjectProfile profile)
-    : dispatcher_(dispatcher),
-      project_id_(project_id),
-      profile_(std::move(profile)) {}
+    : dispatcher_(dispatcher), project_id_(project_id), profile_(std::move(profile)) {}
 
 BaseCobaltLoggerImpl::~BaseCobaltLoggerImpl() {
   if (!events_in_transit_.empty() || !events_to_send_.empty()) {
@@ -121,40 +119,42 @@ ProjectProfile BaseCobaltLoggerImpl::CloneProjectProfile() {
 }
 
 void BaseCobaltLoggerImpl::ConnectToCobaltApplication() {
-  auto logger_factory = ConnectToLoggerFactory();
-  if (!logger_factory) {
+  logger_factory_ = ConnectToLoggerFactory();
+  logger_factory_.set_error_handler([](zx_status_t status) {
+    FX_PLOGS(ERROR, status) << "logger_factory_ experienced an error";
+  });
+
+  if (!logger_factory_) {
     return;
   }
 
   if (project_id_ == 0) {
-    logger_factory->CreateLogger(
-        CloneProjectProfile(), logger_.NewRequest(), [this](Status status) {
-          if (status == Status::OK) {
-            if (logger_) {
-              logger_.set_error_handler([this](zx_status_t status) { OnConnectionError(); });
-              SendEvents();
-            } else {
-              OnConnectionError();
-            }
-          } else {
-            FX_LOGST(ERROR, "cobalt_lib") << "CreateLogger() failed.";
-          }
-        });
+    logger_factory_->CreateLogger(CloneProjectProfile(), logger_.NewRequest(),
+                                  CreateLoggerCallback("CreateLogger"));
   } else {
-    logger_factory->CreateLoggerFromProjectId(
-        project_id_, logger_.NewRequest(), [this](Status status) {
-          if (status == Status::OK) {
-            if (logger_) {
-              logger_.set_error_handler([this](zx_status_t status) { OnConnectionError(); });
-              SendEvents();
-            } else {
-              OnConnectionError();
-            }
-          } else {
-            FX_LOGST(ERROR, "cobalt_lib") << "CreateLoggerFromProjectId() failed";
-          }
-        });
+    logger_factory_->CreateLoggerFromProjectId(project_id_, logger_.NewRequest(),
+                                               CreateLoggerCallback("CreateLoggerFromProjectId"));
   }
+}
+
+std::function<void(fuchsia::cobalt::Status)> BaseCobaltLoggerImpl::CreateLoggerCallback(
+    const std::string& method_name) {
+  return [this, method_name](Status status) {
+    if (status == Status::OK) {
+      if (logger_) {
+        logger_ready_ = true;
+        logger_.set_error_handler([this](zx_status_t status) { OnConnectionError(); });
+        if (events_in_transit_.empty()) {
+          SendEvents();
+        }
+      } else {
+        OnConnectionError();
+      }
+    } else {
+      FX_LOGST(ERROR, "cobalt_lib") << method_name << "() failed";
+    }
+    logger_factory_.Unbind();
+  };
 }
 
 void BaseCobaltLoggerImpl::OnTransitFail() {
@@ -170,6 +170,7 @@ void BaseCobaltLoggerImpl::OnConnectionError() {
   FX_LOGS(ERROR) << "Connection to cobalt failed. Reconnecting after a delay.";
 
   OnTransitFail();
+  logger_ready_ = false;
   logger_.Unbind();
   async::PostDelayedTask(
       dispatcher_, [this]() { ConnectToCobaltApplication(); }, backoff_.GetNext());
@@ -177,7 +178,7 @@ void BaseCobaltLoggerImpl::OnConnectionError() {
 
 void BaseCobaltLoggerImpl::LogEventOnMainThread(std::unique_ptr<BaseEvent> event) {
   events_to_send_.insert(std::move(event));
-  if (!logger_ || !events_in_transit_.empty()) {
+  if (!logger_ready_ || !events_in_transit_.empty()) {
     return;
   }
 
@@ -251,16 +252,14 @@ fidl::InterfacePtr<LoggerFactory> CobaltLoggerImpl::ConnectToLoggerFactory() {
 CobaltLoggerImpl::CobaltLoggerImpl(async_dispatcher_t* dispatcher,
                                    std::shared_ptr<sys::ServiceDirectory> services,
                                    ProjectProfile profile)
-    : BaseCobaltLoggerImpl(dispatcher, 0, std::move(profile)),
-      services_(services) {
+    : BaseCobaltLoggerImpl(dispatcher, 0, std::move(profile)), services_(services) {
   ConnectToCobaltApplication();
 }
 
 CobaltLoggerImpl::CobaltLoggerImpl(async_dispatcher_t* dispatcher,
                                    std::shared_ptr<sys::ServiceDirectory> services,
                                    uint32_t project_id)
-    : BaseCobaltLoggerImpl(dispatcher, project_id, ProjectProfile()),
-      services_(services) {
+    : BaseCobaltLoggerImpl(dispatcher, project_id, ProjectProfile()), services_(services) {
   ConnectToCobaltApplication();
 }
 
