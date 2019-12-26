@@ -13,13 +13,13 @@ use {
 ///
 /// This method will run until the proxy closes the connection.
 pub async fn run_fidl_server(mut stream: ProfilesRequestStream) -> Result<(), Error> {
-    while let Some(req) = stream.try_next().await.unwrap() {
+    while let Some(req) = stream.try_next().await? {
         // TODO:(41124) This is just a stub implementation for now. Support
         // needs to be added for all events.
         match req {
             ProfilesRequest::GetProfileList { responder } => {
                 let list = Vec::new();
-                responder.send(&mut list.into_iter()).unwrap();
+                responder.send(&mut list.into_iter())?;
             }
             _ => fx_log_info!("unsupported event called!"),
         }
@@ -39,7 +39,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn shuts_down_when_proxy_closes() -> Result<(), Error> {
-        let (proxy, stream) = create_proxy_and_stream::<ProfilesMarker>().unwrap();
+        let (proxy, stream) = create_proxy_and_stream::<ProfilesMarker>()?;
         fasync::spawn(async move {
             let timeout = zx::Duration::from_nanos(100).after_now();
             fasync::Timer::new(timeout).await;
@@ -54,13 +54,13 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn can_get_profiles_list() -> Result<(), Error> {
-        let (proxy, stream) = create_proxy_and_stream::<ProfilesMarker>().unwrap();
+        let (proxy, stream) = create_proxy_and_stream::<ProfilesMarker>()?;
         fasync::spawn(
             run_fidl_server(stream)
                 .unwrap_or_else(|e| panic!("Error while serving profiles service: {}", e)),
         );
 
-        let _list = proxy.get_profile_list().await.unwrap();
+        let _list = proxy.get_profile_list().await?;
 
         Ok(())
     }

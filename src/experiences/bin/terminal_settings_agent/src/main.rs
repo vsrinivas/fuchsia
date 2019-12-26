@@ -11,7 +11,7 @@ mod profiles_service;
 
 fn main() -> Result<(), Error> {
     syslog::init_with_tags(&["terminal-settings-agent"]).expect("Can't init logger");
-    let mut executor = fasync::Executor::new().unwrap();
+    let mut executor = fasync::Executor::new()?;
     let mut fs = ServiceFs::new();
     let mut public = fs.dir("svc");
 
@@ -22,7 +22,7 @@ fn main() -> Result<(), Error> {
         )
     });
 
-    fs.take_and_serve_directory_handle().unwrap();
+    fs.take_and_serve_directory_handle()?;
     let () = executor.run_singlethreaded(fs.collect());
 
     Ok(())
