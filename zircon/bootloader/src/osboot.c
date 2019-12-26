@@ -598,19 +598,20 @@ EFIAPI efi_status efi_main(efi_handle img, efi_system_table* sys) {
 
   //
   // The first entry in valid_keys will be the default after the timeout.
-  // Check the bootbyte before checking bootloader.default
+  // Check the bootbyte before checking bootloader.default, except when
+  // bootloader.default is local.
   // Use the value of bootloader.default to determine the first entry. If
   // bootloader.default is not set, use "network".
   //
-  if (bootbyte == RTC_BOOT_RECOVERY) {
+  if (!memcmp(defboot, "local", 5)) {
+    swap_to_head('m', valid_keys, key_idx);
+  } else if (bootbyte == RTC_BOOT_RECOVERY) {
     swap_to_head('z', valid_keys, key_idx);
   } else if (bootbyte == RTC_BOOT_NORMAL) {
     swap_to_head('m', valid_keys, key_idx);
   } else if (bootbyte == RTC_BOOT_BOOTLOADER) {
     // swap_to_head('b', valid_keys, key_idx);
     printf("ERROR: booting to bootloader is not supported!\n");
-  } else if (!memcmp(defboot, "local", 5)) {
-    swap_to_head('m', valid_keys, key_idx);
   } else if (!memcmp(defboot, "zedboot", 7)) {
     swap_to_head('z', valid_keys, key_idx);
   } else {
