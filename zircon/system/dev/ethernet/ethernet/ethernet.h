@@ -68,6 +68,8 @@ class EthDev0 : public EthDev0Type, public ddk::EmptyProtocol<ZX_PROTOCOL_ETHERN
   EthDev0& operator=(const EthDev0&) = delete;
   EthDev0& operator=(EthDev0&&) = delete;
 
+  ~EthDev0();
+
   static zx_status_t EthBind(void* ctx, zx_device_t* dev);
   zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
   void DdkUnbindNew(ddk::UnbindTxn txn);

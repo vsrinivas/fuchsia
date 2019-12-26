@@ -716,9 +716,6 @@ void EthDev::KillLocked() {
     return;
   }
 
-  // Ensure that all requests to ethmac were completed.
-  ZX_DEBUG_ASSERT(ethernet_request_count_ == ethernet_response_count_);
-
   zxlogf(TRACE, "eth [%s]: kill: tearing down%s\n", name_,
          (state_ & kStateTransmitThreadCreated) ? " tx thread" : "");
   SetPromiscLocked(false);
@@ -735,10 +732,6 @@ void EthDev::KillLocked() {
     transmit_fifo_.signal(0, kSignalFifoTerminate);
   }
 
-  if (io_vmo_.is_valid()) {
-    io_vmo_.reset();
-  }
-
   if (state_ & kStateTransmitThreadCreated) {
     state_ &= (~kStateTransmitThreadCreated);
     int ret;
@@ -746,8 +739,15 @@ void EthDev::KillLocked() {
     zxlogf(TRACE, "eth [%s]: kill: tx thread exited\n", name_);
   }
 
+  // Ensure that all requests to ethmac were completed.
+  ZX_DEBUG_ASSERT(ethernet_request_count_ == ethernet_response_count_);
+
   if (transmit_fifo_.is_valid()) {
     transmit_fifo_.reset();
+  }
+
+  if (io_vmo_.is_valid()) {
+    io_vmo_.reset();
   }
 
   io_buffer_.Unmap();
@@ -870,6 +870,12 @@ zx_status_t EthDev::AddDevice(zx_device_t** out) {
   }
 
   return ZX_OK;
+}
+
+EthDev0::~EthDev0() {
+  // Assert that all EthDevs are removed to avoid use-after free of edev0_ in EthDev
+  ZX_DEBUG_ASSERT(list_active_.is_empty());
+  ZX_DEBUG_ASSERT(list_idle_.is_empty());
 }
 
 zx_status_t EthDev0::DdkOpen(zx_device_t** out, uint32_t flags) {
