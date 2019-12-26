@@ -15,7 +15,8 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"go.fuchsia.dev/fuchsia/tools/build/lib"
+	"go.fuchsia.dev/fuchsia/tools/bootserver/lib"
+	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
 	"go.fuchsia.dev/fuchsia/tools/qemu"
 )
 
@@ -114,7 +115,7 @@ func (t *QEMUTarget) SSHKey() string {
 }
 
 // Start starts the QEMU target.
-func (t *QEMUTarget) Start(ctx context.Context, images []build.Image, args []string) error {
+func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args []string) error {
 	qemuTarget, ok := qemuTargetMapping[t.config.Target]
 	if !ok {
 		return fmt.Errorf("invalid target %q", t.config.Target)
@@ -128,34 +129,29 @@ func (t *QEMUTarget) Start(ctx context.Context, images []build.Image, args []str
 		return fmt.Errorf("could not find qemu-system binary %q: %v", qemuSystem, err)
 	}
 
-	absImagePath := func(name string) (string, error) {
-		var img *build.Image
-		for i := range images {
-			if images[i].Name == name {
-				img = &images[i]
-			}
+	var qemuKernel, zirconA, storageFull bootserver.Image
+	for _, img := range images {
+		switch img.Name {
+		case "qemu-kernel":
+			qemuKernel = img
+		case "zircon-a":
+			zirconA = img
+		case "storage-full":
+			storageFull = img
 		}
-		if img == nil {
-			return "", fmt.Errorf("could not find %s", name)
-		}
-		return filepath.Abs(img.Path)
 	}
-
-	qemuKernel, err := absImagePath("qemu-kernel")
-	if err != nil {
-		return err
+	if qemuKernel.Reader == nil {
+		return fmt.Errorf("could not find qemu-kernel")
 	}
-	zirconA, err := absImagePath("zircon-a")
-	if err != nil {
-		return err
+	if zirconA.Reader == nil {
+		return fmt.Errorf("could not find zircon-a")
 	}
 
 	var drives []qemu.Drive
-	storageFull, err := absImagePath("storage-full")
-	if err == nil {
+	if storageFull.Reader != nil {
 		drives = append(drives, qemu.Drive{
 			ID:   "maindisk",
-			File: storageFull,
+			File: getImageName(storageFull),
 		})
 	}
 	if t.config.MinFS != nil {
@@ -198,8 +194,8 @@ func (t *QEMUTarget) Start(ctx context.Context, images []build.Image, args []str
 		CPU:      t.config.CPU,
 		Memory:   t.config.Memory,
 		KVM:      t.config.KVM,
-		Kernel:   qemuKernel,
-		Initrd:   zirconA,
+		Kernel:   getImageName(qemuKernel),
+		Initrd:   getImageName(zirconA),
 		Drives:   drives,
 		Networks: networks,
 	}
@@ -226,6 +222,13 @@ func (t *QEMUTarget) Start(ctx context.Context, images []build.Image, args []str
 	workdir, err := ioutil.TempDir("", "qemu-working-dir")
 	if err != nil {
 		return err
+	}
+	for _, img := range []bootserver.Image{qemuKernel, zirconA, storageFull} {
+		if img.Reader != nil {
+			if err := transferToDir(workdir, img); err != nil {
+				return err
+			}
+		}
 	}
 
 	t.cmd = &exec.Cmd{
@@ -265,6 +268,37 @@ func (t *QEMUTarget) Stop(ctx context.Context) error {
 // Wait waits for the QEMU target to stop.
 func (t *QEMUTarget) Wait(ctx context.Context) error {
 	return <-t.c
+}
+
+// getImageName returns the absolute path to the image if it exists on the filesystem, else just the image name.
+func getImageName(img bootserver.Image) string {
+	if f, ok := img.Reader.(*os.File); ok {
+		absName, err := filepath.Abs(f.Name())
+		if err != nil {
+			log.Printf("failed to get abs path: %v", err)
+		} else {
+			return absName
+		}
+	}
+	return img.Name
+}
+
+func transferToDir(dir string, img bootserver.Image) error {
+	filename := filepath.Join(dir, img.Name)
+	if filepath.IsAbs(getImageName(img)) {
+		log.Printf("img %s has path: %s\n", img.Name, getImageName(img))
+	} else {
+		tmp, err := os.Create(filename)
+		if err != nil {
+			return err
+		}
+		defer tmp.Close()
+		if _, err := io.Copy(tmp, iomisc.ReaderAtToReader(img.Reader)); err != nil {
+			return err
+		}
+		log.Printf("transferred %s to %s\n", img.Name, filename)
+	}
+	return nil
 }
 
 func overwriteFileWithCopy(path string) error {

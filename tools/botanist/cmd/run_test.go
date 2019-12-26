@@ -15,8 +15,8 @@ import (
 	"testing"
 	"time"
 
+	"go.fuchsia.dev/fuchsia/tools/bootserver/lib"
 	"go.fuchsia.dev/fuchsia/tools/botanist/target"
-	"go.fuchsia.dev/fuchsia/tools/build/lib"
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
@@ -73,8 +73,7 @@ func TestExecute(t *testing.T) {
 		// cmd.execute() calls setupTargets() followed by runCmdWithTargets().
 		// The logs should be open for writing to when runCmdWithTargets()
 		// is called and closed after it finishes.
-		var imgs []build.Image
-		targetSetup := cmd.setupTargets(ctx, imgs, targets)
+		targetSetup := cmd.setupTargets(ctx, []bootserver.Image{}, targets)
 		for _, log := range targetSetup.syslogs {
 			if _, err := io.WriteString(log.file, "File is open!"); err != nil {
 				t.Fatalf("File is not open: %v", err)
@@ -125,8 +124,7 @@ func TestExecute(t *testing.T) {
 		}
 		targets := []Target{target}
 
-		var imgs []build.Image
-		targetSetup := cmd.setupTargets(ctx, imgs, targets)
+		targetSetup := cmd.setupTargets(ctx, []bootserver.Image{}, targets)
 		if err = cmd.runCmdWithTargets(ctx, targetSetup, []string{scriptPath}); err != nil {
 			t.Fatalf("Execute failed with error: %v", err)
 		}

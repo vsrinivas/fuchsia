@@ -9,7 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"sort"
 	"strings"
@@ -80,7 +80,8 @@ func Boot(ctx context.Context, t tftp.Client, imgs []Image, cmdlineArgs []string
 		for _, arg := range cmdlineArgs {
 			fmt.Fprintf(&buf, "%s\n", arg)
 		}
-		cmdlineFile, err := newNetsvcFile(cmdlineNetsvcName, buf.Bytes())
+		reader := bytes.NewReader(buf.Bytes())
+		cmdlineFile, err := newNetsvcFile(cmdlineNetsvcName, reader, reader.Size())
 		if err != nil {
 			return err
 		}
@@ -93,7 +94,7 @@ func Boot(ctx context.Context, t tftp.Client, imgs []Image, cmdlineArgs []string
 			if !ok {
 				return fmt.Errorf("unrecognized bootserver argument found: %s", arg)
 			}
-			imgFile, err := openNetsvcFile(name, img.Path)
+			imgFile, err := newNetsvcFile(name, img.Reader, img.Size)
 			if err != nil {
 				return err
 			}
@@ -108,7 +109,8 @@ func Boot(ctx context.Context, t tftp.Client, imgs []Image, cmdlineArgs []string
 			authorizedKey := ssh.MarshalAuthorizedKey(s.PublicKey())
 			authorizedKeys = append(authorizedKeys, authorizedKey...)
 		}
-		authorizedKeysFile, err := newNetsvcFile(authorizedKeysNetsvcName, authorizedKeys)
+		reader := bytes.NewReader(authorizedKeys)
+		authorizedKeysFile, err := newNetsvcFile(authorizedKeysNetsvcName, reader, reader.Size())
 		if err != nil {
 			return err
 		}
@@ -197,22 +199,22 @@ func filterZedbootShimImages(imgs []Image) ([]*netsvcFile, error) {
 		}
 	}
 
-	if zirconRImg.Path != "" {
+	if zirconRImg.Reader != nil {
 		files := []*netsvcFile{}
-		zedbootFile, err := openNetsvcFile(netsvcName, zirconRImg.Path)
+		zedbootFile, err := newNetsvcFile(netsvcName, zirconRImg.Reader, zirconRImg.Size)
 		if err != nil {
 			return nil, err
 		}
 		files = append(files, zedbootFile)
-		if vbmetaRImg.Path != "" && netsvcName == zirconANetsvcName {
-			vbmetaRFile, err := openNetsvcFile(vbmetaANetsvcName, vbmetaRImg.Path)
+		if vbmetaRImg.Reader != nil && netsvcName == zirconANetsvcName {
+			vbmetaRFile, err := newNetsvcFile(vbmetaANetsvcName, vbmetaRImg.Reader, vbmetaRImg.Size)
 			if err != nil {
 				return nil, err
 			}
 			files = append(files, vbmetaRFile)
 		}
-		if bootloaderImg.Path != "" {
-			bootloaderFile, err := openNetsvcFile(bootloaderNetsvcName, bootloaderImg.Path)
+		if bootloaderImg.Reader != nil {
+			bootloaderFile, err := newNetsvcFile(bootloaderNetsvcName, bootloaderImg.Reader, bootloaderImg.Size)
 			if err != nil {
 				return nil, err
 			}
@@ -227,27 +229,21 @@ func filterZedbootShimImages(imgs []Image) ([]*netsvcFile, error) {
 // A file to send to netsvc.
 type netsvcFile struct {
 	name   string
-	buffer []byte
+	reader io.ReaderAt
 	index  int
+	size   int64
 }
 
-func openNetsvcFile(name, path string) (*netsvcFile, error) {
-	buf, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	return newNetsvcFile(name, buf)
-}
-
-func newNetsvcFile(name string, buf []byte) (*netsvcFile, error) {
+func newNetsvcFile(name string, reader io.ReaderAt, size int64) (*netsvcFile, error) {
 	idx, ok := transferOrder[name]
 	if !ok {
 		return nil, fmt.Errorf("unrecognized name: %s", name)
 	}
 	return &netsvcFile{
-		buffer: buf,
+		reader: reader,
 		name:   name,
 		index:  idx,
+		size:   size,
 	}, nil
 }
 
@@ -265,7 +261,7 @@ func transfer(ctx context.Context, t tftp.Client, files []*netsvcFile) error {
 				if ctx.Err() != nil {
 					return nil
 				}
-				err := t.Write(ctx, f.name, f.buffer)
+				err := t.Write(ctx, f.name, f.reader, f.size)
 				switch err {
 				case nil:
 				case tftp.ErrShouldWait:

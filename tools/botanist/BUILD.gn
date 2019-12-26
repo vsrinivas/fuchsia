@@ -27,6 +27,7 @@ go_library("target") {
     ":botanist_lib",
     "//tools/bootserver:bootserver_lib",
     "//tools/botanist/power",
+    "//tools/lib/iomisc",
     "//tools/net/netutil",
     "//tools/qemu",
     "//tools/serial",

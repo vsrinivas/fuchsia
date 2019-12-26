@@ -10,8 +10,8 @@ import (
 	"fmt"
 
 	"github.com/google/subcommands"
+	"go.fuchsia.dev/fuchsia/tools/bootserver/lib"
 	"go.fuchsia.dev/fuchsia/tools/botanist/target"
-	"go.fuchsia.dev/fuchsia/tools/build/lib"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
@@ -81,10 +81,11 @@ func (cmd *QEMUCommand) execute(ctx context.Context, cmdlineArgs []string) error
 		return fmt.Errorf("-qemu-dir must be set")
 	}
 
-	imgs, err := build.LoadImages(cmd.imageManifest)
+	imgs, closeFunc, err := bootserver.GetImages(ctx, cmd.imageManifest, bootserver.ModePave)
 	if err != nil {
 		return err
 	}
+	defer closeFunc()
 
 	// TODO: pass this directly from a file.
 	config := target.QEMUConfig{

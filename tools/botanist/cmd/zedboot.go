@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
+	"go.fuchsia.dev/fuchsia/tools/bootserver/lib"
 	"go.fuchsia.dev/fuchsia/tools/botanist/target"
-	"go.fuchsia.dev/fuchsia/tools/build/lib"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/net/tftp"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
@@ -80,7 +80,7 @@ func (cmd *ZedbootCommand) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&cmd.serialLogFile, "serial-log", "", "file to write the serial logs to.")
 }
 
-func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs []build.Image, t tftp.Client, cmdlineArgs []string) error {
+func (cmd *ZedbootCommand) runTests(ctx context.Context, t tftp.Client, cmdlineArgs []string) error {
 	logger.Debugf(ctx, "waiting for %q\n", cmd.summaryFilename)
 	return runtests.PollForSummary(ctx, t, cmd.summaryFilename, cmd.testResultsDir, cmd.outputArchive, cmd.filePollInterval)
 }
@@ -91,8 +91,26 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 	if err != nil {
 		return fmt.Errorf("failed to load target config file %q", cmd.configFile)
 	}
+
+	var bootMode bootserver.Mode
+	if cmd.netboot {
+		bootMode = bootserver.ModeNetboot
+	} else {
+		bootMode = bootserver.ModePave
+	}
+	imgs, closeFunc, err := bootserver.GetImages(ctx, cmd.imageManifest, bootMode)
+	if err != nil {
+		return err
+	}
+	defer closeFunc()
+	paveImgs, closePaveImgsFunc, err := bootserver.GetImages(ctx, cmd.imageManifest, bootserver.ModePave)
+	if err != nil {
+		return err
+	}
+	defer closePaveImgsFunc()
 	opts := target.Options{
-		Netboot: cmd.netboot,
+		Netboot:  cmd.netboot,
+		PaveImgs: paveImgs,
 	}
 
 	var devices []*target.DeviceTarget
@@ -102,11 +120,6 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 			return err
 		}
 		devices = append(devices, device)
-	}
-
-	imgs, err := build.LoadImages(cmd.imageManifest)
-	if err != nil {
-		return err
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -168,7 +181,7 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 		// We execute tests here against the 0th device, there may be N devices
 		// in the test bed but all other devices are driven by the tests not
 		// the test runner.
-		errs <- cmd.runTests(ctx, imgs, devices[0].Tftp(), cmdlineArgs)
+		errs <- cmd.runTests(ctx, devices[0].Tftp(), cmdlineArgs)
 	}()
 
 	select {

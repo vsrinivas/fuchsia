@@ -4,6 +4,10 @@
 
 package target
 
+import (
+	"go.fuchsia.dev/fuchsia/tools/bootserver/lib"
+)
+
 // Options represents lifecycle options for a target. The options will not necessarily make
 // sense for all target types.
 type Options struct {
@@ -15,4 +19,8 @@ type Options struct {
 	// SSHKey is a private SSH key file, corresponding to an authorized key to be paved or
 	// to one baked into a boot image.
 	SSHKey string
+
+	// PaveImgs are a list of images to be passed into BootZedbootShim().
+	// TODO(fxbug.dev/38517): remove this once BootZedbootShim is deprecated.
+	PaveImgs []bootserver.Image
 }

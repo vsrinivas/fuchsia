@@ -152,7 +152,8 @@ func attemptTftp(t *testing.T, i *qemu.Instance, shouldWork bool) {
 		return
 	}
 
-	writeErr := tftp.Write(ctx, "/tmp/test", []byte("123456789"))
+	reader := strings.NewReader("123456789")
+	writeErr := tftp.Write(ctx, "/tmp/test", reader, reader.Size())
 	if shouldWork {
 		if writeErr == nil {
 			t.Log("tftp write succeeded as expected")

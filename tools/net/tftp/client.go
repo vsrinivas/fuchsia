@@ -19,7 +19,7 @@ import (
 type Client interface {
 	newTransfer(opCode uint8, filename string) *transfer
 	Read(ctx context.Context, filename string) (*bytes.Reader, error)
-	Write(ctx context.Context, filename string, buf []byte) error
+	Write(ctx context.Context, filename string, reader io.ReaderAt, size int64) error
 	RemoteAddr() *net.UDPAddr
 }
 
@@ -111,12 +111,12 @@ func (c *ClientImpl) RemoteAddr() *net.UDPAddr {
 // Write requests to send a file to the TFTP remote, if the operation is unsuccesful
 // error is returned, if the error is ErrShouldWait, the request can be retried at
 // some point in the future.
-func (c *ClientImpl) Write(ctx context.Context, filename string, buf []byte) error {
+func (c *ClientImpl) Write(ctx context.Context, filename string, r io.ReaderAt, size int64) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	t := c.newTransfer(opWrq, filename)
 	attempts := 0
-	t.opts.transferSize = uint64(len(buf))
+	t.opts.transferSize = uint64(size)
 	// Send the request to write the file.
 	for {
 		if ctx.Err() != nil {
@@ -141,8 +141,6 @@ func (c *ClientImpl) Write(ctx context.Context, filename string, buf []byte) err
 		}
 		break
 	}
-
-	r := bytes.NewReader(buf)
 
 	// Send the file.
 	for {

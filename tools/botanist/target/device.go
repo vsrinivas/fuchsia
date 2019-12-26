@@ -17,7 +17,6 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/bootserver/lib"
 	"go.fuchsia.dev/fuchsia/tools/botanist/lib"
 	"go.fuchsia.dev/fuchsia/tools/botanist/power/lib"
-	"go.fuchsia.dev/fuchsia/tools/build/lib"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/net/netboot"
 	"go.fuchsia.dev/fuchsia/tools/net/netutil"
@@ -152,7 +151,7 @@ func (t *DeviceTarget) SSHKey() string {
 }
 
 // Start starts the device target.
-func (t *DeviceTarget) Start(ctx context.Context, images []build.Image, args []string) error {
+func (t *DeviceTarget) Start(ctx context.Context, images []bootserver.Image, args []string) error {
 	// Set up log listener and dump kernel output to stdout.
 	l, err := netboot.NewLogListener(t.Nodename())
 	if err != nil {
@@ -172,31 +171,22 @@ func (t *DeviceTarget) Start(ctx context.Context, images []build.Image, args []s
 		}
 	}()
 
-	// Get boot mode and ssh signers.
+	// Get ssh signers.
 	// We cannot have signers in netboot because there is no notion
 	// of a hardware backed key when you are not booting from disk
-	var bootMode bootserver.Mode
 	var signers []ssh.Signer
-	if t.opts.Netboot {
-		bootMode = bootserver.ModeNetboot
-	} else {
-		bootMode = bootserver.ModePave
+	if !t.opts.Netboot {
 		signers = t.signers
 	}
 
-	// Convert build images to bootserver images
-	bootImgs := bootserver.ConvertFromBuildImages(images, bootMode)
-
-	// TODO(fxbug.dev/38517): remove this once BootZedbootShim is deprecated
-	paveImgs := bootserver.ConvertFromBuildImages(images, bootserver.ModePave)
 	// Mexec Zedboot
-	err = bootserver.BootZedbootShim(ctx, t.Tftp(), paveImgs)
+	err = bootserver.BootZedbootShim(ctx, t.Tftp(), t.opts.PaveImgs)
 	if err != nil {
 		return err
 	}
 
 	// Boot Fuchsia.
-	return bootserver.Boot(ctx, t.Tftp(), bootImgs, args, signers)
+	return bootserver.Boot(ctx, t.Tftp(), images, args, signers)
 }
 
 // Restart restarts the target.

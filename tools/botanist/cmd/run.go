@@ -16,9 +16,9 @@ import (
 	"sync"
 	"time"
 
+	"go.fuchsia.dev/fuchsia/tools/bootserver/lib"
 	"go.fuchsia.dev/fuchsia/tools/botanist/lib"
 	"go.fuchsia.dev/fuchsia/tools/botanist/target"
-	"go.fuchsia.dev/fuchsia/tools/build/lib"
 	"go.fuchsia.dev/fuchsia/tools/lib/command"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/runner"
@@ -46,7 +46,7 @@ type Target interface {
 	SSHKey() string
 
 	// Start starts the target.
-	Start(ctx context.Context, images []build.Image, args []string) error
+	Start(ctx context.Context, images []bootserver.Image, args []string) error
 
 	// Restart restarts the target.
 	Restart(ctx context.Context) error
@@ -203,7 +203,7 @@ type logWriter struct {
 	target Target
 }
 
-func (r *RunCommand) setupTargets(ctx context.Context, imgs []build.Image, targets []Target) *targetSetup {
+func (r *RunCommand) setupTargets(ctx context.Context, imgs []bootserver.Image, targets []Target) *targetSetup {
 	var syslogs, serialLogs []*logWriter
 	errs := make(chan error, len(targets))
 	var wg sync.WaitGroup
@@ -391,14 +391,27 @@ func checkEmptyLogs(ctx context.Context, logs []*logWriter) error {
 }
 
 func (r *RunCommand) execute(ctx context.Context, args []string) error {
-	imgs, err := build.LoadImages(r.imageManifest)
-	if err != nil {
-		return fmt.Errorf("failed to load images: %v", err)
+	var bootMode bootserver.Mode
+	if r.netboot {
+		bootMode = bootserver.ModeNetboot
+	} else {
+		bootMode = bootserver.ModePave
 	}
+	imgs, closeFunc, err := bootserver.GetImages(ctx, r.imageManifest, bootMode)
+	if err != nil {
+		return err
+	}
+	defer closeFunc()
 
+	paveImgs, closePaveImgsFunc, err := bootserver.GetImages(ctx, r.imageManifest, bootserver.ModePave)
+	if err != nil {
+		return err
+	}
+	defer closePaveImgsFunc()
 	opts := target.Options{
-		Netboot: r.netboot,
-		SSHKey:  r.sshKey,
+		Netboot:  r.netboot,
+		SSHKey:   r.sshKey,
+		PaveImgs: paveImgs,
 	}
 
 	data, err := ioutil.ReadFile(r.configFile)

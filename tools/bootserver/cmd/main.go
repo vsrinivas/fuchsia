@@ -8,12 +8,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"os"
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver/lib"
-	"go.fuchsia.dev/fuchsia/tools/build/lib"
 	"go.fuchsia.dev/fuchsia/tools/net/netutil"
 	"go.fuchsia.dev/fuchsia/tools/net/tftp"
 )
@@ -87,14 +87,10 @@ func init() {
 	flag.BoolVar(&failFastZedbootVersionMismatch, "fail-fast-if-version-mismatch", false, "error if zedboot version does not match")
 }
 
-func getImages() ([]bootserver.Image, error) {
+func getImages(ctx context.Context) ([]bootserver.Image, func() error, error) {
 	// If an image manifest is provided, we use that.
 	if imageManifest != "" {
-		buildImages, err := build.LoadImages(imageManifest)
-		if err != nil {
-			return nil, err
-		}
-		return bootserver.ConvertFromBuildImages(buildImages, mode), nil
+		return bootserver.GetImages(ctx, imageManifest, mode)
 	}
 	// Otherwise, build an image list from the cmd line args.
 	var imgs []bootserver.Image
@@ -161,7 +157,43 @@ func getImages() ([]bootserver.Image, error) {
 			Args: []string{"--vbmetar"},
 		})
 	}
-	return imgs, nil
+	closeFunc, err := populateReaders(imgs)
+	return imgs, closeFunc, err
+}
+
+func populateReaders(imgs []bootserver.Image) (func() error, error) {
+	closeFunc := func() error {
+		var errs []error
+		for _, img := range imgs {
+			if img.Reader != nil {
+				if closer, ok := img.Reader.(io.Closer); ok {
+					if err := closer.Close(); err != nil {
+						errs = append(errs, err)
+					}
+				}
+			}
+		}
+		if len(errs) > 0 {
+			return fmt.Errorf("failed to close images: %v", errs)
+		}
+		return nil
+	}
+	for i := range imgs {
+		r, err := os.Open(imgs[i].Path)
+		if err != nil {
+			// Close already opened readers.
+			closeFunc()
+			return closeFunc, fmt.Errorf("failed to open %s: %v", imgs[i].Path, err)
+		}
+		fi, err := r.Stat()
+		if err != nil {
+			closeFunc()
+			return closeFunc, fmt.Errorf("failed to get file info for %s: %v", imgs[i].Path, err)
+		}
+		imgs[i].Reader = r
+		imgs[i].Size = fi.Size()
+	}
+	return closeFunc, nil
 }
 
 func connectAndBoot(ctx context.Context, nodename string, imgs []bootserver.Image, cmdlineArgs []string) error {
@@ -202,13 +234,14 @@ func execute(ctx context.Context, cmdlineArgs []string) error {
 	} else if imageManifest == "" && mode != bootserver.ModeNull {
 		return fmt.Errorf("cannot specify a bootserver mode without an image manifest [--images]")
 	}
-	imgs, err := getImages()
+	imgs, closeFunc, err := getImages(ctx)
 	if err != nil {
 		return err
 	}
 	if len(imgs) == 0 {
 		return fmt.Errorf("no images provided!")
 	}
+	defer closeFunc()
 
 	n, err := resolveNodename()
 	if err != nil {

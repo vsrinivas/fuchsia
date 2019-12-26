@@ -55,11 +55,17 @@ func TestFilterZedbootShimImages(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to create tmp file: %s", err)
 			}
-			test.images[i].Path = tmpFile.Name()
+			tmpFile.Close()
 			defer os.Remove(tmpFile.Name())
+			test.images[i].Path = tmpFile.Name()
 		}
 
-		files, err := filterZedbootShimImages(test.images)
+		imgs, closeFunc, err := ConvertFromBuildImages(test.images, ModePave)
+		if err != nil {
+			t.Fatalf("Failed to load images: %v", err)
+		}
+		defer closeFunc()
+		files, err := filterZedbootShimImages(imgs)
 
 		if test.expectedErr != nil && err == nil {
 			t.Errorf("Test%v: Exepected errors; no errors found", test.name)

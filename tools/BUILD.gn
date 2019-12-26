@@ -55,6 +55,7 @@ group("tests") {
     "//tools/artifactory:tests",
     "//tools/bindc:tests",
     "//tools/blackout:tests",
+    "//tools/bootserver:tests($host_toolchain)",
     "//tools/botanist:tests($host_toolchain)",
     "//tools/build:tests($host_toolchain)",
     "//tools/debug:tests($host_toolchain)",
