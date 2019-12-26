@@ -89,7 +89,7 @@ zx_status_t GdcDevice::GdcInitTask(const buffer_collection_info_2_t* input_buffe
   zx_status_t status = task->Init(
       input_buffer_collection, output_buffer_collection, input_image_format,
       output_image_format_table_list, output_image_format_table_count, output_image_format_index,
-      config_vmo_list, config_vmos_count, frame_callback, res_callback, bti_);
+      config_vmo_list, config_vmos_count, frame_callback, res_callback, remove_task_callback, bti_);
   if (status != ZX_OK) {
     FX_PLOGST(ERROR, kTag, status) << "Task Creation Failed";
     return status;

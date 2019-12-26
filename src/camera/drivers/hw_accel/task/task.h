@@ -106,6 +106,10 @@ class GenericTask {
     res_callback_->frame_resolution_changed(res_callback_->ctx, info);
   }
 
+  void RemoveTaskCallback(task_remove_status_t status) {
+    remove_task_callback_->task_removed(remove_task_callback_->ctx, status);
+  }
+
  protected:
   // Initializes a VMO pool from buffer collection for output buffer collection.
   // Pins the input buffer collection.
@@ -117,7 +121,8 @@ class GenericTask {
                           size_t output_image_format_table_count,
                           uint32_t output_image_format_index, const zx::bti& bti,
                           const hw_accel_frame_callback_t* frame_callback,
-                          const hw_accel_res_change_callback_t* res_callback);
+                          const hw_accel_res_change_callback_t* res_callback,
+                          const hw_accel_remove_task_callback_t* remove_task_callback);
   // Guards Allocations and Frees of buffers in the output pool.
 
  private:
@@ -130,6 +135,7 @@ class GenericTask {
   uint32_t cur_output_image_format_index_;
   const hw_accel_frame_callback_t* frame_callback_;
   const hw_accel_res_change_callback_t* res_callback_;
+  const hw_accel_remove_task_callback_t* remove_task_callback_;
   fzl::VmoPool output_buffers_;
   fbl::Array<fzl::PinnedVmo> input_buffers_;
   std::deque<fzl::VmoPool::Buffer> write_locked_buffers_;

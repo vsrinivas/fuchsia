@@ -56,10 +56,10 @@ zx_status_t Ge2dDevice::Ge2dInitTaskResize(
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  zx_status_t status =
-      task->InitResize(input_buffer_collection, output_buffer_collection, info, input_image_format,
-                       output_image_format_table_list, output_image_format_table_count,
-                       output_image_format_index, frame_callback, res_callback, bti_, canvas_);
+  zx_status_t status = task->InitResize(
+      input_buffer_collection, output_buffer_collection, info, input_image_format,
+      output_image_format_table_list, output_image_format_table_count, output_image_format_index,
+      frame_callback, res_callback, task_remove_callback, bti_, canvas_);
   if (status != ZX_OK) {
     FX_PLOGST(ERROR, kTag, status) << "Task Creation Failed";
     return status;
@@ -94,7 +94,7 @@ zx_status_t Ge2dDevice::Ge2dInitTaskWaterMark(
   zx_status_t status =
       task->InitWatermark(input_buffer_collection, output_buffer_collection, info, watermark_vmo,
                           image_format_table_list, image_format_table_count, image_format_index,
-                          frame_callback, res_callback, bti_, canvas_);
+                          frame_callback, res_callback, task_remove_callback, bti_, canvas_);
   if (status != ZX_OK) {
     FX_PLOGST(ERROR, kTag, status) << "Task Creation Failed";
     return status;

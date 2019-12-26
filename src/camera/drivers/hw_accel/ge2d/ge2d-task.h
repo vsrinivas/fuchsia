@@ -53,8 +53,9 @@ class Ge2dTask : public generictask::GenericTask {
                          const image_format_2_t* output_image_format_table_list,
                          size_t output_image_format_table_count, uint32_t output_image_format_index,
                          const hw_accel_frame_callback_t* frame_callback,
-                         const hw_accel_res_change_callback_t* res_callback, const zx::bti& bti,
-                         amlogic_canvas_protocol_t canvas);
+                         const hw_accel_res_change_callback_t* res_callback,
+                         const hw_accel_remove_task_callback_t* remove_task_callback,
+                         const zx::bti& bti, amlogic_canvas_protocol_t canvas);
 
   image_format_2_t WatermarkFormat() { return wm_.wm_image_format; }
 
@@ -66,8 +67,9 @@ class Ge2dTask : public generictask::GenericTask {
                             const image_format_2_t* image_format_table_list,
                             size_t image_format_table_count, uint32_t image_format_index,
                             const hw_accel_frame_callback_t* frame_callback,
-                            const hw_accel_res_change_callback_t* res_callback, const zx::bti& bti,
-                            amlogic_canvas_protocol_t canvas);
+                            const hw_accel_res_change_callback_t* res_callback,
+                            const hw_accel_remove_task_callback_t* remove_task_callback,
+                            const zx::bti& bti, amlogic_canvas_protocol_t canvas);
 
   image_canvas_id_t GetOutputCanvasIds(zx_handle_t vmo) {
     auto entry = buffer_map_.find(vmo);
@@ -95,7 +97,8 @@ class Ge2dTask : public generictask::GenericTask {
                    const image_format_2_t* output_image_format_table_list,
                    size_t output_image_format_table_count, uint32_t output_image_format_index,
                    const hw_accel_frame_callback_t* frame_callback,
-                   const hw_accel_res_change_callback_t* res_callback, const zx::bti& bti);
+                   const hw_accel_res_change_callback_t* res_callback,
+                   const hw_accel_remove_task_callback_t* remove_task_callback, const zx::bti& bti);
   // Allocates canvas ids for every frame in the input and output buffer collections
   // (amlogic). One canvas id is allocated per plane of the image frame. Internally,
   // canvas id allocation pins the vmos (zx_bit_pin()).

@@ -245,15 +245,15 @@ TEST_F(TaskTest, BasicCreationTest) {
   auto watermark_task = std::unique_ptr<Ge2dTask>(new (&ac) Ge2dTask());
   EXPECT_TRUE(ac.check());
   zx_status_t status;
-  status = resize_task->InitResize(&input_buffer_collection_, &output_buffer_collection_,
-                                   &resize_info_, &output_image_format_table_[0],
-                                   output_image_format_table_, kImageFormatTableSize, 0,
-                                   &frame_callback_, &res_callback_, bti_handle_, fake_canvas);
+  status = resize_task->InitResize(
+      &input_buffer_collection_, &output_buffer_collection_, &resize_info_,
+      &output_image_format_table_[0], output_image_format_table_, kImageFormatTableSize, 0,
+      &frame_callback_, &res_callback_, &remove_task_callback_, bti_handle_, fake_canvas);
   EXPECT_OK(status);
   status = watermark_task->InitWatermark(
       &input_buffer_collection_, &output_buffer_collection_, &watermark_info_, watermark_vmo_,
       output_image_format_table_, kImageFormatTableSize, 0, &frame_callback_, &res_callback_,
-      bti_handle_, fake_canvas);
+      &remove_task_callback_, bti_handle_, fake_canvas);
   EXPECT_OK(status);
 }
 
@@ -267,8 +267,8 @@ TEST_F(TaskTest, CanvasIdTest) {
   zx_status_t status;
   status = task->InitResize(&input_buffer_collection_, &output_buffer_collection_, &resize_info_,
                             &output_image_format_table_[0], output_image_format_table_,
-                            kImageFormatTableSize, 0, &frame_callback_, &res_callback_, bti_handle_,
-                            fake_canvas);
+                            kImageFormatTableSize, 0, &frame_callback_, &res_callback_,
+                            &remove_task_callback_, bti_handle_, fake_canvas);
   EXPECT_OK(status);
   for (uint32_t i = 0; i < input_buffer_collection_.buffer_count; i++) {
     zx_handle_t vmo_handle = input_buffer_collection_.buffers[i].vmo;
@@ -305,7 +305,7 @@ TEST_F(TaskTest, WatermarkResTest) {
   status = wm_task->InitWatermark(&input_buffer_collection_, &output_buffer_collection_,
                                   &watermark_info_, watermark_vmo_, output_image_format_table_,
                                   kImageFormatTableSize, 0, &frame_callback_, &res_callback_,
-                                  bti_handle_, fake_canvas);
+                                  &remove_task_callback_, bti_handle_, fake_canvas);
   EXPECT_OK(status);
   image_format_2_t format = wm_task->WatermarkFormat();
   EXPECT_EQ(format.display_width, kWidth / 4);
@@ -318,10 +318,10 @@ TEST_F(TaskTest, InitOutputResTest) {
   auto resize_task = std::unique_ptr<Ge2dTask>(new (&ac) Ge2dTask());
   EXPECT_TRUE(ac.check());
   zx_status_t status;
-  status = resize_task->InitResize(&input_buffer_collection_, &output_buffer_collection_,
-                                   &resize_info_, &output_image_format_table_[2],
-                                   output_image_format_table_, kImageFormatTableSize, 2,
-                                   &frame_callback_, &res_callback_, bti_handle_, fake_canvas);
+  status = resize_task->InitResize(
+      &input_buffer_collection_, &output_buffer_collection_, &resize_info_,
+      &output_image_format_table_[2], output_image_format_table_, kImageFormatTableSize, 2,
+      &frame_callback_, &res_callback_, &remove_task_callback_, bti_handle_, fake_canvas);
   EXPECT_OK(status);
   image_format_2_t format = resize_task->output_format();
   EXPECT_EQ(format.display_width, kWidth / 4);
@@ -334,10 +334,10 @@ TEST_F(TaskTest, InitInputResTest) {
   auto resize_task = std::unique_ptr<Ge2dTask>(new (&ac) Ge2dTask());
   EXPECT_TRUE(ac.check());
   zx_status_t status;
-  status = resize_task->InitResize(&input_buffer_collection_, &output_buffer_collection_,
-                                   &resize_info_, &output_image_format_table_[2],
-                                   output_image_format_table_, kImageFormatTableSize, 2,
-                                   &frame_callback_, &res_callback_, bti_handle_, fake_canvas);
+  status = resize_task->InitResize(
+      &input_buffer_collection_, &output_buffer_collection_, &resize_info_,
+      &output_image_format_table_[2], output_image_format_table_, kImageFormatTableSize, 2,
+      &frame_callback_, &res_callback_, &remove_task_callback_, bti_handle_, fake_canvas);
   EXPECT_OK(status);
   image_format_2_t format = resize_task->input_format();
   EXPECT_EQ(format.display_width, kWidth / 4);
@@ -355,7 +355,8 @@ TEST_F(TaskTest, InvalidFormatTest) {
   EXPECT_EQ(ZX_ERR_INVALID_ARGS,
             task->InitResize(&input_buffer_collection_, &output_buffer_collection_, &resize_info_,
                              &format, output_image_format_table_, kImageFormatTableSize, 0,
-                             &frame_callback_, &res_callback_, bti_handle_, fake_canvas));
+                             &frame_callback_, &res_callback_, &remove_task_callback_, bti_handle_,
+                             fake_canvas));
 }
 
 TEST_F(TaskTest, InvalidVmoTest) {
@@ -366,8 +367,8 @@ TEST_F(TaskTest, InvalidVmoTest) {
   zx_status_t status;
   status = task->InitResize(&input_buffer_collection_, &output_buffer_collection_, &resize_info_,
                             &output_image_format_table_[0], output_image_format_table_,
-                            kImageFormatTableSize, 0, &frame_callback_, &res_callback_, bti_handle_,
-                            fake_canvas);
+                            kImageFormatTableSize, 0, &frame_callback_, &res_callback_,
+                            &remove_task_callback_, bti_handle_, fake_canvas);
   // Expecting Task setup to be returning an error when there are
   // no VMOs in the buffer collection. At the moment VmoPool library
   // doesn't return an error.
@@ -710,6 +711,8 @@ TEST(TaskTest, NonContigVmoTest) {
   zx::bti bti_handle;
   hw_accel_frame_callback_t frame_callback;
   hw_accel_res_change_callback_t res_callback;
+  hw_accel_remove_task_callback_t remove_task_callback;
+
   zx::vmo watermark_vmo;
   buffer_collection_info_2_t input_buffer_collection;
   buffer_collection_info_2_t output_buffer_collection;
@@ -741,7 +744,8 @@ TEST(TaskTest, NonContigVmoTest) {
                                    kHeight / 4));
   status = task->InitWatermark(&input_buffer_collection, &output_buffer_collection, &watermark_info,
                                watermark_vmo, image_format_table, kImageFormatTableSize, 0,
-                               &frame_callback, &res_callback, bti_handle, fake_canvas);
+                               &frame_callback, &res_callback, &remove_task_callback, bti_handle,
+                               fake_canvas);
   // Expecting Task setup to be returning an error when watermark vmo is not
   // contig.
   EXPECT_NE(ZX_OK, status);
@@ -755,6 +759,8 @@ TEST(TaskTest, InvalidBufferCollectionTest) {
   zx::bti bti_handle;
   hw_accel_frame_callback_t frame_callback;
   hw_accel_res_change_callback_t res_callback;
+  hw_accel_remove_task_callback_t remove_task_callback;
+
   zx::vmo watermark_vmo;
   image_format_2_t image_format_table[kImageFormatTableSize];
   water_mark_info_t watermark_info;
@@ -775,8 +781,8 @@ TEST(TaskTest, InvalidBufferCollectionTest) {
                                    fuchsia_sysmem_PixelFormatType_R8G8B8A8, kWidth / 4,
                                    kHeight / 4));
   status = task->InitWatermark(nullptr, nullptr, &watermark_info, watermark_vmo, image_format_table,
-                               kImageFormatTableSize, 0, &frame_callback, &res_callback, bti_handle,
-                               fake_canvas);
+                               kImageFormatTableSize, 0, &frame_callback, &res_callback,
+                               &remove_task_callback, bti_handle, fake_canvas);
   EXPECT_NE(ZX_OK, status);
 }
 

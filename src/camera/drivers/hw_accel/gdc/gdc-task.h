@@ -35,6 +35,7 @@ class GdcTask : public generictask::GenericTask {
   // |config_vmo_list|                      : Array of configurations info.
   // |config_vmo_count|                     : Number of config vmos.
   // |frame_callback|                       : Process frame callback.
+  // |remove_task_callback|                 : Remove task callback.
   // |res_callback|                         : Res change callback.
   zx_status_t Init(const buffer_collection_info_2_t* input_buffer_collection,
                    const buffer_collection_info_2_t* output_buffer_collection,
@@ -43,7 +44,8 @@ class GdcTask : public generictask::GenericTask {
                    size_t output_image_format_table_count, uint32_t output_image_format_index,
                    const gdc_config_info* config_vmo_list, size_t config_vmos_count,
                    const hw_accel_frame_callback_t* frame_callback,
-                   const hw_accel_res_change_callback* res_callback, const zx::bti& bti);
+                   const hw_accel_res_change_callback* res_callback,
+                   const hw_accel_remove_task_callback_t* remove_task_callback, const zx::bti& bti);
 
  private:
   zx_status_t PinConfigVmos(const gdc_config_info* config_vmo_list, size_t config_vmos_count,

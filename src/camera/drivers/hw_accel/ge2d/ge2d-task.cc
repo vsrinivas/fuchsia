@@ -224,20 +224,22 @@ zx_status_t Ge2dTask::Init(const buffer_collection_info_2_t* input_buffer_collec
                            size_t output_image_format_table_count,
                            uint32_t output_image_format_index,
                            const hw_accel_frame_callback_t* frame_callback,
-                           const hw_accel_res_change_callback_t* res_callback, const zx::bti& bti) {
+                           const hw_accel_res_change_callback_t* res_callback,
+                           const hw_accel_remove_task_callback_t* remove_task_callback,
+                           const zx::bti& bti) {
   if ((output_image_format_table_count < 1) ||
       (output_image_format_index >= output_image_format_table_count) ||
       (input_image_format_table_count < 1) ||
       (input_image_format_index >= input_image_format_table_count) || (frame_callback == nullptr) ||
-      (res_callback == nullptr)) {
+      (res_callback == nullptr) || remove_task_callback == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  zx_status_t status =
-      InitBuffers(input_buffer_collection, output_buffer_collection, input_image_format_table_list,
-                  input_image_format_table_count, input_image_format_index,
-                  output_image_format_table_list, output_image_format_table_count,
-                  output_image_format_index, bti, frame_callback, res_callback);
+  zx_status_t status = InitBuffers(input_buffer_collection, output_buffer_collection,
+                                   input_image_format_table_list, input_image_format_table_count,
+                                   input_image_format_index, output_image_format_table_list,
+                                   output_image_format_table_count, output_image_format_index, bti,
+                                   frame_callback, res_callback, remove_task_callback);
   if (status != ZX_OK) {
     FX_LOG(ERROR, kTag, "InitBuffers Failed");
     return status;
@@ -259,12 +261,14 @@ zx_status_t Ge2dTask::InitResize(const buffer_collection_info_2_t* input_buffer_
                                  uint32_t output_image_format_index,
                                  const hw_accel_frame_callback_t* frame_callback,
                                  const hw_accel_res_change_callback_t* res_callback,
+                                 const hw_accel_remove_task_callback_t* remove_task_callback,
                                  const zx::bti& bti, amlogic_canvas_protocol_t canvas) {
   canvas_ = canvas;
 
-  zx_status_t status = Init(input_buffer_collection, output_buffer_collection, input_image_format,
-                            1, 0, output_image_format_table_list, output_image_format_table_count,
-                            output_image_format_index, frame_callback, res_callback, bti);
+  zx_status_t status =
+      Init(input_buffer_collection, output_buffer_collection, input_image_format, 1, 0,
+           output_image_format_table_list, output_image_format_table_count,
+           output_image_format_index, frame_callback, res_callback, remove_task_callback, bti);
   if (status != ZX_OK) {
     FX_LOG(ERROR, kTag, "Init Failed");
     return status;
@@ -285,13 +289,14 @@ zx_status_t Ge2dTask::InitWatermark(const buffer_collection_info_2_t* input_buff
                                     size_t image_format_table_count, uint32_t image_format_index,
                                     const hw_accel_frame_callback_t* frame_callback,
                                     const hw_accel_res_change_callback_t* res_callback,
+                                    const hw_accel_remove_task_callback_t* remove_task_callback,
                                     const zx::bti& bti, amlogic_canvas_protocol_t canvas) {
   canvas_ = canvas;
 
-  zx_status_t status =
-      Init(input_buffer_collection, output_buffer_collection, image_format_table_list,
-           image_format_table_count, image_format_index, image_format_table_list,
-           image_format_table_count, image_format_index, frame_callback, res_callback, bti);
+  zx_status_t status = Init(input_buffer_collection, output_buffer_collection,
+                            image_format_table_list, image_format_table_count, image_format_index,
+                            image_format_table_list, image_format_table_count, image_format_index,
+                            frame_callback, res_callback, remove_task_callback, bti);
   if (status != ZX_OK) {
     FX_LOG(ERROR, kTag, "Init Failed");
     return status;
