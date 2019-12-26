@@ -234,6 +234,9 @@ template("test_spec") {
                               allowed_device_types + [ dims.device_type ] -
                               [ dims.device_type ] != allowed_device_types
     if (has_allowed_device_type || !defined(dims.device_type)) {
+      # GN idiom for adding to a list without adding duplicate elements.
+      _environments += [ env ]
+      _environments -= [ env ]
       _environments += [ env ]
     }
   }
