@@ -18,6 +18,7 @@ use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_auth::{AuthProviderMarker, AuthenticationContextProviderProxy};
 use fidl_fuchsia_identity_external::{OauthMarker, OauthOpenIdConnectMarker, OpenIdConnectMarker};
 
+mod auth_provider_cache;
 mod auth_provider_connection;
 mod error;
 mod fake_auth_provider_supplier;

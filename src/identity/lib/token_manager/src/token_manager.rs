@@ -2,27 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::auth_provider_cache::AuthProviderCache;
 use crate::tokens::{AccessTokenKey, IdTokenKey, OAuthToken};
 use crate::{AuthProviderSupplier, ResultExt, TokenManagerContext, TokenManagerError};
 use anyhow::format_err;
 use fidl;
 use fidl::endpoints::{create_endpoints, ClientEnd};
 use fidl_fuchsia_auth::{
-    AppConfig, AuthProviderProxy, AuthProviderStatus, AuthenticationUiContextMarker, Status,
+    AppConfig, AuthProviderStatus, AuthenticationUiContextMarker, Status,
     TokenManagerAuthorizeResponder, TokenManagerDeleteAllTokensResponder,
     TokenManagerGetAccessTokenResponder, TokenManagerGetIdTokenResponder,
     TokenManagerListProfileIdsResponder, TokenManagerRequest, TokenManagerRequestStream,
     UserProfileInfo,
 };
-use fidl_fuchsia_identity_external::{
-    OauthOpenIdConnectProxy, OpenIdTokenFromOauthRefreshTokenRequest,
-};
+use fidl_fuchsia_identity_external::OpenIdTokenFromOauthRefreshTokenRequest;
 use fidl_fuchsia_identity_tokens::OauthRefreshToken;
 use futures::prelude::*;
 use identity_common::{cancel_or, TaskGroup, TaskGroupCancel};
 use log::{error, info, warn};
 use parking_lot::Mutex;
-use std::collections::HashMap;
 use std::convert::TryInto;
 use std::path::Path;
 use std::sync::Arc;
@@ -38,14 +36,9 @@ type TokenManagerResult<T> = Result<T, TokenManagerError>;
 
 /// The supplier references and mutable state used to create, store, and cache authentication
 /// tokens for a particular user across a range of third party services.
-pub struct TokenManager<T: AuthProviderSupplier> {
-    /// An object capable of supplying AuthProvider connections.
-    auth_provider_supplier: T,
-    // TODO(satsukiu): pull proxy caches out to another struct.
-    /// A cache of proxies for previously used connections to AuthProviders.
-    auth_providers: Mutex<HashMap<String, Arc<AuthProviderProxy>>>,
-    /// A cache of proxies for previously used connections to `OauthOpenIdConnect` implementations.
-    oauth_open_id_proxies: Mutex<HashMap<String, Arc<OauthOpenIdConnectProxy>>>,
+pub struct TokenManager<APS: AuthProviderSupplier> {
+    /// An in-memory cache that retrieves and caches token provider proxies.
+    auth_provider_cache: AuthProviderCache<APS>,
     /// A persistent store of long term credentials.
     token_store: Mutex<Box<dyn AuthDb + Send + Sync>>,
     /// An in-memory cache of recently used tokens.
@@ -54,11 +47,11 @@ pub struct TokenManager<T: AuthProviderSupplier> {
     task_group: TaskGroup,
 }
 
-impl<T: AuthProviderSupplier> TokenManager<T> {
+impl<APS: AuthProviderSupplier> TokenManager<APS> {
     /// Creates a new TokenManager, backed by a file db.
     pub fn new(
         db_path: &Path,
-        auth_provider_supplier: T,
+        auth_provider_supplier: APS,
         task_group: TaskGroup,
     ) -> Result<Self, anyhow::Error> {
         let token_store = AuthDbFile::new(db_path)
@@ -66,9 +59,7 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
         let token_cache = TokenCache::new(CACHE_SIZE);
 
         Ok(TokenManager {
-            auth_provider_supplier,
-            auth_providers: Mutex::new(HashMap::new()),
-            oauth_open_id_proxies: Mutex::new(HashMap::new()),
+            auth_provider_cache: AuthProviderCache::new(auth_provider_supplier),
             token_store: Mutex::new(Box::new(token_store)),
             token_cache: Mutex::new(token_cache),
             task_group,
@@ -76,13 +67,11 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
     }
 
     /// Create a new in-memory TokenManager.
-    pub fn new_in_memory(auth_provider_supplier: T, task_group: TaskGroup) -> Self {
+    pub fn new_in_memory(auth_provider_supplier: APS, task_group: TaskGroup) -> Self {
         let token_store = AuthDbInMemory::new();
         let token_cache = TokenCache::new(CACHE_SIZE);
         TokenManager {
-            auth_provider_supplier,
-            auth_providers: Mutex::new(HashMap::new()),
-            oauth_open_id_proxies: Mutex::new(HashMap::new()),
+            auth_provider_cache: AuthProviderCache::new(auth_provider_supplier),
             token_store: Mutex::new(Box::new(token_store)),
             token_cache: Mutex::new(token_cache),
             task_group,
@@ -182,7 +171,8 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
         // Depending on the outcome of design discussions either pass it through or remove it
         // entirely.
         let auth_provider_type = &app_config.auth_provider_type;
-        let auth_provider_proxy = self.get_auth_provider_proxy(auth_provider_type).await?;
+        let auth_provider_proxy =
+            self.auth_provider_cache.get_auth_provider_proxy(auth_provider_type).await?;
 
         let (ui_context_client_end, ui_context_server_end) =
             create_endpoints().token_manager_status(Status::UnknownError)?;
@@ -198,7 +188,6 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
             )
             .await
             .map_err(|err| {
-                self.discard_auth_provider_proxy(auth_provider_type);
                 TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
             })?;
 
@@ -255,7 +244,8 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
         cache_key: AccessTokenKey,
     ) -> TokenManagerResult<Arc<OAuthToken>> {
         let auth_provider_type = &app_config.auth_provider_type;
-        let auth_provider_proxy = self.get_auth_provider_proxy(auth_provider_type).await?;
+        let auth_provider_proxy =
+            self.auth_provider_cache.get_auth_provider_proxy(auth_provider_type).await?;
 
         let fut = auth_provider_proxy.get_app_access_token(
             &refresh_token,
@@ -263,7 +253,6 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
             &mut app_scopes.iter().map(|x| &**x),
         );
         let (status, provider_token) = fut.await.map_err(|err| {
-            self.discard_auth_provider_proxy(auth_provider_type);
             TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
         })?;
 
@@ -298,7 +287,8 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
         let db_key = Self::create_db_key(&app_config, &user_profile_id)?;
         let refresh_token = self.get_refresh_token(&db_key)?;
         let auth_provider_type = &app_config.auth_provider_type;
-        let oauth_open_id_proxy = self.get_oauth_open_id_connect_proxy(auth_provider_type).await?;
+        let oauth_open_id_proxy =
+            self.auth_provider_cache.get_oauth_open_id_connect_proxy(auth_provider_type).await?;
         let get_id_token_request = OpenIdTokenFromOauthRefreshTokenRequest {
             refresh_token: Some(OauthRefreshToken {
                 content: Some(refresh_token),
@@ -311,7 +301,6 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
             match oauth_open_id_proxy.get_id_token_from_refresh_token(get_id_token_request).await {
                 Ok(api_result) => api_result?,
                 Err(fidl_err) => {
-                    self.discard_oauth_open_id_connect_proxy(auth_provider_type);
                     return Err(TokenManagerError::new(Status::AuthProviderServerError)
                         .with_cause(fidl_err));
                 }
@@ -348,14 +337,12 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
 
         // Request that the auth provider revoke the credential server-side.
         let auth_provider_type = &app_config.auth_provider_type;
-        let auth_provider_proxy = self.get_auth_provider_proxy(auth_provider_type).await?;
-        let status = auth_provider_proxy
-            .revoke_app_or_persistent_credential(&refresh_token)
-            .await
-            .map_err(|err| {
-                self.discard_auth_provider_proxy(auth_provider_type);
-                TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
-            })?;
+        let auth_provider_proxy =
+            self.auth_provider_cache.get_auth_provider_proxy(auth_provider_type).await?;
+        let status =
+            auth_provider_proxy.revoke_app_or_persistent_credential(&refresh_token).await.map_err(
+                |err| TokenManagerError::new(Status::AuthProviderServerError).with_cause(err),
+            )?;
 
         if status != AuthProviderStatus::Ok {
             if force {
@@ -398,59 +385,6 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
             CredentialKey::new(app_config.auth_provider_type.clone(), user_profile_id.clone())
                 .map_err(|_| TokenManagerError::new(Status::InvalidRequest))?;
         Ok(db_key)
-    }
-
-    /// Returns an `AuthProviderProxy` for the specified `auth_provider_type` either by returning
-    /// a previously created copy or by acquiring a new one from the `AuthProviderSupplier`.
-    async fn get_auth_provider_proxy<'a>(
-        &'a self,
-        auth_provider_type: &'a str,
-    ) -> TokenManagerResult<Arc<AuthProviderProxy>> {
-        if let Some(auth_provider) = self.auth_providers.lock().get(auth_provider_type) {
-            return Ok(Arc::clone(auth_provider));
-        }
-
-        let client_end = self.auth_provider_supplier.get_auth_provider(auth_provider_type).await?;
-        let proxy = Arc::new(client_end.into_proxy().token_manager_status(Status::UnknownError)?);
-        self.auth_providers.lock().insert(auth_provider_type.to_string(), Arc::clone(&proxy));
-
-        // TODO(jsankey): AuthProviders might crash or close connections, leaving our cached proxy
-        // in an invalid state. Currently we explicitly discard a proxy from each method that
-        // observes a communication failure, but we should probably also be monitoring for the
-        // close event on each channel to remove the associated proxy from the cache automatically.
-
-        Ok(proxy)
-    }
-
-    /// Returns an `OauthOpenIdConnectProxy` for the specified `auth_provider_type` either by
-    /// returning a previously created copy or by acquiring a new one from the
-    /// `AuthProviderSupplier`.
-    async fn get_oauth_open_id_connect_proxy<'a>(
-        &self,
-        auth_provider_type: &'a str,
-    ) -> TokenManagerResult<Arc<OauthOpenIdConnectProxy>> {
-        if let Some(proxy) = self.oauth_open_id_proxies.lock().get(auth_provider_type) {
-            return Ok(Arc::clone(proxy));
-        }
-
-        let client_end =
-            self.auth_provider_supplier.get_oauth_open_id_connect(auth_provider_type).await?;
-        let proxy = Arc::new(client_end.into_proxy().token_manager_status(Status::UnknownError)?);
-        self.oauth_open_id_proxies
-            .lock()
-            .insert(auth_provider_type.to_string(), Arc::clone(&proxy));
-
-        Ok(proxy)
-    }
-
-    /// Removes an `AuthProviderProxy` from the local cache, if one is found.
-    fn discard_auth_provider_proxy(&self, auth_provider_type: &str) {
-        self.auth_providers.lock().remove(auth_provider_type);
-    }
-
-    /// Removes an `OauthOpenIdConnectProxy` from the local cache, if one is found.
-    fn discard_oauth_open_id_connect_proxy(&self, auth_provider_type: &str) {
-        self.oauth_open_id_proxies.lock().remove(auth_provider_type);
     }
 
     /// Returns the current refresh token for a user from the data store.  Failure to find the user
