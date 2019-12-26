@@ -2,61 +2,86 @@
 
 ## Features
 
-* Configure [YouCompleteMe](youcompleteme.md) to provide error checking,
-  code completion, and source navigation within the Fuchsia tree.
-* Set path so that `:find` and `gf` know how to find files.
-* Fidl syntax highlighting (using /lib/fidl/tools/vim/).
-* Basic build system integration so that `:make` builds and populates the
+The [`fuchsia.vim`](/scripts/vim/fuchsia.vim) script sets up Vim
+to do the following:
+
+* Set paths so that `:find` and `gf` know how to find files.
+* Enable FIDL syntax highlighting (using `/lib/fidl/tools/vim/`).
+* Integrate basic build system so that `:make` builds and populates the
   QuickFix window.
+* Configure [YouCompleteMe](/docs/development/editors/youcompleteme.md) (YCM)
+  to provide error checking, code completion, and source navigation
+  within the Fuchsia tree.
 
 ## Installation
 
-1. Update your login script:
+The steps are:
 
-   Steps #2 and #3 depend on configuration set by the `fx set` command. Add
-   these lines to your startup script (typically `~/.bashrc`).
+1. [Update your login script](#update-your-login-script).
+1. [Run the fx set command](#run-the-fx-set-command).
+1. [Update your Vim startup file](#update-your-vim-startup-file).
+1. [Restart Vim to configure YouCompleteMe](#restart-vim-to-configure-ycm).
+1. [Build a compilation database](#build-a-compilation-database).
 
-   ```shell
-   export FUCHSIA_DIR=/path/to/fuchsia-dir
-   fx set core.x64
-   ```
+### Update your login script {:#update-your-login-script}
 
-1. Update your Vim startup file:
+Add the following line to your startup script (typically `~/.bashrc`):
 
-   If this line exists in your `~/.vimrc file`, remove it:
+```shell
+export FUCHSIA_DIR=<your_fuchsia_source_directory>
+```
 
-   ```
-   filetype plugin indent on
-   ```
+### Run the fx set command {:#run-the-fx-set-command}
 
-   Then add these lines to your `~/.vimrc`.
+This command uses the format `fx set [PRODUCT].[BOARD]`. For example:
 
-   ```
-   if $FUCHSIA_DIR != ""
-     source $FUCHSIA_DIR/scripts/vim/fuchsia.vim
-   endif
-   filetype plugin indent on
-   ```
+```shell
+fx set core.x64
+```
 
-1. Install YouCompleteMe (YCM):
+### Update your Vim startup file {:#update-your-vim-startup-file}
 
-   Optionally [install YouCompleteMe](youcompleteme.md)
-   for fancy completion, source navigation and inline errors.
+If the following line exists in your `~/.vimrc` file, remove it:
 
-   If it's installed, `fuchsia.vim` configures YCM properly.
+```shell
+filetype plugin indent on
+```
 
-   If everything is working properly, you can place the cursor on an
-   identifier in a .cc or .h file then hit Ctrl+], to navigate
-   to the definition of the identifier.
+Then add the following lines to your `~/.vimrc`:
 
-   Use `fx compdb` to build a compilation database. YCM will use the
-   compilation database which is more reliable and efficient than
-   the default `ycm_extra_config.py` configuration.
+```shell
+if $FUCHSIA_DIR != ""
+  source $FUCHSIA_DIR/scripts/vim/fuchsia.vim
+endif
+filetype plugin indent on
+```
 
-## TODO
+### Restart Vim to configure YouCompleteMe {:#restart-vim-to-configure-ycm}
 
-In the future it would be nice to support:
-* Fidl indentation
-* GN indentation
-* Dart, Go and Rust support
-* Navigate between generated files and fidl source
+Note: If you haven't installed YouCompleteMe,
+see [this installation guide] (https://github.com/ycm-core/YouCompleteMe#installation){:.external}
+to install YCM on your workstation.
+
+To configure YouCompleteMe (YCM), you need to source the
+[`fuchsia.vim`](/scripts/vim/fuchsia.vim) file.
+
+Restart your Vim to run the
+`source $FUCHSIA_DIR/scripts/vim/fuchsia.vim` command in your `~/.vimrc`
+file (see [Update your Vim startup file](#update-yout-vim-startup-file)).
+
+To verify that your YCM works, place the cursor on an
+identifier in a `.cc` or `.h` file in Vim, then hit `Ctrl+]`
+to navigate to the definition of the identifier.
+
+### Build a compilation database {:#build-a-compilation-database}
+
+YCM uses the
+[compilation database](https://github.com/ycm-core/YouCompleteMe#option-1-use-a-compilation-database){:.external},
+which is more reliable and efficient than the default
+[`ycm_extra_config.py` configuration](/docs/development/editors/youcompleteme.md#generate_compilation_database).
+
+To build a compilation database, run the following command:
+
+```shell
+fx compdb
+```
