@@ -9,7 +9,6 @@
 #include <lib/zxs/protocol.h>
 #include <netinet/in.h>
 #include <poll.h>
-#include <sys/param.h>
 #include <zircon/syscalls.h>
 
 #include "private-socket.h"
@@ -327,7 +326,7 @@ static zx_status_t fdio_socket_getsockname(fdio_t* io, struct sockaddr* addr, so
   auto response = result.Unwrap();
   *out_code = response->code;
   auto out = response->addr;
-  memcpy(addr, out.data(), MIN(*addrlen, out.count()));
+  memcpy(addr, out.data(), std::min(static_cast<size_t>(*addrlen), out.count()));
   *addrlen = static_cast<socklen_t>(out.count());
   return ZX_OK;
 }
@@ -343,7 +342,7 @@ static zx_status_t fdio_socket_getpeername(fdio_t* io, struct sockaddr* addr, so
   auto response = result.Unwrap();
   *out_code = response->code;
   auto out = response->addr;
-  memcpy(addr, out.data(), MIN(*addrlen, out.count()));
+  memcpy(addr, out.data(), std::min(static_cast<size_t>(*addrlen), out.count()));
   *addrlen = static_cast<socklen_t>(out.count());
   return ZX_OK;
 }
@@ -359,7 +358,7 @@ static zx_status_t fdio_socket_getsockopt(fdio_t* io, int level, int optname, vo
   auto response = result.Unwrap();
   *out_code = response->code;
   auto out = response->optval;
-  socklen_t copy_len = MIN(*optlen, static_cast<socklen_t>(out.count()));
+  size_t copy_len = std::min(static_cast<size_t>(*optlen), out.count());
   bool do_optlen_check = true;
   // The following code block is to just keep up with Linux parity.
   switch (level) {
@@ -397,7 +396,7 @@ static zx_status_t fdio_socket_getsockopt(fdio_t* io, int level, int optname, vo
     }
   }
   memcpy(optval, out.data(), copy_len);
-  *optlen = copy_len;
+  *optlen = static_cast<socklen_t>(copy_len);
 
   return ZX_OK;
 }
