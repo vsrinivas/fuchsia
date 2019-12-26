@@ -1,6 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 use {
     crate::{
         collection::{DataCollector, DataMap},
@@ -39,14 +40,13 @@ use {
 // TODO(4601): Consider configuring batch sizes by bytes, not by hierarchy count.
 static IN_MEMORY_SNAPSHOT_LIMIT: usize = 64;
 
-type InspectDataTrie = trie::Trie<char, (PathBuf, DirectoryProxy, Option<InspectHierarchyMatcher>)>;
+type InspectDataTrie = trie::Trie<char, UnpopulatedInspectDataContainer>;
 
 enum ReadSnapshot {
     Single(Snapshot),
     Tree(SnapshotTree),
     Finished(NodeHierarchy),
 }
-
 /// InspectDataCollector holds the information needed to retrieve the Inspect
 /// VMOs associated with a particular component
 #[derive(Clone, Debug)]
@@ -100,6 +100,7 @@ impl InspectDataCollector {
                     Data::DeprecatedFidl(proxy),
                 );
             }
+
             if !entry.name.ends_with(".inspect") || entry.kind != files_async::DirentKind::File {
                 continue;
             }
@@ -226,11 +227,12 @@ pub struct InspectHierarchyMatcher {
 /// along with all information needed to transform that data
 /// to be returned to the client.
 pub struct PopulatedInspectDataContainer {
-    /// Path to the out directory that this
-    /// data packet is configured for.
-    component_out_dir_path: PathBuf,
+    /// Relative moniker of the component that this populated
+    /// data packet has gathered data for.
+    component_moniker: String,
     /// Vector of all the snapshots of inspect hierarchies under
-    /// the directory for component_out_dir_path.
+    /// the diagnostics directory of the component identified by
+    /// component_moniker.
     snapshots: Vec<ReadSnapshot>,
     /// Optional hierarchy matcher. If unset, the reader is running
     /// in all-access mode, meaning no matching or filtering is required.
@@ -274,13 +276,13 @@ impl PopulatedInspectDataContainer {
                 }
                 match snapshots {
                     Some(snapshots) => Ok(PopulatedInspectDataContainer {
-                        component_out_dir_path: unpopulated.component_out_dir_path,
+                        component_moniker: unpopulated.component_moniker,
                         snapshots: snapshots,
                         inspect_matcher: unpopulated.inspect_matcher,
                     }),
                     None => Err(format_err!(
                         "Failed to parse snapshots for: {:?}.",
-                        unpopulated.component_out_dir_path
+                        unpopulated.component_moniker
                     )),
                 }
             }
@@ -293,9 +295,9 @@ impl PopulatedInspectDataContainer {
 /// all information needed to retrieve Inspect data
 /// for a given component, when requested.
 pub struct UnpopulatedInspectDataContainer {
-    /// Path to the out directory that this
-    /// data packet is configured for.
-    component_out_dir_path: PathBuf,
+    /// Relative moniker of the component that this data container
+    /// is representing.
+    component_moniker: String,
     /// DirectoryProxy for the out directory that this
     /// data packet is configured for.
     component_out_proxy: DirectoryProxy,
@@ -335,17 +337,21 @@ impl InspectDataRepository {
     pub fn add(
         &mut self,
         component_name: String,
-        absolute_moniker: Vec<String>,
-        component_hierachy_path: PathBuf,
+        relative_moniker: Vec<String>,
         directory_proxy: DirectoryProxy,
     ) -> Result<(), Error> {
         let matched_selectors = match &self.static_selectors {
             Some(selectors) => Some(selectors::match_component_moniker_against_selectors(
-                &absolute_moniker,
+                &relative_moniker,
                 &selectors,
             )?),
             None => None,
         };
+        let sanitized_moniker = relative_moniker
+            .iter()
+            .map(|s| selectors::sanitize_string_for_selectors(s))
+            .collect::<Vec<String>>()
+            .join("/");
         match matched_selectors {
             Some(selectors) => {
                 if !selectors.is_empty() {
@@ -376,14 +382,14 @@ impl InspectDataRepository {
 
                     self.data_directories.insert(
                         component_name.chars().collect(),
-                        (
-                            component_hierachy_path,
-                            directory_proxy,
-                            Some(InspectHierarchyMatcher {
+                        UnpopulatedInspectDataContainer {
+                            component_moniker: sanitized_moniker,
+                            component_out_proxy: directory_proxy,
+                            inspect_matcher: Some(InspectHierarchyMatcher {
                                 component_node_selector: node_path_regex_set,
                                 node_property_selectors: property_regexes,
                             }),
-                        ),
+                        },
                     );
                 }
                 Ok(())
@@ -391,7 +397,11 @@ impl InspectDataRepository {
             None => {
                 self.data_directories.insert(
                     component_name.chars().collect(),
-                    (component_hierachy_path, directory_proxy, None),
+                    UnpopulatedInspectDataContainer {
+                        component_moniker: sanitized_moniker,
+                        component_out_proxy: directory_proxy,
+                        inspect_matcher: None,
+                    },
                 );
 
                 Ok(())
@@ -405,13 +415,16 @@ impl InspectDataRepository {
         return self
             .data_directories
             .iter()
-            .filter_map(|(_, (component_path, dir_proxy, inspect_hierarchy_matcher))| {
-                io_util::clone_directory(&dir_proxy, CLONE_FLAG_SAME_RIGHTS).ok().map(|directory| {
-                    UnpopulatedInspectDataContainer {
-                        component_out_dir_path: component_path.clone(),
-                        component_out_proxy: directory,
-                        inspect_matcher: inspect_hierarchy_matcher.clone(),
-                    }
+            .filter_map(|(_, unpopulated_data_container)| {
+                io_util::clone_directory(
+                    &unpopulated_data_container.component_out_proxy,
+                    CLONE_FLAG_SAME_RIGHTS,
+                )
+                .ok()
+                .map(|directory| UnpopulatedInspectDataContainer {
+                    component_moniker: unpopulated_data_container.component_moniker.clone(),
+                    component_out_proxy: directory,
+                    inspect_matcher: unpopulated_data_container.inspect_matcher.clone(),
                 })
             })
             .collect();
@@ -522,7 +535,7 @@ impl ReaderServer {
         pumped_inspect_data_results.into_iter().fold(Vec::new(), |mut acc, pumped_data| {
             match pumped_data {
                 Ok(PopulatedInspectDataContainer {
-                    component_out_dir_path,
+                    component_moniker,
                     snapshots,
                     inspect_matcher,
                 }) => {
@@ -537,10 +550,7 @@ impl ReaderServer {
                                     Ok(filtered_hierarchy) => {
                                         acc.push(HierarchyData {
                                             hierarchy: filtered_hierarchy,
-                                            file_path: component_out_dir_path
-                                                .to_str()
-                                                .expect("Can't have an invalid path here.")
-                                                .to_string(),
+                                            file_path: component_moniker.clone(),
                                             fields: vec![],
                                         });
                                     }
@@ -565,10 +575,7 @@ impl ReaderServer {
                                     Ok(node_hierarchy) => {
                                         acc.push(HierarchyData {
                                             hierarchy: node_hierarchy,
-                                            file_path: component_out_dir_path
-                                                .to_str()
-                                                .expect("Can't have an invalid path here.")
-                                                .to_string(),
+                                            file_path: component_moniker.clone(),
                                             fields: vec![],
                                         });
                                     }
@@ -629,6 +636,7 @@ impl ReaderServer {
 
                     let client_vmo =
                         dump_vmo.duplicate_handle(zx::Rights::READ | zx::Rights::BASIC)?;
+
                     let mem_buffer = fidl_fuchsia_mem::Buffer { vmo: client_vmo, size: vmo_size };
 
                     match format {
@@ -663,11 +671,9 @@ impl ReaderServer {
             let locked_inspect_repo = self.inspect_repo.read().unwrap();
             locked_inspect_repo.fetch_data()
         };
-
         let mut stream = fidl_fuchsia_diagnostics::BatchIteratorRequestStream::from_channel(
             batch_iterator_channel,
         );
-
         let inspect_repo_length = inspect_repo_data.len();
         let mut inspect_repo_iter = inspect_repo_data.into_iter();
         let mut iter = 0;
@@ -696,6 +702,7 @@ impl ReaderServer {
 
                         let filtered_results: Vec<fidl_fuchsia_diagnostics::FormattedContent> =
                             formatted_content.into_iter().filter_map(Result::ok).collect();
+
                         responder.send(&mut Ok(filtered_results)).unwrap();
                     } else {
                         responder.send(&mut Ok(Vec::new())).unwrap();
@@ -777,7 +784,6 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn inspect_data_collector() {
         let path = PathBuf::from("/test-bindings");
-
         // Make a ServiceFs containing two files.
         // One is an inspect file, and one is not.
         let mut fs = ServiceFs::new();
@@ -787,7 +793,6 @@ mod tests {
         vmo2.write(b"test", 0).unwrap();
         fs.dir("diagnostics").add_vmo_file_at("root.inspect", vmo, 0, 4096);
         fs.dir("diagnostics").add_vmo_file_at("root_not_inspect", vmo2, 0, 4096);
-
         // Create a connection to the ServiceFs.
         let (h0, h1) = zx::Channel::create().unwrap();
         fs.serve_connection(h1).unwrap();
@@ -800,6 +805,7 @@ mod tests {
         let (done0, done1) = zx::Channel::create().unwrap();
 
         let thread_path = path.join("out");
+
         // Run the actual test in a separate thread so that it does not block on FS operations.
         // Use signalling on a zx::Channel to indicate that the test is done.
         std::thread::spawn(move || {
@@ -809,7 +815,6 @@ mod tests {
 
             executor.run_singlethreaded(async {
                 let collector = InspectDataCollector::new();
-
                 // Trigger collection on a clone of the inspect collector so
                 // we can use collector to take the collected data.
                 Box::new(collector.clone()).collect(path).await.unwrap();
@@ -868,8 +873,8 @@ mod tests {
         fasync::spawn(fs.collect());
 
         let (done0, done1) = zx::Channel::create().unwrap();
-
         let thread_path = path.join("out");
+
         // Run the actual test in a separate thread so that it does not block on FS operations.
         // Use signalling on a zx::Channel to indicate that the test is done.
         std::thread::spawn(move || {
@@ -948,19 +953,17 @@ mod tests {
         ns.bind(path.join("out").to_str().unwrap(), h0).unwrap();
 
         fasync::spawn(fs.collect());
-
         let (done0, done1) = zx::Channel::create().unwrap();
-
         let thread_path = path.join("out");
+
         // Run the actual test in a separate thread so that it does not block on FS operations.
         // Use signalling on a zx::Channel to indicate that the test is done.
         std::thread::spawn(move || {
             let path = thread_path;
             let done = done1;
             let mut executor = fasync::Executor::new().unwrap();
-
             executor.run_singlethreaded(async {
-                verify_reader("test.inspect", path, "test-bindings3").await;
+                verify_reader("test.inspect", path).await;
                 done.signal_peer(zx::Signals::NONE, zx::Signals::USER_0).expect("signalling peer");
             });
         });
@@ -987,23 +990,20 @@ mod tests {
         ns.bind(path.join("out").to_str().unwrap(), h0).unwrap();
 
         fasync::spawn(fs.collect());
-
         let (done0, done1) = zx::Channel::create().unwrap();
-
         let thread_path = path.join("out");
+
         // Run the actual test in a separate thread so that it does not block on FS operations.
         // Use signalling on a zx::Channel to indicate that the test is done.
         std::thread::spawn(move || {
             let path = thread_path;
             let done = done1;
             let mut executor = fasync::Executor::new().unwrap();
-
             executor.run_singlethreaded(async {
-                verify_reader(TreeMarker::SERVICE_NAME, path, "test-bindings4").await;
+                verify_reader(TreeMarker::SERVICE_NAME, path).await;
                 done.signal_peer(zx::Signals::NONE, zx::Signals::USER_0).expect("signalling peer");
             });
         });
-
         fasync::OnSignals::new(&done0, zx::Signals::USER_0).await.unwrap();
         ns.unbind(path.join("out").to_str().unwrap()).unwrap();
     }
@@ -1011,27 +1011,22 @@ mod tests {
     fn inspector_for_reader_test() -> Inspector {
         let inspector = Inspector::new();
         let root = inspector.root();
-
         let child_1 = root.create_child("child_1");
         child_1.record_int("some-int", 2);
-
         let child_1_1 = child_1.create_child("child_1_1");
         child_1_1.record_int("some-int", 3);
         child_1_1.record_int("not-wanted-int", 4);
         root.record(child_1_1);
         root.record(child_1);
-
         let child_2 = root.create_child("child_2");
         child_2.record_int("some-int", 2);
         root.record(child_2);
-
         inspector
     }
-
-    async fn verify_reader(filename: impl Into<String>, path: PathBuf, bindings_dir: &str) {
+    async fn verify_reader(filename: impl Into<String>, path: PathBuf) {
         let child_1_1_selector = selectors::parse_selector(r#"*:root/child_1/*:some-int"#).unwrap();
         let child_2_selector =
-            selectors::parse_selector(r#"test_bindings2:root/child_2:*"#).unwrap();
+            selectors::parse_selector(r#"test_component.cmx:root/child_2:*"#).unwrap();
         let inspect_repo = Arc::new(RwLock::new(InspectDataRepository::new(Some(vec![
             Arc::new(child_1_1_selector),
             Arc::new(child_2_selector),
@@ -1041,38 +1036,33 @@ mod tests {
 
         // The absolute moniker here is made up since the selector is a glob
         // selector, so any path would match.
-        let absolute_moniker = vec!["test_bindings2".to_string()];
-
+        let absolute_moniker = vec!["test_component.cmx".to_string()];
         let filename_string = filename.into();
         inspect_repo
             .write()
             .unwrap()
-            .add(filename_string.clone(), absolute_moniker, path, out_dir_proxy)
+            .add(filename_string.clone(), absolute_moniker, out_dir_proxy)
             .unwrap();
 
         let reader_server = ReaderServer::new(inspect_repo.clone(), Vec::new());
 
         let result_string = read_snapshot(reader_server.clone()).await;
 
-        let expected_result = format!(
-            r#"{{
-    "contents": {{
-        "root": {{
-            "child_1": {{
-                "child_1_1": {{
+        let expected_result = r#"{
+    "contents": {
+        "root": {
+            "child_1": {
+                "child_1_1": {
                     "some-int": 3
-                }}
-            }},
-            "child_2": {{
+                }
+            },
+            "child_2": {
                 "some-int": 2
-            }}
-        }}
-    }},
-    "path": "/{}/out"
-}}"#,
-            bindings_dir
-        );
-
+            }
+        }
+    },
+    "path": "test_component.cmx"
+}"#;
         assert_eq!(result_string, expected_result);
 
         inspect_repo.write().unwrap().remove(&filename_string);

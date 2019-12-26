@@ -10,7 +10,6 @@ use {
     },
     anyhow::{format_err, Error},
     chrono::prelude::*,
-    fidl_fuchsia_io::DirectoryProxy,
     fuchsia_async as fasync,
     fuchsia_inspect::{component, health::Reporter},
     fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode},
@@ -623,7 +622,6 @@ fn populate_inspect_repo(
     inspect_repo.add(
         inspect_reader_data.component_name,
         inspect_reader_data.absolute_moniker,
-        inspect_reader_data.component_hierarchy_path,
         inspect_directory_proxy,
     )
 }
@@ -756,48 +754,7 @@ async fn archive_event(
     Ok(())
 }
 
-fn collect_own_inspect(
-    state: &Arc<Mutex<ArchivistState>>,
-    self_out_dir: DirectoryProxy,
-) -> Result<(), Error> {
-    let mut data_dirs = vec![];
-    if let Some(dirs) = &state.lock().unwrap().configuration.summarized_dirs {
-        for name in dirs.keys() {
-            let proxy = io_util::open_directory(
-                &self_out_dir,
-                name.as_ref(),
-                io_util::OPEN_RIGHT_READABLE,
-            )?;
-
-            data_dirs.push(InspectReaderData {
-                absolute_moniker: vec!["archivist.cmx".into()],
-                component_name: "archivist.cmx".into(),
-                component_id: "self".into(),
-                component_hierarchy_path: Path::new("/out").join(name),
-                data_directory_proxy: Some(proxy),
-            });
-        }
-    }
-
-    for dir in data_dirs {
-        if let Err(why) = populate_inspect_repo(state, dir) {
-            let mut state = state.lock().unwrap();
-            inspect_log!(
-                state.log_node,
-                event: "Failed to populate repo",
-                result: format!("{:?}", why)
-            );
-            eprintln!("Failed to populate repo: {:?}", why);
-        }
-    }
-
-    Ok(())
-}
-
-pub async fn run_archivist(
-    archivist_state: ArchivistState,
-    self_out_dir: DirectoryProxy,
-) -> Result<(), Error> {
+pub async fn run_archivist(archivist_state: ArchivistState) -> Result<(), Error> {
     let state = Arc::new(Mutex::new(archivist_state));
     component::health().set_starting_up();
 
@@ -811,8 +768,6 @@ pub async fn run_archivist(
         inspect_log!(state.log_node, event: "Collection ended", result: format!("{:?}", e));
         eprintln!("Collection ended with result {:?}", e);
     }));
-
-    collect_own_inspect(&state, self_out_dir)?;
 
     component::health().set_ok();
 

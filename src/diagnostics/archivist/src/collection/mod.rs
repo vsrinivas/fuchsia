@@ -45,9 +45,6 @@ use {
 /// The capacity for bounded channels used by this implementation.
 static CHANNEL_CAPACITY: usize = 1024;
 
-/// Ignore components with this name, since reading our own output data may deadlock.
-static ARCHIVIST_NAME: &str = "archivist.cmx";
-
 /// Ignore components with this name, since ComponentManager hub contains a cycle.
 static COMPONENT_MANAGER_NAME: &str = "component_manager.cmx";
 
@@ -393,9 +390,8 @@ impl HubCollector {
     pub async fn start(mut self) -> Result<(), Error> {
         let mut watch_stream = fuchsia_watch::watch_recursive(&self.path);
 
-        let is_name_allowed = |component_name: &str| -> bool {
-            component_name != ARCHIVIST_NAME && component_name != COMPONENT_MANAGER_NAME
-        };
+        let is_name_allowed =
+            |component_name: &str| -> bool { component_name != COMPONENT_MANAGER_NAME };
 
         while let Some(result) = watch_stream.next().await {
             let event = match result {
@@ -690,6 +686,16 @@ mod tests {
         // the appearence of its out directory.
         assert_eq!(
             make_start_with_realm(vec!["app".to_string()], "archivist.cmx", "12", None),
+            component_events.next().await.unwrap()
+        );
+
+        assert_eq!(
+            make_out_directory_event(
+                "r/app/1/c/archivist.cmx/12",
+                "archivist.cmx",
+                "12",
+                vec!["app".to_string(), "archivist.cmx".to_string()],
+            ),
             component_events.next().await.unwrap()
         );
 

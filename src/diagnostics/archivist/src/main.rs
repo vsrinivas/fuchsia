@@ -10,10 +10,8 @@ use {
     anyhow::Error,
     archivist_lib::{archive, archive_accessor, configs, data_stats, diagnostics, inspect, logs},
     argh::FromArgs,
-    fidl_fuchsia_io::DirectoryProxy,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_zircon as zx,
     futures::{future, FutureExt, StreamExt},
     io_util,
     std::{
@@ -88,12 +86,9 @@ fn main() -> Result<(), Error> {
             all_archive_accessor.spawn_archive_accessor_server(stream)
         });
 
-    let (out_dir_raw, out_dir_remote) = zx::Channel::create()?;
-    let out_dir = DirectoryProxy::new(fasync::Channel::from_channel(out_dir_raw)?);
-    fs.serve_connection(out_dir_remote)?;
     fs.take_and_serve_directory_handle()?;
 
-    let running_archivist = archive::run_archivist(archivist_state, out_dir);
+    let running_archivist = archive::run_archivist(archivist_state);
     let running_service_fs = fs.collect::<()>().map(Ok);
     let both = future::try_join(running_service_fs, running_archivist);
     executor.run(both, num_threads)?;
