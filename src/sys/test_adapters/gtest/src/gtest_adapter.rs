@@ -6,7 +6,7 @@ use {
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_test::{Outcome, RunListenerProxy, Status},
     fuchsia_async as fasync,
-    fuchsia_syslog::fx_log_err,
+    fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_zircon as zx,
     futures::prelude::*,
     serde_derive::{Deserialize, Serialize},
@@ -132,6 +132,7 @@ impl GTestAdapter {
         run_listener: RunListenerProxy,
     ) -> Result<(), Error> {
         for test in &test_names {
+            fx_log_info!("Running test {}", test);
             let test_result_file = format!("/tmp/{}_test_result.json", test);
 
             let (process, logger) = test_adapter_lib::launch_process(
@@ -152,13 +153,17 @@ impl GTestAdapter {
 
             let mut test_logger = fasync::Socket::from_socket(test_logger)?;
 
+            fx_log_info!("waiting for test to finish: {}", test);
+
             fasync::OnSignals::new(&process, zx::Signals::PROCESS_TERMINATED)
                 .await
                 .context("Error waiting for test process to exit")?;
 
+            fx_log_info!("collecting logs for {}", test);
             let logs = logger.try_concat().await?;
             let output = from_utf8(&logs)?;
 
+            fx_log_info!("open output file for {}", test);
             // Open the file in read-only mode with buffer.
             // TODO(anmittal): Convert this to async ops.
             let output_file = if let Ok(f) = File::open(&test_result_file) {
@@ -177,9 +182,11 @@ impl GTestAdapter {
 
             let reader = BufReader::new(output_file);
 
+            fx_log_info!("parse output file for {}", test);
             let test_list: TestOutput =
                 serde_json::from_reader(reader).context("Can't get test result")?;
 
+            fx_log_info!("parsed output file for {}", test);
             if test_list.testsuites.len() != 1 || test_list.testsuites[0].testsuite.len() != 1 {
                 // TODO(anmittal): Introduce Status::InternalError.
                 test_logger
@@ -211,6 +218,7 @@ impl GTestAdapter {
                         .context("Cannot send finish event")?;
                 }
             }
+            fx_log_info!("test finish {}", test);
         }
         Ok(())
     }
@@ -343,6 +351,8 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn run_multiple_tests() {
+        fuchsia_syslog::init_with_tags(&["gtest_adapter"]).expect("cannot init logger");
+
         let (run_listener_client, run_listener) =
             fidl::endpoints::create_request_stream::<RunListenerMarker>()
                 .expect("Failed to create run_listener");
