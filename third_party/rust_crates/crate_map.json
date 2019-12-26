@@ -506,6 +506,21 @@
             "package_name": "timebomb"
         },
         {
+            "crate_name": "tracing",
+            "crate_type": "lib",
+            "package_name": "tracing"
+        },
+        {
+            "crate_name": "tracing_futures",
+            "crate_type": "lib",
+            "package_name": "tracing-futures"
+        },
+        {
+            "crate_name": "tracing_subscriber",
+            "crate_type": "lib",
+            "package_name": "tracing-subscriber"
+        },
+        {
             "crate_name": "unic_char_range",
             "crate_type": "lib",
             "package_name": "unic-char-range"
@@ -931,6 +946,21 @@
             "crate_name": "tokio",
             "crate_type": "lib",
             "package_name": "tokio"
+        },
+        {
+            "crate_name": "tracing",
+            "crate_type": "lib",
+            "package_name": "tracing"
+        },
+        {
+            "crate_name": "tracing_futures",
+            "crate_type": "lib",
+            "package_name": "tracing-futures"
+        },
+        {
+            "crate_name": "tracing_subscriber",
+            "crate_type": "lib",
+            "package_name": "tracing-subscriber"
         },
         {
             "crate_name": "unic_char_range",

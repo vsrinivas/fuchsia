@@ -75,6 +75,8 @@ tempfile = "3.1"
 termion = "1.5.3"
 timebomb = "0.1.2"
 thiserror = "1.0.9"
+tracing = { version = "0.1.10", features = ["log"] }
+tracing-futures = "0.2.0"
 unicase = "2.2.0"
 url = "2.1"
 uuid = { version = "0.7.2", features = ["v4"] } # move ?
@@ -85,6 +87,11 @@ xml-rs = "0.8"
 num = "0.2"
 unic-char-range = "0.9"
 unic-ucd-block = "0.9"
+
+[dependencies.tracing-subscriber]
+version = "0.1.6"
+default-features = false
+features = ["chrono", "tracing-log"]
 
 # Target-side only dependencies
 [target.'cfg(target_os = "fuchsia")'.dependencies]
