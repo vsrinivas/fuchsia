@@ -224,9 +224,15 @@ mod tests {
 
         auth_provider_supplier.add_auth_provider("pied-piper", |mut stream| async move {
             match stream.try_next().await? {
-                Some(AuthProviderRequest::GetAppIdToken { responder, credential, audience }) => {
+                Some(AuthProviderRequest::GetAppAccessToken {
+                    responder,
+                    credential,
+                    client_id,
+                    scopes,
+                }) => {
                     assert_eq!(credential, "PIED_PIPER_CREDENTIAL");
-                    assert!(audience.is_none());
+                    assert!(client_id.is_none());
+                    assert!(scopes.is_empty());
                     responder.send(AuthProviderStatus::Ok, None)?;
                 }
                 _ => panic!("Unexpected message received"),
@@ -254,10 +260,12 @@ mod tests {
                 .unwrap()
                 .into_proxy()
                 .unwrap();
-            let (status, auth_token) =
-                ap_proxy.get_app_id_token("PIED_PIPER_CREDENTIAL", None).await.unwrap();
+            let (status, access_token) = ap_proxy
+                .get_app_access_token("PIED_PIPER_CREDENTIAL", None, &mut vec![].into_iter())
+                .await
+                .unwrap();
             assert_eq!(status, AuthProviderStatus::Ok);
-            assert!(auth_token.is_none());
+            assert!(access_token.is_none());
         };
         let (run_result, _) = join(auth_provider_supplier.run(), client_fn).await;
         assert!(run_result.is_ok());

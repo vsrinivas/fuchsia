@@ -2,8 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::error::TokenManagerError;
 use anyhow::{format_err, Error};
+use fidl_fuchsia_auth::Status;
 use fuchsia_zircon::{ClockId, Duration, Time};
+use std::convert::TryFrom;
 use std::ops::Deref;
 use token_cache::{CacheKey, CacheToken, KeyFor};
 
@@ -34,6 +37,21 @@ impl From<fidl_fuchsia_auth::AuthToken> for OAuthToken {
             expiry_time: get_current_time() + Duration::from_seconds(auth_token.expires_in as i64),
             token: auth_token.token,
         }
+    }
+}
+
+impl TryFrom<fidl_fuchsia_identity_tokens::OpenIdToken> for OAuthToken {
+    type Error = TokenManagerError;
+
+    fn try_from(
+        fidl_id_token: fidl_fuchsia_identity_tokens::OpenIdToken,
+    ) -> Result<Self, Self::Error> {
+        let content =
+            fidl_id_token.content.ok_or(TokenManagerError::new(Status::AuthProviderServerError))?;
+        Ok(OAuthToken {
+            expiry_time: fidl_id_token.expiry_time.map_or(Time::INFINITE, Time::from_nanos),
+            token: content,
+        })
     }
 }
 
@@ -161,14 +179,20 @@ fn get_current_time() -> Time {
 mod tests {
     use super::*;
     use fidl_fuchsia_auth::TokenType;
+    use lazy_static::lazy_static;
 
     const LONG_EXPIRY: Duration = Duration::from_seconds(3000);
     const TEST_ACCESS_TOKEN: &str = "access token";
+    const TEST_ID_TOKEN: &str = "id token";
     const TEST_AUTH_PROVIDER_TYPE: &str = "test-provider";
     const TEST_USER_PROFILE_ID: &str = "test-user-123";
     const TEST_SCOPE_1: &str = "scope-1";
     const TEST_SCOPE_2: &str = "scope-2";
     const TEST_AUDIENCE: &str = "audience";
+
+    lazy_static! {
+        static ref TEST_EXPIRY_TIME: Time = Time::from_nanos(12345);
+    }
 
     #[test]
     fn test_oauth_from_fidl() {
@@ -188,6 +212,33 @@ mod tests {
 
         // Also verify our implementation of the Deref trait
         assert_eq!(&*native_type, TEST_ACCESS_TOKEN);
+    }
+
+    #[test]
+    fn test_oauth_token_from_id_token_fidl() {
+        // Token with contents and expiry time.
+        let fidl_type = fidl_fuchsia_identity_tokens::OpenIdToken {
+            expiry_time: Some(TEST_EXPIRY_TIME.clone().into_nanos()),
+            content: Some(TEST_ID_TOKEN.to_string()),
+        };
+
+        let native_type = OAuthToken::try_from(fidl_type).unwrap();
+        assert_eq!(&native_type.token, TEST_ID_TOKEN);
+        assert_eq!(native_type.expiry_time, TEST_EXPIRY_TIME.clone());
+
+        // Token that doesn't expire
+        let fidl_type = fidl_fuchsia_identity_tokens::OpenIdToken {
+            expiry_time: None,
+            content: Some(TEST_ID_TOKEN.to_string()),
+        };
+        let native_type = OAuthToken::try_from(fidl_type).unwrap();
+        assert_eq!(&native_type.token, TEST_ID_TOKEN);
+        assert_eq!(native_type.expiry_time(), &Time::INFINITE);
+
+        // No token contents.
+        let invalid_fidl_type =
+            fidl_fuchsia_identity_tokens::OpenIdToken { expiry_time: None, content: None };
+        assert!(OAuthToken::try_from(invalid_fidl_type).is_err());
     }
 
     #[test]

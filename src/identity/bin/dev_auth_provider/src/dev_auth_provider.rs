@@ -10,7 +10,7 @@ use crate::common::{
 use fidl::Error;
 use fidl_fuchsia_auth::{
     AuthProviderGetAppAccessTokenFromAssertionJwtResponder, AuthProviderGetAppAccessTokenResponder,
-    AuthProviderGetAppFirebaseTokenResponder, AuthProviderGetAppIdTokenResponder,
+    AuthProviderGetAppFirebaseTokenResponder,
     AuthProviderGetPersistentCredentialFromAttestationJwtResponder,
     AuthProviderGetPersistentCredentialResponder, AuthProviderRequest, AuthProviderRequestStream,
     AuthProviderRevokeAppOrPersistentCredentialResponder, AuthProviderStatus, UserProfileInfo,
@@ -43,10 +43,6 @@ impl AuthProvider {
 
             AuthProviderRequest::GetAppAccessToken { credential, client_id, responder, .. } => {
                 Self::get_app_access_token(credential, client_id, responder)
-            }
-
-            AuthProviderRequest::GetAppIdToken { credential, responder, .. } => {
-                Self::get_app_id_token(credential, responder)
             }
 
             AuthProviderRequest::GetAppFirebaseToken { firebase_api_key, responder, .. } => {
@@ -107,21 +103,6 @@ impl AuthProvider {
                 + &client_id.unwrap_or("none".to_string())
                 + ":at_"
                 + &generate_random_string(),
-            expires_in: TOKEN_LIFETIME_SECONDS,
-        });
-
-        responder.send(AuthProviderStatus::Ok, auth_token.as_mut())
-    }
-
-    /// Implementation of the `GetAppIdToken` method for the `AuthProvider` fidl
-    /// interface.
-    fn get_app_id_token(
-        credential: String,
-        responder: AuthProviderGetAppIdTokenResponder,
-    ) -> Result<(), Error> {
-        let mut auth_token = Some(fidl_fuchsia_auth::AuthToken {
-            token_type: fidl_fuchsia_auth::TokenType::IdToken,
-            token: credential + ":idt_" + &generate_random_string(),
             expires_in: TOKEN_LIFETIME_SECONDS,
         });
 
@@ -224,27 +205,6 @@ mod tests {
                 _ => panic!(
                     "AuthProviderStatus not correct. Or response doesn't contain access_token."
                 ),
-            })
-            .await
-    }
-
-    #[fasync::run_until_stalled(test)]
-    async fn test_get_app_id_token() -> Result<(), Error> {
-        let dev_auth_provider = get_auth_provider_connection_proxy();
-        let credential = "rt_".to_string() + &generate_random_string();
-
-        dev_auth_provider
-            .get_app_id_token(&credential, None)
-            .map_ok(move |response| match response {
-                (AuthProviderStatus::Ok, Some(id_token)) => {
-                    assert_eq!(id_token.token_type, fidl_fuchsia_auth::TokenType::IdToken);
-                    assert_eq!(id_token.expires_in, TOKEN_LIFETIME_SECONDS);
-                    assert!(id_token.token.contains(&credential));
-                    assert!(id_token.token.contains("idt_"));
-                }
-                _ => {
-                    panic!("AuthProviderStatus not correct. Or response doesn't contain id_token.")
-                }
             })
             .await
     }

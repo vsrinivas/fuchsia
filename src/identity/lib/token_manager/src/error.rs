@@ -4,6 +4,7 @@
 
 use anyhow::{format_err, Error};
 use fidl_fuchsia_auth::{AuthProviderStatus, Status};
+use fidl_fuchsia_identity_external::Error as ExternalApiError;
 use thiserror::Error;
 use token_cache::AuthCacheError;
 use token_store::AuthDbError;
@@ -81,6 +82,28 @@ impl From<AuthCacheError> for TokenManagerError {
             // No cache failures are persistent and hence none are fatal.
             fatal: false,
             cause: Some(Error::from(auth_cache_error)),
+        }
+    }
+}
+
+impl From<ExternalApiError> for TokenManagerError {
+    fn from(external_api_error: ExternalApiError) -> Self {
+        TokenManagerError {
+            status: match external_api_error {
+                ExternalApiError::Unknown => Status::UnknownError,
+                ExternalApiError::Internal => Status::InternalError,
+                ExternalApiError::Config => Status::AuthProviderServiceUnavailable,
+                ExternalApiError::UnsupportedOperation => Status::UnknownError,
+                ExternalApiError::InvalidRequest => Status::InvalidRequest,
+                ExternalApiError::Resource => Status::IoError,
+                ExternalApiError::Network => Status::NetworkError,
+                ExternalApiError::Server => Status::AuthProviderServerError,
+                ExternalApiError::InvalidToken => Status::ReauthRequired,
+                ExternalApiError::InsufficientToken => Status::ReauthRequired,
+                ExternalApiError::Aborted => Status::UserCancelled,
+            },
+            fatal: false,
+            cause: Some(format_err!("Auth provider error: {:?}", external_api_error)),
         }
     }
 }

@@ -14,11 +14,16 @@ use fidl_fuchsia_auth::{
     TokenManagerListProfileIdsResponder, TokenManagerRequest, TokenManagerRequestStream,
     UserProfileInfo,
 };
+use fidl_fuchsia_identity_external::{
+    OauthOpenIdConnectProxy, OpenIdTokenFromOauthRefreshTokenRequest,
+};
+use fidl_fuchsia_identity_tokens::OauthRefreshToken;
 use futures::prelude::*;
 use identity_common::{cancel_or, TaskGroup, TaskGroupCancel};
 use log::{error, info, warn};
 use parking_lot::Mutex;
 use std::collections::HashMap;
+use std::convert::TryInto;
 use std::path::Path;
 use std::sync::Arc;
 use token_cache::{AuthCacheError, TokenCache};
@@ -36,8 +41,11 @@ type TokenManagerResult<T> = Result<T, TokenManagerError>;
 pub struct TokenManager<T: AuthProviderSupplier> {
     /// An object capable of supplying AuthProvider connections.
     auth_provider_supplier: T,
+    // TODO(satsukiu): pull proxy caches out to another struct.
     /// A cache of proxies for previously used connections to AuthProviders.
     auth_providers: Mutex<HashMap<String, Arc<AuthProviderProxy>>>,
+    /// A cache of proxies for previously used connections to `OauthOpenIdConnect` implementations.
+    oauth_open_id_proxies: Mutex<HashMap<String, Arc<OauthOpenIdConnectProxy>>>,
     /// A persistent store of long term credentials.
     token_store: Mutex<Box<dyn AuthDb + Send + Sync>>,
     /// An in-memory cache of recently used tokens.
@@ -60,6 +68,7 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
         Ok(TokenManager {
             auth_provider_supplier,
             auth_providers: Mutex::new(HashMap::new()),
+            oauth_open_id_proxies: Mutex::new(HashMap::new()),
             token_store: Mutex::new(Box::new(token_store)),
             token_cache: Mutex::new(token_cache),
             task_group,
@@ -73,6 +82,7 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
         TokenManager {
             auth_provider_supplier,
             auth_providers: Mutex::new(HashMap::new()),
+            oauth_open_id_proxies: Mutex::new(HashMap::new()),
             token_store: Mutex::new(Box::new(token_store)),
             token_cache: Mutex::new(token_cache),
             task_group,
@@ -288,17 +298,30 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
         let db_key = Self::create_db_key(&app_config, &user_profile_id)?;
         let refresh_token = self.get_refresh_token(&db_key)?;
         let auth_provider_type = &app_config.auth_provider_type;
-        let auth_provider_proxy = self.get_auth_provider_proxy(auth_provider_type).await?;
-        let (status, provider_token) = auth_provider_proxy
-            .get_app_id_token(&refresh_token, audience.as_ref().map(|x| &**x))
-            .await
-            .map_err(|err| {
-                self.discard_auth_provider_proxy(auth_provider_type);
-                TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
-            })?;
+        let oauth_open_id_proxy = self.get_oauth_open_id_connect_proxy(auth_provider_type).await?;
+        let get_id_token_request = OpenIdTokenFromOauthRefreshTokenRequest {
+            refresh_token: Some(OauthRefreshToken {
+                content: Some(refresh_token),
+                account_id: Some(user_profile_id),
+            }),
+            audiences: audience.map(|audience| vec![audience]),
+        };
 
-        let provider_token = provider_token.ok_or(TokenManagerError::from(status))?;
-        let native_token = Arc::new(OAuthToken::from(*provider_token));
+        let provider_token =
+            match oauth_open_id_proxy.get_id_token_from_refresh_token(get_id_token_request).await {
+                Ok(api_result) => api_result?,
+                Err(fidl_err) => {
+                    self.discard_oauth_open_id_connect_proxy(auth_provider_type);
+                    return Err(TokenManagerError::new(Status::AuthProviderServerError)
+                        .with_cause(fidl_err));
+                }
+            };
+
+        // TODO(satsukiu): At the moment, the ID token is stored as an AuthToken type because
+        // the fuchsia.auth.TokenManager protocol returns AuthTokens.  As part of the migration
+        // to fuchsia.identity.tokens ID tokens should be stored as a separate type from Oauth
+        // tokens.
+        let native_token = Arc::new(provider_token.try_into()?);
         self.token_cache.lock().put(cache_key, Arc::clone(&native_token));
         Ok(native_token)
     }
@@ -399,9 +422,35 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
         Ok(proxy)
     }
 
+    /// Returns an `OauthOpenIdConnectProxy` for the specified `auth_provider_type` either by
+    /// returning a previously created copy or by acquiring a new one from the
+    /// `AuthProviderSupplier`.
+    async fn get_oauth_open_id_connect_proxy<'a>(
+        &self,
+        auth_provider_type: &'a str,
+    ) -> TokenManagerResult<Arc<OauthOpenIdConnectProxy>> {
+        if let Some(proxy) = self.oauth_open_id_proxies.lock().get(auth_provider_type) {
+            return Ok(Arc::clone(proxy));
+        }
+
+        let client_end =
+            self.auth_provider_supplier.get_oauth_open_id_connect(auth_provider_type).await?;
+        let proxy = Arc::new(client_end.into_proxy().token_manager_status(Status::UnknownError)?);
+        self.oauth_open_id_proxies
+            .lock()
+            .insert(auth_provider_type.to_string(), Arc::clone(&proxy));
+
+        Ok(proxy)
+    }
+
     /// Removes an `AuthProviderProxy` from the local cache, if one is found.
     fn discard_auth_provider_proxy(&self, auth_provider_type: &str) {
         self.auth_providers.lock().remove(auth_provider_type);
+    }
+
+    /// Removes an `OauthOpenIdConnectProxy` from the local cache, if one is found.
+    fn discard_oauth_open_id_connect_proxy(&self, auth_provider_type: &str) {
+        self.oauth_open_id_proxies.lock().remove(auth_provider_type);
     }
 
     /// Returns the current refresh token for a user from the data store.  Failure to find the user
@@ -519,7 +568,10 @@ mod tests {
         AuthProviderRequest, AuthProviderStatus, AuthToken, AuthenticationContextProviderMarker,
         TokenManagerMarker, TokenManagerProxy, TokenType,
     };
+    use fidl_fuchsia_identity_external::OauthOpenIdConnectRequest;
+    use fidl_fuchsia_identity_tokens::OpenIdToken;
     use fuchsia_async as fasync;
+    use fuchsia_zircon::{ClockId, Duration, Time};
     use futures::channel::oneshot;
     use futures::future::join3;
     use tempfile::TempDir;
@@ -631,18 +683,22 @@ mod tests {
         Ok(())
     }
 
-    /// Expect a GetAppIdToken request, configurable with a token. Generates a response.
-    fn expect_get_id_token(request: AuthProviderRequest, token: &str) -> Result<(), fidl::Error> {
+    /// Expect a GetIdTokenFromRefreshToken request, configurable with a token. Generates a response.
+    fn expect_get_id_token(
+        request: OauthOpenIdConnectRequest,
+        expected_refresh_token: &str,
+    ) -> Result<(), fidl::Error> {
         match request {
-            AuthProviderRequest::GetAppIdToken { credential, audience, responder } => {
-                assert_eq!(credential, token);
-                assert_eq!(audience, Some("AUDIENCE".to_string()));
-                let mut auth_token = AuthToken {
-                    token_type: TokenType::IdToken,
-                    token: format!("{}_ID", token),
-                    expires_in: 3600,
-                };
-                responder.send(AuthProviderStatus::Ok, Some(&mut auth_token))?;
+            OauthOpenIdConnectRequest::GetIdTokenFromRefreshToken { request, responder } => {
+                let OpenIdTokenFromOauthRefreshTokenRequest { refresh_token, audiences } = request;
+                assert_eq!(&refresh_token.unwrap().content.unwrap(), expected_refresh_token);
+                assert_eq!(audiences, Some(vec!["AUDIENCE".to_string()]));
+                let expiry_time = Time::get(ClockId::UTC) + Duration::from_seconds(3600);
+                let mut id_token = Ok(OpenIdToken {
+                    content: Some(format!("{}_ID", expected_refresh_token)),
+                    expiry_time: Some(expiry_time.into_nanos()),
+                });
+                responder.send(&mut id_token)?;
             }
             _ => panic!("Unexpected message received"),
         }
@@ -872,6 +928,9 @@ mod tests {
                 stream.try_next().await?.expect("End of stream"),
                 "RICHARD_CREDENTIAL",
             )?;
+            Ok(assert!(stream.try_next().await?.is_none()))
+        });
+        auth_provider_supplier.add_oauth_open_id_connect("pied-piper", |mut stream| async move {
             expect_get_id_token(
                 stream.try_next().await?.expect("End of stream"),
                 "RICHARD_CREDENTIAL",
@@ -931,11 +990,14 @@ mod tests {
                 stream.try_next().await?.expect("End of stream"),
                 "RICHARD_CREDENTIAL",
             )?;
-            expect_get_id_token(
+            expect_revoke_cred(
                 stream.try_next().await?.expect("End of stream"),
                 "RICHARD_CREDENTIAL",
             )?;
-            expect_revoke_cred(
+            Ok(assert!(stream.try_next().await?.is_none()))
+        });
+        auth_provider_supplier.add_oauth_open_id_connect("pied-piper", |mut stream| async move {
+            expect_get_id_token(
                 stream.try_next().await?.expect("End of stream"),
                 "RICHARD_CREDENTIAL",
             )?;
