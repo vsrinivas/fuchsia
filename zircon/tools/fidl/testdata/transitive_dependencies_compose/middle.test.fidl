@@ -1,0 +1,8 @@
+library middle;
+
+using bottom;
+
+[FragileBase]
+protocol Middle {
+    compose bottom.Bottom;
+};

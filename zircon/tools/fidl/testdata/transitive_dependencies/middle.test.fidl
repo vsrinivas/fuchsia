@@ -1,0 +1,7 @@
+library middle;
+
+using bottom;
+
+struct Bar {
+    bottom.Foo f;
+};

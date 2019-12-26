@@ -1,0 +1,7 @@
+library example;
+
+using dependent;
+
+struct Foo {
+    dependent.MyEnum field = dependent.MyEnum.A;
+};

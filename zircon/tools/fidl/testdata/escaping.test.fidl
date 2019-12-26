@@ -1,0 +1,5 @@
+library escapeme;
+
+/// "pleaseescapethisdocommentproperly"
+struct DocCommentWithQuotes {
+};

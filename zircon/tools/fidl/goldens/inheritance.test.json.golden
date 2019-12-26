@@ -1,0 +1,336 @@
+{
+  "version": "0.0.1",
+  "name": "fidl.test.json",
+  "library_dependencies": [],
+  "bits_declarations": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "interface_declarations": [
+    {
+      "name": "fidl.test.json/super",
+      "location": {
+        "filename": "inheritance.test.fidl",
+        "line": 4,
+        "column": 10
+      },
+      "maybe_attributes": [
+        {
+          "name": "FragileBase",
+          "value": ""
+        }
+      ],
+      "methods": [
+        {
+          "ordinal": 3393112382468259840,
+          "generated_ordinal": 5722958650322615442,
+          "name": "foo",
+          "location": {
+            "filename": "inheritance.test.fidl",
+            "line": 5,
+            "column": 5
+          },
+          "has_request": true,
+          "maybe_request": [
+            {
+              "type": {
+                "kind": "string",
+                "nullable": false
+              },
+              "name": "s",
+              "location": {
+                "filename": "inheritance.test.fidl",
+                "line": 5,
+                "column": 16
+              },
+              "size": 16,
+              "max_out_of_line": 4294967295,
+              "alignment": 8,
+              "offset": 16,
+              "max_handles": 0,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 0
+              },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 0
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 0
+              }
+            }
+          ],
+          "maybe_request_size": 32,
+          "maybe_request_alignment": 8,
+          "maybe_request_has_padding": true,
+          "experimental_maybe_request_has_flexible_envelope": false,
+          "maybe_request_type_shape_old": {
+            "inline_size": 32,
+            "alignment": 8,
+            "depth": 1,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": false,
+            "contains_union": false
+          },
+          "maybe_request_type_shape_v1": {
+            "inline_size": 32,
+            "alignment": 8,
+            "depth": 1,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": false,
+            "contains_union": false
+          },
+          "maybe_request_type_shape_v1_no_ee": {
+            "inline_size": 32,
+            "alignment": 8,
+            "depth": 1,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": false,
+            "contains_union": false
+          },
+          "has_response": true,
+          "maybe_response": [
+            {
+              "type": {
+                "kind": "primitive",
+                "subtype": "int64"
+              },
+              "name": "y",
+              "location": {
+                "filename": "inheritance.test.fidl",
+                "line": 5,
+                "column": 29
+              },
+              "size": 8,
+              "max_out_of_line": 0,
+              "alignment": 8,
+              "offset": 16,
+              "max_handles": 0,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 0
+              },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 0
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 0
+              }
+            }
+          ],
+          "maybe_response_size": 24,
+          "maybe_response_alignment": 8,
+          "maybe_response_has_padding": false,
+          "experimental_maybe_response_has_flexible_envelope": false,
+          "maybe_response_type_shape_old": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false,
+            "contains_union": false
+          },
+          "maybe_response_type_shape_v1": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false,
+            "contains_union": false
+          },
+          "maybe_response_type_shape_v1_no_ee": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false,
+            "contains_union": false
+          },
+          "is_composed": false
+        }
+      ]
+    },
+    {
+      "name": "fidl.test.json/sub",
+      "location": {
+        "filename": "inheritance.test.fidl",
+        "line": 8,
+        "column": 10
+      },
+      "methods": [
+        {
+          "ordinal": 3393112382468259840,
+          "generated_ordinal": 5722958650322615442,
+          "name": "foo",
+          "location": {
+            "filename": "inheritance.test.fidl",
+            "line": 5,
+            "column": 5
+          },
+          "has_request": true,
+          "maybe_request": [
+            {
+              "type": {
+                "kind": "string",
+                "nullable": false
+              },
+              "name": "s",
+              "location": {
+                "filename": "inheritance.test.fidl",
+                "line": 5,
+                "column": 16
+              },
+              "size": 16,
+              "max_out_of_line": 4294967295,
+              "alignment": 8,
+              "offset": 16,
+              "max_handles": 0,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 0
+              },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 0
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 0
+              }
+            }
+          ],
+          "maybe_request_size": 32,
+          "maybe_request_alignment": 8,
+          "maybe_request_has_padding": true,
+          "experimental_maybe_request_has_flexible_envelope": false,
+          "maybe_request_type_shape_old": {
+            "inline_size": 32,
+            "alignment": 8,
+            "depth": 1,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": false,
+            "contains_union": false
+          },
+          "maybe_request_type_shape_v1": {
+            "inline_size": 32,
+            "alignment": 8,
+            "depth": 1,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": false,
+            "contains_union": false
+          },
+          "maybe_request_type_shape_v1_no_ee": {
+            "inline_size": 32,
+            "alignment": 8,
+            "depth": 1,
+            "max_handles": 0,
+            "max_out_of_line": 4294967295,
+            "has_padding": true,
+            "has_flexible_envelope": false,
+            "contains_union": false
+          },
+          "has_response": true,
+          "maybe_response": [
+            {
+              "type": {
+                "kind": "primitive",
+                "subtype": "int64"
+              },
+              "name": "y",
+              "location": {
+                "filename": "inheritance.test.fidl",
+                "line": 5,
+                "column": 29
+              },
+              "size": 8,
+              "max_out_of_line": 0,
+              "alignment": 8,
+              "offset": 16,
+              "max_handles": 0,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 0
+              },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 0
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 0
+              }
+            }
+          ],
+          "maybe_response_size": 24,
+          "maybe_response_alignment": 8,
+          "maybe_response_has_padding": false,
+          "experimental_maybe_response_has_flexible_envelope": false,
+          "maybe_response_type_shape_old": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false,
+            "contains_union": false
+          },
+          "maybe_response_type_shape_v1": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false,
+            "contains_union": false
+          },
+          "maybe_response_type_shape_v1_no_ee": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false,
+            "contains_union": false
+          },
+          "is_composed": true
+        }
+      ]
+    }
+  ],
+  "service_declarations": [],
+  "struct_declarations": [],
+  "table_declarations": [],
+  "union_declarations": [],
+  "xunion_declarations": [],
+  "type_alias_declarations": [],
+  "declaration_order": [
+    "fidl.test.json/super",
+    "fidl.test.json/sub"
+  ],
+  "declarations": {
+    "fidl.test.json/super": "interface",
+    "fidl.test.json/sub": "interface"
+  }
+}

@@ -1,0 +1,24 @@
+library example;
+
+using someotherlibrary;
+
+using u32 = uint32;
+using vec_at_most_five = vector:5;
+using vec_of_strings = vector<string>;
+using vec_of_strings_at_most_5 = vector<string>:5;
+using vec_at_most_5 = vector:5;
+using channel = handle<channel>;
+using client_end = channel;
+
+struct ExampleOfUseOfAliases {
+    u32 field_of_u32;
+    vec_at_most_five<string> field_of_vec_at_most_five_of_string;
+    vec_at_most_five<uint32> field_of_vec_at_most_five_of_uint32;
+    vec_of_strings field_of_vec_of_strings;
+    vec_of_strings:9 field_of_vec_of_strings_at_most_nine;
+    vec_of_strings_at_most_5 field_of_vec_of_strings_at_most_5;
+    vec_at_most_5<someotherlibrary.ReferenceMe> field_of_vec_at_most_5_of_reference_me;
+    channel field_of_channel;
+    client_end field_of_client_end;
+    client_end? field_of_nullable_client_end;
+};

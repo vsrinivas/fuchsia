@@ -1,0 +1,21 @@
+library fidl.test.json;
+
+struct Pizza {
+    vector<string:16> toppings;
+};
+
+struct Pasta {
+    string:16 sauce;
+};
+
+union PizzaOrPasta {
+    1: Pizza pizza;
+    2: Pasta pasta;
+};
+
+union ExplicitPizzaOrPasta {
+    3: reserved;
+    2: reserved;
+    1: Pizza pizza;
+    4: Pasta pasta;
+};

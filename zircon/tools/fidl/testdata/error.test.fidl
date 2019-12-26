@@ -1,0 +1,5 @@
+library fidl.test.json;
+
+protocol Example {
+    foo(string s) -> (int64 y) error uint32;
+};

@@ -1,0 +1,388 @@
+{
+  "version": "0.0.1",
+  "name": "fidl.test.json",
+  "library_dependencies": [],
+  "bits_declarations": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "interface_declarations": [],
+  "service_declarations": [],
+  "struct_declarations": [],
+  "table_declarations": [],
+  "union_declarations": [],
+  "xunion_declarations": [
+    {
+      "name": "fidl.test.json/FlexibleFoo",
+      "location": {
+        "filename": "xunion.test.fidl",
+        "line": 3,
+        "column": 8
+      },
+      "members": [
+        {
+          "ordinal": 1056421836,
+          "explicit_ordinal": 1,
+          "hashed_ordinal": 1056421836,
+          "reserved": false,
+          "name": "s",
+          "type": {
+            "kind": "string",
+            "nullable": false
+          },
+          "location": {
+            "filename": "xunion.test.fidl",
+            "line": 4,
+            "column": 15
+          },
+          "size": 16,
+          "max_out_of_line": 4294967295,
+          "alignment": 8,
+          "offset": 0
+        },
+        {
+          "ordinal": 1911600824,
+          "explicit_ordinal": 2,
+          "hashed_ordinal": 1911600824,
+          "reserved": false,
+          "name": "i",
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32"
+          },
+          "location": {
+            "filename": "xunion.test.fidl",
+            "line": 5,
+            "column": 14
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 0
+        }
+      ],
+      "size": 24,
+      "max_out_of_line": 4294967295,
+      "alignment": 8,
+      "max_handles": 0,
+      "strict": false,
+      "type_shape_old": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": true,
+        "contains_union": false
+      },
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": true,
+        "contains_union": false
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": true,
+        "contains_union": false
+      }
+    },
+    {
+      "name": "fidl.test.json/StrictFoo",
+      "location": {
+        "filename": "xunion.test.fidl",
+        "line": 8,
+        "column": 15
+      },
+      "members": [
+        {
+          "ordinal": 215696753,
+          "explicit_ordinal": 1,
+          "hashed_ordinal": 215696753,
+          "reserved": false,
+          "name": "s",
+          "type": {
+            "kind": "string",
+            "nullable": false
+          },
+          "location": {
+            "filename": "xunion.test.fidl",
+            "line": 9,
+            "column": 15
+          },
+          "size": 16,
+          "max_out_of_line": 4294967295,
+          "alignment": 8,
+          "offset": 0
+        },
+        {
+          "ordinal": 2063855467,
+          "explicit_ordinal": 2,
+          "hashed_ordinal": 2063855467,
+          "reserved": false,
+          "name": "i",
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32"
+          },
+          "location": {
+            "filename": "xunion.test.fidl",
+            "line": 10,
+            "column": 14
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 0
+        }
+      ],
+      "size": 24,
+      "max_out_of_line": 4294967295,
+      "alignment": 8,
+      "max_handles": 0,
+      "strict": true,
+      "type_shape_old": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "contains_union": false
+      },
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "contains_union": false
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "contains_union": false
+      }
+    },
+    {
+      "name": "fidl.test.json/ExplicitFoo",
+      "location": {
+        "filename": "xunion.test.fidl",
+        "line": 13,
+        "column": 8
+      },
+      "members": [
+        {
+          "ordinal": 1104328308,
+          "explicit_ordinal": 2,
+          "hashed_ordinal": 1104328308,
+          "reserved": false,
+          "name": "s",
+          "type": {
+            "kind": "string",
+            "nullable": false
+          },
+          "location": {
+            "filename": "xunion.test.fidl",
+            "line": 14,
+            "column": 15
+          },
+          "size": 16,
+          "max_out_of_line": 4294967295,
+          "alignment": 8,
+          "offset": 0
+        },
+        {
+          "ordinal": 239266458,
+          "explicit_ordinal": 1,
+          "hashed_ordinal": 239266458,
+          "reserved": false,
+          "name": "i",
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32"
+          },
+          "location": {
+            "filename": "xunion.test.fidl",
+            "line": 15,
+            "column": 14
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 0
+        },
+        {
+          "ordinal": 3,
+          "explicit_ordinal": 3,
+          "reserved": true,
+          "location": {
+            "filename": "xunion.test.fidl",
+            "line": 16,
+            "column": 5
+          }
+        }
+      ],
+      "size": 24,
+      "max_out_of_line": 4294967295,
+      "alignment": 8,
+      "max_handles": 0,
+      "strict": false,
+      "type_shape_old": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": true,
+        "contains_union": false
+      },
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": true,
+        "contains_union": false
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": true,
+        "contains_union": false
+      }
+    },
+    {
+      "name": "fidl.test.json/ExplicitStrictFoo",
+      "location": {
+        "filename": "xunion.test.fidl",
+        "line": 19,
+        "column": 15
+      },
+      "members": [
+        {
+          "ordinal": 1,
+          "explicit_ordinal": 1,
+          "reserved": true,
+          "location": {
+            "filename": "xunion.test.fidl",
+            "line": 20,
+            "column": 5
+          }
+        },
+        {
+          "ordinal": 1579569872,
+          "explicit_ordinal": 3,
+          "hashed_ordinal": 1579569872,
+          "reserved": false,
+          "name": "s",
+          "type": {
+            "kind": "string",
+            "nullable": false
+          },
+          "location": {
+            "filename": "xunion.test.fidl",
+            "line": 21,
+            "column": 15
+          },
+          "size": 16,
+          "max_out_of_line": 4294967295,
+          "alignment": 8,
+          "offset": 0
+        },
+        {
+          "ordinal": 1284403118,
+          "explicit_ordinal": 2,
+          "hashed_ordinal": 1284403118,
+          "reserved": false,
+          "name": "i",
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32"
+          },
+          "location": {
+            "filename": "xunion.test.fidl",
+            "line": 22,
+            "column": 14
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 0
+        }
+      ],
+      "size": 24,
+      "max_out_of_line": 4294967295,
+      "alignment": 8,
+      "max_handles": 0,
+      "strict": true,
+      "type_shape_old": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "contains_union": false
+      },
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "contains_union": false
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 4294967295,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "contains_union": false
+      }
+    }
+  ],
+  "type_alias_declarations": [],
+  "declaration_order": [
+    "fidl.test.json/StrictFoo",
+    "fidl.test.json/FlexibleFoo",
+    "fidl.test.json/ExplicitStrictFoo",
+    "fidl.test.json/ExplicitFoo"
+  ],
+  "declarations": {
+    "fidl.test.json/FlexibleFoo": "xunion",
+    "fidl.test.json/StrictFoo": "xunion",
+    "fidl.test.json/ExplicitFoo": "xunion",
+    "fidl.test.json/ExplicitStrictFoo": "xunion"
+  }
+}

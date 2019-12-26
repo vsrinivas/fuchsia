@@ -1,0 +1,11 @@
+library fidl.test.json;
+
+[FragileBase]
+protocol Parent {
+    First(request<Parent> request);
+};
+
+protocol Child {
+    compose Parent;
+    Second(request<Parent> request);
+};

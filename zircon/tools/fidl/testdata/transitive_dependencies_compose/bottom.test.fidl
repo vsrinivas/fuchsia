@@ -1,0 +1,10 @@
+library bottom;
+
+struct Foo {
+    int32 a;
+};
+
+[FragileBase]
+protocol Bottom {
+    GetFoo() -> (Foo foo);
+};

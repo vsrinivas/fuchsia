@@ -1,0 +1,10 @@
+library fidl.test.json;
+
+[FragileBase]
+protocol super {
+    foo(string s) -> (int64 y);
+};
+
+protocol sub {
+    compose super;
+};

@@ -1,0 +1,42 @@
+library values;
+
+const uint8 UINT8 = 0b100;
+const uint16 UINT16 = 0b100;
+const uint32 UINT32 = 0b100;
+const uint64 UINT64 = 0b100;
+const int8 INT8 = 0b100;
+const int16 INT16 = 0b100;
+const int32 INT32 = 0b100;
+const int64 INT64 = 0b100;
+const float32 FLOAT32 = 3.14159;
+const float64 FLOAT64 = 3.14159;
+const bool BOOL = true;
+const string STRING = "string";
+
+enum EnumType : int32 {
+    VALUE = 1;
+};
+const EnumType enumVal = EnumType.VALUE;
+const int32 enumPrimitiveVal = EnumType.VALUE;
+
+enum BitsType : int32 {
+    VALUE = 0x00000001;
+};
+const BitsType bitsVal = BitsType.VALUE;
+const int32 bitsPrimitiveVal = BitsType.VALUE;
+
+enum Enum {
+    E = 0b10101010;
+};
+
+bits Bits {
+    B = 0x8;
+};
+
+struct Struct {
+    int64 int64_with_default = 007;
+    string string_with_default = "stuff";
+    bool bool_with_default = true;
+    Enum enum_with_default = Enum.E;
+    Bits bits_with_default = Bits.B;
+};

@@ -1,0 +1,7 @@
+library fidl.test.json;
+
+table Simple {
+    1: uint8 f1;
+    2: bool f2;
+    3: reserved;
+};

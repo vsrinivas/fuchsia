@@ -1,0 +1,12 @@
+library example;
+
+protocol SomeProtocol {
+};
+
+service AnEmptyService {
+};
+
+service SomeService {
+    SomeProtocol member1;
+    SomeProtocol member2;
+};

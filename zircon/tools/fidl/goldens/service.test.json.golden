@@ -1,0 +1,81 @@
+{
+  "version": "0.0.1",
+  "name": "example",
+  "library_dependencies": [],
+  "bits_declarations": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "interface_declarations": [
+    {
+      "name": "example/SomeProtocol",
+      "location": {
+        "filename": "service.test.fidl",
+        "line": 3,
+        "column": 10
+      },
+      "methods": []
+    }
+  ],
+  "service_declarations": [
+    {
+      "name": "example/AnEmptyService",
+      "location": {
+        "filename": "service.test.fidl",
+        "line": 6,
+        "column": 9
+      },
+      "members": []
+    },
+    {
+      "name": "example/SomeService",
+      "location": {
+        "filename": "service.test.fidl",
+        "line": 9,
+        "column": 9
+      },
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "example/SomeProtocol",
+            "nullable": false
+          },
+          "name": "member1",
+          "location": {
+            "filename": "service.test.fidl",
+            "line": 10,
+            "column": 18
+          }
+        },
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "example/SomeProtocol",
+            "nullable": false
+          },
+          "name": "member2",
+          "location": {
+            "filename": "service.test.fidl",
+            "line": 11,
+            "column": 18
+          }
+        }
+      ]
+    }
+  ],
+  "struct_declarations": [],
+  "table_declarations": [],
+  "union_declarations": [],
+  "xunion_declarations": [],
+  "type_alias_declarations": [],
+  "declaration_order": [
+    "example/SomeService",
+    "example/SomeProtocol",
+    "example/AnEmptyService"
+  ],
+  "declarations": {
+    "example/SomeProtocol": "interface",
+    "example/AnEmptyService": "service",
+    "example/SomeService": "service"
+  }
+}

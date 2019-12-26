@@ -203,6 +203,16 @@ $FUCHSIA_DIR/out/default.zircon/tools/fidlc \
   --files $FUCHSIA_DIR/zircon/system/utest/fidl/fidl/extra_messages.test.fidl
 ```
 
+To regenerate the `fidlc` JSON goldens, ensure `fidlc` is built and up to date, then run:
+
+```sh
+fx exec $FUCHSIA_DIR/zircon/tools/fidl/testdata/regen.sh
+```
+
+These "golden" files are examples of what kind of JSON IR `fidlc` produces and
+are used to track changes. It is required to regenerate the golden files each
+time the JSON IR is changed in any way, otherwise the `json_generator_tests` fails.
+
 ### fidlgen (LLCPP, HLCPP, Rust, Go)
 
 Build:
@@ -424,6 +434,7 @@ The following requires: fx set bringup.x64 --with-base //garnet/packages/tests:z
 
 | Name                                 | Regen Commands                                                              | Input                                                             | Output                                                                                                                                                                                                                                                                                       |
 |--------------------------------------|-----------------------------------------------------------------------------|-------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| fidlc goldens                        | fx exec $FUCHSIA_DIR/tools/fidl/testdata/regen.sh                           | zircon/tools/fidl/goldens                                         | zircon/tools/fidl/testdata                                                                                                                                                                                                                                                                   |
 | fidlgen goldens                      | fx exec $FUCHSIA_DIR/garnet/go/src/fidl/compiler/backend/typestest/regen.sh | garnet/go/src/fidl/compiler/backend/goldens                       | garnet/go/src/fidl/compiler/backend/goldens                                                                                                                                                                                                                                                  |
 | dart fidlgen goldens                 | fx exec $FUCHSIA_DIR/topaz/bin/fidlgen_dart/regen.sh                        | garnet/go/src/fidl/compiler/backend/goldens                       | topaz/bin/fidlgen_dart/goldens                                                                                                                                                                                                                                                               |
 | gidl conformance test generation     | fx exec $FUCHSIA_DIR/tools/fidl/gidl-conformance-suite/regen.sh             | tools/fidl/gidl-conformance-suite                                 | third_party/go/src/syscall/zx/fidl/conformance/impl.go third_party/go/src/syscall/zx/fidl/fidl_test/conformance_test.go sdk/lib/fidl/cpp/conformance_test.cc topaz/bin/fidl_bindings_test/test/test/conformance_test_types.dart topaz/bin/fidl_bindings_test/test/test/conformance_test.dart |

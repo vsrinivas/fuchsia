@@ -1,0 +1,23 @@
+library fidl.test.json;
+
+xunion FlexibleFoo {
+    1: string s;
+    2: int32 i;
+};
+
+strict xunion StrictFoo {
+    1: string s;
+    2: int32 i;
+};
+
+xunion ExplicitFoo {
+    2: string s;
+    1: int32 i;
+    3: reserved;
+};
+
+strict xunion ExplicitStrictFoo {
+    1: reserved;
+    3: string s;
+    2: int32 i;
+};

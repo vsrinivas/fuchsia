@@ -1,0 +1,73 @@
+{
+  "version": "0.0.1",
+  "name": "escapeme",
+  "library_dependencies": [],
+  "bits_declarations": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "interface_declarations": [],
+  "service_declarations": [],
+  "struct_declarations": [
+    {
+      "name": "escapeme/DocCommentWithQuotes",
+      "location": {
+        "filename": "escaping.test.fidl",
+        "line": 4,
+        "column": 8
+      },
+      "anonymous": false,
+      "maybe_attributes": [
+        {
+          "name": "Doc",
+          "value": " \"pleaseescapethisdocommentproperly\"\n"
+        }
+      ],
+      "members": [],
+      "size": 1,
+      "max_out_of_line": 0,
+      "alignment": 1,
+      "max_handles": 0,
+      "has_padding": false,
+      "type_shape_old": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false,
+        "contains_union": false
+      },
+      "type_shape_v1": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false,
+        "contains_union": false
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false,
+        "contains_union": false
+      }
+    }
+  ],
+  "table_declarations": [],
+  "union_declarations": [],
+  "xunion_declarations": [],
+  "type_alias_declarations": [],
+  "declaration_order": [
+    "escapeme/DocCommentWithQuotes"
+  ],
+  "declarations": {
+    "escapeme/DocCommentWithQuotes": "struct"
+  }
+}

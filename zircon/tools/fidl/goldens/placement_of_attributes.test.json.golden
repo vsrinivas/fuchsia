@@ -1,0 +1,596 @@
+{
+  "version": "0.0.1",
+  "name": "example",
+  "library_dependencies": [
+    {
+      "name": "exampleusing",
+      "declarations": {
+        "exampleusing/Empty": "struct"
+      }
+    }
+  ],
+  "bits_declarations": [
+    {
+      "name": "example/ExampleBits",
+      "location": {
+        "filename": "example.test.fidl",
+        "line": 7,
+        "column": 6
+      },
+      "maybe_attributes": [
+        {
+          "name": "OnBits",
+          "value": ""
+        }
+      ],
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint32"
+      },
+      "mask": "1",
+      "members": [
+        {
+          "name": "MEMBER",
+          "location": {
+            "filename": "example.test.fidl",
+            "line": 9,
+            "column": 5
+          },
+          "value": {
+            "kind": "literal",
+            "literal": {
+              "kind": "numeric",
+              "value": "1",
+              "expression": "1"
+            }
+          },
+          "maybe_attributes": [
+            {
+              "name": "OnBitsMember",
+              "value": ""
+            }
+          ]
+        }
+      ],
+      "strict": true
+    }
+  ],
+  "const_declarations": [
+    {
+      "name": "example/EXAMPLE_CONST",
+      "location": {
+        "filename": "example.test.fidl",
+        "line": 13,
+        "column": 14
+      },
+      "maybe_attributes": [
+        {
+          "name": "OnConst",
+          "value": ""
+        }
+      ],
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint32"
+      },
+      "value": {
+        "kind": "literal",
+        "literal": {
+          "kind": "numeric",
+          "value": "0",
+          "expression": "0"
+        }
+      }
+    }
+  ],
+  "enum_declarations": [
+    {
+      "name": "example/ExampleEnum",
+      "location": {
+        "filename": "example.test.fidl",
+        "line": 16,
+        "column": 6
+      },
+      "maybe_attributes": [
+        {
+          "name": "OnEnum",
+          "value": ""
+        }
+      ],
+      "type": "uint32",
+      "members": [
+        {
+          "name": "MEMBER",
+          "location": {
+            "filename": "example.test.fidl",
+            "line": 18,
+            "column": 5
+          },
+          "value": {
+            "kind": "literal",
+            "literal": {
+              "kind": "numeric",
+              "value": "1",
+              "expression": "1"
+            }
+          },
+          "maybe_attributes": [
+            {
+              "name": "OnEnumMember",
+              "value": ""
+            }
+          ]
+        }
+      ],
+      "strict": true
+    }
+  ],
+  "interface_declarations": [
+    {
+      "name": "example/ExampleProtocol",
+      "location": {
+        "filename": "example.test.fidl",
+        "line": 22,
+        "column": 10
+      },
+      "maybe_attributes": [
+        {
+          "name": "OnProtocol",
+          "value": ""
+        }
+      ],
+      "methods": [
+        {
+          "ordinal": 4827131039807700992,
+          "generated_ordinal": 1965996700874037518,
+          "name": "Method",
+          "location": {
+            "filename": "example.test.fidl",
+            "line": 24,
+            "column": 5
+          },
+          "has_request": true,
+          "maybe_attributes": [
+            {
+              "name": "OnMethod",
+              "value": ""
+            }
+          ],
+          "maybe_request": [
+            {
+              "type": {
+                "kind": "identifier",
+                "identifier": "exampleusing/Empty",
+                "nullable": false
+              },
+              "name": "arg",
+              "location": {
+                "filename": "example.test.fidl",
+                "line": 24,
+                "column": 31
+              },
+              "size": 1,
+              "max_out_of_line": 0,
+              "alignment": 1,
+              "offset": 16,
+              "max_handles": 0,
+              "field_shape_old": {
+                "offset": 16,
+                "padding": 7
+              },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 7
+              },
+              "field_shape_v1_no_ee": {
+                "offset": 16,
+                "padding": 7
+              }
+            }
+          ],
+          "maybe_request_size": 24,
+          "maybe_request_alignment": 8,
+          "maybe_request_has_padding": true,
+          "experimental_maybe_request_has_flexible_envelope": false,
+          "maybe_request_type_shape_old": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false,
+            "contains_union": false
+          },
+          "maybe_request_type_shape_v1": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false,
+            "contains_union": false
+          },
+          "maybe_request_type_shape_v1_no_ee": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false,
+            "contains_union": false
+          },
+          "has_response": false,
+          "is_composed": false
+        }
+      ]
+    }
+  ],
+  "service_declarations": [],
+  "struct_declarations": [
+    {
+      "name": "example/ExampleStruct",
+      "location": {
+        "filename": "example.test.fidl",
+        "line": 28,
+        "column": 8
+      },
+      "anonymous": false,
+      "maybe_attributes": [
+        {
+          "name": "OnStruct",
+          "value": ""
+        }
+      ],
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint32"
+          },
+          "name": "member",
+          "location": {
+            "filename": "example.test.fidl",
+            "line": 30,
+            "column": 12
+          },
+          "maybe_attributes": [
+            {
+              "name": "OnStructMember",
+              "value": ""
+            }
+          ],
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 0,
+          "max_handles": 0,
+          "field_shape_old": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v1_no_ee": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "size": 4,
+      "max_out_of_line": 0,
+      "alignment": 4,
+      "max_handles": 0,
+      "has_padding": false,
+      "type_shape_old": {
+        "inline_size": 4,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false,
+        "contains_union": false
+      },
+      "type_shape_v1": {
+        "inline_size": 4,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false,
+        "contains_union": false
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 4,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false,
+        "contains_union": false
+      }
+    }
+  ],
+  "table_declarations": [
+    {
+      "name": "example/ExampleTable",
+      "location": {
+        "filename": "example.test.fidl",
+        "line": 34,
+        "column": 7
+      },
+      "maybe_attributes": [
+        {
+          "name": "OnTable",
+          "value": ""
+        }
+      ],
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint32"
+          },
+          "name": "member",
+          "location": {
+            "filename": "example.test.fidl",
+            "line": 36,
+            "column": 15
+          },
+          "maybe_attributes": [
+            {
+              "name": "OnTableMember",
+              "value": ""
+            }
+          ],
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "max_handles": 0
+        }
+      ],
+      "size": 16,
+      "max_out_of_line": 24,
+      "alignment": 8,
+      "max_handles": 0,
+      "strict": false,
+      "type_shape_old": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 24,
+        "has_padding": true,
+        "has_flexible_envelope": true,
+        "contains_union": false
+      },
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 24,
+        "has_padding": true,
+        "has_flexible_envelope": true,
+        "contains_union": false
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 24,
+        "has_padding": true,
+        "has_flexible_envelope": true,
+        "contains_union": false
+      }
+    }
+  ],
+  "union_declarations": [
+    {
+      "name": "example/ExampleUnion",
+      "location": {
+        "filename": "example.test.fidl",
+        "line": 43,
+        "column": 7
+      },
+      "maybe_attributes": [
+        {
+          "name": "OnUnion",
+          "value": ""
+        }
+      ],
+      "members": [
+        {
+          "xunion_ordinal": 1,
+          "reserved": false,
+          "name": "variant",
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint32"
+          },
+          "location": {
+            "filename": "example.test.fidl",
+            "line": 45,
+            "column": 15
+          },
+          "maybe_attributes": [
+            {
+              "name": "OnUnionMember",
+              "value": ""
+            }
+          ],
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 4
+        }
+      ],
+      "size": 8,
+      "max_out_of_line": 0,
+      "alignment": 4,
+      "max_handles": 0,
+      "type_shape_old": {
+        "inline_size": 8,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false,
+        "contains_union": true
+      },
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "contains_union": true
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "contains_union": true
+      }
+    }
+  ],
+  "xunion_declarations": [
+    {
+      "name": "example/ExampleXUnion",
+      "location": {
+        "filename": "example.test.fidl",
+        "line": 49,
+        "column": 8
+      },
+      "maybe_attributes": [
+        {
+          "name": "OnXUnion",
+          "value": ""
+        }
+      ],
+      "members": [
+        {
+          "ordinal": 1300389554,
+          "explicit_ordinal": 1,
+          "hashed_ordinal": 1300389554,
+          "reserved": false,
+          "name": "variant",
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint32"
+          },
+          "location": {
+            "filename": "example.test.fidl",
+            "line": 51,
+            "column": 15
+          },
+          "maybe_attributes": [
+            {
+              "name": "OnXUnionMember",
+              "value": ""
+            }
+          ],
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 0
+        }
+      ],
+      "size": 24,
+      "max_out_of_line": 8,
+      "alignment": 8,
+      "max_handles": 0,
+      "strict": false,
+      "type_shape_old": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": true,
+        "contains_union": false
+      },
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": true,
+        "contains_union": false
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": true,
+        "contains_union": false
+      }
+    }
+  ],
+  "type_alias_declarations": [
+    {
+      "name": "example/TypeAlias",
+      "location": {
+        "filename": "example.test.fidl",
+        "line": 40,
+        "column": 7
+      },
+      "maybe_attributes": [
+        {
+          "name": "OnTypeAlias",
+          "value": ""
+        }
+      ],
+      "partial_type_ctor": {
+        "name": "uint32",
+        "args": [],
+        "nullable": false
+      }
+    }
+  ],
+  "declaration_order": [
+    "example/ExampleProtocol",
+    "example/TypeAlias",
+    "example/ExampleXUnion",
+    "example/ExampleUnion",
+    "example/ExampleTable",
+    "example/ExampleStruct",
+    "example/ExampleEnum",
+    "example/ExampleBits",
+    "example/EXAMPLE_CONST"
+  ],
+  "declarations": {
+    "example/ExampleBits": "bits",
+    "example/EXAMPLE_CONST": "const",
+    "example/ExampleEnum": "enum",
+    "example/ExampleProtocol": "interface",
+    "example/ExampleStruct": "struct",
+    "example/ExampleTable": "table",
+    "example/ExampleUnion": "union",
+    "example/ExampleXUnion": "xunion",
+    "example/TypeAlias": "type_alias"
+  }
+}

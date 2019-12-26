@@ -1,0 +1,7 @@
+library top;
+
+using middle;
+
+struct Baz {
+    middle.Bar g;
+};

@@ -1,0 +1,7 @@
+library top;
+
+using middle;
+
+protocol Top {
+    compose middle.Middle;
+};

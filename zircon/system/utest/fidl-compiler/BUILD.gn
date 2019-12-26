@@ -45,6 +45,73 @@ if (current_toolchain == default_toolchain) {
     args = rebase_path(outputs, root_build_dir) +
            rebase_path(sources, root_build_dir)
   }
+
+  action("gen-goldens") {
+    visibility = [ ":goldens" ]
+    outputs = [
+      "$target_gen_dir/goldens.cc",
+    ]
+    sources = [
+      "$zx/tools/fidl/goldens/bits.test.json.golden",
+      "$zx/tools/fidl/goldens/byte_and_bytes.test.json.golden",
+      "$zx/tools/fidl/goldens/constants.test.json.golden",
+      "$zx/tools/fidl/goldens/empty_struct.test.json.golden",
+      "$zx/tools/fidl/goldens/error.test.json.golden",
+      "$zx/tools/fidl/goldens/escaping.test.json.golden",
+      "$zx/tools/fidl/goldens/foreign_type_in_response_used_through_compose.test.json.golden",
+      "$zx/tools/fidl/goldens/inheritance.test.json.golden",
+      "$zx/tools/fidl/goldens/inheritance_with_recursive_decl.test.json.golden",
+      "$zx/tools/fidl/goldens/placement_of_attributes.test.json.golden",
+      "$zx/tools/fidl/goldens/request_flexible_envelope.test.json.golden",
+      "$zx/tools/fidl/goldens/service.test.json.golden",
+      "$zx/tools/fidl/goldens/struct.test.json.golden",
+      "$zx/tools/fidl/goldens/struct_default_value_enum_library_reference.test.json.golden",
+      "$zx/tools/fidl/goldens/table.test.json.golden",
+      "$zx/tools/fidl/goldens/transitive_dependencies.test.json.golden",
+      "$zx/tools/fidl/goldens/transitive_dependencies_compose.test.json.golden",
+      "$zx/tools/fidl/goldens/type_aliases.test.json.golden",
+      "$zx/tools/fidl/goldens/union.test.json.golden",
+      "$zx/tools/fidl/goldens/xunion.test.json.golden",
+      "$zx/tools/fidl/testdata/bits.test.fidl",
+      "$zx/tools/fidl/testdata/byte_and_bytes.test.fidl",
+      "$zx/tools/fidl/testdata/constants.test.fidl",
+      "$zx/tools/fidl/testdata/empty_struct.test.fidl",
+      "$zx/tools/fidl/testdata/error.test.fidl",
+      "$zx/tools/fidl/testdata/escaping.test.fidl",
+      "$zx/tools/fidl/testdata/foreign_type_in_response_used_through_compose/bottom.test.fidl",
+      "$zx/tools/fidl/testdata/foreign_type_in_response_used_through_compose/middle.test.fidl",
+      "$zx/tools/fidl/testdata/foreign_type_in_response_used_through_compose/order.txt",
+      "$zx/tools/fidl/testdata/foreign_type_in_response_used_through_compose/top.test.fidl",
+      "$zx/tools/fidl/testdata/inheritance.test.fidl",
+      "$zx/tools/fidl/testdata/inheritance_with_recursive_decl.test.fidl",
+      "$zx/tools/fidl/testdata/placement_of_attributes/example.test.fidl",
+      "$zx/tools/fidl/testdata/placement_of_attributes/exampleusing.test.fidl",
+      "$zx/tools/fidl/testdata/placement_of_attributes/order.txt",
+      "$zx/tools/fidl/testdata/request_flexible_envelope.test.fidl",
+      "$zx/tools/fidl/testdata/service.test.fidl",
+      "$zx/tools/fidl/testdata/struct.test.fidl",
+      "$zx/tools/fidl/testdata/struct_default_value_enum_library_reference/dependent.test.fidl",
+      "$zx/tools/fidl/testdata/struct_default_value_enum_library_reference/example.test.fidl",
+      "$zx/tools/fidl/testdata/struct_default_value_enum_library_reference/order.txt",
+      "$zx/tools/fidl/testdata/table.test.fidl",
+      "$zx/tools/fidl/testdata/transitive_dependencies/bottom.test.fidl",
+      "$zx/tools/fidl/testdata/transitive_dependencies/middle.test.fidl",
+      "$zx/tools/fidl/testdata/transitive_dependencies/order.txt",
+      "$zx/tools/fidl/testdata/transitive_dependencies/top.test.fidl",
+      "$zx/tools/fidl/testdata/transitive_dependencies_compose/bottom.test.fidl",
+      "$zx/tools/fidl/testdata/transitive_dependencies_compose/middle.test.fidl",
+      "$zx/tools/fidl/testdata/transitive_dependencies_compose/order.txt",
+      "$zx/tools/fidl/testdata/transitive_dependencies_compose/top.test.fidl",
+      "$zx/tools/fidl/testdata/type_aliases/example.test.fidl",
+      "$zx/tools/fidl/testdata/type_aliases/order.txt",
+      "$zx/tools/fidl/testdata/type_aliases/someotherlibrary.test.fidl",
+      "$zx/tools/fidl/testdata/union.test.fidl",
+      "$zx/tools/fidl/testdata/xunion.test.fidl",
+    ]
+    script = "gen-goldens.py"
+    args = rebase_path(outputs, root_build_dir) +
+           rebase_path(sources, root_build_dir)
+  }
 } else {
   zx_test("fidl-compiler") {
     sources = [
@@ -83,6 +150,7 @@ if (current_toolchain == default_toolchain) {
     ]
     deps = [
       ":examples",
+      ":goldens",
       "$zx/system/ulib/unittest",
       "$zx/system/ulib/zxtest",
       "$zx/third_party/ulib/uboringssl",
@@ -97,6 +165,18 @@ if (current_toolchain == default_toolchain) {
     include_dirs = [ "." ]
     sources = [
       "$gen_dir/examples.cc",
+    ]
+    deps = [
+      gen_label,
+    ]
+  }
+
+  source_set("goldens") {
+    gen_label = ":gen-goldens($default_toolchain)"
+    gen_dir = get_label_info(gen_label, "target_gen_dir")
+    include_dirs = [ "." ]
+    sources = [
+      "$gen_dir/goldens.cc",
     ]
     deps = [
       gen_label,

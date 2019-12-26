@@ -1,0 +1,5 @@
+library dependent;
+
+enum MyEnum : int32 {
+    A = 1;
+};

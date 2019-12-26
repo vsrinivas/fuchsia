@@ -1,0 +1,8 @@
+library middle;
+
+using bottom;
+
+[FragileBase]
+protocol Middle {
+    GetFoo() -> (bottom.Foo foo);
+};

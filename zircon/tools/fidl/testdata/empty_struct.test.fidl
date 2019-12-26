@@ -1,0 +1,10 @@
+library fidl.test.json;
+
+struct Empty {
+};
+
+protocol EmptyProtocol {
+    Send(Empty e);
+    -> Receive(Empty e);
+    SendAndReceive(Empty e) -> (Empty e);
+};

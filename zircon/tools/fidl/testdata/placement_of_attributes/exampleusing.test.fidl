@@ -1,0 +1,4 @@
+library exampleusing;
+
+struct Empty {
+};

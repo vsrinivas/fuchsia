@@ -1,0 +1,112 @@
+{
+  "version": "0.0.1",
+  "name": "fidl.test.json",
+  "library_dependencies": [],
+  "bits_declarations": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "interface_declarations": [],
+  "service_declarations": [],
+  "struct_declarations": [],
+  "table_declarations": [
+    {
+      "name": "fidl.test.json/Simple",
+      "location": {
+        "filename": "table.test.fidl",
+        "line": 3,
+        "column": 7
+      },
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint8"
+          },
+          "name": "f1",
+          "location": {
+            "filename": "table.test.fidl",
+            "line": 4,
+            "column": 14
+          },
+          "size": 1,
+          "max_out_of_line": 0,
+          "alignment": 1,
+          "max_handles": 0
+        },
+        {
+          "ordinal": 2,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "bool"
+          },
+          "name": "f2",
+          "location": {
+            "filename": "table.test.fidl",
+            "line": 5,
+            "column": 13
+          },
+          "size": 1,
+          "max_out_of_line": 0,
+          "alignment": 1,
+          "max_handles": 0
+        },
+        {
+          "ordinal": 3,
+          "reserved": true,
+          "location": {
+            "filename": "table.test.fidl",
+            "line": 6,
+            "column": 5
+          }
+        }
+      ],
+      "size": 16,
+      "max_out_of_line": 48,
+      "alignment": 8,
+      "max_handles": 0,
+      "strict": false,
+      "type_shape_old": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 48,
+        "has_padding": true,
+        "has_flexible_envelope": true,
+        "contains_union": false
+      },
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 48,
+        "has_padding": true,
+        "has_flexible_envelope": true,
+        "contains_union": false
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 48,
+        "has_padding": true,
+        "has_flexible_envelope": true,
+        "contains_union": false
+      }
+    }
+  ],
+  "union_declarations": [],
+  "xunion_declarations": [],
+  "type_alias_declarations": [],
+  "declaration_order": [
+    "fidl.test.json/Simple"
+  ],
+  "declarations": {
+    "fidl.test.json/Simple": "table"
+  }
+}

@@ -1,0 +1,52 @@
+library example;
+
+// TODO: Support placement of an attribute on using.
+using exampleusing;
+
+[OnBits]
+bits ExampleBits {
+    [OnBitsMember]
+    MEMBER = 1;
+};
+
+[OnConst]
+const uint32 EXAMPLE_CONST = 0;
+
+[OnEnum]
+enum ExampleEnum {
+    [OnEnumMember]
+    MEMBER = 1;
+};
+
+[OnProtocol]
+protocol ExampleProtocol {
+    [OnMethod]
+    Method(exampleusing.Empty arg);
+};
+
+[OnStruct]
+struct ExampleStruct {
+    [OnStructMember]
+    uint32 member;
+};
+
+[OnTable]
+table ExampleTable {
+    [OnTableMember]
+    1: uint32 member;
+};
+
+[OnTypeAlias]
+using TypeAlias = uint32;
+
+[OnUnion]
+union ExampleUnion {
+    [OnUnionMember]
+    1: uint32 variant;
+};
+
+[OnXUnion]
+xunion ExampleXUnion {
+    [OnXUnionMember]
+    1: uint32 variant;
+};
