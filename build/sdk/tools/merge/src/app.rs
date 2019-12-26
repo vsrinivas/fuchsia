@@ -2,20 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Fail;
+use thiserror::Error;
 
 /// The various types of errors raised by this tool.
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 pub enum Error {
-    #[fail(display = "could not find file in archive: {}", name)]
+    #[error("could not find file in archive: {}", name)]
     ArchiveFileNotFound { name: String },
-    #[fail(display = "path already maps to a file: {}", path)]
+    #[error("path already maps to a file: {}", path)]
     PathAlreadyExists { path: String },
-    #[fail(display = "could not merge: {}", error)]
+    #[error("could not merge: {}", error)]
     CannotMerge { error: String },
-    #[fail(display = "meta files differ")]
+    #[error("meta files differ")]
     MetaFilesDiffer,
 }
 
 /// Common result types for methods in this crate.
-pub type Result<T> = std::result::Result<T, failure::Error>;
+pub type Result<T> = std::result::Result<T, anyhow::Error>;

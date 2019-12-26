@@ -17,11 +17,12 @@ rustc_binary("merge_sdk") {
 
   deps = [
     "//build/sdk/meta:rust",
-    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:flate2",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:structopt",
     "//third_party/rust_crates:tar",
     "//third_party/rust_crates:tempfile",
+    "//third_party/rust_crates:thiserror",
   ]
 }

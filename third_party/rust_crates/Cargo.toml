@@ -30,7 +30,6 @@ crc = "1.8.1"
 criterion = { version = "0.2", default-features = false }
 csv = "1.0.7"
 difference = "2.0.0"
-failure = "0.1.1"
 futures = { version = "0.3.1", features = ["io-compat"] }
 futures-executor = "0.3.1"
 futures-io = "0.3.1"

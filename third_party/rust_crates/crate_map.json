@@ -106,11 +106,6 @@
             "package_name": "eui48"
         },
         {
-            "crate_name": "failure",
-            "crate_type": "lib",
-            "package_name": "failure"
-        },
-        {
             "crate_name": "freetype",
             "crate_type": "lib",
             "package_name": "freetype"
@@ -666,11 +661,6 @@
             "crate_name": "difference",
             "crate_type": "lib",
             "package_name": "difference"
-        },
-        {
-            "crate_name": "failure",
-            "crate_type": "lib",
-            "package_name": "failure"
         },
         {
             "crate_name": "flate2",

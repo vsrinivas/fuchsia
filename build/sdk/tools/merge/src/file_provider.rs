@@ -4,7 +4,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use failure::Fail;
+use thiserror::Error;
 
 use sdk_metadata::TargetArchitecture;
 
@@ -45,7 +45,9 @@ fn are_lists_equal(one: &[String], two: &[String]) -> bool {
 
 /// Copies the given list of files from a tarball to another.
 fn copy_file_list<F: TarballContent>(
-    paths: &[String], input: &impl InputTarball<F>, output: &mut impl OutputTarball<F>,
+    paths: &[String],
+    input: &impl InputTarball<F>,
+    output: &mut impl OutputTarball<F>,
 ) -> Result<()> {
     for path in paths {
         input.get_file(path, |file| output.write_file(path, file))?;
@@ -54,21 +56,24 @@ fn copy_file_list<F: TarballContent>(
 }
 
 /// Errors thrown by `merge_files`.
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 enum Error {
-    #[fail(display = "common files are different")]
+    #[error("common files are different")]
     CommonFilesDiffer,
-    #[fail(display = "contents of {} are different", path)]
+    #[error("contents of {} are different", path)]
     CommonFilesContentDiffer { path: String },
-    #[fail(display = "arch files are different for {:?}", arch)]
+    #[error("arch files are different for {:?}", arch)]
     ArchFilesDiffer { arch: TargetArchitecture },
 }
 
 /// Verifies that the files in two input tarballs are consistent and copies them over to an output
 /// tarball.
 pub fn merge_files<F: TarballContent>(
-    base: &impl FileProvider, base_tarball: &impl InputTarball<F>, complement: &impl FileProvider,
-    complement_tarball: &impl InputTarball<F>, output: &mut impl OutputTarball<F>,
+    base: &impl FileProvider,
+    base_tarball: &impl InputTarball<F>,
+    complement: &impl FileProvider,
+    complement_tarball: &impl InputTarball<F>,
+    output: &mut impl OutputTarball<F>,
 ) -> Result<()> {
     let base_common = base.get_common_files();
     let complement_common = complement.get_common_files();
@@ -98,18 +103,12 @@ pub fn merge_files<F: TarballContent>(
                     &base_arch.get(arch).unwrap(),
                     &complement_arch.get(arch).unwrap(),
                 ) {
-                    return Err(Error::ArchFilesDiffer {
-                        arch: arch.clone().to_owned(),
-                    })?;
+                    return Err(Error::ArchFilesDiffer { arch: arch.clone().to_owned() })?;
                 }
             }
             copy_file_list(&base_arch.get(arch).unwrap(), base_tarball, output)?;
         } else {
-            copy_file_list(
-                &complement_arch.get(arch).unwrap(),
-                complement_tarball,
-                output,
-            )?;
+            copy_file_list(&complement_arch.get(arch).unwrap(), complement_tarball, output)?;
         }
     }
 
@@ -171,10 +170,7 @@ mod tests {
 
     impl TestProvider {
         fn new(common: CommonFiles, arch: ArchFiles) -> Self {
-            TestProvider {
-                common: common,
-                arch: arch,
-            }
+            TestProvider { common: common, arch: arch }
         }
 
         fn common(common: CommonFiles) -> Self {
@@ -207,14 +203,7 @@ mod tests {
         complement.add("file_one", "one");
         complement.add("file_two", "two");
         let mut output = MockOutputTarball::new();
-        merge_files(
-            &base_files,
-            &base,
-            &complement_files,
-            &complement,
-            &mut output,
-        )
-        .unwrap();
+        merge_files(&base_files, &base, &complement_files, &complement, &mut output).unwrap();
         output.assert_has_file("file_one");
         output.assert_has_file("file_two");
     }
@@ -232,14 +221,7 @@ mod tests {
         complement.add("arm64/target_file_one", "one");
         complement.add("arm64/target_file_two", "two");
         let mut output = MockOutputTarball::new();
-        merge_files(
-            &base_files,
-            &base,
-            &complement_files,
-            &complement,
-            &mut output,
-        )
-        .unwrap();
+        merge_files(&base_files, &base, &complement_files, &complement, &mut output).unwrap();
         output.assert_has_file("x64/target_file_one");
         output.assert_has_file("x64/target_file_two");
         output.assert_has_file("arm64/target_file_one");
@@ -262,14 +244,7 @@ mod tests {
         complement.add("file_one", "one");
         complement.add("file_two", "two");
         let mut output = MockOutputTarball::new();
-        merge_files(
-            &base_files,
-            &base,
-            &complement_files,
-            &complement,
-            &mut output,
-        )
-        .unwrap();
+        merge_files(&base_files, &base, &complement_files, &complement, &mut output).unwrap();
         output.assert_has_file("file_one");
         output.assert_has_file("file_two");
         output.assert_has_file("x64/target_file_one");
@@ -287,14 +262,9 @@ mod tests {
         complement.add("file_one", "one");
         complement.add("file_three", "three"); // Different file.
         let mut output = MockOutputTarball::new();
-        assert!(merge_files(
-            &base_files,
-            &base,
-            &complement_files,
-            &complement,
-            &mut output
-        )
-        .is_err());
+        assert!(
+            merge_files(&base_files, &base, &complement_files, &complement, &mut output).is_err()
+        );
     }
 
     #[test]
@@ -308,14 +278,9 @@ mod tests {
         complement.add("file_one", "one");
         complement.add("file_two", "not really two!!"); // Different content.
         let mut output = MockOutputTarball::new();
-        assert!(merge_files(
-            &base_files,
-            &base,
-            &complement_files,
-            &complement,
-            &mut output
-        )
-        .is_err());
+        assert!(
+            merge_files(&base_files, &base, &complement_files, &complement, &mut output).is_err()
+        );
     }
 
     #[test]
@@ -331,13 +296,8 @@ mod tests {
         complement.add("x64/target_file_one", "one");
         complement.add("x64/target_file_three", "three"); // Different file.
         let mut output = MockOutputTarball::new();
-        assert!(merge_files(
-            &base_files,
-            &base,
-            &complement_files,
-            &complement,
-            &mut output
-        )
-        .is_err());
+        assert!(
+            merge_files(&base_files, &base, &complement_files, &complement, &mut output).is_err()
+        );
     }
 }

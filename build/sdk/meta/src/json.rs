@@ -2,24 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Fail;
 use serde::{Deserialize, Serialize};
 use serde_json::{from_reader, from_str, to_string, to_value};
 use std::io::Read;
+use thiserror::Error;
 use valico::common::error::ValicoError;
 use valico::json_schema;
 
 /// The various types of errors raised by this module.
-#[derive(Debug, Fail)]
+#[derive(Debug, Error)]
 enum Error {
-    #[fail(display = "invalid JSON schema: {:?}", _0)]
+    #[error("invalid JSON schema: {:?}", _0)]
     SchemaInvalid(valico::json_schema::schema::SchemaError),
-    #[fail(display = "could not validate file: {}", errors)]
+    #[error("could not validate file: {}", errors)]
     #[allow(dead_code)] // The compiler complains about the variant not being constructed.
     JsonFileInvalid { errors: String },
 }
 
-type Result<T> = std::result::Result<T, failure::Error>;
+type Result<T> = std::result::Result<T, anyhow::Error>;
 
 impl From<valico::json_schema::schema::SchemaError> for Error {
     fn from(err: valico::json_schema::schema::SchemaError) -> Self {
@@ -65,23 +65,16 @@ pub trait JsonObject: for<'a> Deserialize<'a> + Serialize + Sized {
 
         // Add the schema including all the common definitions.
         let common_schema = from_str(include_str!("../common.json"))?;
-        scope
-            .compile(common_schema, true)
-            .map_err(Error::SchemaInvalid)?;
+        scope.compile(common_schema, true).map_err(Error::SchemaInvalid)?;
 
-        let validator = scope
-            .compile_and_return(schema, true)
-            .map_err(Error::SchemaInvalid)?;
+        let validator = scope.compile_and_return(schema, true).map_err(Error::SchemaInvalid)?;
         let value = to_value(self)?;
         let result = validator.validate(&value);
         if !result.is_valid() {
             let mut error_messages: Vec<String> =
                 result.errors.iter().map(format_valico_error).collect();
             error_messages.sort_unstable();
-            return Err(Error::JsonFileInvalid {
-                errors: error_messages.join(", "),
-            }
-            .into());
+            return Err(Error::JsonFileInvalid { errors: error_messages.join(", ") }.into());
         }
         Ok(())
     }
