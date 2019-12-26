@@ -194,7 +194,7 @@ class DoublyLinkedList : private internal::SizeTracker<ListSizeOrder_> {
     return const_iterator(&const_cast<ValueType&>(obj));
   }
 
-  // is_empty : True if the list has at least one element in it, false otherwise.
+  // is_empty : False if the list has at least one element in it, true otherwise.
   bool is_empty() const {
     ZX_DEBUG_ASSERT(head_ != nullptr);
     return internal::is_sentinel_ptr(head_);
