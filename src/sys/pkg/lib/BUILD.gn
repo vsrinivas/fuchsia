@@ -6,6 +6,7 @@ group("lib") {
   testonly = true
   deps = [
     "fidl-fuchsia-amber-ext:fidl_fuchsia_amber_ext",
+    "forced-fdr",
     "fuchsia-archive",
     "fuchsia-merkle",
     "fuchsia-pkg:fuchsia_pkg",
@@ -22,6 +23,7 @@ group("tests") {
   testonly = true
   deps = [
     "fidl-fuchsia-amber-ext:tests",
+    "forced-fdr:tests",
     "fuchsia-archive:tests",
     "fuchsia-merkle:tests",
     "fuchsia-pkg:tests",

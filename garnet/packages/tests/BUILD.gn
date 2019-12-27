@@ -301,7 +301,6 @@ group("all") {
     ":fidlext_tests",
     ":files_async",
     ":fonts",
-    ":forced_fdr",
     ":fostr",
     ":fsl",
     ":fuchsia_component_test",
@@ -1107,13 +1106,6 @@ group("a11y") {
   testonly = true
   public_deps = [
     "//src/ui/a11y/bundles:tests",
-  ]
-}
-
-group("forced_fdr") {
-  testonly = true
-  public_deps = [
-    "//garnet/lib/rust/forced_fdr:forced_fdr_tests",
   ]
 }
 

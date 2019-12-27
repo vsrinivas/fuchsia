@@ -6,7 +6,7 @@ import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
 
-rustc_library("forced_fdr") {
+rustc_library("forced-fdr") {
   name = "forced_fdr"
   version = "0.1.0"
   edition = "2018"
@@ -30,14 +30,21 @@ rustc_library("forced_fdr") {
   ]
 }
 
-test_package("forced_fdr_tests") {
+test_package("forced-fdr-tests") {
   deps = [
-    ":forced_fdr_test",
+    ":forced-fdr_test",
   ]
 
   tests = [
     {
       name = "forced_fdr_lib_test"
     },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":forced-fdr-tests",
   ]
 }
