@@ -10,8 +10,8 @@ rustc_binary("virtio_block_test_util") {
   edition = "2018"
   deps = [
     "//garnet/public/rust/fdio",
-    "//garnet/public/rust/fuchsia-zircon",
     "//src/lib/fuchsia-async",
+    "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:libc",
     "//third_party/rust_crates:structopt",

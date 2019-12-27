@@ -35,8 +35,8 @@ rustc_binary("blobfs-fsck-soft-target-bin") {
   edition = "2018"
   deps = [
     "//garnet/public/rust/fdio",
-    "//garnet/public/rust/fuchsia-zircon",
     "//src/lib/cstr",
+    "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/storage/fs-management",
     "//src/storage/ramdevice-client",
     "//third_party/rust_crates:anyhow",

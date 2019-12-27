@@ -10,12 +10,12 @@ rustc_library("identity_key_manager") {
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.identity.keys:fuchsia.identity.keys-rustc",
     "//src/identity/lib/identity_common",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/test_util",
+    "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",

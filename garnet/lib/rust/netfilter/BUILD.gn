@@ -12,8 +12,8 @@ rustc_library("netfilter") {
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.net.filter:fuchsia.net.filter-rustc",
+    "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:pest",
     "//third_party/rust_crates:pest_derive",

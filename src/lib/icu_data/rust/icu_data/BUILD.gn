@@ -13,11 +13,11 @@ rustc_library("icu_data") {
 
   deps = [
     "//garnet/public/rust/fdio",
-    "//garnet/public/rust/fuchsia-zircon",
     "//src/lib/icu/rust/rust_icu_common",
     "//src/lib/icu/rust/rust_icu_sys",
     "//src/lib/icu/rust/rust_icu_udata",
     "//src/lib/icu/rust/rust_icu_uenum",
+    "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:thiserror",

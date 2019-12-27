@@ -25,8 +25,8 @@ rustc_library("hoist") {
     ]
   } else {
     deps += [
-      "//garnet/public/rust/fuchsia-zircon/fuchsia-zircon-status",
       "//src/connectivity/overnet/lib/core",
+      "//src/lib/zircon/rust:fuchsia-zircon-status",
       "//third_party/rust_crates:chrono",
       "//third_party/rust_crates:lazy_static",
       "//third_party/rust_crates:log",

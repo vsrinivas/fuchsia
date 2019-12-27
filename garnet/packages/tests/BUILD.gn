@@ -969,8 +969,8 @@ group("rust_crates") {
     "//garnet/public/rust/fuchsia-bootfs:fuchsia-bootfs-tests",
     "//garnet/public/rust/fuchsia-hyper:fuchsia-hyper-tests",
     "//garnet/public/rust/fuchsia-syslog:fuchsia-syslog-tests",
-    "//garnet/public/rust/fuchsia-zircon:fuchsia-zircon-tests",
     "//src/lib/fuchsia-async:fuchsia-async-tests",
+    "//src/lib/zircon/rust:fuchsia-zircon-tests",
     "//src/storage/lib:fuchsia-vfs-tests",
   ]
 }

@@ -11,10 +11,10 @@ rustc_binary("test_manager_test_bin") {
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/test_manager:lib",
     "//src/sys/test_manager/fidl:test_manager-rustc",
     "//third_party/rust_crates:anyhow",

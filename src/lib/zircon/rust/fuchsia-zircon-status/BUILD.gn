@@ -12,6 +12,6 @@ rustc_library("fuchsia-zircon-status") {
   version = "0.1.0"
   edition = "2018"
   deps = [
-    "//garnet/public/rust/fuchsia-zircon/fuchsia-zircon-sys",
+    "//src/lib/zircon/rust:fuchsia-zircon-sys",
   ]
 }

@@ -10,7 +10,6 @@ rustc_binary("svc_list") {
   edition = "2018"
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/connectivity/network/testing/netemul/lib/fidl:environment-rustc",
@@ -18,6 +17,7 @@ rustc_binary("svc_list") {
     "//src/connectivity/network/testing/netemul/lib/fidl:sync-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:structopt",

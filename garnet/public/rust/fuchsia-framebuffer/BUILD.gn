@@ -15,11 +15,11 @@ rustc_library("fuchsia-framebuffer") {
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-runtime",
-    "//garnet/public/rust/fuchsia-zircon",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/mapped-vmo",
     "//src/lib/shared-buffer",
+    "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
@@ -35,8 +35,8 @@ rustc_binary("box") {
   source_root = "examples/box.rs"
   deps = [
     "//garnet/public/rust/fuchsia-framebuffer",
-    "//garnet/public/rust/fuchsia-zircon",
     "//src/lib/fuchsia-async",
+    "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
@@ -69,8 +69,8 @@ rustc_binary("fb_integration_test_bin") {
   source_root = "tests/fb_integration_test.rs"
   deps = [
     "//garnet/public/rust/fuchsia-framebuffer",
-    "//garnet/public/rust/fuchsia-zircon",
     "//src/lib/fuchsia-async",
+    "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",

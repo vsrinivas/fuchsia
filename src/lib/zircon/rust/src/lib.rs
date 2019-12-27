@@ -264,7 +264,9 @@ pub fn object_get_info<Q: ObjectQuery>(
 }
 
 /// Get a property on a zircon object
-pub fn object_get_property<P: PropertyQueryGet>(handle: HandleRef<'_>) -> Result<P::PropTy, Status> {
+pub fn object_get_property<P: PropertyQueryGet>(
+    handle: HandleRef<'_>,
+) -> Result<P::PropTy, Status> {
     // this is safe due to the contract on the P::PropTy type in the ObjectProperty trait.
     let mut out = ::std::mem::MaybeUninit::<P::PropTy>::uninit();
     let status = unsafe {

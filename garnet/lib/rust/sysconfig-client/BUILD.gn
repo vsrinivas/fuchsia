@@ -10,8 +10,8 @@ rustc_library("sysconfig-client") {
   edition = "2018"
 
   deps = [
-    "//garnet/public/rust/fuchsia-zircon",
     "//src/lib/zerocopy",
+    "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:crc",
     "//third_party/rust_crates:matches",

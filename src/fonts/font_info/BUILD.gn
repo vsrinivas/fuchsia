@@ -21,7 +21,7 @@ rustc_library("font_info") {
 
   if (is_fuchsia) {
     deps += [
-      "//garnet/public/rust/fuchsia-zircon",
+      "//src/lib/zircon/rust:fuchsia-zircon",
       "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
       "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
     ]
