@@ -68,6 +68,6 @@
 
     Utilities for safely operating on memory shared between untrusting processes
 
-* [zerocopy/](/garnet/public/rust/zerocopy/)
+* [zerocopy/](/src/lib/zerocopy/)
 
     Work with values contained in raw Byte strings without copying

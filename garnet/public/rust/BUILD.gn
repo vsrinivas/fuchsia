@@ -14,8 +14,6 @@ unittest_package("rust-crates-tests") {
     "fuchsia-scenic:fuchsia-scenic_test",
     "fuchsia-trace:fuchsia-trace_test",
     "mundane:mundane_test",
-    "packet:packet_test",
-    "zerocopy:zerocopy_test",
   ]
 
   tests = [
@@ -37,14 +35,6 @@ unittest_package("rust-crates-tests") {
     },
     {
       name = "mundane_lib_test"
-      environments = basic_envs
-    },
-    {
-      name = "packet_lib_test"
-      environments = basic_envs
-    },
-    {
-      name = "zerocopy_lib_test"
       environments = basic_envs
     },
   ]

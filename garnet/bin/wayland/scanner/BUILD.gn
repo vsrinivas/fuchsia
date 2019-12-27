@@ -46,7 +46,7 @@ rustc_test("wayland_scanner_back_end_test") {
     ":test_protocol",
     "//garnet/bin/wayland/core",
     "//garnet/public/rust/fuchsia-zircon",
-    "//garnet/public/rust/zerocopy",
+    "//src/lib/zerocopy",
   ]
   source_root = "tests/back_end_test.rs"
 }

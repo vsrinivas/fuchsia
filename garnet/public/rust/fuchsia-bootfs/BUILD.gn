@@ -12,7 +12,7 @@ rustc_library("fuchsia-bootfs") {
 
   deps = [
     "//garnet/public/rust/fuchsia-zircon",
-    "//garnet/public/rust/zerocopy",
+    "//src/lib/zerocopy",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:num",

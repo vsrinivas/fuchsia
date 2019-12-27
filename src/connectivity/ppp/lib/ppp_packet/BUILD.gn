@@ -13,8 +13,8 @@ rustc_library("ppp_packet") {
 
   deps = [
     "//garnet/public/rust/fuchsia-syslog",
-    "//garnet/public/rust/packet",
-    "//garnet/public/rust/zerocopy",
+    "//src/lib/packet",
+    "//src/lib/zerocopy",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:thiserror",
@@ -26,8 +26,8 @@ rustc_test("ppp_packet_test_bin") {
 
   deps = [
     "//garnet/public/rust/fuchsia-syslog",
-    "//garnet/public/rust/packet",
-    "//garnet/public/rust/zerocopy",
+    "//src/lib/packet",
+    "//src/lib/zerocopy",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:thiserror",

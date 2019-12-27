@@ -10,9 +10,9 @@ rustc_library("eapol") {
   with_unit_tests = true
   edition = "2018"
   deps = [
-    "//garnet/public/rust/zerocopy",
     "//src/connectivity/wlan/lib/bitfield:wlan-bitfield",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
+    "//src/lib/zerocopy",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:bitfield",
     "//third_party/rust_crates:byteorder",

@@ -17,7 +17,7 @@ rustc_library("process_builder") {
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-runtime",
     "//garnet/public/rust/fuchsia-zircon",
-    "//garnet/public/rust/zerocopy",
+    "//src/lib/zerocopy",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:bitflags",
     "//third_party/rust_crates:futures",

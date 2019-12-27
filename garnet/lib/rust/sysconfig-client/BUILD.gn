@@ -11,7 +11,7 @@ rustc_library("sysconfig-client") {
 
   deps = [
     "//garnet/public/rust/fuchsia-zircon",
-    "//garnet/public/rust/zerocopy",
+    "//src/lib/zerocopy",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:crc",
     "//third_party/rust_crates:matches",

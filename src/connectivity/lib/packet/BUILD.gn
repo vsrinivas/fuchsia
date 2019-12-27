@@ -19,7 +19,7 @@ rustc_library("packet") {
 
   deps = [
     "//garnet/lib/rust/never",
-    "//garnet/public/rust/zerocopy",
+    "//src/lib/zerocopy",
   ]
 }
 

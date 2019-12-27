@@ -15,7 +15,7 @@ rustc_library("ext4-read-only") {
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/zerocopy",
+    "//src/lib/zerocopy",
     "//src/storage/lib/pseudo-fs-mt",
     "//src/storage/lib/pseudo-fs-mt/macros",
     "//third_party/rust_crates:anyhow",

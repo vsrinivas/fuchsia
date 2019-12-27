@@ -14,11 +14,11 @@ rustc_library("netstack3-core") {
   deps = [
     "//garnet/lib/rust/never",
     "//garnet/public/rust/mundane",
-    "//garnet/public/rust/zerocopy",
     "//src/connectivity/lib/internet-checksum",
     "//src/connectivity/lib/net-types",
     "//src/connectivity/lib/packet",
     "//src/connectivity/network/netstack3/core/specialize-ip-macro",
+    "//src/lib/zerocopy",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:log",

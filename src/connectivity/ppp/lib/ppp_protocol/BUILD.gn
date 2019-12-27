@@ -13,8 +13,8 @@ rustc_library("ppp_protocol") {
   deps = [
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-syslog",
-    "//garnet/public/rust/packet",
     "//src/connectivity/ppp/lib/ppp_packet",
+    "//src/lib/packet",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:thiserror",
   ]
@@ -26,8 +26,8 @@ rustc_test("ppp_protocol_test_bin") {
   deps = [
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-syslog",
-    "//garnet/public/rust/packet",
     "//src/connectivity/ppp/lib/ppp_packet",
+    "//src/lib/packet",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:thiserror",
   ]

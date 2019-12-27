@@ -21,6 +21,7 @@ group("lib") {
     "isolated_devmgr",
     "mapped-vmo",
     "network_wrapper",
+    "packet",
     "pkg_url",
     "shared-buffer",
     "testing",
@@ -28,6 +29,7 @@ group("lib") {
     "ui",
     "url",
     "uuid",
+    "zerocopy",
   ]
 }
 
@@ -55,6 +57,7 @@ group("tests") {
     "mapped-vmo:tests",
     "mpmc:tests",
     "network_wrapper:tests",
+    "packet:tests",
     "process_builder:tests",
     "shared-buffer:tests",
     "streammap:tests",
@@ -65,5 +68,6 @@ group("tests") {
     "ui:tests",
     "waitgroup:tests",
     "watch_handler:tests",
+    "zerocopy:tests",
   ]
 }
