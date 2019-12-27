@@ -16,6 +16,10 @@ source_set("pcie") {
     "pcie_device.cc",
     "pcie_firmware.cc",
     "pcie_firmware.h",
+    "pcie_interrupt_handlers.cc",
+    "pcie_interrupt_handlers.h",
+    "pcie_interrupt_master.cc",
+    "pcie_interrupt_master.h",
     "pcie_regs.h",
   ]
   public = [
@@ -25,6 +29,7 @@ source_set("pcie") {
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:dmabuf",
     "//zircon/public/lib/mmio",
+    "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.pci",
   ]

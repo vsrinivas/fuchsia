@@ -12,6 +12,8 @@
 
 #include <ddk/device.h>
 
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/dma_buffer.h"
+
 namespace wlan {
 namespace brcmfmac {
 
@@ -34,6 +36,7 @@ class PcieFirmware {
   // Accessors for various shared RAM states.
   uint8_t GetSharedRamVersion() const;
   uint16_t GetSharedRamFlags() const;
+  uint32_t GetDeviceToHostMailboxDataAddress() const;
 
   // Read the firmware console.  Only complete lines are returned, one at a time.
   std::string ReadConsole();
@@ -43,6 +46,10 @@ class PcieFirmware {
 
   PcieBuscore* buscore_ = nullptr;
   std::unique_ptr<SharedRamInfo> shared_ram_info_;
+
+  // Firmware scratch buffers.
+  std::unique_ptr<DmaBuffer> dma_d2h_scratch_buffer_;
+  std::unique_ptr<DmaBuffer> dma_d2h_ringupdate_buffer_;
 
   std::string console_line_;
   uint32_t console_buffer_addr_ = 0;

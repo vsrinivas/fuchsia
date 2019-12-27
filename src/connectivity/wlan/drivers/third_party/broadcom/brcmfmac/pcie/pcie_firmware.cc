@@ -6,6 +6,7 @@
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
+#include <zircon/syscalls.h>
 
 #include <cstring>
 
@@ -28,6 +29,10 @@ constexpr uint32_t kFirmwareRamsizeOffset = 0x6C;
 // Duration and interval for waiting for firmware boot.
 constexpr zx::duration kFirmwareBootTimeout = zx::sec(2);
 constexpr zx::duration kFirmwareBootIteration = zx::msec(50);
+
+// Scratch buffer sizes.
+constexpr size_t kDmaD2hScratchBufferSize = 8;
+constexpr size_t kDmaD2hRingupdateBufferSize = 1024;
 
 // Adjust the buscore RAM size, according to the firmware binary.
 void AdjustBuscoreRamsize(std::string_view firmware, PcieBuscore* buscore) {
@@ -54,6 +59,13 @@ struct [[gnu::packed]] PcieFirmware::SharedRamInfo {
   uint16_t flags;
   uint32_t pad1[4];
   uint32_t console_addr;
+  uint32_t pad2[5];
+  uint32_t d2h_mb_data_addr;
+  uint32_t ring_info_addr;
+  uint32_t dma_scratch_len;
+  uint64_t dma_scratch_addr;
+  uint32_t dma_ringupd_len;
+  uint64_t dma_ringupd_addr;
 };
 
 PcieFirmware::PcieFirmware() = default;
@@ -148,13 +160,34 @@ zx_status_t PcieFirmware::Create(Device* device, PcieBuscore* buscore,
     zx::nanosleep(zx::deadline_after(kFirmwareBootIteration));
   }
 
+  // Create the scratch and ringupdate buffers.
+  std::unique_ptr<DmaBuffer> dma_d2h_scratch_buffer;
+  if ((status = buscore->CreateDmaBuffer(ZX_CACHE_POLICY_CACHED, kDmaD2hScratchBufferSize,
+                                         &dma_d2h_scratch_buffer)) != ZX_OK) {
+    BRCMF_ERR("Failed to create D2H scratch buffer: %s\n", zx_status_get_string(status));
+    return status;
+  }
+  std::unique_ptr<DmaBuffer> dma_d2h_ringupdate_buffer;
+  if ((status = buscore->CreateDmaBuffer(ZX_CACHE_POLICY_CACHED, kDmaD2hRingupdateBufferSize,
+                                         &dma_d2h_ringupdate_buffer)) != ZX_OK) {
+    BRCMF_ERR("Failed to create D2H ringupdate buffer: %s\n", zx_status_get_string(status));
+    return status;
+  }
+
   // Setup the shared ram info.
   auto shared_ram_info = std::make_unique<SharedRamInfo>();
   buscore->TcmRead(sharedram_addr_value, shared_ram_info.get(), sizeof(*shared_ram_info));
+  shared_ram_info->dma_scratch_len = dma_d2h_scratch_buffer->size();
+  shared_ram_info->dma_scratch_addr = dma_d2h_scratch_buffer->dma_address();
+  shared_ram_info->dma_ringupd_len = dma_d2h_ringupdate_buffer->size();
+  shared_ram_info->dma_ringupd_addr = dma_d2h_ringupdate_buffer->dma_address();
+  buscore->TcmWrite(sharedram_addr_value, shared_ram_info.get(), sizeof(*shared_ram_info));
 
   auto firmware = std::make_unique<PcieFirmware>();
   firmware->buscore_ = buscore;
   firmware->shared_ram_info_ = std::move(shared_ram_info);
+  firmware->dma_d2h_scratch_buffer_ = std::move(dma_d2h_scratch_buffer);
+  firmware->dma_d2h_ringupdate_buffer_ = std::move(dma_d2h_ringupdate_buffer);
 
   // Setup the firmware console offsets.
   firmware->console_buffer_addr_ = buscore->TcmRead<uint32_t>(
@@ -169,6 +202,10 @@ zx_status_t PcieFirmware::Create(Device* device, PcieBuscore* buscore,
 uint8_t PcieFirmware::GetSharedRamVersion() const { return shared_ram_info_->version; }
 
 uint16_t PcieFirmware::GetSharedRamFlags() const { return shared_ram_info_->flags; }
+
+uint32_t PcieFirmware::GetDeviceToHostMailboxDataAddress() const {
+  return shared_ram_info_->d2h_mb_data_addr;
+}
 
 std::string PcieFirmware::ReadConsole() {
   // Optimization: estimated line length of a typical console log line.  Not required for

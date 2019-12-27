@@ -49,6 +49,7 @@ zx_status_t DmaBuffer::Create(const zx::bti& bti, uint32_t cache_policy, size_t 
   auto dma_buffer = std::make_unique<DmaBuffer>();
 
   // Create the VMO.
+  uint32_t bti_pin_options = ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE;
   if (cache_policy == ZX_CACHE_POLICY_CACHED) {
     // For VMOs with ZX_CACHE_POLICY_CACHED, we can use zx::vmo::create_contiguous(), since
     // contiguous VMOs are by default cached.
@@ -57,6 +58,7 @@ zx_status_t DmaBuffer::Create(const zx::bti& bti, uint32_t cache_policy, size_t 
                 zx_status_get_string(status));
       return status;
     }
+    bti_pin_options |= ZX_BTI_CONTIGUOUS;
   } else {
     // VMOs created with zx::vmo::create_contiguous() cannot have their cache policy set after
     // creation, since the creation causes pages to be committed.  So we have to use a "plain" VMO,
@@ -67,8 +69,7 @@ zx_status_t DmaBuffer::Create(const zx::bti& bti, uint32_t cache_policy, size_t 
           size, static_cast<size_t>(ZX_PAGE_SIZE), cache_policy);
       return ZX_ERR_NO_MEMORY;
     }
-    if ((status = zx::vmo::create(size, ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP,
-                                  &dma_buffer->vmo_)) != ZX_OK) {
+    if ((status = zx::vmo::create(size, 0, &dma_buffer->vmo_)) != ZX_OK) {
       BRCMF_ERR("Failed to create VMO, size=%zu: %s\n", size, zx_status_get_string(status));
       return status;
     }
@@ -101,9 +102,8 @@ zx_status_t DmaBuffer::Create(const zx::bti& bti, uint32_t cache_policy, size_t 
   dma_buffer->size_ = static_cast<size_t>(actual_vmo_size);
 
   // Pin it.
-  if ((status = bti.pin(ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE | ZX_BTI_CONTIGUOUS, dma_buffer->vmo_,
-                        0, dma_buffer->size_, &dma_buffer->dma_address_, 1, &dma_buffer->pmt_)) !=
-      ZX_OK) {
+  if ((status = bti.pin(bti_pin_options, dma_buffer->vmo_, 0, dma_buffer->size_,
+                        &dma_buffer->dma_address_, 1, &dma_buffer->pmt_)) != ZX_OK) {
     BRCMF_ERR("Failed to pin VMO: %s\n", zx_status_get_string(status));
     return status;
   }

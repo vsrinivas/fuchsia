@@ -6,6 +6,7 @@
 
 #include <zircon/types.h>
 
+#include <list>
 #include <memory>
 
 #include <ddk/device.h>
@@ -14,6 +15,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bus.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/netbuf.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_interrupt_master.h"
 
 namespace wlan {
 namespace brcmfmac {
@@ -53,6 +55,8 @@ class PcieBus {
   Device* device_ = nullptr;
   std::unique_ptr<PcieBuscore> pcie_buscore_;
   std::unique_ptr<PcieFirmware> pcie_firmware_;
+  std::unique_ptr<PcieInterruptMaster> pcie_interrupt_master_;
+  std::list<std::unique_ptr<PcieInterruptMaster::InterruptHandler>> pcie_interrupt_handlers_;
   std::unique_ptr<brcmf_bus> brcmf_bus_;
   std::unique_ptr<brcmf_mp_device> brcmf_mp_device_;
 };

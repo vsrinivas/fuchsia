@@ -159,6 +159,7 @@ source_set("core") {
     "fwil.h",
     "fwil_types.h",
     "proto.h",
+    "regs.h",
     "soc.h",
     "timer.h",
   ]

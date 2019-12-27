@@ -24,6 +24,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_buscore.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_device.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_firmware.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_interrupt_master.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_regs.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/soc.h"
 
@@ -61,6 +62,33 @@ zx_status_t StubDdkDevice::LoadFirmware(const char* path, zx_handle_t* fw, size_
 zx_status_t StubDdkDevice::DeviceGetMetadata(uint32_t type, void* buf, size_t buflen,
                                              size_t* actual) {
   return device_get_metadata(parent(), type, buf, buflen, actual);
+}
+
+// An implementation of InterruptHandler which logs to error.
+class ConsoleLogger : public PcieInterruptMaster::InterruptHandler {
+ public:
+  explicit ConsoleLogger(PcieInterruptMaster* interrupt_master, PcieFirmware* firmware);
+  ~ConsoleLogger() override;
+  uint32_t HandleInterrupt(uint32_t mailboxint) override;
+
+ private:
+  PcieInterruptMaster* const interrupt_master_;
+  PcieFirmware* const firmware_;
+};
+
+ConsoleLogger::ConsoleLogger(PcieInterruptMaster* interrupt_master, PcieFirmware* firmware)
+    : interrupt_master_(interrupt_master), firmware_(firmware) {
+  interrupt_master_->AddInterruptHandler(this);
+}
+
+ConsoleLogger::~ConsoleLogger() { interrupt_master_->RemoveInterruptHandler(this); }
+
+uint32_t ConsoleLogger::HandleInterrupt(uint32_t mailboxint) {
+  std::string console;
+  while (!(console = firmware_->ReadConsole()).empty()) {
+    BRCMF_INFO("%s\n", console.c_str());
+  }
+  return 0;
 }
 
 // The following are unit tests for the individual components of the PCIE driver.  The testing
@@ -198,6 +226,17 @@ zx_status_t RunPcieBusComponentsTest(zx_device_t* parent) {
   while (!(console = pcie_firmware->ReadConsole()).empty()) {
     BRCMF_INFO("%s\n", console.c_str());
   }
+
+  std::unique_ptr<PcieInterruptMaster> pcie_interrupt_master;
+  if ((status = PcieInterruptMaster::Create(device.parent(), pcie_buscore.get(),
+                                            &pcie_interrupt_master)) != ZX_OK) {
+    BRCMF_ERR("PcieInterruptMaster creation failed: %s\n", zx_status_get_string(status));
+    return status;
+  }
+
+  // Check that we can create the interrupt-driven logger.
+  auto console_logger =
+      std::make_unique<ConsoleLogger>(pcie_interrupt_master.get(), pcie_firmware.get());
 
   return ZX_OK;
 }

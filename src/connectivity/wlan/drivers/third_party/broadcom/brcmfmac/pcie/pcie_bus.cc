@@ -16,6 +16,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/firmware.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_buscore.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_firmware.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_interrupt_handlers.h"
 
 namespace wlan {
 namespace brcmfmac {
@@ -23,6 +24,10 @@ namespace brcmfmac {
 PcieBus::PcieBus() = default;
 
 PcieBus::~PcieBus() {
+  while (!pcie_interrupt_handlers_.empty()) {
+    // Pop them back to front for a defined order of destruction.
+    pcie_interrupt_handlers_.pop_back();
+  }
   if (device_ != nullptr) {
     if (device_->drvr()->settings == brcmf_mp_device_.get()) {
       device_->drvr()->settings = nullptr;
@@ -49,6 +54,18 @@ zx_status_t PcieBus::Create(Device* device, std::unique_ptr<PcieBus>* bus_out) {
     return status;
   }
 
+  std::unique_ptr<PcieInterruptMaster> pcie_interrupt_master;
+  if ((status = PcieInterruptMaster::Create(device->parent(), pcie_buscore.get(),
+                                            &pcie_interrupt_master)) != ZX_OK) {
+    return status;
+  }
+
+  std::list<std::unique_ptr<PcieInterruptMaster::InterruptHandler>> pcie_interrupt_handlers;
+  pcie_interrupt_handlers.emplace_back(new PcieSleepInterruptHandler(
+      pcie_interrupt_master.get(), pcie_buscore.get(), pcie_firmware.get()));
+  pcie_interrupt_handlers.emplace_back(
+      new PcieConsoleInterruptHandler(pcie_interrupt_master.get(), pcie_firmware.get()));
+
   auto bus = std::make_unique<brcmf_bus>();
   bus->bus_priv.pcie = pcie_bus.get();
   bus->ops = PcieBus::GetBusOps();
@@ -63,6 +80,8 @@ zx_status_t PcieBus::Create(Device* device, std::unique_ptr<PcieBus>* bus_out) {
   pcie_bus->device_ = device;
   pcie_bus->pcie_buscore_ = std::move(pcie_buscore);
   pcie_bus->pcie_firmware_ = std::move(pcie_firmware);
+  pcie_bus->pcie_interrupt_master_ = std::move(pcie_interrupt_master);
+  pcie_bus->pcie_interrupt_handlers_ = std::move(pcie_interrupt_handlers);
   pcie_bus->brcmf_bus_ = std::move(bus);
   pcie_bus->brcmf_mp_device_ = std::move(mp_device);
 
