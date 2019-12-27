@@ -12,8 +12,6 @@ use bytes::{Buf, Bytes, IntoBuf};
 use fdio::service_connect;
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_hardware_input::DeviceMarker;
-use fuchsia_async::{self as fasync, DurationExt};
-use fuchsia_zircon as zx;
 use lazy_static::lazy_static;
 use log::{info, warn};
 use rand::{rngs::OsRng, Rng};
@@ -97,11 +95,6 @@ impl<C: Connection, R: Rng> Device<C, R> {
                 .write_packet(init_packet)
                 .await
                 .map_err(|err| format_err!("Error writing init packet: {:?}", err))?;
-
-            // TODO(jsankey): Replace sleep with an async wait inside connection.read_packet
-            // using an event retrieved from `Device.GetReportsEvent`.
-            let sleep_duration = zx::Duration::from_millis(250);
-            fasync::Timer::new(sleep_duration.after_now()).await;
             let res = connection.read_packet().await;
 
             // TODO(jsankey): Currently this fails if the first packet we read from the connection
@@ -243,7 +236,7 @@ mod tests {
         Packet::padded_initialization(INIT_CHANNEL, Command::Init, &payload, REPORT_LENGTH).unwrap()
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fasync::run_until_stalled(test)]
     async fn test_valid_device() -> Result<(), Error> {
         // Configure a fake connection to expect an init request and return a response.
         let con = FakeConnection::new(&FIDO_REPORT_DESCRIPTOR);
@@ -268,7 +261,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fasync::run_until_stalled(test)]
     async fn test_mismatched_nonce_during_init() -> Result<(), Error> {
         // Configure a fake connection to expect an init request and return a response.
         let con = FakeConnection::new(&FIDO_REPORT_DESCRIPTOR);

@@ -36,13 +36,21 @@ pub mod fidl {
     use async_trait::async_trait;
     use bytes::Bytes;
     use fidl_fuchsia_hardware_input::{DeviceProxy, ReportType};
+    use fuchsia_async::{self as fasync, Time, TimeoutExt};
     use fuchsia_zircon as zx;
+    use lazy_static::lazy_static;
     use std::convert::TryFrom;
 
     // TODO(jsankey): Don't hardcode the report IDs, although its hard to imagine other values
     const OUTPUT_REPORT_ID: u8 = 0;
     #[allow(dead_code)]
     const INPUT_REPORT_ID: u8 = 0;
+
+    lazy_static! {
+        /// Time to wait before declaring a read failure. Set slightly higher than the 100ms
+        /// KEEPALIVE requirement in the CTAPHID specification.
+        static ref READ_PACKET_TIMEOUT: zx::Duration = zx::Duration::from_millis(110);
+    }
 
     /// An connection to a HID device over the FIDL `Device` protocol.
     #[derive(Debug)]
@@ -55,26 +63,63 @@ pub mod fidl {
         pub fn new(proxy: DeviceProxy) -> FidlConnection {
             FidlConnection { proxy }
         }
+
+        /// Helper method to call the FIDL `GetReports` method and format the results.
+        async fn get_reports(&self) -> Result<(zx::Status, Vec<u8>), Error> {
+            self.proxy
+                .get_reports()
+                .await
+                .map_err(|err| format_err!("FIDL error on GetReports: {:?}", err))
+                .map(|(status, data)| (zx::Status::from_raw(status), data))
+        }
+
+        /// Helper method to call the FIDL `GetReportsEvent` method and format the results.
+        async fn get_reports_event(&self) -> Result<zx::Event, Error> {
+            let (status, event) = self
+                .proxy
+                .get_reports_event()
+                .await
+                .map_err(|err| format_err!("FIDL error on GetReportsEvent: {:?}", err))
+                .map(|(status, event)| (zx::Status::from_raw(status), event))?;
+            if status != zx::Status::OK {
+                return Err(format_err!("Bad status on GetReportsEvent: {:?}", status));
+            }
+            Ok(event)
+        }
     }
 
     #[async_trait(?Send)]
     impl Connection for FidlConnection {
         async fn read_packet(&self) -> Result<Packet, Error> {
-            // TODO(jsankey): Currently this requests reports that have already been received and
-            // returns an error from the ZX_ERR_SHOULD_WAIT response if none are available. Once
-            // this simple case is working reliably, expand the implementation to use
-            // GetReportsEvent to await for signalling on an event when a message arrives,
-            // potentially changing the method signature to accept a timeout.
-            let (status, data) = self
-                .proxy
-                .get_reports()
-                .await
-                .map_err(|err| format_err!("FIDL error reading packet: {:?}", err))
-                .map(|(status, data)| (zx::Status::from_raw(status), data))?;
-            if status != zx::Status::OK {
-                return Err(format_err!("Received not-ok status reading packet: {:?}", status));
+            // Poll once to see if a report is already waiting.
+            let (status, data) = self.get_reports().await?;
+            match status {
+                zx::Status::OK => return Packet::try_from(data),
+                zx::Status::SHOULD_WAIT => (),
+                _ => return Err(format_err!("Received bad status on GetReports: {:?}", status)),
             }
-            Packet::try_from(data)
+
+            // If we were told to wait, use GetReportEvent to do that. Although not documented in
+            // FIDL, GetReportsEvent communicates through `DEV_STATE_READABLE` which is defined as
+            // `ZX_USER_SIGNAL_0` in ddk/device.h.
+            let event = self.get_reports_event().await?;
+            fasync::OnSignals::new(&event, zx::Signals::USER_0)
+                .on_timeout(Time::after(*READ_PACKET_TIMEOUT), || Err(zx::Status::SHOULD_WAIT))
+                .await
+                .map_err(|err| {
+                    if err == zx::Status::SHOULD_WAIT {
+                        format_err!("Timeout on GetReportsEvent")
+                    } else {
+                        format_err!("Error waiting on event: {:?}", err)
+                    }
+                })?;
+
+            // Now we expect a report to be waiting, poll again
+            let (status, data) = self.get_reports().await?;
+            match status {
+                zx::Status::OK => Packet::try_from(data),
+                _ => Err(format_err!("Received bad status on post-event GetReports: {:?}", status)),
+            }
         }
 
         async fn write_packet(&self, packet: Packet) -> Result<(), Error> {
@@ -112,6 +157,7 @@ pub mod fidl {
         use fidl::endpoints::{create_proxy_and_stream, RequestStream};
         use fidl_fuchsia_hardware_input::{DeviceMarker, DeviceRequest};
         use fuchsia_async as fasync;
+        use fuchsia_zircon::AsHandleRef;
         use futures::TryStreamExt;
 
         const TEST_REPORT_LENGTH: u16 = 99;
@@ -121,13 +167,15 @@ pub mod fidl {
         /// Creates a mock device proxy that will invoke the supplied function on each request.
         fn valid_mock_device_proxy<F>(request_fn: F) -> DeviceProxy
         where
-            F: (Fn(DeviceRequest) -> ()) + Send + 'static,
+            F: (Fn(DeviceRequest, u32) -> ()) + Send + 'static,
         {
             let (device_proxy, mut stream) = create_proxy_and_stream::<DeviceMarker>()
                 .expect("Failed to create proxy and stream");
             fasync::spawn(async move {
+                let mut req_num = 0u32;
                 while let Some(req) = stream.try_next().await.expect("Failed to read req") {
-                    request_fn(req)
+                    req_num += 1;
+                    request_fn(req, req_num)
                 }
             });
             device_proxy
@@ -142,8 +190,8 @@ pub mod fidl {
         }
 
         #[fasync::run_until_stalled(test)]
-        async fn test_read_packet() -> Result<(), Error> {
-            let proxy = valid_mock_device_proxy(|req| match req {
+        async fn test_read_immediate_packet() -> Result<(), Error> {
+            let proxy = valid_mock_device_proxy(|req, _| match req {
                 DeviceRequest::GetReports { responder } => {
                     let response = TEST_PACKET.to_vec();
                     responder
@@ -157,9 +205,55 @@ pub mod fidl {
             Ok(())
         }
 
+        #[fasync::run_singlethreaded(test)]
+        async fn test_read_delayed_packet() -> Result<(), Error> {
+            let proxy = valid_mock_device_proxy(|req, req_num| match (req, req_num) {
+                (DeviceRequest::GetReports { responder }, 1) => {
+                    responder
+                        .send(zx::sys::ZX_ERR_SHOULD_WAIT, &mut vec![].into_iter())
+                        .expect("failed to send response");
+                }
+                (DeviceRequest::GetReportsEvent { responder }, 2) => {
+                    let event = zx::Event::create().unwrap();
+                    event.signal_handle(zx::Signals::NONE, zx::Signals::USER_0).unwrap();
+                    responder.send(zx::sys::ZX_OK, event).expect("failed to send response");
+                }
+                (DeviceRequest::GetReports { responder }, 3) => {
+                    let response = TEST_PACKET.to_vec();
+                    responder
+                        .send(zx::sys::ZX_OK, &mut response.into_iter())
+                        .expect("failed to send response");
+                }
+                (req, num) => panic!("got unexpected device request {:?} as num {:?}", req, num),
+            });
+            let connection = FidlConnection::new(proxy);
+            assert_eq!(connection.read_packet().await?, Packet::try_from(TEST_PACKET.to_vec())?);
+            Ok(())
+        }
+
+        #[fasync::run_singlethreaded(test)]
+        async fn test_read_packet_timeout() -> Result<(), Error> {
+            let proxy = valid_mock_device_proxy(|req, req_num| match (req, req_num) {
+                (DeviceRequest::GetReports { responder }, 1) => {
+                    responder
+                        .send(zx::sys::ZX_ERR_SHOULD_WAIT, &mut vec![].into_iter())
+                        .expect("failed to send response");
+                }
+                (DeviceRequest::GetReportsEvent { responder }, 2) => {
+                    // Generate an event but never signal it.
+                    let event = zx::Event::create().unwrap();
+                    responder.send(zx::sys::ZX_OK, event).expect("failed to send response");
+                }
+                (req, num) => panic!("got unexpected device request {:?} as num {:?}", req, num),
+            });
+            let connection = FidlConnection::new(proxy);
+            assert!(connection.read_packet().await.is_err());
+            Ok(())
+        }
+
         #[fasync::run_until_stalled(test)]
         async fn test_write_packet() -> Result<(), Error> {
-            let proxy = valid_mock_device_proxy(|req| match req {
+            let proxy = valid_mock_device_proxy(|req, _| match req {
                 DeviceRequest::SetReport {
                     type_: ReportType::Output,
                     id: 0,
@@ -179,7 +273,7 @@ pub mod fidl {
 
         #[fasync::run_until_stalled(test)]
         async fn test_report_descriptor() -> Result<(), Error> {
-            let proxy = valid_mock_device_proxy(|req| match req {
+            let proxy = valid_mock_device_proxy(|req, _| match req {
                 DeviceRequest::GetReportDesc { responder } => {
                     let response = TEST_REPORT_DESCRIPTOR.to_vec();
                     responder.send(&mut response.into_iter()).expect("failed to send response");
@@ -193,7 +287,7 @@ pub mod fidl {
 
         #[fasync::run_until_stalled(test)]
         async fn test_max_packet_length() -> Result<(), Error> {
-            let proxy = valid_mock_device_proxy(|req| match req {
+            let proxy = valid_mock_device_proxy(|req, _| match req {
                 DeviceRequest::GetMaxInputReportSize { responder } => {
                     responder.send(TEST_REPORT_LENGTH).expect("failed to send response");
                 }
