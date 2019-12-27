@@ -213,6 +213,8 @@ extern "C" void ap_sta_delete(wlan_ap_sta_t *sta);
 
 extern "C" int32_t ap_sta_handle_eth_frame(wlan_ap_sta_t *sta, wlan_span_t frame);
 
+extern "C" int32_t ap_sta_handle_hw_indication(wlan_ap_sta_t *sta, wlan_indication_t ind);
+
 extern "C" int32_t ap_sta_handle_mac_frame(wlan_ap_sta_t *sta, wlan_span_t frame,
                                            bool body_aligned);
 

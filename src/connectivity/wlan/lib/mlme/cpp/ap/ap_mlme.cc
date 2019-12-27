@@ -150,9 +150,7 @@ zx_status_t ApMlme::HandleFramePacket(std::unique_ptr<Packet> pkt) {
 }
 
 void ApMlme::HwIndication(uint32_t ind) {
-  // TODO(37891): Support this.
-  // WLAN_INDICATION_PRE_TBTT
-  // WLAN_INDICATION_BCN_TX_COMPLETE
+  ap_sta_handle_hw_indication(rust_ap_.get(), static_cast<wlan_indication_t>(ind));
 }
 
 }  // namespace wlan

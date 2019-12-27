@@ -50,6 +50,7 @@ exclude = [
     "WlanChannel",
     "WlanBssConfig",
     "WlanHwScanConfig",
+    "WlanIndication",
     "WlanmacInfo",
 
     # Other existing types.
@@ -81,6 +82,7 @@ exclude = [
 "WlanChannel" = "wlan_channel_t"
 "WlanHwScanConfig" = "wlan_hw_scan_config_t"
 "WlanmacInfo" = "wlanmac_info_t"
+"WlanIndication" = "wlan_indication_t"
 
 # Other existing types.
 "KeyConfig" = "wlan_key_config_t"

@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
+    banjo_ddk_protocol_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fuchsia_zircon as zx,
     log::error,
     wlan_common::mac::Bssid,
     wlan_mlme::{ap::Ap, buffer::BufferProvider, device::Device, error::ResultExt, timer::*},
@@ -57,5 +58,14 @@ pub extern "C" fn ap_sta_handle_mac_frame(
 #[no_mangle]
 pub extern "C" fn ap_sta_handle_eth_frame(sta: &mut Ap, frame: CSpan<'_>) -> i32 {
     sta.handle_eth_frame(frame.into());
+    zx::sys::ZX_OK
+}
+
+#[no_mangle]
+pub extern "C" fn ap_sta_handle_hw_indication(
+    sta: &mut Ap,
+    ind: banjo_wlan_mac::WlanIndication,
+) -> i32 {
+    sta.handle_hw_indication(ind);
     zx::sys::ZX_OK
 }

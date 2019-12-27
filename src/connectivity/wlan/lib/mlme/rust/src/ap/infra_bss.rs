@@ -16,6 +16,7 @@ use {
     anyhow::format_err,
     banjo_ddk_hw_wlan_wlaninfo::WlanInfoDriverFeature,
     banjo_ddk_protocol_wlan_info::{WlanChannel, WlanChannelBandwidth},
+    banjo_ddk_protocol_wlan_mac as banjo_wlan_mac,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     std::collections::HashMap,
     wlan_common::{
@@ -384,6 +385,34 @@ impl InfraBss {
         client
             .handle_eth_frame(ctx, hdr.da, hdr.sa, hdr.ether_type.to_native(), body)
             .map_err(|e| Rejection::Client(client.addr, e))
+    }
+
+    pub fn handle_hw_indication(
+        &mut self,
+        ctx: &mut Context,
+        ind: banjo_wlan_mac::WlanIndication,
+    ) -> Result<(), Rejection> {
+        match ind {
+            banjo_wlan_mac::WlanIndication::PRE_TBTT => self.handle_pre_tbtt_hw_indication(ctx),
+            banjo_wlan_mac::WlanIndication::BCN_TX_COMPLETE => {
+                self.handle_bcn_tx_complete_indication(ctx)
+            }
+            _ => {
+                // Ignore unknown HW indications.
+                Ok(())
+            }
+        }
+    }
+
+    pub fn handle_pre_tbtt_hw_indication(&mut self, _ctx: &mut Context) -> Result<(), Rejection> {
+        Ok(())
+    }
+
+    pub fn handle_bcn_tx_complete_indication(
+        &mut self,
+        _ctx: &mut Context,
+    ) -> Result<(), Rejection> {
+        Ok(())
     }
 
     // Timed event functions

@@ -15,7 +15,8 @@ use {
         logger,
         timer::{EventId, Scheduler, Timer},
     },
-    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
+    banjo_ddk_protocol_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fuchsia_zircon as zx,
     log::{error, info, log},
     std::fmt,
     wlan_common::{
@@ -281,6 +282,20 @@ impl Ap {
             }
         } {
             log!(e.log_level(), "failed to handle MAC frame: {}", e)
+        }
+    }
+
+    pub fn handle_hw_indication(&mut self, ind: banjo_wlan_mac::WlanIndication) {
+        let bss = match self.bss.as_mut() {
+            Some(bss) => bss,
+            None => {
+                error!("received HW indication but BSS was not started yet");
+                return;
+            }
+        };
+
+        if let Err(e) = bss.handle_hw_indication(&mut self.ctx, ind) {
+            log!(e.log_level(), "failed to handle HW indication {:?}: {}", ind, e)
         }
     }
 }
