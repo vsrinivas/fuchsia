@@ -6,8 +6,14 @@ package templates
 
 const Bits = `
 {{- define "BitsForwardDeclaration" }}
+{{range .DocComments}}
+///{{ . }}
+{{- end}}
 enum class {{ .Name }} : {{ .Type }} {
   {{- range .Members }}
+  {{range .DocComments}}
+  ///{{ . }}
+  {{- end}}
   {{ .Name }} = {{ .Value }},
   {{- end }}
 };

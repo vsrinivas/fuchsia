@@ -11,16 +11,16 @@ class {{ .Name }};
 
 {{- define "TableDeclaration" }}
 {{range .DocComments}}
-//{{ . }}
+///{{ . }}
 {{- end}}
 class {{ .Name }} final {
  public:
   static const fidl_type_t* FidlType;
-  // Returns whether no field is set.
+  /// Returns whether no field is set.
   bool IsEmpty() const;
   {{- range .Members }}
   {{range .DocComments}}
-  //{{ . }}
+  ///{{ . }}
   {{- end}}
   const {{ .Type.Decl }}& {{ .Name }}() const {
     ZX_ASSERT({{ .FieldPresenceName }});
@@ -30,7 +30,7 @@ class {{ .Name }} final {
     return {{ .FieldPresenceName }};
   }
   {{range .DocComments}}
-  //{{ . }}
+  ///{{ . }}
   {{- end}}
   {{ .Type.Decl }}* mutable_{{ .Name }}() {
     if (!{{ .FieldPresenceName }}) {

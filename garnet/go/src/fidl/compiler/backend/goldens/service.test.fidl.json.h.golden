@@ -9,6 +9,7 @@ namespace test {
 namespace name {
 
 #ifdef __Fuchsia__
+
 class SecondProtocol;
 using SecondProtocolPtr = ::fidl::InterfacePtr<SecondProtocol>;
 class SecondProtocol_Proxy;
@@ -24,6 +25,7 @@ constexpr uint64_t kSecondProtocol_MethodOnSecond_GenOrdinal = 0x5785f9c1f2aece2
 }  // namespace
 #endif // __Fuchsia__
 #ifdef __Fuchsia__
+
 class FirstProtocol;
 using FirstProtocolPtr = ::fidl::InterfacePtr<FirstProtocol>;
 class FirstProtocol_Proxy;
@@ -333,7 +335,7 @@ class SingleMemberService final {
       : service_(std::move(service)) {}
 
   explicit operator bool() const { return !!service_; }
-  // Returns a |fidl::MemberConnector| which can be used to connect to the member protocol "single_member".
+  /// Returns a |fidl::MemberConnector| which can be used to connect to the member protocol "single_member".
   ::fidl::MemberConnector<FirstProtocol> single_member() const {
     return ::fidl::MemberConnector<FirstProtocol>(service_.get(), "single_member");
   }
@@ -342,17 +344,17 @@ class SingleMemberService final {
   std::unique_ptr<::fidl::ServiceConnector> service_;
 };
 
-// Facilitates member protocol registration for servers.
+/// Facilitates member protocol registration for servers.
 class SingleMemberService::Handler final {
  public:
-  // Constructs a new |Handler|. Does not take ownership of |service|.
+  /// Constructs a new |Handler|. Does not take ownership of |service|.
   explicit Handler(::fidl::ServiceHandlerBase* service) : service_(service) {}
-  // Adds member "single_member" to the service instance. |handler| is invoked when a connection
-  // is made to the member protocol.
-  //
-  // # Errors
-  //
-  // Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
+  /// Adds member "single_member" to the service instance. |handler| is invoked when a connection
+  /// is made to the member protocol.
+  ///
+  /// # Errors
+  ///
+  /// Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
   zx_status_t add_single_member(::fidl::InterfaceRequestHandler<FirstProtocol> handler) {
     return service_->AddMember("single_member", std::move(handler));
   }
@@ -373,11 +375,11 @@ class MultiHomogeneousMemberService final {
       : service_(std::move(service)) {}
 
   explicit operator bool() const { return !!service_; }
-  // Returns a |fidl::MemberConnector| which can be used to connect to the member protocol "first_member".
+  /// Returns a |fidl::MemberConnector| which can be used to connect to the member protocol "first_member".
   ::fidl::MemberConnector<FirstProtocol> first_member() const {
     return ::fidl::MemberConnector<FirstProtocol>(service_.get(), "first_member");
   }
-  // Returns a |fidl::MemberConnector| which can be used to connect to the member protocol "second_member".
+  /// Returns a |fidl::MemberConnector| which can be used to connect to the member protocol "second_member".
   ::fidl::MemberConnector<FirstProtocol> second_member() const {
     return ::fidl::MemberConnector<FirstProtocol>(service_.get(), "second_member");
   }
@@ -386,26 +388,26 @@ class MultiHomogeneousMemberService final {
   std::unique_ptr<::fidl::ServiceConnector> service_;
 };
 
-// Facilitates member protocol registration for servers.
+/// Facilitates member protocol registration for servers.
 class MultiHomogeneousMemberService::Handler final {
  public:
-  // Constructs a new |Handler|. Does not take ownership of |service|.
+  /// Constructs a new |Handler|. Does not take ownership of |service|.
   explicit Handler(::fidl::ServiceHandlerBase* service) : service_(service) {}
-  // Adds member "first_member" to the service instance. |handler| is invoked when a connection
-  // is made to the member protocol.
-  //
-  // # Errors
-  //
-  // Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
+  /// Adds member "first_member" to the service instance. |handler| is invoked when a connection
+  /// is made to the member protocol.
+  ///
+  /// # Errors
+  ///
+  /// Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
   zx_status_t add_first_member(::fidl::InterfaceRequestHandler<FirstProtocol> handler) {
     return service_->AddMember("first_member", std::move(handler));
   }
-  // Adds member "second_member" to the service instance. |handler| is invoked when a connection
-  // is made to the member protocol.
-  //
-  // # Errors
-  //
-  // Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
+  /// Adds member "second_member" to the service instance. |handler| is invoked when a connection
+  /// is made to the member protocol.
+  ///
+  /// # Errors
+  ///
+  /// Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
   zx_status_t add_second_member(::fidl::InterfaceRequestHandler<FirstProtocol> handler) {
     return service_->AddMember("second_member", std::move(handler));
   }
@@ -426,11 +428,11 @@ class MultiHeterogeneousMemberService final {
       : service_(std::move(service)) {}
 
   explicit operator bool() const { return !!service_; }
-  // Returns a |fidl::MemberConnector| which can be used to connect to the member protocol "first_member".
+  /// Returns a |fidl::MemberConnector| which can be used to connect to the member protocol "first_member".
   ::fidl::MemberConnector<FirstProtocol> first_member() const {
     return ::fidl::MemberConnector<FirstProtocol>(service_.get(), "first_member");
   }
-  // Returns a |fidl::MemberConnector| which can be used to connect to the member protocol "second_member".
+  /// Returns a |fidl::MemberConnector| which can be used to connect to the member protocol "second_member".
   ::fidl::MemberConnector<SecondProtocol> second_member() const {
     return ::fidl::MemberConnector<SecondProtocol>(service_.get(), "second_member");
   }
@@ -439,26 +441,26 @@ class MultiHeterogeneousMemberService final {
   std::unique_ptr<::fidl::ServiceConnector> service_;
 };
 
-// Facilitates member protocol registration for servers.
+/// Facilitates member protocol registration for servers.
 class MultiHeterogeneousMemberService::Handler final {
  public:
-  // Constructs a new |Handler|. Does not take ownership of |service|.
+  /// Constructs a new |Handler|. Does not take ownership of |service|.
   explicit Handler(::fidl::ServiceHandlerBase* service) : service_(service) {}
-  // Adds member "first_member" to the service instance. |handler| is invoked when a connection
-  // is made to the member protocol.
-  //
-  // # Errors
-  //
-  // Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
+  /// Adds member "first_member" to the service instance. |handler| is invoked when a connection
+  /// is made to the member protocol.
+  ///
+  /// # Errors
+  ///
+  /// Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
   zx_status_t add_first_member(::fidl::InterfaceRequestHandler<FirstProtocol> handler) {
     return service_->AddMember("first_member", std::move(handler));
   }
-  // Adds member "second_member" to the service instance. |handler| is invoked when a connection
-  // is made to the member protocol.
-  //
-  // # Errors
-  //
-  // Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
+  /// Adds member "second_member" to the service instance. |handler| is invoked when a connection
+  /// is made to the member protocol.
+  ///
+  /// # Errors
+  ///
+  /// Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
   zx_status_t add_second_member(::fidl::InterfaceRequestHandler<SecondProtocol> handler) {
     return service_->AddMember("second_member", std::move(handler));
   }

@@ -27,6 +27,73 @@ struct Table;
 struct Struct;
 class Interface;
 class Service;
+enum class MyEnum : uint32_t {
+  FOO = 1u,
+  BAR = 2u,
+};
+
+
+class MyBits final {
+public:
+  constexpr MyBits() : value_(0u) {}
+  explicit constexpr MyBits(uint32_t value) : value_(value) {}
+  const static MyBits MY_FIRST_BIT;
+  const static MyBits MY_OTHER_BIT;
+  const static MyBits mask;
+
+  explicit constexpr inline operator uint32_t() const { return value_; }
+  explicit constexpr inline operator bool() const { return static_cast<bool>(value_); }
+  constexpr inline bool operator==(const MyBits& other) const { return value_ == other.value_; }
+  constexpr inline bool operator!=(const MyBits& other) const { return value_ != other.value_; }
+  constexpr inline MyBits operator~() const;
+  constexpr inline MyBits operator|(const MyBits& other) const;
+  constexpr inline MyBits operator&(const MyBits& other) const;
+  constexpr inline MyBits operator^(const MyBits& other) const;
+  constexpr inline void operator|=(const MyBits& other);
+  constexpr inline void operator&=(const MyBits& other);
+  constexpr inline void operator^=(const MyBits& other);
+
+private:
+  uint32_t value_;
+};
+constexpr const ::llcpp::test::name::MyBits MyBits::MY_FIRST_BIT = ::llcpp::test::name::MyBits(1u);
+constexpr const ::llcpp::test::name::MyBits MyBits::MY_OTHER_BIT = ::llcpp::test::name::MyBits(2u);
+constexpr const ::llcpp::test::name::MyBits MyBits::mask = ::llcpp::test::name::MyBits(3u);
+
+constexpr inline ::llcpp::test::name::MyBits MyBits::operator~() const {
+  return ::llcpp::test::name::MyBits(static_cast<uint32_t>(~this->value_ & mask.value_));
+}
+
+constexpr inline ::llcpp::test::name::MyBits MyBits::operator|(
+    const ::llcpp::test::name::MyBits& other) const {
+  return ::llcpp::test::name::MyBits(static_cast<uint32_t>(this->value_ | other.value_));
+}
+
+constexpr inline ::llcpp::test::name::MyBits MyBits::operator&(
+    const ::llcpp::test::name::MyBits& other) const {
+  return ::llcpp::test::name::MyBits(static_cast<uint32_t>(this->value_ & other.value_));
+}
+
+constexpr inline ::llcpp::test::name::MyBits MyBits::operator^(
+    const ::llcpp::test::name::MyBits& other) const {
+  return ::llcpp::test::name::MyBits(static_cast<uint32_t>(this->value_ ^ other.value_));
+}
+
+constexpr inline void MyBits::operator|=(
+    const ::llcpp::test::name::MyBits& other) {
+  this->value_ |= other.value_;
+}
+
+constexpr inline void MyBits::operator&=(
+    const ::llcpp::test::name::MyBits& other) {
+  this->value_ &= other.value_;
+}
+
+constexpr inline void MyBits::operator^=(
+    const ::llcpp::test::name::MyBits& other) {
+  this->value_ ^= other.value_;
+}
+
 
 extern "C" const fidl_type_t test_name_UnionTable;
 extern "C" const fidl_type_t v1_test_name_UnionTable;
@@ -463,5 +530,10 @@ struct IsFidlType<::llcpp::test::name::Struct> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::test::name::Struct>);
 static_assert(offsetof(::llcpp::test::name::Struct, Field) == 0);
 static_assert(sizeof(::llcpp::test::name::Struct) == ::llcpp::test::name::Struct::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::test::name::MyBits> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::test::name::MyBits>);
+static_assert(sizeof(::llcpp::test::name::MyBits) == sizeof(uint32_t));
 
 }  // namespace fidl

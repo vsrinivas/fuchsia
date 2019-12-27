@@ -14,6 +14,7 @@ class WithErrorSyntax_ErrorAsPrimitive_Response;
 class WithErrorSyntax_ErrorAsPrimitive_Result;
 class WithErrorSyntax_ErrorAsEnum_Response;
 #ifdef __Fuchsia__
+
 class ChannelProtocol;
 using ChannelProtocolPtr = ::fidl::InterfacePtr<ChannelProtocol>;
 class ChannelProtocol_Proxy;
@@ -35,6 +36,7 @@ constexpr uint64_t kChannelProtocol_MutateSocket_GenOrdinal = 0x36caa6fff7569577
 }  // namespace
 #endif // __Fuchsia__
 #ifdef __Fuchsia__
+
 class WithAndWithoutRequestResponse;
 using WithAndWithoutRequestResponsePtr = ::fidl::InterfacePtr<WithAndWithoutRequestResponse>;
 class WithAndWithoutRequestResponse_Proxy;
@@ -63,8 +65,11 @@ constexpr uint64_t kWithAndWithoutRequestResponse_OnWithResponse_GenOrdinal = 0x
 
 }  // namespace
 #endif // __Fuchsia__
+
 enum class ErrorEnun : uint32_t {
+  
   ERR_FOO = 1u,
+  
   ERR_BAR = 2u,
 };
 
@@ -76,6 +81,7 @@ inline zx_status_t Clone(::test::name::ErrorEnun value,
 
 class WithErrorSyntax_ErrorAsEnum_Result;
 #ifdef __Fuchsia__
+
 class WithErrorSyntax;
 using WithErrorSyntaxPtr = ::fidl::InterfacePtr<WithErrorSyntax>;
 class WithErrorSyntax_Proxy;

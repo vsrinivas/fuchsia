@@ -13,6 +13,7 @@ class StrictSimpleXUnion;
 class StrictBoundedXUnion;
 class OlderSimpleUnion;
 #ifdef __Fuchsia__
+
 class TestProtocol;
 using TestProtocolPtr = ::fidl::InterfacePtr<TestProtocol>;
 class TestProtocol_Proxy;

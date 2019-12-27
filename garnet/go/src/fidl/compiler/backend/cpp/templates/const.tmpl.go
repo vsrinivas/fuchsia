@@ -7,7 +7,7 @@ package templates
 const Const = `
 {{- define "ConstDeclaration" }}
 {{range .DocComments}}
-//{{ . }}
+///{{ . }}
 {{- end}}
 {{- if .Extern }}
 extern {{ .Decorator }} {{ .Type.Decl }} {{ .Name }};

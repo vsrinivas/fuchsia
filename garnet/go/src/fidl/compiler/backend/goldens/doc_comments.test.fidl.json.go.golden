@@ -19,6 +19,42 @@ const (
 
 
 
+// enum comment #1.
+//
+// enum comment #2.
+type MyEnum uint32
+const (
+	MyEnumFoo MyEnum = 1
+	MyEnumBar MyEnum = 2
+)
+func (x MyEnum) String() string {
+	switch x {
+	case 1:
+		return "Foo"
+	case 2:
+		return "Bar"
+	}
+	return "Unknown"
+}
+
+// bits comment #1
+//
+// bits comment #2
+type MyBits uint32
+const (
+	MyBitsMyFirstBit MyBits = 1
+	MyBitsMyOtherBit MyBits = 2
+)
+func (x MyBits) String() string {
+	switch x {
+	case 1:
+		return "MyFirstBit"
+	case 2:
+		return "MyOtherBit"
+	}
+	return "Unknown"
+}
+
 // struct comment #1
 //
 // struct comment #3

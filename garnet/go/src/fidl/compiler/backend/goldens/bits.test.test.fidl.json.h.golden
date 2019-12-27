@@ -8,8 +8,11 @@
 namespace test {
 namespace name {
 
+
 enum class MyBits : uint32_t {
+  
   MY_FIRST_BIT = 1u,
+  
   MY_OTHER_BIT = 2u,
 };
 

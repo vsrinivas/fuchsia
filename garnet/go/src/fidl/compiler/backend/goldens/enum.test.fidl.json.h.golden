@@ -8,8 +8,11 @@
 namespace test {
 namespace name {
 
+
 enum class MyStrictEnum : uint32_t {
+  
   FOO = 1u,
+  
   BAR = 2u,
 };
 
@@ -19,8 +22,11 @@ inline zx_status_t Clone(::test::name::MyStrictEnum value,
   return ZX_OK;
 }
 
+
 enum class MyEnum : uint32_t {
+  
   FOO = 1u,
+  
   BAR = 2u,
 };
 

@@ -7,6 +7,9 @@ package templates
 const Interface = `
 {{- define "InterfaceForwardDeclaration" }}
 #ifdef __Fuchsia__
+{{range .DocComments}}
+///{{ . }}
+{{- end}}
 class {{ .Name }};
 using {{ .Name }}Ptr = ::fidl::InterfacePtr<{{ .Name }}>;
 class {{ .ProxyName }};
@@ -74,7 +77,7 @@ constexpr uint64_t {{ .Name }} = {{ .Ordinal }}lu;
 {{- define "InterfaceDeclaration" }}
 #ifdef __Fuchsia__
 {{range .DocComments}}
-//{{ . }}
+///{{ . }}
 {{- end}}
 class {{ .Name }} {
  public:
@@ -94,7 +97,7 @@ class {{ .Name }} {
     {{- end }}
     {{- if .HasRequest }}
       {{ range .DocComments }}
-  //{{ . }}
+      ///{{ . }}
       {{- end }}
       {{- if .Transitional }}
   virtual void {{ template "RequestMethodSignature" . }} { }

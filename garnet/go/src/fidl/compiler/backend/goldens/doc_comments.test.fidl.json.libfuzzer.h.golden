@@ -18,6 +18,8 @@ using Union = ::test::name::Union;
 using Table = ::test::name::Table;
 using Struct = ::test::name::Struct;
 using Service = ::test::name::Service;
+using MyEnum = ::test::name::MyEnum;
+using MyBits = ::test::name::MyBits;
 
 
 template<>
@@ -82,6 +84,45 @@ struct Allocate<Struct> {
     size_t out_size;
     out_size = MinSize<int32_t>() + slack_per_member;
     out.Field = Allocate<int32_t>{}(src, &out_size);
+    return out;
+  }
+};
+template<>
+struct MinSize<MyEnum> {
+  operator size_t() { return sizeof(uint64_t); }
+};
+template<>
+struct Allocate<MyEnum> {
+  MyEnum operator()(FuzzInput* src, size_t* size) {
+    MyEnum out;
+    uint64_t selector;
+    ZX_ASSERT(*size >= sizeof(uint64_t));
+    ZX_ASSERT(src->CopyObject(&selector));
+    *size = sizeof(uint64_t);
+
+    switch (selector % 2) {
+      case 0:
+        out = MyEnum::FOO;
+        break;
+      case 1:
+        out = MyEnum::BAR;
+        break;
+    }
+
+    return out;
+  }
+};
+template<>
+struct MinSize<MyBits> {
+  operator size_t() { return sizeof(MyBits); }
+};
+template<>
+struct Allocate<MyBits> {
+  MyBits operator()(FuzzInput* src, size_t* size) {
+    MyBits out;
+    ZX_ASSERT(*size >= sizeof(MyBits));
+    ZX_ASSERT(src->CopyObject(&out));
+    *size = sizeof(MyBits);
     return out;
   }
 };

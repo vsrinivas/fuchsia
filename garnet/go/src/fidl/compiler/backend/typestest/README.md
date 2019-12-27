@@ -2,7 +2,7 @@
 
 Ensure `fidlc` and `fidlgen` are built, for instance
 
-    fx clean-build x64
+    fx clean-build
 
 Then run the `regen.sh` script, e.g.
 

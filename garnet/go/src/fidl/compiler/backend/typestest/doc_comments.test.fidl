@@ -3,10 +3,34 @@
 /// library comment #2
 library test.name;
 
+
+/// bits comment #1
+///
+/// bits comment #2
+bits MyBits:uint32 {
+    /// bits member comment #1
+    ///
+    /// bits member comment #3
+    MY_FIRST_BIT = 1;
+    MY_OTHER_BIT = 2;
+};
+
+
 /// const comment #1
 ///
 /// const comment #3
 const int32 C = 4;
+
+
+/// enum comment #1.
+///
+/// enum comment #2.
+enum MyEnum : uint32 {
+    /// enum Member comment 1.
+    FOO = 1;
+    // Internal comment.
+    BAR = 2;
+};
 
 /// struct comment #1
 ///

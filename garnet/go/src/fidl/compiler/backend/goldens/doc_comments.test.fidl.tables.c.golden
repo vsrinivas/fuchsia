@@ -18,6 +18,8 @@ extern const fidl_type_t v1_test_name_StructTable;
 extern const fidl_type_t test_name_UnionTable;
 extern const fidl_type_t test_name_TableTable;
 extern const fidl_type_t test_name_StructTable;
+extern const fidl_type_t test_name_MyEnumTable;
+extern const fidl_type_t test_name_MyBitsTable;
 
 
 extern const fidl_type_t test_name_InterfaceMethodRequestTable;
@@ -44,11 +46,18 @@ static const struct FidlStructField Fields16test_name_Struct[] = {
 };
 const fidl_type_t test_name_StructTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields16test_name_Struct, .field_count=1u, .size=4u, .max_out_of_line=0u, .contains_union=false, .name="test.name/Struct", .alt_type=&v1_test_name_StructTable}}};
 
+static bool EnumValidatorFor_test_name_MyEnum(uint64_t v) { return (v == 1ul) || (v == 2ul) || false; }
+const fidl_type_t test_name_MyEnumTable = {.type_tag=kFidlTypeEnum, {.coded_enum={.underlying_type=kFidlCodedPrimitive_Uint32, .validate=&EnumValidatorFor_test_name_MyEnum, .name="test.name/MyEnum"}}};
+
+const fidl_type_t test_name_MyBitsTable = {.type_tag=kFidlTypeBits, {.coded_bits={.underlying_type=kFidlCodedPrimitive_Uint32, .mask=3ul, .name="test.name/MyBits"}}};
+
 // Coding tables for v1 wire format.
 
 extern const fidl_type_t v1_test_name_UnionTable;
 extern const fidl_type_t v1_test_name_TableTable;
 extern const fidl_type_t v1_test_name_StructTable;
+extern const fidl_type_t v1_test_name_MyEnumTable;
+extern const fidl_type_t v1_test_name_MyBitsTable;
 
 
 extern const fidl_type_t v1_test_name_InterfaceMethodRequestTable;
@@ -73,4 +82,9 @@ static const struct FidlStructField Fields19v1_test_name_Struct[] = {
     /*FidlStructField*/{.type=NULL, .padding_offset=4u, .padding=0u}
 };
 const fidl_type_t v1_test_name_StructTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields19v1_test_name_Struct, .field_count=1u, .size=4u, .max_out_of_line=0u, .contains_union=false, .name="test.name/Struct", .alt_type=&test_name_StructTable}}};
+
+static bool EnumValidatorFor_v1_test_name_MyEnum(uint64_t v) { return (v == 1ul) || (v == 2ul) || false; }
+const fidl_type_t v1_test_name_MyEnumTable = {.type_tag=kFidlTypeEnum, {.coded_enum={.underlying_type=kFidlCodedPrimitive_Uint32, .validate=&EnumValidatorFor_v1_test_name_MyEnum, .name="test.name/MyEnum"}}};
+
+const fidl_type_t v1_test_name_MyBitsTable = {.type_tag=kFidlTypeBits, {.coded_bits={.underlying_type=kFidlCodedPrimitive_Uint32, .mask=3ul, .name="test.name/MyBits"}}};
 

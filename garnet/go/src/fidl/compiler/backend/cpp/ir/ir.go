@@ -83,6 +83,7 @@ type Const struct {
 }
 
 type Bits struct {
+	types.Attributes
 	Namespace string
 	Type      string
 	Name      string
@@ -93,11 +94,13 @@ type Bits struct {
 }
 
 type BitsMember struct {
+	types.Attributes
 	Name  string
 	Value string
 }
 
 type Enum struct {
+	types.Attributes
 	Namespace string
 	Type      string
 	Name      string
@@ -106,6 +109,7 @@ type Enum struct {
 }
 
 type EnumMember struct {
+	types.Attributes
 	Name  string
 	Value string
 }
@@ -743,14 +747,16 @@ func (c *compiler) compileType(val types.Type) Type {
 
 func (c *compiler) compileBits(val types.Bits, appendNamespace string) Bits {
 	r := Bits{
-		Namespace: c.namespace,
-		Type:      c.compileType(val.Type).Decl,
-		Name:      c.compileCompoundIdentifier(val.Name, "", appendNamespace, false),
-		Mask:      val.Mask,
-		MaskName:  c.compileCompoundIdentifier(val.Name, "Mask", appendNamespace, false),
+		Attributes: val.Attributes,
+		Namespace:  c.namespace,
+		Type:       c.compileType(val.Type).Decl,
+		Name:       c.compileCompoundIdentifier(val.Name, "", appendNamespace, false),
+		Mask:       val.Mask,
+		MaskName:   c.compileCompoundIdentifier(val.Name, "Mask", appendNamespace, false),
 	}
 	for _, v := range val.Members {
 		r.Members = append(r.Members, BitsMember{
+			v.Attributes,
 			changeIfReserved(v.Name, ""),
 			c.compileConstant(v.Value, nil, val.Type, appendNamespace),
 		})
@@ -786,14 +792,16 @@ func (c *compiler) compileConst(val types.Const, appendNamespace string) Const {
 
 func (c *compiler) compileEnum(val types.Enum, appendNamespace string) Enum {
 	r := Enum{
-		Namespace: c.namespace,
-		Type:      c.compilePrimitiveSubtype(val.Type),
-		Name:      c.compileCompoundIdentifier(val.Name, "", appendNamespace, false),
-		Members:   []EnumMember{},
+		Attributes: val.Attributes,
+		Namespace:  c.namespace,
+		Type:       c.compilePrimitiveSubtype(val.Type),
+		Name:       c.compileCompoundIdentifier(val.Name, "", appendNamespace, false),
+		Members:    []EnumMember{},
 	}
 	for _, v := range val.Members {
 		r.Members = append(r.Members, EnumMember{
-			Name: changeIfReserved(v.Name, ""),
+			Attributes: v.Attributes,
+			Name:       changeIfReserved(v.Name, ""),
 			// TODO(FIDL-324): When we expose types consistently in the IR, we
 			// will not need to plug this here.
 			Value: c.compileConstant(v.Value, nil, types.Type{

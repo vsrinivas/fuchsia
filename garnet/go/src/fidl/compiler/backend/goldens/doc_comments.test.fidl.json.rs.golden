@@ -23,10 +23,26 @@ use fidl::{
 };
 
 
+fidl_bits! {
+  MyBits(u32) {
+    MyFirstBit = 1,
+    MyOtherBit = 2,
+  }
+}
+
+
 /// const comment #1
 ///
 /// const comment #3
 pub const C: i32 = 4;
+
+fidl_enum! {
+  MyEnum(u32) {
+    Foo = 1,
+    Bar = 2,
+  }
+}
+
 
 fidl_xunion! {
 	/// union comment #1

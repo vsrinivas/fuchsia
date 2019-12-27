@@ -9,6 +9,7 @@ namespace test {
 namespace name {
 
 #ifdef __Fuchsia__
+
 class Parent;
 using ParentPtr = ::fidl::InterfacePtr<Parent>;
 class Parent_Proxy;
@@ -30,6 +31,7 @@ constexpr uint64_t kParent_TakeChildRequest_GenOrdinal = 0x6c4a70e2a2126637lu;
 }  // namespace
 #endif // __Fuchsia__
 #ifdef __Fuchsia__
+
 class Child;
 using ChildPtr = ::fidl::InterfacePtr<Child>;
 class Child_Proxy;

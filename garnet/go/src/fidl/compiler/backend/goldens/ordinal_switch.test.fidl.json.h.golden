@@ -9,6 +9,7 @@ namespace test {
 namespace name {
 
 #ifdef __Fuchsia__
+
 class SwitchingOrdinals;
 using SwitchingOrdinalsPtr = ::fidl::InterfacePtr<SwitchingOrdinals>;
 class SwitchingOrdinals_Proxy;

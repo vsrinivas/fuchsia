@@ -8,13 +8,74 @@
     }
   ],
   "library_dependencies": [],
-  "bits_declarations": [],
+  "bits_declarations": [
+    {
+      "name": "test.name/MyBits",
+      "location": {
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
+        "line": 10,
+        "column": 6
+      },
+      "maybe_attributes": [
+        {
+          "name": "Doc",
+          "value": " bits comment #1\n\n bits comment #2\n"
+        }
+      ],
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint32"
+      },
+      "mask": "3",
+      "members": [
+        {
+          "name": "MY_FIRST_BIT",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
+            "line": 14,
+            "column": 5
+          },
+          "value": {
+            "kind": "literal",
+            "literal": {
+              "kind": "numeric",
+              "value": "1",
+              "expression": "1"
+            }
+          },
+          "maybe_attributes": [
+            {
+              "name": "Doc",
+              "value": " bits member comment #1\n\n bits member comment #3\n"
+            }
+          ]
+        },
+        {
+          "name": "MY_OTHER_BIT",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
+            "line": 15,
+            "column": 5
+          },
+          "value": {
+            "kind": "literal",
+            "literal": {
+              "kind": "numeric",
+              "value": "2",
+              "expression": "2"
+            }
+          }
+        }
+      ],
+      "strict": true
+    }
+  ],
   "const_declarations": [
     {
       "name": "test.name/C",
       "location": {
         "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
-        "line": 9,
+        "line": 22,
         "column": 13
       },
       "maybe_attributes": [
@@ -37,13 +98,70 @@
       }
     }
   ],
-  "enum_declarations": [],
+  "enum_declarations": [
+    {
+      "name": "test.name/MyEnum",
+      "location": {
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
+        "line": 28,
+        "column": 6
+      },
+      "maybe_attributes": [
+        {
+          "name": "Doc",
+          "value": " enum comment #1.\n\n enum comment #2.\n"
+        }
+      ],
+      "type": "uint32",
+      "members": [
+        {
+          "name": "FOO",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
+            "line": 30,
+            "column": 5
+          },
+          "value": {
+            "kind": "literal",
+            "literal": {
+              "kind": "numeric",
+              "value": "1",
+              "expression": "1"
+            }
+          },
+          "maybe_attributes": [
+            {
+              "name": "Doc",
+              "value": " enum Member comment 1.\n"
+            }
+          ]
+        },
+        {
+          "name": "BAR",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
+            "line": 32,
+            "column": 5
+          },
+          "value": {
+            "kind": "literal",
+            "literal": {
+              "kind": "numeric",
+              "value": "2",
+              "expression": "2"
+            }
+          }
+        }
+      ],
+      "strict": true
+    }
+  ],
   "interface_declarations": [
     {
       "name": "test.name/Interface",
       "location": {
         "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
-        "line": 44,
+        "line": 68,
         "column": 10
       },
       "maybe_attributes": [
@@ -59,7 +177,7 @@
           "name": "Method",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
-            "line": 48,
+            "line": 72,
             "column": 5
           },
           "has_request": true,
@@ -113,7 +231,7 @@
           "name": "OnEvent",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
-            "line": 53,
+            "line": 77,
             "column": 8
           },
           "has_request": false,
@@ -169,7 +287,7 @@
       "name": "test.name/Service",
       "location": {
         "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
-        "line": 59,
+        "line": 83,
         "column": 9
       },
       "maybe_attributes": [
@@ -188,7 +306,7 @@
           "name": "interface",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
-            "line": 63,
+            "line": 87,
             "column": 15
           },
           "maybe_attributes": [
@@ -206,7 +324,7 @@
       "name": "test.name/Struct",
       "location": {
         "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
-        "line": 14,
+        "line": 38,
         "column": 8
       },
       "anonymous": false,
@@ -225,7 +343,7 @@
           "name": "Field",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
-            "line": 18,
+            "line": 42,
             "column": 11
           },
           "maybe_attributes": [
@@ -295,7 +413,7 @@
       "name": "test.name/Table",
       "location": {
         "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
-        "line": 34,
+        "line": 58,
         "column": 7
       },
       "maybe_attributes": [
@@ -315,7 +433,7 @@
           "name": "Field",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
-            "line": 38,
+            "line": 62,
             "column": 14
           },
           "maybe_attributes": [
@@ -372,7 +490,7 @@
       "name": "test.name/Union",
       "location": {
         "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
-        "line": 24,
+        "line": 48,
         "column": 7
       },
       "maybe_attributes": [
@@ -392,7 +510,7 @@
           },
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/doc_comments.test.fidl",
-            "line": 28,
+            "line": 52,
             "column": 14
           },
           "maybe_attributes": [
@@ -451,10 +569,14 @@
     "test.name/Struct",
     "test.name/Interface",
     "test.name/Service",
+    "test.name/MyEnum",
+    "test.name/MyBits",
     "test.name/C"
   ],
   "declarations": {
+    "test.name/MyBits": "bits",
     "test.name/C": "const",
+    "test.name/MyEnum": "enum",
     "test.name/Interface": "interface",
     "test.name/Service": "service",
     "test.name/Struct": "struct",

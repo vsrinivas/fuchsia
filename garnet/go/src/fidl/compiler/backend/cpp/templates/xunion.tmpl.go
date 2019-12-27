@@ -11,7 +11,7 @@ class {{ .Name }};
 
 {{- define "XUnionDeclaration" }}
 {{range .DocComments}}
-//{{ . }}
+///{{ . }}
 {{- end}}
 class {{ .Name }} final {
  public:
@@ -80,14 +80,14 @@ class {{ .Name }} final {
 
   bool is_{{ .Name }}() const { return tag_ == Tag::{{ .TagName }}; }
   {{range .DocComments}}
-  //{{ . }}
+  ///{{ . }}
   {{- end}}
   {{ .Type.Identifier }}& {{ .Name }}() {
     EnsureStorageInitialized(Tag::{{ .TagName }});
     return {{ .StorageName }};
   }
   {{range .DocComments}}
-  //{{ . }}
+  ///{{ . }}
   {{- end}}
   const {{ .Type.Identifier }}& {{ .Name }}() const {
     ZX_ASSERT(is_{{ .Name }}());

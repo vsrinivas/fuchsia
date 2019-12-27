@@ -11,7 +11,7 @@ class {{ .Name }};
 
 {{- define "StructDeclaration" }}
 {{range .DocComments}}
-//{{ . }}
+///{{ . }}
 {{- end}}
 class {{ .Name }} final {
  public:
@@ -48,7 +48,7 @@ class {{ .Name }} final {
 
   {{- range .Members }}
   {{range .DocComments}}
-  //{{ . }}
+  ///{{ . }}
   {{- end}}
   {{ .Type.Decl }} {{ .Name }}{{ if .DefaultValue }} = {{ .DefaultValue }}{{ else }}{}{{ end }};
   {{- end }}
