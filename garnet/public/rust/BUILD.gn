@@ -7,7 +7,6 @@ import("//build/testing/environments.gni")
 
 unittest_package("rust-crates-tests") {
   deps = [
-    "fuchsia-component:fuchsia-component-blackbox-unit-tests",
     "fuchsia-cprng:fuchsia-cprng_test",
     "fuchsia-framebuffer",
     "fuchsia-hyper:fuchsia-hyper-tests",
@@ -17,10 +16,6 @@ unittest_package("rust-crates-tests") {
   ]
 
   tests = [
-    {
-      name = "fuchsia_component_blackbox_unit_tests"
-      environments = basic_envs
-    },
     {
       name = "fuchsia_cprng_lib_test"
       environments = basic_envs

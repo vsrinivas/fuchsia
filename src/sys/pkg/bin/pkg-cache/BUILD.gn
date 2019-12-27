@@ -17,7 +17,6 @@ rustc_binary("bin") {
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
-    "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-trace",
     "//garnet/public/rust/fuchsia-trace-provider",
@@ -25,6 +24,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.space:fuchsia.space-rustc",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
     "//src/sys/lib/fidl-fuchsia-pkg-ext",
     "//src/sys/pkg/lib/pkgfs",
     "//third_party/rust_crates:anyhow",

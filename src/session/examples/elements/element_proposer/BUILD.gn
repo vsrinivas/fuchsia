@@ -11,9 +11,9 @@ rustc_binary("element_proposer_bin") {
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-component",
     "//sdk/fidl/fuchsia.session:fuchsia.session-rustc",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:thiserror",
   ]

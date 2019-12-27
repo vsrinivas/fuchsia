@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.test.echos.EchoExposedByParent",
+            "fuchsia.test.echos.EchoHiddenByParent"
+        ]
+    }
+}

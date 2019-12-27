@@ -28,9 +28,9 @@ rustc_binary("echo_looper_bin") {
   source_root = "echo_looper.rs"
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
-    "//garnet/public/rust/fuchsia-component",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
   ]
 }

@@ -605,11 +605,11 @@ group("uuid") {
 group("fuchsia_component_test") {
   testonly = true
   public_deps = [
-    "//garnet/public/rust/fuchsia-component/component-launching-test:component-launching-tests",
-    "//garnet/public/rust/fuchsia-component/isolated_component_test:fuchsia_component_test_inner",
-    "//garnet/public/rust/fuchsia-component/isolated_component_test:fuchsia_component_test_middle",
-    "//garnet/public/rust/fuchsia-component/isolated_component_test:fuchsia_component_test_middle_sibling",
-    "//garnet/public/rust/fuchsia-component/isolated_component_test:fuchsia_component_test_outer",
+    "//src/lib/fuchsia-component/component-launching-test:component-launching-tests",
+    "//src/lib/fuchsia-component/isolated_component_test:fuchsia_component_test_inner",
+    "//src/lib/fuchsia-component/isolated_component_test:fuchsia_component_test_middle",
+    "//src/lib/fuchsia-component/isolated_component_test:fuchsia_component_test_middle_sibling",
+    "//src/lib/fuchsia-component/isolated_component_test:fuchsia_component_test_outer",
   ]
 }
 

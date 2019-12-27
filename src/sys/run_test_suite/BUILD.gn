@@ -20,9 +20,9 @@ rustc_library("lib") {
   ]
 
   deps = [
-    "//garnet/public/rust/fuchsia-component",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
     "//src/lib/test_executor/rust:test_executor",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",

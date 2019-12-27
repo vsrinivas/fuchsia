@@ -35,10 +35,10 @@ rustc_binary("bin") {
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
-    "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
     "//src/storage/lib/fuchsia-vfs-watcher",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",

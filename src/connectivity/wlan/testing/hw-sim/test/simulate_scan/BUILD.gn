@@ -8,7 +8,6 @@ rustc_test("simulate_scan") {
   edition = "2018"
   deps = [
     "//garnet/lib/wlan/fidl:wlantap-rustc",
-    "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-zircon",
     "//garnet/public/rust/fuchsia-zircon/fuchsia-zircon-sys",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
@@ -16,6 +15,7 @@ rustc_test("simulate_scan") {
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
     "//src/connectivity/wlan/testing/hw-sim:wlan-hw-sim",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:pin-utils",

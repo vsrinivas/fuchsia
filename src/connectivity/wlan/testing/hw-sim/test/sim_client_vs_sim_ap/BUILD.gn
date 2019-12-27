@@ -13,12 +13,12 @@ rustc_test("sim_client_vs_sim_ap") {
     "//garnet/lib/wlan/fidl:sme-rustc",
     "//garnet/lib/wlan/fidl:wlantap-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.wlan.service:fuchsia.wlan.service-rustc",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
     "//src/connectivity/wlan/testing/hw-sim:wlan-hw-sim",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:pin-utils",
   ]

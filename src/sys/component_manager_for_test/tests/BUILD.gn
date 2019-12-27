@@ -11,10 +11,10 @@ rustc_test("bin") {
   source_root = "src/main.rs"
 
   deps = [
-    "//garnet/public/rust/fuchsia-component",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
   ]
 }
 

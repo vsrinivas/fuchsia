@@ -11,10 +11,10 @@ rustc_test("test") {
   name = "regulatory_region_integration_test"
   edition = "2018"
   deps = [
-    "//garnet/public/rust/fuchsia-component",
     "//sdk/fidl/fuchsia.location.namedplace:fuchsia.location.namedplace-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:thiserror",
   ]

@@ -1,55 +1,25 @@
-# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/fidl/fidl.gni")
-import("//build/rust/rustc_library.gni")
-import("//build/rust/rustc_test.gni")
+# Soft transition for out-of-tree Rust
+#
+# TODO(bwb): Remove when all code is migrated away from using these paths
 
-rustc_library("fuchsia-component") {
-  version = "0.1.0"
-  edition = "2018"
+group("fuchsia-component") {
   deps = [
-    "//garnet/lib/rust/io_util",
-    "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fdio",
-    "//garnet/public/rust/fuchsia-runtime",
-    "//garnet/public/rust/fuchsia-zircon",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
-    "//src/lib/fuchsia-async",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:byteorder",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:hex",
-    "//third_party/rust_crates:libc",
-    "//third_party/rust_crates:log",
-    "//third_party/rust_crates:thiserror",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+    "//src/lib/fuchsia-component",
   ]
 }
 
-rustc_test("fuchsia-component-blackbox-unit-tests") {
-  edition = "2018"
-  source_root = "blackbox_unit_tests/lib.rs"
+copy("fuchsia-component_info") {
   deps = [
-    ":fuchsia-component",
-    ":fuchsia.component.test-rustc",
-    "//garnet/lib/rust/files_async",
-    "//garnet/lib/rust/io_util",
-    "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-zircon",
-    "//src/lib/fuchsia-async",
-    "//src/lib/test_util",
-    "//src/storage/lib/pseudo-fs",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:thiserror",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+    "//src/lib/fuchsia-component:fuchsia-component_info",
   ]
-}
-
-fidl("fuchsia.component.test") {
   sources = [
-    "blackbox_unit_tests/test.test.fidl",
+    "$root_out_dir/obj/src/lib/fuchsia-component/fuchsia-component_info.json",
+  ]
+  outputs = [
+    "$root_out_dir/obj/garnet/public/rust/fuchsia-component/fuchsia-component_info.json",
   ]
 }

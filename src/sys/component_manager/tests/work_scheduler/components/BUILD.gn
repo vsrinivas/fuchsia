@@ -10,7 +10,7 @@ rustc_binary("unbound_child_worker_child_bin") {
   edition = "2018"
   source_root = "unbound_child/worker_child.rs"
   deps = [
-    "//garnet/public/rust/fuchsia-component",
+    "//src/lib/fuchsia-component",
     "//src/sys/component_manager/tests/fidl:fuchsia.test.workscheduler-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
@@ -22,8 +22,8 @@ rustc_binary("unbound_child_worker_sibling_bin") {
   edition = "2018"
   source_root = "unbound_child/worker_sibling.rs"
   deps = [
-    "//garnet/public/rust/fuchsia-component",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
   ]
 }
@@ -33,7 +33,7 @@ rustc_binary("bound_worker_bin") {
   edition = "2018"
   source_root = "bound/worker.rs"
   deps = [
-    "//garnet/public/rust/fuchsia-component",
+    "//src/lib/fuchsia-component",
     "//src/sys/component_manager/tests/fidl:fuchsia.test.workscheduler-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",

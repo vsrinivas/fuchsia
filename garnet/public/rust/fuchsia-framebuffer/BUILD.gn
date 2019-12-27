@@ -14,10 +14,10 @@ rustc_library("fuchsia-framebuffer") {
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
-    "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-runtime",
     "//garnet/public/rust/fuchsia-zircon",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
     "//src/lib/mapped-vmo",
     "//src/lib/shared-buffer",
     "//third_party/rust_crates:anyhow",

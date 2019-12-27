@@ -15,7 +15,6 @@ rustc_binary("bin") {
   deps = [
     "//garnet/lib/rust/io_util",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.app.discover:fuchsia.app.discover-rustc",
@@ -25,6 +24,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/ledger/fidl/fuchsia.ledger:fuchsia.ledger-rustc",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-url",
     "//src/sys/component_index/fidl:index-rustc",
     "//third_party/rust_crates:anyhow",

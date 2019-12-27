@@ -20,8 +20,8 @@ rustc_library("hoist") {
   non_rust_deps = [ "//third_party/boringssl" ]
   if (is_fuchsia) {
     deps += [
-      "//garnet/public/rust/fuchsia-component",
       "//src/lib/fuchsia-async",
+      "//src/lib/fuchsia-component",
     ]
   } else {
     deps += [

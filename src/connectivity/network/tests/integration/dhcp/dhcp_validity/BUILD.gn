@@ -12,9 +12,9 @@ rustc_binary("test") {
   deps = [
     ":lib",
     "//garnet/public/rust/fdio",
-    "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-zircon",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
@@ -27,11 +27,11 @@ rustc_library("lib") {
   deps = [
     "//garnet/lib/rust/fidl_fuchsia_net_ext",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//src/connectivity/network/testing/netemul/runner/test/guest:lib",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
     "//src/virtualization/lib/guest_interaction:fuchsia.netemul.guest-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",

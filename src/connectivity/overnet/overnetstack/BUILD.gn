@@ -12,7 +12,6 @@ rustc_binary("bin") {
   edition = "2018"
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.net.mdns:fuchsia.net.mdns-rustc",
@@ -21,6 +20,7 @@ rustc_binary("bin") {
     "//src/connectivity/overnet/lib/core",
     "//src/connectivity/overnet/lib/salt_slab",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",

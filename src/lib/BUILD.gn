@@ -50,6 +50,7 @@ group("tests") {
     "fidl_table_validation:tests",
     "fuchsia-async:tests",
     "fuchsia-async-testloop:tests",
+    "fuchsia-component:tests",
     "fuchsia-url:tests",
     "fuzzing:tests",
     "http-sse:tests",
