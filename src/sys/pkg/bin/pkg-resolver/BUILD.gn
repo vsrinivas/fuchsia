@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config.gni")
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
@@ -128,6 +129,16 @@ test_package("pkg-resolver-unit-tests") {
 
 pkg_resolver_config("disable_dynamic_configuration") {
   disable_dynamic_configuration = true
+}
+
+config_data("config") {
+  for_pkg = "sysmgr"
+  outputs = [
+    "pkg_resolver.config",
+  ]
+  sources = [
+    "sysmgr.config",
+  ]
 }
 
 group("tests") {

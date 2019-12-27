@@ -28,6 +28,7 @@ group("core") {
     "bin/amber:pkgfs",
     "bin/pkg-cache:config",
     "bin/pkg-cache:pkg_cache",
+    "bin/pkg-resolver:config",
     "bin/pkg-resolver:pkg_resolver",
     "bin/pkgctl",
     "bin/system-update-checker",
