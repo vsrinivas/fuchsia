@@ -36,3 +36,11 @@ test_package("system-health-check-tests") {
     },
   ]
 }
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":system-health-check-tests",
+    "mark-active-configuration-healthy-tests",
+  ]
+}

@@ -358,7 +358,6 @@ group("all") {
     ":sysmem_connector",
     ":sysmgr",
     ":sysmgr_tests",
-    ":system-health-check",
     ":system_monitor_fuchsia",
     ":system_monitor_host",
     ":telephony",
@@ -840,14 +839,6 @@ group("json") {
   testonly = true
   public_deps = [
     "//build/tools/json_merge:json_merge_test($host_toolchain)",
-  ]
-}
-
-group("system-health-check") {
-  testonly = true
-  public_deps = [
-    "//garnet/lib/rust/system-health-check:system-health-check-tests",
-    "//garnet/lib/rust/system-health-check/mark-active-configuration-healthy-tests",
   ]
 }
 

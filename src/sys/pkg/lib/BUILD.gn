@@ -13,6 +13,7 @@ group("lib") {
     "omaha-client",
     "pkgfs",
     "repo",
+    "system-health-check",
     "tuf",
   ]
 }
@@ -28,6 +29,7 @@ group("tests") {
     "omaha-client:tests",
     "pkgfs:tests",
     "repo:tests",
+    "system-health-check:tests",
     "tuf:tests",
   ]
 }

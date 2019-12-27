@@ -31,8 +31,8 @@ rustc_binary("mark-active-configuration-healthy") {
   source_root = "src/mark_active_configuration_healthy.rs"
 
   deps = [
-    "//garnet/lib/rust/system-health-check",
     "//garnet/public/rust/fuchsia-async",
+    "//src/sys/pkg/lib/system-health-check",
   ]
 }
 
