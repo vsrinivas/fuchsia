@@ -24,14 +24,17 @@ namespace feedback {
 namespace {
 
 constexpr uint32_t kMaxQueueSize = 500u;
-constexpr uint32_t kMetricIdStart = 1u;
-constexpr uint32_t kEventCodeStart = std::numeric_limits<uint32_t>::max();
+constexpr uint32_t kMetricId = 1u;
+constexpr uint32_t kEventCode = std::numeric_limits<uint32_t>::max();
+constexpr uint64_t kCount = 2u;
+constexpr zx::duration kLoggerBackoffInitialDelay = zx::msec(100);
 
 using fuchsia::cobalt::Status;
+using testing::UnorderedElementsAreArray;
 
 class CobaltTest : public UnitTestFixture {
  public:
-  void SetUp() override { cobalt_ = std::make_unique<Cobalt>(services()); }
+  void SetUp() override { cobalt_ = std::make_unique<Cobalt>(dispatcher(), services()); }
 
  protected:
   void SetUpCobaltLoggerFactory(std::unique_ptr<StubCobaltLoggerFactoryBase> logger_factory) {
@@ -39,69 +42,93 @@ class CobaltTest : public UnitTestFixture {
     if (logger_factory_) {
       InjectServiceProvider(logger_factory_.get());
     }
-
-    // Because |cobalt_| cannot send any messages until after the callback for creating the
-    // Logger has executed, we must run the loop before attempting to log events, else |cobalt_|
-    // will deem the Logger not ready.
-    RunLoopUntilIdle();
   }
 
-  const CobaltEvent& LastEvent() { return logger_factory_->LastEvent(); }
+  void LogOccurrence() {
+    cobalt_->LogOccurrence(kMetricId, kEventCode);
+    events_.emplace_back(kMetricId, kEventCode);
+  }
+
+  void LogCount() {
+    cobalt_->LogCount(kMetricId, kEventCode, kCount);
+    events_.emplace_back(kMetricId, kEventCode, kCount);
+  }
+
+  const std::vector<CobaltEvent>& SentEvents() const { return events_; }
+  const std::vector<CobaltEvent>& ReceivedEvents() const { return logger_factory_->Events(); }
 
   bool WasLogEventCalled() { return logger_factory_->WasLogEventCalled(); }
   bool WasLogEventCountCalled() { return logger_factory_->WasLogEventCountCalled(); }
 
-  void CloseAllConnections() { logger_factory_->CloseAllConnections(); }
-  void CloseFactoryConnection() { logger_factory_->CloseFactoryConnection(); }
-  void CloseLoggerConnection() { logger_factory_->CloseLoggerConnection(); }
+  void CloseAllConnections() {
+    logger_factory_->CloseAllConnections();
+    RunLoopUntilIdle();
+  }
 
-  // We want generate new a new metric id and a new event code each time so we can guarantee that
-  // the stub logger's values are changing.
-  uint32_t NextMetricId() { return next_metric_id_++; }
-  uint32_t NextEventCode() { return next_event_code_--; }
+  void CloseFactoryConnection() {
+    logger_factory_->CloseFactoryConnection();
+    RunLoopUntilIdle();
+  }
+
+  void CloseLoggerConnection() {
+    logger_factory_->CloseLoggerConnection();
+    RunLoopUntilIdle();
+  }
 
   std::unique_ptr<Cobalt> cobalt_;
 
  private:
+  std::vector<CobaltEvent> events_;
   std::unique_ptr<StubCobaltLoggerFactoryBase> logger_factory_;
-
-  // Define |next_metric_id| and |next_event_code| such that it's highly  unlikely that they'll ever
-  // share the same value. Additionally, select starting values that are not the default constructed
-  // value of | uint32_t | (which is 0).
-  uint32_t next_metric_id_ = kMetricIdStart;
-  uint32_t next_event_code_ = kEventCodeStart;
 };
 
 TEST_F(CobaltTest, Check_Log) {
   SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
 
-  uint32_t metric_id = 0;
-  uint32_t event_code = 0;
-
   for (size_t i = 0; i < 5; ++i) {
-    metric_id = NextMetricId();
-    event_code = NextEventCode();
-
-    cobalt_->LogOccurrence(metric_id, event_code);
+    LogCount();
+    LogOccurrence();
     RunLoopUntilIdle();
-    EXPECT_EQ(LastEvent(), CobaltEvent(CobaltEvent::Type::Occurrence, metric_id, event_code));
   }
+
+  EXPECT_THAT(ReceivedEvents(), UnorderedElementsAreArray(SentEvents()));
 }
 
-TEST_F(CobaltTest, Check_LogCount) {
+TEST_F(CobaltTest, Check_LoggerLosesConnection_BeforeLoggingEvents) {
   SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
 
-  uint32_t metric_id = 0;
-  uint32_t event_code = 0;
+  CloseLoggerConnection();
 
   for (size_t i = 0; i < 5; ++i) {
-    metric_id = NextMetricId();
-    event_code = NextEventCode();
-
-    cobalt_->LogCount(metric_id, event_code, i);
-    RunLoopUntilIdle();
-    EXPECT_EQ(LastEvent(), CobaltEvent(CobaltEvent::Type::Count, metric_id, event_code, i));
+    LogOccurrence();
+    EXPECT_FALSE(WasLogEventCalled());
   }
+  RunLoopUntilIdle();
+
+  EXPECT_THAT(ReceivedEvents(), UnorderedElementsAreArray(SentEvents()));
+}
+
+TEST_F(CobaltTest, Check_LoggerLosesConnection_WhileLoggingEvents) {
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+
+  for (size_t i = 0; i < 5; ++i) {
+    LogOccurrence();
+  }
+  RunLoopUntilIdle();
+
+  EXPECT_THAT(ReceivedEvents(), UnorderedElementsAreArray(SentEvents()));
+
+  CloseLoggerConnection();
+
+  for (size_t i = 0; i < 5; ++i) {
+    LogCount();
+  }
+
+  // Run the loop for twice the delay to account for the nondeterminism of
+  // backoff::ExponentialBackoff.
+  RunLoopFor(kLoggerBackoffInitialDelay * 2);
+
+  EXPECT_THAT(ReceivedEvents(), UnorderedElementsAreArray(SentEvents()));
 }
 
 TEST_F(CobaltTest, Check_CallbackExecutes) {
@@ -109,65 +136,80 @@ TEST_F(CobaltTest, Check_CallbackExecutes) {
       std::make_unique<StubCobaltLoggerFactory>(std::make_unique<StubCobaltLoggerFailsLogEvent>()));
 
   Status log_event_status = Status::OK;
-  uint32_t metric_id = NextMetricId();
-  uint32_t event_code = NextEventCode();
-
-  cobalt_->LogOccurrence(metric_id, event_code,
+  cobalt_->LogOccurrence(kMetricId, kEventCode,
                          [&log_event_status](Status status) { log_event_status = status; });
   RunLoopUntilIdle();
   EXPECT_EQ(log_event_status, Status::INVALID_ARGUMENTS);
 }
 
-TEST_F(CobaltTest, Check_LoggerLosesConnection) {
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
-
-  uint32_t metric_id = 0;
-  uint32_t event_code = 0;
+TEST_F(CobaltTest, Check_LoggerDoesNotRespond_ClosesConnection) {
+  auto stub_logger = std::make_unique<StubCobaltLoggerIgnoresFirstEvents>(5u);
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>(std::move(stub_logger)));
 
   for (size_t i = 0; i < 5; ++i) {
-    metric_id = NextMetricId();
-    event_code = NextEventCode();
-
-    cobalt_->LogOccurrence(metric_id, event_code);
+    LogOccurrence();
     RunLoopUntilIdle();
-    EXPECT_EQ(LastEvent(), CobaltEvent(CobaltEvent::Type::Occurrence, metric_id, event_code));
   }
 
   CloseLoggerConnection();
-  RunLoopUntilIdle();
 
-  // Attempt to log more, but the values should not be stored by the Logger.
-  for (size_t i = 0; i < 5; ++i) {
-    cobalt_->LogOccurrence(NextMetricId(), NextEventCode());
-    RunLoopUntilIdle();
-    // The stub is stuck on the last value before we closed the connection.
-    EXPECT_EQ(LastEvent(), CobaltEvent(CobaltEvent::Type::Occurrence, metric_id, event_code));
-  }
+  LogOccurrence();
+
+  // Run the loop for twice the delay to account for the nondeterminism of
+  // backoff::ExponentialBackoff.
+  RunLoopFor(kLoggerBackoffInitialDelay * 2);
+
+  EXPECT_THAT(ReceivedEvents(), UnorderedElementsAreArray(SentEvents()));
 }
 
 TEST_F(CobaltTest, Check_QueueReachesMaxSize) {
-  // We setup this test so that |cobalt_| will queue up events to Log() until a minute has passed.
-  // At that point class serving fuchsia.cobalt.Logger is deemed ready and |cobalt_| will flush the
-  // queue.
-  const zx::duration delay(zx::min(1));
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
 
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactoryDelaysCallback>(
-      std::make_unique<StubCobaltLogger>(), dispatcher(), delay));
+  CloseLoggerConnection();
 
-  uint32_t metric_id = 0;
-  uint32_t event_code = 0;
-
+  std::vector<CobaltEvent> events;
   for (size_t i = 0; i < kMaxQueueSize; ++i) {
-    metric_id = NextMetricId();
-    event_code = NextEventCode();
-
-    cobalt_->LogOccurrence(metric_id, event_code);
-    RunLoopUntilIdle();
-    ASSERT_FALSE(WasLogEventCalled());
+    cobalt_->LogOccurrence(kMetricId, kEventCode);
+    events.emplace_back(kMetricId, kEventCode);
   }
 
+  for (size_t i = 0; i < kMaxQueueSize; ++i) {
+    cobalt_->LogOccurrence(kMetricId, kEventCode);
+  }
+  RunLoopUntilIdle();
+
+  EXPECT_THAT(ReceivedEvents(), UnorderedElementsAreArray(events));
+}
+
+TEST_F(CobaltTest, Check_ExponentialBackoff) {
+  constexpr uint64_t num_attempts = 10u;
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactoryCreatesOnRetry>(num_attempts));
+  CloseLoggerConnection();
+
+  // We need to conservatively approximate the exponential backoff used by |logger_| so we don't
+  // unintentionally run the loop for too long.
+  zx::duration delay = kLoggerBackoffInitialDelay;
+  uint32_t retry_factor = 2u;
+
+  LogOccurrence();
+  RunLoopUntilIdle();
+
+  for (size_t i = 0; i < num_attempts - 1; ++i) {
+    RunLoopFor(delay);
+    EXPECT_FALSE(WasLogEventCalled());
+    delay *= retry_factor;
+  }
   RunLoopFor(delay);
-  EXPECT_EQ(LastEvent(), CobaltEvent(CobaltEvent::Type::Occurrence, metric_id, event_code));
+
+  EXPECT_THAT(ReceivedEvents(), UnorderedElementsAreArray(SentEvents()));
+}
+
+TEST_F(CobaltTest, SmokeTest_NoLoggerFactoryServer) {
+  RunLoopUntilIdle();
+  for (size_t i = 0; i < 5u; ++i) {
+    LogOccurrence();
+    RunLoopUntilIdle();
+  }
 }
 
 }  // namespace

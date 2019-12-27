@@ -5,6 +5,7 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_INFO_INFO_CONTEXT_H_
 #define SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_INFO_INFO_CONTEXT_H_
 
+#include <lib/async/dispatcher.h>
 #include <lib/inspect/cpp/vmo/types.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/timekeeper/clock.h>
@@ -19,9 +20,9 @@ namespace feedback {
 // Holds the objects needed to expose information for a component.
 class InfoContext {
  public:
-  InfoContext(inspect::Node *root_node, timekeeper::Clock *clock,
+  InfoContext(inspect::Node *root_node, timekeeper::Clock *clock, async_dispatcher_t *dispatcher,
               std::shared_ptr<sys::ServiceDirectory> services)
-      : inspect_manager_(root_node, clock), cobalt_(services) {}
+      : inspect_manager_(root_node, clock), cobalt_(dispatcher, services) {}
   InspectManager &InspectManager() { return inspect_manager_; }
   Cobalt &Cobalt() { return cobalt_; }
 

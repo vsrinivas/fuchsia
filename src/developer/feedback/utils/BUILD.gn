@@ -41,6 +41,7 @@ source_set("cobalt") {
 
   public_deps = [
     "//sdk/lib/sys/cpp",
+    "//src/lib/backoff:backoff",
     "//zircon/public/lib/fit",
     "//zircon/system/fidl/fuchsia-cobalt",
   ]

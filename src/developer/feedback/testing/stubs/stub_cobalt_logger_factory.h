@@ -9,6 +9,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_handle.h>
 
+#include <limits>
 #include <memory>
 
 #include "src/developer/feedback/testing/stubs/stub_cobalt_logger.h"
@@ -105,7 +106,7 @@ class StubCobaltLoggerFactoryClosesConnection : public StubCobaltLoggerFactoryBa
       LoggerFactory::CreateLoggerFromProjectIdCallback callback) override;
 };
 
-// Always fail to create the logger.
+// Fail to create the logger.
 class StubCobaltLoggerFactoryFailsToCreateLogger : public StubCobaltLoggerFactoryBase {
  public:
   StubCobaltLoggerFactoryFailsToCreateLogger()
@@ -115,6 +116,22 @@ class StubCobaltLoggerFactoryFailsToCreateLogger : public StubCobaltLoggerFactor
   void CreateLoggerFromProjectId(
       uint32_t project_id, fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
       LoggerFactory::CreateLoggerFromProjectIdCallback callback) override;
+};
+
+// Fail to create the logger until |succeed_after_| attempts have been made.
+class StubCobaltLoggerFactoryCreatesOnRetry : public StubCobaltLoggerFactoryBase {
+ public:
+  StubCobaltLoggerFactoryCreatesOnRetry(uint64_t succeed_after)
+      : StubCobaltLoggerFactoryBase(std::make_unique<StubCobaltLogger>()),
+        succeed_after_(succeed_after) {}
+
+ private:
+  void CreateLoggerFromProjectId(
+      uint32_t project_id, fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
+      LoggerFactory::CreateLoggerFromProjectIdCallback callback) override;
+
+  const uint64_t succeed_after_;
+  uint64_t num_calls_ = 0;
 };
 
 // Delay calling the callee provided callback by the specified delay.

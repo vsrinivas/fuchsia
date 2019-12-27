@@ -39,6 +39,19 @@ void StubCobaltLoggerFactoryFailsToCreateLogger::CreateLoggerFromProjectId(
   callback(Status::INVALID_ARGUMENTS);
 }
 
+void StubCobaltLoggerFactoryCreatesOnRetry::CreateLoggerFromProjectId(
+    uint32_t project_id, fidl::InterfaceRequest<Logger> logger,
+    CreateLoggerFromProjectIdCallback callback) {
+  ++num_calls_;
+  if (num_calls_ >= succeed_after_) {
+    logger_bindings_.AddBinding(logger_.get(), std::move(logger));
+    callback(Status::OK);
+    return;
+  }
+
+  callback(Status::INVALID_ARGUMENTS);
+}
+
 void StubCobaltLoggerFactoryDelaysCallback::CreateLoggerFromProjectId(
     uint32_t project_id, fidl::InterfaceRequest<Logger> logger,
     CreateLoggerFromProjectIdCallback callback) {

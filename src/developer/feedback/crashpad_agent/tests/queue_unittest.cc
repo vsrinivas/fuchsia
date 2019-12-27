@@ -91,7 +91,8 @@ class QueueTest : public UnitTestFixture {
     clock_ = std::make_unique<timekeeper::TestClock>();
     crash_server_ = std::make_unique<StubCrashServer>(upload_attempt_results_);
     inspector_ = std::make_unique<inspect::Inspector>();
-    info_context_ = std::make_shared<InfoContext>(&inspector_->GetRoot(), clock_.get(), services());
+    info_context_ = std::make_shared<InfoContext>(&inspector_->GetRoot(), clock_.get(),
+                                                  dispatcher(), services());
     queue_ = Queue::TryCreate(dispatcher(), info_context_, crash_server_.get());
 
     ASSERT_TRUE(queue_);

@@ -160,6 +160,19 @@ class StubCobaltLoggerFailsLogEvent : public StubCobaltLoggerBase {
                 fuchsia::cobalt::Logger::LogEventCallback callback) override;
 };
 
+// Will not execute the callback for the first n events.
+class StubCobaltLoggerIgnoresFirstEvents : public StubCobaltLoggerBase {
+ public:
+  StubCobaltLoggerIgnoresFirstEvents(size_t n) : to_ignore_(n) {}
+
+ private:
+  void LogEvent(uint32_t metric_id, uint32_t event_code,
+                fuchsia::cobalt::Logger::LogEventCallback callback) override;
+
+  size_t to_ignore_;
+  size_t num_calls_ = 0;
+};
+
 }  // namespace feedback
 
 #endif  // SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_STUB_COBALT_LOGGER_FACTORY_H_

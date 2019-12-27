@@ -98,7 +98,8 @@ class DatabaseTest : public UnitTestFixture {
   void SetUp() override {
     clock_ = std::make_unique<timekeeper::TestClock>();
     inspector_ = std::make_unique<inspect::Inspector>();
-    info_context_ = std::make_shared<InfoContext>(&inspector_->GetRoot(), clock_.get(), services());
+    info_context_ = std::make_shared<InfoContext>(&inspector_->GetRoot(), clock_.get(),
+                                                  dispatcher(), services());
 
     SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
     SetUpDatabase(/*max_size_in_kb=*/kMaxTotalReportsSizeInKb);
@@ -138,12 +139,11 @@ class DatabaseTest : public UnitTestFixture {
   std::vector<std::string> GetPendingDirContents() { return GetDirectoryContents(pending_dir_); }
 
   void AddCobaltCrashState(const CrashState crash_state) {
-    expected_events_.emplace_back(CobaltEvent::Type::Occurrence, kCrashMetricId, crash_state);
+    expected_events_.emplace_back(kCrashMetricId, crash_state);
   }
 
   void AddCobaltCrashUploadAttempt(const UploadAttemptState attempt_state, const uint64_t count) {
-    expected_events_.emplace_back(CobaltEvent::Type::Count, kCrashUploadAttemptsMetricId,
-                                  attempt_state, count);
+    expected_events_.emplace_back(kCrashUploadAttemptsMetricId, attempt_state, count);
   }
 
   void CheckCobaltEvents() {

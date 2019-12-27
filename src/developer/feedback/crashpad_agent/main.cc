@@ -26,7 +26,8 @@ int main(int argc, const char** argv) {
   auto inspector = std::make_unique<sys::ComponentInspector>(context.get());
   inspect::Node& root_node = inspector->root();
   timekeeper::SystemClock clock;
-  auto info_context = std::make_shared<feedback::InfoContext>(&root_node, &clock, context->svc());
+  auto info_context = std::make_shared<feedback::InfoContext>(&root_node, &clock, loop.dispatcher(),
+                                                              context->svc());
 
   std::unique_ptr<feedback::CrashpadAgent> agent = feedback::CrashpadAgent::TryCreate(
       loop.dispatcher(), context->svc(), std::move(info_context));

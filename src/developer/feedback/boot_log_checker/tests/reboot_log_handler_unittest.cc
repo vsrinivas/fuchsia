@@ -176,8 +176,7 @@ TEST_P(RebootLogHandlerTest, Succeed) {
   EXPECT_EQ(crash_reporter_->uptime(), param.output_uptime);
 
   EXPECT_EQ(logger_factory_->LastEvent(),
-            CobaltEvent(CobaltEvent::Type::Occurrence, cobalt_registry::kRebootMetricId,
-                        param.output_cobalt_event_code));
+            CobaltEvent(cobalt_registry::kRebootMetricId, param.output_cobalt_event_code));
 }
 
 TEST_F(RebootLogHandlerTest, Pending_NetworkNotReachable) {

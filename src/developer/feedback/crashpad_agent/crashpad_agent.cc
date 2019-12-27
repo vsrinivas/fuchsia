@@ -11,7 +11,6 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
-#include <cstdio>
 #include <map>
 #include <memory>
 #include <optional>

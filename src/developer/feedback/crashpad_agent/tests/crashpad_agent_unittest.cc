@@ -125,7 +125,8 @@ class CrashpadAgentTest : public UnitTestFixture {
     attachments_dir_ = files::JoinPath(kCrashpadDatabasePath, kCrashpadAttachmentsDir);
     inspector_ = std::make_unique<inspect::Inspector>();
     clock_ = std::make_unique<timekeeper::TestClock>();
-    info_context_ = std::make_shared<InfoContext>(&inspector_->GetRoot(), clock_.get(), services());
+    info_context_ = std::make_shared<InfoContext>(&inspector_->GetRoot(), clock_.get(),
+                                                  dispatcher(), services());
     agent_ = CrashpadAgent::TryCreate(dispatcher(), services(), info_context_, std::move(config),
                                       std::move(crash_server));
     FXL_CHECK(agent_);
@@ -757,12 +758,10 @@ TEST_F(CrashpadAgentTest, Check_CobaltAfterSuccessfulUpload) {
   SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
   EXPECT_TRUE(FileOneCrashReport().is_ok());
 
-  CobaltEvent event_1(CobaltEvent::Type::Occurrence, kCrashMetricId, CrashState::Filed);
-  CobaltEvent event_2(CobaltEvent::Type::Occurrence, kCrashMetricId, CrashState::Uploaded);
-  CobaltEvent event_3(CobaltEvent::Type::Count, kCrashUploadAttemptsMetricId,
-                      UploadAttemptState::UploadAttempt, 1u);
-  CobaltEvent event_4(CobaltEvent::Type::Count, kCrashUploadAttemptsMetricId,
-                      UploadAttemptState::Uploaded, 1u);
+  CobaltEvent event_1(kCrashMetricId, CrashState::Filed);
+  CobaltEvent event_2(kCrashMetricId, CrashState::Uploaded);
+  CobaltEvent event_3(kCrashUploadAttemptsMetricId, UploadAttemptState::UploadAttempt, 1u);
+  CobaltEvent event_4(kCrashUploadAttemptsMetricId, UploadAttemptState::Uploaded, 1u);
 
   EXPECT_THAT(AllCobaltEvents(), UnorderedElementsAreArray({
                                      Eq(ByRef(event_1)),
@@ -777,7 +776,7 @@ TEST_F(CrashpadAgentTest, Check_CobaltAfterInvalidInputCrashReport) {
   SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
   EXPECT_TRUE(FileOneEmptyCrashReport().is_error());
 
-  CobaltEvent event_1(CobaltEvent::Type::Occurrence, kCrashMetricId, CrashState::Dropped);
+  CobaltEvent event_1(kCrashMetricId, CrashState::Dropped);
   EXPECT_THAT(AllCobaltEvents(), UnorderedElementsAreArray({
                                      Eq(ByRef(event_1)),
                                  }));
