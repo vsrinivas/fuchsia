@@ -236,6 +236,7 @@ zx_status_t dispatch_user_exception(uint exception_type, const arch_exception_co
     }
 #endif
 
+    printf("KERN: terminating process\n");
     process->Kill(ZX_TASK_RETCODE_EXCEPTION_KILL);
   }
 
