@@ -49,9 +49,6 @@ typedef FuchsiaUptimeMetricDimensionUptimeRange UptimeRange;
 static constexpr int kHour = 3600;
 static constexpr int kDay = 24 * kHour;
 static constexpr int kWeek = 7 * kDay;
-constexpr int32_t kTemperatureMetricBucketFloor = 0;
-constexpr int32_t kTemperatureMetricNumBuckets = 80;
-constexpr int32_t kTemperatureMetricStepSize = 1;
 }  // namespace
 
 class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
@@ -64,7 +61,16 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
             dispatcher(), nullptr, &fake_logger_, std::unique_ptr<cobalt::SteadyClock>(fake_clock_),
             std::unique_ptr<cobalt::MemoryStatsFetcher>(new FakeMemoryStatsFetcher()),
             std::unique_ptr<cobalt::CpuStatsFetcher>(new FakeCpuStatsFetcher()),
-            std::unique_ptr<cobalt::TemperatureFetcher>(new FakeTemperatureFetcher()), nullptr)) {}
+            std::unique_ptr<cobalt::TemperatureFetcher>(new FakeTemperatureFetcher()), nullptr)) {
+    daemon_->cpu_bucket_config_ = daemon_->InitializeLinearBucketConfig(
+        fuchsia_system_metrics::kCpuPercentageIntBucketsFloor,
+        fuchsia_system_metrics::kCpuPercentageIntBucketsNumBuckets,
+        fuchsia_system_metrics::kCpuPercentageIntBucketsStepSize);
+    daemon_->temperature_bucket_config_ = daemon_->InitializeLinearBucketConfig(
+        fuchsia_system_metrics::kFuchsiaTemperatureExperimentalIntBucketsFloor,
+        fuchsia_system_metrics::kFuchsiaTemperatureExperimentalIntBucketsNumBuckets,
+        fuchsia_system_metrics::kFuchsiaTemperatureExperimentalIntBucketsStepSize);
+  }
 
   void UpdateState(fuchsia::ui::activity::State state) { daemon_->UpdateState(state); }
 
@@ -88,11 +94,6 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
 
   void RepeatedlyLogUptime() { return daemon_->RepeatedlyLogUptime(); }
 
-  void InitializeTemperatureBucketConfig(int32_t bucket_floor, int32_t num_buckets,
-                                         int32_t step_size) {
-    daemon_->InitializeTemperatureBucketConfig(bucket_floor, num_buckets, step_size);
-  }
-
   // Calls BucketIndex on temperature_bucket_config_.
   uint32_t GetTemperatureBucketGivenTemperature(int64_t temperature) {
     return (daemon_->temperature_bucket_config_)->BucketIndex(temperature);
@@ -102,16 +103,20 @@ class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
 
   seconds LogCpuUsage() { return daemon_->LogCpuUsage(); }
 
-  void PrepareForLogCpuUsage() {
+  void PrepareForLogCpuUsageDeprecated() {
     for (int i = 0; i < 59; i++) {
       daemon_->cpu_percentages_.push_back(
           {static_cast<double>(i), fuchsia::ui::activity::State::UNKNOWN});
     }
   }
 
+  void PrepareForLogCpuUsage() {
+    daemon_->cpu_data_stored_ = 599;
+    daemon_->activity_state_to_cpu_map_.clear();
+    daemon_->activity_state_to_cpu_map_[fuchsia::ui::activity::State::ACTIVE][345u] = 599u;
+  }
+
   seconds LogTemperature() {
-    daemon_->InitializeTemperatureBucketConfig(
-        kTemperatureMetricBucketFloor, kTemperatureMetricNumBuckets, kTemperatureMetricStepSize);
     daemon_->temperature_map_[40] = 1;
     daemon_->temperature_map_[45] = 2;
     daemon_->temperature_map_[48] = 1;
@@ -564,7 +569,7 @@ TEST_F(SystemMetricsDaemonTest, LogCpuUsage) {
   fake_logger_.reset();
   // When LogCpuUsage() is invoked it should log 60 events
   // in 1 FIDL call, and return 1 second.
-  PrepareForLogCpuUsage();
+  PrepareForLogCpuUsageDeprecated();
   UpdateState(fuchsia::ui::activity::State::ACTIVE);
   EXPECT_EQ(seconds(1).count(), LogCpuUsage().count());
   // Call count is 1. Just one call to LogCobaltEvents, with 60 events.
@@ -572,22 +577,27 @@ TEST_F(SystemMetricsDaemonTest, LogCpuUsage) {
               fuchsia_system_metrics::kFuchsiaCpuPercentageExperimentalMetricId,
               DeviceState::Active, -1 /*no second position event code*/, 60);
 
-  PrepareForLogCpuUsage();
+  PrepareForLogCpuUsageDeprecated();
   UpdateState(fuchsia::ui::activity::State::IDLE);
   EXPECT_EQ(seconds(1).count(), LogCpuUsage().count());
   // Another call to LogCobaltEvents, with 60 events.
   CheckValues(cobalt::kLogCobaltEvents, 2,
               fuchsia_system_metrics::kFuchsiaCpuPercentageExperimentalMetricId, DeviceState::Idle,
               -1 /*no second position event code*/, 60);
+
+  fake_logger_.reset();
+  PrepareForLogCpuUsage();
+  UpdateState(fuchsia::ui::activity::State::ACTIVE);
+  EXPECT_EQ(seconds(1).count(), LogCpuUsage().count());
+  // Call count is 1. Just one call to LogCobaltEvents, with 60 events.
+  CheckValues(cobalt::kLogCobaltEvents, 1, fuchsia_system_metrics::kCpuPercentageMetricId,
+              DeviceState::Active, -1 /*no second position event code*/, 1);
 }
 
 // Tests that temperature_bucket_config_ created will put extreme temperature data into
 // overflow or underflow buckets accordingly.
 TEST_F(SystemMetricsDaemonTest, TemperatureBucketConfig) {
   fake_logger_.reset();
-  InitializeTemperatureBucketConfig(kTemperatureMetricBucketFloor, kTemperatureMetricNumBuckets,
-                                    kTemperatureMetricStepSize);
-
   EXPECT_EQ(GetTemperatureBucketGivenTemperature(-25), uint32_t(0));
   EXPECT_EQ(GetTemperatureBucketGivenTemperature(-1), uint32_t(0));
   EXPECT_EQ(GetTemperatureBucketGivenTemperature(0), uint32_t(1));

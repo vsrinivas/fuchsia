@@ -95,10 +95,9 @@ class SystemMetricsDaemon {
   // |remaining_attempts| times.
   void LogTemperatureIfSupported(int remaining_attempts);
 
-  // Bucket config is for getting the histogram bucket index given temperature
-  // in Celsius. The arguments should be the same as in Cobalt metrics.yaml file.
-  void InitializeTemperatureBucketConfig(int32_t bucket_floor, int32_t num_buckets,
-                                         int32_t step_size);
+  // Create linear bucket config with the bucket_floor, number of buckets and step size.
+  std::unique_ptr<cobalt::config::IntegerBucketConfig> InitializeLinearBucketConfig(
+      int64_t bucket_floor, int32_t num_buckets, int32_t step_size);
 
   // Calls LogTemperature,
   // then uses the |dispatcher| passed to the constructor to schedule
@@ -169,9 +168,14 @@ class SystemMetricsDaemon {
   // Returns the amount of time before this method needs to be invoked again.
   std::chrono::seconds LogCpuUsage();
 
+  // Helper function to store the fetched CPU data and store until flush.
+  void StoreCpuData(double cpu_percentage);            // histogram, flush every 10 min
+  void StoreCpuDataDeprecated(double cpu_percentage);  // list, flush every 1 min
+
   // Helper function to call Cobalt logger's LogCobaltEvent to log
-  // a vector of cpu percentages taken in one minute into Cobalt.
-  void LogCpuPercentagesToCobalt();
+  // cpu percentages.
+  bool LogCpuToCobalt();            // INT_HISTOGRAM metric type
+  void LogCpuToCobaltDeprecated();  // MEMORY_USAGE metric type
 
   // Fetches and logs device temperature.
   //
@@ -200,14 +204,31 @@ class SystemMetricsDaemon {
   fuchsia::ui::activity::State current_state_ = fuchsia::ui::activity::State::UNKNOWN;
   fidl::InterfacePtr<fuchsia::ui::activity::Provider> activity_provider_;
 
+  template <typename T>
+  T GetCobaltEventCodeForDeviceState(fuchsia::ui::activity::State state) {
+    switch (state) {
+      case fuchsia::ui::activity::State::IDLE:
+        return T::Idle;
+      case fuchsia::ui::activity::State::ACTIVE:
+        return T::Active;
+      case fuchsia::ui::activity::State::UNKNOWN:
+        return T::Unknown;
+    }
+  }
   struct CpuWithActivityState {
     double cpu_percentage;
     fuchsia::ui::activity::State state;
   };
-  std::vector<CpuWithActivityState> cpu_percentages_;
+  std::vector<CpuWithActivityState> cpu_percentages_;  // This will deprecate.
+  std::unordered_map<fuchsia::ui::activity::State, std::unordered_map<uint32_t, uint32_t>>
+      activity_state_to_cpu_map_;
   std::unordered_map<uint32_t, uint32_t> temperature_map_;
   uint32_t temperature_map_size_ = 0;
-  // The bucket config is used to calculate the histogram bucket index for a given temperature.
+  uint32_t cpu_data_stored_ = 0;
+  // This bucket config is used to calculate the histogram bucket index for a given cpu percentage.
+  // Usage: cpu_bucket_config_->BucketIndex(cpu_percentage * 100)
+  std::unique_ptr<cobalt::config::IntegerBucketConfig> cpu_bucket_config_;
+  // This bucket config is used to calculate the histogram bucket index for a given temperature.
   // Usage: temperature_bucket_config_->BucketIndex(temperature)
   std::unique_ptr<cobalt::config::IntegerBucketConfig> temperature_bucket_config_;
 

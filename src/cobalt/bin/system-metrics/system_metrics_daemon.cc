@@ -57,11 +57,6 @@ std::chrono::seconds SecondsBeforeNextHour(std::chrono::seconds uptime) {
   return std::chrono::seconds(3600 - (uptime.count() % 3600));
 }
 
-// These constants are copied from fuchsia_system_metrics/metrics.yaml
-constexpr int32_t kTemperatureMetricBucketFloor = 0;
-constexpr int32_t kTemperatureMetricNumBuckets = 80;
-constexpr int32_t kTemperatureMetricStepSize = 1;
-
 }  // namespace
 
 SystemMetricsDaemon::SystemMetricsDaemon(async_dispatcher_t* dispatcher,
@@ -123,6 +118,10 @@ void SystemMetricsDaemon::RepeatedlyLogUptime() {
 }
 
 void SystemMetricsDaemon::RepeatedlyLogCpuUsage() {
+  cpu_bucket_config_ =
+      InitializeLinearBucketConfig(fuchsia_system_metrics::kCpuPercentageIntBucketsFloor,
+                                   fuchsia_system_metrics::kCpuPercentageIntBucketsNumBuckets,
+                                   fuchsia_system_metrics::kCpuPercentageIntBucketsStepSize);
   std::chrono::seconds seconds_to_sleep = LogCpuUsage();
   async::PostDelayedTask(
       dispatcher_, [this]() { RepeatedlyLogCpuUsage(); }, zx::sec(seconds_to_sleep.count()));
@@ -144,8 +143,10 @@ void SystemMetricsDaemon::LogTemperatureIfSupported(int remaining_attempts) {
       FX_LOGS(INFO) << "Stop further attempt to read or log temperature as it is not supported.";
       return;
     case TemperatureFetchStatus::SUCCEED:
-      InitializeTemperatureBucketConfig(kTemperatureMetricBucketFloor, kTemperatureMetricNumBuckets,
-                                        kTemperatureMetricStepSize);
+      temperature_bucket_config_ = InitializeLinearBucketConfig(
+          fuchsia_system_metrics::kFuchsiaTemperatureExperimentalIntBucketsFloor,
+          fuchsia_system_metrics::kFuchsiaTemperatureExperimentalIntBucketsNumBuckets,
+          fuchsia_system_metrics::kFuchsiaTemperatureExperimentalIntBucketsStepSize);
       RepeatedlyLogTemperature();
       return;
     case TemperatureFetchStatus::FAIL:
@@ -163,15 +164,14 @@ void SystemMetricsDaemon::LogTemperatureIfSupported(int remaining_attempts) {
   }
 }
 
-void SystemMetricsDaemon::InitializeTemperatureBucketConfig(int32_t bucket_floor,
-                                                            int32_t num_buckets,
-                                                            int32_t step_size) {
-  IntegerBuckets temperature_bucket_proto;
-  LinearIntegerBuckets* linear = temperature_bucket_proto.mutable_linear();
+std::unique_ptr<IntegerBucketConfig> SystemMetricsDaemon::InitializeLinearBucketConfig(
+    int64_t bucket_floor, int32_t num_buckets, int32_t step_size) {
+  IntegerBuckets bucket_proto;
+  LinearIntegerBuckets* linear = bucket_proto.mutable_linear();
   linear->set_floor(bucket_floor);
   linear->set_num_buckets(num_buckets);
   linear->set_step_size(step_size);
-  temperature_bucket_config_ = IntegerBucketConfig::CreateFromProto(temperature_bucket_proto);
+  return IntegerBucketConfig::CreateFromProto(bucket_proto);
 }
 
 void SystemMetricsDaemon::RepeatedlyLogTemperature() {
@@ -388,18 +388,63 @@ std::chrono::seconds SystemMetricsDaemon::LogCpuUsage() {
   if (!cpu_stats_fetcher_->FetchCpuPercentage(&cpu_percentage)) {
     return std::chrono::minutes(1);
   }
-  cpu_percentages_.push_back({cpu_percentage, current_state_});
-  if (cpu_percentages_.size() == 60) {  // Flush every minute.
-    LogCpuPercentagesToCobalt();
-    // Drop the data even if logging does not succeed.
-    cpu_percentages_.clear();
-  }
+  StoreCpuDataDeprecated(cpu_percentage);
+  StoreCpuData(cpu_percentage);
   return std::chrono::seconds(1);
 }
 
-void SystemMetricsDaemon::LogCpuPercentagesToCobalt() {
-  TRACE_DURATION("system_metrics", "SystemMetricsDaemon::LogCpuPercentagesToCobalt");
-  using DeviceState =
+void SystemMetricsDaemon::StoreCpuData(double cpu_percentage) {
+  uint32_t bucket_index = cpu_bucket_config_->BucketIndex(cpu_percentage * 100);
+  activity_state_to_cpu_map_[current_state_][bucket_index]++;
+  cpu_data_stored_++;
+  if (cpu_data_stored_ >= 10 * 60) {  // Flush every 10 minutes.
+    if (LogCpuToCobalt()) {
+      // If failed, attempt to log agin next time.
+      activity_state_to_cpu_map_.clear();
+      cpu_data_stored_ = 0;
+    }
+  }
+}
+
+void SystemMetricsDaemon::StoreCpuDataDeprecated(double cpu_percentage) {
+  cpu_percentages_.push_back({cpu_percentage, current_state_});
+  if (cpu_percentages_.size() == 60) {  // Flush every minute.
+    LogCpuToCobaltDeprecated();
+    // Drop the data even if logging does not succeed.
+    cpu_percentages_.clear();
+  }
+}
+
+bool SystemMetricsDaemon::LogCpuToCobalt() {
+  TRACE_DURATION("system_metrics", "SystemMetricsDaemon::LogCpuToCobalt");
+  using EventCode = fuchsia_system_metrics::CpuPercentageMetricDimensionDeviceState;
+  std::vector<CobaltEvent> events;
+  auto builder = CobaltEventBuilder(fuchsia_system_metrics::kCpuPercentageMetricId);
+  for (const auto& pair : activity_state_to_cpu_map_) {
+    std::vector<HistogramBucket> cpu_buckets_;
+    for (const auto& bucket_pair : pair.second) {
+      HistogramBucket bucket;
+      bucket.index = bucket_pair.first;
+      bucket.count = bucket_pair.second;
+      cpu_buckets_.push_back(std::move(bucket));
+    }
+    events.push_back(builder.Clone()
+                         .with_event_code(GetCobaltEventCodeForDeviceState<EventCode>(pair.first))
+                         .as_int_histogram(cpu_buckets_));
+  }
+  // call cobalt FIDL
+  fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
+  ReinitializeIfPeerClosed(logger_->LogCobaltEvents(std::move(events), &status));
+  if (status != fuchsia::cobalt::Status::OK) {
+    FX_LOGS(ERROR) << "LogCpuToCobalt returned status=" << StatusToString(status);
+    return false;
+  }
+  return true;
+}
+
+void SystemMetricsDaemon::LogCpuToCobaltDeprecated() {
+  TRACE_DURATION("system_metrics", "SystemMetricsDaemon::LogCpuToCobaltDeprecated");
+  using EventCode =
       fuchsia_system_metrics::FuchsiaCpuPercentageExperimentalMetricDimensionDeviceState;
   std::vector<CobaltEvent> events;
   auto builder =
@@ -407,27 +452,16 @@ void SystemMetricsDaemon::LogCpuPercentagesToCobalt() {
   for (unsigned i = 0; i < cpu_percentages_.size(); i++) {
     // TODO(CB-253) Change to CPU metric type and
     // take away "* 100" if the new metric type supports double.
-    fuchsia_system_metrics::FuchsiaCpuPercentageExperimentalMetricDimensionDeviceState event_code;
-    switch (cpu_percentages_[i].state) {
-      case State::IDLE:
-        event_code = DeviceState::Idle;
-        break;
-      case State::ACTIVE:
-        event_code = DeviceState::Active;
-        break;
-      case State::UNKNOWN:
-        event_code = DeviceState::Unknown;
-        break;
-    }
-    events.push_back(builder.Clone()
-                         .with_event_code(event_code)
-                         .as_memory_usage(cpu_percentages_[i].cpu_percentage * 100));
+    events.push_back(
+        builder.Clone()
+            .with_event_code(GetCobaltEventCodeForDeviceState<EventCode>(cpu_percentages_[i].state))
+            .as_memory_usage(cpu_percentages_[i].cpu_percentage * 100));
   }
   // call cobalt FIDL
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
   ReinitializeIfPeerClosed(logger_->LogCobaltEvents(std::move(events), &status));
   if (status != fuchsia::cobalt::Status::OK) {
-    FX_LOGS(ERROR) << "LogCpuPercentagesToCobalt returned status=" << StatusToString(status);
+    FX_LOGS(ERROR) << "LogCpuToCobaltDeprecated returned status=" << StatusToString(status);
   }
   return;
 }
